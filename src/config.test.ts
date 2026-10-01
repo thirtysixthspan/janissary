@@ -6,6 +6,7 @@ import { mkdtempSync } from 'node:fs';
 import {
   loadConfig, getConfig, updateConfig, DEFAULT_TRANSCRIPT_MAX_LINES,
   DEFAULT_TAB_NAME_MAX_LENGTH, DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
+  DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
 } from './config.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
@@ -97,6 +98,42 @@ describe('loadConfig', () => {
     expect(config.interactiveShellDetection).toBe(true);
     expect(config.tabNameMaxLength).toBe(8);
   });
+
+  it('defaults the clipboard-history cap to 15, including for a config that predates it', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ tabNameMaxLength: 8 }));
+
+    const config = loadConfig(tmpDir);
+
+    expect(config.clipboardHistoryMaxEntries).toBe(DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES);
+    expect(config.tabNameMaxLength).toBe(8);
+  });
+
+  it('honors a raised clipboard-history cap', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ clipboardHistoryMaxEntries: 40 }));
+
+    expect(loadConfig(tmpDir).clipboardHistoryMaxEntries).toBe(40);
+  });
+
+  it.each([0, -5, 2.5, '15', null])(
+    'falls back to 15 for the nonsense clipboard-history cap %p',
+    (value) => {
+      const configDir = path.join(tmpDir, '.janissary');
+      mkdirSync(configDir, { recursive: true });
+      writeFileSync(
+        path.join(configDir, 'config.json'),
+        JSON.stringify({ clipboardHistoryMaxEntries: value, tabNameMaxLength: 8 }),
+      );
+
+      const config = loadConfig(tmpDir);
+
+      expect(config.clipboardHistoryMaxEntries).toBe(DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES);
+      expect(config.tabNameMaxLength).toBe(8);
+    },
+  );
 
   it('honors interactive shell detection turned off, and ignores a non-boolean value', () => {
     const configDir = path.join(tmpDir, '.janissary');
@@ -307,6 +344,19 @@ describe('updateConfig', () => {
     updateConfig({ theme: 'dracula' });
     const reloaded = loadConfig(tmpDir);
     expect(reloaded.theme).toBe('dracula');
+  });
+
+  it('preserves the clipboard-history cap when rewriting an unrelated key', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ clipboardHistoryMaxEntries: 40 }) + '\n');
+    loadConfig(tmpDir);
+
+    updateConfig({ syntaxTheme: 'nord' });
+
+    const parsed = JSON.parse(readFileSync(path.join(configDir, 'config.json'), 'utf8'));
+    expect(parsed.clipboardHistoryMaxEntries).toBe(40);
+    expect(getConfig().clipboardHistoryMaxEntries).toBe(40);
   });
 
   it('preserves an unknown key planted in the JSON', () => {

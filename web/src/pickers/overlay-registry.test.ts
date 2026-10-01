@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   OVERLAYS, buildOverlayOpenState, commandBarDisabled, commandBarSuppressed, firstOpenOverlay,
   type OverlayName, type OverlayOpenSources, type OverlayOpenState,
 } from './overlay-registry';
+import {
+  closeContributedOverlay, contributedOverlayOnScreen, openContributedOverlay, registerContributedOverlay,
+} from '../shared/contributed-overlays';
 
 const NONE: OverlayOpenState = {
   route: false, syntaxTheme: false, appTheme: false, quickOpen: false,
@@ -120,4 +123,45 @@ describe('commandBarDisabled', () => {
     'is false while only %s is open',
     (name) => { expect(commandBarDisabled(opened(name))).toBe(false); },
   );
+});
+
+// A contributed overlay ranks after every built-in one, so the nine core answers are unchanged and
+// only the two that have to know about a plugin consult the seam.
+describe('a plugin-contributed overlay', () => {
+  const registrations: (() => void)[] = [];
+  afterEach(() => { while (registrations.length > 0) registrations.pop()?.(); });
+
+  const publish = (name: string, claimsCommandBar = true) => {
+    registrations.push(registerContributedOverlay(
+      { name, claimsCommandBar, render: () => null, onKey: () => {}, onOpen: () => {} },
+    ));
+  };
+
+  it('does not change what the core registry reports', () => {
+    publish('clipboard-history');
+    openContributedOverlay('clipboard-history', null);
+    expect(firstOpenOverlay(opened())).toBeUndefined();
+    expect(firstOpenOverlay(opened('history'))).toBe('history');
+  });
+
+  it('claims the command bar while it is open, on its own bit', () => {
+    publish('clipboard-history');
+    expect(commandBarSuppressed(opened())).toBe(false);
+    openContributedOverlay('clipboard-history', null);
+    expect(commandBarSuppressed(opened())).toBe(true);
+    closeContributedOverlay('clipboard-history');
+    expect(commandBarSuppressed(opened())).toBe(false);
+  });
+
+  it('never disables the command bar, which must stay live for a paste at the caret', () => {
+    publish('clipboard-history');
+    openContributedOverlay('clipboard-history', null);
+    expect(commandBarDisabled(opened())).toBe(false);
+  });
+
+  it('answers with its own name once no built-in overlay is up', () => {
+    publish('clipboard-history');
+    openContributedOverlay('clipboard-history', null);
+    expect(contributedOverlayOnScreen()?.name).toBe('clipboard-history');
+  });
 });

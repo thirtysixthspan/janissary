@@ -1,7 +1,27 @@
 import { render } from '@testing-library/react';
 import React, { useRef } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useWindowKeys } from './useWindowKeys';
+import { declareOverlayClaims, installOverlayOpener, openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
+
+const published: (() => void)[] = [];
+afterEach(() => { while (published.length > 0) published.pop()?.(); });
+
+// Publishes an overlay claiming the given chords, with an opener standing in for the host's: the
+// window handler never holds a plugin, it asks the seam. The claim and the registration are separate
+// publishes because they are separate facts — the host declares the chord before it has loaded the
+// chunk, and registers the overlay afterwards.
+function publishClaiming(chords: string[]) {
+  const opened = vi.fn();
+  published.push(
+    declareOverlayClaims('fixture', { chords, command: 'clip' }),
+    registerContributedOverlay(
+      { name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {} },
+    ),
+    installOverlayOpener(opened),
+  );
+  return opened;
+}
 
 function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; shiftKey?: boolean } = {}) {
   globalThis.dispatchEvent(new KeyboardEvent('keydown', {
@@ -210,6 +230,19 @@ describe('useWindowKeys', () => {
     expect(openQuickOpen).toHaveBeenCalled();
   });
 
+  // Cmd+T is a table entry now. It was dispatched by a trailing branch in `handleChordKeys` while the
+  // overlay-plugin host's hand-written reserved list forgot it, so a plugin could declare it and be
+  // shadowed — this pins the handler side of the chord the reserved list now carries.
+  it('Cmd+T opens a new agent tab and calls preventDefault', () => {
+    const runCommand = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { runCommand } }));
+    const event = new KeyboardEvent('keydown', { key: 't', metaKey: true, bubbles: true, cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    globalThis.dispatchEvent(event);
+    expect(runCommand).toHaveBeenCalledWith('agent');
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
   it('Ctrl+P does not open quick open', () => {
     const openQuickOpen = vi.fn();
     render(React.createElement(TestComponent, { callbacks: { openQuickOpen } }));
@@ -236,6 +269,85 @@ describe('useWindowKeys', () => {
     render(React.createElement(TestComponent, { callbacks: { openTabNav } }));
     dispatchKey('g', { ctrlKey: true });
     expect(openTabNav).toHaveBeenCalled();
+  });
+
+  // A plugin's chord is resolved through the shared seam and consulted after every core chord. It has
+  // to prevent the browser default: Ctrl+Shift+V is "paste as plain text" in a text field, which is
+  // where an editor keeps its keyboard, so without it the popup would open *and* the browser would
+  // paste, in one keystroke, with nothing in the popup looking wrong.
+  it('Ctrl+Shift+V opens a contributed overlay and suppresses the browser paste', () => {
+    const opened = publishClaiming(['ctrl+shift+v']);
+    render(React.createElement(TestComponent, {}));
+
+    dispatchKey('V', { ctrlKey: true, shiftKey: true });
+
+    expect(opened).toHaveBeenCalledWith('fixture', null);
+  });
+
+  // The Cmd form falls through every Cmd chord the application owns before the seam is asked, and the
+  // browser's "paste and match style" on it has to be suppressed for the same reason as the Ctrl form's.
+  it('Cmd+Shift+V opens a contributed overlay claiming it and suppresses the browser paste', () => {
+    const opened = publishClaiming(['ctrl+shift+v', 'meta+shift+v']);
+    render(React.createElement(TestComponent, {}));
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'v', metaKey: true, shiftKey: true, bubbles: true, cancelable: true,
+    });
+    globalThis.dispatchEvent(event);
+
+    expect(opened).toHaveBeenCalledWith('fixture', null);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('claims nothing by a chord no plugin declares', () => {
+    const opened = publishClaiming(['ctrl+r']);
+    render(React.createElement(TestComponent, {}));
+
+    dispatchKey('V', { ctrlKey: true, shiftKey: true });
+
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  // Plain Ctrl+V is the browser's own paste in an editor buffer and must stay untouched, which is why
+  // the shift is part of the claim rather than an afterthought.
+  it('leaves Ctrl+V entirely alone', () => {
+    const opened = publishClaiming(['ctrl+shift+v']);
+    render(React.createElement(TestComponent, {}));
+
+    dispatchKey('v', { ctrlKey: true });
+
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  it('does not claim a chord while a key is being composed, so an IME is never interrupted', () => {
+    const opened = publishClaiming(['ctrl+shift+v']);
+    render(React.createElement(TestComponent, {}));
+
+    const composing = new KeyboardEvent('keydown', { key: 'V', ctrlKey: true, shiftKey: true });
+    Object.defineProperty(composing, 'isComposing', { value: true });
+    globalThis.dispatchEvent(composing);
+
+    expect(opened).not.toHaveBeenCalled();
+  });
+
+  it('routes keys to a contributed overlay while it is open, and to nothing else', () => {
+    const onKey = vi.fn();
+    const openPicker = vi.fn();
+    published.push(
+      declareOverlayClaims('open-one', { chords: ['ctrl+r'], command: 'other' }),
+      registerContributedOverlay(
+        { name: 'open-one', claimsCommandBar: true, render: () => null, onKey, onOpen: () => {} },
+      ),
+    );
+    openContributedOverlay('open-one', null);
+    render(React.createElement(TestComponent, { callbacks: { openPicker } }));
+
+    dispatchKey('r', { ctrlKey: true });
+
+    // A contributed overlay ranks below the nine, but it is the only one on screen, so it takes the
+    // key — including a chord that would otherwise open a picker underneath it.
+    expect(onKey).toHaveBeenCalled();
+    expect(openPicker).not.toHaveBeenCalled();
   });
 
   it('Ctrl+E opens the queue popup', () => {

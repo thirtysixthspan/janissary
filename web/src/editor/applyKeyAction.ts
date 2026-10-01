@@ -10,6 +10,7 @@ import {
 } from './model';
 import { multiEdit, multiMove, type MultiEditKind } from './multi-caret';
 import { moveCursor, movePage, moveLineEdge, moveDocumentEdge, moveToVisualTarget } from './motion';
+import { copyText } from '../shared/system-clipboard';
 import type { KeyAction } from './keys';
 import type { UndoBuffer } from './undo';
 
@@ -47,7 +48,7 @@ function applyMove(s: EditorState, action: KeyAction, pageLines: number, move: M
     case 'docEdge': { move(run((one) => moveDocumentEdge(one, action.edge, action.extend))); return true; }
     case 'escape': { move(collapseSelection(s)); return true; }
     case 'selectAll': { move(selectAll(s)); return true; }
-    case 'copy': { void navigator.clipboard.writeText(selectionsText(s)); return true; }
+    case 'copy': { copyText(selectionsText(s)); return true; }
     default: { return false; }
   }
 }
@@ -108,7 +109,7 @@ function applyEdit(surface: EditSurface, s: EditorState, action: KeyAction, edit
     case 'cut': {
       const text = selectionsText(s);
       if (text) {
-        void navigator.clipboard.writeText(text);
+        copyText(text);
         edit(s, editedState(s, 'insert', ''), 'other');
       }
       break;

@@ -37,7 +37,8 @@ const client = {
     stateListener = (tabs, active, route, maxLength, history, syntax, theme, tasks) => {
       listener({
         t: 'state', tabs, activeTab: active, route, tabNameMaxLength: maxLength,
-        activeTabNameMaxLength: 50, globalHistory: history, syntaxTheme: syntax, theme, tasks,
+        activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: history,
+        syntaxTheme: syntax, theme, tasks,
         profiles: [], projectDir: '/tmp', version: '1.2.3',
         harnessLaunch: null, scheduleLaunch: null,
       });

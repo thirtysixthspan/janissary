@@ -81,13 +81,13 @@ function useFileNavigatorDrag(
 const registeredHarnesses: (() => void)[] = [];
 
 function registerHarness(ptyId: string): HarnessDropHandle {
-  const handle = { insertAtCaret: vi.fn() };
+  const handle = { insertAtCaret: vi.fn(), pasteAtCaret: vi.fn() };
   registeredHarnesses.push(registerHarnessDrop(ptyId, handle));
   return handle;
 }
 
 function registerEditor(label: string): EditorDropHandle {
-  const handle = { insertAtCaret: vi.fn() };
+  const handle = { insertAtCaret: vi.fn(), pasteAtCaret: vi.fn() };
   registeredHarnesses.push(registerEditorDrop(label, handle));
   return handle;
 }

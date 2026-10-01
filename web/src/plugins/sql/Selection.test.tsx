@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DataGrid } from './DataGrid';
 import { makeCapabilities, payload } from './fixture';
 import { selectionTo, selectionToTsv } from './grid-view';
+import { subscribeClipboardCopies } from '../../shared/clipboard-captures';
 
 // The grid's highlighted run of rows and its copy. The grid marks whole rows and never cells, so the
 // two questions — which rows does this run cover, and what do they read as — are both about rows.
@@ -277,6 +278,23 @@ describe('copying a run of rows', () => {
   it('offers no control to copy with', () => {
     shown();
     expect(screen.queryByLabelText('Copy selection')).toBeNull();
+  });
+
+  // This grid keeps its own clipboard write so a denied copy can say why (see the test below), which
+  // means it is the one copy site that cannot route through `copyText`. It still has to reach the one
+  // capture seam, or SQL results would be missing from the clipboard-history popup.
+  it('publishes the copied rows to the clipboard-captures seam', async () => {
+    clipboardThat(vi.fn().mockResolvedValue(undefined));
+    const seen: string[] = [];
+    const unsubscribe = subscribeClipboardCopies((text) => { seen.push(text); });
+    shown();
+    fireEvent.mouseDown(headers()[0] as HTMLElement);
+    fireEvent.mouseDown(headers()[1] as HTMLElement, { shiftKey: true });
+
+    copyKey();
+
+    await vi.waitFor(() => expect(seen).toEqual(['1\tpaid\n2\tNULL']));
+    unsubscribe();
   });
 
   // The copy reads the page's own row array, so a run expressed in the table's numbering would point

@@ -6,7 +6,10 @@ import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey
 import { dispatchTaskPickerKey } from './pickers/task-picker-keys';
 import { dispatchProfilePickerKey } from './pickers/profile-picker-keys';
 import { buildOverlayOpenState, firstOpenOverlay } from './pickers/overlay-registry';
+import { eventChordId } from './overlay-plugins/chords';
+import { openOverlayForChord, contributedOverlayOnScreen } from './shared/contributed-overlays';
 import { isTabSwitchChord } from './shared/terminal/window-chords';
+import { appChordAction, type AppChordAction } from './shared/app-chords';
 import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker/key-bindings';
 
 // Every overlay-owned field comes from `pickers/picker-key-bindings`, where the hook that owns the
@@ -70,7 +73,15 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
     );
     return true;
   }
-  default: { return false; }
+  default: {
+    // No built-in overlay is up, which is the only condition under which a contributed one can be:
+    // the registry ranks the nine above every plugin, so nothing below this line fires while one of
+    // them is open — including the chords that open them.
+    const contributed = contributedOverlayOnScreen();
+    if (!contributed) return false;
+    contributed.onKey(e);
+    return true;
+  }
   }
 }
 
@@ -99,55 +110,87 @@ function ctrlLetterShortcut(e: KeyboardEvent, client: JanusClient): void {
   else if (key === 'o') { e.preventDefault(); client.send({ method: 'promoteToTerminal', params: {} }); }
 }
 
-// The Ctrl-key picker openers (Ctrl+R history, Ctrl+G nav, Ctrl+E queue, Ctrl+A tasks), keyed by
-// letter so the chord list stays flat and under the file's cognitive-complexity threshold.
-function ctrlChordOpener(key: string, cb: Callbacks): (() => void) | undefined {
-  switch (key) {
-  case 'r': { return cb.openPicker; }
-  case 'g': { return cb.openTabNav; }
-  case 'e': { return cb.openQueue; }
-  case 'a': { return cb.openTaskPicker; }
+// The chords this handler dispatches, resolved through `shared/app-chords.ts` — the same table the
+// overlay-plugin host reads to refuse a chord the application already owns. Routing on the action rather
+// than on key and modifier comparisons is what keeps the two in step: an action added to the table with no
+// case below narrows the default branch to `never`, which is a compile error rather than a chord that
+// silently stops working.
+function ctrlChordOpener(action: AppChordAction | undefined, cb: Callbacks): (() => void) | undefined {
+  switch (action) {
+  // Most Ctrl chords are not application chords — Ctrl+T, Ctrl+O and the tab moves are dispatched further
+  // down by `handleTabShortcuts` — so "none of these" is an ordinary answer, not a missing case.
+  case undefined: { return undefined; }
+  case 'history': { return cb.openPicker; }
+  case 'tabNav': { return cb.openTabNav; }
+  case 'queue': { return cb.openQueue; }
+  case 'tasks': { return cb.openTaskPicker; }
+  default: { return exhaust(action); }
   }
 }
 
-// The Cmd-key chord openers (Cmd+Shift+F project search, Cmd+F transcript search, Cmd+P quick open)
-// — split out of `handleChordKeys` to keep its own cognitive complexity under the file's lint
+// The Cmd-key chords (Cmd+Shift+F project search, Cmd+F transcript search, Cmd+P quick open, Cmd+T new
+// agent tab) — split out of `handleChordKeys` to keep its own cognitive complexity under the file's lint
 // threshold.
 //
-// The two `f` chords are ordered deliberately: the project search is matched first because the
-// transcript search below matches on the key alone and never looks at `shiftKey`, so without this
-// order Cmd+Shift+F would open the transcript search bar instead. Both run the same plugin command
-// the user could type, so there is one route into that tab rather than two.
+// The two `f` chords are separate table entries rather than one branch testing `shiftKey`, which is what
+// makes the project search reachable at all: the transcript search below matches on the key alone, so an
+// ordering inside a single branch was the only thing keeping Cmd+Shift+F from opening it instead. Both run
+// the same plugin command the user could type, so there is one route into that tab rather than two.
 function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
-  if (e.key.toLowerCase() === 'f') {
-    if (e.shiftKey) {
-      e.preventDefault();
-      cb.runCommand('search');
-      return true;
-    }
+  const action = appChordAction(eventChordId(e));
+  switch (action) {
+  // Not an application chord: the Cmd+Shift bracket tab moves belong to `handleTabShortcuts`, and every
+  // other Cmd combination is either a browser shortcut or nothing at all.
+  case undefined: { return false; }
+  case 'projectSearch': {
+    e.preventDefault();
+    cb.runCommand('search');
+    return true;
+  }
+  case 'transcriptSearch': {
     if (!snap.canSearch) return true;
     e.preventDefault();
     if (!snap.searchOpen) cb.openSearch();
     return true;
   }
-  if (e.key.toLowerCase() === 'p') {
+  case 'quickOpen': {
     e.preventDefault();
     if (!snap.quickOpenOpen) cb.openQuickOpen();
     return true;
   }
-  return false;
+  case 'newAgentTab': {
+    e.preventDefault();
+    cb.runCommand('agent');
+    return true;
+  }
+  // Shift+Tab belongs to `useSectionNav`, which claims it inside a dialog and not here. Saying so is the
+  // point of the table carrying an owner: the chord is reserved, and this handler is not what fires it.
+  case 'sectionNav': { return false; }
+  default: { return exhaust(action); }
+  }
+}
+
+// Narrowing to `never` is the whole guarantee: a new `AppChordAction` with no case above fails to compile
+// here rather than becoming a chord the application reserves and nothing dispatches.
+function exhaust(action: AppChordAction | undefined): never {
+  throw new Error(`unhandled application chord action: ${String(action)}`);
 }
 
 // The chord openers (Cmd+Shift+F search, Cmd+F search, Cmd+P quick open, the Ctrl picker chords,
 // Cmd+T new agent tab) — split out of `onKey` to keep its own cognitive complexity under the file's
-// lint threshold.
+// lint threshold. A plugin's chord is consulted after all of them, so a core chord always wins.
+//
+// `preventDefault` on a claimed plugin chord is not optional here. In a text field — which is exactly
+// where an editor keeps its keyboard — a browser binds Ctrl+Shift+V to "paste as plain text", and the
+// keydown still reaches the page: without it the popup would open *and* the browser would paste, in
+// one keystroke, with nothing in the popup looking wrong.
 function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
   if (e.metaKey && metaChordOpener(e, snap, cb)) return true;
   if (e.ctrlKey) {
-    const opener = ctrlChordOpener(e.key.toLowerCase(), cb);
+    const opener = ctrlChordOpener(appChordAction(eventChordId(e)), cb);
     if (opener) { e.preventDefault(); opener(); return true; }
   }
-  if (e.metaKey && e.key.toLowerCase() === 't') { e.preventDefault(); cb.runCommand('agent'); return true; }
+  if (!e.isComposing && openOverlayForChord(eventChordId(e))) { e.preventDefault(); return true; }
   return false;
 }
 
@@ -178,3 +221,4 @@ export function useWindowKeys(
     };
   }, [client, stateRef, callbacksRef, handleScrollKey, handleScrollKeyUp]);
 }
+

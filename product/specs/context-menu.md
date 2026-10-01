@@ -1,25 +1,26 @@
 # Context Menu
 
-The application draws its own right-click menus rather than leaving them to the browser. A surface that defines a menu of its own shows that menu — the file navigator's rows are the worked example (see [[file-navigator-tab]]). Everywhere else, a default Copy/Paste menu answers the right-click.
+The application draws its own right-click menus rather than leaving them to the browser. A surface that defines a menu of its own shows that menu — the file navigator's rows are the worked example (see [[file-navigator-tab]]). Everywhere else, a default Copy/Paste/Paste-from-clipboard menu answers the right-click.
 
 ### The default menu
 
-Right-clicking anywhere the application has not defined a menu — an editor tab, a terminal, the command line, a transcript — opens a small menu at the pointer offering **Copy** and **Paste**. It looks and behaves exactly like the file navigator's menu: the same styling, arrow keys and `Enter` to activate an entry, `Escape` or clicking away to dismiss it. Dismissing the menu returns the keyboard to whatever had it before.
+Right-clicking anywhere the application has not defined a menu — an editor tab, a terminal, the command line, a transcript — opens a small menu at the pointer offering **Copy**, **Paste**, and **Paste from clipboard…**. It looks and behaves exactly like the file navigator's menu: the same styling, arrow keys and `Enter` to activate an entry, `Escape` or clicking away to dismiss it. Dismissing the menu returns the keyboard to whatever had it before.
 
 Right-clicking the open menu itself does nothing and does not expose the browser's context menu.
 
-An entry that cannot act is left out rather than shown greyed out, so the menu holds one entry, two, or none:
+Two entries are left out when they cannot act, matching the file navigator's menu, and one is never left out:
 
 - **Copy** appears whenever page text, editor text, or a terminal's own selection is present, and writes that selection to the system clipboard.
 - **Paste** appears only when the right-click reaches somewhere text can go — the field it landed in, or the field that currently holds the keyboard. That second case is what makes an editor tab and a terminal work, since a click there lands on rendered output while the keyboard belongs to the surface as a whole. Activating it inserts the clipboard's text at the caret. Paste is withheld while a terminal's held selection is showing, even if some other field still holds the keyboard, since that menu answers a committed copy region rather than an invitation to paste elsewhere.
+- **Paste from clipboard…** always appears. It opens the clipboard-history popup (see [[clipboard-history]]), which lists what has been copied in this session rather than only what the system clipboard holds right now. Because it can always act, the menu now opens on a right-click that offers nothing else — a terminal with no held selection and no field holding the keyboard, or any inert part of a tab — where previously no menu opened at all and the browser's own appeared.
 
-When neither entry applies — a right-click on a surface with nothing selected and nowhere to type — no menu opens at all, and the browser's own menu appears instead.
+Clicking an entry in that popup pastes into whatever the right-click landed on, which is why the element under the pointer is kept rather than only the field a paste would have used; choosing one with the keyboard pastes at the caret instead, because the element the right-click found is no longer what the user is aiming at by then. The popup itself opens at its usual anchor above the command line, not at the pointer.
 
-The editor is the exception: an empty-selection right-click there opens no menu, including the browser's own menu.
+The editor is no longer an exception. It used to cancel a right-click with no selection outright, so no menu opened there and not even the browser's did; it now answers like every other surface, offering **Paste** and **Paste from clipboard…**. The browser's own menu never appears wherever the application's menu answers.
 
 ### A contributed entry
 
-To select harness terminal output while the harness owns the mouse, hold Shift while dragging (see the selecting-and-copying section in [[harness]]). Releasing that drag over a non-empty pick opens the default menu itself, offering **Copy** alongside **Chat about this** and never **Paste**; right-clicking the held selection afterward opens the same menu again. Escape on either of those menus is one case where dismissing the default menu does more than "return the keyboard to whatever had it before": it also clears the terminal's held selection, so a single Escape leaves copy mode entirely instead of just closing the menu on top of it. Activating Copy does the same — it releases the selection right after copying it — while Chat about this leaves the selection held, since choosing it is not itself a copy.
+To select harness terminal output while the harness owns the mouse, hold Shift while dragging (see the selecting-and-copying section in [[harness]]). Releasing that drag over a non-empty pick opens the default menu itself, offering **Copy** and **Paste from clipboard…** alongside **Chat about this** and never **Paste**; right-clicking the held selection afterward opens the same menu again. Escape on either of those menus is one case where dismissing the default menu does more than "return the keyboard to whatever had it before": it also clears the terminal's held selection, so a single Escape leaves copy mode entirely instead of just closing the menu on top of it. Activating Copy does the same — it releases the selection right after copying it — while Chat about this leaves the selection held, since choosing it is not itself a copy.
 
 Replies arriving after a menu closes are ignored. If menus are opened in succession, only the newest menu's reply can supply an entry, regardless of reply order; activating it uses that menu's selection.
 
@@ -27,7 +28,7 @@ Disabled plugins contribute no entries to newly opened menus. An entry offered b
 
 When an entry arrives while the menu is open, the highlighted action stays selected as the entries move. If that action disappears, selection moves to the first remaining entry. Enter activates the highlighted action, and arrow navigation continues from its current position.
 
-A bundled tab plugin may contribute one entry to the default menu for a text selection: `Chat about this`, offered by the conversations plugin. It appears only when the right-click resolves a selection — a DOM selection, an editor's own selection, or, in a terminal, the selection that terminal itself holds — and renders as its own final group after Copy and Paste, separated by a divider. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs the same action directly for the current selection. Activating it runs the plugin's own presentation (see [[conversations]]); the label is decided once by the plugin's manifest, and everything a second right-click sees is offered again from scratch, so a menu that closed without it carries nothing into the next one.
+A bundled tab plugin may contribute one entry to the default menu for a text selection: `Chat about this`, offered by the conversations plugin. It appears only when the right-click resolves a selection — a DOM selection, an editor's own selection, or, in a terminal, the selection that terminal itself holds — and renders as its own final group after Copy, Paste, and Paste from clipboard…, separated by a divider. `Cmd+I` on macOS, or `Ctrl+I` elsewhere, runs the same action directly for the current selection. Activating it runs the plugin's own presentation (see [[conversations]]); the label is decided once by the plugin's manifest, and everything a second right-click sees is offered again from scratch, so a menu that closed without it carries nothing into the next one.
 
 The terminal paragraph above is narrowed by that entry and only by it: the menu may read an xterm selection to answer **Chat about this**, and offers **Copy** for that same selection — the terminal's own copy shortcut still works too, unaffected by the menu.
 

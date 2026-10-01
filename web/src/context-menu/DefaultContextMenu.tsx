@@ -7,14 +7,15 @@ import { copyText } from '../shared/system-clipboard';
 import { clearTerminalSelection } from '../shared/terminal/terminal/selection';
 import { useDefaultContextMenu } from './useDefaultContextMenu';
 
-// The app's fallback right-click menu, mounted once by the shell. It draws Copy and Paste for any
-// surface that defines no menu of its own — an editor tab, a terminal, the command bar — in the
-// same visual language as the file navigator's, which keeps its own menu because it defines one.
+// The app's fallback right-click menu, mounted once by the shell. It draws Copy, Paste, and Paste from
+// clipboard for any surface that defines no menu of its own — an editor tab, a terminal, the command
+// bar — in the same visual language as the file navigator's, which keeps its own menu because it
+// defines one.
 //
 // When a plugin contributes an entry for the selection, it arrives while the menu is open and
-// renders as its own group after Copy and Paste.
+// renders as its own group after Copy, Paste, and Paste from clipboard.
 export function DefaultContextMenu({ client }: { client?: JanusClient }) {
-  const { pending, contributed, runContributed, close } = useDefaultContextMenu(client);
+  const { pending, contributed, runContributed, pasteFromClipboard, close } = useDefaultContextMenu(client);
   if (!pending) return null;
 
   const groups = defaultMenuGroups(pending, {
@@ -25,6 +26,7 @@ export function DefaultContextMenu({ client }: { client?: JanusClient }) {
       if (pending.selectionSource === 'terminal') clearTerminalSelection(pending.restoreFocus);
     },
     paste: (element) => { void pasteInto(element); },
+    pasteFromClipboard,
   });
   if (contributed) {
     groups.push([{ label: contributed.label, onActivate: runContributed }]);

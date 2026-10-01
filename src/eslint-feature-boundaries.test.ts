@@ -99,4 +99,32 @@ describe('client feature boundaries', () => {
     expect(messages).toHaveLength(1);
     expect(messages[0]?.message).toContain('Shared modules must not import a feature');
   });
+
+  // The overlay-plugin host sits outside the feature list because it has to reach the pickers, the
+  // command bar, and the context menu to build the one capability a plugin gets. Nothing may reach
+  // back: the seam in `shared` is the only way in, and this is what keeps that direction one-way.
+  it('rejects a feature reaching into the overlay-plugin layer', async () => {
+    const messages = await boundaryMessages(
+      "import { createOverlayPluginHost } from '../overlay-plugins/host'; void createOverlayPluginHost;",
+      'web/src/pickers/overlay-registry.ts',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.message).toContain('shared/contributed-overlays');
+  });
+
+  it('allows a feature to reach an overlay through the shared seam', async () => {
+    const messages = await boundaryMessages(
+      "import { openContributedOverlay } from '../shared/contributed-overlays'; void openContributedOverlay;",
+      'web/src/context-menu/useDefaultContextMenu.ts',
+    );
+    expect(messages).toEqual([]);
+  });
+
+  it('allows the overlay-plugin host to import a feature, which is what it exists to compose', async () => {
+    const messages = await boundaryMessages(
+      "import { defaultMenuGroups } from '../context-menu/default-menu-target'; void defaultMenuGroups;",
+      'web/src/overlay-plugins/host.ts',
+    );
+    expect(messages).toEqual([]);
+  });
 });

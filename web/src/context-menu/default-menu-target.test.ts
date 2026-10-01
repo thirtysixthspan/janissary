@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  defaultMenuGroups, isTextEntryElement, resolveDefaultMenuTarget, type DefaultMenuTarget,
+  defaultMenuGroups, resolveDefaultMenuTarget, type DefaultMenuTarget,
 } from './default-menu-target';
 
 function input(type: string): HTMLInputElement {
@@ -18,22 +18,8 @@ function div(contentEditable: boolean): HTMLElement {
 }
 
 function target(overrides: Partial<DefaultMenuTarget> = {}): DefaultMenuTarget {
-  return { selectionText: '', pasteTarget: null, restoreFocus: null, ...overrides };
+  return { selectionText: '', pasteTarget: null, restoreFocus: null, clicked: null, ...overrides };
 }
-
-describe('isTextEntryElement', () => {
-  it('accepts a text input, a textarea, and a contenteditable element', () => {
-    expect(isTextEntryElement(input('text'))).toBe(true);
-    expect(isTextEntryElement(document.createElement('textarea'))).toBe(true);
-    expect(isTextEntryElement(div(true))).toBe(true);
-  });
-
-  it('rejects a plain div, a checkbox, and nothing at all', () => {
-    expect(isTextEntryElement(div(false))).toBe(false);
-    expect(isTextEntryElement(input('checkbox'))).toBe(false);
-    expect(isTextEntryElement(null)).toBe(false);
-  });
-});
 
 describe('resolveDefaultMenuTarget', () => {
   it('takes the field the click landed in as the paste target', () => {
@@ -74,31 +60,31 @@ describe('resolveDefaultMenuTarget', () => {
 });
 
 describe('defaultMenuGroups', () => {
-  const actions = { copy: () => {}, paste: () => {} };
+  const actions = { copy: () => {}, paste: () => {}, pasteFromClipboard: () => {} };
 
   it('offers Copy and Paste in one group when both apply', () => {
     const groups = defaultMenuGroups(
       target({ selectionText: 'hello', pasteTarget: input('text') }), actions,
     );
     expect(groups).toHaveLength(1);
-    expect(groups[0].map((item) => item.label)).toEqual(['Copy', 'Paste']);
+    expect(groups[0].map((item) => item.label)).toEqual(['Copy', 'Paste', 'Paste from clipboard…']);
   });
 
   it('omits Copy when nothing is selected', () => {
     const groups = defaultMenuGroups(target({ pasteTarget: input('text') }), actions);
-    expect(groups[0].map((item) => item.label)).toEqual(['Paste']);
+    expect(groups[0].map((item) => item.label)).toEqual(['Paste', 'Paste from clipboard…']);
   });
 
   it('omits Paste when there is nowhere to paste', () => {
     const groups = defaultMenuGroups(target({ selectionText: 'hello' }), actions);
-    expect(groups[0].map((item) => item.label)).toEqual(['Copy']);
+    expect(groups[0].map((item) => item.label)).toEqual(['Copy', 'Paste from clipboard…']);
   });
 
   it('offers Copy for a terminal selection too', () => {
     const groups = defaultMenuGroups(
       target({ selectionText: 'aa bb', selectionSource: 'terminal' }), actions,
     );
-    expect(groups[0].map((item) => item.label)).toEqual(['Copy']);
+    expect(groups[0].map((item) => item.label)).toEqual(['Copy', 'Paste from clipboard…']);
   });
 
   it('omits Paste for a live terminal copy region even with a resolved paste target', () => {
@@ -106,30 +92,39 @@ describe('defaultMenuGroups', () => {
       target({ selectionText: 'aa bb', selectionSource: 'terminal', pasteTarget: input('text') }),
       actions,
     );
-    expect(groups[0].map((item) => item.label)).toEqual(['Copy']);
+    expect(groups[0].map((item) => item.label)).toEqual(['Copy', 'Paste from clipboard…']);
   });
 
   it('still offers Paste for a terminal target with no active copy region', () => {
     const groups = defaultMenuGroups(
       target({ selectionSource: 'terminal', pasteTarget: input('text') }), actions,
     );
-    expect(groups[0].map((item) => item.label)).toEqual(['Paste']);
+    expect(groups[0].map((item) => item.label)).toEqual(['Paste', 'Paste from clipboard…']);
   });
 
-  it('yields no group at all when neither entry applies', () => {
-    expect(defaultMenuGroups(target(), actions)).toEqual([]);
+  // The one entry that cannot be withheld is the one that made a right-click on a bare terminal open
+  // no menu at all, which is what this family of assertions used to record as the expected outcome.
+  it('still offers the clipboard entry where neither other entry applies', () => {
+    expect(defaultMenuGroups(target(), actions).map((group) => group.map((item) => item.label)))
+      .toEqual([['Paste from clipboard…']]);
   });
 
   it('activating an entry calls the action with what it acts on', () => {
     const copy = vi.fn();
     const paste = vi.fn();
+    const pasteFromClipboard = vi.fn();
     const field = input('text');
+    const clicked = div(false);
     const groups = defaultMenuGroups(
-      target({ selectionText: 'hello', pasteTarget: field }), { copy, paste },
+      target({ selectionText: 'hello', pasteTarget: field, clicked }), { copy, paste, pasteFromClipboard },
     );
     groups[0][0].onActivate();
     groups[0][1].onActivate();
+    groups[0][2].onActivate();
     expect(copy).toHaveBeenCalledWith('hello');
     expect(paste).toHaveBeenCalledWith(field);
+    // The right-clicked element, not the paste target: it is the answer to where the user aimed, and
+    // on a terminal there is no paste target to take instead.
+    expect(pasteFromClipboard).toHaveBeenCalledWith(clicked);
   });
 });

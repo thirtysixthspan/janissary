@@ -13,7 +13,7 @@ const makeClient = () => {
     emit: (route: RouteChooserView | null, secondary?: number) => {
       listener?.({
         t: 'state', tabs: [], activeTab: 0, secondaryTab: secondary, route,
-        tabNameMaxLength: 16, activeTabNameMaxLength: 50, globalHistory: [],
+        tabNameMaxLength: 16, activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: [],
         syntaxTheme: 'github-dark', theme: 'dark', tasks: [],
         profiles: [], projectDir: '', version: '', harnessLaunch: null, scheduleLaunch: null,
       });
@@ -30,6 +30,7 @@ const makeSetters = () => ({
   setScheduleLaunch: vi.fn(),
   setTabNameMaxLength: vi.fn(),
   setActiveTabNameMaxLength: vi.fn(),
+  setClipboardHistoryMaxEntries: vi.fn(),
   setGlobalHistory: vi.fn(),
   setSyntaxTheme: vi.fn(),
   setTheme: vi.fn(),
@@ -47,7 +48,7 @@ describe('useServerState', () => {
     const snapshot: StateEvent = {
       t: 'state', tabs: [], activeTab: 2, secondaryTab: 5,
       route: { cmd: 'route-command', choices: ['shell', 'acp'] },
-      tabNameMaxLength: 19, activeTabNameMaxLength: 63, globalHistory: ['previous-command'],
+      tabNameMaxLength: 19, activeTabNameMaxLength: 63, clipboardHistoryMaxEntries: 15, globalHistory: ['previous-command'],
       syntaxTheme: 'monokai', theme: 'light',
       tasks: [{ path: 'task.md', name: 'task', depth: 3, dir: false, source: 'project' }],
       profiles: [{ name: 'profile', source: 'janissary' }],
@@ -62,6 +63,7 @@ describe('useServerState', () => {
     expect(setters.setRoute).toHaveBeenCalledWith(snapshot.route);
     expect(setters.setTabNameMaxLength).toHaveBeenCalledWith(19);
     expect(setters.setActiveTabNameMaxLength).toHaveBeenCalledWith(63);
+    expect(setters.setClipboardHistoryMaxEntries).toHaveBeenCalledWith(15);
     expect(setters.setGlobalHistory).toHaveBeenCalledWith(['previous-command']);
     expect(setters.setSyntaxTheme).toHaveBeenCalledWith('monokai');
     expect(setters.setTheme).toHaveBeenCalledWith('light');

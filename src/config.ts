@@ -22,6 +22,10 @@ export type Config = {
   transcriptMaxLines: number;
   tabNameMaxLength: number;
   activeTabNameMaxLength: number;
+  // How many entries the clipboard-history popup keeps (see `clipboard-history` in the specs). A cap
+  // rather than a count of everything copied, so the popup stays a menu. Hand-edited, like
+  // `transcriptMaxLines`, and read by the client — the browser has no storage of its own.
+  clipboardHistoryMaxEntries: number;
   // Isolate workspaced tabs (`agent --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
@@ -56,6 +60,7 @@ export type Config = {
 export const DEFAULT_TRANSCRIPT_MAX_LINES = 25_000;
 export const DEFAULT_TAB_NAME_MAX_LENGTH = 16;
 export const DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH = 50;
+export const DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES = 15;
 // Cap for the tab-rename input itself, independent of tabNameMaxLength (which only truncates
 // the tab strip's *display* label). Editor-tab renames go straight to a file-system rename, so
 // this needs to accommodate real file names rather than the short display length.
@@ -67,6 +72,7 @@ const DEFAULT_CONFIG: Config = {
   transcriptMaxLines: DEFAULT_TRANSCRIPT_MAX_LINES,
   tabNameMaxLength: DEFAULT_TAB_NAME_MAX_LENGTH,
   activeTabNameMaxLength: DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
+  clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
   sandboxWorkspaces: true,
   interactiveShellDetection: true,
   syntaxTheme: DEFAULT_SYNTAX_THEME,

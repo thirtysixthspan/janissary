@@ -1,11 +1,11 @@
 // The plugin architecture's import boundaries, as lint rules.
 //
-// Five layers, each with its own rule because each has a different neighbour it must not reach: a
+// Six layers, each with its own rule because each has a different neighbour it must not reach: a
 // concrete tab plugin (server and client), the host's plugin infrastructure, core, a concrete editor
-// plugin, and the client plugin host. Together they enforce the two architectural promises
-// `ai/guidelines/plugins.md` makes — plugins depend only on a published contract, and concrete
-// behavior is reachable only through a lazy loader map, never a static import that would drag it
-// into startup or the client entry chunk.
+// plugin, the client plugin host, and a concrete overlay plugin. Together they enforce the two
+// architectural promises `ai/guidelines/plugins.md` makes — plugins depend only on a published
+// contract, and concrete behavior is reachable only through a lazy loader map, never a static import
+// that would drag it into startup or the client entry chunk.
 //
 // Every block below is exercised by `src/eslint-plugin-boundaries.test.ts`, with a rejected and an
 // allowed case each: a regex that stops matching disables its rule silently, and the first symptom
@@ -130,6 +130,24 @@ export const pluginBoundaries = [
         }, {
           regex: String.raw`^\./[^/]+/`,
           message: 'The client plugin host must reach a plugin entry only through the literal import() in registry.tsx.',
+        }],
+      }],
+    },
+  },
+  // A concrete overlay plugin: the popup that floats above the command line. Its whole vocabulary is
+  // `api.ts` — a declaration, a chord, a command word, and one paste capability — plus two things it
+  // cannot do without: the capture seam every copy in the application already publishes to, which is
+  // the plugin's data source, and its own files. Reaching for the pickers, the context menu, the
+  // command bar, or the window key handler would be a plugin reimplementing host plumbing, and every
+  // one of those is reachable the supported way instead.
+  {
+    files: ['web/src/overlay-plugins/*/**/*.ts', 'web/src/overlay-plugins/*/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          regex: String.raw`^\.\.(?!(?:/\.\./shared/clipboard-captures|/api)$)`,
+          message: 'Overlay plugins must use web/src/overlay-plugins/api.ts capabilities instead of host internals.',
         }],
       }],
     },

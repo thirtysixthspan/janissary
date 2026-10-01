@@ -112,7 +112,7 @@ describe('harness terminal selection with the default context menu', () => {
       fireEvent.contextMenu(input, { clientX: 30, clientY: 40 });
       const entry = await screen.findByText('Chat about this');
       expect(screen.getAllByRole('menuitem').map((item) => item.textContent))
-        .toEqual(['Copy', 'Chat about this']);
+        .toEqual(['Copy', 'Paste from clipboard…', 'Chat about this']);
       expect(request).toHaveBeenCalledExactlyOnceWith({
         method: 'defaultMenuSelectionAction', params: { selection: 'aa bb\ncc dd' },
       });

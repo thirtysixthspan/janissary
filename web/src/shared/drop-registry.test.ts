@@ -66,7 +66,7 @@ describe('harness drop registry', () => {
 
 describe('editor drop registry', () => {
   it('returns a registered handle by its tab label, and nothing once removed', () => {
-    const handle = { insertAtCaret: vi.fn() };
+    const handle = { insertAtCaret: vi.fn(), pasteAtCaret: vi.fn() };
     const unregister = registerEditorDrop('notes', handle);
 
     expect(editorDropHandle('notes')).toBe(handle);
@@ -75,7 +75,7 @@ describe('editor drop registry', () => {
   });
 
   it('keeps editors and harnesses apart even under the same key', () => {
-    const editor = { insertAtCaret: vi.fn() };
+    const editor = { insertAtCaret: vi.fn(), pasteAtCaret: vi.fn() };
     const unregister = registerEditorDrop('shared-key', editor);
 
     expect(harnessDropHandle('shared-key')).toBeUndefined();

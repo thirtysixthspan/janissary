@@ -13,6 +13,7 @@ type Setters = {
   setScheduleLaunch: (view: ScheduleLaunchView | null) => void;
   setTabNameMaxLength: (length: number) => void;
   setActiveTabNameMaxLength: (length: number) => void;
+  setClipboardHistoryMaxEntries: (entries: number) => void;
   setGlobalHistory: (history: string[]) => void;
   setSyntaxTheme: (theme: string) => void;
   setTheme: (theme: string) => void;
@@ -28,13 +29,21 @@ export function useTabNameLimits() {
   return { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength };
 }
 
+// The browser has no storage of its own, so the clipboard-history cap is the one tunable the client
+// reads rather than owns: it comes down in the state snapshot from `.janissary/config.json`.
+export function useClipboardHistoryCap() {
+  const [clipboardHistoryMaxEntries, setClipboardHistoryMaxEntries] = useState(15);
+  return { clipboardHistoryMaxEntries, setClipboardHistoryMaxEntries };
+}
+
 // Subscribes App to server state snapshots, fanning each field out to its setter. Split out of
 // App.tsx to keep it under the file-size limit. Also mirrors `projectDir` into the titlebar, since
 // that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
     setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
-    setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme,
+    setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries,
+    setGlobalHistory, setSyntaxTheme, setTheme,
     setTasks, setProfiles, setRouteIndex, routeRef,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
@@ -43,6 +52,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
   useEffect(() => client.onState(({
     tabs: nextTabs, activeTab: active, secondaryTab: secondary, route: nextRoute,
     tabNameMaxLength: nextTabNameMaxLength, activeTabNameMaxLength: nextActiveTabNameMaxLength,
+    clipboardHistoryMaxEntries: nextClipboardHistoryMaxEntries,
     globalHistory: nextGlobalHistory, syntaxTheme: nextSyntaxTheme, theme: nextTheme,
     tasks: nextTasks, profiles: nextProfiles,
     projectDir: nextProjectDir, version: nextVersion,
@@ -56,6 +66,7 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setScheduleLaunch(nextScheduleLaunch);
     setTabNameMaxLength(nextTabNameMaxLength);
     setActiveTabNameMaxLength(nextActiveTabNameMaxLength);
+    setClipboardHistoryMaxEntries(nextClipboardHistoryMaxEntries);
     setGlobalHistory(nextGlobalHistory);
     setSyntaxTheme(nextSyntaxTheme);
     setTheme(nextTheme);
@@ -72,7 +83,8 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     }
   }), [
     client, setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
-    setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme, setTheme,
+    setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries,
+    setGlobalHistory, setSyntaxTheme, setTheme,
     setTasks, setProfiles, setRouteIndex, routeRef,
   ]);
 }

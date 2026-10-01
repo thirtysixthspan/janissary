@@ -95,7 +95,7 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
       // copying from the layer releases the pick it just copied — the overlay clears with it.
       const layerHeld = selectionRef.current.holds();
       if (copySelectionChord(e, isMac) && (layerHeld || term.hasSelection())) {
-        void navigator.clipboard.writeText(layerHeld ? selectionRef.current.text() : term.getSelection());
+        copyText(layerHeld ? selectionRef.current.text() : term.getSelection());
         if (layerHeld) selectionRef.current.clear();
         return false;
       }

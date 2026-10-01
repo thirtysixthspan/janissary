@@ -83,7 +83,7 @@ describe('JanusClient', () => {
     messageHandler!({
       data: JSON.stringify({
         t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, route: null, tabNameMaxLength: 20,
-        activeTabNameMaxLength: 40,
+        activeTabNameMaxLength: 40, clipboardHistoryMaxEntries: 15,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
         profiles: [], projectDir: '/tmp', version: '1.2.3',
         harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } },
@@ -92,7 +92,7 @@ describe('JanusClient', () => {
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith({
       t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, route: null,
-      tabNameMaxLength: 20, activeTabNameMaxLength: 40, globalHistory: [],
+      tabNameMaxLength: 20, activeTabNameMaxLength: 40, clipboardHistoryMaxEntries: 15, globalHistory: [],
       syntaxTheme: 'monokai', theme: 'dark', tasks: [],
       profiles: [], projectDir: '/tmp', version: '1.2.3',
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] } }, scheduleLaunch: null,
@@ -108,7 +108,7 @@ describe('JanusClient', () => {
     const snapshot: StateEvent = {
       t: 'state', tabs: [], activeTab: 1, secondaryTab: 3,
       route: { cmd: 'command', choices: ['shell', 'acp'] },
-      tabNameMaxLength: 23, activeTabNameMaxLength: 71, globalHistory: ['history'],
+      tabNameMaxLength: 23, activeTabNameMaxLength: 71, clipboardHistoryMaxEntries: 15, globalHistory: ['history'],
       syntaxTheme: 'monokai', theme: 'light', tasks: [],
       profiles: [], projectDir: '/project', version: '7.8.9',
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'] },

@@ -14,6 +14,7 @@ import { statusButton } from '../shared/status-windows/status-button';
 import { tabBodyBorder } from '../shared/tab/body-border';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 import { remoteSessionControl } from '../shared/remote-session-control';
+import { copyText } from '../shared/system-clipboard';
 
 type Properties = {
   current: TabView;
@@ -58,7 +59,7 @@ export function AgentTabBody({
       style={{ borderLeft: tabBodyBorder(current.dotColor, true) }}
       onMouseUp={() => {
         const selection = globalThis.getSelection()?.toString();
-        if (selection) { navigator.clipboard.writeText(selection); return; }
+        if (selection) { copyText(selection); return; }
         inputReference.current?.focus();
       }}
     >
