@@ -58,6 +58,12 @@ describe('EditorMetaName', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
+  it('does not auto-start the rename for a new file named when it was opened', () => {
+    setup(makeView({ name: 'plan.md', newFile: true, named: true }));
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(document.querySelector('.editor-name')?.textContent).toBe('plan.md');
+  });
+
   it('double-clicking the name starts the edit pre-filled', () => {
     setup(makeView());
     expect(screen.queryByRole('textbox')).toBeNull();

@@ -175,6 +175,15 @@ describe('EditorTab', () => {
     expect(textareaFor('untitled.md')).not.toBe(document.activeElement);
   });
 
+  it('a new-file tab named when it was opened focuses the buffer, not the metadata row name', async () => {
+    const { client } = makeClient();
+    const view = makeView({ name: 'plan.md', path: '/home/user/plan.md', newFile: true, named: true, size: 'unknown' });
+    const { container } = render(<EditorTab editor={view} tab={makeTab({ editor: view })} client={client} active />);
+    await waitFor(() => expect(document.activeElement).toBe(textareaFor('plan.md')));
+    expect(container.querySelector('.editor-name-input')).toBeNull();
+    expect(nameText(container)).toBe('plan.md');
+  });
+
   it('accepting the new name in the metadata row sends renameEditorFile and returns focus to the buffer', async () => {
     const { client, renameEditorFile } = makeClient();
     const view = makeView({ name: 'untitled.md', path: '/home/user/untitled.md', newFile: true, size: 'unknown' });

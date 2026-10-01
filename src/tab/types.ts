@@ -120,6 +120,9 @@ export type EditorView = {
   // cleared once the buffer is saved. Drives the new-file-only save auto-suffix, de-dupe bypass,
   // and rename-sets-filename behavior (see the new-text-file-button plan).
   newFile?: boolean;
+  // Set when the command that opened this new file already named it (`newfile <file>`), so the tab
+  // skips the rename session a default-named new file starts with and focuses the buffer instead.
+  named?: boolean;
   // Set only for a file whose project-relative path is config-listed for GitHub syncing (see
   // `src/git/sync.ts`); absent entirely for an ordinary editor tab, so the sync status icon simply
   // doesn't render. `provisioning` covers the shared sync workspace's first-open clone/pull;
