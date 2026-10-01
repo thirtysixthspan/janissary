@@ -4,22 +4,6 @@
 
 ## development
 
-* pull-request-testing (1/10) — Not a user-documentation gap: all 6 facts in `product/specs/pull-request-testing.md` describe this repository's own test-pull-request agent task (`ai/tasks/test-pull-request.md`), not a command or behaviour of the Janissary app. `pull-request-review` was judged the same way in an earlier run. No page under `documentation/user-documentation/` or `help.md` row should carry it.
-
-* pull-request-updating (1/10) — Not a user-documentation gap: all 5 facts in `product/specs/pull-request-updating.md` describe this repository's own update-pull-request agent task (`ai/tasks/update-pull-request.md`), not a command or behaviour of the Janissary app. The spec itself leaves user documentation pages to the documentation workflow, so nothing belongs in `documentation/user-documentation/` or `help.md`.
-
-* command-routing (1/10) — Not a gap: fix(web) #1472 made the app match what `documentation/user-documentation/command-bar/shell.md` already said, that the route chooser is modal and the command bar is disabled until you choose or cancel. The one new detail in `product/specs/command-routing.md` is that focus returns to the command bar when the chooser closes. That is the expected default, not a fact a reader needs.
-
-* cli (1/10) — Not a gap: fix(cli) #1471 made the launcher match what `documentation/user-documentation/getting-started/startup.md` already said, that a `<project-dir>` which doesn't exist or isn't a directory stops the launch with a pointer to `--help`, starts nothing, and exits with code 2. The only change to `product/specs/cli.md` is the internal detail that `bin/janus.mjs` runs the server attached in that case, which is implementation and not user documentation.
-
-* agent-questions — flagged by fix(web) #1470 (a question panel's `Tab` moves from the focused button) and the tab-name wording change in `product/specs/agent-questions.md` from #1467; not yet evaluated (over this run's limit)
-
-* keyboard-navigation — flagged by `product/specs/keyboard-navigation.md` gaining the `Cmd+Shift+F` row in #1481 with no matching change to `documentation/user-documentation/getting-started/keyboard.md`; not yet evaluated (over this run's limit, and largely covered by the `search-tab` entry)
-
-* database — flagged by `product/specs/database.md` gaining a "Browsing a database" section in #1467 with no change to `documentation/user-documentation/command-bar/database.md`; not yet evaluated (over this run's limit, and largely covered by the `sql-database` entry)
-
-* connection — flagged by `product/specs/connection.md` gaining the rule that a SQL browser's database appears in `connection list` but not in its own connections panel (#1467); not yet evaluated (over this run's limit)
-
 ## deferred
 
 ## declined
@@ -205,3 +189,11 @@
 * notifications — documented in documentation/user-documentation/tab-types/notifications.md; the feed section now covers file icons and where they come from, the agent-question tab link (the only event that carries one, not every line as the entry implied), the gathered icons on a folded line, and the single queue slot a folded run takes (removed 2026-09-30)
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md, documentation/user-documentation/getting-started/tabs.md; Lifecycle now says ending a harness ends every process it started, with the two-second grace, the daemon exception, and the same cleanup for ssh sessions, terminal cards, and remote harnesses, and the busy-dot paragraph gives the roughly-two-second settle (removed 2026-09-30)
 * profiles — documented in documentation/user-documentation/automation/profiles.md; the storage paragraph says the first `profile save` creates `profiles/`, and the save section quotes the `could not write profile` failure line (removed 2026-09-30)
+* pull-request-testing — not a gap: product/specs/pull-request-testing.md describes this repository's own test-pull-request agent task, not a command or behaviour of the app, so no user page or help.md row should carry it (removed 2026-09-30)
+* pull-request-updating — not a gap: product/specs/pull-request-updating.md describes this repository's own update-pull-request agent task, not a command or behaviour of the app (removed 2026-09-30)
+* command-routing — not a gap: fix(web) #1472 made the route chooser disable the command bar, which documentation/user-documentation/command-bar/shell.md already said it did (removed 2026-09-30)
+* cli — not a gap: fix(cli) #1471 made the launcher report a missing or non-directory `<project-dir>` as the usage error documentation/user-documentation/getting-started/startup.md already described (removed 2026-09-30)
+* agent-questions — not a gap: fix(web) #1470 made `Tab` step from the focused button, which documentation/user-documentation/advanced-agents/agent-questions.md already described, and the `Question from <tab>` line needs no change for the tab-name wording (removed 2026-09-30)
+* keyboard-navigation — documented in documentation/user-documentation/getting-started/keyboard.md and help.md as part of the search-tab work, which added the `Cmd+Shift+F` row (removed 2026-09-30)
+* database — documented in documentation/user-documentation/command-bar/database.md as part of the sql-database work, which added a "Browse a database instead" section linking the SQL browser (removed 2026-09-30)
+* connection — documented in documentation/user-documentation/command-bar/connections.md; a SQL browser's database is listed as `sqlite:<name>` but never in the browser tab's own panel, and a closed one reopens when the browser next uses it (removed 2026-09-30)
