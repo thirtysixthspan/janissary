@@ -44,4 +44,4 @@ Search needs a transcript, so it's available on agent tabs and nowhere else. A v
 
 Run from a schedule or with [`send`](/user-documentation/command-bar/send), where no one is watching the bar, `search transcript <pattern>` writes its answer into the transcript instead: the most recent matching line, or `No matches found in the transcript.`
 
-To search inside a file rather than a transcript, open it in the [editor](/user-documentation/tab-types/editor#find-a-line) and press `Cmd+F` there.
+To search inside a file rather than a transcript, open it in the [editor](/user-documentation/tab-types/editor#find-a-line) and press `Cmd+F` there. To search every file in the project, press `Cmd+Shift+F` to open the [search tab](/user-documentation/command-bar/project-search).

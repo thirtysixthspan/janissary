@@ -33,6 +33,7 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `Ctrl+O` | Move the command currently running into a full-tab terminal, where you can type to it; does nothing when nothing is running |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
 | `Cmd+F` | Search the current tab's transcript |
+| `Cmd+Shift+F` | Open the [project search tab](/user-documentation/command-bar/project-search), or focus it if it is open |
 | `Cmd+P` | Open the Quick Open file finder |
 | `Cmd+T` | Open a new [workspaced agent tab](/user-documentation/advanced-agents/workspaced-agent) |
 | `Cmd+I` / `Ctrl+I` | Start a chat with the current text selection |
