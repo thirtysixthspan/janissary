@@ -126,6 +126,11 @@ caret return to the top of the editor buffer; the Enter that accepts the name is
 into the buffer, so the caret stays on line 1 and the buffer is unchanged. The metadata row's file name keeps working as a
 double-click-to-rename field afterwards, the same way a tab label is renamed.
 
+A new file opened with the `newfile <file>` command is the exception: the name was given with the
+command, so no rename session starts. The tab opens with keyboard focus in the editor buffer, ready
+for typing, and the metadata row shows the name as plain text that can still be double-clicked to
+rename.
+
 Renaming the same file from the file navigator instead (see `file-navigator-tab.md`) has the same
 effect on an already-open editor tab: its name and path update to match, with its unsaved content,
 dirty state, cursor, and undo history preserved exactly as above — the buffer is never reloaded.

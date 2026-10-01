@@ -83,6 +83,25 @@ describe('OpenFileManager.edit', () => {
     expect(opened[0].line).toBe(42);
   });
 
+  // Only `newfile` names its new file for the user; `edit` on a missing path keeps the rename session.
+  it('does not mark a new file opened by edit as named', () => {
+    const opened: { newFile?: boolean; named?: boolean }[] = [];
+    const managers = {
+      tab: {
+        cwdOf: () => mkdtempSync(path.join(tmpdir(), 'janus-edit-new-')),
+        append: () => {},
+        openEditorTab: (view: { newFile?: boolean; named?: boolean }) => { opened.push(view); return 'editor'; },
+        registerFile: (p: string) => `/open/test-${p.length}`,
+      },
+    } as unknown as Managers;
+
+    new OpenFileManager(managers).edit('edit notes.txt', 'notes.txt', 'janus');
+
+    expect(opened).toHaveLength(1);
+    expect(opened[0].newFile).toBe(true);
+    expect(opened[0].named).toBeUndefined();
+  });
+
   it('returns no editor result when an oversized file is refused', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'janus-large-edit-'));
     const file = path.join(dir, 'large.txt');
@@ -210,6 +229,25 @@ describe('OpenFileManager.newFile', () => {
     mgr.newFile('newfile untitled.md', 'untitled.md', 'janus');
 
     expect(opened).toEqual([path.join(dir, 'untitled-3.md')]);
+  });
+
+  // The command already carries the name, so the editor opens in its buffer rather than a rename.
+  it('marks the opened new-file view as named', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-newfile-'));
+    const views: { path: string; newFile?: boolean; named?: boolean }[] = [];
+    const managers = {
+      tab: {
+        cwdOf: () => dir,
+        append: () => {},
+        openEditorTab: (view: { path: string; newFile?: boolean; named?: boolean }) => { views.push(view); },
+        registerFile: vi.fn((p: string) => `/open/test-${p.length}`),
+      },
+    } as unknown as Managers;
+
+    new OpenFileManager(managers).newFile('newfile notes.txt', 'notes.txt', 'janus');
+
+    expect(views).toHaveLength(1);
+    expect(views[0]).toMatchObject({ path: path.join(dir, 'notes.txt'), newFile: true, named: true });
   });
 });
 

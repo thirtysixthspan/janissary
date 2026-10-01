@@ -24,6 +24,7 @@ import { OverwriteConflictDialog } from './OverwriteConflictDialog';
 import { EditorMetaRow } from './EditorMetaRow';
 import { commitAfterSave, renameAndRefocus, sendResync } from './editor-file-commands';
 import { useEditorDrop } from './useEditorDrop';
+import { opensRenameSession } from './new-file-rename';
 import type { DirtyTabHandle } from '../shared/tab/handles';
 
 // The plain-text editor tab. Mounted persistently by App (like harness tabs) so the buffer, undo
@@ -75,10 +76,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const onBodyScroll = useEditorScrollRetention(bodyRef, visible);
 
   const loaded = state !== null;
-  // While the metadata row's rename session is open (a new file auto-starts one), the loaded
-  // buffer must not steal the keyboard back from the rename input. The flag starts at the tab's
-  // own newFile state: the loaded effect would otherwise fire before the session reports in.
-  const [renaming, setRenaming] = useState(editor.newFile === true);
+  // While the metadata row's rename session is open (a default-named new file auto-starts one), the
+  // loaded buffer must not steal the keyboard back from the rename input. The flag starts at the
+  // same rule the session does: the loaded effect would otherwise fire before the session reports in.
+  const [renaming, setRenaming] = useState(opensRenameSession(editor));
   // `preventScroll` because the textarea is pinned to the top of the scrollport (see theme.css): a
   // plain focus() on a scrolled buffer drags it back into view, undoing the restored position.
   useEffect(() => {
