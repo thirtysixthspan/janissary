@@ -38,7 +38,8 @@ function noTab(): undefined {
 
 function setup(currentTab: () => TabView | undefined, dropRef: { current: CommandInputDropHandle | null }) {
   const client = { send: vi.fn() } as unknown as JanusClient;
-  return { client, paste: createPasteCapability({ client, dropRef, currentTab }) };
+  const focusHarness = vi.fn();
+  return { client, focusHarness, paste: createPasteCapability({ client, dropRef, currentTab, focusHarness }) };
 }
 
 beforeEach(() => {
@@ -89,6 +90,27 @@ describe('paste into whatever holds the caret', () => {
     expect(client.send).toHaveBeenCalledWith({ method: 'ptyInput', params: { id: 'pty-7', data: 'typed at the prompt' } });
     // No trailing Enter, unlike `typeIntoHarness` which exists to run a command on the user's behalf.
     expect(vi.mocked(client.send).mock.calls[0]?.[0]).not.toMatchObject({ params: { data: expect.stringContaining('\r') } });
+  });
+
+  // The PTY route is picked from the tab rather than from a focused element, so it is the one route that
+  // would otherwise leave the keyboard wherever it happened to be.
+  it('puts the keyboard on the harness it typed into', () => {
+    const { focusHarness, paste } = setup(() => harnessTab('pty-7'), { current: null });
+
+    paste('typed at the prompt', null);
+
+    expect(focusHarness).toHaveBeenCalledWith('pty-7');
+  });
+
+  it('focuses no harness when the paste lands somewhere else', () => {
+    const { textarea, handle } = commandBar();
+    const { focusHarness, paste } = setup(() => harnessTab('pty-7'), { current: handle });
+    textarea.focus();
+
+    paste('into the bar', null);
+
+    expect(handle.insertAtCaret).toHaveBeenCalledWith('into the bar');
+    expect(focusHarness).not.toHaveBeenCalled();
   });
 
   it('falls back to the command bar when there is nothing else to paste into', () => {

@@ -35,6 +35,7 @@ function options(maxEntries: number, overrides: Partial<UseOverlayPluginsOptions
     dropRef: DROP_REF,
     maxEntries,
     currentTab: () => TAB,
+    focusHarness: () => {},
     tabLabel: TAB.label,
     ...overrides,
   };

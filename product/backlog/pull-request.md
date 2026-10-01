@@ -2,5 +2,3 @@
 
 # pull-request
 
-* after pasting into a harness tab from the clipboard, the keyboard focus must return to the harness.   		
- 

@@ -36,7 +36,7 @@ The text lands at the keyboard caret:
 
 - in a **command bar**, at the caret, replacing any selected text and leaving the rest of the line alone;
 - in an **editor buffer**, at the caret, with the caret left at the *start* of the pasted text so the next keystroke continues before it — what a paste in an editor does everywhere else;
-- in a **harness or ssh terminal**, typed at the prompt as terminal input and *not* submitted. Pasting does not run what it pastes.
+- in a **harness or ssh terminal**, typed at the prompt as terminal input and *not* submitted. Pasting does not run what it pastes. The keyboard is left in that terminal afterwards, even if it was somewhere else when the popup opened, so typing carries on at the prompt.
 
 A field the keyboard is in always wins over a tab-level choice, so pasting from the clipboard popup into the Quick Open box on a harness tab puts the text in that box.
 

@@ -37,6 +37,10 @@ export type PasteCapabilityOptions = {
   // The exposed tab, read at paste time rather than captured, so a tab switch between opening the
   // overlay and choosing an entry lands in the tab the user is looking at now.
   currentTab: () => TabView | undefined;
+  // Puts the keyboard on the harness terminal with this PTY id. The PTY route is chosen from the tab
+  // rather than from a focused element, so unlike the command bar and the editor it focuses nothing
+  // by itself, and the user expects to keep typing at the prompt they just pasted into.
+  focusHarness: (ptyId: string) => void;
 };
 
 // Where the user was typing. While an overlay is open it holds the keyboard itself, so the answer is
@@ -74,6 +78,7 @@ function pasteIntoPty(options: PasteCapabilityOptions, text: string): boolean {
   const ptyId = options.currentTab()?.harness?.ptyId;
   if (!ptyId) return false;
   options.client.send({ method: 'ptyInput', params: { id: ptyId, data: text } });
+  options.focusHarness(ptyId);
   return true;
 }
 

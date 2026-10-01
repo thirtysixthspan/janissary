@@ -75,9 +75,10 @@ export function App({ client }: { client: JanusClient }) {
   // `currentTab` is a callback because the host is built once and needs the tab at the moment a paste
   // happens; it is wrapped so the hook's memo does not see a new function on every render.
   const currentTabForOverlay = useCallback(() => currentRef.current, []);
+  const focusHarness = useCallback((ptyId: string) => { harnessHandles.current.get(ptyId)?.focus(); }, [harnessHandles]);
   useOverlayPlugins({
     client, dropRef: dropReference, maxEntries: clipboardHistoryMaxEntries,
-    currentTab: currentTabForOverlay, tabLabel: current?.label,
+    currentTab: currentTabForOverlay, focusHarness, tabLabel: current?.label,
   });
 
   const { canSearch, search, highlight } = useViewSearchState(current, lines);

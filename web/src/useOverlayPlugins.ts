@@ -28,7 +28,8 @@ import { createPasteCapability } from './paste-into-surface';
 // value the memo below depends on has to be stable, and a caller's `() => currentTab` is a fresh
 // identity on every render even though what it reads has not changed. Depend on it and the host is
 // rebuilt — and the effect that disposes it runs — on ordinary shell re-renders, which is enough to
-// throw away a plugin's history and drop its subscriptions.
+// throw away a plugin's history and drop its subscriptions. `focusHarness` is behind a ref for the
+// same reason.
 //
 // `tabLabel` is the exposed tab's label, and a change to it closes any open overlay. An overlay is a
 // modal over the tab it opened on, so it does not follow the user to another one. The label rather
@@ -40,16 +41,19 @@ export type UseOverlayPluginsOptions = {
   dropRef: React.RefObject<CommandInputDropHandle | null>;
   maxEntries: number;
   currentTab: () => TabView | undefined;
+  focusHarness: (ptyId: string) => void;
   tabLabel: string | undefined;
 };
 
 export function useOverlayPlugins(options: UseOverlayPluginsOptions): OverlayPluginHost {
-  const { client, dropRef, maxEntries, currentTab, tabLabel } = options;
+  const { client, dropRef, maxEntries, currentTab, focusHarness, tabLabel } = options;
 
   const maxEntriesRef = useRef(maxEntries);
   maxEntriesRef.current = maxEntries;
   const currentTabRef = useRef(currentTab);
   currentTabRef.current = currentTab;
+  const focusHarnessRef = useRef(focusHarness);
+  focusHarnessRef.current = focusHarness;
 
   const onDisabled = useMemo(
     () => (plugin: string, reason: string) => {
@@ -66,7 +70,11 @@ export function useOverlayPlugins(options: UseOverlayPluginsOptions): OverlayPlu
 
   const host = useMemo(
     () => createOverlayPluginHost(onDisabled, {
-      paste: createPasteCapability({ client, dropRef, currentTab: () => currentTabRef.current() }),
+      paste: createPasteCapability({
+        client, dropRef,
+        currentTab: () => currentTabRef.current(),
+        focusHarness: (ptyId) => { focusHarnessRef.current(ptyId); },
+      }),
       get maxEntries() { return maxEntriesRef.current; },
     }),
     [client, dropRef, onDisabled],
