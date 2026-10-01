@@ -4,17 +4,6 @@
 
 ## development
 
-* Route the file navigator's row-stat fallback and saved-view restore through the tab's filesystem port, so a remote navigator never mixes in stats or directory checks read from the local disk.
-
-Existing Debt: The file navigator abstracts local and remote trees behind its filesystem port, but two modules still read the local disk directly by joining the tab's root onto a local path — the row-stat marker for any row not yet in the stat cache, and the saved-view restore for its directory checks — which is correct only for a local tab. Severity: 5/10
-
-Existing Risk: 5/10 - On a remote navigator in a size, modified, or permissions detail mode, a row whose remote stat is still in flight is cached with the local host's `lstat` of the same relative path, and because the async fill skips already-cached paths that wrong value stays; restoring a saved view onto a remote tab is judged against local directories and silently keeps or drops the wrong expansions.
-
-Proposal Risk: 2/10 - Only the port reads the filesystem, so local and remote tabs share one path; the remaining risk is a brief moment where a row shows no detail until its stat arrives, which the async path already intends and a local-tab render test would catch if it regressed visibly.
-
-Proposal: `buildCachedRows` in `src/file-navigator/filesystem-cache.ts` calls `fillStats` (which asks `state.filesystem` for missing stats) and then `markStats` from `src/file-navigator/stats.ts`, which for any path absent from `state.stats` calls `readRowStat(path.join(state.root, row.path))` — a synchronous local `lstatSync` — and caches the result. Make `markStats` read only `state.stats` and leave a row without detail when its stat is not cached yet, so `fillStats` is the only writer; check `LocalFileSystemPort.statRows` in `src/file-navigator/filesystem-port.ts` to see whether local tabs then need one extra async round before details show, and if so keep that round as short as the existing `onReady` rebuild allows. In `src/file-navigator/restore.ts`, `restoreTreeView` uses `statSync(path.join(state.root, relPath))` and `buildRows(state.root, state.expanded)` with the local directory reader; switch it to `state.filesystem.readDirectory`/`statRows`, deferring the validation until the listing arrives when the port is asynchronous. Tests: `src/file-navigator/stats.test.ts` pins the current lazy `lstat` and must be rewritten to assert a cache-only read; `src/file-navigator/filesystem-cache.test.ts` carries a `state.stats.delete('a.txt')` workaround for this pre-population that should become unnecessary; `src/file-navigator/manager.test.ts` covers `restoreView` for local tabs only — add a remote-port case using the fake port pattern in `src/file-navigator/remote/port.test.ts`.
-
-
 * Tie each cached remote file to the navigator tab that opened it, so closing or retargeting that navigator drops the record instead of leaving later saves to write through a disposed port.
 
 Existing Debt: The remote file cache is a module-level map that stores the filesystem port object itself in each record and is cleared only when a whole remote workspace is cleared, while the navigator disposes that port on close or retarget, so a record outlives the port it points at. Severity: 5/10

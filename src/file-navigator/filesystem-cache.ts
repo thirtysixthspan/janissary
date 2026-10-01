@@ -8,7 +8,9 @@ function isPromise<T>(value: T | Promise<T>): value is Promise<T> {
   return typeof (value as Promise<T>).then === 'function';
 }
 
-function listingFor(
+// A directory's entries from the tab's own filesystem, cached: the listing when it is known, or
+// `undefined` while a read of it is still in flight — `onReady` fires once that read lands.
+export function listingFor(
   state: FilesTabState,
   relPath: string,
   onReady: () => void,
@@ -47,7 +49,7 @@ function fillStats(state: FilesTabState, rows: FileNavigatorRow[], onReady: () =
   if (missing.length === 0) return;
   const result = state.filesystem.statRows(state.root, missing);
   if (!isPromise(result)) {
-    for (const [relPath, stat] of Object.entries(result)) state.stats.set(relPath, stat);
+    for (const relPath of missing) state.stats.set(relPath, result[relPath] ?? null);
     return;
   }
   // Discarded on a generation change for the same reason a listing read is — see `listingFor`.

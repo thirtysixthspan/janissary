@@ -104,6 +104,10 @@ within the workspace provisioned for the channel. The header shows the same host
 tab, ahead of the root path and branch; its text is the bare host and its tooltip is the full remote
 destination.
 
+A remote row's size, modified time, and permissions come only from the remote host. Until they
+arrive the row shows no detail, rather than whatever the local machine happens to hold at the same
+relative path, and a detail read that fails is asked for again on the next refresh.
+
 Opening or editing a remote file reads it into the local remote-file cache and then uses the normal
 opener for its type. Saving a cached editor file writes the content back over the channel. A failed
 write is reported in the notifications feed and leaves the editor dirty. `open external` is not
