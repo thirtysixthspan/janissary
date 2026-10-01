@@ -207,9 +207,10 @@ return value, so **"hidden" is enforced by construction** rather than by a secon
 7. **The event type is `harness-idle`**, kebab-case like every other member of the union. It is
    written verbatim into the `event` field of every line in `.janissary/notifications.json`, so it is
    user-visible to anyone reading that file.
-8. **The line and the toast link back to the tab.** `notify`'s `openTab` option (`src/notifications/index.ts:148`)
+8. **The feed line links back to the tab.** `notify`'s `openTab` option (`src/notifications/index.ts:148`)
    is set to the tab's label, the same way a `question` line links to the asking tab. Clicking is how
-   the user acts on being told.
+   the user acts on being told. A toast carries no link of its own — clicking it reveals the feed,
+   where the linked line is.
 9. **At most one pending escalation per tab.** A new commit *replaces* any pending escalation for
    that tab, restarting the 30 seconds, so a harness running short repeated turns stays quiet and one
    notification arrives 30 seconds after it finally settles. Escalations never stack. Separately, when
