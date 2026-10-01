@@ -240,6 +240,8 @@ export type TabRuntime = {
   busy: boolean;
   context: string[];
   queue: string[];
+  // A harness tab's pending idle escalation, owned by `src/harness/idle-notification.ts`.
+  idleEscalation?: NodeJS.Timeout;
 };
 
 export type Tab = {

@@ -468,13 +468,17 @@ describe('busyStatusHandler idle escalation', () => {
       busy(next);
     };
     const messages = () => managers.notifications.all.map((n) => n.message);
+    current = managers;
     return { handler, harness, janus, managers, messages, tabs, makeActive: (i: number) => { activeIndex = i; } };
   }
+
+  let current: Managers | undefined;
 
   // Dispose before clearing the bus, the order `Controller.shutdown` uses: the escalation releases its
   // own badge-clear subscription, and the next case's first arm attaches a fresh one.
   afterEach(() => {
-    disposeHarnessIdleEscalations();
+    if (current) disposeHarnessIdleEscalations(current);
+    current = undefined;
     messageBus.clear();
     vi.useRealTimers();
   });

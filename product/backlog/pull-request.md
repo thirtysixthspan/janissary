@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Move the harness escalation's per-tab pending timer off a new label-keyed map and onto the harness tab's own per-tab owner, as the architecture principles require of new per-agent state.
-
-Existing Issue: The escalation keeps its per-tab state in a new module-level `Map<string, NodeJS.Timeout>` keyed by tab label, which is the shape `ai/guidelines/architecture-principles.md` § 2 rules out for new per-agent state and its "How to use these" checklist names explicitly, and it needs a hand-added `cancelHarnessIdleEscalation` in `HarnessManager.closeTab` to be released. Severity: 3/10
-
-Existing Risk: 3/10 - The next per-tab harness concern copies this precedent, and each one adds another release line that the tab-close walk depends on someone remembering, which is the leak pattern principle 6 describes.
-
-Proposal Risk: 2/10 - Holding the handle with the tab's harness runtime makes close and dispose release it through the existing walk, though the remote-harness path still has to be confirmed to reach the same owner.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1500: hold the pending idle escalation with the harness tab's per-tab state rather than a label-keyed module map". Replace the `pending` map in `src/harness/idle-notification.ts` with a handle stored on the owner that already holds each harness tab's per-tab resources: either an optional field on the harness payload of the tab record (`Tab.harness` in `src/tab/types.ts`, excluded from the wire projection in `src/tab/view.ts`), or an entry on the per-PTY runtime that `HarnessRuntimes` in `src/harness/runtime-registry.ts` installs from `src/harness/tab-spawn.ts`, so that `HarnessManager.closeTab` and `HarnessManager.dispose` in `src/harness/manager.ts` release it through `this.runtimes` without a separate call. Before choosing, confirm the remote path — `applyBusyTransition` is reached from `src/remote/pty-session.ts` — resolves the same owner for a remote harness tab, and note that `removeTabAt` in `src/tab/reorder.ts` spreads each surviving tab into a new object, so a field on the tab record must be read through `managers.tab.byLabel` at cancel time rather than captured. Keep `armHarnessIdleEscalation`, `cancelHarnessIdleEscalation` and `disposeHarnessIdleEscalations` as the module's public surface so `src/harness/busy-status.ts` and the bus subscription do not change. `src/harness/idle-notification.test.ts`, the escalation block of `src/harness/busy-status.test.ts`, and the arm and cancel cases in `src/remote/pty-session.test.ts` cover the behavior that must not move.
-
-
 * Correct the harness spec's placement and wording of the new idle-escalation section, which splits the busy/ready section and claims cancellations the code does not perform.
 
 Existing Issue: In `product/specs/harness.md` the new `### The idle escalation` heading is inserted in the middle of § Busy/ready status, so the pre-existing paragraphs on a recognized permission prompt badging immediately and on harnesses without recognition signals now sit under the escalation heading, and the section says clearing cancels the escalation when the tab "is reordered or undocked and something else becomes active" — a claim the matching `src/harness/idle-notification.ts` header comment repeats as "reordered away" — although neither operation clears a hidden harness tab's badge. Severity: 3/10

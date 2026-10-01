@@ -1,8 +1,10 @@
 import { messageBus, type Subscription } from '../bus.js';
 import { isUnreadEligible } from '../tab/transcript/events.js';
 import { UNREAD_DWELL_MS } from '../tab/dwell.js';
+import { tabRuntime } from '../tab/runtime.js';
 import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
+import type { Tab } from '../tab/types.js';
 
 // The unread badge says a harness tab is waiting. It is a glance-level signal: a flag in the strip,
 // on a tab the user may not be looking at, for a run that finished while they were reading something
@@ -16,40 +18,51 @@ import type { Managers } from '../managers.js';
 // of them — a harness running short turns stays quiet and says something once, thirty seconds after
 // it finally settles. And it is cancelled the moment the badge comes off, however that happens:
 // focused long enough to count as read, taken back to work, closed, or reordered away.
+//
+// The pending handle is per-tab state, so it lives on the tab's own runtime record rather than in a
+// map here. It is always reached through the live tab: a close or reorder replaces each tab with a
+// shallow copy, and the runtime record those copies share is what keeps arm, cancel, and fire on the
+// same handle.
 
 export const HARNESS_IDLE_ESCALATION_MS = 30_000;
 
-const pending = new Map<string, NodeJS.Timeout>();
 let subscription: Subscription | undefined;
 
 // Arm the escalation for a tab whose committed idle transition just badged it. Replaces any pending
 // escalation for the same tab, which is what keeps a cycling harness to one notification and what
-// makes the interval run from the most recent idle commit. `managers` is captured in the closure
-// rather than stored here, so this module holds no reference of its own beyond the pending handles.
+// makes the interval run from the most recent idle commit.
 export function armHarnessIdleEscalation(managers: Managers, label: string): void {
-  cancelHarnessIdleEscalation(label);
-  subscribeToBadgeClears();
-  schedule(managers, label, HARNESS_IDLE_ESCALATION_MS);
+  const tab = managers.tab.byLabel(label);
+  if (!tab) return;
+  release(tab);
+  subscribeToBadgeClears(managers);
+  schedule(managers, tab, HARNESS_IDLE_ESCALATION_MS);
 }
 
-function schedule(managers: Managers, label: string, delay: number): void {
+function schedule(managers: Managers, tab: Tab, delay: number): void {
+  const label = tab.label;
   const timer = setTimeout(() => escalate(managers, label), delay);
   timer.unref?.();
-  pending.set(label, timer);
+  tabRuntime(tab).idleEscalation = timer;
+}
+
+function release(tab: Tab): void {
+  const runtime = tab.runtime;
+  if (!runtime?.idleEscalation) return;
+  clearTimeout(runtime.idleEscalation);
+  runtime.idleEscalation = undefined;
 }
 
 // Drop a tab's pending escalation without escalating it. This is the harness going back to work, the
 // tab being closed, and the badge being cleared for any other reason.
-export function cancelHarnessIdleEscalation(label: string): void {
-  const timer = pending.get(label);
-  if (!timer) return;
-  clearTimeout(timer);
-  pending.delete(label);
+export function cancelHarnessIdleEscalation(managers: Managers, label: string): void {
+  const tab = managers.tab.byLabel(label);
+  if (tab) release(tab);
 }
 
 function escalate(managers: Managers, label: string): void {
-  pending.delete(label);
   const tab = managers.tab.byLabel(label);
+  if (tab?.runtime) tab.runtime.idleEscalation = undefined;
   // Docking into a sidebar deliberately leaves a badge in place, but a docked tab is permanently
   // visible chrome that no dwell will ever visit, so it is discarded rather than escalated on the
   // strength of a flag it can no longer justify. A badge that is gone anyway means the tab was
@@ -61,7 +74,7 @@ function escalate(managers: Managers, label: string): void {
   // stayed, the dwell's badge clear has cancelled this; if they moved on, the badge is still up and
   // the escalation fires then.
   if (!isUnreadEligible(tab, label, managers.tab.cur().label, managers.tab.secondaryTabLabel)) {
-    schedule(managers, label, UNREAD_DWELL_MS);
+    schedule(managers, tab, UNREAD_DWELL_MS);
     return;
   }
   // `shouldNotify` and `deliverNotification` apply every existing rule: the queue, the record file,
@@ -73,9 +86,8 @@ function escalate(managers: Managers, label: string): void {
 // `unref`'d and so cannot hold the process open on their own; this is here so each arm has its
 // matching release. It runs before `Controller.shutdown` clears the bus, so the next arm in the same
 // process attaches a fresh subscription rather than relying on one the clear already dropped.
-export function disposeHarnessIdleEscalations(): void {
-  for (const timer of pending.values()) clearTimeout(timer);
-  pending.clear();
+export function disposeHarnessIdleEscalations(managers: Managers): void {
+  for (const tab of managers.tab.tabs) release(tab);
   subscription?.unsubscribe();
   subscription = undefined;
 }
@@ -84,7 +96,8 @@ export function disposeHarnessIdleEscalations(): void {
 // `tabs` channel rather than carried on `state: dirty`, which fires on essentially every mutation;
 // `clearUnreadTab` emits only when the flag was actually set, so a clear aimed at a tab that was
 // never badged cancels nothing. Attached by the first arm and released by dispose, so the listener
-// lives exactly as long as there is something for it to cancel.
-function subscribeToBadgeClears(): void {
-  subscription ??= messageBus.on('tabs', 'unread-cleared', (event) => cancelHarnessIdleEscalation(event.label));
+// lives exactly as long as there is something for it to cancel, and resolves labels through the
+// `Managers` that armed it.
+function subscribeToBadgeClears(managers: Managers): void {
+  subscription ??= messageBus.on('tabs', 'unread-cleared', (event) => cancelHarnessIdleEscalation(managers, event.label));
 }

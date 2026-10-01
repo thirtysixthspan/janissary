@@ -41,13 +41,17 @@ function setup(harnessLabel = 'build') {
   } as unknown as Managers;
   const messages = () => managers.notifications.all.map((n) => n.message);
   const dispose = () => { for (const s of subscriptions) s.unsubscribe(); };
+  current = managers;
   return { append, dispose, harness, janus, managers, messages, tabs, toasts };
 }
+
+let current: Managers | undefined;
 
 // Dispose before clearing the bus, the order `Controller.shutdown` uses: the escalation releases its
 // own badge-clear subscription, and the next case's first arm attaches a fresh one.
 afterEach(() => {
-  disposeHarnessIdleEscalations();
+  if (current) disposeHarnessIdleEscalations(current);
+  current = undefined;
   messageBus.clear();
   vi.useRealTimers();
 });
@@ -133,10 +137,12 @@ describe('harness idle escalation', () => {
   // process — must still be cancelled by a badge clear, so the subscription has to come back with it.
   it('cancels on the badge-clear signal after a dispose and a bus clear', () => {
     vi.useFakeTimers();
-    disposeHarnessIdleEscalations();
-    messageBus.clear();
     const fixture = setup();
     try {
+      armHarnessIdleEscalation(fixture.managers, 'build');
+      disposeHarnessIdleEscalations(fixture.managers);
+      messageBus.clear();
+
       fixture.managers.tab.markUnread('build');
       armHarnessIdleEscalation(fixture.managers, 'build');
       clearUnreadTab(fixture.tabs, 'build');
@@ -152,7 +158,7 @@ describe('harness idle escalation', () => {
     const fixture = setup();
     try {
       armHarnessIdleEscalation(fixture.managers, 'build');
-      cancelHarnessIdleEscalation('build');
+      cancelHarnessIdleEscalation(fixture.managers, 'build');
 
       vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
       expect(fixture.messages()).toEqual([]);
@@ -262,7 +268,25 @@ describe('harness idle escalation', () => {
     try {
       fixture.managers.tab.markUnread('build');
       armHarnessIdleEscalation(fixture.managers, 'build');
-      disposeHarnessIdleEscalations();
+      disposeHarnessIdleEscalations(fixture.managers);
+
+      vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+      expect(fixture.messages()).toEqual([]);
+    } finally { fixture.dispose(); }
+  });
+
+  // A close or reorder replaces every tab with a shallow copy. The pending handle sits on the runtime
+  // record those copies share, so a badge clear reaching the copy still finds and cancels it.
+  it('cancels through the live tab after the tabs are replaced by copies', () => {
+    vi.useFakeTimers();
+    const fixture = setup();
+    try {
+      fixture.managers.tab.markUnread('build');
+      armHarnessIdleEscalation(fixture.managers, 'build');
+      fixture.tabs.splice(0, fixture.tabs.length, ...fixture.tabs.map((t) => ({ ...t })));
+
+      clearUnreadTab(fixture.tabs, 'build');
+      fixture.tabs[1].hasUnread = true;
 
       vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
       expect(fixture.messages()).toEqual([]);

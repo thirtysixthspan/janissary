@@ -28,7 +28,7 @@ export class HarnessManager extends HarnessTabSpawn {
 
   dispose(): void {
     this.runtimes.dispose();
-    disposeHarnessIdleEscalations();
+    disposeHarnessIdleEscalations(this.managers);
   }
 
   // Release the closing tab's runtimes: its screen reader, recorder, transcript tailer, and e2e
@@ -39,7 +39,7 @@ export class HarnessManager extends HarnessTabSpawn {
   // escalation from firing for a tab that no longer exists.
   closeTab(label: string): void {
     this.runtimes.closeTab(label);
-    cancelHarnessIdleEscalation(label);
+    cancelHarnessIdleEscalation(this.managers, label);
   }
 
   // The named harness tab's most recent rendered-screen capture, or undefined when the tab is

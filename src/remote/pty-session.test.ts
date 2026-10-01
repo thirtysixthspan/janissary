@@ -289,9 +289,9 @@ describe('createRemotePtySession', () => {
   // exactly the same terms, with no extra frame and no protocol change.
   it('arms the idle escalation for a badged tab, as a local capture would', () => {
     vi.useFakeTimers();
+    const managers = escalateManagers([makeTab('janus', 'blue'), makeTab('claude', 'red')]);
     try {
       const { channel } = attachedChannel();
-      const managers = escalateManagers([makeTab('janus', 'blue'), makeTab('claude', 'red')]);
       createRemotePtySession(channel, managers, {
         id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
       }, vi.fn());
@@ -303,16 +303,16 @@ describe('createRemotePtySession', () => {
       vi.advanceTimersByTime(1);
       expect(notify).toHaveBeenCalledWith(managers, 'harness-idle', 'claude', undefined, { openTab: 'claude' });
     } finally {
-      disposeHarnessIdleEscalations();
+      disposeHarnessIdleEscalations(managers);
       vi.useRealTimers();
     }
   });
 
   it('cancels the idle escalation when the far side reports the harness busy again', () => {
     vi.useFakeTimers();
+    const managers = escalateManagers([makeTab('janus', 'blue'), makeTab('claude', 'red')]);
     try {
       const { channel } = attachedChannel();
-      const managers = escalateManagers([makeTab('janus', 'blue'), makeTab('claude', 'red')]);
       createRemotePtySession(channel, managers, {
         id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
       }, vi.fn());
@@ -323,7 +323,7 @@ describe('createRemotePtySession', () => {
 
       expect(notify).not.toHaveBeenCalledWith(managers, 'harness-idle', 'claude', undefined, { openTab: 'claude' });
     } finally {
-      disposeHarnessIdleEscalations();
+      disposeHarnessIdleEscalations(managers);
       vi.useRealTimers();
     }
   });
