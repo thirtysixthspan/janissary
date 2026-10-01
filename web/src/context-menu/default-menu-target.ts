@@ -1,4 +1,5 @@
 import type { ContextMenuItem } from '../shared/ContextMenu';
+import { isTextEntryElement } from '../shared/text-entry';
 
 // What a right-click that no surface claimed has to work with: the text a Copy would write, the
 // element a Paste would land in, the element focus belongs to once the menu closes again, and the
@@ -23,19 +24,6 @@ export type DefaultMenuActions = {
   // surface where the other two cannot.
   pasteFromClipboard: (anchor: HTMLElement | null) => void;
 };
-
-const TEXT_ENTRY_INPUT_TYPES = new Set([
-  'text', 'search', 'url', 'tel', 'email', 'password', 'number',
-]);
-
-// A place typed text can go: a text-ish input, a textarea, or anything contenteditable. A checkbox,
-// a button, and a plain div are not, so a right-click on one of them offers no Paste.
-export function isTextEntryElement(element: Element | null): element is HTMLElement {
-  if (!(element instanceof HTMLElement)) return false;
-  if (element instanceof HTMLTextAreaElement) return true;
-  if (element instanceof HTMLInputElement) return TEXT_ENTRY_INPUT_TYPES.has(element.type);
-  return element.isContentEditable;
-}
 
 export function editorSelectionText(clicked: Element | null): string {
   if (!(clicked instanceof HTMLElement)) return '';

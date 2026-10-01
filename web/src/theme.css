@@ -560,7 +560,9 @@ html, body, #root {
 .editor-find-row.selected mark { background: var(--bg); color: var(--accent); }
 .editor-find-row.selected .editor-find-line { color: var(--bg); }
 
-/* Clipboard history overlay (Ctrl+Shift+V / clip) */
+/* Clipboard history overlay (Ctrl+Shift+V / clip). It holds the keyboard while open; the selected row
+   already shows where it is, so the root draws no focus ring. */
+.clipboard-history:focus { outline: none; }
 .clipboard-history-row { overflow: hidden; }
 /* One line per entry, clipped at the overlay's width. The truncation lives on the label rather than on
    the row because a row is a flex container and `text-overflow` does not reach the anonymous flex item

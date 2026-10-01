@@ -4,6 +4,8 @@ import { createPasteCapability } from './paste-into-surface';
 import { editorDropHandle, registerEditorDrop } from './shared/drop-registry';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { JanusClient } from './ws';
+import { openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
+import { registerTerminalSelection, unregisterTerminalSelection } from './shared/terminal/terminal/selection';
 
 function commandBar(): { bar: HTMLElement; textarea: HTMLTextAreaElement; handle: CommandInputDropHandle } {
   const bar = document.createElement('div');
@@ -104,6 +106,42 @@ describe('paste into whatever holds the caret', () => {
     paste('goes nowhere', null);
 
     expect(client.send).not.toHaveBeenCalled();
+  });
+
+  // An open overlay holds the keyboard itself, so the live focus is the overlay. The paste goes to the
+  // element that held the keyboard as the overlay opened.
+  it('pastes where the keyboard was when an open overlay took it', () => {
+    const { textarea, paste: editorPaste } = editor('notes');
+    const { paste } = setup(noTab, { current: null });
+    const unregister = registerContributedOverlay({
+      name: 'popup', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {},
+    });
+    textarea.focus();
+    openContributedOverlay('popup', null);
+    const popup = document.createElement('div');
+    popup.tabIndex = -1;
+    document.body.append(popup);
+    popup.focus();
+
+    paste('into the buffer', null);
+
+    expect(editorPaste).toHaveBeenCalledWith('into the buffer');
+    unregister();
+  });
+
+  it('sends text to the PTY rather than typing it into a focused terminal\'s hidden input', () => {
+    const container = document.createElement('div');
+    const hidden = document.createElement('textarea');
+    container.append(hidden);
+    document.body.append(container);
+    registerTerminalSelection(container, { hasSelection: () => false, getSelection: () => '', clear: () => {} });
+    const { client, paste } = setup(() => harnessTab('pty-3'), { current: null });
+    hidden.focus();
+
+    paste('for the terminal', null);
+
+    expect(client.send).toHaveBeenCalledWith({ method: 'ptyInput', params: { id: 'pty-3', data: 'for the terminal' } });
+    unregisterTerminalSelection(container);
   });
 
   it('ignores an editor with no published handle, which is one no longer visible', () => {

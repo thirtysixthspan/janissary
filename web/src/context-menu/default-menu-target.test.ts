@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  defaultMenuGroups, isTextEntryElement, resolveDefaultMenuTarget, type DefaultMenuTarget,
+  defaultMenuGroups, resolveDefaultMenuTarget, type DefaultMenuTarget,
 } from './default-menu-target';
 
 function input(type: string): HTMLInputElement {
@@ -20,20 +20,6 @@ function div(contentEditable: boolean): HTMLElement {
 function target(overrides: Partial<DefaultMenuTarget> = {}): DefaultMenuTarget {
   return { selectionText: '', pasteTarget: null, restoreFocus: null, clicked: null, ...overrides };
 }
-
-describe('isTextEntryElement', () => {
-  it('accepts a text input, a textarea, and a contenteditable element', () => {
-    expect(isTextEntryElement(input('text'))).toBe(true);
-    expect(isTextEntryElement(document.createElement('textarea'))).toBe(true);
-    expect(isTextEntryElement(div(true))).toBe(true);
-  });
-
-  it('rejects a plain div, a checkbox, and nothing at all', () => {
-    expect(isTextEntryElement(div(false))).toBe(false);
-    expect(isTextEntryElement(input('checkbox'))).toBe(false);
-    expect(isTextEntryElement(null)).toBe(false);
-  });
-});
 
 describe('resolveDefaultMenuTarget', () => {
   it('takes the field the click landed in as the paste target', () => {

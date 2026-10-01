@@ -73,6 +73,12 @@ describe('the clipboard-history popup', () => {
     expect(screen.getByText('first').closest('.picker-row')?.className).toContain('selected');
   });
 
+  it('takes the keyboard as it appears', () => {
+    record('first');
+    const { container } = render(<ClipboardHistoryPopup choose={vi.fn()} />);
+    expect(document.activeElement).toBe(container.querySelector('.clipboard-history'));
+  });
+
   it('adds a copy made while it is open', () => {
     render(<ClipboardHistoryPopup choose={vi.fn()} />);
     expect(screen.getByText('(no clipboard history)')).toBeTruthy();
@@ -142,6 +148,28 @@ describe('the clipboard-history module', () => {
 
     act(() => overlay.onKey(new KeyboardEvent('keydown', { key: 'Escape' })));
     expect(close).toHaveBeenCalledTimes(2);
+  });
+
+  it('closes on Tab without pasting, and keeps the browser from moving focus', () => {
+    const { overlay, paste, close } = started();
+    record('chosen text');
+    act(() => overlay.onOpen());
+
+    const tab = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true });
+    act(() => overlay.onKey(tab));
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(paste).not.toHaveBeenCalled();
+    expect(tab.defaultPrevented).toBe(true);
+  });
+
+  it('leaves Shift+Tab alone, since it is the section-navigation chord', () => {
+    const { overlay, close } = started();
+    act(() => overlay.onOpen());
+
+    act(() => overlay.onKey(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true })));
+
+    expect(close).not.toHaveBeenCalled();
   });
 
   it('empties itself on dispose, releasing what it recorded', () => {

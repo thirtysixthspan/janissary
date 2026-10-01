@@ -36,6 +36,12 @@ export function unregisterTerminalSelection(container: HTMLDivElement): void {
   terminals.delete(container);
 }
 
+// Whether the target falls inside a registered terminal. A terminal's hidden input is a textarea, but
+// text meant for the terminal has to reach its PTY rather than be typed into that element.
+export function isInsideTerminal(target: Element | null): boolean {
+  return resolveTerminal(target) !== undefined;
+}
+
 // The selection text held by the terminal the click landed in, or empty when the click fell outside
 // every registered container or that terminal holds no selection. Deliberately a linear scan over a
 // handle of entries at menu-open time — the file navigator's registries settle the same trade.

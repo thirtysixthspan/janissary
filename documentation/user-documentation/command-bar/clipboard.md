@@ -26,7 +26,7 @@ Choosing an entry — with `Return`, or by clicking it — puts it at the keyboa
 
 If you opened it from the right-click menu, it pastes into whatever you right-clicked rather than into wherever the keyboard happened to be.
 
-`↑`/`↓` move the selection and stop at the ends, `Return` pastes, and `Escape` closes without pasting anything. Switching to another tab closes it the same way.
+The window takes the keyboard while it is open, even in an editor or a terminal. `↑`/`↓` move the selection and stop at the ends, `Return` pastes, and `Escape` or `Tab` closes without pasting anything. Switching to another tab closes it the same way. Once it closes, the keyboard goes back to where you were typing.
 
 ## What an entry looks like
 

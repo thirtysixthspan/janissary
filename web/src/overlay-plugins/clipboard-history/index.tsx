@@ -35,18 +35,28 @@ const module: OverlayPluginModule = {
       // whole point is pasting at the caret, which needs the bar still there.
       claimsCommandBar: true,
       render: (anchor) => <ClipboardHistoryPopup choose={(text) => chooseByClick(text, anchor)} />,
-      onKey: (event) => handlePickerKey(
-        event, rowIds(), selection(), setSelection,
-        (id) => {
-          const index = rowIds().indexOf(id);
-          const text = index === -1 ? undefined : textAt(index);
-          // Return carries no anchor even when the overlay was opened from the context menu, because
-          // by then the menu has closed and its element is no longer what the user aimed at; the click
-          // that gets here carries one, because the element is still the thing under the pointer.
-          if (text !== undefined) pasteOnly(text, null);
-        },
-        capabilities.close,
-      ),
+      onKey: (event) => {
+        // Tab puts the popup away like Escape does. Left to the browser it would move focus out of the
+        // popup and leave it open with nothing holding its keys. Shift+Tab is not this: it is the
+        // section-navigation chord, claimed before any key reaches here.
+        if (event.key === 'Tab' && !event.shiftKey) {
+          event.preventDefault();
+          capabilities.close();
+          return;
+        }
+        handlePickerKey(
+          event, rowIds(), selection(), setSelection,
+          (id) => {
+            const index = rowIds().indexOf(id);
+            const text = index === -1 ? undefined : textAt(index);
+            // Return carries no anchor even when the overlay was opened from the context menu, because
+            // by then the menu has closed and its element is no longer what the user aimed at; the click
+            // that gets here carries one, because the element is still the thing under the pointer.
+            if (text !== undefined) pasteOnly(text, null);
+          },
+          capabilities.close,
+        );
+      },
       onOpen: selectNewest,
     };
   },

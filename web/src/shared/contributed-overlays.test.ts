@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  closeContributedOverlay, closeContributedOverlays, contributedOverlayAnchor, contributedOverlayClaimsCommandBar,
+  closeContributedOverlay, closeContributedOverlays, contributedOverlayAnchor, contributedOverlayFocusOrigin, contributedOverlayClaimsCommandBar,
   contributedOverlayOnScreen, contributedOverlays, contributedOverlaysVersion, declareOverlayClaims,
   installOverlayOpener, isContributedOverlayOpen, openContributedOverlay, openOverlayForChord,
   openOverlayForCommand, overlayClaimedByCommand, registerContributedOverlay,
@@ -188,6 +188,101 @@ describe('the contributed-overlay seam', () => {
     closeContributedOverlays();
 
     expect(contributedOverlaysVersion()).toBe(before);
+  });
+
+  // The overlay takes the keyboard once it is on screen, so where the user was typing has to be read as
+  // it opens. That element is both where a paste lands and where focus goes back to.
+  describe('the keyboard it takes and gives back', () => {
+    function field(): HTMLTextAreaElement {
+      const element = document.createElement('textarea');
+      document.body.append(element);
+      published.push(() => { element.remove(); });
+      return element;
+    }
+    function popup(): HTMLDivElement {
+      const element = document.createElement('div');
+      element.tabIndex = -1;
+      document.body.append(element);
+      published.push(() => { element.remove(); });
+      return element;
+    }
+
+    it('records the element that held the keyboard as the overlay opened', () => {
+      register('a');
+      const origin = field();
+      origin.focus();
+
+      openContributedOverlay('a', null);
+      popup().focus();
+
+      expect(contributedOverlayFocusOrigin()).toBe(origin);
+      closeContributedOverlay('a');
+      expect(contributedOverlayFocusOrigin()).toBeNull();
+    });
+
+    it('gives the keyboard back to that element when the plugin closes', () => {
+      register('a');
+      const origin = field();
+      origin.focus();
+      openContributedOverlay('a', null);
+      popup().focus();
+
+      closeContributedOverlay('a');
+
+      expect(document.activeElement).toBe(origin);
+    });
+
+    it('leaves the keyboard in a different field a paste moved it to', () => {
+      register('a');
+      const origin = field();
+      origin.focus();
+      openContributedOverlay('a', null);
+      const clicked = field();
+      clicked.focus();
+
+      closeContributedOverlay('a');
+
+      expect(document.activeElement).toBe(clicked);
+    });
+
+    it('does nothing with an origin that has left the document', () => {
+      register('a');
+      const origin = field();
+      origin.focus();
+      openContributedOverlay('a', null);
+      const holder = popup();
+      holder.focus();
+      origin.remove();
+
+      closeContributedOverlay('a');
+
+      expect(document.activeElement).toBe(holder);
+    });
+
+    it('does not give the keyboard back when every overlay is closed for a tab switch', () => {
+      register('a');
+      const origin = field();
+      origin.focus();
+      openContributedOverlay('a', null);
+      const holder = popup();
+      holder.focus();
+
+      closeContributedOverlays();
+
+      expect(document.activeElement).toBe(holder);
+    });
+
+    it('keeps the first origin when an overlay already open is opened again', () => {
+      register('a');
+      const origin = field();
+      origin.focus();
+      openContributedOverlay('a', null);
+      popup().focus();
+
+      openContributedOverlay('a', null);
+
+      expect(contributedOverlayFocusOrigin()).toBe(origin);
+    });
   });
 
   it('opens nothing for a name no plugin registered', () => {

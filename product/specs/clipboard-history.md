@@ -42,7 +42,11 @@ A field the keyboard is in always wins over a tab-level choice, so pasting from 
 
 Clicking an entry in a popup opened from the right-click menu pastes into whatever the right-click landed on, rather than into wherever the keyboard happened to be. Choosing one with `Return` instead pastes at the keyboard caret: by then the menu has closed and the element the click found is no longer what the user is aiming at.
 
-While the popup is open it takes every keystroke, like every other overlay (see [[keyboard-navigation]]): the arrows move the selection and stop at the ends without wrapping, Return chooses, Escape closes without pasting. Switching to another tab closes it without pasting too, because the popup belongs to the tab it was opened on. `Ctrl+W` closes no tab while it is up. It does not disable the command bar, because pasting at the caret needs the bar still there, and the bar stops handling its own keys while it is up. In an editor buffer the keyboard is a separate matter: the buffer keeps its own focus and its own key handling, so typing there still edits the buffer underneath the popup.
+The keyboard caret is where the keyboard was when the popup opened, because the popup takes the keyboard for itself once it is on screen.
+
+While the popup is open it holds keyboard focus and takes every keystroke, like every other overlay (see [[keyboard-navigation]]). This holds on every tab: in an editor buffer or a terminal the arrows move the popup's selection, not the caret or the cursor underneath. The arrows move the selection and stop at the ends without wrapping, Return chooses, and Escape or Tab closes without pasting. Shift+Tab is still section navigation. Switching to another tab closes it without pasting too, because the popup belongs to the tab it was opened on. `Ctrl+W` closes no tab while it is up. It does not disable the command bar, because pasting at the caret needs the bar still there, and the bar stops handling its own keys while it is up.
+
+When the popup closes after Return, a click, Escape, or Tab, keyboard focus goes back to where it was when the popup opened: the command bar, the editor buffer, or the terminal. The exception is a paste into a right-clicked field, which leaves the caret in that field. A tab switch puts focus on the new tab instead.
 
 ### When it is not there
 

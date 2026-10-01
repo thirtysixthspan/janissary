@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  clearTerminalSelection, registerTerminalSelection, terminalSelectionText, unregisterTerminalSelection,
+  clearTerminalSelection, isInsideTerminal, registerTerminalSelection, terminalSelectionText, unregisterTerminalSelection,
 } from './selection';
 
 function container(): HTMLDivElement {
@@ -122,5 +122,19 @@ describe('terminal selection', () => {
     clearTerminalSelection(null);
 
     expect(clear).not.toHaveBeenCalled();
+  });
+
+  it('says whether a target falls inside a registered terminal', () => {
+    const start = container();
+    const hidden = document.createElement('textarea');
+    start.append(hidden);
+    const outside = container();
+    registerTerminalSelection(start, { hasSelection: () => false, getSelection: () => '', clear: () => {} });
+
+    expect(isInsideTerminal(hidden)).toBe(true);
+    expect(isInsideTerminal(outside)).toBe(false);
+    expect(isInsideTerminal(null)).toBe(false);
+    unregisterTerminalSelection(start);
+    expect(isInsideTerminal(hidden)).toBe(false);
   });
 });

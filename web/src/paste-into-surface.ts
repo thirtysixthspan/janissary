@@ -2,7 +2,10 @@ import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import { editorDropHandle } from './shared/drop-registry';
-import { isTextEntryElement } from './context-menu/default-menu-target';
+import { isTextEntryElement } from './shared/text-entry';
+import { focusedElement } from './shared/overlay-focus';
+import { contributedOverlayFocusOrigin } from './shared/contributed-overlays';
+import { isInsideTerminal } from './shared/terminal/terminal/selection';
 import { pasteTextInto } from './context-menu/clipboard-commands';
 
 // Putting text at the keyboard caret, wherever the caret is.
@@ -36,9 +39,15 @@ export type PasteCapabilityOptions = {
   currentTab: () => TabView | undefined;
 };
 
-function focusedElement(): HTMLElement | null {
-  const active = typeof document === 'undefined' ? null : document.activeElement;
-  return active instanceof HTMLElement ? active : null;
+// Where the user was typing. While an overlay is open it holds the keyboard itself, so the answer is
+// the element that held it when the overlay opened rather than the live focus. A terminal's hidden
+// input is not a field: text for a terminal goes to its PTY, below.
+function typingTarget(): HTMLElement | null {
+  return contributedOverlayFocusOrigin() ?? focusedElement();
+}
+
+function typedField(focused: HTMLElement | null): HTMLElement | null {
+  return isTextEntryElement(focused) && !isInsideTerminal(focused) ? focused : null;
 }
 
 function clickedField(anchor: HTMLElement | null): HTMLElement | null {
@@ -77,9 +86,9 @@ function pasteIntoCommandBar(options: PasteCapabilityOptions, text: string): boo
 
 export function createPasteCapability(options: PasteCapabilityOptions) {
   return (text: string, anchor: HTMLElement | null): void => {
-    const focused = focusedElement();
+    const focused = typingTarget();
     const clicked = clickedField(anchor);
-    const field = clicked ?? (isTextEntryElement(focused) ? focused : null);
+    const field = clicked ?? typedField(focused);
 
     if (field?.closest('[data-command-bar]') && pasteIntoCommandBar(options, text)) return;
     if (pasteIntoEditor(anchor ?? focused, text)) return;

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { focusedElement, returnFocus } from './overlay-focus';
 
 // Where a plugin that contributes a floating overlay publishes it, so the pickers, the window key
 // handler, the command bar, and the context menu can all reach one without any of them importing the
@@ -46,6 +47,9 @@ type Registration = {
   overlay: ContributedOverlay;
   open: boolean;
   anchor: HTMLElement | null;
+  // The element that held the keyboard when the overlay opened: where a paste lands and where focus
+  // goes back to, because the overlay takes focus for itself once it is on screen.
+  focusOrigin: HTMLElement | null;
 };
 
 // A declaration and a registration are two facts that arrive at different times and come from different
@@ -80,7 +84,7 @@ export function declareOverlayClaims(name: string, claims: OverlayClaims): () =>
 }
 
 export function registerContributedOverlay(overlay: ContributedOverlay): () => void {
-  registrations.set(overlay.name, { overlay, open: false, anchor: null });
+  registrations.set(overlay.name, { overlay, open: false, anchor: null, focusOrigin: null });
   notify();
   // The removal leaves a later registration under the same name in place, so a remount's cleanup
   // ordering cannot drop a successor's.
@@ -133,6 +137,14 @@ export function contributedOverlayAnchor(name: string): HTMLElement | null {
   return registrations.get(name)?.anchor ?? null;
 }
 
+// The element that held the keyboard when the open overlay opened, or null when none is open.
+// Captured at open time for the same reason as the anchor: once the overlay is on screen it holds the
+// keyboard itself, so the live focus no longer says where the user was typing.
+export function contributedOverlayFocusOrigin(): HTMLElement | null {
+  for (const entry of registrations.values()) if (entry.open) return entry.focusOrigin;
+  return null;
+}
+
 function claimForCommand(command: string): string | null {
   const wanted = command.toLowerCase();
   for (const [name, claims] of declarations) {
@@ -171,6 +183,9 @@ export function openOverlayForChord(chordId: string): boolean {
 export function openContributedOverlay(name: string, anchor: HTMLElement | null): boolean {
   const entry = registrations.get(name);
   if (!entry) return false;
+  // A second open of an overlay already on screen keeps its first origin: by then the overlay holds the
+  // keyboard itself, and recording that would leave nowhere to go back to.
+  if (!entry.open) entry.focusOrigin = focusedElement();
   entry.open = true;
   entry.anchor = anchor;
   entry.overlay.onOpen();
@@ -178,23 +193,32 @@ export function openContributedOverlay(name: string, anchor: HTMLElement | null)
   return true;
 }
 
+function markClosed(entry: Registration): void {
+  entry.open = false;
+  entry.anchor = null;
+  entry.focusOrigin = null;
+}
+
+// The close a plugin calls once it is done: after a choice, Escape, or Tab. The keyboard goes back to
+// where it was when the overlay opened (see `returnFocus` for when it does not).
 export function closeContributedOverlay(name: string): void {
   const entry = registrations.get(name);
   if (!entry?.open) return;
-  entry.open = false;
-  entry.anchor = null;
+  const origin = entry.focusOrigin;
+  markClosed(entry);
   notify();
+  returnFocus(origin);
 }
 
 // Closes whichever overlay is open, without pasting or choosing anything. A contributed overlay is a
 // modal over the exposed tab, so the app shell calls this when that tab changes. Nothing open means
-// nothing changed, and nothing is notified.
+// nothing changed, and nothing is notified. Focus is left alone: a tab switch puts the keyboard on the
+// new tab by its own rule, and handing it back to the old tab would undo that.
 export function closeContributedOverlays(): void {
   let closed = false;
   for (const entry of registrations.values()) {
     if (!entry.open) continue;
-    entry.open = false;
-    entry.anchor = null;
+    markClosed(entry);
     closed = true;
   }
   if (closed) notify();
