@@ -44,6 +44,19 @@ export default [
     clipHeight: 400,
   },
   {
+    // A small table with a null in it, so the grid shows the muted `NULL` cell beside ordinary values.
+    name: 'sql-tab',
+    setup: [
+      'db sqlite create shop',
+      'db sqlite query shop CREATE TABLE orders (id INTEGER PRIMARY KEY, customer TEXT, status TEXT, total REAL)',
+      "db sqlite query shop INSERT INTO orders (customer, status, total) VALUES ('Ayla', 'paid', 42.5), ('Bora', 'pending', 18), ('Cem', 'paid', 7.25), ('Deniz', NULL, 99)",
+      'sql shop',
+    ],
+    settle: 1500,
+    target: 'sql-tab',
+    clipHeight: 230,
+  },
+  {
     name: 'messaging-output',
     setup: ['agent bilal', 'msg bilal info the deploy is done', 'msg bilal request state'],
     settle: 1500,

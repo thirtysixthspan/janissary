@@ -53,6 +53,10 @@ A database name must match `^[A-Za-z0-9_-]+$` — letters, numbers, `-`, and `_`
 
 The first command that touches a database opens a connection that stays open, shared across every tab and not just the one that opened it, until you close it, delete the database, or quit the app. Creating a database counts as touching it: `db sqlite create notes` opens a connection for `notes`, creating the file on the way, so the database appears in `connection list` straight away. Because the connection is reused, connection-scoped state like open transactions and `TEMP` tables survives between commands. See [Connections](/user-documentation/command-bar/connections) for listing and closing connections, including `connection close sqlite:<name>`.
 
+## Browse a database instead
+
+To look through a database's tables rather than query them, open it in the [SQL database browser](/user-documentation/tab-types/sql-browser) with `sql <name>`. It filters, sorts, pages, and edits rows, and has its own SQL console. It works on the same databases `db` creates, and `db` keeps printing its own text tables exactly as before.
+
 ## Databases persist across sessions
 
 Database files live in `.janissary/db/sqlite/<name>.sqlite` and are never cleared — not on a normal launch, not on `--relaunch`, not on quit. Unlike a tab's workspace or session state, a database you create sticks around until you `db sqlite delete` it.
