@@ -58,5 +58,8 @@ Auto-approve opencode's permission prompt the same way claude and codex prompts 
 - Selecting opencode's `Allow always` option or launching opencode with a global allow-all permission config.
 - Answering opencode's `Always allow` confirmation stage or `Reject` feedback input.
 - Removing the generic unsupported-harness guards or the dialog's auto-approve capability list.
-- Regenerating the launch-dialog documentation screenshot (needs Playwright Chromium, unavailable in the workspace); the label change is data-driven and shows at next regeneration.
+
+## Follow-up
+
+- The launch-dialog documentation screenshot was regenerated in a follow-up change through `./scripts/run.mjs docs-screenshots harness-launch-dialog`, driving the workspace's attached E2E browser, so it shows the "claude, opencode, and codex only" label.
 - Changing opencode's busy/ready classifier.
