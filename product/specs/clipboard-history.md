@@ -26,7 +26,7 @@ Each entry shows one line: the first line of non-space text, which is not always
 
 `Ctrl+V` is untouched. In an editor tab it is the browser's own paste, as it is everywhere else in the application.
 
-The popup appears on an agent tab, an editor tab, and a harness or ssh tab. It does not appear on a markdown, image, pdf, page, video, sql, or conversations tab: those have no overlay and nowhere to paste into.
+The popup renders on an agent tab, an editor tab, and a harness or ssh tab. Those are the only tabs with an overlay surface at all. A markdown, image, pdf, page, video, sql, or conversations tab has none, so there is nowhere to paste into and nothing appears there — but the chord is still answered on such a tab, and the popup it opens takes the keyboard until `Escape` or `Return` dismisses it.
 
 ### Choosing an entry
 
@@ -40,9 +40,9 @@ The text lands at the keyboard caret:
 
 A field the keyboard is in always wins over a tab-level choice, so pasting from the clipboard popup into the Quick Open box on a harness tab puts the text in that box.
 
-Choosing an entry from the right-click menu's popup pastes into whatever the right-click landed on, rather than into wherever the keyboard happened to be.
+Clicking an entry in a popup opened from the right-click menu pastes into whatever the right-click landed on, rather than into wherever the keyboard happened to be. Choosing one with `Return` instead pastes at the keyboard caret: by then the menu has closed and the element the click found is no longer what the user is aiming at.
 
-While the popup is open it takes every keystroke, like every other overlay (see [[keyboard-navigation]]): the arrows move the selection and stop at the ends without wrapping, Return chooses, Escape closes without pasting. `Ctrl+W` closes no tab while it is up. It does not disable the command bar, because pasting at the caret needs the bar still there.
+While the popup is open it takes every keystroke, like every other overlay (see [[keyboard-navigation]]): the arrows move the selection and stop at the ends without wrapping, Return chooses, Escape closes without pasting. `Ctrl+W` closes no tab while it is up. It does not disable the command bar, because pasting at the caret needs the bar still there, and the bar stops handling its own keys while it is up. In an editor buffer the keyboard is a separate matter: the buffer keeps its own focus and its own key handling, so typing there still edits the buffer underneath the popup.
 
 ### When it is not there
 

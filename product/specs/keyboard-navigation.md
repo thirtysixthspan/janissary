@@ -85,7 +85,9 @@ which one keystrokes go to:
 8. task picker
 9. profile picker
 
-A plugin-contributed overlay ranks below all nine, so a chord pressed while one of them is open never reaches it. Only one overlay is ever on screen, which means the clipboard-history popup ([[clipboard-history]]) is reachable from an agent tab, an editor tab, and a harness or ssh tab, but not from a markdown, image, pdf, page, video, sql, or conversations tab: those render no overlay.
+A plugin-contributed overlay ranks below all nine, so a chord pressed while one of them is open never reaches it. Inside the plugin band the order plugins declared in decides, so two of them claiming the same moment resolve the same way every time. Only one overlay is ever on screen, and which surfaces render one is its own question: the clipboard-history popup ([[clipboard-history]]) renders on an agent tab, an editor tab, and a harness or ssh tab, and a markdown, image, pdf, page, video, sql, or conversations tab renders none at all — its chord is still answered there, and the overlay it opens claims the keyboard without anything to show.
+
+A contributed overlay takes the command bar's keys while it is open, exactly as a built-in one does, and none of them disables the bar outright.
 
 While an overlay is open it claims every keystroke: nothing underneath it scrolls the transcript,
 switches tabs, or reorders them, and the shortcuts that open the other overlays do nothing until it

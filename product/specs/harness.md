@@ -500,6 +500,9 @@ All keys, clicks, and mouse events are delivered to the harness **except**:
 - **Shift+←/→** and **Cmd+Shift+[/]** — the tab-switch chord, which bubbles to the window handler.
 - **Ctrl+A** and **Ctrl+G** (with no other modifier) — the task picker and tab navigator chords,
   which bubble to the window handler so those pickers open over the harness.
+- **Ctrl+Shift+V** — the clipboard-history popup's chord, which bubbles to the window handler for the
+  same reason, so the popup opens over the harness rather than the terminal's own paste handling
+  (see [[clipboard-history]]).
 - Every key while the task picker or tab navigator is open over the tab, so the picker is driven
   instead of the PTY.
 - Clicks on the tab strip — handled by the tab strip as usual.
@@ -579,9 +582,9 @@ first. Copying a
 held selection releases it — the copy chord and the menu's **Copy** entry both clear it right
 after the clipboard write, so a second Shift+drag is needed to pick text again. Releasing a
 Shift+drag that picks text opens the default menu itself, at the point the drag ended, offering
-**Copy** alongside **Chat about this** (see [[context-menu]]); right-clicking the held selection
-afterward opens the same menu again. `Cmd+I`/`Ctrl+I` runs Chat about this directly without
-clearing the selection.
+**Copy** and **Paste from clipboard…** alongside **Chat about this** (see [[context-menu]]);
+right-clicking the held selection afterward opens the same menu again. `Cmd+I`/`Ctrl+I` runs Chat
+about this directly without clearing the selection.
 
 A harness's own copy command reaches the system clipboard too. A harness copying something first
 tries the clipboard of the machine it is running on; when it cannot reach it — which is the case
