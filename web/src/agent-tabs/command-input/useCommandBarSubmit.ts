@@ -1,10 +1,9 @@
 import { useCallback } from 'react';
 import type { BufferLine, TabView } from '@shared/protocol';
 import type { PickerCommands } from '../../shared/command-bar/picker-commands';
-import { closeQuitsApp } from '@shared/tab/placement';
 import { openOverlayForCommand } from '../../shared/contributed-overlays';
 import { resolveSearchInterception } from './command-interceptions';
-import { typedCloseIndex } from './close-interception';
+import { classifyTypedClose } from './close-interception';
 import type { useTranscriptSearch } from '../../shared/search-bar/useTranscriptSearch';
 
 // The nine intercepted openers are the shared `PickerCommands` shape rather than a restatement of it:
@@ -53,8 +52,9 @@ function openClaimedOverlay(command: string): boolean {
 
 // The command bar's `onSubmit` interception chain: several client-side commands (`hist`,
 // `syntax theme`, `queue`, `nav`, `quit`/`close`/`exit`) are handled locally instead of reaching
-// the server — split out of App.tsx to keep it under the file-size limit. A `close <name>` still
-// goes to the server unless the named tab holds unsaved work, which only the client can see.
+// the server — split out of App.tsx to keep it under the file-size limit. A close that would quit
+// the app, bare or named, opens the quit confirmation; any other `close <name>` still goes to the
+// server unless the named tab holds unsaved work, which only the client can see.
 //
 // The nine overlay openers stay the bag they arrive as, so a sixth bare word costs one table row
 // rather than a sixth branch through a callback already at its cognitive-complexity limit.
@@ -79,12 +79,12 @@ export function useCommandBarSubmit(params: Params): (text: string) => void {
       else openTabNavWithQuery(text.trim().slice(3).trim());
       return;
     }
-    if (trimmed === 'quit' || ((trimmed === 'close' || trimmed === 'exit') && closeQuitsApp(tabs, activeTab))) {
+    const closing = classifyTypedClose(text, tabs, activeTab);
+    if (trimmed === 'quit' || closing.kind === 'quit') {
       openQuitConfirm();
       return;
     }
-    const closing = typedCloseIndex(text, tabs, activeTab);
-    if (closing >= 0 && guardRef.current?.(closing)) return;
+    if (closing.kind === 'close' && guardRef.current?.(closing.index)) return;
     runCommand(text);
   }, [
     canSearch, lines, search, pickers,
