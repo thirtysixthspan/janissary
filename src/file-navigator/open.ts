@@ -2,6 +2,7 @@ import { statSync } from 'node:fs';
 import { buildCachedRows, clearFilesystemCache } from './filesystem-cache.js';
 import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
 import { RemoteFileSystemPort } from './remote/port.js';
+import { forgetRemoteFilesOf } from './remote/file-cache.js';
 import type { Managers } from '../managers.js';
 import type { RemoteTarget } from '../tab/types.js';
 import { dropExpandedWatchers } from './navigation.js';
@@ -100,6 +101,7 @@ function updateRemoteRoot(port: OpenPort, label: string, ready: Promise<string>)
 function releaseRemote(port: OpenPort, label: string): void {
   const state = port.states.get(label);
   if (!state?.remote) return;
+  forgetRemoteFilesOf(state.filesystem);
   state.filesystem.dispose();
   port.managers.remote.release(label);
 }

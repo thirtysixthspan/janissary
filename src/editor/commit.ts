@@ -5,7 +5,7 @@ import type { EditorView } from '../tab/types.js';
 import { commitLeftStagingInPlace, commitRoot } from '../git/commit.js';
 import { writeGitFailureOutput } from '../git/failure-output.js';
 import { errorFirstLine } from '../error-text.js';
-import { remoteFileFor } from '../file-navigator/remote/file-cache.js';
+import { isRemoteCacheFile } from '../file-navigator/remote/file-cache.js';
 import { notify } from '../notifications/index.js';
 
 const REST_HOLD_MS = 3000;
@@ -26,7 +26,7 @@ export function commitEditorFile(managers: Managers, url: string, message: strin
   const editor = tab?.editor;
   if (!tab || !editor) return;
   if (editor.commit === 'committing') return;
-  if (remoteFileFor(editor.path)) {
+  if (isRemoteCacheFile(editor.path)) {
     notify(managers, 'file-operation', tab.label, 'Could not commit: remote files commit from their navigator');
     return;
   }

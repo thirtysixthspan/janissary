@@ -4,17 +4,6 @@
 
 ## development
 
-* Tie each cached remote file to the navigator tab that opened it, so closing or retargeting that navigator drops the record instead of leaving later saves to write through a disposed port.
-
-Existing Debt: The remote file cache is a module-level map that stores the filesystem port object itself in each record and is cleared only when a whole remote workspace is cleared, while the navigator disposes that port on close or retarget, so a record outlives the port it points at. Severity: 5/10
-
-Existing Risk: 6/10 - Close a remote file navigator while an editor tab still holds one of its files, then save: the save writes the local cache copy and then sends the write through the disposed port, which refuses it, so the two copies diverge and the user's edit never reaches the remote machine.
-
-Proposal Risk: 3/10 - A record whose navigator is gone is no longer found, so the save takes a defined branch instead of writing through a dead port; the remaining risk is how that branch reads to the user — it must report that the remote navigator is closed rather than silently saving only the local copy.
-
-Proposal: `src/file-navigator/remote/file-cache.ts` keeps `records`, a module-level `Map` from cached local path to `{ filesystem, root, relPath, label }`, written by `materializeRemoteFile` and cleared only by `clearRemoteFileCacheForWorkspace` (called when a remote session ends, from `src/remote/attach.ts`) and `clearRemoteFileCache`. `saveFile` in `src/editor/save.ts` calls `remoteFileFor(filePath)`, writes locally with `atomicWriteFile`, then calls `remote.filesystem.writeFile(...)`. Meanwhile `releaseRemote` and `retarget` in `src/file-navigator/open.ts` and `closeTabState` in `src/file-navigator/manager/profile.ts` call `state.filesystem.dispose()`. Add a `forgetRemoteFiles(filesystem)` to `file-cache.ts` that drops every record holding that port, and call it at each of those three dispose sites so a record never outlives its port. Then make `saveFile` refuse a path inside the remote cache root that has no record — before the local write, so the copies cannot diverge — returning the same failed-save result the editor already renders for a refused remote write. Tests: `src/file-navigator/remote/file-cache.test.ts` (records drop when their port is forgotten), `src/editor/save.test.ts` (saving a cached remote file after its navigator closed reports a failure and leaves the local copy unchanged), and `src/file-navigator/open.test.ts` for the retarget path.
-
-
 * Catch SQLite failures on the database browser's read paths so an unreadable or locked database file shows an error in the SQL tab instead of disabling the whole sql plugin.
 
 Existing Debt: The database browser wraps its writes and its connection open in error handling, but its schema, create, and query/export lookups call into SQLite outside any guard, and the topic-action path runs inside the plugin's guarded call, so a host-side SQLite error is blamed on the plugin. Severity: 5/10

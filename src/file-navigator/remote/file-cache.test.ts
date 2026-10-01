@@ -6,8 +6,8 @@ import { TabManager } from '../../tab/manager.js';
 import type { Managers } from '../../managers.js';
 import type { FileSystemPort } from '../filesystem-port.js';
 import {
-  clearRemoteFileCache, clearRemoteFileCacheForWorkspace, initRemoteFileCache,
-  materializeRemoteFile, remoteFileFor,
+  clearRemoteFileCache, clearRemoteFileCacheForWorkspace, forgetRemoteFilesOf, initRemoteFileCache,
+  isRemoteCacheFile, materializeRemoteFile, remoteFileFor,
 } from './file-cache.js';
 import { saveFile } from '../../editor/save.js';
 import { openNavigatorFile } from '../manager/files.js';
@@ -93,6 +93,50 @@ describe('remote file cache', () => {
     await expect(saveFile(managers, url, 'changed')).rejects.toThrow('read only');
     expect(tab?.editorDraft?.content).toBe('changed');
     expect(notificationsTab(managers)?.log.at(-1)?.output).toContain('Could not save remote file: read only');
+  });
+
+  // The cached copy follows the remote rather than leading it, so a write the remote refuses leaves
+  // the two agreeing instead of the local copy holding content the remote never received.
+  it('leaves the cached copy unchanged when the remote refuses the write', async () => {
+    const { managers, file, url } = setup(vi.fn().mockResolvedValue({ ok: false, reason: 'read only' }));
+    await expect(saveFile(managers, url, 'changed')).rejects.toThrow('read only');
+    expect(readFileSync(file, 'utf8')).toBe('remote');
+  });
+
+  it('forgets the files that wrote back through a disposed port, and only those', () => {
+    const { file } = setup(vi.fn(() => ({ ok: true })));
+    const other = materializeRemoteFile(
+      'devbox', 'claude', 'src/other.txt', Buffer.from('x'),
+      { filesystem: {} as FileSystemPort, root: '/remote/ws', relPath: 'src/other.txt', label: 'files-2' },
+    );
+    const disposed = remoteFileFor(file)!.filesystem;
+
+    forgetRemoteFilesOf(disposed);
+
+    expect(remoteFileFor(file)).toBeUndefined();
+    expect(remoteFileFor(other)).toBeDefined();
+    expect(isRemoteCacheFile(file)).toBe(true);
+    expect(existsSync(file)).toBe(true);
+  });
+
+  // With its navigator gone the copy has no route back; a local-only save would report the file saved
+  // while the remote kept the old content.
+  it('refuses to save a cached copy whose navigator has closed, and leaves it unchanged', async () => {
+    const writeFile = vi.fn().mockResolvedValue({ ok: true });
+    const { managers, file, url } = setup(writeFile);
+    openNotificationsTab(managers);
+    forgetRemoteFilesOf(remoteFileFor(file)!.filesystem);
+
+    expect(() => saveFile(managers, url, 'changed')).toThrow('file navigator is closed');
+    expect(writeFile).not.toHaveBeenCalled();
+    expect(readFileSync(file, 'utf8')).toBe('remote');
+    expect(notificationsTab(managers)?.log.at(-1)?.output).toContain('file navigator is closed');
+  });
+
+  it('counts only paths inside the cache as cached remote files', () => {
+    const { file } = setup(vi.fn(() => ({ ok: true })));
+    expect(isRemoteCacheFile(file)).toBe(true);
+    expect(isRemoteCacheFile(path.join(tmpdir(), 'notes.txt'))).toBe(false);
   });
 
   it('removes one workspace without retaining its records', () => {
