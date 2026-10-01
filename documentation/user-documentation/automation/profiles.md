@@ -26,7 +26,7 @@ The bundled ones are `debugging`, `features`, `multitasking`, `planning`, and `p
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
-Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary also includes built-in profiles. If both sources use the same profile name, your project copy wins. Saving always writes to your project, so you can customize a built-in profile by saving a same-named replacement. Each profile is a single JSON file (dasherized, like `writing-code.json`) with one `tabs` array. Every element names its kind with a `type`, and an agent or harness entry also carries its own `name`, which becomes the tab's label:
+Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary also includes built-in profiles. If both sources use the same profile name, your project copy wins. Saving always writes to your project, so you can customize a built-in profile by saving a same-named replacement. You don't need to create the directory yourself: the first `profile save` makes it, and a project that never saves a profile never gets one. Each profile is a single JSON file (dasherized, like `writing-code.json`) with one `tabs` array. Every element names its kind with a `type`, and an agent or harness entry also carries its own `name`, which becomes the tab's label:
 
 ```json
 {
@@ -146,7 +146,7 @@ Open images, markdown previews, videos, web pages, and SSH sessions are captured
 
 The window size, sidebar widths, and reporting-area split are captured into the profile's layout as they currently look, along with any running monitors. Under `--no-open`, the window size is omitted and the command reports that omission, while the sidebar and tab-area sizes are still captured. A monitor's own reporting tab is the one thing left out, and it is left out quietly: it appears neither in the profile nor in the report's skipped list.
 
-Saving over an existing profile name atomically replaces it outright, with no confirmation prompt. Janissary keeps the previous file until the complete replacement is ready, so a capture or write failure leaves your last valid profile intact. The command reports what it captured: counts per tab type, plus monitors and docked tabs, followed by the list of anything skipped.
+Saving over an existing profile name atomically replaces it outright, with no confirmation prompt. Janissary keeps the previous file until the complete replacement is ready, so a capture or write failure leaves your last valid profile intact. If the file can't be written at all, for example because `profiles` exists but is a plain file, the save reports `Profile command failed: could not write profile "<name>" to <path>/profiles/<name>.json (<code>).` with an error code such as `EEXIST`. The command reports what it captured: counts per tab type, plus monitors and docked tabs, followed by the list of anything skipped.
 
 If several `profile save` commands arrive close together, they run in command order. Each finishes capturing file-navigator selections before the next starts, and a failed save does not block the saves behind it. If an asynchronous save or launch fails, the issuing transcript receives `Profile command failed: <reason>.` so the command does not appear unfinished.
 
