@@ -24,6 +24,12 @@ export type OverlayChord = {
   alt?: boolean;
 };
 
+// When the host loads and starts a plugin. `'open'`, the default, waits for the first chord, command
+// word, or context-menu open, so an unused plugin costs nothing. `'startup'` starts it once the window
+// mounts, for a plugin that has to observe something from launch to be any use when it is first opened.
+// It is the broad trigger, so a declaration that asks for it says why beside the field.
+export type OverlayPluginActivation = 'open' | 'startup';
+
 export type OverlayPluginDeclaration = {
   id: string;
   version: string;
@@ -37,6 +43,8 @@ export type OverlayPluginDeclaration = {
   title: string;
   // What the overlay shows when it has nothing to show, in the `(…)` shape the built-in pickers use.
   emptyText: string;
+  // Absent means `'open'`.
+  activation?: OverlayPluginActivation;
 };
 
 // What one row of the overlay represents. `text` is everything the user copied and is what gets
@@ -64,7 +72,9 @@ export type OverlayPluginCapabilities = {
   // Put `text` at the keyboard caret. `anchor` is the element a right-click landed on when the
   // overlay was opened from the context menu, or null for every other route in.
   paste: (text: string, anchor: HTMLElement | null) => void;
-  // How many entries this overlay may keep, from the host's configuration. Read once, at `start`.
+  // How many entries this overlay may keep, from the host's configuration. Read it when it is needed
+  // rather than once at `start`: the configuration arrives after the window mounts, so a plugin that
+  // activates at startup sees the default here first and the configured number afterwards.
   maxEntries: number;
   // Close this overlay. The one action a plugin needs that is not about the outside world: it is how
   // choosing an entry ends, and how Escape ends. Given as a capability rather than imported from the

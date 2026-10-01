@@ -27,6 +27,12 @@ describe('the shipped registry', () => {
     expect(validateDeclarations().rejections).toEqual([]);
   });
 
+  // A history started on its popup's first open has seen none of what was copied before it.
+  it('starts the clipboard history at launch rather than on first open', () => {
+    const clipboard = overlayPluginDeclarations.find((entry) => entry.id === 'clipboard-history');
+    expect(clipboard?.activation).toBe('startup');
+  });
+
   // The registry is reachable from the entry bundle, so a static import of an implementation would
   // pull that plugin's chunk in with it and silently defeat the lazy loading the loaders exist for.
   it('reaches its implementation only through a dynamic import', () => {
@@ -162,6 +168,7 @@ describe('the overlay-plugin developer documentation', () => {
     expect(block).toContain(`command: '${shipped?.command}'`);
     expect(block).toContain(`title: '${shipped?.title}'`);
     expect(block).toContain(`emptyText: '${shipped?.emptyText}'`);
+    expect(block).toContain(`activation: '${shipped?.activation}'`);
     // The chord as the declaration writes it, so a retune shows up here.
     const chord = shipped?.chord;
     expect(block).toContain(`key: '${chord?.key}'`);

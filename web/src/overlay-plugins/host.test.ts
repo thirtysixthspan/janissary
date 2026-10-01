@@ -269,3 +269,110 @@ describe('the overlay-plugin host', () => {
     expect(() => { host.dispose(); }).not.toThrow();
   });
 });
+
+// A plugin that has to observe something from launch — the clipboard history above all — declares
+// `'startup'`, and is started without any opener having asked for it.
+describe('activation at startup', () => {
+  it('starts a startup plugin and registers its overlay with no opener involved', async () => {
+    const start = vi.fn(() => ({
+      name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {},
+    }));
+    const opened = installOverlayOpener(() => { throw new Error('no opener should be reached'); });
+    teardown.push(opened);
+    const host = hostWith(noopReporter(), {
+      declarations: [declaration({ activation: 'startup' })] as never,
+      loaders: { fixture: async () => ({ default: overlayModule({ start }) }) },
+    });
+
+    await host.activateAtStartup();
+
+    expect(start).toHaveBeenCalledTimes(1);
+    // Registered but not opened: starting is not showing.
+    expect(contributedOverlayOnScreen()).toBeUndefined();
+    openContributedOverlay('fixture', null);
+    expect(contributedOverlayOnScreen()?.name).toBe('fixture');
+    closeContributedOverlay('fixture');
+  });
+
+  it('leaves a plugin that activates on open, or names no activation, unloaded', async () => {
+    const onOpen = vi.fn(async () => ({ default: overlayModule() }));
+    const unnamed = vi.fn(async () => ({ default: overlayModule() }));
+    const host = hostWith(noopReporter(), {
+      declarations: [
+        declaration({ activation: 'open' }),
+        declaration({ id: 'unnamed', chord: { key: 'b', ctrl: true }, command: 'other' }),
+      ] as never,
+      loaders: { fixture: onOpen, unnamed },
+    });
+
+    await host.activateAtStartup();
+
+    expect(onOpen).not.toHaveBeenCalled();
+    expect(unnamed).not.toHaveBeenCalled();
+  });
+
+  it('disables and reports a startup plugin that fails to load, like any other activation', async () => {
+    const onDisabled = noopReporter();
+    const host = hostWith(onDisabled, {
+      declarations: [declaration({ activation: 'startup' })] as never,
+      loaders: { fixture: async () => { throw new Error('chunk is gone'); } },
+    });
+
+    await expect(host.activateAtStartup()).resolves.toBeUndefined();
+
+    expect(onDisabled).toHaveBeenCalledWith('fixture', 'chunk is gone');
+    expect(overlayClaimedByCommand('clip')).toBe(false);
+  });
+
+  // The configured cap reaches the client after mount, so a plugin started at mount would keep the
+  // default for good if the host handed it a copy of the number rather than a way to read it.
+  it('hands a plugin the current cap, not the one it had when the plugin started', async () => {
+    let configured = 15;
+    const grants = { paste: vi.fn(), get maxEntries() { return configured; } };
+    const seen: { maxEntries: number }[] = [];
+    const host = createOverlayPluginHost(noopReporter(), grants, {
+      declarations: [declaration({ activation: 'startup' })] as never,
+      loaders: {
+        fixture: async () => ({
+          default: overlayModule({
+            start: (capabilities) => {
+              seen.push(capabilities);
+              return { name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {} };
+            },
+          }),
+        }),
+      },
+    });
+    teardown.push(host.dispose);
+
+    await host.activateAtStartup();
+    configured = 40;
+
+    expect(seen[0]?.maxEntries).toBe(40);
+  });
+
+  // StrictMode runs the app shell's effects, cleans them up, and runs them again on the same host, so a
+  // startup activation from the first run is still loading when the host is disposed.
+  it('does not start a plugin whose load finishes after the host was disposed', async () => {
+    const start = vi.fn(() => ({
+      name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {},
+    }));
+    let release!: () => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web target excludes ES2024.
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const onDisabled = noopReporter();
+    const host = hostWith(onDisabled, {
+      declarations: [declaration({ activation: 'startup' })] as never,
+      loaders: { fixture: async () => { await gate; return { default: overlayModule({ start }) }; } },
+    });
+
+    const pending = host.activate('fixture');
+    host.dispose();
+    release();
+
+    expect(await pending).toBe(false);
+    expect(start).not.toHaveBeenCalled();
+    // A dispose is not a failure, so nothing is reported.
+    expect(onDisabled).not.toHaveBeenCalled();
+  });
+});

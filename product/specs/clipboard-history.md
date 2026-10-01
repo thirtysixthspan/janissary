@@ -6,7 +6,7 @@ A menu of the text copied in this session, newest at the bottom, from which any 
 
 Every copy made inside the application is recorded: an editor copy or cut, a terminal's own copy chord, a copy a program in a terminal asked for through its pasteboard escape, a SQL grid's row copy, a transcript drag-selection, and the context menu's Copy. Text copied from another application is not recorded — there is no way to observe it, and the application reads no system pasteboard.
 
-A copy that is empty or only whitespace is not recorded. Nothing is recorded until the popup is first opened: the history begins at the first open rather than at launch, so a session in which nothing is ever copied costs nothing.
+A copy that is empty or only whitespace is not recorded. Recording begins when the application window opens, not when the popup is first opened, so the first time the popup is opened it already lists everything copied in the session so far.
 
 The history lives in the application window and is not written anywhere. Reloading the window or restarting the application clears it. That is the same lifetime every IDE clipboard history has.
 

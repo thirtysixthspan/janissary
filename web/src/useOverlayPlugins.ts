@@ -16,13 +16,13 @@ import { createPasteCapability } from './paste-into-surface';
 // a service belongs at the edge rather than inside a component
 // (`ai/guidelines/react-code-organization.md` §7).
 //
-// Nothing here activates a plugin. A plugin's chunk loads when its chord, its command word, or the
-// context menu first asks for it, which is the whole point of declaring statically.
+// A plugin's chunk loads when its chord, its command word, or the context menu first asks for it,
+// which is the whole point of declaring statically. The one exception is a plugin whose declaration
+// asks for `'startup'`: the effect below activates it once the window has mounted.
 //
 // `maxEntries` is read through a getter rather than captured, because the value arrives in the first
-// state snapshot — after mount — and activation happens even later, on the first keypress. Reading
-// it at activation is therefore both correct and enough: the config file itself is read once at
-// startup, so the number cannot change under a live session anyway.
+// state snapshot — after mount, and so after a startup plugin has already started. A plugin reads it
+// when it needs it, and sees the configured number from the first snapshot on.
 //
 // `currentTab` is behind a ref for the same reason and one more: the host is session-scoped, so every
 // value the memo below depends on has to be stable, and a caller's `() => currentTab` is a fresh
@@ -92,7 +92,10 @@ export function useOverlayPlugins(options: UseOverlayPluginsOptions): OverlayPlu
     void host.activate(plugin).then((ready) => { if (ready) openContributedOverlay(plugin, anchor); });
   }), [host]);
 
-  useEffect(() => () => { host.dispose(); }, [host]);
+  useEffect(() => {
+    void host.activateAtStartup();
+    return () => { host.dispose(); };
+  }, [host]);
 
   useEffect(() => { closeContributedOverlays(); }, [tabLabel]);
 

@@ -17,9 +17,9 @@ const rowIds = () => rows().map((row) => row.id);
 
 const module: OverlayPluginModule = {
   start: (capabilities: OverlayPluginCapabilities) => {
-    // The cap is applied here, at activation, rather than at import: the plugin's module is loaded
-    // only when the popup is first opened, which is after the host's configuration has arrived.
-    startHistory(capabilities.maxEntries);
+    // The cap goes in as a source rather than a number: the plugin starts at launch, before the host's
+    // configuration has arrived, so the store reads it again at every copy and every open.
+    startHistory(() => capabilities.maxEntries);
     // Pasting is kept separate from closing because the two routes in close differently. A keypress
     // goes through `handlePickerKey`, which closes on Return and on Escape alike; a row click goes
     // straight through `choose`. Folding the close into `paste` as well would close twice on Return.

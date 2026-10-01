@@ -21,6 +21,7 @@ The declaration is pure data in `web/src/overlay-plugins/registry.ts`:
   command: 'clip',
   title: 'clipboard',
   emptyText: '(no clipboard history)',
+  activation: 'startup',
 }
 ```
 
@@ -43,7 +44,7 @@ const module: OverlayPluginModule = {
 export default module;
 ```
 
-A plugin is loaded only when its chord, its command word, or the right-click menu first asks for it. Nothing about a plugin executes at startup.
+By default a plugin is loaded only when its chord, its command word, or the right-click menu first asks for it, and nothing about it executes at startup. A plugin that has to observe something from launch declares `activation: 'startup'` and is loaded and started once the window has mounted. The clipboard history is one: it can only list copies it saw happen, so starting it on the popup's first open would show an empty list however much had been copied. The chunk is still loaded separately from the entry bundle either way.
 
 ## Files to add
 
@@ -65,6 +66,7 @@ For plugin `example`, add `web/src/overlay-plugins/example/index.ts` and any mod
 | `command` | yes | The command word typed in the command bar that opens the overlay. Intercepted client-side; it never reaches the server |
 | `title` | yes | What the overlay's own title row reads |
 | `emptyText` | yes | What the overlay shows when it has nothing to show |
+| `activation` | no | `'open'` (the default) loads the plugin when something first opens it; `'startup'` loads it once the window has mounted. Startup is the broad trigger, so a declaration that asks for it says why beside the field |
 
 A chord the application already claims, a chord another plugin already claims, a command word the built-in dispatcher already answers, or a command word another plugin already claims is a **recorded refusal that disables that plugin** — never a throw, so one bad declaration leaves every other plugin working. The reason reaches the notifications feed as `Overlay plugin "<id>" disabled: <reason>.`
 
@@ -74,7 +76,7 @@ A chord the application claims is refused separately, at construction, because s
 
 A plugin overlay ranks **below all nine built-in overlays** — the route chooser, the syntax-theme and application-theme pickers, Quick Open, the tab navigator, the command history picker, the queue popup, the task picker, and the profile picker. A built-in overlay always wins a tie, so a plugin's chord pressed while one of them is open does nothing. There is no band that lets a plugin preempt a built-in overlay; adding one later is one optional field on the declaration, not a change to the seam.
 
-Within the plugin band, declaration order decides, so two plugins claiming the same moment resolve the same way every time. It is the declaration rather than the registration because a plugin has to be reachable before anything has loaded it: a chord or a command word resolves against the claims the host published at startup, and the chunk is fetched afterwards, when the plugin is first actually opened.
+Within the plugin band, declaration order decides, so two plugins claiming the same moment resolve the same way every time. It is the declaration rather than the registration because a plugin has to be reachable before anything has loaded it: a chord or a command word resolves against the claims the host published at startup, and the chunk is fetched afterwards, when the plugin is first actually opened — or once the window has mounted, for a plugin that declares `activation: 'startup'`.
 
 `claimsCommandBar` is data on the overlay rather than an omission from a separate list, for the same reason the built-in registry records it: whether the command bar keeps working while an overlay is up is a property of that overlay, and the queue popup is the one built-in that differs.
 
@@ -91,7 +93,7 @@ So the command bar's interception chain holds no plugin, the right-click menu na
 | Member | Meaning |
 |---|---|
 | `paste(text, anchor)` | Put `text` at the keyboard caret. `anchor` is the element a right-click landed on when the overlay was opened from the context menu, or null for every other route in |
-| `maxEntries` | How many entries the overlay may keep, from the host's configuration. Read once, at `start` |
+| `maxEntries` | How many entries the overlay may keep, from the host's configuration. Read it when it is needed rather than once at `start`: the configuration arrives after the window mounts, so a startup plugin sees the default first and the configured number afterwards |
 | `close()` | Close this overlay. How choosing an entry ends, and how Escape ends |
 
 That is the whole vocabulary. A plugin has no client, no tabs, no file access, and no host internals: an import boundary in `eslint.plugin-boundaries.mjs` rejects anything but its own contract, and `src/eslint-plugin-boundaries.test.ts` keeps the rule from rotting. The one shared module it may import is the capture seam — the same subscribe-and-unsubscribe shape `shared/drop-registry.ts` uses, because those two features may not import each other either.
@@ -128,4 +130,4 @@ A plugin may not save a file, scroll, rename, close, or open anything; it may no
 
 ### v1
 
-The first version: a declaration with an identity, a version, an API version, a chord, a command word, and the two strings the overlay shows; a `start` returning the overlay to publish and a `dispose`; and three capabilities — `paste`, `maxEntries`, and `close`.
+The first version: a declaration with an identity, a version, an API version, a chord, a command word, the two strings the overlay shows, and an optional `activation` trigger; a `start` returning the overlay to publish and a `dispose`; and three capabilities — `paste`, `maxEntries`, and `close`.

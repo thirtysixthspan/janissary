@@ -34,32 +34,56 @@ describe('the clipboard history', () => {
   });
 
   it('keeps the configured number of entries and drops the oldest', () => {
-    applyMaxEntries(3);
+    applyMaxEntries(() => 3);
     for (const text of ['a', 'b', 'c', 'd']) record(text);
     expect(texts()).toEqual(['b', 'c', 'd']);
   });
 
   it('starts each test from the default cap, whatever the last one left behind', () => {
-    applyMaxEntries(15);
-    expect(rows().length).toBeLessThanOrEqual(15);
+    applyMaxEntries(() => 3);
+    disposeHistory();
+    const twenty = Array.from({ length: 20 }, (_unused, index) => `t${index}`);
+    for (const text of twenty) record(text);
+    expect(rows()).toHaveLength(15);
   });
 
   it('trims at once when the cap is lowered below what is already held', () => {
     for (const text of ['a', 'b', 'c', 'd']) record(text);
-    applyMaxEntries(2);
+    applyMaxEntries(() => 2);
     expect(texts()).toEqual(['c', 'd']);
   });
 
   it('falls back to 15 for a cap that is not a positive integer', () => {
-    applyMaxEntries(100);
+    applyMaxEntries(() => 100);
     const twenty = Array.from({ length: 20 }, (_unused, index) => `t${index}`);
     for (const text of twenty) record(text);
-    applyMaxEntries(0);
+    applyMaxEntries(() => 0);
     expect(rows()).toHaveLength(15);
-    applyMaxEntries(-1);
+    applyMaxEntries(() => -1);
     expect(rows()).toHaveLength(15);
-    applyMaxEntries(2.5);
+    applyMaxEntries(() => 2.5);
     expect(rows()).toHaveLength(15);
+  });
+
+  // The plugin starts at launch and the configured cap arrives in the first state snapshot after it, so
+  // the store reads its source again rather than keeping the number it was started with.
+  it('keeps more entries once a higher cap arrives after start', () => {
+    let configured = 15;
+    applyMaxEntries(() => configured);
+    configured = 20;
+    const twenty = Array.from({ length: 20 }, (_unused, index) => `t${index}`);
+    for (const text of twenty) record(text);
+    expect(rows()).toHaveLength(20);
+  });
+
+  it('trims on the next open once a lower cap arrives after the copies', () => {
+    let configured = 15;
+    applyMaxEntries(() => configured);
+    for (const text of ['a', 'b', 'c', 'd']) record(text);
+    configured = 2;
+    selectNewest();
+    expect(texts()).toEqual(['c', 'd']);
+    expect(selection()).toBe(1);
   });
 
   it('clamps the selection to the rows that exist', () => {
@@ -97,10 +121,10 @@ describe('the clipboard history', () => {
   });
 
   it('records what the application copies while started, and stops when disposed', () => {
-    // `startHistory` is what subscribes to the capture seam, so the history begins at the first open
-    // of the popup rather than at application start — the module is not even loaded before then.
+    // `startHistory` is what subscribes to the capture seam, which is why the plugin is declared to
+    // activate at launch: a copy made before it starts is never seen.
     captureCopiedText('before start');
-    startHistory(15);
+    startHistory(() => 15);
     captureCopiedText('after start');
     expect(texts()).toEqual(['after start']);
 

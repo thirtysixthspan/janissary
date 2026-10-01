@@ -1,8 +1,11 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, render as renderComponent, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import { useOverlayPlugins, type UseOverlayPluginsOptions } from './useOverlayPlugins';
-import { contributedOverlayOnScreen, openContributedOverlay, overlayClaimedByCommand, registerContributedOverlay } from './shared/contributed-overlays';
+import {
+  contributedOverlayOnScreen, contributedOverlays, openContributedOverlay, overlayClaimedByCommand, registerContributedOverlay,
+} from './shared/contributed-overlays';
+import { captureCopiedText } from './shared/clipboard-captures';
 
 // The hook that owns the overlay-plugin host's lifetime. Every other host test constructs a host
 // directly, so nothing until this file mounted the hook — and the bug this file exists for is in the
@@ -102,6 +105,22 @@ describe('useOverlayPlugins', () => {
 
     // Same host, new cap: the config arrives after mount, so the number cannot be captured at build time.
     expect(view.result.current).toBe(first);
+  });
+
+  // The bug this pins: the clipboard plugin used to start on the popup's first open, so everything
+  // copied before then was gone. Mounting the hook starts it, and nothing here opens anything first.
+  it('records a copy made before the clipboard popup has ever been opened', async () => {
+    render();
+    await vi.waitFor(() => {
+      expect(contributedOverlays().map((overlay) => overlay.name)).toContain('clipboard-history');
+    });
+
+    captureCopiedText('copied before any open');
+
+    const overlay = contributedOverlays().find((entry) => entry.name === 'clipboard-history');
+    const popup = renderComponent(<>{overlay?.render(null)}</>);
+    teardown.push(popup.unmount);
+    expect(popup.getByText('copied before any open')).toBeTruthy();
   });
 
   it('disposes the host on unmount, so its claims stop answering', () => {

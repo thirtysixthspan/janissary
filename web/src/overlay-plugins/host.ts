@@ -3,14 +3,18 @@
 // a budget overrun disables that one plugin and leaves the picker stack and every other plugin
 // running — the same containment the editor host and the tab-plugin host both provide.
 //
-// Registration is what activation means for this family. Nothing here loads a plugin: a declaration is
-// enough for the host to answer "which chord opens this, which command word does, and what should
-// happen when one does", which is the whole reason to declare statically. The chunk arrives when the
-// user actually opens the overlay, and the plugin registers itself into the shared seam then.
+// Registration is what activation means for this family. Constructing the host loads no plugin: a
+// declaration is enough for the host to answer "which chord opens this, which command word does, and
+// what should happen when one does", which is the whole reason to declare statically. The chunk arrives
+// when the user actually opens the overlay, and the plugin registers itself into the shared seam then —
+// unless its declaration asks for `'startup'`, in which case `activateAtStartup` loads it once the
+// window has mounted.
 
 import { errorFirstLine } from '@shared/error-text';
 import { guardPluginCall } from '@shared/plugins/guard';
-import type { OverlayPluginGrants, OverlayPluginLoader, OverlayPluginModule } from './api';
+import type {
+  OverlayPluginCapabilities, OverlayPluginGrants, OverlayPluginLoader, OverlayPluginModule,
+} from './api';
 import { claimedByCore, overlayChordId } from './chords';
 import { overlayPluginDeclarations, overlayPluginLoaders, validateDeclarations } from './registry';
 import { closeContributedOverlay, declareOverlayClaims, registerContributedOverlay } from '../shared/contributed-overlays';
@@ -22,6 +26,9 @@ export type OverlayPluginHost = {
   // loader, or failed — in every one of those cases the plugin has been disabled and the reason is
   // reported through `onDisabled`.
   activate: (plugin: string) => Promise<boolean>;
+  // Activates every accepted plugin whose declaration asks for `'startup'`, concurrently: each one is
+  // independent, and each failure is contained and reported by `activate` like any other.
+  activateAtStartup: () => Promise<void>;
   dispose: () => void;
 };
 export type OverlayPluginHostOptions = {
@@ -51,6 +58,18 @@ export function createOverlayPluginHost(
   // Each plugin's own close, bound to its name. Handed to the plugin as a capability so choosing an
   // entry and pressing Escape both put the overlay away without the plugin importing the seam.
   const closeFor = (plugin: string) => () => { closeContributedOverlay(plugin); };
+
+  // `maxEntries` is a getter on the grants, because the configuration arrives after mount. Spreading
+  // the grants would read it once, here, and hand a startup plugin the default for good.
+  const capabilitiesFor = (plugin: string): OverlayPluginCapabilities => ({
+    paste: capabilities.paste,
+    get maxEntries() { return capabilities.maxEntries; },
+    close: closeFor(plugin),
+  });
+
+  // Advanced by `dispose`. An attempt still loading when the host is disposed — a startup activation
+  // under StrictMode's effect replay is the ordinary case — must not start a plugin nothing will dispose.
+  let generation = 0;
 
   const withdrawClaims = (plugin: string): void => {
     claimWithdrawals.get(plugin)?.();
@@ -125,7 +144,7 @@ export function createOverlayPluginHost(
     return pending;
   };
 
-  return {
+  const host: OverlayPluginHost = {
     activate: (plugin) => {
       if (disabledPlugins.has(plugin)) return Promise.resolve(false);
       if (unregisters.has(plugin)) return Promise.resolve(true);
@@ -135,15 +154,17 @@ export function createOverlayPluginHost(
       // unregistration in the map, which is how a subscription made in `start` leaks.
       const inFlight = activating.get(plugin);
       if (inFlight) return inFlight;
+      const startedIn = generation;
       const attempt = (async () => {
         try {
           const loaded = await load(plugin);
+          if (startedIn !== generation) return false;
           if (!byId.get(plugin)) throw new Error('has no declaration');
           // The plugin hands back what it wants published; the host stores the unsubscription so a
           // disable or a dispose takes the overlay off the seam before anything can open it again. The
           // claims are not passed here: they were published from the declaration at construction, which is
           // what let the chord that got us here find this plugin before it was loaded.
-          unregisters.set(plugin, registerContributedOverlay(loaded.start({ ...capabilities, close: closeFor(plugin) })));
+          unregisters.set(plugin, registerContributedOverlay(loaded.start(capabilitiesFor(plugin))));
           return true;
         } catch (error) {
           disable(plugin, errorFirstLine(error));
@@ -153,7 +174,12 @@ export function createOverlayPluginHost(
       activating.set(plugin, attempt);
       return attempt;
     },
+    activateAtStartup: async () => {
+      const startup = enabled.filter((declaration) => declaration.activation === 'startup');
+      await Promise.all(startup.map((declaration) => host.activate(declaration.id)));
+    },
     dispose: () => {
+      generation += 1;
       for (const plugin of modules.keys()) disposePlugin(plugin);
       // Each withdrawal deletes itself from the map, so the map is emptied rather than iterated.
       for (const withdraw of claimWithdrawals.values()) withdraw();
@@ -164,4 +190,5 @@ export function createOverlayPluginHost(
       disabledPlugins.clear();
     },
   };
+  return host;
 }

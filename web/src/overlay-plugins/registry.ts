@@ -26,6 +26,9 @@ export const overlayPluginDeclarations = [
     command: 'clip',
     title: 'clipboard',
     emptyText: '(no clipboard history)',
+    // A history can only show copies it saw happen. Started on first open, it would greet the user's
+    // first `Ctrl+Shift+V` with an empty list however much they had already copied.
+    activation: 'startup',
   },
 ] as const satisfies readonly OverlayPluginDeclaration[];
 

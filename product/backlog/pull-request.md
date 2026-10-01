@@ -2,7 +2,5 @@
 
 # pull-request
 
-* the copy buffer does collect values until a paste is attempted likely due to eager loading.
-
 * enable the 'cmd+shift+V' as well as 'ctrl+shift+V'
 
