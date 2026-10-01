@@ -62,10 +62,10 @@ offers: a harness selector (claude, opencode, codex), a **Label** field (the `as
 an **Auto-approve** toggle (`-y`), a **Model** dropdown, and an **Effort** dropdown.
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
-disabled unless the selected harness is claude or codex — switching between those two keeps its
-checked state, while switching to opencode clears and disables it. The dialog offers Auto-approve
-for exactly the harnesses the `harness` command accepts `-y` for, so the two can never disagree about
-which harnesses support it. **E2E browser** stays
+enabled only for a harness that accepts `-y` — today claude, opencode, and codex all do, so switching
+between them keeps its checked state — and a harness without auto-approve support would clear and
+disable it. The dialog offers Auto-approve for exactly the harnesses the `harness` command accepts
+`-y` for, so the two can never disagree about which harnesses support it. **E2E browser** stays
 enabled for every harness, since none rejects it. It starts checked, matching the command's default,
 and unchecking it adds `--no-browser` to the built command. The **Model** dropdown lists
 the selected harness's known models and is disabled when that harness has no model catalog. The
@@ -198,15 +198,15 @@ requirement, the failure set, and the connections rows.
 
 ### Auto-approve permissions (`-y` / `--yes`)
 
-Claude and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly
+Claude, opencode, and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly
 confirms that default, while `--no-auto-approve` opts out and wins if both forms are present. When auto-approval is active and the harness raises a
 blocking permission prompt, the app recognizes the prompt and answers it automatically instead of
 waiting for the user. Because the harness is confined to a disposable workspace clone (and, on
 macOS, a sandbox), auto-approving its prompts stays low-risk — see [[workspaced-agent]].
 
-The flag is supported for **claude and codex**:
-
-- `harness opencode -y` (or any harness without a recognized permission prompt) — error: `-y/--yes is only supported for the claude and codex harnesses.`
+The flag is supported for **claude, opencode, and codex** — every harness whose permission prompt
+the app recognizes. A harness without a recognized permission prompt would refuse it with
+`-y/--yes is only supported for the <supported harnesses> harnesses.`
 
 Auto-approval does **not** require a workspace. Launching `harness claude --no-workspace` without also opting out of auto-approval
 succeeds, but since there is then no disposable clone (and, on macOS, no sandbox) confining the
@@ -214,7 +214,7 @@ harness, a security warning line appears in the new tab's terminal: `auto-approv
 workspace: prompts are approved unattended against your real files, with no sandbox confining the
 harness`.
 
-`-y` combines with `as <label>` and `-w` in any order. Support for opencode is future work.
+`-y` combines with `as <label>` and `-w` in any order.
 
 For codex, the app recognizes codex's approval overlay by its structure rather than by broad
 approval words: a request-specific title (the command-execution, network-access, file-changes,
@@ -225,6 +225,17 @@ When that overlay is live, the app injects a single Enter to accept the highligh
 selected-row Enter contract as claude, not a literal `y` — and records the same `Auto-approved a
 permission prompt` notification with a capture link. A gate-shaped menu that has scrolled above
 codex's live input composer is treated as stale and not answered.
+
+For opencode, the app recognizes its permission panel by structure as well: the exact
+`△ Permission required` title, then an option row led by `Allow once` that also offers `Reject`,
+then the `enter confirm` hint on that row or below it. The request line, path, and patterns between
+them vary and are not part of the match, and the prompt is recognized whether or not it offers
+`Allow always`. opencode's menu defaults to `Allow once`, so the app injects a single Enter to take
+that one-time choice — never `Allow always` — and records the same `Auto-approved a permission
+prompt` notification with a capture link. opencode's follow-up stages (the `Always allow`
+confirmation after choosing `Allow always` by hand, and the feedback input after `Reject`) carry a
+different title and are never answered. opencode draws the prompt full-screen in place of its input
+box and removes it once answered, so a resolved prompt cannot linger on screen to be answered again.
 
 ### End-to-end browser (`-b` / `--no-browser`)
 
@@ -662,14 +673,11 @@ then answered, for example by auto-approve landing after it had stood down, leav
 harness that has gone back to work. If it stops again, the next committed idle transition or
 unanswered prompt badges it afresh.
 
-When claude or codex shows a recognized permission prompt, the dot stops blinking immediately — the
-harness is waiting on the user, not working — and if nothing is going to answer the prompt (the tab
-was launched without `-y`, or auto-approve has stood down on a prompt it could not clear), the tab is
-marked unread right away rather than waiting on the usual working→idle debounce. A permission prompt
-in opencode simply reads as idle, with no distinct gate detection of its own — its prompt recognition
-is future work, alongside its auto-approve support — but it still badges unread like any other
-working→idle transition, so a hidden opencode tab stuck on an unanswered prompt is still surfaced,
-just without the immediate (non-debounced) timing.
+When claude, opencode, or codex shows a recognized permission prompt, the dot stops blinking
+immediately — the harness is waiting on the user, not working — and if nothing is going to answer the
+prompt (the tab was launched with `--no-auto-approve`, or auto-approve has stood down on a prompt it
+could not clear), the tab is marked unread right away rather than waiting on the usual working→idle
+debounce.
 
 A harness without its own recognition signals keeps the previous coarse behavior — the dot blinks
 for as long as the process is alive. All three launchable harnesses have signals today, so this

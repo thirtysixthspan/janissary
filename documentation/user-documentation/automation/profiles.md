@@ -52,7 +52,7 @@ The eleven types are `agent`, `harness`, `editor`, `files`, `notifications`, `sc
 - **`model`** — passed to the harness verbatim; an unknown model for that harness is reported and the entry skipped.
 - **`effort`** — an effort/thinking level, forwarded verbatim like `--effort` on the interactive `harness` command (translated to each harness's own flag: claude `--effort`, codex `-c model_reasoning_effort`, opencode has none). Not validated against any fixed set of levels.
 - **`workspace`** — launch in a fresh [workspace clone](/user-documentation/advanced-agents/workspaced-agent). It defaults to `true`; set it to `false` to opt out.
-- **`autoApprove`** — auto-approve permission prompts. It defaults to `true` for claude and codex and `false` for opencode; explicitly setting it to `true` for opencode reports an unsupported setting and skips that entry.
+- **`autoApprove`** — auto-approve permission prompts. It defaults to `true` for claude, opencode, and codex.
 - **`offline`**: deny network access inside the workspace sandbox. It is only meaningful when `workspace` is enabled.
 - **`browser`**: launch the harness with a browser attached. It defaults to `true`, the same as an interactive `harness` command; set it to `false` to opt out, the entry form of `--no-browser`. A `profile save`d entry records it, so a saved session reopens with or without its browser exactly as it ran.
 - **`remote`**: launch on another machine, using the address you would put after `on` in a harness command, such as `"dev@example.com:project"`. It implies `workspace`, omits `cwd`, and asks for authentication once for each remote tab the profile opens.

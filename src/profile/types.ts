@@ -32,9 +32,10 @@ export type ProfileHarnessEntry = ProfileTabRuntime & {
   // validation against a fixed set (unlike `model`, which is checked against harness-models.json).
   effort?: string;
   workspace?: boolean;
-  // `-y`/`--yes`: auto-approve the harness's own permission prompts. Supported for claude and codex
-  // (mirrors `parseHarnessCommand`); an entry that sets it for an unsupported harness (opencode) is
-  // reported and skipped at launch rather than opened unsafely. Works with or without `workspace`.
+  // `-y`/`--yes`: auto-approve the harness's own permission prompts. Supported for every harness with
+  // a permission-gate detector (mirrors `parseHarnessCommand`); an entry that sets it for an
+  // unsupported harness is reported and skipped at launch rather than opened unsafely. Works with or
+  // without `workspace`.
   autoApprove?: boolean;
   // `--offline`: adds a network-deny rule to the tab's sandbox profile (only meaningful with
   // `workspace`).

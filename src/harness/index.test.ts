@@ -169,15 +169,14 @@ describe('parseHarnessCommand', () => {
     expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
   });
 
-  it('errors when -y is given for an unsupported harness', () => {
+  it('sets autoApprove true with -y for opencode alongside -w', () => {
     const result = parseHarnessCommand('harness opencode -w -y');
-    expect('error' in result).toBe(true);
-    expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude and codex harnesses.');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
   });
 
-  it('errors when -y is given for an unsupported harness with no other flags', () => {
-    const result = parseHarnessCommand('harness opencode -y');
-    expect((result as { error: string }).error).toBe('-y/--yes is only supported for the claude and codex harnesses.');
+  it('sets autoApprove true with --yes for opencode with no other flags', () => {
+    const result = parseHarnessCommand('harness opencode --yes');
+    expect('autoApprove' in result && (result as { autoApprove: boolean }).autoApprove).toBe(true);
   });
 
   it('combines -y with `as <label>` and -w', () => {

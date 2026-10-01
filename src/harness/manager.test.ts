@@ -676,7 +676,7 @@ describe('HarnessManager launch dialog view', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.openLaunchDialog();
-    expect(manager.harnessLaunchView()!.autoApprove).toEqual(['claude', 'codex']);
+    expect(manager.harnessLaunchView()!.autoApprove).toEqual(['claude', 'opencode', 'codex']);
   });
 
   it('returns null again after the dialog is closed', () => {

@@ -1,5 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { parseHarnessCommand } from './command-parse.js';
+import { supportsHarnessAutoApprove } from './auto-approve.js';
+import type * as AutoApprove from './auto-approve.js';
+
+// Every bundled harness has a gate detector, so the unsupported-harness refusal is reachable only by
+// stubbing the support predicate; it otherwise passes through to the real gate table.
+vi.mock('./auto-approve.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof AutoApprove>();
+  return { ...actual, supportsHarnessAutoApprove: vi.fn(actual.supportsHarnessAutoApprove) };
+});
+
+afterEach(() => { vi.mocked(supportsHarnessAutoApprove).mockReset(); });
 
 // The helpers (findFlagValue, splitWithClause, parseHarnessFlags, parseLabelSubcommand) are
 // module-private, so every branch is reached through the exported entry point.
@@ -15,7 +26,17 @@ describe('parseHarnessCommand — launch form', () => {
     });
   });
 
-  it('defaults an unsupported harness to workspace without auto-approve', () => {
+  it('defaults opencode to workspace and auto-approve like the other harnesses', () => {
+    expect(parseHarnessCommand('harness opencode')).toMatchObject({ workspace: true, autoApprove: true });
+  });
+
+  it('accepts -y for opencode and lets --no-auto-approve opt it out', () => {
+    expect(parseHarnessCommand('harness opencode -y')).toMatchObject({ name: 'opencode', autoApprove: true });
+    expect(parseHarnessCommand('harness opencode --no-auto-approve')).toMatchObject({ autoApprove: false });
+  });
+
+  it('defaults a harness without a gate detector to workspace without auto-approve', () => {
+    vi.mocked(supportsHarnessAutoApprove).mockReturnValue(false);
     expect(parseHarnessCommand('harness opencode')).toMatchObject({ workspace: true, autoApprove: false });
   });
 
@@ -253,9 +274,10 @@ describe('parseHarnessCommand — error paths', () => {
     });
   });
 
-  it('errors when auto-approve is asked of an unsupported harness', () => {
+  it('errors when auto-approve is asked of a harness without a gate detector', () => {
+    vi.mocked(supportsHarnessAutoApprove).mockReturnValue(false);
     expect(parseHarnessCommand('harness opencode -y')).toEqual({
-      error: '-y/--yes is only supported for the claude and codex harnesses.',
+      error: expect.stringMatching(/^-y\/--yes is only supported for the .+ harnesses\.$/),
     });
   });
 

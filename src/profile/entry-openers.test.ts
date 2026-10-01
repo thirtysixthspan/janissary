@@ -4,6 +4,15 @@ import type { AgentState } from '../agent/types.js';
 import type { Managers } from '../managers.js';
 import type { ProfileHarnessEntry } from './types.js';
 import type { RemoteLaunchHandlers } from '../remote/entry-factory.js';
+import { supportsHarnessAutoApprove } from '../harness/auto-approve.js';
+import type * as AutoApprove from '../harness/auto-approve.js';
+
+// Every bundled harness has a gate detector, so the unsupported-autoApprove skip is reachable only by
+// stubbing the support predicate; it otherwise passes through to the real gate table.
+vi.mock('../harness/auto-approve.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof AutoApprove>();
+  return { ...actual, supportsHarnessAutoApprove: vi.fn(actual.supportsHarnessAutoApprove) };
+});
 
 // `profile launch`'s per-entry openers. `save/index.test.ts` drives them through a whole profile,
 // which never reaches the entries that carry a saved context or schedule, the one whose harness
@@ -53,6 +62,7 @@ function agentState(overrides: Partial<AgentState> = {}): AgentState {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(supportsHarnessAutoApprove).mockReset();
 });
 
 describe('openAgentEntry', () => {
@@ -116,9 +126,21 @@ describe('openHarnessEntry', () => {
 
   it('rejects autoApprove for a harness that cannot take it', () => {
     const h = harness();
+    vi.mocked(supportsHarnessAutoApprove).mockReturnValue(false);
 
     expect(openHarnessEntry(entry({ tool: 'opencode', autoApprove: true }), h.managers, 1, '#fff', ISSUING, []))
-      .toBe('autoApprove (-y) is only supported for the claude and codex harnesses');
+      .toMatch(/^autoApprove \(-y\) is only supported for the .+ harnesses$/);
+    expect(h.managers.harness.openFromProfile).not.toHaveBeenCalled();
+  });
+
+  it('opens an opencode entry that asks for autoApprove', () => {
+    const h = harness();
+
+    expect(openHarnessEntry(entry({ tool: 'opencode', autoApprove: true }), h.managers, 1, '#fff', ISSUING, []))
+      .toBeUndefined();
+    expect(h.managers.harness.openFromProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ tool: 'opencode', autoApprove: true }), expect.any(String), 1, '#fff', 'janus',
+    );
   });
 
   it('installs a schedule when the entry carries one, and none when it does not', () => {

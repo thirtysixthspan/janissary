@@ -1,6 +1,7 @@
 import type { ScreenCapture } from './screen.js';
 import { HARNESS_NAMES } from './index.js';
 import { detectCodexPermissionGate, CODEX_APPROVAL_KEYSTROKE } from './codex-permission-gate.js';
+import { detectOpencodePermissionGate, OPENCODE_APPROVAL_KEYSTROKE } from './opencode-permission-gate.js';
 
 // The highlighted default option-1 line, e.g. `❯ 1. Yes` (possibly with trailing text). The `❯`
 // glyph is the highlight marker and is required — a gate always defaults to "Yes".
@@ -50,14 +51,14 @@ function detectClaudeGate(text: string): boolean {
 
 type GateEntry = { detect: (text: string) => boolean; keystroke: string };
 
-// Per-harness gate detectors + approval keystrokes. claude and codex are populated; opencode is
-// deliberate later work (it needs its own captured gate signatures). Both keystrokes are Enter
-// (`\r`), which accepts the highlighted default option — `y` does not work because these are
+// Per-harness gate detectors + approval keystrokes, one per bundled harness. Every keystroke is
+// Enter (`\r`), which accepts the highlighted default option — `y` does not work because these are
 // selected-row menus, not y/n prompts. Membership here is also the source of truth for which
 // harnesses accept `-y`/auto-approve (see supportsHarnessAutoApprove).
 const GATE_TABLE: Record<string, GateEntry> = {
   claude: { detect: detectClaudeGate, keystroke: '\r' },
   codex: { detect: detectCodexPermissionGate, keystroke: CODEX_APPROVAL_KEYSTROKE },
+  opencode: { detect: detectOpencodePermissionGate, keystroke: OPENCODE_APPROVAL_KEYSTROKE },
 };
 
 // Whether `harnessName` has an installed permission-gate detector and therefore supports
@@ -73,7 +74,7 @@ export function autoApproveHarnessNames(): string[] {
   return HARNESS_NAMES.filter((name) => supportsHarnessAutoApprove(name));
 }
 
-// The auto-approve harnesses as prose ("claude and codex"), for the refusals that name them.
+// The auto-approve harnesses as prose ("claude, opencode, and codex"), for the refusals that name them.
 export function describeAutoApproveHarnesses(): string {
   return new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(autoApproveHarnessNames());
 }

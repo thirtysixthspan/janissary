@@ -74,8 +74,8 @@ function parseHarnessFlags(
   const noAutoApprove = tokens.some((t) => t.toLowerCase() === '--no-auto-approve');
   const requestedAutoApprove = tokens.some((t) => t === '-y' || t === '--yes');
   const autoApprove = supportsHarnessAutoApprove(name) && !noAutoApprove;
-  // The supported-harness check comes first: adding -w would not make `harness opencode -y` valid,
-  // so pointing at -w would misdirect — the harness choice is the real blocker.
+  // The supported-harness check comes first: adding -w would not make -y valid for a harness with no
+  // gate detector, so pointing at -w would misdirect — the harness choice is the real blocker.
   if (requestedAutoApprove && !noAutoApprove && !supportsHarnessAutoApprove(name)) {
     return { error: `-y/--yes is only supported for the ${describeAutoApproveHarnesses()} harnesses.` };
   }
@@ -112,7 +112,7 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
  * gives the new tab a custom label instead of the harness name (still de-duplicated against
  * existing tab labels). `--offline` adds a network-deny rule to the tab's sandbox profile (only
  * meaningful alongside `-w`/`--workspace`). `-y`/`--yes` auto-approves the harness's own permission
- * prompts; it is supported for claude and codex (a hard error otherwise) and works with or without `-w`/`--workspace` —
+ * prompts; it is supported for every harness with a permission-gate detector (a hard error otherwise) and works with or without `-w`/`--workspace` —
  * without a workspace, the new tab's terminal shows a security warning since prompts are then
  * approved unattended against the real working directory, with no sandbox.
  * Every harness gets a headless Chromium by default, with the two variables a sandboxed AI drives it
