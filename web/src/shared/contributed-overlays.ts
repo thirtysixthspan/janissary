@@ -44,11 +44,16 @@ export type OverlayClaims = {
 
 type Registration = {
   overlay: ContributedOverlay;
-  claims: OverlayClaims;
   open: boolean;
   anchor: HTMLElement | null;
 };
 
+// A declaration and a registration are two facts that arrive at different times and come from different
+// parties, so they are two tables rather than one. A plugin declares how it will be reached before
+// anything has loaded it; it registers the overlay it built afterwards. Routing reads the first, display
+// reads the second, and collapsing them would make the chord a plugin has declared unusable until the
+// plugin has already been activated to answer for it.
+const declarations = new Map<string, OverlayClaims>();
 const registrations = new Map<string, Registration>();
 const listeners = new Set<() => void>();
 let version = 0;
@@ -59,10 +64,23 @@ function notify(): void {
   for (const listener of listeners) listener();
 }
 
-export function registerContributedOverlay(
-  overlay: ContributedOverlay, claims: OverlayClaims,
-): () => void {
-  registrations.set(overlay.name, { overlay, claims, open: false, anchor: null });
+// Publishes how a plugin will be reached. The host calls this once per accepted plugin at construction,
+// before any chunk exists, which is what lets a chord or a command word find a plugin on its first use
+// rather than only after something has opened it once.
+//
+// Declaring does not notify: nothing rendered depends on a claim, only on a registration. The version
+// counter means "an overlay was registered, opened, or closed", and a claim changing is not one of those.
+export function declareOverlayClaims(name: string, claims: OverlayClaims): () => void {
+  declarations.set(name, claims);
+  return () => {
+    // The withdrawal leaves a later declaration under the same name in place, so a host that is rebuilt
+    // after its successor cannot drop the successor's claim.
+    if (declarations.get(name) === claims) declarations.delete(name);
+  };
+}
+
+export function registerContributedOverlay(overlay: ContributedOverlay): () => void {
+  registrations.set(overlay.name, { overlay, open: false, anchor: null });
   notify();
   // The removal leaves a later registration under the same name in place, so a remount's cleanup
   // ordering cannot drop a successor's.
@@ -117,15 +135,15 @@ export function contributedOverlayAnchor(name: string): HTMLElement | null {
 
 function claimForCommand(command: string): string | null {
   const wanted = command.toLowerCase();
-  for (const entry of registrations.values()) {
-    if (entry.claims.command.toLowerCase() === wanted) return entry.overlay.name;
+  for (const [name, claims] of declarations) {
+    if (claims.command.toLowerCase() === wanted) return name;
   }
   return null;
 }
 
 function claimForChord(chordId: string): string | null {
-  for (const entry of registrations.values()) {
-    if (entry.claims.chords.includes(chordId)) return entry.overlay.name;
+  for (const [name, claims] of declarations) {
+    if (claims.chords.includes(chordId)) return name;
   }
   return null;
 }

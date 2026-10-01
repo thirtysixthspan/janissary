@@ -134,7 +134,6 @@ describe('a plugin-contributed overlay', () => {
   const publish = (name: string, claimsCommandBar = true) => {
     registrations.push(registerContributedOverlay(
       { name, claimsCommandBar, render: () => null, onKey: () => {}, onOpen: () => {} },
-      { chords: ['ctrl+shift+v'], command: 'clip' },
     ));
   };
 

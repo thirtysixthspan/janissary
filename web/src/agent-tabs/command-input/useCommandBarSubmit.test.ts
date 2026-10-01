@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import React from 'react';
 import { useCommandBarSubmit } from './useCommandBarSubmit';
-import { installOverlayOpener, registerContributedOverlay } from '../../shared/contributed-overlays';
+import { declareOverlayClaims, installOverlayOpener, registerContributedOverlay } from '../../shared/contributed-overlays';
 
 const published: (() => void)[] = [];
 afterEach(() => { while (published.length > 0) published.pop()?.(); });
@@ -13,9 +13,9 @@ afterEach(() => { while (published.length > 0) published.pop()?.(); });
 function publishClaiming(command: string) {
   const opened = vi.fn();
   published.push(
+    declareOverlayClaims('fixture', { chords: ['ctrl+shift+v'], command }),
     registerContributedOverlay(
       { name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {} },
-      { chords: ['ctrl+shift+v'], command },
     ),
     installOverlayOpener(opened),
   );

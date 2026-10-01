@@ -2,19 +2,21 @@ import { render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useWindowKeys } from './useWindowKeys';
-import { installOverlayOpener, openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
+import { declareOverlayClaims, installOverlayOpener, openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
 
 const published: (() => void)[] = [];
 afterEach(() => { while (published.length > 0) published.pop()?.(); });
 
 // Publishes an overlay claiming the given chords, with an opener standing in for the host's: the
-// window handler never holds a plugin, it asks the seam.
+// window handler never holds a plugin, it asks the seam. The claim and the registration are separate
+// publishes because they are separate facts — the host declares the chord before it has loaded the
+// chunk, and registers the overlay afterwards.
 function publishClaiming(chords: string[]) {
   const opened = vi.fn();
   published.push(
+    declareOverlayClaims('fixture', { chords, command: 'clip' }),
     registerContributedOverlay(
       { name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {} },
-      { chords, command: 'clip' },
     ),
     installOverlayOpener(opened),
   );
@@ -303,10 +305,12 @@ describe('useWindowKeys', () => {
   it('routes keys to a contributed overlay while it is open, and to nothing else', () => {
     const onKey = vi.fn();
     const openPicker = vi.fn();
-    published.push(registerContributedOverlay(
-      { name: 'open-one', claimsCommandBar: true, render: () => null, onKey, onOpen: () => {} },
-      { chords: ['ctrl+r'], command: 'other' },
-    ));
+    published.push(
+      declareOverlayClaims('open-one', { chords: ['ctrl+r'], command: 'other' }),
+      registerContributedOverlay(
+        { name: 'open-one', claimsCommandBar: true, render: () => null, onKey, onOpen: () => {} },
+      ),
+    );
     openContributedOverlay('open-one', null);
     render(React.createElement(TestComponent, { callbacks: { openPicker } }));
 

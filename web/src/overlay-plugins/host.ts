@@ -13,22 +13,15 @@ import { guardPluginCall } from '@shared/plugins/guard';
 import type { OverlayPluginGrants, OverlayPluginLoader, OverlayPluginModule } from './api';
 import { claimedByCore, overlayChordId } from './chords';
 import { overlayPluginDeclarations, overlayPluginLoaders, validateDeclarations } from './registry';
-import { closeContributedOverlay, registerContributedOverlay } from '../shared/contributed-overlays';
+import { closeContributedOverlay, declareOverlayClaims, registerContributedOverlay } from '../shared/contributed-overlays';
 
 const LOAD_TIMEOUT_MS = 1000;
 
 export type OverlayPluginHost = {
-  // The plugin a chord opens, or null. Only accepted, non-disabled plugins appear.
-  pluginForChord: (chordId: string) => string | null;
-  // The plugin a command word opens, or null.
-  pluginForCommand: (command: string) => string | null;
-  // The accepted plugins in declaration order, for the host to hand the seam and the window handler.
-  accepted: () => string[];
   // Loads the plugin and registers its overlay. Returns false when the plugin is disabled, has no
   // loader, or failed — in every one of those cases the plugin has been disabled and the reason is
   // reported through `onDisabled`.
   activate: (plugin: string) => Promise<boolean>;
-  disabled: () => readonly string[];
   dispose: () => void;
 };
 export type OverlayPluginHostOptions = {
@@ -52,10 +45,28 @@ export function createOverlayPluginHost(
   const modules = new Map<string, OverlayPluginModule>();
   const loading = new Map<string, Promise<OverlayPluginModule>>();
   const unregisters = new Map<string, () => void>();
+  const claimWithdrawals = new Map<string, () => void>();
 
   // Each plugin's own close, bound to its name. Handed to the plugin as a capability so choosing an
   // entry and pressing Escape both put the overlay away without the plugin importing the seam.
   const closeFor = (plugin: string) => () => { closeContributedOverlay(plugin); };
+
+  const withdrawClaims = (plugin: string): void => {
+    claimWithdrawals.get(plugin)?.();
+    claimWithdrawals.delete(plugin);
+  };
+
+  // How a plugin is reached, published before anything has loaded it. This is the half of the routing
+  // that a chord or a command word needs before it can decide anything, and it is why a plugin is
+  // reachable on its first use rather than only after something has already opened it once.
+  const publishClaims = (plugin: string): void => {
+    if (claimWithdrawals.has(plugin) || disabledPlugins.has(plugin)) return;
+    const declaration = byId.get(plugin);
+    if (!declaration) return;
+    claimWithdrawals.set(plugin, declareOverlayClaims(plugin, {
+      chords: [overlayChordId(declaration.chord)], command: declaration.command,
+    }));
+  };
 
   const disposePlugin = (plugin: string): void => {
     unregisters.get(plugin)?.();
@@ -71,6 +82,9 @@ export function createOverlayPluginHost(
   const disable = (plugin: string, reason: string): void => {
     if (disabledPlugins.has(plugin)) return;
     disabledPlugins.set(plugin, reason);
+    // A plugin the host has given up on stops answering its chord and its command word in the same
+    // breath, so nothing routes to a plugin that can no longer be opened.
+    withdrawClaims(plugin);
     disposePlugin(plugin);
     loading.delete(plugin);
     onDisabled(plugin, reason);
@@ -79,6 +93,7 @@ export function createOverlayPluginHost(
   for (const rejection of rejections) disable(rejection.id, rejection.reason);
 
   const enabled = accepted;
+  const byId = new Map(enabled.map((entry) => [entry.id, entry]));
 
   // A chord the window handler already owns could never open, so it is reported at construction rather
   // than left silently dead.
@@ -88,10 +103,8 @@ export function createOverlayPluginHost(
     }
   }
 
-  // The declarations that survived construction, minus anything disabled since. Read at call time
-  // rather than captured: a plugin disabled by a failed load must stop answering its chord and its
-  // command word immediately, or the host would keep routing to a plugin it has already given up on.
-  const live = () => accepted.filter((declaration) => !disabledPlugins.has(declaration.id));
+  // Last, so a plugin refused above never publishes a claim.
+  for (const declaration of enabled) publishClaims(declaration.id);
 
   const load = async (plugin: string): Promise<OverlayPluginModule> => {
     const cached = modules.get(plugin);
@@ -109,28 +122,17 @@ export function createOverlayPluginHost(
   };
 
   return {
-    accepted: () => live().map((declaration) => declaration.id),
-    disabled: () => [...disabledPlugins.keys()],
-    pluginForChord: (chord) => live().find((entry) => overlayChordId(entry.chord) === chord)?.id ?? null,
-    pluginForCommand: (command) => {
-      const wanted = command.toLowerCase();
-      return live().find((entry) => entry.command.toLowerCase() === wanted)?.id ?? null;
-    },
     activate: async (plugin) => {
       if (disabledPlugins.has(plugin)) return false;
       if (unregisters.has(plugin)) return true;
       try {
         const loaded = await load(plugin);
-        const declaration = enabled.find((entry) => entry.id === plugin);
-        if (!declaration) throw new Error('has no declaration');
+        if (!byId.get(plugin)) throw new Error('has no declaration');
         // The plugin hands back what it wants published; the host stores the unsubscription so a
         // disable or a dispose takes the overlay off the seam before anything can open it again. The
-        // claims come from the declaration, not from the plugin, so nothing but the host has to know
-        // which chord and command word reach a plugin.
-        unregisters.set(plugin, registerContributedOverlay(
-          loaded.start({ ...capabilities, close: closeFor(plugin) }),
-          { chords: [overlayChordId(declaration.chord)], command: declaration.command },
-        ));
+        // claims are not passed here: they were published from the declaration at construction, which is
+        // what let the chord that got us here find this plugin before it was loaded.
+        unregisters.set(plugin, registerContributedOverlay(loaded.start({ ...capabilities, close: closeFor(plugin) })));
         return true;
       } catch (error) {
         disable(plugin, errorFirstLine(error));
@@ -139,6 +141,9 @@ export function createOverlayPluginHost(
     },
     dispose: () => {
       for (const plugin of modules.keys()) disposePlugin(plugin);
+      // Each withdrawal deletes itself from the map, so the map is emptied rather than iterated.
+      for (const withdraw of claimWithdrawals.values()) withdraw();
+      claimWithdrawals.clear();
       disabledPlugins.clear();
     },
   };
