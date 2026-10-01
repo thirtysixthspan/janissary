@@ -85,21 +85,35 @@ belongs on a new `tabs` channel rather than as a second variant of `StateEvent`.
 into a sidebar (it only clears on the `dock === null` branch, line 26), because a docked tab is
 permanently visible chrome that may go on holding a badge from before. So the badge alone cannot
 answer "still unseen" — a tab badged and then docked keeps its badge while being permanently
-visible. Re-asking `markUnreadTab`'s eligibility test when the grace period ends closes that, and it
-closes the "do not notify a tab you are looking at" rule at the same time, because that same
-predicate already refuses the active label and the visible-secondary label. One re-read, three
-answers; no separate mechanism is built for either.
+visible. So when the grace period ends, a tab that is gone, docked, or no longer badged is discarded.
+A tab that is still badged but fails `markUnreadTab`'s eligibility test — the active label or the
+visible-secondary label — is on screen right now, and is **deferred rather than discarded**: the
+escalation looks again after `UNREAD_DWELL_MS`. A user who stayed on the tab has completed its dwell
+by then, and that badge clear cancels the re-check; a user who glanced and moved on left the badge up,
+and the re-check notifies. Discarding instead would let a glance that straddles the thirty-second
+mark spend the escalation while leaving the badge up, which is the forgotten badge this feature
+exists to remove. The same predicate answers "on screen" for both the raise and the fire path; no
+separate mechanism is built for either.
 
-**The pending escalation is module-level singleton state, released by the harness feature.** The arm
-site is `applyBusyTransition(managers, label, transition)`, so the owner has to be something
-`managers` can reach or a module import. A singleton in its own focused module is that, and it keeps
-the concern out of `TabManager` and out of the `Managers` registry — the latter matters because
-adding a manager means entries in `MANAGER_DISPOSE_ORDER` and `MANAGER_TAB_RELEASE`
-(`src/managers.ts:83,139`) plus `src/controller/create-managers.ts`, and their compile-time
-completeness checks (`src/managers.ts:120-123,157-163`) and `src/managers.test.ts` would all have to
-move for a feature that owns one map. `messageBus` (`src/bus.ts:165`) is the existing precedent for
-module-level singleton state in `src/`, and this singleton is the one thing that genuinely needs a
-`tabs`-channel subscription — the dwell produces clears and never consumes them, so it takes none.
+**The pending escalation lives on the tab; the module holds only the subscription.** The arm site is
+`applyBusyTransition(managers, label, transition)`, and the handle is per-tab state, so
+`ai/guidelines/architecture-principles.md` § 2 puts it on the tab record rather than in a new
+`Map<label, …>`: `TabRuntime` (`src/tab/types.ts`) gains an optional `idleEscalation` timer, reached
+through `tabRuntime` (`src/tab/runtime.ts`), beside the `busy` flag, `cwd`, `context`, and `queue` it
+already carries. `Tab.harness` is the wire-shaped `HarnessView`, so a timer does not belong there, and
+`HarnessRuntimes` is keyed by PTY id and releases on PTY exit, which would add a cancel cause. The
+runtime record's readers — `buildAgentStateFromTab` (`src/tab/agent-state.ts`) and the view builder
+(`src/tab/view.ts`) — pick named fields, so the handle is never serialized. Every lookup goes through
+`managers.tab.byLabel`: `removeTabAt` spreads each surviving tab into a new object, but the spread is
+shallow, so the runtime record — and the handle on it — is shared by every copy. This keeps the
+concern out of the `Managers` registry, which would otherwise need entries in
+`MANAGER_DISPOSE_ORDER` and `MANAGER_TAB_RELEASE` (`src/managers.ts`), `src/controller/create-managers.ts`,
+and their completeness checks. The module's one piece of state is its `tabs`-channel subscription —
+the dwell produces clears and never consumes them, so it takes none. The subscription is attached by
+the first arm and released by `disposeHarnessIdleEscalations`, which runs in `MANAGER_DISPOSE_ORDER`
+before `Controller.shutdown` calls `messageBus.clear()`, so a later arm in the same process
+re-subscribes rather than relying on a listener the clear already dropped. It captures the `Managers`
+that armed it, to resolve a cleared label to its tab.
 
 **The dwell timer is the same shape, in the module that owns the badge.** There is only ever one
 candidate — the active tab — so it is one handle, not a map. It is a tab concern rather than a
@@ -118,7 +132,7 @@ the acquire/release symmetry the architecture principles require. Note that `clo
 closed — so closing a badged harness tab produces no badge clear for that label, and the `closeTab`
 release is the only thing that stops its pending escalation. That is correct, not a redundancy.
 
-**A tab's label is immutable, so keying the pending escalation by label is safe.** No non-test
+**A tab's label is immutable, so resolving the pending escalation's tab by label is safe.** No non-test
 source assigns to `Tab.label`; `renameTabOp` (`src/tab/rename.ts`, imported at
 `src/tab/operations.ts:8`) changes the tab's `title`, which is its display name, not its identity.
 Two consequences: a tab renamed during the grace period is still found by its label, and — because
@@ -252,19 +266,24 @@ as the one depth gap worth closing. The others found are declined and listed und
     claim.
 14. **All five visibility clear sites become dwell-gated** — `setActiveTabOp`, `reorderTabOp`,
     `reorderTabToOp`, `closeTabOp`'s newly-active tab, and `applyDock`'s undock-to-center — because
-    all five make a tab active or selected *because the user went to it*. The busy-path clear and
-    `clearUnread` do not, and stay immediate.
+    all five make a tab active or selected *because the user went to it*. Each names the tab the
+    operation actually leaves active, not the one it was asked about: a reorder-to that drags a
+    docked or reporting tab leaves the previously active tab active, so that tab keeps its dwell and
+    the dragged one is never dwelled. The busy-path clear and `clearUnread` do not dwell, and stay
+    immediate.
 15. **The visible split-pane half of `repairPaneSelections` clears immediately**, and only its
     active-tab half dwells. A tab rendered in the other half of the screen is on screen, which is the
     same judgement `markUnreadTab` already makes by refusing to badge that pane at all. It also
     cannot work the other way: a split-pane tab is visible but not active, so it could never complete
     an active-tab dwell, and its badge would never clear.
-16. **An escalation is discarded at fire time if its tab is the active tab or the visible split-pane
-    selection** — the notification never lands on a tab you are looking at. This needs no new
-    mechanism: the fire path already re-asks the badge's own eligibility predicate, and that
-    predicate already refuses both labels. The consequence is accepted deliberately — a one-second
-    glance at t=29s does not stop a notification firing at t=30s, because by then the user is not
-    looking at that tab, which is exactly the "a glance is not a read" rule applied honestly.
+16. **An escalation that fires while its tab is the active tab or the visible split-pane selection
+    waits** — the notification never lands on a tab you are looking at, but a glance is not a read
+    either. The fire path re-asks the badge's own eligibility predicate, which refuses both labels,
+    and in that case looks again after `UNREAD_DWELL_MS`: a user who stayed has dwelt the badge off
+    and the re-check is cancelled, while a user who moved on is told then. The consequence is accepted
+    deliberately — a one-second glance at t=29s does not stop a notification firing at t=30s, because
+    by then the user is not looking at that tab, which is exactly the "a glance is not a read" rule
+    applied honestly.
 
 ## What already exists (reuse, don't rebuild)
 
@@ -367,6 +386,15 @@ call. The `resolveTabs ?? (() => tabs)` defaults remain, because `src/tab/dock.t
 `src/tab/split-selection.test.ts` call those functions positionally and rely on them; making the
 parameter required would mean rewriting test suites to satisfy a production concern.
 
+**Each site dwells the tab it leaves active, not the tab it was asked about.** Every `beginDwell`
+replaces the pending one, so the last call an operation makes must name the tab the user ends up on.
+`setActiveTabOp`'s `applyActiveTab` callback returns the index that ended up active after
+`repairSelections` ran, and the dwell is begun for that tab — so clicking a monitor tab on a split
+strip, which hands the active slot to the first left-pane tab, dwells that tab rather than the monitor
+tab. `reorderTabToOp` dwells `result.tabs[nextActive]`, the tab `applyResult` made active: dragging a
+docked or reporting tab leaves the previously active tab active, and that tab keeps its dwell while
+the dragged tab is not dwelled at all.
+
 **Each site states which kind of clear it is, in a comment and in the spec.** Five visibility sites
 defer, `repairPaneSelections` defers for the active tab and clears immediately for the visible
 split-pane selection, and `selection-operations.clearUnread` clears immediately.
@@ -381,7 +409,8 @@ one added alongside. Without it, a badged tab reached by `open` would keep its b
 while the same tab reached by a click lost it after three seconds — and since the badge is what arms
 the escalation, a harness that finished in that state would be badged forever and never announced.
 The split branch keeps its own immediate clear for the other pane's selection, which the unsplit path
-never reaches.
+never reaches, and when it swaps the active tab — the tab it was handed is not a center action tab —
+it begins the dwell again for the tab it makes active, replacing the one begun above the return.
 
 **A `state: dirty` at dwell completion, not at focus.** Each of the five sites still emits its own
 `state: dirty` as it does today, and the completed dwell emits one more, so the client learns the badge
@@ -398,29 +427,35 @@ as confirmation that the change landed, not as a test to delete.
 
 ### The escalation
 
-**A new `src/harness/idle-notification.ts` holding the pending escalation per tab label**, in the
-shape of `messageBus`, with an `arm`, a `cancel`, and a `dispose`, plus the exported 30-second
-constant it waits. Its contract:
+**A new `src/harness/idle-notification.ts` owning the escalation**, with an `arm`, a `cancel`, and a
+`dispose`, plus the exported 30-second constant it waits. The pending handle for each tab is stored on
+that tab's runtime record as `idleEscalation` (`TabRuntime` in `src/tab/types.ts`), always reached
+through `managers.tab.byLabel`. Its contract:
 
-- `arm(managers, label)` — called from `applyBusyTransition`'s idle branch **only** when
-  `managers.tab.markUnread(label)` reported that it actually raised the badge. It clears any pending
-  escalation for that label first, so escalations replace rather than stack, then starts the 30
-  seconds. The `managers` reference is captured in the timer's closure rather than stored on the
-  instance. The timer is `unref`'d.
-- The instance subscribes to the `tabs` channel's badge-clear event at module scope, and its
-  subscription is released by `dispose()`.
-- The timer callback re-reads the tab and asks the eligibility predicate again. Tab gone, or no
-  longer eligible — docked into a sidebar, the active tab, or the visible split-pane selection — and
-  it discards silently: no record, no feed line, no toast, nothing emitted to the client. The badge
-  check is a cheap third condition that stands behind the cancel path, particularly for a close,
-  which clears a different tab's badge. Otherwise it calls
-  `notify(managers, 'harness-idle', label, undefined, { openTab: label })` and drops the entry,
-  letting `shouldNotify` and `deliverNotification` apply every existing rule.
-- `cancel(label)` — clears the pending escalation for one label, if any. Reached from the
-  badge-clear event with no further wiring, and directly from `HarnessManager.closeTab`
-  (`src/harness/manager.ts:35`), the release for a closed tab.
-- `dispose()` — unsubscribes, clears every pending escalation, and drops the module's state. Called
-  from `HarnessManager.dispose()` beside the existing `this.runtimes.dispose()`.
+- `armHarnessIdleEscalation(managers, label)` — called from `applyBusyTransition`'s idle branch
+  **only** when `managers.tab.markUnread(label)` reported that it actually raised the badge. It does
+  nothing for a label with no tab. It clears any pending escalation for that tab first, so
+  escalations replace rather than stack, attaches the badge-clear subscription if none is held, then
+  starts the 30 seconds. The `managers` reference is captured in the timer's closure. The timer is
+  `unref`'d.
+- The subscription to the `tabs` channel's badge-clear event is attached by the first arm, captures
+  that arm's `managers` to resolve a cleared label to its tab, and is released by `dispose`.
+- The timer callback re-reads the tab and drops its handle. Tab gone, docked into a sidebar, or no
+  longer badged, and it discards silently: no record, no feed line, no toast, nothing emitted to the
+  client. The badge check stands behind the cancel path, particularly for a close, which clears a
+  different tab's badge. Still badged but on screen — the eligibility predicate refuses the active
+  label or the visible split-pane selection — and it schedules a re-check after `UNREAD_DWELL_MS`
+  (`src/tab/dwell.ts`) on the same handle, so every cancel and release still reaches it. Otherwise it
+  calls `notify(managers, 'harness-idle', label, undefined, { openTab: label })`, letting
+  `shouldNotify` and `deliverNotification` apply every existing rule.
+- `cancelHarnessIdleEscalation(managers, label)` — clears the pending escalation for one tab, if
+  any. Reached from the badge-clear event with no further wiring, and directly from
+  `HarnessManager.closeTab` (`src/harness/manager.ts`), the release for a closed tab, which runs in
+  the close walk before the tab record is removed.
+- `disposeHarnessIdleEscalations(managers)` — clears every tab's pending escalation, unsubscribes,
+  and drops the subscription so the next arm attaches a fresh one. Called from
+  `HarnessManager.dispose()` beside the existing `this.runtimes.dispose()`, before
+  `Controller.shutdown` clears the bus.
 
 **The event itself.** `src/notifications/index.ts` gains `'harness-idle'` in `NotificationEventType`
 and in `EXPLICIT_EVENTS`; `AmbientNotificationEvent` and `AMBIENT_EVENTS` are untouched, as is
@@ -448,7 +483,9 @@ longer cancels an escalation; a completed dwell clears the badge, and that clear
 escalation's `cancel` through the one `tabs`-channel event. The harness going back to work still
 cancels immediately, because that clear is not dwell-gated. And at fire time the escalation asks the
 eligibility predicate, which refuses the active and visible-secondary labels, so a notification
-never lands on a tab currently on screen. Nothing else couples the two timers.
+never lands on a tab currently on screen — it re-checks one dwell interval later instead, by which
+time the user has either dwelt the badge off (cancelling the re-check) or left it up and moved on.
+Nothing else couples the two timers.
 
 **Landing order, so typecheck and tests stay green at each step.** The pieces are independent until
 they are wired: (1) the predicate, `markUnreadTab`'s boolean, and the two widened signatures;
@@ -462,8 +499,8 @@ escalation module and its `arm` in `applyBusyTransition`, plus the two release c
 Nothing here depends on another plan, and nothing waits on a package update.
 
 **File sizes are not at risk, and the response if one trips is extraction.** The additions are one
-union member, one `EXPLICIT_EVENTS` entry, one `notificationText` arm, one bus channel, and two
-small new modules. `src/notifications/index.ts` is the largest file touched at 204 raw lines, and
+union member, one `EXPLICIT_EVENTS` entry, one `notificationText` arm, one bus channel, one
+`TabRuntime` field, and two small new modules. `src/notifications/index.ts` is the largest file touched at 204 raw lines, and
 `max-lines` counts with `skipBlankLines` and `skipComments` against a file that is heavily commented
 — the two added code lines will not move it. `src/tab/manager.ts` is 221 raw lines and gains a
 three-line `dispose`; `ai/guidelines/architecture-principles.md` § 3 already names it as one of the
@@ -481,15 +518,18 @@ changes. § Marking gains a sentence that a badge raised while hidden survives a
 against `TabItem`'s `active` prop. § Persistence is unchanged and still correct — `hasUnread` remains
 in-memory only.
 
-**`product/specs/harness.md` § Busy/ready status** gains the escalation next to the badge rule it
-extends: the 30 seconds, the two arming causes, the replace-don't-stack rule, the cancel-on-clear
-rule, and the fact that the badge now survives a glance so the cancel arrives on a dwell rather than
-on the focus.
+**`product/specs/harness.md`** — § Busy/ready status gains the fact that the badge now survives a
+glance, so the cancel arrives on a dwell rather than on the focus, and stays one contiguous section.
+A new § The idle escalation follows it: the 30 seconds, the two arming causes, the
+replace-don't-stack rule, the routes that cancel (a completed dwell, the harness going back to work,
+the tab becoming the other pane's visible selection, and a close — not a reorder or another tab's
+undock), the fire-time re-check that discards a docked tab and waits out a tab on screen, the
+accepted glance, sleep, and remote parity.
 
 **`product/specs/notifications.md`** § Events that notify gains the `harness-idle` entry with its
 exact line and its `openTab` link; § Focus suppression names it among the events that bypass focus
 suppression, noting that in practice it can only arise for a background tab, because a tab that is
-active at fire time is discarded by the eligibility re-read.
+on screen at fire time records nothing yet and waits until the user has read it or left it.
 
 **`documentation/user-documentation/tab-types/notifications.md`** gains the new line in its list of
 what the feed reports, and the sentence that there is "no sound and no OS-level notification" stays
@@ -536,7 +576,12 @@ already the pattern in `src/harness/busy-status.test.ts` and `src/schedule/manag
   `src/tab/dock.test.ts` covers the other two directly: undocking a badged tab back to the center
   defers its badge, while docking it into a sidebar leaves the badge in place and arms nothing.
   `src/tab/split-selection.test.ts` keeps its own case, asserting the split-pane selection's clear is
-  still synchronous and the active half defers.
+  still synchronous and the active half defers, plus one proving a repair that swaps a monitor tab out
+  of the active slot dwells the left-pane tab it makes active. Two more in `src/tab/operations.test.ts`
+  pin that each operation dwells the tab it leaves active: dragging a docked tab with `reorderTabTo`
+  keeps the active tab's dwell and leaves the docked tab's badge alone, and `setActiveTab` on a
+  monitor tab in a split strip, through the real `repairSelections`, clears the left-pane tab that
+  ends up active.
 - `src/tab/manager.test.ts` — the open and activation path through `TabManager.applyOpenResult`:
   the selected tab's badge survives the call and comes off after the interval, in both strip shapes.
   The split case also replaces the manager's tabs with fresh objects the way a close does, so the
@@ -547,12 +592,14 @@ already the pattern in `src/harness/busy-status.test.ts` and `src/schedule/manag
   notifies once when the grace period ends; `arm` twice before it ends produces one notification, 30
   seconds after the second; a badge clear cancels so nothing fires; **`cancel` fires on the
   badge-clear signal even when the badge is put back afterwards, so nothing but that subscription can
-  have stopped it**; `cancel(label)` and `closeTab` cancel; a tab gone, docked, active, or the
-  visible split-pane selection when the timer fires notifies not at all; a tab that was never badged
-  is never armed; `dispose()` releases every pending escalation. Neither this file nor
-  `src/harness/busy-status.test.ts` clears the bus in its teardown: `MessageBus.clear` would drop the
-  escalation's module-scope subscription, and the two cases above would then pass through the
-  fire-time backstop instead of the mechanism they name.
+  have stopped it**; an explicit cancel, as a close makes, cancels; a tab gone, docked, or the
+  visible split-pane selection when the timer fires notifies not at all; a tab that is active when
+  the timer fires is told once the user leaves it badged, and never if they stay until a dwell clears
+  the badge; a badge-clear still cancels after a dispose and a bus clear, because the next arm
+  re-subscribes; the handle is found on the live tab after the tabs are replaced by shallow copies;
+  `dispose` releases every pending escalation. This file and the escalation block of
+  `src/harness/busy-status.test.ts` dispose the escalations and then clear the bus in `afterEach`, the
+  order `Controller.shutdown` uses.
 - `src/harness/busy-status.test.ts` — the arm site: the debounced ready commit that badges a hidden
   tab arms one, and the first transient ready capture that only starts the debounce does not; the
   permission-gate stop arms one when `stuck`; nothing arms for a visible tab, for a claude
@@ -562,12 +609,15 @@ already the pattern in `src/harness/busy-status.test.ts` and `src/schedule/manag
   produces a queued `harness-idle` notification 30 seconds later, and none at 29 — and that dwelling
   its tab for 3 seconds before the 30 seconds produces none at all.
 - `src/notifications/format.test.ts` — the `harness-idle` arm renders `Agent 'foo' is waiting`.
-- `src/notifications/index.test.ts` — `harness-idle` is in `EXPLICIT_EVENTS`, `shouldNotify` returns
-  it true with no config present, and `notify` with `openTab` produces a line and a toast that carry
-  the link. The "no toast while the feed is visible" and burst-escalation halves are already covered
-  for other events and are not re-tested here.
+- `src/notifications/index.test.ts` — a named block pins `harness-idle` as explicit, not ambient: it
+  is in `EXPLICIT_EVENTS` and absent from `AMBIENT_EVENTS`, `shouldNotify` returns it true with no
+  config and with every toggle off, it fires on the active tab, and it never targets the
+  notifications tab. The table-driven cases already run every explicit event, but would keep passing
+  if the event moved behind a toggle. And `notify` with `openTab` produces a feed line carrying the
+  link. The "no toast while the feed is visible" and burst-escalation halves are already covered for
+  other events and are not re-tested here.
 - `src/remote/pty-session.test.ts` — a `busy-transition` frame from a far-side harness arms the
-  escalation exactly as a local capture does, and the session's release cancels it.
+  escalation exactly as a local capture does, and a later frame reporting the harness busy cancels it.
 - `web/src/TabStrip.test.tsx` — `web/src/TabStrip.test.tsx:120` is **rewritten**, not deleted: it
   currently asserts the flag on the *active* tab, which the `&& !active` condition removes, so the
   badged tab moves to a non-active index. Two new cases pin the behavior: the flag is not rendered on
@@ -601,9 +651,9 @@ proposes them again:
   `product/backlog/features.md:41`.
 - **Recording suppressed escalations instead of discarding them silently.** pacslate's rule is that
   "what gets dropped is logged rather than silently discarded, so the filter can be inspected instead
-  of trusted blind" (`https://github.com/pacific-slate/pacslate`). The fire path here discards
-  silently by design, so a user who wonders why they were not told has nowhere to look. Declined
-  rather than added, because it reverses a decision already made here.
+  of trusted blind" (`https://github.com/pacific-slate/pacslate`). The fire path here discards a
+  docked, closed, or already-read tab silently by design, so a user who wonders why they were not told
+  has nowhere to look. Declined rather than added, because it reverses a decision already made here.
 - **Replacing the time-window grace period with a state filter.** The same `audio-hooks` documentation
   argues that a duration filter "is a better answer than debounce, which suppresses by time window and
   so cannot tell a burst of fast tools from one genuinely long command". The 30-second grace period
@@ -631,6 +681,10 @@ proposes them again:
   change is the `&& !active` render condition.
 - **Persisting the badge or the dwell across a relaunch.** `hasUnread` stays in-memory only, as
   `product/specs/tabs.md` § Persistence already states.
+- **A link on the toast.** A toast carries no link of its own; clicking it reveals the feed, where the
+  linked line is. Adding one changes the toast wire shape for every event and belongs to its own plan.
+- **Clearing a dragged docked or reporting tab's own badge.** A reorder that leaves another tab
+  active dwells that tab only; nothing visits the dragged tab, so its badge stays.
 
 ## Verification
 
@@ -638,13 +692,17 @@ proposes them again:
 
 Then, by hand, the escalation: launch a harness tab, start work in it, switch to another tab, and let
 it go idle. The flag icon appears at once and no toast does. Leave it alone for 30 seconds and the
-notification arrives — `Agent '<name>' is waiting` in the corner, with the tab's dot color, clickable
-to focus the harness tab — and the same line is in the notifications feed and in
-`.janissary/notifications.json`. Then confirm the negative paths, one at a time:
+notification arrives — `Agent '<name>' is waiting` in the corner, with the tab's dot color — and the
+same line is in the notifications feed and in `.janissary/notifications.json`. Clicking the feed
+line's link focuses the harness tab; clicking the toast reveals the feed. Then confirm the paths a
+glance and a stop take, one at a time:
 
-- click the badged harness tab, look for under three seconds, and click away — no notification ever
-  arrives, and the flag is still on the tab you left;
-- come back to it, stay four seconds, and the flag disappears with no notification;
+- click the badged harness tab, look for under three seconds, and click away — the flag is still on
+  the tab you left, and the notification still arrives at thirty seconds;
+- click it and stay four seconds before the thirty seconds are up — the flag disappears and no
+  notification arrives;
+- be on the tab when the thirty seconds run out and click away within three seconds — nothing at
+  thirty, then the notification a moment after you leave;
 - answer a permission prompt with `-y` auto-approve landing after the badge was raised, and no
   notification follows;
 - dock the badged harness tab into a sidebar, and confirm no notification follows even though the
