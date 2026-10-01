@@ -55,6 +55,23 @@ describe('unread dwell', () => {
     expect(labelOf(tabs, 'bob')).toBe(true);
   });
 
+  // The switch has to be unconditional, not just the arming: a candidate left counting down when
+  // the user moves to a tab with no badge fires against the tab behind them, and since that badge is
+  // what arms the harness idle escalation, the same switch would cancel a notification they never
+  // got. `product/specs/tabs.md` states this invariant in the same words.
+  it('abandons a pending dwell when the newly selected tab carries no badge', () => {
+    vi.useFakeTimers();
+    const tabs = [makeTab('janus', 'red'), makeTab('bob', 'red')];
+    markUnreadTab(tabs, 'bob', 'janus');
+
+    beginDwell(() => tabs, 'bob');
+    vi.advanceTimersByTime(UNREAD_DWELL_MS - 1);
+    beginDwell(() => tabs, 'janus');
+    vi.advanceTimersByTime(UNREAD_DWELL_MS * 2);
+
+    expect(labelOf(tabs, 'bob')).toBe(true);
+  });
+
   it('arms nothing for a tab carrying no badge', () => {
     vi.useFakeTimers();
     const tabs = [makeTab('bob', 'red')];

@@ -26,13 +26,17 @@ let timer: NodeJS.Timeout | undefined;
 // selection time can be a detached copy by the time the dwell fires. Every caller here is a tab
 // manager or a port onto one, so reading the field at fire time is what gets the live array.
 //
-// Selecting a tab that carries no badge arms nothing: there is nothing to take off, and a tab cannot
-// be badged while it is the active one, so the badge can never appear after this point to be missed.
-// That keeps the common case — moving around a strip of tabs nobody is waiting on — free of timers.
+// Every call replaces whatever was pending, before anything else is decided. That is what makes the
+// interval continuous per tab, and it has to be unconditional: selecting a tab with no badge is
+// still a tab switch, and a candidate left counting down would fire against the tab the user just
+// left. Only after the replacement does the guard decide whether a new dwell is worth arming —
+// there is nothing to take off a tab carrying no badge, and a tab cannot be badged while it is the
+// active one, so the badge can never appear afterwards to be missed. That keeps the common case —
+// moving around a strip of tabs nobody is waiting on — free of timers.
 export function beginDwell(resolveTabs: () => Tab[], label: string): void {
+  clearPending();
   const tab = resolveTabs().find((t) => t.label === label);
   if (!tab?.hasUnread) return;
-  clearPending();
   pending = { label, resolveTabs };
   timer = setTimeout(complete, UNREAD_DWELL_MS);
   timer.unref?.();

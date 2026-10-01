@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Fix the unread dwell surviving a switch to a tab that carries no badge, so a badge comes off a tab the user has left.
-
-Existing Issue: `beginDwell` in `src/tab/dwell.ts` returns early when the selected tab has no badge, and that early return sits above the `clearPending()` call, so a dwell already armed for a previously badged tab survives the switch and fires three seconds later against the tab the user just left. Severity: 6/10
-
-Existing Risk: 5/10 - Flicking from a badged tab to an ordinary one drops the badge on the tab behind you, which is the exact confusion the dwell was added to remove, and since that badge is what arms the thirty-second harness escalation the same switch also silently cancels a notification the user never received.
-
-Proposal Risk: 1/10 - The behavior becomes the one the plan already specifies, with a covering test pinning it, and the early return keeps its intended effect of arming no timer for a tab with nothing to clear.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1500: clear a pending unread dwell when the newly selected tab carries no badge". In `src/tab/dwell.ts`, move the `clearPending()` call in `beginDwell` above the `if (!tab?.hasUnread) return;` guard so every call to `beginDwell` replaces whatever was pending regardless of whether the new candidate has a badge, then keep the guard so the common case still arms no timer. Add a case to `src/tab/dwell.test.ts` covering the sequence the current suite misses: a badged tab begins a dwell, a second tab with no badge is selected, the interval elapses, and the first tab still carries its badge. The existing case "replaces a pending dwell rather than queueing a second one" does not cover this because both of its tabs are badged, so it reaches `clearPending()` on both calls and passes either way; leave it as the regression guard for the replace path. The four suites that exercise the deferring sites — `src/controller.test.ts`, `src/tab/manager.test.ts`, `src/tab/operations.test.ts`, and `src/tab/split-selection.test.ts` — use fake timers scoped to a single case each and must keep passing untouched. `product/specs/tabs.md`'s dwell paragraph already states the intended invariant, so no spec change is needed.
-
-
 * Deliver a live tabs-array resolver on the open and activation path, so a dwell there cannot clear a detached copy of a tab.
 
 Existing Issue: `applyOpenResult` in `src/tab/open-result.ts` is the only production caller of `repairPaneSelections` that omits the new `resolveTabs` argument, so the dwell it begins falls back to the `() => tabs` default and captures the array by value, while `removeTabAt` and the reorder computations in `src/tab/reorder.ts` replace every surviving tab with a fresh object. Severity: 6/10
