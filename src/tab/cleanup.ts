@@ -6,15 +6,15 @@ import { deleteAgentState } from '../agent/state.js';
 import { TranscriptStore } from '../transcript/store.js';
 
 // The walk covers exactly the managers named in `MANAGER_TAB_RELEASE` — the declared list beside
-// `MANAGER_DISPOSE_ORDER`. `workspace` is released only through the deferred block below, `tab`
-// orchestrates this whole file, and `database`'s last-tab `closeAll()` is a separate end-of-walk
-// decision, so those three are handled outside the per-tab release list and stated explicitly
-// around it instead.
+// `MANAGER_DISPOSE_ORDER`. `workspace` is released only through the deferred block below and `tab`
+// orchestrates this whole file, so those two are handled outside the per-tab release list and stated
+// explicitly around it instead. SQLite connections are global, not per-tab: they close at shutdown,
+// which is also how closing the last non-docked tab closes them, since that close exits instead of
+// reaching this walk.
 export function closeTabResources(
   tab: Tab,
   managers: Managers,
   openFiles: Map<string, string>,
-  nonDockedCount: number,
 ): void {
   const label = tab.label;
   // Release the workspace clone in the background: its final release recursively removes a full git clone,
@@ -41,7 +41,6 @@ export function closeTabResources(
   managers.tab.forgetPersisted(label);
   deleteAgentState(label);
   TranscriptStore.remove(label);
-  if (nonDockedCount <= 1) managers.database.closeAll();
   messageBus.emit('transcript', { type: 'tab:removed', tabLabel: label });
   if (tab.plugin) {
     for (const id of tab.plugin.fileRefs) openFiles.delete(id);

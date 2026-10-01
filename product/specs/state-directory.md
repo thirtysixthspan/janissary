@@ -6,7 +6,7 @@ Agent names are accepted by persistence whenever they are safe as a single filen
 
 On a normal `janus` launch the state directory and workspace directory are recursively deleted before rendering. On `janus --relaunch` the directories are preserved and all agent files are loaded to recreate tabs with their saved command history, transcripts, and working directories.
 
-Closing a tab removes its agent-state file and its transcript record, so what `--relaunch` restores is the set of tabs that were open — not every tab that ever existed in the session. A tab closed deliberately stays closed. Quitting is different: it closes nothing, so every tab still open is persisted and comes back.
+Closing a tab removes its agent-state file and its transcript record, so what `--relaunch` restores is the set of tabs that were open — not every tab that ever existed in the session. A tab closed deliberately stays closed. Quitting is different: it closes nothing, so every tab still open is persisted and comes back. Closing the last non-docked tab counts as quitting — however it was closed — so that tab is kept and comes back too.
 
 Work that finishes after its tab has closed — a shell command completing, a scheduled command firing — does not write that tab's state back. The tab is gone, and recreating its file would bring it back on the next relaunch. A tab name returned to the pool and reused by a new tab persists normally again.
 
