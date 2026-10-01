@@ -3,6 +3,12 @@ import { busyStatusHandler, BusyTracker } from './busy-status.js';
 import { endsWithRecap, classifyBusy } from './busy-classify.js';
 import { HarnessScreenReader, type ScreenCapture } from './screen.js';
 import { HarnessAutoApprover } from './auto-approve.js';
+import { HARNESS_IDLE_ESCALATION_MS, disposeHarnessIdleEscalations } from './idle-notification.js';
+import { NotificationQueue } from '../notifications/queue.js';
+import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
+import { clearUnreadTab, markUnreadTab } from '../tab/transcript/events.js';
+import { makeTab } from '../tab/index.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { messageBus, type Subscription } from '../bus.js';
 
@@ -418,5 +424,157 @@ describe('busyStatusHandler state push', () => {
     expect(tabs[0].hasUnread).toBe(false);
     handler(capture('anything', CLAUDE_IDLE_TITLE));
     expect(tabs[0].hasUnread).toBe(true);
+  });
+});
+
+// The escalation is armed from `applyBusyTransition` — the one place a local capture and a remote
+// harness's reported transition both arrive — and only when the badge was genuinely raised. These
+// drive real captures through the real handler with the real notification path behind it, which is
+// the only place the two halves meet.
+describe('busyStatusHandler idle escalation', () => {
+  const GATE = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
+
+  function make(name = 'claude', autoApprove = false) {
+    vi.useFakeTimers();
+    const janus = makeTab('janus', '#abc');
+    const harness = makeTab(name, '#def');
+    const tabs: Tab[] = [janus, harness];
+    let activeIndex = 0;
+    const busyLabels = new Set<string>();
+    const approver = autoApprove
+      ? new HarnessAutoApprover({ harnessName: name, approve: vi.fn(), notify: vi.fn() })
+      : undefined;
+    const managers = {
+      tab: {
+        // The host fixture's own `markUnread` is inert; this one has to be real, because whether the
+        // badge went up is exactly what decides whether an escalation is armed.
+        ...fakeNotificationsHost(tabs),
+        tabs,
+        byLabel: (l: string) => tabs.find((t) => t.label === l),
+        cur: () => tabs[activeIndex],
+        append: vi.fn(),
+        isBusy: (l: string) => busyLabels.has(l),
+        addBusy: (l: string) => { busyLabels.add(l); },
+        deleteBusy: (l: string) => { busyLabels.delete(l); },
+        markUnread: (l: string) => markUnreadTab(tabs, l, tabs[activeIndex].label),
+        clearUnread: (l: string) => { clearUnreadTab(tabs, l); },
+      },
+      notifications: new NotificationQueue(),
+    } as unknown as Managers;
+    const busy = busyStatusHandler(name, name, managers, approver);
+    if (!busy) throw new Error(`no busy entry for ${name}`);
+    const handler = (next: ScreenCapture) => {
+      approver?.onCapture(next);
+      busy(next);
+    };
+    const messages = () => managers.notifications.all.map((n) => n.message);
+    current = managers;
+    return { handler, harness, janus, managers, messages, tabs, makeActive: (i: number) => { activeIndex = i; } };
+  }
+
+  let current: Managers | undefined;
+
+  // Dispose before clearing the bus, the order `Controller.shutdown` uses: the escalation releases its
+  // own badge-clear subscription, and the next case's first arm attaches a fresh one.
+  afterEach(() => {
+    if (current) disposeHarnessIdleEscalations(current);
+    current = undefined;
+    messageBus.clear();
+    vi.useRealTimers();
+  });
+
+  it('notifies a hidden tab 30s after the debounced ready transition commits, and not before', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    expect(fixture.messages()).toEqual([]);
+
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS - 1);
+    expect(fixture.messages()).toEqual([]);
+
+    vi.advanceTimersByTime(1);
+    expect(fixture.messages()).toEqual(["Agent 'claude' is waiting"]);
+  });
+
+  it('arms nothing for the first transient ready capture that only starts the debounce', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+    expect(fixture.messages()).toEqual([]);
+  });
+
+  it('arms for an unanswered permission gate, which stops the dot without the debounce', () => {
+    const fixture = make();
+    fixture.handler(capture(GATE));
+
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS);
+    expect(fixture.messages()).toEqual(["Agent 'claude' is waiting"]);
+  });
+
+  it('arms for nothing on a tab the user is looking at', () => {
+    const fixture = make();
+    fixture.makeActive(1);
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    expect(fixture.harness.hasUnread).toBeUndefined();
+
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+    expect(fixture.messages()).toEqual([]);
+  });
+
+  it('arms for nothing on a claude recap, which is badged-exempt', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.handler(capture(CLAUDE_RECAP_PROMPT_BOX));
+    fixture.handler(capture(CLAUDE_RECAP_PROMPT_BOX));
+    expect(fixture.harness.hasUnread).toBeUndefined();
+
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+    expect(fixture.messages()).toEqual([]);
+  });
+
+  it('cancels when the harness goes back to work', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+    expect(fixture.messages()).toEqual([]);
+  });
+
+  // The case above passes either way: with the badge down, the fire-time check discards the
+  // escalation whether or not anything cancelled it. Re-raising the badge behind that check's back
+  // leaves the `tabs: unread-cleared` subscription as the only thing that can stop it, so this fails
+  // if that listener is gone.
+  it('cancels on the badge-clear signal even when the badge comes back', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    // Deliberate, not a setup slip: the escalation must not be rescued by the badge being back.
+    fixture.harness.hasUnread = true;
+
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+    expect(fixture.messages()).toEqual([]);
+  });
+
+  it('cancels when the tab is dwelt on and the badge comes off', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    expect(fixture.harness.hasUnread).toBe(true);
+
+    // What a completed unread dwell does, three seconds after the user goes to the tab.
+    clearUnreadTab(fixture.tabs ?? [], 'claude');
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+    expect(fixture.messages()).toEqual([]);
   });
 });

@@ -9,6 +9,7 @@ import type { AgentState } from '../agent/types.js';
 import type { ScheduleEntry } from '../schedule/types.js';
 import * as agentState from '../agent/state.js';
 import { messageBus } from '../bus.js';
+import { UNREAD_DWELL_MS } from './dwell.js';
 
 function makeManagers(): Managers {
   return {
@@ -408,24 +409,98 @@ describe('TabManager markUnread', () => {
   });
 });
 
+describe('TabManager open and activation', () => {
+  // The unread dwell resolves the tabs array when its interval is up, because a close maps every
+  // surviving tab into a fresh object. This path replaces the array too, so a dwell begun here that
+  // captured it would clear a detached copy and leave the live tab badged for good. The pair is split
+  // across panes because `repairPaneSelections` only reaches the dwell once there is a split to
+  // repair.
+  it('clears the live tab\'s badge after a close replaces the array mid-dwell', () => {
+    vi.useFakeTimers();
+    try {
+      const tm = makeTabManager();
+      tm.tabs.push({ ...tm.cur(), label: 'second', number: 2, pane: 'right' });
+      tm.tabs[1].hasUnread = true;
+
+      tm.applyOpenResult({ tabs: [...tm.tabs], activeTab: 1 });
+      expect(tm.tabs[tm.activeTab].label).toBe('second');
+
+      // What `removeTabAt` does on a close: every surviving tab becomes a new object.
+      tm.tabs = tm.tabs.map((t) => ({ ...t }));
+
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(tm.tabs[1].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('drops a pending unread dwell on dispose', () => {
+    vi.useFakeTimers();
+    try {
+      const tm = makeTabManager();
+      tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
+      tm.tabs[1].hasUnread = true;
+      tm.setActiveTab(1);
+
+      // The release `Controller.shutdown` reaches through `MANAGER_DISPOSE_ORDER`.
+      tm.dispose();
+      vi.advanceTimersByTime(UNREAD_DWELL_MS * 2);
+
+      expect(tm.tabs[1].hasUnread).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  // The same shape, on a strip with no split — which is where `open` had no dwell at all, because
+  // `repairPaneSelections` returned before reaching one. A badge that never comes off here is a badge
+  // the user cannot clear by looking at the tab.
+  it('dwells the badge of a tab an open activates in a strip with no split', () => {
+    vi.useFakeTimers();
+    try {
+      const tm = makeTabManager();
+      tm.tabs.push({ ...tm.cur(), label: 'second', number: 2 });
+      tm.tabs[1].hasUnread = true;
+
+      tm.applyOpenResult({ tabs: [...tm.tabs], activeTab: 1 });
+
+      expect(tm.tabs[1].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(tm.tabs[1].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('TabManager split panes', () => {
   it('creates a split, swaps focused selections across panes, and clears unread', () => {
-    const tm = makeTabManager();
-    tm.tabs.push(
-      { ...tm.cur(), label: 'second', number: 2 },
-      { ...tm.cur(), label: 'third', number: 3 },
-    );
-    tm.setActiveTab(1);
-    tm.setActiveTab(2);
-    tm.moveTabToOtherPane(2);
-    expect(tm.tabs[tm.activeTab].label).toBe('third');
-    expect(tm.secondaryTabLabel).toBe('second');
+    vi.useFakeTimers();
+    try {
+      const tm = makeTabManager();
+      tm.tabs.push(
+        { ...tm.cur(), label: 'second', number: 2 },
+        { ...tm.cur(), label: 'third', number: 3 },
+      );
+      tm.setActiveTab(1);
+      tm.setActiveTab(2);
+      tm.moveTabToOtherPane(2);
+      expect(tm.tabs[tm.activeTab].label).toBe('third');
+      expect(tm.secondaryTabLabel).toBe('second');
 
-    tm.tabs[1].hasUnread = true;
-    tm.setActiveTab(1);
-    expect(tm.tabs[tm.activeTab].label).toBe('second');
-    expect(tm.secondaryTabLabel).toBe('third');
-    expect(tm.tabs[1].hasUnread).toBe(false);
+      tm.tabs[1].hasUnread = true;
+      tm.tabs[2].hasUnread = true;
+      tm.setActiveTab(1);
+      expect(tm.tabs[tm.activeTab].label).toBe('second');
+      expect(tm.secondaryTabLabel).toBe('third');
+      // The tab that became active is being visited, so its badge waits out the dwell; the tab left
+      // showing in the other pane is on screen without being visited, so its badge goes at once.
+      expect(tm.tabs[1].hasUnread).toBe(true);
+      expect(tm.tabs[2].hasUnread).toBe(false);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(tm.tabs[1].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('new center tabs inherit the focused pane', () => {

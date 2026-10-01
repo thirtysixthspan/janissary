@@ -102,6 +102,23 @@ These five events notify only for a **background** tab. Activity in the currentl
 
 A command that fires more than five seconds late ignores all five toggles and posts regardless, even from the active tab. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for when that happens.
 
+## A harness that finished and you weren't looking
+
+A harness tab you can't see gets a flag badge the moment it stops working, so a run that finished
+while you were somewhere else is never silent. Thirty seconds later, if that flag is still there,
+the feed also says `Agent '<tab>' is waiting` — with a link that takes you to the tab. The same
+happens for a harness stopped at a permission prompt, since a run blocked on you cannot continue
+until you answer it.
+
+This one has no toggle: it always fires. It also never interrupts a tab you are looking at. If you
+get to the tab in the meantime, the badge goes away when you've been on it for a moment, and so
+does the notification. A tab you only glanced at still gets told about, because the badge is what
+says you haven't read it.
+
+A harness that runs several short turns in a row is not announced once per turn — the thirty seconds
+restart on each stop, so you get one notification, thirty seconds after it finally settles. If the
+machine is asleep when the thirty seconds run out, the notification arrives when it wakes.
+
 ## Post your own line with `notify`
 
 <img class="agent-float left" src="/agents/mahir-south.png" alt="" />

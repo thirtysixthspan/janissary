@@ -676,6 +676,13 @@ then answered, for example by auto-approve landing after it had stood down, leav
 harness that has gone back to work. If it stops again, the next committed idle transition or
 unanswered prompt badges it afresh.
 
+The badge is a glance-level signal, and a glance is not a read. Focusing a badged harness tab does
+not clear its badge at once — it starts the tab's unread dwell (`tabs.md` § Unread badge), so a
+harness that finished while the user was flicking through the strip to find something else keeps the
+fact that it finished, and a harness they actually stop on loses it three seconds later. The badge
+also survives an unanswered permission prompt in the same way: going to look at a harness blocked on
+a prompt and moving straight on leaves the badge up.
+
 When claude, opencode, or codex shows a recognized permission prompt, the dot stops blinking
 immediately — the harness is waiting on the user, not working — and if nothing is going to answer the
 prompt (the tab was launched with `--no-auto-approve`, or auto-approve has stood down on a prompt it
@@ -685,6 +692,46 @@ debounce.
 A harness without its own recognition signals keeps the previous coarse behavior — the dot blinks
 for as long as the process is alive. All three launchable harnesses have signals today, so this
 applies only to harnesses added later.
+
+### The idle escalation
+
+A badge is still only a flag in the strip, on a tab the user may not be looking at. So a badged
+hidden harness tab that is **still badged thirty seconds later** is escalated into a `harness-idle`
+notification (see `notifications.md`): `Agent '<tab>' is waiting`, carrying the tab's own name and a
+link that focuses it. Thirty seconds is long enough that a user reading a transcript elsewhere,
+answering something, or simply mid-thought is not interrupted, and short enough that a tab which
+finished an overnight run is not still silent the next morning.
+
+The escalation is armed only when the committed transition actually raised the badge, so a harness
+tab that was on screen — or docked into a sidebar — never starts the clock. Both causes the badge
+has arm it: the debounced working→idle commit above, and an unanswered permission gate, since a
+harness blocked on a prompt cannot continue until the user answers it.
+
+There is at most one escalation pending per tab, and a new commit **replaces** a pending one rather
+than queuing behind it — the interval runs from the most recent idle, so a harness running short
+repeated turns stays quiet and says something once, thirty seconds after it finally settles.
+
+The badge is the escalation's whole lifetime, so **clearing the badge cancels it**: the user dwells
+on the tab and reads it, the harness goes back to work, the tab becomes the visible selection in the
+other pane, or the tab is closed. Reordering tabs, or undocking another tab so that it becomes
+active, leaves a hidden harness tab's badge — and its escalation — where they are. When the interval does run out, the harness's tab is
+re-checked before anything is said. A tab that has since been docked into a sidebar is **not**
+announced — it is on screen for good and no dwell is coming. A tab that is on screen at that moment
+— the active tab, or the visible selection in the other pane — is not announced *yet*: a
+notification never lands on a tab you are looking at, but a glance is not a read either, so the
+escalation looks again three seconds later. If you stayed on the tab, its dwell has taken the badge
+off by then and nothing is said; if you moved on with the badge still up, the notification arrives
+then. A one-second look at the tab twenty-nine seconds in does not stop the notification at thirty,
+because by then you are not looking at it, which is the "a glance is not a read" rule applied
+honestly.
+
+A machine that sleeps through the interval notifies when it wakes rather than staying silent: the
+harness really did stop and really was unattended, and the user has just come back. The line is
+timestamped when it is delivered, not when the transition committed.
+
+A remote harness's tab behaves identically. The far side runs the same busy tracking and reports the
+committed transition, and that report lands in the same place a local capture does, so there is no
+separate rule for a harness on another host.
 
 ## Lifecycle
 

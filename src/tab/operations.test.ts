@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { closeTab, insertTab, moveTabToOtherPane, setDock, toggleCollapse } from './operations.js';
+import { closeTab, insertTab, moveTabToOtherPane, reorderTab, reorderTabTo, setActiveTab, setDock, toggleCollapse } from './operations.js';
 import { MANAGER_TAB_RELEASE } from '../managers.js';
 import type { TabOperationsPort } from './operations.js';
 import type { CenterPane, Tab } from './types.js';
+import { beginDwell, UNREAD_DWELL_MS } from './dwell.js';
+import { repairSelections } from './selection-operations.js';
 
 function tab(label: string, pane?: CenterPane, dock?: 'left' | 'right'): Tab {
   return { label, pane, dock, view: 'agent', hasUnread: true } as unknown as Tab;
@@ -112,10 +114,19 @@ describe('setDock', () => {
     expect(port.secondaryTabLabel).toBeUndefined();
   });
 
-  it('clears the unread mark of a tab that leaves the center', () => {
-    const port = makePort(split(), 0, 'right-1');
-    setDock(port, 1, null);
-    expect(port.tabs[1].hasUnread).toBe(false);
+  // Undocking back to the center strip makes the tab the active one, so its badge waits out the
+  // unread dwell rather than going with the undock.
+  it('clears the unread mark of a tab that leaves the center once it has been dwelled on', () => {
+    vi.useFakeTimers();
+    try {
+      const port = makePort(split(), 0, 'right-1');
+      setDock(port, 1, null);
+      expect(port.tabs[1].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[1].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -262,5 +273,101 @@ describe('insertTab', () => {
     const report = { label: 'quality', view: 'monitor' } as unknown as Tab;
     insertTab(port, report);
     expect(port.tabs.at(-1)?.pane).toBeUndefined();
+  });
+});
+
+// Each of these three operations re-selects a tab and wires its own call into the dwell, so the badge
+// has to survive the operation itself and go only once the interval is up. The two reorders carry the
+// *same* tab along to its new index rather than changing which one is selected, so what they prove is
+// that the dwell is re-armed for it; the close promotes a different tab outright. Read back through
+// `port.tabs` because `removeTabAt` maps every survivor into a fresh object.
+describe('operations that reselect a tab and the unread dwell', () => {
+  const strip = () => [tab('a'), tab('b'), tab('c')];
+
+  it('defers the badge of the tab a reorder carries to its new index', () => {
+    vi.useFakeTimers();
+    try {
+      const port = makePort(strip());
+      reorderTab(port, 1);
+      expect(port.tabs[port.activeTab].label).toBe('a');
+
+      expect(port.tabs[port.activeTab].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[port.activeTab].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('defers the badge of the tab a reorder-to carries to its new index', () => {
+    vi.useFakeTimers();
+    try {
+      const port = makePort(strip());
+      reorderTabTo(port, 0, 2);
+      expect(port.tabs[port.activeTab].label).toBe('a');
+
+      expect(port.tabs[port.activeTab].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[port.activeTab].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('defers the badge of the tab a close promotes to active', () => {
+    vi.useFakeTimers();
+    try {
+      // An unsplit strip, so the surviving tab's index is the one the port's own `activeTab` names.
+      // `makePort`'s `findIndex` closes over the pre-close array, which a split would make stale.
+      const port = makePort(strip());
+      closeTab(port, 0);
+      expect(port.tabs.map((t) => t.label)).toEqual(['b', 'c']);
+      expect(port.tabs[port.activeTab].label).toBe('b');
+
+      expect(port.tabs[port.activeTab].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[port.activeTab].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+// The dwell has one candidate, and every new dwell replaces the pending one, so each operation has to
+// name the tab it actually leaves active — not the tab it was asked about, when the two differ.
+describe('the unread dwell follows the tab an operation leaves active', () => {
+  // Dragging a docked tab leaves the active tab where it was, so the active tab's dwell must survive
+  // the drag and the docked tab — never visited — must keep its badge.
+  it('keeps the active tab\'s dwell when a docked tab is reordered', () => {
+    vi.useFakeTimers();
+    try {
+      const port = makePort([tab('a'), tab('b'), tab('c'), tab('d', undefined, 'right')]);
+      beginDwell(() => port.tabs, 'a');
+      reorderTabTo(port, 3, 2);
+      expect(port.tabs[port.activeTab].label).toBe('a');
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs.find((t) => t.label === 'a')?.hasUnread).toBe(false);
+      expect(port.tabs.find((t) => t.label === 'd')?.hasUnread).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Selecting a monitor tab on a split strip hands the active slot to the first left-pane tab, so that
+  // tab is the one the user is on and the one whose badge the dwell takes off.
+  it('dwells the tab a selection repair makes active, not the one that was clicked', () => {
+    vi.useFakeTimers();
+    try {
+      const watch = { label: 'watch', view: 'monitor', hasUnread: false } as unknown as Tab;
+      const port = makePort([tab('left-1', 'left'), tab('right-1', 'right'), watch], 1, 'left-1');
+      port.repairSelections = () => repairSelections(port);
+      setActiveTab(port, 2);
+      expect(port.tabs[port.activeTab].label).toBe('left-1');
+      expect(port.tabs[0].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[0].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -17,6 +17,7 @@ import type { ProfileHarnessEntry } from '../profile/types.js';
 import { messageBus } from '../bus.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { parseRemoteAddress } from '../remote/address.js';
+import { cancelHarnessIdleEscalation, disposeHarnessIdleEscalations } from './idle-notification.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
 // fresh `--workspace` git clone, and optionally under a custom `as <label>`) and naming it uniquely.
@@ -27,13 +28,18 @@ export class HarnessManager extends HarnessTabSpawn {
 
   dispose(): void {
     this.runtimes.dispose();
+    disposeHarnessIdleEscalations(this.managers);
   }
 
   // Release the closing tab's runtimes: its screen reader, recorder, transcript tailer, and e2e
   // browser. Part of the tab-close walk, so a remote harness whose PTY never reports an exit (a
-  // detach) still stops recording and polling when its tab goes.
+  // detach) still stops recording and polling when its tab goes. Also drops any idle escalation
+  // pending on the tab: closing a badged harness tab clears no badge of its own — `closeTabOp`
+  // clears the tab that *becomes* active instead — so this is the only thing that stops its
+  // escalation from firing for a tab that no longer exists.
   closeTab(label: string): void {
     this.runtimes.closeTab(label);
+    cancelHarnessIdleEscalation(this.managers, label);
   }
 
   // The named harness tab's most recent rendered-screen capture, or undefined when the tab is

@@ -148,6 +148,12 @@ type SessionsEvent = { type: 'changed' };
 // tab plugin may subscribe to. It is raised once per request the user or the plugin issued, never per
 // row, so the rate is bounded by what a person did rather than by how much data came back.
 type DatabasesEvent = { type: 'changed' };
+// A tab's unread badge was cleared. Its own channel for the same reason `schedules` has one: a
+// named, low-frequency signal rather than a reason carried on `state: dirty`, which fires on
+// essentially every mutation. It is raised only when the badge was actually set, so a subscriber can
+// treat it as "this tab was badged and no longer is" — which is what lets the harness's idle
+// escalation cancel on the badge's real lifetime rather than on every request to clear it.
+type TabsEvent = { type: 'unread-cleared'; label: string };
 // What the notification path asks the client to show in the corner. `toast` is one notification
 // with no feed on screen to carry it; `clear` empties the corner at once, which is what escalation
 // and a toast click both do once the feed becomes visible and starts showing those same lines.
@@ -161,5 +167,6 @@ export type BusChannels = {
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
   fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent;
   sessions: SessionsEvent; notifications: NotificationsEvent; databases: DatabasesEvent;
+  tabs: TabsEvent;
 };
 export const messageBus = new MessageBus<BusChannels>();

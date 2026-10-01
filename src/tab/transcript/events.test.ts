@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  markUnreadTab, startRunningTab, finishRunningTab, appendTab, clearTranscriptTab, updateRunningEntry,
+  markUnreadTab, clearUnreadTab, isUnreadEligible, startRunningTab, finishRunningTab, appendTab,
+  clearTranscriptTab, updateRunningEntry,
 } from './events.js';
 import { capLog } from './log.js';
 import { makeTab } from '../index.js';
@@ -23,6 +24,18 @@ describe('markUnreadTab', () => {
     expect(tabs[0].hasUnread).toBe(true);
   });
 
+  // The return value is what lets the harness idle escalation arm itself only on a tab the badge
+  // was genuinely raised on, rather than on a tab it merely knows is out of sight.
+  it('reports whether it raised the badge', () => {
+    const hidden = makeTab('hidden', 'red');
+    const active = makeTab('active', 'red');
+    const tabs = [hidden, active];
+
+    expect(markUnreadTab(tabs, 'hidden', 'active')).toBe(true);
+    expect(markUnreadTab(tabs, 'active', 'active')).toBe(false);
+    expect(markUnreadTab(tabs, 'ghost', 'active')).toBe(false);
+  });
+
   it('leaves the active, secondary, and docked tabs alone', () => {
     const active = makeTab('active', 'red');
     const secondary = makeTab('secondary', 'red');
@@ -39,6 +52,54 @@ describe('markUnreadTab', () => {
 
   it('ignores a label with no matching tab', () => {
     expect(() => markUnreadTab([makeTab('bob', 'red')], 'ghost', 'janus')).not.toThrow();
+  });
+});
+
+describe('isUnreadEligible', () => {
+  it('refuses a docked tab, the active tab, and the other pane visible selection', () => {
+    const plain = makeTab('plain', 'red');
+    const docked = makeTab('docked', 'red');
+    docked.dock = 'right';
+
+    expect(isUnreadEligible(plain, 'plain', 'janus', 'other')).toBe(true);
+    expect(isUnreadEligible(docked, 'docked', 'janus', 'other')).toBe(false);
+    expect(isUnreadEligible(plain, 'plain', 'plain', 'other')).toBe(false);
+    expect(isUnreadEligible(plain, 'plain', 'janus', 'plain')).toBe(false);
+  });
+});
+
+describe('clearUnreadTab', () => {
+  it('clears a badged tab and announces it once', () => {
+    const tabs = [makeTab('bob', 'red')];
+    tabs[0].hasUnread = true;
+    const events: string[] = [];
+    const subscription = messageBus.on('tabs', 'unread-cleared', (e) => { events.push(e.label); });
+
+    expect(clearUnreadTab(tabs, 'bob')).toBe(true);
+
+    expect(tabs[0].hasUnread).toBe(false);
+    expect(events).toEqual(['bob']);
+    subscription.unsubscribe();
+  });
+
+  it('ignores a label with no matching tab', () => {
+    expect(clearUnreadTab([makeTab('bob', 'red')], 'ghost')).toBe(false);
+  });
+
+  // The whole point of gating the announcement on a real change: a dwell that completes on a tab
+  // nobody badged must stay silent, because a spurious `unread-cleared` would cancel a pending
+  // harness escalation that dwell knows nothing about.
+  it('stays silent, and changes nothing, when the tab was not badged', () => {
+    const tabs = [makeTab('bob', 'red')];
+    const events: string[] = [];
+    const subscription = messageBus.on('tabs', 'unread-cleared', (e) => { events.push(e.label); });
+
+    expect(clearUnreadTab(tabs, 'bob')).toBe(false);
+    expect(clearUnreadTab(tabs, 'ghost')).toBe(false);
+
+    expect(tabs[0].hasUnread).toBeUndefined();
+    expect(events).toEqual([]);
+    subscription.unsubscribe();
   });
 });
 

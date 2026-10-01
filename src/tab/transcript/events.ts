@@ -49,12 +49,44 @@ export function updateRunningEntry(
   messageBus.emit('state', { type: 'dirty' });
 }
 
+// Whether a tab is one the unread badge may be raised on. The badge is the app's record that a tab
+// holds something the user has not looked at, so only a tab that is out of sight can carry it: a
+// docked tab is permanently visible chrome, the active tab is the one being looked at, and so is the
+// other pane's visible selection. Split out from `markUnreadTab` so the sites that decide whether an
+// escalation still applies — a completed dwell, a harness's grace period running out — ask exactly
+// the question the raise asked, rather than re-deriving the rule. A missing tab is the caller's to
+// rule out, since only they know whether an absent tab is a closed tab or a typo.
+export function isUnreadEligible(
+  tab: Tab, label: string, activeLabel: string | undefined, secondaryLabel?: string,
+): boolean {
+  return !tab.dock && label !== activeLabel && label !== secondaryLabel;
+}
+
+// Raise the badge, and report whether this tab was eligible for it. The return value is what lets a
+// caller that is about to schedule follow-up work on the badge — the harness's idle escalation —
+// arm it only when the badge was actually raised, rather than guessing from a tab it happens to
+// know is hidden. Callers that only want the badge ignore it.
 export function markUnreadTab(
   tabs: Tab[], label: string, activeLabel: string | undefined, secondaryLabel?: string,
-): void {
+): boolean {
   const tab = tabs.find((t) => t.label === label);
-  if (!tab || tab.dock || label === activeLabel || label === secondaryLabel) return;
+  if (!tab || !isUnreadEligible(tab, label, activeLabel, secondaryLabel)) return false;
   tab.hasUnread = true;
+  return true;
+}
+
+// Take the unread badge off a tab, and say so on the `tabs` channel. Every site that used to assign
+// `hasUnread = false` inline comes through here, so the badge has one definition of how it is
+// lowered and one signal for the work that hangs off it. The signal fires only when the flag was
+// actually set: a dwell that completes on a tab nobody badged, or a request to clear a badge that
+// is already down, has nothing to announce, and a spurious `unread-cleared` would cancel a pending
+// harness escalation the caller knows nothing about. Returns whether the badge came off.
+export function clearUnreadTab(tabs: Tab[], label: string): boolean {
+  const tab = tabs.find((t) => t.label === label);
+  if (!tab?.hasUnread) return false;
+  tab.hasUnread = false;
+  messageBus.emit('tabs', { type: 'unread-cleared', label });
+  return true;
 }
 
 // The fields a producer may add to the running entry it starts, beyond its command text: the

@@ -117,14 +117,24 @@ describe('TabStrip', () => {
     expect(container.querySelector('.dot.busy')).toBeInTheDocument();
   });
 
-  it('shows the unread badge when hasUnread is set', () => {
+  // The badge is suppressed on the tab the user is looking at, so a badged tab has to be a
+  // non-active one. It still carries the flag while it is active — a glance is not a read — but
+  // drawing it there would flicker for the three seconds before the badge comes off.
+  it('shows the unread badge on an inactive tab when hasUnread is set', () => {
     const { container, getByRole } = render(
-      <TabStrip tabs={[makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+      <TabStrip tabs={[makeTab({}), makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
     );
     const badge = getByRole('img', { name: 'unread' });
     expect(badge).toHaveClass('tab-badge');
     expect(badge.querySelector('svg[data-icon="flag"]')).not.toBeNull();
     expect(container.querySelector('.tab-badge')).toBeInTheDocument();
+  });
+
+  it('shows no badge on the active tab even while it is badged', () => {
+    const { container } = render(
+      <TabStrip tabs={[makeTab({ hasUnread: true })]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+    );
+    expect(container.querySelector('.tab-badge')).not.toBeInTheDocument();
   });
 
   it('shows no badge when hasUnread is false', () => {

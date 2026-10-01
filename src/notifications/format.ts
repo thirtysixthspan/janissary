@@ -45,6 +45,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'remote-session':
     case 'remote-session-terminated': { return detail ?? ''; }
     case 'state-change': { return `Agent '${tabLabel}' finished`; }
+    case 'harness-idle': { return `Agent '${tabLabel}' is waiting`; }
     case 'agent-start': { return `Agent '${tabLabel}' started`; }
     case 'rate-limited': { return `Agent '${tabLabel}' is being rate limited`; }
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }

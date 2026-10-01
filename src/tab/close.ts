@@ -5,6 +5,7 @@ import { closeTabResources } from './cleanup.js';
 import { closeQuitsApp } from './placement.js';
 import { removeTabAt } from './reorder.js';
 import { isSshTab } from './view-guards.js';
+import { beginDwell } from './dwell.js';
 
 // Resolves TabManager.closeTab: releases the tab's external resources, then either exits the
 // app (closing the last non-docked tab) or removes it from `tabs` and restores focus.
@@ -21,6 +22,7 @@ export function closeTabOp(
   discardFocusHistoryLabel: (label: string) => void,
   popFocusHistory: () => number | undefined,
   applyResult: (tabs: Tab[], activeTab: number) => void,
+  resolveTabs?: () => Tab[],
 ): void {
   const tab = tabs[index];
   if (!tab) return;
@@ -37,8 +39,13 @@ export function closeTabOp(
   const restored = wasActive ? popFocusHistory() : undefined;
   const nextActiveTab = restored ?? Math.min(activeTab, nextTabs.length - 1);
   applyResult(nextTabs, nextActiveTab);
+  // The tab that just became active starts its unread dwell rather than dropping its badge, so a
+  // glance at a tab the close moved focus onto is not mistaken for having read it. `resolveTabs` is
+  // passed rather than `nextTabs` because that array is a fresh object per tab — `removeTabAt` maps
+  // each survivor into a new one — and the dwell fires later, by which time `port.tabs` may be a
+  // newer array again.
   const active = nextTabs[nextActiveTab];
-  if (active) active.hasUnread = false;
+  if (active) beginDwell(resolveTabs ?? (() => nextTabs), active.label);
   messageBus.emit('state', { type: 'dirty' });
   // A plain ssh tab is a row in the sessions list, and every other manager's release has already
   // announced its own. Raised here rather than in the resource walk above because the list is
