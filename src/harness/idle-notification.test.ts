@@ -43,10 +43,12 @@ function setup(harnessLabel = 'build') {
   return { append, dispose, harness, janus, managers, messages, tabs, toasts };
 }
 
+// No `messageBus.clear()` here: this file imports a module whose `tabs: unread-cleared` subscription
+// is registered at module scope, and clearing the bus would drop it from the second case onward —
+// leaving the cancel path below unexercised while still passing, through the fire-time backstop.
 afterEach(() => {
   disposeHarnessIdleEscalations();
   vi.useRealTimers();
-  messageBus.clear();
 });
 
 describe('harness idle escalation', () => {
@@ -99,6 +101,26 @@ describe('harness idle escalation', () => {
       // What a completed unread dwell, a focus the user stayed on, or an auto-approve landing late
       // all end up doing: taking the badge off, which is the escalation's whole lifetime.
       clearUnreadTab(fixture.tabs, 'build');
+
+      vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+      expect(fixture.messages()).toEqual([]);
+      expect(fixture.toasts).toEqual([]);
+    } finally { fixture.dispose(); }
+  });
+
+  // The case above passes either way: with the badge down, the fire-time check discards the
+  // escalation whether or not anything cancelled it. Re-raising the badge behind that check's back
+  // leaves the subscription as the only thing that can stop it, so this fails if the
+  // `tabs: unread-cleared` listener is gone.
+  it('cancels on the badge-clear signal even when the badge comes back', () => {
+    vi.useFakeTimers();
+    const fixture = setup();
+    try {
+      fixture.managers.tab.markUnread('build');
+      armHarnessIdleEscalation(fixture.managers, 'build');
+      clearUnreadTab(fixture.tabs, 'build');
+      // Deliberate, not a setup slip: the escalation must not be rescued by the badge being back.
+      fixture.harness.hasUnread = true;
 
       vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
       expect(fixture.messages()).toEqual([]);

@@ -471,10 +471,13 @@ describe('busyStatusHandler idle escalation', () => {
     return { handler, harness, janus, managers, messages, tabs, makeActive: (i: number) => { activeIndex = i; } };
   }
 
+  // No `messageBus.clear()` here: this file imports `idle-notification.js`, whose
+  // `tabs: unread-cleared` subscription is registered at module scope, and clearing the bus would
+  // drop it from the second case onward — leaving the cancel cases below unexercised while still
+  // passing, through the fire-time backstop.
   afterEach(() => {
     disposeHarnessIdleEscalations();
     vi.useRealTimers();
-    messageBus.clear();
   });
 
   it('notifies a hidden tab 30s after the debounced ready transition commits, and not before', () => {
@@ -537,6 +540,23 @@ describe('busyStatusHandler idle escalation', () => {
     fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
     fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
     fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+    expect(fixture.messages()).toEqual([]);
+  });
+
+  // The case above passes either way: with the badge down, the fire-time check discards the
+  // escalation whether or not anything cancelled it. Re-raising the badge behind that check's back
+  // leaves the `tabs: unread-cleared` subscription as the only thing that can stop it, so this fails
+  // if that listener is gone.
+  it('cancels on the badge-clear signal even when the badge comes back', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    fixture.handler(capture('anything', CLAUDE_IDLE_TITLE));
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    // Deliberate, not a setup slip: the escalation must not be rescued by the badge being back.
+    fixture.harness.hasUnread = true;
 
     vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
     expect(fixture.messages()).toEqual([]);
