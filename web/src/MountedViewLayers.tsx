@@ -31,9 +31,9 @@ type Properties = {
   pickerOverlays?: React.ReactNode;
   overlayOpen?: boolean;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
-  // `HarnessTab.harnessKeyFilter`); they're the only pickers/choosers those chords ever let bubble
-  // there, so this renders just those two overlays rather than the full `PickerOverlays` stack the
-  // agent-tab body uses.
+  // `HarnessTab.harnessKeyFilter`), and Ctrl+Shift+V opens whatever overlay the clipboard plugin
+  // contributes; those are the pickers/choosers those chords ever let bubble there, so this renders
+  // just those overlays rather than the full `PickerOverlays` stack the agent-tab body uses.
 } & PickerOverlayProps;
 
 function TabBodyDiv({
@@ -63,7 +63,7 @@ export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
   visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
-  navOpen, navQuery, navIndex, onPickTab,
+  navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
 }: Properties) {
   return (
     <>
@@ -82,6 +82,7 @@ export function MountedViewLayers({
               {navOpen && onPickTab && (
                 <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
               )}
+              {contributedOverlay}
             </>
           )}
         />

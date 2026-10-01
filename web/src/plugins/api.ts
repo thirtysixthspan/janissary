@@ -38,6 +38,13 @@ export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../s
 // does not move.
 export { nextListSelection } from '../shared/list-selection';
 
+// The one clipboard writer, published so a plugin's copy reaches the same capture seam every other
+// copy in the application does rather than being invisible to the clipboard history. The optional
+// second argument is for the one plugin copy with something to say when the clipboard refuses;
+// everything else stays silent, which is the shared writer's own behavior. Additive, so
+// `TAB_PLUGIN_API_VERSION` does not move.
+export { copyText } from '../shared/system-clipboard';
+
 // The selection *state* behind that rule, for a plugin list whose rows arrive whole: which row is
 // highlighted, which row the user confirmed, and the three rules that keep both inside a list the
 // server has since rebuilt. Published on the same terms as `nextListSelection` — the two lists that

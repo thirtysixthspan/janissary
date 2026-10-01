@@ -8,21 +8,24 @@ import { registerEditorDrop } from '../shared/drop-registry';
 //
 // Focuses the textarea before inserting: the caller is a drag release, so focus is still in the file
 // tree, where the letters the user types next are a type-to-select gesture rather than text.
-// `insert` leaves the caret at the end of what it inserted, so once focus is here the user simply
-// carries on typing from there.
+//
+// Both insertion members focus first and are then the editor's own two doors: `insert` leaves the
+// caret at the end of what it inserted, so a dropped file can be carried on typing from; `paste`
+// leaves it at the start, which is what a paste in this editor does everywhere else.
 export function useEditorDrop(
   label: string, visible: boolean, textareaRef: RefObject<HTMLTextAreaElement | null>,
-  insert: (text: string) => void,
+  insert: (text: string) => void, paste?: (text: string) => void,
 ): void {
   const insertRef = useRef(insert);
   insertRef.current = insert;
+  const pasteRef = useRef(paste);
+  pasteRef.current = paste;
   useEffect(() => {
     if (!visible) return;
+    const focus = () => textareaRef.current?.focus();
     return registerEditorDrop(label, {
-      insertAtCaret: (text: string) => {
-        textareaRef.current?.focus();
-        insertRef.current(text);
-      },
+      insertAtCaret: (text: string) => { focus(); insertRef.current(text); },
+      pasteAtCaret: (text: string) => { focus(); pasteRef.current?.(text); },
     });
   }, [label, visible, textareaRef]);
 }

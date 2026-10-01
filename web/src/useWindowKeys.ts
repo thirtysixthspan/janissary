@@ -6,6 +6,8 @@ import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey
 import { dispatchTaskPickerKey } from './pickers/task-picker-keys';
 import { dispatchProfilePickerKey } from './pickers/profile-picker-keys';
 import { buildOverlayOpenState, firstOpenOverlay } from './pickers/overlay-registry';
+import { eventChordId } from './overlay-plugins/chords';
+import { openOverlayForChord, contributedOverlayOnScreen } from './shared/contributed-overlays';
 import { isTabSwitchChord } from './shared/terminal/window-chords';
 import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker/key-bindings';
 
@@ -70,7 +72,15 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
     );
     return true;
   }
-  default: { return false; }
+  default: {
+    // No built-in overlay is up, which is the only condition under which a contributed one can be:
+    // the registry ranks the nine above every plugin, so nothing below this line fires while one of
+    // them is open — including the chords that open them.
+    const contributed = contributedOverlayOnScreen();
+    if (!contributed) return false;
+    contributed.onKey(e);
+    return true;
+  }
   }
 }
 
@@ -140,13 +150,19 @@ function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): 
 
 // The chord openers (Cmd+Shift+F search, Cmd+F search, Cmd+P quick open, the Ctrl picker chords,
 // Cmd+T new agent tab) — split out of `onKey` to keep its own cognitive complexity under the file's
-// lint threshold.
+// lint threshold. A plugin's chord is consulted after all of them, so a core chord always wins.
+//
+// `preventDefault` on a claimed plugin chord is not optional here. In a text field — which is exactly
+// where an editor keeps its keyboard — a browser binds Ctrl+Shift+V to "paste as plain text", and the
+// keydown still reaches the page: without it the popup would open *and* the browser would paste, in
+// one keystroke, with nothing in the popup looking wrong.
 function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
   if (e.metaKey && metaChordOpener(e, snap, cb)) return true;
   if (e.ctrlKey) {
     const opener = ctrlChordOpener(e.key.toLowerCase(), cb);
     if (opener) { e.preventDefault(); opener(); return true; }
   }
+  if (!e.isComposing && openOverlayForChord(eventChordId(e))) { e.preventDefault(); return true; }
   if (e.metaKey && e.key.toLowerCase() === 't') { e.preventDefault(); cb.runCommand('agent'); return true; }
   return false;
 }
@@ -178,3 +194,4 @@ export function useWindowKeys(
     };
   }, [client, stateRef, callbacksRef, handleScrollKey, handleScrollKeyUp]);
 }
+

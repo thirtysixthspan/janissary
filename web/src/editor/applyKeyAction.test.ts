@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { EditorState } from './model';
 import { UndoBuffer } from './undo';
 import { applyKeyAction, type EditSurface } from './applyKeyAction';
+import { subscribeClipboardCopies } from '../shared/clipboard-captures';
 
 function makeSurface(initial: EditorState, onSave = vi.fn()): EditSurface & { get: () => EditorState } {
   let state = initial;
@@ -59,6 +60,22 @@ describe('applyKeyAction', () => {
     applyKeyAction(surface, { kind: 'cut' }, 20);
     expect(writeText).toHaveBeenCalledWith('abc');
     expect(surface.get().lines).toEqual(['']);
+    vi.unstubAllGlobals();
+  });
+
+  // The clipboard-history popup sees a copy only if every writer reaches the one seam, so each site
+  // is pinned here rather than trusted: a future editor copy that writes to the clipboard directly
+  // would otherwise be silently missing from the history.
+  it.each([['copy'], ['cut']] as const)('%s publishes to the clipboard-captures seam', (kind) => {
+    vi.stubGlobal('navigator', { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    const seen: string[] = [];
+    const unsubscribe = subscribeClipboardCopies((text) => { seen.push(text); });
+    const surface = makeSurface({ lines: ['abc'], cursor: { line: 0, col: 3 }, anchor: { line: 0, col: 0 } });
+
+    applyKeyAction(surface, { kind }, 20);
+
+    expect(seen).toEqual(['abc']);
+    unsubscribe();
     vi.unstubAllGlobals();
   });
 

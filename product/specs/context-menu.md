@@ -4,18 +4,19 @@ The application draws its own right-click menus rather than leaving them to the 
 
 ### The default menu
 
-Right-clicking anywhere the application has not defined a menu — an editor tab, a terminal, the command line, a transcript — opens a small menu at the pointer offering **Copy** and **Paste**. It looks and behaves exactly like the file navigator's menu: the same styling, arrow keys and `Enter` to activate an entry, `Escape` or clicking away to dismiss it. Dismissing the menu returns the keyboard to whatever had it before.
+Right-clicking anywhere the application has not defined a menu — an editor tab, a terminal, the command line, a transcript — opens a small menu at the pointer offering **Copy**, **Paste**, and **Paste from clipboard…**. It looks and behaves exactly like the file navigator's menu: the same styling, arrow keys and `Enter` to activate an entry, `Escape` or clicking away to dismiss it. Dismissing the menu returns the keyboard to whatever had it before.
 
 Right-clicking the open menu itself does nothing and does not expose the browser's context menu.
 
-An entry that cannot act is left out rather than shown greyed out, so the menu holds one entry, two, or none:
+Two entries are left out when they cannot act, matching the file navigator's menu, and one is never left out:
 
 - **Copy** appears whenever page text, editor text, or a terminal's own selection is present, and writes that selection to the system clipboard.
 - **Paste** appears only when the right-click reaches somewhere text can go — the field it landed in, or the field that currently holds the keyboard. That second case is what makes an editor tab and a terminal work, since a click there lands on rendered output while the keyboard belongs to the surface as a whole. Activating it inserts the clipboard's text at the caret. Paste is withheld while a terminal's held selection is showing, even if some other field still holds the keyboard, since that menu answers a committed copy region rather than an invitation to paste elsewhere.
+- **Paste from clipboard…** always appears. It opens the clipboard-history popup (see [[clipboard-history]]), which lists what has been copied in this session rather than only what the system clipboard holds right now. Because it can always act, the menu now opens on a right-click that offers nothing else — a terminal with no held selection and no field holding the keyboard, or any inert part of a tab — where previously no menu opened at all and the browser's own appeared.
 
-When neither entry applies — a right-click on a surface with nothing selected and nowhere to type — no menu opens at all, and the browser's own menu appears instead.
+Choosing an entry from that popup pastes into whatever the right-click landed on, which is why the element under the pointer is kept rather than only the field a paste would have used. The popup itself opens at its usual anchor above the command line, not at the pointer.
 
-The editor is the exception: an empty-selection right-click there opens no menu, including the browser's own menu.
+The editor is no longer an exception. It used to cancel a right-click with no selection outright, so no menu opened there and not even the browser's did; it now answers like every other surface, offering **Paste** and **Paste from clipboard…**. The browser's own menu never appears wherever the application's menu answers.
 
 ### A contributed entry
 

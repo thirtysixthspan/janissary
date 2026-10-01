@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isPickerChord, isTabSwitchChord } from './window-chords';
+import { isClipboardChord, isPickerChord, isTabSwitchChord } from './window-chords';
 
 function keyEvent(overrides: Partial<KeyboardEvent>): KeyboardEvent {
   return { type: 'keydown', key: 'a', shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, ...overrides } as KeyboardEvent;
@@ -50,5 +50,27 @@ describe('isPickerChord', () => {
 
   it('rejects a bare a', () => {
     expect(isPickerChord(keyEvent({ key: 'a' }))).toBe(false);
+  });
+});
+
+describe('isClipboardChord', () => {
+  // The clipboard popup is a plugin's, not a built-in overlay's, so its chord is matched by its own
+  // declaration. What the terminal needs is only that the chord reaches the window at all.
+  it.each(['v', 'V'])('accepts Ctrl+Shift+%s', (key) => {
+    expect(isClipboardChord(keyEvent({ key, ctrlKey: true, shiftKey: true }))).toBe(true);
+  });
+
+  it.each(['altKey', 'metaKey'] as const)('rejects Ctrl+Shift+V with %s', (modifier) => {
+    expect(isClipboardChord(keyEvent({ key: 'v', ctrlKey: true, shiftKey: true, [modifier]: true }))).toBe(false);
+  });
+
+  // Plain Ctrl+V has to stay the browser's own paste in an editor buffer, which is why the shift is
+  // part of the claim rather than an afterthought.
+  it('rejects Ctrl+V without the shift', () => {
+    expect(isClipboardChord(keyEvent({ key: 'v', ctrlKey: true }))).toBe(false);
+  });
+
+  it('is not one of the picker chords the terminal already let through', () => {
+    expect(isPickerChord(keyEvent({ key: 'v', ctrlKey: true, shiftKey: true }))).toBe(false);
   });
 });

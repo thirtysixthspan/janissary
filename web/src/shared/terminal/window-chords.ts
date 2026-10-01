@@ -15,3 +15,13 @@ export function isPickerChord(e: KeyboardEvent): boolean {
   const key = e.key.toLowerCase();
   return key === 'a' || key === 'g';
 }
+
+// Ctrl+Shift+V, which opens the clipboard-history popup. In a different function from `isPickerChord`
+// because it is a different claim: Ctrl+A and Ctrl+G are the built-in overlays' chords, this one is
+// declared by the overlay plugin that owns the popup, and the plugin's chord is matched by its own
+// declaration rather than by a name written here. What the terminal needs is only the fact that the
+// chord reaches the window, so that a harness tab can get the popup the same way an editor tab can.
+export function isClipboardChord(e: KeyboardEvent): boolean {
+  if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return false;
+  return e.key.toLowerCase() === 'v';
+}

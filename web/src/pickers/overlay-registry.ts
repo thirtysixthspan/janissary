@@ -3,9 +3,15 @@
 // `PickerOverlays`, the keyboard priority chain in `useWindowKeys`, and the command-bar suppression
 // flag in `AppMain` — and they had already stopped agreeing.
 //
-// Only one overlay is ever up at a time; position in `OVERLAYS` is priority, highest first.
+// Only one overlay is ever up at a time; position in `OVERLAYS` is priority, highest first. A plugin
+// that contributes one ranks after all of these, so a built-in overlay always wins a tie and a chord
+// pressed while one is up does nothing — which is what the overlay stack already promised about the
+// shortcuts that open the others. A contributed overlay's own name is part of `OverlayName`, so the
+// compile-time guarantee that a tenth overlay cannot be added without being mapped here still holds
+// for a bundled plugin as well.
 
 import type { RouteChooserView } from '@shared/protocol';
+import { contributedOverlayClaimsCommandBar } from '../shared/contributed-overlays';
 
 export type OverlayName =
   | 'route'
@@ -17,6 +23,8 @@ export type OverlayName =
   | 'queue'
   | 'task'
   | 'profile';
+
+
 
 export type OverlayOpenState = Record<OverlayName, boolean>;
 
@@ -65,8 +73,10 @@ export const OVERLAYS: readonly OverlayDescriptor[] = [
 ];
 
 // The one translation from app state to overlay names. Every consumer reads the object this
-// returns, so a tenth overlay added to `OverlayName` fails to compile here until it is mapped, and
-// then fails at each caller until the state behind it is supplied.
+// returns, so a tenth core overlay added to `CoreOverlayName` fails to compile here until it is
+// mapped, and then fails at each caller until the state behind it is supplied. A contributed
+// overlay's open flag is not in that record on purpose — it is the plugin's own state, read from the
+// seam it registered with rather than threaded through every projection.
 export function buildOverlayOpenState(sources: OverlayOpenSources): OverlayOpenState {
   return {
     route: sources.route !== null,
@@ -81,18 +91,24 @@ export function buildOverlayOpenState(sources: OverlayOpenSources): OverlayOpenS
   };
 }
 
-// The overlay on screen, or `undefined` when none is. The same answer serves the render and the
-// keyboard priority chain, which is what stops the two from drifting.
+// The core overlay on screen, or `undefined` when none of the nine is. Unchanged in meaning, and
+// deliberately still core-only: a caller that gets `undefined` knows no built-in overlay is up, and
+// whether a plugin has contributed one is a separate question it asks the seam — which is what lets
+// both `switch` chains keep their existing arms and gain one `default` each.
 export function firstOpenOverlay(state: OverlayOpenState): OverlayName | undefined {
   return OVERLAYS.find((overlay) => state[overlay.name])?.name;
 }
 
 // Whether an overlay currently owns the command bar's keys, so the bar stops handling its own.
 export function commandBarSuppressed(state: OverlayOpenState): boolean {
-  return OVERLAYS.some((overlay) => state[overlay.name] && overlay.claimsCommandBar);
+  if (OVERLAYS.some((overlay) => state[overlay.name] && overlay.claimsCommandBar)) return true;
+  return contributedOverlayClaimsCommandBar();
 }
 
 // Whether an open overlay disables the command bar's textarea outright (see `disablesCommandBar`).
+// No contributed overlay does: the clipboard popup inserts at the caret rather than replacing the
+// line, so the bar has to stay live behind it.
 export function commandBarDisabled(state: OverlayOpenState): boolean {
   return OVERLAYS.some((overlay) => state[overlay.name] && overlay.disablesCommandBar);
 }
+

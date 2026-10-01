@@ -12,6 +12,8 @@ export type StateEvent = {
   scheduleLaunch: ScheduleLaunchView | null;
   tabNameMaxLength: number;
   activeTabNameMaxLength: number;
+  // How many entries the clipboard-history popup keeps, from `.janissary/config.json`.
+  clipboardHistoryMaxEntries: number;
   globalHistory: string[];
   syntaxTheme: string;
   theme: string;

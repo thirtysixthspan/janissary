@@ -3,7 +3,7 @@ import type { JanusClient } from '../ws';
 import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
 import { SelectionOverlay } from '../shared/terminal/SelectionOverlay';
-import { isPickerChord, isTabSwitchChord } from '../shared/terminal/window-chords';
+import { isClipboardChord, isPickerChord, isTabSwitchChord } from '../shared/terminal/window-chords';
 import { AgentTabMeta } from '../shared/AgentTabMeta';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 import { remoteSessionControl } from '../shared/remote-session-control';
@@ -23,14 +23,14 @@ type Properties = {
 function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: boolean): boolean {
   if (e.type !== 'keydown') return true;
   if (taskPickerOpen || navOpen) return false;
-  return !(isTabSwitchChord(e) || isPickerChord(e));
+  return !(isTabSwitchChord(e) || isPickerChord(e) || isClipboardChord(e));
 }
 
 // Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach
 // the harness except the tab-switch chords (Shift+←/→, Cmd+Shift+[/]), the task-picker chord
-// (Ctrl+A), the tab-navigator chord (Ctrl+G), and every key while either picker overlay is open
-// over this tab (Up/Down/Left/Right/Enter/Escape must reach the picker instead of the PTY), which
-// all bubble to the window handler.
+// (Ctrl+A), the tab-navigator chord (Ctrl+G), the clipboard-history chord
+// (Ctrl+Shift+V), and every key while either picker overlay is open over this tab (Up/Down/Left/Right/
+// Enter/Escape must reach the picker instead of the PTY), which all bubble to the window handler.
 export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({
   harness, client, taskPickerOpen, navOpen, cwd, cwdDisplay, flags, remote, label, connectionsButton, scheduleButton,
   active, onSplit,

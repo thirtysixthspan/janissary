@@ -38,6 +38,19 @@ const clientFeatureZones = [
   },
 ];
 
+// The overlay-plugin host and its bundled plugins sit outside the feature list on purpose: the host
+// has to reach the pickers, the command bar, and the context menu to build the one capability a plugin
+// gets, and no feature may reach back. A feature that wants an overlay plugin's chord, its command
+// word, or a way to open it goes through `shared/contributed-overlays.ts`, which is the seam that
+// exists for exactly that. These zones are what keep the direction one-way rather than a convention.
+for (const target of clientFeatureDirectories) {
+  clientFeatureZones.push({
+    target: `./web/src/${target}`,
+    from: './web/src/overlay-plugins',
+    message: 'Features must reach an overlay plugin through shared/contributed-overlays.ts, not by importing the plugin layer.',
+  });
+}
+
 export default ts.config(
   js.configs.recommended,
   ...ts.configs.recommended,

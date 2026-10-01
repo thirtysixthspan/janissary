@@ -14,6 +14,13 @@ function numberValue(value: unknown, fallback: number): number {
   return typeof value === 'number' ? value : fallback;
 }
 
+// For a setting that is a count rather than a threshold: `numberValue` would happily pass `0`, a
+// negative, and a fraction through, and each of those is nonsense for "how many entries to keep".
+// A well-typed but meaningless number is this decoder's job, not the consumer's.
+function positiveIntegerValue(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : fallback;
+}
+
 function stringValue(value: unknown, fallback: string): string {
   return typeof value === 'string' ? value : fallback;
 }
@@ -59,6 +66,7 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     transcriptMaxLines: numberValue(record.transcriptMaxLines, defaults.transcriptMaxLines),
     tabNameMaxLength: numberValue(record.tabNameMaxLength, defaults.tabNameMaxLength),
     activeTabNameMaxLength: numberValue(record.activeTabNameMaxLength, defaults.activeTabNameMaxLength),
+    clipboardHistoryMaxEntries: positiveIntegerValue(record.clipboardHistoryMaxEntries, defaults.clipboardHistoryMaxEntries),
     sandboxWorkspaces: booleanValue(record.sandboxWorkspaces, defaults.sandboxWorkspaces),
     interactiveShellDetection: booleanValue(record.interactiveShellDetection, defaults.interactiveShellDetection),
     syntaxTheme: stringValue(record.syntaxTheme, defaults.syntaxTheme),

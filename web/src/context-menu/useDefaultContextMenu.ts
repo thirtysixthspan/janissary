@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { editorSelectionText, resolveDefaultMenuTarget, type DefaultMenuTarget } from './default-menu-target';
 import { clearTerminalSelection, terminalSelectionText } from '../shared/terminal/terminal/selection';
+import { openOverlayForCommand } from '../shared/contributed-overlays';
 import type { DefaultMenuEntry } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 
@@ -29,8 +30,7 @@ function isChatShortcut(event: KeyboardEvent): boolean {
 // A surface with a menu of its own has already called `preventDefault()` on the event by the time
 // this listener runs — React dispatches at the root container, `document` is further out — so
 // `defaultPrevented` is the whole test for "someone else owns this click", and no surface has to
-// register anything to be left alone. When the click offers neither entry the default is left
-// alone too, so the browser's own menu still appears rather than an empty box of ours.
+// register anything to be left alone.
 //
 // When the click also resolves a plugin-contributed entry, the label arrives while the menu is
 // open: the server owns the declarations, so the client asks rather than assuming a contributor.
@@ -49,7 +49,8 @@ export function useDefaultContextMenu(client?: JanusClient) {
       const target = resolveDefaultMenuTarget(
         clicked, document.activeElement, selection.text, selection.source,
       );
-      if (!target.selectionText && !target.pasteTarget) return;
+      // `Paste from clipboard…` can always act, so there is no longer a case where the menu has nothing
+      // to offer and the right-click should be left to the browser.
       event.preventDefault();
       generation.current += 1;
       setContributed(null);
@@ -86,6 +87,13 @@ export function useDefaultContextMenu(client?: JanusClient) {
     };
   }, [client]);
 
+  // Opens the clipboard popup at the element the right-click landed on, captured now: the menu closes
+  // and hands focus back before the popup is on screen, so the answer has to be taken here or lost.
+  // The command word names the overlay, not the plugin — this feature never learns a plugin exists.
+  const pasteFromClipboard = (anchor: HTMLElement | null) => {
+    openOverlayForCommand('clip', anchor);
+  };
+
   // The menu holds the keyboard while it is open, so whatever had focus gets it back on the way
   // out — otherwise a dismissed menu would leave the app's key handling pointed at the body.
   // Escape closing a menu that answered for a terminal's own selection exits copy mode with it:
@@ -109,5 +117,5 @@ export function useDefaultContextMenu(client?: JanusClient) {
     close();
   };
 
-  return { pending, contributed, runContributed, close };
+  return { pending, contributed, runContributed, pasteFromClipboard, close };
 }

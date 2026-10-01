@@ -10,6 +10,7 @@
 | `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |
 | `next` | Switch to the next tab |
 | `hist` | Open command history picker |
+| `clip` | Open the clipboard-history popup: everything copied in this session, newest at the bottom (Ctrl+Shift+V); choosing an entry pastes it at the cursor rather than running it |
 | `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
 | `msg` | Send a message to another agent |
@@ -62,6 +63,7 @@
 | `Escape` | Reset scroll to bottom |
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
 | `Ctrl+R` | Open command history picker |
+| `Ctrl+Shift+V` | Open the clipboard-history popup (`clip`); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` is untouched |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
 | `Ctrl+E` | Open the queue picker to send a command to another agent tab (no-op on a tab that is not an agent tab) |
 | `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead on a shell tab |

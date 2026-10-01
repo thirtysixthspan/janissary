@@ -18,6 +18,7 @@ export function buildStateEvent(controller: ControllerCore): ServerEvent {
     scheduleLaunch: controller.scheduleLaunchView(),
     tabNameMaxLength: getConfig().tabNameMaxLength,
     activeTabNameMaxLength: getConfig().activeTabNameMaxLength,
+    clipboardHistoryMaxEntries: getConfig().clipboardHistoryMaxEntries,
     globalHistory: globalCommands(), syntaxTheme: getConfig().syntaxTheme, theme: getConfig().theme,
     tasks: cachedTasks(controller.rootDir),
     profiles: cachedProfileRows(), projectDir: controller.rootDir, version: appVersionNumber(),

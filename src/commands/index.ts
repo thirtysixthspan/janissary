@@ -11,6 +11,7 @@ import { command as connection } from './connection.js';
 import { command as clear } from './clear.js';
 import { command as state } from './state.js';
 import { command as hist } from './hist.js';
+import { command as clip } from './clip.js';
 import { command as close } from './close.js';
 import { command as quit } from './quit.js';
 import { command as schedule } from './schedule.js';
@@ -50,6 +51,7 @@ const coreCommands: Command[] = [
   clear,
   state,
   hist,
+  clip,
   close,
   quit,
   schedule,

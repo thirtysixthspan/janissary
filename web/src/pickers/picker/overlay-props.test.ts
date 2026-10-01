@@ -31,13 +31,19 @@ describe('mountedPickerOverlayProps', () => {
     expect(props.onPickTab).toBe(state.selectNavTab);
   });
 
-  // The mounted layers render only the task picker and the tab navigator; anything more would be a
-  // second overlay stack competing with `PickerOverlays`.
-  it('projects exactly the nine fields a mounted tab body takes', () => {
+  // The mounted layers render the task picker, the tab navigator, and whatever a plugin has
+  // contributed — not the whole `PickerOverlays` stack, which would be a second overlay stack
+  // competing with it.
+  it('projects exactly the fields a mounted tab body takes', () => {
     const byName = (a: string, b: string) => a.localeCompare(b);
     expect(Object.keys(mountedPickerOverlayProps(view)).toSorted(byName)).toEqual([
+      'contributedOverlay',
       'navIndex', 'navOpen', 'navQuery', 'onPickTab', 'onPickTask', 'onToggleTaskDir',
       'taskPickerIndex', 'taskPickerOpen', 'taskRows',
     ]);
+  });
+
+  it('carries no contributed overlay when no plugin has one open', () => {
+    expect(mountedPickerOverlayProps(view).contributedOverlay).toBeUndefined();
   });
 });

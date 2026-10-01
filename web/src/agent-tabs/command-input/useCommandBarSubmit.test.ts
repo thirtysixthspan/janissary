@@ -1,7 +1,26 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import React from 'react';
 import { useCommandBarSubmit } from './useCommandBarSubmit';
+import { installOverlayOpener, registerContributedOverlay } from '../../shared/contributed-overlays';
+
+const published: (() => void)[] = [];
+afterEach(() => { while (published.length > 0) published.pop()?.(); });
+
+// Publishes an overlay claiming `command`, with an opener standing in for the host's. The submit chain
+// never holds a plugin, it asks the seam — which is what lets it open an overlay without importing
+// the plugin layer.
+function publishClaiming(command: string) {
+  const opened = vi.fn();
+  published.push(
+    registerContributedOverlay(
+      { name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {} },
+      { chords: ['ctrl+shift+v'], command },
+    ),
+    installOverlayOpener(opened),
+  );
+  return opened;
+}
 import type { BufferLine, TabView } from '@shared/protocol';
 import type { useTranscriptSearch } from '../../shared/search-bar/useTranscriptSearch';
 
@@ -55,6 +74,59 @@ function TestComponent({
 }
 
 describe('useCommandBarSubmit', () => {
+  // A command word a plugin claims is reached through the shared overlay seam rather than named
+  // here, so adding a plugin's command adds no line to this chain. `clip` is the first one.
+  it('opens a contributed overlay for a command word a plugin claims, instead of dispatching it', () => {
+    const opened = publishClaiming('clip');
+    const runCommand = vi.fn();
+    let submit: ((text: string) => void) | undefined;
+    render(React.createElement(TestComponent, {
+      canSearch: false, lines: [], search: makeSearch(),
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {}, openProfilePicker: () => {},
+      navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
+      tabs: [makeTab()], openQuitConfirm: () => {}, guardRef: { current: null }, activeTab: 0, runCommand,
+      onResult: (s) => { submit = s; },
+    }));
+
+    submit!('clip');
+
+    expect(opened).toHaveBeenCalledWith('fixture', null);
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it('dispatches a command word no plugin claims', () => {
+    publishClaiming('hist');
+    const runCommand = vi.fn();
+    let submit: ((text: string) => void) | undefined;
+    render(React.createElement(TestComponent, {
+      canSearch: false, lines: [], search: makeSearch(),
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {}, openProfilePicker: () => {},
+      navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
+      tabs: [makeTab()], openQuitConfirm: () => {}, guardRef: { current: null }, activeTab: 0, runCommand,
+      onResult: (s) => { submit = s; },
+    }));
+
+    submit!('clip');
+
+    expect(runCommand).toHaveBeenCalledWith('clip');
+  });
+
+  it('dispatches a command word no plugin claims', () => {
+    const runCommand = vi.fn();
+    let submit: ((text: string) => void) | undefined;
+    render(React.createElement(TestComponent, {
+      canSearch: false, lines: [], search: makeSearch(),
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {}, openProfilePicker: () => {},
+      navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
+      tabs: [makeTab()], openQuitConfirm: () => {}, guardRef: { current: null }, activeTab: 0, runCommand,
+      onResult: (s) => { submit = s; },
+    }));
+
+    submit!('clip');
+
+    expect(runCommand).toHaveBeenCalledWith('clip');
+  });
+
   it('sends "quit" through openQuitConfirm', () => {
     const openQuitConfirm = vi.fn();
     const runCommand = vi.fn();

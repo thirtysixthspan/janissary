@@ -26,6 +26,7 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `PageDown` | Scroll the transcript down by half a terminal height |
 | `Escape` | Reset the transcript scroll to the bottom |
 | `Ctrl+R` | Open the command history picker |
+| `Ctrl+Shift+V` | Open the clipboard-history popup — everything you have copied this session, newest at the bottom; choosing an entry pastes it at the cursor. `Ctrl+V` is untouched |
 | `Ctrl+A` | Open the task picker |
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |
 | `Ctrl+E` | Open the queue picker; does nothing on a tab that is not an agent tab |

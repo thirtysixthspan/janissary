@@ -14,6 +14,15 @@ export type CommandInputDropHandle = {
 // rather than through a single ref the active tab claims: every editor and harness tab stays
 // mounted and a split pane can leave two of them visible at once, so "whichever one is active" would
 // deliver the drop to the wrong one.
-export type EditorDropHandle = { insertAtCaret: (text: string) => void };
+//
+// Two insertion members, because the two callers want different caret placement and one definition
+// cannot serve both. A drop leaves the caret at the end of what it inserted, so the user carries on
+// typing from there; a paste leaves it at the start, which is what a real paste in this editor does.
+// Growing this handle rather than adding a second registry is what keeps one lookup path for a
+// second function.
+export type EditorDropHandle = {
+  insertAtCaret: (text: string) => void;
+  pasteAtCaret: (text: string) => void;
+};
 
 export type HarnessDropHandle = { insertAtCaret: (text: string) => void };

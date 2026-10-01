@@ -831,13 +831,16 @@ describe('EditorTab', () => {
     expect(document.activeElement).toBe(ta);
   });
 
-  it('claims an empty-selection right-click without blocking the shared menu for a selection', async () => {
+  it('leaves an empty-selection right-click to the shared menu, which now answers on an editor', async () => {
     const { client } = makeClient();
     const { container } = await renderLoaded(client);
     const body = container.querySelector('.editor-body')!;
+    // The editor used to cancel an empty-selection right-click outright, which meant no menu at all
+    // here — not even the browser's. It no longer does: the shared menu can always offer
+    // `Paste from clipboard…`, so an editor is no longer a special case.
     const emptyClick = createEvent.contextMenu(body);
     fireEvent(body, emptyClick);
-    expect(emptyClick.defaultPrevented).toBe(true);
+    expect(emptyClick.defaultPrevented).toBe(false);
 
     fireEvent.keyDown(textarea(), { key: 'ArrowRight', shiftKey: true });
     const selectedClick = createEvent.contextMenu(body);

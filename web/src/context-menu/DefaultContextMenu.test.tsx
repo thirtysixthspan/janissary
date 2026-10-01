@@ -82,9 +82,9 @@ describe('DefaultContextMenu', () => {
       method: 'defaultMenuSelectionAction', params: { selection: 'new selection' },
     });
     await act(async () => { second.resolve({ ok: true, value: { label: 'Chat about this' } }); await second.promise; });
-    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…', 'Chat about this']);
     await act(async () => { first.resolve({ ok: true, value: { label: 'Stale action' } }); await first.promise; });
-    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…', 'Chat about this']);
     fireEvent.click(screen.getByText('Chat about this'));
     expect(client.send).toHaveBeenCalledExactlyOnceWith({
       method: 'runDefaultMenuSelectionAction',
@@ -116,11 +116,11 @@ describe('DefaultContextMenu', () => {
     await screen.findByText('Chat about this');
     fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
     await act(async () => { rightClick(field()); });
-    expect(labels()).toEqual(['Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…']);
     fireEvent.click(screen.getByText('Copy'));
     expect(writeText).toHaveBeenCalledExactlyOnceWith('selected text');
     await act(async () => { rightClick(field()); });
-    expect(labels()).toEqual(['Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…']);
     await act(async () => { fireEvent.click(screen.getByText('Paste')); });
     expect(readText).toHaveBeenCalledOnce();
     expect(client.send).not.toHaveBeenCalled();
@@ -137,7 +137,7 @@ describe('DefaultContextMenu', () => {
     rightClick(field());
     if (label === 'Paste') fireEvent.keyDown(screen.getByRole('menu'), { key: 'ArrowDown' });
     await act(async () => { reply.resolve({ ok: true, value: { label: 'Chat about this' } }); await reply.promise; });
-    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…', 'Chat about this']);
     expect(screen.getByText(label)).toHaveClass('selected');
     await act(async () => { fireEvent.keyDown(screen.getByRole('menu'), { key: 'Enter' }); });
     expect(label === 'Copy' ? writeText : readText).toHaveBeenCalledOnce();
@@ -149,7 +149,7 @@ describe('DefaultContextMenu', () => {
     stubSelection('selected text');
     render(<DefaultContextMenu />);
     const event = rightClick(field());
-    expect(labels()).toEqual(['Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…']);
     expect(event.defaultPrevented).toBe(true);
   });
 
@@ -168,7 +168,7 @@ describe('DefaultContextMenu', () => {
     expect(client.request).toHaveBeenCalledWith({
       method: 'defaultMenuSelectionAction', params: { selection: 'editor selection' },
     });
-    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…', 'Chat about this']);
   });
 
   it('offers only Paste for an editor with no selection', () => {
@@ -181,21 +181,21 @@ describe('DefaultContextMenu', () => {
     editor.append(line);
     document.body.append(editor);
     rightClick(line);
-    expect(labels()).toEqual(['Paste']);
+    expect(labels()).toEqual(['Paste', 'Paste from clipboard…']);
   });
 
   it('offers only Paste when nothing is selected', () => {
     stubSelection('');
     render(<DefaultContextMenu />);
     rightClick(field());
-    expect(labels()).toEqual(['Paste']);
+    expect(labels()).toEqual(['Paste', 'Paste from clipboard…']);
   });
 
   it('offers only Copy when the right-click reaches no field', () => {
     stubSelection('selected text');
     render(<DefaultContextMenu />);
     rightClick(document.body);
-    expect(labels()).toEqual(['Copy']);
+    expect(labels()).toEqual(['Copy', 'Paste from clipboard…']);
   });
 
   it('runs Chat about this with Cmd+I for the current selection', async () => {
@@ -233,12 +233,14 @@ describe('DefaultContextMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
-  it('leaves the browser its own menu when neither entry applies', () => {
+  it('answers even where neither Copy nor Paste applies, because the clipboard entry can', () => {
     stubSelection('');
     render(<DefaultContextMenu />);
     const event = rightClick(document.body);
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
-    expect(event.defaultPrevented).toBe(false);
+    // The one entry that cannot be withheld is what makes a bare terminal or an inert part of a tab
+    // open a menu at all. It used to open none, and the browser's own menu appeared instead.
+    expect(labels()).toEqual(['Paste from clipboard…']);
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it('writes the selected text to the clipboard when Copy is activated', () => {
@@ -314,7 +316,7 @@ describe('DefaultContextMenu', () => {
     expect(client.request).toHaveBeenCalledWith({
       method: 'defaultMenuSelectionAction', params: { selection: 'selected text' },
     });
-    expect(labels()).toEqual(['Copy', 'Paste', 'Chat about this']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…', 'Chat about this']);
     expect(screen.getByRole('menu').querySelectorAll('.context-menu-separator')).toHaveLength(1);
 
     fireEvent.click(entry);
@@ -331,7 +333,7 @@ describe('DefaultContextMenu', () => {
     render(<DefaultContextMenu client={client as never} />);
     rightClick(field());
     await screen.findByText('Copy');
-    expect(labels()).toEqual(['Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…']);
   });
 
   it('asks again for the next menu and leaves a closed menu behind it unanswered', async () => {
@@ -352,7 +354,7 @@ describe('DefaultContextMenu', () => {
     stubSelection('selected text');
     rightClick(field());
     await screen.findByText('Copy');
-    expect(labels()).toEqual(['Copy', 'Paste']);
+    expect(labels()).toEqual(['Copy', 'Paste', 'Paste from clipboard…']);
     expect(rendered.container).toBeTruthy();
   });
 });

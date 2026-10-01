@@ -2,7 +2,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { ESLint } from 'eslint';
 import path from 'node:path';
 
-// The seven restricted-import blocks in `eslint.plugin-boundaries.mjs` encode the whole plugin
+// The eight restricted-import blocks in `eslint.plugin-boundaries.mjs` encode the whole plugin
 // architecture — plugins may not reach past their API, host infrastructure may import only a
 // manifest, core reaches behavior only through the lazy loader maps, and the client plugin host must
 // not pull a shared contract into the entry bundle. They are intricate regexes with negative
@@ -81,6 +81,16 @@ describe('plugin architecture import boundaries', () => {
       importOf('../../model'), 'web/src/editor/plugins/multiselect/index.ts',
       "instead of the editor's internals",
     ],
+    [
+      'an overlay plugin reaching the command bar',
+      importOf('../../shared/command-bar/CommandBarShell'), 'web/src/overlay-plugins/clipboard-history/index.tsx',
+      'must use web/src/overlay-plugins/api.ts',
+    ],
+    [
+      'an overlay plugin reaching the overlay registry',
+      importOf('../../pickers/overlay-registry'), 'web/src/overlay-plugins/clipboard-history/store.ts',
+      'must use web/src/overlay-plugins/api.ts',
+    ],
   ])('rejects %s', async (_name, source, filePath, fragment) => {
     const messages = await boundaryMessages(source, filePath);
     expect(messages).toHaveLength(1);
@@ -100,6 +110,11 @@ describe('plugin architecture import boundaries', () => {
     ['host infrastructure importing a plugin manifest', importOf('./video/manifest.js'), 'src/plugins/host.ts'],
     ['the client plugin host importing a shared contract as a type', typeImportOf('@shared/plugins/video/shared'), 'web/src/plugins/registry.tsx'],
     ['an editor plugin using its contract', importOf('../api'), 'web/src/editor/plugins/multiselect/index.ts'],
+    ['an overlay plugin using its contract', importOf('../api'), 'web/src/overlay-plugins/clipboard-history/index.tsx'],
+    [
+      'an overlay plugin reading the capture seam',
+      importOf('../../shared/clipboard-captures'), 'web/src/overlay-plugins/clipboard-history/store.ts',
+    ],
   ])('allows %s', async (_name, source, filePath) => {
     expect(await boundaryMessages(source, filePath)).toEqual([]);
   });

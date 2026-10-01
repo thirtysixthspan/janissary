@@ -18,18 +18,20 @@ import { useTranscriptScroll } from './shared/transcript/useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import { usePickerOverlays } from './pickers/usePickerOverlays';
-import { useServerState, useTabNameLimits } from './useServerState';
+import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useCmdWRefs } from './useCmdWRefs';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
+import { useOverlayPlugins } from './useOverlayPlugins';
 
 export function App({ client }: { client: JanusClient }) {
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryTab, setSecondaryTab] = useState<number>();
   const { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength } = useTabNameLimits();
+  const { clipboardHistoryMaxEntries, setClipboardHistoryMaxEntries } = useClipboardHistoryCap();
   const [globalHistory, setGlobalHistory] = useState<string[]>([]);
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
@@ -64,6 +66,16 @@ export function App({ client }: { client: JanusClient }) {
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
   currentRef.current = current;
   const lines = useMemo(() => current?.bufferLines ?? [], [current]);
+
+  // The overlay-plugin host. Nothing holds it: the seam resolves a chord or a command word to a plugin
+  // and the host loads its chunk, so every route into an overlay — the chord, the `clip` command, and
+  // the context menu — goes through one place. It is built here because the app shell is the only
+  // place free to import the command bar, the editor's drop registry, and the tab view at once, and
+  // those are what the one capability a plugin gets is assembled from.
+  useOverlayPlugins({
+    client, dropRef: dropReference, maxEntries: clipboardHistoryMaxEntries,
+    currentTab: () => currentRef.current,
+  });
 
   const { canSearch, search, highlight } = useViewSearchState(current, lines);
 
@@ -107,7 +119,8 @@ export function App({ client }: { client: JanusClient }) {
 
   useServerState(client, {
     setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
-    setTabNameMaxLength, setActiveTabNameMaxLength, setGlobalHistory, setSyntaxTheme,
+    setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries, setGlobalHistory,
+    setSyntaxTheme,
     setTasks, setProfiles,
     ...pickers.serverState,
   });

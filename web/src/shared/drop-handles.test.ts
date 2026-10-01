@@ -23,16 +23,27 @@ describe('CommandInputDropHandle', () => {
 describe('EditorDropHandle', () => {
   it('accepts a dropped path at the cursor', () => {
     const insertAtCaret = vi.fn();
-    const handle: EditorDropHandle = { insertAtCaret };
+    const handle: EditorDropHandle = { insertAtCaret, pasteAtCaret: vi.fn() };
 
     handle.insertAtCaret('src/index.ts');
 
     expect(insertAtCaret).toHaveBeenCalledWith('src/index.ts');
   });
 
+  it('carries paste semantics alongside drop semantics, which place the caret differently', () => {
+    const insertAtCaret = vi.fn();
+    const pasteAtCaret = vi.fn();
+    const handle: EditorDropHandle = { insertAtCaret, pasteAtCaret };
+
+    handle.pasteAtCaret('pasted');
+
+    expect(pasteAtCaret).toHaveBeenCalledWith('pasted');
+    expect(insertAtCaret).not.toHaveBeenCalled();
+  });
+
   it('is satisfied by a command-bar handle, which carries the highlight on top of it', () => {
     const commandBar: CommandInputDropHandle = { insertAtCaret: vi.fn(), setDropHighlighted: vi.fn() };
-    const asEditorTarget: EditorDropHandle = commandBar;
+    const asEditorTarget: EditorDropHandle = { ...commandBar, pasteAtCaret: vi.fn() };
 
     asEditorTarget.insertAtCaret('notes.md');
 

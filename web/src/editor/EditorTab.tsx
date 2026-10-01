@@ -70,7 +70,7 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   const pluginKey = useEditorPlugins(client, editor.url, api, editor.name);
   const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, overlayOpen });
 
-  useEditorDrop(tab.label, visible, textareaRef, api.insert);
+  useEditorDrop(tab.label, visible, textareaRef, api.insert, api.paste);
 
   const onBodyScroll = useEditorScrollRetention(bodyRef, visible);
 
@@ -148,7 +148,6 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
         data-editor-selection={selectionText}
         onScroll={onBodyScroll}
         onMouseDown={mouse.onMouseDown}
-        onContextMenu={(event) => { if (!selectionText) event.preventDefault(); }}
         onClick={(e) => { handleSuggestPillClick(e, state, suggest.fireOnLine); }}
       >
         <EditorConnectionsPanel tab={tab} api={connections} />

@@ -2,6 +2,10 @@
 // testable without a render. Every API here is feature-detected: a browser may withhold the async
 // clipboard, and jsdom implements none of them. The menu's Copy is `copyText` in
 // `../shared/system-clipboard`, which the file navigator shares.
+//
+// `pasteTextInto` is published because the clipboard-history popup has to put text at a caret too,
+// and there is one answer to "how does text get into an element that owns its own pasting" rather
+// than two.
 
 async function readClipboardText(): Promise<string> {
   try {
@@ -32,10 +36,14 @@ function insertAtCaret(text: string): void {
   document.execCommand('insertText', false, text);
 }
 
-export async function pasteInto(element: HTMLElement): Promise<void> {
+export function pasteTextInto(element: HTMLElement, text: string): void {
   element.focus();
-  const text = await readClipboardText();
-  if (!text) return;
   if (dispatchPasteEvent(element, text)) return;
   insertAtCaret(text);
+}
+
+export async function pasteInto(element: HTMLElement): Promise<void> {
+  const text = await readClipboardText();
+  if (!text) return;
+  pasteTextInto(element, text);
 }
