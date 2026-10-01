@@ -680,6 +680,16 @@ fact that it finished, and a harness they actually stop on loses it three second
 also survives an unanswered permission prompt in the same way: going to look at a harness blocked on
 a prompt and moving straight on leaves the badge up.
 
+When claude, opencode, or codex shows a recognized permission prompt, the dot stops blinking
+immediately — the harness is waiting on the user, not working — and if nothing is going to answer the
+prompt (the tab was launched with `--no-auto-approve`, or auto-approve has stood down on a prompt it
+could not clear), the tab is marked unread right away rather than waiting on the usual working→idle
+debounce.
+
+A harness without its own recognition signals keeps the previous coarse behavior — the dot blinks
+for as long as the process is alive. All three launchable harnesses have signals today, so this
+applies only to harnesses added later.
+
 ### The idle escalation
 
 A badge is still only a flag in the strip, on a tab the user may not be looking at. So a badged
@@ -699,8 +709,9 @@ than queuing behind it — the interval runs from the most recent idle, so a har
 repeated turns stays quiet and says something once, thirty seconds after it finally settles.
 
 The badge is the escalation's whole lifetime, so **clearing the badge cancels it**: the user dwells
-on the tab and reads it, the harness goes back to work, the tab is closed, or it is reordered or
-undocked and something else becomes active. When the interval does run out, the harness's tab is
+on the tab and reads it, the harness goes back to work, the tab becomes the visible selection in the
+other pane, or the tab is closed. Reordering tabs, or undocking another tab so that it becomes
+active, leaves a hidden harness tab's badge — and its escalation — where they are. When the interval does run out, the harness's tab is
 re-checked before anything is said. A tab that has since been docked into a sidebar is **not**
 announced — it is on screen for good and no dwell is coming. A tab that is on screen at that moment
 — the active tab, or the visible selection in the other pane — is not announced *yet*: a
@@ -718,16 +729,6 @@ timestamped when it is delivered, not when the transition committed.
 A remote harness's tab behaves identically. The far side runs the same busy tracking and reports the
 committed transition, and that report lands in the same place a local capture does, so there is no
 separate rule for a harness on another host.
-
-When claude, opencode, or codex shows a recognized permission prompt, the dot stops blinking
-immediately — the harness is waiting on the user, not working — and if nothing is going to answer the
-prompt (the tab was launched with `--no-auto-approve`, or auto-approve has stood down on a prompt it
-could not clear), the tab is marked unread right away rather than waiting on the usual working→idle
-debounce.
-
-A harness without its own recognition signals keeps the previous coarse behavior — the dot blinks
-for as long as the process is alive. All three launchable harnesses have signals today, so this
-applies only to harnesses added later.
 
 ## Lifecycle
 

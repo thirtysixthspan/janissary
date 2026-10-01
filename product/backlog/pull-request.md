@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the harness spec's placement and wording of the new idle-escalation section, which splits the busy/ready section and claims cancellations the code does not perform.
-
-Existing Issue: In `product/specs/harness.md` the new `### The idle escalation` heading is inserted in the middle of § Busy/ready status, so the pre-existing paragraphs on a recognized permission prompt badging immediately and on harnesses without recognition signals now sit under the escalation heading, and the section says clearing cancels the escalation when the tab "is reordered or undocked and something else becomes active" — a claim the matching `src/harness/idle-notification.ts` header comment repeats as "reordered away" — although neither operation clears a hidden harness tab's badge. Severity: 3/10
-
-Existing Risk: 3/10 - The spec is declared authoritative, so a reader or agent following it either expects a reorder to silence a pending notification or misfiles the permission-prompt rule as part of the escalation.
-
-Proposal Risk: 1/10 - A documentation-only correction with no behavior change, whose only hazard is wording that drifts from the code again.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1500: move the harness spec's idle-escalation section after the busy/ready paragraphs and correct its cancellation list". In `product/specs/harness.md`, move the two paragraphs that currently follow § The idle escalation — the one beginning "When claude, opencode, or codex shows a recognized permission prompt" and the one beginning "A harness without its own recognition signals" — back above the `### The idle escalation` heading so § Busy/ready status is contiguous and the escalation's reference to "an unanswered permission gate" follows the paragraph that defines it. In the escalation's cancellation sentence, replace "or it is reordered or undocked and something else becomes active" with the routes that actually cancel: a completed dwell (`src/tab/dwell.ts`), the harness going busy again (`applyBusyTransition` in `src/harness/busy-status.ts`), the tab being shown in the other split pane (`repairPaneSelections` in `src/tab/split-selection.ts`), and the tab closing (`HarnessManager.closeTab` in `src/harness/manager.ts`). Make the same correction to the header comment in `src/harness/idle-notification.ts`, dropping "or reordered away". No code or test changes; confirm the cross-references from `product/specs/notifications.md` and `product/specs/tabs.md` to "harness.md § The idle escalation" still resolve.
-
-
 * Correct the pull request description's claim that clicking the toast focuses the waiting harness tab, which the toast path does not do.
 
 Existing Issue: The description says "Clicking the feed line or the toast focuses the tab" and its manual step 2 says "Clicking either focuses the tab", and the plan's product decision 8 says the toast links back to the tab, but the toast `deliverNotification` emits carries only `from`, `message` and `color`, and `ToastStack` answers a click with `revealNotifications`, so a toast click opens the feed rather than the tab. Severity: 4/10

@@ -17,7 +17,8 @@ import type { Tab } from '../tab/types.js';
 // raised: a tab that was on screen, or docked, never got one. One escalation per tab, never a queue
 // of them — a harness running short turns stays quiet and says something once, thirty seconds after
 // it finally settles. And it is cancelled the moment the badge comes off, however that happens:
-// focused long enough to count as read, taken back to work, closed, or reordered away.
+// focused long enough to count as read, taken back to work, or shown in the other split pane — and
+// when the tab is closed, which takes no badge off but releases the escalation directly.
 //
 // The pending handle is per-tab state, so it lives on the tab's own runtime record rather than in a
 // map here. It is always reached through the live tab: a close or reorder replaces each tab with a
