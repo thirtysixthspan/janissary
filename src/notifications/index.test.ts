@@ -113,6 +113,29 @@ describe('shouldNotify — manual event', () => {
   });
 });
 
+// The table-driven block above runs `harness-idle` as whatever it is classified as, so it would keep
+// passing if the event moved behind a toggle. This pins the classification: an escalation that needs
+// `config.json` edited before it fires is inert for everyone who never edits it.
+describe('shouldNotify — harness-idle event', () => {
+  it('is classified explicit, not ambient', () => {
+    expect(EXPLICIT_EVENTS['harness-idle']).toBe(true);
+    expect(Object.keys(AMBIENT_EVENTS)).not.toContain('harness-idle');
+  });
+
+  it('fires with no config at all and with every toggle off', () => {
+    expect(shouldNotify(undefined, 'harness-idle', 'build', 'janus')).toBe(true);
+    expect(shouldNotify(allOff, 'harness-idle', 'build', 'janus')).toBe(true);
+  });
+
+  it('fires even when the harness tab is the active one', () => {
+    expect(shouldNotify(allOff, 'harness-idle', 'build', 'build')).toBe(true);
+  });
+
+  it('still never targets the notifications tab itself', () => {
+    expect(shouldNotify(allOff, 'harness-idle', NOTIFICATIONS_LABEL, 'janus')).toBe(false);
+  });
+});
+
 describe('shouldNotify — auto-approve event', () => {
   it('fires even when the issuing tab is active', () => {
     expect(shouldNotify(allOn, 'auto-approve', 'claude', 'claude')).toBe(true);
