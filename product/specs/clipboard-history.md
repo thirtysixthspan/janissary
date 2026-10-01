@@ -42,7 +42,7 @@ A field the keyboard is in always wins over a tab-level choice, so pasting from 
 
 Clicking an entry in a popup opened from the right-click menu pastes into whatever the right-click landed on, rather than into wherever the keyboard happened to be. Choosing one with `Return` instead pastes at the keyboard caret: by then the menu has closed and the element the click found is no longer what the user is aiming at.
 
-The keyboard caret is where the keyboard was when the popup opened, because the popup takes the keyboard for itself once it is on screen.
+The keyboard caret is where the keyboard was when the popup opened, because the popup takes the keyboard for itself once it is on screen. Where an entry lands therefore does not depend on how the popup was opened: an editor buffer that held the keyboard receives the paste whether the popup came from `Ctrl+Shift+V`, `clip`, or the right-click menu, and whether the entry is chosen with Return or a click.
 
 While the popup is open it holds keyboard focus and takes every keystroke, like every other overlay (see [[keyboard-navigation]]). This holds on every tab: in an editor buffer or a terminal the arrows move the popup's selection, not the caret or the cursor underneath. The arrows move the selection and stop at the ends without wrapping, Return chooses, and Escape or Tab closes without pasting. Shift+Tab is still section navigation. Switching to another tab closes it without pasting too, because the popup belongs to the tab it was opened on. `Ctrl+W` closes no tab while it is up. It does not disable the command bar, because pasting at the caret needs the bar still there, and the bar stops handling its own keys while it is up.
 

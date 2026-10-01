@@ -2,7 +2,5 @@
 
 # pull-request
 
-* pasting into an editor tab when the menu is triggered by keybinding fails.		
-
 * after pasting into a harness tab from the clipboard, the keyboard focus must return to the harness.   		
  
