@@ -4,17 +4,6 @@
 
 ## development
 
-* Let `connection close shell` finish the command it interrupts — ending its transcript entry, clearing the tab's busy flag, and answering any waiting sender — instead of dropping the completion the way a tab close does.
-
-Existing Debt: The shell manager's one `close` serves two callers with different needs — a tab close, whose tab is gone, and `connection close shell`, whose tab stays open — and applies the tab-close rule to both, so a command killed by a connection close never reaches its completion handler. Severity: 5/10
-
-Existing Risk: 6/10 - Closing the shell connection while a command runs leaves the transcript entry running, the tab's busy flag set, and the shell promotion live, so every later command typed in that agent tab is queued behind a command that will never finish, and a `msg … command` sender waiting on the output never gets a reply.
-
-Proposal Risk: 2/10 - The completion path for a deliberate connection close becomes explicit and tested, leaving only the tab-close and shutdown paths dropping completions, which is correct there because the tab and its transcript no longer exist.
-
-Proposal: In `src/shell/manager.ts`, `close(label)` adds the shell to the `retired` WeakSet and kills it, and `execute` resolves a retired shell's completion without calling `handlers.onDone`, so `run`'s `onDone` — which calls `promotion.finish()`, deletes the `promotions` entry, calls `update(…, false)` (whose `finalize` runs `managers.tab.deleteBusy` and `persist`), and fires `options.onComplete` — is skipped. That is right for `closeTab(label)` (called from the `MANAGER_TAB_RELEASE` walk in `src/tab/cleanup.ts`) and for `closeAll`, but `src/connection/close.ts` also calls `managers.shell.close(label)` for `connection close shell` while the tab stays open. Split the two: keep `closeTab(label)` and `closeAll` retiring silently as today, and give the connection-close path its own method (e.g. `closeConnection(label)`, called from `src/connection/close.ts`) that lets a running command's completion still reach `handlers.onDone` with the output collected so far, so the entry finalizes, busy clears, the queue drains through the existing gate in `src/command/queue.ts`, and `onComplete` answers a messaged sender. The pwd query must not be written to the killed shell — the completion for a connection-closed shell should call `onDone` and then resolve without `queryShellPwd`. `src/shell/manager.test.ts` already pins the tab-close behaviour ("drops the completion of a command whose shell the manager killed", asserting the entry stays running) and must keep passing; add a case there that runs a command, closes it via the connection-close path, and asserts the entry is finalized, busy is cleared, and `onComplete` fired, plus a case in `src/connection/close.test.ts` for `connection close shell`. Update the spec under `product/specs/` that documents `connection close` to say a running command is ended.
-
-
 * Make closing the last non-docked tab take the same exit path as `quit`, so it no longer deletes that tab's saved agent state and transcript just before the app exits.
 
 Existing Debt: The close-quits-app decision in the tab-close operation is made after the per-tab release walk instead of before it, so the last-tab close runs the "this tab is gone for good" teardown — forgetting persisted state, deleting agent state, removing the transcript — that the quit path deliberately skips, even though the spec says the two behave exactly alike. Severity: 5/10

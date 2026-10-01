@@ -63,10 +63,12 @@ export class ShellManager {
   // The promotion state of each tab's currently-running command, so the manual `open in terminal`
   // intent has something to act on.
   private promotions = new Map<string, ShellPromotion>();
-  // Shells this manager killed itself. Killing ends a shell's streams, which completes its running
-  // command; for a killed shell that completion is dropped, because the tab it would report to may
-  // already be closed. Only an exit the shell made on its own reaches the command's handlers.
-  private retired = new WeakSet<ShellProcess>();
+  // Shells this manager killed itself, and what becomes of the command each was running. Killing ends
+  // a shell's streams, which completes that command. A tab close or shutdown kills `silent`ly: the
+  // completion is dropped, because the tab it would report to may already be gone. `connection close
+  // shell` kills with `report`: its tab stays open, so the command finishes as if the shell had exited
+  // on its own — only the pwd query is skipped, there being no shell left to answer it.
+  private retired = new WeakMap<ShellProcess, 'silent' | 'report'>();
 
   constructor(private managers: Managers) {}
 
@@ -246,8 +248,10 @@ export class ShellManager {
       await previous;
       await new Promise<void>((resolve) => {
         executeShellCommand(shell, command, index, handlers.onChunk, (result) => {
-          if (this.retired.has(shell)) { resolve(); return; }
+          const retired = this.retired.get(shell);
+          if (retired === 'silent') { resolve(); return; }
           handlers.onDone(result);
+          if (retired) { resolve(); return; }
           queryShellPwd(shell, index, (pwd) => {
             if (pwd) handlers.onPwd(pwd);
             resolve();
@@ -265,13 +269,18 @@ export class ShellManager {
     this.promotions.get(label)?.promote();
   }
 
-  // Kill and forget a tab's shell. Returns whether a shell was actually open (drives the
-  // `connection close shell` result message). On `connection close shell` and tab close.
-  close(label: string): boolean {
+  // Kill and forget a tab's shell on `connection close shell`. The tab stays open, so the command the
+  // shell was running still finishes. Returns whether a shell was actually open (drives the result
+  // message).
+  close(label: string): boolean { return this.retire(label, 'report'); }
+
+  closeTab(label: string): void { this.retire(label, 'silent'); }
+
+  private retire(label: string, mode: 'silent' | 'report'): boolean {
     const shell = this.shells.get(label);
     this.adopted.delete(label);
     if (!shell) return false;
-    this.retired.add(shell);
+    this.retired.set(shell, mode);
     shell.kill();
     this.shells.delete(label);
     this.shellQueues.delete(label);
@@ -280,11 +289,9 @@ export class ShellManager {
     return true;
   }
 
-  closeTab(label: string): void { this.close(label); }
-
   // Kill every shell (app shutdown).
   closeAll(): void {
-    for (const [, shell] of this.shells) { this.retired.add(shell); shell.kill(); }
+    for (const [, shell] of this.shells) { this.retired.set(shell, 'silent'); shell.kill(); }
     this.shells.clear();
     this.shellQueues.clear();
     this.shellPtyIds.clear();
