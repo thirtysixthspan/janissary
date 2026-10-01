@@ -7,6 +7,7 @@ import { NotificationQueue } from '../notifications/queue.js';
 import { fakeNotificationsHost } from '../notifications/tab-test-fixture.js';
 import { clearUnreadTab, markUnreadTab } from '../tab/transcript/events.js';
 import { makeTab } from '../tab/index.js';
+import { UNREAD_DWELL_MS } from '../tab/dwell.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
@@ -169,9 +170,10 @@ describe('harness idle escalation', () => {
     } finally { fixture.dispose(); }
   });
 
-  // The same test is what keeps a notification off a tab the user is looking at: a glance at 29s
-  // does not stop the notification at 30s, because by then they are not on the tab.
-  it('says nothing for a tab that is the active tab when the grace period runs out', () => {
+  // A notification never lands on a tab the user is looking at, but a glance is not a read: a user
+  // who is on the tab at 30s and moves on before the dwell finishes leaves the badge up, so the
+  // escalation waits for them to go rather than dying with the badge still set.
+  it('waits out a glance that straddles the grace period, then notifies', () => {
     vi.useFakeTimers();
     const fixture = setup();
     try {
@@ -180,6 +182,30 @@ describe('harness idle escalation', () => {
       fixture.tabs.reverse();
 
       vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS);
+      expect(fixture.messages()).toEqual([]);
+
+      fixture.tabs.reverse();
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(fixture.messages()).toEqual(["Agent 'build' is waiting"]);
+    } finally { fixture.dispose(); }
+  });
+
+  // The other half: a user who stays on the tab completes its dwell, and that badge clear cancels the
+  // re-check, so nothing is ever said.
+  it('says nothing when the user stays on the tab past the grace period', () => {
+    vi.useFakeTimers();
+    const fixture = setup();
+    try {
+      fixture.managers.tab.markUnread('build');
+      armHarnessIdleEscalation(fixture.managers, 'build');
+      fixture.tabs.reverse();
+
+      vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS + 1000);
+      clearUnreadTab(fixture.tabs, 'build');
+      fixture.tabs.reverse();
+      fixture.harness.hasUnread = true;
+
+      vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
       expect(fixture.messages()).toEqual([]);
     } finally { fixture.dispose(); }
   });

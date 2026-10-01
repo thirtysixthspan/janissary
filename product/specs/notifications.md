@@ -236,8 +236,8 @@ explicit event with no configuration toggle, but it is emitted only when its own
 background. `harness-idle` is bypassed by the same rule and, in practice, can only ever arise for a
 background tab: it is armed on a badge, a badge is never raised on the active tab, and the tab is
 re-checked before the line is written, so a tab that has become active or become the visible
-selection in the other pane by then is discarded without recording anything (see `harness.md` § The
-idle escalation).
+selection in the other pane by then records nothing yet — the escalation waits until the user has
+either read the tab or left it (see `harness.md` § The idle escalation).
 
 ### Toasts and escalation
 

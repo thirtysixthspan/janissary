@@ -1,5 +1,6 @@
 import { messageBus } from '../bus.js';
 import { isUnreadEligible } from '../tab/transcript/events.js';
+import { UNREAD_DWELL_MS } from '../tab/dwell.js';
 import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 
@@ -26,7 +27,11 @@ const pending = new Map<string, NodeJS.Timeout>();
 // rather than stored here, so this module holds no reference of its own beyond the pending handles.
 export function armHarnessIdleEscalation(managers: Managers, label: string): void {
   cancelHarnessIdleEscalation(label);
-  const timer = setTimeout(() => escalate(managers, label), HARNESS_IDLE_ESCALATION_MS);
+  schedule(managers, label, HARNESS_IDLE_ESCALATION_MS);
+}
+
+function schedule(managers: Managers, label: string, delay: number): void {
+  const timer = setTimeout(() => escalate(managers, label), delay);
   timer.unref?.();
   pending.set(label, timer);
 }
@@ -43,18 +48,22 @@ export function cancelHarnessIdleEscalation(label: string): void {
 function escalate(managers: Managers, label: string): void {
   pending.delete(label);
   const tab = managers.tab.byLabel(label);
-  // Re-ask the badge's own eligibility rule rather than trusting the badge, because docking into a
-  // sidebar deliberately leaves a badge in place: `markUnreadTab` refuses a docked tab, so a tab
-  // that has been badged and then docked is permanently visible chrome that would otherwise be
-  // escalated on the strength of a flag it can no longer justify. The same test is what keeps a
-  // notification off a tab the user is currently looking at, since it refuses the active label and
-  // the other pane's visible selection too.
-  if (!tab || !isUnreadEligible(tab, label, managers.tab.cur().label, managers.tab.secondaryTabLabel)) return;
-  // A badge that is gone anyway means the tab was handled while the interval ran — a completed
-  // unread dwell, most often. `shouldNotify` and `deliverNotification` then apply every existing
-  // rule: the queue, the record file, the feed, repeat folding, burst escalation, and a toast when
-  // the feed is not on screen.
-  if (!tab.hasUnread) return;
+  // Docking into a sidebar deliberately leaves a badge in place, but a docked tab is permanently
+  // visible chrome that no dwell will ever visit, so it is discarded rather than escalated on the
+  // strength of a flag it can no longer justify. A badge that is gone anyway means the tab was
+  // handled while the interval ran — a completed unread dwell, most often.
+  if (!tab || tab.dock || !tab.hasUnread) return;
+  // Still badged, but on screen right now — the active tab, or the other pane's visible selection.
+  // A notification never lands on a tab the user is looking at, and a glance is not a read either,
+  // so rather than giving up, look again once a dwell would have had time to finish: if the user
+  // stayed, the dwell's badge clear has cancelled this; if they moved on, the badge is still up and
+  // the escalation fires then.
+  if (!isUnreadEligible(tab, label, managers.tab.cur().label, managers.tab.secondaryTabLabel)) {
+    schedule(managers, label, UNREAD_DWELL_MS);
+    return;
+  }
+  // `shouldNotify` and `deliverNotification` apply every existing rule: the queue, the record file,
+  // the feed, repeat folding, burst escalation, and a toast when the feed is not on screen.
   notify(managers, 'harness-idle', label, undefined, { openTab: label });
 }
 

@@ -701,11 +701,15 @@ repeated turns stays quiet and says something once, thirty seconds after it fina
 The badge is the escalation's whole lifetime, so **clearing the badge cancels it**: the user dwells
 on the tab and reads it, the harness goes back to work, the tab is closed, or it is reordered or
 undocked and something else becomes active. When the interval does run out, the harness's tab is
-re-checked before anything is said, on the badge's own eligibility rule — so a tab that has since
-been docked into a sidebar, become the active tab, or become the visible selection in the other
-pane is **not** announced. A notification never lands on a tab you are looking at. A one-second look
-at the tab twenty-nine seconds in does not stop the notification at thirty, because by then you are
-not looking at it, which is the "a glance is not a read" rule applied honestly.
+re-checked before anything is said. A tab that has since been docked into a sidebar is **not**
+announced — it is on screen for good and no dwell is coming. A tab that is on screen at that moment
+— the active tab, or the visible selection in the other pane — is not announced *yet*: a
+notification never lands on a tab you are looking at, but a glance is not a read either, so the
+escalation looks again three seconds later. If you stayed on the tab, its dwell has taken the badge
+off by then and nothing is said; if you moved on with the badge still up, the notification arrives
+then. A one-second look at the tab twenty-nine seconds in does not stop the notification at thirty,
+because by then you are not looking at it, which is the "a glance is not a read" rule applied
+honestly.
 
 A machine that sleeps through the interval notifies when it wakes rather than staying silent: the
 harness really did stop and really was unattended, and the user has just come back. The line is
