@@ -9,6 +9,7 @@ import type { AgentState } from '../agent/types.js';
 import type { ScheduleEntry } from '../schedule/types.js';
 import * as agentState from '../agent/state.js';
 import { messageBus } from '../bus.js';
+import { UNREAD_DWELL_MS } from './dwell.js';
 
 function makeManagers(): Managers {
   return {
@@ -410,22 +411,33 @@ describe('TabManager markUnread', () => {
 
 describe('TabManager split panes', () => {
   it('creates a split, swaps focused selections across panes, and clears unread', () => {
-    const tm = makeTabManager();
-    tm.tabs.push(
-      { ...tm.cur(), label: 'second', number: 2 },
-      { ...tm.cur(), label: 'third', number: 3 },
-    );
-    tm.setActiveTab(1);
-    tm.setActiveTab(2);
-    tm.moveTabToOtherPane(2);
-    expect(tm.tabs[tm.activeTab].label).toBe('third');
-    expect(tm.secondaryTabLabel).toBe('second');
+    vi.useFakeTimers();
+    try {
+      const tm = makeTabManager();
+      tm.tabs.push(
+        { ...tm.cur(), label: 'second', number: 2 },
+        { ...tm.cur(), label: 'third', number: 3 },
+      );
+      tm.setActiveTab(1);
+      tm.setActiveTab(2);
+      tm.moveTabToOtherPane(2);
+      expect(tm.tabs[tm.activeTab].label).toBe('third');
+      expect(tm.secondaryTabLabel).toBe('second');
 
-    tm.tabs[1].hasUnread = true;
-    tm.setActiveTab(1);
-    expect(tm.tabs[tm.activeTab].label).toBe('second');
-    expect(tm.secondaryTabLabel).toBe('third');
-    expect(tm.tabs[1].hasUnread).toBe(false);
+      tm.tabs[1].hasUnread = true;
+      tm.tabs[2].hasUnread = true;
+      tm.setActiveTab(1);
+      expect(tm.tabs[tm.activeTab].label).toBe('second');
+      expect(tm.secondaryTabLabel).toBe('third');
+      // The tab that became active is being visited, so its badge waits out the dwell; the tab left
+      // showing in the other pane is on screen without being visited, so its badge goes at once.
+      expect(tm.tabs[1].hasUnread).toBe(true);
+      expect(tm.tabs[2].hasUnread).toBe(false);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(tm.tabs[1].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('new center tabs inherit the focused pane', () => {

@@ -34,6 +34,10 @@ import { deliverNotification } from './deliver.js';
 // remote launch cloned onto its host after the user accepted the offer. `remote-refused` reports a remote host refusing a request after its
 // workspace was ready: the session is still alive, so the tab stays open and this line is the only
 // sign of the refusal. It carries its line verbatim too.
+// `harness-idle` reports that a hidden harness tab's working→idle transition was badged and has
+// stayed badged long enough to be worth saying out loud, the escalation a backgrounded fleet
+// otherwise leaves silent. It is explicit rather than ambient: the badge has no toggle and neither
+// does this, because a badge the app raised on its own is not something the user opted into either.
 export type NotificationEventType =
   | 'schedule-late'
   | 'remote-session-terminated'
@@ -43,6 +47,7 @@ export type NotificationEventType =
   | 'schedule-fire'
   | 'agent-start'
   | 'rate-limited'
+  | 'harness-idle'
   | 'manual'
   | 'auto-approve'
   | 'editor-suggest'
@@ -98,6 +103,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'schedule-late': true,
   'remote-session-terminated': true,
   'remote-session': true,
+  'harness-idle': true,
   manual: true,
   'auto-approve': true,
   'editor-suggest': true,

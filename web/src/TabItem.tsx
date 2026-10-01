@@ -96,7 +96,7 @@ export function TabItem({
         >{displayName}</span>
       )}
       {dirtyTabs?.has(tab.label) && <span className="tab-dirty" role="img" aria-label="unsaved changes">•</span>}
-      {tab.hasUnread && <span className="tab-badge" role="img" aria-label="unread"><FontAwesomeIcon icon={unreadIcon} /></span>}
+      {tab.hasUnread && !active && <span className="tab-badge" role="img" aria-label="unread"><FontAwesomeIcon icon={unreadIcon} /></span>}
       <button
         type="button"
         className="tab-close"

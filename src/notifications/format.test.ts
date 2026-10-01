@@ -64,6 +64,12 @@ describe('notificationText', () => {
     expect(notificationText('agent-start', 'build')).toBe("Agent 'build' started");
   });
 
+  // One wording for both causes a harness tab can stop blinking for — a finished run and a prompt
+  // nothing is going to answer — so the line is true either way. "finished" would not be.
+  it('renders harness-idle event text', () => {
+    expect(notificationText('harness-idle', 'build')).toBe("Agent 'build' is waiting");
+  });
+
   it('renders schedule-fire event text with the detail and tab', () => {
     expect(notificationText('schedule-fire', 'build', 'deploy')).toBe('Scheduled: deploy in build');
   });

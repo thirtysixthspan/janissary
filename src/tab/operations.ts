@@ -38,7 +38,7 @@ export function setActiveTab(port: TabOperationsPort, index: number): void {
       && centerPane(previous) !== centerPane(next)) port.secondaryTabLabel = previous.label;
     port.activeTab = i;
     port.repairSelections();
-  });
+  }, () => port.tabs);
 }
 
 export function moveTab(port: TabOperationsPort, dir: -1 | 1): void {
@@ -53,13 +53,12 @@ export function setDock(port: TabOperationsPort, index: number, dock: 'left' | '
   const wasSecondary = tab.label === port.secondaryTabLabel;
   const pane = focusedPane(port.tabs, port.activeTab);
   tab.pane = dock === null && pane === 'right' ? 'right' : undefined;
-  port.activeTab = applyDock(port.tabs, port.activeTab, index, dock, (i) => port.recordLeavingActiveTab(i));
+  port.activeTab = applyDock(port.tabs, port.activeTab, index, dock, (i) => port.recordLeavingActiveTab(i), () => port.tabs);
   if (dock !== null && wasActive && hasSplit(port.tabs)) {
     const replacement = recentLabel(port.tabs, port.focusHistory, (candidate) => isCenterActionTab(candidate) && centerPane(candidate) === sourcePane, tab.label);
     if (replacement) port.activeTab = port.findIndex(replacement);
   }
   if (dock !== null && wasSecondary) port.secondaryTabLabel = undefined;
-  if (dock === null) tab.hasUnread = false;
   port.repairSelections();
   messageBus.emit('state', { type: 'dirty' });
 }
@@ -86,11 +85,11 @@ export function placeProfileTabs(port: TabOperationsPort, candidates: { label: s
 }
 
 export function reorderTab(port: TabOperationsPort, dir: -1 | 1): void {
-  reorderTabOp(port.tabs, port.activeTab, dir, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, (state) => port.persist(state), (tab) => port.buildAgentState(tab));
+  reorderTabOp(port.tabs, port.activeTab, dir, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, (state) => port.persist(state), (tab) => port.buildAgentState(tab), () => port.tabs);
 }
 
 export function reorderTabTo(port: TabOperationsPort, from: number, to: number): void {
-  reorderTabToOp(port.tabs, port.activeTab, from, to, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, (state) => port.persist(state), (tab) => port.buildAgentState(tab));
+  reorderTabToOp(port.tabs, port.activeTab, from, to, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, (state) => port.persist(state), (tab) => port.buildAgentState(tab), () => port.tabs);
 }
 
 export function closeTab(port: TabOperationsPort, index: number): void {
@@ -110,7 +109,7 @@ export function closeTab(port: TabOperationsPort, index: number): void {
     }
     if (wasSecondary) port.secondaryTabLabel = undefined;
     port.repairSelections();
-  });
+  }, () => port.tabs);
 }
 
 export function renameTab(port: TabOperationsPort, index: number, title: string): void {

@@ -2,6 +2,8 @@ import type { CenterPane, Tab } from './types.js';
 import { centerPane, isCenterActionTab } from './placement.js';
 import { moveToOtherPane } from './split.js';
 import { applyProfileTabPanes, resolveProfileTabFocus } from './place-profile-tabs.js';
+import { beginDwell } from './dwell.js';
+import { clearUnreadTab } from './transcript/events.js';
 
 export function focusedPane(tabs: Tab[], activeTab: number): CenterPane {
   const active = tabs[activeTab];
@@ -20,7 +22,7 @@ export function recentLabel(
 }
 
 export function repairPaneSelections(
-  tabs: Tab[], activeTab: number, secondaryTabLabel?: string,
+  tabs: Tab[], activeTab: number, secondaryTabLabel?: string, resolveTabs?: () => Tab[],
 ): { activeTab: number; secondaryTabLabel?: string } {
   const centerTabs = tabs.filter((tab) => isCenterActionTab(tab));
   const leftTabs = centerTabs.filter((tab) => centerPane(tab) === 'left');
@@ -38,9 +40,13 @@ export function repairPaneSelections(
   const nextSecondary = !secondary || !isCenterActionTab(secondary) || centerPane(secondary) !== oppositePane || secondary.label === liveActive.label
     ? centerTabs.find((tab) => centerPane(tab) === oppositePane)?.label
     : secondaryTabLabel;
-  liveActive.hasUnread = false;
+  // Two tabs, two different clears. The live active one was selected, so it starts its dwell and
+  // keeps a badge through a glance. The other pane's selection is not being visited — it is simply
+  // on screen, which is the same judgement `markUnreadTab` makes by refusing to badge it at all —
+  // and it can never complete an active-tab dwell, so its badge comes off here.
+  beginDwell(resolveTabs ?? (() => tabs), liveActive.label);
   const visible = tabs.find((tab) => tab.label === nextSecondary);
-  if (visible) visible.hasUnread = false;
+  if (visible) clearUnreadTab(tabs, visible.label);
   return { activeTab: nextActiveTab, secondaryTabLabel: nextSecondary };
 }
 

@@ -8,6 +8,7 @@ import { TabTranscriptState } from './transcript/state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { FileRegistry } from './file-registry.js';
 import { placeProfileTabSelection } from './split-selection.js';
+import { disposeDwell } from './dwell.js';
 import * as tabOperations from './operations.js';
 import { tabRuntime } from './runtime.js';
 import * as lookup from './lookup.js';
@@ -33,6 +34,10 @@ export class TabManager extends TabTranscriptState {
   private readonly rootDir: string;
   get launchDir(): string { return this.rootDir; }
   static readonly OPEN_MAX_FILES = 10;
+
+  dispose(): void {
+    disposeDwell();
+  }
 
   get openFiles(): Map<string, string> { return this.fileRegistry.map; }
   get managerServices(): Managers { return this.managers; }
@@ -140,7 +145,7 @@ export class TabManager extends TabTranscriptState {
   }
 
   // Selection and focus history (see `./selection-operations.ts`).
-  markUnread(label: string): void { selectionOperations.markUnread(this, label); }
+  markUnread(label: string): boolean { return selectionOperations.markUnread(this, label); }
   clearUnread(label: string): void { selectionOperations.clearUnread(this, label); }
 
   recordLeavingActiveTab(newIndex: number): void { selectionOperations.recordLeavingActiveTab(this, newIndex); }

@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { focusedPane, recentLabel, repairPaneSelections } from './split-selection.js';
 import type { CenterPane, Tab } from './types.js';
+import { UNREAD_DWELL_MS } from './dwell.js';
 
 // A center action tab is one that is neither docked nor a reporting tab; a pane is `left` unless the
 // tab says otherwise. Built structurally so these tests can talk about layout and nothing else.
@@ -97,17 +98,26 @@ describe('repairPaneSelections', () => {
     expect(tabs[2].pane).toBe('left');
   });
 
-  // Whichever tabs the repair leaves showing are the ones the user is looking at, so their unread
-  // marks have to go with them.
-  it('clears the unread mark on the active tab and on the tab it leaves showing', () => {
-    const tabs = [
-      tab('left-1', 'left', { hasUnread: true }),
-      tab('right-1', 'right', { hasUnread: true }),
-      tab('right-2', 'right', { hasUnread: true }),
-    ];
-    repairPaneSelections(tabs, 0, 'right-2');
-    expect(tabs[0].hasUnread).toBe(false);
-    expect(tabs[1].hasUnread).toBe(true);
-    expect(tabs[2].hasUnread).toBe(false);
+  // Two of the three tabs the repair leaves showing are on screen, but only one of them is being
+  // visited: the active tab's mark waits out the unread dwell, while the other pane's selection is
+  // merely visible and cannot ever complete a dwell of its own.
+  it('clears the mark on the tab left showing, and defers the active tab to its dwell', () => {
+    vi.useFakeTimers();
+    try {
+      const tabs = [
+        tab('left-1', 'left', { hasUnread: true }),
+        tab('right-1', 'right', { hasUnread: true }),
+        tab('right-2', 'right', { hasUnread: true }),
+      ];
+      repairPaneSelections(tabs, 0, 'right-2');
+      expect(tabs[0].hasUnread).toBe(true);
+      expect(tabs[1].hasUnread).toBe(true);
+      expect(tabs[2].hasUnread).toBe(false);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(tabs[0].hasUnread).toBe(false);
+      expect(tabs[2].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

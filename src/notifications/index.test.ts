@@ -340,6 +340,17 @@ describe('notify — line composition', () => {
     expect(entry.openTab).toBe('janus');
   });
 
+  // Being told a harness is waiting is only useful if the line can take you there, the same way a
+  // question line links to the tab asking it.
+  it('threads the waiting tab\'s own link onto a harness-idle notification', () => {
+    const append = vi.fn();
+    notify(makeManagers(append), 'harness-idle', 'build', undefined, { openTab: 'build' });
+    const [label, entry] = append.mock.calls[0];
+    expect(label).toBe(NOTIFICATIONS_LABEL);
+    expect(entry.openTab).toBe('build');
+    expect(entry.output).toBe("Agent 'build' is waiting");
+  });
+
   it('carries neither link when given only a detection time', () => {
     const append = vi.fn();
     notify(

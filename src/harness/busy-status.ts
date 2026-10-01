@@ -1,6 +1,7 @@
 import type { ScreenCapture } from './screen.js';
 import { detectPermissionGate, type HarnessAutoApprover } from './auto-approve.js';
 import { BUSY_TABLE, classifyBusy, endsWithRecap } from './busy-classify.js';
+import { armHarnessIdleEscalation } from './idle-notification.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 
@@ -74,13 +75,19 @@ function dotSnapshot(managers: Managers, label: string): string {
 // landing after it stood down) must not leave the badge on a harness that is busy again. The next
 // idle commit or unanswered gate badges it afresh. `markUnread` itself only badges a hidden
 // (backgrounded, undocked) tab, so a visible tab going ready is unaffected.
+//
+// When a hidden tab is badged here, arm the idle escalation against it — but only when the badge
+// was actually raised, so a tab that was on screen or docked never starts a clock it has not earned.
+// That is the whole reason `markUnread` reports whether it acted, and the reason the escalation is
+// armed here rather than in a capture handler: this is the one place a local capture and a remote
+// harness's reported transition both arrive, so both are covered by the same line.
 export function applyBusyTransition(managers: Managers, label: string, transition: BusyTransition): void {
   if (transition.busy) {
     managers.tab.addBusy(label);
     managers.tab.clearUnread(label);
   } else {
     managers.tab.deleteBusy(label);
-    if (transition.unread) managers.tab.markUnread(label);
+    if (transition.unread && managers.tab.markUnread(label)) armHarnessIdleEscalation(managers, label);
   }
 }
 

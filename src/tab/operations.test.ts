@@ -3,6 +3,7 @@ import { closeTab, insertTab, moveTabToOtherPane, setDock, toggleCollapse } from
 import { MANAGER_TAB_RELEASE } from '../managers.js';
 import type { TabOperationsPort } from './operations.js';
 import type { CenterPane, Tab } from './types.js';
+import { UNREAD_DWELL_MS } from './dwell.js';
 
 function tab(label: string, pane?: CenterPane, dock?: 'left' | 'right'): Tab {
   return { label, pane, dock, view: 'agent', hasUnread: true } as unknown as Tab;
@@ -112,10 +113,19 @@ describe('setDock', () => {
     expect(port.secondaryTabLabel).toBeUndefined();
   });
 
-  it('clears the unread mark of a tab that leaves the center', () => {
-    const port = makePort(split(), 0, 'right-1');
-    setDock(port, 1, null);
-    expect(port.tabs[1].hasUnread).toBe(false);
+  // Undocking back to the center strip makes the tab the active one, so its badge waits out the
+  // unread dwell rather than going with the undock.
+  it('clears the unread mark of a tab that leaves the center once it has been dwelled on', () => {
+    vi.useFakeTimers();
+    try {
+      const port = makePort(split(), 0, 'right-1');
+      setDock(port, 1, null);
+      expect(port.tabs[1].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[1].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

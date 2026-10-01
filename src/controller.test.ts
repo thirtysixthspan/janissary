@@ -18,6 +18,7 @@ import type { PtyHandlers } from './pty.js';
 import type { BusEvent } from './bus.js';
 import { openMonitorTab } from './monitor/window.js';
 import { initHarnessCaptureDirectory } from './harness/capture/file.js';
+import { UNREAD_DWELL_MS } from './tab/dwell.js';
 import { createControllerAdapters } from './controller/create-adapters.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
@@ -1303,15 +1304,24 @@ describe('Controller unread badge', () => {
     expect(c.view().find((t) => t.label === 'janus')!.hasUnread).toBe(false);
   });
 
-  it('setActiveTab clears hasUnread on the newly active tab', () => {
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.setActiveTab(0);
-    c.managers.tab.append('bob', { input: 'hello', output: 'world' });
-    expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
-    const bobIndex = c.view().findIndex((t) => t.label === 'bob');
-    c.managers.tab.setActiveTab(bobIndex);
-    expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(false);
+  it('setActiveTab clears hasUnread on the newly active tab once it has been dwelled on', () => {
+    vi.useFakeTimers();
+    try {
+      const { c } = makeController();
+      c.dispatch('agent bob --no-workspace');
+      c.setActiveTab(0);
+      c.managers.tab.append('bob', { input: 'hello', output: 'world' });
+      expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
+      const bobIndex = c.view().findIndex((t) => t.label === 'bob');
+      c.managers.tab.setActiveTab(bobIndex);
+      // A glance is not a read: selecting the tab starts its unread dwell rather than dropping the
+      // badge, so a tab flicked through on the way to somewhere else keeps what it had to say.
+      expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('finishRunning to a non-active tab sets hasUnread', () => {

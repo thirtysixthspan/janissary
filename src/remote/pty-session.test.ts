@@ -8,8 +8,10 @@ import { PseudoterminalManager } from './../pseudoterminal-manager.js';
 import { HarnessScreenReader } from '../harness/screen.js';
 import { messageBus } from '../bus.js';
 import { makeTab } from '../tab/index.js';
+import { clearUnreadTab, markUnreadTab } from '../tab/transcript/events.js';
 import { notify } from '../notifications/index.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
+import { HARNESS_IDLE_ESCALATION_MS, disposeHarnessIdleEscalations } from '../harness/idle-notification.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
@@ -48,6 +50,23 @@ function makeManagers(tabs: Tab[]): Managers {
       deleteBusy: vi.fn(),
       markUnread: vi.fn(),
       clearUnread: vi.fn(),
+    },
+  } as unknown as Managers;
+}
+
+// The idle escalation is armed off `markUnread`'s return value and cancelled by a real badge clear,
+// so a fixture with both is what the arming tests need — `makeManagers`' inert stubs answer
+// `undefined` and do nothing, which is the "no badge raised" and "nothing to cancel" cases.
+function escalateManagers(tabs: Tab[]): Managers {
+  const managers = makeManagers(tabs);
+  return {
+    ...managers,
+    tab: {
+      ...managers.tab,
+      cur: () => tabs[0],
+      byLabel: (l: string) => tabs.find((t) => t.label === l),
+      markUnread: (l: string) => markUnreadTab(tabs, l, tabs[0].label),
+      clearUnread: (l: string) => { clearUnreadTab(tabs, l); },
     },
   } as unknown as Managers;
 }
@@ -263,6 +282,50 @@ describe('createRemotePtySession', () => {
 
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith('claude');
     expect(managers.tab.markUnread).not.toHaveBeenCalled();
+  });
+
+  // A far side runs the same busy tracker and reports the committed transition, and it lands in the
+  // same `applyBusyTransition` a local capture does — so a remote harness's idle tab escalates on
+  // exactly the same terms, with no extra frame and no protocol change.
+  it('arms the idle escalation for a badged tab, as a local capture would', () => {
+    vi.useFakeTimers();
+    try {
+      const { channel } = attachedChannel();
+      const managers = escalateManagers([makeTab('janus', 'blue'), makeTab('claude', 'red')]);
+      createRemotePtySession(channel, managers, {
+        id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+      }, vi.fn());
+
+      channel.receive(`${encodeFrame({ type: 'busy-transition', id: 'r1', busy: false, unread: true })}\n`);
+      vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS - 1);
+      expect(notify).not.toHaveBeenCalledWith(managers, 'harness-idle', 'claude', undefined, { openTab: 'claude' });
+
+      vi.advanceTimersByTime(1);
+      expect(notify).toHaveBeenCalledWith(managers, 'harness-idle', 'claude', undefined, { openTab: 'claude' });
+    } finally {
+      disposeHarnessIdleEscalations();
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancels the idle escalation when the far side reports the harness busy again', () => {
+    vi.useFakeTimers();
+    try {
+      const { channel } = attachedChannel();
+      const managers = escalateManagers([makeTab('janus', 'blue'), makeTab('claude', 'red')]);
+      createRemotePtySession(channel, managers, {
+        id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+      }, vi.fn());
+
+      channel.receive(`${encodeFrame({ type: 'busy-transition', id: 'r1', busy: false, unread: true })}\n`);
+      channel.receive(`${encodeFrame({ type: 'busy-transition', id: 'r1', busy: true, unread: false })}\n`);
+      vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+
+      expect(notify).not.toHaveBeenCalledWith(managers, 'harness-idle', 'claude', undefined, { openTab: 'claude' });
+    } finally {
+      disposeHarnessIdleEscalations();
+      vi.useRealTimers();
+    }
   });
 });
 

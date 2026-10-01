@@ -120,6 +120,14 @@ These event types can produce a notification line:
 
 - **`state-change`** — an agent tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
   errors.
+- **`harness-idle`** — a hidden harness tab's working→idle transition was badged and has stayed
+  badged for thirty seconds (see `harness.md` § The idle escalation). The line reads
+  `Agent '<tab>' is waiting` — one wording for both causes, a finished run and a prompt nothing is
+  going to answer, since for a harness the badge means it is waiting either way. The tab label on
+  this line is a link that focuses the waiting tab, the same as a `question` line's. Like
+  `state-change` it is the idle half of a busy flag clearing, but where that one reports the
+  transition and this one reports the tab having been left unread, it is **explicit**: it has no
+  configuration toggle and always fires.
 - **`incoming-message`** — a `msg` or `broadcast` is delivered to a tab (detected by the delivered
   entry carrying a sender).
 - **`schedule-fire`** — a scheduled command fires in a tab (see `scheduling.md`).
@@ -206,7 +214,7 @@ These event types can produce a notification line:
 
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
-`.janissary/config.json` (see `application-config.md`). The `manual`, `auto-approve`,
+`.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
@@ -217,16 +225,19 @@ background tab.
 
 An ambient event on the **currently active** tab never produces a notification — only background
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
-events, so it never notifies about itself. The `manual`, `auto-approve`, `editor-suggest`,
+events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `editor-suggest`,
 `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, and
 `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
 capability degrading, or a plugin's own deliberate report, rather than ambient background activity.
 For `plugin-note` this is the case that matters most: a plugin reporting on the very tab the user is
-watching — a playlist shedding a track — is exactly the line that must not be discarded. A
-`question` is also an
+watching — a playlist shedding a track — is exactly the line that must not be discarded. A `question` is also an
 explicit event with no configuration toggle, but it is emitted only when its owning tab is in the
-background.
+background. `harness-idle` is bypassed by the same rule and, in practice, can only ever arise for a
+background tab: it is armed on a badge, a badge is never raised on the active tab, and the tab is
+re-checked before the line is written, so a tab that has become active or become the visible
+selection in the other pane by then is discarded without recording anything (see `harness.md` § The
+idle escalation).
 
 ### Toasts and escalation
 
