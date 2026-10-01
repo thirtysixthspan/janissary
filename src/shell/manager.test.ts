@@ -557,6 +557,35 @@ describe('ShellManager — a pty shell that exits', () => {
     expect(queryShellPwdMock).not.toHaveBeenCalled();
     expect(tab().log.at(-1)).toMatchObject({ input: 'sleep 100', running: true });
   });
+
+  it('drops the completion of a command whose shell shutdown killed', async () => {
+    const onComplete = vi.fn();
+    shellManager.run(label, 'sleep 100', { onComplete });
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    shellManager.closeAll();
+    completeCommand('(shell exited)');
+
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(tab().log.at(-1)).toMatchObject({ input: 'sleep 100', running: true });
+  });
+
+  // `connection close shell` leaves the tab open, so the command its shell was running finishes the
+  // way a shell's own exit finishes it — otherwise the tab stays busy and every later command queues.
+  it('finishes a command whose shell `connection close shell` killed, without querying its pwd', async () => {
+    const onComplete = vi.fn();
+    shellManager.run(label, 'sleep 100', { onComplete });
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    expect(managers.tab.isBusy(label)).toBe(true);
+
+    expect(shellManager.close(label)).toBe(true);
+    completeCommand('partial\n(shell exited)');
+
+    expect(onComplete).toHaveBeenCalledWith('partial\n(shell exited)');
+    expect(tab().log.at(-1)).toMatchObject({ input: 'sleep 100', output: 'partial\n(shell exited)', running: false });
+    expect(managers.tab.isBusy(label)).toBe(false);
+    expect(queryShellPwdMock).not.toHaveBeenCalled();
+  });
 });
 
 // A shell command's entry is started and finished by the same transcript choreography every other
