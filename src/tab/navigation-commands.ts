@@ -19,14 +19,13 @@ import { beginDwell } from './dwell.js';
 export function setActiveTabOp(
   tabs: Tab[], index: number,
   recordLeavingActiveTab: (newIndex: number) => void,
-  applyActiveTab: (index: number) => void,
+  applyActiveTab: (index: number) => number,
   resolveTabs?: () => Tab[],
 ): void {
   if (index < 0 || index >= tabs.length) return;
   if (tabs[index]?.dock) return; // a docked tab is never the active tab
   recordLeavingActiveTab(index);
-  applyActiveTab(index);
-  const tab = tabs[index];
+  const tab = tabs[applyActiveTab(index)];
   if (tab) beginDwell(resolveTabs ?? (() => tabs), tab.label);
   messageBus.emit('state', { type: 'dirty' });
 }
@@ -74,7 +73,8 @@ export function reorderTabToOp(
     ? result.tabs.findIndex((tab) => tab.label === currentLabel)
     : result.activeTab;
   applyResult(result.tabs, nextActive);
-  beginDwell(resolveTabs ?? (() => result.tabs), moved.label);
+  const active = result.tabs[nextActive];
+  if (active) beginDwell(resolveTabs ?? (() => result.tabs), active.label);
   const first = Math.min(from, to);
   const last = Math.max(from, to);
   const affectedTabs = result.tabs.slice(first, last + 1);

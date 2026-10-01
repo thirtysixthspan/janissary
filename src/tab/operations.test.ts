@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { closeTab, insertTab, moveTabToOtherPane, reorderTab, reorderTabTo, setDock, toggleCollapse } from './operations.js';
+import { closeTab, insertTab, moveTabToOtherPane, reorderTab, reorderTabTo, setActiveTab, setDock, toggleCollapse } from './operations.js';
 import { MANAGER_TAB_RELEASE } from '../managers.js';
 import type { TabOperationsPort } from './operations.js';
 import type { CenterPane, Tab } from './types.js';
-import { UNREAD_DWELL_MS } from './dwell.js';
+import { beginDwell, UNREAD_DWELL_MS } from './dwell.js';
+import { repairSelections } from './selection-operations.js';
 
 function tab(label: string, pane?: CenterPane, dock?: 'left' | 'right'): Tab {
   return { label, pane, dock, view: 'agent', hasUnread: true } as unknown as Tab;
@@ -326,6 +327,45 @@ describe('operations that reselect a tab and the unread dwell', () => {
       expect(port.tabs[port.activeTab].hasUnread).toBe(true);
       vi.advanceTimersByTime(UNREAD_DWELL_MS);
       expect(port.tabs[port.activeTab].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+// The dwell has one candidate, and every new dwell replaces the pending one, so each operation has to
+// name the tab it actually leaves active — not the tab it was asked about, when the two differ.
+describe('the unread dwell follows the tab an operation leaves active', () => {
+  // Dragging a docked tab leaves the active tab where it was, so the active tab's dwell must survive
+  // the drag and the docked tab — never visited — must keep its badge.
+  it('keeps the active tab\'s dwell when a docked tab is reordered', () => {
+    vi.useFakeTimers();
+    try {
+      const port = makePort([tab('a'), tab('b'), tab('c'), tab('d', undefined, 'right')]);
+      beginDwell(() => port.tabs, 'a');
+      reorderTabTo(port, 3, 2);
+      expect(port.tabs[port.activeTab].label).toBe('a');
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs.find((t) => t.label === 'a')?.hasUnread).toBe(false);
+      expect(port.tabs.find((t) => t.label === 'd')?.hasUnread).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Selecting a monitor tab on a split strip hands the active slot to the first left-pane tab, so that
+  // tab is the one the user is on and the one whose badge the dwell takes off.
+  it('dwells the tab a selection repair makes active, not the one that was clicked', () => {
+    vi.useFakeTimers();
+    try {
+      const watch = { label: 'watch', view: 'monitor', hasUnread: false } as unknown as Tab;
+      const port = makePort([tab('left-1', 'left'), tab('right-1', 'right'), watch], 1, 'left-1');
+      port.repairSelections = () => repairSelections(port);
+      setActiveTab(port, 2);
+      expect(port.tabs[port.activeTab].label).toBe('left-1');
+      expect(port.tabs[0].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(port.tabs[0].hasUnread).toBe(false);
     } finally {
       vi.useRealTimers();
     }

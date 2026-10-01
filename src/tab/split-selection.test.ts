@@ -120,4 +120,24 @@ describe('repairPaneSelections', () => {
       vi.useRealTimers();
     }
   });
+
+  // A monitor tab cannot hold the active slot of a split strip, so the repair hands it to the first
+  // left-pane tab. That tab is the one the user ends up on, so it is the one whose dwell has to run.
+  it('dwells the tab the repair makes active, not the one it was handed', () => {
+    vi.useFakeTimers();
+    try {
+      const tabs = [
+        tab('watch', undefined, { view: 'monitor' }),
+        tab('left-1', 'left', { hasUnread: true }),
+        tab('right-1', 'right'),
+      ];
+      const result = repairPaneSelections(tabs, 0, 'right-1');
+      expect(result.activeTab).toBe(1);
+      expect(tabs[1].hasUnread).toBe(true);
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(tabs[1].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

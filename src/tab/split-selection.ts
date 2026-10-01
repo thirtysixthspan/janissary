@@ -44,6 +44,7 @@ export function repairPaneSelections(
   const active = tabs[nextActiveTab];
   nextActiveTab = !active || !isCenterActionTab(active) ? tabs.findIndex((tab) => tab.label === leftTabs[0].label) : nextActiveTab;
   const liveActive = tabs[nextActiveTab];
+  if (nextActiveTab !== activeTab) beginDwell(resolve, liveActive.label);
   const oppositePane: CenterPane = centerPane(liveActive) === 'left' ? 'right' : 'left';
   const secondary = tabs.find((tab) => tab.label === secondaryTabLabel);
   const nextSecondary = !secondary || !isCenterActionTab(secondary) || centerPane(secondary) !== oppositePane || secondary.label === liveActive.label

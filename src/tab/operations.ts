@@ -38,6 +38,7 @@ export function setActiveTab(port: TabOperationsPort, index: number): void {
       && centerPane(previous) !== centerPane(next)) port.secondaryTabLabel = previous.label;
     port.activeTab = i;
     port.repairSelections();
+    return port.activeTab;
   }, () => port.tabs);
 }
 
