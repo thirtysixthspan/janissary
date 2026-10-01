@@ -373,7 +373,10 @@ fills with is
 read-only, as described under Editing: a statement is not a page of one object, so nothing in it can
 be written to.
 
-Nothing a grid or a console does disables the plugin, and nothing is written to a transcript.
+Nothing a grid or a console does disables the plugin, and nothing is written to a transcript. That
+holds for a database file the tab cannot read too — one that is not an SQLite database at all, or one
+another process holds locked: its object list, its pages, and its exports each fail with the SQLite
+error, said the same way as any other failure, while every other SQL tab carries on.
 
 A database deleted by `db sqlite delete` while its tab is open is not an ordinary read failure. The
 tab drops the grid, and the grid's header — where the range line would be — reads
