@@ -199,7 +199,7 @@ A browser that died keeps its scratch directory instead, so there's something le
 
 A harness tab's blinking dot follows what the harness is doing, not just whether its process is alive: it blinks while the harness is generating or running tools, and settles once the harness is back at its own prompt. That works from the strip, so you can start something and go elsewhere without checking back.
 
-A new harness tab starts busy until the app has had a look at it. Going idle takes two readings in a row before the dot settles, so a pause mid-answer doesn't make it flicker; going busy again is immediate. Either way the strip updates live, whether or not you're on the tab.
+A new harness tab starts busy until the app has had a look at it. Going idle takes two readings in a row before the dot settles, so a pause mid-answer doesn't make it flicker; going busy again is immediate. The app takes one more reading about a second after the harness goes quiet, so the dot settles about two seconds after the last output, even when the harness then prints nothing at all. Either way the strip updates live, whether or not you're on the tab.
 
 When a harness that isn't on screen finishes and goes idle, its tab picks up the unread flag — that's what tells you to come back. A tab you're already looking at doesn't get flagged, since you can see it. One exception: for claude, a turn that ends with nothing but a `recap:` summary line is left unflagged. The dot still settles; a recap on its own isn't news.
 
@@ -228,6 +228,8 @@ Wrapping the whole launch in a [`schedule`](/user-documentation/automation/sched
 <img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
 The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file and a normalized session transcript, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
+
+Ending a harness ends everything it started. Its helpers, MCP servers, and the commands it runs all go with it, so nothing is left behind holding a port or a file. That holds whether you close the tab or the harness quits on its own. Each process is asked to stop first, and anything still running two seconds later is killed. The one thing out of reach is a process that deliberately detaches itself, like a background daemon. The same cleanup applies to every program Janissary runs in a terminal, including an [SSH session](#ssh-sessions), an inline terminal card, and a remote harness on its own host.
 
 A [schedule](/user-documentation/automation/scheduling) attached to a harness tab lives no longer than the tab does. When the harness exits, its scheduled commands go with it rather than firing later — and because `janus --relaunch` restores no harness tabs, there is no tab left to carry them.
 
