@@ -24,6 +24,15 @@ export function recentLabel(
 export function repairPaneSelections(
   tabs: Tab[], activeTab: number, secondaryTabLabel?: string, resolveTabs?: () => Tab[],
 ): { activeTab: number; secondaryTabLabel?: string } {
+  // Whoever ends up selected is being looked at, so it starts its unread dwell — and that is true of
+  // both shapes. On a strip with no split there is nothing to swap between panes, so the tab that is
+  // active is the one the caller passed in; naming it needs none of the pane filtering below. The
+  // call sits above the unsplit early return so `open` dwells the same tab a click does, since a
+  // badge that never comes off here is a badge the user cannot clear by looking at the tab — and a
+  // harness that finished in that state is badged for the session and never escalated.
+  const resolve = resolveTabs ?? (() => tabs);
+  const selected = tabs[activeTab];
+  if (selected) beginDwell(resolve, selected.label);
   const centerTabs = tabs.filter((tab) => isCenterActionTab(tab));
   const leftTabs = centerTabs.filter((tab) => centerPane(tab) === 'left');
   const rightTabs = centerTabs.filter((tab) => centerPane(tab) === 'right');
@@ -40,11 +49,10 @@ export function repairPaneSelections(
   const nextSecondary = !secondary || !isCenterActionTab(secondary) || centerPane(secondary) !== oppositePane || secondary.label === liveActive.label
     ? centerTabs.find((tab) => centerPane(tab) === oppositePane)?.label
     : secondaryTabLabel;
-  // Two tabs, two different clears. The live active one was selected, so it starts its dwell and
-  // keeps a badge through a glance. The other pane's selection is not being visited — it is simply
-  // on screen, which is the same judgement `markUnreadTab` makes by refusing to badge it at all —
-  // and it can never complete an active-tab dwell, so its badge comes off here.
-  beginDwell(resolveTabs ?? (() => tabs), liveActive.label);
+  // Only the split shape reaches here, and only it has a second pane to account for. The tab left
+  // showing in the other pane is on screen without being visited — the same judgement
+  // `markUnreadTab` makes by refusing to badge it at all — and it can never complete a dwell of its
+  // own, so its badge comes off now. The selected tab's own badge waits out the dwell begun above.
   const visible = tabs.find((tab) => tab.label === nextSecondary);
   if (visible) clearUnreadTab(tabs, visible.label);
   return { activeTab: nextActiveTab, secondaryTabLabel: nextSecondary };
