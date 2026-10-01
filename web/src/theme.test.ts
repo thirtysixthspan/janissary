@@ -34,6 +34,22 @@ describe('metadata theme', () => {
     expect(actionRule).toContain('margin-left: auto');
   });
 
+  it('wraps the file navigator header buttons onto more rows when they do not fit', () => {
+    const actionRule = theme.match(/^\.files-actions \{[^}]+\}/m)?.[0];
+
+    expect(actionRule).toContain('flex-wrap: wrap');
+    expect(actionRule).toContain('justify-content: flex-end');
+    expect(actionRule).toContain('max-width: 100%');
+  });
+
+  it('lets the file navigator header drop its buttons below the root path', () => {
+    const headerRule = theme.match(/^\.files-header \{[^}]+\}/m)?.[0];
+    const metaRule = theme.match(/^\.files-meta \{[^}]+\}/m)?.[0];
+
+    expect(headerRule).toContain('flex-wrap: wrap');
+    expect(metaRule).toContain('flex: 1 1 16ch');
+  });
+
   it('keeps host metadata action groups at the right edge', () => {
     const actionRule = theme.match(
       /\.tab-meta-actions, \.monitor-actions, \.editor-actions, \.files-actions \{[^}]+\}/,

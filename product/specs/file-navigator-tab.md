@@ -668,6 +668,11 @@ host chip, root path, and branch on the first, and the buttons alone on the seco
 trailing edge. Docking changes only how the header is laid out — the same buttons are offered
 either way, apart from the split control a docked tree already withholds.
 
+A header too narrow for its buttons never lets them run past its edge. In the centre strip, when
+the buttons no longer fit beside a short stretch of the root path, they move below the path, as in
+the docked layout. Wherever the buttons are still too wide for one line, they wrap onto as many
+rows as they need, staying at the trailing edge.
+
 When the tree is rooted inside a git repository whose `origin` remote points at GitHub, the header
 also carries a **GitHub** button, shown before Search files. Clicking it opens that repository's
 commits page for the currently checked-out branch (for example
