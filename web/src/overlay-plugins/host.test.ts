@@ -156,6 +156,48 @@ describe('the overlay-plugin host', () => {
     closeContributedOverlay('fixture');
   });
 
+  // The same boundary as load and start, for the calls the window makes into an overlay already up.
+  it('disables a plugin whose key handler throws, and takes its overlay off the screen', async () => {
+    const onDisabled = noopReporter();
+    const host = hostWith(onDisabled, {
+      declarations: [declaration()] as never,
+      loaders: { fixture: async () => ({ default: overlayModule({
+        start: () => ({
+          name: 'fixture', claimsCommandBar: true, render: () => null, onOpen: () => {},
+          onKey: () => { throw new Error('key handler broke'); },
+        }),
+      }) }) },
+    });
+    expect(await host.activate('fixture')).toBe(true);
+    openContributedOverlay('fixture', null);
+
+    expect(() => { contributedOverlayOnScreen()?.onKey(new KeyboardEvent('keydown', { key: 'Enter' })); }).not.toThrow();
+
+    expect(onDisabled).toHaveBeenCalledWith('fixture', 'key handler broke');
+    expect(contributedOverlayOnScreen()).toBeUndefined();
+    expect(overlayClaimedByCommand('clip')).toBe(false);
+    expect(await host.activate('fixture')).toBe(false);
+  });
+
+  it('disables a plugin whose open hook throws, leaving nothing on screen', async () => {
+    const onDisabled = noopReporter();
+    const host = hostWith(onDisabled, {
+      declarations: [declaration()] as never,
+      loaders: { fixture: async () => ({ default: overlayModule({
+        start: () => ({
+          name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {},
+          onOpen: () => { throw new Error('open hook broke'); },
+        }),
+      }) }) },
+    });
+    expect(await host.activate('fixture')).toBe(true);
+
+    expect(() => openContributedOverlay('fixture', null)).not.toThrow();
+
+    expect(onDisabled).toHaveBeenCalledWith('fixture', 'open hook broke');
+    expect(contributedOverlayOnScreen()).toBeUndefined();
+  });
+
   it('disables a plugin whose module throws on load, and leaves the host running', async () => {
     const onDisabled = noopReporter();
     const host = hostWith(onDisabled, {

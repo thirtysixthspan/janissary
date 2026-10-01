@@ -50,7 +50,7 @@ When the popup closes after Return, a click, Escape, or Tab, keyboard focus goes
 
 ### When it is not there
 
-The popup is contributed by an overlay plugin, and a plugin that fails to load, is refused a chord or command word another plugin already holds, or breaks is disabled with `Overlay plugin "<id>" disabled: <reason>.` in the notifications feed. Everything else keeps working, and only that chord and that command word stop answering.
+The popup is contributed by an overlay plugin, and a plugin that fails to load, is refused a chord or command word another plugin already holds, or breaks is disabled with `Overlay plugin "<id>" disabled: <reason>.` in the notifications feed. Breaking includes failing while the popup is already up — while it draws, while it handles a key, or as it opens: the popup closes, keyboard focus goes back to where it was, and the window carries on rather than going blank or losing its key handling. Everything else keeps working, and only that chord and that command word stop answering.
 
 ## Out of scope
 

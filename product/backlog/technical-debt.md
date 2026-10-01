@@ -4,17 +4,6 @@
 
 ## development
 
-* Guard every host call into a contributed overlay plugin — its render, key handler, and open hook — so one throwing overlay disables itself instead of blanking the app or breaking the window's key handling.
-
-Existing Debt: The overlay plugin host guards loading, starting, and disposing a plugin, but registers the overlay object the plugin returns as-is, and the picker layer and window key handler then call its render, key, and open hooks directly with no error boundary or try/catch, contrary to the plugin guideline that no call crosses the plugin boundary unguarded. Severity: 5/10
-
-Existing Risk: 6/10 - A throw inside an overlay's render (the clipboard-history popup, for example) propagates through React and unmounts the whole app to a blank window, and a throw in its key handler escapes the global key handler on every keystroke while the plugin stays enabled.
-
-Proposal Risk: 2/10 - Each call is wrapped where the overlay is registered, so a throw disables that plugin with a reason through the existing disable path; the remaining risk is a render throw that the boundary contains to the overlay only after one failed frame.
-
-Proposal: In `web/src/overlay-plugins/host.ts`, `createOverlayPluginHost` guards the load and `loaded.start(...)` and has a `disable(plugin, reason)` that records the reason and unregisters the overlay, but it passes the started overlay straight to `registerContributedOverlay` from `web/src/shared/contributed-overlays.ts`. The host app then calls it unguarded: `entry.overlay.onOpen()` in `contributed-overlays.ts`, `contributed.render(...)` in `web/src/pickers/PickerOverlays.tsx` and `web/src/pickers/picker/overlay-props.ts`, and `contributed.onKey(e)` in `web/src/useWindowKeys.ts`; the only React error boundary in the client is in `web/src/plugins/PluginBody.tsx`, for tab plugins. Wrap the overlay in `host.ts` before registering it: `onKey` and `onOpen` get a try/catch that calls `disable(plugin, errorFirstLine(error))`, and `render` returns its node inside a small error boundary component colocated under `web/src/overlay-plugins/` (modelled on the one `PluginBody.tsx` uses) whose catch calls the same `disable`. Keep the wrapping inside the overlay-plugins feature so `shared/contributed-overlays.ts` stays unaware of plugins. Tests: `web/src/overlay-plugins/host.test.ts` covers load, start, and dispose throws — add cases that a throwing `onKey`, `onOpen`, and `render` each disable the plugin and leave the host running; `web/src/shared/contributed-overlays.test.ts`, `web/src/pickers/PickerOverlays.test.tsx`, and `web/src/useWindowKeys.test.ts` must keep passing.
-
-
 * Give `question` a capture hook and share one match-aware command lookup between the command bar and messaged commands, so a messaged `question ask` replies with the human's answer instead of an empty string.
 
 Existing Debt: Messaged commands choose a command's capture hook with a first-by-name lookup that the command bar's dispatcher has already replaced with a match-aware one, and any command without a hook is answered by reading the tab's last log entry the moment `run` returns, which is empty for a command like `question` whose output arrives later. Severity: 5/10

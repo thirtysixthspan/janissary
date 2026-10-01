@@ -16,6 +16,7 @@ import type {
   OverlayPluginCapabilities, OverlayPluginGrants, OverlayPluginLoader, OverlayPluginModule,
 } from './api';
 import { claimedByCore, declarationChords, overlayChordId } from './chords';
+import { guardOverlay } from './guarded-overlay';
 import { overlayPluginDeclarations, overlayPluginLoaders, validateDeclarations } from './registry';
 import { closeContributedOverlay, declareOverlayClaims, registerContributedOverlay } from '../shared/contributed-overlays';
 
@@ -163,7 +164,11 @@ export function createOverlayPluginHost(
           // disable or a dispose takes the overlay off the seam before anything can open it again. The
           // claims are not passed here: they were published from the declaration at construction, which is
           // what let the chord that got us here find this plugin before it was loaded.
-          unregisters.set(plugin, registerContributedOverlay(loaded.start(capabilitiesFor(plugin))));
+          const overlay = guardOverlay(loaded.start(capabilitiesFor(plugin)), (reason) => {
+            closeContributedOverlay(plugin);
+            disable(plugin, reason);
+          });
+          unregisters.set(plugin, registerContributedOverlay(overlay));
           return true;
         } catch (error) {
           disable(plugin, errorFirstLine(error));
