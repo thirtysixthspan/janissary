@@ -28,8 +28,8 @@ function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: bo
 
 // Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach
 // the harness except the tab-switch chords (Shift+←/→, Cmd+Shift+[/]), the task-picker chord
-// (Ctrl+A), the tab-navigator chord (Ctrl+G), the clipboard-history chord
-// (Ctrl+Shift+V), and every key while either picker overlay is open over this tab (Up/Down/Left/Right/
+// (Ctrl+A), the tab-navigator chord (Ctrl+G), the clipboard-history chords
+// (Ctrl+Shift+V and Cmd+Shift+V), and every key while either picker overlay is open over this tab (Up/Down/Left/Right/
 // Enter/Escape must reach the picker instead of the PTY), which all bubble to the window handler.
 export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function HarnessTab({
   harness, client, taskPickerOpen, navOpen, cwd, cwdDisplay, flags, remote, label, connectionsButton, scheduleButton,

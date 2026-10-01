@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { OVERLAY_PLUGIN_API_VERSION, type OverlayPluginDeclaration } from './api';
-import { claimedByCore, eventChordId, overlayChordId } from './chords';
+import { claimedByCore, declarationChords, eventChordId, overlayChordId } from './chords';
 import { overlayPluginDeclarations, overlayPluginLoaders, validateDeclarations } from './registry';
 
 function declaration(overrides: Partial<OverlayPluginDeclaration> = {}): OverlayPluginDeclaration {
@@ -25,6 +25,14 @@ describe('the shipped registry', () => {
 
   it('accepts every declaration it ships', () => {
     expect(validateDeclarations().rejections).toEqual([]);
+  });
+
+  // On macOS Cmd is the modifier every other application chord uses, so a Mac user reaches for it first.
+  it('opens the clipboard history with Cmd+Shift+V as well as Ctrl+Shift+V', () => {
+    const clipboard = overlayPluginDeclarations.find((entry) => entry.id === 'clipboard-history');
+    expect(clipboard && declarationChords(clipboard).map((chord) => overlayChordId(chord)))
+      .toEqual(['ctrl+shift+v', 'meta+shift+v']);
+    expect(clipboard && declarationChords(clipboard).some((chord) => claimedByCore(chord))).toBe(false);
   });
 
   // A history started on its popup's first open has seen none of what was copied before it.
@@ -53,6 +61,23 @@ describe('validateDeclarations', () => {
     expect(accepted.map((entry) => entry.id)).toEqual(['first']);
     expect(rejections).toHaveLength(1);
     expect(rejections[0].reason).toContain('already claimed by "first"');
+  });
+
+  it('refuses a plugin whose alternate chord another plugin already has', () => {
+    const { accepted, rejections } = validateDeclarations([
+      declaration({ id: 'first', chord: { key: 'b', ctrl: true }, command: 'first' }),
+      declaration({ id: 'second', alternateChords: [{ key: 'b', ctrl: true }], command: 'second' }),
+    ]);
+    expect(accepted.map((entry) => entry.id)).toEqual(['first']);
+    expect(rejections[0].reason).toContain('chord "ctrl+b" is already claimed by "first"');
+  });
+
+  it('counts an alternate chord as taken against the plugins after it', () => {
+    const { rejections } = validateDeclarations([
+      declaration({ id: 'first', alternateChords: [{ key: 'v', meta: true, shift: true }], command: 'first' }),
+      declaration({ id: 'second', chord: { key: 'v', meta: true, shift: true }, command: 'second' }),
+    ]);
+    expect(rejections[0].reason).toContain('chord "meta+shift+v" is already claimed by "first"');
   });
 
   it('refuses a command word another plugin already has', () => {
@@ -107,6 +132,19 @@ describe('claimedByCore', () => {
     // And plain Ctrl+V stays the browser's own paste in an editor buffer, which is why the shift is
     // part of the claim rather than an afterthought.
     expect(claimedByCore({ key: 'v', ctrl: true })).toBe(false);
+  });
+});
+
+describe('declarationChords', () => {
+  it('lists the primary chord first, then the alternates in the order written', () => {
+    const chords = declarationChords(declaration({
+      alternateChords: [{ key: 'v', meta: true, shift: true }, { key: 'b', ctrl: true }],
+    }));
+    expect(chords.map((chord) => overlayChordId(chord))).toEqual(['ctrl+shift+v', 'meta+shift+v', 'ctrl+b']);
+  });
+
+  it('is the primary chord alone when there are no alternates', () => {
+    expect(declarationChords(declaration()).map((chord) => overlayChordId(chord))).toEqual(['ctrl+shift+v']);
   });
 });
 
@@ -174,6 +212,8 @@ describe('the overlay-plugin developer documentation', () => {
     expect(block).toContain(`key: '${chord?.key}'`);
     expect(block).toContain(`ctrl: ${chord?.ctrl === true}`);
     expect(block).toContain(`shift: ${chord?.shift === true}`);
+    const alternate = shipped?.alternateChords[0];
+    expect(block).toContain(`alternateChords: [{ key: '${alternate?.key}', meta: ${alternate?.meta === true}, shift: ${alternate?.shift === true} }]`);
   });
 
   it('documents every capability the contract hands a plugin', () => {

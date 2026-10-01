@@ -18,7 +18,7 @@
 | Ctrl+P | Scroll transcript up (fixed — one line per press) |
 | Ctrl+N | Scroll transcript down (fixed — one line per press) |
 | Ctrl+R | Open command history picker |
-| Ctrl+Shift+V | Open the clipboard-history popup (see [[clipboard-history]]). `Ctrl+V` is untouched — in an editor tab it is the browser's own paste |
+| Ctrl+Shift+V / Cmd+Shift+V | Open the clipboard-history popup (see [[clipboard-history]]). `Ctrl+V` and `Cmd+V` are untouched — in an editor tab they are the browser's own paste |
 | Ctrl+A | Open the task picker |
 | Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
 | Ctrl+E | Open the agent command queue popup (no-op if the exposed tab is not an agent tab) |

@@ -18,6 +18,7 @@ The declaration is pure data in `web/src/overlay-plugins/registry.ts`:
   version: '1.0.0',
   apiVersion: OVERLAY_PLUGIN_API_VERSION,
   chord: { key: 'v', ctrl: true, shift: true },
+  alternateChords: [{ key: 'v', meta: true, shift: true }],
   command: 'clip',
   title: 'clipboard',
   emptyText: '(no clipboard history)',
@@ -63,12 +64,13 @@ For plugin `example`, add `web/src/overlay-plugins/example/index.ts` and any mod
 | `version` | yes | The plugin's own version |
 | `apiVersion` | yes | The host API required; must equal `OVERLAY_PLUGIN_API_VERSION` |
 | `chord` | yes | The chord that opens the overlay. Plain letters are matched with their modifiers, so `{ key: 'v', ctrl: true, shift: true }` is one chord and not two |
+| `alternateChords` | no | Further chords that open the same overlay, such as the Cmd form of a Ctrl chord. Each one is checked and refused on the same terms as `chord` |
 | `command` | yes | The command word typed in the command bar that opens the overlay. Intercepted client-side; it never reaches the server |
 | `title` | yes | What the overlay's own title row reads |
 | `emptyText` | yes | What the overlay shows when it has nothing to show |
 | `activation` | no | `'open'` (the default) loads the plugin when something first opens it; `'startup'` loads it once the window has mounted. Startup is the broad trigger, so a declaration that asks for it says why beside the field |
 
-A chord the application already claims, a chord another plugin already claims, a command word the built-in dispatcher already answers, or a command word another plugin already claims is a **recorded refusal that disables that plugin** — never a throw, so one bad declaration leaves every other plugin working. The reason reaches the notifications feed as `Overlay plugin "<id>" disabled: <reason>.`
+A chord the application already claims, a chord another plugin already claims (the primary chord or any alternate), a command word the built-in dispatcher already answers, or a command word another plugin already claims is a **recorded refusal that disables that plugin** — never a throw, so one bad declaration leaves every other plugin working. The reason reaches the notifications feed as `Overlay plugin "<id>" disabled: <reason>.`
 
 A chord the application claims is refused separately, at construction, because such a chord could never fire.
 
@@ -130,4 +132,4 @@ A plugin may not save a file, scroll, rename, close, or open anything; it may no
 
 ### v1
 
-The first version: a declaration with an identity, a version, an API version, a chord, a command word, the two strings the overlay shows, and an optional `activation` trigger; a `start` returning the overlay to publish and a `dispose`; and three capabilities — `paste`, `maxEntries`, and `close`.
+The first version: a declaration with an identity, a version, an API version, a chord with optional alternates, a command word, the two strings the overlay shows, and an optional `activation` trigger; a `start` returning the overlay to publish and a `dispose`; and three capabilities — `paste`, `maxEntries`, and `close`.

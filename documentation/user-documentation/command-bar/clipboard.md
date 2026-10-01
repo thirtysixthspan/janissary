@@ -2,19 +2,19 @@
 
 <img class="agent-float" src="/agents/ahmed-south.png" alt="" />
 
-Everything you copy inside janus is remembered, and `Ctrl+Shift+V` brings back the last 15 of it. It is the same window as the [`Ctrl+R` command picker](/user-documentation/command-bar/history), with your copied text in place of commands — and unlike that picker, choosing an entry *pastes* it rather than running it.
+Everything you copy inside janus is remembered, and `Ctrl+Shift+V` (or `Cmd+Shift+V`) brings back the last 15 of it. It is the same window as the [`Ctrl+R` command picker](/user-documentation/command-bar/history), with your copied text in place of commands — and unlike that picker, choosing an entry *pastes* it rather than running it.
 
 ## Opening it
 
 Three routes, all to the same window:
 
-- **`Ctrl+Shift+V`** from anywhere.
+- **`Ctrl+Shift+V`** or **`Cmd+Shift+V`** from anywhere.
 - **`clip`** typed in the command bar, like `hist` is to `Ctrl+R`.
 - **Paste from clipboard…** in the right-click menu.
 
 It opens above the command line with the newest copy at the bottom, nearest the input. With nothing copied it still opens, showing `(no clipboard history)`.
 
-`Ctrl+V` is untouched — in an editor tab it is the ordinary paste.
+`Ctrl+V` and `Cmd+V` are untouched — in an editor tab they are the ordinary paste.
 
 ## What you can paste it into
 

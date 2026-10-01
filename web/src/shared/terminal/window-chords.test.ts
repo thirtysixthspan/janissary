@@ -64,6 +64,20 @@ describe('isClipboardChord', () => {
     expect(isClipboardChord(keyEvent({ key: 'v', ctrlKey: true, shiftKey: true, [modifier]: true }))).toBe(false);
   });
 
+  // The Cmd form is the plugin's alternate chord, and a harness tab has to let it reach the window too.
+  it.each(['v', 'V'])('accepts Cmd+Shift+%s', (key) => {
+    expect(isClipboardChord(keyEvent({ key, metaKey: true, shiftKey: true }))).toBe(true);
+  });
+
+  it('rejects Cmd+Shift+V with Alt', () => {
+    expect(isClipboardChord(keyEvent({ key: 'v', metaKey: true, shiftKey: true, altKey: true }))).toBe(false);
+  });
+
+  // Cmd+V is the terminal's own paste and has to stay that.
+  it('rejects Cmd+V without the shift', () => {
+    expect(isClipboardChord(keyEvent({ key: 'v', metaKey: true }))).toBe(false);
+  });
+
   // Plain Ctrl+V has to stay the browser's own paste in an editor buffer, which is why the shift is
   // part of the claim rather than an afterthought.
   it('rejects Ctrl+V without the shift', () => {

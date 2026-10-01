@@ -500,7 +500,7 @@ All keys, clicks, and mouse events are delivered to the harness **except**:
 - **Shift+←/→** and **Cmd+Shift+[/]** — the tab-switch chord, which bubbles to the window handler.
 - **Ctrl+A** and **Ctrl+G** (with no other modifier) — the task picker and tab navigator chords,
   which bubble to the window handler so those pickers open over the harness.
-- **Ctrl+Shift+V** — the clipboard-history popup's chord, which bubbles to the window handler for the
+- **Ctrl+Shift+V** and **Cmd+Shift+V** — the clipboard-history popup's chords, which bubble to the window handler for the
   same reason, so the popup opens over the harness rather than the terminal's own paste handling
   (see [[clipboard-history]]).
 - Every key while the task picker or tab navigator is open over the tab, so the picker is driven

@@ -38,6 +38,9 @@ export type OverlayPluginDeclaration = {
   // bar. A core chord or a command colliding with a built-in or another plugin's is a recorded
   // refusal that disables this plugin — never a throw, so one bad declaration leaves the rest working.
   chord: OverlayChord;
+  // Further chords that open the same overlay — the Cmd form of a Ctrl chord, say. Each is checked and
+  // refused on exactly the same terms as `chord`, and any one of them colliding disables the plugin.
+  alternateChords?: readonly OverlayChord[];
   command: string;
   // What the overlay's own title row reads.
   title: string;

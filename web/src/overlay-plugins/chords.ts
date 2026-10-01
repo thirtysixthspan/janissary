@@ -7,7 +7,7 @@
 // common, and the overlay family must not be able to reach into the editor's.
 
 import { appChordAction } from '../shared/app-chords';
-import type { OverlayChord } from './api';
+import type { OverlayChord, OverlayPluginDeclaration } from './api';
 
 // A chord's canonical identity, used both to detect two plugins claiming the same chord and to match
 // a keydown against the table. Modifiers are emitted in a fixed order so the same chord written two
@@ -20,6 +20,15 @@ export function overlayChordId(chord: OverlayChord): string {
     chord.alt === true ? 'alt' : '',
   ].filter(Boolean);
   return [...modifiers, chord.key.toLowerCase()].join('+');
+}
+
+// Every chord a declaration claims: the primary chord first, then the alternates in the order written.
+// The one reading of a declaration's chords, so validation, the core-chord refusal, and the published
+// claims cannot disagree about which chords a plugin holds.
+export function declarationChords(
+  declaration: Pick<OverlayPluginDeclaration, 'chord' | 'alternateChords'>,
+): OverlayChord[] {
+  return [declaration.chord, ...(declaration.alternateChords ?? [])];
 }
 
 export type ChordEvent = {

@@ -2,5 +2,3 @@
 
 # pull-request
 
-* enable the 'cmd+shift+V' as well as 'ctrl+shift+V'
-

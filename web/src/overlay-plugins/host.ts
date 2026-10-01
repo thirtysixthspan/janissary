@@ -15,7 +15,7 @@ import { guardPluginCall } from '@shared/plugins/guard';
 import type {
   OverlayPluginCapabilities, OverlayPluginGrants, OverlayPluginLoader, OverlayPluginModule,
 } from './api';
-import { claimedByCore, overlayChordId } from './chords';
+import { claimedByCore, declarationChords, overlayChordId } from './chords';
 import { overlayPluginDeclarations, overlayPluginLoaders, validateDeclarations } from './registry';
 import { closeContributedOverlay, declareOverlayClaims, registerContributedOverlay } from '../shared/contributed-overlays';
 
@@ -84,7 +84,7 @@ export function createOverlayPluginHost(
     const declaration = byId.get(plugin);
     if (!declaration) return;
     claimWithdrawals.set(plugin, declareOverlayClaims(plugin, {
-      chords: [overlayChordId(declaration.chord)], command: declaration.command,
+      chords: declarationChords(declaration).map((chord) => overlayChordId(chord)), command: declaration.command,
     }));
   };
 
@@ -121,9 +121,8 @@ export function createOverlayPluginHost(
   // A chord the window handler already owns could never open, so it is reported at construction rather
   // than left silently dead.
   for (const declaration of enabled) {
-    if (claimedByCore(declaration.chord)) {
-      disable(declaration.id, `chord "${overlayChordId(declaration.chord)}" is already used by the application`);
-    }
+    const owned = declarationChords(declaration).find((chord) => claimedByCore(chord));
+    if (owned) disable(declaration.id, `chord "${overlayChordId(owned)}" is already used by the application`);
   }
 
   // Last, so a plugin refused above never publishes a claim.

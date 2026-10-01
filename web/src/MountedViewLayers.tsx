@@ -31,7 +31,7 @@ type Properties = {
   pickerOverlays?: React.ReactNode;
   overlayOpen?: boolean;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
-  // `HarnessTab.harnessKeyFilter`), and Ctrl+Shift+V opens whatever overlay the clipboard plugin
+  // `HarnessTab.harnessKeyFilter`), and Ctrl+Shift+V or Cmd+Shift+V opens whatever overlay the clipboard plugin
   // contributes; those are the pickers/choosers those chords ever let bubble there, so this renders
   // just those overlays rather than the full `PickerOverlays` stack the agent-tab body uses.
 } & PickerOverlayProps;

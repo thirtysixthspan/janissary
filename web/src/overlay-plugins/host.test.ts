@@ -204,6 +204,30 @@ describe('the overlay-plugin host', () => {
     expect(overlayClaimedByCommand('clip')).toBe(false);
   });
 
+  it('reaches a plugin on its first alternate chord, like its primary one', async () => {
+    const host = hostWith(noopReporter(), {
+      declarations: [declaration({ alternateChords: [{ key: 'v', meta: true, shift: true }] })] as never,
+      loaders: { fixture: async () => ({ default: overlayModule() }) },
+    });
+    installActivatingOpener(host);
+
+    expect(openOverlayForChord('meta+shift+v')).toBe(true);
+    await vi.waitFor(() => { expect(contributedOverlayOnScreen()?.name).toBe('fixture'); });
+    closeContributedOverlay('fixture');
+  });
+
+  it('disables a plugin whose alternate chord the application already uses', () => {
+    const onDisabled = noopReporter();
+    hostWith(onDisabled, {
+      declarations: [declaration({ alternateChords: [{ key: 'p', meta: true }] })] as never,
+      loaders: { fixture: async () => ({ default: overlayModule() }) },
+    });
+
+    expect(onDisabled).toHaveBeenCalledWith('fixture', 'chord "meta+p" is already used by the application');
+    // Refused whole, so the primary chord stops answering too.
+    expect(openOverlayForChord('ctrl+shift+v')).toBe(false);
+  });
+
   it('disables a plugin whose declaration was refused, without loading it', () => {
     const onDisabled = noopReporter();
     const load = vi.fn(async () => ({ default: overlayModule() }));

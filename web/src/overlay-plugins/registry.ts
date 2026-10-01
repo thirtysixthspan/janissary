@@ -12,7 +12,7 @@ import {
   type OverlayPluginDeclaration,
   type OverlayPluginLoader,
 } from './api';
-import { overlayChordId } from './chords';
+import { declarationChords, overlayChordId } from './chords';
 
 export const overlayPluginDeclarations = [
   {
@@ -23,6 +23,10 @@ export const overlayPluginDeclarations = [
     // because nothing here claims it. Plain Ctrl+V must stay the browser's own paste in an editor
     // buffer, which is why the shift is part of the claim rather than an afterthought.
     chord: { key: 'v', ctrl: true, shift: true },
+    // Cmd+Shift+V, because on macOS Cmd is the modifier every other application chord here uses, and a
+    // Mac user reaches for it first. The browser's "paste and match style" on it is suppressed the same
+    // way the Ctrl form's "paste as plain text" is.
+    alternateChords: [{ key: 'v', meta: true, shift: true }],
     command: 'clip',
     title: 'clipboard',
     emptyText: '(no clipboard history)',
@@ -61,9 +65,11 @@ function declarationFault(
   if (declaration.apiVersion !== OVERLAY_PLUGIN_API_VERSION) {
     return `requires overlay plugin API ${declaration.apiVersion}; host provides ${OVERLAY_PLUGIN_API_VERSION}`;
   }
-  const chord = overlayChordId(declaration.chord);
-  const chordOwner = takenChords.get(chord);
-  if (chordOwner !== undefined) return `chord "${chord}" is already claimed by "${chordOwner}"`;
+  for (const entry of declarationChords(declaration)) {
+    const chord = overlayChordId(entry);
+    const chordOwner = takenChords.get(chord);
+    if (chordOwner !== undefined) return `chord "${chord}" is already claimed by "${chordOwner}"`;
+  }
   const command = declaration.command.toLowerCase();
   if (RESERVED_COMMANDS.has(command)) return `command "${command}" is already a built-in command`;
   const commandOwner = takenCommands.get(command);
@@ -87,7 +93,7 @@ export function validateDeclarations(
       rejections.push({ id: declaration.id, reason: fault });
       continue;
     }
-    takenChords.set(overlayChordId(declaration.chord), declaration.id);
+    for (const chord of declarationChords(declaration)) takenChords.set(overlayChordId(chord), declaration.id);
     takenCommands.set(declaration.command.toLowerCase(), declaration.id);
     accepted.push(declaration);
   }

@@ -284,6 +284,21 @@ describe('useWindowKeys', () => {
     expect(opened).toHaveBeenCalledWith('fixture', null);
   });
 
+  // The Cmd form falls through every Cmd chord the application owns before the seam is asked, and the
+  // browser's "paste and match style" on it has to be suppressed for the same reason as the Ctrl form's.
+  it('Cmd+Shift+V opens a contributed overlay claiming it and suppresses the browser paste', () => {
+    const opened = publishClaiming(['ctrl+shift+v', 'meta+shift+v']);
+    render(React.createElement(TestComponent, {}));
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'v', metaKey: true, shiftKey: true, bubbles: true, cancelable: true,
+    });
+    globalThis.dispatchEvent(event);
+
+    expect(opened).toHaveBeenCalledWith('fixture', null);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('claims nothing by a chord no plugin declares', () => {
     const opened = publishClaiming(['ctrl+r']);
     render(React.createElement(TestComponent, {}));
