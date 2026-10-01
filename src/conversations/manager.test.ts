@@ -215,6 +215,54 @@ describe('ConversationsManager when a conversation tab closes', () => {
     // Still cancellable, so an unrelated tab closing did not tear this conversation down.
     expect(f.manager.cancel('c1')).toBe(true);
   });
+
+  // A finished reply keeps its session alive for the next turn. Once no tab shows the conversation
+  // there is no next turn to keep it for, so the agent process ends with the tab.
+  it('ends the idle session of a conversation whose tab is gone', async () => {
+    const f = fixture();
+    f.manager.create('c1');
+    const session = fakeSession();
+    mocks.connectAcp.mockReturnValue(session);
+    f.manager.send('c1', 'hello');
+    session.prompts[0].handlers.onEnd();
+    expect(session.kill).not.toHaveBeenCalled();
+
+    await tabRemoved();
+
+    expect(session.kill).toHaveBeenCalledOnce();
+  });
+
+  it('stops sending the window of a conversation whose tab is gone', async () => {
+    const f = fixture();
+    f.manager.create('c1');
+    expect(f.manager.view().windows.map((window) => window.id)).toEqual(['c1']);
+    const changed = vi.fn();
+    const subscription = messageBus.on('conversations', 'changed', changed);
+
+    await tabRemoved();
+
+    expect(f.manager.view().windows).toEqual([]);
+    expect(changed).toHaveBeenCalled();
+    subscription.unsubscribe();
+  });
+
+  it('keeps the session and window of a conversation still open in a tab', async () => {
+    const f = fixture();
+    f.manager.create('c1');
+    const session = fakeSession();
+    mocks.connectAcp.mockReturnValue(session);
+    f.manager.send('c1', 'hello');
+    session.prompts[0].handlers.onEnd();
+    f.managers.tab.tabs.push({
+      label: 'conversations-1',
+      plugin: { id: 'conversations', instanceKey: 'c1' },
+    } as unknown as Tab);
+
+    await tabRemoved();
+
+    expect(session.kill).not.toHaveBeenCalled();
+    expect(f.manager.view().windows.map((window) => window.id)).toEqual(['c1']);
+  });
 });
 
 describe('ConversationsManager', () => {
