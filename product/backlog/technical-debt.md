@@ -4,17 +4,6 @@
 
 ## development
 
-* Catch SQLite failures on the database browser's read paths so an unreadable or locked database file shows an error in the SQL tab instead of disabling the whole sql plugin.
-
-Existing Debt: The database browser wraps its writes and its connection open in error handling, but its schema, create, and query/export lookups call into SQLite outside any guard, and the topic-action path runs inside the plugin's guarded call, so a host-side SQLite error is blamed on the plugin. Severity: 5/10
-
-Existing Risk: 6/10 - One corrupt `.db` file in the databases folder, or a database another process holds locked, throws on the first schema read; the plugin host treats that as the sql plugin failing, disables it for the rest of the process, and closes every open SQL tab.
-
-Proposal Risk: 2/10 - Read failures become error results the SQL tab already renders for open failures; the remaining risk is an SQLite call this pass misses, which a host-side catch around topic actions contains.
-
-Proposal: In `src/database/browser.ts`, `open()` guards only `getConnection`, but opening a non-SQLite or locked file succeeds and the first `prepare` is what throws ("file is not a database", "database is locked"). `create()` and `schema()` call `schemaObjects(opened.handle)` unguarded, and `handleFor()` (used by `query()` and `exportObject()`) calls `hasObject()` and `objectColumns()` from `src/database/schema.ts` before any try; the class already records this exact failure mode as fixed for writes through `attempted()`. Guard the reads the same way: `schema` and `create` record `schemaResult(requestId, database, [], errorText(error))` on a throw, and `handleFor` returns `{ error }` on a throw, which `query` and `exportObject` already handle. As defense in depth, wrap `TOPIC_SOURCES[action.topic].act(managers, action)` in `runTopicAction` (`src/plugins/topics.ts`) in a try/catch that logs the host error instead of letting it propagate into the plugin's guarded call (`topicAction` in `src/plugins/context.ts` calls it). Tests: `src/database/browser.test.ts` covers refused writes; add cases that `schema`, `create`, and `query` against a file of non-SQLite bytes record an error result and do not throw, and a case in `src/plugins/topics.test.ts` that a throwing topic source does not throw out of `runTopicAction`.
-
-
 * Guard every host call into a contributed overlay plugin — its render, key handler, and open hook — so one throwing overlay disables itself instead of blanking the app or breaking the window's key handling.
 
 Existing Debt: The overlay plugin host guards loading, starting, and disposing a plugin, but registers the overlay object the plugin returns as-is, and the picker layer and window key handler then call its render, key, and open hooks directly with no error boundary or try/catch, contrary to the plugin guideline that no call crosses the plugin boundary unguarded. Severity: 5/10

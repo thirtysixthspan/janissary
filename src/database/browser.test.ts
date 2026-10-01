@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DatabaseSync } from 'node:sqlite';
-import { initDbDir, closeAllConnections, removeDatabaseFile } from '../connections.js';
+import { initDbDir, closeAllConnections, removeDatabaseFile, dbPath } from '../connections.js';
 import { runDatabaseCommand } from './index.js';
 import { CONSOLE_ROW_LIMIT } from './console-read.js';
 import { DatabaseBrowser } from './browser.js';
 import { DatabaseBrowserState, RESULT_LIMIT } from './browser-state.js';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import type { DatabaseGridQuery } from '../protocol.js';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -99,6 +100,45 @@ describe('DatabaseBrowser', () => {
     expect(answer).toEqual({ kind: 'schema', requestId, database: 'fresh', objects: [] });
     expect(browser.view().databases.map((ref) => `${ref.name}:${ref.exists}`)).toContain('fresh:true');
     browser.dispose();
+  });
+
+  // A file that is not a database opens without complaint; the first read is what throws. Letting that
+  // escape took the whole `sql` plugin down, so each read records it as an answer about the file.
+  describe('a database file that is not a database', () => {
+    const corrupt = (name: string): void => {
+      mkdirSync(path.dirname(dbPath(name)), { recursive: true });
+      writeFileSync(dbPath(name), 'this is not an SQLite database, only text long enough to be read as a header');
+    };
+    const answerTo = (browser: DatabaseBrowser, requestId: string) =>
+      browser.view().results.find((result) => result.requestId === requestId);
+
+    it('answers a schema read with the error, rather than throwing', () => {
+      const browser = new DatabaseBrowser();
+      corrupt('broken');
+      const requestId = nextId();
+      expect(() => { browser.schema('broken', requestId); }).not.toThrow();
+      expect(answerTo(browser, requestId)).toMatchObject({ kind: 'schema', objects: [], error: expect.stringMatching(/not a database/i) as string });
+    });
+
+    it('answers a create of it with the error, rather than throwing', () => {
+      const browser = new DatabaseBrowser();
+      corrupt('broken');
+      const requestId = nextId();
+      expect(() => { browser.create('broken', requestId); }).not.toThrow();
+      expect(answerTo(browser, requestId)).toMatchObject({ kind: 'schema', error: expect.stringMatching(/not a database/i) as string });
+    });
+
+    it('answers a grid query and an export with the error, rather than throwing', () => {
+      const browser = new DatabaseBrowser();
+      corrupt('broken');
+      const query: DatabaseGridQuery = { object: 'orders', filters: [], global: '', order: [], limit: 10, offset: 0 };
+      const queried = nextId();
+      const exported = nextId();
+      expect(() => { browser.query('broken', queried, query); }).not.toThrow();
+      expect(() => { browser.exportObject('broken', exported, query, 'csv'); }).not.toThrow();
+      expect(answerTo(browser, queried)).toMatchObject({ kind: 'query', error: expect.stringMatching(/not a database/i) as string });
+      expect(answerTo(browser, exported)).toMatchObject({ kind: 'export', error: expect.stringMatching(/not a database/i) as string });
+    });
   });
 
   it('answers a grid query with a page, its totals, and a key per row', () => {

@@ -92,10 +92,14 @@ export class DatabaseBrowser {
   private handleFor(database: string, object: string): { handle: DatabaseSync; columns: DatabaseColumnView[] } | { error: string } {
     const opened = this.open(database);
     if ('error' in opened) return opened;
-    if (!hasObject(opened.handle, object)) {
-      return { error: `"${object}" is not in "${database}".` };
+    try {
+      if (!hasObject(opened.handle, object)) {
+        return { error: `"${object}" is not in "${database}".` };
+      }
+      return { handle: opened.handle, columns: objectColumns(opened.handle, object) };
+    } catch (error) {
+      return { error: errorText(error) };
     }
-    return { handle: opened.handle, columns: objectColumns(opened.handle, object) };
   }
 
   private record(result: DatabaseResultView): void {
@@ -111,7 +115,7 @@ export class DatabaseBrowser {
     const opened = this.open(database, true);
     if ('error' in opened) { this.record(this.schemaResult(requestId, database, [], opened.error)); return; }
     this.forgetTotals(database);
-    this.record(this.schemaResult(requestId, database, schemaObjects(opened.handle)));
+    this.record(this.schemaRead(requestId, database, opened.handle));
   }
 
   schema(database: string, requestId: string): void {
@@ -119,7 +123,18 @@ export class DatabaseBrowser {
     this.forgetTotals(database);
     this.record('error' in opened
       ? this.schemaResult(requestId, database, [], opened.error)
-      : this.schemaResult(requestId, database, schemaObjects(opened.handle)));
+      : this.schemaRead(requestId, database, opened.handle));
+  }
+
+  // Opening a file that is not a database, or one another process holds locked, succeeds; the first
+  // read is what throws. That is an answer about the file, recorded like any refused open — not a
+  // broken plugin, which is what an escaping throw would make it (see `attempted`).
+  private schemaRead(requestId: string, database: string, handle: DatabaseSync): DatabaseResultView {
+    try {
+      return this.schemaResult(requestId, database, schemaObjects(handle));
+    } catch (error) {
+      return this.schemaResult(requestId, database, [], errorText(error));
+    }
   }
 
   query(database: string, requestId: string, query: DatabaseGridQuery): void {
