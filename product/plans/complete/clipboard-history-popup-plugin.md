@@ -14,7 +14,9 @@ Give the user a clipboard-history popup: a menu of the text they have copied, ne
 capped at the last 15 entries by default and raisable through a config setting, opened the way the
 `Ctrl+R` history popup is opened. Choosing an entry pastes it at the keyboard caret — into the command
 bar, into an editor buffer, or into a harness/ssh terminal. Each entry is represented by the first
-line of non-space text, with an ellipsis when the text is too long or spans several lines.
+line of non-space text, with a `(N lines)` postfix when the copy spans several lines and an ellipsis
+only when that line is too long for the popup. The popup takes the keyboard while it is open and
+hands it back when it closes, and it records copies from the moment the window opens.
 
 The default context menu gains a `Paste from clipboard…` entry that opens the same popup, which
 makes the clipboard reachable from the mouse on surfaces where no field holds the keyboard.
@@ -36,7 +38,8 @@ introduces the third family, whose plugins contribute a floating overlay.
 1. **The popup is modelled on the history popup.** Same shape, same anchor (bottom-anchored, above
    the command line, full width), same `.picker` markup, same keyboard model: Up/Down move the
    selection clamped at both ends with no wraparound, Return chooses, Escape closes, a row can be
-   clicked, and the popup opens on its newest row. The history popup's behavior is specified in
+   clicked, and the popup opens on its newest row. Tab closes it too, like Escape; Shift+Tab stays
+   the section-navigation chord. The history popup's behavior is specified in
    `product/specs/history.md` § "History picker" and its keyboard priority in
    `product/specs/keyboard-navigation.md` § "Overlay priority". Choosing an entry closes the popup,
    because that is what the history popup does on the same keystroke.
@@ -49,7 +52,7 @@ introduces the third family, whose plugins contribute a floating overlay.
    copies heavily can raise it, which is what JetBrains offers with "Maximum number of contents to
    keep in clipboard" (default 5, with its own docs suggesting 20–50). Where the setting lives, what an
    out-of-range value does, and what happens to existing entries when it is lowered are settled in
-   decisions 22–24.
+   decisions 25–27.
 4. **Choosing an entry pastes, it does not run.** This is the deliberate difference from the history
    picker, which *runs* the selected command (`web/src/pickers/useHistPicker.ts:16`, `pick`). The
    feature says *paste*, and the overlays that populate the command line rather than submit it
@@ -88,11 +91,15 @@ introduces the third family, whose plugins contribute a floating overlay.
    needs it, is one optional `band` field on the declaration folded into the composed list, not a
    change to the seam.
 10. **Two openers, exactly like `hist`, plus a third from the context menu.** The chord is
-    **`Ctrl+Shift+V`** (currently unclaimed; plain `Ctrl+V` stays the browser's paste in the editor
-    buffer and is not touched), and the command word is **`clip`**. Both always open rather than
-    toggle, and both preselect the newest (bottom) row, matching `useHistPicker`'s `openPicker`.
-11. **The plugin declares both its chord and its command word**, and the host arbitrates them the
-    way the other two families do: a chord already claimed by another plugin, a core chord, or a
+    **`Ctrl+Shift+V`**, with **`Cmd+Shift+V`** as an alternate chord because on macOS Cmd is the
+    modifier every other application chord here uses (`Cmd+P`, `Cmd+F`, `Cmd+T`), so a Mac user
+    reaches for it first. Both were unclaimed; plain `Ctrl+V` and `Cmd+V` stay the browser's paste in
+    the editor buffer and are not touched. The command word is **`clip`**. Every opener always opens
+    rather than toggles, and preselects the newest (bottom) row, matching `useHistPicker`'s
+    `openPicker`.
+11. **The plugin declares its chords and its command word**, and the host arbitrates them the
+    way the other two families do: a chord — the primary one or any alternate — already claimed by
+    another plugin, a core chord, or a
     command colliding with a built-in, the `schedule`/`harness`/`ssh`/`shell` routes, or another
     plugin's command is a **recorded refusal that disables that one plugin**, never a throw —
     `web/src/editor/plugins/registry.ts` `validateDeclarations` and `src/plugins/command-adapter.ts`
@@ -118,7 +125,8 @@ introduces the third family, whose plugins contribute a floating overlay.
     - a **harness/ssh terminal's PTY**, typed as terminal input *without* a trailing Enter — the
       existing `insertIntoCommandLine` harness branch sends `ptyInput` with the bare text, unlike
       `typeIntoHarness` in `src/harness/input.ts`, which appends a delayed `\r` to submit. Pasting
-      must not run the pasted text.
+      must not run the pasted text. The keyboard is left in that terminal afterwards, even when it
+      was somewhere else as the popup opened, so the user keeps typing at the prompt they pasted into.
     This is wider than the two targets the feature text names, by the user's decision.
 16. **The history lives in the browser, in memory, and never crosses the wire.** There is no
     server-side clipboard and no OS pasteboard integration anywhere in the app, and the pasteboard
@@ -134,15 +142,24 @@ introduces the third family, whose plugins contribute a floating overlay.
     bundle and defeat the lazy load entirely. The seam is a subscribe/notify module in
     `web/src/shared/`, shaped like `web/src/shared/drop-registry.ts` and
     `web/src/file-navigator/file/navigator-clipboard.ts`; the plugin subscribes when it activates
-    and releases its subscription when it is disabled or the host shuts down.
+    and releases its subscription when it is disabled or the host shuts down. It activates when the
+    window mounts rather than on the popup's first open (decision 34), because a copy made before the
+    subscription exists is never seen.
 18. **In an editor, the caret ends at the *start* of the pasted text.** `EditorApi.paste` does this
     deliberately (`web/src/editor/applyKeyAction.ts` `pastedState`), and it is what a real `Cmd+V`
     does in this editor. `EditorApi.insert`, which leaves the caret at the end, is what a
     file-navigator drop uses; the two are not interchangeable and the clipboard entry is a paste.
-19. **Two distinct ellipses, one per cause, and the CSS one lives on the popup's own label.**
-    Multi-line text gets a literal `…` appended by the derivation, because that case is knowable
-    without measuring anything and unit-testable. An over-long single line gets a CSS ellipsis,
-    which needs `overflow: hidden` and `text-overflow: ellipsis` — and on a child, not on the row.
+19. **A multi-line copy says how many lines it has; only an over-long line gets an ellipsis, and that
+    ellipsis lives on the popup's own label.** The derivation returns the first line of non-space
+    text and a separate `(N lines)` postfix when the copy has more than one line. `N` counts the lines
+    of the text trimmed at both ends, so a copy that merely ends in a newline or opens with blank lines
+    is not reported as more lines than the user can see in it. A literal `…` for the multi-line case
+    would read exactly like a clipped long line, which is why the count replaces it. The postfix sits
+    in its own `.clipboard-history-lines` span after the label, never shrinks, and is never pasted:
+    choosing a row pastes the stored text, not the label or the postfix. An over-long line gets a CSS
+    ellipsis, which needs `overflow: hidden` and `text-overflow: ellipsis` — and on a child, not on
+    the row. The label is the shrinking flex item, so it is clipped before the postfix, which stays
+    visible.
     A `.picker-row` is a `display: flex` container, so a declaration on the row cannot reach the
     anonymous flex item a bare text child becomes: it contributes a hard clip and no glyph. And
     `.picker-row` is shared by thirteen other overlays — Quick Open, the command-history popup, the
@@ -167,7 +184,9 @@ introduces the third family, whose plugins contribute a floating overlay.
     resolved from the right-clicked element when the menu supplied one, falling back to whichever
     field holds the keyboard — which is `resolvePasteTarget`'s existing rule, reused rather than
     restated. The menu closes and focus returns before the popup opens, so the element has to be
-    captured at open time and handed to the paste, not re-resolved later.
+    captured at open time and handed to the paste, not re-resolved later. This is the click route:
+    choosing with Return carries no anchor and pastes at the keyboard caret, because by then the menu
+    has closed and the right-clicked element is no longer what the user is aiming at.
 22. **A plugin's open state is the plugin's own state, not a field threaded through the projections.**
     The nine core overlays each have a boolean on `OverlayOpenSources` because they are app state the
     projections carry; a contributed overlay's open flag already lives with the plugin, in the seam it
@@ -207,10 +226,15 @@ introduces the third family, whose plugins contribute a floating overlay.
     `positiveIntegerValue(value, fallback)` beside `numberValue`, used by this field alone, and
     `product/specs/application-config.md`'s row states the stricter rule for this one setting so the
     file's policy paragraph stays true for everything else.
-27. **Lowering the cap trims immediately.** The plugin's store applies the cap when it is handed the
-    new value, discarding the oldest entries over it, so the visible list always matches the
-    configured number. In practice this surfaces at startup, since the config file is read once in
-    `src/main.ts:75` — the same restart requirement every other config setting carries.
+27. **A lower cap trims what is held before the list is shown.** The plugin starts when the window
+    mounts (decision 34), before the first state snapshot has delivered the configured number, so the
+    store takes a cap *source* rather than a number and reads it again at every copy and every open,
+    discarding the oldest entries over it. A higher configured cap therefore keeps more from the next
+    copy on, and a lower one has trimmed the list by the time it is on screen. The host hands the
+    plugin `maxEntries` as a getter over the grants rather than a spread copy, because spreading would
+    read it once at activation and freeze the default. In practice the number only changes once, as
+    the first snapshot arrives, since the config file is read once in `src/main.ts:75` — the same
+    restart requirement every other config setting carries.
 
 ### Forced by building it
 
@@ -254,7 +278,8 @@ introduces the third family, whose plugins contribute a floating overlay.
     constructed in a `useMemo`, and `App` re-renders constantly — re-rendering *because of this
     feature*, since the hook subscribes to the seam's version and the version bumps the moment a
     plugin registers. `currentTab` is a *reader* of state that changes, not a value that changes, so
-    it joins `maxEntries` behind a ref read inside the memo body, the way the cap already was; the
+    it joins `maxEntries` behind a ref read inside the memo body, the way the cap already was, and
+    `focusHarness` (decision 33) sits behind a ref for the same reason; the
     call site additionally wraps it in a `useCallback`, because an inline arrow is the trap itself
     and the hook's comment should not have to explain why the option is safe to pass inline.
     Depending on it rebuilds the host on ordinary shell re-renders, the effect cleanup disposes the
@@ -272,6 +297,60 @@ introduces the third family, whose plugins contribute a floating overlay.
     thing it describes. The guarantee is stated in `api.ts` as well, since a plugin author has no
     other reason to write an idempotence guard.
 
+33. **The popup takes the keyboard while it is open and hands it back when it closes.** Left where it
+    was, the keyboard broke the popup on every tab but the agent tab: in an editor buffer the arrows
+    moved the caret and Return reached the hidden textarea, which binds Enter to a newline and stops
+    the event there; a click on a row blurred that textarea first, so the paste found no editor under
+    `document.activeElement` and fell through to a command bar the editor tab does not have; in a
+    terminal the keys went to the PTY. So the popup's root is focusable (`tabIndex={-1}`) and focuses
+    itself on mount, and its keys bubble to the window key handler, which already routes them to the
+    open contributed overlay's `onKey`. Once focus has moved, "where the caret is" can no longer be
+    read from the live focus at paste time, so the seam records the element that held the keyboard as
+    the overlay's **focus origin** when it opens, and the paste capability reads that origin in place
+    of the live focus while an overlay is open. Where an entry lands therefore does not depend on how
+    the popup was opened: an editor buffer that held the keyboard receives the paste whether the popup
+    came from its chord, `clip`, or the right-click menu, and whether the entry is chosen with Return
+    or a click. A plugin's close — after Return, a click, Escape, or Tab — hands focus back to the
+    origin when it is still in the document, except when a different text field now holds focus,
+    which is what a paste into a right-clicked field leaves behind. The PTY route is the one paste
+    route chosen from the tab rather than from a focused element, so it focuses nothing by itself; the
+    capability gains a `focusHarness(ptyId)` callback, supplied by the app shell from the harness
+    handles it already keeps, so the keyboard ends in that terminal however the popup was reached. A
+    terminal's hidden xterm input is not treated as a text field, because a paste event there would go
+    through xterm's own paste handling and then be inserted again — text for a terminal goes to its PTY.
+34. **The clipboard plugin activates at startup, as a declared trigger.** Started on its popup's first
+    open, the history greeted the first `Ctrl+Shift+V` with an empty list however much had already been
+    copied. `ai/guidelines/plugins.md` §3 puts activation triggers in the static declaration and §6
+    asks a broad trigger to justify itself beside the field, so the declaration gains an optional
+    `activation: 'open' | 'startup'`, defaulting to `'open'` and additive to API v1, and the clipboard
+    declaration sets `'startup'` with its reason written beside it. The host's `activateAtStartup`
+    activates every accepted startup plugin concurrently, through the same guarded `activate`, from an
+    effect in `useOverlayPlugins` after mount. The chunk is still a separate dynamic import, so the entry
+    bundle carries no plugin code. Under `React.StrictMode` that effect runs, is cleaned up, and runs
+    again on the same memoized host, so a startup activation can still be loading when the host is
+    disposed; the host keeps a generation counter that `dispose` advances, and an attempt that finds it
+    changed after its load does not call `start` and reports false without disabling the plugin. The
+    capture seam was not made to buffer copies for a plugin that has not loaded, which would have put
+    the history's cap and retention back into shared code.
+35. **A contributed overlay closes when the exposed tab changes.** It is a modal over the pane it opened
+    on, takes every keystroke, and pastes into the tab the user is looking at now, so carrying it onto
+    another tab would put a modal over a tab it was never opened on. `useOverlayPlugins` takes the
+    exposed tab's label and closes every open contributed overlay when it changes, through the seam's
+    `closeContributedOverlays()`. The label rather than the index is the key, because closing a tab to
+    the left shifts the index without changing what is on screen. This close returns no focus: the tab
+    switch puts the keyboard on the new tab by its own rule.
+36. **A declaration may name alternate chords.** The seam already published a list of chord ids per
+    plugin, so the second clipboard chord needed no routing change, only a way to declare it. The
+    declaration gains an optional `alternateChords`, additive to API v1, and `declarationChords` in
+    `overlay-plugins/chords.ts` is the one reading of a declaration's chords — the primary first, then
+    the alternates — so validation, the core-chord refusal, and the published claims cannot disagree
+    about which chords a plugin holds. Any one of them colliding with a core chord or another plugin's
+    refuses the whole plugin. The window handler needed no change: a Cmd chord the application does not
+    own falls through `metaChordOpener` to the seam, and the existing `preventDefault` on a claimed
+    plugin chord suppresses the browser's "paste and match style" just as it suppresses the Ctrl form's
+    "paste as plain text". `isClipboardChord` lets either chord out of a harness terminal, with exactly
+    one of Ctrl and Cmd held.
+
 ## What already exists (reuse, don't rebuild)
 
 | Need | Existing mechanism | Location |
@@ -286,7 +365,7 @@ introduces the third family, whose plugins contribute a floating overlay.
 | The ordered overlay registry every overlay answers to | `OVERLAYS`, `firstOpenOverlay`, `commandBarSuppressed`, `commandBarDisabled`, `buildOverlayOpenState` | `web/src/pickers/overlay-registry.ts` |
 | Where an overlay is rendered and given keys | the `PickerOverlays` switch; `dispatchModalKey` in `useWindowKeys` | `web/src/pickers/PickerOverlays.tsx:33`; `web/src/useWindowKeys.ts:31` |
 | A chord opening a picker | the four Ctrl chords and the four Cmd chords, now routed by action through `shared/app-chords.ts` rather than by key and modifier comparison | `web/src/shared/app-chords.ts`; `web/src/useWindowKeys.ts:118,139` |
-| Letting a chord out of a full-tab terminal | `isPickerChord` (Ctrl+A, Ctrl+G) plus `harnessKeyFilter`, now with `isClipboardChord` (Ctrl+Shift+V) beside them | `web/src/shared/terminal/window-chords.ts:13,19` |
+| Letting a chord out of a full-tab terminal | `isPickerChord` (Ctrl+A, Ctrl+G) plus `harnessKeyFilter`, now with `isClipboardChord` (Ctrl+Shift+V or Cmd+Shift+V) beside them | `web/src/shared/terminal/window-chords.ts:13,19` |
 | Matching a declared modifier chord | `eventChordId` / `matchBinding`, and `claimedByCore` — the latter now a lookup in the app's own chord table rather than a second hand-written list | `web/src/editor/plugins/chords.ts:20,30,43`; `web/src/overlay-plugins/chords.ts:54` |
 | A command word opening a picker, with a server no-op twin | `hist` intercepted at submit; `src/commands/hist.ts` is the 10-line server no-op | `web/src/agent-tabs/command-input/useCommandBarSubmit.ts:36`; `src/commands/hist.ts` |
 | Recording a refused declaration instead of throwing | `validateDeclarations` (editor plugins); `rejectContribution` (tab plugins) | `web/src/editor/plugins/registry.ts:74`; `src/plugins/rejections.ts:9` |
@@ -301,7 +380,9 @@ introduces the third family, whose plugins contribute a floating overlay.
 | The command-bar-vs-harness split, already written | `insertIntoCommandLine` — `ptyInput` on a harness tab, `dropRef.insertAtCaret` otherwise | `web/src/pickers/populate-command-line.ts:25` |
 | Inserting text into an editor at the caret, by lookup | `useEditorDrop` registers a handle keyed by the tab label written on `data-editor-drop`; `registerEditorDrop` / `editorDropHandle` | `web/src/editor/useEditorDrop.ts:13`; `web/src/shared/drop-registry.ts:28` |
 | Paste-semantics editor insertion (caret at the start) | `EditorApi.paste` | `web/src/editor/useEditor.ts:21` |
-| Reading which field holds the keyboard | `resolvePasteTarget`, `isTextEntryElement` | `web/src/context-menu/default-menu-target.ts:25,40` |
+| Reading which field holds the keyboard | `resolvePasteTarget`, and `isTextEntryElement`, moved to `shared/` because the overlay seam needs it too | `web/src/context-menu/default-menu-target.ts`; `web/src/shared/text-entry.ts` |
+| Telling a terminal's hidden input apart from a text field | the terminal selection registry's container lookup, now exported as `isInsideTerminal` | `web/src/shared/terminal/terminal/selection.ts` |
+| Putting the keyboard on a harness terminal | `harnessHandles`, keyed by PTY id, which tab-switch focus already uses | `web/src/App.tsx` |
 | One writer for clipboard text | `copyText(text)` — no-ops on empty, fire-and-forget | `web/src/shared/system-clipboard.ts:14` |
 | Reading the clipboard for the existing Paste | `pasteInto` / `readClipboardText`, and now `pasteTextInto` — the element-pasting half published on its own so there is one answer to "how does text get into an element that owns its own pasting" | `web/src/context-menu/clipboard-commands.ts:40,8` |
 | A subscribe-and-notify seam between two features that may not import each other | `drop-registry.ts` `createRegistry`; `navigator-clipboard.ts`'s snapshot + listeners | `web/src/shared/drop-registry.ts:11`; `web/src/file-navigator/file/navigator-clipboard.ts` |
@@ -335,41 +416,57 @@ the paste capability is built at the app-shell edge and injected.
   may not import each other, and a single ref could only ever name one of them", which is exactly this
   problem. The overlay descriptor is pure data: the plugin id as its name, a render function taking
   the right-click anchor, a key handler, the `claimsCommandBar` bit, and an `onOpen`; the claim is the
-  chord ids and the command word.
+  chord ids and the command word. Each registration also keeps the anchor and the focus origin it was
+  opened with (decision 33): `openContributedOverlay` records the focused element on a first open,
+  `contributedOverlayFocusOrigin()` answers it, `closeContributedOverlay` hands focus back to it, and
+  `closeContributedOverlays()` closes every open overlay without returning focus (decision 35).
+- **`web/src/shared/overlay-focus.ts`** — `focusedElement()` and `returnFocus(origin)`, the latter
+  skipping an origin that has left the document or a moment when a different text field holds focus.
+  **`web/src/shared/text-entry.ts`** — `isTextEntryElement`, moved out of the context menu so the seam
+  can use it without importing a feature, with its tests.
 - **`web/src/overlay-plugins/`** — the family, outside `clientFeatureDirectories` and reachable from
   the app shell only. No barrel file, mirroring `web/src/editor/plugins/`:
   - `api.ts` — the versioned contract: `OVERLAY_PLUGIN_API_VERSION` (start at 1), the
-    `OverlayPluginDeclaration` (identity `id` and `version`, the requested `apiVersion`, a `chord`, a
-    `command`, the title, and the empty-state text), `OverlayPluginItem` (the derived label paired
+    `OverlayPluginDeclaration` (identity `id` and `version`, the requested `apiVersion`, a `chord`, the
+    optional `alternateChords`, a `command`, the title, the empty-state text, and the optional
+    `activation` trigger), `OverlayPluginItem` (the derived label paired
     with the full text, plus the cap), `OverlayPluginCapabilities` (`paste`, `maxEntries`, `close`),
     the `OverlayPluginModule` default export, the `OverlayPluginLoader` type, and `handlePickerKey`
     re-exported from the shared keyboard module. Every host-visible signature is written out at the
     contract rather than inferred from the implementation, the way `web/src/editor/plugins/api.ts`
     pins its re-exported helpers, so a refactor that changes what a plugin sees fails to typecheck
     here where the version decision belongs.
-  - `chords.ts` — `overlayChordId` and `eventChordId`, and `claimedByCore` as a lookup in
-    `shared/app-chords.ts` (decision 28).
+  - `chords.ts` — `overlayChordId` and `eventChordId`, `declarationChords` (decision 36), and
+    `claimedByCore` as a lookup in `shared/app-chords.ts` (decision 28).
   - `registry.ts` — `overlayPluginDeclarations`, the pure data the host reads to answer "what chords
     and commands are claimed" without importing plugin code; `overlayPluginLoaders`, literal
     `() => import('./<id>')` entries, never a filesystem walk; `ProductionOverlayPluginId`, the
     static id union that `src/plugins/catalog.ts` already models; and `validateDeclarations`,
-    refusing a wrong API version, a duplicate chord, a command colliding with a built-in or another
+    refusing a wrong API version, a duplicate chord among every chord a declaration claims, a command colliding with a built-in or another
     plugin's, and returning every refusal as data rather than throwing —
     `validateDeclarations` at `web/src/editor/plugins/registry.ts:74` is the shape to copy.
   - `host.ts` — `createOverlayPluginHost`, session-scoped: claims published from the declarations at
     construction, a lazy `load` memoized through `loading`, a second memoized attempt through
     `activating` so `start` runs once, `guardPluginCall` (`src/plugins/guard.ts:5`) around the load,
     a `disable` that records one reason, withdraws the claims, drops both caches and affects that
-    plugin alone, and a `dispose` that unregisters every overlay and withdraws every claim. Modelled
-    on `createEditorPluginHost` (`web/src/editor/plugins/host.ts:35`).
-  - `clipboard-history/` — the plugin. `store.ts` owns the history (record, dedupe, cap, ordering,
-    trim-on-lower, and the capture subscription) as module state inside the chunk, with a memoized
-    row snapshot so `useSyncExternalStore` does not loop; `display.ts` is the pure
-    first-line-of-non-space-text derivation returning the display line and whether a literal ellipsis
-    belongs after it; `Popup.tsx` is the component, in the same `.picker` markup as `HistoryPicker` so
-    the CSS is shared rather than duplicated, with the row's label in a `.clipboard-history-label`
-    span so the CSS ellipsis has something to truncate; `index.tsx` is the module the host loads,
-    where `start` builds the overlay and `dispose` empties the store.
+    plugin alone, and a `dispose` that unregisters every overlay, withdraws every claim, and advances
+    the generation that stops a still-loading activation from starting (decision 34). It refuses a
+    plugin when any of its chords is a core chord, publishes every chord as a claim, hands each plugin
+    a capability object whose `maxEntries` is a live getter over the grants, and exposes
+    `activateAtStartup`. Modelled on `createEditorPluginHost` (`web/src/editor/plugins/host.ts:35`).
+  - `clipboard-history/` — the plugin, declared with `activation: 'startup'` and the `Cmd+Shift+V`
+    alternate chord. `store.ts` owns the history (record, dedupe, cap, ordering, trim-on-lower, and
+    the capture subscription) as module state inside the chunk, with a memoized row snapshot so
+    `useSyncExternalStore` does not loop; it reads its cap from a source at every copy and every open
+    (decision 27), and its rows are a plugin-local `ClipboardHistoryRow` — the contract's item plus
+    the postfix — so `OverlayPluginItem` does not change. `display.ts` is the pure
+    first-line-of-non-space-text derivation returning the label and the `(N lines)` postfix;
+    `Popup.tsx` is the component, in the same `.picker` markup as `HistoryPicker` so the CSS is shared
+    rather than duplicated, with the label in a `.clipboard-history-label` span so the CSS ellipsis has
+    something to truncate and the postfix in a `.clipboard-history-lines` span after it, and a
+    focusable root that takes the keyboard on mount; `index.tsx` is the module the host loads, where
+    `start` builds the overlay — closing on a plain Tab ahead of the shared picker keys — and
+    `dispose` empties the store.
 
 ### 2. The overlay registry seam
 
@@ -480,7 +577,10 @@ components"). It lives in a top-level `web/src/*.ts` module, which is the only p
 with it. The host resolves, in order:
 
 1. the field the right-click landed in, else the field holding the keyboard, kept only when
-   `isTextEntryElement` (`web/src/context-menu/default-menu-target.ts:40`) agrees;
+   `isTextEntryElement` (`web/src/shared/text-entry.ts`) agrees and it is not a terminal's hidden
+   input (`isInsideTerminal`). While an overlay is open the popup holds the keyboard itself, so "the
+   field holding the keyboard" is the overlay's recorded focus origin rather than the live focus
+   (decision 33);
 2. if that field is inside `[data-command-bar]`, the command bar's caret, through
    `dropRef.current.insertAtCaret`;
 3. otherwise an editor buffer, resolved by walking up from the anchor — or, failing that, from the
@@ -491,7 +591,8 @@ with it. The host resolves, in order:
    paste into an element that owns its pasting has one answer rather than two;
 5. otherwise the current tab's harness/ssh PTY, via `ptyInput` with the bare text and no trailing
    Enter, exactly as `insertIntoCommandLine` already does
-   (`web/src/pickers/populate-command-line.ts:31`);
+   (`web/src/pickers/populate-command-line.ts:31`), followed by the injected `focusHarness(ptyId)` so
+   the keyboard ends in that terminal;
 6. otherwise the command bar again, when the tab has one.
 
 Steps 1 and 3 are the ones that matter, and getting them the wrong way round is the failure the
@@ -527,8 +628,11 @@ change: `EditorDropHandle` is the host's own drop plumbing in `web/src/shared/`,
   reaches the page. Without `preventDefault()` the popup opens *and* the browser pastes, in the same
   keystroke. Every chord the handler claims already prevents the default, so matching that is the
   whole fix; it is called out because the symptom is a double action rather than a missing one.
-- `web/src/shared/terminal/window-chords.ts` gains `isClipboardChord`, the predicate that lets the
-  chord out of a full-tab terminal, so `harnessKeyFilter` (`web/src/harness/HarnessTab.tsx:23-26`)
+- **The alternate chord.** `Cmd+Shift+V` reaches the same line: `metaChordOpener` returns false for a
+  Cmd chord the application does not own, and the seam answers `meta+shift+v` because the host
+  published every chord the declaration names (decision 36).
+- `web/src/shared/terminal/window-chords.ts` gains `isClipboardChord`, the predicate that lets
+  `Ctrl+Shift+V` or `Cmd+Shift+V` — exactly one of Ctrl and Cmd — out of a full-tab terminal, so `harnessKeyFilter` (`web/src/harness/HarnessTab.tsx:23-26`)
   passes it through the way it already does for `Ctrl+A` and `Ctrl+G` (decision 15). It is a separate
   function from `isPickerChord` because it is a separate claim: `Ctrl+A` and `Ctrl+G` are the
   built-in overlays' chords, this one belongs to a plugin and is matched by its own declaration. What
@@ -614,7 +718,18 @@ as it reaches the file navigator's drop handles today.
   `web/src/useServerState.ts`: seed it beside the other two caps. **No mirror type** — the client
   imports these from `@shared/protocol` (architecture principle 7).
 - The value is handed to the plugin as part of its capabilities, alongside the paste capability,
-  because the plugin owns the store and therefore owns applying the cap (decisions 17 and 27).
+  because the plugin owns the store and therefore owns applying the cap (decisions 17 and 27). It
+  reaches the plugin as a getter, read through `useOverlayPlugins`' ref and kept live by the host,
+  because the plugin starts before the first state snapshot delivers it.
+
+### 7a. The overlay-plugin hook
+
+`web/src/useOverlayPlugins.ts` builds the host once per session (decision 31) with the paste
+capability, `maxEntries`, and `focusHarness`, each read through a ref; installs the seam's opener;
+activates startup plugins from an effect after mount and disposes the host in that effect's cleanup
+(decision 34); and closes every open contributed overlay when the exposed tab's label changes
+(decision 35). `App.tsx` passes it a stable `currentTab` reader, a stable `focusHarness` that focuses
+`harnessHandles.current.get(ptyId)`, and `tabLabel: current?.label`.
 - `product/specs/application-config.md` gains the row: name, default 15, hand-edited, and that it
   takes effect at startup.
 
@@ -622,10 +737,14 @@ as it reaches the file navigator's drop handles today.
 
 - New `product/specs/clipboard-history.md`: what is recorded (every in-app copy, text only, no
   empty or whitespace-only), the newest-at-the-bottom order, the dedupe-and-promote rule, the cap and
-  its setting, the one-line rendering with its two ellipses, the three paste targets and the caret
-  rules for each, the three openers and the popup's key model, that nothing is persisted, and the
-  failure message a disabled plugin puts in the notifications feed.
-- `product/specs/keyboard-navigation.md`: a `Ctrl+Shift+V` row in the chord table, `Cmd+W` naming a
+  its setting, the one-line rendering with its `(N lines)` postfix and its ellipsis, the three paste
+  targets and the caret rules for each, the three openers and the popup's key model, that recording
+  starts when the window opens, that the popup takes the keyboard and where focus goes afterwards,
+  that a tab switch closes it, that nothing is persisted, and the failure message a disabled plugin
+  puts in the notifications feed.
+- `product/specs/harness.md`: `Ctrl+Shift+V` and `Cmd+Shift+V` among the keys a harness terminal lets
+  bubble to the window handler.
+- `product/specs/keyboard-navigation.md`: a `Ctrl+Shift+V` / `Cmd+Shift+V` row in the chord table, `Cmd+W` naming a
   plugin-contributed overlay among the overlays that withhold it, and the plugin band appended to the
   "Overlay priority" list with decision 9's tie rule stated and the tab kinds that render no overlay
   named.
@@ -645,8 +764,9 @@ as it reaches the file navigator's drop handles today.
 
 - New `documentation/developer-documentation/overlay-plugins.md`, following the structure of
   `editor-plugins.md`: trust stated first, the smallest working example copied from shipped code, a
-  "Files to add" tree with the registration edges named, the declaration reference, the chord and
-  command resolution and the recorded-refusal rule, the capability reference, the budgets, what a
+  "Files to add" tree with the registration edges named, the declaration reference including the
+  optional `alternateChords` and `activation` fields, the chord and command resolution and the
+  recorded-refusal rule, the capability reference, the budgets, what a
   plugin may not do, an API changelog, and the two sidebar entries in
   `documentation/.vitepress/config.mts`.
 - **The page's own claim to be pinned is delivered**, because a page that presents itself as
@@ -659,7 +779,7 @@ as it reaches the file navigator's drop handles today.
   Nothing there checks prose, which is the shape the editor family's own block takes and the reason a
   reformat of the page is not a test failure.
 - New `documentation/user-documentation/command-bar/clipboard.md` for the user-facing behavior,
-  including the `clipboardHistoryMaxEntries` setting, plus the `Ctrl+Shift+V` and `clip` rows in
+  including the `clipboardHistoryMaxEntries` setting, plus the `Ctrl+Shift+V` / `Cmd+Shift+V` and `clip` rows in
   `help.md` and in `documentation/user-documentation/getting-started/keyboard.md`.
 
 
@@ -706,16 +826,18 @@ as it reaches the file navigator's drop handles today.
 Client tests colocated as `web/src/**/*.test.ts(x)`, run through `./scripts/run.mjs check-diff`.
 
 - **The derivation** (`display.test.ts`, pure): a single line with leading whitespace and newlines
-  before it yields that line with no ellipsis; multi-line text yields the first line plus a literal
-  `…`; text whose first line is the whole text yields no ellipsis; a text that is only whitespace
-  never reaches the store.
+  before it yields that line with no postfix; `first\nsecond\nthird` reads `first` with `(3 lines)`;
+  a copy that only ends in a newline has no postfix; leading blank lines are not counted; the label
+  never carries an ellipsis; a text that is only whitespace never reaches the store.
 - **The store** (`store.test.ts`): newest at the bottom; the cap keeps the configured number of
   entries and drops the oldest; re-copying existing text moves its one row to the bottom rather than
   adding a second; empty and whitespace-only copies are ignored; a cap lowered below the number held
-  trims immediately; a cap that is not a positive integer falls back to 15; each test starts from the
-  default cap whatever the last one left behind; the selection stays inside the rows that exist; a row
-  keeps its identity as the list changes around it; a row's full text is readable separately from its
-  label; and what the application copies is recorded while started and stops when disposed.
+  trims immediately; a cap that is not a positive integer falls back to 15; a dispose resets the cap
+  to the default; a higher cap arriving from the source after start keeps more entries on later
+  copies, and a lower one trims on the next open; the selection stays inside the rows that exist; a
+  row keeps its identity as the list changes around it; a row's full text is readable separately from
+  its label and postfix; and what the application copies is recorded while started and stops when
+  disposed.
 - **The configurable cap** (`src/config.test.ts`, which is where `loadConfig`, `decodeConfig`, and
   `updateConfig` are all exercised — there is no separate `config-decode.test.ts`): the default is 15
   when the key is absent, from a fresh config, and from an existing project config that predates the
@@ -733,22 +855,37 @@ Client tests colocated as `web/src/**/*.test.ts(x)`, run through `./scripts/run.
   command colliding with a built-in or with another plugin's is refused; each refusal is recorded
   rather than thrown and leaves the healthy plugins accepted; the reserved set now includes `Cmd+T`,
   which the list it replaced omitted, and keeps `Shift+Tab` for the contextual claim; `Ctrl+Shift+V`
-  and `Ctrl+V` are not reserved; and the loader map holds a literal dynamic import per id with no
-  static import of any implementation.
+  and `Ctrl+V` are not reserved; a plugin whose alternate chord collides with an earlier plugin's is
+  refused, and an alternate counts as taken against the plugins after it; `declarationChords` lists the
+  primary chord first and then the alternates; the shipped clipboard declaration claims
+  `ctrl+shift+v` and `meta+shift+v`, neither reserved, and activates at startup; and the loader map
+  holds a literal dynamic import per id with no static import of any implementation.
 - **The host** (`host.test.ts`): a declared chord and command word route without loading anything; the
   plugin is reached on the *first* chord and the first command word, with no prior activation; two
   activations arriving before the chunk resolves run `start` once, load once, register once, and
   report one outcome to both callers; a plugin that throws on load, exports no overlay, claims a chord
   the application already uses, or had its declaration refused is disabled while the host keeps
   running; `dispose` withdraws the claims so a disposed host answers nothing; each plugin's `close` is
-  bound to its own name and `dispose` takes its overlay away; and a `dispose` that throws is survived.
+  bound to its own name and `dispose` takes its overlay away; a `dispose` that throws is survived; an
+  alternate chord reaches the plugin on its first press, and an alternate the application owns
+  disables the plugin at construction. At startup, `activateAtStartup` starts a `'startup'` plugin and
+  registers its overlay without any opener, leaves an `'open'` plugin and one naming no activation
+  unloaded, and disables and reports a startup plugin that fails to load; the capability's
+  `maxEntries` reflects a grants value that changes after `start`; and a load that finishes after the
+  host was disposed does not call `start` and reports nothing.
 - **The seam** (`shared/contributed-overlays.test.ts`): an overlay publishes and withdraws; two
   plugins registering one name resolve in registration order; an earlier withdrawal leaves a later one
   in place; **a declared chord and command word answer before anything has registered** and the opener
   receives the name; withdrawing a declaration stops it answering; two plugins declaring one chord
   resolve in declaration order; `onOpen` is where a plugin resets its selection; the anchor is handed
   to the open route and forgotten on close; `claimsCommandBar` is read per open overlay; the version
-  counter is stable between changes and is *not* bumped by a claim.
+  counter is stable between changes and is *not* bumped by a claim. Opening records the focused
+  element as the focus origin and closing returns focus to it, but not when another text field holds
+  focus or the origin has left the document; `closeContributedOverlays` closes an open overlay, clears
+  its anchor, notifies once, returns no focus, and with nothing open does not notify.
+- **Focus helpers** (`shared/text-entry.test.ts`, `shared/terminal/terminal/selection.test.ts`): the
+  moved `isTextEntryElement` cases, and `isInsideTerminal` true inside a registered terminal container
+  and false outside one.
 - **The seam and the copy sites**: `copyText` notifies subscribers once per written text, not at all
   for an empty one, and still notifies when the browser withholds the clipboard; a throwing subscriber
   does not cost the others their copy; unsubscribing leaves a later registration in place. The
@@ -759,22 +896,36 @@ Client tests colocated as `web/src/**/*.test.ts(x)`, run through `./scripts/run.
 - **Paste resolution** (`paste-into-surface.test.ts`, pure over injected elements): the command bar's
   caret; the right-clicked field wins over the field holding the keyboard; an editor buffer is found
   through `data-editor-drop` and gets paste semantics; a harness tab writes bare text to the PTY with
-  no trailing Enter; the command bar is the fallback; nothing to paste into is a no-op; and an editor
-  with no published handle, which is one no longer visible, is ignored rather than mis-pasted into.
+  no trailing Enter and focuses that harness through `focusHarness`, which no other route calls; the
+  command bar is the fallback; nothing to paste into is a no-op; an editor with no published handle,
+  which is one no longer visible, is ignored rather than mis-pasted into; with an overlay open, a
+  paste reaches the editor that held focus when it opened even though focus is elsewhere; and a
+  focused terminal input goes to the PTY rather than being pasted into.
+- **The real route end to end** (`clipboard-history/paste-routing.test.tsx`): the plugin's module
+  started with the real paste capability on the real seam. With an editor's textarea focused,
+  opening the overlay moves focus to the popup, Return pastes the newest entry through the editor's
+  `pasteAtCaret`, closes the overlay, and returns focus to the textarea; the same with a click on a
+  row. With a harness tab exposed, Return sends `ptyInput` and focus ends on the terminal, whether
+  the terminal or the body held focus as the popup opened.
 - **The popup** (`clipboard-history/Popup.test.tsx`, which covers the component and the module): title
-  `clipboard`, empty row `(no clipboard history)`, one line per entry with the derivation's ellipsis,
-  the newest on open, a copy made while it is open appearing in it, a long line in a
+  `clipboard`, empty row `(no clipboard history)`, one line per entry, a multi-line entry's first
+  line with a separate `(2 lines)` element in `.clipboard-history-lines` and a single-line entry with
+  none, the newest on open, a copy made while it is open appearing in it, a long line in a
   `clipboard-history-label` span inside a `.clipboard-history-row` rather than on the shared row, a
-  clicked row pasting the *full* stored text at the anchor it was handed and closing, the arrows
-  clamped with no wraparound, Return pasting and closing, Escape closing without pasting, the command
+  clicked row pasting the *full* stored text — never the postfix — at the anchor it was handed and
+  closing, the arrows clamped with no wraparound, Return pasting and closing, Escape closing without
+  pasting, Tab closing and preventing the default, the popup holding focus once rendered, the command
   bar claimed while open, and `dispose` emptying the store.
 - **Openers** (`useWindowKeys.test.ts`): `Ctrl+Shift+V` opens a contributed overlay and suppresses the
   browser's paste — asserted directly, because the regression it guards is silent: without it, the
   popup opens *and* the browser's own paste-as-plain-text runs, and nothing about the popup looks
   wrong. `Ctrl+V` is left entirely alone; a chord no plugin declares claims nothing; a key being
   composed claims nothing, so an IME is never interrupted; an open contributed overlay takes the key
-  instead of the picker that would otherwise open under it; and `Cmd+T` is dispatched, which is the
-  handler side of the chord the reserved-chord table now carries.
+  instead of the picker that would otherwise open under it; `Cmd+Shift+V` opens an overlay claiming
+  `meta+shift+v` and prevents the browser default; and `Cmd+T` is dispatched, which is the handler
+  side of the chord the reserved-chord table now carries. `window-chords.test.ts` lets `Ctrl+Shift+V`
+  and `Cmd+Shift+V` out of a terminal and rejects either with Alt, `Ctrl+Cmd+Shift+V`, and the bare
+  `Ctrl+V` and `Cmd+V`.
 - **The seam in the registry** (`overlay-registry.test.ts`): a contributed overlay changes none of the
   core registry's answers and `undefined` is still returned when nothing core is open;
   `commandBarSuppressed` reflects a plugin overlay's own bit and drops again on close; and
@@ -782,8 +933,10 @@ Client tests colocated as `web/src/**/*.test.ts(x)`, run through `./scripts/run.
   stay live.
 - **The hook** (`useOverlayPlugins.test.tsx`, the first test to mount the hook at all): a rerender with
   new option identities returns the *same* host, a plugin registered on the seam is still registered
-  afterwards, the cap reaches the plugin through the ref on the same host, and unmounting disposes the
-  host so its claims stop answering. Without these the memo lifecycle was untested, which is why a host
+  afterwards, the cap reaches the plugin through the ref on the same host, an open overlay closes when
+  `tabLabel` changes and stays open across a rerender with the same label, a copy made before the
+  clipboard popup has ever been opened is listed once the startup activation settles, and unmounting
+  disposes the host so its claims stop answering. Without these the memo lifecycle was untested, which is why a host
   rebuilt on an ordinary re-render went unnoticed.
 - **Where it renders** (`MountedViewLayers.test.tsx` and `overlay-props.test.ts`): a harness tab
   renders the contributed overlay alongside the task picker and tab navigator, and carries none when
@@ -849,6 +1002,19 @@ Client tests colocated as `web/src/**/*.test.ts(x)`, run through `./scripts/run.
   memoized activation belong to this family; those two are separate contracts this change does not read.
 - **Rebuilding the host on every render, or accepting a throwing `start` twice** — the first is settled
   by decision 31, the second cannot happen now that `start` runs once.
+- **Buffering copies in the shared capture seam** for a plugin that has not loaded yet. Startup
+  activation is the declared trigger the plugin guidelines name, and a buffer would put the history's
+  cap and retention back in shared code (decision 34).
+- **Republishing claims after a StrictMode dispose.** The generation guard stops a stale activation
+  from starting a plugin; what a disposed-then-reused host does with its withdrawn claims under the
+  development-only effect replay is a separate lifecycle question.
+- **Platform-specific chords.** `Ctrl+Shift+V` and `Cmd+Shift+V` are both claimed on every platform,
+  matching how the application's other Cmd chords are bound.
+- Focus behavior of the built-in pickers, and closing them on a tab change; decisions 33 and 35 are
+  about contributed overlays.
+- Changing how a paste reaches a PTY (bracketed paste and the like), and pasting into the shell PTYs
+  embedded in an agent tab, which the paste capability does not route to.
+- Windows `\r\n` handling in the line count beyond what splitting on `\n` already does.
 - Any change to the existing `Paste`, `Copy`, or the tab plugin's contributed context-menu entry.
 - The file navigator's own row menu, which keeps its own Paste that acts on files.
 - Any server-side clipboard. The pasteboard stays unreachable from a shell.
@@ -862,15 +1028,20 @@ Client tests colocated as `web/src/**/*.test.ts(x)`, run through `./scripts/run.
   the capture seam is wired by static import.
 - A deliberate edit to `documentation/developer-documentation/overlay-plugins.md`'s example must fail
   `registry.test.ts`, which is the check that the pin is pinning something.
-- Manual end-to-end: copy four snippets of differing shapes from an editor selection, a terminal
-  selection, a SQL grid's rows, and a transcript drag; confirm the popup lists them newest at the
-  bottom with one line each and a literal ellipsis on the multi-line one; copy one again and confirm
+- Manual end-to-end: before opening the popup at all, copy four snippets of differing shapes from an
+  editor selection, a terminal selection, a SQL grid's rows, and a transcript drag; confirm the first
+  open lists them newest at the bottom with one line each and a `(N lines)` postfix on the multi-line
+  one; copy one again and confirm
   its row moved to the bottom rather than duplicating; paste more than 15 and confirm the oldest
   falls off. Then set `"clipboardHistoryMaxEntries": 5` in `.janissary/config.json` and confirm a
   restart trims to 5, that `0` falls back to 15, and that deleting the key returns it to 15. With
   text half-typed and the caret mid-line, open the popup with `Ctrl+Shift+V` and confirm Return
-  splices at the caret and leaves the surrounding text intact; open it with `clip`; open it from the
+  splices at the caret and leaves the surrounding text intact and the keyboard back in the bar; open
+  it with `Cmd+Shift+V`; open it with `clip`; confirm Tab closes it like Escape and that switching tabs
+  closes it without pasting; open it from the
   right-click menu on a terminal with nothing selected, and on an editor tab with nothing selected. In
   an editor tab, confirm the entry lands at the caret with the caret left at the start of the pasted
-  text. On a harness tab, confirm the text is typed into the PTY and not submitted. Reload the page
+  text, and that the arrows moved the popup's selection rather than the editor's caret. On a harness
+  tab, confirm the text is typed into the PTY and not submitted, and that typing afterwards reaches
+  the prompt. Reload the page
   and confirm the history is gone.
