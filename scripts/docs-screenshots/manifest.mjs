@@ -75,6 +75,14 @@ export default [
     target: 'task-overlay',
   },
   { name: 'ghost-text', setup: ['shell git status'], actions: [{ type: 'shell git' }], target: 'command-bar' },
+  {
+    // `tides` appears in both the fixture's Markdown sample and its source tree, so the result window
+    // shows matches from more than one file stacked above the search bar.
+    name: 'search-tab',
+    setup: ['search tides'],
+    settle: 1500,
+    target: 'search-tab',
+  },
   // View tabs.
   { name: 'image-tab', setup: ['open ./sample.png'], actions: [{ press: 'PageUp' }], target: 'image-view' },
   { name: 'markdown-tab', setup: ['open ./sample.md'], target: 'markdown-view' },
