@@ -2,8 +2,6 @@
 
 ## ready
 
-* profiles (3/10) — `documentation/user-documentation/automation/profiles.md` has 2 of 10 `profile save` facts missing and none wrong. Since fix(profile) #1474, the first `profile save` on a project with no `profiles/` directory creates it, and nothing creates it at startup. The page says profiles "live in the `profiles/` directory" without telling a reader they need not make it. A write that still fails, for example because `profiles` is a regular file, now reports `Profile command failed: could not write profile "<name>" to <path>/profiles/<name>.json (<code>).` instead of an error naming a temporary file. The page mentions only the generic `Profile command failed: <reason>.` The ground truth is `product/specs/profiles.md` and `src/profile/save/index.ts`. Fix by adding one sentence each to the storage paragraph and the `profile save` section of `profiles.md`.
-
 ## development
 
 * pull-request-testing (1/10) — Not a user-documentation gap: all 6 facts in `product/specs/pull-request-testing.md` describe this repository's own test-pull-request agent task (`ai/tasks/test-pull-request.md`), not a command or behaviour of the Janissary app. `pull-request-review` was judged the same way in an earlier run. No page under `documentation/user-documentation/` or `help.md` row should carry it.
@@ -206,3 +204,4 @@
 * tab-plugins — documented in documentation/user-documentation/command-bar/plugins.md; the sample `plugins` output and count now show all eleven bundled plugins, and the plugin-tab list names the search tab, the SQL browser, their commands, and the `Cmd+Shift+F` shortcut (removed 2026-09-30)
 * notifications — documented in documentation/user-documentation/tab-types/notifications.md; the feed section now covers file icons and where they come from, the agent-question tab link (the only event that carries one, not every line as the entry implied), the gathered icons on a folded line, and the single queue slot a folded run takes (removed 2026-09-30)
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md, documentation/user-documentation/getting-started/tabs.md; Lifecycle now says ending a harness ends every process it started, with the two-second grace, the daemon exception, and the same cleanup for ssh sessions, terminal cards, and remote harnesses, and the busy-dot paragraph gives the roughly-two-second settle (removed 2026-09-30)
+* profiles — documented in documentation/user-documentation/automation/profiles.md; the storage paragraph says the first `profile save` creates `profiles/`, and the save section quotes the `could not write profile` failure line (removed 2026-09-30)
