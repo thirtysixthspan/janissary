@@ -77,7 +77,7 @@ export function App({ client }: { client: JanusClient }) {
   const currentTabForOverlay = useCallback(() => currentRef.current, []);
   useOverlayPlugins({
     client, dropRef: dropReference, maxEntries: clipboardHistoryMaxEntries,
-    currentTab: currentTabForOverlay,
+    currentTab: currentTabForOverlay, tabLabel: current?.label,
   });
 
   const { canSearch, search, highlight } = useViewSearchState(current, lines);

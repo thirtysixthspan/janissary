@@ -35,6 +35,7 @@ function options(maxEntries: number, overrides: Partial<UseOverlayPluginsOptions
     dropRef: DROP_REF,
     maxEntries,
     currentTab: () => TAB,
+    tabLabel: TAB.label,
     ...overrides,
   };
 }
@@ -76,6 +77,20 @@ describe('useOverlayPlugins', () => {
 
     // The user-visible half: a disposed host took the overlay away with it.
     expect(contributedOverlayOnScreen()?.name).toBe('clipboard-history');
+  });
+
+  it('closes an open overlay when the exposed tab changes', () => {
+    const view = render();
+    teardown.push(registerContributedOverlay({
+      name: 'clipboard-history', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {},
+    }));
+    act(() => { openContributedOverlay('clipboard-history', null); });
+
+    view.rerenderWith({ tabLabel: TAB.label });
+    expect(contributedOverlayOnScreen()?.name).toBe('clipboard-history');
+
+    view.rerenderWith({ tabLabel: 'another-tab' });
+    expect(contributedOverlayOnScreen()).toBeUndefined();
   });
 
   it('reads the cap through a ref, so a later value reaches the same host', () => {

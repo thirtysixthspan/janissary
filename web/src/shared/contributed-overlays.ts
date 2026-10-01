@@ -185,3 +185,17 @@ export function closeContributedOverlay(name: string): void {
   entry.anchor = null;
   notify();
 }
+
+// Closes whichever overlay is open, without pasting or choosing anything. A contributed overlay is a
+// modal over the exposed tab, so the app shell calls this when that tab changes. Nothing open means
+// nothing changed, and nothing is notified.
+export function closeContributedOverlays(): void {
+  let closed = false;
+  for (const entry of registrations.values()) {
+    if (!entry.open) continue;
+    entry.open = false;
+    entry.anchor = null;
+    closed = true;
+  }
+  if (closed) notify();
+}

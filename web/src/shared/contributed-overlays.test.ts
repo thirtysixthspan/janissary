@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  closeContributedOverlay, contributedOverlayAnchor, contributedOverlayClaimsCommandBar,
+  closeContributedOverlay, closeContributedOverlays, contributedOverlayAnchor, contributedOverlayClaimsCommandBar,
   contributedOverlayOnScreen, contributedOverlays, contributedOverlaysVersion, declareOverlayClaims,
   installOverlayOpener, isContributedOverlayOpen, openContributedOverlay, openOverlayForChord,
   openOverlayForCommand, overlayClaimedByCommand, registerContributedOverlay,
@@ -165,6 +165,29 @@ describe('the contributed-overlay seam', () => {
     closeContributedOverlay('loud');
     openContributedOverlay('quiet', null);
     expect(contributedOverlayClaimsCommandBar()).toBe(false);
+  });
+
+  it('closes whichever overlay is open, forgetting its anchor, and tells subscribers', () => {
+    register('a');
+    openContributedOverlay('a', document.createElement('div'));
+    const listener = vi.fn();
+    const unsubscribe = subscribeContributedOverlays(listener);
+
+    closeContributedOverlays();
+
+    expect(contributedOverlayOnScreen()).toBeUndefined();
+    expect(contributedOverlayAnchor('a')).toBeNull();
+    expect(listener).toHaveBeenCalledTimes(1);
+    unsubscribe();
+  });
+
+  it('notifies nobody when closing all finds nothing open', () => {
+    register('a');
+    const before = contributedOverlaysVersion();
+
+    closeContributedOverlays();
+
+    expect(contributedOverlaysVersion()).toBe(before);
   });
 
   it('opens nothing for a name no plugin registered', () => {

@@ -5,7 +5,7 @@ import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { OverlayPluginHost } from './overlay-plugins/host';
 import { createOverlayPluginHost } from './overlay-plugins/host';
 import {
-  contributedOverlaysVersion, installOverlayOpener, openContributedOverlay, subscribeContributedOverlays,
+  closeContributedOverlays, contributedOverlaysVersion, installOverlayOpener, openContributedOverlay, subscribeContributedOverlays,
 } from './shared/contributed-overlays';
 import { createPasteCapability } from './paste-into-surface';
 
@@ -29,16 +29,22 @@ import { createPasteCapability } from './paste-into-surface';
 // identity on every render even though what it reads has not changed. Depend on it and the host is
 // rebuilt — and the effect that disposes it runs — on ordinary shell re-renders, which is enough to
 // throw away a plugin's history and drop its subscriptions.
+//
+// `tabLabel` is the exposed tab's label, and a change to it closes any open overlay. An overlay is a
+// modal over the tab it opened on, so it does not follow the user to another one. The label rather
+// than the index is the key, because closing a tab to the left shifts the index without changing what
+// is on screen.
 
 export type UseOverlayPluginsOptions = {
   client: JanusClient;
   dropRef: React.RefObject<CommandInputDropHandle | null>;
   maxEntries: number;
   currentTab: () => TabView | undefined;
+  tabLabel: string | undefined;
 };
 
 export function useOverlayPlugins(options: UseOverlayPluginsOptions): OverlayPluginHost {
-  const { client, dropRef, maxEntries, currentTab } = options;
+  const { client, dropRef, maxEntries, currentTab, tabLabel } = options;
 
   const maxEntriesRef = useRef(maxEntries);
   maxEntriesRef.current = maxEntries;
@@ -79,6 +85,8 @@ export function useOverlayPlugins(options: UseOverlayPluginsOptions): OverlayPlu
   }), [host]);
 
   useEffect(() => () => { host.dispose(); }, [host]);
+
+  useEffect(() => { closeContributedOverlays(); }, [tabLabel]);
 
   return host;
 }
