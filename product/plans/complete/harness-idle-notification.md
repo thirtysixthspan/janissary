@@ -332,13 +332,19 @@ gaining the edge, so no cycle is introduced.
 **A module-level dwell owner in `src/tab/dwell.ts`.** One pending handle, never a map — there is only
 one active tab — and an exported 3-second constant beside it. Its contract:
 
-- `begin(managers, label)` — called by the five visibility clear sites instead of clearing directly.
-  It clears any pending dwell first, so switching tabs resets the clock rather than leaving a stale
-  candidate to fire against the wrong tab, then starts the 3 seconds. It records the label, and does
-  **not** read "whoever is active" at fire time — a glance that is followed by switching tabs must
-  never clear the tab that was glanced at. It subscribes to nothing: the dwell *produces* a clear and
-  never needs to hear one, because an immediate clear that lands first leaves the pending dwell a
-  harmless no-op that the emit-only-on-change clause absorbs.
+- `begin(resolveTabs, label)` — called by the five visibility clear sites instead of clearing
+  directly. **Every call replaces whatever was pending, before anything else is decided**, which is
+  what makes the interval continuous per tab: switching tabs resets the clock rather than leaving a
+  stale candidate to fire against the tab the user just left. The replacement is unconditional, and
+  has to be — selecting a tab that carries no badge is still a tab switch, and a candidate left
+  counting down would fire against the wrong tab. Only after the replacement does the guard decide
+  whether a new dwell is worth arming at all: there is nothing to take off a tab with no badge, and a
+  tab cannot be badged while it is the active one, so nothing can appear afterwards to be missed.
+  That keeps the common case — moving around a strip of tabs nobody is waiting on — free of timers.
+  It records the label, and does **not** read "whoever is active" at fire time — a glance that is
+  followed by switching tabs must never clear the tab that was glanced at. It subscribes to nothing:
+  the dwell *produces* a clear and never needs to hear one, because an immediate clear that lands
+  first leaves the pending dwell a harmless no-op that the emit-only-on-change clause absorbs.
 - On expiry it calls `clearUnreadTab` for the recorded label, so a completed dwell takes the same
   emitting path as every other clear and the escalation's cancel is reached through one route. A tab
   that closed, was reordered away, or was already cleared in the meantime clears nothing and emits
@@ -350,9 +356,31 @@ one active tab — and an exported 3-second constant beside it. Its contract:
   `tab` (`src/managers.ts:113`) and `Controller.shutdown` disposes in that order, so nothing else
   moves.
 
+**Every production caller passes a live resolver, and the defaults stay for the tests that do not.**
+`removeTabAt` maps every surviving tab into a fresh object, so an array captured at selection time is
+a detached copy by the time the dwell fires, and a dwell writing to one would leave the real tab
+badged for good while still announcing the clear — which cancels that tab's escalation too. So each
+deferring site takes an optional `resolveTabs` and hands the dwell a closure reading the live field.
+`applyOpenResult` is the sixth such caller and threads one through to its own `repairPaneSelections`
+call. The `resolveTabs ?? (() => tabs)` defaults remain, because `src/tab/dock.test.ts` and
+`src/tab/split-selection.test.ts` call those functions positionally and rely on them; making the
+parameter required would mean rewriting test suites to satisfy a production concern.
+
 **Each site states which kind of clear it is, in a comment and in the spec.** Five visibility sites
 defer, `repairPaneSelections` defers for the active tab and clears immediately for the visible
 split-pane selection, and `selection-operations.clearUnread` clears immediately.
+
+**The open and activation path dwells too, in both strip shapes.** `repairPaneSelections` reaches the
+dwell on the way to repairing panes, and its early return for a strip with no split — every
+unsplit strip, the common case — sits above that call. So the dwell is begun *before* the return, for
+the tab that is active after the selection is resolved. On an unsplit strip there is nothing to swap
+between panes, so that tab is the one the caller passed in and naming it needs none of the pane
+filtering the split branch does, which is what lets one call cover both shapes rather than a second
+one added alongside. Without it, a badged tab reached by `open` would keep its badge for the session
+while the same tab reached by a click lost it after three seconds — and since the badge is what arms
+the escalation, a harness that finished in that state would be badged forever and never announced.
+The split branch keeps its own immediate clear for the other pane's selection, which the unsplit path
+never reaches.
 
 **A `state: dirty` at dwell completion, not at focus.** Each of the five sites still emits its own
 `state: dirty` as it does today, and the completed dwell emits one more, so the client learns the badge
@@ -484,34 +512,46 @@ already the pattern in `src/harness/busy-status.test.ts` and `src/schedule/manag
 
 - `src/tab/dwell.test.ts` (new) — the dwell's own behavior, with the module released in `afterEach`
   so its state does not leak: beginning a dwell clears the badge only after 3 seconds and not before;
-  beginning a second dwell replaces the first and only the second label is ever cleared; a dwell begun
-  on a tab with no badge clears nothing and emits nothing; a tab that closed or was reordered away
-  mid-dwell clears nothing; a dwell still pending when its tab is docked into a sidebar completes and
-  clears, since `applyDock` does not clear on the docking branch and would otherwise leave the badge
-  with nothing to remove it; `dispose()` releases the pending dwell.
+  beginning a second dwell replaces the first and only the second label is ever cleared; **a pending
+  dwell is abandoned when the newly selected tab carries no badge, so a badge never comes off the tab
+  the user just left**; a dwell begun on a tab with no badge clears nothing and emits nothing; a tab
+  that closed or was reordered away mid-dwell clears nothing; a dwell still pending when its tab is
+  docked into a sidebar completes and clears, since `applyDock` does not clear on the docking branch
+  and would otherwise leave the badge with nothing to remove it; the tabs array is resolved when the
+  interval is up rather than when the dwell began; a completed dwell that changes something pushes a
+  state event; `dispose()` releases the pending dwell.
 - `src/tab/transcript/events.test.ts` — the split: the predicate returns false for a docked tab, the
   active tab, and the visible secondary, true otherwise; `markUnreadTab` returns whether it raised
   and sets the flag only when it did; `clearUnreadTab` clears only an existing tab, returns whether
   it changed anything, emits exactly one `unread-cleared` event carrying the label when it did, and
   emits **nothing** when the flag was already false — with a test that pins the reason, namely that a
   spurious emit would cancel a pending escalation.
-- The visibility sites, each keeping a case proving its own site now defers rather than clears:
-  `src/tab/operations.test.ts` (already exercises `setDock` and `closeTabOp`), `src/tab/dock.test.ts`,
-  `src/tab/reorder.test.ts`, `src/tab/split-selection.test.ts`, and `src/tab/cleanup.test.ts`. Put
-  these in `src/tab/dwell.test.ts` rather than in each file's own suite, because they need
-  `vi.useFakeTimers` and none of those suites uses it today — except
-  `src/tab/split-selection.test.ts`'s half, which asserts the split-pane clear is still synchronous
-  and needs no timer at all, so that one stays put.
-- `src/tab/manager.test.ts` — the parts that need no timer: `clearUnread` still clears
-  synchronously, and the new `TabManager.dispose()` releases a pending dwell begun through the
-  manager. Note this suite uses no fake timers today, which is why it is not where the timed
-  assertions go.
+- The visibility sites, each with a case proving its own site defers rather than clears. Three of them
+  need a `TabOperationsPort` and so live in `src/tab/operations.test.ts` beside its `makePort` helper
+  rather than in the suites that hold the pure array computations: `reorderTab` and `reorderTabTo`
+  carry the selected tab to its new index and re-arm its dwell, and `closeTab` dwells the tab it
+  promotes to active — each asserting the badge is still set immediately and gone after the interval,
+  and read back through `port.tabs` because `removeTabAt` maps each survivor into a fresh object.
+  `src/tab/dock.test.ts` covers the other two directly: undocking a badged tab back to the center
+  defers its badge, while docking it into a sidebar leaves the badge in place and arms nothing.
+  `src/tab/split-selection.test.ts` keeps its own case, asserting the split-pane selection's clear is
+  still synchronous and the active half defers.
+- `src/tab/manager.test.ts` — the open and activation path through `TabManager.applyOpenResult`:
+  the selected tab's badge survives the call and comes off after the interval, in both strip shapes.
+  The split case also replaces the manager's tabs with fresh objects the way a close does, so the
+  live array is proven to be what the dwell resolves. And the no-timer parts: `clearUnread` still
+  clears synchronously, and the new `TabManager.dispose()` drops a pending dwell — the release
+  `Controller.shutdown` reaches through `MANAGER_DISPOSE_ORDER`.
 - `src/harness/idle-notification.test.ts` (new) — the escalation's own behavior: a badged tab
   notifies once when the grace period ends; `arm` twice before it ends produces one notification, 30
-  seconds after the second; a badge clear cancels so nothing fires; `cancel(label)` and `closeTab`
-  cancel; a tab gone, docked, active, or the visible split-pane selection when the timer fires
-  notifies not at all; a tab that was never badged is never armed; `dispose()` releases every pending
-  escalation.
+  seconds after the second; a badge clear cancels so nothing fires; **`cancel` fires on the
+  badge-clear signal even when the badge is put back afterwards, so nothing but that subscription can
+  have stopped it**; `cancel(label)` and `closeTab` cancel; a tab gone, docked, active, or the
+  visible split-pane selection when the timer fires notifies not at all; a tab that was never badged
+  is never armed; `dispose()` releases every pending escalation. Neither this file nor
+  `src/harness/busy-status.test.ts` clears the bus in its teardown: `MessageBus.clear` would drop the
+  escalation's module-scope subscription, and the two cases above would then pass through the
+  fire-time backstop instead of the mechanism they name.
 - `src/harness/busy-status.test.ts` — the arm site: the debounced ready commit that badges a hidden
   tab arms one, and the first transient ready capture that only starts the debounce does not; the
   permission-gate stop arms one when `stuck`; nothing arms for a visible tab, for a claude
