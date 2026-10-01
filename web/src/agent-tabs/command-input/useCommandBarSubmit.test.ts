@@ -175,6 +175,43 @@ describe('useCommandBarSubmit', () => {
     expect(runCommand).not.toHaveBeenCalled();
   });
 
+  it('sends "close <name>" naming the last tab through openQuitConfirm, not the server', () => {
+    const openQuitConfirm = vi.fn();
+    const runCommand = vi.fn();
+    const guard = vi.fn(() => false);
+    let submit: ((text: string) => void) | undefined;
+    render(React.createElement(TestComponent, {
+      canSearch: false, lines: [], search: makeSearch(),
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {}, openProfilePicker: () => {},
+      navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
+      tabs: [makeTab()], openQuitConfirm, guardRef: { current: guard }, activeTab: 0, runCommand,
+      onResult: (s) => { submit = s; },
+    }));
+    submit!('close janus');
+    expect(openQuitConfirm).toHaveBeenCalledTimes(1);
+    expect(guard).not.toHaveBeenCalled();
+    expect(runCommand).not.toHaveBeenCalled();
+  });
+
+  it('sends "close <name>" naming another tab through the save guard, then the server', () => {
+    const openQuitConfirm = vi.fn();
+    const runCommand = vi.fn();
+    const guard = vi.fn(() => false);
+    let submit: ((text: string) => void) | undefined;
+    render(React.createElement(TestComponent, {
+      canSearch: false, lines: [], search: makeSearch(),
+      openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {}, openQueue: () => {}, openTaskPicker: () => {}, openProfilePicker: () => {},
+      navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
+      tabs: [makeTab(), makeTab({ label: 'other' })],
+      openQuitConfirm, guardRef: { current: guard }, activeTab: 0, runCommand,
+      onResult: (s) => { submit = s; },
+    }));
+    submit!('close other');
+    expect(openQuitConfirm).not.toHaveBeenCalled();
+    expect(guard).toHaveBeenCalledWith(1);
+    expect(runCommand).toHaveBeenCalledWith('close other');
+  });
+
   it('sends "close" through runCommand when multiple tabs exist', () => {
     const openQuitConfirm = vi.fn();
     const runCommand = vi.fn();

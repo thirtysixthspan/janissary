@@ -3,15 +3,23 @@ import { isCloseCommand, parseClose } from '@shared/commands/parse-close';
 import { matchesLabelOrAlias } from '@shared/tab/name-match';
 import { closeQuitsApp } from '@shared/tab/placement';
 
-// The position of the tab a typed `close` / `exit` would close, read and matched exactly as the
-// server's `close` command does, so the command bar can put the save guard in front of it: the
-// active tab for a bare close, the named tab for `close <name>`. -1 for any other command, a name no
-// tab carries, or a named tab whose close quits the app — that goes to the server unguarded.
-export function typedCloseIndex(text: string, tabs: TabView[], activeTab: number): number {
+// What a typed `close` / `exit` would do, read and matched exactly as the server's `close` command
+// does, so the command bar can put the right dialog in front of it: the save guard for a tab it would
+// close, the quit confirmation for a close that would quit the app. The target is the active tab for
+// a bare close and the named tab for `close <name>` — either spelling quits when its target is the
+// last non-docked tab, and either one is confirmed first.
+export type TypedClose =
+  | { kind: 'close'; index: number }
+  | { kind: 'quit' }
+  | { kind: 'none' };
+
+export function classifyTypedClose(text: string, tabs: TabView[], activeTab: number): TypedClose {
   const trimmed = text.trim();
-  if (!isCloseCommand(trimmed)) return -1;
+  if (!isCloseCommand(trimmed)) return { kind: 'none' };
   const parsed = parseClose(trimmed);
-  if (!('name' in parsed)) return activeTab;
-  const index = tabs.findIndex((tab) => matchesLabelOrAlias(tab, parsed.name));
-  return index !== -1 && closeQuitsApp(tabs, index) ? -1 : index;
+  const index = 'name' in parsed
+    ? tabs.findIndex((tab) => matchesLabelOrAlias(tab, parsed.name))
+    : activeTab;
+  if (index === -1) return { kind: 'none' };
+  return closeQuitsApp(tabs, index) ? { kind: 'quit' } : { kind: 'close', index };
 }

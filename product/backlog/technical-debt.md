@@ -4,17 +4,6 @@
 
 ## development
 
-* Put the quit confirmation in front of a typed `close <name>` that would quit the app, the same as a bare `close` on the last tab, instead of sending it to the server unguarded.
-
-Existing Debt: The command bar re-derives the server's close-and-quit decision to choose which dialog to show, and the two halves of that derivation disagree — the typed-close interception hands back a quitting named close as "not a close", while the quit-confirm branch only recognises the bare `close`/`exit` spelling. Severity: 4/10
-
-Existing Risk: 6/10 - Typing `close <name>` naming the last non-docked tab quits the app immediately with neither the quit confirmation nor the unsaved-changes dialog, contrary to the spec's rule that a typed close on the last tab confirms first, so unsaved editor or plugin work in docked tabs is lost without a prompt.
-
-Proposal Risk: 2/10 - Every typed close that would quit goes through one confirm branch that a test pins; the remaining hazard is that the client still mirrors the server's name-matching rule, so a future change to matching on one side could reopen the gap.
-
-Proposal: In `web/src/agent-tabs/command-input/close-interception.ts`, `typedCloseIndex` returns `-1` for a named close whose target `closeQuitsApp(tabs, index)` (from `@shared/tab/placement`) — its comment says "that goes to the server unguarded". In `web/src/agent-tabs/command-input/useCommandBarSubmit.ts`, the quit-confirm branch fires only for `quit` or a bare `close`/`exit` when `closeQuitsApp(tabs, activeTab)`; the server (`src/commands/close.ts` → `closeTabOp` in `src/tab/close.ts`) then exits directly. Have `close-interception.ts` classify a typed close as closing a tab at an index, quitting the app, or neither (e.g. a `{ kind: 'close'; index } | { kind: 'quit' } | { kind: 'none' }` result), fold the bare-close quit test into that classifier, and have the submit hook route the quit case to `openQuitConfirm` — the hook's own comment says its callback is at its cognitive-complexity limit, so the branching belongs in the pure classifier, not the hook. `web/src/agent-tabs/command-input/close-interception.test.ts` pins the current `-1` for the quitting named close and must move to the new shape; `web/src/agent-tabs/command-input/useCommandBarSubmit.test.ts` covers the bare-close confirm and should gain a case for `close <name>` on the last tab opening the confirm and sending nothing to the server. `product/specs/tabs.md` already says a typed close on the last tab confirms first; make it explicit that the named form does too.
-
-
 * Release a closed conversation tab's ACP session and window state when the tab closes, not only when a reply is still in flight.
 
 Existing Debt: The conversations manager tears down closed tabs through its own `tab:removed` bus subscription rather than the declared per-tab release walk, and that subscription only looks at in-flight replies, so an idle conversation's agent session and its window-size entry outlive the tab. Severity: 5/10
