@@ -7,8 +7,10 @@ import { removeTabAt } from './reorder.js';
 import { isSshTab } from './view-guards.js';
 import { beginDwell } from './dwell.js';
 
-// Resolves TabManager.closeTab: releases the tab's external resources, then either exits the
-// app (closing the last non-docked tab) or removes it from `tabs` and restores focus.
+// Resolves TabManager.closeTab: closing the last non-docked tab exits the app exactly as `quit` does,
+// releasing nothing first — shutdown releases everything, and the tab's saved state is kept for the
+// next `--relaunch`. Any other close releases the tab's external resources, removes it from `tabs`,
+// and restores focus.
 // `applyResult` is called with the new `tabs`/`activeTab` *before* the `state:dirty` emit below —
 // mirroring `reorderTabOp`'s documented invariant — so the resulting broadcast (some listeners
 // read manager state synchronously off that emit) reflects the tab's removal instead of the
@@ -26,13 +28,11 @@ export function closeTabOp(
 ): void {
   const tab = tabs[index];
   if (!tab) return;
-  const nonDockedCount = tabs.filter((t) => !t.dock).length;
-  closeTabResources(tab, managers, openFiles, nonDockedCount);
-  // Closing the last remaining non-docked tab quits the app (same as the `quit` command).
   if (closeQuitsApp(tabs, index)) {
     messageBus.emit('app', { type: 'exit' });
     return;
   }
+  closeTabResources(tab, managers, openFiles);
   const wasActive = index === activeTab;
   discardFocusHistoryLabel(tab.label);
   const nextTabs = removeTabAt(tabs, index);

@@ -4,17 +4,6 @@
 
 ## development
 
-* Make closing the last non-docked tab take the same exit path as `quit`, so it no longer deletes that tab's saved agent state and transcript just before the app exits.
-
-Existing Debt: The close-quits-app decision in the tab-close operation is made after the per-tab release walk instead of before it, so the last-tab close runs the "this tab is gone for good" teardown — forgetting persisted state, deleting agent state, removing the transcript — that the quit path deliberately skips, even though the spec says the two behave exactly alike. Severity: 5/10
-
-Existing Risk: 6/10 - Closing the last tab with the × button, Cmd+W, or a process exit throws away that agent's saved state and transcript, so the next `--relaunch` does not restore it while an identical session ended with `quit` does — silent loss of a session the user expected to come back.
-
-Proposal Risk: 2/10 - The last-tab close and `quit` share one shutdown path, so their persistence behavior cannot drift again; the remaining risk is a resource only the per-tab walk released that shutdown's dispose order does not, which a shutdown test would surface.
-
-Proposal: `closeTabOp` in `src/tab/close.ts` calls `closeTabResources` (in `src/tab/cleanup.ts`) unconditionally and only then checks `closeQuitsApp(tabs, index)` from `src/tab/placement.ts` and emits `app:exit`. `closeTabResources` runs the `MANAGER_TAB_RELEASE` walk and then `managers.tab.forgetPersisted(label)`, `deleteAgentState(label)`, and `TranscriptStore.remove(label)` — its own comment says "Quitting takes a different path and keeps persisting everything still open", and `product/specs/tabs.md` says closing the last non-docked tab "behaves exactly like `quit`". Move the `closeQuitsApp` check ahead of `closeTabResources` so that path keeps the tab's persisted files and exits the way the `quit` command does (find the quit command under `src/commands/` and match how it emits exit). `closeTabResources` also calls `managers.database.closeAll()` for the last-tab case; confirm shutdown's `MANAGER_DISPOSE_ORDER` in `src/managers.ts` already closes database connections on exit, and keep an explicit close on the quitting branch if it does not. Tests: `src/controller.test.ts` ("closes all SQLite connections when the last tab is closed") and `src/tab/placement.test.ts` pin the current exit and `src/tab/cleanup.test.ts` covers the release walk; add a test that closing the last non-docked tab emits `app:exit` without deleting that tab's agent state or transcript, and one that a non-last close still deletes them.
-
-
 * Put the quit confirmation in front of a typed `close <name>` that would quit the app, the same as a bare `close` on the last tab, instead of sending it to the server unguarded.
 
 Existing Debt: The command bar re-derives the server's close-and-quit decision to choose which dialog to show, and the two halves of that derivation disagree — the typed-close interception hands back a quitting named close as "not a close", while the quit-confirm branch only recognises the bare `close`/`exit` spelling. Severity: 4/10

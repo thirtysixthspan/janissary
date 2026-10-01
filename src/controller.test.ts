@@ -234,12 +234,17 @@ describe('Controller', () => {
     }
   });
 
-  it('closes all SQLite connections when the last tab is closed', () => {
+  // Closing the last tab exits the way `quit` does; the shutdown that exit runs closes the connections.
+  it('closes all SQLite connections in the shutdown that closing the last tab requests', () => {
     initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-db2-')));
-    const { c } = makeController();
+    let isExited = false;
+    const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    liveControllers.push(c);
     c.dispatch('db sqlite create lastdb');
     expect(isConnectionOpen('lastdb')).toBe(true);
-    c.dispatch('close'); // last tab → closeAllConnections, then app exit
+    c.dispatch('close');
+    expect(isExited).toBe(true);
+    c.shutdown();
     expect(isConnectionOpen('lastdb')).toBe(false);
   });
 

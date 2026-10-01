@@ -129,9 +129,9 @@ export const MANAGER_DISPOSE_ORDER_IS_COMPLETE: [UnorderedManager] extends [neve
 // release that leaks its per-tab resource — a PTY, an ACP session, a directory watcher, a database
 // handle — on every tab close.
 //
-// `workspace` is released only through the deferred block in the walk, `tab` orchestrates the walk
-// itself, and `database`'s last-tab `closeAll()` is a separate end-of-walk decision — so those
-// concerns are handled outside this list on purpose, even where a `closeTab(label)` also exists.
+// `workspace` is released only through the deferred block in the walk and `tab` orchestrates the walk
+// itself — so those concerns are handled outside this list on purpose. `database` is listed for the
+// tab's own attributions; its global connections close at shutdown, not on any tab close.
 export const MANAGER_TAB_RELEASE = [
   'shell',
   'schedule',

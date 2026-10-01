@@ -35,7 +35,7 @@ describe('closeTabResources', () => {
     const tab = makeTab('main', 'red');
     const managers = makeManagers();
 
-    closeTabResources(tab, managers, new Map(), 2);
+    closeTabResources(tab, managers, new Map());
 
     expect(managers.shell.closeTab).toHaveBeenCalledWith('main');
     expect(managers.acp.closeTab).toHaveBeenCalledWith('main');
@@ -63,7 +63,7 @@ describe('closeTabResources', () => {
       (managers as unknown as Record<string, unknown>)[name] = undefined;
     }
 
-    closeTabResources(tab, managers, new Map(), 2);
+    closeTabResources(tab, managers, new Map());
 
     expect(visited).toEqual([...MANAGER_TAB_RELEASE].filter((name) => name !== 'remote'));
   });
@@ -73,27 +73,27 @@ describe('closeTabResources', () => {
   it('releases the closed tab\'s agent-messaging queue', () => {
     const managers = makeManagers();
 
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map());
 
     expect(managers.communication.closeTab).toHaveBeenCalledWith('main');
   });
 
   it('releases the remote channel only when the closed tab carries the remote payload', () => {
     const managers = makeManagers();
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map());
     expect(managers.remote.closeTab).not.toHaveBeenCalled();
 
     const remote = { ...makeTab('claude', 'red'), remote: { address: 'devbox', host: 'devbox' } };
-    closeTabResources(remote, managers, new Map(), 2);
+    closeTabResources(remote, managers, new Map());
     expect(managers.remote.closeTab).toHaveBeenCalledWith('claude');
   });
 
   it('removes the workspace clone in the background only when the tab has one', async () => {
     const managers = makeManagers();
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map());
 
     const workspaced = { ...makeTab('ws', 'red'), workspaceDir: '/tmp/ws-main' };
-    closeTabResources(workspaced, managers, new Map(), 2);
+    closeTabResources(workspaced, managers, new Map());
     // Deferred off the synchronous close path so the rmSync of the clone can't freeze the UI.
     expect(managers.workspace.release).not.toHaveBeenCalled();
 
@@ -106,7 +106,7 @@ describe('closeTabResources', () => {
     const managers = makeManagers();
     const workspaced = { ...makeTab('ws', 'red'), label: 'ws', workspaceDir: '/tmp/ws-provisioning' };
 
-    closeTabResources(workspaced, managers, new Map(), 2);
+    closeTabResources(workspaced, managers, new Map());
 
     expect(managers.workspace.cancel).toHaveBeenCalledWith('ws');
   });
@@ -123,7 +123,7 @@ describe('closeTabResources', () => {
       remote: { address: 'devbox:/srv/proj', host: 'devbox' },
     };
 
-    closeTabResources(remote, managers, new Map(), 2);
+    closeTabResources(remote, managers, new Map());
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(managers.workspace.release).not.toHaveBeenCalled();
@@ -135,8 +135,8 @@ describe('closeTabResources', () => {
     const remote = { ...makeTab('claude', 'red'), workspaceDir: undefined };
     const local = { ...makeTab('ws', 'red'), workspaceDir: '/tmp/ws-local' };
 
-    closeTabResources(remote, managers, new Map(), 3);
-    closeTabResources(local, managers, new Map(), 3);
+    closeTabResources(remote, managers, new Map());
+    closeTabResources(local, managers, new Map());
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(managers.workspace.release).toHaveBeenCalledTimes(1);
@@ -146,25 +146,24 @@ describe('closeTabResources', () => {
   it('does not cancel anything for a tab with no workspace', () => {
     const managers = makeManagers();
 
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map());
 
     expect(managers.workspace.cancel).not.toHaveBeenCalled();
   });
 
-  it('closes every database connection only when this was the last tab', () => {
+  // SQLite connections are global and close at shutdown; a tab's release only drops its attributions.
+  it('never closes every database connection', () => {
     const managers = makeManagers();
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map());
+    expect(managers.database.closeTab).toHaveBeenCalledWith('main');
     expect(managers.database.closeAll).not.toHaveBeenCalled();
-
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), 1);
-    expect(managers.database.closeAll).toHaveBeenCalledTimes(1);
   });
 
   it('emits a tab:removed transcript event', () => {
     const managers = makeManagers();
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map());
 
     expect(emitSpy).toHaveBeenCalledWith('transcript', { type: 'tab:removed', tabLabel: 'main' });
     emitSpy.mockRestore();
@@ -183,7 +182,7 @@ describe('closeTabResources', () => {
       ['video', '/tmp/clip.mp4'], ['poster', '/tmp/poster.png'], ['keep', '/tmp/keep.txt'],
     ]);
 
-    closeTabResources(tab, managers, openFiles, 2);
+    closeTabResources(tab, managers, openFiles);
 
     expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
   });
@@ -192,7 +191,7 @@ describe('closeTabResources', () => {
     const managers = makeManagers();
     const openFiles = new Map([['keep', '/tmp/keep.png']]);
 
-    closeTabResources(makeTab('main', 'red'), managers, openFiles, 2);
+    closeTabResources(makeTab('main', 'red'), managers, openFiles);
 
     expect(openFiles.has('keep')).toBe(true);
   });
@@ -205,7 +204,7 @@ describe('closeTabResources', () => {
     };
     const openFiles = new Map([['editor', '/tmp/notes.txt'], ['keep', '/tmp/keep.txt']]);
 
-    closeTabResources(tab, managers, openFiles, 2);
+    closeTabResources(tab, managers, openFiles);
 
     expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
   });
@@ -232,7 +231,7 @@ describe('closeTabResources — persisted state', () => {
     expect(existsSync(statePath('main'))).toBe(true);
     expect(existsSync(transcriptPath('main'))).toBe(true);
 
-    closeTabResources(makeTab('main', 'red'), makeManagers(), new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), makeManagers(), new Map());
 
     expect(existsSync(statePath('main'))).toBe(false);
     expect(existsSync(transcriptPath('main'))).toBe(false);
@@ -242,7 +241,7 @@ describe('closeTabResources — persisted state', () => {
     saveAgentState({ name: 'main', dotColor: 'red', active: false });
     saveAgentState({ name: 'other', dotColor: 'blue', active: false });
 
-    closeTabResources(makeTab('main', 'red'), makeManagers(), new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), makeManagers(), new Map());
 
     expect(existsSync(statePath('other'))).toBe(true);
   });
@@ -257,7 +256,7 @@ describe('closeTabResources — persisted state', () => {
       order.push(existsSync(statePath('main')) ? 'file still there' : 'file already gone');
     });
 
-    closeTabResources(makeTab('main', 'red'), managers, new Map(), 2);
+    closeTabResources(makeTab('main', 'red'), managers, new Map());
 
     expect(managers.tab.forgetPersisted).toHaveBeenCalledWith('main');
     expect(order).toEqual(['file still there']);
@@ -268,7 +267,7 @@ describe('closeTabResources — persisted state', () => {
     writeFileSync(path.join(projectDir, '.janissary', 'state', 'keep.json'), '{}');
 
     expect(() => {
-      closeTabResources(makeTab('ghost', 'red'), makeManagers(), new Map(), 2);
+      closeTabResources(makeTab('ghost', 'red'), makeManagers(), new Map());
     }).not.toThrow();
     expect(existsSync(path.join(projectDir, '.janissary', 'state', 'keep.json'))).toBe(true);
 
