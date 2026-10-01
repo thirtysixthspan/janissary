@@ -4,16 +4,6 @@
 
 ## development
 
-* Give `question` a capture hook and share one match-aware command lookup between the command bar and messaged commands, so a messaged `question ask` replies with the human's answer instead of an empty string.
-
-Existing Debt: Messaged commands choose a command's capture hook with a first-by-name lookup that the command bar's dispatcher has already replaced with a match-aware one, and any command without a hook is answered by reading the tab's last log entry the moment `run` returns, which is empty for a command like `question` whose output arrives later. Severity: 5/10
-
-Existing Risk: 5/10 - An agent that messages another tab with `question ask …` gets an empty reply immediately rather than the human's answer, so it proceeds as if the question were answered blank; and where a plugin command shares a built-in's name, the messaged path can pick the wrong entry's capture hook.
-
-Proposal Risk: 2/10 - `question` answers through the same hook mechanism `acp` and `browser` use, and both dispatchers resolve commands one way; the last-entry fallback still serves the remaining synchronous commands, whose output is final when `run` returns.
-
-Proposal: `CaptureManager.runCommand` in `src/capture/manager.ts` uses `commands.find((c) => c.name === name)` to look for a `capture` hook, while `CommandManager.executeCommand` in `src/command/manager.ts` uses `commands.find((entry) => entry.name === name && entry.match(command)) ?? commands.find((entry) => entry.name === name)`, with a comment explaining why first-by-name is wrong (the plugin and built-in `search`). Extract that lookup as `findCommand(name, input)` beside the registry in `src/commands/index.ts` and use it in both managers. Then add a `capture` hook to `src/commands/question.ts` (see the `Command` type in `src/commands/types.ts` and the hooks in `src/commands/acp.ts` and `src/commands/browser.ts`): call `runQuestionCommand` from `src/question-command.ts`, reply at once with a string result, and otherwise keep the transcript behaviour `run` has (`startRunning`, then `finishRunning` with the answer) while also replying with the answer when the promise resolves. Tests: `src/capture/manager.test.ts` covers acp, browser, and sync commands — add a messaged `question ask` that replies only after the question is answered and a plugin/built-in name-clash case for the shared lookup; `src/commands/question.test.ts` and `src/question-command.test.ts` must keep passing. Update the messaging spec under `product/specs/` that describes what a messaged command returns.
-
 ## deferred
 
 * Give every wall-clock wait in the suite a budget that is a stated multiple of the interval it actually polls, instead of leaving nine fixed sleeps and forty-six raised timeouts to absorb a loaded machine. — deferred: complexity 8/10, requires an empirical multi-run flake baseline on an idle machine and then spans the vitest config, about ten test files with forty-nine timeout overrides, and the CI workflow.

@@ -111,6 +111,41 @@ describe('CaptureManager.run', () => {
     expect(managers.browser.runInteractive).toHaveBeenCalledWith('browser https://example.com', 'main', callback);
   });
 
+  // A question's entry is empty while it waits for the human, so reading the last entry back as soon
+  // as `run` returned answered the sender with nothing. Its capture hook answers with the answer.
+  it('answers a messaged question with the human\'s answer, once there is one', async () => {
+    let answer: (text: string) => void = () => {};
+    const managers = makeManagers({
+      // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
+      questions: { register: vi.fn(() => new Promise<string>((resolve) => { answer = resolve; })) },
+    } as unknown as Partial<Managers>);
+    Object.assign(managers.tab, { startRunning: vi.fn(), finishRunning: vi.fn(), append: vi.fn() });
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', 'question ask "Ship it?"', callback);
+    await Promise.resolve();
+    expect(callback).not.toHaveBeenCalled();
+    expect(managers.command.executeCommand).not.toHaveBeenCalled();
+    expect(managers.tab.startRunning).toHaveBeenCalledWith('main', 'question ask "Ship it?"');
+
+    answer('yes');
+    await vi.waitFor(() => { expect(callback).toHaveBeenCalledWith('yes'); });
+    expect(managers.tab.finishRunning).toHaveBeenCalledWith('main', 'yes', { command: 'question ask "Ship it?"' });
+  });
+
+  it('answers a malformed messaged question with its usage at once', () => {
+    const managers = makeManagers({ questions: { register: vi.fn() } } as unknown as Partial<Managers>);
+    Object.assign(managers.tab, { append: vi.fn() });
+    const capture = new CaptureManager(managers);
+    const callback = vi.fn();
+
+    capture.run('main', 'question ask', callback);
+
+    expect(callback).toHaveBeenCalledWith(expect.stringContaining('Usage: question ask'));
+    expect(managers.questions.register).not.toHaveBeenCalled();
+  });
+
   it('executes a matched command and reports its logged output', async () => {
     const tab = makeTab('main', 'red');
     let finish!: () => void;
