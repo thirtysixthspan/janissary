@@ -5,7 +5,7 @@ import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { nextFreeName } from './next-free-name.js';
 import { atomicWriteFile } from '../atomic-write.js';
-import { remoteFileFor } from '../file-navigator/remote/file-cache.js';
+import { isRemoteCacheFile, remoteFileFor } from '../file-navigator/remote/file-cache.js';
 import { notify } from '../notifications/index.js';
 import type { MaybePromise } from '../maybe-promise.js';
 import { errorFirstLine, errorText } from '../error-text.js';
@@ -30,15 +30,29 @@ export function saveFile(managers: Managers, url: string, content: string, expec
   // file that another untitled tab already saved. Only the first save is eligible — `newFile`
   // clears below once the write lands, so later saves on this tab overwrite normally.
   const remote = remoteFileFor(filePath);
+  if (!remote && isRemoteCacheFile(filePath)) refuseOrphanedRemoteSave(managers, tab?.label);
   const isFirstNewFileSave = wasNewFile && existsSync(filePath) && !remote;
   const targetPath = isFirstNewFileSave ? path.join(path.dirname(filePath), nextFreeName(path.dirname(filePath), path.basename(filePath))) : filePath;
 
   if (expectedHash !== undefined && !wasNewFile && !remote) refuseStaleSave(managers, tab?.label, filePath, expectedHash);
+  // A remote file's cached copy is written only once the remote has the content, so a write the
+  // remote refuses — or never answers — leaves the two copies agreeing rather than diverged.
+  if (remote) return saveRemote(managers, remote, content, () => {
+    atomicWriteFile(targetPath, content);
+    finishSave(managers, url, targetPath, filePath, wasNewFile);
+  });
   atomicWriteFile(targetPath, content);
-  if (remote) return saveRemote(managers, remote, content, () => finishSave(
-    managers, url, targetPath, filePath, wasNewFile,
-  ));
   finishSave(managers, url, targetPath, filePath, wasNewFile);
+}
+
+export const ORPHANED_REMOTE_SAVE_REASON =
+  'Could not save remote file: its file navigator is closed. Reopen the file from the remote navigator to save it.';
+
+// A cached copy of a remote file whose navigator has closed has no route back to the remote. Saving
+// it only locally would leave the remote file unchanged while the editor reports it saved.
+function refuseOrphanedRemoteSave(managers: Managers, label: string | undefined): never {
+  if (label) notify(managers, 'file-operation', label, ORPHANED_REMOTE_SAVE_REASON);
+  throw new Error(ORPHANED_REMOTE_SAVE_REASON);
 }
 
 function finishSave(
@@ -85,12 +99,12 @@ async function saveRemote(
   try {
     const result = await remote.filesystem.writeFile(remote.root, remote.relPath, Buffer.from(content));
     if (!result.ok) throw new Error(result.reason);
-    finish();
   } catch (error) {
     const reason = errorText(error);
     notify(managers, 'file-operation', remote.label, `Could not save remote file: ${reason}`);
     throw error;
   }
+  finish();
 }
 
 // The cycle's pull may have rewritten this or any other synced file, so every synced tab is

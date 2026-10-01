@@ -109,8 +109,13 @@ arrive the row shows no detail, rather than whatever the local machine happens t
 relative path, and a detail read that fails is asked for again on the next refresh.
 
 Opening or editing a remote file reads it into the local remote-file cache and then uses the normal
-opener for its type. Saving a cached editor file writes the content back over the channel. A failed
-write is reported in the notifications feed and leaves the editor dirty. `open external` is not
+opener for its type. Saving a cached editor file writes the content back over the channel, and the
+local cached copy is updated only once the remote has accepted it. A failed write is reported in the
+notifications feed, leaves the editor dirty, and leaves the cached copy as it was, so it never holds
+content the remote did not receive. A cached file keeps its route back only while the navigator it
+was opened from stays open on that remote root: once that navigator closes or is re-rooted, saving
+the file is refused with a notification saying so, rather than being saved only locally, and the
+file can be reopened from a remote navigator to save it again. `open external` is not
 allowed for a remote row: choosing it is refused in the notifications feed because an external
 application has no route to save its changes back.
 Plugin-contributed selection actions are likewise not offered for remote rows.
