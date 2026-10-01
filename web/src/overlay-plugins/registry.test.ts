@@ -125,3 +125,71 @@ describe('overlayChordId', () => {
       .toBe('ctrl+v');
   });
 });
+
+// `documentation/developer-documentation/overlay-plugins.md` presents itself as the authoritative
+// description of the contract and names this file as the pin that keeps its worked example honest.
+// Nothing here checks prose — these assertions pin only the blocks a reader would copy into a new
+// plugin, and the member names those blocks have to satisfy, so reformatting the page is not a failure.
+describe('the overlay-plugin developer documentation', () => {
+  // A repository-root-relative path rather than `import.meta.url`: this test runs in the jsdom project,
+  // where `import.meta.url` is not a file URL. It matches how the sibling capture-seam test and the
+  // editor-plugin registry test in this same project read their sources.
+  const documentation = readFileSync('documentation/developer-documentation/overlay-plugins.md', 'utf8');
+  const shipped = overlayPluginDeclarations.find((entry) => entry.id === 'clipboard-history');
+
+  // The declaration block the page shows: the fenced `ts` block opening with that id.
+  function declarationBlock(): string {
+    return /```ts\n(?<block>.\n\s*id: 'clipboard-history',[\s\S]*?)```/u.exec(documentation)?.groups?.block ?? '';
+  }
+
+  // The module block: the fenced `ts` block that names `OverlayPluginModule` and default-exports one.
+  function moduleBlock(): string {
+    return /```ts\n(?<block>import type . OverlayPluginModule[\s\S]*?)```/u.exec(documentation)?.groups?.block ?? '';
+  }
+
+  it('names this file as the pin, which is what makes the rest of this block true', () => {
+    expect(documentation).toContain('`web/src/overlay-plugins/registry.test.ts`');
+  });
+
+  it('shows the declaration the repository actually ships', () => {
+    expect(shipped).toBeDefined();
+    const block = declarationBlock();
+
+    expect(block).toContain(`id: '${shipped?.id}'`);
+    expect(block).toContain(`version: '${shipped?.version}'`);
+    // The constant rather than the literal, so an API bump cannot leave the example behind.
+    expect(block).toContain('apiVersion: OVERLAY_PLUGIN_API_VERSION');
+    expect(block).toContain(`command: '${shipped?.command}'`);
+    expect(block).toContain(`title: '${shipped?.title}'`);
+    expect(block).toContain(`emptyText: '${shipped?.emptyText}'`);
+    // The chord as the declaration writes it, so a retune shows up here.
+    const chord = shipped?.chord;
+    expect(block).toContain(`key: '${chord?.key}'`);
+    expect(block).toContain(`ctrl: ${chord?.ctrl === true}`);
+    expect(block).toContain(`shift: ${chord?.shift === true}`);
+  });
+
+  it('documents every capability the contract hands a plugin', () => {
+    // Each member of `OverlayPluginCapabilities` appears as a row in the page's capability table, so a
+    // member added to `api.ts` cannot ship undocumented.
+    for (const member of ['paste', 'maxEntries', 'close']) {
+      expect(documentation).toContain(`\`${member}`);
+    }
+  });
+
+  it('returns every member the overlay contract requires', () => {
+    const block = moduleBlock();
+
+    expect(block).toBeTruthy();
+    for (const member of ['start', 'dispose']) {
+      expect(block).toContain(member);
+    }
+    for (const member of ['name', 'claimsCommandBar', 'render', 'onKey', 'onOpen']) {
+      expect(block).toContain(member);
+    }
+  });
+
+  it('states the ordering a plugin inherits, which is the rule it cannot override', () => {
+    expect(documentation).toContain('below all nine built-in overlays');
+  });
+});
