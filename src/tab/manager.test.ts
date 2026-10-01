@@ -409,6 +409,33 @@ describe('TabManager markUnread', () => {
   });
 });
 
+describe('TabManager open and activation', () => {
+  // The unread dwell resolves the tabs array when its interval is up, because a close maps every
+  // surviving tab into a fresh object. This path replaces the array too, so a dwell begun here that
+  // captured it would clear a detached copy and leave the live tab badged for good. The pair is split
+  // across panes because `repairPaneSelections` only reaches the dwell once there is a split to
+  // repair.
+  it('clears the live tab\'s badge after a close replaces the array mid-dwell', () => {
+    vi.useFakeTimers();
+    try {
+      const tm = makeTabManager();
+      tm.tabs.push({ ...tm.cur(), label: 'second', number: 2, pane: 'right' });
+      tm.tabs[1].hasUnread = true;
+
+      tm.applyOpenResult({ tabs: [...tm.tabs], activeTab: 1 });
+      expect(tm.tabs[tm.activeTab].label).toBe('second');
+
+      // What `removeTabAt` does on a close: every surviving tab becomes a new object.
+      tm.tabs = tm.tabs.map((t) => ({ ...t }));
+
+      vi.advanceTimersByTime(UNREAD_DWELL_MS);
+      expect(tm.tabs[1].hasUnread).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('TabManager split panes', () => {
   it('creates a split, swaps focused selections across panes, and clears unread', () => {
     vi.useFakeTimers();

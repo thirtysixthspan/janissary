@@ -50,7 +50,11 @@ export function mostRecentFileNavigatorLabel(port: TabSelectionPort): string | u
 export function applyOpenResult(
   port: TabSelectionPort, result: { tabs: Tab[]; activeTab: number },
 ): void {
-  const next = applyOpenResultOp(port.tabs, port.activeTab, port.secondaryTabLabel, port.focusHistory, result);
+  // `() => port.tabs` rather than `port.tabs`, so the unread dwell `applyOpenResultOp` may begin
+  // resolves the array the port holds when its interval is up. It also resolves immediately, for the
+  // guard that decides whether to arm at all, and that is right here: a tab being opened is not in
+  // `port.tabs` yet and so arms nothing, while a pre-existing badged tab being activated already is.
+  const next = applyOpenResultOp(port.tabs, port.activeTab, port.secondaryTabLabel, port.focusHistory, result, () => port.tabs);
   port.tabs = next.tabs;
   port.activeTab = next.activeTab;
   port.secondaryTabLabel = next.secondaryTabLabel;
