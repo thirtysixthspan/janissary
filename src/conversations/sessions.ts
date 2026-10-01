@@ -15,6 +15,10 @@ export class ConversationSessions {
     return this.sessions.has(id);
   }
 
+  ids(): IterableIterator<string> {
+    return this.sessions.keys();
+  }
+
   session(
     id: string,
     pair: ConversationModelPair,

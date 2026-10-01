@@ -4,17 +4,6 @@
 
 ## development
 
-* Release a closed conversation tab's ACP session and window state when the tab closes, not only when a reply is still in flight.
-
-Existing Debt: The conversations manager tears down closed tabs through its own `tab:removed` bus subscription rather than the declared per-tab release walk, and that subscription only looks at in-flight replies, so an idle conversation's agent session and its window-size entry outlive the tab. Severity: 5/10
-
-Existing Risk: 5/10 - Each conversation tab closed after its reply finished leaves a live ACP agent subprocess running until the server exits, and its window keeps being sent in every conversations view broadcast, so a long session accumulates idle agent processes and payload for tabs that no longer exist.
-
-Proposal Risk: 2/10 - Closing the tab releases the session and window whether or not a reply is running; the remaining risk is closing a conversation still open in another tab, which the existing open-tab check guards and a test should pin.
-
-Proposal: In `src/conversations/manager.ts`, the constructor subscribes to `transcript`/`tab:removed` and calls `cancelClosedConversations`, which walks only `this.responder.ids()` — the `inFlight` map in `src/conversations/responder.ts` — and calls `cancel`. `ConversationResponder.complete` deliberately keeps the `ConversationSessions` entry (`src/conversations/sessions.ts`) alive for the next turn, and only `cancel`, `fail`, `close`, and `dispose` call `sessions.close(id)`; `windowSizes` is cleared only by `delete`. Change `cancelClosedConversations` to walk every conversation id with a window entry or a live session (add an `ids()` to `ConversationSessions` if needed), and for each id with no open conversations plugin tab (the existing `tab.plugin?.id === 'conversations' && tab.plugin.instanceKey === id` test) call `cancel(id)` and `responder.close(id)`, drop its `windowSizes` entry, and emit `changed()` once if anything was dropped. `src/conversations/manager.test.ts` has a "when a conversation tab closes" block covering the in-flight case; add cases that an idle conversation's session is closed (the injectable `sessions` option lets the test observe it), that its window leaves `view().windows`, and that a conversation still open in another tab is left alone.
-
-
 * Give every outstanding remote file-navigator request an end — a deadline, and failure when the channel drops into reconnecting — so a lost reply cannot leave the navigator waiting forever.
 
 Existing Debt: The remote filesystem port's request table settles a pending request only on a reply or on a fail-all that runs only on dispose or a final channel close, and the remote channel entering its reconnecting state notifies no navigator listener, so a request written into a transport that then dies, or whose reply the detached peer's bounded replay buffer evicted, is never settled. Severity: 6/10

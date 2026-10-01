@@ -27,19 +27,20 @@ export class ConversationsManager {
   private readonly store: ConversationStore;
   private readonly now: () => number;
   private readonly responder: ConversationResponder;
+  private readonly sessions: ConversationSessions;
   private readonly conversations = new Map<string, Conversation>();
   private readonly windowSizes = new Map<string, number>();
   private readonly tabRemoved: Subscription;
 
   constructor(private managers: Managers, options: ManagerOptions = {}) {
     this.store = options.store ?? new ConversationStore();
-    const sessions = options.sessions ?? new ConversationSessions();
+    this.sessions = options.sessions ?? new ConversationSessions();
     this.now = options.now ?? Date.now;
     this.responder = new ConversationResponder(
-      this.store, sessions, this.now, () => { this.changed(); },
+      this.store, this.sessions, this.now, () => { this.changed(); },
     );
     this.tabRemoved = messageBus.on('transcript', 'tab:removed', () => {
-      queueMicrotask(() => { this.cancelClosedConversations(); });
+      queueMicrotask(() => { this.releaseClosedConversations(); });
     });
   }
 
@@ -187,12 +188,20 @@ export class ConversationsManager {
     return { label: tab.label, workspace };
   }
 
-  private cancelClosedConversations(): void {
-    for (const id of this.responder.ids()) {
+  // A conversation no open tab shows lets go of everything it held for that tab: a reply still
+  // streaming is cancelled, the ACP session kept alive between turns is ended, and its window stops
+  // being sent. Reopening the conversation loads it again, and its next query starts a new session.
+  private releaseClosedConversations(): void {
+    const held = new Set([...this.windowSizes.keys(), ...this.responder.ids(), ...this.sessions.ids()]);
+    let released = false;
+    for (const id of held) {
       const open = this.managers.tab.tabs.some((tab) =>
         tab.plugin?.id === 'conversations' && tab.plugin.instanceKey === id);
-      if (!open) this.cancel(id);
+      if (open) continue;
+      this.cancel(id);
+      if (this.windowSizes.delete(id)) released = true;
     }
+    if (released) this.changed();
   }
 
   private changed(): void {
