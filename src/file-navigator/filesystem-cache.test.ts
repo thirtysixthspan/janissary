@@ -261,6 +261,27 @@ describe('buildCachedRows reading in flight', () => {
     statReads[0].resolve({ 'a.txt': { size: 1, modified: 2, mode: 33_188 } });
     await settle();
   });
+
+  // The row waits for the port: nothing local fills the gap, so a remote row is never described by
+  // the local disk, and a batch that fails leaves it uncached for the next rebuild to ask again.
+  it('shows no detail and caches nothing for a row while its stat is in flight, and asks again after a failure', async () => {
+    const { state, listingReads, statReads } = makeAsyncState([], 'size');
+    const onReady = vi.fn();
+    buildCachedRows(state, onReady);
+    listingReads[0].resolve([{ name: 'a.txt', dir: false }]);
+    await settle();
+
+    state.filesystem.statRows = () => Promise.reject(new Error('connection lost'));
+    const rows = buildCachedRows(state, onReady);
+    expect(rows.find((row) => row.path === 'a.txt')?.size).toBeUndefined();
+    expect(state.stats.has('a.txt')).toBe(false);
+    await settle();
+
+    const retried = vi.fn(() => new Promise<Record<string, RowStat | null>>((resolve) => { statReads.push({ resolve }); }));
+    state.filesystem.statRows = retried;
+    buildCachedRows(state, onReady);
+    expect(retried).toHaveBeenCalledWith('/remote/ws', ['a.txt']);
+  });
 });
 
 describe('buildCachedRows settling an asynchronous stat batch', () => {
