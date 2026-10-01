@@ -1,7 +1,7 @@
 import type { RouteChoice } from '../recognizers/types.js';
 import { resolveCommand, type Resolution } from '../resolve.js';
 import { isInteractive } from '../interactive/index.js';
-import { commands } from '../commands/index.js';
+import { findCommand } from '../commands/index.js';
 import { toPrefixedCommand } from '../recognizers/route-choices.js';
 import { messageBus } from '../bus.js';
 import { resolveUnknownCommand } from './router.js';
@@ -118,13 +118,7 @@ export class CommandManager {
   }
 
   async executeCommand(name: string, command: string, label: string, index: number): Promise<void> {
-    // `resolveCommand` picked this command by walking `match` in order, so the entry to run is the
-    // one that matches the input — not merely the first with this name. A plugin command and a
-    // built-in can share a name when the built-in answers only to a longer form of it, as the
-    // transcript search and the search tab both answer to `search`: a bare `search` must reach the
-    // plugin, and only a match-based lookup can tell the two apart.
-    const cmd = commands.find((entry) => entry.name === name && entry.match(command))
-      ?? commands.find((entry) => entry.name === name);
+    const cmd = findCommand(name, command);
     if (!cmd) return;
     try {
       await cmd.run(command, { label, index }, this.managers);

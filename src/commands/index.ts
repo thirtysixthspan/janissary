@@ -87,3 +87,14 @@ export const commands: Command[] = [
   ...coreCommands,
   ...createPluginCommands(tabPluginCatalog, coreCommands),
 ];
+
+// The entry to run for a command `resolveCommand` named. It picked the name by walking `match` in
+// order, so the entry is the one that matches the input — not merely the first with this name. A
+// plugin command and a built-in can share a name when the built-in answers only to a longer form of
+// it, as the transcript search and the search tab both answer to `search`: a bare `search` must reach
+// the plugin, and only a match-based lookup can tell the two apart. Every dispatcher — the command
+// bar and a messaged command alike — looks commands up here, so the two can never pick differently.
+export function findCommand(name: string, input: string): Command | undefined {
+  return commands.find((entry) => entry.name === name && entry.match(input))
+    ?? commands.find((entry) => entry.name === name);
+}

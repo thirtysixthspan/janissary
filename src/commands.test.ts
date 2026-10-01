@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { availableCommands, getOutput } from './commands.js';
-import { commands } from './commands/index.js';
+import { commands, findCommand } from './commands/index.js';
 import { findPriorityConflicts } from './commands/priority.js';
 
 function helpText(): string {
@@ -38,6 +38,17 @@ describe('command registry priority', () => {
 
   it('has every registered command declare at least one sample', () => {
     expect(commands.filter((command) => command.samples.length === 0).map((c) => c.name)).toEqual([]);
+  });
+
+  // Every dispatcher looks a resolved name up through `findCommand`, so two entries sharing a name —
+  // a built-in answering a longer form of a plugin command's word — each still get their own inputs,
+  // whether the command was typed or arrived in a message.
+  it('finds, for each declared sample, the entry that declares it rather than the first of its name', () => {
+    const misses = commands.flatMap((command) => command.samples
+      .filter((sample) => findCommand(command.name, sample) !== command)
+      .map((sample) => `${command.name}: ${sample}`));
+    expect(misses).toEqual([]);
+    expect(new Set(commands.map((command) => command.name)).size).toBeLessThan(commands.length);
   });
 });
 

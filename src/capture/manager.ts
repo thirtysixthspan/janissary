@@ -1,5 +1,5 @@
 import { isInteractive } from '../interactive/index.js';
-import { commands } from '../commands/index.js';
+import { findCommand } from '../commands/index.js';
 import { resolveCommand, type Resolution } from '../resolve.js';
 import { routeUnknownCommand } from './router.js';
 import { messageBus } from '../bus.js';
@@ -43,7 +43,7 @@ export class CaptureManager {
   }
 
   private async runCommand(name: string, cmd: string, label: string, index: number, callback: Reply): Promise<void> {
-    const command = commands.find((c) => c.name === name);
+    const command = findCommand(name, cmd);
     if (command?.capture) { command.capture(cmd, label, this.managers, callback); return; }
     // Counted from the append events rather than the log's length: a tab at its transcript cap
     // drops its oldest entry on every append, so its length stops growing.
