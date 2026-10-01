@@ -814,8 +814,10 @@ html, body, #root {
 
 /* File navigator tab: metadata header (image-tab classes) above a scrollable, keyboard-navigable tree. */
 .files-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; outline: none; position: relative; }
+/* The header wraps so that, when the buttons do not fit beside the root path's minimum share of the
+   line (see .files-meta), they drop below the path rather than squeezing it to nothing. */
 .files-header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; row-gap: 4px;
   padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
 }
 /* Docked into a sidebar the header has no width for a root path and seven icon buttons on one line,
@@ -823,13 +825,20 @@ html, body, #root {
    second, still pushed to the trailing edge by the action group's own automatic margin. */
 .files-header--docked { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 4px; }
 .files-header--docked .files-meta { flex: none; }
+/* The 16ch basis is the room the root path claims beside the buttons in the centre strip: with less
+   than that left over, the wrapping header moves the buttons below the path instead. */
 .files-meta {
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px;
-  flex: 1; min-width: 0;
+  flex: 1 1 16ch; min-width: 0;
 }
 .files-loc { font-size: 12px; word-break: break-all; color: var(--muted); }
 .files-branch { font-size: 12px; color: var(--muted); }
-.files-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+/* Too narrow for every button on one line, the buttons wrap onto further rows, capped at the
+   header's width and still gathered at the trailing edge. */
+.files-actions {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 2px;
+  flex-shrink: 0; max-width: 100%;
+}
 .files-collapse-all, .files-commit, .files-detail-cycle, .files-dock-cycle, .files-github, .files-new-directory, .files-new-file, .files-pull, .files-search {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1;
