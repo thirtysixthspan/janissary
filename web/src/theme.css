@@ -512,7 +512,7 @@ html, body, #root {
   padding: 3px 10px; color: var(--muted); cursor: default;
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;
 }
-.picker-row { display: flex; align-items: center; padding: 3px 10px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.picker-row { display: flex; align-items: center; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
 .picker-row.picker-empty { color: var(--muted); cursor: default; }
 .picker-row.selected { background: var(--accent); color: var(--bg); }
 .picker-row:hover { background: var(--border); }
@@ -559,6 +559,13 @@ html, body, #root {
 .editor-find-row mark { background: var(--accent); color: var(--bg); border-radius: 2px; }
 .editor-find-row.selected mark { background: var(--bg); color: var(--accent); }
 .editor-find-row.selected .editor-find-line { color: var(--bg); }
+
+/* Clipboard history overlay (Ctrl+Shift+V / clip) */
+.clipboard-history-row { overflow: hidden; }
+/* One line per entry, clipped at the overlay's width. The truncation lives on the label rather than on
+   the row because a row is a flex container and `text-overflow` does not reach the anonymous flex item
+   a bare text child becomes — which is the same reason `.editor-find-text` carries it. */
+.clipboard-history-label { overflow: hidden; text-overflow: ellipsis; }
 
 /* Quit confirmation dialog (modal: backdrop blocks all input outside the dialog) */
 .modal-backdrop {

@@ -30,6 +30,19 @@ describe('the clipboard-history popup', () => {
     expect(screen.getByText('the first line…')).toBeTruthy();
   });
 
+  // Truncation lives on the label rather than on `.picker-row`, because a row is a flex container and
+  // `text-overflow` does not reach the anonymous flex item a bare text child becomes. A shared rule on
+  // the row would also change how the other thirteen overlays render long labels.
+  it('puts a long line in a label that truncates, rather than on the shared row', () => {
+    record('a line far longer than any picker is wide, and then some more after it');
+    render(<ClipboardHistoryPopup choose={vi.fn()} />);
+
+    const label = screen.getByText(/far longer than any picker/).closest('span');
+    expect(label?.className).toContain('clipboard-history-label');
+    expect(screen.getByText(/far longer than any picker/).closest('.picker-row')?.className)
+      .toContain('clipboard-history-row');
+  });
+
   it('pastes the full text of a clicked row, not the line it displays', () => {
     record('  the first line\nand the second');
     const choose = vi.fn();
@@ -45,12 +58,12 @@ describe('the clipboard-history popup', () => {
     record('second');
     selectNewest();
     render(<ClipboardHistoryPopup choose={vi.fn()} />);
-    expect(screen.getByText('second').className).toContain('selected');
-    expect(screen.getByText('first').className).not.toContain('selected');
+    expect(screen.getByText('second').closest('.picker-row')?.className).toContain('selected');
+    expect(screen.getByText('first').closest('.picker-row')?.className).not.toContain('selected');
 
     // The store is the selection's only home, so the popup re-renders as it moves.
     act(() => setSelection(0));
-    expect(screen.getByText('first').className).toContain('selected');
+    expect(screen.getByText('first').closest('.picker-row')?.className).toContain('selected');
   });
 
   it('adds a copy made while it is open', () => {
@@ -89,7 +102,7 @@ describe('the clipboard-history module', () => {
 
     act(() => overlay.onOpen());
     render(overlay.render(null));
-    expect(screen.getByText('second').className).toContain('selected');
+    expect(screen.getByText('second').closest('.picker-row')?.className).toContain('selected');
   });
 
   it('moves the selection with the arrows, clamped at both ends', () => {
@@ -100,12 +113,12 @@ describe('the clipboard-history module', () => {
     render(overlay.render(null));
 
     act(() => overlay.onKey(new KeyboardEvent('keydown', { key: 'ArrowUp' })));
-    expect(screen.getByText('first').className).toContain('selected');
+    expect(screen.getByText('first').closest('.picker-row')?.className).toContain('selected');
     act(() => overlay.onKey(new KeyboardEvent('keydown', { key: 'ArrowUp' })));
-    expect(screen.getByText('first').className).toContain('selected');
+    expect(screen.getByText('first').closest('.picker-row')?.className).toContain('selected');
 
     act(() => overlay.onKey(new KeyboardEvent('keydown', { key: 'ArrowDown' })));
-    expect(screen.getByText('second').className).toContain('selected');
+    expect(screen.getByText('second').closest('.picker-row')?.className).toContain('selected');
   });
 
   // Return and Escape both close, so the shared handler does the closing and `paste` does not — a
