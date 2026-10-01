@@ -23,6 +23,12 @@ import { createPasteCapability } from './paste-into-surface';
 // state snapshot — after mount — and activation happens even later, on the first keypress. Reading
 // it at activation is therefore both correct and enough: the config file itself is read once at
 // startup, so the number cannot change under a live session anyway.
+//
+// `currentTab` is behind a ref for the same reason and one more: the host is session-scoped, so every
+// value the memo below depends on has to be stable, and a caller's `() => currentTab` is a fresh
+// identity on every render even though what it reads has not changed. Depend on it and the host is
+// rebuilt — and the effect that disposes it runs — on ordinary shell re-renders, which is enough to
+// throw away a plugin's history and drop its subscriptions.
 
 export type UseOverlayPluginsOptions = {
   client: JanusClient;
@@ -36,6 +42,8 @@ export function useOverlayPlugins(options: UseOverlayPluginsOptions): OverlayPlu
 
   const maxEntriesRef = useRef(maxEntries);
   maxEntriesRef.current = maxEntries;
+  const currentTabRef = useRef(currentTab);
+  currentTabRef.current = currentTab;
 
   const onDisabled = useMemo(
     () => (plugin: string, reason: string) => {
@@ -52,10 +60,10 @@ export function useOverlayPlugins(options: UseOverlayPluginsOptions): OverlayPlu
 
   const host = useMemo(
     () => createOverlayPluginHost(onDisabled, {
-      paste: createPasteCapability({ client, dropRef, currentTab }),
+      paste: createPasteCapability({ client, dropRef, currentTab: () => currentTabRef.current() }),
       get maxEntries() { return maxEntriesRef.current; },
     }),
-    [client, dropRef, currentTab, onDisabled],
+    [client, dropRef, onDisabled],
   );
 
   // A contributed overlay opening or closing changes nothing in React state, so this is what puts it

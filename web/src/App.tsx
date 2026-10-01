@@ -72,9 +72,12 @@ export function App({ client }: { client: JanusClient }) {
   // the context menu — goes through one place. It is built here because the app shell is the only
   // place free to import the command bar, the editor's drop registry, and the tab view at once, and
   // those are what the one capability a plugin gets is assembled from.
+  // `currentTab` is a callback because the host is built once and needs the tab at the moment a paste
+  // happens; it is wrapped so the hook's memo does not see a new function on every render.
+  const currentTabForOverlay = useCallback(() => currentRef.current, []);
   useOverlayPlugins({
     client, dropRef: dropReference, maxEntries: clipboardHistoryMaxEntries,
-    currentTab: () => currentRef.current,
+    currentTab: currentTabForOverlay,
   });
 
   const { canSearch, search, highlight } = useViewSearchState(current, lines);
