@@ -152,6 +152,14 @@ const CODEX_GATE = [
   ' Press Enter to confirm · Esc to cancel',
 ].join('\n');
 
+// An opencode permission prompt: a bordered panel with a horizontal option row, no numbered list.
+const OPENCODE_GATE = [
+  '  ┃  △ Permission required',
+  '  ┃    ← Access external directory /tmp/outside',
+  '  ┃',
+  '  ┃   Allow once   Allow always   Reject                              ⇆ select  enter confirm',
+].join('\n');
+
 function capture(text: string): ScreenCapture {
   return { text, capturedAt: Date.now() };
 }
@@ -212,13 +220,25 @@ describe('detectPermissionGate — codex', () => {
   });
 });
 
-describe('detectPermissionGate — unarmed harnesses', () => {
-  it('returns false for opencode even on a claude-shaped gate', () => {
-    expect(detectPermissionGate(BASH_IN_PROJECT, 'opencode')).toBe(false);
+describe('detectPermissionGate — opencode', () => {
+  it('matches an opencode permission prompt routed to the opencode matcher', () => {
+    expect(detectPermissionGate(OPENCODE_GATE, 'opencode')).toBe(true);
   });
 
-  it('returns false for opencode even on a codex-shaped gate', () => {
+  it('does not match claude- or codex-shaped gates against opencode', () => {
+    expect(detectPermissionGate(BASH_IN_PROJECT, 'opencode')).toBe(false);
     expect(detectPermissionGate(CODEX_GATE, 'opencode')).toBe(false);
+  });
+
+  it('does not match an opencode prompt against claude or codex', () => {
+    expect(detectPermissionGate(OPENCODE_GATE, 'claude')).toBe(false);
+    expect(detectPermissionGate(OPENCODE_GATE, 'codex')).toBe(false);
+  });
+});
+
+describe('detectPermissionGate — harnesses without a detector', () => {
+  it('returns false for an unknown harness even on a recognized gate', () => {
+    expect(detectPermissionGate(BASH_IN_PROJECT, 'gemini')).toBe(false);
   });
 });
 
@@ -245,6 +265,16 @@ describe('HarnessAutoApprover', () => {
     const notify = vi.fn();
     const approver = new HarnessAutoApprover({ harnessName: 'codex', approve, notify });
     approver.onCapture(capture(CODEX_GATE));
+    expect(approve).toHaveBeenCalledTimes(1);
+    expect(approve).toHaveBeenCalledWith('\r');
+    expect(notify).toHaveBeenCalledWith('Auto-approved a permission prompt', expect.anything());
+  });
+
+  it('injects the opencode table keystroke on an opencode permission prompt', () => {
+    const approve = vi.fn();
+    const notify = vi.fn();
+    const approver = new HarnessAutoApprover({ harnessName: 'opencode', approve, notify });
+    approver.onCapture(capture(OPENCODE_GATE));
     expect(approve).toHaveBeenCalledTimes(1);
     expect(approve).toHaveBeenCalledWith('\r');
     expect(notify).toHaveBeenCalledWith('Auto-approved a permission prompt', expect.anything());
@@ -295,23 +325,23 @@ describe('HarnessAutoApprover', () => {
 });
 
 describe('supportsHarnessAutoApprove', () => {
-  it('accepts claude and codex, rejects opencode and unknown harnesses', () => {
+  it('accepts claude, codex, and opencode, rejects unknown harnesses', () => {
     expect(supportsHarnessAutoApprove('claude')).toBe(true);
     expect(supportsHarnessAutoApprove('codex')).toBe(true);
-    expect(supportsHarnessAutoApprove('opencode')).toBe(false);
+    expect(supportsHarnessAutoApprove('opencode')).toBe(true);
     expect(supportsHarnessAutoApprove('gemini')).toBe(false);
   });
 });
 
 describe('autoApproveHarnessNames', () => {
   it('lists the harnesses with a gate detector, in catalog order', () => {
-    expect(autoApproveHarnessNames()).toEqual(['claude', 'codex']);
+    expect(autoApproveHarnessNames()).toEqual(['claude', 'opencode', 'codex']);
   });
 });
 
 describe('describeAutoApproveHarnesses', () => {
   it('names the auto-approve harnesses as prose', () => {
-    expect(describeAutoApproveHarnesses()).toBe('claude and codex');
+    expect(describeAutoApproveHarnesses()).toBe('claude, opencode, and codex');
   });
 });
 

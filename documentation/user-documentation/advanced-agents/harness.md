@@ -97,11 +97,11 @@ A default label walks past everything in use to the next free `-2`, `-3`, and so
 
 ## New harness dialog
 
-Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for claude and codex and disabled for opencode. **E2E browser** starts unchecked and stays available for every harness.
+Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for every harness. **E2E browser** starts unchecked and stays available for every harness.
 
 ![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
 
-**Auto-approve** stays disabled unless you've picked claude or codex — the dialog only ever builds a command that's actually valid. Switching between claude and codex keeps your Auto-approve choice; switching to opencode clears and disables it. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
+Claude, opencode, and codex all accept auto-approval, so switching harnesses keeps your **Auto-approve** choice. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
 
 ## Choosing a model and effort level
 
@@ -136,16 +136,13 @@ A codex tab always runs its session in its own process rather than handing it to
 
 ## Auto-approving permission prompts
 
-Claude and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly confirms the default; `--no-auto-approve` opts out. When active, the app answers a harness permission prompt automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved.
+Claude, opencode, and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly confirms the default; `--no-auto-approve` opts out. When active, the app answers a harness permission prompt automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved.
 
-Both permission menus are numbered lists rather than yes/no questions, so the app sends `Enter` to take whatever option is highlighted. That is always the one-time answer, never a choice that widens the permission for later:
+All three permission menus are selection menus rather than yes/no questions, so the app sends `Enter` to take whatever option is highlighted. That is always the one-time answer, never a choice that widens the permission for later:
 
 - **claude** — the highlighted `❯ 1. Yes`, whatever else the gate offers. Its later "Yes, and don't ask again" and "Yes, and switch to auto mode" options are never the one taken.
 - **codex** — the app recognizes the approval overlay and confirms its highlighted one-time approval choice, never a persistent allowlist option.
-
-Opencode remains unsupported:
-
-- `harness opencode -y` (or any harness without a recognized permission prompt): `-y/--yes is only supported for the claude and codex harnesses.`
+- **opencode** — the app recognizes the `△ Permission required` panel and confirms `Allow once`, the option it starts on. `Allow always` is never the one taken.
 
 Auto-approval doesn't require a workspace. Launching with `--no-workspace` still works, but unless you also pass `--no-auto-approve`, the new tab's terminal shows a security warning that prompts will be approved unattended against your real files.
 
@@ -203,7 +200,7 @@ A new harness tab starts busy until the app has had a look at it. Going idle tak
 
 When a harness that isn't on screen finishes and goes idle, its tab picks up the unread flag — that's what tells you to come back. A tab you're already looking at doesn't get flagged, since you can see it. One exception: for claude, a turn that ends with nothing but a `recap:` summary line is left unflagged. The dot still settles; a recap on its own isn't news.
 
-A permission prompt is treated as idle, because the harness is waiting on you rather than working. If nothing is going to answer it — you launched without `-y`, or [auto-approval](#auto-approving-permission-prompts) hit a prompt it couldn't clear — the tab is flagged straight away instead of waiting out the usual two readings. Opencode is the exception again: its prompts aren't recognized as prompts, so a stuck opencode tab is still flagged, just on the ordinary timing.
+A permission prompt is treated as idle, because the harness is waiting on you rather than working. If nothing is going to answer it — you launched with `--no-auto-approve`, or [auto-approval](#auto-approving-permission-prompts) hit a prompt it couldn't clear — the tab is flagged straight away instead of waiting out the usual two readings.
 
 The flag means the harness is waiting, so it goes away on its own once the harness starts working again. Say auto-approval stood down on a prompt and the tab got flagged, and then the harness carried on anyway. The flag clears as the dot starts blinking, and you won't come back to a flag on a tab that's busy. If the harness stops again, it gets flagged again.
 
