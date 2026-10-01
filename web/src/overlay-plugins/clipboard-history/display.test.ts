@@ -6,36 +6,40 @@ import { displayLine } from './display';
 // block or from output that opens with blank lines actually looks like.
 
 describe('displayLine', () => {
-  it('reads a single line of text as itself', () => {
-    expect(displayLine('hello')).toEqual({ label: 'hello', truncated: false });
+  it('reads a single line of text as itself, with no postfix', () => {
+    expect(displayLine('hello')).toEqual({ label: 'hello', postfix: '' });
   });
 
   it('strips leading whitespace across newlines before taking the first line', () => {
     expect(displayLine('\n\n    indented first line').label).toBe('indented first line');
   });
 
-  it('marks an ellipsis when the copy had more than one line', () => {
-    expect(displayLine('first\nsecond\nthird')).toEqual({ label: 'first…', truncated: true });
+  it('postfixes the line count when the copy had more than one line, rather than an ellipsis', () => {
+    expect(displayLine('first\nsecond\nthird')).toEqual({ label: 'first', postfix: '(3 lines)' });
   });
 
-  it('marks an ellipsis when the rest of the copy is only trailing whitespace on later lines', () => {
-    // The stored text is the thing that matters, not its appearance: a copy of one line that happens
-    // to end in a newline is still more than the one line shown.
-    expect(displayLine('only line\n')).toEqual({ label: 'only line…', truncated: true });
+  it('does not count a trailing newline as another line', () => {
+    // A copy of one line that happens to end in a newline reads as that one line. Calling it two lines
+    // would describe text the user cannot see in it.
+    expect(displayLine('only line\n')).toEqual({ label: 'only line', postfix: '' });
+  });
+
+  it('does not count the blank lines a copy opens with', () => {
+    expect(displayLine('\n\n  first\nsecond')).toEqual({ label: 'first', postfix: '(2 lines)' });
   });
 
   it('leaves the full text alone, so what is pasted is never the display line', () => {
     const text = '   keep\tthis\nexactly';
-    expect(displayLine(text).label).toBe('keep\tthis…');
+    expect(displayLine(text)).toEqual({ label: 'keep\tthis', postfix: '(2 lines)' });
   });
 
   it('reads an empty copy as an empty line with nothing more', () => {
-    expect(displayLine('')).toEqual({ label: '', truncated: false });
+    expect(displayLine('')).toEqual({ label: '', postfix: '' });
   });
 
   it('reads a whitespace-only copy as an empty line too, since nothing precedes the first line', () => {
     // Every character here is leading whitespace, so there is no first line to read and nothing to
-    // mark as missing. Such a copy is never recorded anyway.
-    expect(displayLine('  \n \n')).toEqual({ label: '', truncated: false });
+    // count. Such a copy is never recorded anyway.
+    expect(displayLine('  \n \n')).toEqual({ label: '', postfix: '' });
   });
 });

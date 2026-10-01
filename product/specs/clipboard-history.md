@@ -18,7 +18,7 @@ The list keeps the last 15 entries by default, dropping the oldest. `clipboardHi
 
 ### How an entry reads
 
-Each entry shows one line: the first line of non-space text, which is not always the copy's first line — a copy taken from the middle of an indented block, or from output that opens with blank lines, has recognizable text on some line rather than the first. An entry whose copy had more text after that line carries an ellipsis. A line too long for the popup is cut off with an ellipsis too. The stored text is never shortened: choosing an entry pastes all of it.
+Each entry shows one line: the first line of non-space text, which is not always the copy's first line — a copy taken from the middle of an indented block, or from output that opens with blank lines, has recognizable text on some line rather than the first. An entry whose copy had more than one line carries a `(N lines)` postfix after that line, counting the copy's lines without the blank ones it opens or ends with, so a copy that only ends in a newline has no postfix. An ellipsis marks only a line too long for the popup: it is cut off before the postfix, which stays visible. The postfix is never pasted. The stored text is never shortened: choosing an entry pastes all of it.
 
 ### Opening the popup
 

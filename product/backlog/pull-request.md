@@ -2,8 +2,6 @@
 
 # pull-request
 
-* when a clipboard entry has multiple lines, rather than an ellipsis, postfix the entry with `(# lines)`. The ellipsis should only be used when the text is so long that it would extend past the length of the line (also considering the postfix. The postfix should not be pasted into e target.
-
 * when a tab change happens, the popup should close.
 
 * keyboard focus should switch to the popup when it is openned so that up and down arrows can be used to navigate the menu. when the popup is focused escape and tab should then close the popup, while enter should cause the item to be pasted. After these the focus should return to the visible tab.  

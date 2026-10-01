@@ -24,10 +24,17 @@ describe('the clipboard-history popup', () => {
     expect(screen.getAllByText(/first|second/).map((node) => node.textContent)).toEqual(['first', 'second']);
   });
 
-  it('shows the display line, with the ellipsis the derivation adds', () => {
+  it('shows the display line, with the line count beside it in its own element', () => {
     record('  the first line\nand the second');
     render(<ClipboardHistoryPopup choose={vi.fn()} />);
-    expect(screen.getByText('the first line…')).toBeTruthy();
+    expect(screen.getByText('the first line').className).toContain('clipboard-history-label');
+    expect(screen.getByText('(2 lines)').className).toContain('clipboard-history-lines');
+  });
+
+  it('shows no line count for a single-line entry', () => {
+    record('just one line');
+    const { container } = render(<ClipboardHistoryPopup choose={vi.fn()} />);
+    expect(container.querySelector('.clipboard-history-lines')).toBeNull();
   });
 
   // Truncation lives on the label rather than on `.picker-row`, because a row is a flex container and
@@ -43,12 +50,12 @@ describe('the clipboard-history popup', () => {
       .toContain('clipboard-history-row');
   });
 
-  it('pastes the full text of a clicked row, not the line it displays', () => {
+  it('pastes the full text of a clicked row, not the line it displays or its line count', () => {
     record('  the first line\nand the second');
     const choose = vi.fn();
     render(<ClipboardHistoryPopup choose={choose} />);
 
-    fireEvent.click(screen.getByText('the first line…'));
+    fireEvent.click(screen.getByText('(2 lines)'));
 
     expect(choose).toHaveBeenCalledWith('  the first line\nand the second');
   });

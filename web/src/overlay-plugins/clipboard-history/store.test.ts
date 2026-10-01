@@ -92,7 +92,8 @@ describe('the clipboard history', () => {
   it('reads the full text at a row, which is not the label', () => {
     record('  spaced\nsecond line');
     expect(textAt(0)).toBe('  spaced\nsecond line');
-    expect(rows()[0]?.label).toBe('spaced…');
+    expect(rows()[0]?.label).toBe('spaced');
+    expect(rows()[0]?.postfix).toBe('(2 lines)');
   });
 
   it('records what the application copies while started, and stops when disposed', () => {

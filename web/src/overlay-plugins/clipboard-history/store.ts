@@ -17,6 +17,10 @@ import { displayLine } from './display';
 
 export const FALLBACK_MAX_ENTRIES = 15;
 
+// A row as the popup draws it: the contract's item, plus the `(N lines)` postfix shown beside the label
+// and never pasted.
+export type ClipboardHistoryRow = OverlayPluginItem & { postfix: string };
+
 const PLUGIN_ID = 'clipboard-history';
 
 const entries: { id: string; text: string }[] = [];
@@ -29,7 +33,7 @@ let revision = 0;
 
 // Rebuilt only when something changes: `useSyncExternalStore` compares its snapshot by identity, so a
 // fresh array on every call would put the popup in an endless render loop.
-let snapshot: readonly OverlayPluginItem[] = [];
+let snapshot: readonly ClipboardHistoryRow[] = [];
 let snapshotRevision = -1;
 
 function notify(): void {
@@ -42,11 +46,9 @@ export function subscribeToHistory(listener: () => void): () => void {
   return () => { listeners.delete(listener); };
 }
 
-export function rows(): readonly OverlayPluginItem[] {
+export function rows(): readonly ClipboardHistoryRow[] {
   if (snapshotRevision !== revision) {
-    snapshot = entries.map((entry) => ({
-      id: entry.id, text: entry.text, label: displayLine(entry.text).label,
-    }));
+    snapshot = entries.map((entry) => ({ id: entry.id, text: entry.text, ...displayLine(entry.text) }));
     snapshotRevision = revision;
   }
   return snapshot;

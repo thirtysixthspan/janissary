@@ -30,7 +30,7 @@ If you opened it from the right-click menu, it pastes into whatever you right-cl
 
 ## What an entry looks like
 
-One line per entry: the first line of text that isn't whitespace, which is not always the copy's first line — a copy taken from the middle of an indented block, or of output that starts with blank lines, has the text you recognize on some line rather than the first. `…` marks that more of the copy followed, and a line too long for the window is cut off the same way. The stored text is never shortened, so what lands is all of it.
+One line per entry: the first line of text that isn't whitespace, which is not always the copy's first line — a copy taken from the middle of an indented block, or of output that starts with blank lines, has the text you recognize on some line rather than the first. A copy of more than one line shows how many after it, like `(3 lines)`. A line too long for the window is cut off with `…` before that count, so the count stays visible. The count is only shown, never pasted, and the stored text is never shortened, so what lands is all of it.
 
 ## What's kept
 
