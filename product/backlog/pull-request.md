@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the harness escalation's badge-clear subscription survive a message bus reset and be released by its dispose, as the plan's contract states.
-
-Existing Issue: `src/harness/idle-notification.ts` subscribes to `tabs: unread-cleared` once at module import and never again, `disposeHarnessIdleEscalations` does not unsubscribe as the plan's contract says it does, and `ControllerCore.shutdown` calls `messageBus.clear()`, so after any clear the subscription is gone for the life of the process and both new test files have to carry comments forbidding `messageBus.clear()` in their teardown. Severity: 4/10
-
-Existing Risk: 3/10 - Any process or test that clears the bus and then arms an escalation silently loses cancel-on-clear, so a harness the user dwelt on or that went back to work can still be announced, with only the fire-time `hasUnread` backstop standing between that and a wrong notification.
-
-Proposal Risk: 1/10 - A lazily attached subscription tracked beside the pending map ties the listener's lifetime to the module's own arm and dispose, and the residual risk is a forgotten re-subscribe, which the existing cancel-on-signal test would catch.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1500: attach the idle escalation's badge-clear subscription on arm and release it on dispose". In `src/harness/idle-notification.ts`, replace the bare module-scope `messageBus.on('tabs', 'unread-cleared', …)` with a module-level `subscription` variable holding the `Subscription` that `messageBus.on` returns (see `src/bus.ts`), attached inside `armHarnessIdleEscalation` when it is undefined, and have `disposeHarnessIdleEscalations` call `subscription.unsubscribe()` and reset it to undefined after clearing the pending timers. `HarnessManager.dispose` in `src/harness/manager.ts` already runs before `messageBus.clear()` in `ControllerCore.shutdown` (`src/controller.ts`, via `MANAGER_DISPOSE_ORDER` in `src/managers.ts`), so a subsequent arm in the same process re-subscribes cleanly. Then call `disposeHarnessIdleEscalations()` in the `afterEach` of `src/harness/idle-notification.test.ts` and the escalation block of `src/harness/busy-status.test.ts`, remove the comments there that forbid `messageBus.clear()`, and add a case to `src/harness/idle-notification.test.ts` that disposes, clears the bus, arms again, clears the badge through `clearUnreadTab` in `src/tab/transcript/events.ts`, and asserts nothing is notified at thirty seconds. The existing "cancels on the badge-clear signal even when the badge comes back" case must keep failing if the subscription is removed.
-
-
 * Move the harness escalation's per-tab pending timer off a new label-keyed map and onto the harness tab's own per-tab owner, as the architecture principles require of new per-agent state.
 
 Existing Issue: The escalation keeps its per-tab state in a new module-level `Map<string, NodeJS.Timeout>` keyed by tab label, which is the shape `ai/guidelines/architecture-principles.md` § 2 rules out for new per-agent state and its "How to use these" checklist names explicitly, and it needs a hand-added `cancelHarnessIdleEscalation` in `HarnessManager.closeTab` to be released. Severity: 3/10

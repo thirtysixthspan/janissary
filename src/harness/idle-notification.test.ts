@@ -44,11 +44,11 @@ function setup(harnessLabel = 'build') {
   return { append, dispose, harness, janus, managers, messages, tabs, toasts };
 }
 
-// No `messageBus.clear()` here: this file imports a module whose `tabs: unread-cleared` subscription
-// is registered at module scope, and clearing the bus would drop it from the second case onward —
-// leaving the cancel path below unexercised while still passing, through the fire-time backstop.
+// Dispose before clearing the bus, the order `Controller.shutdown` uses: the escalation releases its
+// own badge-clear subscription, and the next case's first arm attaches a fresh one.
 afterEach(() => {
   disposeHarnessIdleEscalations();
+  messageBus.clear();
   vi.useRealTimers();
 });
 
@@ -126,6 +126,24 @@ describe('harness idle escalation', () => {
       vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
       expect(fixture.messages()).toEqual([]);
       expect(fixture.toasts).toEqual([]);
+    } finally { fixture.dispose(); }
+  });
+
+  // A shutdown disposes and then clears the bus. An arm after that — the next controller in the same
+  // process — must still be cancelled by a badge clear, so the subscription has to come back with it.
+  it('cancels on the badge-clear signal after a dispose and a bus clear', () => {
+    vi.useFakeTimers();
+    disposeHarnessIdleEscalations();
+    messageBus.clear();
+    const fixture = setup();
+    try {
+      fixture.managers.tab.markUnread('build');
+      armHarnessIdleEscalation(fixture.managers, 'build');
+      clearUnreadTab(fixture.tabs, 'build');
+      fixture.harness.hasUnread = true;
+
+      vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+      expect(fixture.messages()).toEqual([]);
     } finally { fixture.dispose(); }
   });
 

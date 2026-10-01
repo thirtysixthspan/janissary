@@ -471,12 +471,11 @@ describe('busyStatusHandler idle escalation', () => {
     return { handler, harness, janus, managers, messages, tabs, makeActive: (i: number) => { activeIndex = i; } };
   }
 
-  // No `messageBus.clear()` here: this file imports `idle-notification.js`, whose
-  // `tabs: unread-cleared` subscription is registered at module scope, and clearing the bus would
-  // drop it from the second case onward — leaving the cancel cases below unexercised while still
-  // passing, through the fire-time backstop.
+  // Dispose before clearing the bus, the order `Controller.shutdown` uses: the escalation releases its
+  // own badge-clear subscription, and the next case's first arm attaches a fresh one.
   afterEach(() => {
     disposeHarnessIdleEscalations();
+    messageBus.clear();
     vi.useRealTimers();
   });
 
