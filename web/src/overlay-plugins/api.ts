@@ -82,6 +82,11 @@ export type OverlayPluginGrants = Omit<OverlayPluginCapabilities, 'close'>;
 export type OverlayPluginModule = {
   // Called once, before anything can open the overlay, and returns what the host registers. Anything
   // the plugin acquired — a subscription above all — is released by `dispose`.
+  //
+  // Once per activation, and a plugin does not have to guard against a second call: when two openers ask
+  // for a plugin whose chunk is still loading, the host has the second join the first attempt rather than
+  // begin its own, so `start` cannot run twice for one activation. A later activation after a `dispose`
+  // calls it again, which is what makes `dispose` releasing what `start` acquired meaningful.
   start: (capabilities: OverlayPluginCapabilities) => ContributedOverlay;
   dispose: () => void;
 };

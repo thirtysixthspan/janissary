@@ -2,26 +2,6 @@
 
 # pull-request
 
-* Guard activation against a second concurrent request, since nothing stops the host from calling a plugin's `start` twice.
-
-Existing Issue: `activate` in `web/src/overlay-plugins/host.ts` checks `unregisters.has(plugin)` to avoid registering twice, but that check runs before the first `await` and the registration happens after it, so two openers firing before the chunk resolves both pass the check, both await the same memoized load, and both call `loaded.start(...)` and `registerContributedOverlay(...)`; the second return value overwrites the first in the `unregisters` map, leaving the first unregistration function unreferenced, and `web/src/overlay-plugins/api.ts` documents nothing that forbids a plugin's `start` from running twice. Severity: 5/10
-
-Existing Risk: 5/10 - A user mashing the chord or pressing it again during the load budget runs the plugin's lifecycle hook twice, and any plugin that subscribes in `start` without its own guard leaks the first subscription for the life of the session, which is invisible because the plugin's own idempotence hides it for the one plugin that ships today and is not a property the API asks for.
-
-Proposal Risk: 3/10 - The guard is a promise cache keyed by plugin name, so it introduces one more piece of state to keep consistent with `disable` and `dispose`, and the lost-unregistration symptom stays silent unless the single-start guarantee is asserted.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1499: guarantee an overlay plugin's start runs once per activation". Add an in-flight promise keyed by plugin name in `web/src/overlay-plugins/host.ts` so a second `activate` for a plugin already loading awaits the first attempt instead of starting a fresh one, and clear it in `disable` and `dispose` alongside `loading` so a plugin disabled mid-load is not resurrected by an in-flight promise. Make the guarantee explicit in the `start` contract documented in `web/src/overlay-plugins/api.ts` so plugin authors can rely on it rather than defensively re-guarding. Cover it in `web/src/overlay-plugins/host.test.ts` by calling `activate` twice without awaiting the first, then asserting `start` was called once and one registration is on the seam, which the current single-activation tests cannot detect. That file's existing disable-on-throw and budget-overrun cases must keep passing unchanged.
-
-
-* Test-pin the overlay-plugin documentation example the way the editor-plugin family pins its own page, since the plan required it and the page now claims it exists.
-
-Existing Issue: The plan states in its design decisions that the developer documentation's example is "test-pinned the way `web/src/editor/plugins/registry.test.ts` pins its own page, so the example cannot drift from the shipped declaration", and the section 8 requirement is repeated in its out-of-scope notes, and `documentation/developer-documentation/overlay-plugins.md` states that `web/src/overlay-plugins/registry.test.ts` "pins the declaration table and the documented example below to the real files", but that test only reads `web/src/overlay-plugins/registry.ts` and never opens the Markdown page, so the claim is false and the plan item was not delivered. Two tests in the repository already perform exactly this check for the other two plugin families: `web/src/editor/plugins/registry.test.ts` reads its own page and `src/plugins/documentation.test.ts` reads the tab-plugin page. Severity: 5/10
-
-Existing Risk: 4/10 - The example is the first thing a plugin author copies, and the two families beside it are held to a check this one opts out of, so an edit to the declaration shape can leave the page teaching an API that no longer exists, with the page asserting a guarantee it never had.
-
-Proposal Risk: 2/10 - A test that compares the page against the shipped declaration is sensitive to how the example is formatted, so ordinary rewording of the prose can fail it and its assertions have to stay narrow enough to pin the API rather than the wording.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1499: pin the overlay-plugin documentation example to the shipped declaration". Follow the pattern in `web/src/editor/plugins/registry.test.ts`: in `web/src/overlay-plugins/registry.test.ts`, read `documentation/developer-documentation/overlay-plugins.md` and assert that the declaration the page shows matches `overlayPluginDeclarations` in `web/src/overlay-plugins/registry.ts`, and that every capability it lists in the reference section appears in `OverlayPluginCapabilities` in `web/src/overlay-plugins/api.ts`, so the page cannot teach a shape the code has dropped. Resolve the path the way `src/plugins/documentation.test.ts` does, from `import.meta.url`, so the test does not depend on the working directory the way a relative path would. Keep the existing declaration-table, refusal, and literal-dynamic-import cases in that file passing untouched, and narrow the new assertions to identifiers so reformatting the page's prose does not fail them. Once it exists, the sentence in the page asserting the pin is true; if the example is deliberately left unpinned, correct that sentence and remove the requirement from the plan instead.
 
 * Correct the files-changed list's reference to a shared context-menu module, which does not exist, and drop the chord entry it lists twice.
 

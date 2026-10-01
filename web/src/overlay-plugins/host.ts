@@ -46,6 +46,7 @@ export function createOverlayPluginHost(
   const loading = new Map<string, Promise<OverlayPluginModule>>();
   const unregisters = new Map<string, () => void>();
   const claimWithdrawals = new Map<string, () => void>();
+  const activating = new Map<string, Promise<boolean>>();
 
   // Each plugin's own close, bound to its name. Handed to the plugin as a capability so choosing an
   // entry and pressing Escape both put the overlay away without the plugin importing the seam.
@@ -86,7 +87,10 @@ export function createOverlayPluginHost(
     // breath, so nothing routes to a plugin that can no longer be opened.
     withdrawClaims(plugin);
     disposePlugin(plugin);
+    // Both caches are dropped, not just the load: a plugin disabled while its chunk was still in flight
+    // must not be resurrected by an attempt that is already running, and must not keep one queued.
     loading.delete(plugin);
+    activating.delete(plugin);
     onDisabled(plugin, reason);
   };
 
@@ -122,28 +126,41 @@ export function createOverlayPluginHost(
   };
 
   return {
-    activate: async (plugin) => {
-      if (disabledPlugins.has(plugin)) return false;
-      if (unregisters.has(plugin)) return true;
-      try {
-        const loaded = await load(plugin);
-        if (!byId.get(plugin)) throw new Error('has no declaration');
-        // The plugin hands back what it wants published; the host stores the unsubscription so a
-        // disable or a dispose takes the overlay off the seam before anything can open it again. The
-        // claims are not passed here: they were published from the declaration at construction, which is
-        // what let the chord that got us here find this plugin before it was loaded.
-        unregisters.set(plugin, registerContributedOverlay(loaded.start({ ...capabilities, close: closeFor(plugin) })));
-        return true;
-      } catch (error) {
-        disable(plugin, errorFirstLine(error));
-        return false;
-      }
+    activate: (plugin) => {
+      if (disabledPlugins.has(plugin)) return Promise.resolve(false);
+      if (unregisters.has(plugin)) return Promise.resolve(true);
+      // The whole attempt, not just the load, is what a second caller has to wait for. `unregisters` is
+      // written after the `await` below, so two openers arriving before the chunk resolves would both miss
+      // it and both call `start` — running a plugin's lifecycle hook twice and overwriting the first
+      // unregistration in the map, which is how a subscription made in `start` leaks.
+      const inFlight = activating.get(plugin);
+      if (inFlight) return inFlight;
+      const attempt = (async () => {
+        try {
+          const loaded = await load(plugin);
+          if (!byId.get(plugin)) throw new Error('has no declaration');
+          // The plugin hands back what it wants published; the host stores the unsubscription so a
+          // disable or a dispose takes the overlay off the seam before anything can open it again. The
+          // claims are not passed here: they were published from the declaration at construction, which is
+          // what let the chord that got us here find this plugin before it was loaded.
+          unregisters.set(plugin, registerContributedOverlay(loaded.start({ ...capabilities, close: closeFor(plugin) })));
+          return true;
+        } catch (error) {
+          disable(plugin, errorFirstLine(error));
+          return false;
+        }
+      })();
+      activating.set(plugin, attempt);
+      return attempt;
     },
     dispose: () => {
       for (const plugin of modules.keys()) disposePlugin(plugin);
       // Each withdrawal deletes itself from the map, so the map is emptied rather than iterated.
       for (const withdraw of claimWithdrawals.values()) withdraw();
       claimWithdrawals.clear();
+      // A settled attempt is not a pending one, so this only drops references; `disable` is what clears
+      // the map entry that could otherwise let a plugin be re-activated after the host gave up on it.
+      activating.clear();
       disabledPlugins.clear();
     },
   };

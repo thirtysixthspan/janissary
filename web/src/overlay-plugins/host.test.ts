@@ -97,6 +97,53 @@ describe('the overlay-plugin host', () => {
     expect(load).toHaveBeenCalledTimes(1);
   });
 
+  // Two openers arriving before the chunk resolves — a user mashing the chord, or a chord and the
+  // context menu in the same moment — used to both miss the `unregisters` guard, because it is written
+  // after the load's `await`. Both then ran `start`, and the second registration overwrote the first
+  // unregistration in the map, leaving nothing able to take the first one away.
+  it('runs start once when two activations arrive before the chunk resolves', async () => {
+    const start = vi.fn(() => ({
+      name: 'fixture', claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {},
+    }));
+    const load = vi.fn(async () => ({ default: overlayModule({ start }) }));
+    const host = hostWith(noopReporter(), {
+      declarations: [declaration()] as never,
+      // A tick before the chunk arrives, so the plugin is genuinely still loading when the second
+      // activation lands — which is the whole condition under test, and the one a chord fetch creates.
+      loaders: { fixture: async () => { await new Promise((resolve) => { setTimeout(resolve, 0); }); return load(); } },
+    });
+
+    const first = host.activate('fixture');
+    const second = host.activate('fixture');
+    const [firstResult, secondResult] = await Promise.all([first, second]);
+
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(load).toHaveBeenCalledTimes(1);
+    // A join reports the first attempt's outcome rather than a second, possibly different, one.
+    expect(firstResult).toBe(true);
+    expect(secondResult).toBe(true);
+    // And the overlay is registered once, so exactly one open closes it.
+    expect(contributedOverlayOnScreen()).toBeUndefined();
+    openContributedOverlay('fixture', null);
+    expect(contributedOverlayOnScreen()?.name).toBe('fixture');
+    closeContributedOverlay('fixture');
+    expect(contributedOverlayOnScreen()).toBeUndefined();
+  });
+
+  it('reports one attempt to both callers when the chunk fails', async () => {
+    const onDisabled = noopReporter();
+    const host = hostWith(onDisabled, {
+      declarations: [declaration()] as never,
+      loaders: { fixture: async () => { throw new Error('chunk is gone'); } },
+    });
+
+    const [first, second] = await Promise.all([host.activate('fixture'), host.activate('fixture')]);
+
+    expect([first, second]).toEqual([false, false]);
+    // One disable, one report: the join must not re-report the same failure.
+    expect(onDisabled).toHaveBeenCalledTimes(1);
+  });
+
   it('publishes the overlay a plugin returns, and opens it on request', async () => {
     const host = hostWith(noopReporter(), {
       declarations: [declaration()] as never,
