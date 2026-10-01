@@ -4,17 +4,6 @@
 
 ## development
 
-* Give every outstanding remote file-navigator request an end — a deadline, and failure when the channel drops into reconnecting — so a lost reply cannot leave the navigator waiting forever.
-
-Existing Debt: The remote filesystem port's request table settles a pending request only on a reply or on a fail-all that runs only on dispose or a final channel close, and the remote channel entering its reconnecting state notifies no navigator listener, so a request written into a transport that then dies, or whose reply the detached peer's bounded replay buffer evicted, is never settled. Severity: 6/10
-
-Existing Risk: 6/10 - A pull whose reply is lost leaves the navigator's pull state at pulling, which blocks every further pull and commit on that navigator until the tab is closed, and a lost listing leaves that directory permanently unloaded — a stuck remote file navigator with no error shown.
-
-Proposal Risk: 3/10 - Every request ends in a reply, a refusal value, or a rejection within a known time; the remaining risk is a deadline shorter than a legitimately slow operation such as a large pull, which would show a spurious failure rather than a hang, so the deadline must be generous or per-operation.
-
-Proposal: `src/file-navigator/remote/port-requests.ts` keeps `pending` keyed by request id and settles entries only in `answer` or `failAll`; `failAll` is called from `RemoteFileSystemPort.dispose()` (`CLOSED_REASON`) and `onClose()` (`ENDED_REASON`) in `src/file-navigator/remote/port.ts`. In `src/remote/channel/index.ts`, losing the transport with a live session id sets the state to `'reconnecting'` and calls `handlers.onClose()` without calling each `navigators` listener's `onClose`, so requests already sent stay pending across the reconnect; on the far side `src/remote/serve-detach.ts` evicts the oldest queued frames past its pending-buffer budget, which can include a `filesystem-reply`. Do two things: (1) in `RemotePortRequests.add`, start a timer per request that calls the existing `settle(pending, reason)` with a timeout reason after a deadline, cleared in `answer` and `failAll` — a generous default, longer for pull/commit if those are distinct operations in `src/remote/filesystem/operations.ts`, with the deadline injectable so tests use fake timers; (2) add a navigator-listener hook (e.g. `onReconnecting`) that `RemoteChannel` calls on entering `'reconnecting'`, and have `RemoteFileSystemPort` fail its outstanding requests with `ENDED_REASON` there while staying usable for new requests after reattach. `refusalValueFor` in `src/remote/filesystem/refusal.ts` already shapes the failure for result-returning operations; confirm the pull and listing callers in `src/file-navigator/` clear their in-progress state on such a result. Tests: `src/file-navigator/remote/port.test.ts` and `src/remote/channel/index.test.ts` — add a request-times-out case, a request-in-flight-across-reconnect case, and a reply-after-timeout-is-ignored case.
-
-
 * Route the file navigator's row-stat fallback and saved-view restore through the tab's filesystem port, so a remote navigator never mixes in stats or directory checks read from the local disk.
 
 Existing Debt: The file navigator abstracts local and remote trees behind its filesystem port, but two modules still read the local disk directly by joining the tab's root onto a local path — the row-stat marker for any row not yet in the stat cache, and the saved-view restore for its directory checks — which is correct only for a local tab. Severity: 5/10
