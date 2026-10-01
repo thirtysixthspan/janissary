@@ -88,8 +88,11 @@ describe('claimedByCore', () => {
     ['Cmd+P', { key: 'p', meta: true }],
     ['Cmd+F', { key: 'f', meta: true }],
     ['Cmd+Shift+F', { key: 'f', meta: true, shift: true }],
+    // Cmd+T opens a new agent tab. The list this replaced did not carry it, so a plugin could declare it,
+    // be accepted, and then be shadowed by the window handler — the one failure the refusal exists for.
+    ['Cmd+T', { key: 't', meta: true }],
     ['Shift+Tab', { key: 'Tab', shift: true }],
-  ])('refuses %s, which the window handler owns', (_name, chord) => {
+  ])('refuses %s, which the application owns', (_name, chord) => {
     expect(claimedByCore(chord)).toBe(true);
   });
 

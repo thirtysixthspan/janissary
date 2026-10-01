@@ -6,6 +6,7 @@
 // shared helper because a tab plugin's chord and an editor plugin's chord have nothing else in
 // common, and the overlay family must not be able to reach into the editor's.
 
+import { appChordAction } from '../shared/app-chords';
 import type { OverlayChord } from './api';
 
 // A chord's canonical identity, used both to detect two plugins claiming the same chord and to match
@@ -43,24 +44,13 @@ export function eventChordId(event: ChordEvent): string {
   });
 }
 
-// Whether the window key handler already claims this chord and never yields it. An overlay plugin
-// whose chord the core owns could never open, so the host reports it once rather than leaving it
-// silently dead — the same rule the editor host applies to a binding the editor table claims.
+// Whether the application already claims this chord and never yields it. An overlay plugin whose chord
+// the core owns could never open, so the host reports it once rather than leaving it silently dead —
+// the same rule the editor host applies to a binding the editor table claims.
+//
+// The answer comes from the one table of owned chords rather than from a second listing of the key
+// handler's bindings, which is what drifted before: it omitted Cmd+T, which the handler does dispatch,
+// and treated Shift+Tab as a global chord when only a section dialog claims it.
 export function claimedByCore(chord: OverlayChord): boolean {
-  const key = chord.key.toLowerCase();
-  if (chord.ctrl === true && !chord.shift && !chord.alt && !chord.meta) {
-    return ['r', 'g', 'e', 'a'].includes(key);
-  }
-  if (chord.meta === true && !chord.shift && !chord.alt && !chord.ctrl) {
-    // Cmd+P is Quick Open and Cmd+F is the transcript search; both are claimed outright, and Cmd+F
-    // matches on the key alone so Cmd+Shift+F is claimed by the same branch.
-    return ['p', 'f'].includes(key);
-  }
-  if (chord.meta === true && chord.shift && !chord.alt && !chord.ctrl) {
-    return ['f'].includes(key);
-  }
-  if (chord.shift === true && !chord.ctrl && !chord.alt && !chord.meta) {
-    return ['tab'].includes(key);
-  }
-  return false;
+  return appChordAction(overlayChordId(chord)) !== undefined;
 }

@@ -230,6 +230,19 @@ describe('useWindowKeys', () => {
     expect(openQuickOpen).toHaveBeenCalled();
   });
 
+  // Cmd+T is a table entry now. It was dispatched by a trailing branch in `handleChordKeys` while the
+  // overlay-plugin host's hand-written reserved list forgot it, so a plugin could declare it and be
+  // shadowed — this pins the handler side of the chord the reserved list now carries.
+  it('Cmd+T opens a new agent tab and calls preventDefault', () => {
+    const runCommand = vi.fn();
+    render(React.createElement(TestComponent, { callbacks: { runCommand } }));
+    const event = new KeyboardEvent('keydown', { key: 't', metaKey: true, bubbles: true, cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    globalThis.dispatchEvent(event);
+    expect(runCommand).toHaveBeenCalledWith('agent');
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
   it('Ctrl+P does not open quick open', () => {
     const openQuickOpen = vi.fn();
     render(React.createElement(TestComponent, { callbacks: { openQuickOpen } }));
