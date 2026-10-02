@@ -51,6 +51,7 @@ export function buildTabView(
   const workspacePrefix = tab.workspaceDir ?? (tab.remote ? workspaceOf?.(tab.label) : undefined);
   const remoteProvisioning = workspaceOf !== undefined && tab.remote !== undefined
     && workspaceOf(tab.label) === undefined;
+  const provisioning = provisioningFlag(tab, remoteProvisioning, workspaceProvisioning);
   return {
     label: tab.label,
     number: tab.number,
@@ -62,11 +63,12 @@ export function buildTabView(
     cwd: shorten(cwd),
     cwdDisplay: workspaceCwdDisplay(cwd, workspacePrefix),
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
-    // derived from either field rather than from `workspaceDir` alone.
+    // derived from either field rather than from `workspaceDir` alone. The provisioning spinner
+    // stands in for it until the workspace lands.
     flags: [
-      ...provisioningFlag(tab, remoteProvisioning, workspaceProvisioning),
-      ...(tab.workspaceDir || tab.remote ? ['workspaced'] : []),
-      ...(tab.autoApprove ? ['autoApprove'] : []),
+      ...provisioning,
+      ...(provisioning.length === 0 && (tab.workspaceDir || tab.remote) ? ['workspaced'] : []),
+      ...autoApproveFlag(tab),
       ...browserFlag(tab),
     ],
     // Present only when true, so a healthy tab's target is exactly what it was before the flag.
@@ -112,8 +114,8 @@ export function buildTabView(
   };
 }
 
-// The metadata row's animated provisioning flag, first in the row so it sits beside the working
-// directory. Lit while the tab's workspace is still being provisioned — a harness placeholder with no
+// The metadata row's animated provisioning flag, in the workspace flag's place so the box replaces it
+// once provisioning ends. Lit while the tab's workspace is still being provisioned — a harness placeholder with no
 // PTY yet, a remote channel with no workspace yet, or a local clone still in flight — and dropped once
 // it lands or a harness records why it never will. Derived at view time, so it stops on the same
 // broadcast that ends provisioning. See the Metadata row in `product/specs/tabs.md`.
@@ -124,6 +126,13 @@ function provisioningFlag(
   const provisioning = tab.harness?.status === 'provisioning' || remoteProvisioning
     || (tab.workspaceDir !== undefined && workspaceProvisioning?.(tab.workspaceDir) === true);
   return provisioning ? ['provisioning'] : [];
+}
+
+// The metadata row's auto-approve flag. `autoApproved` once auto-approve has cleared a permission
+// prompt in the tab, which the row lights green; `autoApprove` before then.
+function autoApproveFlag(tab: Tab): string[] {
+  if (!tab.autoApprove) return [];
+  return tab.harness?.autoApproved ? ['autoApproved'] : ['autoApprove'];
 }
 
 // The metadata row's browser flag. `browserInUse` while a browser is running behind the tab's

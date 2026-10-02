@@ -44,6 +44,7 @@ function makeManagers(tabs: Tab[]): Managers {
     tab: {
       tabs,
       cwdOf: vi.fn(() => '/repo'),
+      harnessTab: (label: string) => tabs.find((t) => t.label === label && t.harness),
       persist: vi.fn(),
       buildAgentState: vi.fn((tab: Tab) => ({ name: tab.label, dotColor: tab.dotColor, active: true })),
       addBusy: vi.fn(),
@@ -197,6 +198,34 @@ describe('createRemotePtySession', () => {
       managers, 'auto-approve', 'claude', 'Auto-approve could not clear the permission prompt; standing down',
       { openFile: undefined, detectedAt: undefined },
     );
+  });
+
+  describe('the tab\'s auto-approve flag', () => {
+    function gateTab(): { channel: RemoteChannel; tab: Tab } {
+      const { channel } = attachedChannel();
+      const tab = makeTab('claude', 'red');
+      tab.harness = { name: 'claude', program: 'claude', ptyId: 'r1', status: 'running' };
+      createRemotePtySession(channel, makeManagers([tab]), {
+        id: 'r1', program: 'claude', command: 'claude', harness: 'claude', cols: 80, rows: 24, agentName: 'claude',
+      }, vi.fn());
+      return { channel, tab };
+    }
+
+    it('lights once a gate-event reports an approval with its capture', () => {
+      const { channel, tab } = gateTab();
+      channel.receive(`${encodeFrame({
+        type: 'gate-event', id: 'r1', message: 'Auto-approved a permission prompt', capturedAt: 1000, capture: 'the screen text',
+      })}\n`);
+      expect(tab.harness?.autoApproved).toBe(true);
+    });
+
+    it('stays unlit on a stand-down, which carries no capture', () => {
+      const { channel, tab } = gateTab();
+      channel.receive(`${encodeFrame({
+        type: 'gate-event', id: 'r1', message: 'Auto-approve could not clear the permission prompt; standing down', capturedAt: 1000,
+      })}\n`);
+      expect(tab.harness?.autoApproved).toBeUndefined();
+    });
   });
 
   it('translates a gate-event frame replayed on reattach into notify(), stamped with the original detection time', async () => {

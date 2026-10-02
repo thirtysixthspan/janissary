@@ -153,8 +153,16 @@ launched with the e2e browser, which is every harness tab not launched with `--n
 tabs only — see End-to-end browser in `harness.md`).
 They appear in that order, so the browser icon sits to the right of the other two. Hovering a flag's
 icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "E2E browser"). More flags of the
-same kind are expected in the future. A tab whose workspace is still being provisioned also shows a
-transient provisioning indicator ahead of all three (see Provisioning indicator below).
+same kind are expected in the future. The workspaced flag is drawn in the same green as the
+browser-in-use flag. While a tab's workspace is still being provisioned, a transient provisioning
+indicator takes the workspaced flag's place, and the workspaced flag replaces it once provisioning
+ends (see Provisioning indicator below).
+
+The auto-permitting flag has two looks too. Until auto-approval has cleared a permission prompt in
+the tab, it is the plain bolt with the "Auto-permitting" tooltip. Once it approves its first prompt,
+the bolt turns the same green and its tooltip reads "Auto-permitting (a prompt was approved)". It
+stays green for the rest of the tab's life, for a local tab and a remote one alike. A stand-down on a
+prompt auto-approval could not clear does not light it.
 
 The browser flag has two looks. Before any browser has been started behind a `-b` tab's endpoint, it
 is the plain globe with the "E2E browser" tooltip: it reports the tab's launch, and it is lit from the
@@ -203,14 +211,15 @@ button is a no-op when the harness has no session transcript available yet.
 
 While a tab's workspace is still being provisioned, its metadata row shows a **provisioning**
 indicator: a spinning arrows icon placed first among the flags, right after the working directory,
-with the tooltip "Provisioning workspace". It covers agent and harness tabs, local and remote alike —
+with the tooltip "Provisioning workspace". It stands in for the workspaced flag, which is hidden
+while provisioning lasts and takes the spinner's place once it ends. It covers agent and harness tabs, local and remote alike —
 a local `agent --workspace` or `harness -w` tab while its clone is in flight, and a remote agent or
 harness tab until the far host reports its workspace ready. The icon keeps spinning for as long as
 provisioning lasts, then stops and disappears on the same update that makes the tab ready. A tab that
 joined a local workspace while it was still being cloned shows the indicator too, and it stops when
 the clone lands even if the tab that started the clone has since closed. A local
-clone that fails, or a harness tab that shows a provisioning error, drops the indicator at once,
-while the error stays on screen until the tab closes. A remote agent tab whose launch fails keeps
+clone that fails, or a harness tab that shows a provisioning error, drops the indicator at once and
+shows the workspaced flag in its place, while the error stays on screen until the tab closes. A remote agent tab whose launch fails keeps
 the indicator until the tab closes, since the channel never reports a workspace. Attaching a detached
 remote session clones nothing, but the tab shows the same indicator until the host accepts the
 attach — the state the row's connection plug reports as "Provisioning". Tabs with no workspace to

@@ -36,7 +36,7 @@ export function AgentTabMeta({
   cwd, cwdDisplay, flags, model, effort, remote, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
   connectionsButton, scheduleButton, onSplit, remoteSession,
 }: Properties) {
-  const workspaced = flags?.includes('workspaced') ?? false;
+  const workspaced = flags?.some((flag) => flag === 'workspaced' || flag === 'provisioning') ?? false;
   return (
     <div className="tab-meta">
       {remote !== undefined && remoteSession !== undefined && (
