@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CastStream, type CastEvent, type CastHeader } from './cast-stream';
 
 // How often a visible replay asks for the recording's tail. A `setTimeout` chain rather than an
@@ -15,6 +15,12 @@ export const POLL_MS = 750;
 // comes back `416`, which is not a failure but the ordinary answer to a question whose answer is
 // "nothing new", and a poll that finds no bytes is not a reason to stop: a session that is quiet for
 // minutes and then speaks again is still followed.
+//
+// Two effects rather than one, because two different things change here and only one of them is rare.
+// The served reference changes once, when the tab opens, and owns the parser, the offset, and the one
+// whole-file read. Visibility changes every time the user switches tabs, and owns only the poll chain
+// — so hiding a replay costs one timer, and showing it again resumes from where the reading got to
+// instead of fetching the whole recording a second time.
 export type ReplaySource = {
   header: CastHeader | undefined;
   events: readonly CastEvent[];
@@ -46,56 +52,69 @@ export function useReplaySource(url: string | undefined, active: boolean): Repla
   // A streaming decoder holds back an incomplete UTF-8 sequence at the end of a chunk, so a chunk
   // boundary landing inside a multi-byte character cannot corrupt the line that follows it.
   const decoder = useRef(new TextDecoder());
-  const cancelled = useRef(false);
+  const failure = useRef<string | undefined>(undefined);
 
+  const publish = useCallback((growing: boolean) => setSource({
+    header: stream.current.header,
+    events: stream.current.events,
+    // A file that could not be fetched outranks one that could not be parsed, since the parse reason
+    // is usually a consequence of an empty or truncated read.
+    error: failure.current ?? stream.current.error,
+    exitStatus: stream.current.exitStatus,
+    growing,
+    recorded: stream.current.duration,
+  }), []);
+
+  const read = useCallback(async (from: number): Promise<boolean> => {
+    if (!url) return false;
+    const response = await fetch(url, from === 0
+      ? { cache: 'no-store' }
+      : { headers: { Range: `bytes=${from}-` }, cache: 'no-store' });
+    if (response.status === 416) return false;
+    const body = await response.arrayBuffer();
+    if (body.byteLength === 0) return false;
+    offset.current = from + body.byteLength;
+    stream.current.push(decoder.current.decode(body, { stream: true }));
+    return true;
+  }, [url]);
+
+  // The one whole-file read, and the reset of everything a new recording needs. Keyed on the served
+  // reference alone: a change of visibility must not throw away the reading already done.
   useEffect(() => {
-    cancelled.current = false;
+    stream.current = new CastStream();
+    offset.current = 0;
+    decoder.current = new TextDecoder();
+    failure.current = undefined;
     if (!url) { setSource(EMPTY); return; }
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const publish = (growing: boolean) => setSource({
-      header: stream.current.header,
-      events: stream.current.events,
-      error: stream.current.error,
-      exitStatus: stream.current.exitStatus,
-      growing,
-      recorded: stream.current.duration,
+    void read(0).then((grew) => {
+      if (!failure.current) publish(grew);
+    }).catch(() => {
+      failure.current = 'the recording could not be read';
+      publish(false);
     });
+  }, [url, read, publish]);
 
-    const read = async (from: number): Promise<boolean> => {
-      const response = await fetch(url, from === 0
-        ? { cache: 'no-store' }
-        : { headers: { Range: `bytes=${from}-` }, cache: 'no-store' });
-      if (response.status === 416) return false;
-      const body = await response.arrayBuffer();
-      if (body.byteLength === 0) return false;
-      offset.current = from + body.byteLength;
-      stream.current.push(decoder.current.decode(body, { stream: true }));
-      return true;
-    };
-
+  // The poll chain, keyed on visibility alone. Each chain carries its own flag, so a cleanup can only
+  // stop the chain that effect started and never the one that replaced it.
+  useEffect(() => {
+    if (!url || !active) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const poll = async (): Promise<void> => {
-      if (cancelled.current) return;
       let grew: boolean;
       try {
         grew = await read(offset.current);
       } catch {
-        setSource({ ...EMPTY, error: 'the recording could not be read' });
+        failure.current = 'the recording could not be read';
+        publish(false);
         return;
       }
       publish(grew);
-      // A poll that finds nothing is not a reason to stop: a session quiet for minutes and then
-      // speaking again is still followed. Only the tab becoming invisible stops the chain, and
-      // starting the effect again starts it over.
-      if (active && !cancelled.current) timer = setTimeout(() => { void poll(); }, POLL_MS);
+      if (!cancelled) timer = setTimeout(() => { void poll(); }, POLL_MS);
     };
-
-    stream.current = new CastStream();
-    offset.current = 0;
-    decoder.current = new TextDecoder();
-    void poll();
-    return () => { cancelled.current = true; if (timer) clearTimeout(timer); };
-  }, [url, active]);
+    timer = setTimeout(() => { void poll(); }, POLL_MS);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+  }, [url, active, read, publish]);
 
   return source;
 }

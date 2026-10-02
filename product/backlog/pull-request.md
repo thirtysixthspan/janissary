@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Keep a hidden replay's read position across a tab becoming visible again, rather than reading the whole recording a second time.
-
-Existing Issue: `useReplaySource`'s effect depends on `[url, active]`, so a tab becoming visible again restarts it: the `CastStream` is replaced, the byte offset returns to zero, and the whole file is fetched and re-parsed from the beginning every time the user switches away and back. Severity: 5/10
-
-Existing Risk: 4/10 - An hour-long recording re-read on every tab switch is a visible stall each time, and it grows with the recording rather than with the time since the last switch.
-
-Proposal Risk: 2/10 - Two effects now share one fetch, so a future edit to either can race the other's cancellation.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1515: keep the replay read position when the tab becomes visible again". In `web/src/plugins/replay/useReplaySource.ts`, split the effect: one keyed on `url` alone owns the stream, the byte offset, the decoder, and the first whole-file read, and a second keyed on `active` only starts and stops the poll chain, leaving the offset and the parsed timeline untouched across a hide. Guard the resumed chain with a ref so a cleanup from an earlier `active` value cannot cancel the one that replaced it, and keep the `cancelled` flag as the single authority on whether a chain may schedule its next poll. `web/src/plugins/replay/useReplaySource.test.ts` already asserts that polling stops while hidden and resumes when shown; extend that case to assert the second fetch asks for a range from the previous offset rather than reading the file again, which is the behavior this entry is about.
-
 * Remove the unused route exports and the unread terminal ref the new modules leave behind.
 
 Existing Issue: `src/plugins/core-route-claims.ts` exports `pluginCoreRoutes` and `coreRouteOwner` that nothing imports — the host resolves its own map from the declarations it was constructed with, which is what makes a fixture catalog authoritative — and `web/src/plugins/replay/useReplayTerminal.ts` keeps a `live` ref it assigns and never reads, left over from when the copy chord read the terminal through it. Severity: 2/10

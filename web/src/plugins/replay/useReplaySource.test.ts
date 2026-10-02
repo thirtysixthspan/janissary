@@ -72,13 +72,14 @@ describe('useReplaySource', () => {
     expect(result.current.growing).toBe(false);
   });
 
-  it('stops polling while the tab is hidden, and starts again when it is shown', async () => {
+  it('stops polling while the tab is hidden, and resumes from where it left off when shown', async () => {
     fetchMock.mockImplementation(respondWith(HEADER + '[0, "o", "one"]\n'));
     const { rerender, result } = renderHook(
       ({ active }) => useReplaySource('/open/1?token=t', active),
       { initialProps: { active: false } },
     );
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const first = HEADER.length + '[0, "o", "one"]\n'.length;
 
     await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS * 3); });
     expect(fetchMock.mock.calls.length).toBe(1);
@@ -86,6 +87,9 @@ describe('useReplaySource', () => {
     rerender({ active: true });
     await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1));
+    // Showing the tab again resumes the reading rather than starting it over: the offset survived the
+    // hide, so the second read asks for what came after the first rather than the whole file again.
+    expect(fetchMock.mock.calls[1][1]).toMatchObject({ headers: { Range: `bytes=${first}-` } });
     expect(result.current.header).toBeDefined();
   });
 
