@@ -109,6 +109,15 @@
 | `←` / `→` | Seek back / forward ten seconds (clamped to the current track) |
 | `Shift+←` / `Shift+→` | Previous / next track |
 
+**Asciicast tab controls** (active only while an asciicast tab is the visible one):
+
+| Key | Action |
+| --- | ------ |
+| `Space` or `p` | Play / pause |
+| `.` | Next recorded moment |
+| `,` | Previous recorded moment |
+| `]` / `[` | Faster / slower |
+
 **Editor tab controls** (active only while an editor tab is focused):
 
 | Key | Action |
