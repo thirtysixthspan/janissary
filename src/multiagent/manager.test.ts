@@ -3,8 +3,17 @@ import type { AcpOptions, AcpSession } from '../acp/types.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 
-const mocks = vi.hoisted(() => ({ connectAcp: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  connectAcp: vi.fn(),
+  sandboxNotice: vi.fn<() => string | undefined>(),
+}));
 vi.mock('../acp/index.js', () => ({ connectAcp: mocks.connectAcp }));
+// A member is only connected once its spawn is known to be confined, and whether it would be is a
+// property of the host: `sandboxAvailable` is false on anything without `/usr/bin/sandbox-exec`, so
+// on a Linux runner every member is refused and nothing below this line ever runs. Stubbed rather
+// than read from the machine, the way `sessions.test.ts` and `profile/manager.test.ts` both do, so
+// these cases assert the manager's orchestration and not where they happen to be running.
+vi.mock('../sandbox/index.js', () => ({ sandboxNotice: mocks.sandboxNotice }));
 
 import { MultiAgentManager } from './manager.js';
 import type { MultiAgentMember } from './types.js';
@@ -68,7 +77,11 @@ const memberOf = (tabs: Tab[], index = 0): MultiAgentMember =>
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-beforeEach(() => { mocks.connectAcp.mockReset(); });
+beforeEach(() => {
+  mocks.connectAcp.mockReset();
+  mocks.sandboxNotice.mockReset();
+  mocks.sandboxNotice.mockReturnValue(undefined);
+});
 
 describe('MultiAgentManager member resolution', () => {
   it('runs a member naming a model the opencode catalog carries', () => {
@@ -131,6 +144,26 @@ describe('MultiAgentManager member resolution', () => {
 });
 
 describe('MultiAgentManager prompting', () => {
+  // This is what a Linux runner looks like from here: `sandboxAvailable` is false, so every member is
+  // refused and nothing is ever spawned. The run still opens its tab and still reports honestly,
+  // which is the part worth pinning — the alternative, a summary counting members that are not
+  // running, is what the post-provisioning count exists to prevent.
+  it('opens the tab and reports nothing running when no member can be confined', async () => {
+    mocks.sandboxNotice.mockReturnValue('workspace isolation unavailable');
+    mocks.connectAcp.mockImplementation(() => session());
+    const fake = fakeManager();
+
+    const outcome = new MultiAgentManager(fake.managers).run('main', `fanout opencode:${KNOWN} go`);
+    await flush();
+
+    expect(outcome).toMatchObject({ running: 0 });
+    expect(mocks.connectAcp).not.toHaveBeenCalled();
+    const views = fake.tabs.filter((t) => t.multiagent);
+    expect(views).toHaveLength(1);
+    expect(memberOf(fake.tabs).state).toBe('failed');
+    expect(memberOf(fake.tabs).error).toBe('workspace isolation unavailable');
+  });
+
   it('prompts a member only once its clone is ready', async () => {
     const pending = Promise.withResolvers<void>();
     mocks.connectAcp.mockImplementation(() => session());

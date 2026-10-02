@@ -13,7 +13,7 @@ vi.mock('../acp/index.js', () => ({ connectAcp: mocks.connectAcp }));
 // from a darwin machine with isolation enabled.
 vi.mock('../sandbox/index.js', () => ({ sandboxNotice: mocks.sandboxNotice }));
 
-import { MultiAgentSessions } from './sessions.js';
+import { MultiAgentSessions, memberIsConfined } from './sessions.js';
 
 type Handlers = Parameters<AcpSession['prompt']>[1];
 
@@ -109,6 +109,20 @@ describe('MultiAgentSessions', () => {
     expect(mocks.connectAcp).not.toHaveBeenCalled();
     expect(m.state).toBe('failed');
     expect(m.error).toBe('Cannot confine a member with no workspace of its own.');
+  });
+
+  // Knowable before the clone lands, which is what lets a run report its own size honestly at the
+  // moment it is issued. `MultiAgentManager` counts on this, so the two must not answer differently.
+  describe('memberIsConfined', () => {
+    it('is true for a member with a workspace on a host reporting isolation available', () => {
+      expect(memberIsConfined(member())).toBe(true);
+    });
+
+    it('is false when isolation is reported unavailable, and false without a workspace', () => {
+      mocks.sandboxNotice.mockReturnValue('workspace isolation unavailable');
+      expect(memberIsConfined(member())).toBe(false);
+      expect(memberIsConfined(member({ dir: undefined }))).toBe(false);
+    });
   });
 
   it('prompts a member exactly once', () => {

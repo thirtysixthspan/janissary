@@ -21,6 +21,15 @@ function confinableDir(member: MultiAgentMember): { dir: string } | { error: str
   return notice ? { error: notice } : { dir: member.dir };
 }
 
+// Whether this member can be connected at all: it has a workspace, and its spawn would be confined.
+// Both are knowable before the clone lands, which is what lets a run report its own size honestly at
+// the moment it is issued rather than after the clone settles. Derived from `confinableDir` so the
+// two cannot answer the same question differently — and exported because `MultiAgentManager` counts
+// on it when it builds that report.
+export function memberIsConfined(member: MultiAgentMember): boolean {
+  return 'dir' in confinableDir(member);
+}
+
 // Owns a multi-agent tab's member connections. The registry, the composite key and the identity
 // guard are the shape `EditorAcpManager` established; what differs is that each session is spawned
 // with that member's *own* `cwd` and `workspaceDir` rather than read off the tab — the one place

@@ -3,7 +3,7 @@ import { isKnownModel } from '../harness/models.js';
 import { messageBus } from '../bus.js';
 import { parseFanout } from '../fanout/parse.js';
 import { openMultiAgentTab } from '../tab/openers.js';
-import { MultiAgentSessions } from './sessions.js';
+import { MultiAgentSessions, memberIsConfined } from './sessions.js';
 import { provisionMembers, releaseMembers } from './workspaces.js';
 import type { MultiAgentMember } from './types.js';
 
@@ -77,8 +77,13 @@ export class MultiAgentManager {
     });
     messageBus.emit('state', { type: 'dirty' });
     // Counted after provisioning, not before: a clone that could not start fails its member here,
-    // and a summary that reported it as running would be reporting a run that is not happening.
-    const running = members.filter((m) => m.state !== 'failed');
+    // and a summary that reported it as running would be reporting a run that is not happening. A
+    // member that provably cannot be confined is left out for the same reason — that verdict depends
+    // only on the host and on the member's own workspace, so it is knowable now, and a transcript
+    // reading "Comparing 2 models" above two rows that immediately say isolation is unavailable is
+    // the failure this count exists to prevent. The refusal itself still happens later, when the
+    // clone lands and `connect` runs.
+    const running = members.filter((m) => m.state !== 'failed' && memberIsConfined(m));
     const skipped = members.filter((m) => m.state === 'failed').map((m) => m.error ?? `"${m.model}" was refused.`);
     return { label: tabLabel, running: running.length, skipped };
   }
