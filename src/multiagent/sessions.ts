@@ -9,13 +9,16 @@ import type { MultiAgentMember } from './types.js';
 // member's key carries the member's own index inside it. `closeTab` prefix-scans on the label.
 const key = (label: string, index: number): string => `${label}:${index}`;
 
-// Whether this member's spawn would actually be confined, and if not, why not. `sandboxNotice` is
-// the same helper a workspaced tab's transcript carries when its processes will not be confined, and
-// it folds in the `sandboxWorkspaces` toggle and `sandbox-exec` availability — so this is exactly the
-// test `sandboxSpawn` applies internally, and the two cannot drift apart.
-function confinementFailure(member: MultiAgentMember): string | undefined {
-  if (!member.dir) return 'Cannot confine a member with no workspace of its own.';
-  return sandboxNotice();
+// The directory this member's spawn would be confined to, or the reason there is none. `sandboxNotice`
+// is the same helper a workspaced tab's transcript carries when its processes will not be confined,
+// and it folds in the `sandboxWorkspaces` toggle and `sandbox-exec` availability — so this is
+// exactly the test `sandboxSpawn` applies internally, and the two cannot drift apart. Handing the
+// directory back rather than only a verdict is what lets `connect` bind it once and use it for both
+// the process's `cwd` and the `workspaceDir` it is confined to, so the two cannot come apart.
+function confinableDir(member: MultiAgentMember): { dir: string } | { error: string } {
+  if (!member.dir) return { error: 'Cannot confine a member with no workspace of its own.' };
+  const notice = sandboxNotice();
+  return notice ? { error: notice } : { dir: member.dir };
 }
 
 // Owns a multi-agent tab's member connections. The registry, the composite key and the identity
@@ -44,18 +47,19 @@ export class MultiAgentSessions {
     // that keeps it inside it; with no boundary, approving its tool calls would point an
     // unrestricted agent at the user's own repository, which is worse than a row that says why it
     // did not run.
-    const unconfined = confinementFailure(member);
-    if (unconfined) {
+    const confinable = confinableDir(member);
+    if ('error' in confinable) {
       member.state = 'failed';
-      member.error = unconfined;
+      member.error = confinable.error;
       messageBus.emit('state', { type: 'dirty' });
       return;
     }
+    const { dir } = confinable;
     const k = key(label, member.index);
     const session = connectAcp({
       ...acpLaunchFor({ harness: 'opencode', model: member.model, variant: 'default' }),
-      cwd: member.dir as string,
-      workspaceDir: member.dir,
+      cwd: dir,
+      workspaceDir: dir,
       offline,
       // The opt-in that lets a member's agent use its own tools, which an ordinary agent tab's may
       // not. Safe here, and only here, because the check above established that this process is

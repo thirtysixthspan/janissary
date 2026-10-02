@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Refuse a member connection that has no clone directory instead of falling back to an unsandboxed working directory.
-
-Existing Issue: `MultiAgentSessions.connect` in `src/multiagent/sessions.ts` passes `cwd: member.dir ?? process.cwd()` and `workspaceDir: member.dir`, so the one code path in the application that sets `ownTools: true` also carries a fallback that spawns the agent in the server's own working directory with no `workspaceDir` and therefore no sandbox at all. Severity: 5/10
-
-Existing Risk: 5/10 - The path is unreachable today only because `connect` happens to be called from exactly one place, immediately after `member.dir` is assigned; any later caller that reaches it without a directory silently gets an unconfined agent with every tool call approved, running against the user's live checkout rather than a disposable clone.
-
-Proposal Risk: 2/10 - The fallback becomes an explicit refusal on a path that is already unreachable, so the exposure it guards is closed rather than merely narrowed.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1513: refuse a member connection with no clone directory rather than defaulting to the server's cwd". In `MultiAgentSessions.connect` in `src/multiagent/sessions.ts`, replace the `member.dir ?? process.cwd()` fallback with an early return that marks the member `failed` with a reason naming the missing workspace, so a member can never be connected outside a clone. The member record already has the fields to say so (`state` and `error`), and `provisionMembers` in `src/multiagent/workspaces.ts` is the only caller and always assigns `dir` before calling, so no existing behavior changes. Make `memberWorkspaceName`'s directory the single source of truth for the cwd rather than passing it separately, so the value the sandbox confines and the value the process starts in cannot come apart. Add a case in `src/multiagent/sessions.test.ts` connecting a member with no `dir` and asserting no session is spawned and the member reads `failed`; the existing per-member cwd cases must keep passing untouched.
-
 * Guarantee each member gets its own clone directory when two model names fold to the same workspace name.
 
 Existing Issue: `memberWorkspaceName` in `src/multiagent/workspaces.ts` derives a member's workspace name by replacing every `/` in the model with `-`, and that folding is not injective — a project overriding `.janissary/harness-models.json` can carry both `a/b` and `a-b`, which derive the same name, so `WorkspaceManager.create` is called twice for one name and the second call overwrites the first's `refs` and `pending` entries. Severity: 5/10

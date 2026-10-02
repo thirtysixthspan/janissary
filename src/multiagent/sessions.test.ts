@@ -69,6 +69,14 @@ describe('MultiAgentSessions', () => {
     expect((mocks.connectAcp.mock.calls[0][0] as AcpOptions).offline).toBe(true);
   });
 
+  it('confines a member to the very directory it starts in', () => {
+    mocks.connectAcp.mockImplementation(() => fakeSession());
+    new MultiAgentSessions().connect('multi-agent', member(), 'go', false);
+
+    const options = mocks.connectAcp.mock.calls[0][0] as AcpOptions;
+    expect(options.cwd).toBe(options.workspaceDir);
+  });
+
   // Approving a member's own tool calls is only safe because the process is confined to that
   // member's clone. Without confinement there is no boundary holding it, so the member is refused
   // rather than run wide open — the one combination that exists nowhere else in the application.
