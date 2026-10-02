@@ -17,6 +17,21 @@ describe('openersForRow', () => {
     expect(openersForRow('/root', 'docs/readme.md', true)).toEqual({ command: 'edit', choices: [] });
   });
 
+  // The other way into the asciicast tab: double-clicking a recording row runs `open`, which the
+  // registry resolves to the plugin that claims `.cast`.
+  it('opens a recording row with open rather than offering the chooser', () => {
+    expect(openersForRow('/root', 'recordings/devbox.cast', false)).toEqual({ command: 'open', choices: [] });
+    expect(openersForRow('/root', 'recordings/DEVBOX.CAST', false)).toEqual({ command: 'open', choices: [] });
+    // No edit gesture and no editsOwnFiles, so a recording has nothing to edit as text.
+    expect(openersForRow('/root', 'recordings/devbox.cast', true)).toEqual({ command: 'edit', choices: [] });
+  });
+
+  it('leads a forced chooser on a recording row with the opener that owns it', () => {
+    const result = openersForRow('/root', 'recordings/devbox.cast', false, true);
+    expect(result.choices[0]).toEqual({ label: 'Open as asciicast', command: 'open' });
+    expect(result.choices).toHaveLength(3);
+  });
+
   // The regression guard for the PDF plugin declaring `editsOwnFiles` and no `editGesture`: the
   // gesture branch is checked first, so a declaration carrying both would send Shift-activation to
   // `open external` and leave the viewer reachable only by typing the command.

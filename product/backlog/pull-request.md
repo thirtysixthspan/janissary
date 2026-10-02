@@ -2,7 +2,3 @@
 
 # pull-request
 
-* agent tabs should be recorded via a ascii cast as well as ssh and harness tabs.
-
-* providing a .cast file to the `open` command should open the asciicast tab.
-
