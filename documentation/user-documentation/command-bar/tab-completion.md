@@ -17,6 +17,7 @@ What gets completed depends on where in the command you are:
 | The target of [`connection close`](/user-documentation/command-bar/connections) | Open connection strings, the same ones `connection list` prints (`sqlite:my-db`, `shell:bash`, `acp:opencode/big-pickle`, `browser:w1`, `ssh:my-host`, `terminal:vim`) |
 | After `browser` | Browser subcommands; for those that take a window id (`browser use`, `browser window close`), the current tab's open window ids |
 | After `harness <name>`, at `--model` | That harness's known model names; `--model` may sit anywhere after the harness name |
+| A [`fanout`](/user-documentation/tab-types/multi-agent-tab) member, once `opencode:` is typed | The known OpenCode model names, each offered as `opencode:<model>`; completes on every member, so a second model completes beside the first. A bare `fanout` is still the start of a prompt and completes filesystem paths |
 | After `syntax` | `theme` at the first argument, and the available theme names after it |
 | After `search` | `transcript`, its only subcommand |
 | Anywhere else | Filesystem paths, relative to the tab's working directory |

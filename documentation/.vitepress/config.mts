@@ -108,6 +108,7 @@ export default defineConfig({
             { text: "File navigator", link: "/user-documentation/tab-types/file-navigator" },
             { text: "Notifications", link: "/user-documentation/tab-types/notifications" },
             { text: "Conversations", link: "/user-documentation/tab-types/conversations" },
+            { text: "Multi-agent comparison", link: "/user-documentation/tab-types/multi-agent-tab" },
             { text: "Sessions", link: "/user-documentation/tab-types/sessions" },
             { text: "SQL database browser", link: "/user-documentation/tab-types/sql-browser" },
           ],
