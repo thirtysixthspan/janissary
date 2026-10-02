@@ -2,3 +2,5 @@
 
 # pull-request
 
+* while the workspace is being provisioned, the workspace icon should be hidden. Onced provisioned, the spinning icon is replaced by the workspace icon. The workspace icon should be the same green as the browser icon when a browser is in use. the auto-approve icon should go green once a permission prompt is auto approved.
+
