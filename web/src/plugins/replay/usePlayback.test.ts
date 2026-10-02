@@ -60,9 +60,21 @@ describe('usePlayback', () => {
   it('compresses only a finished recording, and leaves a live one in real time', () => {
     const finished = setup({ recordedIdleLimit: 2, live: false });
     expect(finished.view.result.current.duration).toBe(4);
+    expect(finished.view.result.current.idleLimit).toBe(2);
 
+    // The same events, still being written: the silences are real time, and the control says so
+    // rather than claiming a limit it is not applying.
     const live = setup({ recordedIdleLimit: 2, live: true });
     expect(live.view.result.current.live).toBe(true);
+    expect(live.view.result.current.duration).toBe(602);
+    expect(live.view.result.current.idleLimit).toBe('off');
+  });
+
+  it('keeps a limit chosen while live for when the recording finishes', () => {
+    const { view } = setup({ recordedIdleLimit: 2, live: true });
+    act(() => { view.result.current.cycleIdle(); });
+    act(() => { view.result.current.cycleIdle(); });
+    expect(view.result.current.idleLimit).toBe('off');
     expect(compressIdle(timeline, 'off')).toHaveLength(timeline.length);
   });
 

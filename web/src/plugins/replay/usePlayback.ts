@@ -49,7 +49,12 @@ export function usePlayback(
   // with; the mirror is refreshed every render and only ever written here.
   const clock = useRef({ position: 0, speed: 1 });
   clock.current.speed = speed;
-  const timeline = useMemo(() => compressIdle(events, idleLimit), [events, idleLimit]);
+  // A live recording plays in real time however long its silences are; a finished one is compressed,
+  // which is what makes an hour of recorded silence watchable. The stored limit is the user's choice
+  // and is kept through the live period rather than discarded, so the limit the recording stated
+  // applies the moment the session is over without anything being set again.
+  const applied: IdleLimit = live ? 'off' : idleLimit;
+  const timeline = useMemo(() => compressIdle(events, applied), [events, applied]);
   const duration = durationOf(timeline);
 
   // The recorded limit is the default as soon as the recording states one, and it stays the default
@@ -101,7 +106,7 @@ export function usePlayback(
     duration,
     playing,
     speed,
-    idleLimit,
+    idleLimit: applied,
     live,
     play,
     pause,
@@ -117,5 +122,5 @@ export function usePlayback(
       const next = SPEEDS.indexOf(current) + direction;
       return SPEEDS[(next + SPEEDS.length) % SPEEDS.length];
     }),
-  }), [position, duration, playing, speed, idleLimit, live, play, pause, show, timeline]);
+  }), [position, duration, playing, speed, applied, live, play, pause, show, timeline]);
 }

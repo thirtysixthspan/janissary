@@ -25,13 +25,15 @@ export function ReplayTab({
     capabilities,
   );
   // A live recording plays in real time however long its silences are; a finished one is compressed,
-  // which is what makes an hour of recorded silence watchable. A finished recording that has just
-  // been reopened mid-write is the one case that reads as live again, and it is the same recording.
+  // which is what makes an hour of recorded silence watchable. Both facts are needed: the server's
+  // answer says the recording was not being written when the tab opened, and new bytes arriving say it
+  // is being written now — and a first read always brings bytes, so either alone would put every
+  // freshly opened recording into the live state for a moment.
   const playback = usePlayback(
     source.events,
     source.header?.idleTimeLimit,
     terminal,
-    !payload.finished || source.growing,
+    !payload.finished && source.growing,
   );
 
   useEffect(() => { if (!active) playback.pause(); }, [active, playback]);

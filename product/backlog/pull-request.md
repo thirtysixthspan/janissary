@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Play a recording that is still being written in real time, rather than idle-compressed as the plan and the spec both say it should be.
-
-Existing Issue: The plan decided that "Compression applies only to a finished recording, and a live one plays in real time", and the specification and user documentation the pull request adds repeat it, but `usePlayback` compresses the timeline unconditionally — `compressIdle(events, idleLimit)` runs whatever `live` says — and every recording this version writes carries `idle_time_limit: 2`, so a live replay sprints through a session's silences and then sits pinned at the newest frame while the session is still working. Severity: 6/10
-
-Existing Risk: 5/10 - A user watching a running session sees it appear to finish in seconds and hold still, so the replay stops being a mirror of the tab and starts looking like a stuck one; the only hint is a `live` badge on a timeline that is visibly not the session's.
-
-Proposal Risk: 2/10 - The rule remains one line of state that a later edit could undo, so it needs a test that states it rather than one that happens to pass.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1515: play a live recording in real time instead of idle-compressing it". In `web/src/plugins/replay/usePlayback.ts`, make the compressed timeline conditional on liveness: compute the timeline as `compressIdle(events, live ? 'off' : idleLimit)` (memoized on `events`, `idleLimit`, and `live`), and stop deriving the control's state from the header alone — a live recording should show `idle off` rather than the recorded limit, since that is what it is applying. Leave the recorded-limit default, the cycle order, and the reporting of a recording's own limit untouched, so a finished recording still starts at the limit its header states. `web/src/plugins/replay/idle-compression.test.ts` already covers the rule in isolation and must keep passing; add a case to `web/src/plugins/replay/usePlayback.test.ts` asserting that a live recording's duration is the uncompressed one while a finished recording's is the compressed one, which is the behavior the specification now promises. Check `product/specs/harness-recording.md` § Retrieval and the recordings section of `documentation/user-documentation/advanced-agents/harness.md` still read correctly after the change — they should need no edit, since they already describe this behavior.
-
 * Build the replayed terminal only once its recorded size is known, so the bytes already written are not lost when the header arrives.
 
 Existing Issue: `useReplayTerminal` creates the terminal at the fallback 80x24 and lists `options.cols` and `options.rows` as effect dependencies, so a recording of any other size causes the effect to tear the terminal down and build a new one moments later — while `cursor.current`, the hook's record of how far the new terminal has been fed, survives and is never reset, so every event written before the rebuild is dropped and never re-written. Severity: 7/10
