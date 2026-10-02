@@ -1,8 +1,9 @@
 import type { Tab, EditorView, FileNavigatorView } from './types.js';
+import type { MultiAgentRun } from '../multiagent/types.js';
 import type { TabPluginPayload, TabPluginResources, TabPluginTabUpdate } from '../plugins/api.js';
 import { messageBus } from '../bus.js';
 import {
-  addPluginTab, addEditorTab, addFilesTab, addNotificationsTab,
+  addPluginTab, addEditorTab, addFilesTab, addNotificationsTab, addMultiAgentTab,
 } from './creators.js';
 import { releaseFileReference } from './file-registry.js';
 
@@ -149,4 +150,13 @@ export function openFilesTab(target: OpenTarget, view: FileNavigatorView): void 
 
 export function openNotificationsTab(target: OpenTarget): void {
   activate(target, addNotificationsTab(target.tabs, target.activeTab));
+}
+
+// Open the comparison tab for a `fanout` run and return its label — the key the run's clones and
+// connections are held under, and what `close` addresses. The tab joins the group of the tab that
+// created it, the same inheritance an agent tab follows, so one tab needs no band of its own.
+export function openMultiAgentTab(target: OpenTarget, run: MultiAgentRun, offline: boolean): string {
+  const result = addMultiAgentTab(target.tabs, target.activeTab, run, offline);
+  activate(target, result);
+  return result.tabs[result.activeTab].label;
 }

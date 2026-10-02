@@ -21,6 +21,7 @@ function makeManagers(): Managers {
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
+    multiAgent: { closeTab: vi.fn() },
     schedule: { closeTab: vi.fn() },
     questions: { closeTab: vi.fn() },
     database: { forgetTab: vi.fn(), closeTab: vi.fn(), closeAll: vi.fn() },
@@ -218,7 +219,6 @@ describe('closeTabResources — persisted state', () => {
   beforeEach(() => {
     projectDir = mkdtempSync(path.join(tmpdir(), 'janus-close-state-'));
     initAgentStateDirectory(projectDir);
-    // eslint-disable-next-line no-new -- the constructor is what binds the transcript directory
     new TranscriptStore(projectDir);
   });
 

@@ -1,6 +1,6 @@
 import type { Tab } from './types.js';
 
-// The tab record declares `view` and its five view-specific payloads as independent optional fields,
+// The tab record declares `view` and its six view-specific payloads as independent optional fields,
 // and documents in prose that each payload is "present only when `view === '<kind>'`". Nothing
 // enforces that, so consumers used to recover it with a non-null assertion — which turns a payload
 // that is genuinely absent (a harness tab caught mid-provision, a plugin record dropped by a failed
@@ -14,6 +14,7 @@ export type EditorTab = Tab & { view: 'editor'; editor: NonNullable<Tab['editor'
 export type FilesTab = Tab & { view: 'files'; files: NonNullable<Tab['files']> };
 export type PluginTab = Tab & { view: 'plugin'; plugin: NonNullable<Tab['plugin']> };
 export type MonitorTab = Tab & { view: 'monitor'; monitor: NonNullable<Tab['monitor']> };
+export type MultiAgentTab = Tab & { view: 'multiagent'; multiagent: NonNullable<Tab['multiagent']> };
 
 export function isHarnessTab(tab: Tab): tab is HarnessTab {
   return tab.view === 'harness' && tab.harness !== undefined;
@@ -33,6 +34,10 @@ export function isPluginTab(tab: Tab): tab is PluginTab {
 
 export function isMonitorTab(tab: Tab): tab is MonitorTab {
   return tab.view === 'monitor' && tab.monitor !== undefined;
+}
+
+export function isMultiAgentTab(tab: Tab): tab is MultiAgentTab {
+  return tab.view === 'multiagent' && tab.multiagent !== undefined;
 }
 
 // A plain `ssh <destination>` tab is a local PTY running the real ssh binary — recognized the way the

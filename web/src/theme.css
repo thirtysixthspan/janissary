@@ -948,6 +948,20 @@ html, body, #root {
    the sidebar (see .files-tab for the equivalent file-navigator containment). */
 .notifications-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
+/* Multi-agent tab: the one prompt, once, above a row per member. A flex column with its own scroll
+   so a comparison of eight answers scrolls inside the tab body rather than growing the strip. */
+.multiagent-tab { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; padding: 12px; gap: 8px; }
+.multiagent-prompt { font-weight: 600; white-space: pre-wrap; overflow-wrap: anywhere; }
+.multiagent-summary { color: var(--muted); font-size: 12px; }
+.multiagent-members { display: flex; flex-direction: column; gap: 12px; }
+.multiagent-member { border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+.multiagent-member-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.multiagent-model { font-weight: 600; overflow-wrap: anywhere; }
+.multiagent-state { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.multiagent-state.failed { color: var(--error); }
+.multiagent-error { color: var(--error); font-size: 12px; margin-top: 4px; overflow-wrap: anywhere; }
+.multiagent-answer { margin-top: 6px; }
+
 /* Notifications tab: metadata header matching the file tab's header treatment. */
 .notifications-header {
   display: flex; align-items: center; justify-content: flex-end;

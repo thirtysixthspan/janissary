@@ -11,7 +11,8 @@ import { QuestionPanel } from './QuestionPanel';
 import type { QuestionPanelHandle } from './shared/tab/handles';
 import { tabBodyBorder } from './shared/tab/body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
-import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab/view-guards';
+import { MultiAgentTab } from './multiagent/MultiAgentTab';
+import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView, isMultiAgentTabView } from './shared/tab/view-guards';
 
 type Properties = {
   tabs: TabView[];
@@ -56,9 +57,11 @@ function TabBodyDiv({
   );
 }
 
-// Harness, editor, and plugin tabs stay mounted (hidden when inactive) so terminal/xterm state,
-// editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video playback
-// position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
+// Harness, editor, multi-agent, and plugin tabs stay mounted (hidden when inactive) so
+// terminal/xterm state, editor buffers, undo stacks, cursor/scroll position, embedded-page
+// navigation, and video playback position survive tab switches — and so a multi-agent tab's rows
+// are not torn down and rebuilt while its members are still answering. Split out of App.tsx to keep
+// it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
   visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, overlayOpen,
@@ -96,6 +99,12 @@ export function MountedViewLayers({
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
           {t.label === current.label && pickerOverlays}
+        </TabBodyDiv>
+      ))}
+
+      {indexedTabs(tabs, isMultiAgentTabView).map(({ t, index }) => (
+        <TabBodyDiv key={t.label} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
+          <MultiAgentTab view={t.multiagent} />
         </TabBodyDiv>
       ))}
 

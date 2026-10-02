@@ -1,4 +1,5 @@
 import type { LogEntry, Tab, PluginTabRecord, EditorView, HarnessView, FileNavigatorView } from './types.js';
+import type { MultiAgentRun } from '../multiagent/types.js';
 
 export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDirectory?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
   label,
@@ -48,6 +49,21 @@ export const makeFilesTab = (label: string, dotColor: string, number: number, gr
   view: 'files',
   title: 'navigator',
   files,
+});
+
+// A multi-agent view tab (opened via `fanout <members> <prompt>`). Shows one prompt above a row per
+// member — its state while it works, its answer when it lands. Titled with the prompt so a user with
+// several comparisons open can tell them apart in the strip; the tab's own `workspaceDir` stays
+// empty, because the N clones live in `MultiAgentManager` and are released through it.
+export const makeMultiAgentTab = (
+  label: string, dotColor: string, number: number, group: number, groupColor: string,
+  run: MultiAgentRun, offline: boolean,
+): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  view: 'multiagent',
+  title: run.prompt,
+  multiagent: run,
+  ...(offline && { offline: true }),
 });
 
 // A notifications view tab (opened via `notifications`). A singleton, view-only feed whose body is

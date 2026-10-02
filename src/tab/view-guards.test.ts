@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { makeTab } from './index.js';
 import type { Tab } from './types.js';
 import {
-  isHarnessTab, isEditorTab, isFilesTab, isPluginTab, isMonitorTab, isSshTab,
+  isHarnessTab, isEditorTab, isFilesTab, isPluginTab, isMonitorTab, isMultiAgentTab, isSshTab,
 } from './view-guards.js';
 
 const tab = (overrides: Partial<Tab>): Tab => ({ ...makeTab('t', '#fff'), ...overrides });
@@ -12,6 +12,7 @@ const EDITOR = { name: 'a.txt', path: '/repo/a.txt', size: '1 B', url: '/open/1'
 const FILES = { root: '/repo', rows: [] } as unknown as NonNullable<Tab['files']>;
 const PLUGIN = { id: 'image', instanceKey: '/repo/a.png' } as unknown as NonNullable<Tab['plugin']>;
 const MONITOR = { suggestions: [], persona: 'security', targets: '', contextBytes: 0 };
+const MULTIAGENT = { prompt: 'go', members: [], cloning: 0 };
 
 // Each guard has to check both halves of the record's prose invariant. The payload half is the one
 // that matters at runtime: a tab carrying the right `view` but no payload is exactly the case the
@@ -22,6 +23,7 @@ describe.each([
   ['files', isFilesTab, 'files', { files: FILES }] as const,
   ['plugin', isPluginTab, 'plugin', { plugin: PLUGIN }] as const,
   ['monitor', isMonitorTab, 'monitor', { monitor: MONITOR }] as const,
+  ['multiagent', isMultiAgentTab, 'multiagent', { multiagent: MULTIAGENT }] as const,
 ])('is%sTab', (kind, guard, view, payload) => {
   it('admits a tab with both the view and the payload', () => {
     expect(guard(tab({ view, ...payload }))).toBe(true);

@@ -19,3 +19,7 @@ export function uniqueEditorLabel(tabs: Tab[]): string {
 export function uniqueFilesLabel(tabs: Tab[]): string {
   return uniqueLabel(new Set(tabs.map((t) => t.label)), 'navigator');
 }
+
+export function uniqueMultiAgentLabel(tabs: Tab[]): string {
+  return uniqueLabel(new Set(tabs.map((t) => t.label)), 'multi-agent');
+}

@@ -22,6 +22,7 @@ function makeManagers(): Managers {
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
+    multiAgent: { closeTab: vi.fn() },
     schedule: { delete: vi.fn(), closeTab: vi.fn(), get: vi.fn() },
     questions: { cancelTab: vi.fn(), closeTab: vi.fn(), pendingFor: vi.fn() },
     communication: { closeTab: vi.fn() },

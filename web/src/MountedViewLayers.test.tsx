@@ -539,3 +539,52 @@ describe('MountedViewLayers', () => {
     expect(closeTab).toHaveBeenCalledWith(1);
   });
 });
+
+describe('MountedViewLayers — multi-agent tabs', () => {
+  function makeMultiAgentTab(label: string): TabView {
+    return {
+      label, view: 'multiagent' as const, dotColor: '#0af', groupColor: '#ccc',
+      multiagent: {
+        prompt: 'what does this repository do?',
+        cloning: 0,
+        members: [{ index: 0, model: 'opencode/big-pickle', state: 'answered', answer: 'A terminal UI.' }],
+      },
+      connections: [], schedule: [], bufferLines: [], cmdHistory: [],
+    } as unknown as TabView;
+  }
+
+  const layers = (tabs: TabView[], current: TabView) => React.createElement(MountedViewLayers, {
+    tabs, current, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+    harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+  });
+
+  it('selects a multi-agent tab by its wire guard and renders its rows', () => {
+    const tabs = [makeMultiAgentTab('multi-agent')];
+    const { container } = render(layers(tabs, tabs[0]));
+
+    expect(container.querySelector('.multiagent-tab')).toBeTruthy();
+    expect(container.textContent).toContain('opencode/big-pickle');
+    expect(container.textContent).toContain('A terminal UI.');
+  });
+
+  it('keeps a multi-agent tab mounted and hidden across a tab switch', () => {
+    const tabs = [makeMultiAgentTab('multi-agent'), makeEditorTab('other', '/other.ts')];
+    const { container, rerender } = render(layers(tabs, tabs[0]));
+    const shown = container.querySelector('.multiagent-tab')?.closest('.tab-body') as HTMLElement;
+    expect(shown.style.display).toBe('flex');
+
+    rerender(layers(tabs, tabs[1]));
+
+    const body = container.querySelector('.multiagent-tab')?.closest('.tab-body') as HTMLElement;
+    expect(body).toBeTruthy();
+    expect(body.style.display).toBe('none');
+    expect(container.textContent).toContain('opencode/big-pickle');
+  });
+
+  it('renders nothing for a multiagent tab carrying no payload', () => {
+    const tab = { ...makeMultiAgentTab('multi-agent'), multiagent: undefined };
+    const { container } = render(layers([tab as TabView], tab as TabView));
+
+    expect(container.querySelector('.multiagent-tab')).toBeNull();
+  });
+});

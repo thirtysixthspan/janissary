@@ -100,6 +100,18 @@ export function buildTabView(
 
     monitor: tab.monitor,
     files: tab.files ? { ...tab.files, root: shorten(tab.files.root), absoluteRoot: tab.files.root } : undefined,
+    // Each member is projected field by field rather than spread, so a member's clone directory —
+    // the sandbox boundary its own agent process is confined to — is left on the server beside the
+    // `editorDraft`/`pageSnapshot`/`sessionTerminated` fields above. A path the client has no
+    // business holding is not put on the wire, and adding a field to the server record cannot
+    // quietly start broadcasting it.
+    multiagent: tab.multiagent && {
+      prompt: tab.multiagent.prompt,
+      cloning: tab.multiagent.cloning,
+      members: tab.multiagent.members.map((m) => ({
+        index: m.index, model: m.model, state: m.state, error: m.error, answer: m.answer,
+      })),
+    },
     activePty: tab.activePty,
     dock: tab.dock,
     pane: tab.pane,

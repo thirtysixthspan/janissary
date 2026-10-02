@@ -22,6 +22,8 @@ The report carries whatever the agent said on its own standard error, on the lin
 
 The `acp` command's per-tab session and a [[conversations]] session are separate uses of the same protocol channel. A conversation session is tool-less, runs in the conversation's own workspace, and sends a plain text query directly; it does not enter the `acp` command's database/browser tool loop.
 
+A [[multi-agent-tab]] comparison tab holds several connections at once, not one per tab: each of its members is a separate opencode session on its own model, told apart by the member it belongs to rather than by a tab label, each running in its own clone and confined to it (see [[sandbox]]). Its members are also the one place an ACP agent's *own* tool calls are approved rather than cancelled — every other connection, this one included outside a member, decides exactly as this section describes.
+
 ### Reply streaming
 
 The agent is instructed (via the prompt primer) to write its replies in **GitHub-flavored Markdown**, and the tab renders them as formatted Markdown. The reply streams into a running log entry keyed by the prompt text; that entry is flagged `markdown` so the raw Markdown is kept verbatim (not split into plain-text lines) and `flattenBuffer` (`src/tab.ts`) emits it as a single `markdown` buffer line. The web client renders that line by converting the Markdown to HTML (`marked`, GFM enabled) and sanitizing it (`DOMPurify`) before insertion — so headings, lists, tables, fenced code blocks, blockquotes, and links all render, with partial Markdown rendering progressively as it streams. While awaiting the agent, the tab's busy indicator flashes (the dot blinks). On completion the entry is finalized.

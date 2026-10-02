@@ -18,15 +18,29 @@ export function classifyTool(toolCall: ToolCallUpdate): PersonaTool | null {
   return null;
 }
 
-// Decide the outcome for a monitor tool-permission request: approve only a classified web tool the
-// persona's allowlist includes, choosing the least-privilege allow option (`allow_once`, falling
-// back to `allow_always`); deny everything else. An undefined/empty allowlist — every non-monitor
-// caller and every tool-less persona — denies unconditionally, exactly as before.
+// Decide the outcome for a tool-permission request. Two modes, and only the connection's own option
+// field chooses between them.
+//
+// `ownTools` is the mode a multi-agent tab's member runs in: the agent is a real coding agent
+// working in a disposable clone it alone owns, so its own tool calls are approved, preferring
+// `allow_always` over `allow_once` so a multi-step task is not stopped at every step. Nothing else
+// reaches it — no existing caller sets the field — and it is safe precisely because each member's
+// process is confined to its own clone.
+//
+// Without it, the behavior is unchanged: approve only a classified web tool the persona's
+// allowlist includes, choosing the least-privilege allow option (`allow_once`, falling back to
+// `allow_always`); deny everything else. An undefined/empty allowlist — every non-monitor caller and
+// every tool-less persona — denies unconditionally, exactly as before.
 export function decidePermission(
   allowedTools: string[] | undefined,
   toolCall: ToolCallUpdate,
   options: PermissionOption[],
+  ownTools = false,
 ): RequestPermissionOutcome {
+  if (ownTools) {
+    const own = options.find((o) => o.kind === 'allow_always') ?? options.find((o) => o.kind === 'allow_once');
+    return own ? { outcome: 'selected', optionId: own.optionId } : { outcome: 'cancelled' };
+  }
   if (!allowedTools || allowedTools.length === 0) return { outcome: 'cancelled' };
   const tool = classifyTool(toolCall);
   if (!tool || !allowedTools.includes(tool)) return { outcome: 'cancelled' };

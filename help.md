@@ -17,6 +17,7 @@
 | `broadcast` | Send a message to several or all agents |
 | `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
 | `acp` | Send a prompt to the OpenCode ACP agent (`acp reset` starts a fresh session) |
+| `fanout` | `fanout opencode:<model>... <prompt>` runs one prompt across up to eight models at once, each in a fresh disposable workspace, and opens a `multi-agent` tab lining their answers up to compare |
 | `db` | Create, delete, query, or list SQLite databases |
 | `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the database reached most recently, by `sql` or any `db` command (`sql [<name>] left`/`right` to dock it) |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |

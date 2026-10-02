@@ -1,7 +1,7 @@
 import type { CompletionResult } from './types.js';
 import {
   completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
-  type MonitorCompletions,
+  completeFanoutMember, type MonitorCompletions,
 } from './handlers.js';
 import {
   completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose,
@@ -22,6 +22,7 @@ import { SYNTAX_THEMES } from '../syntax-themes.js';
  *   (e.g. `sqlite:movies`, `shell:bash`, `acp:opencode`, `browser:w1`).
  * - For the `browser` command, completes subcommands and, where a window id is expected
  *   (`browser use`, `browser window close`), the current tab's open window ids.
+ * - For a `fanout` member (`opencode:<partial>`), completes the opencode model catalog.
  * - Otherwise completes a filesystem path relative to `cwd`.
  *
  * A single match is filled in fully; multiple matches fill in their longest common prefix
@@ -44,6 +45,7 @@ export function completeCommandLine(
     completeMonitorCommand(cursor, monitor) ??
     completeSearchCommand(cursor) ??
     completeSyntaxTheme(cursor, SYNTAX_THEMES) ??
-    completeHarnessModel(cursor);
+    completeHarnessModel(cursor) ??
+    completeFanoutMember(cursor);
   return result ?? completeFilePath(cursor, cwd);
 }

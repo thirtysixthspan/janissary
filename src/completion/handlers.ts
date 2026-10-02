@@ -45,6 +45,15 @@ export function completeSyntaxTheme(cursor: CompletionCursor, themes: string[]):
   return null;
 }
 
+// Complete a `fanout` member — `opencode:<model>` — against the opencode catalog, so a model id is
+// never typed from memory. Only a token that already names the harness is completed: a bare `fanout`
+// is still the start of a prompt and still falls through to the filesystem rule, and a prompt word
+// that happens to begin with `opencode` is not hijacked into a member.
+export function completeFanoutMember(cursor: CompletionCursor): CompletionResult | null {
+  if (cursor.command !== 'fanout' || !/^opencode:/i.test(cursor.token)) return null;
+  return completeWord(cursor, modelsFor('opencode').map((model) => `opencode:${model}`));
+}
+
 // Complete `harness <name> ... --model <partial>` against the harness's known model catalog.
 // The flag can appear anywhere after the harness name, so match on the token immediately
 // preceding the cursor rather than a fixed argument index (mirrors completeScheduleTarget).

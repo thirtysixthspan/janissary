@@ -16,6 +16,7 @@ import type { RemoteSessionRpcCall } from './protocol/sessions.js';
 
 export type { BufferLine, HarnessView, EditorView, RemoteTarget, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorPullStatus, FileNavigatorCommitStatus, FileNavigatorRow, TaskRow } from './tab/types.js';
 export type { CompletionResult } from './completion/types.js';
+export type { MultiAgentMemberState } from './multiagent/types.js';
 export type { ProfileRow } from './profile/types.js';
 
 export type ConversationHarness = 'claude' | 'opencode';
@@ -102,6 +103,8 @@ export type {
   QuestionKind,
   PendingQuestionView,
   RemoteTargetView,
+  MultiAgentMemberView,
+  MultiAgentView,
   TabView,
 } from './protocol/tab.js';
 export type {

@@ -5,6 +5,7 @@ import { command as message } from './msg.js';
 import { command as broadcast } from './broadcast.js';
 import { command as acp } from './acp.js';
 import { command as acpReset } from './acp-reset.js';
+import { command as fanout } from './fanout.js';
 import { command as database } from './db.js';
 import { command as browser } from './browser.js';
 import { command as connection } from './connection.js';
@@ -45,6 +46,7 @@ const coreCommands: Command[] = [
   broadcast,
   acpReset,
   acp,
+  fanout,
   database,
   browser,
   connection,
