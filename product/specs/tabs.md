@@ -211,8 +211,10 @@ joined a local workspace while it was still being cloned shows the indicator too
 the clone lands even if the tab that started the clone has since closed. A local
 clone that fails, or a harness tab that shows a provisioning error, drops the indicator at once,
 while the error stays on screen until the tab closes. A remote agent tab whose launch fails keeps
-the indicator until the tab closes, since the channel never reports a workspace. Tabs that never
-provision a workspace never show it.
+the indicator until the tab closes, since the channel never reports a workspace. Attaching a detached
+remote session clones nothing, but the tab shows the same indicator until the host accepts the
+attach — the state the row's connection plug reports as "Provisioning". Tabs with no workspace to
+provision or attach to never show it.
 
 ### Per-tab state isolation
 
