@@ -36,7 +36,8 @@ export function ReplayTab({
 
   // Space and `p` play and pause, `,` and `.` step one recorded event, `[` and `]` change speed, and
   // `i` cycles the idle limit. Every one of them is also a button, so a chord is the short way round
-  // rather than the only way — and none is claimed while the user is in a text field.
+  // rather than the only way — and none is claimed while the user is in a text field. Each is
+  // deliberately unshifted, so none can collide with a key the terminal underneath already claims.
   //
   // `active` is read through a ref rather than listed as a dependency: the listener is installed once
   // and decides per keystroke whether the tab is on screen, which is the same gate the host's `active`

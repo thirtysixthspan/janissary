@@ -33,6 +33,7 @@ Every one of those is a button as well as a key:
 | `.` | Next recorded moment |
 | `,` | Previous recorded moment |
 | `]` / `[` | Faster / slower |
+| `i` | Longer or shorter idle limit |
 
 Seeking backwards rebuilds the frame from the recording rather than storing every frame, so jumping
 back into a long recording takes a moment.

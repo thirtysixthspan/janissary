@@ -110,7 +110,7 @@ describe('ReplayTab', () => {
     await waitFor(() => expect(screen.getByLabelText('Idle time limit').textContent).toBe('idle 2s'));
   });
 
-  it('cycles the idle limit and the speed when their controls are pressed', async () => {
+  it('cycles the idle limit and the speed from their chords as well as their buttons', async () => {
     renderTab();
     const idle = await screen.findByLabelText('Idle time limit');
     const speed = screen.getByLabelText('Playback speed');
@@ -120,6 +120,12 @@ describe('ReplayTab', () => {
     expect(idle.textContent).toBe('idle 5s');
     await userEvent.click(speed);
     expect(speed.textContent).toBe('1.5×');
+
+    // The same two actions from the keyboard, which is what the documentation's key tables claim.
+    await userEvent.keyboard('i');
+    expect(screen.getByLabelText('Idle time limit').textContent).toBe('idle 10s');
+    await userEvent.keyboard(']');
+    expect(screen.getByLabelText('Playback speed').textContent).toBe('2×');
   });
 
   it('pauses and plays from its button and from its chords', async () => {

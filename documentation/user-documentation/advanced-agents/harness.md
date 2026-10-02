@@ -275,6 +275,7 @@ time forward and back, and a seek bar. Each is a button as well as a key:
 | `.` | Next recorded moment |
 | `,` | Previous recorded moment |
 | `]` / `[` | Faster / slower |
+| `i` | Longer or shorter idle limit |
 
 Text can be selected in the replay and copied with `Cmd+C` (or `Ctrl+C`), the same as a terminal.
 
