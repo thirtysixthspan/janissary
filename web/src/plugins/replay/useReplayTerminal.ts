@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { isMacPlatform, terminalColors, type TabPluginClientCapabilities } from '../api';
-import type { CastEvent } from './cast-stream';
+import type { CastEvent, CastHeader } from './cast-stream';
 
 // The replayed terminal, built by the plugin's own chunk rather than by the host's shared hook: a
 // concrete client plugin reaches only its own API, the shared plugin stylesheet, and its own contract,
@@ -21,7 +21,7 @@ const BASE_FONT_SIZE = 13.5;
 const MIN_FONT_SIZE = 6;
 
 export function useReplayTerminal(
-  options: { cols: number; rows: number; colors?: { fg: string; bg: string } },
+  header: CastHeader | undefined,
   containerRef: React.RefObject<HTMLDivElement | null>,
   capabilities: TabPluginClientCapabilities,
 ): ReplayTerminal {
@@ -30,17 +30,19 @@ export function useReplayTerminal(
   // runs forward would otherwise walk every event behind it again, which on a long recording at sixty
   // ticks a second is the difference between a few hundred operations and a few hundred thousand.
   const cursor = useRef({ index: 0, time: 0 });
-  // The key handler reads the live terminal and the live capability, so it must close over neither.
-  const live = useRef({ term: null as Terminal | null, copyText: capabilities.copyText });
   const isMac = useMemo(() => isMacPlatform(), []);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
-    const palette = options.colors ?? terminalColors();
+    // Nothing is built until the header says what grid to build: the recorded columns and rows are
+    // the whole point of the tab, and a terminal built at any other size would have to be thrown away
+    // and rebuilt — losing the bytes already written, since the cursor below is this hook's only
+    // record of how far it got.
+    if (!container || !header) return;
+    const palette = header.colors ?? terminalColors();
     const term = new Terminal({
-      cols: options.cols,
-      rows: options.rows,
+      cols: header.cols,
+      rows: header.rows,
       cursorBlink: false,
       theme: { background: palette.bg, foreground: palette.fg },
       fontFamily: getComputedStyle(document.documentElement).getPropertyValue('--mono').trim()
@@ -48,7 +50,8 @@ export function useReplayTerminal(
       fontSize: BASE_FONT_SIZE,
     });
     termRef.current = term;
-    live.current = { term, copyText: capabilities.copyText };
+    // A new terminal has been fed nothing, whatever a previous one had been fed.
+    cursor.current = { index: 0, time: 0 };
     term.open(container);
     // Copying is the ordinary chord rather than the terminal's: there is no program behind this
     // terminal to interrupt, so Ctrl+C is free to mean what it means everywhere else.
@@ -80,7 +83,7 @@ export function useReplayTerminal(
     };
     // Built once per recording: its recorded size and colors are fixed for the recording's whole life.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the terminal is one object for one recording: rebuilding it on a new options object or capability would tear down and re-create a terminal that is playing.
-  }, [containerRef, options.cols, options.rows, isMac]);
+  }, [containerRef, header, isMac]);
 
   return useMemo<ReplayTerminal>(() => ({
     renderUpTo(events, time) {

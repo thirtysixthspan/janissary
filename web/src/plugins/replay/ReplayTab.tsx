@@ -19,11 +19,7 @@ export function ReplayTab({
   const containerRef = useRef<HTMLDivElement>(null);
   const { resourceUrl, active, splitAction, dock } = capabilities;
   const source = useReplaySource(resourceUrl(payload.url), active);
-  const terminal = useReplayTerminal(
-    { cols: source.header?.cols ?? 80, rows: source.header?.rows ?? 24, colors: source.header?.colors },
-    containerRef,
-    capabilities,
-  );
+  const terminal = useReplayTerminal(source.header, containerRef, capabilities);
   // A live recording plays in real time however long its silences are; a finished one is compressed,
   // which is what makes an hour of recorded silence watchable. Both facts are needed: the server's
   // answer says the recording was not being written when the tab opened, and new bytes arriving say it

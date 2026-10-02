@@ -38,10 +38,10 @@ function makeCapabilities(overrides: Partial<TabPluginClientCapabilities> = {}) 
 
 // jsdom has no xterm, no terminal metrics and no measurement, so the chunk's terminal is stubbed and
 // everything this tab is actually responsible for — the metadata line, the transport, the chords, the
-// copy, and what it does with a degenerate recording — is exercised against it.
-vi.mock('./useReplayTerminal', () => ({
-  useReplayTerminal: () => ({ renderUpTo: vi.fn() }),
-}));
+// copy, and what it does with a degenerate recording — is exercised against it. The stub is a spy, so
+// a case can also pin what the tab asks the terminal for, which is where the recorded grid comes from.
+const { terminalHook } = vi.hoisted(() => ({ terminalHook: vi.fn() }));
+vi.mock('./useReplayTerminal', () => ({ useReplayTerminal: terminalHook }));
 
 const renderTab = (payload: ReplayPayload = makePayload(), capabilities = makeCapabilities()) => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(encode(HEADER + '[0, "o", "hi"]\n'))));
@@ -49,7 +49,22 @@ const renderTab = (payload: ReplayPayload = makePayload(), capabilities = makeCa
 };
 
 describe('ReplayTab', () => {
-  beforeEach(() => { vi.unstubAllGlobals(); });
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    terminalHook.mockReset();
+    terminalHook.mockImplementation(() => ({ renderUpTo: vi.fn() }));
+  });
+
+  it('asks for no terminal until the recording states its grid, then for that grid', async () => {
+    renderTab();
+    // Nothing is built from a fallback: a terminal at any size but the recorded one would have to be
+    // thrown away, and the bytes already written would go with it.
+    expect(terminalHook.mock.calls[0][0]).toBeUndefined();
+    await waitFor(() => {
+      const header = terminalHook.mock.calls.at(-1)?.[0];
+      expect(header).toMatchObject({ cols: 80, rows: 24 });
+    });
+  });
 
   it('reports what the recording is, when it started, and how long it is', async () => {
     renderTab();

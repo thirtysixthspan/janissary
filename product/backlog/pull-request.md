@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Build the replayed terminal only once its recorded size is known, so the bytes already written are not lost when the header arrives.
-
-Existing Issue: `useReplayTerminal` creates the terminal at the fallback 80x24 and lists `options.cols` and `options.rows` as effect dependencies, so a recording of any other size causes the effect to tear the terminal down and build a new one moments later — while `cursor.current`, the hook's record of how far the new terminal has been fed, survives and is never reset, so every event written before the rebuild is dropped and never re-written. Severity: 7/10
-
-Existing Risk: 6/10 - Every replay of a recording that is not 80x24 opens showing a partial or empty screen that stays wrong until the user seeks backwards, which resets the cursor and happens to repair it; a user who does not seek sees a broken player with no indication why.
-
-Proposal Risk: 2/10 - The rule becomes a conditional rather than a constructor argument, so a reader still has to know why the fallback exists.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1515: build the replay terminal once the recording's size is known". In `web/src/plugins/replay/ReplayTab.tsx`, do not call `useReplayTerminal` with `source.header?.cols ?? 80` and `source.header?.rows ?? 24`; pass the header itself and let the hook decline to build until it arrives, returning a `renderUpTo` that is a no-op until then, so the terminal is constructed once with the recorded grid and never rebuilt. Reset `cursor.current` in the same place the terminal is created as well as in the backward-seek branch, so any future rebuild cannot silently skip the bytes before it. If the hook keeps the fallback for a recording whose header never parses, say so in its own doc comment and cover it with a case in `web/src/plugins/replay/ReplayTab.test.tsx` — that file already stubs this hook, so a case asserting the tab still renders its metadata line and transport for an unreadable recording will pass through the same path.
-
 * Keep a hidden replay's read position across a tab becoming visible again, rather than reading the whole recording a second time.
 
 Existing Issue: `useReplaySource`'s effect depends on `[url, active]`, so a tab becoming visible again restarts it: the `CastStream` is replaced, the byte offset returns to zero, and the whole file is fetched and re-parsed from the beginning every time the user switches away and back. Severity: 5/10
