@@ -69,6 +69,13 @@ why the members' workspaces do not live in the tab's own single workspace field.
 A member whose clone could not be provisioned, whose connection died, or whose prompt failed reads
 `failed` with the reason. A connection that has gone cannot be revived within the run.
 
+A member is also refused when its process would not actually be confined — when workspace isolation
+is switched off in configuration, or on a machine where it is unavailable — and a member with no
+workspace of its own is refused for the same reason. Approving an agent's own tool calls is only
+safe because a boundary keeps it inside its disposable clone; with no boundary, a row reading
+`failed` with the reason is a better outcome than an unrestricted agent pointed at the user's own
+checkout.
+
 ## What it does not do
 
 The tab lines answers up for a person to read. It does not judge, score or rank them, does not diff

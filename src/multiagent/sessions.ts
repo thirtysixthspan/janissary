@@ -2,21 +2,29 @@ import { connectAcp } from '../acp/index.js';
 import { acpLaunchFor } from '../acp/launch.js';
 import type { AcpSession } from '../acp/types.js';
 import { messageBus } from '../bus.js';
+import { sandboxNotice } from '../sandbox/index.js';
 import type { MultiAgentMember } from './types.js';
 
 // The composite key, copied from `EditorAcpManager`: a tab label alone cannot hold N sessions, so a
 // member's key carries the member's own index inside it. `closeTab` prefix-scans on the label.
 const key = (label: string, index: number): string => `${label}:${index}`;
 
-// The member connection registry: one live ACP session per member of a multi-agent tab, keyed by
-// label and member index. `AcpManager` keys its sessions by tab label and holds exactly one per tab,
-// so it cannot host eight and stays as it is; these live here.
-//
-// Each session is spawned with that member's *own* `cwd` and `workspaceDir` rather than read off the
-// tab, which is the one place today's wiring has to differ: `AcpManager.session` takes `cwd` as a
-// parameter but reads `workspaceDir` and `offline` off the tab, which is right for one session per
-// tab and wrong for eight in one — a session pointed at a clone it is not confined to would look
-// workspaced and not be. Exactly as `ConversationSessions` already threads a per-session workspace.
+// Whether this member's spawn would actually be confined, and if not, why not. `sandboxNotice` is
+// the same helper a workspaced tab's transcript carries when its processes will not be confined, and
+// it folds in the `sandboxWorkspaces` toggle and `sandbox-exec` availability — so this is exactly the
+// test `sandboxSpawn` applies internally, and the two cannot drift apart.
+function confinementFailure(member: MultiAgentMember): string | undefined {
+  if (!member.dir) return 'Cannot confine a member with no workspace of its own.';
+  return sandboxNotice();
+}
+
+// Owns a multi-agent tab's member connections. The registry, the composite key and the identity
+// guard are the shape `EditorAcpManager` established; what differs is that each session is spawned
+// with that member's *own* `cwd` and `workspaceDir` rather than read off the tab — the one place
+// today's wiring has to differ, since `AcpManager.session` takes `cwd` as a parameter but reads
+// `workspaceDir` and `offline` off the tab, which is right for one session per tab and wrong for
+// eight in one: a session pointed at a clone it is not confined to would look workspaced and not be.
+// Exactly as `ConversationSessions` already threads a per-session workspace.
 export class MultiAgentSessions {
   private sessions = new Map<string, AcpSession>();
 
@@ -32,14 +40,26 @@ export class MultiAgentSessions {
     prompt: string,
     offline: boolean,
   ): void {
+    // Refused rather than degraded. A member exists to work in a disposable clone under a boundary
+    // that keeps it inside it; with no boundary, approving its tool calls would point an
+    // unrestricted agent at the user's own repository, which is worse than a row that says why it
+    // did not run.
+    const unconfined = confinementFailure(member);
+    if (unconfined) {
+      member.state = 'failed';
+      member.error = unconfined;
+      messageBus.emit('state', { type: 'dirty' });
+      return;
+    }
     const k = key(label, member.index);
     const session = connectAcp({
       ...acpLaunchFor({ harness: 'opencode', model: member.model, variant: 'default' }),
-      cwd: member.dir ?? process.cwd(),
+      cwd: member.dir as string,
       workspaceDir: member.dir,
       offline,
       // The opt-in that lets a member's agent use its own tools, which an ordinary agent tab's may
-      // not. It is safe here because this process is confined to this member's own clone.
+      // not. Safe here, and only here, because the check above established that this process is
+      // confined to this member's own clone.
       ownTools: true,
       onError: (message) => this.died(k, session, member, message),
     });

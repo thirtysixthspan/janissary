@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Grant a member's own-tool approval only when the sandbox will actually confine that member's process.
-
-Existing Issue: `MultiAgentSessions.connect` in `src/multiagent/sessions.ts` passes `ownTools: true` unconditionally, while the confinement that makes it safe is conditional — `sandboxSpawn` in `src/sandbox/index.ts` returns the command and arguments unchanged when there is no `workspaceDir`, when the `sandboxWorkspaces` config toggle is off, or when `sandbox-exec` is unavailable, which on any non-darwin host is every spawn. Severity: 6/10
-
-Existing Risk: 7/10 - On a host where confinement is unavailable, every tool call a member's agent makes is approved with no Seatbelt profile, no secret-path deny and no network deny, and the agent runs against a clone of the user's own repository with `HOME` set — so it can read credentials and `.env` files the sandbox exists to keep out of reach, on the first host where the toggle is off.
-
-Proposal Risk: 3/10 - The grant becomes conditional rather than unconditional, so a host without confinement refuses instead of running wide open; what remains is that a member on such a host cannot do its work at all, which is a visible refusal rather than a silent exposure.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1513: gate a member's own-tool approval on the sandbox actually confining it". In `src/multiagent/sessions.ts`, decide `ownTools` from whether this spawn will be confined rather than passing `true` outright: reuse the existing exports `sandboxAvailable` and `sandboxNotice` from `src/sandbox/index.ts` together with the presence of `member.dir`, which is exactly the `confinable` test `sandboxSpawn` itself applies, so the two cannot drift. When the spawn would not be confined, mark the member `failed` with the reason `sandboxNotice()` returns — the same helper a workspaced tab uses to tell a user its processes will not be confined — and do not open the session at all, rather than opening one whose tools are approved with nothing enforcing the boundary. The confinement invariant is the premise the whole grant rests on, so refusing is the coherent response and matches how `provisionMembers` already treats a member it cannot provision. Record the reason in `product/specs/multi-agent-tab.md`, whose "What a member does" section currently states the confinement without qualifying it, and in `product/specs/sandbox.md`. Add cases in `src/multiagent/sessions.test.ts` asserting `ownTools` is not set and no session is opened when isolation is reported unavailable, keeping the existing case that asserts it is set for a confined member.
-
 * Refuse a member connection that has no clone directory instead of falling back to an unsandboxed working directory.
 
 Existing Issue: `MultiAgentSessions.connect` in `src/multiagent/sessions.ts` passes `cwd: member.dir ?? process.cwd()` and `workspaceDir: member.dir`, so the one code path in the application that sets `ownTools: true` also carries a fallback that spawns the agent in the server's own working directory with no `workspaceDir` and therefore no sandbox at all. Severity: 5/10

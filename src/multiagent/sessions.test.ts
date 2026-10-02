@@ -3,8 +3,15 @@ import type { AcpOptions, AcpSession } from '../acp/types.js';
 import { messageBus } from '../bus.js';
 import type { MultiAgentMember } from './types.js';
 
-const mocks = vi.hoisted(() => ({ connectAcp: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  connectAcp: vi.fn(),
+  sandboxNotice: vi.fn<() => string | undefined>(),
+}));
 vi.mock('../acp/index.js', () => ({ connectAcp: mocks.connectAcp }));
+// The own-tools grant is only safe under real confinement, and this is the helper that reports
+// whether there is any. Stubbed rather than exercised against the host so the refusal is testable
+// from a darwin machine with isolation enabled.
+vi.mock('../sandbox/index.js', () => ({ sandboxNotice: mocks.sandboxNotice }));
 
 import { MultiAgentSessions } from './sessions.js';
 
@@ -25,7 +32,12 @@ const lastHandlers = (session: AcpSession): Handlers => {
   return prompt.mock.calls.at(-1)![1];
 };
 
-beforeEach(() => { mocks.connectAcp.mockReset(); messageBus.clear(); });
+beforeEach(() => {
+  mocks.connectAcp.mockReset();
+  mocks.sandboxNotice.mockReset();
+  mocks.sandboxNotice.mockReturnValue(undefined);
+  messageBus.clear();
+});
 
 // Every write to a member is a change to what the tab shows, and the client only learns of one when
 // the state change goes out with it. Subscribed the way `src/editor/acp-manager.test.ts` does.
@@ -55,6 +67,40 @@ describe('MultiAgentSessions', () => {
     mocks.connectAcp.mockImplementation(() => fakeSession());
     new MultiAgentSessions().connect('multi-agent', member(), 'go', true);
     expect((mocks.connectAcp.mock.calls[0][0] as AcpOptions).offline).toBe(true);
+  });
+
+  // Approving a member's own tool calls is only safe because the process is confined to that
+  // member's clone. Without confinement there is no boundary holding it, so the member is refused
+  // rather than run wide open — the one combination that exists nowhere else in the application.
+  describe('when the member would not be confined', () => {
+    beforeEach(() => {
+      mocks.sandboxNotice.mockReturnValue('workspace isolation off: sandboxWorkspaces disabled in config');
+    });
+
+    it('opens no session at all', () => {
+      mocks.connectAcp.mockImplementation(() => fakeSession());
+      new MultiAgentSessions().connect('multi-agent', member(), 'go', false);
+      expect(mocks.connectAcp).not.toHaveBeenCalled();
+    });
+
+    it('fails the member with the isolation reason and announces it', () => {
+      const m = member();
+      const dirty = watchState();
+      new MultiAgentSessions().connect('multi-agent', m, 'go', false);
+
+      expect(m.state).toBe('failed');
+      expect(m.error).toBe('workspace isolation off: sandboxWorkspaces disabled in config');
+      expect(dirty).toHaveBeenCalledOnce();
+    });
+  });
+
+  it('refuses a member with no workspace of its own, naming what is missing', () => {
+    const m = member({ dir: undefined });
+    new MultiAgentSessions().connect('multi-agent', m, 'go', false);
+
+    expect(mocks.connectAcp).not.toHaveBeenCalled();
+    expect(m.state).toBe('failed');
+    expect(m.error).toBe('Cannot confine a member with no workspace of its own.');
   });
 
   it('prompts a member exactly once', () => {
