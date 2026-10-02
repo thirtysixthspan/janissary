@@ -301,8 +301,11 @@ command:
 - `No recording found for "<target>".` — nothing open has that label, and it is not a path.
 - `No recording available for "<label>" yet.` — the tab is open but has not produced any output yet.
 - `No such recording file: <path>.`
-- `Cannot play <name>: <reason>.` — the file is there but cannot be read as a recording.
 - `Replay is unavailable.` — the player is disabled; its own message in the feed says why.
+
+All four are decided before the player opens anything. If the recording is there but cannot be read as
+one — a truncated file, a header that is not a header — the replay tab still opens and its info line
+carries the reason, and nothing is posted to the feed.
 
 ### When recording fails
 

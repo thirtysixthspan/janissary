@@ -865,9 +865,12 @@ in, and nothing is written to that tab's transcript:
 - `No recording found for "<target>".` — no such tab is open, or it is not one that records.
 - `No recording available for "<label>" yet.` — the tab is open but has produced no output yet.
 - `No such recording file: <path>.` — the `.cast` path is not there.
-- `Cannot play <name>: <reason>.` — the file is there but its header or its events cannot be read.
 - `Replay is unavailable.` — no active player plugin is behind the route; the plugin's own disabled
   line in the feed is the account of why.
+
+Every one of those is decided before any tab exists. A recording that is there but that the player
+cannot read is a different moment: the tab opens, its metadata line carries the reason, and nothing is
+posted to the feed.
 
 ## Monitoring
 
