@@ -77,7 +77,7 @@ describe('MultiAgentManager member resolution', () => {
     const outcome = new MultiAgentManager(fake.managers).run('main', `fanout opencode:${KNOWN} go`);
 
     expect(outcome).toMatchObject({ running: 1, skipped: [] });
-    expect(fake.create).toHaveBeenCalledWith(`multi-agent-${KNOWN.replaceAll('/', '-')}`);
+    expect(fake.create).toHaveBeenCalledWith(`multi-agent-${KNOWN.replaceAll('/', '-')}-0`);
   });
 
   it('refuses a member naming a model the catalog does not carry, and runs the rest', () => {
@@ -193,8 +193,8 @@ describe('MultiAgentManager teardown', () => {
 
     expect(first.kill).toHaveBeenCalledOnce();
     expect(second.kill).toHaveBeenCalledOnce();
-    expect(fake.release).toHaveBeenCalledWith(`/ws/multi-agent-${KNOWN.replaceAll('/', '-')}`);
-    expect(fake.release).toHaveBeenCalledWith(`/ws/multi-agent-${OTHER.replaceAll('/', '-')}`);
+    expect(fake.release).toHaveBeenCalledWith(`/ws/multi-agent-${KNOWN.replaceAll('/', '-')}-0`);
+    expect(fake.release).toHaveBeenCalledWith(`/ws/multi-agent-${OTHER.replaceAll('/', '-')}-1`);
   });
 
   it('cancels a clone still in flight when the tab closes', async () => {
@@ -205,7 +205,7 @@ describe('MultiAgentManager teardown', () => {
     manager.run('main', `fanout opencode:${KNOWN} go`);
     manager.closeTab('multi-agent');
 
-    expect(fake.cancel).toHaveBeenCalledWith(`multi-agent-${KNOWN.replaceAll('/', '-')}`);
+    expect(fake.cancel).toHaveBeenCalledWith(`multi-agent-${KNOWN.replaceAll('/', '-')}-0`);
   });
 
   it('leaves another tab run alone when one tab closes', async () => {
@@ -234,6 +234,6 @@ describe('MultiAgentManager teardown', () => {
     manager.dispose();
     await flush();
 
-    expect(fake.release).toHaveBeenCalledWith(`/ws/multi-agent-${KNOWN.replaceAll('/', '-')}`);
+    expect(fake.release).toHaveBeenCalledWith(`/ws/multi-agent-${KNOWN.replaceAll('/', '-')}-0`);
   });
 });

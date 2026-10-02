@@ -8,17 +8,25 @@ import type { MultiAgentMember } from './types.js';
 // are released from the manager's own `closeTab(label)`, which the walk already calls for every
 // manager named in `MANAGER_TAB_RELEASE`.
 
-// One distinct workspace name per member. The label part keeps two runs from colliding on a name
-// and the model-derived part keeps the folder readable — a model holding a `/` becomes `-`, since
-// the name has to be a single folder name directly under the workspace base.
-export function memberWorkspaceName(label: string, model: string): string {
-  return `${label}-${model.replaceAll('/', '-')}`;
+// One distinct workspace name per member: `<tab label>-<model with / replaced by ->-<member index>`.
+// The label part keeps two runs from colliding on a name and the model-derived part keeps the folder
+// readable — a model holding a `/` becomes `-`, since the name has to be a single folder name
+// directly under the workspace base.
+//
+// The index is what makes the name *provably* distinct rather than distinct in practice. Folding
+// `/` to `-` is not injective: a project overriding `.janissary/harness-models.json` can carry both
+// `a/b` and `a-b`, which would otherwise derive one name for two members — and `WorkspaceManager`
+// keys its `refs` and `pending` maps by name, so the second `create` would overwrite the first's
+// entries and both members would be handed one clone to write into concurrently. The bundled catalog
+// cannot collide, which is precisely why relying on that was not good enough.
+export function memberWorkspaceName(label: string, model: string, index: number): string {
+  return `${label}-${model.replaceAll('/', '-')}-${index}`;
 }
 
 // A name that cannot name one folder is refused before `create` is called, rather than after a
 // clone it would never have made. Reuses the workspace's own rule so both agree on what is legal.
-function unusableName(label: string, model: string): boolean {
-  return workspaceLabelError(memberWorkspaceName(label, model)) !== undefined;
+function unusableName(label: string, model: string, index: number): boolean {
+  return workspaceLabelError(memberWorkspaceName(label, model, index)) !== undefined;
 }
 
 // Start a clone per member, keyed by each member's distinct name. A member whose name cannot be a
@@ -37,8 +45,8 @@ export function provisionMembers(
     // A member already refused when the list was resolved against the catalog — an unknown model, a
     // repeat — is authoritative: it is never cloned and never prompted.
     if (member.state === 'failed') continue;
-    const name = memberWorkspaceName(label, member.model);
-    if (unusableName(label, member.model)) {
+    const name = memberWorkspaceName(label, member.model, member.index);
+    if (unusableName(label, member.model, member.index)) {
       member.state = 'failed';
       member.error = `Cannot provision a workspace named "${name}".`;
       continue;
@@ -71,7 +79,7 @@ export function provisionMembers(
 // it fires still sweeps them.
 export function releaseMembers(label: string, members: MultiAgentMember[], managers: Managers): void {
   for (const member of members) {
-    managers.workspace.cancel(memberWorkspaceName(label, member.model));
+    managers.workspace.cancel(memberWorkspaceName(label, member.model, member.index));
     const dir = member.dir;
     if (dir) setTimeout(() => managers.workspace.release(dir), 0);
   }

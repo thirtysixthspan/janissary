@@ -15,16 +15,28 @@ const member = (model: string, index = 0): MultiAgentMember => ({ index, model, 
 
 describe('memberWorkspaceName', () => {
   it('replaces the slashes of a model so the result is one folder name', () => {
-    expect(memberWorkspaceName('multi-agent', 'google/gemini-3.1-flash-lite'))
-      .toBe('multi-agent-google-gemini-3.1-flash-lite');
+    expect(memberWorkspaceName('multi-agent', 'google/gemini-3.1-flash-lite', 0))
+      .toBe('multi-agent-google-gemini-3.1-flash-lite-0');
   });
 
   it('keeps a model with no slash whole', () => {
-    expect(memberWorkspaceName('multi-agent', 'big-pickle')).toBe('multi-agent-big-pickle');
+    expect(memberWorkspaceName('multi-agent', 'big-pickle', 1)).toBe('multi-agent-big-pickle-1');
   });
 
   it('gives two runs on different labels different names', () => {
-    expect(memberWorkspaceName('multi-agent', 'm')).not.toBe(memberWorkspaceName('multi-agent-2', 'm'));
+    expect(memberWorkspaceName('multi-agent', 'm', 0)).not.toBe(memberWorkspaceName('multi-agent-2', 'm', 0));
+  });
+
+  it('gives two members of one run different names', () => {
+    expect(memberWorkspaceName('multi-agent', 'm', 0)).not.toBe(memberWorkspaceName('multi-agent', 'm', 1));
+  });
+
+  // Folding `/` to `-` is not injective, and a project can override the catalog. Without the index
+  // these two models would share one clone directory, and `WorkspaceManager` keys its tracking maps
+  // by name — so the second `create` would overwrite the first's and both agents would write into
+  // one working tree.
+  it('keeps a slashed model and an unslashed one apart', () => {
+    expect(memberWorkspaceName('multi-agent', 'a/b', 0)).not.toBe(memberWorkspaceName('multi-agent', 'a-b', 1));
   });
 });
 
@@ -40,16 +52,16 @@ describe('provisionMembers', () => {
     await Promise.all([Promise.resolve(), Promise.resolve(), Promise.resolve()]);
 
     expect(create.mock.calls.map(([name]) => name)).toEqual([
-      'multi-agent-opencode-a',
-      'multi-agent-opencode-b',
-      'multi-agent-google-gemini',
+      'multi-agent-opencode-a-0',
+      'multi-agent-opencode-b-1',
+      'multi-agent-google-gemini-2',
     ]);
-    expect(members.map((m) => m.dir)).toEqual(['/ws/multi-agent-opencode-a', '/ws/multi-agent-opencode-b', '/ws/multi-agent-google-gemini']);
+    expect(members.map((m) => m.dir)).toEqual(['/ws/multi-agent-opencode-a-0', '/ws/multi-agent-opencode-b-1', '/ws/multi-agent-google-gemini-2']);
     expect(ready).toEqual(['opencode/a', 'opencode/b', 'google/gemini']);
   });
 
   it('fails the member whose clone cannot start and provisions the rest', () => {
-    const create = vi.fn((name: string) => (name.endsWith('b') ? { error: 'no origin remote' } : { dir: `/ws/${name}`, ready: Promise.resolve() }));
+    const create = vi.fn((name: string) => (name.endsWith('-b-1') ? { error: 'no origin remote' } : { dir: `/ws/${name}`, ready: Promise.resolve() }));
     const managers = { workspace: { create } } as unknown as Managers;
     const members = [member('opencode/a'), member('opencode/b', 1)];
 
@@ -97,8 +109,8 @@ describe('releaseMembers', () => {
 
     releaseMembers('multi-agent', members, managers);
 
-    expect(workspace.cancel).toHaveBeenCalledWith('multi-agent-opencode-a');
-    expect(workspace.cancel).toHaveBeenCalledWith('multi-agent-opencode-b');
+    expect(workspace.cancel).toHaveBeenCalledWith('multi-agent-opencode-a-0');
+    expect(workspace.cancel).toHaveBeenCalledWith('multi-agent-opencode-b-1');
     expect(workspace.release).not.toHaveBeenCalled();
 
     await new Promise((resolve) => setTimeout(resolve, 0));
