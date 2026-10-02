@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { useReplaySource, POLL_MS } from './useReplaySource';
+import { useAsciicastSource, POLL_MS } from './useAsciicastSource';
 
 const HEADER = '{"version":3,"term":{"cols":80,"rows":24},"timestamp":1504467315,'
   + '"idle_time_limit":2,"command":"claude","title":"claude"}\n';
@@ -14,7 +14,7 @@ function respondWith(text: string, status = 200) {
   return vi.fn(async () => new Response(bytes.buffer as ArrayBuffer, { status }));
 }
 
-describe('useReplaySource', () => {
+describe('useAsciicastSource', () => {
   const fetchMock = vi.fn();
 
   beforeEach(() => {
@@ -27,7 +27,7 @@ describe('useReplaySource', () => {
 
   it('reads the whole recording first, with no range to ask for', async () => {
     fetchMock.mockImplementationOnce(respondWith(HEADER + '[0, "o", "one"]\n'));
-    const { result } = renderHook(() => useReplaySource('/open/1?token=t', true));
+    const { result } = renderHook(() => useAsciicastSource('/open/1?token=t', true));
 
     await waitFor(() => expect(result.current.header).toBeDefined());
     expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('headers');
@@ -39,7 +39,7 @@ describe('useReplaySource', () => {
   it('asks only for the bytes after the last one read, so a long recording is read once', async () => {
     fetchMock.mockImplementationOnce(respondWith(HEADER + '[0, "o", "one"]\n'));
     fetchMock.mockImplementationOnce(respondWith('[0.5, "o", "two"]\n'));
-    const { result } = renderHook(() => useReplaySource('/open/1?token=t', true));
+    const { result } = renderHook(() => useAsciicastSource('/open/1?token=t', true));
     await waitFor(() => expect(result.current.header).toBeDefined());
 
     await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
@@ -52,7 +52,7 @@ describe('useReplaySource', () => {
   it('reports a poll that brings nothing new as not growing, and keeps polling', async () => {
     fetchMock.mockImplementationOnce(respondWith(HEADER + '[0, "o", "one"]\n'));
     fetchMock.mockImplementationOnce(respondWith('', 206));
-    const { result } = renderHook(() => useReplaySource('/open/1?token=t', true));
+    const { result } = renderHook(() => useAsciicastSource('/open/1?token=t', true));
     await waitFor(() => expect(result.current.header).toBeDefined());
 
     await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
@@ -64,7 +64,7 @@ describe('useReplaySource', () => {
   it('reads a 416 as nothing new rather than as a failure', async () => {
     fetchMock.mockImplementationOnce(respondWith(HEADER + '[0, "o", "one"]\n'));
     fetchMock.mockImplementationOnce(respondWith('', 416));
-    const { result } = renderHook(() => useReplaySource('/open/1?token=t', true));
+    const { result } = renderHook(() => useAsciicastSource('/open/1?token=t', true));
     await waitFor(() => expect(result.current.header).toBeDefined());
 
     await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
@@ -75,7 +75,7 @@ describe('useReplaySource', () => {
   it('stops polling while the tab is hidden, and resumes from where it left off when shown', async () => {
     fetchMock.mockImplementation(respondWith(HEADER + '[0, "o", "one"]\n'));
     const { rerender, result } = renderHook(
-      ({ active }) => useReplaySource('/open/1?token=t', active),
+      ({ active }) => useAsciicastSource('/open/1?token=t', active),
       { initialProps: { active: false } },
     );
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
@@ -95,12 +95,12 @@ describe('useReplaySource', () => {
 
   it('reports a recording it could not read at all, rather than showing an empty player', async () => {
     fetchMock.mockImplementation(async () => { throw new Error('offline'); });
-    const { result } = renderHook(() => useReplaySource('/open/1?token=t', true));
+    const { result } = renderHook(() => useAsciicastSource('/open/1?token=t', true));
     await waitFor(() => expect(result.current.error).toBe('the recording could not be read'));
   });
 
   it('has nothing to say without a served reference', () => {
-    const { result } = renderHook(() => useReplaySource(undefined, true));
+    const { result } = renderHook(() => useAsciicastSource(undefined, true));
     expect(result.current).toMatchObject({ header: undefined, events: [], growing: false });
   });
 });

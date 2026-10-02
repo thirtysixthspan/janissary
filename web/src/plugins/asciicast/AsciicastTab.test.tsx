@@ -2,15 +2,15 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ReplayPayload } from '@shared/plugins/replay/shared';
+import type { AsciicastPayload } from '@shared/plugins/asciicast/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { ReplayTab } from './ReplayTab';
+import { AsciicastTab } from './AsciicastTab';
 
 const HEADER = '{"version":3,"term":{"cols":80,"rows":24,"theme":{"fg":"#123456","bg":"#654321"}},'
   + '"timestamp":1504467315,"idle_time_limit":2,"command":"claude","title":"claude"}\n';
 const encode = (text: string) => new TextEncoder().encode(text);
 
-function makePayload(overrides: Partial<ReplayPayload> = {}): ReplayPayload {
+function makePayload(overrides: Partial<AsciicastPayload> = {}): AsciicastPayload {
   return {
     name: 'claude-2026-10-01T14-32-05-123Z.cast',
     path: '/project/.janissary/recordings/claude-2026-10-01T14-32-05-123Z.cast',
@@ -41,14 +41,14 @@ function makeCapabilities(overrides: Partial<TabPluginClientCapabilities> = {}) 
 // copy, and what it does with a degenerate recording — is exercised against it. The stub is a spy, so
 // a case can also pin what the tab asks the terminal for, which is where the recorded grid comes from.
 const { terminalHook } = vi.hoisted(() => ({ terminalHook: vi.fn() }));
-vi.mock('./useReplayTerminal', () => ({ useReplayTerminal: terminalHook }));
+vi.mock('./useAsciicastTerminal', () => ({ useAsciicastTerminal: terminalHook }));
 
-const renderTab = (payload: ReplayPayload = makePayload(), capabilities = makeCapabilities()) => {
+const renderTab = (payload: AsciicastPayload = makePayload(), capabilities = makeCapabilities()) => {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(encode(HEADER + '[0, "o", "hi"]\n'))));
-  return render(<ReplayTab payload={payload} capabilities={capabilities} />);
+  return render(<AsciicastTab payload={payload} capabilities={capabilities} />);
 };
 
-describe('ReplayTab', () => {
+describe('AsciicastTab', () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
     terminalHook.mockReset();
@@ -69,7 +69,7 @@ describe('ReplayTab', () => {
   it('reports what the recording is, when it started, and how long it is', async () => {
     renderTab();
     await waitFor(() => expect(screen.getByText(/claude/)).toBeDefined());
-    const meta = document.querySelector('.replay-meta')?.textContent ?? '';
+    const meta = document.querySelector('.asciicast-meta')?.textContent ?? '';
     expect(meta).toContain('claude');
     expect(meta).toMatch(/started \d/);
     expect(meta).toMatch(/\d+:\d\d/);
@@ -79,21 +79,21 @@ describe('ReplayTab', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(
       encode(HEADER + '[0, "o", "bye"]\n[0.5, "x", "130"]\n'),
     )));
-    const { unmount } = render(<ReplayTab payload={makePayload()} capabilities={makeCapabilities()} />);
-    await waitFor(() => expect(document.querySelector('.replay-meta')?.textContent).toContain('exit 130'));
+    const { unmount } = render(<AsciicastTab payload={makePayload()} capabilities={makeCapabilities()} />);
+    await waitFor(() => expect(document.querySelector('.asciicast-meta')?.textContent).toContain('exit 130'));
     unmount();
 
     renderTab();
-    await waitFor(() => expect(document.querySelector('.replay-meta')).toBeDefined());
-    expect(document.querySelector('.replay-meta')?.textContent).not.toContain('exit');
+    await waitFor(() => expect(document.querySelector('.asciicast-meta')).toBeDefined());
+    expect(document.querySelector('.asciicast-meta')?.textContent).not.toContain('exit');
   });
 
   it('shows the reason on the metadata line rather than replacing the player', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(encode('not a cast file\n'))));
-    render(<ReplayTab payload={makePayload()} capabilities={makeCapabilities()} />);
+    render(<AsciicastTab payload={makePayload()} capabilities={makeCapabilities()} />);
 
-    await waitFor(() => expect(document.querySelector('.replay-problem')).toBeDefined());
-    expect(document.querySelector('.replay-problem')?.textContent)
+    await waitFor(() => expect(document.querySelector('.asciicast-problem')).toBeDefined());
+    expect(document.querySelector('.asciicast-problem')?.textContent)
       .toContain('the file is not an asciicast recording');
     // The transport is still there, so the first good frame has somewhere to go.
     expect(screen.getByLabelText('Seek')).toBeDefined();
@@ -129,8 +129,8 @@ describe('ReplayTab', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(encode(
       HEADER + '[0, "o", "one"]\n[600, "o", "two"]\n',
     ))));
-    render(<ReplayTab payload={makePayload()} capabilities={makeCapabilities()} />);
-    await waitFor(() => expect(document.querySelector('.replay-meta')?.textContent).toContain('10:00'));
+    render(<AsciicastTab payload={makePayload()} capabilities={makeCapabilities()} />);
+    await waitFor(() => expect(document.querySelector('.asciicast-meta')?.textContent).toContain('10:00'));
     expect(screen.queryByLabelText('Idle time limit')).toBeNull();
   });
 
@@ -155,7 +155,7 @@ describe('ReplayTab', () => {
   it('claims no chord while the tab is not the visible one', async () => {
     renderTab(makePayload(), makeCapabilities({ active: false }));
     await waitFor(() => expect(screen.getByLabelText('Next frame')).toBeDefined());
-    // A hidden plugin tab stays mounted, so a hidden replay must not answer keys, and must have
+    // A hidden plugin tab stays mounted, so a hidden asciicast tab must not answer keys, and must have
     // stopped where it was: the transport is there, paused.
     expect(screen.getByLabelText('Play')).toBeDefined();
   });

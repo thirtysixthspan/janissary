@@ -10,7 +10,7 @@ import { autoApproveHarnessNames, supportsHarnessAutoApprove } from './auto-appr
 import { sshRuntime } from './observers.js';
 import { HarnessTabSpawn } from './tab-spawn.js';
 import type { SpawnTabOptions } from './spawn-options.js';
-import { captureSubcommand, replaySubcommand, transcriptSubcommand } from './subcommands.js';
+import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
 import type { Tab } from '../tab/types.js';
 import type { ProfileHarnessEntry } from '../profile/types.js';
@@ -81,8 +81,9 @@ export class HarnessManager extends HarnessTabSpawn {
 
   // Register the observer pair for a PTY this manager did not spawn itself (currently: ssh tabs,
   // which reuse the harness-view tab shape but spawn their PTY directly via SshManager): a screen
-  // reader, so the tab is monitorable, and a recorder, so the session is replayable after the tab
-  // closes. `command` is the verbatim `ssh …` invocation, which the recording's header carries.
+  // reader, so the tab is monitorable, and a recorder, so the session stays on disk after the tab
+  // closes and `play` can reach the file. `command` is the verbatim `ssh …` invocation, which the
+  // recording's header carries.
   registerSshObservers(id: string, label: string, command: string): void {
     this.runtimes.install(id, label, sshRuntime(this.managers, id, label, command));
   }
@@ -95,10 +96,6 @@ export class HarnessManager extends HarnessTabSpawn {
     if ('error' in parsed) return parsed.error;
     if ('capture' in parsed) return captureSubcommand(this.managers, (l) => this.latestScreenText(l), input, parsed.label);
     if ('transcript' in parsed) return transcriptSubcommand(this.managers, (l) => this.transcriptTailer(l), input, parsed.label);
-    if ('replay' in parsed) {
-      replaySubcommand(this.managers, parsed.target, this.managers.tab.cur().label, input);
-      return undefined;
-    }
     if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
     }

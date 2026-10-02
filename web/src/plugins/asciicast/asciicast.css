@@ -1,4 +1,4 @@
-/* The replay plugin's own rules, layered on the shared plugin frame from ../shared.css. The body is a
+/* The asciicast plugin's own rules, layered on the shared plugin frame from ../shared.css. The body is a
    terminal stage rather than a centering one: a recording is a grid of its own size that must not be
    re-laid-out, so the stage holds it at that size and clips whatever falls outside — a recording wider
    or taller than the tab is read by resizing the window, not by scrolling the tab. The overflow is
@@ -7,7 +7,7 @@
    width. The metadata line and the transport row both wrap, which is what lets the whole thing survive
    being docked into a narrow sidebar. */
 
-.replay-tab {
+.asciicast-tab {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -16,7 +16,7 @@
   gap: 8px;
 }
 
-.replay-head {
+.asciicast-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -25,23 +25,23 @@
   user-select: text;
 }
 
-.replay-meta {
+.asciicast-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
 }
 
-.replay-live {
+.asciicast-live {
   color: var(--accent, var(--fg));
   font-weight: 600;
 }
 
-.replay-problem {
+.asciicast-problem {
   color: var(--warn, var(--muted));
 }
 
-.replay-stage {
+.asciicast-stage {
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -49,24 +49,24 @@
   background: var(--terminal-bg, #17181b);
 }
 
-.replay-stage .xterm {
+.asciicast-stage .xterm {
   height: 100%;
 }
 
 /* Still scrollable programmatically, which is how xterm keeps the cursor in view as the buffer
    scrolls during playback — but with no scrollbar and nothing for the wheel to grab. */
-.replay-stage .xterm-viewport {
+.asciicast-stage .xterm-viewport {
   overflow-y: hidden;
 }
 
-.replay-transport {
+.asciicast-transport {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
-.replay-button {
+.asciicast-button {
   background: none;
   border: 1px solid var(--border, transparent);
   border-radius: 4px;
@@ -76,22 +76,22 @@
   padding: 2px 8px;
 }
 
-.replay-button:hover {
+.asciicast-button:hover {
   background: var(--hover, rgb(255 255 255 / 6%));
 }
 
-.replay-scrub {
+.asciicast-scrub {
   flex: 1 1 120px;
   min-width: 80px;
   accent-color: var(--accent, currentColor);
 }
 
-.replay-clock {
+.asciicast-clock {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.replay-speed {
+.asciicast-speed {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

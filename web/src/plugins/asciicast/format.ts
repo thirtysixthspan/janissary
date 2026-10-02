@@ -1,4 +1,4 @@
-// Formatting for the two facts a replay reports about itself that are not numbers to paste: a
+// Formatting for the two facts the player reports about itself that are not numbers to paste: a
 // duration, and a wall-clock start time. Both come from the recording's own header, so both are shown
 // in the session's own local time rather than in whatever zone the viewer happens to be in.
 

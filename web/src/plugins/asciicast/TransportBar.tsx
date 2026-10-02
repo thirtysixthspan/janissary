@@ -6,17 +6,17 @@ import { formatClock } from './format';
 export function TransportBar({ playback }: { playback: Playback }) {
   const { position, duration, playing, speed } = playback;
   return (
-    <div className="replay-transport">
-      <button type="button" className="replay-button" onClick={playback.toggle}
+    <div className="asciicast-transport">
+      <button type="button" className="asciicast-button" onClick={playback.toggle}
         aria-label={playing ? 'Pause' : 'Play'} title={playing ? 'Pause (Space)' : 'Play (Space)'}>
         {playing ? '❚❚' : '▶'}
       </button>
-      <button type="button" className="replay-button" onClick={() => { playback.step(-1); }}
+      <button type="button" className="asciicast-button" onClick={() => { playback.step(-1); }}
         aria-label="Previous frame" title="Previous frame (,)">◀|</button>
-      <button type="button" className="replay-button" onClick={() => { playback.step(1); }}
+      <button type="button" className="asciicast-button" onClick={() => { playback.step(1); }}
         aria-label="Next frame" title="Next frame (.)">|▶</button>
       <input
-        className="replay-scrub"
+        className="asciicast-scrub"
         type="range"
         min={0}
         max={Math.max(duration, 0.1)}
@@ -25,8 +25,8 @@ export function TransportBar({ playback }: { playback: Playback }) {
         aria-label="Seek"
         onChange={(event) => { playback.seek(Number(event.target.value)); }}
       />
-      <span className="replay-clock">{formatClock(position)} / {formatClock(duration)}</span>
-      <button type="button" className="replay-button replay-speed" onClick={() => { playback.cycleSpeed(1); }}
+      <span className="asciicast-clock">{formatClock(position)} / {formatClock(duration)}</span>
+      <button type="button" className="asciicast-button asciicast-speed" onClick={() => { playback.cycleSpeed(1); }}
         aria-label="Playback speed" title="Playback speed ([ and ])">{speed}×</button>
     </div>
   );

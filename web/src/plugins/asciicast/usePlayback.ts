@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { CastEvent } from './cast-stream';
 import { durationOf, stepIndex } from './timeline';
-import type { ReplayTerminal } from './useReplayTerminal';
+import type { AsciicastTerminal } from './useAsciicastTerminal';
 
 // The transport. Playback advances a position along a recording's timeline and asks the terminal to
 // show it; the terminal holds the only thing that can reconstruct a frame — the bytes — so this hook
@@ -30,7 +30,7 @@ const TICK_MS = 50;
 
 export function usePlayback(
   events: readonly CastEvent[],
-  terminal: ReplayTerminal,
+  terminal: AsciicastTerminal,
   live: boolean,
 ): Playback {
   const [speed, setSpeed] = useState(1);
@@ -50,8 +50,8 @@ export function usePlayback(
   }, [duration, terminal, events]);
 
   // Redraw the current position whenever the recording grows. This is what catches up a *paused*
-  // live replay: a paused clock does not tick, so an event arriving behind the position the viewer is
-  // looking at would never otherwise be fed to the terminal.
+  // live recording: a paused clock does not tick, so an event arriving behind the position the viewer
+  // is looking at would never otherwise be fed to the terminal.
   useEffect(() => { show(Math.min(clock.current.position, duration)); }, [duration, show]);
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export function usePlayback(
     return () => clearInterval(timer);
   }, [playing, events, duration, show]);
 
-  // The end of a finished recording is the end of the replay; the end of a live one is where the
+  // The end of a finished recording is the end of the playback; the end of a live one is where the
   // session currently is, so the clock holds there and the timeline extends underneath it.
   useEffect(() => {
     if (!live && duration > 0 && position >= duration) setPlaying(false);

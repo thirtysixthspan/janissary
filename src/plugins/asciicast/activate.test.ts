@@ -10,8 +10,8 @@ import type { Managers } from '../../managers.js';
 import { fakeNotificationsHost } from '../../notifications/tab-test-fixture.js';
 import { NotificationQueue } from '../../notifications/queue.js';
 import { createPluginContext } from '../context.js';
-import { activate, replayLabelFromFilename } from './activate.js';
-import { replayManifest } from './manifest.js';
+import { activate, asciicastLabelFromFilename } from './activate.js';
+import { asciicastManifest } from './manifest.js';
 
 function fakeCapabilities(options: { live?: boolean } = {}) {
   const opened: TabPluginPayload[] = [];
@@ -63,46 +63,49 @@ function hostCapabilities(file: string, options: { live?: boolean } = {}) {
     notifications: new NotificationQueue(),
   } as unknown as Managers;
   const capabilities = createPluginContext(
-    managers, replayManifest, activate(), { label: 'janus', command: 'fixture' }, () => true,
+    managers, asciicastManifest, activate(), { label: 'janus', command: 'fixture' }, () => true,
   );
   return { capabilities, keys, opened };
 }
 
 const recording = (name: string) => {
-  const file = path.join(mkdtempSync(path.join(tmpdir(), 'replay-')), name);
+  const file = path.join(mkdtempSync(path.join(tmpdir(), 'asciicast-')), name);
   writeFileSync(file, '{"version":3,"term":{"cols":80,"rows":24}}\n');
   return file;
 };
 
-describe('replay opener registration', () => {
+describe('asciicast opener registration', () => {
   it('claims the cast extension case-insensitively through the generic adapter', () => {
-    expect(openerForExtension('.cast')?.name).toBe('replay');
-    expect(openerForExtension('.CAST')?.name).toBe('replay');
-    expect(openerForExtension('.mp4')?.name).not.toBe('replay');
+    expect(openerForExtension('.cast')?.name).toBe('asciicast');
+    expect(openerForExtension('.CAST')?.name).toBe('asciicast');
+    expect(openerForExtension('.mp4')?.name).not.toBe('asciicast');
   });
 
   it('serves a recording as the format\'s own media type, so it arrives as text', () => {
-    expect(replayManifest.fileExtensions['.cast']).toBe('application/x-asciicast');
+    expect(asciicastManifest.fileExtensions['.cast']).toBe('application/x-asciicast');
   });
 
-  it('claims no command of its own, only the core route the two commands name', () => {
-    expect(replayManifest.coreRoutes).toEqual(['replay']);
-    expect(replayManifest.command).toBeUndefined();
+  // `play` is a core command, so the plugin cannot claim it as one of its own; declaring the recorded
+  // types playable is what lets it be dispatched to, and it keeps no command word and no route token.
+  it('declares its recorded types playable, with no command and no core route of its own', () => {
+    expect(asciicastManifest.playable).toBe(true);
+    expect(asciicastManifest.command).toBeUndefined();
+    expect('coreRoutes' in asciicastManifest).toBe(false);
   });
 });
 
-describe('replay opener', () => {
+describe('asciicast opener', () => {
   it('opens a tab named after the label the artifact was named for', () => {
     const file = recording('devbox-2026-10-01T14-32-05-123Z.cast');
     const { capabilities, keys, opened } = fakeCapabilities();
     activate().opener.inline(file, capabilities);
     expect(keys).toEqual([file]);
-    expect(opened[0].title).toBe('replay: devbox');
+    expect(opened[0].title).toBe('asciicast: devbox');
   });
 
   it('keeps a whole stem for a file that is not named by the artifact scheme', () => {
-    expect(replayLabelFromFilename('/tmp/session.cast')).toBe('session');
-    expect(replayLabelFromFilename('/tmp/2026-10-01T14-32-05-123Z.cast')).toBe('2026-10-01T14-32-05-123Z');
+    expect(asciicastLabelFromFilename('/tmp/session.cast')).toBe('session');
+    expect(asciicastLabelFromFilename('/tmp/2026-10-01T14-32-05-123Z.cast')).toBe('2026-10-01T14-32-05-123Z');
   });
 
   it('registers the recording through the one registration path every file tab uses', () => {
@@ -159,6 +162,6 @@ describe('replay opener', () => {
     const payload = opened[0].payload;
     // The rejection is thrown rather than answered, which is what every guarded plugin call does.
     expect(() => activate().intent({ intent: 'rewind', payload: {}, tabPayload: payload }, capabilities))
-      .toThrow(new TabPluginRejection('unknown replay intent "rewind"'));
+      .toThrow(new TabPluginRejection('unknown asciicast intent "rewind"'));
   });
 });

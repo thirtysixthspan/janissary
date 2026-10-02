@@ -27,7 +27,7 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 
 // The two colors a terminal renders with, and the platform check that decides which modifier is the
 // copy one. Published on the same terms as the components above: a plugin with its own terminal — the
-// replay player — should read the app's colors rather than keep a second copy of the fallbacks that
+// asciicast player — should read the app's colors rather than keep a second copy of the fallbacks that
 // drifts from the stylesheet, and should reach for the same platform check, because getting that
 // wrong breaks Cmd+C on exactly one platform and nowhere else to notice it.
 export { terminalColors, type TerminalColors } from '../shared/terminal/colors';

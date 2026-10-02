@@ -1,6 +1,6 @@
 # Harness Session Recording
 
-Every named-harness session (claude, opencode, codex — see [[harness]]) is recorded to a replayable
+Every named-harness session (claude, opencode, codex — see [[harness]]) is recorded to a playable
 [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/) file under `.janissary/recordings/`.
 Recording is **automatic** — there is no command to start or stop it — and it captures the full timed
 PTY byte stream (ANSI and all) for the whole session, so a harness's output survives after its tab
@@ -141,16 +141,20 @@ ssh tab.
 
 ### Retrieval
 
-A **recording** is played back in the app by `harness replay <label>` (and `ssh replay <label>` for an
-ssh tab), which opens a **replay tab** showing what the session did. `open <file>.cast` opens one too,
-from the command bar or from a file navigator row.
+A **recording** is played back in the app by `play <file>`, which opens an **asciicast tab** showing
+what the session did. `open <file>.cast` opens one too, from the command bar or from a file navigator
+row, so the command is a shortcut rather than the only way in.
 
-The target is a tab label or a path to a `.cast` file, told apart by the extension: a target ending in
-`.cast` is a path, and anything else is the label of a tab that is open right now. A label names that
-tab's own recording; a path names a file, which is how a recording whose tab has since closed is
-reached. Both commands resolve the target the same way and open the same tab.
+What plays a file is the file: `play` reads the extension and hands the recording to the tab plugin
+that claims it. A file no plugin claims, or one a plugin claims without declaring it playable, is
+refused by name rather than opened by whatever happens to read it. `play` with no target, a target
+that is not there, and a target that is not playable are three separate answers, each one line in the
+transcript the command was typed into.
 
-The replay tab:
+A recording whose tab is still open is reached by the same path its recording always had, so
+`play .janissary/recordings/<file>.cast` works whether or not the session is still running.
+
+The asciicast tab:
 
 - **plays the recording from the beginning**, at the size it was recorded at, into a terminal of its
   own — the recorded columns and rows, with each recorded resize applied as it happened, rendered at
@@ -161,7 +165,7 @@ The replay tab:
   and there are no markers;
 - **follows a live session**: while the session is still recording, the timeline extends as output
   arrives, the metadata line reads `live`, and reaching the end of what has been recorded holds the
-  last frame and continues rather than reporting the replay finished;
+  last frame and continues rather than reporting the playback finished;
 - **plays at the timing it was recorded at**, silences at their real length. A recording is the only
   record of what a session did, and shortening the gaps would make a run that waited ten minutes
   indistinguishable from one that answered in ten seconds;

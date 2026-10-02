@@ -63,17 +63,12 @@ describe('parseSshCommand', () => {
     expect((result as { options: string[] }).options).toEqual(['ls', '-la']);
   });
 
-  it('reads replay as a subcommand rather than a host called replay', () => {
-    expect(parseSshCommand('ssh replay devbox')).toEqual({ replay: true, target: 'devbox' });
-  });
-
-  it('takes a replay target whole, so a path holding a space resolves', () => {
-    expect(parseSshCommand('ssh replay .janissary/recordings/my session.cast'))
-      .toEqual({ replay: true, target: '.janissary/recordings/my session.cast' });
-  });
-
-  it('errors when replay has no target', () => {
-    expect(parseSshCommand('ssh replay')).toEqual({ error: 'Usage: ssh replay <label|file.cast>.' });
+  // `ssh replay` is gone, so `replay` is an ordinary hostname again — which is the correct reading of it,
+  // and the reason a host that happens to share the retired subcommand's name still connects.
+  it('reads a retired replay subcommand as an ordinary destination', () => {
+    const result = parseSshCommand('ssh replay');
+    expect((result as { destination: string; label: string }).destination).toBe('replay');
+    expect((result as { label: string }).label).toBe('replay');
   });
 
   it('still connects to a host that is named after a subcommand-like word', () => {

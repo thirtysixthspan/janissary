@@ -69,7 +69,7 @@ Literal imports make the modules visible to TypeScript, Vite, Knip, and tests wh
 | `webTargets` | no | Claims the `open` command's web branch: an `http`/`https` address, or any address preceded by the `page` keyword |
 | `editGesture` | no | `open external` for a file-navigator edit activation |
 | `command` | no | One case-insensitive first-token command |
-| `coreRoutes` | no | Command tokens a core command may route into your inline opener with a file it has already resolved |
+| `playable` | no | Every extension in `fileExtensions` is something `play` may dispatch to your inline opener |
 | `notifications` | no | Host topics to be told about; a declaration naming one must supply `notify` |
 | `capabilities` | yes | Requested names from the v1 server capability set; the host grants only these |
 
@@ -108,7 +108,7 @@ The host supplies eighteen capabilities:
 - `configuredViewer()` reads the viewer configured for this plugin id.
 - `openExternally(path, application?)` asks the OS to open a file.
 - `readSettings()` reads your plugin's own remembered settings from the `pluginSettings` map in `.janissary/config.json`, keyed by your plugin id, or `{}` when you have saved none. Treat every field as untrusted: the user can edit the file by hand, so check each value's type and fall back to a default rather than assuming the shape you last wrote.
-- `isRecordingLive(absPath)` answers whether a tab the user can see is recording that exact file right now. A plugin reaches no tab list of its own, so this is the only way to tell a file that is still being written from one that is finished — which the file itself usually cannot: a recording ends when its tab closes just as surely as when its process exits, and only the tab that is still there knows. The replay plugin uses it to decide whether a recording it is about to play is a live session.
+- `isRecordingLive(absPath)` answers whether a tab the user can see is recording that exact file right now. A plugin reaches no tab list of its own, so this is the only way to tell a file that is still being written from one that is finished — which the file itself usually cannot: a recording ends when its tab closes just as surely as when its process exits, and only the tab that is still there knows. The asciicast plugin uses it to decide whether a recording it is about to play is a live session.
 - `saveSettings(settings)` replaces your plugin's own entry in that map and answers whether the write succeeded. The file is replaced atomically and every other plugin's entry is left alone. A value that is not a plain JSON object is a bug in your plugin and disables it. The search tab uses the pair to remember its three toggles across restarts.
 - `rejectRequest(reason)` answers one bad request without disabling the plugin.
 - `reportFailure(reason)` exits through the guarded failure boundary and disables the plugin.
@@ -196,17 +196,17 @@ command: (argument, capabilities) => {
 
 That makes the command a second route into your own opener rather than a second behavior. Relative-path resolution, `~` expansion, wildcards, sorted processing, the ten-file limit, and missing-file errors are all the host's and stay identical to `open`. A file that resolves to somebody else's opener is refused, so `video notes.txt` reports a non-video file instead of opening the text editor. The refusal covers web targets too, which `open` resolves before it ever consults the opener registry: `video https://example.com` and `video page notes.txt` are both refused rather than opening a browser tab.
 
-## Being routed to from a core command
+## Being played by `play`
 
-A `command` claim covers a command you own the name of. It cannot cover a subcommand of a name the host reserves — `harness` and `ssh` are both built-ins, and the replay player is reached from `harness replay` and `ssh replay`. A `coreRoutes` claim covers that case:
+A `command` claim covers a command you own the name of. It cannot cover `play`, which is a built-in, so a plugin cannot own that name for itself. A `playable` claim covers the case instead:
 
 ```ts
-coreRoutes: ['replay'],
+playable: true,
 ```
 
-It names the tokens, not handlers: your own `opener.inline` is what runs, through the same guarded, budgeted, failure-isolated path the `open` pipeline uses. The core command resolves a file — a tab's recording, say — and hands that path over; nothing about path resolution, activation, or the deadline is restated in the command. There is no handler to supply and no way for a route to be claimed and unanswered, because the opener a route needs is the one you already have.
+`play <file>` resolves its target the way `open` does, reads the extension, and asks the same opener registry which plugin owns it — handing your `opener.inline` the resolved path through the same guarded, budgeted, failure-isolated path the `open` pipeline uses. Nothing about path resolution, activation, or the deadline is restated in the command, and there is no handler to supply: the opener `play` needs is the one you already have.
 
-The token is looked up only by the core command that names it, so a claim nothing asks for is inert rather than ambiguous. A duplicate, or a token that collides with a reserved name, is refused like any other claim: the loser contributes nothing and starts disabled with the reason. The replay plugin is the worked example — two commands reach one tab through it, and a third route into the same opener is its `.cast` extension claim.
+It is a flag over the extensions you already claim rather than a list of its own, so the playable types cannot drift from the claimed ones, and it is the only way the host knows which claimed types are something to play. The asciicast plugin is the worked example: `.cast` reaches its tab through both `play <file>` and the plain `open <file>.cast`, with no second claim and no second code path. A plugin that claims an extension without the flag — an image viewer, say — is never a `play` target, so a file nothing plays is refused by name instead of opening whichever viewer can read it.
 
 ## Rejecting versus failing
 
@@ -291,7 +291,7 @@ Add server tests for declaration claims, playable/external routes, payload valid
 
 - Initial bundled-only tab-view contract.
 - Static opener, web-target, command, and notification contributions, with `command` and `notify` handlers on the activation.
-- Eighteen server and eight client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. `readSettings` and `saveSettings` followed, so the search tab can remember its toggles in `.janissary/config.json` without a plugin reaching the config itself. `isRecordingLive` and the client-side `copyText` followed for the replay tab, which has to tell a live recording from a finished one and has its own terminal to copy out of. All are additive optional capabilities, so the API integer is unchanged.
+- Eighteen server and eight client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. `readSettings` and `saveSettings` followed, so the search tab can remember its toggles in `.janissary/config.json` without a plugin reaching the config itself. `isRecordingLive` and the client-side `copyText` followed for the asciicast tab, which has to tell a live recording from a finished one and has its own terminal to copy out of. All are additive optional capabilities, so the API integer is unchanged.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 - `notifyUser` takes an optional `tab` instance key, attributing the line to one of the plugin's own tabs. Additive, so still v1.

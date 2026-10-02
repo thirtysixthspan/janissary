@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CastStream, type CastEvent, type CastHeader } from './cast-stream';
 
-// How often a visible replay asks for the recording's tail. A `setTimeout` chain rather than an
+// How often a visible tab asks for the recording's tail. A `setTimeout` chain rather than an
 // interval, so a slow response can never overlap the next one and the poll interval starts again
 // only once this one has been read.
 export const POLL_MS = 750;
@@ -19,9 +19,9 @@ export const POLL_MS = 750;
 // Two effects rather than one, because two different things change here and only one of them is rare.
 // The served reference changes once, when the tab opens, and owns the parser, the offset, and the one
 // whole-file read. Visibility changes every time the user switches tabs, and owns only the poll chain
-// — so hiding a replay costs one timer, and showing it again resumes from where the reading got to
+// — so hiding the tab costs one timer, and showing it again resumes from where the reading got to
 // instead of fetching the whole recording a second time.
-export type ReplaySource = {
+export type AsciicastSource = {
   header: CastHeader | undefined;
   events: readonly CastEvent[];
   error: string | undefined;
@@ -32,7 +32,7 @@ export type ReplaySource = {
   growing: boolean;
 };
 
-const EMPTY: ReplaySource = {
+const EMPTY: AsciicastSource = {
   header: undefined,
   events: [],
   error: undefined,
@@ -40,8 +40,8 @@ const EMPTY: ReplaySource = {
   growing: false,
 };
 
-export function useReplaySource(url: string | undefined, active: boolean): ReplaySource {
-  const [source, setSource] = useState<ReplaySource>(EMPTY);
+export function useAsciicastSource(url: string | undefined, active: boolean): AsciicastSource {
+  const [source, setSource] = useState<AsciicastSource>(EMPTY);
   // The parser and the offset outlive a render so a poll answers into the same stream the first read
   // built, rather than re-parsing from the beginning on every tick.
   const stream = useRef(new CastStream());

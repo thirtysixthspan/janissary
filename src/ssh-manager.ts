@@ -2,7 +2,6 @@ import { makeHarnessTab } from './tab/index.js';
 import { distinctColor } from './tab/colors.js';
 import { uniqueLabel } from './tab/utils.js';
 import { parseSshCommand } from './ssh.js';
-import { replaySubcommand } from './harness/subcommands.js';
 import type { HarnessView } from './tab/types.js';
 import { messageBus } from './bus.js';
 import type { Managers } from './managers.js';
@@ -19,12 +18,6 @@ export class SshManager {
   run(input: string): string | undefined {
     const parsed = parseSshCommand(input);
     if ('error' in parsed) return parsed.error;
-    if ('replay' in parsed) {
-      // The same body `harness replay` runs, against the same resolver and the same plugin route:
-      // two spellings of one execution path, not two implementations of it.
-      replaySubcommand(this.managers, parsed.target, this.managers.tab.cur().label, input);
-      return undefined;
-    }
     return this.open(parsed.command, parsed.destination, parsed.label, parsed.options);
   }
 

@@ -2,13 +2,13 @@ import type { TabPluginLoader } from './api.js';
 import type { ProductionTabPluginId } from './catalog.js';
 
 export const tabPluginLoaders = {
+  asciicast: () => import('./asciicast/activate.js'),
   audio: () => import('./audio/activate.js'),
   conversations: () => import('./conversations/activate.js'),
   image: () => import('./image/activate.js'),
   markdown: () => import('./markdown/activate.js'),
   page: () => import('./page/activate.js'),
   pdf: () => import('./pdf/activate.js'),
-  replay: () => import('./replay/activate.js'),
   schedules: () => import('./schedules/activate.js'),
   search: () => import('./search/activate.js'),
   sessions: () => import('./sessions/activate.js'),

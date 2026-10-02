@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { usePlayback } from './usePlayback';
 import type { CastEvent } from './cast-stream';
-import type { ReplayTerminal } from './useReplayTerminal';
+import type { AsciicastTerminal } from './useAsciicastTerminal';
 
 const output = (time: number, data = 'x'): CastEvent => ({ code: 'o', time, data });
 
@@ -10,7 +10,7 @@ const output = (time: number, data = 'x'): CastEvent => ({ code: 'o', time, data
 // has, and the shape that must still play for the whole ten minutes.
 const timeline = [output(0), output(1), output(601), output(602)];
 
-function fakeTerminal(): ReplayTerminal & { shown: number[] } {
+function fakeTerminal(): AsciicastTerminal & { shown: number[] } {
   const shown: number[] = [];
   return {
     shown,

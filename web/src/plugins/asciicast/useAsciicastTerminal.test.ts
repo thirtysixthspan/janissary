@@ -2,7 +2,7 @@ import { createRef } from 'react';
 import { renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CastHeader } from './cast-stream';
-import { useReplayTerminal, type ReplayTerminal } from './useReplayTerminal';
+import { useAsciicastTerminal, type AsciicastTerminal } from './useAsciicastTerminal';
 
 // xterm needs canvas and real metrics, so it is faked the way `HarnessTab.test.tsx` fakes it: the
 // constructor is a spy, and the cases here are about the options it was handed and about what the hook
@@ -38,17 +38,17 @@ const header = (overrides: Partial<CastHeader> = {}): CastHeader => ({
 });
 
 function capabilities() {
-  return { copyText: vi.fn() } as unknown as Parameters<typeof useReplayTerminal>[2];
+  return { copyText: vi.fn() } as unknown as Parameters<typeof useAsciicastTerminal>[2];
 }
 
 function render(headerValue: CastHeader | undefined) {
   const container = createRef<HTMLDivElement>();
   container.current = document.createElement('div');
-  const view = renderHook(() => useReplayTerminal(headerValue, container, capabilities()));
-  return { view, terminal: view.result.current as ReplayTerminal & { options: { fontSize?: number } } };
+  const view = renderHook(() => useAsciicastTerminal(headerValue, container, capabilities()));
+  return { view, terminal: view.result.current as AsciicastTerminal & { options: { fontSize?: number } } };
 }
 
-describe('useReplayTerminal', () => {
+describe('useAsciicastTerminal', () => {
   let term: ReturnType<typeof fakeTerminal>;
 
   beforeEach(async () => {

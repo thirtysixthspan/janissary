@@ -31,6 +31,19 @@ export function createPluginOpeners(
   return openers;
 }
 
+// The plugin ids the `play` command may dispatch a file to, from the declarations that say their
+// claimed types are playable. Built from the catalog rather than from the accepted openers for one
+// reason: a declaration rejected for a duplicate extension claim contributed no opener, and the
+// lookup in `openers/index.ts` only ever asks about an extension the registry already resolved — so a
+// disabled claimant can never be named here, because nothing ever reaches its id.
+export function playablePluginIds(
+  declarations: readonly TabPluginDeclaration[],
+): ReadonlySet<string> {
+  return new Set(
+    declarations.filter((declaration) => declaration.playable).map((declaration) => declaration.id),
+  );
+}
+
 // The content types the server should serve for plugin-claimed files, composed from the openers
 // `createPluginOpeners` actually accepted rather than from the raw catalog. Reading the catalog
 // directly would let a declaration rejected for a duplicate extension still name that extension's

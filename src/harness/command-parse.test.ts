@@ -262,22 +262,11 @@ describe('parseHarnessCommand — capture and transcript subcommands', () => {
     expect(parseHarnessCommand('harness CAPTURE bot')).toEqual({ capture: true, label: 'bot' });
   });
 
-  it('parses replay <target>', () => {
-    expect(parseHarnessCommand('harness replay reviewer')).toEqual({ replay: true, target: 'reviewer' });
-  });
-
-  it('takes a replay target whole, so a path holding a space resolves', () => {
-    expect(parseHarnessCommand('harness replay .janissary/recordings/my session.cast'))
-      .toEqual({ replay: true, target: '.janissary/recordings/my session.cast' });
-  });
-
-  it('errors when replay has no target', () => {
-    expect(parseHarnessCommand('harness replay'))
-      .toEqual({ error: 'Usage: harness replay <label|file.cast>.' });
-  });
-
-  it('does not let replay shadow a harness name', () => {
-    expect(parseHarnessCommand('harness replay claude')).toEqual({ replay: true, target: 'claude' });
+  // `play` replaced `harness replay`, so `replay` is an unknown harness name rather than a subcommand —
+  // and saying so is what keeps a retired spelling from silently reading as a launch.
+  it('reads a retired replay subcommand as an unknown harness', () => {
+    expect(parseHarnessCommand('harness replay claude'))
+      .toEqual({ error: 'Unknown harness "replay". Choose from: claude, opencode, codex.' });
   });
 });
 

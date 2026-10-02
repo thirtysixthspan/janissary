@@ -34,12 +34,11 @@ export type TabPluginDeclaration = {
   editsOwnFiles?: boolean;
   editGesture?: 'open external';
   command?: string;
-  // Command tokens a core command may route into this plugin's inline opener with a file it has
-  // already resolved. `harness` and `ssh` are reserved command names a plugin cannot claim, so a
-  // subcommand of one of them has no other way to reach a plugin that owns the presentation. The
-  // claim names the token only — no handler, because the plugin's own opener is what runs — and a
-  // duplicate or reserved token is refused at startup like any other claim.
-  coreRoutes?: readonly string[];
+  // Every extension in `fileExtensions` is something to play rather than merely to open, which is
+  // what the `play` command asks before dispatching a file to this plugin's inline opener. A flag
+  // rather than a list of its own, so the playable types cannot drift from the claimed ones: a
+  // plugin claims what it owns once and says of that set whether any of it plays.
+  playable?: boolean;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
   // An entry the default context menu offers for a text selection. A declaration carrying one must

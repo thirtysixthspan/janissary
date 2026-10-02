@@ -10,7 +10,6 @@ import { reportPluginFailure, type PluginFailureOrigin } from './failure.js';
 import { errorFirstLine } from '../error-text.js';
 import { invokePlugin, type PluginCallOutcome } from './invoke.js';
 import { openerPresentation } from './presentation.js';
-import { resolveCoreRoutes } from './core-route-claims.js';
 import { tabPluginLoaders } from './loaders.js';
 import { subscribeTabPluginNotifications, TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
 import { runPluginDefaultMenuAction } from './default-menu.js';
@@ -31,7 +30,6 @@ export type TabPluginHostOptions = {
 
 export class TabPluginHost {
   private readonly records = new Map<string, PluginRecord>();
-  private readonly coreRoutes: ReadonlyMap<string, string>;
   private readonly disabledTabPlugins = new Map<string, string>();
   private readonly activationTimeoutMs: number;
   private readonly handlerTimeoutMs: number;
@@ -46,9 +44,6 @@ export class TabPluginHost {
   ) {
     this.activationTimeoutMs = options.activationTimeoutMs ?? 1000;
     this.handlerTimeoutMs = options.handlerTimeoutMs ?? 5000;
-    // Resolved before the records, because a refused claim is recorded the way a refused command or
-    // extension claim is and the loop below reads that one place for all three.
-    this.coreRoutes = resolveCoreRoutes(declarations);
     for (const declaration of declarations) {
       if (this.records.has(declaration.id)) {
         throw new Error(`Duplicate tab plugin id "${declaration.id}"`);
@@ -99,19 +94,6 @@ export class TabPluginHost {
       }
       return activation.command(argument, capabilities);
     });
-  }
-
-  // How a core command reaches the plugin owning a subcommand of its own. `harness` and `ssh` are
-  // reserved names a plugin may not claim, so `harness replay` resolves no plugin command and looks
-  // its owner up by route instead. The file is one the caller has already resolved, and it runs
-  // through that plugin's own inline opener by the guarded path `open` uses, so activation, the
-  // deadline, and the failure boundary are not restated here. Answers whether a plugin could act:
-  // an unclaimed route, or one whose owner is already disabled, answers false.
-  async runCoreRoute(route: string, file: string, origin: PluginFailureOrigin): Promise<boolean> {
-    const id = this.coreRoutes.get(route.toLowerCase());
-    if (id === undefined || this.records.get(id)?.state === 'disabled') return false;
-    await this.runOpener(id, 'inline', file, origin);
-    return true;
   }
 
   runSelectionAction(id: string, action: string, paths: readonly string[], origin: PluginFailureOrigin): Promise<void> {

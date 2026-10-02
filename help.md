@@ -21,6 +21,7 @@
 | `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the database reached most recently, by `sql` or any `db` command (`sql [<name>] left`/`right` to dock it) |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
+| `play` | `play <file>` plays a recording in the bundled asciicast tab; what plays a file is decided by its extension |
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |
@@ -35,8 +36,8 @@
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
 | `profile` | `profile launch <name>` launches a project or built-in Janissary profile (bare `profile launch` opens a source-labeled picker); `profile save <name>` captures the running session in the project; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
-| `harness` | Open an AI coding harness in a disposable workspace with an E2E browser attached; claude, opencode, and codex auto-approve prompts by default (`--no-workspace`, `--no-browser`, and `--no-auto-approve` opt out); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `harness replay <name|file.cast>` plays a session's recording in a player tab; `on <[user@]host[:path]>` runs it on another machine |
-| `ssh` | Open an SSH session to a remote host in a full-tab terminal; `ssh replay <name\|file.cast>` plays its recording in a player tab |
+| `harness` | Open an AI coding harness in a disposable workspace with an E2E browser attached; claude, opencode, and codex auto-approve prompts by default (`--no-workspace`, `--no-browser`, and `--no-auto-approve` opt out); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
+| `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `search` | `search` opens or focuses the project-wide search tab (Cmd+Shift+F); `search <phrase>` opens it and searches for the phrase; `search transcript <pattern>` searches the current tab's transcript with a case-insensitive regex (Cmd+F opens it empty); `↑`/`↓` step older/newer, Escape closes |
 | `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
 | `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab — a feed of background-tab events (see `.janissary/config.json` to enable events) |

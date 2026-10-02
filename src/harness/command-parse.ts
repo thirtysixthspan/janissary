@@ -18,7 +18,6 @@ export type HarnessParsed =
   | HarnessLaunch
   | { capture: true; label: string }
   | { transcript: true; label: string }
-  | { replay: true; target: string }
   | { error: string };
 
 // Find a `--flag <value>` pair anywhere in `tokens`. Returns the value, `undefined` if the flag
@@ -92,21 +91,12 @@ function parseHarnessFlags(
 }
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab instead of
-// launching one. The three share a shape, so they parse through one branch — keeping
+// launching one. The two share a shape, so they parse through one branch — keeping
 // `parseHarnessCommand`'s own branching under the complexity limit and the usage string singular.
 // Returns undefined when the first token is not one of them.
-//
-// `replay` is the odd one out and is given `rest` as well as the tokens: its target is a label *or* a
-// path, and a path may hold a space, so it is the whole remainder of the line rather than one token.
-function parseLabelSubcommand(tokens: string[], rest: string): HarnessParsed | undefined {
+function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
   const subcommand = tokens[0].toLowerCase();
-  if (subcommand !== 'capture' && subcommand !== 'transcript' && subcommand !== 'replay') {
-    return undefined;
-  }
-  if (subcommand === 'replay') {
-    const target = rest.slice(tokens[0].length).trim();
-    return target ? { replay: true, target } : { error: 'Usage: harness replay <label|file.cast>.' };
-  }
+  if (subcommand !== 'capture' && subcommand !== 'transcript') return undefined;
   const label = tokens[1];
   if (!label) return { error: `Usage: harness ${subcommand} <name>.` };
   return subcommand === 'capture' ? { capture: true, label } : { transcript: true, label };
@@ -147,7 +137,7 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   if ('error' in clause) return clause;
   const { left, prompt } = clause;
   const tokens = left.split(/\s+/);
-  const subcommand = parseLabelSubcommand(tokens, left);
+  const subcommand = parseLabelSubcommand(tokens);
   if (subcommand) return subcommand;
   const name = tokens[0].toLowerCase();
   if (HARNESS_COMMANDS[name] === undefined) {

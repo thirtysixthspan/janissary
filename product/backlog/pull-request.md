@@ -2,8 +2,6 @@
 
 # pull-request
 
-* remove `harness play` and `ssh play` and instead create a `play` command that decides what to play based on the file given. For this feature the `play` command with a file with the extension `.cast` should trigger the asciicast tab. rename the replay tab the asciicast tab updating all code and documentation references.
-
 * agent tabs should be recorded via a ascii cast as well as ssh and harness tabs.
 
 * if the play command does not find the file with the given filename, search the .janissary/recordings folder. 

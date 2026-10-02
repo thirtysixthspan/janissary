@@ -842,35 +842,16 @@ file naming, and the fallback when no session record can be found.
 ## Session recording
 
 Separately from on-demand screen capture, every named-harness session is **automatically** recorded
-to a replayable asciicast file under `.janissary/recordings/` for its whole lifetime — a *recording*
+to a playable asciicast file under `.janissary/recordings/` for its whole lifetime — a *recording*
 is the full timed output stream, where a *capture* is a single point-in-time screen snapshot. See
 [[harness-recording]] for the file format, scope (ssh and inline PTYs excluded), lazy creation, and
-replay.
+playback.
 
-## Replay
-
-```
-harness replay <label|file.cast>
-```
-
-Opens a **replay tab** playing a recording, with the transport, the live following, and the text
-selection and copy described in [[harness-recording]] § Retrieval. A target ending in `.cast` is a
-path; anything else is the label of an open harness or ssh tab, whose own recording is played.
-
-- `harness replay` with no target — `Usage: harness replay <label|file.cast>.`
-
-Every refusal is one line in the **notifications feed**, attributed to the tab the command was typed
-in, and nothing is written to that tab's transcript:
-
-- `No recording found for "<target>".` — no such tab is open, or it is not one that records.
-- `No recording available for "<label>" yet.` — the tab is open but has produced no output yet.
-- `No such recording file: <path>.` — the `.cast` path is not there.
-- `Replay is unavailable.` — no active player plugin is behind the route; the plugin's own disabled
-  line in the feed is the account of why.
-
-Every one of those is decided before any tab exists. A recording that is there but that the player
-cannot read is a different moment: the tab opens, its metadata line carries the reason, and nothing is
-posted to the feed.
+A recording is played back with `play <file>`, which opens an **asciicast tab** with the transport,
+the live following, and the text selection and copy described in [[harness-recording]] § Retrieval.
+`open <file>.cast` opens the same tab. Both refusals and both successes are decided before any tab
+exists: `play` with no target, a target that is not there, and a target that is not playable each say
+so in the transcript the command was typed into.
 
 ## Monitoring
 

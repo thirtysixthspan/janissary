@@ -101,6 +101,19 @@ A path with no wildcard characters is always a single literal target (so a name 
 
 Malformed invocations return a usage message; an unrecognized file type reports that no opener is registered — in the notifications feed — when opened in the app, and goes to the operating system's handler when opened externally.
 
+### `play` command
+
+`play <file>` — play a file in the tab that plays its kind of thing.
+
+The same registry decides, and the same opener runs: `play` resolves the target the way `open` does, reads its extension, and hands the file to the inline presentation of the plugin that claims it. What differs is the question being asked of the registry. `open` wants the opener that can show the file; `play` wants one whose plugin has declared its claimed types playable, so a file whose type is claimed for viewing but not for playing — an image, say — is not a `play` target.
+
+- `play <path>` — play a file **in the app**. One file per command; there is no wildcard expansion.
+- `play` with no target — `Usage: play <file>.`
+- `play: <path>: no such file.`
+- `play: <file>: not a playable file.` — nothing plays this kind of file.
+
+Every one of those is decided before any tab exists, and each is a line in the transcript the command was typed into rather than an entry in the notifications feed. A file that is there but cannot be read as one is a different moment: the tab opens, and its own view says why on it. See [[harness-recording]] § Retrieval for what playing a terminal recording offers.
+
 ---
 
 ## Image plugin opener

@@ -83,19 +83,19 @@ open ssh tab.
 ## Session recording
 
 Every ssh session is recorded, automatically, from spawn to exit — there is no flag, command, or
-setting to turn it on or off. The recording is a replayable asciicast file under
+setting to turn it on or off. The recording is a playable asciicast file under
 `.janissary/recordings/`, named after the tab label and the start time, alongside harness recordings
 and governed by the same rules (see [[harness-recording]]).
 
 Only what the remote host printed is saved. **Keystrokes are never recorded**, so a passphrase or a
 remote `sudo` password typed into an ssh tab does not land on disk. Terminal resizes are recorded, so
-a replay reflows the way the session did.
+playback reflows the way the session did.
 
 The file is created **lazily, on the first output** — a session that never connects leaves no empty
 file — and closed when the ssh process exits. Recordings are **cleared at a fresh launch** and
 **preserved across `--relaunch`**, so a run's recordings are bounded to that run.
 
-`ssh replay <label|file.cast>` opens a replay tab playing that session's recording, following it while
+`play <file>` opens an asciicast tab playing that session's recording, following it while
 the session is still running; see [[harness-recording]] § Retrieval for what the player offers. The
 file is also playable outside the app with `asciinema play`. If a recording cannot be written, the ssh
 session is unaffected and one `ssh recording failed` line appears in the notifications feed for that

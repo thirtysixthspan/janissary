@@ -1,27 +1,27 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import type { TabPluginClientCapabilities } from '../api';
-import { ReplayMeta } from './ReplayMeta';
+import { AsciicastMeta } from './AsciicastMeta';
 import { TransportBar } from './TransportBar';
 import { usePlayback } from './usePlayback';
-import { useReplaySource } from './useReplaySource';
-import { useReplayTerminal } from './useReplayTerminal';
-import type { ReplayPayload } from '@shared/plugins/replay/shared';
+import { useAsciicastSource } from './useAsciicastSource';
+import { useAsciicastTerminal } from './useAsciicastTerminal';
+import type { AsciicastPayload } from '@shared/plugins/asciicast/shared';
 
-// The replay tab: a recording's own bytes, fed into a terminal at the size they were recorded at, with
-// a transport under them. Everything it knows, it knows from the file — the plugin holds no server
-// state and asks the host for nothing while playing.
-export function ReplayTab({
+// The asciicast tab: a recording's own bytes, fed into a terminal at the size they were recorded at,
+// with a transport under them. Everything it knows, it knows from the file — the plugin holds no
+// server state and asks the host for nothing while playing.
+export function AsciicastTab({
   payload, capabilities,
 }: {
-  payload: ReplayPayload;
+  payload: AsciicastPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { resourceUrl, active, splitAction, dock } = capabilities;
-  const source = useReplaySource(resourceUrl(payload.url), active);
-  const terminal = useReplayTerminal(source.header, containerRef, capabilities);
+  const source = useAsciicastSource(resourceUrl(payload.url), active);
+  const terminal = useAsciicastTerminal(source.header, containerRef, capabilities);
   // A recording still being written is followed and holds at the end of what has been recorded rather
-  // than reporting the replay finished. Both facts are needed: the server's answer says the recording
+  // than reporting the playback finished. Both facts are needed: the server's answer says the recording
   // was not being written when the tab opened, and new bytes arriving say it is being written now —
   // and a first read always brings bytes, so either alone would put every freshly opened recording
   // into the live state for a moment.
@@ -61,9 +61,9 @@ export function ReplayTab({
   }, [onKey]);
 
   return (
-    <div className="replay-tab" data-dock={dock ?? undefined}>
-      <div className="replay-head">
-        <ReplayMeta
+    <div className="asciicast-tab" data-dock={dock ?? undefined}>
+      <div className="asciicast-head">
+        <AsciicastMeta
           header={source.header}
           duration={playback.duration}
           growing={source.growing}
@@ -72,7 +72,7 @@ export function ReplayTab({
         />
         {splitAction}
       </div>
-      <div className="replay-stage" ref={containerRef} />
+      <div className="asciicast-stage" ref={containerRef} />
       <TransportBar playback={playback} />
     </div>
   );

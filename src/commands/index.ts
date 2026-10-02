@@ -19,6 +19,7 @@ import { command as harness } from './harness.js';
 import { command as ssh } from './ssh.js';
 import { command as profile } from './profile.js';
 import { command as open } from './open.js';
+import { command as play } from './play.js';
 import { command as edit } from './edit.js';
 import { command as newFile } from './new-file.js';
 import { command as newDirectory } from './new-directory.js';
@@ -63,6 +64,7 @@ const coreCommands: Command[] = [
   ssh,
   profile,
   open,
+  play,
   edit,
   newFile,
   newDirectory,
