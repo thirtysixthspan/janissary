@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AcpOptions, AcpSession } from '../acp/types.js';
+import { messageBus } from '../bus.js';
 import type { MultiAgentMember } from './types.js';
 
 const mocks = vi.hoisted(() => ({ connectAcp: vi.fn() }));
@@ -24,7 +25,15 @@ const lastHandlers = (session: AcpSession): Handlers => {
   return prompt.mock.calls.at(-1)![1];
 };
 
-beforeEach(() => { mocks.connectAcp.mockReset(); });
+beforeEach(() => { mocks.connectAcp.mockReset(); messageBus.clear(); });
+
+// Every write to a member is a change to what the tab shows, and the client only learns of one when
+// the state change goes out with it. Subscribed the way `src/editor/acp-manager.test.ts` does.
+function watchState(): ReturnType<typeof vi.fn> {
+  const dirty = vi.fn();
+  messageBus.on('state', 'dirty', dirty);
+  return dirty;
+}
 
 describe('MultiAgentSessions', () => {
   it('spawns each member with its own cwd, its own workspaceDir, its model and the opt-in', () => {
@@ -71,16 +80,29 @@ describe('MultiAgentSessions', () => {
     expect(m.answer).toBe('first second');
   });
 
+  it('announces the settled answer, so a client ever receives it', () => {
+    const session = fakeSession();
+    mocks.connectAcp.mockReturnValue(session);
+    const dirty = watchState();
+    new MultiAgentSessions().connect('multi-agent', member(), 'go', false);
+
+    lastHandlers(session).onEnd('end_turn');
+
+    expect(dirty).toHaveBeenCalledOnce();
+  });
+
   it('changes nothing while a chunk streams', () => {
     const session = fakeSession();
     mocks.connectAcp.mockReturnValue(session);
     const m = member();
     new MultiAgentSessions().connect('multi-agent', m, 'go', false);
+    const dirty = watchState();
 
     lastHandlers(session).onChunk('half an ans');
 
     expect(m.state).toBe('running');
     expect(m.answer).toBeUndefined();
+    expect(dirty).not.toHaveBeenCalled();
   });
 
   it('marks a member failed with the reason when its prompt errors', () => {
@@ -95,6 +117,17 @@ describe('MultiAgentSessions', () => {
     expect(m.error).toBe('the agent refused');
   });
 
+  it('announces a prompt failure as well', () => {
+    const session = fakeSession();
+    mocks.connectAcp.mockReturnValue(session);
+    const dirty = watchState();
+    new MultiAgentSessions().connect('multi-agent', member(), 'go', false);
+
+    lastHandlers(session).onError('the agent refused');
+
+    expect(dirty).toHaveBeenCalledOnce();
+  });
+
   it('marks a member failed and drops it when its agent dies', () => {
     let onError: ((message: string) => void) | undefined;
     mocks.connectAcp.mockImplementation((options: AcpOptions) => {
@@ -102,6 +135,7 @@ describe('MultiAgentSessions', () => {
       return fakeSession();
     });
     const m = member();
+    const dirty = watchState();
     const sessions = new MultiAgentSessions();
     sessions.connect('multi-agent', m, 'go', false);
 
@@ -109,6 +143,7 @@ describe('MultiAgentSessions', () => {
 
     expect(m.state).toBe('failed');
     expect(m.error).toBe('ACP agent exited.');
+    expect(dirty).toHaveBeenCalledOnce();
   });
 
   it('does not let a dead predecessor drop its successor', () => {
@@ -118,6 +153,7 @@ describe('MultiAgentSessions', () => {
       return fakeSession();
     });
     const m = member();
+    const dirty = watchState();
     const sessions = new MultiAgentSessions();
     sessions.connect('multi-agent', m, 'first', false);
     sessions.connect('multi-agent', m, 'second', false);
@@ -127,6 +163,7 @@ describe('MultiAgentSessions', () => {
 
     expect(m.state).toBe('running');
     expect(m.error).toBeUndefined();
+    expect(dirty).not.toHaveBeenCalled();
   });
 
   it('kills every member session of the tab on close and leaves other tabs alone', () => {

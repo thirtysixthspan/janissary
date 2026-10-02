@@ -1,6 +1,7 @@
 import { connectAcp } from '../acp/index.js';
 import { acpLaunchFor } from '../acp/launch.js';
 import type { AcpSession } from '../acp/types.js';
+import { messageBus } from '../bus.js';
 import type { MultiAgentMember } from './types.js';
 
 // The composite key, copied from `EditorAcpManager`: a tab label alone cannot hold N sessions, so a
@@ -22,7 +23,9 @@ export class MultiAgentSessions {
   // Open a member's connection, prompt it, and settle its row. `answer` accumulates chunks locally
   // rather than writing them onto the member: `emitState` broadcasts the whole view on essentially
   // every mutation, an ACP chunk is one mutation, and eight streaming members would each multiply
-  // that. The member is written once, when the turn ends.
+  // that. The member is written once, when the turn ends — and written *loudly*, because a payload
+  // nobody is told about is a payload no client receives: a state change goes out with each
+  // terminal transition, the way `EditorAcpManager` emits after mutating the same kind of state.
   connect(
     label: string,
     member: MultiAgentMember,
@@ -48,10 +51,12 @@ export class MultiAgentSessions {
       onEnd: () => {
         member.answer = answer;
         member.state = 'answered';
+        messageBus.emit('state', { type: 'dirty' });
       },
       onError: (message) => {
         member.state = 'failed';
         member.error = message;
+        messageBus.emit('state', { type: 'dirty' });
       },
     });
   }
@@ -59,12 +64,13 @@ export class MultiAgentSessions {
   // A connection-level error means the agent is gone (it failed to start or exited), so the member
   // is marked failed and its session forgotten — the discipline `EditorAcpManager` uses. Nothing at
   // all when this session is no longer the one registered under `k`: a late report from a closed or
-  // replaced session must not drop its successor.
+  // replaced session must not drop its successor, and must not announce anything either.
   private died(k: string, session: AcpSession, member: MultiAgentMember, message: string): void {
     if (this.sessions.get(k) !== session) return;
     this.sessions.delete(k);
     member.state = 'failed';
     member.error = message;
+    messageBus.emit('state', { type: 'dirty' });
   }
 
   closeTab(label: string): void {

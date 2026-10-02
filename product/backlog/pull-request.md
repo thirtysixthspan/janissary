@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Broadcast a state change when a member's turn ends or fails, so the answers this feature exists to show actually reach the tab.
-
-Existing Issue: A member's `onEnd` and `onError` handlers in `src/multiagent/sessions.ts` write `member.answer` and `member.state` on the tab's payload but never call `messageBus.emit('state', { type: 'dirty' })`, and the tab never enters the busy set, so nothing in the run pushes the change to any client. Severity: 8/10
-
-Existing Risk: 8/10 - The feature's entire output never arrives on its own: rows stay reading `cloning its workspace` or `working` until some unrelated event elsewhere in the app happens to emit a state change, so the comparison appears to work when a shell command finishes nearby and to hang when the app is quiet, and a user comparing models concludes the models are stuck.
-
-Proposal Risk: 2/10 - The payload is already correct by the time the turn ends, so this only adds the push; what remains is the ordinary risk that an agent takes minutes to answer, which the per-row state word already communicates.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1513: broadcast a state change when a multi-agent member's turn ends or fails". In `src/multiagent/sessions.ts`, have the `onEnd` and `onError` handlers passed to `session.prompt` emit a state change after writing the member — import `messageBus` from `../bus.js` and call `messageBus.emit('state', { type: 'dirty' })` once per terminal transition, matching what `EditorAcpManager.died` in `src/editor/acp-manager.ts` already does after mutating the same kind of state. The `died` handler needs the same emit, for the same reason. Keep the write itself single-shot: the chunk handler must keep accumulating into its local and touching neither the member nor the bus, or the eight-fold broadcast multiplication the design avoids comes back. `src/multiagent/sessions.test.ts` currently drives the handlers directly with a mocked `connectAcp`; add a case asserting the bus receives a state change for `onEnd` and another for `onError`, and one asserting it receives nothing for `onChunk`. Nothing in `src/acp/index.ts` changes, and no existing test asserts the absence of an emit, so nothing needs unlearning.
-
 * Recompute the multi-agent payload's clone-in-flight count instead of freezing the value it was created with.
 
 Existing Issue: `MultiAgentRun.cloning` is written once by `cloningCount(members)` when `MultiAgentManager.run` builds the tab's payload, and `buildTabView` in `src/tab/view.ts` passes `tab.multiagent.cloning` straight through, so the number never changes as members leave the `cloning` state. Severity: 6/10
