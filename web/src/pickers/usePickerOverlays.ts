@@ -29,6 +29,8 @@ type Input = {
   inputRef: React.RefObject<HTMLTextAreaElement | null>;
   recallRef: React.RefObject<((text: string) => void) | null>;
   dropRef: React.RefObject<CommandInputDropHandle | null>;
+  // Puts the keyboard on the harness terminal with this PTY id, after the task picker types into it.
+  focusHarness: (ptyId: string) => void;
 };
 
 // The `commands` bag this hook builds, re-exported from the shared module both features name so a
@@ -62,7 +64,7 @@ export function usePickerOverlays(input: Input): {
   onDeleteQueued: () => void;
 } {
   const { client, current, tabs, syntaxTheme, tasks, profiles } = input;
-  const { runCommand, inputRef, recallRef, dropRef } = input;
+  const { runCommand, inputRef, recallRef, dropRef, focusHarness } = input;
 
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
@@ -77,7 +79,7 @@ export function usePickerOverlays(input: Input): {
   const quick = useQuickOpen(client);
   const queue = useQueuePicker(client, current, inputRef, recallRef);
   const populate = usePopulatePickers(
-    tasks, profiles, recallRef, inputRef, client, harnessPtyId, dropRef,
+    tasks, profiles, recallRef, inputRef, client, harnessPtyId, dropRef, focusHarness,
   );
 
   const overlays = buildOverlayOpenState({

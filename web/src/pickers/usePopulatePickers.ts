@@ -15,8 +15,9 @@ export function usePopulatePickers(
   client: JanusClient,
   harnessPtyId: string | undefined,
   dropRef: React.RefObject<CommandInputDropHandle | null>,
+  focusHarness: (ptyId: string) => void,
 ) {
-  const task = useTaskPicker(tasks, client, harnessPtyId, dropRef);
+  const task = useTaskPicker(tasks, client, harnessPtyId, dropRef, focusHarness);
   const profile = useProfilePicker(profiles, recallRef, inputRef, client, harnessPtyId);
   return { ...task, ...profile };
 }
