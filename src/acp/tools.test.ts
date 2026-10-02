@@ -65,4 +65,43 @@ describe('decidePermission', () => {
   it('denies when no allow option is offered', () => {
     expect(decidePermission(['web_fetch'], toolCall({ kind: 'fetch' }), [rejectOnce])).toEqual({ outcome: 'cancelled' });
   });
+
+  it('approves an own tool call, preferring allow_always over allow_once', () => {
+    expect(decidePermission(undefined, toolCall({ kind: 'execute', title: 'run tests' }),
+      [rejectOnce, allowOnce, allowAlways], true))
+      .toEqual({ outcome: 'selected', optionId: 'always' });
+  });
+
+  it("falls back to allow_once for an own tool call when allow_always is not offered", () => {
+    expect(decidePermission(undefined, toolCall({ kind: 'execute' }), [allowOnce, allowAlways], true))
+      .toEqual({ outcome: 'selected', optionId: 'always' });
+    expect(decidePermission(undefined, toolCall({ kind: 'execute' }), [allowOnce], true))
+      .toEqual({ outcome: 'selected', optionId: 'once' });
+  });
+
+  it('cancels an own tool call when the agent offers no allow option', () => {
+    expect(decidePermission(undefined, toolCall({ kind: 'execute' }), [rejectOnce], true))
+      .toEqual({ outcome: 'cancelled' });
+  });
+
+  it("still cancels an ordinary agent tab's own tool call", () => {
+    expect(decidePermission(undefined, toolCall({ kind: 'execute', title: 'run tests' }), [allowOnce, allowAlways]))
+      .toEqual({ outcome: 'cancelled' });
+  });
+
+  it('leaves the web-tool allowlist untouched when the own-tools mode is off', () => {
+    expect(decidePermission(['web_fetch'], toolCall({ kind: 'fetch' }), [allowOnce, allowAlways]))
+      .toEqual({ outcome: 'selected', optionId: 'once' });
+    expect(decidePermission(['web_search'], toolCall({ kind: 'fetch' }), [allowOnce]))
+      .toEqual({ outcome: 'cancelled' });
+  });
+
+  it('denies a web tool for a connection with no own-tools opt-in', () => {
+    // The same connection as a member, minus the field: its own tool call is cancelled and its
+    // narrow web allowlist still decides, so a monitor's allowlist is untouched by the new mode.
+    expect(decidePermission(['web_fetch'], toolCall({ kind: 'execute', title: 'run tests' }), [allowOnce, allowAlways], false))
+      .toEqual({ outcome: 'cancelled' });
+    expect(decidePermission(['web_fetch'], toolCall({ kind: 'fetch' }), [allowOnce], false))
+      .toEqual({ outcome: 'selected', optionId: 'once' });
+  });
 });

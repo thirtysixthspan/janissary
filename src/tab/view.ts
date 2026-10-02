@@ -108,6 +108,18 @@ export function buildTabView(
 
     monitor: tab.monitor,
     files: tab.files ? { ...tab.files, root: shorten(tab.files.root), absoluteRoot: tab.files.root } : undefined,
+    // Each member is projected field by field rather than spread, so a member's clone directory —
+    // the sandbox boundary its own agent process is confined to — is left on the server beside the
+    // `editorDraft`/`pageSnapshot`/`sessionTerminated` fields above. A path the client has no
+    // business holding is not put on the wire, and adding a field to the server record cannot
+    // quietly start broadcasting it.
+    multiagent: tab.multiagent && {
+      prompt: tab.multiagent.prompt,
+      cloning: cloningInFlight(tab.multiagent.members),
+      members: tab.multiagent.members.map((m) => ({
+        index: m.index, model: m.model, state: m.state, error: m.error, answer: m.answer,
+      })),
+    },
     activePty: tab.activePty,
     dock: tab.dock,
     pane: tab.pane,
@@ -144,6 +156,14 @@ function autoApproveFlag(tab: Tab): string[] {
 function browserFlag(tab: Tab): string[] {
   if (!tab.browser) return [];
   return tab.harness?.browserRunning ? ['browserInUse'] : ['browser'];
+}
+
+// How many of a comparison's members are still cloning, counted here rather than stored on the
+// payload. The member states are already being read to project the rows beside it, so a stored copy
+// would be a second answer to the same question that could disagree with the first — and did,
+// freezing at whatever the count was when the tab opened.
+function cloningInFlight(members: { state: string }[]): number {
+  return members.filter((m) => m.state === 'cloning').length;
 }
 
 // The metadata row's display symbol for a workspaced tab's working directory: the clone's own name

@@ -1,3 +1,5 @@
+import type { MultiAgentRun } from '../multiagent/types.js';
+
 export type LogEntry = {
   input: string;
   output: string;
@@ -256,7 +258,7 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'plugin'`
   // renders a bundled plugin's view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
+  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications' | 'multiagent';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled with its file name while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
@@ -286,6 +288,11 @@ export type Tab = {
   monitor?: { suggestions: MonitorSuggestion[]; name: string; persona: string; targets: string; contextBytes: number };
   // The file navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
+  // The multi-agent payload, present only when `view === 'multiagent'`: the one prompt every member
+  // of the run received, the members in the order they were listed with their model, state, failure
+  // reason and answer once there is one, and how many clones are still in flight. Server-only: each
+  // member also carries its clone directory, which `buildTabView` leaves off (see the note there).
+  multiagent?: MultiAgentRun;
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
   // is group 1; a launched profile forms its own group.
   group: number;

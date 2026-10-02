@@ -15,6 +15,7 @@ import { OpenFileManager } from '../open/file-manager.js';
 import { FileNavigatorManager } from '../file-navigator/manager.js';
 import { EditorWatchManager } from '../editor/watch-manager.js';
 import { EditorAcpManager } from '../editor/acp-manager.js';
+import { MultiAgentManager } from '../multiagent/manager.js';
 import { CaptureManager } from '../capture/manager.js';
 import { AgentCommunicationManager } from '../agent/communication-manager.js';
 import { BrowserManager } from '../browser/tab.js';
@@ -64,6 +65,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.fileNavigator = new FileNavigatorManager(managers);
   managers.editorWatch = new EditorWatchManager(managers);
   managers.editorAcp = new EditorAcpManager(managers);
+  managers.multiAgent = new MultiAgentManager(managers);
   managers.pty = new PseudoterminalManager(managers);
   managers.schedule = new ScheduleManager(managers);
   managers.shell = new ShellManager(managers);

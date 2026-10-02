@@ -35,6 +35,11 @@ export type AcpOptions = {
   // Tool ids the connection's permission handler may approve (see acp-tools.ts). Undefined/empty
   // (every non-monitor caller and every tool-less persona) means deny every tool request.
   allowedTools?: string[];
+  // Opt-in for the second permission mode: approve the agent's *own* tool calls, preferring
+  // `allow_always`, rather than only a classified web tool from `allowedTools`. Reachable only from
+  // a multi-agent tab's member connection, whose agent is confined to its own disposable clone; no
+  // existing caller sets it, so every other connection decides exactly as before.
+  ownTools?: boolean;
 };
 
 export type AcpPromptHandlers = {

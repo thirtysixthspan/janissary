@@ -21,6 +21,10 @@ inherits the same confinement.
 
 A conversation's ACP agent is also confined to its own private workspace. An ordinary agent launched from the conversation's metadata row uses the same directory as its sandbox workspace. That workspace belongs to the durable conversation rather than to a tab or project clone, and closing the conversation tab or shutting down the application does not sweep it. See [[conversations]].
 
+A [[multi-agent-tab]] member's ACP agent is confined to that member's own clone — one process per member, each with its own `workspaceDir` rather than a single one read off the tab — and each clone is released with the tab. That per-member confinement is the invariant the comparison's own-tool approval rests on: it is what makes an agent free to use its own tools inside a disposable copy of the repository (see [[acp]]). A member's agent can be denied the network the same way a workspaced tab's is.
+
+Because the grant depends on it, a member is refused rather than run when this confinement would not apply — the same condition `sandboxNotice` reports to a workspaced tab, being the isolation toggle off or `sandbox-exec` unavailable. Refusing is the point: without a boundary, approving a member's tool calls would be the one configuration in the application where an agent acts on the user's checkout unrestricted.
+
 ### Filesystem policy
 
 Rule ordering follows Seatbelt's "last matching rule wins" semantic: broad allow → `$HOME` deny →

@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { makeEditorTab, makePluginTab, makeTab } from './index.js';
-import { addEditorTab, addPluginTab } from './creators.js';
-import { uniqueEditorLabel, uniquePluginLabel } from './unique-labels.js';
+import { makeEditorTab, makeMultiAgentTab, makePluginTab, makeTab } from './index.js';
+import { addEditorTab, addMultiAgentTab, addPluginTab } from './creators.js';
+import { uniqueEditorLabel, uniqueMultiAgentLabel, uniquePluginLabel } from './unique-labels.js';
 import type { EditorView, PluginTabRecord } from './types.js';
+import type { MultiAgentRun } from '../multiagent/types.js';
 
 const view: EditorView = { name: 'notes.txt', path: '/tmp/notes.txt', size: '5 B', url: '/open/1' };
 const plugin: PluginTabRecord = {
@@ -66,5 +67,44 @@ describe('addEditorTab', () => {
     const result = addEditorTab(tabs, 0, long);
     const added = result.tabs[result.activeTab];
     expect(added.title).toBe(long.name);
+  });
+});
+
+const run: MultiAgentRun = {
+  prompt: 'what does this repository do?',
+  members: [{ index: 0, model: 'opencode/a', state: 'running', dir: '/ws/a' }],
+};
+
+describe('uniqueMultiAgentLabel', () => {
+  it('suffixes the label when a comparison is already open', () => {
+    const tabs = [makeTab('janus', '#fff'), makeMultiAgentTab('multi-agent', '#123', 2, 1, '#fff', run, false)];
+    expect(uniqueMultiAgentLabel(tabs)).toBe('multi-agent-2');
+  });
+});
+
+describe('makeMultiAgentTab', () => {
+  it('builds a multi-agent tab titled with the prompt and carrying the run', () => {
+    const tab = makeMultiAgentTab('multi-agent', '#fff', 2, 1, '#fff', run, false);
+    expect(tab).toMatchObject({ label: 'multi-agent', view: 'multiagent', title: run.prompt, multiagent: run });
+    // The clones live in the manager, so the tab's own single workspace field stays empty.
+    expect(tab.workspaceDir).toBeUndefined();
+    expect(tab.offline).toBeUndefined();
+  });
+
+  it('marks the tab offline only when the issuing tab was', () => {
+    expect(makeMultiAgentTab('multi-agent', '#fff', 2, 1, '#fff', run, true).offline).toBe(true);
+  });
+});
+
+describe('addMultiAgentTab', () => {
+  it('joins the creator group and focuses the new tab', () => {
+    const tabs = [makeTab('janus', '#fff')];
+    const result = addMultiAgentTab(tabs, 0, run, false);
+    const added = result.tabs[result.activeTab];
+    expect(added.label).toBe('multi-agent');
+    expect(added.group).toBe(1);
+    expect(added.groupColor).toBe('#fff');
+    expect(added.dotColor).not.toBe('#fff');
+    expect(added.title).toBe(run.prompt);
   });
 });

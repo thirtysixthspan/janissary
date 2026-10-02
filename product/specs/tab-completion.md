@@ -44,7 +44,13 @@ The shell uses the following rules, in order of precedence:
 - **Candidates:** The known model names for the harness named earlier on the same command line.
 - **Behavior:** The `--model` flag may appear anywhere after the harness name, alongside the command's other flags and options.
 
-### 5. Filesystem Path Completion
+### 5. Fanout Member (`fanout opencode:...`)
+
+- **Context:** A `fanout` member token that already names its harness (`opencode:`).
+- **Candidates:** The known model names for that harness, each offered as `opencode:<model>`.
+- **Behavior:** Fires on every member token, so a second model completes beside the first. A bare `fanout` is still the start of a prompt and falls through to filesystem completion, and a prompt word that happens to begin with `opencode` is not completed as a member. See [[multi-agent-tab]].
+
+### 6. Filesystem Path Completion
 
 - **Context:** Default fallback for all other positions.
 - **Behavior:**

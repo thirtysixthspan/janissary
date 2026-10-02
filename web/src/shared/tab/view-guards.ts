@@ -1,6 +1,6 @@
 import type { TabView } from '@shared/protocol';
 
-// The client mirror of `src/tab/view-guards.ts`. The wire shape carries the same five optional
+// The client mirror of `src/tab/view-guards.ts`. The wire shape carries the same six optional
 // payloads under the same "present only for this view kind" prose invariant, and the same reason to
 // check it rather than assert it: a payload that is absent should render nothing for that layer, not
 // throw inside a render and take the tab body out.
@@ -10,6 +10,7 @@ export type EditorTabView = TabView & { view: 'editor'; editor: NonNullable<TabV
 export type FilesTabView = TabView & { view: 'files'; files: NonNullable<TabView['files']> };
 export type PluginTabView = TabView & { view: 'plugin'; plugin: NonNullable<TabView['plugin']> };
 export type MonitorTabView = TabView & { view: 'monitor'; monitor: NonNullable<TabView['monitor']> };
+export type MultiAgentTabView = TabView & { view: 'multiagent'; multiagent: NonNullable<TabView['multiagent']> };
 
 export function isHarnessTabView(tab: TabView): tab is HarnessTabView {
   return tab.view === 'harness' && tab.harness !== undefined;
@@ -29,6 +30,10 @@ export function isPluginTabView(tab: TabView): tab is PluginTabView {
 
 export function isMonitorTabView(tab: TabView): tab is MonitorTabView {
   return tab.view === 'monitor' && tab.monitor !== undefined;
+}
+
+export function isMultiAgentTabView(tab: TabView): tab is MultiAgentTabView {
+  return tab.view === 'multiagent' && tab.multiagent !== undefined;
 }
 
 // Pair each tab with its position in the tab strip, keeping only those the guard admits. The index

@@ -14,6 +14,7 @@ function makeTabManager(): TabManager {
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
+    multiAgent: { closeTab: vi.fn() },
     schedule: { delete: vi.fn() },
     questions: { cancelTab: vi.fn(), pendingFor: vi.fn() },
     database: { forgetTab: vi.fn(), closeAll: vi.fn() },

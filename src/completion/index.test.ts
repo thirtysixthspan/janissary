@@ -215,3 +215,51 @@ describe('completeCommandLine — harness model', () => {
     expect(r.newInput).toBe(`harness claude --model ${model} `);
   });
 });
+
+describe('completeCommandLine — fanout member', () => {
+  const noFiles = '/no/such/dir/xyz';
+
+  // As with the harness-model rule, the prefix comes from the catalog so this pins the routing
+  // rather than the catalog's contents.
+  it('completes an opencode model from the catalog', () => {
+    const models = modelsFor('opencode');
+    const model = models.find((id) => models.filter((other) => other.startsWith(id.slice(0, -1))).length === 1)!;
+    const line = `fanout opencode:${model.slice(0, -1)}`;
+    const r = completeCommandLine(line, line.length, noFiles);
+    expect(r.newInput).toBe(`fanout opencode:${model} `);
+  });
+
+  it('completes the whole list from a bare member prefix', () => {
+    const line = 'fanout opencode:';
+    const r = completeCommandLine(line, line.length, noFiles);
+    expect(r.matches).toHaveLength(modelsFor('opencode').length);
+    expect([...r.matches].toSorted((a, b) => a.localeCompare(b)))
+      .toEqual(modelsFor('opencode').map((model) => `opencode:${model}`).toSorted((a, b) => a.localeCompare(b)));
+  });
+
+  it('completes a second member beside the first', () => {
+    const models = modelsFor('opencode');
+    const model = models.find((id) => models.filter((other) => other.startsWith(id.slice(0, -1))).length === 1)!;
+    const line = `fanout opencode:${model} opencode:${model.slice(0, -1)}`;
+    const r = completeCommandLine(line, line.length, noFiles);
+    expect(r.newInput).toBe(`fanout opencode:${model} opencode:${model} `);
+  });
+
+  it('still falls through to the filesystem rule for a bare fanout', () => {
+    const r = completeCommandLine('fanout ', 'fanout '.length, noFiles);
+    expect(r.newInput).toBe('fanout ');
+    expect(r.matches).toEqual([]);
+  });
+
+  it('does not complete a token that has not reached the harness prefix', () => {
+    const r = completeCommandLine('fanout openco', 'fanout openco'.length, noFiles);
+    expect(r.newInput).toBe('fanout openco');
+    expect(r.matches).toEqual([]);
+  });
+
+  it('leaves another command alone', () => {
+    const r = completeCommandLine('send opencode:', 'send opencode:'.length, noFiles);
+    expect(r.newInput).toBe('send opencode:');
+    expect(r.matches).toEqual([]);
+  });
+});

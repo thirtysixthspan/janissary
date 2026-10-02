@@ -1,5 +1,6 @@
 // Tab-presentation wire types, composed into the shared contract by ../protocol.ts.
 import type { BufferLine, HarnessView, EditorView, FileNavigatorView, RemoteTarget } from '../tab/types.js';
+import type { MultiAgentMemberState } from '../multiagent/types.js';
 import type { PluginTabView } from './plugin.js';
 import type { ScheduleView } from './schedule.js';
 import type { SuggestionView } from './monitor.js';
@@ -44,6 +45,25 @@ export type HarnessLaunchView = {
   autoApprove: string[];
 };
 
+// One member of a multi-agent tab as the client sees it. The server-side member record also carries
+// the clone directory that member's process is confined to; that is a path the client has no
+// business holding, so it is projected away rather than sent (see `buildTabView`).
+export type MultiAgentMemberView = {
+  index: number;
+  model: string;
+  state: MultiAgentMemberState;
+  error?: string;
+  answer?: string;
+};
+
+// The multi-agent tab's payload: the one prompt every member received, the members in the order they
+// were listed, and how many clones are still in flight.
+export type MultiAgentView = {
+  prompt: string;
+  members: MultiAgentMemberView[];
+  cloning: number;
+};
+
 export type QuestionKind = 'ask' | 'approve';
 export type PendingQuestionView = {
   id: string;
@@ -86,7 +106,7 @@ export type TabView = {
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
   // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.
-  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
+  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications' | 'multiagent';
   // Display name when it differs from `label` (a plugin tab is titled by its plugin).
   title?: string;
   // Bundled-plugin envelope, present only when `view === 'plugin'`.
@@ -103,6 +123,8 @@ export type TabView = {
   monitor?: { suggestions: SuggestionView[]; name: string; persona: string; targets: string; contextBytes: number };
   // File-navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
+  // Multi-agent payload, present only when `view === 'multiagent'`.
+  multiagent?: MultiAgentView;
   // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
   // Cleared on exit; the client hides the transcript while this is set.
   activePty?: string;

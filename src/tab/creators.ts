@@ -1,12 +1,13 @@
 import type { Tab, PluginTabRecord, EditorView, FileNavigatorView } from './types.js';
+import type { MultiAgentRun } from '../multiagent/types.js';
 import {
-  makePluginTab, makeEditorTab, makeFilesTab, makeNotificationsTab,
+  makePluginTab, makeEditorTab, makeFilesTab, makeNotificationsTab, makeMultiAgentTab,
 } from './index.js';
 import { distinctColor } from './colors.js';
 import { insertTabInGroup } from './utils.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import {
-  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel,
+  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, uniqueMultiAgentLabel,
 } from './unique-labels.js';
 
 type TabAndActive = { tabs: Tab[]; activeTab: number };
@@ -38,6 +39,18 @@ export function addEditorTab(tabs: Tab[], activeTab: number, view: EditorView): 
   const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeEditorTab(label, dotColor, tabs.length + 1, group, groupColor, view);
   return finalizeTab(tabs, tab, label, view.name);
+}
+
+export function addMultiAgentTab(
+  tabs: Tab[], activeTab: number, run: MultiAgentRun, offline: boolean,
+): TabAndActive {
+  const creator = tabs[activeTab];
+  const label = uniqueMultiAgentLabel(tabs);
+  const dotColor = distinctColor(tabs.map((t) => t.dotColor));
+  const group = creator?.group ?? 1;
+  const groupColor = creator?.groupColor ?? dotColor;
+  const tab = makeMultiAgentTab(label, dotColor, tabs.length + 1, group, groupColor, run, offline);
+  return finalizeTab(tabs, tab, label, run.prompt);
 }
 
 export function addFilesTab(tabs: Tab[], activeTab: number, view: FileNavigatorView): TabAndActive {

@@ -20,6 +20,7 @@ import type { MonitorManager } from './monitor/manager.js';
 import type { FileNavigatorManager } from './file-navigator/manager.js';
 import type { EditorWatchManager } from './editor/watch-manager.js';
 import type { EditorAcpManager } from './editor/acp-manager.js';
+import type { MultiAgentManager } from './multiagent/manager.js';
 import type { Questions } from './questions.js';
 import type { TabPluginHost } from './plugins/host.js';
 import type { ConversationsManager } from './conversations/manager.js';
@@ -53,6 +54,7 @@ type ManagerRegistry = {
   fileNavigator: FileNavigatorManager;
   editorWatch: EditorWatchManager;
   editorAcp: EditorAcpManager;
+  multiAgent: MultiAgentManager;
   questions: Questions;
   plugins: TabPluginHost;
   conversations: ConversationsManager;
@@ -72,7 +74,8 @@ export type Managers = {
 // Three groups, and the reason each sits where it does:
 //
 // 1. Session and process owners, first: they kill what they started while everything they need to
-//    do so is still up.
+//    do so is still up. `multiAgent` sits ahead of `workspace` for that reason — it releases its
+//    members' clones through the workspace manager, which has to still be tracking them.
 // 2. `remote`, after every one of them. A remote PTY's `kill`, a remote ACP session's `acp-close`,
 //    and a remote navigator port's session close are all `channel.send(...)`, and `RemoteChannel.send`
 //    drops a frame silently once the channel is no longer attached — so closing the channels first
@@ -97,6 +100,7 @@ export const MANAGER_DISPOSE_ORDER = [
   'fileNavigator',
   'openFile',
   'acp',
+  'multiAgent',
   'browser',
   'gitSync',
   'workspace',
@@ -141,6 +145,7 @@ export const MANAGER_TAB_RELEASE = [
   'editorWatch',
   'fileNavigator',
   'acp',
+  'multiAgent',
   'browser',
   'questions',
   'remote',

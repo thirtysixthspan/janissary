@@ -21,6 +21,70 @@ describe('buildTabView', () => {
     expect(view.editor).toEqual(tab.editor);
   });
 
+  // Each member's clone directory is the sandbox boundary its own agent process is confined to, and
+  // a path the client has no business holding. Projected field by field, so adding a field to the
+  // server record cannot quietly start broadcasting it.
+  it('projects the multi-agent payload without any member clone directory', () => {
+    const tab = makeTab('multi-agent', '#fff');
+    tab.view = 'multiagent';
+    tab.multiagent = {
+      prompt: 'what does this repository do?',
+      members: [
+        { index: 0, model: 'opencode/a', state: 'answered', answer: 'It is a terminal UI.', dir: '/ws/a' },
+        { index: 1, model: 'opencode/b', state: 'cloning', dir: '/ws/b' },
+      ],
+    };
+
+    const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+
+    expect(view.multiagent).toEqual({
+      prompt: 'what does this repository do?',
+      cloning: 1,
+      members: [
+        { index: 0, model: 'opencode/a', state: 'answered', answer: 'It is a terminal UI.', error: undefined },
+        { index: 1, model: 'opencode/b', state: 'cloning', error: undefined, answer: undefined },
+      ],
+    });
+    expect(JSON.stringify(view.multiagent)).not.toContain('/ws/');
+  });
+
+  // The count used to be written once, when the tab was created, and read straight through — so a
+  // run that finished still reported its clones as cloning for the life of the tab.
+  it('counts the clones in flight from the members\' current states, not from a stored value', () => {
+    const tab = makeTab('multi-agent', '#fff');
+    tab.view = 'multiagent';
+    tab.multiagent = {
+      prompt: 'go',
+      members: [
+        { index: 0, model: 'opencode/a', state: 'answered', answer: 'a' },
+        { index: 1, model: 'opencode/b', state: 'running' },
+        { index: 2, model: 'opencode/c', state: 'failed', error: 'no' },
+      ],
+    };
+
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).multiagent?.cloning).toBe(0);
+  });
+
+  it('counts every member still cloning', () => {
+    const tab = makeTab('multi-agent', '#fff');
+    tab.view = 'multiagent';
+    tab.multiagent = {
+      prompt: 'go',
+      members: [
+        { index: 0, model: 'opencode/a', state: 'cloning' },
+        { index: 1, model: 'opencode/b', state: 'cloning' },
+        { index: 2, model: 'opencode/c', state: 'running' },
+      ],
+    };
+
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).multiagent?.cloning).toBe(2);
+  });
+
+  it('leaves the multi-agent payload absent on every other view', () => {
+    const tab = makeTab('agent-1', '#fff');
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).multiagent).toBeUndefined();
+  });
+
   // The two `sessionTerminated` fields hold the same text for different purposes: the tab's copy is the
   // server's own gate on a dead session and has no client reader, while the harness view's copy is
   // what the tab shows in place of `exited`.
