@@ -2,16 +2,6 @@
 
 # pull-request
 
-* State in the pull request description that the comparison feature only runs where workspace isolation is available.
-
-Existing Issue: The description presents each member's process as "Seatbelt-confined to its own clone" and describes the isolation-off case only as something a member is refused for, but never says that this makes the whole feature inert off macOS: `confinableDir` in `src/multiagent/sessions.ts` refuses a member whenever `sandboxNotice` returns a reason, and `sandboxAvailable` is false on any platform without `/usr/bin/sandbox-exec`, so on Linux or Windows every member of every run reads `failed: workspace isolation unavailable` and no comparison is ever produced. Severity: 4/10
-
-Existing Risk: 4/10 - A reviewer or user on a non-macOS host discovers this by running the feature and getting nothing but refusals, and the description's own framing — a comparison you open with one command — reads as a promise the code keeps only on one platform.
-
-Proposal Risk: 2/10 - A sentence in the description; the behavior is correct and already recorded in `product/specs/multi-agent-tab.md`, so what remains is only the risk that the two documents drift apart later.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1513: state in the description that a comparison needs workspace isolation". Add to the **What** section of the pull request description, beside the paragraph that explains why confinement is what makes the own-tools grant safe, one sentence saying that a member is refused rather than connected whenever its process would not actually be confined — the isolation toggle off, or a host without `sandbox-exec` — so the comparison runs only where workspace isolation is available, and that this is why it is a macOS feature. Add nothing else to that section, and leave the **How to verify** steps and the **Additional test cases** section exactly as they are. The sentence should agree with the wording already in `product/specs/multi-agent-tab.md`, which states the condition and that a member is refused with the reason rather than run, so no spec change is needed. No test is needed for a description sentence.
-
 * Drop the `hasResult` helper the comparison rows never call.
 
 Existing Issue: `web/src/multiagent/format.ts` exports `hasResult`, which answers whether a member's row has anything beyond its state, but no component calls it — `MemberRow` tests `member.state === 'failed'` and `member.state === 'answered'` separately, because it renders an error line and an answer line and has to tell them apart — and the only reference anywhere in the tree is the test written for it. Severity: 3/10
