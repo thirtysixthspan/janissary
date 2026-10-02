@@ -76,6 +76,12 @@ safe because a boundary keeps it inside its disposable clone; with no boundary, 
 `failed` with the reason is a better outcome than an unrestricted agent pointed at the user's own
 checkout.
 
+That verdict is knowable before the member is asked anything, because it depends only on the machine
+and on the member's own workspace. So a `fanout` that runs where nothing can be confined reports
+nothing running — `→ Comparing 0 models in "multi-agent".`, and the same for a `capture` that asked
+another tab to run one — rather than announcing a comparison it cannot produce. The rows still carry
+the reason, and the tab still opens: a refusal is a result, not a reason to hide the run.
+
 ## What it does not do
 
 The tab lines answers up for a person to read. It does not judge, score or rank them, does not diff
