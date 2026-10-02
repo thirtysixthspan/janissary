@@ -173,6 +173,9 @@ ${secretDenyClauses})
 (deny appleevent-send)
 (allow mach-lookup)
 (deny mach-lookup (global-name-regex #"^com\.apple\.pboard"))
+; Codex synchronizes managed preferences while loading workspace requirements. CoreFoundation
+; needs read access to the preferences service's shared-memory cache for that to succeed.
+(allow ipc-posix-shm-read* (ipc-posix-name-prefix "apple.cfprefs."))
 
 ; Read-only system info (CPU/memory/OS-version queries) — no user data, but JS engines that JIT
 ; (Bun, which compiles the claude/opencode CLIs) probe these during startup via sysctlbyname and
