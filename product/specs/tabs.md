@@ -206,7 +206,9 @@ indicator: a spinning arrows icon placed first among the flags, right after the 
 with the tooltip "Provisioning workspace". It covers agent and harness tabs, local and remote alike —
 a local `agent --workspace` or `harness -w` tab while its clone is in flight, and a remote agent or
 harness tab until the far host reports its workspace ready. The icon keeps spinning for as long as
-provisioning lasts, then stops and disappears on the same update that makes the tab ready. A local
+provisioning lasts, then stops and disappears on the same update that makes the tab ready. A tab that
+joined a local workspace while it was still being cloned shows the indicator too, and it stops when
+the clone lands even if the tab that started the clone has since closed. A local
 clone that fails, or a harness tab that shows a provisioning error, drops the indicator at once,
 while the error stays on screen until the tab closes. A remote agent tab whose launch fails keeps
 the indicator until the tab closes, since the channel never reports a workspace. Tabs that never

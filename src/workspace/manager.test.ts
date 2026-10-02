@@ -18,6 +18,7 @@ vi.mock('./index.js', async (importOriginal) => {
 });
 
 const { WorkspaceManager } = await import('./manager.js');
+const { messageBus } = await import('../bus.js');
 
 function handle(dir: string, cancel: () => void = vi.fn()): { dir: string; ready: Promise<void>; cancel: () => void } {
   return { dir, ready: Promise.resolve(), cancel };
@@ -176,6 +177,30 @@ describe('WorkspaceManager', () => {
       const result = manager.create('agent-1');
       if ('ready' in result) await expect(result.ready).rejects.toThrow('clone failed');
       expect(manager.provisioning(dir)).toBe(false);
+    });
+
+    // A tab that joined the clone has no callback of its own, so the settlement itself must
+    // rebroadcast, or that tab's indicator spins on after its creator closed.
+    it('rebroadcasts state once a clone lands, after it has left the in-flight set', async () => {
+      const clone = Promise.withResolvers<void>();
+      const manager = startClone(clone.promise);
+      const result = manager.create('agent-1');
+      const seenProvisioning: boolean[] = [];
+      const emitSpy = vi.spyOn(messageBus, 'emit').mockImplementation(() => { seenProvisioning.push(manager.provisioning(dir)); });
+      clone.resolve();
+      if ('ready' in result) await result.ready;
+      expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
+      expect(seenProvisioning).toEqual([false]);
+      emitSpy.mockRestore();
+    });
+
+    it('rebroadcasts state once a clone fails', async () => {
+      const manager = startClone(Promise.reject(new Error('clone failed')));
+      const emitSpy = vi.spyOn(messageBus, 'emit');
+      const result = manager.create('agent-1');
+      if ('ready' in result) await expect(result.ready).rejects.toThrow('clone failed');
+      expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
+      emitSpy.mockRestore();
     });
   });
 

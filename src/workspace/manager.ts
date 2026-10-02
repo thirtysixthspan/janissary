@@ -1,5 +1,6 @@
 import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace } from './index.js';
 import { errorText } from '../error-text.js';
+import { messageBus } from '../bus.js';
 
 const NO_REPO = 'No git repository found. Cannot create workspace.';
 
@@ -65,6 +66,7 @@ export class WorkspaceManager {
       await ready;
     } finally {
       this.pending.delete(name);
+      messageBus.emit('state', { type: 'dirty' });
     }
   }
 

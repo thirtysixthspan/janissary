@@ -82,7 +82,6 @@ function startWorkspaceAgent(managers: Managers, launch: AgentLaunch, resolved: 
     },
     (message) => {
       out(`Failed to create workspace for "${resolved}": ${message}`);
-      messageBus.emit('state', { type: 'dirty' });
       setTimeout(() => {
         const index = managers.tab.findIndex(resolved);
         if (index !== -1) managers.tab.closeTab(index);
