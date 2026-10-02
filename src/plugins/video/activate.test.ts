@@ -5,8 +5,9 @@ import path from 'node:path';
 import {
   TabPluginRejection, type TabPluginPayload, type TabPluginServerCapabilities,
 } from '../api.js';
-import { openerForExtension } from '../../openers/index.js';
+import { openerForExtension, playablePluginForExtension } from '../../openers/index.js';
 import { activate } from './activate.js';
+import { videoManifest } from './manifest.js';
 
 function fakeCapabilities(options: {
   player?: string;
@@ -38,6 +39,15 @@ describe('video opener registration', () => {
     expect(openerForExtension('.MOV')?.name).toBe('video');
     expect(openerForExtension('.MKV')?.name).toBe('video');
     expect(openerForExtension('.mp3')?.name).not.toBe('video');
+  });
+
+  // What makes `play` reach this plugin at all. It is the plugin's own declaration, so the command that
+  // has to know about it does not: `play clip.mp4` reaches the same tab `video clip.mp4` opens.
+  it('declares its claimed containers playable, so `play` routes one here', () => {
+    expect(videoManifest.playable).toBe(true);
+    expect(playablePluginForExtension('.mp4')).toBe('video');
+    // The external-only containers are playable through the configured player rather than in a tab.
+    expect(playablePluginForExtension('.mkv')).toBe('video');
   });
 });
 

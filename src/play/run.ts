@@ -39,8 +39,8 @@ export function runPlay(managers: Managers, input: string, label: string): strin
 }
 
 // The file the target names, resolved the way `open` resolves one. A path that is already there is
-// played as written; only one that is not falls through to the recordings directory, so the fallback
-// can never quietly open a different recording than the one asked for.
+// played as written; only a recording name that is not falls through to the recordings directory, so
+// the fallback can never quietly open a different recording than the one asked for.
 function resolveTarget(managers: Managers, label: string, target: string): string {
   const expanded = expandUserPath(target, { root: managers.tab.launchDir });
   const cwd = managers.tab.cwdOf(label) ?? process.cwd();
@@ -49,9 +49,19 @@ function resolveTarget(managers: Managers, label: string, target: string): strin
   return recordedByName(target) ?? requested;
 }
 
+// Whether a target could name a recording at all: a recording's stem is its session name, so a target
+// carrying any other extension is asking for a file of that type and a missing one is simply missing.
+// Without this, `play home.mp4` on a machine that has no `home.mp4` but does have a recording of a
+// session named `home` would play that recording instead of reporting the video that is not there.
+function namesARecording(target: string): boolean {
+  const extension = path.extname(target);
+  return extension === '' || extension.toLowerCase() === '.cast';
+}
+
 // The recording of the name the user typed, or undefined when the directory has none. The path comes
 // from the module that owns the directory, which is what the recorders themselves write into.
 function recordedByName(target: string): string | undefined {
+  if (!namesARecording(target)) return undefined;
   const directory = harnessRecordingDirectory();
   if (!directory) return undefined;
   let names: string[];

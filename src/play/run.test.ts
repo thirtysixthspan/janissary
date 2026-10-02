@@ -162,4 +162,38 @@ describe('runPlay — the recordings directory fallback', () => {
       .toBe('play: navy-2.txt: not a playable file');
     expect(runOpener).not.toHaveBeenCalled();
   });
+
+  // A stem is a session name, so the search must not answer for a target that named some other type of
+  // file: `home.mp4` missing means the video is missing, whatever a session called `home` recorded.
+  it('does not fall back to a recording for a missing file of another playable type', () => {
+    const { managers, runOpener, cwd } = makeManagers();
+    archived('home-2026-07-10T18-30-05-123Z.cast');
+    expect(runPlay(managers, 'play home.mp4', 'janus'))
+      .toBe(`play: ${path.join(cwd, 'home.mp4')}: no such file`);
+    expect(runPlay(managers, 'play home.mp3', 'janus'))
+      .toBe(`play: ${path.join(cwd, 'home.mp3')}: no such file`);
+    expect(runOpener).not.toHaveBeenCalled();
+  });
+});
+
+// What plays a video or a track is the plugin that owns that kind of file, declared by the plugin itself
+// rather than listed by the command. Reached by the same opener `open` uses, which is where the
+// `video <path>` and `audio <path>` commands end up too.
+describe('runPlay — video and audio', () => {
+  it('routes a video and an audio file to the plugin that plays that kind of thing', () => {
+    const { managers, runOpener, cwd } = makeManagers();
+    const video = recording(cwd, 'clip.mp4');
+    const track = recording(cwd, 'song.mp3');
+    runPlay(managers, 'play clip.mp4', 'janus');
+    runPlay(managers, 'play song.mp3', 'janus');
+    expect(runOpener.mock.calls.map((call) => [call[0], call[2]]))
+      .toEqual([['video', video], ['audio', track]]);
+  });
+
+  it('hands an external-only container to its plugin, which launches the configured player', () => {
+    const { managers, runOpener, cwd } = makeManagers();
+    const video = recording(cwd, 'archive.mkv');
+    runPlay(managers, 'play archive.mkv', 'janus');
+    expect(runOpener).toHaveBeenCalledWith('video', 'inline', video, expect.anything());
+  });
 });

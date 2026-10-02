@@ -115,12 +115,17 @@ The same registry decides, and the same opener runs: `play` resolves the target 
   not a file of that name exists. A target that carries none is a **recording name** instead, and is
   resolved by the search below.
 
+Playable types are whatever the owning plugin declares playable: terminal recordings (`.cast`), the video
+plugin's containers, and the audio plugin's tracks. A container the video plugin can only hand to an
+external player is playable too, and `play` hands it over exactly as `open` does. See [[tab-plugins]].
+
 A path that is already there is played as written. Only a file that is not there falls through to the
 **search**, which looks in the project's recordings directory — where every session's file is written,
 so `play` learns the path from the recorder that owns it rather than re-deriving it. The name searched
 is the target's **stem**: its filename with any `.cast` suffix removed, so `play devbox`,
 `play devbox.cast`, and `play /somewhere/else/devbox-2026-07-10T18-30-05-123Z.cast` all ask about one
-session.
+session. Only a target that names no extension or names a `.cast` is searched for at all, so a missing
+video is missing rather than answered by a session of the same name.
 
 Two things in that directory answer a stem, in this order: the **recordings of that session**, named
 `<stem>-<timestamp>.cast`, of which the **most recent** is chosen — which is what "the devbox

@@ -18,7 +18,8 @@ An [SSH session](/user-documentation/advanced-agents/harness#ssh-sessions) is pl
 so is any `.cast` file given to `open` — from the command bar, or by double-clicking it in a
 [file navigator](/user-documentation/tab-types/file-navigator). What plays a file is the file: `play`
 looks at its extension and hands it to the tab that plays that kind of thing, so a recording is reached
-by the name of the session that wrote it whether or not that session is still running.
+by the name of the session that wrote it whether or not that session is still running. A video plays
+the same way, with `play clip.mp4`, and a track with `play track.mp3`.
 
 Every [harness](/user-documentation/advanced-agents/harness#recordings) and SSH tab is recorded
 automatically, so this is the way to watch a session again: one still running, or one whose tab has

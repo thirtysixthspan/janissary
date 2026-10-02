@@ -4,9 +4,10 @@
 
 ```
 audio track.mp3
+play track.mp3
 ```
 
-`open track.mp3` does the same thing. The tab shows the playing track's name, size, and location in a header, your platform's own audio controls below that, and the playlist filling the rest of the tab. The header carries a **Split** control at its right edge, so you can put the player in the other pane while you work.
+`open track.mp3` does the same thing, and so does `play <file>` — one file rather than a wildcard. All three queue the track into the one playlist rather than opening a second player. The tab shows the playing track's name, size, and location in a header, your platform's own audio controls below that, and the playlist filling the rest of the tab. The header carries a **Split** control at its right edge, so you can put the player in the other pane while you work.
 
 There is no command line and no command history here, and nothing the tab does runs through a shell. The tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus; in the strip it reads like any other member of that band, so you can move it within the group, and the × after its label closes it without selecting it first.
 

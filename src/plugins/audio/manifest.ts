@@ -25,6 +25,9 @@ export const audioManifest = {
     '.wma': undefined,
   },
   editGesture: 'open external',
+  // Every track this plugin claims is playable, which is what lets `play` route one here — and it is the
+  // same append into the single playlist that `audio <path>` and `open` both reach.
+  playable: true,
   command: 'audio',
   selectionAction: { label: 'Add to playlist', action: 'queue' },
   capabilities: [
