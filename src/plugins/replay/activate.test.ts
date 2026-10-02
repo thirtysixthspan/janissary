@@ -3,9 +3,13 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  TabPluginRejection, type TabPluginPayload, type TabPluginServerCapabilities,
+  TabPluginRejection, type TabPluginPayload, type TabPluginResources, type TabPluginServerCapabilities,
 } from '../api.js';
 import { openerForExtension } from '../../openers/index.js';
+import type { Managers } from '../../managers.js';
+import { fakeNotificationsHost } from '../../notifications/tab-test-fixture.js';
+import { NotificationQueue } from '../../notifications/queue.js';
+import { createPluginContext } from '../context.js';
 import { activate, replayLabelFromFilename } from './activate.js';
 import { replayManifest } from './manifest.js';
 
@@ -24,6 +28,44 @@ function fakeCapabilities(options: { live?: boolean } = {}) {
     reportFailure: (reason): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
   return { capabilities, isRecordingLive, keys, opened };
+}
+
+// The context the host builds rather than the one a test would like to have: taken from the plugin's
+// own manifest and passed through `restrictToDeclared`, so a capability the manifest never asked for
+// throws instead of answering. The stub tab list is what decides a recording's liveness, exactly as it
+// is in the running app — a tab with a `harness` on it is writing a file, and the host is the only
+// thing that knows so.
+function hostCapabilities(file: string, options: { live?: boolean } = {}) {
+  const opened: TabPluginPayload[] = [];
+  const keys: string[] = [];
+  const tabs = [{
+    label: 'janus', dotColor: '#fff', log: [], harness: options.live ? {} : undefined,
+  }];
+  const managers = {
+    tab: {
+      tabs,
+      append: vi.fn(),
+      closeTab: vi.fn(),
+      cur: () => tabs[0],
+      launchDir: '/repo',
+      openPluginTab: (
+        _pluginId: string, _prefix: string, key: string,
+        _schemaVersion: number, _sourceLabel: string,
+        factory: (resources: TabPluginResources) => TabPluginPayload,
+      ) => {
+        keys.push(key);
+        opened.push(factory({ registerFile: (abs) => `/open/ref-${abs.length}` }));
+      },
+      ...fakeNotificationsHost(tabs),
+    },
+    harness: { recordingPathOf: (label: string) => (options.live && label === 'janus' ? file : undefined) },
+    openFile: { runAs: vi.fn(async () => {}) },
+    notifications: new NotificationQueue(),
+  } as unknown as Managers;
+  const capabilities = createPluginContext(
+    managers, replayManifest, activate(), { label: 'janus', command: 'fixture' }, () => true,
+  );
+  return { capabilities, keys, opened };
 }
 
 const recording = (name: string) => {
@@ -82,6 +124,17 @@ describe('replay opener', () => {
     expect(finished.isRecordingLive).toHaveBeenCalledWith(file);
 
     const live = fakeCapabilities({ live: true });
+    activate().opener.inline(file, live.capabilities);
+    expect(live.opened[0].payload).toMatchObject({ finished: false });
+  });
+
+  it('reads liveness through the host, whose grant is the manifest\'s own declaration', () => {
+    const file = recording('claude-2026-10-01T14-32-05-123Z.cast');
+    const finished = hostCapabilities(file);
+    activate().opener.inline(file, finished.capabilities);
+    expect(finished.opened[0].payload).toMatchObject({ finished: true });
+
+    const live = hostCapabilities(file, { live: true });
     activate().opener.inline(file, live.capabilities);
     expect(live.opened[0].payload).toMatchObject({ finished: false });
   });

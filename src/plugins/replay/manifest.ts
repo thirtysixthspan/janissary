@@ -19,6 +19,9 @@ export const replayManifest = {
   coreRoutes: ['replay'],
   capabilities: [
     'openOrFocusTab',
+    // A recording cannot say whether its session is still running, so the payload asks the host which
+    // of its files a live tab is still writing.
+    'isRecordingLive',
     'rejectRequest',
     'reportFailure',
   ],
