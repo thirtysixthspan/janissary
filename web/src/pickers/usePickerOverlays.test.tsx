@@ -26,7 +26,7 @@ function TestComponent({ client, current, onHook }: {
     client, current, tabs: current ? [current] : [], syntaxTheme: 'monokai',
     tasks: [], profiles: [],
     runCommand: () => {},
-    inputRef: createRef(), recallRef: createRef(), dropRef: createRef(),
+    inputRef: createRef(), recallRef: createRef(), dropRef: createRef(), focusHarness: () => {},
   });
   onHook(hook);
   return null;

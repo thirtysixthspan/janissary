@@ -94,7 +94,9 @@ matches the command-queue picker's behavior of making the command line the edit 
 On a harness tab there is no command line to populate, so selecting a task instead sends the same
 `execute …` command (relative for a Project task, `$janissary`-anchored for a Janissary task) directly
 into that harness's terminal input, exactly as if it had been typed there; the picker's
-Up/Down/Left/Right/Enter/Escape keys work the same as on any other tab.
+Up/Down/Left/Right/Enter/Escape keys work the same as on any other tab. Once the command is sent,
+the keyboard returns to that harness's terminal, whether the task was picked with Return or a click,
+so the next keystroke reaches the harness.
 
 The path is inserted verbatim, with no quoting or escaping — a task file whose name (or an
 ancestor directory's name) contains a space populates the command line with that space intact,

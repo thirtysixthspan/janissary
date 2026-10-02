@@ -15,12 +15,13 @@ import { insertIntoCommandLine } from './populate-command-line';
 // src/janissary-root.ts), so the command resolves from any working directory and, unlike an absolute
 // path this client could build, names the right installation when the agent runs on a remote machine.
 // On a harness tab there is no command line, so the same text is sent straight into that harness's
-// PTY input.
+// PTY input and the keyboard is handed back to that harness's terminal.
 export function useTaskPicker(
   tasks: TaskRow[],
   client: JanusClient,
   harnessPtyId: string | undefined,
   dropRef: React.RefObject<CommandInputDropHandle | null>,
+  focusHarness: (ptyId: string) => void,
 ) {
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [taskPickerIndex, setTaskPickerIndex] = useState(0);
@@ -44,9 +45,9 @@ export function useTaskPicker(
     const command = source === 'janissary'
       ? `execute $janissary/ai/tasks/${path}`
       : `execute ./ai/tasks/${path}`;
-    insertIntoCommandLine(command, client, harnessPtyId, dropRef);
+    insertIntoCommandLine(command, client, harnessPtyId, dropRef, focusHarness);
     setTaskPickerOpen(false);
-  }, [tasks, client, harnessPtyId, dropRef]);
+  }, [tasks, client, harnessPtyId, dropRef, focusHarness]);
 
   const toggleTaskDir = useCallback((path: string) => {
     setExpandedTaskDirs((prev) => {

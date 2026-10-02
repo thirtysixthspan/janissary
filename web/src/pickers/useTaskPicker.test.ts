@@ -22,7 +22,7 @@ function makeDrop(insertAtCaret = vi.fn()): CommandInputDropHandle {
 
 function TestComponent({ tasks, onHook }: { tasks: TaskRow[]; onHook: (hook: ReturnType<typeof useTaskPicker>) => void }) {
   const dropRef = useRef<CommandInputDropHandle | null>(makeDrop());
-  const hook = useTaskPicker(tasks, mockClient, undefined, dropRef);
+  const hook = useTaskPicker(tasks, mockClient, undefined, dropRef, vi.fn());
   onHook(hook);
   return null;
 }
@@ -42,7 +42,7 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
-      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], mockClient, undefined, dropRef);
+      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], mockClient, undefined, dropRef, vi.fn());
       return null;
     }
     render(React.createElement(C));
@@ -57,7 +57,7 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
-      hook = useTaskPicker([fileRow('build-a-feature.md', 0, 'janissary')], mockClient, undefined, dropRef);
+      hook = useTaskPicker([fileRow('build-a-feature.md', 0, 'janissary')], mockClient, undefined, dropRef, vi.fn());
       return null;
     }
     render(React.createElement(C));
@@ -74,7 +74,7 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
-      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], client, 'pty-1', dropRef);
+      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], client, 'pty-1', dropRef, vi.fn());
       return null;
     }
     render(React.createElement(C));
@@ -91,7 +91,7 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop());
-      hook = useTaskPicker([fileRow('work-an-issue.md', 0, 'janissary')], client, 'pty-1', dropRef);
+      hook = useTaskPicker([fileRow('work-an-issue.md', 0, 'janissary')], client, 'pty-1', dropRef, vi.fn());
       return null;
     }
     render(React.createElement(C));
@@ -101,6 +101,38 @@ describe('useTaskPicker', () => {
       method: 'ptyInput',
       params: { id: 'pty-1', data: 'execute $janissary/ai/tasks/work-an-issue.md' },
     });
+  });
+
+  it('pickTask hands the keyboard back to the harness after typing into its PTY', () => {
+    const send = vi.fn();
+    const client = { send, request: vi.fn() } as unknown as JanusClient;
+    const focusHarness = vi.fn(() => {
+      expect(send).toHaveBeenCalledWith({ method: 'ptyInput', params: { id: 'pty-1', data: 'execute ./ai/tasks/fix-a-small-issue.md' } });
+    });
+    let hook: ReturnType<typeof useTaskPicker> | undefined;
+    function C() {
+      const dropRef = useRef<CommandInputDropHandle | null>(makeDrop());
+      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], client, 'pty-1', dropRef, focusHarness);
+      return null;
+    }
+    render(React.createElement(C));
+    act(() => hook!.openTaskPicker());
+    act(() => hook!.pickTask('fix-a-small-issue.md'));
+    expect(focusHarness).toHaveBeenCalledExactlyOnceWith('pty-1');
+  });
+
+  it('pickTask leaves focus alone when it inserts into the command line', () => {
+    const focusHarness = vi.fn();
+    let hook: ReturnType<typeof useTaskPicker> | undefined;
+    function C() {
+      const dropRef = useRef<CommandInputDropHandle | null>(makeDrop());
+      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], mockClient, undefined, dropRef, focusHarness);
+      return null;
+    }
+    render(React.createElement(C));
+    act(() => hook!.openTaskPicker());
+    act(() => hook!.pickTask('fix-a-small-issue.md'));
+    expect(focusHarness).not.toHaveBeenCalled();
   });
 
   it('re-seats the index onto a selectable row when a re-render leaves it past the end', () => {

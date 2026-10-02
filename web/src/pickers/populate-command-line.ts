@@ -21,15 +21,18 @@ export function populateCommandLine(
 
 // Insert `text` at the command line's current cursor (via the shared drop handle's `insertAtCaret`),
 // leaving the surrounding text intact — or, on a harness tab (no command line), send it straight
-// into that harness's PTY as terminal input. Used by the task picker.
+// into that harness's PTY as terminal input and put the keyboard back on that harness's terminal,
+// since a row click has already taken it away. Used by the task picker.
 export function insertIntoCommandLine(
   text: string,
   client: JanusClient,
   harnessPtyId: string | undefined,
   dropRef: React.RefObject<CommandInputDropHandle | null>,
+  focusHarness: (ptyId: string) => void,
 ): void {
   if (harnessPtyId) {
     client.send({ method: 'ptyInput', params: { id: harnessPtyId, data: text } });
+    focusHarness(harnessPtyId);
   } else {
     dropRef.current?.insertAtCaret(text);
   }

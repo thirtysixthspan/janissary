@@ -89,7 +89,7 @@ export function App({ client }: { client: JanusClient }) {
   // of them restates the others' fields (see `pickers/usePickerOverlays`).
   const pickers = usePickerOverlays({
     client, current, tabs, syntaxTheme, tasks, profiles, runCommand,
-    inputRef: inputReference, recallRef: recallReference, dropRef: dropReference,
+    inputRef: inputReference, recallRef: recallReference, dropRef: dropReference, focusHarness,
   });
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
