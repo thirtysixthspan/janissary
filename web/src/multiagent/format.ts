@@ -14,11 +14,6 @@ export function stateWord(state: MultiAgentMemberState): string {
   return STATE_WORDS[state];
 }
 
-// Whether the row has anything to show beyond its state: an answer, or the reason there is none.
-export function hasResult(member: MultiAgentMemberView): boolean {
-  return member.state === 'answered' || member.state === 'failed';
-}
-
 // The line above the rows: how many of the run have answered, and how many are still cloning. A
 // member that failed counts in the total and reads `failed` with its reason on its own row, so the
 // summary never has to distinguish a refused member from one whose connection died.

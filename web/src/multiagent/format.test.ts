@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MultiAgentMemberView } from '@shared/protocol';
-import { hasResult, runSummary, stateWord } from './format';
+import { runSummary, stateWord } from './format';
 
 const member = (overrides: Partial<MultiAgentMemberView> = {}): MultiAgentMemberView => ({
   index: 0, model: 'opencode/a', state: 'running', ...overrides,
@@ -12,15 +12,6 @@ describe('stateWord', () => {
     expect(stateWord('running')).toBe('working');
     expect(stateWord('answered')).toBe('answered');
     expect(stateWord('failed')).toBe('failed');
-  });
-});
-
-describe('hasResult', () => {
-  it('is true only once there is an answer or a reason', () => {
-    expect(hasResult(member({ state: 'answered' }))).toBe(true);
-    expect(hasResult(member({ state: 'failed' }))).toBe(true);
-    expect(hasResult(member({ state: 'running' }))).toBe(false);
-    expect(hasResult(member({ state: 'cloning' }))).toBe(false);
   });
 });
 
