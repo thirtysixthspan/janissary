@@ -49,18 +49,22 @@ export function usePlayback(
     terminal.renderUpTo(events, clamped);
   }, [duration, terminal, events]);
 
+  // Redraw the current position whenever the recording grows. This is what catches up a *paused*
+  // live replay: a paused clock does not tick, so an event arriving behind the position the viewer is
+  // looking at would never otherwise be fed to the terminal.
   useEffect(() => { show(Math.min(clock.current.position, duration)); }, [duration, show]);
 
   useEffect(() => {
     if (!playing) return;
     const timer = setInterval(() => {
-      const end = events.length === 0 ? clock.current.position : duration;
-      const next = Math.min(end, clock.current.position + clock.current.speed * (TICK_MS / 1000));
-      clock.current.position = next;
-      setPosition(next);
+      // Through `show`, which publishes the position and renders the frame together and clamps to the
+      // recording. The position is the transport's own state and the seek bar's; what the viewer is
+      // watching is the terminal, and a tick that only moved the position left a finished recording
+      // sitting on its first frame for the whole of its run.
+      show(clock.current.position + clock.current.speed * (TICK_MS / 1000));
     }, TICK_MS);
     return () => clearInterval(timer);
-  }, [playing, events, duration]);
+  }, [playing, events, duration, show]);
 
   // The end of a finished recording is the end of the replay; the end of a live one is where the
   // session currently is, so the clock holds there and the timeline extends underneath it.

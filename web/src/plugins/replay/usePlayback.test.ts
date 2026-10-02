@@ -116,6 +116,25 @@ describe('usePlayback — the clock', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
+  it('advances the terminal as it plays, not only the seek bar', () => {
+    const { terminal, view } = setup({ events: [output(0), output(1)] });
+    act(() => { vi.advanceTimersByTime(600); });
+    // Playing used to publish a position and nothing else, so a finished recording ran to its end
+    // with the terminal still showing the first frame: the timeline moved and the playback did not.
+    // Every tick now renders the frame it reaches, so the last one asked for is where the transport
+    // says it is.
+    expect(terminal.shown.length).toBeGreaterThan(1);
+    expect(terminal.shown.at(-1)).toBe(view.result.current.position);
+  });
+
+  it('leaves the last frame on screen when a finished recording has played out', () => {
+    const { terminal, view } = setup({ events: [output(0), output(1)] });
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(view.result.current.position).toBe(1);
+    expect(view.result.current.playing).toBe(false);
+    expect(terminal.shown.at(-1)).toBe(1);
+  });
+
   it('advances and stops at the end of what has been recorded, holding the last frame', () => {
     const { view } = setup({ events: [output(0), output(1)] });
     act(() => { vi.advanceTimersByTime(2000); });

@@ -2,5 +2,3 @@
 
 # pull-request
 
-* scrubbing the timeline works to change the playback positions, but playing the recording does not advance the playback, only the timeline.
- 
