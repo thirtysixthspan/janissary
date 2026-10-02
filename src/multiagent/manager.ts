@@ -5,7 +5,7 @@ import { parseFanout } from '../fanout/parse.js';
 import { openMultiAgentTab } from '../tab/openers.js';
 import { MultiAgentSessions } from './sessions.js';
 import { provisionMembers, releaseMembers } from './workspaces.js';
-import { cloningCount, type MultiAgentMember } from './types.js';
+import type { MultiAgentMember } from './types.js';
 
 // What a `fanout` run did, for the transcript and for the captured reply of a run another tab asked
 // for as a `request`: the new tab, the members that will run, and the ones refused.
@@ -66,7 +66,6 @@ export class MultiAgentManager {
     const tabLabel = openMultiAgentTab(this.managers.tab, {
       prompt: parsed.prompt,
       members,
-      cloning: cloningCount(members),
     }, offline);
 
     this.runs.set(tabLabel, members);

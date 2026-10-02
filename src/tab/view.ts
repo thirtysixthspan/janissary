@@ -107,7 +107,7 @@ export function buildTabView(
     // quietly start broadcasting it.
     multiagent: tab.multiagent && {
       prompt: tab.multiagent.prompt,
-      cloning: tab.multiagent.cloning,
+      cloning: cloningInFlight(tab.multiagent.members),
       members: tab.multiagent.members.map((m) => ({
         index: m.index, model: m.model, state: m.state, error: m.error, answer: m.answer,
       })),
@@ -127,6 +127,14 @@ export function buildTabView(
 function browserFlag(tab: Tab): string[] {
   if (!tab.browser) return [];
   return tab.harness?.browserRunning ? ['browserInUse'] : ['browser'];
+}
+
+// How many of a comparison's members are still cloning, counted here rather than stored on the
+// payload. The member states are already being read to project the rows beside it, so a stored copy
+// would be a second answer to the same question that could disagree with the first — and did,
+// freezing at whatever the count was when the tab opened.
+function cloningInFlight(members: { state: string }[]): number {
+  return members.filter((m) => m.state === 'cloning').length;
 }
 
 // The metadata row's display symbol for a workspaced tab's working directory: the clone's own name

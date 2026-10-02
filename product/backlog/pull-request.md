@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Recompute the multi-agent payload's clone-in-flight count instead of freezing the value it was created with.
-
-Existing Issue: `MultiAgentRun.cloning` is written once by `cloningCount(members)` when `MultiAgentManager.run` builds the tab's payload, and `buildTabView` in `src/tab/view.ts` passes `tab.multiagent.cloning` straight through, so the number never changes as members leave the `cloning` state. Severity: 6/10
-
-Existing Risk: 6/10 - The summary line above the rows permanently misreports a finished run as still cloning, so the one number a reader uses to judge whether to wait is wrong from the moment the first clone lands, and it stays wrong for the life of the tab.
-
-Proposal Risk: 2/10 - The count becomes derived rather than stored, so it cannot go stale; what remains is a projection running a filter over at most eight members on every state broadcast.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1513: recompute the multi-agent payload's cloning count at projection time". Remove `cloning` from the stored payload in `src/multiagent/types.ts` — both the field on `MultiAgentRun` and the `cloningCount` helper — and compute it in the `multiagent` branch of `buildTabView` in `src/tab/view.ts` from the members being projected, leaving the wire type's `cloning` field in `src/protocol/tab.ts` intact so the client and its `runSummary` in `web/src/multiagent/format.ts` need no change. Every member's state is already on the payload and is already projected, so the count is derivable with no new state to keep in sync. Update `src/multiagent/manager.ts` to stop passing `cloningCount` at tab creation, and update the `MultiAgentView` expectations in `src/tab/view.test.ts` and `src/multiagent/manager.test.ts` accordingly. Add a `view.test.ts` case that builds a payload whose members have moved past `cloning` and asserts the projected count reflects their current states rather than the states they were created in, since no existing test pins the count's freshness.
-
 * Grant a member's own-tool approval only when the sandbox will actually confine that member's process.
 
 Existing Issue: `MultiAgentSessions.connect` in `src/multiagent/sessions.ts` passes `ownTools: true` unconditionally, while the confinement that makes it safe is conditional — `sandboxSpawn` in `src/sandbox/index.ts` returns the command and arguments unchanged when there is no `workspaceDir`, when the `sandboxWorkspaces` config toggle is off, or when `sandbox-exec` is unavailable, which on any non-darwin host is every spawn. Severity: 6/10

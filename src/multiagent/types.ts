@@ -18,16 +18,13 @@ export type MultiAgentMember = {
 };
 
 // The multi-agent tab's payload, present only when `view === 'multiagent'`: the one prompt every
-// member received, the members in the order they were listed, and how many clones are still in
-// flight. Its members carry their clone directory, so this is the server-side shape — `buildTabView`
+// member received and the members in the order they were listed. Their states are the record — how
+// many clones are still in flight is counted from them at projection time rather than stored beside
+// them, which is the only way that number cannot disagree with the states it summarizes.
+//
+// Its members carry their clone directory, so this is the server-side shape — `buildTabView`
 // projects it onto `MultiAgentView` for the wire, which is why the two are named apart.
 export type MultiAgentRun = {
   prompt: string;
   members: MultiAgentMember[];
-  cloning: number;
 };
-
-// How many members have neither answered nor failed yet — the tab's single progress number.
-export function cloningCount(members: MultiAgentMember[]): number {
-  return members.filter((m) => m.state === 'cloning').length;
-}

@@ -29,7 +29,6 @@ describe('buildTabView', () => {
     tab.view = 'multiagent';
     tab.multiagent = {
       prompt: 'what does this repository do?',
-      cloning: 1,
       members: [
         { index: 0, model: 'opencode/a', state: 'answered', answer: 'It is a terminal UI.', dir: '/ws/a' },
         { index: 1, model: 'opencode/b', state: 'cloning', dir: '/ws/b' },
@@ -47,6 +46,38 @@ describe('buildTabView', () => {
       ],
     });
     expect(JSON.stringify(view.multiagent)).not.toContain('/ws/');
+  });
+
+  // The count used to be written once, when the tab was created, and read straight through — so a
+  // run that finished still reported its clones as cloning for the life of the tab.
+  it('counts the clones in flight from the members\' current states, not from a stored value', () => {
+    const tab = makeTab('multi-agent', '#fff');
+    tab.view = 'multiagent';
+    tab.multiagent = {
+      prompt: 'go',
+      members: [
+        { index: 0, model: 'opencode/a', state: 'answered', answer: 'a' },
+        { index: 1, model: 'opencode/b', state: 'running' },
+        { index: 2, model: 'opencode/c', state: 'failed', error: 'no' },
+      ],
+    };
+
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).multiagent?.cloning).toBe(0);
+  });
+
+  it('counts every member still cloning', () => {
+    const tab = makeTab('multi-agent', '#fff');
+    tab.view = 'multiagent';
+    tab.multiagent = {
+      prompt: 'go',
+      members: [
+        { index: 0, model: 'opencode/a', state: 'cloning' },
+        { index: 1, model: 'opencode/b', state: 'cloning' },
+        { index: 2, model: 'opencode/c', state: 'running' },
+      ],
+    };
+
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).multiagent?.cloning).toBe(2);
   });
 
   it('leaves the multi-agent payload absent on every other view', () => {

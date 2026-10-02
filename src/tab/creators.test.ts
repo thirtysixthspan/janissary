@@ -72,7 +72,6 @@ describe('addEditorTab', () => {
 
 const run: MultiAgentRun = {
   prompt: 'what does this repository do?',
-  cloning: 0,
   members: [{ index: 0, model: 'opencode/a', state: 'running', dir: '/ws/a' }],
 };
 
