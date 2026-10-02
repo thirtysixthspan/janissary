@@ -70,6 +70,9 @@ export type HarnessView = {
   // listens, cleared when one is reported gone. It is what tells a browser in use apart from an
   // endpoint nothing has connected to yet, which the metadata row's browser flag reads.
   browserRunning?: boolean;
+  // Set once auto-approve has injected an approval into a `-y` tab's permission prompt, local or
+  // remote, and left set for the tab's life: it lights the metadata row's auto-approve flag green.
+  autoApproved?: boolean;
   // Set when the remote session behind this tab has ended, carrying the line that says so. It rides
   // the view for `browserError`'s reason — a harness tab's body is its PTY, so a line written into
   // the transcript would never be seen and one written into the terminal would be painted over.

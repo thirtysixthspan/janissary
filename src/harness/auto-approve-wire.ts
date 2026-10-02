@@ -1,4 +1,5 @@
 import { HarnessAutoApprover } from './auto-approve.js';
+import { reportAutoApproved } from './auto-approved.js';
 import { writeCaptureFile } from './capture/file.js';
 import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
@@ -13,7 +14,10 @@ import type { Managers } from '../managers.js';
 export function buildAutoApprover(managers: Managers, name: string, label: string, id: string): HarnessAutoApprover {
   return new HarnessAutoApprover({
     harnessName: name,
-    approve: (keystroke) => managers.pty.input(id, keystroke),
+    approve: (keystroke) => {
+      managers.pty.input(id, keystroke);
+      reportAutoApproved(managers, label);
+    },
     notify: (message, capture) => {
       const openFile = capture ? writeCaptureFile(label, capture.capturedAt, capture.text) : undefined;
       notify(managers, 'auto-approve', label, message, { openFile });

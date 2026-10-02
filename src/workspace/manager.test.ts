@@ -18,6 +18,7 @@ vi.mock('./index.js', async (importOriginal) => {
 });
 
 const { WorkspaceManager } = await import('./manager.js');
+const { messageBus } = await import('../bus.js');
 
 function handle(dir: string, cancel: () => void = vi.fn()): { dir: string; ready: Promise<void>; cancel: () => void } {
   return { dir, ready: Promise.resolve(), cancel };
@@ -147,6 +148,59 @@ describe('WorkspaceManager', () => {
       manager.retain(dir);
       manager.cancel('agent-1');
       expect(cancel).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('provisioning', () => {
+    const dir = '/repo/.janissary/workspace/agent-1';
+
+    function startClone(ready: Promise<void>): InstanceType<typeof WorkspaceManager> {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      provisionWorkspaceMock.mockReturnValue({ dir, ready, cancel: vi.fn() });
+      return new WorkspaceManager();
+    }
+
+    it('is true while the clone into that directory is in flight, and false once it lands', async () => {
+      const clone = Promise.withResolvers<void>();
+      const manager = startClone(clone.promise);
+      const result = manager.create('agent-1');
+      expect(manager.provisioning(dir)).toBe(true);
+      expect(manager.provisioning('/elsewhere')).toBe(false);
+      clone.resolve();
+      if ('ready' in result) await result.ready;
+      expect(manager.provisioning(dir)).toBe(false);
+    });
+
+    it('is false once the clone fails', async () => {
+      const manager = startClone(Promise.reject(new Error('clone failed')));
+      const result = manager.create('agent-1');
+      if ('ready' in result) await expect(result.ready).rejects.toThrow('clone failed');
+      expect(manager.provisioning(dir)).toBe(false);
+    });
+
+    // A tab that joined the clone has no callback of its own, so the settlement itself must
+    // rebroadcast, or that tab's indicator spins on after its creator closed.
+    it('rebroadcasts state once a clone lands, after it has left the in-flight set', async () => {
+      const clone = Promise.withResolvers<void>();
+      const manager = startClone(clone.promise);
+      const result = manager.create('agent-1');
+      const seenProvisioning: boolean[] = [];
+      const emitSpy = vi.spyOn(messageBus, 'emit').mockImplementation(() => { seenProvisioning.push(manager.provisioning(dir)); });
+      clone.resolve();
+      if ('ready' in result) await result.ready;
+      expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
+      expect(seenProvisioning).toEqual([false]);
+      emitSpy.mockRestore();
+    });
+
+    it('rebroadcasts state once a clone fails', async () => {
+      const manager = startClone(Promise.reject(new Error('clone failed')));
+      const emitSpy = vi.spyOn(messageBus, 'emit');
+      const result = manager.create('agent-1');
+      if ('ready' in result) await expect(result.ready).rejects.toThrow('clone failed');
+      expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
+      emitSpy.mockRestore();
     });
   });
 

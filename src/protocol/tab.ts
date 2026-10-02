@@ -70,8 +70,9 @@ export type TabView = {
   // clones alike (see buildTabView). Undefined when the working directory is not the tab's own
   // workspace or a dir inside it — ordinary tabs render `cwd` as before.
   cwdDisplay?: string;
-  // Identifiers of this tab's currently-active flags ('workspaced', 'autoApprove', 'browser'), for
-  // the metadata row's flag-emoji display. Empty when none are active.
+  // Identifiers of this tab's currently-active flags ('provisioning' or 'workspaced', 'autoApprove'
+  // or 'autoApproved', 'browser' or 'browserInUse'), for the metadata row's flag display. Empty when
+  // none are active.
   flags?: string[];
   // Set when this tab's process runs on another host: the metadata row's leading host chip.
   remote?: RemoteTargetView;

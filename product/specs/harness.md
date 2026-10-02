@@ -452,8 +452,8 @@ per launch — like the harness tab itself, it is never persisted or restored on
 every notification, the `auto-approve` line is held in the notification queue and shown as a toast
 when no feed is on screen — except when it is replayed from a detached session, which never toasts.
 
-A harness tab opened with `-y` shows the auto-permitting flag icon in its metadata row — see
-Metadata row in `tabs.md`.
+A harness tab opened with `-y` shows the auto-permitting flag icon in its metadata row, which turns
+green once auto-approval clears its first permission prompt — see Metadata row in `tabs.md`.
 
 For a remote harness tab, all of this — gate detection, the injected keystroke, the notification,
 the capture link, and the stand-down behavior — works identically whether the tab is attached, mid

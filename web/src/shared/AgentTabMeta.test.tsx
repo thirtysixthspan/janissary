@@ -74,6 +74,14 @@ describe('AgentTabMeta', () => {
     expect(getByTitle('New agent in this workspace')).toBeInTheDocument();
   });
 
+  it('names the workspace in both action tooltips while the workspace is provisioning', () => {
+    const { getByTitle } = render(
+      <AgentTabMeta cwd="~/project" flags={['provisioning']} onOpenFileNavigator={() => {}} onLaunchAgentHere={() => {}} />,
+    );
+    expect(getByTitle('Open file navigator in this workspace')).toBeInTheDocument();
+    expect(getByTitle('New agent in this workspace')).toBeInTheDocument();
+  });
+
   it('keeps both here tooltips for a plain tab', () => {
     const { getByTitle } = render(
       <AgentTabMeta cwd="~/project" onOpenFileNavigator={() => {}} onLaunchAgentHere={() => {}} />,
@@ -128,12 +136,22 @@ describe('AgentTabMeta', () => {
     const flag = getByRole('img', { name: 'Workspaced' });
     expect(flag).toHaveAttribute('title', 'Workspaced');
     expect(flag.querySelector('svg[data-icon="box"]')).not.toBeNull();
+    expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
   });
 
   it('renders the auto-permit flag as a bolt icon with its accessible label', () => {
     const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoApprove']} />);
     const flag = getByRole('img', { name: 'Auto-permitting' });
     expect(flag).toHaveAttribute('title', 'Auto-permitting');
+    expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
+    expect(flag).not.toHaveClass('tab-flag--active');
+  });
+
+  it('renders the auto-approved flag as the same bolt, marked active for its green highlight', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoApproved']} />);
+    const flag = getByRole('img', { name: 'Auto-approval' });
+    expect(flag).toHaveAttribute('title', 'Auto-approval');
+    expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
     expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
   });
 
@@ -160,6 +178,22 @@ describe('AgentTabMeta', () => {
     );
     const icons = [...container.querySelectorAll<SVGElement>(':scope .tab-flag svg')].map((svg) => svg.dataset.icon);
     expect(icons).toEqual(['box', 'bolt', 'globe']);
+  });
+
+  it('renders the provisioning flag as a spinning arrows icon with its accessible label', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['provisioning']} />);
+    const flag = getByRole('img', { name: 'Provisioning workspace' });
+    expect(flag).toHaveAttribute('title', 'Provisioning workspace');
+    expect(flag).toHaveClass('tab-flag', 'tab-flag--provisioning');
+    expect(flag.querySelector('svg[data-icon="arrows-rotate"]')).not.toBeNull();
+  });
+
+  it('swaps the provisioning flag for the workspaced flag once the server sends it', () => {
+    const { rerender, queryByRole } = render(<AgentTabMeta cwd="~/project" flags={['provisioning']} />);
+    expect(queryByRole('img', { name: 'Workspaced' })).toBeNull();
+    rerender(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
+    expect(queryByRole('img', { name: 'Provisioning workspace' })).toBeNull();
+    expect(queryByRole('img', { name: 'Workspaced' })).not.toBeNull();
   });
 
   it('renders an active connections button with hover and click handlers wired', () => {

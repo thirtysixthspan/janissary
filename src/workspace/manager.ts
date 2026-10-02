@@ -1,5 +1,6 @@
 import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace } from './index.js';
 import { errorText } from '../error-text.js';
+import { messageBus } from '../bus.js';
 
 const NO_REPO = 'No git repository found. Cannot create workspace.';
 
@@ -65,7 +66,15 @@ export class WorkspaceManager {
       await ready;
     } finally {
       this.pending.delete(name);
+      messageBus.emit('state', { type: 'dirty' });
     }
+  }
+
+  // Whether a clone into `dir` is still in flight. Keyed by directory rather than by name so a
+  // second tab sharing the same clone reports it too.
+  provisioning(dir: string): boolean {
+    for (const pending of this.pending.values()) if (pending.dir === dir) return true;
+    return false;
   }
 
   // Cancel an in-flight clone still provisioning under `name` (the owning tab's label). A no-op
