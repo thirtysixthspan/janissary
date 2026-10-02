@@ -1,13 +1,11 @@
 import type { TabPluginDeclaration } from './api.js';
-import { tabPluginCatalog } from './catalog.js';
 import { rejectContribution } from './rejections.js';
 import { RESERVED_NON_COMMAND_NAMES } from '../commands/reserved.js';
 import { ROUTE_NAMES } from './command-adapter.js';
 
-// The one ordered map of the command tokens a core command may route into a plugin's own inline
-// opener, built from the catalog at module load for the same reason the opener and command maps are:
-// a claim that conflicts has to be refused while the registries are being built, and recorded rather
-// than thrown so one malformed manifest disables that one plugin instead of stopping the app.
+// Which plugin owns each command token a core command may route into a plugin's own inline opener,
+// and which claims are refused. A claim that conflicts is recorded rather than thrown, so one
+// malformed manifest disables that one plugin instead of stopping the app.
 //
 // `harness` and `ssh` are reserved command names a plugin cannot claim, so `harness replay` resolves
 // no plugin command at all; a route claim is how it reaches the plugin that owns the presentation.
@@ -41,15 +39,10 @@ function buildOwners(declarations: readonly TabPluginDeclaration[]): Map<string,
   return owners;
 }
 
-export const pluginCoreRoutes: ReadonlyMap<string, string> = buildOwners(tabPluginCatalog);
-
-export function coreRouteOwner(route: string): string | undefined {
-  return pluginCoreRoutes.get(route.toLowerCase());
-}
-
-// The same resolution over a caller-supplied set of declarations, for a host built on its own
-// catalog. A refusal still goes through `rejectContribution`, so a host reading its own declarations
-// next sees exactly what a host reading the production catalog would.
+// The route-to-owner map for a caller-supplied set of declarations, which is what `TabPluginHost`
+// builds for the catalog it was constructed with — so a host on its own declarations is the authority
+// for its own routes. A refusal still goes through `rejectContribution`, so a host reading its own
+// declarations sees exactly what one reading the production catalog would.
 export function resolveCoreRoutes(
   declarations: readonly TabPluginDeclaration[],
 ): ReadonlyMap<string, string> {
