@@ -1,7 +1,11 @@
 /* The replay plugin's own rules, layered on the shared plugin frame from ../shared.css. The body is a
    terminal stage rather than a centering one: a recording is a grid of its own size that must not be
-   re-laid-out, so the stage scrolls it and nothing else. The metadata line and the transport row both
-   wrap, which is what lets the whole thing survive being docked into a narrow sidebar. */
+   re-laid-out, so the stage holds it at that size and clips whatever falls outside — a recording wider
+   or taller than the tab is read by resizing the window, not by scrolling the tab. The overflow is
+   hidden in two places for that reason: xterm's own stylesheet gives its viewport `overflow-y: scroll`
+   unconditionally, which would leave a scrollbar inside the terminal on a platform that gives one
+   width. The metadata line and the transport row both wrap, which is what lets the whole thing survive
+   being docked into a narrow sidebar. */
 
 .replay-tab {
   flex: 1;
@@ -40,13 +44,19 @@
 .replay-stage {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   border-radius: 4px;
   background: var(--terminal-bg, #17181b);
 }
 
 .replay-stage .xterm {
   height: 100%;
+}
+
+/* Still scrollable programmatically, which is how xterm keeps the cursor in view as the buffer
+   scrolls during playback — but with no scrollbar and nothing for the wheel to grab. */
+.replay-stage .xterm-viewport {
+  overflow-y: hidden;
 }
 
 .replay-transport {

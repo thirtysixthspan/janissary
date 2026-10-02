@@ -7,18 +7,17 @@ import type { CastEvent, CastHeader } from './cast-stream';
 // concrete client plugin reaches only its own API, the shared plugin stylesheet, and its own contract,
 // and a replay has no PTY to attach to in any case — which is the whole difference between them.
 //
-// The recorded grid is authoritative. There is no fit addon, because fitting is exactly what must not
-// happen: a recording is 120 columns because the session ran in 120 columns, and re-fitting that to
-// whatever the pane happens to be rewraps output the session never produced that way. The font is
-// scaled instead, from the cell size xterm reports itself, so the grid stays what was recorded while
-// the text stays crisp — and pointer coordinates stay honest, which is what makes selecting text in a
-// replay and copying it possible at all.
+// The recorded grid is authoritative, and nothing is scaled to make it fit. There is no fit addon,
+// because fitting is exactly what must not happen: a recording is 120 columns because the session ran
+// in 120 columns, and re-fitting that to whatever the pane happens to be rewraps output the session
+// never produced that way. Nor is the font shrunk to fit — a recording viewed in a narrow sidebar is
+// the same text at the same size as one viewed in the centre, and whatever falls outside the tab is
+// clipped. Resizing the window is how a viewer sees a recording larger than their pane.
 export type ReplayTerminal = {
   renderUpTo(events: readonly CastEvent[], time: number): void;
 };
 
-const BASE_FONT_SIZE = 13.5;
-const MIN_FONT_SIZE = 6;
+const FALLBACK_FONT_SIZE = 13.5;
 
 export function useReplayTerminal(
   header: CastHeader | undefined,
@@ -40,14 +39,18 @@ export function useReplayTerminal(
     // record of how far it got.
     if (!container || !header) return;
     const palette = header.colors ?? terminalColors();
+    const styles = getComputedStyle(document.documentElement);
+    // The app's own terminal font size, read the way `useXterm` reads it, so a replay in this tab is
+    // the same text at the same size as the terminal beside it rather than a second scale of its own.
+    const fontSize = Number(styles.getPropertyValue('--terminal-font-size').replace('px', ''))
+      || FALLBACK_FONT_SIZE;
     const term = new Terminal({
       cols: header.cols,
       rows: header.rows,
       cursorBlink: false,
       theme: { background: palette.bg, foreground: palette.fg },
-      fontFamily: getComputedStyle(document.documentElement).getPropertyValue('--mono').trim()
-        || 'monospace',
-      fontSize: BASE_FONT_SIZE,
+      fontFamily: styles.getPropertyValue('--mono').trim() || 'monospace',
+      fontSize,
     });
     termRef.current = term;
     // A new terminal has been fed nothing, whatever a previous one had been fed.
@@ -63,22 +66,8 @@ export function useReplayTerminal(
       capabilities.copyText(text);
       return false;
     });
-    const refit = () => {
-      const screen = container.querySelector<HTMLElement>('.xterm-screen');
-      if (!screen || screen.offsetWidth === 0) return;
-      const scale = Math.min(
-        container.clientWidth / screen.offsetWidth,
-        container.clientHeight / screen.offsetHeight,
-        1,
-      );
-      term.options.fontSize = Math.max(MIN_FONT_SIZE, BASE_FONT_SIZE * scale);
-    };
-    const observer = new ResizeObserver(refit);
-    observer.observe(container);
-    refit();
     return () => {
       termRef.current = null;
-      observer.disconnect();
       term.dispose();
     };
     // Built once per recording: its recorded size and colors are fixed for the recording's whole life.

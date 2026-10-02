@@ -253,7 +253,8 @@ harness replay <label|file.cast>
 ```
 
 Opens a **replay tab** that plays the recording: the session's output as it was on screen, at the size
-it was recorded at, with the timing it happened at.
+it was recorded at, with the timing it happened at. Nothing is scaled to fit the tab, so a recording
+larger than it is cut off at the tab's edge — make the window big enough to see the whole of it.
 
 A target ending in `.cast` is a file path; anything else is the label of a tab that is open right now.
 That is how a recording whose tab has closed is reached — by its file, which the name tells you:
