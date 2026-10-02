@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the user-documentation update the guidelines require for this user-visible change, so the workspaced-agent and remote-agent pages describe the new provisioning indicator.
-
-Existing Issue: The pull request adds a visible spinning "Provisioning workspace" icon to the metadata row, but the user documentation pages that describe the clone wait and the remote tab's metadata row were not updated, contrary to the user-documentation guideline that a user-visible behavior change updates its doc page in the same pull request. Severity: 3/10
-
-Existing Risk: 3/10 - Readers learn about the clone wait only as a busy tab and never hear what the new spinning icon means, so the docs drift from the behavior they describe the moment this merges.
-
-Proposal Risk: 1/10 - A two-sentence prose addition can only go wrong by misdescribing the icon, which a reviewer comparing the page to the running app would catch; nothing executable changes.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1516: document the metadata row's provisioning indicator in the workspaced-agent and remote-agents user docs". In `documentation/user-documentation/advanced-agents/workspaced-agent.md`, extend the paragraph that begins "The tab appears right away, marked busy, while the clone runs in the background" with one sentence saying the tab's metadata row shows a spinning arrows icon (tooltip "Provisioning workspace") while the clone runs, which disappears once the clone completes or fails. In `documentation/user-documentation/advanced-agents/remote-agents.md`, in the paragraph describing the host chip at the left of the metadata row, add that the same spinning icon shows until the host reports its workspace ready. Keep the wording consistent with the "Provisioning indicator" subsection of `product/specs/tabs.md`, follow `ai/guidelines/user-documentation.md` (user-visible behavior only, no implementation detail), and leave the pages' sprite placement untouched per `ai/guidelines/documentation.md`. Verify with `npm run docs:build` that both pages still build, and read the rendered paragraphs once to confirm they match the app.
-
-
 * Correct the spec's claim that tabs which never provision a workspace never show the indicator, since attaching a detached remote session shows it during the attach handshake.
 
 Existing Issue: The new "Provisioning indicator" subsection of the tabs spec says the indicator appears only while a workspace is being provisioned and that tabs which never provision one never show it, yet an attach to a detached remote session clones nothing and still shows "Provisioning workspace" until the host accepts, because the channel only learns the recorded workspace directory once the peer answers the attach. Severity: 3/10
