@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import type { Managers } from '../managers.js';
+import { messageBus } from '../bus.js';
 import { memberWorkspaceName, provisionMembers, releaseMembers } from './workspaces.js';
 import type { MultiAgentMember } from './types.js';
 
@@ -12,6 +13,16 @@ function fakeWorkspace(): Workspace {
 const managersWith = (workspace: Workspace) => ({ workspace }) as unknown as Managers;
 
 const member = (model: string, index = 0): MultiAgentMember => ({ index, model, state: 'cloning' });
+
+beforeEach(() => { messageBus.clear(); });
+
+// Every terminal transition announces itself, so a client learns of a member's fate when it happens
+// rather than when something else in the application next emits.
+function watchState(): ReturnType<typeof vi.fn> {
+  const dirty = vi.fn();
+  messageBus.on('state', 'dirty', dirty);
+  return dirty;
+}
 
 describe('memberWorkspaceName', () => {
   it('replaces the slashes of a model so the result is one folder name', () => {
@@ -84,11 +95,12 @@ describe('provisionMembers', () => {
     expect(members[0].state).toBe('failed');
   });
 
-  it('never reports a member whose clone failed as ready', async () => {
+  it('never reports a member whose clone failed as ready, and announces that it gave up', async () => {
     const create = vi.fn(() => ({ dir: '/ws/x', ready: Promise.reject(new Error('clone aborted')) }));
     const managers = { workspace: { create } } as unknown as Managers;
     const members = [member('opencode/a')];
     const onReady = vi.fn();
+    const dirty = watchState();
 
     provisionMembers('multi-agent', members, managers, onReady);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -96,6 +108,20 @@ describe('provisionMembers', () => {
     expect(onReady).not.toHaveBeenCalled();
     expect(members[0].state).toBe('failed');
     expect(members[0].error).toBe('clone aborted');
+    // Without this the row keeps reading `cloning its workspace` until something unrelated emits.
+    expect(dirty).toHaveBeenCalledOnce();
+  });
+
+  it('emits nothing of its own when a member clones successfully', async () => {
+    const create = vi.fn(() => ({ dir: '/ws/x', ready: Promise.resolve() }));
+    const managers = { workspace: { create } } as unknown as Managers;
+    const dirty = watchState();
+
+    provisionMembers('multi-agent', [member('opencode/a')], managers, vi.fn());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // The caller announces a member it is about to prompt; an emit here would double it.
+    expect(dirty).not.toHaveBeenCalled();
   });
 });
 

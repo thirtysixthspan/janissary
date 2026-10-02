@@ -1,6 +1,7 @@
 import type { Managers } from '../managers.js';
 import { workspaceLabelError } from '../workspace/label.js';
 import { errorText } from '../error-text.js';
+import { messageBus } from '../bus.js';
 import type { MultiAgentMember } from './types.js';
 
 // The N clones a multi-agent tab's members work in. `Tab.workspaceDir` is a single scalar and the
@@ -66,6 +67,12 @@ export function provisionMembers(
       } catch (error) {
         member.state = 'failed';
         member.error = errorText(error);
+        // Announced, like every other terminal transition in the feature. The two refusals above
+        // need no emit of their own — they run inside `MultiAgentManager.run`, which announces once
+        // after provisioning — but this one lands long after that, so without it a member whose
+        // clone gave up keeps reading `cloning its workspace` until something unrelated in the
+        // application happens to emit.
+        messageBus.emit('state', { type: 'dirty' });
       }
     };
     void settle();
