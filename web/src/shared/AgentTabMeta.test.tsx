@@ -149,8 +149,8 @@ describe('AgentTabMeta', () => {
 
   it('renders the auto-approved flag as the same bolt, marked active for its green highlight', () => {
     const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoApproved']} />);
-    const flag = getByRole('img', { name: 'Auto-permitting (a prompt was approved)' });
-    expect(flag).toHaveAttribute('title', 'Auto-permitting (a prompt was approved)');
+    const flag = getByRole('img', { name: 'Auto-approval' });
+    expect(flag).toHaveAttribute('title', 'Auto-approval');
     expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
     expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
   });

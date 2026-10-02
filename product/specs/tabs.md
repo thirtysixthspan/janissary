@@ -160,9 +160,9 @@ ends (see Provisioning indicator below).
 
 The auto-permitting flag has two looks too. Until auto-approval has cleared a permission prompt in
 the tab, it is the plain bolt with the "Auto-permitting" tooltip. Once it approves its first prompt,
-the bolt turns the same green and its tooltip reads "Auto-permitting (a prompt was approved)". It
-stays green for the rest of the tab's life, for a local tab and a remote one alike. A stand-down on a
-prompt auto-approval could not clear does not light it.
+the bolt turns the same green and its tooltip reads "Auto-approval". It stays green for the rest of
+the tab's life, for a local tab and a remote one alike. A stand-down on a prompt auto-approval could
+not clear does not light it.
 
 The browser flag has two looks. Before any browser has been started behind a `-b` tab's endpoint, it
 is the plain globe with the "E2E browser" tooltip: it reports the tab's launch, and it is lit from the

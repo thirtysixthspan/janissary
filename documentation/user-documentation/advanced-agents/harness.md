@@ -148,7 +148,7 @@ All three permission menus are selection menus rather than yes/no questions, so 
 
 Auto-approval doesn't require a workspace. Launching with `--no-workspace` still works, but unless you also pass `--no-auto-approve`, the new tab's terminal shows a security warning that prompts will be approved unattended against your real files.
 
-A harness with auto-approval active shows the auto-permitting flag icon in its metadata row. The icon turns green once auto-approval has approved its first prompt, and its tooltip changes to "Auto-permitting (a prompt was approved)".
+A harness with auto-approval active shows the auto-permitting flag icon in its metadata row. The icon turns green once auto-approval has approved its first prompt, and its tooltip changes to "Auto-approval".
 
 ## Giving a harness a browser
 

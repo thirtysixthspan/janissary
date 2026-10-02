@@ -9,7 +9,7 @@ export const tabFlagDisplay: Record<string, { icon: IconDefinition; label: strin
   provisioning: { icon: syncIcon, label: 'Provisioning workspace', className: 'tab-flag--provisioning' },
   workspaced: { icon: workspacedIcon, label: 'Workspaced', className: 'tab-flag--active' },
   autoApprove: { icon: autoPermitIcon, label: 'Auto-permitting' },
-  autoApproved: { icon: autoPermitIcon, label: 'Auto-permitting (a prompt was approved)', className: 'tab-flag--active' },
+  autoApproved: { icon: autoPermitIcon, label: 'Auto-approval', className: 'tab-flag--active' },
   browser: { icon: browserIcon, label: 'E2E browser' },
   browserInUse: { icon: browserIcon, label: 'E2E browser in use', className: 'tab-flag--active' },
 };
