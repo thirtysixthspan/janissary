@@ -63,7 +63,9 @@ describe('HarnessRecorder', () => {
     expect(header.term.rows).toBe(24);
     expect(header.term.type).toBe('xterm-256color');
     expect(Number.isSafeInteger(header.timestamp)).toBe(true);
-    expect(header.idle_time_limit).toBe(2);
+    // No idle limit is written: the recording plays at the timing it happened at, and a limit here
+    // would only tell a player to rewrite that timing.
+    expect(header.idle_time_limit).toBeUndefined();
     expect(header.command).toBe('claude');
     expect(header.title).toBe('claude');
     expect(header.env).toBeUndefined();

@@ -1,5 +1,5 @@
 // Reading an asciicast file into a timeline. Both versions this app has to read become the same
-// timeline, because everything downstream — playback, idle compression, the terminal — should not
+// timeline, because everything downstream — playback, the terminal — should not
 // know which format a recording was written in.
 //
 // Two versions, because a recording written before the v3 change and one written after are both on
@@ -25,7 +25,6 @@ export type CastHeader = {
   command: string;
   title: string;
   timestamp: number;
-  idleTimeLimit?: number;
   colors?: CastColors;
 };
 
@@ -65,7 +64,6 @@ export function parseCastHeader(line: string): CastHeaderResult {
   if (typeof cols !== 'number' || typeof rows !== 'number') {
     return { error: 'the recording does not declare a terminal size' };
   }
-  const limit = raw.idle_time_limit;
   const colors = readColors(term);
   return {
     header: {
@@ -75,7 +73,6 @@ export function parseCastHeader(line: string): CastHeaderResult {
       command: readString(raw, 'command'),
       title: readString(raw, 'title'),
       timestamp: typeof raw.timestamp === 'number' ? raw.timestamp : 0,
-      ...(typeof limit === 'number' && { idleTimeLimit: limit }),
       ...(colors && { colors }),
     },
   };

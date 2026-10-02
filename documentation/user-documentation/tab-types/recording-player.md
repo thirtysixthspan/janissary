@@ -33,17 +33,19 @@ Every one of those is a button as well as a key:
 | `.` | Next recorded moment |
 | `,` | Previous recorded moment |
 | `]` / `[` | Faster / slower |
-| `i` | Longer or shorter idle limit |
 
 Seeking backwards rebuilds the frame from the recording rather than storing every frame, so jumping
 back into a long recording takes a moment.
+
+A recording plays at the timing it happened at: a pause in the session is a pause in the replay, at
+its real length. Nothing in the player shortens it.
 
 A recording of a session that is **still running** is followed: new output extends the timeline, the
 metadata line reads `live`, and reaching the end holds the last frame and continues rather than
 stopping.
 
-A recording of a session that has **ended** has its silences compressed — two seconds each, unless the
-`idle` control says otherwise — because an unattended run is mostly waiting. See
+A recording of a session that has **ended** simply plays out. Speed is the way through an unattended
+run rather than silence. See
 [Recordings](/user-documentation/advanced-agents/harness#playing-a-recording-back).
 
 ## Where it lives

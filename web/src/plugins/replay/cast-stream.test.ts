@@ -43,8 +43,11 @@ describe('parseCastHeader', () => {
   it('reads a v2 header, with its dimensions at the top level', () => {
     const result = parseCastHeader(V2_HEADER);
     expect(result).toMatchObject({
-      header: { version: 2, cols: 120, rows: 40, title: 'claude', idleTimeLimit: 2 },
+      header: { version: 2, cols: 120, rows: 40, title: 'claude' },
     });
+    // The format permits an idle limit and neither header shape reads it: a recording plays at the
+    // timing it states, and a file carrying one is not refused for it.
+    expect(result).not.toHaveProperty('header.idleTimeLimit');
   });
 
   it('reads a v3 header, with its dimensions and colors under term', () => {

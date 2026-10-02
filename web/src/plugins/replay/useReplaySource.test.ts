@@ -31,7 +31,7 @@ describe('useReplaySource', () => {
 
     await waitFor(() => expect(result.current.header).toBeDefined());
     expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('headers');
-    expect(result.current.header).toMatchObject({ cols: 80, rows: 24, idleTimeLimit: 2 });
+    expect(result.current.header).toMatchObject({ cols: 80, rows: 24 });
     expect(result.current.events).toHaveLength(1);
     expect(result.current.growing).toBe(true);
   });

@@ -81,8 +81,7 @@
   white-space: nowrap;
 }
 
-.replay-speed,
-.replay-idle {
+.replay-speed {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

@@ -74,7 +74,6 @@ The file is asciicast v3 — the format `asciinema rec` writes by default, and t
 - `term.theme`: the foreground and background the session was recorded under, or absent when the
   tab's terminal had not reported them by the first output
 - `timestamp`: the session start time as an integer Unix epoch (seconds)
-- `idle_time_limit`: `2` — the longest silence a player may show at full length
 - `command`: what the session ran — a named harness writes the bare program name (e.g. `claude`), an
   ssh tab writes its whole verbatim invocation (e.g. `ssh -p 2222 admin@host`), so a stray recording
   names the host it came from. An invocation carrying a secret in a flag value therefore puts that
@@ -84,7 +83,9 @@ The file is asciicast v3 — the format `asciinema rec` writes by default, and t
 There is no `env`: the terminal type moved under `term`, and it was the only variable ever captured.
 There is no `palette` either — the sixteen ANSI colours are the terminal emulator's own and are the
 same on every recording this app makes, so a recorded theme carries exactly the two colours an app
-theme can change here.
+theme can change here. There is no `idle_time_limit` either: a recording plays at the timing it
+happened at, and a header saying otherwise would only tell a player to rewrite it. A recording made
+by another tool may state one, and it is played at its own timing regardless.
 
 Every subsequent line is a JSON event array `[<interval-seconds>, "<code>", "<data>"]`, where
 `interval-seconds` is the gap **since the previous event** rather than the time since the start — the
@@ -160,9 +161,9 @@ The replay tab:
 - **follows a live session**: while the session is still recording, the timeline extends as output
   arrives, the metadata line reads `live`, and reaching the end of what has been recorded holds the
   last frame and continues rather than reporting the replay finished;
-- **compresses a finished recording's silences** to the limit its header states (two seconds), which
-  is what makes an unattended run watchable. A recording still being written plays in real time
-  instead. The `idle` control overrides the recorded limit for one viewing, and shows it on its face;
+- **plays at the timing it was recorded at**, silences at their real length. A recording is the only
+  record of what a session did, and shortening the gaps would make a run that waited ten minutes
+  indistinguishable from one that answered in ten seconds;
 - **shows what the recording is**: the command it ran, the label, when it started, how long it is, the
   session's exit status when the recording carries one, and any reason the file could not be read;
 - **lets you select text and copy it** with `Cmd+C` / `Ctrl+C`;

@@ -275,7 +275,6 @@ time forward and back, and a seek bar. Each is a button as well as a key:
 | `.` | Next recorded moment |
 | `,` | Previous recorded moment |
 | `]` / `[` | Faster / slower |
-| `i` | Longer or shorter idle limit |
 
 Text can be selected in the replay and copied with `Cmd+C` (or `Ctrl+C`), the same as a terminal.
 
@@ -284,11 +283,10 @@ with new output, the metadata line reads `live`, and reaching the end of what ha
 the last frame instead of stopping — the session is not finished, and the replay picks up where the
 session is when it speaks again.
 
-**A finished recording has its silences compressed.** An unattended run is mostly waiting — a build
-that takes ten minutes writes nothing for ten minutes — so a recording whose session has ended plays
-its gaps at two seconds each, which is the limit recorded in the file. The `idle` control changes that
-for one viewing (`off`, `1s`, `2s`, `5s`, `10s`), and shows the current setting on its face. A
-recording still being written always plays in real time.
+**Timing is what happened.** A replay plays at the timing the session ran at, so a pause in the
+recording is a pause in the playback, at its real length. An unattended run is mostly waiting — a
+build that takes ten minutes writes nothing for ten minutes — and a recording that shortened those
+gaps would no longer show what the session did. Use the speed control to get through a long wait.
 
 The line above the terminal says what is being played: the command the session ran, the label, when it
 started, how long it is, and the session's exit status when the file carries one. A recording that

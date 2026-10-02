@@ -99,33 +99,39 @@ describe('ReplayTab', () => {
     expect(screen.getByLabelText('Seek')).toBeDefined();
   });
 
-  it('offers the whole transport, with the idle limit on its face', async () => {
+  it('offers the whole transport', async () => {
     renderTab();
-    await waitFor(() => expect(screen.getByLabelText('Idle time limit')).toBeDefined());
-    expect(screen.getByLabelText('Pause')).toBeDefined();
+    await waitFor(() => expect(screen.getByLabelText('Pause')).toBeDefined());
     expect(screen.getByLabelText('Next frame')).toBeDefined();
     expect(screen.getByLabelText('Previous frame')).toBeDefined();
     expect(screen.getByLabelText('Seek')).toBeDefined();
-    // The control starts off and takes the recording's stated limit once its header has arrived.
-    await waitFor(() => expect(screen.getByLabelText('Idle time limit').textContent).toBe('idle 2s'));
+    // Nothing rewrites the recording's timing: a finished recording's silences play at their
+    // recorded length, so there is no limit on the transport to change.
+    expect(screen.queryByLabelText('Idle time limit')).toBeNull();
   });
 
-  it('cycles the idle limit and the speed from their chords as well as their buttons', async () => {
+  it('cycles the speed from its chord as well as its button', async () => {
     renderTab();
-    const idle = await screen.findByLabelText('Idle time limit');
     const speed = screen.getByLabelText('Playback speed');
     expect(speed.textContent).toBe('1×');
 
-    await userEvent.click(idle);
-    expect(idle.textContent).toBe('idle 5s');
     await userEvent.click(speed);
     expect(speed.textContent).toBe('1.5×');
 
-    // The same two actions from the keyboard, which is what the documentation's key tables claim.
-    await userEvent.keyboard('i');
-    expect(screen.getByLabelText('Idle time limit').textContent).toBe('idle 10s');
+    // The same action from the keyboard, which is what the documentation's key tables claim.
     await userEvent.keyboard(']');
     expect(screen.getByLabelText('Playback speed').textContent).toBe('2×');
+  });
+
+  it('opens a recording whose header states an idle limit, and plays it as recorded', async () => {
+    // A file written by another tool carries `idle_time_limit`; the player reads the timeline it
+    // states rather than rewriting it, which is why this header opens unchanged.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(encode(
+      HEADER + '[0, "o", "one"]\n[600, "o", "two"]\n',
+    ))));
+    render(<ReplayTab payload={makePayload()} capabilities={makeCapabilities()} />);
+    await waitFor(() => expect(document.querySelector('.replay-meta')?.textContent).toContain('10:00'));
+    expect(screen.queryByLabelText('Idle time limit')).toBeNull();
   });
 
   it('pauses and plays from its button and from its chords', async () => {

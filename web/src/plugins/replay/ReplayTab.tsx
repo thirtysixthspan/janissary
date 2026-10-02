@@ -20,24 +20,19 @@ export function ReplayTab({
   const { resourceUrl, active, splitAction, dock } = capabilities;
   const source = useReplaySource(resourceUrl(payload.url), active);
   const terminal = useReplayTerminal(source.header, containerRef, capabilities);
-  // A live recording plays in real time however long its silences are; a finished one is compressed,
-  // which is what makes an hour of recorded silence watchable. Both facts are needed: the server's
-  // answer says the recording was not being written when the tab opened, and new bytes arriving say it
-  // is being written now — and a first read always brings bytes, so either alone would put every
-  // freshly opened recording into the live state for a moment.
-  const playback = usePlayback(
-    source.events,
-    source.header?.idleTimeLimit,
-    terminal,
-    !payload.finished && source.growing,
-  );
+  // A recording still being written is followed and holds at the end of what has been recorded rather
+  // than reporting the replay finished. Both facts are needed: the server's answer says the recording
+  // was not being written when the tab opened, and new bytes arriving say it is being written now —
+  // and a first read always brings bytes, so either alone would put every freshly opened recording
+  // into the live state for a moment.
+  const playback = usePlayback(source.events, terminal, !payload.finished && source.growing);
 
   useEffect(() => { if (!active) playback.pause(); }, [active, playback]);
 
-  // Space and `p` play and pause, `,` and `.` step one recorded event, `[` and `]` change speed, and
-  // `i` cycles the idle limit. Every one of them is also a button, so a chord is the short way round
-  // rather than the only way — and none is claimed while the user is in a text field. Each is
-  // deliberately unshifted, so none can collide with a key the terminal underneath already claims.
+  // Space and `p` play and pause, `,` and `.` step one recorded event, and `[` and `]` change speed.
+  // Every one of them is also a button, so a chord is the short way round rather than the only way —
+  // and none is claimed while the user is in a text field. Each is deliberately unshifted, so none can
+  // collide with a key the terminal underneath already claims.
   //
   // `active` is read through a ref rather than listed as a dependency: the listener is installed once
   // and decides per keystroke whether the tab is on screen, which is the same gate the host's `active`
@@ -55,7 +50,6 @@ export function ReplayTab({
       case '.': { playback.step(1); return true; }
       case '[': { playback.cycleSpeed(-1); return true; }
       case ']': { playback.cycleSpeed(1); return true; }
-      case 'i': { playback.cycleIdle(); return true; }
       default: { return false; }
     }
   }, [playback]);

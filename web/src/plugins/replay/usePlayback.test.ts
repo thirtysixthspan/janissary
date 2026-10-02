@@ -1,14 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { usePlayback } from './usePlayback';
-import { compressIdle } from './idle-compression';
 import type { CastEvent } from './cast-stream';
 import type { ReplayTerminal } from './useReplayTerminal';
 
 const output = (time: number, data = 'x'): CastEvent => ({ code: 'o', time, data });
 
 // Two seconds of work, a ten-minute pause, then one more second of it — the shape an unattended run
-// has, and the shape the idle rule exists for.
+// has, and the shape that must still play for the whole ten minutes.
 const timeline = [output(0), output(1), output(601), output(602)];
 
 function fakeTerminal(): ReplayTerminal & { shown: number[] } {
@@ -21,13 +20,11 @@ function fakeTerminal(): ReplayTerminal & { shown: number[] } {
 
 const setup = (options: {
   events?: readonly CastEvent[];
-  recordedIdleLimit?: number;
   live?: boolean;
 } = {}) => {
   const terminal = fakeTerminal();
   const view = renderHook(() => usePlayback(
     options.events ?? timeline,
-    options.recordedIdleLimit,
     terminal,
     options.live ?? false,
   ));
@@ -41,41 +38,21 @@ describe('usePlayback', () => {
     expect(view.result.current.playing).toBe(true);
   });
 
-  it('shows the timeline compressed when the recording states an idle limit', () => {
-    const { view } = setup({ recordedIdleLimit: 2 });
-    expect(view.result.current.idleLimit).toBe(2);
-    expect(view.result.current.duration).toBe(4);
-  });
-
-  it('ignores a recorded limit the control has no step for, rather than rounding it', () => {
-    const { view } = setup({ recordedIdleLimit: 3 });
-    expect(view.result.current.idleLimit).toBe('off');
-  });
-
-  it('reports a recording with no stated limit as playing in real time', () => {
+  it('plays a recording at the timing it was recorded at, silences and all', () => {
+    // The ten-minute pause in the middle is what the session did, and shortening it would make this
+    // run indistinguishable from one that answered in four seconds.
     const { view } = setup();
     expect(view.result.current.duration).toBe(602);
   });
 
-  it('compresses only a finished recording, and leaves a live one in real time', () => {
-    const finished = setup({ recordedIdleLimit: 2, live: false });
-    expect(finished.view.result.current.duration).toBe(4);
-    expect(finished.view.result.current.idleLimit).toBe(2);
+  it('plays a recording the same way whether or not it is still being written', () => {
+    const finished = setup({ live: false });
+    expect(finished.view.result.current.duration).toBe(602);
 
-    // The same events, still being written: the silences are real time, and the control says so
-    // rather than claiming a limit it is not applying.
-    const live = setup({ recordedIdleLimit: 2, live: true });
+    // The same events, still being written: real time is the only timing a running session has.
+    const live = setup({ live: true });
     expect(live.view.result.current.live).toBe(true);
     expect(live.view.result.current.duration).toBe(602);
-    expect(live.view.result.current.idleLimit).toBe('off');
-  });
-
-  it('keeps a limit chosen while live for when the recording finishes', () => {
-    const { view } = setup({ recordedIdleLimit: 2, live: true });
-    act(() => { view.result.current.cycleIdle(); });
-    act(() => { view.result.current.cycleIdle(); });
-    expect(view.result.current.idleLimit).toBe('off');
-    expect(compressIdle(timeline, 'off')).toHaveLength(timeline.length);
   });
 
   it('pauses and resumes on demand', () => {
@@ -124,14 +101,6 @@ describe('usePlayback', () => {
     expect(view.result.current.speed).toBe(0.5);
     act(() => { view.result.current.cycleSpeed(-1); });
     expect(view.result.current.speed).toBe(4);
-  });
-
-  it('cycles the idle limit through its steps and back to off', () => {
-    const { view } = setup();
-    act(() => { view.result.current.cycleIdle(); });
-    expect(view.result.current.idleLimit).toBe(1);
-    act(() => { view.result.current.cycleIdle(); });
-    expect(view.result.current.idleLimit).toBe(2);
   });
 
   it('starts again from the beginning once a finished recording has played out', () => {

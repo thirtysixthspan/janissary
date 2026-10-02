@@ -30,8 +30,6 @@ export type ReplaySource = {
   exitStatus?: number;
   // Whether the most recent poll brought anything new, which is what the live badge reports.
   growing: boolean;
-  // The length of the recording as written, before idle compression.
-  recorded: number;
 };
 
 const EMPTY: ReplaySource = {
@@ -40,7 +38,6 @@ const EMPTY: ReplaySource = {
   error: undefined,
   exitStatus: undefined,
   growing: false,
-  recorded: 0,
 };
 
 export function useReplaySource(url: string | undefined, active: boolean): ReplaySource {
@@ -62,7 +59,6 @@ export function useReplaySource(url: string | undefined, active: boolean): Repla
     error: failure.current ?? stream.current.error,
     exitStatus: stream.current.exitStatus,
     growing,
-    recorded: stream.current.duration,
   }), []);
 
   const read = useCallback(async (from: number): Promise<boolean> => {

@@ -19,8 +19,8 @@ export function activate(): TabPluginActivation {
   return {
     isPayload: isReplayPayload,
     // No intents, and none needed: the recording is served to the client as a file and played there,
-    // so playback position, speed, and the idle limit are all view-local state the host never has to
-    // hold. An empty table rejects an unknown intent name, which is the whole contract here.
+    // so playback position and speed are all view-local state the host never has to hold. An empty
+    // table rejects an unknown intent name, which is the whole contract here.
     intent: defineIntents('replay', isReplayPayload, {}),
     opener: {
       inline: (file, capabilities) => {

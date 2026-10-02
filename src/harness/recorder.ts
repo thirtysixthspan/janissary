@@ -5,12 +5,6 @@ import { IntervalClock } from './cast-interval-clock.js';
 import { castHeader } from './cast-header.js';
 import type { TerminalColors } from './terminal-colors.js';
 
-// How long a recording's silence may be before a player compresses it. Written into the header so a
-// recording carries the answer with it rather than leaving every player to guess; the value is
-// asciinema's own recommended example and `src/harness/cast-header.ts` explains why it is recorded
-// rather than merely defaulted.
-const IDLE_TIME_LIMIT = 2;
-
 // Records one harness PTY's byte stream to a replayable asciicast v3 `.cast` file. It observes the
 // same `pty` bus events as `HarnessScreenReader` (its sibling observer of the same bytes) and, like
 // it, is owned/disposed by `HarnessManager`. The file is created lazily on the first `data` event —
@@ -118,7 +112,6 @@ export class HarnessRecorder {
       cols: this.cols,
       rows: this.rows,
       timestamp: this.startedAt,
-      idleTimeLimit: IDLE_TIME_LIMIT,
       command: this.command,
       title: this.label,
       colors: this.colors,
