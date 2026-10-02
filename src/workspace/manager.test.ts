@@ -150,6 +150,35 @@ describe('WorkspaceManager', () => {
     });
   });
 
+  describe('provisioning', () => {
+    const dir = '/repo/.janissary/workspace/agent-1';
+
+    function startClone(ready: Promise<void>): InstanceType<typeof WorkspaceManager> {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      provisionWorkspaceMock.mockReturnValue({ dir, ready, cancel: vi.fn() });
+      return new WorkspaceManager();
+    }
+
+    it('is true while the clone into that directory is in flight, and false once it lands', async () => {
+      const clone = Promise.withResolvers<void>();
+      const manager = startClone(clone.promise);
+      const result = manager.create('agent-1');
+      expect(manager.provisioning(dir)).toBe(true);
+      expect(manager.provisioning('/elsewhere')).toBe(false);
+      clone.resolve();
+      if ('ready' in result) await result.ready;
+      expect(manager.provisioning(dir)).toBe(false);
+    });
+
+    it('is false once the clone fails', async () => {
+      const manager = startClone(Promise.reject(new Error('clone failed')));
+      const result = manager.create('agent-1');
+      if ('ready' in result) await expect(result.ready).rejects.toThrow('clone failed');
+      expect(manager.provisioning(dir)).toBe(false);
+    });
+  });
+
   describe('references', () => {
     it('keeps a retained workspace until the last release', () => {
       findRepoRootMock.mockReturnValue('/repo');

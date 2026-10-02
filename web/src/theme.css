@@ -230,6 +230,8 @@ html, body, #root {
 .tab-flags { display: flex; align-items: center; gap: 4px; }
 .tab-flag { font-size: 13px; cursor: default; }
 .tab-flag--active { color: var(--success); }
+.tab-flag--provisioning { color: var(--muted); }
+.tab-flag--provisioning svg { animation: icon-spin 1s linear infinite; }
 .tab-meta-chip {
   display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; vertical-align: bottom; cursor: default;

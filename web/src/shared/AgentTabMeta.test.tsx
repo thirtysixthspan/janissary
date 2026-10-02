@@ -162,6 +162,21 @@ describe('AgentTabMeta', () => {
     expect(icons).toEqual(['box', 'bolt', 'globe']);
   });
 
+  it('renders the provisioning flag as a spinning arrows icon with its accessible label', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['provisioning', 'workspaced']} />);
+    const flag = getByRole('img', { name: 'Provisioning workspace' });
+    expect(flag).toHaveAttribute('title', 'Provisioning workspace');
+    expect(flag).toHaveClass('tab-flag', 'tab-flag--provisioning');
+    expect(flag.querySelector('svg[data-icon="arrows-rotate"]')).not.toBeNull();
+  });
+
+  it('removes the provisioning flag once the server stops sending it', () => {
+    const { rerender, queryByRole } = render(<AgentTabMeta cwd="~/project" flags={['provisioning', 'workspaced']} />);
+    rerender(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
+    expect(queryByRole('img', { name: 'Provisioning workspace' })).toBeNull();
+    expect(queryByRole('img', { name: 'Workspaced' })).not.toBeNull();
+  });
+
   it('renders an active connections button with hover and click handlers wired', () => {
     const onEnter = vi.fn();
     const onLeave = vi.fn();

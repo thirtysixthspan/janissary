@@ -153,7 +153,8 @@ launched with the e2e browser, which is every harness tab not launched with `--n
 tabs only — see End-to-end browser in `harness.md`).
 They appear in that order, so the browser icon sits to the right of the other two. Hovering a flag's
 icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "E2E browser"). More flags of the
-same kind are expected in the future.
+same kind are expected in the future. A tab whose workspace is still being provisioned also shows a
+transient provisioning indicator ahead of all three (see Provisioning indicator below).
 
 The browser flag has two looks. Before any browser has been started behind a `-b` tab's endpoint, it
 is the plain globe with the "E2E browser" tooltip: it reports the tab's launch, and it is lit from the
@@ -197,6 +198,19 @@ Harness tabs show the same clipboard-icon button, tooltip "Open transcript", but
 the harness's **session transcript** file instead (the same file `harness transcript` opens — see
 [[harness]] § Session transcript), since a harness tab has no command-bar transcript of its own. The
 button is a no-op when the harness has no session transcript available yet.
+
+### Provisioning indicator
+
+While a tab's workspace is still being provisioned, its metadata row shows a **provisioning**
+indicator: a spinning arrows icon placed first among the flags, right after the working directory,
+with the tooltip "Provisioning workspace". It covers agent and harness tabs, local and remote alike —
+a local `agent --workspace` or `harness -w` tab while its clone is in flight, and a remote agent or
+harness tab until the far host reports its workspace ready. The icon keeps spinning for as long as
+provisioning lasts, then stops and disappears on the same update that makes the tab ready. A local
+clone that fails, or a harness tab that shows a provisioning error, drops the indicator at once,
+while the error stays on screen until the tab closes. A remote agent tab whose launch fails keeps
+the indicator until the tab closes, since the channel never reports a workspace. Tabs that never
+provision a workspace never show it.
 
 ### Per-tab state isolation
 

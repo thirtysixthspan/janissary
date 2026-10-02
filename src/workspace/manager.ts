@@ -68,6 +68,13 @@ export class WorkspaceManager {
     }
   }
 
+  // Whether a clone into `dir` is still in flight. Keyed by directory rather than by name so a
+  // second tab sharing the same clone reports it too.
+  provisioning(dir: string): boolean {
+    for (const pending of this.pending.values()) if (pending.dir === dir) return true;
+    return false;
+  }
+
   // Cancel an in-flight clone still provisioning under `name` (the owning tab's label). A no-op
   // once nothing is pending for that name, or once another tab has retained the clone. In the
   // latter case the clone must finish for the surviving tab even if its creator closes first.

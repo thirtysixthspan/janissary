@@ -230,6 +230,50 @@ describe('buildTabView', () => {
     expect(view.flags).toEqual(['workspaced', 'autoApprove', 'browser']);
   });
 
+  describe('while the workspace is provisioning', () => {
+    const flagsOf = (tab: Tab, workspaceOf?: (label: string) => string | undefined, cloning?: (dir: string) => boolean) =>
+      buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p, undefined, workspaceOf, undefined, cloning).flags;
+
+    function placeholderHarness(): Tab {
+      const tab = makeTab('claude', '#fff');
+      tab.view = 'harness';
+      tab.workspaceDir = '/tmp/clone';
+      tab.harness = { name: 'claude', program: 'claude', ptyId: '', status: 'provisioning' };
+      return tab;
+    }
+
+    it('reports \'provisioning\' first for a harness placeholder still waiting on its clone', () => {
+      expect(flagsOf(placeholderHarness())).toEqual(['provisioning', 'workspaced']);
+    });
+
+    it('drops it once the harness is running', () => {
+      const tab = placeholderHarness();
+      tab.harness!.status = 'running';
+      expect(flagsOf(tab)).toEqual(['workspaced']);
+    });
+
+    it('drops it once the harness records a provisioning failure', () => {
+      const tab = placeholderHarness();
+      tab.harness!.provisionError = 'Failed to create workspace: clone failed';
+      expect(flagsOf(tab)).toEqual(['workspaced']);
+    });
+
+    it('reports it for a remote tab whose channel has no workspace yet, and drops it once one lands', () => {
+      const tab = makeTab('bekir', '#fff');
+      tab.remote = { address: 'devbox', host: 'devbox' };
+      const notYet: Record<string, string | undefined> = {};
+      expect(flagsOf(tab, (label) => notYet[label])).toEqual(['provisioning', 'workspaced']);
+      expect(flagsOf(tab, () => '/srv/.janissary/workspace/bekir')).toEqual(['workspaced']);
+    });
+
+    it('reports it for a local workspaced agent whose clone is in flight, and drops it once done', () => {
+      const tab = makeTab('agent-1', '#fff');
+      tab.workspaceDir = '/tmp/clone';
+      expect(flagsOf(tab, undefined, (dir) => dir === '/tmp/clone')).toEqual(['provisioning', 'workspaced']);
+      expect(flagsOf(tab, undefined, () => false)).toEqual(['workspaced']);
+    });
+  });
+
   it('abbreviates cwd using the given shorten callback rather than the raw value', () => {
     const tab = makeTab('agent-1', '#fff');
     const view = buildTabView(tab, false, '/Users/derrick/project', undefined, [], [], [], () => '~/project');
@@ -317,9 +361,11 @@ describe('buildTabViews', () => {
     workspaceOf?: (label: string) => string | undefined;
     reconnectingOf?: (label: string) => boolean;
     pendingFor?: (label: string) => PendingQuestion | undefined;
+    provisioning?: (dir: string) => boolean;
   } = {}) {
     return {
       questions: { pendingFor: overrides.pendingFor ?? noQuestion },
+      workspace: { provisioning: overrides.provisioning ?? (() => false) },
       remote: {
         workspaceOf: overrides.workspaceOf ?? noWorkspace,
         reconnectingOf: overrides.reconnectingOf ?? (() => false),
@@ -357,6 +403,14 @@ describe('buildTabViews', () => {
     const views = build([remoteTab('a')], remoteManagers({ workspaceOf: noWorkspace }));
 
     expect(views[0]!.remote?.provisioning).toBe(true);
+  });
+
+  it('reads a local tab\'s in-flight clone from the workspace manager', () => {
+    const tab = makeTab('a', '#fff');
+    tab.workspaceDir = '/tmp/clone';
+    const views = build([tab], remoteManagers({ provisioning: (dir) => dir === '/tmp/clone' }));
+
+    expect(views[0]!.flags).toEqual(['provisioning', 'workspaced']);
   });
 
   it('carries the channel\'s reconnecting state onto the remote target', () => {

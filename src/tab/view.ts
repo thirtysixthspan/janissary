@@ -24,6 +24,7 @@ export function buildTabViews(
     managers.questions.pendingFor(tab.label),
     (label) => managers.remote.workspaceOf(label),
     (label) => managers.remote.reconnectingOf(label),
+    (dir) => managers.workspace.provisioning(dir),
   ));
 }
 
@@ -43,8 +44,13 @@ export function buildTabView(
   // Resolved here rather than marked onto the tab: the channel's recovery state belongs to
   // `RemoteManager`, and a copy of it on the tab is a copy that can outlive the recovery.
   reconnectingOf?: (label: string) => boolean,
+  // Whether a local clone into the given directory is still in flight — the only provisioning
+  // signal a local `agent --workspace` tab has, since it carries no harness status.
+  workspaceProvisioning?: (dir: string) => boolean,
 ): TabView {
   const workspacePrefix = tab.workspaceDir ?? (tab.remote ? workspaceOf?.(tab.label) : undefined);
+  const remoteProvisioning = workspaceOf !== undefined && tab.remote !== undefined
+    && workspaceOf(tab.label) === undefined;
   return {
     label: tab.label,
     number: tab.number,
@@ -58,6 +64,7 @@ export function buildTabView(
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
     // derived from either field rather than from `workspaceDir` alone.
     flags: [
+      ...provisioningFlag(tab, remoteProvisioning, workspaceProvisioning),
       ...(tab.workspaceDir || tab.remote ? ['workspaced'] : []),
       ...(tab.autoApprove ? ['autoApprove'] : []),
       ...browserFlag(tab),
@@ -70,8 +77,7 @@ export function buildTabView(
       // one detach refuses on — read beside `reconnectingOf` from the same lookup the workspace
       // prefix already uses.
       ...(reconnectingOf?.(tab.label) === true && { reconnecting: true }),
-      ...(workspaceOf !== undefined && tab.remote !== undefined
-        && workspaceOf(tab.label) === undefined && { provisioning: true }),
+      ...(remoteProvisioning && { provisioning: true }),
     },
     acp,
     connections,
@@ -104,6 +110,20 @@ export function buildTabView(
     dock: tab.dock,
     pane: tab.pane,
   };
+}
+
+// The metadata row's animated provisioning flag, first in the row so it sits beside the working
+// directory. Lit while the tab's workspace is still being provisioned — a harness placeholder with no
+// PTY yet, a remote channel with no workspace yet, or a local clone still in flight — and dropped once
+// it lands or a harness records why it never will. Derived at view time, so it stops on the same
+// broadcast that ends provisioning. See the Metadata row in `product/specs/tabs.md`.
+function provisioningFlag(
+  tab: Tab, remoteProvisioning: boolean, workspaceProvisioning?: (dir: string) => boolean,
+): string[] {
+  if (tab.harness?.provisionError !== undefined) return [];
+  const provisioning = tab.harness?.status === 'provisioning' || remoteProvisioning
+    || (tab.workspaceDir !== undefined && workspaceProvisioning?.(tab.workspaceDir) === true);
+  return provisioning ? ['provisioning'] : [];
 }
 
 // The metadata row's browser flag. `browserInUse` while a browser is running behind the tab's
