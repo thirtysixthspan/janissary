@@ -134,6 +134,8 @@ A harness tab lands in the same [group](/user-documentation/getting-started/grou
 
 A codex tab always runs its session in its own process rather than handing it to the shared background server recent codex releases start, which a workspace sandbox can't run at all and which would otherwise run a workspaced session with another codex's environment and credentials. The app checks whether the installed codex offers the switch before asking for it, so a release from before the shared server launches exactly as it did. This holds for a remote codex tab too, checked against the codex on that host.
 
+On macOS, Codex can load your administrator's managed requirements while workspace isolation stays active. This also applies to remote Codex tabs. If a remote host still reports `account/read failed` with `failed to load workspace requirements`, update Janissary on that host as well as on the machine launching the tab.
+
 ## Auto-approving permission prompts
 
 Claude, opencode, and codex harnesses auto-approve permission prompts by default. `-y`/`--yes` explicitly confirms the default; `--no-auto-approve` opts out. When active, the app answers a harness permission prompt automatically instead of waiting for you, and records an `Auto-approved a permission prompt` notification with a link to what was approved.

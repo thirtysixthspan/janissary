@@ -133,6 +133,7 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
 - `mach-lookup` is allowed broadly (needed for `securityd`/Keychain access — see below — and
   general system service lookups), except the macOS pasteboard (`com.apple.pboard`), denied last so
   a sandboxed process can't read the system clipboard.
+- Sandboxed processes can read the macOS preferences service's shared-memory cache, allowing Codex to load administrator requirements and finish startup with workspace confinement active. This applies to online and offline workspaces, including remote macOS launches. Shared-memory writes and reads of unrelated shared-memory objects remain denied.
 - `appleevent-send` is denied outright — no controlling other apps via Apple Events.
 - `sysctl-read` is allowed — read-only system info (CPU/memory/OS-version queries, no user data).
   JS engines that JIT (Bun, which compiles the `claude`/`opencode` CLIs) probe these during startup
