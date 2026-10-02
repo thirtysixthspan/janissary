@@ -1,16 +1,24 @@
 # Recording player
 
-`play <file>` plays a session's recording in an **asciicast tab**:
+`play <name>` plays a session's recording in an **asciicast tab**:
+
+```
+play devbox
+```
+
+`<name>` is the name the session's tab had, which is how the recording is named — so `play devbox`
+finds `devbox-2026-07-10T18-30-05-123Z.cast` under `.janissary/recordings/` and plays the most recent
+recording of it. Naming the file itself works too, and is played exactly as written:
 
 ```
 play .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast
 ```
 
-An [SSH session](/user-documentation/advanced-agents/harness#ssh-sessions) is played the same way, and so
-is any `.cast` file given to `open` — from the command bar, or by double-clicking it in a
+An [SSH session](/user-documentation/advanced-agents/harness#ssh-sessions) is played the same way, and
+so is any `.cast` file given to `open` — from the command bar, or by double-clicking it in a
 [file navigator](/user-documentation/tab-types/file-navigator). What plays a file is the file: `play`
 looks at its extension and hands it to the tab that plays that kind of thing, so a recording is reached
-by the path it has whether or not the session that wrote it is still running.
+by the name of the session that wrote it whether or not that session is still running.
 
 Every [harness](/user-documentation/advanced-agents/harness#recordings) and SSH tab is recorded
 automatically, so this is the way to watch a session again: one still running, or one whose tab has

@@ -110,9 +110,30 @@ The same registry decides, and the same opener runs: `play` resolves the target 
 - `play <path>` — play a file **in the app**. One file per command; there is no wildcard expansion.
 - `play` with no target — `Usage: play <file>.`
 - `play: <path>: no such file.`
-- `play: <file>: not a playable file.` — nothing plays this kind of file.
+- `play: <file>: not a playable file.` — nothing plays this kind of file. A target that **carries an
+  extension** is answered this way before any file is looked for, so it is the same answer whether or
+  not a file of that name exists. A target that carries none is a **recording name** instead, and is
+  resolved by the search below.
 
-Every one of those is decided before any tab exists, and each is a line in the transcript the command was typed into rather than an entry in the notifications feed. A file that is there but cannot be read as one is a different moment: the tab opens, and its own view says why on it. See [[harness-recording]] § Retrieval for what playing a terminal recording offers.
+A path that is already there is played as written. Only a file that is not there falls through to the
+**search**, which looks in the project's recordings directory — where every session's file is written,
+so `play` learns the path from the recorder that owns it rather than re-deriving it. The name searched
+is the target's **stem**: its filename with any `.cast` suffix removed, so `play devbox`,
+`play devbox.cast`, and `play /somewhere/else/devbox-2026-07-10T18-30-05-123Z.cast` all ask about one
+session.
+
+Two things in that directory answer a stem, in this order: the **recordings of that session**, named
+`<stem>-<timestamp>.cast`, of which the **most recent** is chosen — which is what "the devbox
+recording" means when a detach and reattach wrote two; and then a file of exactly the name asked for,
+`<stem>.cast`, which is how a recording some other tool wrote is still reached. A stem that is only a
+prefix of another recording's name is not a stem, so `play devbox` never opens `devbox-2`'s session. A
+search that matches nothing is `no such file`, naming the file that was missing.
+
+Every one of these is decided before any tab exists, and each is a line in the transcript the command
+was typed into rather than an entry in the notifications feed. A file that is there but cannot be read
+as one is a different moment: the tab opens, and its own view says why on it.
+
+See [[harness-recording]] § Retrieval for what playing a terminal recording offers.
 
 ---
 

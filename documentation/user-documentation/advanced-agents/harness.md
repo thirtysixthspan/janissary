@@ -258,9 +258,18 @@ recording larger than it is cut off at the tab's edge — make the window big en
 it.
 
 What plays a file is the file. `play` looks at the extension and hands it to the tab that plays that
-kind of thing, so a recording is reached by the path it has whether or not the session that wrote it
-is still running — which is how a recording whose tab has closed is reached, by the file whose name
-tells you:
+kind of thing, so a recording is reached by the **name of the session that wrote it** rather than by
+the timestamped filename the recorder built from it:
+
+```
+play devbox
+```
+
+That is the tab label — how the recording is named — and it answers
+`.janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast`, so a recording whose tab has closed and
+whose scrollback went with it is still one command away. When one session has more than one recording,
+the most recent is the one that plays. Naming the file outright works too, and is played exactly as
+written:
 
 ```
 play .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast
@@ -299,7 +308,7 @@ cannot be read says why there instead of failing to open.
 Three answers come back in your transcript instead of a tab, and each names what was wrong:
 
 - `Usage: play <file>.` — nothing to play was named.
-- `play: <path>: no such file.`
+- `play: <path>: no such file.` — no file of that name, and no recording of that session name, is there.
 - `play: <file>: not a playable file.` — nothing plays this kind of file.
 
 All three are decided before the tab opens anything. If the recording is there but cannot be read as
@@ -393,9 +402,10 @@ Every SSH session is recorded automatically, exactly like a harness session, to 
 
 That error output a failed connection takes with it does reach the recording: `ssh` prints it before exiting, so it's captured before the tab closes.
 
-Play it in the app the same way as any other recording, by its file:
+Play it in the app the same way as any other recording, by the name the tab had:
 
 ```
+play devbox
 play .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast
 ```
 

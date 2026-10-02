@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import {
   initHarnessRecordingDirectory,
   ensureRecordingDirectory,
+  harnessRecordingDirectory,
   harnessRecordingPath,
   clearHarnessRecordingDirectory,
 } from './recording-file.js';
@@ -24,6 +25,12 @@ describe('harness-recording-file before a directory is initialized', () => {
     clearHarnessRecordingDirectory();
     expect(mockFs.rmSync).not.toHaveBeenCalled();
   });
+
+  // A reader of the directory — `play` searching it for a recording of a given name — has nothing to
+  // search until one has been named, and must say so rather than answer the process's own directory.
+  it('harnessRecordingDirectory is empty before a directory is initialized', () => {
+    expect(harnessRecordingDirectory()).toBe('');
+  });
 });
 
 describe('harness-recording-file', () => {
@@ -43,6 +50,13 @@ describe('harness-recording-file', () => {
     const startedAt = Date.UTC(2026, 6, 10, 18, 30, 5, 123);
     const file = harnessRecordingPath('claude', startedAt);
     expect(file).toContain('claude-2026-07-10T18-30-05-123Z.cast');
+  });
+
+  // The path the recorders write into, read back by whoever needs to look at what they wrote rather
+  // than re-deriving it from the project directory and hoping the two still agree.
+  it('harnessRecordingDirectory answers the directory that was initialized', () => {
+    initHarnessRecordingDirectory('/test/project');
+    expect(harnessRecordingDirectory()).toBe('/test/project/.janissary/recordings');
   });
 
   it('harnessRecordingPath sanitizes filename-hostile label characters', () => {

@@ -151,8 +151,14 @@ refused by name rather than opened by whatever happens to read it. `play` with n
 that is not there, and a target that is not playable are three separate answers, each one line in the
 transcript the command was typed into.
 
-A recording whose tab is still open is reached by the same path its recording always had, so
-`play .janissary/recordings/<file>.cast` works whether or not the session is still running.
+A recording is reached by the **name of the session that wrote it**, not by the filename the recorder
+built from that name. `play devbox` and `play devbox.cast` both answer
+`.janissary/recordings/devbox-<timestamp>.cast` — the most recent one, so a session detached and
+reattached is played from its newest recording — while `play
+.janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast` names that file outright and is played as
+written. A session's name is its tab label, which is how the `harness replay <label>` form reached one
+before `play` replaced it, so the recording of a session whose tab has closed and whose scrollback went
+with it is still one command away. See [[open]] § `play` command for the rule.
 
 The asciicast tab:
 
