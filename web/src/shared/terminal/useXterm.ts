@@ -6,6 +6,7 @@ import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence
 import { osc52ClipboardText } from './terminal/osc52';
 import { copyText } from '../system-clipboard';
 import { registerTerminalSelection, unregisterTerminalSelection } from './terminal/selection';
+import { terminalColors } from './colors';
 import { useSelectionLayer } from './useSelectionLayer';
 
 type UseXtermOptions = {
@@ -45,13 +46,10 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
     // frozen snapshot is provably laid out and painted with what the live screen has.
     const fontSize = Number(styles.getPropertyValue('--terminal-font-size').replace('px', '')) || 13.5;
     const lineHeight = Number(styles.getPropertyValue('--terminal-line-height').replace('px', '')) || 1.2;
-    const theme = {
-      background: styles.getPropertyValue('--terminal-bg').trim() || '#17181b',
-      foreground: styles.getPropertyValue('--terminal-fg').trim() || '#e4e5e7',
-    };
+    const theme = terminalColors();
     const term = new Terminal({
       fontFamily: fontFamily || 'monospace', fontSize, lineHeight, cursorBlink: true,
-      theme,
+      theme: { background: theme.bg, foreground: theme.fg },
       // Selection comes from the Shift+drag layer above the terminal, so xterm's own
       // forcing-modifier drag (the old macOptionClickForcesSelection) stays off: leaving it set
       // would give macOS a second selection that the harness's redraws could revoke.
@@ -127,6 +125,16 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
       if (container) unregisterTerminalSelection(container);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter and selectionRef the latest selection layer; setup callbacks apply per PTY/client
+  }, [ptyId, client]);
+
+  // Report the colors this terminal resolved, once per PTY, so the session's recording carries the
+  // foreground and background it ran under rather than whatever theme is active when it is replayed.
+  // The values are read at mount and not watched: a theme change afterwards must not rewrite the
+  // colors an already-started session was recorded under.
+  useEffect(() => {
+    if (!ptyId) return;
+    const { fg, bg } = terminalColors();
+    client.send({ method: 'reportTerminalColors', params: { id: ptyId, fg, bg } });
   }, [ptyId, client]);
 
   const focus = useCallback(() => termRef.current?.focus(), []);

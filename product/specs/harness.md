@@ -847,6 +847,28 @@ is the full timed output stream, where a *capture* is a single point-in-time scr
 [[harness-recording]] for the file format, scope (ssh and inline PTYs excluded), lazy creation, and
 replay.
 
+## Replay
+
+```
+harness replay <label|file.cast>
+```
+
+Opens a **replay tab** playing a recording, with the transport, the live following, and the text
+selection and copy described in [[harness-recording]] § Retrieval. A target ending in `.cast` is a
+path; anything else is the label of an open harness or ssh tab, whose own recording is played.
+
+- `harness replay` with no target — `Usage: harness replay <label|file.cast>.`
+
+Every refusal is one line in the **notifications feed**, attributed to the tab the command was typed
+in, and nothing is written to that tab's transcript:
+
+- `No recording found for "<target>".` — no such tab is open, or it is not one that records.
+- `No recording available for "<label>" yet.` — the tab is open but has produced no output yet.
+- `No such recording file: <path>.` — the `.cast` path is not there.
+- `Cannot play <name>: <reason>.` — the file is there but its header or its events cannot be read.
+- `Replay is unavailable.` — no active player plugin is behind the route; the plugin's own disabled
+  line in the feed is the account of why.
+
 ## Monitoring
 
 A harness tab can be a monitor target (`monitor <persona> <harness-label>`): since a harness has no

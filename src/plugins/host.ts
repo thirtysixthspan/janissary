@@ -10,6 +10,7 @@ import { reportPluginFailure, type PluginFailureOrigin } from './failure.js';
 import { errorFirstLine } from '../error-text.js';
 import { invokePlugin, type PluginCallOutcome } from './invoke.js';
 import { openerPresentation } from './presentation.js';
+import { resolveCoreRoutes } from './core-route-claims.js';
 import { tabPluginLoaders } from './loaders.js';
 import { subscribeTabPluginNotifications, TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
 import { runPluginDefaultMenuAction } from './default-menu.js';
@@ -20,6 +21,7 @@ import { runPluginSelectionAction } from './selection.js';
 import { recordStatus, type PluginRecord, type TabPluginStatus } from './status.js';
 import { startPluginActivation } from './start-activation.js';
 import { closePluginTabs } from './teardown.js';
+import { noteInOriginTab } from './transcript-note.js';
 
 export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
@@ -29,6 +31,7 @@ export type TabPluginHostOptions = {
 
 export class TabPluginHost {
   private readonly records = new Map<string, PluginRecord>();
+  private readonly coreRoutes: ReadonlyMap<string, string>;
   private readonly disabledTabPlugins = new Map<string, string>();
   private readonly activationTimeoutMs: number;
   private readonly handlerTimeoutMs: number;
@@ -43,11 +46,14 @@ export class TabPluginHost {
   ) {
     this.activationTimeoutMs = options.activationTimeoutMs ?? 1000;
     this.handlerTimeoutMs = options.handlerTimeoutMs ?? 5000;
+    // Resolved before the records, because a refused claim is recorded the way a refused command or
+    // extension claim is and the loop below reads that one place for all three.
+    this.coreRoutes = resolveCoreRoutes(declarations);
     for (const declaration of declarations) {
       if (this.records.has(declaration.id)) {
         throw new Error(`Duplicate tab plugin id "${declaration.id}"`);
       }
-      // A claim the registries refused at module load starts life already disabled, rather than
+      // A claim refused while a registry was being built starts life already disabled, rather than
       // having taken the app down with it while those registries were being built.
       const rejection = contributionRejection(declaration.id);
       this.records.set(declaration.id, rejection === undefined
@@ -93,6 +99,19 @@ export class TabPluginHost {
       }
       return activation.command(argument, capabilities);
     });
+  }
+
+  // How a core command reaches the plugin owning a subcommand of its own. `harness` and `ssh` are
+  // reserved names a plugin may not claim, so `harness replay` resolves no plugin command and looks
+  // its owner up by route instead. The file is one the caller has already resolved, and it runs
+  // through that plugin's own inline opener by the guarded path `open` uses, so activation, the
+  // deadline, and the failure boundary are not restated here. Answers whether a plugin could act:
+  // an unclaimed route, or one whose owner is already disabled, answers false.
+  async runCoreRoute(route: string, file: string, origin: PluginFailureOrigin): Promise<boolean> {
+    const id = this.coreRoutes.get(route.toLowerCase());
+    if (id === undefined || this.records.get(id)?.state === 'disabled') return false;
+    await this.runOpener(id, 'inline', file, origin);
+    return true;
   }
 
   runSelectionAction(id: string, action: string, paths: readonly string[], origin: PluginFailureOrigin): Promise<void> {
@@ -145,7 +164,7 @@ export class TabPluginHost {
     const outcome = await this.invoke(record, activation, origin,
       (capabilities) => call(activation, capabilities));
     if (outcome.status === 'failed') this.disable(record, outcome.error, origin);
-    else if (outcome.status === 'rejected') this.note(origin, outcome.reason);
+    else if (outcome.status === 'rejected') noteInOriginTab(this.managers, origin, outcome.reason);
   }
 
   private invoke<Result>(
@@ -158,12 +177,6 @@ export class TabPluginHost {
       this.managers, record.declaration, activation, origin,
       () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call,
     );
-  }
-
-  private note(origin: PluginFailureOrigin, output: string): void {
-    if (this.managers.tab.tabs.some((tab) => tab.label === origin.label)) {
-      this.managers.tab.append(origin.label, { input: origin.command, output });
-    }
   }
 
   private async ensureActive(

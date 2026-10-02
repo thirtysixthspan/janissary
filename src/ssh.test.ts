@@ -62,4 +62,22 @@ describe('parseSshCommand', () => {
     const result = parseSshCommand('ssh devbox ls -la');
     expect((result as { options: string[] }).options).toEqual(['ls', '-la']);
   });
+
+  it('reads replay as a subcommand rather than a host called replay', () => {
+    expect(parseSshCommand('ssh replay devbox')).toEqual({ replay: true, target: 'devbox' });
+  });
+
+  it('takes a replay target whole, so a path holding a space resolves', () => {
+    expect(parseSshCommand('ssh replay .janissary/recordings/my session.cast'))
+      .toEqual({ replay: true, target: '.janissary/recordings/my session.cast' });
+  });
+
+  it('errors when replay has no target', () => {
+    expect(parseSshCommand('ssh replay')).toEqual({ error: 'Usage: ssh replay <label|file.cast>.' });
+  });
+
+  it('still connects to a host that is named after a subcommand-like word', () => {
+    const result = parseSshCommand('ssh replay.example.com');
+    expect((result as { destination: string }).destination).toBe('replay.example.com');
+  });
 });

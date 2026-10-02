@@ -34,6 +34,10 @@ export type CoreRpcCall =
   | { method: 'ptyInput'; params: { id: string; data: string } }
   | { method: 'ptyResize'; params: { id: string; cols: number; rows: number } }
   | { method: 'ptyKill'; params: { id: string } }
+  // The terminal colors a pty-backed surface resolved, reported once after it mounts so the session's
+  // recording carries the foreground and background it ran under. The server holds app theme names,
+  // not the colors a theme defines, so it cannot work them out for itself.
+  | { method: 'reportTerminalColors'; params: { id: string; fg: string; bg: string } }
   // Report the client's current sidebar/tab-area sizes after a manual resize completes, so the
   // server always holds the latest values for `profile save` to read synchronously into a profile's
   // `layout` key. Client-only, no reply — the reverse of the server->client `layout` event.

@@ -69,6 +69,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   reorderTabTo: 'ack',
   reportFileNavigatorSelection: 'ack',
   reportLayout: 'ack',
+  reportTerminalColors: 'ack',
   resetMonitorContext: 'ack',
   resize: 'ack',
   resyncEditorTab: 'ack',

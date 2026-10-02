@@ -21,6 +21,7 @@ function makeCapabilities(
   return {
     resourceUrl: (reference) => `${reference}?token=`,
     intent: async <Result,>() => ({}) as Result,
+    copyText: vi.fn(),
     splitAction: onSplit
       ? <button type="button" className="tab-split" onClick={onSplit}>Split</button>
       : null,

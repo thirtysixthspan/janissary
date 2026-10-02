@@ -8,6 +8,7 @@ import {
   clientReplyMode, unhandledClientMethod,
 } from '../client-message.js';
 import { errorText } from '../error-text.js';
+import { isTerminalColors } from '../harness/terminal-colors.js';
 import { settleReply, type Reply } from './reply.js';
 
 async function projectFiles(controller: Controller): Promise<unknown> {
@@ -65,6 +66,14 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'ptyResize': { controller.ptyResize(message.params.id, message.params.cols, message.params.rows); break;
     }
     case 'ptyKill': { controller.ptyKill(message.params.id); break;
+    }
+    case 'reportTerminalColors': {
+      // Validated at ingress rather than forwarded: these two strings end up in a recording's header
+      // and are handed to a terminal emulator, and neither has any business being anything but a
+      // plain color.
+      const { id, fg, bg } = message.params;
+      if (isTerminalColors({ fg, bg })) controller.reportTerminalColors(id, { fg, bg });
+      break;
     }
     case 'runSuggestion': { controller.runSuggestion(message.params.id); break;
     }

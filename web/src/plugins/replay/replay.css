@@ -1,0 +1,88 @@
+/* The replay plugin's own rules, layered on the shared plugin frame from ../shared.css. The body is a
+   terminal stage rather than a centering one: a recording is a grid of its own size that must not be
+   re-laid-out, so the stage scrolls it and nothing else. The metadata line and the transport row both
+   wrap, which is what lets the whole thing survive being docked into a narrow sidebar. */
+
+.replay-tab {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.replay-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  color: var(--muted);
+  user-select: text;
+}
+
+.replay-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.replay-live {
+  color: var(--accent, var(--fg));
+  font-weight: 600;
+}
+
+.replay-problem {
+  color: var(--warn, var(--muted));
+}
+
+.replay-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border-radius: 4px;
+  background: var(--terminal-bg, #17181b);
+}
+
+.replay-stage .xterm {
+  height: 100%;
+}
+
+.replay-transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.replay-button {
+  background: none;
+  border: 1px solid var(--border, transparent);
+  border-radius: 4px;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  padding: 2px 8px;
+}
+
+.replay-button:hover {
+  background: var(--hover, rgb(255 255 255 / 6%));
+}
+
+.replay-scrub {
+  flex: 1 1 120px;
+  min-width: 80px;
+  accent-color: var(--accent, currentColor);
+}
+
+.replay-clock {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.replay-speed,
+.replay-idle {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

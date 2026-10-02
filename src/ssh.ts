@@ -8,7 +8,23 @@ const PORT_SUFFIX = /:\d+$/;
 
 const USAGE = 'Usage: ssh <destination> [ssh options].';
 
-export type SshParsed = { command: string; destination: string; label: string; options: string[] } | { error: string };
+export type SshParsed =
+  | { command: string; destination: string; label: string; options: string[] }
+  | { replay: true; target: string }
+  | { error: string };
+
+// `ssh replay <label|file.cast>`, recognized ahead of destination parsing so it cannot be read as a
+// host called `replay`. It routes into exactly what `harness replay` does, and takes the whole
+// remainder of the line because a path may hold a space. Answers undefined when the command is not a
+// replay, so the destination parsing below is untouched by it.
+function parseReplay(rest: string): { replay: true; target: string } | { error: string } | undefined {
+  const token = rest.split(/\s+/, 1)[0];
+  if (token?.toLowerCase() !== 'replay') return undefined;
+  const target = rest.slice(token.length).trim();
+  return target
+    ? { replay: true, target }
+    : { error: 'Usage: ssh replay <label|file.cast>.' };
+}
 
 // Find the index of the first non-option token in an `ssh` command's arguments, skipping any flag
 // and (for value-taking flags) the value that follows it. The index — rather than the token itself —
@@ -40,6 +56,8 @@ export function parseSshCommand(input: string): SshParsed {
   const trimmed = input.trim();
   const rest = trimmed.replace(/^ssh\b\s*/i, '').trim();
   if (!rest) return { error: USAGE };
+  const replay = parseReplay(rest);
+  if (replay) return replay;
   const tokens = rest.split(/\s+/);
   const index = findDestination(tokens);
   if (index === -1) return { error: USAGE };

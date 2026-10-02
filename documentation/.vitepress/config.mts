@@ -99,6 +99,7 @@ export default defineConfig({
             { text: "Image viewer", link: "/user-documentation/tab-types/image-viewer" },
             { text: "Video player", link: "/user-documentation/tab-types/video-player" },
             { text: "Audio player", link: "/user-documentation/tab-types/audio-player" },
+            { text: "Recording player", link: "/user-documentation/tab-types/recording-player" },
             { text: "Markdown preview", link: "/user-documentation/tab-types/markdown-preview" },
             { text: "PDF viewer", link: "/user-documentation/tab-types/pdf-viewer" },
             { text: "Embedded web pages", link: "/user-documentation/tab-types/web-pages" },

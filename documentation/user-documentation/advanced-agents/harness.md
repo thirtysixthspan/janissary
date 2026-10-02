@@ -234,7 +234,7 @@ Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [s
 
 ## Recordings
 
-Every harness session is recorded automatically. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. The label is cleaned up on the way in: every character that isn't a letter, a digit, an underscore, or a dash becomes a dash, so `harness opencode as "my tab"` records as `my-tab-<timestamp>.cast`. Captures, transcripts, and browser logs use the same rule. You can review a recording after its tab has closed and its scrollback is gone. There is no command or viewer for one inside the app, so a recording is something you play back yourself. Recordings contain terminal output and terminal resizes, so playback can follow changes in window size. Keystrokes are not recorded as input events; text echoed by a program is part of its output.
+Every harness session is recorded automatically. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. The label is cleaned up on the way in: every character that isn't a letter, a digit, an underscore, or a dash becomes a dash, so `harness opencode as "my tab"` records as `my-tab-<timestamp>.cast`. Captures, transcripts, and browser logs use the same rule. You can review a recording after its tab has closed and its scrollback is gone — `harness replay` plays it back inside the app (see [Playing a recording back](#playing-a-recording-back)), and `asciinema play` still works on the files. Recordings contain terminal output, terminal resizes, and the session's exit status when the tab's process reports one, so playback can follow changes in window size. Keystrokes are not recorded as input events; text echoed by a program is part of its output.
 
 Recording covers named harness tabs and dedicated SSH tabs. Interactive programs launched through `shell`, such as `shell vim`, are not recorded. The two kinds share one directory and are told apart by the file's header: a harness recording names the bare program in `command` and the tab label in `title`, while an SSH recording carries the full invocation you typed. That is worth knowing before you type one: an invocation with a secret passed in an ssh flag value puts that secret in a plaintext file under `.janissary/recordings/`.
 
@@ -244,13 +244,64 @@ A recording covers one stretch of time the tab is attached, so a session you det
 
 The file is created only once the harness produces its first output, so a harness that exits immediately (for example, a binary that isn't found) leaves no recording behind.
 
-Replay a recording with [asciinema](https://asciinema.org):
+The files are standard [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/), so they also drop into any asciicast web player, and reading one recorded by an older version or another tool works both ways. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
+
+### Playing a recording back
 
 ```
-asciinema play .janissary/recordings/claude-2026-07-10T18-30-05-123Z.cast
+harness replay <label|file.cast>
 ```
 
-The files are standard [asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/), so they also drop into any asciicast web player. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
+Opens a **replay tab** that plays the recording: the session's output as it was on screen, at the size
+it was recorded at, with the timing it happened at.
+
+A target ending in `.cast` is a file path; anything else is the label of a tab that is open right now.
+That is how a recording whose tab has closed is reached — by its file, which the name tells you:
+
+```
+harness replay .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast
+```
+
+`open` reaches the same tab, so `open .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast` or
+double-clicking the row in a [file navigator](/user-documentation/tab-types/file-navigator) works too.
+Playback state is not saved: reopening a recording starts it again.
+
+The transport under the terminal is play and pause, speed from 0.5× to 4×, one recorded moment at a
+time forward and back, and a seek bar. Each is a button as well as a key:
+
+| Key | Does |
+| --- | --- |
+| `Space` or `p` | Play, or pause |
+| `.` | Next recorded moment |
+| `,` | Previous recorded moment |
+| `]` / `[` | Faster / slower |
+
+Text can be selected in the replay and copied with `Cmd+C` (or `Ctrl+C`), the same as a terminal.
+
+**A live session is followed.** While the tab that is recording it is still running, the replay keeps up
+with new output, the metadata line reads `live`, and reaching the end of what has been recorded holds
+the last frame instead of stopping — the session is not finished, and the replay picks up where the
+session is when it speaks again.
+
+**A finished recording has its silences compressed.** An unattended run is mostly waiting — a build
+that takes ten minutes writes nothing for ten minutes — so a recording whose session has ended plays
+its gaps at two seconds each, which is the limit recorded in the file. The `idle` control changes that
+for one viewing (`off`, `1s`, `2s`, `5s`, `10s`), and shows the current setting on its face. A
+recording still being written always plays in real time.
+
+The line above the terminal says what is being played: the command the session ran, the label, when it
+started, how long it is, and the session's exit status when the file carries one. A recording that
+cannot be read says why there instead of failing to open.
+
+When the player cannot do what you asked, one line goes to the
+[notifications](/user-documentation/tab-types/notifications) feed and your transcript keeps only the
+command:
+
+- `No recording found for "<target>".` — nothing open has that label, and it is not a path.
+- `No recording available for "<label>" yet.` — the tab is open but has not produced any output yet.
+- `No such recording file: <path>.`
+- `Cannot play <name>: <reason>.` — the file is there but cannot be read as a recording.
+- `Replay is unavailable.` — the player is disabled; its own message in the feed says why.
 
 ### When recording fails
 
@@ -339,7 +390,15 @@ Every SSH session is recorded automatically, exactly like a harness session, to 
 
 That error output a failed connection takes with it does reach the recording: `ssh` prints it before exiting, so it's captured before the tab closes.
 
-Replay it the same way as any other recording:
+Replay it in the app the same way as any other recording, by its tab label or by its file:
+
+```
+ssh replay devbox
+ssh replay .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast
+```
+
+A connected session is followed live, exactly like a harness recording. `asciinema play` still works
+on the files too:
 
 ```
 asciinema play .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast

@@ -78,6 +78,17 @@ describe('notificationText', () => {
     expect(notificationText('rate-limited', 'build')).toBe("Agent 'build' is being rate limited");
   });
 
+  // A refused replay says four different things depending on which of the two forms the target was
+  // and what was wrong with it, so the line is carried verbatim rather than reworded per event.
+  it.each([
+    ['No recording found for "nope".'],
+    ['No recording available for "claude" yet.'],
+    ['No such recording file: ./missing.cast.'],
+    ['Replay is unavailable.'],
+  ])('carries a replay refusal verbatim: %s', (detail) => {
+    expect(notificationText('replay-unavailable', 'janus', detail)).toBe(detail);
+  });
+
   it('renders the incoming-message body with the sender and the tab', () => {
     expect(notificationText('incoming-message', 'bob', 'janus')).toBe('Message from janus in bob');
   });

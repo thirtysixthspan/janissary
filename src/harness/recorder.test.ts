@@ -5,6 +5,7 @@ import path from 'node:path';
 import { messageBus } from '../bus.js';
 import { HarnessRecorder } from './recorder.js';
 import { initHarnessRecordingDirectory } from './recording-file.js';
+import { IntervalClock } from './cast-interval-clock.js';
 
 // The recorder writes real files with an append stream that flushes asynchronously, so a test
 // ends the stream (dispose / exit) and then polls the `.cast` file until it has the expected lines.
@@ -51,23 +52,83 @@ afterEach(() => {
 });
 
 describe('HarnessRecorder', () => {
-  it('writes an asciicast v2 header on the first data event with the spawn dimensions', async () => {
+  it('writes an asciicast v3 header on the first data event with the spawn dimensions', async () => {
     recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     emit({ type: 'data', id: 'pty-1', data: 'hello' });
     recorder.dispose();
     const lines = await waitForCastLines(2);
     const header = JSON.parse(lines[0]);
-    expect(header.version).toBe(2);
-    expect(header.width).toBe(80);
-    expect(header.height).toBe(24);
+    expect(header.version).toBe(3);
+    expect(header.term.cols).toBe(80);
+    expect(header.term.rows).toBe(24);
+    expect(header.term.type).toBe('xterm-256color');
     expect(Number.isSafeInteger(header.timestamp)).toBe(true);
+    expect(header.idle_time_limit).toBe(2);
     expect(header.command).toBe('claude');
     expect(header.title).toBe('claude');
-    expect(header.env.TERM).toBe('xterm-256color');
+    expect(header.env).toBeUndefined();
+    expect(header.term.theme).toBeUndefined();
     const event = JSON.parse(lines[1]);
     expect(event[1]).toBe('o');
     expect(event[2]).toBe('hello');
     expect(typeof event[0]).toBe('number');
+  });
+
+  it('writes the reported terminal colors into the header theme, and nothing when none arrive', async () => {
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
+    recorder.setColors({ fg: '#e4e5e7', bg: '#17181b' });
+    emit({ type: 'data', id: 'pty-1', data: 'a' });
+    recorder.dispose();
+    const [withTheme] = await waitForCastLines(2);
+    expect(JSON.parse(withTheme).term.theme).toEqual({ fg: '#e4e5e7', bg: '#17181b' });
+
+    recorder = new HarnessRecorder('pty-2', 'codex', 'codex', 80, 24, vi.fn());
+    emit({ type: 'data', id: 'pty-2', data: 'b' });
+    recorder.dispose();
+    await waitFor(() => readdirSync(recordingsDir).length === 2);
+    const second = readFileSync(
+      path.join(recordingsDir, readdirSync(recordingsDir).find((f) => f.includes('codex'))!), 'utf8',
+    );
+    expect(JSON.parse(second.trim().split('\n', 1)[0]).term.theme).toBeUndefined();
+  });
+
+  it('names the recording once the file is open, and nothing before it', async () => {
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
+    expect(recorder.recordingPath()).toBeUndefined();
+    emit({ type: 'data', id: 'pty-1', data: 'x' });
+    expect(recorder.recordingPath()).toMatch(/\.janissary[/\\]recordings[/\\]claude-.*\.cast$/u);
+    const named = recorder.recordingPath();
+    await waitForCastLines(2);
+    expect(recorder.recordingPath()).toBe(named);
+  });
+
+  it('writes the exit status as the last event, and no event without one', async () => {
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
+    emit({ type: 'data', id: 'pty-1', data: 'bye' });
+    emit({ type: 'exit', id: 'pty-1', exitCode: 130 });
+    const lines = await waitForCastLines(3);
+    const events = lines.slice(1).map((line) => JSON.parse(line));
+    expect(events.at(-1)).toEqual([expect.any(Number), 'x', '130']);
+
+    recorder = new HarnessRecorder('pty-2', 'codex', 'codex', 80, 24, vi.fn());
+    emit({ type: 'data', id: 'pty-2', data: 'still here' });
+    recorder.dispose();
+    await waitFor(() => readdirSync(recordingsDir).length === 2);
+    const second = readFileSync(
+      path.join(recordingsDir, readdirSync(recordingsDir).find((f) => f.includes('codex'))!), 'utf8',
+    );
+    expect(second.trim().split('\n').slice(1).map((l) => JSON.parse(l)[1])).toEqual(['o']);
+  });
+
+  it('writes intervals that sum to the real elapsed time rather than drifting', () => {
+    const clock = new IntervalClock();
+    const intervals = Array.from({ length: 2000 }, (_, frame) => clock.interval((frame + 1) / 60));
+    const sum = intervals.reduce((total, interval) => total + interval, 0);
+    // Bounded by the half-millisecond still sitting in the carry, not by the number of events: two
+    // thousand intervals rounded independently would drift by two thirds of a second.
+    expect(Math.abs(sum - 2000 / 60)).toBeLessThan(0.001);
+    expect(intervals.every((interval) => interval > 0)).toBe(true);
+    expect(clock.interval(2000 / 60)).toBeCloseTo(0, 3);
   });
 
   it('creates no file when only a resize (or nothing) arrives before dispose', async () => {
@@ -78,7 +139,7 @@ describe('HarnessRecorder', () => {
     expect(existsSync(recordingsDir)).toBe(false);
   });
 
-  it('records data chunks as "o" lines with non-decreasing elapsed times and round-trips ESC bytes', async () => {
+  it('records data chunks as "o" lines with non-negative intervals and round-trips ESC bytes', async () => {
     recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     const esc = String.fromCodePoint(27);
     const ansi = `${esc}[31mred${esc}[0m`;
@@ -90,7 +151,10 @@ describe('HarnessRecorder', () => {
     const second = JSON.parse(lines[2]);
     expect(first[1]).toBe('o');
     expect(first[2]).toBe(ansi);
-    expect(second[0]).toBeGreaterThanOrEqual(first[0]);
+    // v3 carries the gap since the previous event, which is never negative — unlike v2's absolute
+    // elapsed times, two events in the same millisecond are both written and both read as zero.
+    expect(first[0]).toBeGreaterThanOrEqual(0);
+    expect(second[0]).toBeGreaterThanOrEqual(0);
   });
 
   it('a resize before output sets header dims; a resize after output emits an "r" line', async () => {
@@ -101,8 +165,8 @@ describe('HarnessRecorder', () => {
     recorder.dispose();
     const lines = await waitForCastLines(3);
     const header = JSON.parse(lines[0]);
-    expect(header.width).toBe(100);
-    expect(header.height).toBe(40);
+    expect(header.term.cols).toBe(100);
+    expect(header.term.rows).toBe(40);
     expect(JSON.parse(lines[1])[1]).toBe('o');
     const resizeLine = lines.slice(1).map((l) => JSON.parse(l)).find((e) => e[1] === 'r');
     expect(resizeLine[2]).toBe('120x50');

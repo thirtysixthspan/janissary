@@ -3,6 +3,7 @@ import {
   CLIENT_METHOD_CONTRACTS, clientParamsProblem, clientReplyMode, isClientMessage,
 } from './client-message.js';
 import { isPluginFailedParams, isPluginIntentParams } from './client-params/plugin.js';
+import { isTerminalColors } from './harness/terminal-colors.js';
 import type { ClientMessage } from './protocol.js';
 
 describe('isClientMessage', () => {
@@ -88,6 +89,8 @@ describe('clientParamsProblem', () => {
     ['a string renameTab index', 'renameTab', { index: '0', title: 'one' }],
     ['a dir outside moveTab\'s union', 'moveTab', { dir: 0 }],
     ['a command params with no text', 'command', {}],
+    ['a missing terminal color', 'reportTerminalColors', { id: 'pty-1', fg: '#fff' }],
+    ['a non-string terminal color', 'reportTerminalColors', { id: 'pty-1', fg: 0, bg: '#17181b' }],
   ])('names the method for %s', (_case, method, params) => {
     expect(clientParamsProblem(message(method, params))).toBe(`Invalid ${method} params`);
   });
@@ -95,9 +98,32 @@ describe('clientParamsProblem', () => {
   it.each([
     ['command', { text: 'help' }],
     ['reportLayout', { sidebarLeft: 240, sidebarRight: 300, tabAreaPct: 62.5 }],
+    ['reportTerminalColors', { id: 'pty-1', fg: '#e4e5e7', bg: '#17181b' }],
     ['init', {}],
   ])('reports no problem for well-typed %s params', (method, params) => {
     expect(clientParamsProblem(message(method, params))).toBeUndefined();
+  });
+
+  // Shape is all this decoder checks; the values are held to being colors where they are used, since
+  // that is where a bad one would matter and where the refusal can be answered rather than dropped.
+  // Padded hex is accepted on purpose: a computed custom property comes back with its whitespace.
+  it.each([
+    ['a named color', 'red', false],
+    ['an rgb() function', 'rgb(1, 2, 3)', false],
+    ['an empty string', '', false],
+    ['a leading space on a hex color', ' #fff', true],
+    ['six digits', '#ffffff', true],
+    ['three digits', '#fff', true],
+    ['an alpha pair', '#ffffffff', true],
+    ['a missing hash', 'fff', false],
+  ])('accepts %s only where it is a plain color', (_case, color, accepted) => {
+    expect(isTerminalColors({ fg: color, bg: '#17181b' })).toBe(accepted);
+  });
+
+  it('refuses a colors payload that is not a pair of strings', () => {
+    expect(isTerminalColors(null)).toBe(false);
+    expect(isTerminalColors(['#fff', '#000'])).toBe(false);
+    expect(isTerminalColors({ fg: '#fff' })).toBe(false);
   });
 
   // The envelope and the params are separate failures with separate answers: one is dropped, the

@@ -3,6 +3,8 @@ import type { ScreenCapture } from './screen.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
 import { writeCaptureFile } from './capture/file.js';
 import { queryParkedCapture, type RemoteCaptureResult } from './capture/remote.js';
+import { resolveReplay } from './replay-lookup.js';
+import { notify } from '../notifications/index.js';
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab by label rather
 // than launching a new one. Split out of `HarnessManager` so the manager keeps only the lifecycle
@@ -109,4 +111,28 @@ export function transcriptSubcommand(
   if (!file) return `No transcript available for "${label}" yet.`;
   managers.openFile.edit(input, file, managers.tab.cur().label);
   return undefined;
+}
+
+// Handle `harness replay <label|file.cast>` and its `ssh replay` twin: resolve the target to one
+// recording file and route it into the plugin that owns the `replay` core route, which opens or
+// focuses the tab that plays it.
+//
+// Refusals are the one thing here that reaches the user, and they go to the notifications feed and
+// nowhere else — the transcript the command was typed into keeps the command line and no more, which
+// is exactly how a refused launch is reported. The route lookup is asynchronous because activating a
+// plugin is, and the plugin reports its own failure if activation is what went wrong; a route with
+// no active plugin behind it is reported here because the plugin that would have said why is the one
+// that is missing.
+export function replaySubcommand(
+  managers: Managers, target: string, invokingLabel: string, command: string,
+): void {
+  const resolved = resolveReplay(managers, invokingLabel, target);
+  if ('error' in resolved) {
+    notify(managers, 'replay-unavailable', invokingLabel, resolved.error);
+    return;
+  }
+  void managers.plugins.runCoreRoute('replay', resolved.path, { label: invokingLabel, command })
+    .then((claimed) => {
+      if (!claimed) notify(managers, 'replay-unavailable', invokingLabel, 'Replay is unavailable.');
+    });
 }

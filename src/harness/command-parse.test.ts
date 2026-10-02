@@ -261,6 +261,24 @@ describe('parseHarnessCommand — capture and transcript subcommands', () => {
   it('is case-insensitive on the subcommand keyword', () => {
     expect(parseHarnessCommand('harness CAPTURE bot')).toEqual({ capture: true, label: 'bot' });
   });
+
+  it('parses replay <target>', () => {
+    expect(parseHarnessCommand('harness replay reviewer')).toEqual({ replay: true, target: 'reviewer' });
+  });
+
+  it('takes a replay target whole, so a path holding a space resolves', () => {
+    expect(parseHarnessCommand('harness replay .janissary/recordings/my session.cast'))
+      .toEqual({ replay: true, target: '.janissary/recordings/my session.cast' });
+  });
+
+  it('errors when replay has no target', () => {
+    expect(parseHarnessCommand('harness replay'))
+      .toEqual({ error: 'Usage: harness replay <label|file.cast>.' });
+  });
+
+  it('does not let replay shadow a harness name', () => {
+    expect(parseHarnessCommand('harness replay claude')).toEqual({ replay: true, target: 'claude' });
+  });
 });
 
 describe('parseHarnessCommand — error paths', () => {

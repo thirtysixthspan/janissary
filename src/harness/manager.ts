@@ -10,7 +10,7 @@ import { autoApproveHarnessNames, supportsHarnessAutoApprove } from './auto-appr
 import { sshRuntime } from './observers.js';
 import { HarnessTabSpawn } from './tab-spawn.js';
 import type { SpawnTabOptions } from './spawn-options.js';
-import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
+import { captureSubcommand, replaySubcommand, transcriptSubcommand } from './subcommands.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
 import type { Tab } from '../tab/types.js';
 import type { ProfileHarnessEntry } from '../profile/types.js';
@@ -18,6 +18,7 @@ import { messageBus } from '../bus.js';
 import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import { cancelHarnessIdleEscalation, disposeHarnessIdleEscalations } from './idle-notification.js';
+import type { TerminalColors } from './terminal-colors.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
 // fresh `--workspace` git clone, and optionally under a custom `as <label>`) and naming it uniquely.
@@ -61,6 +62,23 @@ export class HarnessManager extends HarnessTabSpawn {
     return this.runtimes.get(tab.harness.ptyId)?.tailer;
   }
 
+  // The recording file the named tab is writing, or nothing when the tab is missing, is not a harness
+  // tab, or has produced no output yet — a recorder has a path only once its file is actually open,
+  // which is why "no recording yet" and "no such tab" are different answers rather than one.
+  recordingPathOf(label: string): string | undefined {
+    const tab = this.managers.tab.harnessTab(label);
+    if (!tab) return undefined;
+    return this.runtimes.get(tab.harness.ptyId)?.recorder?.recordingPath();
+  }
+
+// Hand the PTY's recorder the colors its terminal surface resolved, so the session's recording
+  // carries the foreground and background it was actually recorded under. Reported by the client
+  // because those values live only in the web stylesheet, one per app theme, and this side of the app
+  // holds nothing but the theme's name. A PTY with no recorder — an ordinary shell — is not an error.
+  reportTerminalColors(id: string, colors: TerminalColors): void {
+    this.runtimes.get(id)?.recorder?.setColors(colors);
+  }
+
   // Register the observer pair for a PTY this manager did not spawn itself (currently: ssh tabs,
   // which reuse the harness-view tab shape but spawn their PTY directly via SshManager): a screen
   // reader, so the tab is monitorable, and a recorder, so the session is replayable after the tab
@@ -77,6 +95,10 @@ export class HarnessManager extends HarnessTabSpawn {
     if ('error' in parsed) return parsed.error;
     if ('capture' in parsed) return captureSubcommand(this.managers, (l) => this.latestScreenText(l), input, parsed.label);
     if ('transcript' in parsed) return transcriptSubcommand(this.managers, (l) => this.transcriptTailer(l), input, parsed.label);
+    if ('replay' in parsed) {
+      replaySubcommand(this.managers, parsed.target, this.managers.tab.cur().label, input);
+      return undefined;
+    }
     if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
     }

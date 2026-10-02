@@ -34,6 +34,12 @@ export type TabPluginDeclaration = {
   editsOwnFiles?: boolean;
   editGesture?: 'open external';
   command?: string;
+  // Command tokens a core command may route into this plugin's inline opener with a file it has
+  // already resolved. `harness` and `ssh` are reserved command names a plugin cannot claim, so a
+  // subcommand of one of them has no other way to reach a plugin that owns the presentation. The
+  // claim names the token only — no handler, because the plugin's own opener is what runs — and a
+  // duplicate or reserved token is refused at startup like any other claim.
+  coreRoutes?: readonly string[];
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
   // An entry the default context menu offers for a text selection. A declaration carrying one must
@@ -140,6 +146,11 @@ export type TabPluginServerCapabilities = {
   // Replace this plugin's own remembered settings, answering whether the write succeeded. A value
   // that is not a plain JSON object is a plugin bug and disables the plugin rather than being saved.
   saveSettings(settings: Record<string, unknown>): boolean;
+  // Whether a tab the user can see is recording this exact file right now. A question about host
+  // state a plugin cannot answer for itself — it reaches no tab list — and the answer is not
+  // derivable from the file: a recording ended by its tab closing carries no exit event, so nothing
+  // in it distinguishes a finished session from a live one.
+  isRecordingLive(absPath: string): boolean;
   rejectRequest(reason: string): never;
   reportFailure(reason: unknown): never;
 };

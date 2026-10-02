@@ -95,9 +95,11 @@ The file is created **lazily, on the first output** — a session that never con
 file — and closed when the ssh process exits. Recordings are **cleared at a fresh launch** and
 **preserved across `--relaunch`**, so a run's recordings are bounded to that run.
 
-There is no in-app viewer: recordings are replayed externally with `asciinema play` or any asciicast
-web player. If a recording cannot be written, the ssh session is unaffected and one
-`ssh recording failed` line appears in the notifications feed for that tab.
+`ssh replay <label|file.cast>` opens a replay tab playing that session's recording, following it while
+the session is still running; see [[harness-recording]] § Retrieval for what the player offers. The
+file is also playable outside the app with `asciinema play`. If a recording cannot be written, the ssh
+session is unaffected and one `ssh recording failed` line appears in the notifications feed for that
+tab.
 
 ## Delivery
 

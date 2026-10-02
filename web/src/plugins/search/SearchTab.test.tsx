@@ -28,6 +28,7 @@ function makeCapabilities() {
     resourceUrl: (reference) => reference,
     intent: async <Result,>(name: string, payload: unknown) =>
       intent(name, payload) as Promise<Result>,
+    copyText: vi.fn(),
     splitAction: null, active: true, dock: null,
     close: vi.fn(), reportFailure: vi.fn(),
   };

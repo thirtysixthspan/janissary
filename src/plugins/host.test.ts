@@ -56,6 +56,86 @@ function makeManagers() {
   return { append, closeTab, managers, openPluginTab, runAs };
 }
 
+describe('tab plugin core routes', () => {
+  // `harness` and `ssh` are reserved names a plugin cannot claim, so `harness replay` resolves no
+  // plugin command at all. The route claim is what it looks its owner up by instead, and the call
+  // runs through the plugin's own inline opener by the guarded path `open` uses.
+  it('runs the claiming plugin\'s inline opener and answers that a plugin could act', async () => {
+    const { managers } = makeManagers();
+    const inline = vi.fn();
+    const host = new TabPluginHost(
+      managers, [declaration({ coreRoutes: ['replay'] })],
+      { fixture: loader(activation({ opener: { inline, external: () => {} } })) },
+    );
+
+    expect(await host.runCoreRoute('replay', '/tmp/a.cast', origin)).toBe(true);
+    expect(inline).toHaveBeenCalledWith('/tmp/a.cast', expect.anything());
+    expect(host.statusFor('fixture')).toMatchObject({ state: 'active' });
+  });
+
+  it('matches a route case-insensitively, as command claims are', async () => {
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(
+      managers, [declaration({ coreRoutes: ['replay'] })], { fixture: loader(activation()) },
+    );
+    expect(await host.runCoreRoute('REPLAY', '/tmp/a.cast', origin)).toBe(true);
+  });
+
+  it('answers false for a route nothing claims, without opening anything', async () => {
+    const { managers, openPluginTab } = makeManagers();
+    const load = vi.fn(loader(activation()));
+    const host = new TabPluginHost(managers, [declaration()], { fixture: load });
+
+    expect(await host.runCoreRoute('replay', '/tmp/a.cast', origin)).toBe(false);
+    expect(load).not.toHaveBeenCalled();
+    expect(openPluginTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses a duplicate route to the second claimant and starts it disabled', async () => {
+    const { managers } = makeManagers();
+    clearContributionRejections();
+    const host = new TabPluginHost(managers, [
+      declaration({ id: 'first', coreRoutes: ['replay'] }),
+      declaration({ id: 'second', coreRoutes: ['replay'] }),
+    ], { first: loader(activation()), second: loader(activation()) });
+
+    expect(host.statusFor('first')).toMatchObject({ state: 'declared' });
+    expect(host.statusFor('second')).toMatchObject({
+      state: 'disabled', reason: 'duplicate tab plugin core route claim "replay"',
+    });
+    expect(await host.runCoreRoute('replay', '/tmp/a.cast', origin)).toBe(true);
+    clearContributionRejections();
+  });
+
+  it('refuses a route that collides with a reserved name', async () => {
+    const { managers } = makeManagers();
+    clearContributionRejections();
+    const host = new TabPluginHost(managers, [declaration({ coreRoutes: ['shell'] })],
+      { fixture: loader(activation()) });
+
+    expect(host.statusFor('fixture')).toMatchObject({
+      state: 'disabled', reason: 'reserved tab plugin core route claim "shell"',
+    });
+    clearContributionRejections();
+  });
+
+  it('answers false once the owner is disabled, so the command can say so itself', async () => {
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration({ coreRoutes: ['replay'] })], {
+      fixture: loader(activation({
+        opener: {
+          external: () => {},
+          inline: () => { throw new Error('broken'); },
+        },
+      })),
+    });
+
+    expect(await host.runCoreRoute('replay', '/tmp/a.cast', origin)).toBe(true);
+    expect(host.statusFor('fixture')).toMatchObject({ state: 'disabled', reason: 'broken' });
+    expect(await host.runCoreRoute('replay', '/tmp/a.cast', origin)).toBe(false);
+  });
+});
+
 describe('tab plugin discovery', () => {
   it('keeps the catalog manifest-only and pins server loader parity', () => {
     const source = readFileSync(new URL('catalog.ts', import.meta.url), 'utf8');

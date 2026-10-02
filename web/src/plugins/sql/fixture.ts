@@ -78,6 +78,7 @@ export function makeCapabilities(dock: 'left' | 'right' | null = null) {
   const capabilities: TabPluginClientCapabilities = {
     resourceUrl: (reference) => `${reference}?token=test`,
     intent: async <Result,>(name: string, body: unknown) => intent(name, body) as Promise<Result>,
+    copyText: vi.fn(),
     splitAction: null,
     active: true,
     dock,

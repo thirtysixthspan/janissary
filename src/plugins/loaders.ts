@@ -8,6 +8,7 @@ export const tabPluginLoaders = {
   markdown: () => import('./markdown/activate.js'),
   page: () => import('./page/activate.js'),
   pdf: () => import('./pdf/activate.js'),
+  replay: () => import('./replay/activate.js'),
   schedules: () => import('./schedules/activate.js'),
   search: () => import('./search/activate.js'),
   sessions: () => import('./sessions/activate.js'),

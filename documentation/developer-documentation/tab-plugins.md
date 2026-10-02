@@ -69,6 +69,7 @@ Literal imports make the modules visible to TypeScript, Vite, Knip, and tests wh
 | `webTargets` | no | Claims the `open` command's web branch: an `http`/`https` address, or any address preceded by the `page` keyword |
 | `editGesture` | no | `open external` for a file-navigator edit activation |
 | `command` | no | One case-insensitive first-token command |
+| `coreRoutes` | no | Command tokens a core command may route into your inline opener with a file it has already resolved |
 | `notifications` | no | Host topics to be told about; a declaration naming one must supply `notify` |
 | `capabilities` | yes | Requested names from the v1 server capability set; the host grants only these |
 
@@ -91,7 +92,7 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies seventeen capabilities:
+The host supplies eighteen capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `notifyUser(text, options?)` reports one line to the notifications feed. Text plus, at most, one file to link — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. A link is how you offer something too long to read in place, the way the `sql` plugin links the whole result of a query from a line that only says how many rows came back; it is an absolute path opened with the host's ordinary `edit`, not a `registerFile` reference, because a notification outlives the tab that produced it. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way. A line is attributed to the tab you were invoked from, which a `notify` handler doesn't have, so pass `tab` with one of your own instance keys — `notifyUser(text, { tab: key })` — to have the line carry that tab's name and colour instead. A key you have no open tab for falls back to the invoking tab, so you can't attribute a line to a tab you don't own.
@@ -107,6 +108,7 @@ The host supplies seventeen capabilities:
 - `configuredViewer()` reads the viewer configured for this plugin id.
 - `openExternally(path, application?)` asks the OS to open a file.
 - `readSettings()` reads your plugin's own remembered settings from the `pluginSettings` map in `.janissary/config.json`, keyed by your plugin id, or `{}` when you have saved none. Treat every field as untrusted: the user can edit the file by hand, so check each value's type and fall back to a default rather than assuming the shape you last wrote.
+- `isRecordingLive(absPath)` answers whether a tab the user can see is recording that exact file right now. A plugin reaches no tab list of its own, so this is the only way to tell a file that is still being written from one that is finished — which the file itself usually cannot: a recording ends when its tab closes just as surely as when its process exits, and only the tab that is still there knows. The replay plugin uses it to decide whether a recording it is about to play is a live session.
 - `saveSettings(settings)` replaces your plugin's own entry in that map and answers whether the write succeeded. The file is replaced atomically and every other plugin's entry is left alone. A value that is not a plain JSON object is a bug in your plugin and disables it. The search tab uses the pair to remember its three toggles across restarts.
 - `rejectRequest(reason)` answers one bad request without disabling the plugin.
 - `reportFailure(reason)` exits through the guarded failure boundary and disables the plugin.
@@ -194,6 +196,18 @@ command: (argument, capabilities) => {
 
 That makes the command a second route into your own opener rather than a second behavior. Relative-path resolution, `~` expansion, wildcards, sorted processing, the ten-file limit, and missing-file errors are all the host's and stay identical to `open`. A file that resolves to somebody else's opener is refused, so `video notes.txt` reports a non-video file instead of opening the text editor. The refusal covers web targets too, which `open` resolves before it ever consults the opener registry: `video https://example.com` and `video page notes.txt` are both refused rather than opening a browser tab.
 
+## Being routed to from a core command
+
+A `command` claim covers a command you own the name of. It cannot cover a subcommand of a name the host reserves — `harness` and `ssh` are both built-ins, and the replay player is reached from `harness replay` and `ssh replay`. A `coreRoutes` claim covers that case:
+
+```ts
+coreRoutes: ['replay'],
+```
+
+It names the tokens, not handlers: your own `opener.inline` is what runs, through the same guarded, budgeted, failure-isolated path the `open` pipeline uses. The core command resolves a file — a tab's recording, say — and hands that path over; nothing about path resolution, activation, or the deadline is restated in the command. There is no handler to supply and no way for a route to be claimed and unanswered, because the opener a route needs is the one you already have.
+
+The token is looked up only by the core command that names it, so a claim nothing asks for is inert rather than ambiguous. A duplicate, or a token that collides with a reserved name, is refused like any other claim: the loser contributes nothing and starts disabled with the reason. The replay plugin is the worked example — two commands reach one tab through it, and a third route into the same opener is its `.cast` extension claim.
+
 ## Rejecting versus failing
 
 `rejectRequest` and `reportFailure` look similar and are not interchangeable:
@@ -241,6 +255,7 @@ The component receives `payload` only after the registry wrapper has validated i
 - `active`, whether this tab is the visible one in its pane — or, when the tab is docked into a sidebar, whether it is the selected entry there. Every v1 plugin tab stays mounted while hidden, so a component that binds a window-wide listener — the image plugin's zoom and pan keys, for instance — must gate it on this rather than assume it is on screen. Never infer it from the DOM: the host owns the frame;
 - `close()`, which closes this tab. Use it for a close affordance inside your own body, and for the case that makes it a callback rather than a rendered control: a body hosting a cross-origin surface never sees the host's Cmd+W at all, so the page plugin answers for the browser-level close itself; and
 - `reportFailure(reason)` for an unrecoverable client-contract failure. Only the first report per plugin is sent, whichever tab or code path raises it, so calling it from your own component is safe alongside the failures the host detects for you.
+- `copyText(text)` writes text to the system clipboard, through the same helper every other surface in the application copies with. A plugin with its own terminal needs it: a lazily loaded chunk that grew its own copy would be a second implementation, and the fallback chain is the fiddly part.
 
 It never receives `JanusClient` or imports host UI internals. The host owns the `.tab-body`, focus border, visibility, split placement, loading fallback, and error boundary. Every v1 plugin tab remains mounted while hidden.
 
@@ -276,7 +291,7 @@ Add server tests for declaration claims, playable/external routes, payload valid
 
 - Initial bundled-only tab-view contract.
 - Static opener, web-target, command, and notification contributions, with `command` and `notify` handlers on the activation.
-- Seventeen server and seven client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. `readSettings` and `saveSettings` followed, so the search tab can remember its toggles in `.janissary/config.json` without a plugin reaching the config itself. All four are additive optional capabilities, so the API integer is unchanged.
+- Eighteen server and eight client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. `readSettings` and `saveSettings` followed, so the search tab can remember its toggles in `.janissary/config.json` without a plugin reaching the config itself. `isRecordingLive` and the client-side `copyText` followed for the replay tab, which has to tell a live recording from a finished one and has its own terminal to copy out of. All are additive optional capabilities, so the API integer is unchanged.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 - `notifyUser` takes an optional `tab` instance key, attributing the line to one of the plugin's own tabs. Additive, so still v1.

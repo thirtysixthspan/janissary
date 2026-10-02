@@ -1,7 +1,7 @@
 # Harness Session Recording
 
 Every named-harness session (claude, opencode, codex — see [[harness]]) is recorded to a replayable
-[asciicast v2](https://docs.asciinema.org/manual/asciicast/v2/) file under `.janissary/recordings/`.
+[asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/) file under `.janissary/recordings/`.
 Recording is **automatic** — there is no command to start or stop it — and it captures the full timed
 PTY byte stream (ANSI and all) for the whole session, so a harness's output survives after its tab
 closes (which is when its own scrollback would otherwise be lost, see [[harness]] § Lifecycle).
@@ -66,28 +66,46 @@ setting, and every session records from spawn to exit. Inline / full-tab interac
 
 ### File format
 
-The file is asciicast v2. The first line is a JSON header object:
+The file is asciicast v3 — the format `asciinema rec` writes by default, and the one `asciinema play` reads alongside the older v2. The first line is a JSON header object:
 
-- `version`: `2`
-- `width` / `height`: the terminal dimensions the PTY was spawned at (updated by a resize that
-  arrives before any output)
+- `version`: `3`
+- `term`: the terminal the session ran in — `cols` / `rows` are the dimensions the PTY was spawned at
+  (updated by a resize that arrives before any output), and `type` is the PTY's terminal name
+- `term.theme`: the foreground and background the session was recorded under, or absent when the
+  tab's terminal had not reported them by the first output
 - `timestamp`: the session start time as an integer Unix epoch (seconds)
+- `idle_time_limit`: `2` — the longest silence a player may show at full length
 - `command`: what the session ran — a named harness writes the bare program name (e.g. `claude`), an
   ssh tab writes its whole verbatim invocation (e.g. `ssh -p 2222 admin@host`), so a stray recording
   names the host it came from. An invocation carrying a secret in a flag value therefore puts that
   secret in the header.
 - `title`: the tab label
-- `env`: `{ "TERM": "xterm-256color" }`, matching the PTY's terminal name
 
-Every subsequent line is a JSON event array `[<elapsed-seconds>, "<code>", "<data>"]`, where
-`elapsed-seconds` is a non-decreasing float since the start time and `code` is:
+There is no `env`: the terminal type moved under `term`, and it was the only variable ever captured.
+There is no `palette` either — the sixteen ANSI colours are the terminal emulator's own and are the
+same on every recording this app makes, so a recorded theme carries exactly the two colours an app
+theme can change here.
+
+Every subsequent line is a JSON event array `[<interval-seconds>, "<code>", "<data>"]`, where
+`interval-seconds` is the gap **since the previous event** rather than the time since the start — the
+one thing v3 changed about the event stream, and the reason a v2 file has to be read differently — and
+`code` is:
 
 - `"o"` — output: one PTY `data` chunk, verbatim (control/ANSI bytes are JSON-escaped, so an ESC
-  becomes ``), one event per chunk with no batching or line-splitting.
+  becomes ``), one event per chunk with no batching or line-splitting.
 - `"r"` — resize: `data` is `"<cols>x<rows>"`, written when the terminal is resized during the
   session.
+- `"x"` — exit: `data` is the session's exit status as a number, written as the last line when the
+  PTY reports one. A session ended by its tab closing or by the application shutting down reports
+  none, and none is invented for it.
 
-Keystroke input is not recorded (output and resize only).
+Intervals are rounded to milliseconds with the accumulated error carried into the next one, so a long
+recording's timings do not drift apart from the session they record. Keystroke input is not recorded
+(output, resize, and exit only).
+
+A **v2** file — one written by an earlier version, or by another tool — stays playable: its
+top-level `width` / `height` and its absolute times are read as the older shape, and the same
+timeline comes out of it.
 
 ### File naming and lifecycle
 
@@ -122,9 +140,40 @@ ssh tab.
 
 ### Retrieval
 
-There is no in-app retrieval command or viewer for a **recording**. Files accumulate under
-`.janissary/recordings/` and are replayed externally — `asciinema play
-.janissary/recordings/<file>.cast`, or any asciicast web player.
+A **recording** is played back in the app by `harness replay <label>` (and `ssh replay <label>` for an
+ssh tab), which opens a **replay tab** showing what the session did. `open <file>.cast` opens one too,
+from the command bar or from a file navigator row.
+
+The target is a tab label or a path to a `.cast` file, told apart by the extension: a target ending in
+`.cast` is a path, and anything else is the label of a tab that is open right now. A label names that
+tab's own recording; a path names a file, which is how a recording whose tab has since closed is
+reached. Both commands resolve the target the same way and open the same tab.
+
+The replay tab:
+
+- **plays the recording from the beginning**, at the size it was recorded at, into a terminal of its
+  own — the recorded columns and rows, with each recorded resize applied as it happened, and the font
+  scaled to fit the pane rather than the grid re-fitted to it;
+- **transports**: play and pause, speed from 0.5× to 4×, one recorded event at a time forward and back,
+  and a seek bar. Every one is a button as well as a chord — Space or `p`, `,` and `.`, `[` and `]` —
+  and there are no markers;
+- **follows a live session**: while the session is still recording, the timeline extends as output
+  arrives, the metadata line reads `live`, and reaching the end of what has been recorded holds the
+  last frame and continues rather than reporting the replay finished;
+- **compresses a finished recording's silences** to the limit its header states (two seconds), which
+  is what makes an unattended run watchable. A recording still being written plays in real time
+  instead. The `idle` control overrides the recorded limit for one viewing, and shows it on its face;
+- **shows what the recording is**: the command it ran, the label, when it started, how long it is, the
+  session's exit status when the recording carries one, and any reason the file could not be read;
+- **lets you select text and copy it** with `Cmd+C` / `Ctrl+C`;
+- **pauses while it is not the visible tab**, and resumes where it stopped.
+
+A recording that will not parse, or that has no events yet, still opens as the player, with the reason
+on the metadata line.
+
+Files also accumulate under `.janissary/recordings/` and remain playable outside the app — `asciinema
+play .janissary/recordings/<file>.cast`, which needs asciinema 3.x for a recording written by this
+version, or any asciicast web player.
 
 A **transcript** is opened in the app with `harness transcript <label>`, which shows the file as it
 stands in a normal editor tab (see [[harness]] § Session transcript).

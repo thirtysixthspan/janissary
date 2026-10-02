@@ -1,0 +1,86 @@
+import React, { useEffect, useMemo, useRef } from 'react';
+import type { TabPluginClientCapabilities } from '../api';
+import { ReplayMeta } from './ReplayMeta';
+import { TransportBar } from './TransportBar';
+import { usePlayback } from './usePlayback';
+import { useReplaySource } from './useReplaySource';
+import { useReplayTerminal } from './useReplayTerminal';
+import type { ReplayPayload } from '@shared/plugins/replay/shared';
+
+// The replay tab: a recording's own bytes, fed into a terminal at the size they were recorded at, with
+// a transport under them. Everything it knows, it knows from the file — the plugin holds no server
+// state and asks the host for nothing while playing.
+export function ReplayTab({
+  payload, capabilities,
+}: {
+  payload: ReplayPayload;
+  capabilities: TabPluginClientCapabilities;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { resourceUrl, active, splitAction, dock } = capabilities;
+  const source = useReplaySource(resourceUrl(payload.url), active);
+  const terminal = useReplayTerminal(
+    { cols: source.header?.cols ?? 80, rows: source.header?.rows ?? 24, colors: source.header?.colors },
+    containerRef,
+    capabilities,
+  );
+  // A live recording plays in real time however long its silences are; a finished one is compressed,
+  // which is what makes an hour of recorded silence watchable. A finished recording that has just
+  // been reopened mid-write is the one case that reads as live again, and it is the same recording.
+  const playback = usePlayback(
+    source.events,
+    source.header?.idleTimeLimit,
+    terminal,
+    !payload.finished || source.growing,
+  );
+
+  useEffect(() => { if (!active) playback.pause(); }, [active, playback]);
+
+  // Space and `p` play and pause, `,` and `.` step one recorded event, `[` and `]` change speed, and
+  // `i` cycles the idle limit. Every one of them is also a button, so a chord is the short way round
+  // rather than the only way — and none is claimed while the user is in a text field.
+  //
+  // `active` is read through a ref rather than listed as a dependency: the listener is installed once
+  // and decides per keystroke whether the tab is on screen, which is the same gate the host's `active`
+  // exists for and the same reason a mounted-but-hidden tab must not answer keys.
+  const visible = useRef(active);
+  visible.current = active;
+
+  const onKey = useMemo(() => (event: KeyboardEvent) => {
+    if (!visible.current || event.altKey || event.metaKey || event.ctrlKey) return false;
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return false;
+    switch (event.key) {
+      case ' ': case 'p': { playback.toggle(); return true; }
+      case ',': { playback.step(-1); return true; }
+      case '.': { playback.step(1); return true; }
+      case '[': { playback.cycleSpeed(-1); return true; }
+      case ']': { playback.cycleSpeed(1); return true; }
+      case 'i': { playback.cycleIdle(); return true; }
+      default: { return false; }
+    }
+  }, [playback]);
+
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => { if (onKey(event)) event.preventDefault(); };
+    globalThis.addEventListener('keydown', listener);
+    return () => globalThis.removeEventListener('keydown', listener);
+  }, [onKey]);
+
+  return (
+    <div className="replay-tab" data-dock={dock ?? undefined}>
+      <div className="replay-head">
+        <ReplayMeta
+          header={source.header}
+          duration={playback.duration}
+          growing={source.growing}
+          exitStatus={source.exitStatus}
+          problem={source.error}
+        />
+        {splitAction}
+      </div>
+      <div className="replay-stage" ref={containerRef} />
+      <TransportBar playback={playback} />
+    </div>
+  );
+}
