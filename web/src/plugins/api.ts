@@ -46,7 +46,7 @@ export { isTextEntryElement } from '../shared/text-entry';
 // the same connections, and a plugin drawing its own icon for detach would be the drift this surface
 // exists to prevent. Both are additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedIcon } from '../shared/icons';
+export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedIcon, connectionsWindowIcon, scheduleWindowIcon } from '../shared/icons';
 
 // The host's own floating status panels and the visibility hook that drives them, published for the
 // same reason and on the same terms: a plugin whose tab offers the connections and schedule buttons
@@ -56,6 +56,12 @@ export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedI
 // they change. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { StatusPanels } from '../shared/status-windows/StatusPanels';
 export { useStatusWindows, type StatusWindowHandlers } from '../shared/status-windows/useStatusWindows';
+// The two controls that open those windows, published with them for the same reason: a row offering
+// the windows without the buttons to open them would compute rows it can never show. `statusButton`
+// builds a button's props from a window's handlers and whether it has rows, which is the only pairing
+// the host's own rows use.
+export { StatusWindowButton } from '../shared/status-windows/StatusWindowButton';
+export { statusButton, type StatusWindowButtonProps } from '../shared/status-windows/status-button';
 
 // The bridge a terminal registers its selection with, which is the only way the application's own
 // context menu learns what a right-click landed on: a terminal's selection is emulator state, so

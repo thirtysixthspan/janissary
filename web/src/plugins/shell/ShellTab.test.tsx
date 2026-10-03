@@ -175,6 +175,32 @@ describe('ShellTab', () => {
     expect(document.querySelector('.tab-open-transcript')).toBeNull();
   });
 
+  it('offers the two status-window buttons, without which the windows it renders are unreachable', () => {
+    render(
+      <PluginChordProvider registry={createPluginChordRegistry()}>
+        <ShellTab
+          payload={{ ...PAYLOAD, connections: [{ text: 'zsh', kind: 'terminal' }] }}
+          capabilities={makeCapabilities().capabilities}
+        />
+      </PluginChordProvider>,
+    );
+
+    // The host pushes connection and schedule rows into this payload on every change. Rendering the
+    // panels without the controls that open them computes rows nothing can ever show.
+    expect(document.querySelector('.tab-meta .tab-connections')).not.toBeNull();
+    expect(document.querySelector('.tab-meta .tab-schedule')).not.toBeNull();
+    // The connections button has a row to show, so it offers its window; the schedule button has none
+    // and says so, which is the same pair of states an agent tab's row is in.
+    expect(screen.getByTitle('connections')).toBeInTheDocument();
+    expect(screen.getByTitle('no active schedules')).toBeInTheDocument();
+  });
+
+  it('says the connections window is empty when the tab has no connections yet', () => {
+    renderTab();
+
+    expect(screen.getByTitle('no active connections')).toBeInTheDocument();
+  });
+
   it('renders the host\'s own connections window from the pushed rows', () => {
     render(
       <PluginChordProvider registry={createPluginChordRegistry()}>

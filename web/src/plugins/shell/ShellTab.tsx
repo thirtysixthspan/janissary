@@ -1,79 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  CommandBarShell, StatusPanels, useCommandBarKeys, usePluginChordClaims, useStatusWindows, workspacedIcon,
-  type TabPluginClientCapabilities,
-} from '../api';
+import { CommandBarShell, useCommandBarKeys, usePluginChordClaims } from '../api';
+import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTerminal } from './useShellTerminal';
 import { controlCharacterFor, routeFor, shellLine, type ControlKey } from './command-line-rules';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
+import { ShellTabMeta } from './ShellTabMeta';
 import './shell.css';
 
 type Properties = {
   payload: ShellPayload;
   capabilities: TabPluginClientCapabilities;
 };
-
-// The shell tab's own metadata row.
-//
-// Written here rather than imported from the host's `AgentTabMeta`, which is the self-contained
-// choice this plugin was built for: the same structure and the same class names, so it looks
-// identical, with the actions supplied by declared capabilities rather than borrowed markup. The
-// control it omits is **Open transcript**, which would open nothing — the terminal replaced the
-// transcript, so there is no longer one to open.
-function ShellTabMeta({ payload, capabilities }: Properties) {
-  // The tab's own label, which is what the hook re-arms on: two shell tabs each get their own
-  // auto-show, and returning to this one shows its connections panel again as an agent tab's would.
-  // The fallback is what a host that reports no label would get — one identity for every shell tab,
-  // so the auto-show fires on mount rather than on each activation.
-  const windows = useStatusWindows(capabilities.label ?? 'shell');
-  return (
-    <>
-      <div className="tab-meta">
-        <span className="tab-cwd">{payload.cwd}</span>
-        <span className="tab-flags">
-          {payload.workspace && (
-            <span className="tab-flag tab-flag--active" role="img" aria-label="Workspaced" title="Workspaced">
-              <FontAwesomeIcon icon={workspacedIcon} />
-            </span>
-          )}
-        </span>
-        <span className="tab-meta-actions">
-          <button
-            type="button"
-            className="tab-open-files"
-            title={payload.workspace ? 'Open file navigator in this workspace' : 'Open file navigator here'}
-            onClick={() => capabilities.openFileNavigator?.()}
-          >
-            <FontAwesomeIcon icon={FILES_ICON} />
-          </button>
-          <button
-            type="button"
-            className="tab-launch-agent"
-            title={payload.workspace ? 'New agent in this workspace' : 'New agent here'}
-            onClick={() => capabilities.launchAgentHere?.()}
-          >
-            <FontAwesomeIcon icon={AGENT_ICON} />
-          </button>
-          {capabilities.splitAction}
-        </span>
-      </div>
-      <StatusPanels
-        connections={payload.connections}
-        schedule={payload.schedule}
-        connectionsWindow={windows.connections}
-        scheduleWindow={windows.schedule}
-        interactive
-      />
-    </>
-  );
-}
-
-// The two glyphs this row's own buttons carry, spelled out because a plugin may not import the host's
-// icon module — `workspacedIcon` is published only because the workspace flag needs it.
-const FILES_ICON = { prefix: 'fas' as const, iconName: 'folder-open' as const };
-const AGENT_ICON = { prefix: 'fas' as const, iconName: 'plus' as const };
 
 // The row's dot. Static, and never busy: an agent tab's dot reports that a turn is in flight, and a
 // shell has no turn — the bar's colour is the only thing it has to say.
