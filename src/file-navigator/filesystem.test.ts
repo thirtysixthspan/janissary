@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { copyItem, deleteItem, moveItem, moveReplacingDestination, renameItem } from './filesystem.js';
@@ -195,9 +195,18 @@ describe('renameItem', () => {
 
   it('allows a case-only rename of the same entry', () => {
     const directory = root();
-    writeFileSync(path.join(directory, 'name.txt'), 'content');
+    const source = path.join(directory, 'name.txt');
+    writeFileSync(source, 'content');
+    const before = lstatSync(source);
     expect(renameItem(directory, 'name.txt', 'NAME.txt')).toMatchObject({ ok: true });
-    expect(existsSync(path.join(directory, 'name.txt'))).toBe(true);
+    // The old spelling still resolving to the entry is a property of a case-insensitive
+    // filesystem rather than of the rename: on a case-sensitive one the entry is reachable
+    // only under its new name, so asserting that here could only ever pass on macOS. What
+    // the rename has to preserve everywhere is that it was one entry that moved rather
+    // than a delete followed by a create — the same dev/ino pair `renameItem` compares to
+    // decide the destination is not a conflict.
+    expect(lstatSync(path.join(directory, 'NAME.txt')).ino).toBe(before.ino);
+    expect(readFileSync(path.join(directory, 'NAME.txt'), 'utf8')).toBe('content');
   });
 
   it('rejects a new name containing a path separator', () => {
