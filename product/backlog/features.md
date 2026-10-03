@@ -2,7 +2,7 @@
 
 ## ready
 
-* auto-resume feature. similar to auto-approve, except will match on blockages due to subscription limits. Resume time will be extracted from the text and the agent will be told to resume the task at hand one minute after the given time. A tab blocked waiting on a resume will not throw an unread flag. the scheduled resume task will leverage the existing scheduling input to harnesses.   
+* auto-resume feature. similar to auto-approve, except will match on blockages due to subscription limits. Resume time will be extracted from the text and the agent will be told to resume the task at hand one minute after the given time. A tab blocked waiting on a resume will not throw an unread flag. the scheduled resume task will leverage the existing scheduling input to harnesses. No auto resume will be needed for harnesses that auto resume on their own like claude and opencode.  
 For example:
 ■ You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to
 purchase more credits or try again at 1:20 PM.
