@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   detectResumeLimit,
   resumeInstant,
@@ -115,6 +115,7 @@ describe('resumeInstant', () => {
   });
 });
 
+// A limit banner whose reset is `clause` — the part after `try again`.
 function limit(clause: string): string {
   return `■ You’ve hit your usage limit. Upgrade to Pro, or try again ${clause}.`;
 }
@@ -132,8 +133,18 @@ function makeResumer(overrides: Partial<{ scheduledAt: number[]; delivered: numb
   return { resumer, scheduledAt, state };
 }
 
+// The observer turns a stated reset into an instant against `Date.now()`, so every case here runs
+// on a frozen clock: a suite that read the wall clock passed at noon and failed at 19:00, when two
+// clock-time resets in one test both clamped to `now + margin` and stopped looking like two blockages.
 describe('HarnessAutoResumer', () => {
-  const now = Date.now();
+  const pinned = new Date('2026-10-03T12:00:00');
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(pinned);
+  });
+
+  afterEach(() => { vi.useRealTimers(); });
 
   it('schedules one resume for a recognized blockage and reports it', () => {
     const { resumer, scheduledAt } = makeResumer();
@@ -164,20 +175,27 @@ describe('HarnessAutoResumer', () => {
     expect(claude.isParked).toBe(false);
   });
 
+  // Relative resets, so the two instants differ by the duration rather than by what time of day
+  // the suite happens to run at.
   it('schedules again for a new blockage on a changed screen', () => {
     const { resumer, scheduledAt } = makeResumer();
-    resumer.onCapture(screen(BANNER));
-    resumer.onCapture(screen(limit('at 4:45 PM')));
-    expect(scheduledAt).toHaveLength(2);
+    resumer.onCapture(screen(limit('in 4 hours')));
+    resumer.onCapture(screen(limit('in 5 hours')));
+    expect(scheduledAt).toEqual([
+      pinned.getTime() + 4 * 3_600_000 + RESUME_MARGIN_MS,
+      pinned.getTime() + 5 * 3_600_000 + RESUME_MARGIN_MS,
+    ]);
   });
 
   it('cancels a pending resume and re-arms when the blockage clears', () => {
     const { resumer, scheduledAt, state } = makeResumer();
-    resumer.onCapture(screen(BANNER));
+    resumer.onCapture(screen(limit('in 4 hours')));
     resumer.onCapture(screen('Anything else?'));
     expect(state.cancelled).toBe(1);
     expect(resumer.isParked).toBe(false);
-    resumer.onCapture(screen(BANNER));
+    // The clock moves on before the blockage returns, as it would between two screen captures.
+    vi.advanceTimersByTime(60_000);
+    resumer.onCapture(screen(limit('in 4 hours')));
     expect(scheduledAt).toHaveLength(2);
   });
 
@@ -204,9 +222,8 @@ describe('HarnessAutoResumer', () => {
     expect(state.delivered).toBe(0);
   });
 
-  it('schedules the prompt the plan fixes', () => {
+  it('schedules the prompt and the id the plan fixes', () => {
     expect(RESUME_PROMPT).toBe('resume the task you were working on.');
     expect(RESUME_ENTRY_ID).toBe('auto-resume');
-    expect(now).toBeGreaterThan(0);
   });
 });

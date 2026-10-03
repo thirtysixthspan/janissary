@@ -219,13 +219,21 @@ describe('createRemotePtySession', () => {
       expect(sent).toContainEqual({ type: 'resume-ack', id: 'r1' });
     });
 
+    // A stated clock time is only "already past" relative to the clock reading it, so this pins the
+    // clock: at a real 00:30 the same 01:00 reset is an hour ahead and the assertion inverts.
     it('resumes at once for a report replayed long after its reset, rather than waiting a day', () => {
-      const { channel, add } = resumeTab();
-      channel.receive(`${encodeFrame({
-        type: 'resume-event', id: 'r1', reset: { kind: 'at', time: { hour: 1, minute: 0 } }, capturedAt: 1000,
-      })}\n`);
-      const entry = add.mock.calls[0][1] as unknown as ScheduleEntry;
-      expect(entry.nextRun).toBeLessThanOrEqual(Date.now() + 60_000);
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date('2026-10-03T12:00:00'));
+        const { channel, add } = resumeTab();
+        channel.receive(`${encodeFrame({
+          type: 'resume-event', id: 'r1', reset: { kind: 'at', time: { hour: 1, minute: 0 } }, capturedAt: 1000,
+        })}\n`);
+        const entry = add.mock.calls[0][1] as unknown as ScheduleEntry;
+        expect(entry.nextRun).toBeLessThanOrEqual(Date.now() + 60_000);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 
