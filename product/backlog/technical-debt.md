@@ -4,17 +4,6 @@
 
 ## development
 
-* Bound pending recording bytes when a harness or SSH session outpaces disk writes.
-
-Existing Debt: HarnessRecorder writes every PTY event into an asynchronous stream without observing backpressure or imposing a pending-byte budget, so recording throughput has no resource limit owned by the recorder. Severity: 5/10
-
-Existing Risk: 7/10 - Sustained terminal output while storage is slow can accumulate queued recording data in the shared server process until memory pressure disrupts every tab.
-
-Proposal Risk: 3/10 - A bounded recorder can abandon an incomplete recording during sustained storage pressure, but it reports that loss through the existing failure notification and releases its resources.
-
-Proposal: In `src/harness/recorder.ts`, give header and event writes one bounded enqueue path that accounts for encoded byte size and the stream's outstanding bytes before accepting more data. Define a pending-byte budget and, when another event would exceed it, abandon recording once through the existing `onFailure` callback, unsubscribe from the PTY bus, and close or destroy the stream without inventing an exit event; do not replace the stream's queue with an unbounded application queue. Keep normal disposal idempotent and keep recording failure independent of PTY execution. `src/harness/observers.ts` already wires that callback to the harness and SSH failure notifications, and `src/harness/runtime.ts` owns recorder teardown, so use those existing paths. Extend `src/harness/recorder.test.ts` with a controllable stalled stream to verify bounded queued bytes, one failure notification, no later writes, and safe disposal after abandonment; its existing cases cover format, lazy creation, resize and exit events, stream errors, and open failures, but do not exercise a writable stream that stays congested without emitting an error.
-
-
 ## deferred
 
 * Give every wall-clock wait in the suite a budget that is a stated multiple of the interval it actually polls, instead of leaving nine fixed sleeps and forty-six raised timeouts to absorb a loaded machine. — deferred: complexity 8/10, requires an empirical multi-run flake baseline on an idle machine and then spans the vitest config, about ten test files with forty-nine timeout overrides, and the CI workflow.

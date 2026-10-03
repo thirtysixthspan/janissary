@@ -321,6 +321,8 @@ the reason.
 
 If opening or writing the recording fails, recording stops for the rest of that session. The harness keeps running. The [notifications](/user-documentation/tab-types/notifications#read-diagnostic-messages) feed reports `harness recording failed` once for that tab; an SSH tab reports `ssh recording failed` on the same terms.
 
+Recording also stops with that message if slow storage would leave more than 4 MiB of output waiting to be written. The session keeps running, but its recording may be incomplete.
+
 Both messages bypass event toggles and focus suppression, so they can appear while you're watching the affected tab. The feed does not have to be open: the message is queued either way, so it is waiting for you the next time you look, and if nothing is on screen it toasts instead.
 
 ## Capturing a harness's screen

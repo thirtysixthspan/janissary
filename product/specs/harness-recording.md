@@ -139,6 +139,10 @@ Neither is ever repeated, and both appear even while that tab is the active one.
 from `no harness transcript found`, which is about a missing session record and never fires for an
 ssh tab.
 
+### Recording storage pressure
+
+Each session allows at most 4 MiB of recording data to wait for disk writes, including its header and event text. If accepting the next event would exceed that limit, recording stops for the rest of the session and reports the same single recording-failure notification. The harness or SSH session keeps running. Its recording may be incomplete, and no exit status is added unless the process actually reported one before recording stopped.
+
 ### Retrieval
 
 A **recording** is played back in the app by `play <file>`, which opens an **asciicast tab** showing

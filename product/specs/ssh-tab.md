@@ -101,6 +101,8 @@ file is also playable outside the app with `asciinema play`. If a recording cann
 session is unaffected and one `ssh recording failed` line appears in the notifications feed for that
 tab.
 
+The same failure is reported if queued recording data would exceed 4 MiB while storage is slow. Recording then stops for that session while SSH continues running; the recording may be incomplete.
+
 ## Delivery
 
 `send <ssh-tab> <text>` and `schedule … in <ssh-tab> …` deliver keystrokes to an ssh tab exactly
