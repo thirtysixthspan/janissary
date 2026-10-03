@@ -366,8 +366,39 @@ describe('ShellTab', () => {
     const { capabilities } = renderTab();
 
     await waitFor(() => {
-      expect(capabilities.intent).toHaveBeenCalledWith('terminal-status', undefined);
+      // `null` rather than `undefined`: the request is serialized with `JSON.stringify`, which drops
+      // an `undefined` value, and the server's `pluginIntent` guard requires the key to be present —
+      // so `undefined` here is an intent the host refuses before the plugin is ever asked.
+      expect(capabilities.intent).toHaveBeenCalledWith('terminal-status', null);
     });
+  });
+
+  it('asks with a payload that survives the wire', async () => {
+    const { capabilities } = renderTab();
+
+    await waitFor(() => { expect(capabilities.intent).toHaveBeenCalled(); });
+    const call = (capabilities.intent as unknown as { mock: { calls: unknown[][] } }).mock.calls
+      .find((entry) => entry[0] === 'terminal-status');
+    expect(call).toBeDefined();
+    // The shape the client actually puts on the wire, not the shape it holds in memory: the request
+    // params are serialized, and a key whose value is `undefined` does not survive that step.
+    const params = { tab: 'shell1', intent: 'terminal-status', payload: call![1] };
+    const wire = JSON.stringify(params);
+    expect(JSON.parse(wire)).toHaveProperty('payload');
+  });
+
+  it('reports a refused status question rather than leaving it unhandled', async () => {
+    const { capabilities } = renderTab();
+    const intent = capabilities.intent as unknown as { mockImplementation: (fn: () => unknown) => void };
+    intent.mockImplementation(() => Promise.reject(new Error('Plugin intent "terminal-status" failed')));
+
+    render(
+      <PluginChordProvider registry={createPluginChordRegistry()}>
+        <ShellTab payload={PAYLOAD} capabilities={capabilities} />
+      </PluginChordProvider>,
+    );
+
+    await waitFor(() => { expect(capabilities.reportFailure).toHaveBeenCalled(); });
   });
 
   it('closes a tab whose shell exited while no browser was attached', async () => {

@@ -92,6 +92,11 @@ function dispatch(port: TabPluginHostStatePort): void {
     if (record.state !== 'active' || !record.activation?.hostState) continue;
     if ((record.declaration.hostState ?? []).length === 0) continue;
     const pushed = lastPushed.get(record) ?? new Map<string, string>();
+    // Published *before* the loop, not after it. A delivery re-enters this function: the plugin's
+    // handler merges rows with `updateTab`, which emits `state: dirty` inline, and `messageBus.emit`
+    // is synchronous. A map still unpublished is invisible to that pass, which builds its own empty
+    // map, sees the tab as never pushed, and delivers again — for as long as the tab keeps emitting.
+    lastPushed.set(record, pushed);
     for (const tab of port.managers.tab.tabs) {
       if (tab.plugin?.id !== record.declaration.id) continue;
       const slice = readSlice(
@@ -104,7 +109,6 @@ function dispatch(port: TabPluginHostStatePort): void {
       pushed.set(tab.label, print);
       void deliver(port, record, slice);
     }
-    lastPushed.set(record, pushed);
   }
 }
 

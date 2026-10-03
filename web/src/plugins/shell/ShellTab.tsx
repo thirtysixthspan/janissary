@@ -110,8 +110,18 @@ export function ShellTab({ payload, capabilities }: Properties) {
   // is what keeps such a tab from waiting for input that can never arrive.
   useEffect(() => {
     let cancelled = false;
-    void capabilities.intent<{ running: boolean }>('terminal-status', undefined).then((status) => {
+    // `null` and not `undefined`: the request is serialized with `JSON.stringify`, which drops a key
+    // whose value is `undefined`, and the server's `pluginIntent` guard requires the key to be there.
+    // An absent key is refused before the plugin is asked, so the one intent carrying no data would be
+    // the one that never arrives. `isEmptyShellIntent` accepts both, so `null` is equally a valid
+    // "nothing" on the far side.
+    void capabilities.intent<{ running: boolean }>('terminal-status', null).then((status) => {
       if (!cancelled && !status.running) capabilities.close();
+    }).catch(() => {
+      // A refusal here is this plugin's own request being malformed or its plugin disabled, not
+      // anything the user did. Reporting it crosses the failure boundary instead of leaving an
+      // unhandled rejection in the console on every mount.
+      if (!cancelled) capabilities.reportFailure('shell terminal-status intent failed');
     });
     return () => { cancelled = true; };
   }, [capabilities]);
@@ -186,7 +196,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
       }).then((result) => {
         setMatches(result.matches);
         if (result.matches.length === 1) setDraft(result.newInput);
-      });
+      }).catch(() => { capabilities.reportFailure('shell completion intent failed'); });
       return;
     }
     bar.onKeyDown(event);

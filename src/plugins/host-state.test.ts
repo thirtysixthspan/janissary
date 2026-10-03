@@ -109,6 +109,22 @@ describe('host state delivery', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  it('delivers once even when its own handler emits the signal being dispatched', () => {
+    // A handler that merges rows with `updateTab` brings the whole chain back round: `updateTab`
+    // emits `state: dirty` inline and `messageBus.emit` is synchronous. The fingerprint has to be on
+    // record before the delivery starts, or the re-entrant pass sees a tab that was never pushed and
+    // delivers again, for as long as the handler keeps emitting.
+    const { handler, port } = makePort({
+      tabs: [pluginTab('shell1', 'shell-1')],
+      connections: { shell1: [{ text: 'zsh', kind: 'terminal' }] },
+    });
+    handler.mockImplementation(() => { messageBus.emit('state', { type: 'dirty' }); });
+
+    subscribe(port);
+    expect(() => fireState()).not.toThrow();
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
   it('delivers again once the rows differ from what was last pushed', () => {
     const connections: Record<string, { text: string; kind: 'terminal' }[]> = {
       shell1: [{ text: 'zsh', kind: 'terminal' }],
