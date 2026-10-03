@@ -5,6 +5,8 @@ import { IntervalClock } from './cast-interval-clock.js';
 import { castHeader } from './cast-header.js';
 import type { TerminalColors } from './terminal-colors.js';
 
+export const MAX_PENDING_RECORDING_BYTES = 4 * 1024 * 1024;
+
 // Records one harness PTY's byte stream to a replayable asciicast v3 `.cast` file. It observes the
 // same `pty` bus events as `HarnessScreenReader` (its sibling observer of the same bytes) and, like
 // it, is owned/disposed by `HarnessManager`. The file is created lazily on the first `data` event —
@@ -100,7 +102,7 @@ export class HarnessRecorder {
       // crash the process if unhandled — disable the recorder instead.
       stream.on('error', () => { this.abandon(); });
       this.stream = stream;
-      stream.write(JSON.stringify(this.header()) + '\n');
+      this.writeLine(JSON.stringify(this.header()) + '\n');
     } catch {
       this.path = undefined;
       this.abandon();
@@ -118,17 +120,30 @@ export class HarnessRecorder {
     });
   }
 
-  // Stop recording for good, reporting it once. Both failure paths land here, so a caller hears
-  // about a write error and an open error alike, and hears about it once.
+  // Open errors, stream errors, and excessive pending output all stop recording and release its
+  // resources before reporting once, so none can interrupt the PTY's own lifecycle.
   private abandon(): void {
     if (this.failed) return;
     this.failed = true;
+    this.disposed = true;
+    this.subscription.unsubscribe();
+    this.stream?.destroy();
+    this.stream = undefined;
     this.onFailure();
+  }
+
+  private writeLine(line: string): void {
+    if (this.failed || !this.stream) return;
+    if (this.stream.writableLength + Buffer.byteLength(line) > MAX_PENDING_RECORDING_BYTES) {
+      this.abandon();
+      return;
+    }
+    this.stream.write(line);
   }
 
   private writeEvent(code: 'o' | 'r' | 'x', data: string): void {
     if (this.failed || !this.stream) return;
     const elapsed = (Date.now() - this.startedAt) / 1000;
-    this.stream.write(JSON.stringify([this.clock.interval(elapsed), code, data]) + '\n');
+    this.writeLine(JSON.stringify([this.clock.interval(elapsed), code, data]) + '\n');
   }
 }
