@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { shellManifest } from './shell/manifest.js';
 import type { Managers } from '../managers.js';
 import { TabManager } from '../tab/manager.js';
 import {
@@ -119,5 +121,30 @@ describe('chord claim validation', () => {
     const host = await activateWith(manifest(), activation());
 
     expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+});
+
+// The failure mode this covers is silent and total: a capability an activation calls but its
+// declaration does not name is not refused at activation, it is replaced by a stub that throws — and
+// the plugin is then disabled the first time it is reached, which for a command means the command
+// opens nothing at all. Nothing in the declaration is wrong, so no validation can see it; only a test
+// that compares what the activation uses against what the manifest declares can.
+describe('the shell plugin declares every capability its activation reaches for', () => {
+  it('covers each capability named in activate.ts and open-tab.ts', () => {
+    const declared = new Set<string>(shellManifest.capabilities);
+    // Read out of the activation's own source rather than restated here, so a capability added to the
+    // plugin is covered by this the moment it is written rather than by a second edit here.
+    const source = readFileSync(
+      new URL('shell/activate.ts', import.meta.url), 'utf8',
+    ) + readFileSync(new URL('shell/open-tab.ts', import.meta.url), 'utf8');
+
+    const used = new Set([...source.matchAll(/capabilities\.([a-zA-Z]+)\(/g)].map((match) => match[1]));
+    expect(used.size).toBeGreaterThan(0);
+    expect(used.difference(declared)).toEqual(new Set());
+  });
+
+  it('declares the capability the mount-time status question asks about', () => {
+    // Named separately because it is the one whose absence is invisible until a user opens a tab.
+    expect(shellManifest.capabilities).toContain('terminalRunning');
   });
 });
