@@ -209,7 +209,7 @@ sync, since the text itself is unchanged.
 This draft copy is entirely transient and server-side: it is never shown back in the editor, never
 written to disk, and never persisted or restored on `--relaunch`. A successful save clears it, since
 the saved file is then the current content; further editing builds a fresh draft again. If the
-connection drops, a lost sync simply leaves the server's copy stale until the next buffer change.
+connection drops, the server's copy can lag while disconnected. Reconnecting resends the current draft without requiring another edit. A draft is considered delivered only after the server acknowledges it; edits made while waiting are coalesced into the next update. Replies from an earlier connection or file reference cannot mark newer content delivered. Closing the editor stops its pending updates. This recovery replaces transient draft content only and does not repeat disk saves or other commands.
 
 The one consumer of this draft is a monitor watching the tab (see [[monitoring]]): it is fed the
 draft so it can see unsaved changes without a save, even though the draft is never shown back in the

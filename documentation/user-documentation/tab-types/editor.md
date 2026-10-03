@@ -173,6 +173,8 @@ Every save also checks the file on disk at the moment you save. If the file no l
 
 As you type, the editor also keeps a transient, unsaved copy of your buffer synced to the server a moment after you stop, so a [monitor](/user-documentation/automation/monitoring) watching the tab can see your in-progress edits without you having to save. That draft is never written to disk and never shown back in the editor; it's cleared the moment you do save.
 
+If the connection drops, a monitor may temporarily see an older draft. Once reconnected, the current draft is sent again automatically, even if you have stopped typing.
+
 ## Syntax highlighting
 
 <img class="agent-float" src="/agents/orhan-south-west.png" alt="" />

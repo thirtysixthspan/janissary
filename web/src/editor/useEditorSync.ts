@@ -1,31 +1,33 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { EditorState } from './model';
 import { toText } from './model';
 import type { JanusClient } from '../ws';
+import { DraftSync } from './draft-sync';
 
 // Longer than syntax highlighting's local recompute (100ms): a monitor observing the draft doesn't
 // need sub-second freshness, and this spares the server needless round trips during fast typing.
 const DEBOUNCE_MS = 500;
 
-// Debounced, fire-and-forget sync of one editor tab's buffer to the server as transient draft
+// Debounced, acknowledged sync of one editor tab's buffer to the server as transient draft
 // state. Keyed on `state`, so every buffer-mutation route is covered without enumeration — typing,
 // paste, undo/redo, kill/yank, and the external-change reload. Cursor-only moves produce a new
-// `state` too, but are filtered out by comparing against the last-synced text.
+// `state` too, but are filtered out by comparing against the latest desired text.
 export function useEditorSync(state: EditorState | null, url: string, client: JanusClient): void {
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSyncedRef = useRef<string | null>(null);
+  const [sync] = useState(() => new DraftSync(DEBOUNCE_MS));
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
-    if (!state) return;
-    const text = toText(state);
-    // Seed from the first non-null state without sending: the initial load matches what's on disk.
-    if (lastSyncedRef.current === null) { lastSyncedRef.current = text; return; }
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      if (text === lastSyncedRef.current) return;
-      lastSyncedRef.current = text;
-      client.editorSync(url, text);
-    }, DEBOUNCE_MS);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [state, url, client]);
+    if (stateRef.current) sync.update(toText(stateRef.current));
+    sync.attach(async (text) => {
+      const result = await client.editorSync(url, text);
+      return result.ok;
+    }, client.connectionStatus === 'connected');
+    const unsubscribe = client.onConnectionStatus((phase) => sync.setConnected(phase === 'connected'));
+    return () => { unsubscribe(); sync.detach(); };
+  }, [sync, client, url]);
+
+  useEffect(() => {
+    if (state) sync.update(toText(state));
+  }, [state, sync]);
 }
