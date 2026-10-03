@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Cover the auto-resume branch of the capture wiring in the test file that owns the wiring, which the plan named and the diff left calling the new signature with one argument missing.
-
-Existing Issue: `src/harness/capture/wire.test.ts` still calls `captureWiring` with five arguments, so `autoResume` is `undefined` in every case there and the file never mocks `auto-resume-wire.js`, leaving the new third consumer and its settled-capture skip entirely unexercised in the file whose whole subject is which consumers a capture reaches. Severity: 4/10
-
-Existing Risk: 4/10 - The fan-out order the busy handler depends on — resumer before busy status, so the handler reads the parked state as of the same capture — can be inverted or the resumer dropped from the settled-skip branch without any test failing, and the failure shows up only as a parked tab that badges itself.
-
-Proposal Risk: 1/10 - The wiring gains test coverage rather than behavior, and the mocked collaborators keep the cases fast and hermetic.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: cover the auto-resume branch of captureWiring in capture/wire.test.ts". Extend `src/harness/capture/wire.test.ts` the way the existing auto-approve cases are written: add `vi.mock('../auto-resume-wire.js', () => ({ buildAutoResumer: vi.fn() }))`, a `resumer` stub with an `onCapture` spy and `isParked`, and reset it in the existing `beforeEach`. Add a case asserting that with `autoResume` true the capture reaches the approver, then the resumer, then the busy handler in that order, and that with it false `buildAutoResumer` is never called and the returned `autoResumer` is undefined. Add a case asserting a settled re-read reaches neither the approver nor the resumer and only the busy handler, mirroring the existing settled case. Update the two existing calls to pass the new sixth argument explicitly. The plan's Tests section also asks for a case proving a tab launched with `--no-auto-resume` builds no resumer; `src/harness/manager.test.ts` covers the tab field and `src/harness/observers.test.ts` covers the argument reaching `captureWiring`, so this file's false-branch case is the piece that was missing.
-
 * Key the schedule manager's fired hooks so one tab's removal cannot discard another tab's hook when a label contains a space.
 
 Existing Issue: `hookKey` joins a tab label and an entry id with a single space and `forgetHooks` matches with `startsWith`, so `forgetHooks('codex team')` also matches the key belonging to a tab labeled `codex team 2`, and profile harness entry names — validated only as nonempty strings — may contain spaces. Severity: 3/10
