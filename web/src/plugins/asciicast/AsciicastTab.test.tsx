@@ -48,6 +48,18 @@ const renderTab = (payload: AsciicastPayload = makePayload(), capabilities = mak
   return render(<AsciicastTab payload={payload} capabilities={capabilities} />);
 };
 
+// What clicking the recording leaves behind: focus on the textarea xterm keeps for composition. The
+// chunk's terminal is stubbed throughout this file, so a test builds that element itself rather than
+// waiting for a real xterm to make it.
+async function focusTerminalHelper() {
+  await waitFor(() => expect(document.querySelector('.asciicast-stage')).not.toBeNull());
+  const helper = document.createElement('textarea');
+  helper.className = 'xterm-helper-textarea';
+  document.querySelector('.asciicast-stage')!.append(helper);
+  helper.focus();
+  return helper;
+}
+
 describe('AsciicastTab', () => {
   beforeEach(() => {
     vi.unstubAllGlobals();
@@ -158,6 +170,43 @@ describe('AsciicastTab', () => {
     // A hidden plugin tab stays mounted, so a hidden asciicast tab must not answer keys, and must have
     // stopped where it was: the transport is there, paused.
     expect(screen.getByLabelText('Play')).toBeDefined();
+  });
+
+  it('keeps its chords after the recording is clicked into', async () => {
+    renderTab();
+    // Clicking the recording hands focus to the textarea xterm keeps for composition. That is the
+    // terminal's own bookkeeping rather than a field someone is typing into, so a player whose chords
+    // died on that click answered the mouse and nothing else.
+    const helper = await focusTerminalHelper();
+    await userEvent.keyboard('.');
+    // Stepping is a pause, and it moved: the transport offers Play and the clock left the start.
+    expect(screen.getByLabelText('Play')).toBeDefined();
+    await userEvent.keyboard(' ');
+    expect(screen.getByLabelText('Pause')).toBeDefined();
+    helper.remove();
+  });
+
+  it('keeps its chords while the seek bar holds focus', async () => {
+    renderTab();
+    const seek = await screen.findByLabelText('Seek');
+    await userEvent.click(seek);
+    expect(screen.getByLabelText('Playback speed').textContent).toBe('1×');
+    // A range input is not a place text goes, so it must not swallow the speed chord.
+    await userEvent.keyboard(']');
+    expect(screen.getByLabelText('Playback speed').textContent).toBe('1.5×');
+  });
+
+  it('claims no chord while the user is typing into a field of its own', async () => {
+    renderTab();
+    await waitFor(() => expect(screen.getByLabelText('Next frame')).toBeDefined());
+    // The exemption is the terminal's textarea alone, so anything else that really is a text entry
+    // keeps its keys — a plugin adding a field to this tab later must not have its chords stolen.
+    const field = document.createElement('input');
+    document.body.append(field);
+    field.focus();
+    await userEvent.keyboard('.');
+    expect(screen.getByLabelText('Pause')).toBeDefined();
+    field.remove();
   });
 
   it('renders the host\'s own split control rather than one of its own', async () => {

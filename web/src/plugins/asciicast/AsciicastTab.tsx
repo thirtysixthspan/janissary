@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import type { TabPluginClientCapabilities } from '../api';
+import { isTextEntryElement, type TabPluginClientCapabilities } from '../api';
 import { AsciicastMeta } from './AsciicastMeta';
 import { TransportBar } from './TransportBar';
 import { usePlayback } from './usePlayback';
@@ -34,6 +34,11 @@ export function AsciicastTab({
   // and none is claimed while the user is in a text field. Each is deliberately unshifted, so none can
   // collide with a key the terminal underneath already claims.
   //
+  // Clicking the recording is the first thing anyone does with a player, and that hands focus to the
+  // textarea xterm keeps for composition. It is the terminal's own bookkeeping, not a field someone is
+  // typing into, so the chords stay live through it — which is why the test below it is the shared
+  // "where can text go" predicate with that one class exempted rather than a tag-name check.
+  //
   // `active` is read through a ref rather than listed as a dependency: the listener is installed once
   // and decides per keystroke whether the tab is on screen, which is the same gate the host's `active`
   // exists for and the same reason a mounted-but-hidden tab must not answer keys.
@@ -42,8 +47,8 @@ export function AsciicastTab({
 
   const onKey = useMemo(() => (event: KeyboardEvent) => {
     if (!visible.current || event.altKey || event.metaKey || event.ctrlKey) return false;
-    const target = event.target as HTMLElement | null;
-    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return false;
+    const target = event.target as Element | null;
+    if (isTextEntryElement(target) && !target.classList.contains('xterm-helper-textarea')) return false;
     switch (event.key) {
       case ' ': case 'p': { playback.toggle(); return true; }
       case ',': { playback.step(-1); return true; }

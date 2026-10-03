@@ -34,6 +34,13 @@ export { terminalColors, type TerminalColors } from '../shared/terminal/colors';
 export { isMacPlatform } from '../shared/terminal/terminal/keys';
 export { PluginActionsHeader } from './PluginActionsHeader';
 
+// The application's answer to "is this a place typed text can go", published for the same reason and
+// on the same terms: a plugin that binds its own chords has to tell a field someone is typing into
+// from everything else, and the asciicast player shipped its own copy of that test — which read every
+// `<input>` as text entry and so treated the terminal's own hidden textarea, and the seek bar, as one.
+// Published additively, so `TAB_PLUGIN_API_VERSION` does not move.
+export { isTextEntryElement } from '../shared/text-entry';
+
 // A connection's status glyph, and the three glyphs for the verbs that change one. Published for the
 // same reason the dialog is: a remote tab's metadata row and the sessions tab both show the state of
 // the same connections, and a plugin drawing its own icon for detach would be the drift this surface
