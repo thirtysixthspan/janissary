@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { messageBus } from '../bus.js';
 import { HarnessRecorder } from './recorder.js';
+import { HarnessRuntime } from './runtime.js';
+import { HarnessRuntimes } from './runtime-registry.js';
 import { initHarnessRecordingDirectory } from './recording-file.js';
 import { IntervalClock } from './cast-interval-clock.js';
 
@@ -204,6 +206,45 @@ describe('HarnessRecorder', () => {
     const header = JSON.parse(lines[0]);
     expect(header.command).toBe('ssh -p 2222 admin@host');
     expect(header.title).toBe('devbox');
+  });
+});
+
+// The recorder's own `x` test above emits the exit with nothing else listening, which is not how a
+// recording is ever produced: a runtime is installed in `HarnessRuntimes` first, and that registry
+// releases the runtime — and with it this recorder — from its own `pty:exit` listener, which the bus
+// dispatches ahead of this one. These two run the real wiring.
+describe('HarnessRecorder behind a runtime registry', () => {
+  let runtimes: HarnessRuntimes;
+
+  afterEach(() => {
+    runtimes.dispose();
+  });
+
+  it('writes the exit status its PTY reported, as the last line of the file', async () => {
+    runtimes = new HarnessRuntimes();
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
+    runtimes.install('pty-1', 'claude', new HarnessRuntime(undefined, recorder));
+    emit({ type: 'data', id: 'pty-1', data: 'bye' });
+
+    emit({ type: 'exit', id: 'pty-1', exitCode: 130 });
+
+    const lines = await waitForCastLines(3);
+    const events = lines.slice(1).map((line) => JSON.parse(line));
+    expect(events.map((event) => event[1])).toEqual(['o', 'x']);
+    expect(events.at(-1)).toEqual([expect.any(Number), 'x', '130']);
+  });
+
+  it('writes no exit status when the tab closes instead of the PTY exiting', async () => {
+    runtimes = new HarnessRuntimes();
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
+    runtimes.install('pty-1', 'claude', new HarnessRuntime(undefined, recorder));
+    emit({ type: 'data', id: 'pty-1', data: 'still here' });
+
+    runtimes.closeTab('claude');
+    await Promise.resolve();
+
+    const lines = await waitForCastLines(2);
+    expect(lines.slice(1).map((line) => JSON.parse(line)[1])).toEqual(['o']);
   });
 });
 

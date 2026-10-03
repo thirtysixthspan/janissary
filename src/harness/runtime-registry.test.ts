@@ -18,15 +18,31 @@ describe('HarnessRuntimes', () => {
     runtimes.dispose();
   });
 
-  it('disposes and drops a runtime when its PTY exits', () => {
+  it('disposes and drops a runtime when its PTY exits', async () => {
     runtimes = new HarnessRuntimes();
     const first = runtime();
     runtimes.install('pty-1', 'claude', first);
 
     exit('pty-1');
+    await Promise.resolve();
 
     expect(first.dispose).toHaveBeenCalledOnce();
     expect(runtimes.get('pty-1')).toBeUndefined();
+  });
+
+  it('lets a runtime installed after the exit survive it', async () => {
+    runtimes = new HarnessRuntimes();
+    const first = runtime();
+    runtimes.install('pty-1', 'claude', first);
+
+    exit('pty-1');
+    const second = runtime();
+    runtimes.install('pty-1', 'claude', second);
+    await Promise.resolve();
+
+    expect(first.dispose).toHaveBeenCalledOnce();
+    expect(second.dispose).not.toHaveBeenCalled();
+    expect(runtimes.get('pty-1')).toBe(second);
   });
 
   it('disposes the runtime already held under an id before installing its replacement', () => {

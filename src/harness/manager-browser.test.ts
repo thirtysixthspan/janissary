@@ -63,12 +63,13 @@ describe('HarnessManager e2e browser', () => {
     expect(tabs.at(-1)).toMatchObject({ browser: true });
   });
 
-  it('closes the browser when the runtime is disposed on PTY exit', () => {
+  it('closes the browser when the runtime is disposed on PTY exit', async () => {
     const { managers } = makeBrowserManagers();
     const manager = createHarnessManager(managers);
     expect(manager.run('harness claude --no-workspace -b')).toBeUndefined();
     expect(browserMock.handles).toHaveLength(1);
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    await Promise.resolve();
     expect(browserMock.handles[0].close).toHaveBeenCalledTimes(1);
   });
 
