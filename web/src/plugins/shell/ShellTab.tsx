@@ -23,7 +23,11 @@ type Properties = {
 // control it omits is **Open transcript**, which would open nothing — the terminal replaced the
 // transcript, so there is no longer one to open.
 function ShellTabMeta({ payload, capabilities }: Properties) {
-  const windows = useStatusWindows('shell');
+  // The tab's own label, which is what the hook re-arms on: two shell tabs each get their own
+  // auto-show, and returning to this one shows its connections panel again as an agent tab's would.
+  // The fallback is what a host that reports no label would get — one identity for every shell tab,
+  // so the auto-show fires on mount rather than on each activation.
+  const windows = useStatusWindows(capabilities.label ?? 'shell');
   return (
     <>
       <div className="tab-meta">

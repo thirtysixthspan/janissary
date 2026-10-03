@@ -75,6 +75,7 @@ function makeCapabilities(overrides: {
   completions?: { matches: string[]; newInput: string; newCursor: number };
   status?: { running: boolean };
   claimedChords?: readonly string[];
+  label?: string;
 } = {}) {
   const written: Written = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -115,6 +116,7 @@ function makeCapabilities(overrides: {
     // What the host accepted at activation and put on this tab's view — the shell manifest claims
     // `ctrl+r`, so that is the default here too.
     claimedChords: overrides.claimedChords ?? ['ctrl+r'],
+    label: overrides.label ?? 'shell',
   } as unknown as TabPluginClientCapabilities;
   return {
     capabilities, closed, handle, resized, written,
@@ -433,6 +435,32 @@ describe('ShellTab', () => {
     chords.run('ctrl+t');
 
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
+  });
+
+  it('gives each shell tab its own status-window identity', () => {
+    // Two tabs, two labels: the hook re-arms its auto-show when this changes, so a constant would
+    // leave the second tab's windows armed only once at mount.
+    const rows = [{ text: 'zsh', kind: 'terminal' as const }];
+    const first = render(
+      <PluginChordProvider registry={createPluginChordRegistry()}>
+        <ShellTab
+          payload={{ ...PAYLOAD, connections: rows }}
+          capabilities={makeCapabilities({ label: 'shell' }).capabilities}
+        />
+      </PluginChordProvider>,
+    );
+    expect(screen.getByText('connections')).toBeInTheDocument();
+    first.unmount();
+
+    render(
+      <PluginChordProvider registry={createPluginChordRegistry()}>
+        <ShellTab
+          payload={{ ...PAYLOAD, connections: rows }}
+          capabilities={makeCapabilities({ label: 'shell2' }).capabilities}
+        />
+      </PluginChordProvider>,
+    );
+    expect(screen.getByText('connections')).toBeInTheDocument();
   });
 
   it('claims nothing when the tab carries no claim at all', () => {

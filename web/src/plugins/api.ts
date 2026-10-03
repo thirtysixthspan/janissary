@@ -136,6 +136,13 @@ export type TabPluginClientCapabilities = {
   // so anything a plugin binds globally (a window key listener, say) has to consult this rather than
   // assume it is on screen. The host owns the answer; a plugin must never read it off the DOM.
   active: boolean;
+  // This tab's own label, stable for as long as it is open. A plugin needs it wherever the host asks a
+  // view to key per-tab state on something — `useStatusWindows` re-arms its auto-show when this
+  // changes — and has no other way to learn it, since the capability object deliberately withholds the
+  // client and a plugin must not read the DOM. Optional for the reason `attachTerminal` is: the host
+  // always knows the label, but fourteen plugin fixtures build this object and none of them keys
+  // anything by it. Absent means "no per-tab identity is available to you".
+  label?: string;
   // Which sidebar this tab is docked into, or `null` when it sits in the centre strip. Placement is
   // host-owned, and a plugin that lays itself out differently in a narrow sidebar reads it here
   // rather than measuring the host's frame or sniffing its DOM.
@@ -192,6 +199,7 @@ export function createPluginClientCapabilities(
   return {
     active,
     dock,
+    label,
     claimedChords,
     close: onClose,
     registerDirtyHandle: onDirtyHandle,

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Give a plugin the per-tab identity `useStatusWindows` re-arms on, which the plugin contract does not currently expose.
-
-Existing Issue: The hook's own documentation in `web/src/shared/status-windows/useStatusWindows.ts` says `activeKey` is the tab's label and that a tab becoming active re-arms the auto-show, and every host caller passes `tab.label`, but `TabPluginClientCapabilities` carries no label, so the shell tab's metadata row passes the constant `'shell'`. Severity: 4/10
-
-Existing Risk: 4/10 - The five-second auto-show a shell tab's status windows are documented to keep fires once when its row mounts and never again, so returning to a shell tab shows no connections panel where every agent tab would, leaving hover and pin as the only ways to see one.
-
-Proposal Risk: 2/10 - Exposing a label to plugin bodies widens the client contract by one read-only field, and a plugin could then key its own per-tab state on a value the host considers stable.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: let a plugin tab identify itself to useStatusWindows". Add the tab's label to the client capability object in `web/src/plugins/api.ts`, threading it through the `createPluginClientCapabilities` call `web/src/plugins/PluginBody.tsx` already makes, and have `ShellTabMeta` in `web/src/plugins/shell/ShellTab.tsx` pass it instead of the constant. Publish it from `web/src/plugins/api.ts` beside the other published surfaces, note it in the client capability list in `documentation/developer-documentation/tab-plugins.md`, and raise the documented client count from twelve to thirteen in the same file and in the literal `src/plugins/documentation.test.ts` pins. `web/src/shared/status-windows/useStatusWindows.test.ts` covers the re-arm and must keep passing; add a shell-side case asserting two shell tabs re-arm independently of one another.
-
-
 * Correct the plan's own contradiction about `disableStdin`, which it lists as out of scope in one section and describes as shipped in another.
 
 Existing Issue: `product/plans/complete/shell-tab.md` states that `disableStdin` was considered and not chosen and lists "no `disableStdin`" under Out of scope, while its client section describes the terminal as created with stdin disabled, which is what `web/src/plugins/shell/useShellTerminal.ts` does. Severity: 3/10
