@@ -32,10 +32,17 @@ export function useShellTerminal({
   const handleRef = useRef<PluginTerminal | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
+  // `attachTerminal` is read through a ref rather than closed over, and deliberately kept out of the
+  // effect's dependencies below. It arrives on a capability object the host rebuilds whenever the tab
+  // becomes visible or hidden, so depending on its identity tore the emulator down and built a new one
+  // on every tab switch — losing the buffer, and with it the scrollback, each time. Nothing about the
+  // attachment changes when visibility does.
+  const attachRef = useRef(attachTerminal);
+  attachRef.current = attachTerminal;
 
   useEffect(() => {
     const container = containerRef.current;
-    const attach = attachTerminal;
+    const attach = attachRef.current;
     // No container means the body has not been laid out yet, and no `attachTerminal` means this plugin
     // was given no way to reach a terminal. Either way there is nothing to open and nothing to clean up.
     if (!container || !attach) return;
@@ -92,7 +99,7 @@ export function useShellTerminal({
       unregisterTerminalSelection(container);
       terminal.dispose();
     };
-  }, [attachTerminal, ptyId, containerRef]);
+  }, [ptyId, containerRef]);
 
   return {
     write: (data) => { handleRef.current?.write(data); },

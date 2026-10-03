@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep the shell terminal mounted across tab switches, which currently destroys and rebuilds it and loses its scrollback.
-
-Existing Issue: `web/src/plugins/PluginBody.tsx` memoizes the capability object with `active` among its dependencies, `web/src/plugins/PluginTabLayer.tsx` recomputes `active` from the current tab, and `attachTerminal` is a dependency of the effect in `web/src/plugins/shell/useShellTerminal.ts`, so switching tabs hands the hook a new function identity and the whole emulator is torn down and recreated. Severity: 6/10
-
-Existing Risk: 6/10 - Every switch away from a shell tab and back discards the xterm buffer and the selection, so scrollback is lost in ordinary use, and output produced while the tab was hidden only returns through the bounded early-output buffer, whose oldest chunks are dropped once it passes its ceiling.
-
-Proposal Risk: 3/10 - The emulator and its buffer then live as long as the tab does, so a tab left open holds one more xterm instance than before and its fit handler keeps running against a hidden container.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: stop rebuilding the shell terminal when a tab switch changes the plugin capabilities". The rebuild is driven by the capability object's identity rather than by anything the terminal needs, so take `attachTerminal` out of that identity: read it through a ref inside `useShellTerminal` and depend only on `ptyId`, or drop `active` from the memo in `web/src/plugins/PluginBody.tsx` and expose it to consumers through a ref-backed accessor. The second is the smaller change and also stops `active` churning every other capability consumer, so check the other readers of that object in `web/src/plugins/PluginBody.tsx` before choosing. `web/src/plugins/shell/useShellTerminal.test.ts` asserts one fit and one teardown per mount and must keep passing; add a case that re-renders with a changed `active` and asserts no second `Terminal` was constructed and no `detach` was called.
-
-
 * Answer a dispatched line from the tab the user is looking at, rather than from the tab `zsh` was originally typed in.
 
 Existing Issue: For an intent the host builds its origin from `plugin.sourceLabel` in `src/plugins/requests.ts`, so the `dispatchLine` implementation in `src/plugins/context.ts` resolves and runs the line against the agent tab the user typed `zsh` in, and a command that answers with output is appended to that tab's transcript. Severity: 5/10

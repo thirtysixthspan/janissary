@@ -48,6 +48,18 @@ beforeEach(() => {
   fitCalls.length = 0;
 });
 
+function makeHandle(into: {
+  written?: string[]; resized?: { cols: number; rows: number }[];
+  exitHandlers?: (() => void)[]; detached?: number[];
+} = {}): PluginTerminal {
+  return {
+    write: (data) => { into.written?.push(data); },
+    resize: (cols, rows) => { into.resized?.push({ cols, rows }); },
+    onExit: (handler) => { into.exitHandlers?.push(handler); },
+    detach: () => { into.detached?.push(1); },
+  };
+}
+
 function harness(overrides: { attachTerminal?: undefined } = {}) {
   const written: string[] = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -56,12 +68,7 @@ function harness(overrides: { attachTerminal?: undefined } = {}) {
   // The callbacks the hook was handed, so a test can push bytes through the channel it actually used
   // rather than reaching past the attachment into the terminal.
   const byteCallbacks: ((data: string) => void)[] = [];
-  const handle: PluginTerminal = {
-    write: (data) => { written.push(data); },
-    resize: (cols, rows) => { resized.push({ cols, rows }); },
-    onExit: (handler) => { exitHandlers.push(handler); },
-    detach: () => { detached.push(1); },
-  };
+  const handle = makeHandle({ written, resized, exitHandlers, detached });
   const attachTerminal = overrides.attachTerminal
     ? undefined
     : vi.fn((_id: string, onData: (data: string) => void) => {
@@ -137,5 +144,30 @@ describe('useShellTerminal', () => {
     // this is what makes that structural rather than a matter of where focus happens to be.
     expect(terminals[0].options.disableStdin).toBe(true);
     expect(terminals[0].options.cursorBlink).toBe(false);
+  });
+
+  it('survives a tab switch, which hands it a fresh capability object', () => {
+    const container = document.createElement('div');
+    const containerRef = { current: container };
+    const first = vi.fn((_id: string, _onData: (data: string) => void) => makeHandle());
+    const { rerender, unmount } = renderHook(
+      ({ attachTerminal }) => useShellTerminal({
+        ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(),
+      }),
+      { initialProps: { attachTerminal: first } },
+    );
+
+    // The host rebuilds the capability object whenever the tab becomes visible or hidden, so the
+    // function identity changes on every tab switch even though nothing about the terminal has.
+    const second = vi.fn((_id: string, _onData: (data: string) => void) => makeHandle());
+    rerender({ attachTerminal: second });
+
+    expect(terminals).toHaveLength(1);
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(second).not.toHaveBeenCalled();
+    expect(terminals[0].disposed).toBe(false);
+
+    unmount();
+    expect(terminals[0].disposed).toBe(true);
   });
 });
