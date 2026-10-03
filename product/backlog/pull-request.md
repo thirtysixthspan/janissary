@@ -2,3 +2,62 @@
 
 # pull-request
 
+* Return the auto-resume flag to plain when the user cancels the pending resume themselves, which today leaves it green and unreadable as anything pending.
+
+Existing Issue: `ScheduleManager.cancel` drops an entry's fired hook without telling the observer that owned it, so a `schedule cancel auto-resume in <label>` removes the entry while `HarnessAutoResumer.pendingId` still points at it, `reportAutoResumed` is never reached, and the tab's metadata row keeps reading green `Auto-resuming` for a resume that no longer exists. Severity: 4/10
+
+Existing Risk: 4/10 - The strip claims the app is about to recover the tab when nothing is scheduled to do it, and because `isParked` also stays true until the screen changes, the tab is simultaneously unflagged and showing a pending action that will never happen — a user who cancels the wait has no way back to the honest `Auto-resume` state short of the blockage clearing on its own.
+
+Proposal Risk: 2/10 - The cancelled state remains a lie about a parked tab until its screen changes, but it is a label rather than a lost action, and the schedule entry itself is genuinely gone.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: return the auto-resume flag to plain when the user cancels the pending resume". Teach `ScheduleManager.cancel` and `clearAll` about removal as well as delivery: `add` already records an `onFired` callback per entry id and both methods already call `forgetHook`/`forgetHooks`, so give the removed entry's hook the same chance to run — either by invoking it on removal as well, or by passing a second `onRemoved` callback to `add` and firing that one from `cancel`/`clearAll`/`delete`. Then have `src/harness/auto-resume-wire.ts` route it: a removal means no resume is pending, so it should call `reportAutoResumed` exactly as `onDelivered` does, and clear `HarnessAutoResumer`'s `pendingId` so a later delivery cannot report it twice. Cover it in `src/schedule/manager.test.ts` beside the existing "runs the fired hook once" and "drops a hook when its entry is cancelled or cleared" cases — the latter currently asserts the hook does *not* run, so change it to assert the removal hook does — and in `src/harness/auto-resume-wire.test.ts` with a case that cancels the entry and asserts `autoResumeState` becomes `resumed`. Leave the local resumer's own cancel path (the blockage clearing on screen) as it is: it already clears `pendingId` itself, and double-calling must be harmless either way.
+
+* Cover the auto-resume branch of the capture wiring in the test file that owns the wiring, which the plan named and the diff left calling the new signature with one argument missing.
+
+Existing Issue: `src/harness/capture/wire.test.ts` still calls `captureWiring` with five arguments, so `autoResume` is `undefined` in every case there and the file never mocks `auto-resume-wire.js`, leaving the new third consumer and its settled-capture skip entirely unexercised in the file whose whole subject is which consumers a capture reaches. Severity: 4/10
+
+Existing Risk: 4/10 - The fan-out order the busy handler depends on — resumer before busy status, so the handler reads the parked state as of the same capture — can be inverted or the resumer dropped from the settled-skip branch without any test failing, and the failure shows up only as a parked tab that badges itself.
+
+Proposal Risk: 1/10 - The wiring gains test coverage rather than behavior, and the mocked collaborators keep the cases fast and hermetic.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: cover the auto-resume branch of captureWiring in capture/wire.test.ts". Extend `src/harness/capture/wire.test.ts` the way the existing auto-approve cases are written: add `vi.mock('../auto-resume-wire.js', () => ({ buildAutoResumer: vi.fn() }))`, a `resumer` stub with an `onCapture` spy and `isParked`, and reset it in the existing `beforeEach`. Add a case asserting that with `autoResume` true the capture reaches the approver, then the resumer, then the busy handler in that order, and that with it false `buildAutoResumer` is never called and the returned `autoResumer` is undefined. Add a case asserting a settled re-read reaches neither the approver nor the resumer and only the busy handler, mirroring the existing settled case. Update the two existing calls to pass the new sixth argument explicitly. The plan's Tests section also asks for a case proving a tab launched with `--no-auto-resume` builds no resumer; `src/harness/manager.test.ts` covers the tab field and `src/harness/observers.test.ts` covers the argument reaching `captureWiring`, so this file's false-branch case is the piece that was missing.
+
+* Key the schedule manager's fired hooks so one tab's removal cannot discard another tab's hook when a label contains a space.
+
+Existing Issue: `hookKey` joins a tab label and an entry id with a single space and `forgetHooks` matches with `startsWith`, so `forgetHooks('codex team')` also matches the key belonging to a tab labeled `codex team 2`, and profile harness entry names — validated only as nonempty strings — may contain spaces. Severity: 3/10
+
+Existing Risk: 3/10 - Closing, clearing, or cancelling one such tab's schedule silently drops another tab's callback, so its resume is delivered but the tab's flag stays green `Auto-resuming` for the rest of its life; the trigger needs a profile entry name with a space, so it is rare and the symptom is cosmetic.
+
+Proposal Risk: 1/10 - A separator that cannot appear in a label makes the two keys unambiguous whatever the label is.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: make the schedule fired-hook key unambiguous for labels containing spaces". In `src/schedule/manager.ts`, change `hooks` from a flat `Map<string, () => void>` keyed by a joined string to a `Map<string, Map<string, () => void>>` keyed by label and then entry id, so no separator has to be chosen at all: `add` and `fireHook` read `this.hooks.get(label)?.get(id)` and write the inner map, and `forgetHooks` becomes a single `this.hooks.delete(label)` — which also removes the prefix-matching scan it does today. `forgetHook` stays as the inner delete. `fireHook`'s "fire once" behavior is unchanged: it deletes from the inner map before invoking, so a later entry reusing the id is not answered by the old callback. If a flat map is preferred for its smaller footprint, the separator must be a character no tab label can contain — `\0`, which this codebase already uses as a delimiter in `src/file-navigator/search.ts` and `src/workspace/label.ts` — rather than a space; do not leave the space. Add a case to `src/schedule/manager.test.ts` that registers hooks for two harness tabs labeled `codex team` and `codex team 2`, cancels the first tab's whole schedule, and asserts the second tab's hook still runs when its entry fires.
+
+* Make `ScheduleManager.add` persist an agent tab's schedule, so an app-added entry on one cannot vanish on relaunch.
+
+Existing Issue: `add` writes to the in-memory map and announces the change but never calls `TabManager.persist`, while `tick` persists the whole list on any tick that changes it and the `schedule` command persists explicitly — so an entry appended by `add` on an agent tab reaches the state file only when some later, unrelated schedule change causes a tick to write it. No caller does this today; every `add` call site is a harness tab, whose schedules are memory-only by design. Severity: 3/10
+
+Existing Risk: 2/10 - Nothing reaches it, so the trap is latent rather than live: the first non-harness caller inherits a method whose contract silently differs from the command path beside it.
+
+Proposal Risk: 2/10 - Persisting on every add writes the agent's state file once per append, which is the same cost the `schedule` command already pays.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: have ScheduleManager.add persist a non-harness tab's schedule". Mirror what `src/commands/schedule.ts`'s `persistSchedule` helper does after its `set`: in `add`, look the tab up with `managers.tab.byLabel(label)` and, when it is not a harness tab, call `managers.tab.persist(managers.tab.buildAgentState(tab, { schedule: this.schedules.get(label) }))`. The lookup already returns undefined for a closed tab, which covers the "nothing to persist" case without a second check. Add a case to `src/schedule/manager.test.ts` using the file's existing `withRealTabManager` fixture, which runs the real `TabManager.persist` path: add an entry to an agent tab, assert the agent state file receives it, and add the harness-tab counterpart asserting no persist happens there. `src/commands/schedule.ts` and the manager's own `cancel` path must keep passing untouched.
+
+* Correct the pull request description and the user documentation to say a harness tab's resume is cancelled with `schedule cancel auto-resume in <label>`, since a bare `schedule cancel` targets the issuing tab.
+
+Existing Issue: Both the pull request's "How to verify" step 9 and the new "Resuming after a usage limit" section in `documentation/user-documentation/advanced-agents/harness.md` tell the user to run `schedule cancel auto-resume`, but a harness tab has no command bar and `schedule cancel` without an `in <tab>` clause operates on the issuing tab's own schedule, so from an agent tab it answers `No scheduled command "auto-resume".` Severity: 3/10
+
+Existing Risk: 4/10 - A user follows the documented step, is told the command does not exist, and concludes the entry is uncancellable — the one control the plan named for a user who wants the tab left parked.
+
+Proposal Risk: 1/10 - The corrected text names the clause the parser already requires, so the documented behavior matches what the command does.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: document the `in <tab>` clause needed to cancel a harness tab's auto-resume". In the pull request body's "How to verify", change step 9 to `schedule cancel auto-resume in codex` run from an agent tab, and note that the `in <tab>` clause is what reaches a harness tab's schedule. Make the same correction in `documentation/user-documentation/advanced-agents/harness.md`'s "Resuming after a usage limit" section, and while there state that the clause is required for the same reason the scheduling documentation gives — a harness tab cannot run commands itself, so `in <label>` is the only way to manage its timers. Check `product/specs/harness.md`'s Auto-resume section for the same bare form and correct it in the same change; `product/specs/scheduling.md` already documents the clause correctly and must not change. No code changes; the parser, `ScheduleManager.cancel`, and `src/commands/schedule.ts` are all correct as they stand.
+
+* Regenerate the New harness dialog screenshot, whose fields and alt text no longer match the dialog now that it carries an Auto-resume toggle.
+
+Existing Issue: `documentation/user-documentation/advanced-agents/harness.md` shows the launch-dialog screenshot with the alt text "fields for harness, label, workspace, offline, E2E browser, auto-approve, model, and effort", and the prose beside it now describes an Auto-resume toggle the image does not contain. Severity: 3/10
+
+Existing Risk: 3/10 - The one image a reader has of the dialog misstates its contents on the page whose job is introducing the dialog, and the prose immediately below it mentions a control absent from the picture.
+
+Proposal Risk: 1/10 - The regenerated image matches the dialog that ships, and the alt text change is confined to the same line.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: regenerate the New harness dialog screenshot for the Auto-resume toggle". Follow `ai/tasks/take-documentation-screenshots.md` to recapture the New harness dialog at its existing `data-doc-shot="harness-launch-dialog"` anchor, replacing `documentation/screenshots/harness-launch-dialog.png` in place, and update that page's alt text to include auto-resume so it lists every field the dialog shows. The dialog itself needs no change: `web/src/harness/HarnessLaunchDialog.tsx` already renders the toggle with the same markup as its siblings. Run `./scripts/run.mjs check-diff` after the image swap, and confirm no other screenshot on that page or elsewhere in `documentation/` embeds the same dialog and needs the same refresh.
