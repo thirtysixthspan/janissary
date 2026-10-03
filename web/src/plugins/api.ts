@@ -46,7 +46,33 @@ export { isTextEntryElement } from '../shared/text-entry';
 // the same connections, and a plugin drawing its own icon for detach would be the drift this surface
 // exists to prevent. Both are additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../shared/icons';
+export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedIcon } from '../shared/icons';
+
+// The host's own floating status panels and the visibility hook that drives them, published for the
+// same reason and on the same terms: a plugin whose tab offers the connections and schedule buttons
+// must offer the windows the rest of the application shows, not a second pair of panels that drift
+// from them. They take their rows as props rather than a whole `TabView` precisely so a plugin
+// holding only its own payload can render them — the host pushes those rows into the payload when
+// they change. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { StatusPanels } from '../shared/status-windows/StatusPanels';
+export { useStatusWindows, type StatusWindowHandlers } from '../shared/status-windows/useStatusWindows';
+
+// The bridge a terminal registers its selection with, which is the only way the application's own
+// context menu learns what a right-click landed on: a terminal's selection is emulator state, so
+// `globalThis.getSelection()` finds nothing and the menu cannot work it out for itself. Published so a
+// plugin with its own terminal earns the same **Copy** entry the harness and takeover terminals get
+// rather than shipping a menu of its own. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export {
+  registerTerminalSelection,
+  unregisterTerminalSelection,
+} from '../shared/terminal/terminal/selection';
+
+// The seam a plugin tab claims a keyboard chord through while it is the visible one. The declaration
+// says which chords; the host's window handler asks this registry before its own table, so a claim
+// applies exactly while the tab the user is looking at is on screen and reverts the moment focus moves.
+// Published because the alternative is a plugin binding its own window listener, which cannot pre-empt
+// the application's and would therefore never fire for a chord the application owns.
+export { usePluginChordClaims, type PluginChordHandler } from './PluginChords';
 
 // The arrow/Home/End selection rule for a list of records, published so every plugin list moves its
 // current row the same way. The conversations, sessions, and schedules lists each carried their own
@@ -86,6 +112,18 @@ export type TabDirtyHandle = {
   focus(): void;
 };
 
+// One live terminal, attached for as long as the caller holds the handle. The bytes already travel
+// the application's own `pty` channel — this is the fourth consumer of it rather than a fifth
+// definition of one — so the plugin gains a terminal and no new transport.
+export type PluginTerminal = {
+  write(data: string): void;
+  resize(cols: number, rows: number): void;
+  // Called once when the process behind this terminal has exited. A plugin holding a terminal whose
+  // process is gone cannot tell: nothing on this side reports a death it did not witness.
+  onExit(handler: () => void): void;
+  detach(): void;
+};
+
 export type TabPluginClientCapabilities = {
   resourceUrl(reference: string): string;
   intent<Result>(name: string, payload: unknown): Promise<Result>;
@@ -116,6 +154,20 @@ export type TabPluginClientCapabilities = {
   // cannot reach that helper, and a lazily loaded chunk that grows its own would be a second place a
   // copy is observed and could drift.
   copyText(text: string): void;
+  // Attach to a terminal this plugin's tab owns, by the id its payload carries, handing every byte it
+  // produces to `onData`. Bytes already produced are flushed into `onData` before this returns, so a
+  // plugin attaching late still renders what the shell said before it did. Returns a handle whose
+  // `detach` releases the attachment; call it on teardown, or a hidden tab keeps a live subscription
+  // to a terminal nothing is rendering. Optional, like `registerDirtyHandle`, because a plugin with no
+  // terminal behaves exactly as it did before this existed.
+  attachTerminal?(ptyId: string, onData: (data: string) => void): PluginTerminal;
+  // The two metadata-row actions that are tab-scoped RPCs rather than commands: open a file navigator
+  // rooted at this tab, and launch an agent in this tab's directory. Capabilities rather than a
+  // dispatched command line because the two are not the same thing — the agent action roots the new
+  // tab at *this* tab's cwd and joins its group, which a command run in this tab does not. Optional
+  // for the same reason as `attachTerminal`.
+  openFileNavigator?(): void;
+  launchAgentHere?(): void;
   reportFailure(reason: string): void;
 };
 
@@ -146,6 +198,24 @@ export function createPluginClientCapabilities(
       return result.value;
     },
     splitAction: splitAction ?? null,
+    attachTerminal: (ptyId, onData) => {
+      const exitHandlers = new Set<() => void>();
+      const stopListening = client.onPtyExit((id) => {
+        if (id !== ptyId) return;
+        for (const handler of exitHandlers) handler();
+      });
+      // Buffered early output is flushed into `onData` by `attachPty` before this returns, so a
+      // plugin attaching late still renders whatever the shell said before it did.
+      const detachBytes = client.attachPty(ptyId, onData);
+      return {
+        write: (data) => { client.send({ method: 'ptyInput', params: { id: ptyId, data } }); },
+        resize: (cols, rows) => { client.send({ method: 'ptyResize', params: { id: ptyId, cols, rows } }); },
+        onExit: (handler) => { exitHandlers.add(handler); },
+        detach: () => { detachBytes(); stopListening(); exitHandlers.clear(); },
+      };
+    },
+    openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
+    launchAgentHere: () => { client.send({ method: 'launchAgentFor', params: { label } }); },
     // The report is deduplicated here rather than in the layer above, so the one-report-per-plugin
     // rule covers a plugin component reporting its own failure — a bad intent result, say — and not
     // just the load, schema, timeout, and render failures the host detects for it. The first report

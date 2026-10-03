@@ -1,6 +1,7 @@
 import type { JanusClient } from './ws';
 import { useLatestRef } from './useLatestRef';
 import { useWindowKeys, type StateSnapshot, type Callbacks } from './useWindowKeys';
+import type { PluginChordRegistry } from './plugins/PluginChords';
 
 // Binds App's picker/chooser state and handlers to the window key handler: one useLatestRef snapshot
 // serves as both the state and the callbacks side of useWindowKeys (they are disjoint field sets).
@@ -10,7 +11,8 @@ export function useAppWindowKeys(
   handleScrollKey: (e: KeyboardEvent) => boolean,
   handleScrollKeyUp: (e: KeyboardEvent) => void,
   deps: StateSnapshot & Callbacks,
+  chords: PluginChordRegistry,
 ): void {
   const reference = useLatestRef(deps);
-  useWindowKeys(client, reference, reference, handleScrollKey, handleScrollKeyUp);
+  useWindowKeys(client, reference, reference, handleScrollKey, handleScrollKeyUp, chords);
 }

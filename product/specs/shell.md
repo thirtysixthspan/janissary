@@ -2,6 +2,8 @@
 
 Each tab has its own persistent shell process (spawned via `child_process.spawn`) that runs in the background for the lifetime of the tab. Shell processes are spawned lazily on the first shell command (the `shell` keyword) and kept alive until the tab is closed or the application exits.
 
+A tab whose body is a full interactive terminal — an agent tab's PTY takeover, a harness or SSH tab, or a `shell` tab — is described by those surfaces rather than here. The `shell` tab in particular is a tab of its own kind, contributed by a bundled plugin, with its own command line rather than a shell behind the ordinary one; see [[shell-tab]]. What follows describes the shell every tab carries underneath.
+
 ### Shell startup files
 
 A tab's shell is the user's login shell (`$SHELL`, falling back to `bash`), started with its startup files suppressed so an interactive rc file cannot leak banners, prompts, or traps into captured command output. Each supported shell is given the flags that shell actually accepts: `bash` starts with `--norc --noprofile`, and `zsh` with `--no-rcs` — zsh rejects bash's spelling outright and would otherwise exit immediately instead of producing a working tab shell. A login shell that is neither starts with no startup flags at all and reads its own startup files, which is preferable to failing to launch on an option it does not recognize.

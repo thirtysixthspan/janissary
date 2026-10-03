@@ -4,6 +4,9 @@ import type { Managers } from '../managers.js';
 import path from 'node:path';
 import { flattenBuffer } from './formatting.js';
 
+// The chord ids a plugin claimed, or nothing at all. Omitted rather than sent as an empty list so a
+// plugin that claims none costs no bytes on every state broadcast, and so the client can tell "claims
+// none" from "the host did not say".
 export function buildTabViews(
   tabs: Tab[],
   managers: Managers,
@@ -25,11 +28,17 @@ export function buildTabViews(
     (label) => managers.remote.workspaceOf(label),
     (label) => managers.remote.reconnectingOf(label),
     (dir) => managers.workspace.provisioning(dir),
+    (pluginId) => managers.plugins.declarations
+      .find((declaration) => declaration.id === pluginId)?.chords ?? [],
   ));
 }
 
 // Converts one internal Tab into the wire-format TabView sent to the client — the shape the
 // client actually renders, as opposed to Tab's server-side bookkeeping fields.
+function chordClaim(claimed: readonly string[] | undefined): { chords?: readonly string[] } {
+  return claimed && claimed.length > 0 ? { chords: claimed } : {};
+}
+
 export function buildTabView(
   tab: Tab,
   busy: boolean,
@@ -47,6 +56,11 @@ export function buildTabView(
   // Whether a local clone into the given directory is still in flight — the only provisioning
   // signal a local `agent --workspace` tab has, since it carries no harness status.
   workspaceProvisioning?: (dir: string) => boolean,
+  // The chord ids a plugin claimed in its declaration. Carried with the tab rather than looked up on
+  // the client, so a client holding its own copy is never a second place for the claim to drift from
+  // the declaration the host actually enforces. Omitted from the view when the claim is empty, so a
+  // plugin that claims none costs no bytes on every state broadcast.
+  chordsFor?: (pluginId: string) => readonly string[],
 ): TabView {
   const workspacePrefix = tab.workspaceDir ?? (tab.remote ? workspaceOf?.(tab.label) : undefined);
   const remoteProvisioning = workspaceOf !== undefined && tab.remote !== undefined
@@ -96,6 +110,7 @@ export function buildTabView(
       id: tab.plugin.id,
       schemaVersion: tab.plugin.schemaVersion,
       payload: tab.plugin.payload,
+      ...chordClaim(chordsFor?.(tab.plugin.id)),
     } : undefined,
     harness: tab.harness,
     editor: tab.editor ? { ...tab.editor, path: shorten(tab.editor.path) } : undefined,

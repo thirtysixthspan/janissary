@@ -2,8 +2,6 @@
 
 ## ready
 
-* a new `shell tab` implemented as a plugin. The tab contains a pseudo terminal that launches zshell. The tab derives the following features from the agent tab: command line, identical metadata bar, same popups, menus and keybindings.
-
 * A new type of AI task that runs in a workspaced agent tab, can spawn and terminate new agent tabs and harness tabs as part of doing its work. the first task would be to call plan-a-new-feature, then build-a-feature, then pull-request-review, then work-an-issue on the pull-request backlog until the backlog is clear. 
 
 * Running one prompt across several fresh isolated workspaces and lining the answers up to compare, the way Cursor 3's `/best-of-n` "runs the same task in parallel across multiple models, each in its own isolated worktree, then compares outcomes". Janissary already has every building block — a workspaced `agent`/`harness` tab clones its own disposable workspace (`workspaced-agent.md`), groups keep related tabs in one contiguous band (`tabs.md` § Tab grouping), and `broadcast all command <text>` dispatches one command into every existing agent tab (`messaging.md`) — but there is no single command that creates the N workspaces, delivers the same prompt to each, and presents the results together, so a user comparing approaches still opens the tabs by hand and reads across them. A `fanout <n> <prompt>` command covering creation, delivery, and a side-by-side comparison would close it. Complexity: medium-high.

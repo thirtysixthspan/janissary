@@ -24,6 +24,10 @@ export type TabPluginCapabilityName =
   | 'readSettings'
   | 'saveSettings'
   | 'isRecordingLive'
+  | 'originTab'
+  | 'dispatchLine'
+  | 'completeLine'
+  | 'terminalRunning'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -48,7 +52,11 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   readSettings: true,
   saveSettings: true,
   isRecordingLive: true,
-  rejectRequest: true,
+  originTab: true,
+  dispatchLine: true,
+completeLine: true,
+terminalRunning: true,
+rejectRequest: true,
   reportFailure: true,
 };
 

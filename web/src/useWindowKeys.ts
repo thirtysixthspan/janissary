@@ -10,6 +10,7 @@ import { eventChordId } from './overlay-plugins/chords';
 import { openOverlayForChord, contributedOverlayOnScreen } from './shared/contributed-overlays';
 import { isTabSwitchChord } from './shared/terminal/window-chords';
 import { appChordAction, type AppChordAction } from './shared/app-chords';
+import type { PluginChordRegistry } from './plugins/PluginChords';
 import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker/key-bindings';
 
 // Every overlay-owned field comes from `pickers/picker-key-bindings`, where the hook that owns the
@@ -178,19 +179,22 @@ function exhaust(action: AppChordAction | undefined): never {
 
 // The chord openers (Cmd+Shift+F search, Cmd+F search, Cmd+P quick open, the Ctrl picker chords,
 // Cmd+T new agent tab) — split out of `onKey` to keep its own cognitive complexity under the file's
-// lint threshold. A plugin's chord is consulted after all of them, so a core chord always wins.
-//
-// `preventDefault` on a claimed plugin chord is not optional here. In a text field — which is exactly
-// where an editor keeps its keyboard — a browser binds Ctrl+Shift+V to "paste as plain text", and the
-// keydown still reaches the page: without it the popup would open *and* the browser would paste, in
-// one keystroke, with nothing in the popup looking wrong.
-function handleChordKeys(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
+// lint threshold. A visible plugin tab's claim is consulted before the application's own table, which
+// inverts what the overlay-plugin path below does and is deliberate: an overlay chord cannot fire
+// without the core chord, but a plugin tab the user is looking at would otherwise have the key do
+// nothing at all there.
+function handleChordKeys(
+  e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks, chords: PluginChordRegistry,
+): boolean {
+  const chordId = eventChordId(e);
+  if (chordId === undefined) return false;
+  if (chords.run(chordId)) { e.preventDefault(); return true; }
   if (e.metaKey && metaChordOpener(e, snap, cb)) return true;
   if (e.ctrlKey) {
-    const opener = ctrlChordOpener(appChordAction(eventChordId(e)), cb);
+    const opener = ctrlChordOpener(appChordAction(chordId), cb);
     if (opener) { e.preventDefault(); opener(); return true; }
   }
-  if (!e.isComposing && openOverlayForChord(eventChordId(e))) { e.preventDefault(); return true; }
+  if (!e.isComposing && openOverlayForChord(chordId)) { e.preventDefault(); return true; }
   return false;
 }
 
@@ -200,6 +204,7 @@ export function useWindowKeys(
   callbacksRef: React.RefObject<Callbacks>,
   handleScrollKey: (e: KeyboardEvent) => boolean,
   handleScrollKeyUp: (e: KeyboardEvent) => void,
+  chords: PluginChordRegistry,
 ) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -207,7 +212,7 @@ export function useWindowKeys(
       const cb = callbacksRef.current;
       if (!snap || !cb) return;
       if (dispatchModalKey(e, snap, cb)) return;
-      if (handleChordKeys(e, snap, cb)) return;
+      if (handleChordKeys(e, snap, cb, chords)) return;
       // Quick open no longer needs naming here: `dispatchModalKey` claims its keys above, which is
       // what this guard was patching around while it was missing from that chain.
       if (!snap.searchOpen && handleScrollKey(e)) return;
@@ -219,6 +224,6 @@ export function useWindowKeys(
       globalThis.removeEventListener('keydown', onKey);
       globalThis.removeEventListener('keyup', handleScrollKeyUp);
     };
-  }, [client, stateRef, callbacksRef, handleScrollKey, handleScrollKeyUp]);
+  }, [client, stateRef, callbacksRef, handleScrollKey, handleScrollKeyUp, chords]);
 }
 

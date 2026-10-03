@@ -1,5 +1,8 @@
 import type { Tab, EditorView, FileNavigatorView } from './types.js';
-import type { TabPluginPayload, TabPluginResources, TabPluginTabUpdate } from '../plugins/api.js';
+import type {
+  TabPluginPayload, TabPluginResources, TabPluginTabUpdate,
+  TabPluginTerminal, TabPluginTerminalOptions,
+} from '../plugins/api.js';
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
 import * as tabOpeners from './openers.js';
@@ -11,6 +14,9 @@ export abstract class TabOpeningState extends TabQueueState {
   abstract applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void;
   abstract registerFile(path: string): string;
   abstract get openFiles(): Map<string, string>;
+  abstract spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
+  abstract adoptTerminal(ptyId: string, label: string): void;
+  abstract killTerminal(ptyId: string): void;
 
   protected constructor(protected managers: Managers) {
     super();

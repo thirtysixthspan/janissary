@@ -17,6 +17,7 @@ import { isInsideRoot } from './files.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
 import { liveRecordingPaths } from './live-recordings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
+import { complete } from '../controller/completion.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
@@ -194,6 +195,24 @@ export function createPluginContext(
     // True only while an open tab's recorder is still writing this very file. The host owns the
     // recorders, so the host is what answers; a plugin reaches no tab list of its own to ask.
     isRecordingLive: (absPath) => isEnabled() && liveRecordingPaths(managers).has(absPath),
+    originTab: () => {
+      if (!isEnabled()) return null;
+      const tab = managers.tab.byLabel(origin.label);
+      if (!tab) return null;
+      return {
+        label: tab.label,
+        cwd: managers.tab.cwdOf(origin.label) ?? managers.tab.launchDir,
+        ...(tab.workspaceDir && {
+          workspace: { dir: tab.workspaceDir, offline: tab.offline ?? false },
+        }),
+      };
+    },
+    dispatchLine: (line) => {
+      if (!isEnabled()) return false;
+      return managers.command.dispatchLine(origin.label, line);
+    },
+    completeLine: (line, cursor) => (isEnabled() ? complete(managers, line, cursor) : { matches: [], newInput: line, newCursor: cursor }),
+    terminalRunning: (ptyId) => isEnabled() && managers.pty.isRunning(ptyId),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

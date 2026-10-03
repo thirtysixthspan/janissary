@@ -1,5 +1,8 @@
 import type { Tab, EditorView, FileNavigatorView } from './types.js';
-import type { TabPluginPayload, TabPluginResources, TabPluginTabUpdate } from '../plugins/api.js';
+import type {
+  TabPluginPayload, TabPluginResources, TabPluginTabUpdate,
+  TabPluginTerminal, TabPluginTerminalOptions,
+} from '../plugins/api.js';
 import { messageBus } from '../bus.js';
 import {
   addPluginTab, addEditorTab, addFilesTab, addNotificationsTab,
@@ -15,6 +18,9 @@ interface OpenTarget {
   applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void;
   registerFile(path: string): string;
   openFiles: Map<string, string>;
+  spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
+  adoptTerminal(ptyId: string, label: string): void;
+  killTerminal(ptyId: string): void;
 }
 
 function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }): void {
@@ -23,15 +29,17 @@ function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }
 }
 
 // Runs a plugin factory with a registration window open around it, and reports back every reference
-// it registered. The window closes as soon as the factory returns, so a plugin that stashed the
-// resources object cannot keep serving files from outside the call the host granted them for, and a
-// factory that throws leaves nothing served. Shared by the open and update paths so a reference
-// registered through one is scoped and released exactly as one registered through the other.
+// it registered and the terminal it started, if any. The window closes as soon as the factory
+// returns, so a plugin that stashed the resources object cannot keep serving files or running
+// processes from outside the call the host granted them for, and a factory that throws leaves nothing
+// behind. Shared by the open and update paths so a reference registered through one is scoped and
+// released exactly as one registered through the other.
 function withResources<Result>(
   target: OpenTarget,
   factory: (resources: TabPluginResources) => Result,
-): { result: Result; fileRefs: string[] } {
+): { result: Result; fileRefs: string[]; terminalId?: string } {
   const fileRefs: string[] = [];
+  const terminals: string[] = [];
   let acceptingResources = true;
   try {
     const result = factory({
@@ -41,10 +49,19 @@ function withResources<Result>(
         fileRefs.push(reference.replace(/^\/open\//, ''));
         return reference;
       },
+      spawnTerminal: (options) => {
+        if (!acceptingResources) throw new Error('plugin tab resources are no longer available');
+        const terminal = target.spawnTerminal(options);
+        terminals.push(terminal.ptyId);
+        return terminal;
+      },
     });
-    return { result, fileRefs };
+    return { result, fileRefs, terminalId: terminals[0] };
   } catch (error) {
     for (const reference of fileRefs) target.openFiles.delete(reference);
+    // A factory that failed after starting a terminal must not leave the process running: no tab was
+    // created, so nothing would ever close it.
+    for (const ptyId of terminals) target.killTerminal(ptyId);
     throw error;
   } finally {
     acceptingResources = false;
@@ -74,7 +91,7 @@ export function openPluginTab(
   // `sourceLabel` rather than by whatever happens to be focused when the factory finally runs.
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
-  const { result: created, fileRefs } = withResources(target, factory);
+  const { result: created, fileRefs, terminalId } = withResources(target, factory);
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
@@ -83,6 +100,13 @@ export function openPluginTab(
     fileRefs,
     sourceLabel,
   }));
+  // The terminal was spawned before this tab had a label, so it is adopted onto the one just minted.
+  // From here it is an ordinary tab-owned PTY: the per-tab release walk kills it on close, and the
+  // tab's connection list names it.
+  const label = target.tabs.find(
+    (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
+  )?.label;
+  if (terminalId !== undefined && label !== undefined) target.adoptTerminal(terminalId, label);
 }
 
 
@@ -104,7 +128,7 @@ export function updatePluginTab(
     (candidate) => candidate.plugin?.id === pluginId && candidate.plugin.instanceKey === instanceKey,
   );
   if (!tab?.plugin) return;
-  const { result: update, fileRefs } = withResources(target, factory);
+  const { result: update, fileRefs, terminalId } = withResources(target, factory);
   const rekeyed = update.instanceKey !== undefined && update.instanceKey !== instanceKey
     && target.tabs.every((candidate) => candidate.plugin?.id !== pluginId
       || candidate.plugin.instanceKey !== update.instanceKey);
@@ -114,6 +138,7 @@ export function updatePluginTab(
     fileRefs: [...tab.plugin.fileRefs, ...fileRefs],
     ...(rekeyed && { instanceKey: update.instanceKey! }),
   };
+  if (terminalId !== undefined) target.adoptTerminal(terminalId, tab.label);
   if (update.title !== undefined) tab.title = update.title;
   messageBus.emit('state', { type: 'dirty' });
 }

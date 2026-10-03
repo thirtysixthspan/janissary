@@ -1,14 +1,18 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
+import type { ConnectionView, ScheduleView, AcpRef } from '@shared/protocol';
 import type { StatusWindowHandlers } from './useStatusWindows';
 import { viewCaptureIcon } from '../icons';
 
 type Properties = {
-  tab: TabView;
+  // The rows themselves rather than the tab they came from. A plugin holding its own payload has no
+  // `TabView` to pass, and the host pushes these two lists into a plugin payload precisely so this
+  // component stays renderable there — one panel implementation rather than two.
+  connections: ConnectionView[];
+  schedule: ScheduleView[];
   scheduleOnly?: boolean;
-  connections: StatusWindowHandlers;
-  schedule: StatusWindowHandlers;
+  connectionsWindow: StatusWindowHandlers;
+  scheduleWindow: StatusWindowHandlers;
   interactive?: boolean;
   // Renders a close control on each connection row when supplied (editor tabs' persona
   // connections); omitted elsewhere, so agent-tab rows stay read-only, as today.
@@ -56,16 +60,15 @@ function ConnectionRow({ row, index, onCloseRow, onOpenAcpTranscript }: {
 
 // Floating top-right panels mirroring the Ink ConnectionWindow / ScheduleWindow: the active
 // tab's open connections (shell / acp / terminal cards / sqlite) and its scheduled timers.
-// Each renders only while its window has content *and* `useStatusWindows` marks it visible
-// (hover, pin, or the post-activation auto-show); the schedule panel stacks below the
-// connections panel. `scheduleOnly` drops the connections panel — used over harness tabs, where
-// the whole tab *is* the terminal connection and only the timers are worth overlaying.
-// `interactive` accepts pointer events on the panels themselves (agent tabs, Decision 8); on
-// harness tabs the panels stay non-interactive so they never intercept terminal input.
-export function StatusPanels({ tab, scheduleOnly = false, connections: connectionsWindow, schedule: scheduleWindow, interactive = false, onCloseRow, onOpenAcpTranscript }: Properties) {
-  const scheduleRows = tab.schedule;
-  const connectionRows = scheduleOnly ? [] : tab.connections;
-  const showConnections = connectionRows.length > 0 && connectionsWindow.visible;
+// Each renders only while it has rows *and* `useStatusWindows` marks it visible (hover, pin, or
+// the post-activation auto-show); the schedule panel stacks below the connections panel.
+// `scheduleOnly` drops the connections panel — used over harness tabs, where the whole tab *is*
+// the terminal connection and only the timers are worth overlaying. `interactive` accepts pointer
+// events on the panels themselves (agent tabs, Decision 8); on harness tabs the panels stay
+// non-interactive so they never intercept terminal input.
+export function StatusPanels({ connections: connectionRows, schedule: scheduleRows, scheduleOnly = false, connectionsWindow, scheduleWindow, interactive = false, onCloseRow, onOpenAcpTranscript }: Properties) {
+  const connectionList = scheduleOnly ? [] : connectionRows;
+  const showConnections = connectionList.length > 0 && connectionsWindow.visible;
   const showSchedule = scheduleRows.length > 0 && scheduleWindow.visible;
   if (!showConnections && !showSchedule) return null;
   return (
@@ -78,7 +81,7 @@ export function StatusPanels({ tab, scheduleOnly = false, connections: connectio
           onMouseLeave={interactive ? connectionsWindow.onWindowLeave : undefined}
         >
           <div className="panel-title">connections</div>
-          {connectionRows.map((c, index) => (
+          {connectionList.map((c, index) => (
             <ConnectionRow key={index} row={c} index={index} onCloseRow={onCloseRow} onOpenAcpTranscript={onOpenAcpTranscript} />
           ))}
         </div>

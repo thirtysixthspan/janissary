@@ -4,6 +4,10 @@ export type PluginTabView = {
   id: string;
   schemaVersion: number;
   payload: unknown;
+  // The chords this plugin claimed in its declaration, carried with the tab rather than looked up on
+  // the client: the claim is server-side data, and a client that kept its own copy would be a second
+  // place for it to drift from the declaration that is actually enforced at activation.
+  chords?: readonly string[];
 };
 
 export type PluginIntentRequest = { tab: string; intent: string; payload: unknown };

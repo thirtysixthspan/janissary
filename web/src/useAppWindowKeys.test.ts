@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import type { StateSnapshot, Callbacks } from './useWindowKeys';
 import type { JanusClient } from './ws';
+import { createPluginChordRegistry } from './plugins/PluginChords';
 
 vi.mock('./useWindowKeys', () => ({
   useWindowKeys: vi.fn(),
@@ -11,6 +12,10 @@ vi.mock('./useWindowKeys', () => ({
 import { useWindowKeys } from './useWindowKeys';
 
 const mockedUseWindowKeys = useWindowKeys as ReturnType<typeof vi.fn>;
+
+function fakeChords() {
+  return createPluginChordRegistry();
+}
 
 function fakeClient(): JanusClient {
   return { send: vi.fn() } as unknown as JanusClient;
@@ -24,7 +29,7 @@ describe('useAppWindowKeys', () => {
   it('passes one and the same ref for both the state and the callbacks side', () => {
     mockedUseWindowKeys.mockClear();
     const deps = fakeDeps(0);
-    renderHook(() => useAppWindowKeys(fakeClient(), () => false, () => {}, deps));
+    renderHook(() => useAppWindowKeys(fakeClient(), () => false, () => {}, deps, fakeChords()));
 
     const [, stateRef, callbacksRef] = mockedUseWindowKeys.mock.calls[0];
     expect(stateRef).toBe(callbacksRef);
@@ -36,7 +41,7 @@ describe('useAppWindowKeys', () => {
     const first = fakeDeps(0);
     const second = fakeDeps(3);
     const { rerender } = renderHook(
-      ({ deps }) => useAppWindowKeys(fakeClient(), () => false, () => {}, deps),
+      ({ deps }) => useAppWindowKeys(fakeClient(), () => false, () => {}, deps, fakeChords()),
       { initialProps: { deps: first } },
     );
 
@@ -52,7 +57,7 @@ describe('useAppWindowKeys', () => {
     const client = fakeClient();
     const handleScrollKey = () => false;
     const handleScrollKeyUp = () => {};
-    renderHook(() => useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, fakeDeps(0)));
+    renderHook(() => useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, fakeDeps(0), fakeChords()));
 
     const call = mockedUseWindowKeys.mock.calls[0];
     expect(call[0]).toBe(client);

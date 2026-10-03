@@ -24,7 +24,7 @@ type Properties = {
 export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Properties) {
   const transcriptReference = useRef<HTMLDivElement>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
-  const statusWindows = useStatusWindows(tab.label, tab.connections.length > 0, tab.schedule.length > 0);
+  const statusWindows = useStatusWindows(tab.label);
   const intents = agentTabIntents(client, tab.label, 'openTranscriptFor');
   return (
     <div
@@ -58,9 +58,10 @@ export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Pr
           scrollRef={transcriptReference}
         />
         <StatusPanels
-          tab={tab}
-          connections={statusWindows.connections}
-          schedule={statusWindows.schedule}
+          connections={tab.connections}
+          schedule={tab.schedule}
+          connectionsWindow={statusWindows.connections}
+          scheduleWindow={statusWindows.schedule}
           interactive
           onOpenAcpTranscript={intents.onOpenAcpTranscript}
         />

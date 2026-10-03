@@ -7,6 +7,7 @@ import { makeTab } from './index.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../agent/types.js';
 import type { ScheduleEntry } from '../schedule/types.js';
+import type { TabPluginResources } from '../plugins/api.js';
 import * as agentState from '../agent/state.js';
 import { messageBus } from '../bus.js';
 import { UNREAD_DWELL_MS } from './dwell.js';
@@ -17,7 +18,14 @@ function makeManagers(): Managers {
     shell: { close: vi.fn(), closeTab: vi.fn() },
     acp: { close: vi.fn(), closeTab: vi.fn() },
     browser: { closeTab: vi.fn() },
-    pty: { closeTab: vi.fn() },
+    pty: {
+      closeTab: vi.fn(),
+      spawn: vi.fn(() => 'pty1'),
+      adopt: vi.fn(),
+      kill: vi.fn(),
+      spawnDimensions: vi.fn(() => ({ cols: 80, rows: 24 })),
+      isRunning: vi.fn(() => true),
+    },
     harness: { closeTab: vi.fn() },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
@@ -32,10 +40,16 @@ function makeManagers(): Managers {
 }
 
 function makeTabManager(): TabManager {
+  return makeTabManagerWithManagers().tm;
+}
+
+// The managers alongside, for the cases that assert on what the tab manager asked of them -- a
+// terminal adopted onto a new label, a process killed after a factory failed.
+function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
   Object.assign(managers, makeManagers());
-  return managers.tab;
+  return { tm: managers.tab, managers };
 }
 
 // Callers used to scan the public `tabs` array themselves and then check the returned record's
@@ -293,6 +307,44 @@ describe('TabManager queue', () => {
     tm.openPluginTab('image', 'image', '/test/a.png', 1, 'janus', () => payload('/test/a.png'));
     tm.openPluginTab('image', 'image', '/test/b.png', 1, 'janus', () => payload('/test/b.png'));
     expect(tm.tabs.length).toBe(3); // janus + a.png + b.png
+  });
+
+  // A plugin tab's label is allocated after its factory returns, so a terminal started in that factory
+  // is adopted onto the label the host then mints — which is what puts it under the ordinary per-tab
+  // release walk instead of needing a teardown path of its own.
+  it('adopts a terminal a plugin spawned onto the label its new tab was given', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      const terminal = resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: { ptyId: terminal.ptyId } };
+    });
+
+    const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
+    expect(managers.pty.adopt).toHaveBeenCalledWith('pty1', tab.label);
+  });
+
+  it('kills a terminal rather than leaving it running when the factory that started it fails', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    expect(() => tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      throw new Error('produced an invalid payload');
+    })).toThrow(/invalid payload/);
+
+    expect(managers.pty.kill).toHaveBeenCalledWith('pty1');
+    expect(tm.tabs.some((candidate) => candidate.plugin?.instanceKey === 'shell-1')).toBe(false);
+  });
+
+  it('refuses to start a terminal outside a payload factory', () => {
+    const { tm } = makeTabManagerWithManagers();
+    let stashed: TabPluginResources | undefined;
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      stashed = resources;
+      return { title: 'shell', payload: {} };
+    });
+
+    expect(() => stashed?.spawnTerminal({ cwd: '/repo' })).toThrow(/no longer available/);
   });
 
   it('openEditorTab bypasses de-dupe for a new-file view, allowing multiple untitled tabs', () => {
@@ -715,13 +767,6 @@ describe('TabManager renameTab for editor tabs', () => {
 });
 
 describe('TabManager retargetEditorTab', () => {
-  function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
-    const managers = {} as Managers;
-    managers.tab = new TabManager(managers);
-    Object.assign(managers, makeManagers());
-    return { tm: managers.tab, managers };
-  }
-
   it('updates the matching editor tab\'s path, name, url, and title, and rewatches at the new path', () => {
     const { tm, managers } = makeTabManagerWithManagers();
     const originalUrl = tm.registerFile('/tree/notes.txt');

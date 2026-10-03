@@ -14,8 +14,15 @@ const documentation = readFileSync(
 
 const COUNT_WORDS = [
   'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
-  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen',
+  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen',
+  'twenty', 'twenty-one', 'twenty-two', 'twenty-three', 'twenty-four',
 ];
+
+// The client-side count is a literal because its capability object lives in the web project, which
+// this server-side test cannot import without dragging the client entry into the server graph. Raise
+// it in the same change that adds a client capability, or the assertion below passes for the wrong
+// reason once the two drift apart.
+const CLIENT_CAPABILITY_COUNT_WORD = 'twelve';
 
 describe('tab plugin developer documentation', () => {
   it('shows the fixture manifest the repository actually ships', () => {
@@ -46,8 +53,7 @@ describe('tab plugin developer documentation', () => {
   it('keeps the API changelog honest about the same count', () => {
     const word = COUNT_WORDS[TAB_PLUGIN_CAPABILITY_NAMES.length];
     // The changelog entry opens a sentence, so match the count word however it is capitalized.
-    // The client count stays a literal: its capability object lives in the web project, which this
-    // server-side test cannot import without dragging the client entry into the server graph.
-    expect(documentation.toLowerCase()).toContain(`${word} server and eight client capabilities.`);
+    expect(documentation.toLowerCase())
+      .toContain(`${word} server and ${CLIENT_CAPABILITY_COUNT_WORD} client capabilities.`);
   });
 });

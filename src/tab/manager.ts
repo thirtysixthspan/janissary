@@ -1,7 +1,9 @@
 import type { Tab, LogEntry, CenterPane } from './types.js';
 import type { AgentState } from '../agent/types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
+import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
+import { SHELL_NAME, shellName } from '../shell/manager.js';
 import { abbreviatePath } from '../paths.js';
 import { messageBus } from '../bus.js';
 import { TabTranscriptState } from './transcript/state.js';
@@ -202,6 +204,33 @@ export class TabManager extends TabTranscriptState {
 
   registerFile(absPath: string): string {
     return this.fileRegistry.register(absPath);
+  }
+
+  // Starts a terminal on behalf of a plugin tab's payload factory. The label is deliberately not a
+  // tab's: none exists yet, so the caller adopts the id onto the label `addPluginTab` mints. A
+  // workspace in the options is confined exactly as that tab's own shell is, and the plugin never
+  // learns how.
+  spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal {
+    const workspace = options.workspace;
+    const ptyId = this.managers.pty.spawn(
+      '',
+      options.shell ? shellName(options.shell) : SHELL_NAME,
+      '',
+      options.cwd,
+      workspace?.dir,
+      workspace?.offline,
+      undefined,
+      { shell: options.shell, args: options.args },
+    );
+    return { ptyId, ...this.managers.pty.spawnDimensions(), running: this.managers.pty.isRunning(ptyId) };
+  }
+
+  adoptTerminal(ptyId: string, label: string): void {
+    this.managers.pty.adopt(ptyId, label);
+  }
+
+  killTerminal(ptyId: string): void {
+    this.managers.pty.kill(ptyId);
   }
 
   replaceFile(reference: string, absPath: string): string {

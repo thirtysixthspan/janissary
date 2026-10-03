@@ -15,6 +15,13 @@ import type { Managers } from '../managers.js';
 // The base name of the user's login shell (`bash`, `zsh`, …), used both to launch tab shells and to
 // label the `shell:<name>` connection in the panel/completion.
 export const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bash';
+
+// The bare name of a shell binary, which is what a connection row and a program label show. A caller
+// naming a full path gets its basename, so a plugin that asks for `/bin/zsh` is listed as `zsh`
+// beside every other shell in the application.
+export function shellName(shellPath: string): string {
+  return shellPath.split('/').pop() || SHELL_NAME;
+}
 const TERMINAL_RESET = String.fromCodePoint(27) + 'c';
 
 // A local shell started in a recorded cwd that is not a directory — deleted since, or never a path —

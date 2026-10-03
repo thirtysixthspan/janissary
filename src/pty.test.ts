@@ -85,12 +85,25 @@ describe('spawnPty', () => {
     }
   });
 
-  it('lets an explicit shellArgs replace the default argv', () => {
+  it('lets an explicit launch replace the default shell and argv', () => {
     const previous = process.env.SHELL;
     process.env.SHELL = '/bin/zsh';
     try {
-      spawnPty('zsh', 'zsh', '/tmp', { onData: vi.fn(), onExit: vi.fn() }, 80, 24, undefined, undefined, ['--no-rcs']);
-      expect(mockPtySpawn).toHaveBeenCalledWith('/bin/zsh', ['--no-rcs'], expect.any(Object));
+      spawnPty('zsh', 'zsh', '/tmp', { onData: vi.fn(), onExit: vi.fn() }, 80, 24, undefined, undefined, { shell: '/bin/bash', args: ['--no-rcs'] });
+      expect(mockPtySpawn).toHaveBeenCalledWith('/bin/bash', ['--no-rcs'], expect.any(Object));
+    } finally {
+      process.env.SHELL = previous;
+    }
+  });
+
+  // `args: []` is not the same as omitting it: the first runs the shell as the user configured it,
+  // the second runs one command through it. A terminal a person types into needs the first.
+  it('runs the named shell itself when launch names it with no argv', () => {
+    const previous = process.env.SHELL;
+    process.env.SHELL = '/bin/bash';
+    try {
+      spawnPty('zsh', '', '/tmp', { onData: vi.fn(), onExit: vi.fn() }, 80, 24, undefined, undefined, { shell: '/bin/zsh', args: [] });
+      expect(mockPtySpawn).toHaveBeenCalledWith('/bin/zsh', [], expect.any(Object));
     } finally {
       process.env.SHELL = previous;
     }

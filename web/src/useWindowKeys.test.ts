@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useWindowKeys } from './useWindowKeys';
+import { createPluginChordRegistry, type PluginChordRegistry } from './plugins/PluginChords';
 import { declareOverlayClaims, installOverlayOpener, openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
 
 const published: (() => void)[] = [];
@@ -32,6 +33,7 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 function TestComponent({
   route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, profilePickerOpen,
   canSearch, searchOpen, quickOpenOpen, handleScrollKey, callbacks, client,
+  chords = createPluginChordRegistry(),
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
@@ -45,6 +47,7 @@ function TestComponent({
   quickOpenOpen?: boolean;
   handleScrollKey?: (e: KeyboardEvent) => boolean;
   client?: { send: ReturnType<typeof vi.fn> };
+  chords?: PluginChordRegistry;
   callbacks?: Partial<{
     setRouteIndex: (s: (p: number) => number) => void;
     chooseRoute: (i: number) => void;
@@ -139,7 +142,7 @@ function TestComponent({
   const cbRef = useRef(cb);
   cbRef.current = cb;
   const sendClient = client ?? { send: vi.fn() };
-  useWindowKeys(sendClient as never, stateRef as never, cbRef as never, handleScrollKey ?? vi.fn(() => false), vi.fn());
+  useWindowKeys(sendClient as never, stateRef as never, cbRef as never, handleScrollKey ?? vi.fn(() => false), vi.fn(), chords);
   return null;
 }
 
@@ -410,7 +413,7 @@ describe('useWindowKeys', () => {
       };
       const cbRef = useRef(cb);
       cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn());
+      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -436,7 +439,7 @@ describe('useWindowKeys', () => {
       };
       const cbRef = useRef(cb);
       cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn());
+      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -467,7 +470,7 @@ describe('useWindowKeys', () => {
       };
       const cbRef = useRef(cb);
       cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn());
+      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -529,7 +532,7 @@ describe('useWindowKeys', () => {
     const stateRef = { current: null } as never;
     const cbRef = { current: null } as never;
     function C() {
-      useWindowKeys(client as never, stateRef, cbRef, vi.fn(() => false), vi.fn());
+      useWindowKeys(client as never, stateRef, cbRef, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -549,5 +552,55 @@ describe('useWindowKeys', () => {
     expect(removeSpy).toHaveBeenCalledWith('keyup', expect.any(Function));
     addSpy.mockRestore();
     removeSpy.mockRestore();
+  });
+
+  // A plugin tab's chord claim inverts the overlay rule below it: an overlay chord cannot fire without
+  // the core chord, but a tab the user is looking at would otherwise have the key do nothing at all.
+  describe('a plugin tab chord claim', () => {
+    function claimed(chordId: string) {
+      const chords = createPluginChordRegistry();
+      const handler = vi.fn();
+      chords.register('shell', chordId, handler);
+      return { chords, handler };
+    }
+
+    it('runs the plugin handler instead of the application action', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+
+      dispatchKey('r', { ctrlKey: true });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(openPicker).not.toHaveBeenCalled();
+    });
+
+    it('reverts to the application action once the claim is released', () => {
+      const chords = createPluginChordRegistry();
+      const handler = vi.fn();
+      const release = chords.register('shell', 'ctrl+r', handler);
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+
+      dispatchKey('r', { ctrlKey: true });
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      release();
+      dispatchKey('r', { ctrlKey: true });
+
+      // The application's history picker takes the chord back, which is what focusing another tab does.
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(openPicker).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves an unclaimed chord with the application', () => {
+      const { chords } = claimed('ctrl+r');
+      const openTabNav = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openTabNav } }));
+
+      dispatchKey('g', { ctrlKey: true });
+
+      expect(openTabNav).toHaveBeenCalledTimes(1);
+    });
   });
 });

@@ -51,6 +51,7 @@ describe('PseudoterminalManager', () => {
     expect(manager.terminalsFor('main')).toEqual(['vim']);
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
       'vim', 'vim file.txt', '/repo', expect.anything(), 80, 24, expect.anything(), undefined,
+      undefined,
     );
   });
 
@@ -76,6 +77,7 @@ describe('PseudoterminalManager', () => {
 
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
       'vim', 'vim file.txt', '/repo', expect.anything(), 120, 40, expect.anything(), undefined,
+      undefined,
     );
   });
 
@@ -162,8 +164,32 @@ describe('PseudoterminalManager', () => {
 
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
       'less', 'less file.txt', process.cwd(), expect.anything(), 80, 24, expect.anything(), undefined,
+      undefined,
     );
     expect(tab.activePty).toBe('pty1');
+  });
+
+  // A plugin tab's label does not exist while its payload factory runs, so the terminal is spawned
+  // against a stand-in and adopted afterwards. Adopting is what puts it under the ordinary per-tab
+  // release walk, so a closed shell tab takes its zsh with it rather than needing its own teardown.
+  it('adopt moves a session onto a tab label so closeTab reaches it', () => {
+    const { managers } = makeManagers([makeTab('shell', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+
+    const id = manager.spawn('', 'zsh', '', '/repo', undefined, undefined, undefined,
+      { shell: '/bin/zsh', args: [] });
+    manager.adopt(id, 'shell');
+
+    expect(manager.terminalsFor('shell')).toEqual(['zsh']);
+    manager.closeTab('shell');
+    expect(kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('adopt on an unknown id is a no-op', () => {
+    const { managers } = makeManagers([makeTab('shell', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+
+    expect(() => { manager.adopt('ghost', 'shell'); }).not.toThrow();
   });
 
   it('closeTab kills and forgets only the PTYs owned by that tab', () => {

@@ -35,11 +35,7 @@ export function HarnessTabLayer({
 }: Properties) {
   const isActive = t.label === current.label;
   const scheduleOnly = t.harness.name !== 'ssh';
-  const statusWindows = useStatusWindows(
-    current.label,
-    isActive && !scheduleOnly && t.connections.length > 0,
-    isActive && t.schedule.length > 0,
-  );
+  const statusWindows = useStatusWindows(current.label);
   return (
     <div
       className="tab-body"
@@ -59,7 +55,13 @@ export function HarnessTabLayer({
         scheduleButton={statusButton(t.schedule.length > 0, statusWindows.schedule)}
         onSplit={onSplit}
         ref={(h) => { if (h) harnessHandles.current.set(t.harness.ptyId, h); else harnessHandles.current.delete(t.harness.ptyId); }} />
-      <StatusPanels tab={t} scheduleOnly={scheduleOnly} connections={statusWindows.connections} schedule={statusWindows.schedule} />
+      <StatusPanels
+        connections={t.connections}
+        schedule={t.schedule}
+        scheduleOnly={scheduleOnly}
+        connectionsWindow={statusWindows.connections}
+        scheduleWindow={statusWindows.schedule}
+      />
       {pickerOverlays}
     </div>
   );

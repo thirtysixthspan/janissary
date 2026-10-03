@@ -11,7 +11,9 @@ import { errorFirstLine } from '../error-text.js';
 import { invokePlugin, type PluginCallOutcome } from './invoke.js';
 import { openerPresentation } from './presentation.js';
 import { tabPluginLoaders } from './loaders.js';
-import { subscribeTabPluginNotifications, TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
+import { TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
+import { TAB_PLUGIN_HOST_STATE_TIMEOUT_MS } from './host-state.js';
+import { subscribeHostChannels } from './host-channels.js';
 import { runPluginDefaultMenuAction } from './default-menu.js';
 import { closedTabReason, reportClientFailure, runPluginIntent, type PluginRequestPort } from './requests.js';
 import type { Subscription } from '../bus.js';
@@ -26,6 +28,7 @@ export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
   handlerTimeoutMs?: number;
   notifyTimeoutMs?: number;
+  hostStateTimeoutMs?: number;
 };
 
 export class TabPluginHost {
@@ -33,7 +36,7 @@ export class TabPluginHost {
   private readonly disabledTabPlugins = new Map<string, string>();
   private readonly activationTimeoutMs: number;
   private readonly handlerTimeoutMs: number;
-  private readonly notifications: Subscription[];
+  private readonly subscriptions: Subscription[];
   private disposed = false;
 
   constructor(
@@ -55,16 +58,18 @@ export class TabPluginHost {
         ? { declaration, state: 'declared' }
         : { declaration, state: 'disabled', reason: rejection });
     }
-    this.notifications = subscribeTabPluginNotifications({
+    this.subscriptions = subscribeHostChannels({
       managers,
       records: () => [...this.records.values()],
-      timeoutMs: options.notifyTimeoutMs ?? TAB_PLUGIN_NOTIFY_TIMEOUT_MS,
       invoke: (record, activation, origin, call, timeoutMs) => invokePlugin(
         managers, record.declaration, activation, origin,
         () => record.state === 'active' && !this.disposed, timeoutMs, call,
       ),
       disable: (record, error, origin) => { this.disable(record, error, origin); },
-    }, declarations.flatMap((declaration) => declaration.notifications ?? []));
+    }, declarations, {
+      notifyMs: options.notifyTimeoutMs ?? TAB_PLUGIN_NOTIFY_TIMEOUT_MS,
+      hostStateMs: options.hostStateTimeoutMs ?? TAB_PLUGIN_HOST_STATE_TIMEOUT_MS,
+    });
   }
 
   get declarations(): readonly TabPluginDeclaration[] {
@@ -126,7 +131,7 @@ export class TabPluginHost {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    for (const subscription of this.notifications) subscription.unsubscribe();
+    for (const subscription of this.subscriptions) subscription.unsubscribe();
     for (const record of this.records.values()) this.disposeActivation(record);
   }
 

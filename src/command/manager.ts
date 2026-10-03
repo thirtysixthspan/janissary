@@ -117,6 +117,23 @@ export class CommandManager {
     this.managers.pty.openInlinePty(label, command, program);
   }
 
+  // Offers one line to the ordinary dispatcher and answers whether the application claimed it.
+  //
+  // Deliberately narrower than `run`: a resolution to the `shell` route or to nothing at all is not
+  // an application command, so both report `false` and the caller decides what they mean. What counts
+  // as claimed is a registry entry or a built-in that answers with output — the two kinds `run`
+  // handles without a route chooser or a shell in the middle.
+  dispatchLine(label: string, input: string): boolean {
+    const res = resolveCommand(input);
+    if (res.kind === 'output') {
+      this.managers.tab.append(label, { input, output: res.output, markdown: true });
+      return true;
+    }
+    if (res.kind !== 'app') return false;
+    void this.executeCommand(res.name, res.cmd, label, this.managers.tab.findIndex(label));
+    return true;
+  }
+
   async executeCommand(name: string, command: string, label: string, index: number): Promise<void> {
     const cmd = findCommand(name, command);
     if (!cmd) return;

@@ -9,14 +9,15 @@ import { statusButton, type StatusWindowButtonProps } from '../shared/status-win
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
 import { isEditorTabView } from '../shared/tab/view-guards';
 
-export type EditorConnectionsApi = ReturnType<typeof useStatusWindows> & {
+export type EditorConnectionsApi = {
+  windows: ReturnType<typeof useStatusWindows>;
   connectionsButton: StatusWindowButtonProps;
   closeRow: (row: ConnectionView) => void;
   openAcpTranscript: (acpRef: AcpRef) => void;
 };
 
 export function useEditorConnections(client: JanusClient, tab: TabView): EditorConnectionsApi {
-  const windows = useStatusWindows(tab.label, tab.connections.length > 0, false);
+  const windows = useStatusWindows(tab.label);
 
   // There is no connection to close without the editor payload that names the file, so a tab missing
   // it is left alone rather than dereferenced — the row simply does nothing.
@@ -32,5 +33,5 @@ export function useEditorConnections(client: JanusClient, tab: TabView): EditorC
 
   const connectionsButton = statusButton(tab.connections.length > 0, windows.connections);
 
-  return { ...windows, connectionsButton, closeRow, openAcpTranscript };
+  return { windows, connectionsButton, closeRow, openAcpTranscript };
 }

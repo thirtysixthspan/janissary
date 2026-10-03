@@ -12,6 +12,7 @@ export const tabPluginLoaders = {
   schedules: () => import('./schedules/activate.js'),
   search: () => import('./search/activate.js'),
   sessions: () => import('./sessions/activate.js'),
+  shell: () => import('./shell/activate.js'),
   sql: () => import('./sql/activate.js'),
   video: () => import('./video/activate.js'),
 } satisfies Record<ProductionTabPluginId, TabPluginLoader>;

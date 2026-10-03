@@ -2,6 +2,7 @@ import type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
 } from './api-topics.js';
 import type { TabPluginCapabilityName } from './api-capabilities.js';
+import type { CompletionResult } from '../completion/types.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
 // are re-exported here, so a plugin still reads the whole v1 contract from one module.
@@ -47,11 +48,68 @@ export type TabPluginDeclaration = {
   // An entry the file navigator offers for a multi-row selection of this plugin's own file types.
   // A declaration carrying one must supply a `selectionAction` handler.
   selectionAction?: TabPluginSelectionAction;
+  // Host state this plugin's tabs want pushed into their payloads: the connection list, the schedule
+  // list, or both. A declaration naming any must supply a `hostState` handler. The host delivers a
+  // named slice only when it differs from what it last pushed to that tab, so this is a change
+  // signal rather than a subscription to every state broadcast.
+  hostState?: readonly TabPluginHostStateSlice[];
+  // Chords this plugin claims while one of its tabs is the visible one — canonical ids in the shape
+  // the application's own chord table uses. A claimed chord runs the handler the mounted body
+  // registers rather than the application's action, and reverts to the application the moment
+  // another tab is focused. A claim no mounted body answers falls through unchanged.
+  chords?: readonly string[];
   capabilities: readonly TabPluginCapabilityName[];
+};
+
+export type TabPluginHostStateSlice = 'connections' | 'schedule';
+
+const HOST_STATE_SLICES = new Set<TabPluginHostStateSlice>(['connections', 'schedule']);
+
+export function isTabPluginHostStateSlice(name: string): name is TabPluginHostStateSlice {
+  return HOST_STATE_SLICES.has(name as TabPluginHostStateSlice);
+}
+
+export type TabPluginHostState = {
+  // Addressed by instance key, because that is what `updateTab` takes — the handler's job is to merge
+  // these rows into a payload, and merging needs the key it will be writing under.
+  instanceKey: string;
+  // What the tab currently holds, so a handler can merge rather than replace: the host hands over the
+  // payload it is about to be asked to replace, and only the plugin knows which fields are its own.
+  tabPayload: unknown;
+  connections: unknown[];
+  schedule: unknown[];
+};
+
+// A terminal this plugin's tab owns, spawned while its payload factory runs. The window is the same
+// one `registerFile` is scoped to, which is what guarantees the caller has a tab to attach it to: a
+// tab's label is allocated only after its factory returns.
+export type TabPluginTerminal = {
+  ptyId: string;
+  cols: number;
+  rows: number;
+  // Whether it is still running. False once the process behind it has exited, which a tab cannot
+  // learn any other way after a reconnect.
+  running: boolean;
+};
+
+export type TabPluginTerminalOptions = {
+  // Where the terminal starts. A workspaced tab's clone, or the project root.
+  cwd: string;
+  // The shell to run, and the argv to run it with. Omit `args` to run one command through the
+  // shell; pass `[]` to run the shell itself, which is what a terminal a person types into wants.
+  shell?: string;
+  args?: string[];
+  // Confinement for a terminal started in a workspace clone, mirroring the sandbox the tab's own
+  // shell runs under. The plugin names where the terminal lives; the host owns how it is confined.
+  workspace?: { dir: string; offline?: boolean };
 };
 
 export type TabPluginResources = {
   registerFile(absPath: string): string;
+  // Start a terminal this tab will own. The host releases it when the tab closes, when the plugin is
+  // disposed, and when the plugin is disabled — the plugin never holds a process handle, so there is
+  // nothing for it to leak. Callable only from inside a payload factory.
+  spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
 };
 
 export type TabPluginPayload = {
@@ -150,6 +208,25 @@ export type TabPluginServerCapabilities = {
   // derivable from the file: a recording ended by its tab closing carries no exit event, so nothing
   // in it distinguishes a finished session from a live one.
   isRecordingLive(absPath: string): boolean;
+  // The tab a plugin command was invoked from: its label, where it is working, and the workspace
+  // clone it runs in when it has one. A plugin's command handler is handed the argument and its
+  // capabilities and nothing else, so this is the only way one learns what the user was standing in
+  // when they asked for it. The host already resolves that tab for `note` and `openOrFocusTab`;
+  // this makes the same resolution readable rather than new.
+  originTab(): { label: string; cwd: string; workspace?: { dir: string; offline?: boolean } } | null;
+  // Offer one line to the application's own command dispatcher, answering whether it ran. A line that
+  // resolves to a command runs as that command in the tab this was called from; a line that resolves
+  // to nothing is the caller's to handle. Deliberately one call rather than a resolve-then-decide
+  // pair: the application's command table is consulted once, in the one place that owns it, and is
+  // never copied into a plugin where a newly added command would be invisible.
+  dispatchLine(line: string): boolean;
+  // The completion the application's command bar shows for a line, for a plugin whose tab has one.
+  completeLine(line: string, cursor: number): CompletionResult;
+  // Whether a terminal this plugin spawned is still running. A client that reconnects learns nothing
+  // about what happened while it was away: the exit event was broadcast to nobody, and a plugin tab
+  // is in-memory only, so the tab is still there holding the payload of a shell that finished minutes
+  // ago. This is how a tab learns that and closes rather than waiting for input that can never arrive.
+  terminalRunning(ptyId: string): boolean;
   rejectRequest(reason: string): never;
   reportFailure(reason: unknown): never;
 };
@@ -195,6 +272,12 @@ export type TabPluginActivation = {
   selectionAction?(
     paths: readonly string[], capabilities: TabPluginServerCapabilities,
   ): void | Promise<void>;
+  // Called when host state this tab shows has changed. Required only when the declaration names a
+  // `hostState` slice. Delivered only for a change, so a plugin building a tab reads its first
+  // payload empty and waits for this rather than having to read host state it cannot reach. Its
+  // return value is ignored for the same reason a notification's is: a status window cannot influence
+  // any host outcome, and a plugin acts on it by calling `updateTab`.
+  hostState?(state: TabPluginHostState, capabilities: TabPluginServerCapabilities): void | Promise<void>;
   isPayload(value: unknown): boolean;
   dispose?(): void | Promise<void>;
 };

@@ -17,6 +17,7 @@ import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './shared/transcript/useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
+import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
 import { usePickerOverlays } from './pickers/usePickerOverlays';
 import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
 import { useLayoutState } from './useLayoutState';
@@ -27,6 +28,10 @@ import { collectNavigatorSelections } from './file-navigator/file/navigator-sele
 import { useOverlayPlugins } from './useOverlayPlugins';
 
 export function App({ client }: { client: JanusClient }) {
+  // One registry for the chords plugin tabs claim while visible, owned here because both the window
+  // key handler and every mounted plugin body live in this tree and have to be looking at the same
+  // one. Built once per mount; claims are re-established by each body's effect.
+  const [pluginChords] = useState(createPluginChordRegistry);
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryTab, setSecondaryTab] = useState<number>();
@@ -148,7 +153,7 @@ export function App({ client }: { client: JanusClient }) {
   // overlay-owned field arrives in one bag; only search's two are the app shell's to add.
   useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, {
     ...pickers.keys, canSearch, searchOpen: search.searchOpen, openSearch: () => search.open(''),
-  });
+  }, pluginChords);
 
   const onCommandBarSubmit = useCommandBarSubmit({
     ...pickers.commands,
@@ -158,7 +163,8 @@ export function App({ client }: { client: JanusClient }) {
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
-    <AppMain
+    <PluginChordProvider registry={pluginChords}>
+      <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
       pickers={pickers.view} tabs={tabs}
@@ -182,6 +188,7 @@ export function App({ client }: { client: JanusClient }) {
       confirmQuit={confirmQuit} cancelQuit={cancelQuit}
       confirmUnsavedQuit={confirmUnsavedQuit} cancelUnsavedQuit={cancelUnsavedQuit}
       guardRef={guardRef}
-    />
+      />
+    </PluginChordProvider>
   );
 }
