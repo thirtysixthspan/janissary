@@ -2,6 +2,7 @@ import type { TabPluginLoader } from './api.js';
 import type { ProductionTabPluginId } from './catalog.js';
 
 export const tabPluginLoaders = {
+  asciicast: () => import('./asciicast/activate.js'),
   audio: () => import('./audio/activate.js'),
   conversations: () => import('./conversations/activate.js'),
   image: () => import('./image/activate.js'),

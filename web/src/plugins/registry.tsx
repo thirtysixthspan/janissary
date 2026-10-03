@@ -30,6 +30,7 @@ export type ClientPluginLoader<Payload = unknown> = () => Promise<ClientPluginMo
 // Checked only for catalog parity, not payload type: a loader map entry is a bare import, and the
 // payload each one resolves to is deliberately different per plugin.
 export const clientPluginLoaders = {
+  asciicast: () => import('./asciicast/index'),
   audio: () => import('./audio/index'),
   conversations: () => import('./conversations/index'),
   image: () => import('./image/index'),
@@ -74,6 +75,7 @@ export function createClientPluginRegistry(
 // to avoid — because this module is reachable from the entry. `registry.test.tsx` pins every literal
 // against its plugin's own constant, so the duplication cannot drift silently.
 export const clientPluginRegistry = createClientPluginRegistry({
+  asciicast: clientPlugin(1, clientPluginLoaders.asciicast),
   audio: clientPlugin(1, clientPluginLoaders.audio),
   conversations: clientPlugin(1, clientPluginLoaders.conversations),
   image: clientPlugin(1, clientPluginLoaders.image),

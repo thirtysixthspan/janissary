@@ -1,6 +1,6 @@
 # Audio Tab
 
-An **audio tab** is the persistent view contributed by the bundled audio plugin. It plays a **playlist** of audio files opened with `open <path>` or `audio <path>` (see Open → Audio plugin opener). It is a non-agent **view tab**: it shows the playing track's metadata, a player, and the queue in place of the usual transcript and command bar.
+An **audio tab** is the persistent view contributed by the bundled audio plugin. It plays a **playlist** of audio files opened with `open <path>`, `audio <path>`, or `play <path>` (see Open → Audio plugin opener). It is a non-agent **view tab**: it shows the playing track's metadata, a player, and the queue in place of the usual transcript and command bar.
 
 Unlike every other view tab, an audio tab is a **singleton**. There is one player, and it owns a queue rather than a file: opening a second audio file while the tab is open appends that file to the end of the queue and jumps to it instead of opening a second tab. A session therefore accumulates a playlist rather than a row of tabs. Opening several files in turn — which is what a wildcard such as `open *.mp3` does, dispatching each match in sorted order — builds the queue in that order and leaves the last one playing. Opening a file the queue already holds jumps to it rather than queueing it twice.
 

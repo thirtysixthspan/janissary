@@ -14,7 +14,7 @@ const documentation = readFileSync(
 
 const COUNT_WORDS = [
   'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
-  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen',
+  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen',
 ];
 
 describe('tab plugin developer documentation', () => {
@@ -48,6 +48,6 @@ describe('tab plugin developer documentation', () => {
     // The changelog entry opens a sentence, so match the count word however it is capitalized.
     // The client count stays a literal: its capability object lives in the web project, which this
     // server-side test cannot import without dragging the client entry into the server graph.
-    expect(documentation.toLowerCase()).toContain(`${word} server and seven client capabilities.`);
+    expect(documentation.toLowerCase()).toContain(`${word} server and eight client capabilities.`);
   });
 });

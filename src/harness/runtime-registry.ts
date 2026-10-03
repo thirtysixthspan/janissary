@@ -15,9 +15,19 @@ export class HarnessRuntimes {
   private subscription: Subscription;
 
   constructor() {
+    // The bus dispatches in registration order, and this registry is built when the manager is — so
+    // it is always ahead of any per-PTY observer of the same event, including the recorder that
+    // writes the exit status into the file. Releasing here would therefore dispose that recorder
+    // mid-dispatch and drop the status before it can be written, so the release waits for the
+    // dispatch to finish. The entry is captured rather than looked up on the far side: an attach
+    // that reuses this id in between gets its own runtime, and that one must survive.
     this.subscription = messageBus.on('pty', 'exit', (event) => {
       if (event.type !== 'exit') return;
-      this.release(event.id);
+      const entry = this.entries.get(event.id);
+      if (!entry) return;
+      queueMicrotask(() => {
+        if (this.entries.get(event.id) === entry) this.release(event.id);
+      });
     });
   }
 

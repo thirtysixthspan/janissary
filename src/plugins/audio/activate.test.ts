@@ -8,7 +8,7 @@ import {
   type TabPluginServerCapabilities,
   type TabPluginTabUpdate,
 } from '../api.js';
-import { openerForExtension, pluginOpeners } from '../../openers/index.js';
+import { openerForExtension, playablePluginForExtension, pluginOpeners } from '../../openers/index.js';
 import { tabPluginCatalog } from '../catalog.js';
 import { pluginContentTypes } from '../opener-adapter.js';
 import { activate } from './activate.js';
@@ -95,6 +95,13 @@ describe('audio opener registration', () => {
     expect(contentTypes['.mp3']).toBe('audio/mpeg');
     expect(contentTypes['.opus']).toBe('audio/ogg');
     expect(contentTypes['.wma']).toBeUndefined();
+  });
+
+  // What makes `play` reach this plugin at all. It is the plugin's own declaration, so the command that
+  // has to know about it does not: `play track.mp3` reaches the same queue `audio track.mp3` does.
+  it('declares its claimed tracks playable, so `play` routes one here', () => {
+    expect(audioManifest.playable).toBe(true);
+    expect(playablePluginForExtension('.mp3')).toBe('audio');
   });
 });
 

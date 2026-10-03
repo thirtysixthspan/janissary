@@ -224,11 +224,12 @@ describe('HarnessManager recorder lifecycle', () => {
     expect(recorderMock.instances).toHaveLength(1);
   });
 
-  it('disposes the recorder when its PTY exits', () => {
+  it('disposes the recorder when its PTY exits', async () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.run('harness claude');
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    await Promise.resolve();
     expect(recorderMock.instances[0].dispose).toHaveBeenCalled();
   });
 });
@@ -260,11 +261,12 @@ describe('HarnessManager transcript tailer lifecycle', () => {
     expect(tailerMock.instances).toHaveLength(0);
   });
 
-  it('disposes the tailer when its PTY exits', () => {
+  it('disposes the tailer when its PTY exits', async () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.run('harness claude');
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    await Promise.resolve();
     expect(tailerMock.instances[0].dispose).toHaveBeenCalled();
     expect(manager.transcriptTailer('claude')).toBeUndefined();
   });
@@ -282,13 +284,14 @@ describe('HarnessManager PTY runtime lifecycle', () => {
     vi.restoreAllMocks();
   });
 
-  it('disposes every resource owned by a PTY runtime when the PTY exits', () => {
+  it('disposes every resource owned by a PTY runtime when the PTY exits', async () => {
     const { managers } = makeManagers();
     const readerDispose = vi.spyOn(HarnessScreenReader.prototype, 'dispose');
     const manager = new HarnessManager(managers);
     manager.run('harness claude');
 
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    await Promise.resolve();
 
     expect(readerDispose).toHaveBeenCalled();
     expect(recorderMock.instances[0].dispose).toHaveBeenCalledOnce();
@@ -505,6 +508,7 @@ describe('HarnessManager.registerSshObservers', () => {
     await vi.advanceTimersByTimeAsync(1001);
 
     messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    await Promise.resolve();
 
     expect(recorderMock.instances[0].dispose).toHaveBeenCalled();
     expect(manager.latestScreenText('devbox')).toBeUndefined();

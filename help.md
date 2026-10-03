@@ -21,6 +21,7 @@
 | `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the database reached most recently, by `sql` or any `db` command (`sql [<name>] left`/`right` to dock it) |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
+| `play` | `play <name>` plays a file in the tab that plays its kind — `play devbox` plays the newest `.cast` recording of the session named `devbox`, `play clip.mp4` opens a video, `play song.mp3` queues a track; what plays a file is decided by its extension |
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |
@@ -107,6 +108,15 @@
 | `Space` | Play / pause |
 | `←` / `→` | Seek back / forward ten seconds (clamped to the current track) |
 | `Shift+←` / `Shift+→` | Previous / next track |
+
+**Asciicast tab controls** (active only while an asciicast tab is the visible one):
+
+| Key | Action |
+| --- | ------ |
+| `Space` or `p` | Play / pause |
+| `.` | Next recorded moment |
+| `,` | Previous recorded moment |
+| `]` / `[` | Faster / slower |
 
 **Editor tab controls** (active only while an editor tab is focused):
 

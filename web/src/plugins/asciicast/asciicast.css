@@ -1,0 +1,97 @@
+/* The asciicast plugin's own rules, layered on the shared plugin frame from ../shared.css. The body is a
+   terminal stage rather than a centering one: a recording is a grid of its own size that must not be
+   re-laid-out, so the stage holds it at that size and clips whatever falls outside — a recording wider
+   or taller than the tab is read by resizing the window, not by scrolling the tab. The overflow is
+   hidden in two places for that reason: xterm's own stylesheet gives its viewport `overflow-y: scroll`
+   unconditionally, which would leave a scrollbar inside the terminal on a platform that gives one
+   width. The metadata line and the transport row both wrap, which is what lets the whole thing survive
+   being docked into a narrow sidebar. */
+
+.asciicast-tab {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  gap: 8px;
+}
+
+.asciicast-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  color: var(--muted);
+  user-select: text;
+}
+
+.asciicast-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.asciicast-live {
+  color: var(--accent, var(--fg));
+  font-weight: 600;
+}
+
+.asciicast-problem {
+  color: var(--warn, var(--muted));
+}
+
+.asciicast-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--terminal-bg, #17181b);
+}
+
+.asciicast-stage .xterm {
+  height: 100%;
+}
+
+/* Still scrollable programmatically, which is how xterm keeps the cursor in view as the buffer
+   scrolls during playback — but with no scrollbar and nothing for the wheel to grab. */
+.asciicast-stage .xterm-viewport {
+  overflow-y: hidden;
+}
+
+.asciicast-transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.asciicast-button {
+  background: none;
+  border: 1px solid var(--border, transparent);
+  border-radius: 4px;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  padding: 2px 8px;
+}
+
+.asciicast-button:hover {
+  background: var(--hover, rgb(255 255 255 / 6%));
+}
+
+.asciicast-scrub {
+  flex: 1 1 120px;
+  min-width: 80px;
+  accent-color: var(--accent, currentColor);
+}
+
+.asciicast-clock {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.asciicast-speed {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

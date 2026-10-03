@@ -333,6 +333,32 @@ describe('OpenFileManager.run', () => {
     );
   });
 
+  // The plugin that claims `.cast` is what makes `open <file>.cast` — and a navigator double-click,
+  // which resolves through the same registry — open the asciicast tab rather than the text editor.
+  // Pinned here rather than left to the registry test alone: this is the assertion about the command
+  // the user types, and it fails if `open` ever stops consulting that registry.
+  it('routes a terminal recording inline to the asciicast plugin opener', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'janus-cast-'));
+    const file = path.join(dir, 'devbox-2026-07-10T18-30-05-123Z.cast');
+    writeFileSync(file, '{"version":3,"term":{"cols":80,"rows":24}}\n', 'utf8');
+    const runOpener = vi.fn();
+    const managers = {
+      tab: {
+        cwdOf: () => dir,
+        launchDir: dir,
+        append: () => {},
+        registerFile: (p: string) => `/open/test-${p.length}`,
+      },
+      plugins: { runOpener },
+    } as unknown as Managers;
+
+    await new OpenFileManager(managers).run('open devbox-2026-07-10T18-30-05-123Z.cast', 'janus');
+
+    expect(runOpener).toHaveBeenCalledWith('asciicast', 'inline', file, {
+      label: 'janus', command: 'open devbox-2026-07-10T18-30-05-123Z.cast',
+    });
+  });
+
   // A plugin's declared command reaches the same pipeline as `open`, but pinned to its own opener.
   // Without that pin, `video notes.txt` would quietly open the plain-text editor.
   it('refuses a file that resolves to a different opener when one is required', async () => {

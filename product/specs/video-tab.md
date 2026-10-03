@@ -1,6 +1,6 @@
 # Video Tab
 
-A **video tab** is the persistent view contributed by the bundled video plugin. It plays a single video opened with `open <path>` or `video <path>` (see Open → Video plugin opener).
+A **video tab** is the persistent view contributed by the bundled video plugin. It plays a single video opened with `open <path>`, `video <path>`, or `play <path>` (see Open → Video plugin opener).
 It is a non-agent **view tab**: it shows the video and its metadata in place of the usual transcript
 and command bar, and is controlled by the player's own transport controls rather than a command line.
 

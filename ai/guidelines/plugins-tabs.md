@@ -26,6 +26,7 @@ Every `TabPluginDeclaration` field has one purpose:
 - `fileExtensions`: map of lowercased dot-prefixed claims to a MIME string or `undefined` for externally handled formats.
 - `editGesture` (optional): v1 permits `open external` for file-navigator edit activation.
 - `command` (optional): one case-insensitive first-token command claim.
+- `coreRoutes` (optional): command tokens a core command may route into this plugin's inline opener with a file it has already resolved — how a plugin owns a subcommand of a reserved name such as `harness replay`, which no command claim can reach. It names tokens and no handler, because the opener a route needs is the plugin's own.
 - `capabilities`: names requested from the v1 server capability set.
 
 Declarations contain data, never executable predicates or top-level side effects. Core routes resolve first. Duplicate extension claims, duplicate command claims, and command claims colliding with any built-in, available command, `schedule`, `harness`, `ssh`, or `shell` are refused; array order never breaks a tie. The first plugin to claim a name keeps it. A refused claim is recorded, not thrown: that plugin contributes nothing and starts life disabled with the recorded reason, because the host must start successfully with every plugin broken.
@@ -40,6 +41,7 @@ Declarations contain data, never executable predicates or top-level side effects
 - `openClaimedFiles(target)` asks the host to run its ordinary `open` pipeline for `target`, pinned to this plugin's own opener. This is how a declared command becomes a second route into one opener rather than a second behavior: path resolution, wildcard expansion, sorted processing, the ten-file limit, and missing-file errors all stay identical to `open`, and a file belonging to another opener is refused rather than silently handed over. The host queues these and runs them after the guarded call returns, so that work never counts against the plugin's own budget.
 - `configuredViewer()` reads `externalViewers[pluginId]`.
 - `openExternally(path, application?)` invokes the detached OS opener.
+- `isRecordingLive(path)` answers whether a visible tab is recording that exact file, which a plugin cannot work out for itself because it reaches no tab list and because a recording ends when its tab closes as surely as when its process exits.
 - `rejectRequest(reason)` answers one bad request and leaves the plugin running.
 - `reportFailure(reason)` throws across the guarded boundary and disables the plugin.
 
@@ -55,12 +57,16 @@ An opener or command that returns nothing completed without opening a tab, which
 
 The client entry default-exports a React component accepting `{ payload, capabilities }` and named-exports `isPayload`. Write that guard as a type predicate: the registry infers the payload type from it and hands the component a value already narrowed, so no plugin asserts a type its own guard has already proven. The registry creates one `React.lazy` type at module scope; never create it during a render. The host checks the envelope schema and the entry guard before plugin behavior renders.
 
-`TabPluginClientCapabilities` exposes exactly five things:
+`TabPluginClientCapabilities` exposes exactly eight things:
 
 - `resourceUrl(reference)` adds current-session authentication to a served-file reference.
 - `intent<Result>(name, payload)` sends a request bound to this tab label.
 - `splitAction` is the host-rendered split control node or `null`.
+- `dock` is which sidebar this tab sits in, `null` for the centre strip.
 - `active` is whether this tab is the visible one in its pane — or, for a docked tab, the selected entry in its sidebar. A plugin tab stays mounted while hidden, so a window-wide listener gates on this instead of assuming the tab is on screen; a plugin never reads visibility off the host's DOM.
+- `close()` closes this tab.
+- `registerDirtyHandle(handle | null)` registers unsaved work with the host, or drops it.
+- `copyText(text)` writes to the system clipboard through the host's own copy helper, which a plugin with its own terminal cannot reach.
 - `reportFailure(reason)` sends one failure report for this plugin boundary.
 
 Never pass `JanusClient`, import a raw socket, or import host UI internals from a concrete plugin. Client-local state may hold playback, scroll, or overlay state; server-owned tab state must not be recomputed locally.

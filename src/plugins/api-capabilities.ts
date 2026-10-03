@@ -23,6 +23,7 @@ export type TabPluginCapabilityName =
   | 'openExternally'
   | 'readSettings'
   | 'saveSettings'
+  | 'isRecordingLive'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -46,6 +47,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   openExternally: true,
   readSettings: true,
   saveSettings: true,
+  isRecordingLive: true,
   rejectRequest: true,
   reportFailure: true,
 };

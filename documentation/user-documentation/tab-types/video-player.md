@@ -7,9 +7,11 @@
 ```
 open clip.mp4
 video clip.mp4
+play clip.mp4
 ```
 
 `video <path>` is the same thing under another name, and takes the same paths and wildcards `open` does.
+`play <file>` reaches the same tab by the file's type — it takes one file rather than a wildcard.
 
 The tab shows a compact header with the file's name, size, and location, and the player fills the space below it, fitted to that space rather than stretched, so a portrait clip keeps its shape. The header carries a **Split** control at its right edge. The tab is named after the file in the strip and carries a × close button, which closes it without selecting it first. The new tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you ran the command from, with its own dot color, and takes focus; it is an ordinary member of that band, so you can move it within the group and the rest of the strip reads it like any other tab. If that video is already open, `open <video>` focuses the existing tab instead of creating a duplicate.
 

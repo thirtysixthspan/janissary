@@ -101,6 +101,45 @@ A path with no wildcard characters is always a single literal target (so a name 
 
 Malformed invocations return a usage message; an unrecognized file type reports that no opener is registered — in the notifications feed — when opened in the app, and goes to the operating system's handler when opened externally.
 
+### `play` command
+
+`play <file>` — play a file in the tab that plays its kind of thing.
+
+The same registry decides, and the same opener runs: `play` resolves the target the way `open` does, reads its extension, and hands the file to the inline presentation of the plugin that claims it. What differs is the question being asked of the registry. `open` wants the opener that can show the file; `play` wants one whose plugin has declared its claimed types playable, so a file whose type is claimed for viewing but not for playing — an image, say — is not a `play` target.
+
+- `play <path>` — play a file **in the app**. One file per command; there is no wildcard expansion.
+- `play` with no target — `Usage: play <file>.`
+- `play: <path>: no such file.`
+- `play: <file>: not a playable file.` — nothing plays this kind of file. A target that **carries an
+  extension** is answered this way before any file is looked for, so it is the same answer whether or
+  not a file of that name exists. A target that carries none is a **recording name** instead, and is
+  resolved by the search below.
+
+Playable types are whatever the owning plugin declares playable: terminal recordings (`.cast`), the video
+plugin's containers, and the audio plugin's tracks. A container the video plugin can only hand to an
+external player is playable too, and `play` hands it over exactly as `open` does. See [[tab-plugins]].
+
+A path that is already there is played as written. Only a file that is not there falls through to the
+**search**, which looks in the project's recordings directory — where every session's file is written,
+so `play` learns the path from the recorder that owns it rather than re-deriving it. The name searched
+is the target's **stem**: its filename with any `.cast` suffix removed, so `play devbox`,
+`play devbox.cast`, and `play /somewhere/else/devbox-2026-07-10T18-30-05-123Z.cast` all ask about one
+session. Only a target that names no extension or names a `.cast` is searched for at all, so a missing
+video is missing rather than answered by a session of the same name.
+
+Two things in that directory answer a stem, in this order: the **recordings of that session**, named
+`<stem>-<timestamp>.cast`, of which the **most recent** is chosen — which is what "the devbox
+recording" means when a detach and reattach wrote two; and then a file of exactly the name asked for,
+`<stem>.cast`, which is how a recording some other tool wrote is still reached. A stem that is only a
+prefix of another recording's name is not a stem, so `play devbox` never opens `devbox-2`'s session. A
+search that matches nothing is `no such file`, naming the file that was missing.
+
+Every one of these is decided before any tab exists, and each is a line in the transcript the command
+was typed into rather than an entry in the notifications feed. A file that is there but cannot be read
+as one is a different moment: the tab opens, and its own view says why on it.
+
+See [[harness-recording]] § Retrieval for what playing a terminal recording offers.
+
 ---
 
 ## Image plugin opener

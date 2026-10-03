@@ -10,6 +10,7 @@ function capabilities() {
   const value: TabPluginClientCapabilities = {
     resourceUrl: (reference) => reference,
     intent: async <Result,>(name: string, payload: unknown) => intent(name, payload) as Promise<Result>,
+    copyText: vi.fn(),
     splitAction: <button type="button">Split</button>,
     active: true,
     dock: null,

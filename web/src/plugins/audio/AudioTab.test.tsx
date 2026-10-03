@@ -19,6 +19,7 @@ function makeCapabilities(overrides: Partial<TabPluginClientCapabilities> = {}) 
     resourceUrl: (reference) => `${reference}?token=`,
     intent: async <Result,>(name: string, payload: unknown) =>
       intent(name, payload) as Promise<Result>,
+    copyText: vi.fn(),
     splitAction: null,
     active: true,
     dock: null,

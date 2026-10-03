@@ -261,6 +261,13 @@ describe('parseHarnessCommand — capture and transcript subcommands', () => {
   it('is case-insensitive on the subcommand keyword', () => {
     expect(parseHarnessCommand('harness CAPTURE bot')).toEqual({ capture: true, label: 'bot' });
   });
+
+  // `play` replaced `harness replay`, so `replay` is an unknown harness name rather than a subcommand —
+  // and saying so is what keeps a retired spelling from silently reading as a launch.
+  it('reads a retired replay subcommand as an unknown harness', () => {
+    expect(parseHarnessCommand('harness replay claude'))
+      .toEqual({ error: 'Unknown harness "replay". Choose from: claude, opencode, codex.' });
+  });
 });
 
 describe('parseHarnessCommand — error paths', () => {

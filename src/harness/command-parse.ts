@@ -91,7 +91,7 @@ function parseHarnessFlags(
 }
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab instead of
-// launching one. Both share a shape, so they parse through one branch — keeping
+// launching one. The two share a shape, so they parse through one branch — keeping
 // `parseHarnessCommand`'s own branching under the complexity limit and the usage string singular.
 // Returns undefined when the first token is not one of them.
 function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {

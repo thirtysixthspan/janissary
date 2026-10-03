@@ -24,6 +24,10 @@ export const videoManifest = {
     '.mpeg': undefined,
   },
   editGesture: 'open external',
+  // Every container this plugin claims is playable, which is what lets `play` route one here. The six
+  // claimed with no content type are playable through the configured player rather than in a tab, which
+  // is what their inline presentation already does for `open`.
+  playable: true,
   command: 'video',
   capabilities: [
     'note',

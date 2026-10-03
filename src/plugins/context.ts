@@ -15,6 +15,7 @@ import type { PluginFailureOrigin } from './failure.js';
 import { projectFilesFor } from '../project/files.js';
 import { isInsideRoot } from './files.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
+import { liveRecordingPaths } from './live-recordings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
@@ -190,6 +191,9 @@ export function createPluginContext(
       if (!isSettingsObject(settings)) throw new Error('saved settings that are not a JSON object');
       return isEnabled() && savePluginSettings(declaration.id, settings);
     },
+    // True only while an open tab's recorder is still writing this very file. The host owns the
+    // recorders, so the host is what answers; a plugin reaches no tab list of its own to ask.
+    isRecordingLive: (absPath) => isEnabled() && liveRecordingPaths(managers).has(absPath),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

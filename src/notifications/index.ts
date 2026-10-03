@@ -63,7 +63,7 @@ export type NotificationEventType =
   | 'launch-refused'
   | 'launch-workspace-cleaned'
   | 'launch-root-cloned'
-  | 'remote-refused';
+  | 'remote-refused'
 
 // A background tab's own activity. Both the per-event opt-in toggle and focus suppression (the
 // active tab never notifies about its own activity) apply to these five.

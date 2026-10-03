@@ -18,6 +18,7 @@ export type TabControllerAdapter = {
   ptyInput(id: string, data: string): void;
   ptyResize(id: string, cols: number, rows: number): void;
   ptyKill(id: string): void;
+  reportTerminalColors(id: string, colors: { fg: string; bg: string }): void;
   resize(cols: number, rows: number): void;
 };
 
@@ -42,6 +43,7 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     ptyInput: (id, data) => managers.pty.input(id, data),
     ptyResize: (id, cols, rows) => managers.pty.resizeOne(id, cols, rows),
     ptyKill: (id) => managers.pty.kill(id),
+    reportTerminalColors: (id, colors) => managers.harness.reportTerminalColors(id, colors),
     resize: (cols, rows) => managers.pty.resize(cols, rows),
   };
 }

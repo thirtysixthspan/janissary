@@ -20,6 +20,7 @@ import { runPluginSelectionAction } from './selection.js';
 import { recordStatus, type PluginRecord, type TabPluginStatus } from './status.js';
 import { startPluginActivation } from './start-activation.js';
 import { closePluginTabs } from './teardown.js';
+import { noteInOriginTab } from './transcript-note.js';
 
 export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
@@ -47,7 +48,7 @@ export class TabPluginHost {
       if (this.records.has(declaration.id)) {
         throw new Error(`Duplicate tab plugin id "${declaration.id}"`);
       }
-      // A claim the registries refused at module load starts life already disabled, rather than
+      // A claim refused while a registry was being built starts life already disabled, rather than
       // having taken the app down with it while those registries were being built.
       const rejection = contributionRejection(declaration.id);
       this.records.set(declaration.id, rejection === undefined
@@ -145,7 +146,7 @@ export class TabPluginHost {
     const outcome = await this.invoke(record, activation, origin,
       (capabilities) => call(activation, capabilities));
     if (outcome.status === 'failed') this.disable(record, outcome.error, origin);
-    else if (outcome.status === 'rejected') this.note(origin, outcome.reason);
+    else if (outcome.status === 'rejected') noteInOriginTab(this.managers, origin, outcome.reason);
   }
 
   private invoke<Result>(
@@ -158,12 +159,6 @@ export class TabPluginHost {
       this.managers, record.declaration, activation, origin,
       () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call,
     );
-  }
-
-  private note(origin: PluginFailureOrigin, output: string): void {
-    if (this.managers.tab.tabs.some((tab) => tab.label === origin.label)) {
-      this.managers.tab.append(origin.label, { input: origin.command, output });
-    }
   }
 
   private async ensureActive(

@@ -34,6 +34,11 @@ export type TabPluginDeclaration = {
   editsOwnFiles?: boolean;
   editGesture?: 'open external';
   command?: string;
+  // Every extension in `fileExtensions` is something to play rather than merely to open, which is
+  // what the `play` command asks before dispatching a file to this plugin's inline opener. A flag
+  // rather than a list of its own, so the playable types cannot drift from the claimed ones: a
+  // plugin claims what it owns once and says of that set whether any of it plays.
+  playable?: boolean;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
   // An entry the default context menu offers for a text selection. A declaration carrying one must
@@ -140,6 +145,11 @@ export type TabPluginServerCapabilities = {
   // Replace this plugin's own remembered settings, answering whether the write succeeded. A value
   // that is not a plain JSON object is a plugin bug and disables the plugin rather than being saved.
   saveSettings(settings: Record<string, unknown>): boolean;
+  // Whether a tab the user can see is recording this exact file right now. A question about host
+  // state a plugin cannot answer for itself — it reaches no tab list — and the answer is not
+  // derivable from the file: a recording ended by its tab closing carries no exit event, so nothing
+  // in it distinguishes a finished session from a live one.
+  isRecordingLive(absPath: string): boolean;
   rejectRequest(reason: string): never;
   reportFailure(reason: unknown): never;
 };

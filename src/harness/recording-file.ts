@@ -12,6 +12,13 @@ export function ensureRecordingDirectory(): void {
   mkdirSync(recordingDirectory, { recursive: true });
 }
 
+// The directory recordings are written into, or the empty string before initialization. Published so
+// a reader of those files — `play` searching it for a recording of a given name — learns the path from
+// the module that owns it rather than re-deriving it from the project directory.
+export function harnessRecordingDirectory(): string {
+  return recordingDirectory;
+}
+
 // The absolute `.cast` path for a session started at `startedAt`, named by the shared harness
 // artifact builder.
 export function harnessRecordingPath(label: string, startedAt: number): string {

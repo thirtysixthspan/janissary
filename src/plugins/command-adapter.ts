@@ -7,8 +7,9 @@ import { rejectContribution } from './rejections.js';
 // `resolveCommand` itself and has no registry entry. `harness` and `ssh` used to be listed here
 // too, and `schedule` (whose bare form used to be a pre-registry branch in `CommandManager.run`)
 // were before their registry migrations; they are `Command` entries now, so `coreCommands`
-// reserves them and this list no longer has to.
-const ROUTE_NAMES = ['shell'];
+// reserves them and this list no longer has to. Exported because a core route claim is refused on
+// the same terms, and one reserved-name list is better than two.
+export const ROUTE_NAMES = ['shell'];
 
 function firstToken(command: string): string {
   return command.trimStart().split(/\s/u, 1)[0].toLowerCase();

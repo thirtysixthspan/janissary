@@ -34,6 +34,7 @@ function makeCapabilities(options: {
   return {
     resourceUrl: (reference) => `${reference}?token=`,
     intent: async <Result,>(name: string, payload: unknown) => intent(name, payload) as Promise<Result>,
+    copyText: vi.fn(),
     splitAction: null,
     active: options.active ?? true,
     dock: null,

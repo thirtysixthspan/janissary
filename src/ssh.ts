@@ -8,7 +8,9 @@ const PORT_SUFFIX = /:\d+$/;
 
 const USAGE = 'Usage: ssh <destination> [ssh options].';
 
-export type SshParsed = { command: string; destination: string; label: string; options: string[] } | { error: string };
+export type SshParsed =
+  | { command: string; destination: string; label: string; options: string[] }
+  | { error: string };
 
 // Find the index of the first non-option token in an `ssh` command's arguments, skipping any flag
 // and (for value-taking flags) the value that follows it. The index — rather than the token itself —

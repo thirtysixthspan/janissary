@@ -842,10 +842,16 @@ file naming, and the fallback when no session record can be found.
 ## Session recording
 
 Separately from on-demand screen capture, every named-harness session is **automatically** recorded
-to a replayable asciicast file under `.janissary/recordings/` for its whole lifetime — a *recording*
+to a playable asciicast file under `.janissary/recordings/` for its whole lifetime — a *recording*
 is the full timed output stream, where a *capture* is a single point-in-time screen snapshot. See
 [[harness-recording]] for the file format, scope (ssh and inline PTYs excluded), lazy creation, and
-replay.
+playback.
+
+A recording is played back with `play <file>`, which opens an **asciicast tab** with the transport,
+the live following, and the text selection and copy described in [[harness-recording]] § Retrieval.
+`open <file>.cast` opens the same tab. Both refusals and both successes are decided before any tab
+exists: `play` with no target, a target that is not there, and a target that is not playable each say
+so in the transcript the command was typed into.
 
 ## Monitoring
 

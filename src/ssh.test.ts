@@ -62,4 +62,17 @@ describe('parseSshCommand', () => {
     const result = parseSshCommand('ssh devbox ls -la');
     expect((result as { options: string[] }).options).toEqual(['ls', '-la']);
   });
+
+  // `ssh replay` is gone, so `replay` is an ordinary hostname again — which is the correct reading of it,
+  // and the reason a host that happens to share the retired subcommand's name still connects.
+  it('reads a retired replay subcommand as an ordinary destination', () => {
+    const result = parseSshCommand('ssh replay');
+    expect((result as { destination: string; label: string }).destination).toBe('replay');
+    expect((result as { label: string }).label).toBe('replay');
+  });
+
+  it('still connects to a host that is named after a subcommand-like word', () => {
+    const result = parseSshCommand('ssh replay.example.com');
+    expect((result as { destination: string }).destination).toBe('replay.example.com');
+  });
 });

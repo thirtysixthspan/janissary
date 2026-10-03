@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
 import { resourceUrl } from '../session-url';
+import { copyText as systemCopyText } from '../shared/system-clipboard';
 import type { PluginHost } from './host';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -23,7 +24,22 @@ export { InlineEditInput } from '../shared/InlineEditInput';
 // does, with the same wording shape and the same keyboard contract. It shipped as two identical
 // per-plugin copies before this, which is exactly the drift the published surface exists to prevent.
 export { ConfirmDialog } from '../shared/ConfirmDialog';
+
+// The two colors a terminal renders with, and the platform check that decides which modifier is the
+// copy one. Published on the same terms as the components above: a plugin with its own terminal — the
+// asciicast player — should read the app's colors rather than keep a second copy of the fallbacks that
+// drifts from the stylesheet, and should reach for the same platform check, because getting that
+// wrong breaks Cmd+C on exactly one platform and nowhere else to notice it.
+export { terminalColors, type TerminalColors } from '../shared/terminal/colors';
+export { isMacPlatform } from '../shared/terminal/terminal/keys';
 export { PluginActionsHeader } from './PluginActionsHeader';
+
+// The application's answer to "is this a place typed text can go", published for the same reason and
+// on the same terms: a plugin that binds its own chords has to tell a field someone is typing into
+// from everything else, and the asciicast player shipped its own copy of that test — which read every
+// `<input>` as text entry and so treated the terminal's own hidden textarea, and the seek bar, as one.
+// Published additively, so `TAB_PLUGIN_API_VERSION` does not move.
+export { isTextEntryElement } from '../shared/text-entry';
 
 // A connection's status glyph, and the three glyphs for the verbs that change one. Published for the
 // same reason the dialog is: a remote tab's metadata row and the sessions tab both show the state of
@@ -95,6 +111,11 @@ export type TabPluginClientCapabilities = {
   // answer to `isDirty` changes: re-registering is how the host learns, and it is what puts the
   // unsaved marker in the tab strip beside this tab's name.
   registerDirtyHandle?(handle: TabDirtyHandle | null): void;
+  // Write text to the system clipboard through the same helper every other surface in the
+  // application copies with, so a plugin does not carry a second implementation of it — a plugin
+  // cannot reach that helper, and a lazily loaded chunk that grows its own would be a second place a
+  // copy is observed and could drift.
+  copyText(text: string): void;
   reportFailure(reason: string): void;
 };
 
@@ -115,6 +136,7 @@ export function createPluginClientCapabilities(
     close: onClose,
     registerDirtyHandle: onDirtyHandle,
     resourceUrl,
+    copyText: (text: string) => { systemCopyText(text); },
     intent: async <Result,>(name: string, payload: unknown) => {
       const result = await client.request<Result>({
         method: 'pluginIntent',
