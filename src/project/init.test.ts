@@ -54,6 +54,28 @@ describe('scaffoldProject', () => {
     expect(config).toContain('GITHUB_TOKEN = "include"');
   });
 
+  it('installs Codex permission defaults without the ignored sandbox_permissions setting', () => {
+    scaffoldProject(projectDir);
+
+    const config = readFileSync(path.join(projectDir, '.codex/config.toml'), 'utf8');
+    expect(config).toContain('approval_policy = "on-request"');
+    expect(config).toContain('sandbox_mode = "danger-full-access"');
+    expect(config).not.toContain('sandbox_permissions');
+  });
+
+  it('removes the ignored sandbox_permissions setting when refreshing Codex configuration', () => {
+    const configPath = path.join(projectDir, '.codex/config.toml');
+    mkdirSync(path.dirname(configPath), { recursive: true });
+    writeFileSync(configPath, 'sandbox_permissions = []\n');
+
+    scaffoldProject(projectDir);
+
+    const config = readFileSync(configPath, 'utf8');
+    expect(config).toContain('approval_policy = "on-request"');
+    expect(config).toContain('sandbox_mode = "danger-full-access"');
+    expect(config).not.toContain('sandbox_permissions');
+  });
+
   it('refreshes standard configuration while preserving custom files', () => {
     const codexRules = path.join(projectDir, '.codex', 'rules');
     mkdirSync(codexRules, { recursive: true });

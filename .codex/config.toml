@@ -1,6 +1,5 @@
 approval_policy = "on-request"
 sandbox_mode = "danger-full-access"
-sandbox_permissions = []
 
 # Codex filters the environment it hands to every command it runs, and its default
 # exclusion set drops any credential-shaped variable name (`*KEY*`, `*SECRET*`,
