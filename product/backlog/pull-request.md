@@ -2,28 +2,6 @@
 
 # pull-request
 
-* Send the shell tab's `dispatch` intent payload as a bare line, so a line the application does not claim actually reaches zsh.
-
-Existing Issue: The client sends `{ line: text }` as the `dispatch` intent payload while the server's `isShellDispatch` guard accepts only a string, and `src/plugins/shell/activate.test.ts` pins that exact object as rejected. Severity: 9/10
-
-Existing Risk: 8/10 - The tab's primary path is dead: `routeFor` sends every line not prefixed with `!` down the `dispatch` route, the host refuses it, the promise rejects, and the rejection is unhandled because nothing catches it, so the feature presents as a shell that ignores every ordinary command.
-
-Proposal Risk: 2/10 - The routing rule then behaves as written, and a line the application does claim is still silently swallowed rather than reported, which the same entry's handling leaves as it is today.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: send the shell tab's dispatch intent payload as a bare line and honour its result". In `web/src/plugins/shell/ShellTab.tsx`, change the `dispatch` call in `submit` to pass `text` itself rather than `{ line: text }`, matching the guard in `src/plugins/shell/shared.ts`, and branch on the returned `dispatched` flag: write the line to the terminal and append it to `sent` only when the host answered `false`, so a line the application claimed neither reaches zsh nor enters the shell's recallable history. Attach a rejection handler so a server-side refusal surfaces through `capabilities.reportFailure` instead of becoming an unhandled rejection. `src/plugins/shell/activate.test.ts` already pins the string payload, including the case that `{ line: 'ls' }` is refused, so it must keep passing untouched and the fix is client-only. Land it with the test repair recorded below, because the current client test can observe neither the payload nor the result.
-
-
-* Make the shell tab's dispatch test able to fail, since it currently passes whether or not a claimed line is written to the terminal.
-
-Existing Issue: The test asserts `written` is empty inside `waitFor`, which is already true on the first tick before the promise settles, and its `intent` stub returns by intent name while discarding the payload it was handed. Severity: 6/10
-
-Existing Risk: 7/10 - The only test guarding the tab's central routing rule cannot fail, so a claimed line written to the terminal ships green and the payload mismatch it would have caught is invisible to the whole suite, which is why the defect above reached a pull request.
-
-Proposal Risk: 2/10 - The assertions get stricter rather than the behavior changing, so a future routing regression fails loudly instead of passing quietly.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: make the shell tab's dispatch test able to fail". In `web/src/plugins/shell/ShellTab.test.tsx`, hold a deferred inside the `intent` stub, submit the line, then release it and assert afterwards rather than asserting an array that starts empty, and assert the payload the stub received with `expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'theme')` so a shape change on either side of the wire is caught. Add the mirrored case for an unclaimed line, asserting both that it was written and that it became recallable, and one asserting a claimed line leaves `written` empty and adds nothing to history. Make the stub echo the payload it is given rather than switching on the intent name alone, and review the other async assertions in this file for the same trivially-true-at-t-zero shape, since `waitFor` around an initially-empty array proves nothing.
-
-
 * Keep the shell terminal mounted across tab switches, which currently destroys and rebuilds it and loses its scrollback.
 
 Existing Issue: `web/src/plugins/PluginBody.tsx` memoizes the capability object with `active` among its dependencies, `web/src/plugins/PluginTabLayer.tsx` recomputes `active` from the current tab, and `attachTerminal` is a dependency of the effect in `web/src/plugins/shell/useShellTerminal.ts`, so switching tabs hands the hook a new function identity and the whole emulator is torn down and recreated. Severity: 6/10

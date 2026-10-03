@@ -129,11 +129,20 @@ export function ShellTab({ payload, capabilities }: Properties) {
     // Otherwise the application gets first refusal: a line it claims runs as that command and the shell
     // never sees it. The decision is the host's, because the command table is; this plugin asks rather
     // than keeping a copy of a list that would go stale the moment a command was added.
-    void capabilities.intent<{ dispatched: boolean }>('dispatch', { line: text })
-      .then(() => {
+    //
+    // The payload is the line itself, which is the only shape `isShellDispatch` accepts — anything else
+    // is a request this plugin did not describe, and the host refuses it rather than guessing.
+    void capabilities.intent<{ dispatched: boolean }>('dispatch', text)
+      .then((result) => {
+        if (result.dispatched) return;
         write(`${text}\n`);
         setSent((previous) => [...previous, text]);
-      });
+      })
+      // A refusal here means this plugin sent a payload its own guard rejects, which is a bug in the
+      // plugin rather than anything the user typed, so it crosses the failure boundary instead of
+      // leaving an unhandled rejection. The line is not written either way: a refused dispatch has not
+      // established that the shell should have had it.
+      .catch(() => { capabilities.reportFailure('shell dispatch intent refused'); });
   }, [capabilities, write]);
 
   const bar = useCommandBarKeys({

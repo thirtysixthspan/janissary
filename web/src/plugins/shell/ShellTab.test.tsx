@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
@@ -61,6 +61,14 @@ const PAYLOAD: ShellPayload = {
 
 type Written = string[];
 
+// `Promise.withResolvers` (ES2024) predates this project's `lib` target; a small typed shim keeps
+// the tests off the disallowed "extract resolver from `new Promise()`" pattern regardless.
+function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  const state = { resolve: undefined as unknown as (value: T) => void };
+  const promise = new Promise<T>((resolve) => { state.resolve = resolve; });
+  return { promise, resolve: state.resolve };
+}
+
 function makeCapabilities(overrides: {
   active?: boolean;
   dispatched?: boolean;
@@ -77,11 +85,18 @@ function makeCapabilities(overrides: {
     detach: vi.fn(),
   };
   const attachTerminal = vi.fn((_ptyId: string, _onData: (data: string) => void) => handle);
+  // The dispatch answer is held until the test releases it, so an assertion can be made *after* the
+  // line has been dealt with rather than in the same tick the request was made — asserting an array
+  // that starts empty inside `waitFor` passes whether or not the code ever writes to it.
+  const { promise: answered, resolve: answerDispatch } = withResolvers<void>();
   const capabilities = {
     resourceUrl: (reference: string) => reference,
     intent: vi.fn(async (name: string) => {
       if (name === 'terminal-status') return overrides.status ?? { running: true };
-      if (name === 'dispatch') return { dispatched: overrides.dispatched ?? false };
+      if (name === 'dispatch') {
+        await answered;
+        return { dispatched: overrides.dispatched ?? false };
+      }
       if (name === 'complete') {
         return overrides.completions ?? { matches: [], newInput: '', newCursor: 0 };
       }
@@ -97,7 +112,10 @@ function makeCapabilities(overrides: {
     launchAgentHere: vi.fn(),
     reportFailure: vi.fn(),
   } as unknown as TabPluginClientCapabilities;
-  return { capabilities, closed, handle, resized, written };
+  return {
+    capabilities, closed, handle, resized, written,
+    releaseDispatch: () => { answerDispatch(); },
+  };
 }
 
 function renderTab(options: Parameters<typeof makeCapabilities>[0] = {}) {
@@ -168,21 +186,63 @@ describe('ShellTab', () => {
   });
 
   it('sends a line the host does not claim to the shell', async () => {
-    const { written } = renderTab({ dispatched: false });
+    const { releaseDispatch, written } = renderTab({ dispatched: false });
 
     fireEvent.change(bar(), { target: { value: 'ls -la' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
+    releaseDispatch();
 
     await waitFor(() => { expect(written).toEqual(['ls -la\n']); });
   });
 
+  it('asks the host about a line as the bare string its own guard accepts', async () => {
+    const { capabilities, releaseDispatch } = renderTab({ dispatched: false });
+
+    fireEvent.change(bar(), { target: { value: 'ls -la' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    releaseDispatch();
+
+    await waitFor(() => {
+      expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'ls -la');
+    });
+  });
+
   it('does not put a line the application claimed into the shell', async () => {
-    const { written } = renderTab({ dispatched: true });
+    const { releaseDispatch, written } = renderTab({ dispatched: true });
 
     fireEvent.change(bar(), { target: { value: 'theme' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
+    // Flushed through `act` so the whole promise chain has run before the assertion: before the fix
+    // this assertion was already true on the first tick, so it passed whether or not the line was
+    // written to the terminal.
+    await act(async () => { releaseDispatch(); });
 
-    await waitFor(() => { expect(written).toEqual([]); });
+    expect(written).toEqual([]);
+  });
+
+  it('keeps a line the application claimed out of the shell history', async () => {
+    const { releaseDispatch, written } = renderTab({ dispatched: true });
+
+    fireEvent.change(bar(), { target: { value: 'theme' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+    expect(written).toEqual([]);
+
+    // Up recalls the lines the bar has sent, so a claimed line must not become one of them.
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(bar().value).toBe('');
+  });
+
+  it('records a line the shell was sent as recallable history', async () => {
+    const { releaseDispatch, written } = renderTab({ dispatched: false });
+
+    fireEvent.change(bar(), { target: { value: 'ls -la' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+    expect(written).toEqual(['ls -la\n']);
+
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(bar().value).toBe('ls -la');
   });
 
   it('sends a marker-prefixed line to the shell whatever the application would claim', async () => {
@@ -196,12 +256,13 @@ describe('ShellTab', () => {
   });
 
   it('clears the bar after submitting', async () => {
-    renderTab();
+    const { releaseDispatch } = renderTab();
 
     fireEvent.change(bar(), { target: { value: 'ls' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
 
-    await waitFor(() => { expect(bar().value).toBe(''); });
+    expect(bar().value).toBe('');
   });
 
   it('sends Ctrl+C to the shell when the bar holds no selection', async () => {
@@ -267,14 +328,16 @@ describe('ShellTab', () => {
   });
 
   it('recalls the lines it has sent on Up, newest first', async () => {
-    const { written } = renderTab();
+    const { releaseDispatch, written } = renderTab();
 
     fireEvent.change(bar(), { target: { value: 'first' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
-    await waitFor(() => { expect(written).toEqual(['first\n']); });
+    await act(async () => { releaseDispatch(); });
+    expect(written).toEqual(['first\n']);
     fireEvent.change(bar(), { target: { value: 'second' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
-    await waitFor(() => { expect(written).toHaveLength(2); });
+    await act(async () => { releaseDispatch(); });
+    expect(written).toHaveLength(2);
 
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
     expect(bar().value).toBe('second');
