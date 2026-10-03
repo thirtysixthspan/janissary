@@ -97,9 +97,9 @@ A default label walks past everything in use to the next free `-2`, `-3`, and so
 
 ## New harness dialog
 
-Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, an **Auto-resume** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for every harness. **Auto-resume** starts checked for codex and is unavailable for the others. **E2E browser** starts unchecked and stays available for every harness.
+Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, an **Auto-resume** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for every harness. **Auto-resume** starts checked for codex and is unavailable for the others. **E2E browser** starts checked and stays available for every harness.
 
-![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
+![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, auto-resume, model, and effort.](/screenshots/harness-launch-dialog.png)
 
 Claude, opencode, and codex all accept auto-approval, so switching harnesses keeps your **Auto-approve** choice. Switching away from codex clears and disables **Auto-resume**, since it is the only harness that accepts it. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
 
