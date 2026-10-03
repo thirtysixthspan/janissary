@@ -108,15 +108,44 @@ describe('originTab', () => {
 describe('dispatchLine', () => {
   function withDispatcher(dispatched: boolean) {
     const dispatchLine = vi.fn(() => dispatched);
-    const { managers } = makeManagers({ command: { dispatchLine } as never });
-    return { managers, dispatchLine };
+    const { byLabel, managers } = makeManagers({ command: { dispatchLine } as never });
+    return { byLabel, managers, dispatchLine };
   }
 
   it('reports a line the application claimed, having asked its own dispatcher', () => {
     const { managers, dispatchLine } = withDispatcher(true);
 
     expect(contextFor(['dispatchLine'], managers).dispatchLine('theme')).toBe(true);
-    // In the tab it was called from, which is the tab the plugin owns rather than wherever the user is.
+    // With no answering tab — a command or selection action — the line runs where the plugin was
+    // invoked from, which is the only tab such a call has.
+    expect(dispatchLine).toHaveBeenCalledWith('janus', 'theme');
+  });
+
+  it('runs a line in the tab answering it, rather than the tab the command came from', () => {
+    const { byLabel, managers, dispatchLine } = withDispatcher(true);
+    byLabel.mockReturnValue({ label: 'shell1' } as never);
+    const capabilities = createPluginContext(
+      managers, declaration(['dispatchLine']), activationFor(), { label: 'janus', command: 'zsh' },
+      () => true, [], 'shell1',
+    );
+
+    capabilities.dispatchLine('theme');
+
+    // The user typed this into the shell tab, so this is the tab the command belongs to.
+    expect(dispatchLine).toHaveBeenCalledWith('shell1', 'theme');
+  });
+
+  it('falls back to the invoking tab when the answering tab has closed', () => {
+    const { byLabel, managers, dispatchLine } = withDispatcher(true);
+    byLabel.mockReturnValue(undefined);
+    const capabilities = createPluginContext(
+      managers, declaration(['dispatchLine']), activationFor(), { label: 'janus', command: 'zsh' },
+      () => true, [], 'shell1',
+    );
+
+    capabilities.dispatchLine('theme');
+
+    // Addressing a label with no tab behind it would drop the command's output silently.
     expect(dispatchLine).toHaveBeenCalledWith('janus', 'theme');
   });
 

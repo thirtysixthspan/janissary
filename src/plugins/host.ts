@@ -123,7 +123,8 @@ export class TabPluginHost {
       record: (id) => this.records.get(id),
       closedTabReason: (tabLabel) => closedTabReason(this.records, this.disabledTabPlugins, tabLabel),
       ensureActive: (record, origin) => this.ensureActive(record, origin),
-      invoke: (record, activation, origin, call) => this.invoke(record, activation, origin, call),
+      invoke: (record, activation, origin, call, answeringLabel) =>
+        this.invoke(record, activation, origin, call, answeringLabel),
       disable: (record, error, origin) => this.disable(record, error, origin),
     };
   }
@@ -159,10 +160,11 @@ export class TabPluginHost {
     activation: TabPluginActivation,
     origin: PluginFailureOrigin,
     call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
+    answeringLabel?: string,
   ): Promise<PluginCallOutcome<Result>> {
     return invokePlugin(
       this.managers, record.declaration, activation, origin,
-      () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call,
+      () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call, answeringLabel,
     );
   }
 

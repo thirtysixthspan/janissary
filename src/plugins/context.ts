@@ -89,6 +89,10 @@ export function createPluginContext(
   isEnabled: () => boolean,
   // Collects `openClaimedFiles` targets for the host to run once the guarded call has returned.
   openRequests: string[] = [],
+  // The tab whose client asked, when the call came from one — an intent, or a selection action on a
+  // plugin tab. Distinct from `origin`, which is the tab a *command* was invoked from and which stays
+  // that way for every capability.
+  answeringLabel?: string,
 ): TabPluginServerCapabilities {
   return restrictToDeclared({
     note: (text) => {
@@ -207,9 +211,15 @@ export function createPluginContext(
         }),
       };
     },
+    // The tab a dispatched line runs in. That is the tab answering when the host named one — a line
+    // typed into a plugin tab's own command line runs in that tab — and the tab a command was invoked
+    // from otherwise, which is all a command or selection action has. An answering tab that has since
+    // closed falls back rather than addressing a label with no tab behind it, which would silently drop
+    // the output on the floor.
     dispatchLine: (line) => {
       if (!isEnabled()) return false;
-      return managers.command.dispatchLine(origin.label, line);
+      const answering = answeringLabel && managers.tab.byLabel(answeringLabel);
+      return managers.command.dispatchLine(answering ? answeringLabel : origin.label, line);
     },
     completeLine: (line, cursor) => (isEnabled() ? complete(managers, line, cursor) : { matches: [], newInput: line, newCursor: cursor }),
     terminalRunning: (ptyId) => isEnabled() && managers.pty.isRunning(ptyId),

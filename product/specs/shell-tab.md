@@ -27,6 +27,10 @@ collides with a command name is swallowed by the command. A shell waiting at a `
 asking for a password, cannot be given `theme` or `files` without the `!` prefix. The command bar
 warns about none of this; `!` is the override, and it is documented in `help`.
 
+A command that answers with text rather than opening something — `help`, for one — records that text
+in this tab's transcript. A shell tab draws a terminal in place of a transcript, so nothing appears
+on screen for it.
+
 **Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
 tab's bar asks, and shows the same strip when there is a choice to make. The shell tab keeps no list
 of its own.

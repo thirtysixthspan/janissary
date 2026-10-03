@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Answer a dispatched line from the tab the user is looking at, rather than from the tab `zsh` was originally typed in.
-
-Existing Issue: For an intent the host builds its origin from `plugin.sourceLabel` in `src/plugins/requests.ts`, so the `dispatchLine` implementation in `src/plugins/context.ts` resolves and runs the line against the agent tab the user typed `zsh` in, and a command that answers with output is appended to that tab's transcript. Severity: 5/10
-
-Existing Risk: 5/10 - A user typing an output-producing command such as `help` into a shell tab sees nothing happen, and once that originating tab has been closed the line is silently dropped, because the append path returns early for a label with no open tab while `originTab` is the only thing that reports the tab is gone.
-
-Proposal Risk: 4/10 - Addressing the line at the answering tab changes which transcript a dispatched command's output lands in for every plugin using `dispatchLine`, so today's behavior becomes something to migrate rather than the default.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: address a dispatched line to the tab the plugin is answering from". In `src/plugins/context.ts`, change `dispatchLine` to prefer the plugin's own tab over `origin.label`; the intent's tab label is already available where the context is built in `src/plugins/requests.ts`, and the command path has no plugin tab yet, so `origin.label` remains the fallback there. Correct the capability's documentation in `documentation/developer-documentation/tab-plugins.md`, which currently says a line runs "in the tab it was called from", and say the same in `product/specs/shell-tab.md`. Add a case to `src/plugins/shell-capabilities.test.ts` asserting which label a dispatched line is run against when the originating agent tab has been closed, and keep the existing `originTab` cases in that file passing untouched.
-
-
 * Read the shell plugin's chord claim from the wire view the host already sends, rather than keeping a second copy of it on the client.
 
 Existing Issue: The plan requires the claim to ride `PluginTabView.chords` precisely so that no client keeps its own copy, and `src/tab/view.ts` populates that field from the declaration, but nothing on the client reads it and `web/src/plugins/shell/ShellTab.tsx` declares a separate `CLAIMED_CHORDS` literal. Severity: 5/10

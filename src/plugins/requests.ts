@@ -36,6 +36,7 @@ export type PluginRequestPort = {
     activation: TabPluginActivation,
     origin: PluginFailureOrigin,
     call: (capabilities: TabPluginServerCapabilities) => unknown,
+    answeringLabel?: string,
   ): Promise<PluginCallOutcome<unknown>>;
   disable(record: PluginRecord, error: unknown, origin: PluginFailureOrigin): string;
 };
@@ -63,7 +64,7 @@ export async function runPluginIntent(
 
   const outcome = await port.invoke(record, activation, origin, (capabilities) => activation.intent(
     { tab: tabLabel, intent, payload, tabPayload: plugin.payload }, capabilities,
-  ));
+  ), tabLabel);
   if (outcome.status === 'rejected') throw new Error(outcome.reason);
   if (outcome.status === 'failed') {
     throw new Error(port.disable(record, outcome.error, origin), { cause: outcome.error });

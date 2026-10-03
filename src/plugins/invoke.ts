@@ -38,10 +38,11 @@ export async function invokePlugin<Result>(
   isEnabled: () => boolean,
   timeoutMs: number,
   call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
+  answeringLabel?: string,
 ): Promise<PluginCallOutcome<Result>> {
   const openRequests: string[] = [];
   const capabilities = createPluginContext(
-    managers, declaration, activation, origin, isEnabled, openRequests,
+    managers, declaration, activation, origin, isEnabled, openRequests, answeringLabel,
   );
 
   let value: Result;
