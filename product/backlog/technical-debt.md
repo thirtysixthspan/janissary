@@ -4,6 +4,49 @@
 
 ## development
 
+* Move the file navigator's selection rules into a pure module so menu actions no longer import a React hook module.
+
+Existing Debt: The navigator action service imports `normalizeOperationPaths` from `useFileNavigatorSelection`, while the pure sibling-selection module imports its state type from the same hook module, reversing §8 (the four layers) and leaving selection transitions, operation scoping, and React lifecycle in one owner. Severity: 6/10
+
+Existing Risk: 4/10 - Changes to selection lifecycle also touch the module defining which paths delete and commit actions receive, so UI maintenance can accidentally alter operation scope for selected directories and descendants.
+
+Proposal Risk: 2/10 - Selection rules gain an independent dependency boundary and retain their direct assertions, but a mistaken import or moved constant could still change selection initialization or restoration and would need the existing hook and overlay tests to expose it.
+
+Proposal: Create `web/src/file-navigator/file/navigator-selection.ts` for `FileNavigatorSelection`, `TreeRestoreHint`, `EMPTY_SELECTION`, and the pure selection functions currently in `web/src/file-navigator/useFileNavigatorSelection.ts`, including the private ancestor lookup; keep state, callbacks, effects, and registry publication in the hook and import its rules directly from the new module. Retarget the runtime `normalizeOperationPaths` imports in `web/src/file-navigator/file/navigator-menu-actions.ts` and `web/src/file-navigator/use-file-navigator-row-events.ts`, and the state-type import in `web/src/file-navigator/file/navigator-siblings.ts`, without re-export shims. The hook has six production importers, but only those three need import changes; its return shape and remaining callers stay compatible. Retarget the pure-function imports in `web/src/file-navigator/useFileNavigatorSelection.test.ts`, `web/src/file-navigator/FileNavigatorOverlays.test.tsx`, and the type import in `web/src/file-navigator/file/navigator-siblings.test.ts`; preserve the assertions for descendant suppression, parent-row exclusion, rename reconciliation, restore revisions, root changes, and registry cleanup. Those tests already exercise the pure functions without rendering, so the gain is removing upward dependencies rather than introducing their first unit-test seam.
+
+
+* Give the clipboard-history plugin an owned store instance and feed its popup through an injected subscription hook.
+
+Existing Debt: The clipboard-history store keeps entries, selection, configuration, subscribers, and capture teardown at module scope, and its popup imports the store's live functions directly, violating §7 (service classes are framework-free and injected) and §8 (the four layers), with store and popup tests resetting the same global history. Severity: 8/10
+
+Existing Risk: 4/10 - A second plugin instance or overlapping test shares the first instance's history and cap, and disposing either instance clears the other's data and capture subscription.
+
+Proposal Risk: 2/10 - Instance ownership removes shared history and reset interference, but incorrect subscription cleanup or unstable snapshot identities could still leave a stale popup or repeated renders within one instance.
+
+Proposal: Replace the global mutable state in `web/src/overlay-plugins/clipboard-history/store.ts` with a `createClipboardHistoryStore` factory exposing stable snapshot getters, selection actions, subscription, start, and idempotent disposal; accept the clipboard-capture subscription function as a dependency and retain the current cap, dedupe, ordering, and snapshot-caching rules. Add a factory in `web/src/overlay-plugins/clipboard-history/index.tsx` that creates or accepts one store per plugin instance and closes its keyboard, open, render, and dispose handlers over that store, preserving the existing default `OverlayPluginModule` export and activating capture only on start. Add `web/src/overlay-plugins/clipboard-history/useClipboardHistory.ts` to adapt the injected store with `useSyncExternalStore` and a small `web/src/overlay-plugins/clipboard-history/ClipboardHistoryView.tsx` container; make `web/src/overlay-plugins/clipboard-history/Popup.tsx` receive rows, selected index, and choose callback as props while retaining its focus effect. The store currently has two production importers and three test importers, so this stays within the clipboard-history plugin and requires no host contract change. Update `web/src/overlay-plugins/clipboard-history/store.test.ts`, `web/src/overlay-plugins/clipboard-history/Popup.test.tsx`, and `web/src/overlay-plugins/clipboard-history/paste-routing.test.tsx` to own fresh instances, preserving cap changes, capture teardown, focus restoration, and single-close assertions; add an isolation assertion showing that disposing one instance leaves another's history and subscription intact.
+
+
+* Move search query state and request coordination out of the search tab component into a dedicated hook.
+
+Existing Debt: The search tab component owns history adoption, echo suppression, mode and filter transitions, and construction of search and open intents, violating §5 (components render, they do not decide) by keeping request-timing rules alongside markup. Severity: 6/10
+
+Existing Risk: 4/10 - A new mode or filter handler can send the previous state, reissue an adopted query, or reorder history on a filter-only search because those rules must be preserved across several component callbacks.
+
+Proposal Risk: 2/10 - A single hook owns request coordination and can be exercised with an injected intent sender, but debounce and server-seed timing still cross the hook and search bar and need the existing integration assertions.
+
+Proposal: Extract the include, exclude, modes, history initialization, adoption callback, `useSeededQuery` composition, search submission, mode toggling, filter changes, and selected-result opening from `web/src/plugins/search/SearchTab.tsx` into `web/src/plugins/search/useSearchController.ts`, accepting the payload and a narrow injected intent sender. Return the query, filter and mode values, history, and named handlers; keep result selection, focus refs, keyboard-to-focus wiring, and JSX in the component. Continue using `web/src/plugins/search/useSeededQuery.ts` and `web/src/plugins/search/search-history.ts` for their existing responsibilities and preserve the synchronous use of the newly typed filter or toggled mode in each request. The component's props stay intact, so its one production importer, `web/src/plugins/search/index.tsx`, needs no change. `web/src/plugins/search/SearchTab.test.tsx` already pins history navigation, filter-only reruns, adopted-query echo suppression, current filter values, and result opening; retain those assertions and add focused hook coverage in `web/src/plugins/search/useSearchController.test.ts` with a fake sender for the same transitions. This is confined to the search plugin and preserves the existing wire intents and server-owned result ordering.
+
+
+* Extract SQL insert draft rules into a pure module beside the form so column omission and explicit nulls have one testable definition.
+
+Existing Debt: The SQL insert form initializes primary-key nulls and filters and converts drafts into submitted cells inside its component file, violating §5 (components render, they do not decide) by embedding the distinction between omitted defaults and explicit values in the rendering layer. Severity: 5/10
+
+Existing Risk: 4/10 - Extending the form's draft handling can accidentally name an untouched column or omit an explicit null, changing the inserted row's default values through a UI change.
+
+Proposal Risk: 2/10 - Pure draft conversion makes the omission policy independently callable, but extraction still has to preserve the current primary-key initialization and fallback behavior, which the existing insert-form interaction assertions partly constrain.
+
+Proposal: Extract the private `Draft` type, `draftFor`, `isNamed`, initial draft-map construction, and the `cells` filter/map conversion from `web/src/plugins/sql/InsertForm.tsx` into a new `web/src/plugins/sql/insert-draft.ts` with plain functions taking columns and drafts. Have the component call those functions while keeping its React state, field handlers, preview rendering, and `onSave` contract intact; keep the shared `insertStatement` implementation as the preview formatter and preserve the existing distinction between untouched columns, explicit nulls, and typed text exactly. Only one existing source file changes and its exports and props stay compatible, so its sole production importer, `web/src/plugins/sql/DataGrid.tsx`, needs no edit. `web/src/plugins/sql/SqlTab.test.tsx` already covers primary-key null initialization, omitted defaults, explicit-null toggles, preview SQL, save payloads, and cancel without writing; those assertions require no test-file changes. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/sql/InsertForm.tsx`.
+
 ## deferred
 
 * Give every wall-clock wait in the suite a budget that is a stated multiple of the interval it actually polls, instead of leaving nine fixed sleeps and forty-six raised timeouts to absorb a loaded machine. — deferred: complexity 8/10, requires an empirical multi-run flake baseline on an idle machine and then spans the vitest config, about ten test files with forty-nine timeout overrides, and the CI workflow.
