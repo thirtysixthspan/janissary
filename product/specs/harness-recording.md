@@ -185,6 +185,10 @@ The asciicast tab:
 A recording that will not parse, or that has no events yet, still opens as the player, with the reason
 on the metadata line.
 
+### Reading a live recording
+
+The initial recording load finishes before the player asks for new output. Switching away and back while a read is pending resumes from the last bytes consumed without duplicating events. Closing the player cancels its pending read; changing the recording discards late output and liveness answers from the previous one.
+
 Files also accumulate under `.janissary/recordings/` and remain playable outside the app — `asciinema
 play .janissary/recordings/<file>.cast`, which needs asciinema 3.x for a recording written by this
 version, or any asciicast web player.

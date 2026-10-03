@@ -4,17 +4,6 @@
 
 ## development
 
-* Give replay loading and tail polling one cancellable read lifecycle.
-
-Existing Debt: The replay source starts its initial fetch and polling in separate effects that mutate the same parser and offset, while cleanup only stops future timers and does not invalidate pending reads. Severity: 6/10
-
-Existing Risk: 6/10 - An initial read lasting longer than the polling interval or a hide-and-show during a pending poll can read the same bytes twice, and a response for an old URL can append into the replacement recording's parser.
-
-Proposal Risk: 2/10 - Serial reads with generation checks preserve byte order and recording identity, while network failures can still interrupt playback and must remain visible in the existing error state.
-
-Proposal: In `web/src/plugins/asciicast/useAsciicastSource.ts`, replace the independent initial `read(0)` and timed `read(offset.current)` ownership with a single reader lifecycle that owns the parser, decoder, offset, and pending request for one URL. Start tail polling only after the initial fetch settles; hiding and showing must reuse that reader without starting a second request while the first remains pending. Abort pending fetches when the source is replaced or unmounted, and check the reader generation after each await before changing parser state, offset, liveness, or published state, including the `askLive` result. Keep hidden-tab suspension, streaming UTF-8 decoding, quiet-session liveness checks, and 416 handling intact. `web/src/plugins/asciicast/useAsciicastSource.test.ts` currently uses immediately resolving fetches and covers those ordinary behaviors; add deferred responses for an initial load beyond `POLL_MS`, a visibility toggle during a poll, and a URL replacement whose old response finishes last. Assert that each byte range is consumed once and that only the current recording's events reach the hook result, retaining `web/src/plugins/asciicast/cast-stream.test.ts` as the parser contract.
-
-
 * Bound pending recording bytes when a harness or SSH session outpaces disk writes.
 
 Existing Debt: HarnessRecorder writes every PTY event into an asynchronous stream without observing backpressure or imposing a pending-byte budget, so recording throughput has no resource limit owned by the recorder. Severity: 5/10

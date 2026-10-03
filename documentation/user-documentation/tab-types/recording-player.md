@@ -63,6 +63,8 @@ metadata line reads `live`, and reaching the end holds the last frame and contin
 stopping. The badge reports the session rather than the last thing it said, so it stays on while a
 session sits waiting for your next prompt.
 
+A slow initial load finishes before the player checks for new output. Switching away and back during a read continues from where it reached without adding duplicate moments to the timeline.
+
 A recording of a session that has **ended** simply plays out. Speed is the way through an unattended
 run rather than silence. See
 [Recordings](/user-documentation/advanced-agents/harness#playing-a-recording-back).

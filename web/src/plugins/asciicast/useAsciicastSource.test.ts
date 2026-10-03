@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { useAsciicastSource, POLL_MS, type AsciicastSourceOptions } from './useAsciicastSource';
+import { useAsciicastSource, type AsciicastSourceOptions } from './useAsciicastSource';
+import { POLL_MS } from './source-reader';
 
 const HEADER = '{"version":3,"term":{"cols":80,"rows":24},"timestamp":1504467315,'
   + '"idle_time_limit":2,"command":"claude","title":"claude"}\n';
@@ -11,6 +12,13 @@ const HEADER = '{"version":3,"term":{"cols":80,"rows":24},"timestamp":1504467315
 function respondWith(text: string, status = 200) {
   const bytes = new TextEncoder().encode(text);
   return vi.fn(async () => new Response(bytes.buffer as ArrayBuffer, { status }));
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
+  const promise = new Promise<T>((answer) => { resolve = answer; });
+  return { promise, resolve };
 }
 
 describe('useAsciicastSource', () => {
@@ -32,7 +40,89 @@ describe('useAsciicastSource', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
 
-  afterEach(() => { vi.useRealTimers(); });
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+  it('waits for a slow initial fetch before starting tail reads', async () => {
+    const initial = deferred<Response>();
+    const first = HEADER + '[0, "o", "one"]\n';
+    fetchMock.mockReturnValueOnce(initial.promise).mockImplementation(respondWith('[0.5, "o", "two"]\n'));
+    const { result } = renderHook(() => useAsciicastSource(options()));
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS * 3); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await act(async () => { initial.resolve(new Response(first)); });
+    expect(result.current.events).toHaveLength(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][1].headers).toEqual({ Range: `bytes=${first.length}-` });
+    expect(result.current.events).toHaveLength(2);
+  });
+
+  it('keeps one pending poll across hiding and showing the tab', async () => {
+    const pending = deferred<Response>();
+    const first = HEADER + '[0, "o", "one"]\n';
+    const tail = '[0.5, "o", "two"]\n';
+    fetchMock.mockImplementationOnce(respondWith(first)).mockReturnValueOnce(pending.promise)
+      .mockImplementation(respondWith('', 416));
+    const { result, rerender } = renderHook(({ active }) => useAsciicastSource(options({ active })), {
+      initialProps: { active: true },
+    });
+    await waitFor(() => expect(result.current.events).toHaveLength(1));
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
+    rerender({ active: false });
+    rerender({ active: true });
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS * 2); });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await act(async () => { pending.resolve(new Response(tail)); });
+    expect(result.current.events).toHaveLength(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock.mock.calls[2][1].headers).toEqual({ Range: `bytes=${first.length + tail.length}-` });
+  });
+
+  it('aborts a replaced source and ignores its late body', async () => {
+    const body = deferred<ArrayBuffer>();
+    fetchMock.mockResolvedValueOnce({ status: 200, arrayBuffer: () => body.promise })
+      .mockImplementationOnce(respondWith(HEADER + '[0, "o", "new"]\n'));
+    const { result, rerender } = renderHook(({ url }) => useAsciicastSource(options({ url, active: false })), {
+      initialProps: { url: '/open/old' },
+    });
+    await act(async () => { await Promise.resolve(); });
+    const signal = fetchMock.mock.calls[0][1].signal as AbortSignal;
+    rerender({ url: '/open/new' });
+    await waitFor(() => expect(result.current.events).toHaveLength(1));
+    expect(signal.aborted).toBe(true);
+    await act(async () => { body.resolve(new TextEncoder().encode(HEADER + '[0, "o", "old"]\n').buffer); });
+    expect(result.current.events).toEqual([{ code: 'o', time: 0, data: 'new' }]);
+  });
+
+  it('aborts on unmount and never schedules another read from a late response', async () => {
+    const pending = deferred<Response>();
+    fetchMock.mockReturnValueOnce(pending.promise);
+    const { unmount } = renderHook(() => useAsciicastSource(options()));
+    const signal = fetchMock.mock.calls[0][1].signal as AbortSignal;
+    unmount();
+    expect(signal.aborted).toBe(true);
+    await act(async () => { pending.resolve(new Response(HEADER)); await vi.advanceTimersByTimeAsync(POLL_MS * 3); });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores an old source liveness answer after a URL replacement', async () => {
+    const pending = deferred<boolean>();
+    askLive.mockReturnValueOnce(pending.promise);
+    fetchMock.mockImplementationOnce(respondWith(HEADER)).mockImplementationOnce(respondWith('', 416))
+      .mockImplementationOnce(respondWith(HEADER + '[0, "o", "new"]\n'));
+    const { result, rerender } = renderHook(({ url }) => useAsciicastSource(options({ url, liveAtOpen: true })), {
+      initialProps: { url: '/open/old' },
+    });
+    await waitFor(() => expect(result.current.header).toBeDefined());
+    await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
+    expect(askLive).toHaveBeenCalledTimes(1);
+    rerender({ url: '/open/new' });
+    await waitFor(() => expect(result.current.events).toHaveLength(1));
+    await act(async () => { pending.resolve(false); });
+    expect(result.current.live).toBe(true);
+    expect(result.current.events).toEqual([{ code: 'o', time: 0, data: 'new' }]);
+  });
 
   it('reads the whole recording first, with no range to ask for', async () => {
     fetchMock.mockImplementationOnce(respondWith(HEADER + '[0, "o", "one"]\n'));
