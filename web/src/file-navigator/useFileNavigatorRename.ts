@@ -29,8 +29,16 @@ export function useFileNavigatorRename(
     setDraft(currentName);
   };
 
-  const send = (relPath: string, newName: string, newRelPath: string) => {
-    client.send({ method: 'renameFileNavigatorItem', params: { label, relPath, newName } });
+  const send = async (relPath: string, newName: string, newRelPath: string, overwrite = false) => {
+    const result = await client.request<{ total: number; failedPaths: string[] } | { conflict: true }>({
+      method: 'renameFileNavigatorItem', params: { label, relPath, newName, ...(overwrite && { overwrite }) },
+    });
+    if (!result.ok) return;
+    if ('conflict' in result.value) {
+      setPendingConflict({ relPath, newRelPath, newName });
+      return;
+    }
+    if (result.value.failedPaths.length > 0) return;
     replaceRenamedPath(relPath, newRelPath);
     setPendingSelection({ oldPath: relPath, newPath: newRelPath });
     focusTree();
@@ -47,14 +55,14 @@ export function useFileNavigatorRename(
       setPendingConflict({ relPath, newRelPath: outcome.newRelPath, newName });
       return;
     }
-    send(relPath, newName, outcome.newRelPath);
+    void send(relPath, newName, outcome.newRelPath);
   };
 
   const cancel = () => setEditing(null);
 
   const confirmOverwrite = () => {
     if (!pendingConflict) return;
-    send(pendingConflict.relPath, pendingConflict.newName, pendingConflict.newRelPath);
+    void send(pendingConflict.relPath, pendingConflict.newName, pendingConflict.newRelPath, true);
     setPendingConflict(null);
   };
 

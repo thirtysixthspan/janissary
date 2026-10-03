@@ -75,7 +75,9 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
       return controller.deleteFileNavigatorItems(message.params.label, message.params.paths);
     }
     case 'renameFileNavigatorItem': {
-      return controller.renameFileNavigatorItem(message.params.label, message.params.relPath, message.params.newName);
+      return controller.renameFileNavigatorItem(
+        message.params.label, message.params.relPath, message.params.newName, message.params.overwrite,
+      );
     }
     case 'fileNavigatorSearch': {
       return fileNavigatorSearch(controller, message.params.index);

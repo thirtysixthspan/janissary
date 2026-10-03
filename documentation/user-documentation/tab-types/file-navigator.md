@@ -259,7 +259,7 @@ Click the adjacent **New directory** button to create a folder using the same se
 
 ## Renaming a file or directory
 
-Press `Cmd+R` (`Ctrl+R`) while a row other than `..` is selected to turn its name into an editable field, pre-filled with the current name. Edit it and press Enter to rename the file or directory on disk in place — an unchanged or empty name is a no-op that just closes the field. Escape, or clicking elsewhere, cancels without changing anything. If the new name collides with a sibling already in that directory, the same Overwrite/Cancel dialog used for drag-and-drop moves appears. A rename doesn't join the undo/redo history described below.
+Press `Cmd+R` (`Ctrl+R`) while a row other than `..` is selected to turn its name into an editable field, pre-filled with the current name. Edit it and press Enter to rename the file or directory on disk in place — an unchanged or empty name is a no-op that just closes the field. Escape, or clicking elsewhere, cancels without changing anything. If the new name collides with a sibling, including one the tree hasn't loaded, the same Overwrite/Cancel dialog used for drag-and-drop moves appears before anything is replaced. A rename doesn't join the undo/redo history described below.
 
 A rename only ever renames. Typing a path separator into the field does not move the item: `docs/notes.md` creates a file called `docs/notes.md`, with the slash part of the name, sitting next to the original. Moving something into another directory is a [drag-and-drop](#moving-files-by-drag-and-drop) or a cut-and-paste, never a rename.
 

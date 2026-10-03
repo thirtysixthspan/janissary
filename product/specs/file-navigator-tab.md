@@ -506,8 +506,10 @@ The rename stays within the same directory; typing a name with a path separator 
 move the item elsewhere (drag-and-drop remains the only way to move an item into a different
 directory). Escape, or the field losing focus, cancels and restores the original name with no
 on-disk change. If the new name collides with a sibling already in the same directory, the same
-Overwrite/Cancel confirmation dialog used for a drag-and-drop move appears; Overwrite replaces the
-existing entry and completes the rename, Cancel returns to the still-open edit field. A rename is
+Overwrite/Cancel confirmation dialog used for a drag-and-drop move appears. The host checks the
+actual destination too, so a conflict the tree has not loaded also opens the dialog before anything
+is replaced. Overwrite replaces the existing entry and completes the rename; Cancel returns to the
+still-open edit field. This check runs on the remote host for remote trees as well. A rename is
 not added to the tab's move undo/redo stack and cannot be reversed with Cmd+Z. If the filesystem
 refuses the rename, the item stays in place and a `Could not rename 1 of 1 items: <name>. <reason>.`
 line in the notifications feed gives the cause and recovery action.

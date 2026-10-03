@@ -85,11 +85,23 @@ export function moveItem(
     : moved;
 }
 
-export function renameItem(root: string, relPath: string, newName: string): FileOperationResult<[string, string]> {
+export type RenameItemResult = FileOperationResult<[string, string]> | { conflict: true };
+
+export function renameItem(
+  root: string, relPath: string, newName: string, overwrite = false,
+): RenameItemResult {
   if (newName.includes('/') || newName.includes(path.sep)) return failureResult(INVALID_NAME_REASON);
   const oldAbsolute = containedPath(root, relPath);
   if (!oldAbsolute) return failureResult(OUTSIDE_ROOT_REASON);
   const newAbsolute = path.join(path.dirname(oldAbsolute), newName);
+  if (exists(newAbsolute)) {
+    let sameEntry = false;
+    try {
+      const [sourceStat, destinationStat] = [lstatSync(oldAbsolute), lstatSync(newAbsolute)];
+      sameEntry = sourceStat.dev === destinationStat.dev && sourceStat.ino === destinationStat.ino;
+    } catch { /* checked by rename */ }
+    if (!sameEntry && !overwrite) return { conflict: true };
+  }
   const renamed = renamePath(oldAbsolute, newAbsolute);
   return renamed.ok ? { ok: true, value: [oldAbsolute, newAbsolute] } : renamed;
 }

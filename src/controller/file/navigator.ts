@@ -104,11 +104,12 @@ export function deleteFileNavigatorItems(
 }
 
 export function renameFileNavigatorItem(
-  managers: Managers, label: string, relPath: string, newName: string,
-): MaybePromise<void> {
-  if (!isOpenTab(managers, label)) return;
-  return mapMaybe(managers.fileNavigator.rename(label, relPath, newName), (result) => {
-    reportOperationFailure(managers, label, 'rename', result);
+  managers: Managers, label: string, relPath: string, newName: string, overwrite?: boolean,
+): MaybePromise<BatchResult | { conflict: true }> {
+  if (!isOpenTab(managers, label)) return { total: 0, failedPaths: [] };
+  return mapMaybe(managers.fileNavigator.rename(label, relPath, newName, overwrite), (result) => {
+    if (!('conflict' in result)) reportOperationFailure(managers, label, 'rename', result);
+    return result;
   });
 }
 

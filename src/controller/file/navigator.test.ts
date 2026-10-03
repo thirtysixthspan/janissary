@@ -257,7 +257,7 @@ describe('controller-file-navigator', () => {
       rename: (...args: unknown[]) => { calls.push(args); return { total: 1, failedPaths: [] }; },
     });
     renameFileNavigatorItem(managers, 'agent', 'src/foo.ts', 'bar.ts');
-    expect(calls).toEqual([['agent', 'src/foo.ts', 'bar.ts']]);
+    expect(calls).toEqual([['agent', 'src/foo.ts', 'bar.ts', undefined]]);
   });
 
   it('renameFileNavigatorItem posts one notification with the failure reason', () => {

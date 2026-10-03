@@ -86,10 +86,10 @@ export function replayMutation(
 }
 
 export function renameItem(
-  context: MutationContext, label: string, relPath: string, newName: string,
-): MaybePromise<BatchResult> {
+  context: MutationContext, label: string, relPath: string, newName: string, overwrite?: boolean,
+): MaybePromise<BatchResult | { conflict: true }> {
   return withFilesState(context.tabs, label, unavailable(relPath), (state) => renameOne(
-    context.managers, state, relPath, newName, afterMutation(context, label, state),
+    context.managers, state, relPath, newName, afterMutation(context, label, state), overwrite,
   ));
 }
 

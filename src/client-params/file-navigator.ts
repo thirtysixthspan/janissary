@@ -37,7 +37,8 @@ export const FILE_NAVIGATOR_PARAMS: Record<FileNavigatorRpcCall['method'], Param
     && optionalOneOf(p.policy, POLICIES) && optionalString(p.sourceHost),
   deleteFileNavigatorItem: (p) => isString(p.label) && isString(p.relPath),
   deleteFileNavigatorItems: (p) => isString(p.label) && isStringArray(p.paths),
-  renameFileNavigatorItem: (p) => isString(p.label) && isString(p.relPath) && isString(p.newName),
+  renameFileNavigatorItem: (p) => isString(p.label) && isString(p.relPath) && isString(p.newName)
+    && optionalBoolean(p.overwrite),
   fileNavigatorSearch: (p) => isInteger(p.index),
   revealFileNavigatorItem: (p) => isInteger(p.index) && isString(p.relPath),
   fileNavigatorOpeners: (p) => isInteger(p.index) && isString(p.relPath)

@@ -41,8 +41,10 @@ export function renameOne(
   relPath: string,
   newName: string,
   rebuild: () => void,
-): MaybePromise<BatchResult> {
-  return mapMaybe(state.filesystem.rename(state.root, relPath, newName), (renamed) => {
+  overwrite?: boolean,
+): MaybePromise<BatchResult | { conflict: true }> {
+  return mapMaybe(state.filesystem.rename(state.root, relPath, newName, overwrite), (renamed) => {
+    if ('conflict' in renamed) return renamed;
     if (!renamed.ok) return failedOperation(relPath, renamed.reason);
     if (!state.remote) {
       const [oldAbs, newAbs] = renamed.value;

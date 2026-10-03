@@ -153,8 +153,8 @@ export class FileNavigatorManager extends WatchedFilesTabs {
   // client has already confirmed an overwrite with the user if `newName` collides with a sibling.
   // If an editor tab is already open on the renamed file, it is retargeted to the new path so it
   // doesn't go stale. Rebuilds so the tree reflects the new name immediately.
-  rename(label: string, relPath: string, newName: string): MaybePromise<BatchResult> {
-    return renameItem(this.mutationContext(), label, relPath, newName);
+  rename(label: string, relPath: string, newName: string, overwrite?: boolean): MaybePromise<BatchResult | { conflict: true }> {
+    return renameItem(this.mutationContext(), label, relPath, newName, overwrite);
   }
 
   // Delete a file or directory (recursively) from disk — the client has already confirmed with

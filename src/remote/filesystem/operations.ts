@@ -140,10 +140,14 @@ const MUTATION_OPERATIONS = {
     run: (context, args) => context.filesystem.deleteMany(context.root, args.paths),
   }),
   rename: descriptorFor({
-    valid: (args) => stringValue(args.path) && nonEmptyString(args.name),
-    decode: (args) => ({ path: args.path as string, name: args.name as string }),
+    valid: (args) => stringValue(args.path) && nonEmptyString(args.name)
+      && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),
+    decode: (args) => ({
+      path: args.path as string, name: args.name as string,
+      ...(args.overwrite !== undefined && { overwrite: args.overwrite as boolean }),
+    }),
     paths: namedPath, refusal: refusedItem,
-    run: (context, args) => context.filesystem.rename(context.root, args.path, args.name),
+    run: (context, args) => context.filesystem.rename(context.root, args.path, args.name, args.overwrite),
   }),
   paste: descriptorFor({
     valid: (args) => stringArray(args.sources) && stringValue(args.destination)

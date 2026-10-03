@@ -836,8 +836,8 @@ describe('FileNavigatorTab', () => {
     });
 
     it('Enter with a changed name sends renameFileNavigatorItem and closes the field', async () => {
-      const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { container, rerender } = render(<FileNavigatorTab files={makeFiles()} client={client} index={2} label="files" />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
@@ -845,7 +845,7 @@ describe('FileNavigatorTab', () => {
       const input = screen.getByRole('textbox');
       await userEvent.clear(input);
       await userEvent.type(input, 'renamed.md{Enter}');
-      expect(send).toHaveBeenCalledWith({ method: 'renameFileNavigatorItem', params: { label: 'files', relPath: 'README.md', newName: 'renamed.md' } });
+      expect(request).toHaveBeenCalledWith({ method: 'renameFileNavigatorItem', params: { label: 'files', relPath: 'README.md', newName: 'renamed.md' } });
       expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
       const renamedFiles = makeFiles({ rows: makeFiles().rows.map((row) => row.path === 'README.md' ? { ...row, path: 'renamed.md', name: 'renamed.md' } : row) });
       rerender(<FileNavigatorTab files={renamedFiles} client={client} index={2} label="files" />);
@@ -924,8 +924,8 @@ describe('FileNavigatorTab', () => {
     });
 
     it('Overwrite on the rename conflict dialog sends the RPC', async () => {
-      const send = vi.fn();
-      const client = { send } as unknown as JanusClient;
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: [] } });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
       const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={4} label="files" />);
       const tree = container.querySelector('[role="tree"]')!;
       selectReadme(tree);
@@ -934,7 +934,42 @@ describe('FileNavigatorTab', () => {
       await userEvent.clear(input);
       await userEvent.type(input, 'src{Enter}');
       fireEvent.click(screen.getByRole('button', { name: /overwrite/i }));
-      expect(send).toHaveBeenCalledWith({ method: 'renameFileNavigatorItem', params: { label: 'files', relPath: 'README.md', newName: 'src' } });
+      expect(request).toHaveBeenCalledWith({
+        method: 'renameFileNavigatorItem', params: { label: 'files', relPath: 'README.md', newName: 'src', overwrite: true },
+      });
+    });
+
+    it('opens the overwrite dialog when the server finds a hidden destination conflict', async () => {
+      const request = vi.fn().mockResolvedValueOnce({ ok: true, value: { conflict: true } })
+        .mockResolvedValueOnce({ ok: true, value: { total: 1, failedPaths: [] } });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={4} label="files" />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'hidden.md{Enter}');
+      await waitFor(() => expect(screen.getByRole('alertdialog')).toBeInTheDocument());
+      fireEvent.click(screen.getByRole('button', { name: /overwrite/i }));
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+      expect(request.mock.calls[1][0]).toMatchObject({
+        method: 'renameFileNavigatorItem', params: { relPath: 'README.md', newName: 'hidden.md', overwrite: true },
+      });
+    });
+
+    it('keeps the original selection when the server refuses a rename', async () => {
+      const request = vi.fn().mockResolvedValue({ ok: true, value: { total: 1, failedPaths: ['README.md'] } });
+      const client = { send: vi.fn(), request } as unknown as JanusClient;
+      const { container } = render(<FileNavigatorTab files={makeFiles()} client={client} index={4} label="files" />);
+      const tree = container.querySelector('[role="tree"]')!;
+      selectReadme(tree);
+      fireEvent.keyDown(tree, { key: 'r', metaKey: true });
+      const input = screen.getByRole('textbox');
+      await userEvent.clear(input);
+      await userEvent.type(input, 'renamed.md{Enter}');
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+      expect(screen.getByText('README.md').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
     });
 
     it('Cancel on the rename conflict dialog reopens the edit field', async () => {

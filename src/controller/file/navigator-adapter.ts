@@ -19,7 +19,7 @@ export type FileNavigatorControllerAdapter = {
   pasteFileNavigatorItems(label: string, sources: string[], destinationPath: string, mode: 'copy' | 'cut', policy?: BulkConflictPolicy, sourceHost?: string): ReturnType<typeof fileNavigatorRpc.pasteFileNavigatorItems>;
   deleteFileNavigatorItem(label: string, relPath: string): ReturnType<typeof fileNavigatorRpc.deleteFileNavigatorItem>;
   deleteFileNavigatorItems(label: string, paths: string[]): ReturnType<typeof fileNavigatorRpc.deleteFileNavigatorItems>;
-  renameFileNavigatorItem(label: string, relPath: string, newName: string): ReturnType<typeof fileNavigatorRpc.renameFileNavigatorItem>;
+  renameFileNavigatorItem(label: string, relPath: string, newName: string, overwrite?: boolean): ReturnType<typeof fileNavigatorRpc.renameFileNavigatorItem>;
   fileNavigatorSearch(index: number): Promise<string[]>;
   revealFileNavigatorItem(index: number, relPath: string): void;
   fileNavigatorOpeners(index: number, relPath: string, edit: boolean, all?: boolean): FileOpenerResolution;
@@ -50,7 +50,8 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     pasteFileNavigatorItems: (label, sources, destination, mode, policy, sourceHost) => fileNavigatorRpc.pasteFileNavigatorItems(managers, label, sources, destination, mode, policy, sourceHost),
     deleteFileNavigatorItem: (label, relPath) => fileNavigatorRpc.deleteFileNavigatorItem(managers, label, relPath),
     deleteFileNavigatorItems: (label, paths) => fileNavigatorRpc.deleteFileNavigatorItems(managers, label, paths),
-    renameFileNavigatorItem: (label, relPath, newName) => fileNavigatorRpc.renameFileNavigatorItem(managers, label, relPath, newName),
+    renameFileNavigatorItem: (label, relPath, newName, overwrite) =>
+      fileNavigatorRpc.renameFileNavigatorItem(managers, label, relPath, newName, overwrite),
     fileNavigatorSearch: (index) => fileNavigatorRpc.fileNavigatorSearch(managers, index),
     revealFileNavigatorItem: (index, relPath) => fileNavigatorRpc.revealFileNavigatorItem(managers, index, relPath),
     fileNavigatorOpeners: (index, relPath, edit, all) => fileNavigatorRpc.fileNavigatorOpeners(managers, index, relPath, edit, all),

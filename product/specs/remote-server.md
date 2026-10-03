@@ -212,6 +212,11 @@ bytes, about a quarter smaller than before. A version-21 remote still expects th
 would hand the navigator encoded text in place of the file's contents, so it is refused at the
 handshake like any other mismatch.
 
+Making rename overwrite consent explicit moves the protocol to 24. A remote tree sends consent only
+after the user chooses **Overwrite**; otherwise the remote host checks its actual destination and
+answers with a conflict without replacing anything. A version-23 remote ignores that flag and could
+replace the destination without consent, so it is refused at the handshake like any other mismatch.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session

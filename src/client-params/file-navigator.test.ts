@@ -39,7 +39,9 @@ const CASES: Array<[
   ['renameFileNavigatorItem', { label: 'files', relPath: 'a', newName: 'b' }, [
     { label: 'files', relPath: 'a' },
     { label: 'files', relPath: 'a', newName: 1 },
+    { label: 'files', relPath: 'a', newName: 'b', overwrite: 'yes' },
   ]],
+  ['renameFileNavigatorItem', { label: 'files', relPath: 'a', newName: 'b', overwrite: true }, []],
   ['fileNavigatorSearch', { index: 0 }, [{ index: {} }]],
   ['revealFileNavigatorItem', { index: 0, relPath: 'a/b' }, [{ index: 0, relPath: null }]],
   ['fileNavigatorOpeners', { index: 0, relPath: 'a', edit: true, all: false }, [

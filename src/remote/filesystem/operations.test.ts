@@ -31,6 +31,7 @@ const PATH_CASES: [RemoteFilesystemOperation, RemoteFilesystemArguments, string[
   ['delete', { path: 'a.txt' }, ['a.txt']],
   ['delete-many', { paths: ['a.txt', 'b.txt'] }, ['a.txt', 'b.txt']],
   ['rename', { path: 'a.txt', name: 'b.txt' }, ['a.txt']],
+  ['rename', { path: 'a.txt', name: 'b.txt', overwrite: true }, ['a.txt']],
   ['paste', { sources: ['a.txt'], destination: 'dest', mode: 'copy' }, ['a.txt', 'dest']],
   ['create-file', { destination: 'dest' }, ['dest']],
   ['create-directory', { destination: 'dest' }, ['dest']],
@@ -61,6 +62,7 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['delete', {}],
   ['delete-many', { paths: [1, 2] }],
   ['rename', { path: 'a.txt', name: '' }],
+  ['rename', { path: 'a.txt', name: 'b.txt', overwrite: 'yes' }],
   ['paste', { sources: ['a.txt'], destination: 'dest', mode: 'link' }],
   ['create-file', {}],
   ['create-directory', { destination: 7 }],
@@ -117,6 +119,12 @@ describe('FILESYSTEM_OPERATIONS', () => {
     expect(Object.hasOwn(operationDescriptor('move').decode({ from: 'a.txt', to: 'dest' }), 'overwrite')).toBe(false);
     expect(operationDescriptor('move').decode({ from: 'a.txt', to: 'dest', overwrite: false }))
       .toEqual({ from: 'a.txt', to: 'dest', overwrite: false });
+  });
+
+  it('omits an absent rename overwrite flag and decodes consent when present', () => {
+    expect(Object.hasOwn(operationDescriptor('rename').decode({ path: 'a.txt', name: 'b.txt' }), 'overwrite')).toBe(false);
+    expect(operationDescriptor('rename').decode({ path: 'a.txt', name: 'b.txt', overwrite: true }))
+      .toEqual({ path: 'a.txt', name: 'b.txt', overwrite: true });
   });
 
   it('names a refusal shape for exactly the operations whose result can carry one', () => {
