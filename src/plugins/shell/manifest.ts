@@ -22,6 +22,9 @@ export const shellManifest = {
   // The two rows the metadata row's status windows render. The host pushes them when they differ
   // from what it last pushed, so a shell tab sitting idle costs nothing.
   hostState: ['connections', 'schedule'],
+  // Asked for explicitly: starting a process is the most powerful thing this plugin can do, and it
+  // belongs in the declaration rather than arriving with every plugin.
+  spawnTerminal: true,
   capabilities: [
     'originTab',
     'dispatchLine',

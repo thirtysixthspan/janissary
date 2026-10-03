@@ -7,6 +7,7 @@ import {
   type TabPluginActivation,
   type TabPluginCapabilityName,
   type TabPluginDeclaration,
+  type TabPluginResources,
   type TabPluginServerCapabilities,
 } from './api.js';
 import { createPluginContext } from './context.js';
@@ -163,6 +164,49 @@ describe('dispatchLine', () => {
     );
 
     expect(capabilities.dispatchLine('theme')).toBe(false);
+  });
+});
+
+describe('spawnTerminal as a declared resource', () => {
+  // The gate lives where the resources are handed over rather than in `restrictToDeclared`, which
+  // walks the capability set and cannot see a resource.
+  function spawnThrough(managers: Managers, spawnTerminal: boolean | undefined) {
+    const seen: TabPluginResources[] = [];
+    const opened = managers.tab.openPluginTab as ReturnType<typeof vi.fn>;
+    opened.mockImplementation((
+      _id: string, _prefix: string, _key: string, _schema: number, _source: string,
+      factory: (resources: TabPluginResources) => TabPluginPayload,
+    ) => { factory({ registerFile: vi.fn(), spawnTerminal: vi.fn() }); });
+    const declared = {
+      ...declaration(['openOrFocusTab']),
+      ...(spawnTerminal !== undefined && { spawnTerminal }),
+    };
+    createPluginContext(
+      managers, declared, activationFor(), { label: 'janus', command: 'zsh' }, () => true, [],
+    ).openOrFocusTab('shell-1', (resources: TabPluginResources) => {
+      seen.push(resources);
+      return { title: 'shell', payload: {} };
+    });
+    return seen[0];
+  }
+
+  it('hands a plugin that asked for it a working spawnTerminal', () => {
+    const { managers } = makeManagers();
+    const resources = spawnThrough(managers, true);
+    const spawn = resources.spawnTerminal as unknown as ReturnType<typeof vi.fn>;
+
+    spawn({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+
+    expect(spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses one that did not, rather than handing over a resource that does nothing', () => {
+    const { managers } = makeManagers();
+
+    const resources = spawnThrough(managers, false);
+
+    expect(() => (resources.spawnTerminal as (o: unknown) => unknown)({ cwd: '/repo' }))
+      .toThrow(/without declaring it/);
   });
 });
 

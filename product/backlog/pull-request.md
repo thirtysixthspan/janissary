@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Declare or confine the terminals a plugin starts, since `spawnTerminal` reaches an unsandboxed process without appearing in the declaration the host validates.
-
-Existing Issue: `spawnTerminal` is a resource rather than a capability, so `restrictToDeclared` in `src/plugins/context.ts` never gates it and every bundled plugin receives it whether or not its declaration asks for it, while workspace confinement applies only when the caller passes a `workspace`, which nothing requires. Severity: 5/10
-
-Existing Risk: 5/10 - Any plugin, including one added later without a reviewer looking at this surface, can start an interactive shell in any directory with no Seatbelt profile, which is a wider blast radius than the plugin contract had before this change and is invisible in the declaration that activation validates.
-
-Proposal Risk: 3/10 - Gating it costs every future plugin a declaration edit before it may start a process, and a plugin that genuinely wants an unsandboxed shell still has to say so out loud.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: declare or confine the terminals a plugin starts". Settle the boundary in one of two ways and write it down. Either add `spawnTerminal` to the server capability set so `restrictToDeclared` gates it and `src/plugins/shell/manifest.ts` declares it, which would raise the documented server capability count from twenty-two to twenty-three and require the matching edit in `documentation/developer-documentation/tab-plugins.md` and `src/plugins/documentation.test.ts`. Or keep it a resource and make confinement unconditional for a terminal not launched inside a workspace, which is the stronger guarantee and matches the plan's reasoning that a workspace confines a shell exactly as that tab's own shell is confined, at the cost of changing what an unworkspace'd plugin terminal may do. State the choice in the `spawnTerminal` section of `documentation/developer-documentation/tab-plugins.md` and in `product/specs/tab-plugins.md`, and add a case to `src/plugins/declaration-validation.test.ts` or `src/plugins/shell/activate.test.ts` pinning it, so a later change is a deliberate act rather than a side effect.
-
-
 * Make a terminal spawned without `args` be the shell itself, rather than a shell running an empty command.
 
 Existing Issue: `TabPluginTerminalOptions.args` is optional and `TabManager.spawnTerminal` in `src/tab/manager.ts` forwards it as given, so `spawnPty` falls back to `shellCommandArgs` with the empty command it was handed and spawns an interactive shell whose only command is the empty string. Severity: 4/10

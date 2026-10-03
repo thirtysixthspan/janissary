@@ -54,9 +54,9 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   isRecordingLive: true,
   originTab: true,
   dispatchLine: true,
-completeLine: true,
-terminalRunning: true,
-rejectRequest: true,
+  completeLine: true,
+  terminalRunning: true,
+  rejectRequest: true,
   reportFailure: true,
 };
 

@@ -9,6 +9,7 @@ import {
   type TabPluginCapabilityName,
   type TabPluginDeclaration,
   type TabPluginNotificationTopic,
+  type TabPluginResources,
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
@@ -54,6 +55,24 @@ function restrictToDeclared(
     };
   }
   return restricted;
+}
+
+// `spawnTerminal` is granted on the resources a payload factory receives rather than on the
+// capability object, because a tab's label does not exist until its factory returns — so it is gated
+// here, on the declaration field that asks for it. `restrictToDeclared` walks the capability set and
+// cannot reach a resource. The refusal matches the capability one: it throws the message a plugin
+// author is looking for, rather than handing back a resource that quietly does nothing.
+function declaredResources(
+  declaration: TabPluginDeclaration,
+  resources: TabPluginResources,
+): TabPluginResources {
+  if (declaration.spawnTerminal) return resources;
+  return {
+    ...resources,
+    spawnTerminal: () => {
+      throw new Error('used resource "spawnTerminal" without declaring it');
+    },
+  };
 }
 
 // The checks a plugin-produced tab value must pass, shared by the creation and update paths so a
@@ -125,7 +144,7 @@ export function createPluginContext(
         declaration.payloadSchemaVersion,
         origin.label,
         (resources) => {
-          const created = factory(resources);
+          const created = factory(declaredResources(declaration, resources));
           validateTabValue(activation, created);
           return created;
         },
@@ -136,7 +155,7 @@ export function createPluginContext(
     updateTab: (instanceKey, factory) => {
       if (!isEnabled()) return;
       managers.tab.updatePluginTab(declaration.id, instanceKey, (resources) => {
-        const update = factory(resources);
+        const update = factory(declaredResources(declaration, resources));
         validateTabValue(activation, update);
         return update;
       });

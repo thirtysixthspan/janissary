@@ -40,6 +40,14 @@ export type TabPluginDeclaration = {
   // rather than a list of its own, so the playable types cannot drift from the claimed ones: a
   // plugin claims what it owns once and says of that set whether any of it plays.
   playable?: boolean;
+  // Asks for the `spawnTerminal` resource: the right to start a process from a payload factory, in
+  // any directory the plugin names. A flag rather than a capability entry because the terminal cannot
+  // be started as one — a tab's label does not exist until its factory returns, so it is started there
+  // and adopted onto the label afterwards — but starting a process is the most powerful thing a plugin
+  // can ask for, and it belongs in the declaration a reader reviews rather than arriving ambient.
+  // A workspace passed alongside it confines the process through Seatbelt exactly as that tab's own
+  // shell is confined; without one it runs wherever the plugin said, like any other unconfined shell.
+  spawnTerminal?: boolean;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
   // An entry the default context menu offers for a text selection. A declaration carrying one must
