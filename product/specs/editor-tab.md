@@ -191,6 +191,8 @@ advance only after replacement succeeds, so a failed save leaves the prior file 
 intact. On success a "Saved" flash appears in the metadata header; on failure the server error
 message is shown and the save button remains enabled.
 
+Saves from the button, keyboard shortcut, overwrite confirmation, commit action, and close dialog share one ordered sequence per editor. Repeating a pending save of the same text waits for that write. Saving changed text while a write is pending waits its turn and checks against the preceding successful save, so the editor's own earlier write does not raise an overwrite conflict. A failed write rejects the saves waiting behind it; the user can retry afterward. Edits made after the last requested snapshot remain unsaved.
+
 Saving a file opened from a remote navigator uses the same guarantee on the remote host: its
 existing bytes and permission bits remain in place if the replacement fails, and the local cache,
 draft, and saved indicator advance only after the remote write succeeds.

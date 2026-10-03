@@ -220,3 +220,112 @@ describe('useEditorFile — save', () => {
     expect(result.current.dirty).toBe(true);
   });
 });
+
+describe('useEditorFile overlapping saves', () => {
+  async function setupPending() {
+    let resolve!: (error: string | undefined) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web project's ES2023 library excludes Promise.withResolvers
+    const promise = new Promise<string | undefined>((accept) => { resolve = accept; });
+    const pending = { promise, resolve };
+    const saveFile = vi.fn().mockImplementationOnce(() => pending.promise).mockResolvedValue(undefined);
+    const client = makeClient({ saveFile });
+    const api = makeApi();
+    const hook = renderHook(
+      ({ mtimeMs }: { mtimeMs: number }) => useEditorFile(client, makeView({ mtimeMs }), api),
+      { initialProps: { mtimeMs: 1000 } },
+    );
+    await waitFor(() => expect(api.load).toHaveBeenCalled());
+    return { ...hook, client, api, pending, saveFile };
+  }
+
+  it('lets repeated actions and a save-before-close caller await one write', async () => {
+    const h = await setupPending();
+    h.api.stateRef.current = fromText('edited');
+    const closed = vi.fn();
+    const saveBeforeClose = async () => { await h.result.current.save(); closed(); };
+    let requests: Promise<void>[] = [];
+    act(() => {
+      requests = [h.result.current.save(), h.result.current.save(), saveBeforeClose()];
+    });
+    expect(h.saveFile).toHaveBeenCalledTimes(1);
+    expect(closed).not.toHaveBeenCalled();
+    await act(async () => { h.pending.resolve(undefined); await Promise.all(requests); });
+    expect(closed).toHaveBeenCalledOnce();
+    expect(h.result.current.dirty).toBe(false);
+  });
+
+  it('queues changed text with the preceding saved hash and leaves later edits dirty', async () => {
+    const h = await setupPending();
+    h.api.stateRef.current = fromText('first');
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = h.result.current.save();
+      h.api.stateRef.current = fromText('second');
+      second = h.result.current.save();
+      h.api.stateRef.current = fromText('not yet saved');
+    });
+    expect(h.saveFile).toHaveBeenCalledTimes(1);
+    await act(async () => { h.pending.resolve(undefined); await Promise.all([first, second]); });
+    expect(h.saveFile.mock.calls).toEqual([
+      ['/open/1', 'first', contentHash('line one\nline two')],
+      ['/open/1', 'second', contentHash('first')],
+    ]);
+    expect(h.result.current.dirty).toBe(true);
+  });
+
+  it('rejects queued saves on failure and retries against the unchanged baseline', async () => {
+    const h = await setupPending();
+    let outcomes!: Promise<PromiseSettledResult<void>[]>;
+    act(() => {
+      h.api.stateRef.current = fromText('first');
+      const first = h.result.current.save();
+      h.api.stateRef.current = fromText('second');
+      outcomes = Promise.allSettled([first, h.result.current.save()]);
+    });
+    await act(async () => { h.pending.resolve('disk full'); await outcomes; });
+    const settled = await outcomes;
+    expect(settled.map((value) => value.status)).toEqual(['rejected', 'rejected']);
+    expect(h.saveFile).toHaveBeenCalledTimes(1);
+    expect(h.result.current.saveError).toBe('disk full');
+    await act(async () => { await h.result.current.save(); });
+    expect(h.saveFile).toHaveBeenLastCalledWith('/open/1', 'second', contentHash('line one\nline two'));
+    expect(h.result.current.dirty).toBe(false);
+  });
+
+  it('rejects queued callers on conflict and recovers through explicit overwrite', async () => {
+    const h = await setupPending();
+    let outcomes!: Promise<PromiseSettledResult<void>[]>;
+    act(() => {
+      h.api.stateRef.current = fromText('first');
+      const first = h.result.current.save();
+      h.api.stateRef.current = fromText('second');
+      outcomes = Promise.allSettled([first, h.result.current.save()]);
+    });
+    await act(async () => { h.pending.resolve(SAVE_CONFLICT_ERROR); await outcomes; });
+    const settled = await outcomes;
+    expect(settled.every((value) => value.status === 'rejected')).toBe(true);
+    expect(h.result.current.conflictOpen).toBe(true);
+    expect(h.saveFile).toHaveBeenCalledTimes(1);
+    await act(async () => { h.result.current.overwrite(); });
+    expect(h.saveFile).toHaveBeenLastCalledWith('/open/1', 'second', undefined);
+    expect(h.result.current.dirty).toBe(false);
+    h.api.stateRef.current = fromText('third');
+    await act(async () => { await h.result.current.save(); });
+    expect(h.saveFile).toHaveBeenLastCalledWith('/open/1', 'third', contentHash('second'));
+  });
+
+  it('updates the save baseline after a watched reload', async () => {
+    const h = await setupPending();
+    h.client.readFile.mockResolvedValue('external');
+    h.rerender({ mtimeMs: 2000 });
+    await waitFor(() => expect(h.api.load).toHaveBeenLastCalledWith('external', 0));
+    h.api.stateRef.current = fromText('edited after reload');
+    await act(async () => {
+      const saving = h.result.current.save();
+      h.pending.resolve(undefined);
+      await saving;
+    });
+    expect(h.saveFile).toHaveBeenLastCalledWith('/open/1', 'edited after reload', contentHash('external'));
+  });
+});
