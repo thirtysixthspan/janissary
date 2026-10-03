@@ -547,6 +547,8 @@ save-triggered sync, including a rejected push, is also posted to the notificati
 `Could not sync <filename>: <reason>`, where the reason is the first line of git's error. When that
 error runs longer, the whole of it is kept in a file the line links.
 
+Sync cycles from opens, saves, and manual resyncs run one at a time in request order across all synced files. A cycle finishes its failure recovery before the next begins, and a failed cycle does not prevent later requests from running. Waiting for another file's sync does not delay the local save confirmation.
+
 The metadata header's connections-status button area also shows a status icon for a synced file,
 reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit an
 error. A sync error (for example a network problem, an authentication failure, or a conflicting

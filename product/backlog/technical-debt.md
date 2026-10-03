@@ -4,17 +4,6 @@
 
 ## development
 
-* Serialize Git sync cycles that mutate the shared workspace clone.
-
-Existing Debt: GitSync shares one clone and deduplicates its provisioning, but every open, resync, and save independently starts Git operations against that clone's index and rebase state. Severity: 6/10
-
-Existing Risk: 7/10 - Concurrent tab opens or saves can collide on Git locks or let one failed pull abort another cycle's rebase, leaving multiple synced files in an error state.
-
-Proposal Risk: 4/10 - Serializing Git cycles removes competing internal Git processes, but editor writes during a pull and changes from external writers can still require conflict recovery.
-
-Proposal: Add one instance-owned operation queue in `src/git/sync.ts` and route the complete `openSync` pull and `saveSync` commit/pull/push sequences through it, including the pull failure's abort before the next cycle starts. Keep provisioning deduplication, branch discovery, per-file pathspecs, and each caller's result intact; a failed cycle must settle its caller and release the queue so later work can proceed. `finishOpenSynced` in `src/open/file-manager.ts`, `resyncEditorTab` in `src/editor/resync.ts`, and `syncAfterSave` in `src/editor/save.ts` already converge on this owner and must not each grow a separate lock. Treat this as the first increment: preserve the existing immediate local save confirmation, and do not claim the queue coordinates filesystem writes performed outside GitSync. Extend `src/git/sync.test.ts` with a controllable child-process fake that holds one pull or commit pending while a second open or save arrives, asserting that no second cycle starts until the first completes and that failure recovery precedes the next cycle. Its current concurrent-open test checks only clone creation count and uses immediately completed subprocess callbacks; retain its provisioning retry, branch, commit scope, and failure assertions, along with the save confirmation and refresh behavior in `src/editor/save.test.ts`.
-
-
 * Give replay loading and tail polling one cancellable read lifecycle.
 
 Existing Debt: The replay source starts its initial fetch and polling in separate effects that mutate the same parser and offset, while cleanup only stops future timers and does not invalidate pending reads. Severity: 6/10
