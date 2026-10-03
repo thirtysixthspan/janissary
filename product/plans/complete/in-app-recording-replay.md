@@ -1,6 +1,6 @@
 # In-app asciicast playback
 
-**Complexity: 7/10** — a new bundled plugin on both sides, two additive additions to the published plugin contract with a doc-parity test and fifteen client fixtures that depend on the second one, a recording format migration in both directions, a new client-to-server message, and real concurrency on the client: a playback clock driving a terminal reconstruction, frame stepping, and polling a file that is still being appended to.
+**Complexity: 7/10** — a new bundled plugin on both sides, three additive additions to the published plugin contract with a doc-parity test and fifteen client fixtures that depend on the second one, a recording format migration in both directions, a new client-to-server message, and real concurrency on the client: a playback clock driving a terminal reconstruction, frame stepping, and polling a file that is still being appended to.
 
 Every named-harness and ssh tab is already recorded automatically to an asciicast `.cast` file under
 `.janissary/recordings/`, and `harness-recording.md` § Retrieval recorded that nothing in the app could
@@ -10,11 +10,14 @@ and a bundled **asciicast** tab plugin that plays such a recording — the iTerm
 asciinema player interaction the app has no route to.
 
 The player is a bundled tab plugin, so its code ships in its own lazy chunk, it fails in isolation, and
-it is reachable the way every other media tab is. Two additive additions to the v1 plugin API get it
+it is reachable the way every other media tab is. Three additive additions to the v1 plugin API get it
 there: an optional **`playable`** flag on the declaration, because `play` is a core command a plugin
-cannot claim and needs a way to say which of its claimed file types are things to play, and a
+cannot claim and needs a way to say which of its claimed file types are things to play; a
 **`copyText`** client capability, because selecting and copying out of the playback is part of the
-feature and a concrete client plugin may not reach the host's clipboard helper.
+feature and a concrete client plugin may not reach the host's clipboard helper; and a read-only
+**`isRecordingLive`** server capability, because a recording cannot say whether its session is still
+running — one ended by closing its tab carries no exit event — and only the tab that is still there
+knows.
 
 ## Design decisions
 
@@ -114,7 +117,14 @@ past frame at all; a long recording therefore costs a full pass on a backward se
 accepted rather than papered over with checkpoints. Every control is a button as well as a chord —
 Space or `p` plays and pauses, `,` and `.` step, `[` and `]` change speed — so nothing is keyboard-only.
 Each chord is deliberately unshifted, so none can collide with a key the terminal underneath already
-claims, and none is claimed while the user is in a text field. **There are no markers**: a marker is a
+claims. **A chord is declined only for a place text can actually be typed into**, which the
+application's own `isTextEntryElement` answers: a text-ish input, a textarea, or anything
+contenteditable. Clicking the recording — the first thing anyone does with a player — hands focus to
+the textarea xterm keeps hidden for composition, and that is the terminal's own bookkeeping rather
+than a field a person is typing into, so it is exempted by class name and the chords survive the
+click. The same predicate is what stops the seek bar, an `input[type=range]`, from swallowing chords
+while it holds focus, which a tag-name test cannot tell from a text field. This tab holds no field of
+its own, so nothing else in it can claim a key. **There are no markers**: a marker is a
 named point in one viewing session with nothing to select, copy, or share, and leaving it out keeps
 the player's state to a position and a speed.
 
@@ -160,13 +170,23 @@ uses. The tab title is `asciicast: <label>`, taken from the file's name with its
 suffix removed — the artifact naming scheme already encodes the label — falling back to the whole stem
 for a file that does not follow it, so the same name reads correctly however the file was reached.
 
-**A live badge reflects the file, not the tab.** The metadata line reads `claude · devbox · started
-14:32:05 · 12m 30s · live` — the recorded command, the recorded title, the recorded start time, the
-duration of what has been recorded, and a badge — while polls are still returning new bytes, and shows
-the same duration without the badge once they stop, which is true of a live recording whose session has
-finished and false of nothing. A recording carrying an exit status gains `exit 0` after the duration.
-Size is deliberately absent: the duration is what a viewer of a recording wants next to a seek bar, and
-`size` is carried in the payload for every file-backed tab whether or not it is shown.
+**A live badge reports the session, not the last thing it said.** The metadata line reads
+`claude · devbox · started 14:32:05 · 12m 30s · live` — the recorded command, the recorded title, the
+recorded start time, the duration of what has been recorded, and a badge — for as long as the session
+writing the recording is still running, and shows the same duration without the badge once it is not.
+The badge cannot be derived from the polls: no new bytes means the session is *quiet*, which for an
+agent between two prompts is its normal state for minutes at a time, and reading that as an ending
+made a running session indistinguishable from a finished one. Only the host can tell the two apart,
+since it owns the recorders, so the plugin asks it — through the `isRecordingLive` capability the
+opener already used, reached from the client by one intent taking no argument, because what it answers
+is a property of the tab's own recording. The question is asked only where it cannot be settled
+locally: a poll that brought bytes is proof the session is running, and a recording carrying its own
+`x` event settles it outright. It is asked once and then taken as final, because a session cannot
+resume writing a recording the host has stopped watching, and a host that fails to answer is not a
+host that said no — a recording in progress is never declared finished because a question could not be
+delivered. A recording carrying an exit status gains `exit 0` after the duration. Size is deliberately
+absent: the duration is what a viewer of a recording wants next to a seek bar, and `size` is carried
+in the payload for every file-backed tab whether or not it is shown.
 
 **A degenerate recording opens as the player it is.** A header with no events, or a final line
 truncated by a recording still being written, renders the metadata line and transport over an empty
@@ -190,9 +210,18 @@ header's `version` so a v2 file's absolute times and top-level dimensions and a 
 the tab's metadata line rather than half-parsed. v1 is not read: this app has never written it.
 
 **A recording carries the session's exit status.** The recorder receives it on the `pty` exit event and
-discards it today; v3's `x` event exists for exactly this and the player shows it on the metadata line
-as `exit 0`. A recording ended by closing its tab or quitting the application has no exit status — the
-spec is explicit that closing the tab is enough — and none is invented for it.
+writes v3's `x` event for exactly that, and the player shows it on the metadata line as `exit 0`.
+Getting there needs the write to happen before the recorder is torn down, and two listeners watch
+`pty:exit`: the per-PTY recorder, and the runtime registry that releases a harness or ssh runtime as
+soon as its PTY ends. The registry is built with the manager and the bus dispatches listeners in
+registration order, so the registry's listener always ran first, disposed the runtime, and left the
+recorder's own listener with no stream to write into — the status was received and dropped, and no
+`.cast` file this app wrote had ever carried one. The registry therefore releases from a microtask,
+after the dispatch carrying the event has finished, capturing the entry it means to release so an
+attach reusing that id in the meantime is not dropped in its place. Releasing as soon as the PTY exits
+is what keeps a detached remote harness's `kill` off the far side, so the subscription stays and only
+its timing moves. A recording ended by closing its tab or quitting the application has no exit status
+— the spec is explicit that closing the tab is enough — and none is invented for it.
 
 **The recorded foreground and background are captured, and nothing else is.** asciicast carries a
 `theme` of `fg`, `bg`, and a palette, but this app themes only the first two: `useXterm` passes
@@ -256,6 +285,7 @@ two tab-shape gates relaxed — a feature rather than a fix. `product/backlog/fe
 | Single-range serving on `/open/<id>` — following a growing file needs no new work | `src/open/route.ts`, `parseByteRange` |
 | The opener registry `play` dispatches through, and the accepted-claims list it must read | `src/openers/index.ts` (`openerForExtension`, `pluginOpeners`) |
 | The `open` command's path resolution, existence check, and refusal wording | `src/open/file-command.ts`, `src/open/file-manager.ts` |
+| The application's answer to "is this a place text can go", shared by the context menu and the paste capability | `web/src/shared/text-entry.ts` (`isTextEntryElement`) |
 | Client capabilities, and the host object that builds them | `web/src/plugins/api.ts` (`createPluginClientCapabilities`) |
 | The doc-parity test that pins the documented capability counts | `src/plugins/documentation.test.ts` |
 | Client chunk registry parity gate a new plugin must satisfy | `web/src/plugins/registry.test.tsx` |
@@ -274,6 +304,17 @@ two tab-shape gates relaxed — a feature rather than a fix. `product/backlog/fe
 pure data and carries no executable predicate, and needs no matching handler — a plugin that declares
 itself playable already has an inline opener, because claiming extensions without an opener is already
 a refused declaration.
+
+Two capabilities are added beside it, both additive and optional inside v1. `copyText` on
+`TabPluginClientCapabilities`, because xterm.js gives the selection but no clipboard write and a
+concrete client plugin may not import the host's helper; it is a required member of the object, so
+every fixture that builds it needs the new line. `isRecordingLive` on
+`TabPluginServerCapabilities`, because a plugin reaches no tab list of its own and a recording cannot
+say whether its session is still running. `web/src/plugins/api.ts` additionally re-exports
+`isTextEntryElement` for the same reason `copyText` became a capability: the player needs the
+application's answer to "is this a place text can go", and the client plugin boundary permits only
+`../api`, `../shared.css`, and the plugin's own contract. It is a pure re-export rather than a new
+capability, so nothing about the capability set moves.
 
 `src/plugins/opener-adapter.ts` gains `playablePluginIds`, the set of plugin ids that said so. It
 reads the catalog rather than the accepted openers for one reason: a declaration refused for a duplicate
@@ -316,18 +357,26 @@ false answer is treated as no answer. `src/plugins/live-recordings.ts` answers t
 rather than from the recorder registry, because the file cannot say: a recording ends when its tab
 closes just as surely as when its process exits.
 
+The activation carries one intent, `liveness`, answering whether a live tab is still writing this tab's
+own recording. It takes no argument, because what it answers is a property of the recording the tab
+already holds and a client must not be able to ask about another one. It is the same capability the
+opener used, so the manifest needed nothing new for it.
+
 `web/src/plugins/asciicast/` is the lazy chunk: an entry that loads the shared plugin stylesheet and its
 own, a `cast-stream` pure module that parses a header of either version and turns appended text into
 events while holding a partial trailing line, a `timeline` pure module holding the timeline's own
 arithmetic — how long it is, which events a moment lands on — so it can be tested without a clock or a
 terminal, a `useAsciicastSource` hook owning the parser, the byte offset, and the ranged fetch in one
-effect keyed on the served reference and the poll chain in a second keyed on visibility, a
-`useAsciicastTerminal` hook that builds the terminal once the header gives it a grid, applies the
-recorded colours when the header carries them, and hands a copy to the capability, a `usePlayback` hook
-owning the clock, speed, position, frame stepping, and the reset-and-replay a backward seek needs, a
-presentational transport bar, a metadata line carrying the facts and the `exit` status, and the tab
-component that composes them. Nothing is promoted to `web/src/shared/` — there is one consumer, and the
-plugin boundary would not permit the import anyway.
+effect keyed on the served reference and the poll chain in a second keyed on visibility, and — because
+the first read's verdict about liveness can go stale — the liveness latch that effect resets, which a
+poll that brings nothing clears by asking the host and which never returns; a `useAsciicastTerminal`
+hook that builds the terminal once the header gives it a grid, applies the recorded colours when the
+header carries them, and hands a copy to the capability; a `usePlayback` hook owning the clock, speed,
+position, frame stepping, and the reset-and-replay a backward seek needs, given liveness as its
+hold-at-the-end condition rather than a conjunction of the payload's opening verdict and the last
+packet's size; a presentational transport bar, a metadata line carrying the facts, the `live` badge,
+and the `exit` status; and the tab component that composes them. Nothing is promoted to
+`web/src/shared/` — there is one consumer, and the plugin boundary would not permit the import anyway.
 
 ### The command
 
@@ -370,6 +419,10 @@ pair and the one place that decides a valid one.
 
 `src/harness/manager.ts` gains `recordingPathOf(label)` for the host's own liveness answer, and
 `reportTerminalColors(id, colors)` to hand the client's report to that PTY's recorder.
+`src/harness/runtime-registry.ts` keeps releasing a runtime when its PTY exits, because that is what
+stops a detached remote harness's `kill` reaching the far side, but does it from a microtask rather
+than part-way through the dispatch, so the recorder — a later listener of the same event — gets to
+write the exit status into its file first.
 
 `src/protocol/core-rpc.ts` gains one client-to-server message carrying a PTY id and the two resolved
 terminal colours, and `src/client-message.ts` gives it its entry in the kind table. Each terminal surface
@@ -421,20 +474,28 @@ Server, colocated:
   event carries the same interval encoding as an output event; a PTY exit writes an `x` event carrying
   the exit code before the stream closes, and a recorder disposed without one writes none; and the
   written intervals sum to the real elapsed time rather than drifting, which is the property the format's
-  error-diffusion advice exists to protect. All in the existing real-files style.
+  error-diffusion advice exists to protect. All in the existing real-files style. Two further cases run
+  a recorder *behind* a real `HarnessRuntimes`, which is the only wiring in which the exit event ever
+  arrives: the registry is built first, as it is in the running app, and the `x` event must still be the
+  file's last line, while a runtime released by a tab close writes none. The bare `x` case cannot see
+  this, which is why the passing test was what hid the loss.
+- `src/harness/runtime-registry.test.ts` — a runtime installed under an id between the exit and its
+  release survives, so an attach that reuses the id is not dropped in its place. The existing exit cases
+  await the dispatch rather than asserting synchronously, because the release is now deferred.
 - `src/client-message.test.ts` — the new terminal-colours message is accepted, and its two colours are
   validated as colour strings rather than stored as whatever arrived.
 - `src/plugins/asciicast/activate.test.ts` — the `.cast` extension resolving to the plugin through the
   real opener registry, the tab named after the label the file was named for, a stem without a stamp
   keeping its whole name, the payload's shape and served reference, a `rejectRequest` on a file the
   plugin will not serve, the absence of any external presentation, an unknown intent name rejected
-  against a real payload, and the liveness cases. The liveness cases build their context through
-  `createPluginContext` from the real manifest rather than by hand, so the capability the payload asks
-  the host for is answered under the declaration the plugin ships: with `isRecordingLive` undeclared
-  that context throws and the cases fail, which is the only check in the suite that asks what the
-  manifest grants. The other cases keep the hand-built capability object, which is the right tool for
-  stubbing a capability's answer directly. The registration case pins `playable` true, no command, and
-  no `coreRoutes` key at all.
+  against a real payload, an argument to the argument-less intent rejected, the `liveness` intent
+  answering from the host for the recording its own tab holds, and the liveness cases. The liveness
+  cases build their context through `createPluginContext` from the real manifest rather than by hand, so
+  the capability the payload asks the host for is answered under the declaration the plugin ships: with
+  `isRecordingLive` undeclared that context throws and the cases fail, which is the only check in the
+  suite that asks what the manifest grants. The other cases keep the hand-built capability object, which
+  is the right tool for stubbing a capability's answer directly. The registration case pins `playable`
+  true, no command, and no `coreRoutes` key at all.
 - `src/harness/recording-file.test.ts` — `harnessRecordingDirectory()` answers the directory that was
   initialized, and the empty string before one was.
 - `src/harness/command-parse.test.ts` and `src/ssh.test.ts` — the retired `replay` word reads as an
@@ -482,7 +543,12 @@ Client, colocated:
   offset, a poll returning no bytes leaving the timeline unchanged, polling stopping when the tab is
   hidden and resuming when it is shown, and a 416 being read as no new bytes. The hide-and-show case
   asserts the range offset rather than the fetch count: after being hidden and shown again, the read
-  asks for a window starting where the last one stopped instead of beginning the file again.
+  asks for a window starting where the last one stopped instead of beginning the file again. Then
+  liveness: a session gone quiet stays live while the host says it is running and stops being live once
+  the host says otherwise; a poll that brings bytes asks nothing, because bytes are proof enough; a
+  recording carrying its own `x` event is not live whatever the host says; a recording finished when it
+  opened is never live and never asked about; and a host that cannot answer leaves the latch alone
+  rather than declaring a recording in progress finished.
 - `web/src/plugins/asciicast/useAsciicastTerminal.test.ts` — the terminal is built at the recording's own
   columns and rows; the font size is the document's `--terminal-font-size` with the 13.5 fallback when
   that property is unset; a recorded `fg`/`bg` themes the terminal and their absence falls back to the
@@ -493,7 +559,12 @@ Client, colocated:
   `fg`/`bg` and under the app theme when the header has none, and a degenerate recording rendering the
   reason on the metadata line rather than replacing the body. The stubbed terminal hook is asserted to
   be asked for nothing before the header arrives and for the recording's own columns and rows once it
-  does, which is the whole of the build-once contract.
+  does, which is the whole of the build-once contract. Three cases cover what the chords and the badge
+  need that the others cannot reach: `.` and Space still working with xterm's helper textarea focused,
+  `]` still cycling speed with the seek bar focused, a real text field still holding its chords, and the
+  badge persisting through a session's silence, dropping when the host says the writing stopped, and
+  never appearing for a recording that was finished at open. The older chord cases press keys with
+  focus on the body, which is the state before the click rather than after it.
 - `web/src/plugins/registry.test.tsx` picks up the new entry and pins its schema literal.
 
 ## Out of scope
