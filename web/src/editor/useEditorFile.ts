@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EditorView } from '@shared/protocol';
-import { contentHash, SAVE_CONFLICT_ERROR } from '@shared/editor/save-conflict';
+import { SAVE_CONFLICT_ERROR } from '@shared/editor/save-conflict';
 import type { JanusClient } from '../ws';
 import { toText } from './model';
 import type { EditorApi } from './useEditor';
 import { useEditorWatchReload } from './useEditorWatchReload';
+import { SaveCoordinator } from './save-coordinator';
 
 export type EditorFileApi = {
   dirty: boolean;
@@ -27,6 +28,11 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
+  const [saves] = useState(() => new SaveCoordinator());
+  const setBaseline = useCallback((text: string) => {
+    saves.setBaseline(text);
+    setLastSaved(text);
+  }, [saves]);
   // Set once a watched external change lands while the buffer is dirty; cleared on a successful
   // save. Drives the overwrite-conflict prompt instead of a normal save.
   const conflictPendingRef = useRef(false);
@@ -51,6 +57,12 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     setTimeout(() => setSavedFlash(false), 1500);
   };
 
+  const writeRef = useRef(writeToDisk);
+  writeRef.current = writeToDisk;
+  const queueWrite = (text: string, overwrite = false) => saves.save(
+    text, (content, expectedHash) => writeRef.current(content, expectedHash), overwrite,
+  );
+
   const save = async () => {
     const s = api.stateRef.current;
     if (!s) throw new Error('No buffer to save yet');
@@ -58,7 +70,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
       setConflictOpen(true);
       throw new Error('Save is waiting on the overwrite confirmation');
     }
-    await writeToDisk(toText(s), lastSaved === null ? undefined : contentHash(lastSaved));
+    await queueWrite(toText(s));
   };
 
   useEffect(() => {
@@ -73,14 +85,14 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     // not created yet. Start on the empty buffer that first save will write instead.
     if (editor.newFile) {
       api.load('', editor.line === undefined ? undefined : editor.line - 1);
-      setLastSaved('');
+      setBaseline('');
       return;
     }
     let cancelled = false;
     const load = async () => {
       try {
         const text = await client.readFile(editor.url);
-        if (!cancelled) { api.load(text, editor.line === undefined ? undefined : editor.line - 1); setLastSaved(text); }
+        if (!cancelled) { api.load(text, editor.line === undefined ? undefined : editor.line - 1); setBaseline(text); }
       } catch {
         if (!cancelled) setLoadError(`Failed to load ${editor.name}`);
       }
@@ -95,7 +107,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     [api.state, lastSaved],
   );
 
-  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setLastSaved, client, editor.url);
+  useEditorWatchReload(editor.mtimeMs, dirty, conflictPendingRef, api, setBaseline, client, editor.url);
 
   return {
     dirty,
@@ -109,7 +121,7 @@ export function useEditorFile(client: JanusClient, editor: EditorView, api: Edit
     overwrite: () => {
       setConflictOpen(false);
       const s = api.stateRef.current;
-      if (s) void writeToDisk(toText(s)).catch(() => {});
+      if (s) void queueWrite(toText(s), true).catch(() => {});
     },
     dismissConflict: () => { setConflictOpen(false); },
   };
