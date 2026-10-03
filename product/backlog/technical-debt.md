@@ -4,6 +4,50 @@
 
 ## development
 
+* Preserve each remote file's identity when a navigator changes its root.
+
+Existing Debt: The remote cache identifies files by host, workspace label, and a path relative to the current navigator root, while its write-back record separately holds the root that gives that path meaning. Severity: 6/10
+
+Existing Risk: 8/10 - Opening two different remote files with the same relative name after changing the navigator root overwrites one cache entry and its write-back destination, so an existing editor can save its buffer to the wrong remote file.
+
+Proposal Risk: 3/10 - Distinct remote paths have distinct cache entries, but cached content can still become stale when another process changes the same remote file.
+
+Proposal: In `src/file-navigator/manager/files.ts`, both `openNavigatorFile` and `createNavigatorFile` pass a root-relative name to `materializeRemoteFile` in `src/file-navigator/remote/file-cache.ts`; that function writes to the same local path and replaces `records` without including `record.root` in the identity. `rerootTree` in `src/file-navigator/navigation.ts` changes `state.root`, so opening `notes.txt` at `/workspace` and then at `/workspace/subdir` can alias even within one session. Derive the cache file key from the normalized absolute remote path formed from the captured root and relative path, using an encoding or digest that cannot turn path segments into traversal; keep it beneath the existing workspace cache directory so workspace cleanup still owns all its files. The same absolute remote file reached from two navigator roots should resolve to one key, while different absolute paths must resolve to different keys. Keep `RemoteFileRecord` bound to the exact root and relative path used for that read, and have both open and create use the same identity helper. Extend `src/file-navigator/remote/file-cache.test.ts` and `src/file-navigator/manager/files.test.ts` with the two-root collision and same-file-from-two-roots cases, asserting both cached bytes and the destination reached by `src/editor/save.ts`; current tests cover single-root materialization, write-back failures, orphan refusal, and workspace cleanup but do not cover this identity collision.
+
+
+* Serialize Git sync cycles that mutate the shared workspace clone.
+
+Existing Debt: GitSync shares one clone and deduplicates its provisioning, but every open, resync, and save independently starts Git operations against that clone's index and rebase state. Severity: 6/10
+
+Existing Risk: 7/10 - Concurrent tab opens or saves can collide on Git locks or let one failed pull abort another cycle's rebase, leaving multiple synced files in an error state.
+
+Proposal Risk: 4/10 - Serializing Git cycles removes competing internal Git processes, but editor writes during a pull and changes from external writers can still require conflict recovery.
+
+Proposal: Add one instance-owned operation queue in `src/git/sync.ts` and route the complete `openSync` pull and `saveSync` commit/pull/push sequences through it, including the pull failure's abort before the next cycle starts. Keep provisioning deduplication, branch discovery, per-file pathspecs, and each caller's result intact; a failed cycle must settle its caller and release the queue so later work can proceed. `finishOpenSynced` in `src/open/file-manager.ts`, `resyncEditorTab` in `src/editor/resync.ts`, and `syncAfterSave` in `src/editor/save.ts` already converge on this owner and must not each grow a separate lock. Treat this as the first increment: preserve the existing immediate local save confirmation, and do not claim the queue coordinates filesystem writes performed outside GitSync. Extend `src/git/sync.test.ts` with a controllable child-process fake that holds one pull or commit pending while a second open or save arrives, asserting that no second cycle starts until the first completes and that failure recovery precedes the next cycle. Its current concurrent-open test checks only clone creation count and uses immediately completed subprocess callbacks; retain its provisioning retry, branch, commit scope, and failure assertions, along with the save confirmation and refresh behavior in `src/editor/save.test.ts`.
+
+
+* Give replay loading and tail polling one cancellable read lifecycle.
+
+Existing Debt: The replay source starts its initial fetch and polling in separate effects that mutate the same parser and offset, while cleanup only stops future timers and does not invalidate pending reads. Severity: 6/10
+
+Existing Risk: 6/10 - An initial read lasting longer than the polling interval or a hide-and-show during a pending poll can read the same bytes twice, and a response for an old URL can append into the replacement recording's parser.
+
+Proposal Risk: 2/10 - Serial reads with generation checks preserve byte order and recording identity, while network failures can still interrupt playback and must remain visible in the existing error state.
+
+Proposal: In `web/src/plugins/asciicast/useAsciicastSource.ts`, replace the independent initial `read(0)` and timed `read(offset.current)` ownership with a single reader lifecycle that owns the parser, decoder, offset, and pending request for one URL. Start tail polling only after the initial fetch settles; hiding and showing must reuse that reader without starting a second request while the first remains pending. Abort pending fetches when the source is replaced or unmounted, and check the reader generation after each await before changing parser state, offset, liveness, or published state, including the `askLive` result. Keep hidden-tab suspension, streaming UTF-8 decoding, quiet-session liveness checks, and 416 handling intact. `web/src/plugins/asciicast/useAsciicastSource.test.ts` currently uses immediately resolving fetches and covers those ordinary behaviors; add deferred responses for an initial load beyond `POLL_MS`, a visibility toggle during a poll, and a URL replacement whose old response finishes last. Assert that each byte range is consumed once and that only the current recording's events reach the hook result, retaining `web/src/plugins/asciicast/cast-stream.test.ts` as the parser contract.
+
+
+* Bound pending recording bytes when a harness or SSH session outpaces disk writes.
+
+Existing Debt: HarnessRecorder writes every PTY event into an asynchronous stream without observing backpressure or imposing a pending-byte budget, so recording throughput has no resource limit owned by the recorder. Severity: 5/10
+
+Existing Risk: 7/10 - Sustained terminal output while storage is slow can accumulate queued recording data in the shared server process until memory pressure disrupts every tab.
+
+Proposal Risk: 3/10 - A bounded recorder can abandon an incomplete recording during sustained storage pressure, but it reports that loss through the existing failure notification and releases its resources.
+
+Proposal: In `src/harness/recorder.ts`, give header and event writes one bounded enqueue path that accounts for encoded byte size and the stream's outstanding bytes before accepting more data. Define a pending-byte budget and, when another event would exceed it, abandon recording once through the existing `onFailure` callback, unsubscribe from the PTY bus, and close or destroy the stream without inventing an exit event; do not replace the stream's queue with an unbounded application queue. Keep normal disposal idempotent and keep recording failure independent of PTY execution. `src/harness/observers.ts` already wires that callback to the harness and SSH failure notifications, and `src/harness/runtime.ts` owns recorder teardown, so use those existing paths. Extend `src/harness/recorder.test.ts` with a controllable stalled stream to verify bounded queued bytes, one failure notification, no later writes, and safe disposal after abandonment; its existing cases cover format, lazy creation, resize and exit events, stream errors, and open failures, but do not exercise a writable stream that stays congested without emitting an error.
+
+
 ## deferred
 
 * Give every wall-clock wait in the suite a budget that is a stated multiple of the interval it actually polls, instead of leaving nine fixed sleeps and forty-six raised timeouts to absorb a loaded machine. — deferred: complexity 8/10, requires an empirical multi-run flake baseline on an idle machine and then spans the vitest config, about ten test files with forty-nine timeout overrides, and the CI workflow.
