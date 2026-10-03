@@ -191,6 +191,10 @@ advance only after replacement succeeds, so a failed save leaves the prior file 
 intact. On success a "Saved" flash appears in the metadata header; on failure the server error
 message is shown and the save button remains enabled.
 
+Saving a file opened from a remote navigator uses the same guarantee on the remote host: its
+existing bytes and permission bits remain in place if the replacement fails, and the local cache,
+draft, and saved indicator advance only after the remote write succeeds.
+
 ### Live draft sync
 
 As the buffer changes, the editor keeps the server updated with the current in-progress content

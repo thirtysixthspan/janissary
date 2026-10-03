@@ -181,6 +181,25 @@ describe('renameItem', () => {
     expect(existsSync(path.join(directory, 'b.txt'))).toBe(true);
   });
 
+  it('refuses to replace an existing sibling until overwrite is confirmed', () => {
+    const directory = root();
+    writeFileSync(path.join(directory, 'a.txt'), 'source');
+    writeFileSync(path.join(directory, 'b.txt'), 'destination');
+    expect(renameItem(directory, 'a.txt', 'b.txt')).toEqual({ conflict: true });
+    expect(readFileSync(path.join(directory, 'a.txt'), 'utf8')).toBe('source');
+    expect(readFileSync(path.join(directory, 'b.txt'), 'utf8')).toBe('destination');
+    expect(renameItem(directory, 'a.txt', 'b.txt', true).ok).toBe(true);
+    expect(existsSync(path.join(directory, 'a.txt'))).toBe(false);
+    expect(readFileSync(path.join(directory, 'b.txt'), 'utf8')).toBe('source');
+  });
+
+  it('allows a case-only rename of the same entry', () => {
+    const directory = root();
+    writeFileSync(path.join(directory, 'name.txt'), 'content');
+    expect(renameItem(directory, 'name.txt', 'NAME.txt')).toMatchObject({ ok: true });
+    expect(existsSync(path.join(directory, 'name.txt'))).toBe(true);
+  });
+
   it('rejects a new name containing a path separator', () => {
     const directory = root();
     writeFileSync(path.join(directory, 'a.txt'), 'a');

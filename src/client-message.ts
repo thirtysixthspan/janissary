@@ -63,7 +63,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   // both untrue and the reason the control had nothing to stop spinning on.
   remoteSession: 'result',
   renameEditorFile: 'ack',
-  renameFileNavigatorItem: 'ack',
+  renameFileNavigatorItem: 'result',
   renameTab: 'ack',
   reorderTab: 'ack',
   reorderTabTo: 'ack',

@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { LocalFileSystemPort } from './filesystem-port.js';
@@ -73,6 +75,24 @@ describe('LocalFileSystemPort reading a real tree', () => {
   it('reads a file back as its bytes', async () => {
     const root = tree();
     await expect(port.readFile(root, 'notes.txt')).resolves.toEqual(Buffer.from('notes'));
+  });
+
+  it('atomically writes binary bytes while preserving permissions', () => {
+    const root = tree();
+    const target = path.join(root, 'notes.txt');
+    writeFileSync(target, Buffer.from([0, 255]));
+    chmodSync(target, 0o640);
+    expect(port.writeFile(root, 'notes.txt', Uint8Array.from([3, 0, 255]))).toEqual({ ok: true });
+    expect(readFileSync(target)).toEqual(Buffer.from([3, 0, 255]));
+    expect(lstatSync(target).mode & 0o777).toBe(0o640);
+  });
+
+  it('writes through a file symlink instead of replacing the link', () => {
+    const root = tree();
+    symlinkSync('notes.txt', path.join(root, 'alias.txt'));
+    expect(port.writeFile(root, 'alias.txt', Buffer.from('updated'))).toEqual({ ok: true });
+    expect(lstatSync(path.join(root, 'alias.txt')).isSymbolicLink()).toBe(true);
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('updated');
   });
 
   it('reports a row that is not there as a null stat rather than a miss', () => {

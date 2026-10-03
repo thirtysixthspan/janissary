@@ -81,7 +81,7 @@ describe('createFileNavigatorControllerAdapter', () => {
     expect(fileNavigator.moveMany).toHaveBeenCalledWith('agent', ['a'], 'dest', 'overwrite-all');
     expect(fileNavigator.paste).toHaveBeenCalledWith('agent', ['/x/a'], 'dest', 'copy', 'skip-conflicts', 'other');
     expect(fileNavigator.deleteMany).toHaveBeenCalledWith('agent', ['a', 'b']);
-    expect(fileNavigator.rename).toHaveBeenCalledWith('agent', 'a.ts', 'b.ts');
+    expect(fileNavigator.rename).toHaveBeenCalledWith('agent', 'a.ts', 'b.ts', undefined);
     expect(fileNavigator.redo).toHaveBeenCalledWith('agent', true, true);
   });
 

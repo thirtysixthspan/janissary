@@ -30,13 +30,13 @@ describe('dispatchFileNavigatorMessage', () => {
     expect(result).toBeUndefined();
   });
 
-  it('routes renameFileNavigatorItem through the controller façade and acknowledges', () => {
+  it('routes renameFileNavigatorItem through the controller façade and returns the result', () => {
     const controller = makeController();
     const result = dispatch(controller, 1, {
       method: 'renameFileNavigatorItem',
       params: { label: 'files', relPath: 'src/a.ts', newName: 'b.ts' },
     });
-    expect(controller.renameFileNavigatorItem).toHaveBeenCalledWith('files', 'src/a.ts', 'b.ts');
+    expect(controller.renameFileNavigatorItem).toHaveBeenCalledWith('files', 'src/a.ts', 'b.ts', undefined);
     expect(result).toBeUndefined();
   });
 

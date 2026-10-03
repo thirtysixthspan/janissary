@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
@@ -49,6 +49,20 @@ describe('RemoteFileNavigators', () => {
     expect(statSync(path.join(root, 'src', 'untitled')).isDirectory()).toBe(true);
   });
 
+  it('round-trips binary remote file writes and leaves a directory intact when replacement fails', async () => {
+    const binary = Uint8Array.from([0, 255, 128, 10]);
+    expect(await request('write-file', { path: 'binary.bin', content: Buffer.from(binary).toString('base64') }))
+      .toMatchObject({ result: { ok: true } });
+    expect(readFileSync(path.join(root, 'binary.bin'))).toEqual(Buffer.from(binary));
+    mkdirSync(path.join(root, 'blocked'));
+    expect(await request('write-file', {
+      path: 'blocked', content: Buffer.from('replacement').toString('base64'),
+    })).toMatchObject({ result: { ok: false } });
+    expect(statSync(path.join(root, 'blocked')).isDirectory()).toBe(true);
+    expect(readdirSync(root).toSorted((left, right) => left.localeCompare(right)))
+      .toEqual(['binary.bin', 'blocked']);
+  });
+
   it('refuses a move onto an existing file unless the request carries overwrite', async () => {
     mkdirSync(path.join(root, 'dest'));
     writeFileSync(path.join(root, 'a.txt'), 'new');
@@ -62,6 +76,18 @@ describe('RemoteFileNavigators', () => {
       .toMatchObject({ result: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } } });
     expect(existsSync(path.join(root, 'a.txt'))).toBe(false);
     expect(readFileSync(path.join(root, 'dest', 'a.txt'), 'utf8')).toBe('new');
+  });
+
+  it('refuses a remote rename onto an existing entry until overwrite is confirmed', async () => {
+    writeFileSync(path.join(root, 'a.txt'), 'source');
+    writeFileSync(path.join(root, 'b.txt'), 'destination');
+    expect(await request('rename', { path: 'a.txt', name: 'b.txt' })).toMatchObject({ result: { conflict: true } });
+    expect(readFileSync(path.join(root, 'a.txt'), 'utf8')).toBe('source');
+    expect(readFileSync(path.join(root, 'b.txt'), 'utf8')).toBe('destination');
+    expect(await request('rename', { path: 'a.txt', name: 'b.txt', overwrite: true })).toMatchObject({
+      result: { ok: true },
+    });
+    expect(readFileSync(path.join(root, 'b.txt'), 'utf8')).toBe('source');
   });
 
   it.each([

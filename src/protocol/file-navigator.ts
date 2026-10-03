@@ -103,11 +103,11 @@ export type FileNavigatorRpcCall =
   // confirmed with the user. `relPath` is the tree-relative path of the row being removed.
   | { method: 'deleteFileNavigatorItem'; params: { label: string; relPath: string } }
   | { method: 'deleteFileNavigatorItems'; params: { label: string; paths: string[] } }
-  // Rename a file or directory in place within a file navigator tab (in-directory only — the client has
-  // already confirmed an overwrite with the user, if the new name collides with a sibling).
+  // Rename a file or directory in place. The host checks the actual destination and replies
+  // `{ conflict: true }` unless the caller explicitly confirms replacement.
   // `relPath` is the tree-relative path of the row being renamed; `newName` is the bare new name
   // (no path separators).
-  | { method: 'renameFileNavigatorItem'; params: { label: string; relPath: string; newName: string } }
+  | { method: 'renameFileNavigatorItem'; params: { label: string; relPath: string; newName: string; overwrite?: boolean } }
   // List every gitignore-aware file under a file navigator tab's own root, for its Search-files
   // pop-up. Replies (deferred) with `{ paths }` — root-relative, matching the tree's own rows.
   | { method: 'fileNavigatorSearch'; params: { index: number } }

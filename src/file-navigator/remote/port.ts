@@ -5,6 +5,7 @@ import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../..
 import type { DeleteManyResult, MoveManyResult } from '../batch.js';
 import type { FileOperationResult } from '../file-operation-result.js';
 import type { MoveOneResult } from '../filesystem.js';
+import type { RenameItemResult } from '../filesystem.js';
 import type {
   FileSystemPort, GitMetadata, ReplayResult, WatchHandle,
 } from '../filesystem-port.js';
@@ -123,8 +124,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return remoteDeleteMany(this.requester(), this.paths, root, paths);
   }
 
-  async rename(root: string, relPath: string, name: string): Promise<FileOperationResult<[string, string]>> {
-    return this.request('rename', { path: await this.paths.to(root, relPath), name });
+  async rename(root: string, relPath: string, name: string, overwrite?: boolean): Promise<RenameItemResult> {
+    return this.request('rename', {
+      path: await this.paths.to(root, relPath), name, ...(overwrite !== undefined && { overwrite }),
+    });
   }
 
   paste(

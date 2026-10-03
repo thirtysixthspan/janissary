@@ -5,10 +5,10 @@ function existingMode(file: string): number | undefined {
   try { return statSync(file).mode & 0o777; } catch { return undefined; }
 }
 
-export function atomicWriteFile(file: string, content: string): void {
+export function atomicWriteFile(file: string, content: string | Uint8Array): void {
   const temporary = `${file}.${randomUUID()}.tmp`;
   try {
-    const options: { encoding: 'utf8'; mode?: number } = { encoding: 'utf8' };
+    const options: { encoding?: 'utf8'; mode?: number } = typeof content === 'string' ? { encoding: 'utf8' } : {};
     const mode = existingMode(file);
     if (mode !== undefined) options.mode = mode;
     writeFileSync(temporary, content, options);

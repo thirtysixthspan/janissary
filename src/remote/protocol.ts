@@ -146,7 +146,8 @@
 // the local tab's browser flag can show a browser in use rather than only an endpoint. A version-22
 // remote never sends it, so the flag would never light, and a version-22 local side would refuse the
 // frame as unknown.
-export const REMOTE_PROTOCOL_VERSION = 23;
+// Version 24 makes rename overwrite consent explicit; older peers would ignore the consent flag.
+export const REMOTE_PROTOCOL_VERSION = 24;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
