@@ -32,7 +32,7 @@ export class HarnessTabSpawn {
   // the clone. `model`/`effort`, when given, are passed to the harness binary via
   // `buildHarnessCommand`.
   protected spawnTab(options: SpawnTabOptions): void {
-    const { name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, model, effort, remote } = options;
+    const { name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, autoResume, model, effort, remote } = options;
     const provisioning = options.ready !== undefined || remote !== undefined;
     const harness: HarnessView = { name, program: HARNESS_COMMANDS[name], ptyId: '', status: provisioning ? 'provisioning' : 'running' };
     if (model !== undefined) harness.model = model;
@@ -40,6 +40,7 @@ export class HarnessTabSpawn {
     const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
     tab.offline = offline;
     tab.autoApprove = autoApprove;
+    tab.autoResume = autoResume;
     tab.browser = options.browser;
     // Deliberately left with no `workspaceDir`: a remote tab's clone lives on the other host, and
     // `src/tab/cleanup.ts` reads that field to schedule a recursive delete of the *local* path.
@@ -78,7 +79,7 @@ export class HarnessTabSpawn {
     options: SpawnTabOptions,
     remoteNotice?: string,
   ): void {
-    const { name, label, cwd, workspaceDir, offline, autoApprove, browser, model, effort, remote } = options;
+    const { name, label, cwd, workspaceDir, offline, autoApprove, autoResume, browser, model, effort, remote } = options;
     const program = HARNESS_COMMANDS[name];
     const command = buildHarnessCommand(name, model, effort);
     const channel = remote ? this.managers.remote.get(label) : undefined;
@@ -95,9 +96,9 @@ export class HarnessTabSpawn {
     // spawn or the runtime construction would otherwise strand a fully started browser.
     try {
       const id = channel
-        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser, autoApprove }, options.resumePtyId)
+        ? this.managers.pty.registerRemotePty(label, channel, { program, command, harness: name, offline, browser, autoApprove, autoResume }, options.resumePtyId)
         : this.managers.pty.spawn(label, program, command, cwd, workspaceDir, offline, spawnEnv.env);
-      this.runtimes.install(id, label, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, channel, browser: spawnEnv.handle }));
+      this.runtimes.install(id, label, harnessRuntime({ managers: this.managers, name, label, id, cwd, autoApprove, autoResume, channel, browser: spawnEnv.handle }));
       this.markRunning(label, id);
     } catch (error) {
       spawnEnv.handle?.close();

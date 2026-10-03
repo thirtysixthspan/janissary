@@ -223,6 +223,7 @@ describe('RemoteProcesses when a persistent shell cannot start', () => {
 // drive it through fake timers exactly the way `pty-session.test.ts` already does for the client side.
 const GATE_TEXT = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
 const BUSY_TEXT = ' ✻ Deliberating…\n\n esc to interrupt';
+const LIMIT_TEXT = '■ You’ve hit your usage limit. Upgrade to Pro, or try again at 1:20 PM.';
 const READY_TEXT = ' Some earlier output\n\n ❯\n\n ? for shortcuts';
 
 // Xterm's cursor position carries over between writes with no clear in between, so two identical
@@ -255,11 +256,11 @@ describe('RemoteProcesses harness detection', () => {
     vi.useRealTimers();
   });
 
-  function spawnClaude(autoApprove: boolean) {
-    const processes = new RemoteProcesses(send, '/remote/workspace', 'claude');
+  function spawnHarness(name: string, autoApprove: boolean, autoResume = false) {
+    const processes = new RemoteProcesses(send, '/remote/workspace', name);
     processes.spawn({
-      type: 'spawn', id: 'r1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
-      harness: 'claude', autoApprove,
+      type: 'spawn', id: 'r1', program: name, command: name, mode: 'pty', cols: 80, rows: 24,
+      harness: name, autoApprove, autoResume,
     });
     const handlers = vi.mocked(spawnPty).mock.calls.at(-1)?.[3] as {
       onData: (id: string, data: string) => void; onExit: (id: string, code: number) => void;
@@ -267,15 +268,58 @@ describe('RemoteProcesses harness detection', () => {
     onExitHandlers.push(handlers.onExit);
     return {
       processes, handlers,
-      // `\r\n`: a bare `\n` moves the cursor down without returning it to column 0, which a real PTY
-      // never sends on its own — feeding it unconverted would render every line but the first padded
-      // out to whatever column the previous line ended at.
+      resumeDelivered: (id: string) => processes.resumeDelivered(id),
+    };
+  }
+
+  function spawnClaude(autoApprove: boolean, autoResume = false) {
+    return withFeed(spawnHarness('claude', autoApprove, autoResume));
+  }
+
+  function spawnCodex(autoResume: boolean) {
+    return withFeed(spawnHarness('codex', false, autoResume));
+  }
+
+  // `\r\n`: a bare `\n` moves the cursor down without returning it to column 0, which a real PTY
+  // never sends on its own — feeding it unconverted would render every line but the first padded
+  // out to whatever column the previous line ended at.
+  function withFeed(spawned: ReturnType<typeof spawnHarness>) {
+    const { handlers, processes, resumeDelivered } = spawned;
+    return {
+      processes, handlers, resumeDelivered,
       feed: async (text: string) => {
         handlers.onData('pty1', CLEAR + text.replaceAll('\n', '\r\n'));
         await vi.advanceTimersByTimeAsync(1500);
       },
     };
   }
+
+  // A subscription limit is reported rather than acted on: the resume belongs to the client's
+  // scheduler and clock, so the far side sends the reset it parsed and stops there.
+  it('reports a recognized usage limit as a resume-event, with its screen capture', async () => {
+    const { feed } = spawnCodex(true);
+    await feed(LIMIT_TEXT);
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'resume-event', id: 'r1', reset: { kind: 'at', time: { hour: 13, minute: 20 } }, capture: LIMIT_TEXT,
+    }));
+  });
+
+  it('reports no limit for a spawn with autoResume off', async () => {
+    const { feed } = spawnCodex(false);
+    await feed(LIMIT_TEXT);
+    expect(send).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'resume-event' }));
+  });
+
+  it('stops reporting the same limit once the client acknowledges it', async () => {
+    const { feed, resumeDelivered } = spawnCodex(true);
+    await feed(LIMIT_TEXT);
+    resumeDelivered('r1');
+    send.mockClear();
+    await feed(LIMIT_TEXT.replace('1:20 PM', '1:40 PM'));
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'resume-event', reset: { kind: 'at', time: { hour: 13, minute: 40 } },
+    }));
+  });
 
   it('detects a permission gate and injects the approval keystroke', async () => {
     const { feed } = spawnClaude(true);

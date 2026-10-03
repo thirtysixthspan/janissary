@@ -83,6 +83,7 @@ export function buildTabView(
       ...provisioning,
       ...(provisioning.length === 0 && (tab.workspaceDir || tab.remote) ? ['workspaced'] : []),
       ...autoApproveFlag(tab),
+      ...autoResumeFlag(tab),
       ...browserFlag(tab),
     ],
     // Present only when true, so a healthy tab's target is exactly what it was before the flag.
@@ -148,6 +149,13 @@ function provisioningFlag(
 function autoApproveFlag(tab: Tab): string[] {
   if (!tab.autoApprove) return [];
   return tab.harness?.autoApproved ? ['autoApproved'] : ['autoApprove'];
+}
+
+// The metadata row's auto-resume flag. `autoResuming` while a scheduled resume is waiting, which
+// the row lights green; `autoResume` while merely armed and again once the resume has been typed in.
+function autoResumeFlag(tab: Tab): string[] {
+  if (!tab.autoResume) return [];
+  return tab.harness?.autoResumeState === 'scheduled' ? ['autoResuming'] : ['autoResume'];
 }
 
 // The metadata row's browser flag. `browserInUse` while a browser is running behind the tab's

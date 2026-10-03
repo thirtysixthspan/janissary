@@ -71,6 +71,11 @@ export class RemoteProcesses {
     return [...this.detections].map(([id, detection]) => ({ id, ...detection.snapshot() }));
   }
 
+  // The client's answer to a `resume-event` it has already acted on: the scheduled resume left that
+  // process's tab schedule, delivered or cancelled, so this side's detector may report a fresh limit.
+  // An id with no detection — a plain PTY, an agent process, or one already exited — is ignored.
+  resumeDelivered(id: string): void { this.detections.get(id)?.delivered(); }
+
   killAll(): void {
     for (const [, entry] of this.entries) entry.kill();
     this.entries.clear();
@@ -126,7 +131,7 @@ export class RemoteProcesses {
     this.resizers.set(frame.id, (cols, rows) => session.resize(cols, rows));
     if (frame.harness !== undefined) {
       this.detections.set(frame.id, buildHarnessDetection(
-        frame.id, frame.harness, frame.cols, frame.rows, frame.autoApprove ?? false,
+        frame.id, frame.harness, frame.cols, frame.rows, frame.autoApprove ?? false, frame.autoResume ?? false,
         (keystroke) => this.input(frame.id, keystroke), this.send,
       ));
     }

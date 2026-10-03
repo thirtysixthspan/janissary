@@ -13,6 +13,7 @@ export function spawnFrameState(frame: SpawnFrame): RemoteProcessState {
     mode: frame.mode,
     ...(frame.harness !== undefined && { harness: frame.harness }),
     ...(frame.autoApprove !== undefined && { autoApprove: frame.autoApprove }),
+    ...(frame.autoResume !== undefined && { autoResume: frame.autoResume }),
     ...(frame.agentName !== undefined && { agentName: frame.agentName }),
   };
 }

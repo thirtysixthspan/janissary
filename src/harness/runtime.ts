@@ -1,4 +1,5 @@
 import type { HarnessAutoApprover } from './auto-approve.js';
+import type { HarnessAutoResumer } from './auto-resume.js';
 import type { HarnessRecorder } from './recorder.js';
 import type { HarnessScreenReader } from './screen.js';
 import type { HarnessTranscriptTailer } from './transcript/tailer.js';
@@ -23,6 +24,7 @@ export class HarnessRuntime {
     readonly recorder?: HarnessRecorder,
     readonly tailer?: HarnessTranscriptTailer,
     readonly autoApprover?: HarnessAutoApprover,
+    readonly autoResumer?: HarnessAutoResumer,
     readonly browser?: E2EBrowserHandle,
   ) {}
 

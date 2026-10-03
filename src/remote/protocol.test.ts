@@ -105,6 +105,10 @@ describe('frame codec', () => {
       { type: 'gate-event', id: 'r1', message: 'Auto-approve could not clear the permission prompt; standing down', capturedAt: 1_700_000_000_000 },
       { type: 'busy-transition', id: 'r1', busy: true, unread: false },
       { type: 'busy-transition', id: 'r1', busy: false, unread: true },
+      { type: 'resume-event', id: 'r1', reset: { kind: 'at', time: { hour: 13, minute: 20 } }, capturedAt: 1_700_000_000_000 },
+      { type: 'resume-event', id: 'r1', reset: { kind: 'on', month: 6, day: 8, time: { hour: 10, minute: 59 } }, capturedAt: 1_700_000_000_000, capture: 'the screen text' },
+      { type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 3_600_000 }, capturedAt: 1_700_000_000_000 },
+      { type: 'resume-ack', id: 'r1' },
       { type: 'capture-reply', id: 'r1', request: 'q1', text: 'the screen text', capturedAt: 1_700_000_000_000 },
       { type: 'capture-reply', id: 'r1', request: 'q1' },
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
@@ -208,6 +212,15 @@ describe('frame codec', () => {
     ['busy-transition without an id', { type: 'busy-transition', busy: true, unread: false }],
     ['busy-transition with a non-boolean busy flag', { type: 'busy-transition', id: 'r1', busy: 'yes', unread: false }],
     ['busy-transition with a non-boolean unread flag', { type: 'busy-transition', id: 'r1', busy: true, unread: 'no' }],
+    ['resume-event without an id', { type: 'resume-event', reset: { kind: 'in', ms: 1 }, capturedAt: 1 }],
+    ['resume-event without a reset', { type: 'resume-event', id: 'r1', capturedAt: 1 }],
+    ['resume-event with an unknown reset kind', { type: 'resume-event', id: 'r1', reset: { kind: 'soon' }, capturedAt: 1 }],
+    ['resume-event with a reset missing its time', { type: 'resume-event', id: 'r1', reset: { kind: 'at' }, capturedAt: 1 }],
+    ['resume-event with an hour outside the clock', { type: 'resume-event', id: 'r1', reset: { kind: 'at', time: { hour: 24, minute: 0 } }, capturedAt: 1 }],
+    ['resume-event with a negative duration', { type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: -1 }, capturedAt: 1 }],
+    ['resume-event without a capturedAt', { type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 1 } }],
+    ['resume-event with a non-string capture', { type: 'resume-event', id: 'r1', reset: { kind: 'in', ms: 1 }, capturedAt: 1, capture: 7 }],
+    ['resume-ack without an id', { type: 'resume-ack' }],
     ['browser-exited without an id', { type: 'browser-exited' }],
     ['browser-exited with an empty id', { type: 'browser-exited', id: '' }],
     ['browser-exited with an empty message', { type: 'browser-exited', id: 'r1', message: '' }],
@@ -566,8 +579,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 24', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(24);
+  it('is 25', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(25);
   });
 });
 
@@ -579,7 +592,7 @@ describe('admitted frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-close', 'acp-open', 'acp-prompt', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
-      'input', 'kill', 'provision', 'resize', 'session-state', 'shutdown', 'spawn',
+      'input', 'kill', 'provision', 'resize', 'resume-ack', 'session-state', 'shutdown', 'spawn',
     ]);
   });
 
@@ -587,7 +600,8 @@ describe('admitted frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
       'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
-      'output', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed', 'workspace-ready',
+      'output', 'resume-event', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed',
+      'workspace-ready',
     ]);
   });
 

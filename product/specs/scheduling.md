@@ -34,6 +34,20 @@ An optional `in <tab>` clause immediately after the timer name (`schedule NAME i
 
 A single one-second interval (`ScheduleManager` in `src/schedule-manager.ts`) drives all tabs. On each tick, for every **open** tab, entries whose `nextRun` is at or before now are fired; delivery depends on the tab's kind. In an agent tab, `<command> ## scheduled ##` is dispatched through the normal command handler targeted at that tab, so the command runs and is recorded exactly as if typed there — and several entries due on the same tick all dispatch in that tick. In a harness tab, the raw command is typed into the harness PTY as one burst write followed by a separately delayed Enter (like `send`; for codex the write is framed with bracketed-paste markers so its composer's paste-burst handling does not swallow the Enter — see [[send]]); if the harness is not running yet (or has exited), the entry stays due and delivery retries on a later tick. Because the harness receives the command as text followed by a separately delayed Enter, at most one entry is delivered to a given harness tab per tick: a second entry due on the same tick stays due unchanged and is delivered on a later tick, so two commands can never reach the harness as one concatenated prompt followed by an empty submission. After a firing, a one-shot entry is removed; a recurring entry's `nextRun` is advanced (`computeNextRun`: interval → now + interval; clock time → next matching occurrence). After any schedule change in a tick, the state is re-emitted so the schedule window in the web UI updates to show the new next-run times. A firing for an agent that is not currently open as a tab is skipped, leaving the entry in the state file to fire the next time that agent is open and due. A firing into an agent tab that is currently busy queues behind the tab's other queued commands instead of running concurrently (see [[agent-command-queue]]). A fired command is never moved into a terminal by interactive detection (see [[shell]]) — nobody is watching to type into it — with one exception: a command that queued behind a busy agent loses that marking and is treated as if typed.
 
+### An entry the app adds for itself
+
+Most entries are typed by a user or authored in a profile, but the app appends one of its own: a
+harness tab that hits a subscription limit schedules its own resume, as a one-shot entry named
+`auto-resume` carrying the prompt to type in (see [[harness]] § Auto-resume after a usage limit).
+It is an ordinary entry in every respect — it appears in the schedule window and the `schedules` tab,
+`schedule cancel auto-resume in <label>` removes it, it is retried while the harness is not running,
+and it
+fires like anything else — and it is *appended* to whatever else that tab already has, so a user's
+own timers on the same tab are untouched. An app-added entry replaces an earlier entry of the same id
+rather than piling a second row under it, and a user who cancels it simply stops waiting. The
+`in <label>` clause is what reaches it, for the same reason every other harness timer needs one: a
+harness tab cannot run commands itself.
+
 ### Sleep and overdue commands
 
 A command that became due while the machine was asleep runs once on wake; recurring schedules compute their next run from the current time. Delivery more than five seconds late adds a line to the notifications feed, even for the active tab and with notification toggles disabled: `<command> ran <duration> late (system was asleep)` when the entry was already overdue at the machine's last resume, or `<command> ran <duration> late` otherwise. Durations use seconds, minutes, hours and minutes, or days and hours. Several overdue entries each notify once when delivered. Remote entries wait until their channel is attached; entries on an ended session do not fire.

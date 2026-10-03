@@ -155,6 +155,21 @@ describe('AgentTabMeta', () => {
     expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
   });
 
+  it('renders the armed auto-resume flag as the same bolt, unhighlighted', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoResume']} />);
+    const flag = getByRole('img', { name: 'Auto-resume' });
+    expect(flag).toHaveAttribute('title', 'Auto-resume');
+    expect(flag).not.toHaveClass('tab-flag--active');
+    expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
+  });
+
+  it('renders the waiting auto-resume flag as the same bolt, marked active for its green highlight', () => {
+    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoResuming']} />);
+    const flag = getByRole('img', { name: 'Auto-resuming' });
+    expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
+    expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
+  });
+
   it('renders the browser flag as a globe icon with its accessible label', () => {
     const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['browser']} />);
     const flag = getByRole('img', { name: 'E2E browser' });

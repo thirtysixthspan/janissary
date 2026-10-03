@@ -53,7 +53,7 @@ describe('useServerState', () => {
       tasks: [{ path: 'task.md', name: 'task', depth: 3, dir: false, source: 'project' }],
       profiles: [{ name: 'profile', source: 'janissary' }],
       projectDir: '/projects/example', version: '4.5.6',
-      harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'] },
+      harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'], autoResume: [] },
       scheduleLaunch: { targets: ['agent'], active: 'agent' },
     };
     act(() => { client.emitSnapshot(snapshot); });

@@ -97,16 +97,16 @@ A default label walks past everything in use to the next free `-2`, `-3`, and so
 
 ## New harness dialog
 
-Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for every harness. **E2E browser** starts unchecked and stays available for every harness.
+Typing `harness` with no arguments opens a **New harness** dialog instead of erroring: a form with a harness selector, a **Label** field, **Workspace**, **Offline**, and **E2E browser** toggles, an **Auto-approve** toggle, an **Auto-resume** toggle, and **Model** and **Effort** dropdowns. **Workspace** starts checked. **Auto-approve** starts checked for every harness. **Auto-resume** starts checked for codex and is unavailable for the others. **E2E browser** starts checked and stays available for every harness.
 
-![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, model, and effort.](/screenshots/harness-launch-dialog.png)
+![The New harness dialog, with fields for harness, label, workspace, offline, E2E browser, auto-approve, auto-resume, model, and effort.](/screenshots/harness-launch-dialog.png)
 
-Claude, opencode, and codex all accept auto-approval, so switching harnesses keeps your **Auto-approve** choice. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
+Claude, opencode, and codex all accept auto-approval, so switching harnesses keeps your **Auto-approve** choice. Switching away from codex clears and disables **Auto-resume**, since it is the only harness that accepts it. **Create** launches the harness right away, the same as typing the equivalent command by hand. **Cancel** or `Escape` closes the dialog with nothing launched. Your choices are remembered for the rest of the session, so reopening the dialog restores your last picks and puts focus on **Create** so Return relaunches immediately.
 
 ## Choosing a model and effort level
 
 ```
-harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--no-browser] [--model <name>] [--effort <level>]
+harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--no-auto-resume] [--no-browser] [--model <name>] [--effort <level>]
 ```
 
 `--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens. The bundled catalog covers claude, codex, and opencode; the opencode entries carry a provider prefix (`opencode/…`, `opencode-go/…`, `google/…`) because that harness reaches three providers, and the model you name has to match the one whose key you've configured.
@@ -149,6 +149,14 @@ All three permission menus are selection menus rather than yes/no questions, so 
 Auto-approval doesn't require a workspace. Launching with `--no-workspace` still works, but unless you also pass `--no-auto-approve`, the new tab's terminal shows a security warning that prompts will be approved unattended against your real files.
 
 A harness with auto-approval active shows the auto-permitting flag icon in its metadata row. The icon turns green once auto-approval has approved its first prompt, and its tooltip changes to "Auto-approval".
+
+## Resuming after a usage limit
+
+A codex tab auto-resumes by default. When the harness runs out of its subscription or usage allowance it prints a banner naming the moment it will take work again and then waits; the app reads that moment off the screen, waits for it, and types "resume the task you were working on." into the harness a minute later, so the tab rejoins the run without you. `--auto-resume` confirms the default and `--no-auto-resume` opts out; no other harness accepts the flag, because claude resumes itself and opencode prints nothing when a limit hits.
+
+The wait is an ordinary scheduled entry on that tab, named `auto-resume`, so it appears in the tab's schedule panel and in the `schedules` tab. A harness tab has no command bar of its own, so you cancel it from an agent tab with `schedule cancel auto-resume in codex` — the `in <tab>` clause is what reaches a harness tab's timers — and the wait stops if you'd rather the tab stayed parked, after which the flag goes back to plain because nothing is pending any more. Scheduling one records an "Hit a usage limit; resuming at 1:21pm" notification with a link to the screen it read, and the tab's metadata row shows the same bolt icon as auto-approval, reading "Auto-resuming" in green while the resume waits.
+
+A tab parked this way is deliberately quiet: its dot stops blinking and it is never flagged unread or escalated into a waiting notification, because nothing about it needs you. Normal flagging resumes once the resume has been typed in. One resume is tried per limit — if it lands a touch early and the limit is still there, the tab is left for you rather than being nudged repeatedly — and a limit banner with no usable reset time is flagged as it always was. Closing the tab drops the resume, as it drops any of its timers.
 
 ## Giving a harness a browser
 
@@ -203,6 +211,8 @@ A new harness tab starts busy until the app has had a look at it. Going idle tak
 When a harness that isn't on screen finishes and goes idle, its tab picks up the unread flag — that's what tells you to come back. A tab you're already looking at doesn't get flagged, since you can see it. One exception: for claude, a turn that ends with nothing but a `recap:` summary line is left unflagged. The dot still settles; a recap on its own isn't news.
 
 A permission prompt is treated as idle, because the harness is waiting on you rather than working. If nothing is going to answer it — you launched with `--no-auto-approve`, or [auto-approval](#auto-approving-permission-prompts) hit a prompt it couldn't clear — the tab is flagged straight away instead of waiting out the usual two readings.
+
+A tab parked on a scheduled [auto-resume](#resuming-after-a-usage-limit) is idle too, and stops blinking the same way, but it is never flagged and never escalates into a waiting notification: the app is about to bring it back itself, so there is nothing for you to do.
 
 The flag means the harness is waiting, so it goes away on its own once the harness starts working again. Say auto-approval stood down on a prompt and the tab got flagged, and then the harness carried on anyway. The flag clears as the dot starts blinking, and you won't come back to a flag on a tab that's busy. If the harness stops again, it gets flagged again.
 

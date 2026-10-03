@@ -52,6 +52,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'incoming-message': { return `Message from ${detail} in ${tabLabel}`; }
     case 'manual':
     case 'auto-approve':
+    case 'auto-resume':
     case 'editor-suggest':
     case 'file-operation':
     case 'open-unsupported': { return detail ?? ''; }

@@ -1,6 +1,7 @@
 import type { ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
 import type { RootRefusal } from './root-refusal.js';
+import type { ResumeReset } from '../harness/auto-resume.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
 // wire *grammar* are two files: this one says what a frame may carry, `protocol.ts` says how one is
@@ -79,10 +80,20 @@ export type ClientFrame =
     // Whether this harness process should auto-approve its own permission gates on the far side.
     // Meaningful only alongside `harness`; ignored for a plain PTY takeover or inline terminal card.
     autoApprove?: boolean;
+    // Whether the far side should recognize a subscription-limit screen on this harness and report
+    // it as a `resume-event`. Same shape and same scoping as `autoApprove` above.
+    autoResume?: boolean;
   }
   | { type: 'input'; id: string; data: string }
   | { type: 'resize'; id: string; cols: number; rows: number }
   | { type: 'kill'; id: string }
+  // The client's answer to a `resume-event`: the scheduled resume has been delivered out of the tab's
+  // schedule. The far side's detector re-arms on it, so a later limit is reportable again rather
+  // than suppressed as one it has already acted on — and because delivery can fail indefinitely (the
+  // harness never returns, the tab is never reattached), it cannot infer the outcome from its own
+  // screen. A blockage that clears needs no ack: the far side sees its own screen change and re-arms
+  // on that, exactly as a local observer does.
+  | { type: 'resume-ack'; id: string }
   // Ask the far side for a fresh screen capture of the process `id`. `session` names the peer to ask:
   // ignored by a `RemoteServer` that already holds the live workspace (it answers from its own
   // detection pipeline instead), and required by a freshly relaying process with no workspace of its
@@ -171,6 +182,16 @@ export type ServerFrame =
   // above — so this is sent live on every real change while attached, and exactly once (reflecting
   // whatever is current) on a successful attach; never queued while detached.
   | { type: 'busy-transition'; id: string; busy: boolean; unread: boolean }
+  // A subscription-limit screen the far side recognized, carrying the reset the harness stated as the
+  // detector parsed it — a clock time, a date, or a duration (`ResumeReset` in
+  // `../harness/auto-resume.js`, which is plain JSON). Detection runs far side for the same reason
+  // gate detection does: a detached remote harness has no local screen to read. The resume itself is
+  // scheduled and delivered by the client, which owns the clock the reset is stated in and the
+  // schedule the entry belongs to — so the reset travels unresolved, and the client applies the
+  // margin and the already-past clamp. `capture` is the triggering screen text, inline and
+  // base64-encoded like `output`, so the client writes the same capture file a local detector would
+  // have without a second round trip.
+  | { type: 'resume-event'; id: string; reset: ResumeReset; capturedAt: number; capture?: string }
   // The answer to `capture-request`: the process's latest screen capture, or no fields at all when
   // it has none yet — the same "nothing captured yet" a local `latestCapture()` can return.
   | { type: 'capture-reply'; id: string; request: string; text?: string; capturedAt?: number }
@@ -203,6 +224,7 @@ export type RemoteProcessState = {
   mode: 'pty' | 'pipe';
   harness?: string;
   autoApprove?: boolean;
+  autoResume?: boolean;
   agentName?: string;
 };
 
@@ -214,14 +236,14 @@ export type RemoteFrame = ClientFrame | ServerFrame;
 // ships, and is then silently refused by the receiving end as unknown.
 export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   attach: true, 'session-state': true, shutdown: true,
-  provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true,
+  provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
   'acp-open': true, 'acp-prompt': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'attach-result': true, 'session-state-result': true, 'clone-offer': true, 'root-refused': true,
   'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, output: true, exit: true, transcript: true,
-  'shell-history': true, 'browser-exited': true, 'browser-started': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true,
+  'shell-history': true, 'browser-exited': true, 'browser-started': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true, 'resume-event': true,
   'filesystem-reply': true, 'filesystem-event': true,
   'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,
 };

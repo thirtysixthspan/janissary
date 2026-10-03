@@ -73,6 +73,11 @@ export type HarnessView = {
   // Set once auto-approve has injected an approval into a `-y` tab's permission prompt, local or
   // remote, and left set for the tab's life: it lights the metadata row's auto-approve flag green.
   autoApproved?: boolean;
+  // Where an auto-resume tab is in its own lifecycle: absent while merely armed, `scheduled` once a
+  // usage limit has been recognized and a resume is waiting, `resumed` once that resume has been
+  // typed in. The metadata row's flag reads `Auto-resume` armed or resumed, and green
+  // `Auto-resuming` in between.
+  autoResumeState?: 'scheduled' | 'resumed';
   // Set when the remote session behind this tab has ended, carrying the line that says so. It rides
   // the view for `browserError`'s reason — a harness tab's body is its PTY, so a line written into
   // the transcript would never be seen and one written into the terminal would be painted over.
@@ -317,6 +322,10 @@ export type Tab = {
   // Whether harness auto-permitting (auto-approving the harness's own permission prompts) is
   // enabled on this tab. Harness-only; set once at spawn time.
   autoApprove?: boolean;
+  // Whether harness auto-resume (scheduling a resume for a recognized subscription-limit screen) is
+  // enabled on this tab. Harness-only; set once at spawn time, on by default for a harness whose
+  // limit screen the app recognizes.
+  autoResume?: boolean;
   // `-b`/`--browser` on the tab's creating `harness` command: a headless Chromium was started for
   // this tab and its endpoint injected into the harness's environment. Harness-only; set once at
   // spawn time, and kept so `profile save` can write it back.

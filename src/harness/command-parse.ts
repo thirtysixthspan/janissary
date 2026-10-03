@@ -1,5 +1,6 @@
 import { HARNESS_COMMANDS, HARNESS_NAMES } from './index.js';
 import { describeAutoApproveHarnesses, supportsHarnessAutoApprove } from './auto-approve.js';
+import { describeAutoResumeHarnesses, supportsHarnessAutoResume } from './auto-resume.js';
 import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 
 // The `harness` command's parsing, split out of index.ts: a distinct concern from the
@@ -10,7 +11,7 @@ import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 // positionally — four consecutive booleans followed by four consecutive optional strings, where a
 // transposition typechecks and ships.
 export type HarnessLaunch = {
-  name: string; workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean;
+  name: string; workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean;
   label?: string; model?: string; effort?: string; prompt?: string; remote?: RemoteAddress;
 };
 
@@ -62,7 +63,7 @@ function parseHarnessFlags(
   tokens: string[],
   name: string,
 ): {
-  workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean;
+  workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean;
   model?: string; effort?: string; label?: string; remote?: RemoteAddress;
 } | { error: string } {
   const remote = findRemoteClause(tokens);
@@ -79,15 +80,21 @@ function parseHarnessFlags(
   if (requestedAutoApprove && !noAutoApprove && !supportsHarnessAutoApprove(name)) {
     return { error: `-y/--yes is only supported for the ${describeAutoApproveHarnesses()} harnesses.` };
   }
+  const noAutoResume = tokens.some((t) => t.toLowerCase() === '--no-auto-resume');
+  const requestedAutoResume = tokens.some((t) => t.toLowerCase() === '--auto-resume');
+  const autoResume = supportsHarnessAutoResume(name) && !noAutoResume;
+  if (requestedAutoResume && !noAutoResume && !supportsHarnessAutoResume(name)) {
+    return { error: `--auto-resume is only supported for the ${describeAutoResumeHarnesses()} harnesses.` };
+  }
   const model = findFlagValue(tokens, '--model');
   if (model !== undefined && typeof model !== 'string') return model;
   const effort = findFlagValue(tokens, '--effort');
   if (effort !== undefined && typeof effort !== 'string') return effort;
   const asIndex = tokens.findIndex((t) => t.toLowerCase() === 'as');
-  if (asIndex === -1) return { workspace, offline, autoApprove, browser, model, effort, remote };
+  if (asIndex === -1) return { workspace, offline, autoApprove, browser, autoResume, model, effort, remote };
   const label = tokens[asIndex + 1];
   if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
-  return { workspace, offline, autoApprove, browser, model, effort, label, remote };
+  return { workspace, offline, autoApprove, browser, autoResume, model, effort, label, remote };
 }
 
 // The `harness <subcommand> <label>` forms, which target an existing harness tab instead of
@@ -123,6 +130,9 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
  * network route to its own browser.
  * `--model <name>` selects a model, validated by the caller against the harness's catalog.
  * `--effort <level>` selects an effort level, passed through verbatim with no validation.
+ * `--auto-resume` confirms the default that a recognized subscription-limit screen schedules its own
+ * resume for, and `--no-auto-resume` opts out, winning if both are present; it is supported for every
+ * harness with a limit-screen detector (a hard error otherwise).
  * A trailing `with <prompt>` clause (after all options) carries free-text to inject into the new
  * harness once it is running; everything after the standalone `with` token to end of line is the
  * prompt, with internal spaces preserved verbatim. A `with` with no following text is a usage error.

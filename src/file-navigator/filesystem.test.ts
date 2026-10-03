@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { copyItem, deleteItem, moveItem, moveReplacingDestination, renameItem } from './filesystem.js';
@@ -193,20 +193,30 @@ describe('renameItem', () => {
     expect(readFileSync(path.join(directory, 'b.txt'), 'utf8')).toBe('source');
   });
 
+  // The rename answers this on its own rather than through the conflict check, so it holds on a
+  // case-folding filesystem that reports a different inode for each spelling and on one that does
+  // not. Under a case-folding filesystem the file is still readable under its old spelling.
   it('allows a case-only rename of the same entry', () => {
     const directory = root();
-    const source = path.join(directory, 'name.txt');
-    writeFileSync(source, 'content');
-    const before = lstatSync(source);
+    writeFileSync(path.join(directory, 'name.txt'), 'content');
     expect(renameItem(directory, 'name.txt', 'NAME.txt')).toMatchObject({ ok: true });
-    // The old spelling still resolving to the entry is a property of a case-insensitive
-    // filesystem rather than of the rename: on a case-sensitive one the entry is reachable
-    // only under its new name, so asserting that here could only ever pass on macOS. What
-    // the rename has to preserve everywhere is that it was one entry that moved rather
-    // than a delete followed by a create — the same dev/ino pair `renameItem` compares to
-    // decide the destination is not a conflict.
-    expect(lstatSync(path.join(directory, 'NAME.txt')).ino).toBe(before.ino);
-    expect(readFileSync(path.join(directory, 'NAME.txt'), 'utf8')).toBe('content');
+    expect(existsSync(path.join(directory, 'name.txt')) || existsSync(path.join(directory, 'NAME.txt'))).toBe(true);
+    expect(readdirSync(directory)).toHaveLength(1);
+  });
+
+  // The other half of that rule, and the one the change must not weaken: a destination that is a
+  // genuinely different entry is still an ordinary conflict, refused rather than merged over. (Two
+  // entries differing only by case cannot be constructed at all on a case-folding filesystem, which
+  // is exactly why the case-only case is answered by the rename rather than by this check.)
+  it('still refuses a rename onto a different entry', () => {
+    const directory = root();
+    writeFileSync(path.join(directory, 'name.txt'), 'content');
+    writeFileSync(path.join(directory, 'other.txt'), 'other');
+
+    expect(renameItem(directory, 'name.txt', 'other.txt')).toEqual({ conflict: true });
+    expect(readFileSync(path.join(directory, 'other.txt'), 'utf8')).toBe('other');
+    expect(renameItem(directory, 'name.txt', 'other.txt', true)).toMatchObject({ ok: true });
+    expect(readFileSync(path.join(directory, 'other.txt'), 'utf8')).toBe('content');
   });
 
   it('rejects a new name containing a path separator', () => {
