@@ -410,6 +410,20 @@ describe('ScheduleManager add', () => {
     return { managers, tab, input };
   }
 
+  // The harness fixture plus a second tab whose label extends the first's, for the case where a
+  // joined key would read one tab's entry id as another's.
+  function twoHarnessTabs(): { managers: Managers; input: ReturnType<typeof vi.fn> } {
+    const { managers } = harness();
+    const second = { label: 'codex team 2', view: 'harness', harness: { name: 'codex', program: 'codex', ptyId: 'p2', status: 'running' } };
+    const input = vi.fn();
+    const tab = managers.tab as unknown as { allLabels: () => string[]; byLabel: (l: string) => unknown };
+    tab.allLabels = () => ['codex team', 'codex team 2'];
+    const first = { label: 'codex team', view: 'harness', harness: { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' } };
+    tab.byLabel = (label: string) => (label === 'codex team' ? first : label === 'codex team 2' ? second : undefined);
+    (managers.pty as unknown as { input: typeof input }).input = input;
+    return { managers, input };
+  }
+
   function resume(at: number): ScheduleEntry {
     return { id: 'auto-resume', command: 'resume the task you were working on.', spec: 'at 1:21pm', nextRun: at, recurring: false };
   }
@@ -518,15 +532,33 @@ describe('ScheduleManager add', () => {
     expect(hooks.removed).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves another tab alone when one schedule is cleared', () => {
+  it('keeps one tab hooks separate from a longer tab label sharing its prefix', () => {
     const { managers } = harness();
     const mgr = new ScheduleManager(managers);
-    const other = { fired: vi.fn(), removed: vi.fn() };
-    mgr.add('janus', resume(Date.now() - 1000), other);
+    const shorter = { fired: vi.fn(), removed: vi.fn() };
+    const longer = { fired: vi.fn(), removed: vi.fn() };
+    // A profile harness entry's name may contain a space, so these two labels differ only by a
+    // suffix — the case a single joined key cannot tell apart.
+    mgr.add('codex team', resume(Date.now() + 60_000), shorter);
+    mgr.add('codex team 2', resume(Date.now() - 1000), longer);
     mgr.clearAll();
-    mgr.delete('janus-2');
+    expect(shorter.removed).toHaveBeenCalledTimes(1);
+    expect(longer.removed).toHaveBeenCalledTimes(1);
+  });
+
+  it('delivers a longer label entry after the shorter label schedule was cleared', () => {
+    // Two harness tabs whose labels differ only by a suffix, both due at once.
+    const { managers, input } = twoHarnessTabs();
+    const mgr = new ScheduleManager(managers);
+    const fired = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('codex team', resume(Date.now() + 60_000), { fired: vi.fn(), removed: vi.fn() });
+    mgr.add('codex team 2', resume(Date.now() - 1000), fired);
+    mgr.set('codex team', []);
     mgr.start();
+
     vi.advanceTimersByTime(1000);
+    expect(fired.fired).toHaveBeenCalledTimes(1);
+    expect(input.mock.calls[0]?.[1]).toContain('resume the task');
     mgr.stop();
   });
 });

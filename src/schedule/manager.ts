@@ -57,9 +57,12 @@ export class ScheduleManager {
     return { targets, active: this.managers.tab.cur().label };
   }
 
-  // The per-tab `onFired` hooks, keyed by tab and entry id. Held apart from the entries themselves
-  // because a caller-supplied callback has no business on a type agent tabs persist.
-  private hooks = new Map<string, EntryHooks>();
+  // The per-entry hooks a caller registered through `add`, keyed by tab and then entry id. Two
+  // maps rather than one joined key, so no label can be mistaken for part of an id — a profile
+  // harness entry's name may contain a space, and `codex team 2` must not read as an entry called
+  // `2 …` on `codex team`. Held apart from the entries themselves because a caller-supplied
+  // callback has no business on a type agent tabs persist.
+  private hooks = new Map<string, Map<string, EntryHooks>>();
 
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
   start(): void {
@@ -101,7 +104,7 @@ export class ScheduleManager {
     const current = this.schedules.get(label) ?? [];
     this.schedules.set(label, [...current.filter((e) => e.id !== entry.id), entry]);
     this.forgetHook(label, entry.id);
-    if (hooks) this.hooks.set(hookKey(label, entry.id), hooks);
+    if (hooks) this.entryHooks(label, entry.id, hooks);
     this.announceChange();
     messageBus.emit('state', { type: 'dirty' });
   }
@@ -228,10 +231,9 @@ export class ScheduleManager {
   // Hand a delivered entry's caller its outcome, once. The hooks are dropped as they run, so a
   // later entry reusing the id is not answered by this one's callbacks.
   private fireHook(label: string, id: string): void {
-    const key = hookKey(label, id);
-    const hooks = this.hooks.get(key);
+    const hooks = this.hooks.get(label)?.get(id);
     if (!hooks) return;
-    this.hooks.delete(key);
+    this.forgetHook(label, id);
     hooks.fired?.();
   }
 
@@ -240,26 +242,28 @@ export class ScheduleManager {
   // not outlive the entry backing it. Reported exactly once, and never for an entry that was never
   // there.
   private removedHook(label: string, id: string): void {
-    const key = hookKey(label, id);
-    const hooks = this.hooks.get(key);
+    const hooks = this.hooks.get(label)?.get(id);
     if (!hooks) return;
-    this.hooks.delete(key);
+    this.forgetHook(label, id);
     hooks.removed?.();
   }
 
   private forgetHook(label: string, id: string): void {
-    this.hooks.delete(hookKey(label, id));
+    const forTab = this.hooks.get(label);
+    forTab?.delete(id);
+    if (forTab?.size === 0) this.hooks.delete(label);
   }
 
   private removeHooks(label: string): void {
-    for (const [key, hooks] of this.hooks) {
-      if (!key.startsWith(`${label} `)) continue;
-      this.hooks.delete(key);
-      hooks.removed?.();
-    }
+    const forTab = this.hooks.get(label);
+    if (!forTab) return;
+    this.hooks.delete(label);
+    for (const hooks of forTab.values()) hooks.removed?.();
   }
-}
 
-function hookKey(label: string, id: string): string {
-  return `${label} ${id}`;
+  private entryHooks(label: string, id: string, hooks: EntryHooks): void {
+    const forTab = this.hooks.get(label) ?? new Map<string, EntryHooks>();
+    forTab.set(id, hooks);
+    this.hooks.set(label, forTab);
+  }
 }

@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Key the schedule manager's fired hooks so one tab's removal cannot discard another tab's hook when a label contains a space.
-
-Existing Issue: `hookKey` joins a tab label and an entry id with a single space and `forgetHooks` matches with `startsWith`, so `forgetHooks('codex team')` also matches the key belonging to a tab labeled `codex team 2`, and profile harness entry names — validated only as nonempty strings — may contain spaces. Severity: 3/10
-
-Existing Risk: 3/10 - Closing, clearing, or cancelling one such tab's schedule silently drops another tab's callback, so its resume is delivered but the tab's flag stays green `Auto-resuming` for the rest of its life; the trigger needs a profile entry name with a space, so it is rare and the symptom is cosmetic.
-
-Proposal Risk: 1/10 - A separator that cannot appear in a label makes the two keys unambiguous whatever the label is.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: make the schedule fired-hook key unambiguous for labels containing spaces". In `src/schedule/manager.ts`, change `hooks` from a flat `Map<string, () => void>` keyed by a joined string to a `Map<string, Map<string, () => void>>` keyed by label and then entry id, so no separator has to be chosen at all: `add` and `fireHook` read `this.hooks.get(label)?.get(id)` and write the inner map, and `forgetHooks` becomes a single `this.hooks.delete(label)` — which also removes the prefix-matching scan it does today. `forgetHook` stays as the inner delete. `fireHook`'s "fire once" behavior is unchanged: it deletes from the inner map before invoking, so a later entry reusing the id is not answered by the old callback. If a flat map is preferred for its smaller footprint, the separator must be a character no tab label can contain — `\0`, which this codebase already uses as a delimiter in `src/file-navigator/search.ts` and `src/workspace/label.ts` — rather than a space; do not leave the space. Add a case to `src/schedule/manager.test.ts` that registers hooks for two harness tabs labeled `codex team` and `codex team 2`, cancels the first tab's whole schedule, and asserts the second tab's hook still runs when its entry fires.
-
 * Make `ScheduleManager.add` persist an agent tab's schedule, so an app-added entry on one cannot vanish on relaunch.
 
 Existing Issue: `add` writes to the in-memory map and announces the change but never calls `TabManager.persist`, while `tick` persists the whole list on any tick that changes it and the `schedule` command persists explicitly — so an entry appended by `add` on an agent tab reaches the state file only when some later, unrelated schedule change causes a tick to write it. No caller does this today; every `add` call site is a harness tab, whose schedules are memory-only by design. Severity: 3/10
