@@ -94,7 +94,7 @@ export function createRemotePtySession(
         openFile,
         detectedAt: replayed ? new Date(capturedAt) : undefined,
       });
-      managers.schedule.add(label, resumeEntry(resumeAt), () => channel.send({ type: 'resume-ack', id }));
+      managers.schedule.add(label, resumeEntry(resumeAt), { fired: () => channel.send({ type: 'resume-ack', id }) });
       reportAutoResumeScheduled(managers, label);
     }),
   });

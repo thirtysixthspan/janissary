@@ -158,8 +158,8 @@ export type ResumeObserverOptions = {
   // Report a scheduled resume: the reset the harness stated, the instant it resolves to, and the
   // screen that carried it.
   onScheduled: (reset: ResumeReset, resumeAt: number, capture: ScreenCapture) => void;
-  // Report that the resume was delivered.
-  onDelivered: () => void;
+  // Report that the pending resume has left the tab schedule, delivered or withdrawn.
+  onSettled: () => void;
 };
 
 // Watches a harness's screen captures and schedules one resume for the limit it recognizes. The
@@ -195,10 +195,11 @@ export class HarnessAutoResumer {
     this.opts.onScheduled(reset, resumeAt, capture);
   }
 
-  // The resume was delivered and its entry is gone from the tab's schedule.
-  onDelivered(): void {
+  // The pending entry is gone from the tab schedule — delivered, cancelled, or cleared — so whatever
+  // the caller was showing for it is over.
+  onSettled(): void {
     if (this.pendingId === undefined) return;
     this.pendingId = undefined;
-    this.opts.onDelivered();
+    this.opts.onSettled();
   }
 }

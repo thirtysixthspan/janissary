@@ -526,7 +526,9 @@ resume is delivered the tab stops: it does not retry a limit the first attempt d
 wall the user has to clear — `upgrade your plan`, `Quota exceeded` — is never typed at. If the
 blockage goes away before the resume is due — the user bought credits, or the limit was advisory —
 the pending entry is cancelled. A tab closed or exited in the meantime loses the entry silently,
-like any other harness timer: harness schedules live in memory and end with the tab. Nothing is
+like any other harness timer: harness schedules live in memory and end with the tab. A user who
+cancels the entry themselves with `schedule cancel auto-resume in <label>` puts the flag straight back
+to plain **Auto-resume**, exactly as a blockage clearing on its own does. Nothing is
 written to the tab's transcript.
 
 **The parked tab is quiet.** While a resume is pending the tab's dot stops blinking immediately — the

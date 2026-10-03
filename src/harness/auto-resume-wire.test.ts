@@ -44,13 +44,22 @@ describe('buildAutoResumer', () => {
     expect(tab.harness?.autoResumeState).toBe('scheduled');
   });
 
-  it('reports delivery when the scheduler says the entry landed, moving the flag on', () => {
+  it('reports the entry leaving the schedule, whichever way it left, moving the flag on', () => {
     const { managers, add, tab } = setup();
     const resumer = buildAutoResumer(managers, 'codex', 'bot');
     resumer.onCapture({ text: BANNER, capturedAt: 0 });
 
-    (add.mock.calls[0][2] as () => void)();
+    const hooks = add.mock.calls[0][2] as { fired: () => void; removed: () => void };
+    hooks.fired();
     expect(tab.harness?.autoResumeState).toBe('resumed');
+
+    // A resume the user cancels never fires, so the withdrawal hook has to move the flag too —
+    // otherwise the strip keeps claiming a resume is pending with nothing behind it.
+    const second = setup();
+    const other = buildAutoResumer(second.managers, 'codex', 'bot');
+    other.onCapture({ text: BANNER, capturedAt: 0 });
+    (second.add.mock.calls[0][2] as { removed: () => void }).removed();
+    expect(second.tab.harness?.autoResumeState).toBe('resumed');
   });
 
   it('cancels the pending entry when the blockage clears', () => {

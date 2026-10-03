@@ -127,7 +127,7 @@ function makeResumer(overrides: Partial<{ scheduledAt: number[]; delivered: numb
     schedule: (resumeAt) => { scheduledAt.push(resumeAt); return RESUME_ENTRY_ID; },
     cancel: () => { state.cancelled++; },
     onScheduled: () => {},
-    onDelivered: () => { state.delivered++; },
+    onSettled: () => { state.delivered++; },
   });
   return { resumer, scheduledAt, state };
 }
@@ -158,7 +158,7 @@ describe('HarnessAutoResumer', () => {
       schedule: () => RESUME_ENTRY_ID,
       cancel: () => {},
       onScheduled: () => {},
-      onDelivered: () => {},
+      onSettled: () => {},
     });
     claude.onCapture(screen(BANNER));
     expect(claude.isParked).toBe(false);
@@ -190,8 +190,8 @@ describe('HarnessAutoResumer', () => {
   it('reports delivery once, and stops being parked only when the screen changes', () => {
     const { resumer, state } = makeResumer();
     resumer.onCapture(screen(BANNER));
-    resumer.onDelivered();
-    resumer.onDelivered();
+    resumer.onSettled();
+    resumer.onSettled();
     expect(state.delivered).toBe(1);
     expect(resumer.isParked).toBe(true);
     resumer.onCapture(screen('Anything else?'));
@@ -200,7 +200,7 @@ describe('HarnessAutoResumer', () => {
 
   it('reports delivery for a tab that scheduled nothing', () => {
     const { resumer, state } = makeResumer();
-    resumer.onDelivered();
+    resumer.onSettled();
     expect(state.delivered).toBe(0);
   });
 

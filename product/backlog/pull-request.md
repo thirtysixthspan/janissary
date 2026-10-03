@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Return the auto-resume flag to plain when the user cancels the pending resume themselves, which today leaves it green and unreadable as anything pending.
-
-Existing Issue: `ScheduleManager.cancel` drops an entry's fired hook without telling the observer that owned it, so a `schedule cancel auto-resume in <label>` removes the entry while `HarnessAutoResumer.pendingId` still points at it, `reportAutoResumed` is never reached, and the tab's metadata row keeps reading green `Auto-resuming` for a resume that no longer exists. Severity: 4/10
-
-Existing Risk: 4/10 - The strip claims the app is about to recover the tab when nothing is scheduled to do it, and because `isParked` also stays true until the screen changes, the tab is simultaneously unflagged and showing a pending action that will never happen — a user who cancels the wait has no way back to the honest `Auto-resume` state short of the blockage clearing on its own.
-
-Proposal Risk: 2/10 - The cancelled state remains a lie about a parked tab until its screen changes, but it is a label rather than a lost action, and the schedule entry itself is genuinely gone.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: return the auto-resume flag to plain when the user cancels the pending resume". Teach `ScheduleManager.cancel` and `clearAll` about removal as well as delivery: `add` already records an `onFired` callback per entry id and both methods already call `forgetHook`/`forgetHooks`, so give the removed entry's hook the same chance to run — either by invoking it on removal as well, or by passing a second `onRemoved` callback to `add` and firing that one from `cancel`/`clearAll`/`delete`. Then have `src/harness/auto-resume-wire.ts` route it: a removal means no resume is pending, so it should call `reportAutoResumed` exactly as `onDelivered` does, and clear `HarnessAutoResumer`'s `pendingId` so a later delivery cannot report it twice. Cover it in `src/schedule/manager.test.ts` beside the existing "runs the fired hook once" and "drops a hook when its entry is cancelled or cleared" cases — the latter currently asserts the hook does *not* run, so change it to assert the removal hook does — and in `src/harness/auto-resume-wire.test.ts` with a case that cancels the entry and asserts `autoResumeState` becomes `resumed`. Leave the local resumer's own cancel path (the blockage clearing on screen) as it is: it already clears `pendingId` itself, and double-calling must be harmless either way.
-
 * Cover the auto-resume branch of the capture wiring in the test file that owns the wiring, which the plan named and the diff left calling the new signature with one argument missing.
 
 Existing Issue: `src/harness/capture/wire.test.ts` still calls `captureWiring` with five arguments, so `autoResume` is `undefined` in every case there and the file never mocks `auto-resume-wire.js`, leaving the new third consumer and its settled-capture skip entirely unexercised in the file whose whole subject is which consumers a capture reaches. Severity: 4/10

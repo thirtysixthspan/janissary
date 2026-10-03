@@ -451,16 +451,16 @@ describe('ScheduleManager add', () => {
   it('runs the fired hook once, after the entry is delivered, and drops it', () => {
     const { managers, input } = harness();
     const mgr = new ScheduleManager(managers);
-    const onFired = vi.fn();
+    const onFired = { fired: vi.fn(), removed: vi.fn() };
     mgr.add('janus', resume(Date.now()), onFired);
     mgr.start();
 
     vi.advanceTimersByTime(1000);
-    expect(onFired).toHaveBeenCalledTimes(1);
+    expect(onFired.fired).toHaveBeenCalledTimes(1);
     expect(input.mock.calls[0]?.[0]).toBe('p1');
     expect(input.mock.calls[0]?.[1]).toContain('resume the task you were working on.');
     vi.advanceTimersByTime(5000);
-    expect(onFired).toHaveBeenCalledTimes(1);
+    expect(onFired.fired).toHaveBeenCalledTimes(1);
     mgr.stop();
   });
 
@@ -468,23 +468,23 @@ describe('ScheduleManager add', () => {
     const { managers, tab } = harness();
     tab.harness!.ptyId = '';
     const mgr = new ScheduleManager(managers);
-    const onFired = vi.fn();
+    const onFired = { fired: vi.fn(), removed: vi.fn() };
     mgr.add('janus', resume(Date.now()), onFired);
     mgr.start();
 
     vi.advanceTimersByTime(1000);
-    expect(onFired).not.toHaveBeenCalled();
+    expect(onFired.fired).not.toHaveBeenCalled();
     tab.harness!.ptyId = 'p1';
     vi.advanceTimersByTime(1000);
-    expect(onFired).toHaveBeenCalledTimes(1);
+    expect(onFired.fired).toHaveBeenCalledTimes(1);
     mgr.stop();
   });
 
-  it('drops a hook when its entry is cancelled or cleared, so it can never fire later', () => {
+  it('tells a caller its entry was removed rather than delivered, and never fires it afterwards', () => {
     const { managers } = harness();
     const mgr = new ScheduleManager(managers);
-    const cancelled = vi.fn();
-    const cleared = vi.fn();
+    const cancelled = { fired: vi.fn(), removed: vi.fn() };
+    const cleared = { fired: vi.fn(), removed: vi.fn() };
     mgr.add('janus', resume(Date.now() - 1000), cancelled);
     mgr.cancel('janus', 'auto-resume');
     mgr.add('janus', resume(Date.now() - 1000), cleared);
@@ -492,8 +492,41 @@ describe('ScheduleManager add', () => {
     mgr.start();
 
     vi.advanceTimersByTime(1000);
-    expect(cancelled).not.toHaveBeenCalled();
-    expect(cleared).not.toHaveBeenCalled();
+    expect(cancelled.removed).toHaveBeenCalledTimes(1);
+    expect(cancelled.fired).not.toHaveBeenCalled();
+    expect(cleared.removed).toHaveBeenCalledTimes(1);
+    expect(cleared.fired).not.toHaveBeenCalled();
+    mgr.stop();
+  });
+
+  it('reports a removal once, and not again for an entry id nothing holds', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    const hooks = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('janus', resume(Date.now() - 1000), hooks);
+    mgr.cancel('janus', 'auto-resume');
+    mgr.cancel('janus', 'auto-resume');
+    expect(hooks.removed).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a removal when the tab closes with the entry still on its schedule', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    const hooks = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('janus', resume(Date.now() + 60_000), hooks);
+    mgr.closeTab('janus');
+    expect(hooks.removed).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves another tab alone when one schedule is cleared', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    const other = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('janus', resume(Date.now() - 1000), other);
+    mgr.clearAll();
+    mgr.delete('janus-2');
+    mgr.start();
+    vi.advanceTimersByTime(1000);
     mgr.stop();
   });
 });

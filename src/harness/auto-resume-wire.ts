@@ -16,7 +16,12 @@ export function buildAutoResumer(managers: Managers, name: string, label: string
   const resumer = new HarnessAutoResumer({
     harnessName: name,
     schedule: (resumeAt) => {
-      managers.schedule.add(label, resumeEntry(resumeAt), () => resumer.onDelivered());
+      managers.schedule.add(label, resumeEntry(resumeAt), {
+        fired: () => resumer.onSettled(),
+        // A resume the user cancelled is not a resume that landed, but the entry is gone either way —
+        // so the flag stops claiming one is pending either way.
+        removed: () => resumer.onSettled(),
+      });
       return RESUME_ENTRY_ID;
     },
     cancel: () => {
@@ -27,7 +32,7 @@ export function buildAutoResumer(managers: Managers, name: string, label: string
       notify(managers, 'auto-resume', label, `Hit a usage limit; resuming at ${fmtNextRun(resumeAt)}`, { openFile });
       reportAutoResumeScheduled(managers, label);
     },
-    onDelivered: () => {
+    onSettled: () => {
       reportAutoResumed(managers, label);
     },
   });

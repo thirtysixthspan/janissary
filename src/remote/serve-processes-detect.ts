@@ -55,7 +55,7 @@ export function buildHarnessDetection(
       onScheduled: (reset, _resumeAt, capture) => send({
         type: 'resume-event', id, reset, capturedAt: capture.capturedAt, capture: capture.text,
       }),
-      onDelivered: () => {},
+      onSettled: () => {},
     })
     : undefined;
   // A settled capture skips the approver and the resumer for the same reason `captureWiring()` does.
@@ -70,7 +70,7 @@ export function buildHarnessDetection(
   return {
     latestCapture: () => reader.latestCapture(),
     snapshot: () => tracker?.snapshot() ?? { busy: true, unread: false },
-    delivered: () => resumer?.onDelivered(),
+    delivered: () => resumer?.onSettled(),
     dispose: () => reader.dispose(),
   };
 }

@@ -14,6 +14,11 @@ import { typeIntoHarness } from '../harness/input.js';
 // five seconds regardless of what wall-clock gap counts as a resume.
 const SCHEDULE_LATE_THRESHOLD_MS = 5000;
 
+// What a caller that appended an entry through `add` wants told about its fate: `fired` once the
+// entry has been delivered, `removed` when it leaves the schedule any other way. Both are optional
+// and both are reported at most once.
+type EntryHooks = { fired?: () => void; removed?: () => void };
+
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
 // The controller owns the tabs and persistence; this module owns the schedule state and timing.
@@ -54,7 +59,7 @@ export class ScheduleManager {
 
   // The per-tab `onFired` hooks, keyed by tab and entry id. Held apart from the entries themselves
   // because a caller-supplied callback has no business on a type agent tabs persist.
-  private hooks = new Map<string, () => void>();
+  private hooks = new Map<string, EntryHooks>();
 
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
   start(): void {
@@ -85,17 +90,18 @@ export class ScheduleManager {
     this.announceChange();
   }
 
-  // Add one entry to a tab's schedule, replacing any entry carrying the same id. `onFired` runs once
-  // the entry has actually been delivered, and never on a tick where delivery had to wait — a retry
-  // is not a firing — so a caller that appends an entry learns the outcome without owning a timer of
-  // its own. The hook is held beside the entry rather than on `ScheduleEntry`, which agent tabs
-  // persist. For a harness tab: an entry the app appends itself lands in a schedule the user also
-  // owns, and this appends to it rather than replacing it.
-  add(label: string, entry: ScheduleEntry, onFired?: () => void): void {
+  // Add one entry to a tab's schedule, replacing any entry carrying the same id. The two hooks are
+  // how a caller that appends an entry learns what became of it without owning a timer of its own:
+  // `onFired` runs once the entry has actually been delivered, and never on a tick where delivery had
+  // to wait — a retry is not a firing — while `onRemoved` runs when the entry leaves the schedule any
+  // other way, the user cancelling it or the tab closing. Hooks are held beside the entry rather than
+  // on `ScheduleEntry`, which agent tabs persist. For a harness tab: an entry the app appends itself
+  // lands in a schedule the user also owns, and this appends to it rather than replacing it.
+  add(label: string, entry: ScheduleEntry, hooks?: EntryHooks): void {
     const current = this.schedules.get(label) ?? [];
     this.schedules.set(label, [...current.filter((e) => e.id !== entry.id), entry]);
     this.forgetHook(label, entry.id);
-    if (onFired) this.hooks.set(hookKey(label, entry.id), onFired);
+    if (hooks) this.hooks.set(hookKey(label, entry.id), hooks);
     this.announceChange();
     messageBus.emit('state', { type: 'dirty' });
   }
@@ -103,7 +109,7 @@ export class ScheduleManager {
   // Forget a tab's schedule (on tab close).
   delete(label: string): void {
     this.schedules.delete(label);
-    this.forgetHooks(label);
+    this.removeHooks(label);
     this.announceChange();
   }
 
@@ -117,7 +123,7 @@ export class ScheduleManager {
     const next = current.filter((e) => e.id !== id);
     if (next.length === current.length) return false;
     this.schedules.set(label, next);
-    this.forgetHook(label, id);
+    this.removedHook(label, id);
     const tab = this.managers.tab.byLabel(label);
     if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
     messageBus.emit('state', { type: 'dirty' });
@@ -130,7 +136,7 @@ export class ScheduleManager {
     for (const [label, entries] of this.schedules) {
       if (entries.length === 0) continue;
       this.schedules.set(label, []);
-      this.forgetHooks(label);
+      this.removeHooks(label);
       const tab = this.managers.tab.byLabel(label);
       if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
       changed = true;
@@ -219,27 +225,41 @@ export class ScheduleManager {
     return true;
   }
 
-  // Hand a delivered entry's caller its outcome, once. The hook is dropped as it runs, so a later
-  // entry reusing the id is not answered by this one's callback.
+  // Hand a delivered entry's caller its outcome, once. The hooks are dropped as they run, so a
+  // later entry reusing the id is not answered by this one's callbacks.
   private fireHook(label: string, id: string): void {
     const key = hookKey(label, id);
-    const hook = this.hooks.get(key);
-    if (!hook) return;
+    const hooks = this.hooks.get(key);
+    if (!hooks) return;
     this.hooks.delete(key);
-    hook();
+    hooks.fired?.();
+  }
+
+  // An entry left the schedule without being delivered — the user cancelled it, or a tab close or a
+  // clear took the whole set. Its caller learns that too, so a pending action it is displaying does
+  // not outlive the entry backing it. Reported exactly once, and never for an entry that was never
+  // there.
+  private removedHook(label: string, id: string): void {
+    const key = hookKey(label, id);
+    const hooks = this.hooks.get(key);
+    if (!hooks) return;
+    this.hooks.delete(key);
+    hooks.removed?.();
   }
 
   private forgetHook(label: string, id: string): void {
     this.hooks.delete(hookKey(label, id));
   }
 
-  private forgetHooks(label: string): void {
-    for (const key of this.hooks.keys()) {
-      if (key.startsWith(`${label} `)) this.hooks.delete(key);
+  private removeHooks(label: string): void {
+    for (const [key, hooks] of this.hooks) {
+      if (!key.startsWith(`${label} `)) continue;
+      this.hooks.delete(key);
+      hooks.removed?.();
     }
   }
 }
 
 function hookKey(label: string, id: string): string {
-  return `${label} ${id}`;
+  return `${label} ${id}`;
 }

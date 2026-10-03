@@ -215,7 +215,7 @@ describe('createRemotePtySession', () => {
     it('acknowledges delivery when the scheduler says the entry landed', () => {
       const { channel, sent, add } = resumeTab();
       channel.receive(`${encodeFrame({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000 })}\n`);
-      (add.mock.calls[0][2] as () => void)();
+      (add.mock.calls[0][2] as { fired: () => void }).fired();
       expect(sent).toContainEqual({ type: 'resume-ack', id: 'r1' });
     });
 
