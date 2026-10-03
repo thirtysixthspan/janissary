@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Release every terminal a plugin starts in one payload factory, not only the first.
-
-Existing Issue: `withResources` in `src/tab/openers.ts` collects the ids it spawned but returns only `terminals[0]` for adoption, so a factory that starts a second terminal leaves it registered under the empty label it was spawned with, and the focus-an-existing-tab path adopts the new terminal onto the tab that already existed. Severity: 5/10
-
-Existing Risk: 6/10 - A plugin calling `spawnTerminal` twice in one factory leaks a process that no tab close, plugin dispose, or plugin disable will ever release, because the per-tab release walk and the tab's connection list both key on the label the terminal was adopted onto.
-
-Proposal Risk: 3/10 - Adopting every terminal puts several sessions on one tab, so closing it now kills several processes where it previously killed one, which is the correct reading of the resource but a wider blast radius than today.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: adopt and release every terminal a plugin payload factory starts". In `src/tab/openers.ts`, return the whole `terminals` array from `withResources` rather than `terminals[0]`, adopt each id in both `openPluginTab` and `updatePluginTab`, and keep the existing failure path that kills whatever the factory started before it threw. `src/plugins/shell/open-tab.ts` starts exactly one terminal and needs no change. Decide deliberately what the focus-an-existing-tab path should do — refusing to spawn a second terminal is defensible and simpler than adopting one the user did not ask for — and pin whichever is chosen. Add the second-terminal case to `src/tab/manager.test.ts` and assert that both sessions are released by one `closeTab`.
-
-
 * Declare or confine the terminals a plugin starts, since `spawnTerminal` reaches an unsandboxed process without appearing in the declaration the host validates.
 
 Existing Issue: `spawnTerminal` is a resource rather than a capability, so `restrictToDeclared` in `src/plugins/context.ts` never gates it and every bundled plugin receives it whether or not its declaration asks for it, while workspace confinement applies only when the caller passes a `workspace`, which nothing requires. Severity: 5/10

@@ -13,6 +13,7 @@ import { messageBus } from '../bus.js';
 import { UNREAD_DWELL_MS } from './dwell.js';
 
 function makeManagers(): Managers {
+  let spawned = 0;
   return {
     workspace: { remove: vi.fn(), cancel: vi.fn() },
     shell: { close: vi.fn(), closeTab: vi.fn() },
@@ -20,7 +21,8 @@ function makeManagers(): Managers {
     browser: { closeTab: vi.fn() },
     pty: {
       closeTab: vi.fn(),
-      spawn: vi.fn(() => 'pty1'),
+      // A distinct id per call, so a case can tell two terminals of one factory apart.
+      spawn: vi.fn(() => { spawned += 1; return `pty${spawned}`; }),
       adopt: vi.fn(),
       kill: vi.fn(),
       spawnDimensions: vi.fn(() => ({ cols: 80, rows: 24 })),
@@ -345,6 +347,41 @@ describe('TabManager queue', () => {
     });
 
     expect(() => stashed?.spawnTerminal({ cwd: '/repo' })).toThrow(/no longer available/);
+  });
+
+  it('adopts every terminal one factory started, not only the first', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+
+    const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
+    // A terminal left on the label it was spawned under belongs to no tab, so nothing would ever
+    // release it — neither the per-tab walk nor a plugin disable.
+    expect(managers.pty.adopt).toHaveBeenCalledWith('pty1', tab.label);
+    expect(managers.pty.adopt).toHaveBeenCalledWith('pty2', tab.label);
+  });
+
+  it('refuses a second terminal when an open tab already holds this instance key', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+    const before = managers.pty.spawn.mock.calls.length;
+    // Same instance key: the de-dupe at the top of `openPluginTab` focuses the open tab and returns,
+    // so the factory never runs and no process is started for a tab that will not exist.
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+
+    expect(tm.tabs.filter((candidate) => candidate.plugin?.instanceKey === 'shell-1')).toHaveLength(1);
+    expect(managers.pty.spawn.mock.calls).toHaveLength(before);
   });
 
   it('openEditorTab bypasses de-dupe for a new-file view, allowing multiple untitled tabs', () => {

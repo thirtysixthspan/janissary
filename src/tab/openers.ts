@@ -37,7 +37,7 @@ function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }
 function withResources<Result>(
   target: OpenTarget,
   factory: (resources: TabPluginResources) => Result,
-): { result: Result; fileRefs: string[]; terminalId?: string } {
+): { result: Result; fileRefs: string[]; terminalIds: string[] } {
   const fileRefs: string[] = [];
   const terminals: string[] = [];
   let acceptingResources = true;
@@ -56,7 +56,7 @@ function withResources<Result>(
         return terminal;
       },
     });
-    return { result, fileRefs, terminalId: terminals[0] };
+    return { result, fileRefs, terminalIds: terminals };
   } catch (error) {
     for (const reference of fileRefs) target.openFiles.delete(reference);
     // A factory that failed after starting a terminal must not leave the process running: no tab was
@@ -91,7 +91,7 @@ export function openPluginTab(
   // `sourceLabel` rather than by whatever happens to be focused when the factory finally runs.
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
-  const { result: created, fileRefs, terminalId } = withResources(target, factory);
+  const { result: created, fileRefs, terminalIds } = withResources(target, factory);
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
@@ -100,13 +100,20 @@ export function openPluginTab(
     fileRefs,
     sourceLabel,
   }));
-  // The terminal was spawned before this tab had a label, so it is adopted onto the one just minted.
-  // From here it is an ordinary tab-owned PTY: the per-tab release walk kills it on close, and the
-  // tab's connection list names it.
-  const label = target.tabs.find(
+  // The terminals were spawned before this tab had a label, so they are adopted onto the one just
+  // minted. From here they are ordinary tab-owned PTYs: the per-tab release walk kills them on close,
+  // and the tab's connection list names them. Every one the factory started is adopted, not just the
+  // first — one left on the label it was spawned under would belong to no tab, and neither the
+  // per-tab walk nor a plugin disable would ever release it.
+  //
+  // The tab is always the one `addPluginTab` just made: the de-dupe above returns before the factory
+  // runs, so no tab can already hold this instance key by the time it is reached.
+  const minted = target.tabs.find(
     (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
-  )?.label;
-  if (terminalId !== undefined && label !== undefined) target.adoptTerminal(terminalId, label);
+  );
+  if (minted !== undefined) {
+    for (const ptyId of terminalIds) target.adoptTerminal(ptyId, minted.label);
+  }
 }
 
 
@@ -128,7 +135,7 @@ export function updatePluginTab(
     (candidate) => candidate.plugin?.id === pluginId && candidate.plugin.instanceKey === instanceKey,
   );
   if (!tab?.plugin) return;
-  const { result: update, fileRefs, terminalId } = withResources(target, factory);
+  const { result: update, fileRefs, terminalIds } = withResources(target, factory);
   const rekeyed = update.instanceKey !== undefined && update.instanceKey !== instanceKey
     && target.tabs.every((candidate) => candidate.plugin?.id !== pluginId
       || candidate.plugin.instanceKey !== update.instanceKey);
@@ -138,7 +145,8 @@ export function updatePluginTab(
     fileRefs: [...tab.plugin.fileRefs, ...fileRefs],
     ...(rekeyed && { instanceKey: update.instanceKey! }),
   };
-  if (terminalId !== undefined) target.adoptTerminal(terminalId, tab.label);
+  // This tab exists already, so every terminal the factory started is adopted onto it.
+  for (const ptyId of terminalIds) target.adoptTerminal(ptyId, tab.label);
   if (update.title !== undefined) tab.title = update.title;
   messageBus.emit('state', { type: 'dirty' });
 }
