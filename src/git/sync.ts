@@ -26,6 +26,7 @@ type SyncResult = { ok: true } | { error: string };
 // `WorkspaceManager.remove` on its directory — it's torn down only via `removeAll()` at shutdown.
 export class GitSync {
   private handle: SyncWorkspace | undefined;
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(private workspace: WorkspaceManager) {}
 
@@ -63,18 +64,32 @@ export class GitSync {
     return handle.branch;
   }
 
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const previous = this.queue;
+    const result = (async () => {
+      await previous;
+      return operation();
+    })();
+    this.queue = (async () => {
+      try { await result; } catch { return; }
+    })();
+    return result;
+  }
+
   // Pull-only cycle: used when a synced tab opens (or another synced tab's save completes).
   // Nothing to commit or push — just wait for the shared workspace and pull/rebase it up to date.
   async openSync(): Promise<{ dir: string } | { error: string }> {
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
-    try {
-      const branch = await this.readyBranch(handle);
-      await pullRebase(handle.dir, branch);
-      return { dir: handle.dir };
-    } catch (error) {
-      return { error: errorText(error) };
-    }
+    return this.enqueue(async () => {
+      try {
+        const branch = await this.readyBranch(handle);
+        await pullRebase(handle.dir, branch);
+        return { dir: handle.dir };
+      } catch (error) {
+        return { error: errorText(error) };
+      }
+    });
   }
 
   // Save-triggered cycle: commit the saved file alone as `sync: <filename>` (if it changed), then
@@ -82,15 +97,17 @@ export class GitSync {
   async saveSync(filePath: string): Promise<SyncResult> {
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
-    try {
-      const branch = await this.readyBranch(handle);
-      await commitIfChanged(handle.dir, filePath);
-      await pullRebase(handle.dir, branch);
-      await push(handle.dir, branch);
-      return { ok: true };
-    } catch (error) {
-      return { error: errorText(error) };
-    }
+    return this.enqueue<SyncResult>(async () => {
+      try {
+        const branch = await this.readyBranch(handle);
+        await commitIfChanged(handle.dir, filePath);
+        await pullRebase(handle.dir, branch);
+        await push(handle.dir, branch);
+        return { ok: true };
+      } catch (error) {
+        return { error: errorText(error) };
+      }
+    });
   }
 }
 

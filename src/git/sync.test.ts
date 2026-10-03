@@ -6,6 +6,8 @@ type Call = { args: string[]; options: { cwd?: string; env?: NodeJS.ProcessEnv }
 let calls: Call[] = [];
 let failPatterns: string[][] = [];
 let stdoutFor: Record<string, string> = {};
+let heldCommands = new Set<string>();
+let held: ((error?: Error) => void)[] = [];
 
 const ORIGIN_HEAD = 'symbolic-ref refs/remotes/origin/HEAD';
 const CURRENT_BRANCH = 'rev-parse --abbrev-ref HEAD';
@@ -17,6 +19,10 @@ vi.mock('node:child_process', () => ({
   ) => {
     calls.push({ args, options });
     const shouldFail = failPatterns.some((pattern) => pattern.every((value, i) => args[i] === value));
+    if (heldCommands.has(args[0])) {
+      held.push((error) => callback(error ?? null, { stdout: '', stderr: '' }));
+      return;
+    }
     if (shouldFail) callback(new Error(`git ${args.join(' ')} failed`), { stdout: '', stderr: '' });
     else callback(null, { stdout: stdoutFor[args.join(' ')] ?? '', stderr: '' });
   },
@@ -44,9 +50,61 @@ beforeEach(() => {
   calls = [];
   failPatterns = [];
   stdoutFor = {};
+  heldCommands = new Set();
+  held = [];
 });
 
 describe('GitSync', () => {
+  it('waits for the first pull before starting a concurrent open', async () => {
+    heldCommands.add('pull');
+    const sync = new GitSync(makeWorkspace());
+    const first = sync.openSync();
+    const second = sync.openSync();
+    await vi.waitFor(() => expect(held).toHaveLength(1));
+    expect(argLists().filter(([command]) => command === 'pull')).toHaveLength(1);
+    heldCommands.clear();
+    held[0]();
+    expect(await Promise.all([first, second])).toEqual([
+      { dir: '/repo/.janissary/workspace/git-sync' }, { dir: '/repo/.janissary/workspace/git-sync' },
+    ]);
+    expect(argLists().filter(([command]) => command === 'pull')).toHaveLength(2);
+  });
+
+  it('holds the whole save cycle before another save and open can run', async () => {
+    failPatterns = [['diff', '--cached', '--quiet']];
+    heldCommands.add('commit');
+    const sync = new GitSync(makeWorkspace());
+    const first = sync.saveSync('first.md');
+    const second = sync.saveSync('second.md');
+    const opened = sync.openSync();
+    await vi.waitFor(() => expect(held).toHaveLength(1));
+    expect(argLists().filter(([command]) => command === 'add')).toEqual([['add', '-A', '--', 'first.md']]);
+    expect(argLists().some(([command]) => command === 'pull')).toBe(false);
+    heldCommands.clear();
+    held[0]();
+    await Promise.all([first, second, opened]);
+    expect(argLists().map(([command]) => command).filter((command) => !['symbolic-ref', 'rev-parse'].includes(command)))
+      .toEqual(['add', 'diff', 'commit', 'pull', 'push', 'add', 'diff', 'commit', 'pull', 'push', 'pull']);
+  });
+
+  it('finishes failed pull recovery before releasing the queue to a later save', async () => {
+    heldCommands = new Set(['pull', 'rebase']);
+    const sync = new GitSync(makeWorkspace());
+    const first = sync.openSync();
+    const second = sync.saveSync('later.md');
+    await vi.waitFor(() => expect(held).toHaveLength(1));
+    held[0](new Error('pull refused'));
+    await vi.waitFor(() => expect(held).toHaveLength(2));
+    expect(argLists().some(([command]) => command === 'add')).toBe(false);
+    expect(argLists().at(-1)).toEqual(['rebase', '--abort']);
+    heldCommands.clear();
+    held[1]();
+    expect(await first).toEqual({ error: 'pull refused' });
+    expect(await second).toEqual({ ok: true });
+    expect(argLists().map(([command]) => command).filter((command) => !['symbolic-ref', 'rev-parse'].includes(command)))
+      .toEqual(['pull', 'rebase', 'add', 'diff', 'pull', 'push']);
+  });
+
   it('resolves a synced file\'s path inside the shared workspace', () => {
     const sync = new GitSync(makeWorkspace());
     expect(sync.workspaceFilePath('notes/todo.md')).toBe(`/repo/.janissary/workspace/${SYNC_WORKSPACE_NAME}/notes/todo.md`);
