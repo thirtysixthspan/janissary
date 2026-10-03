@@ -1,6 +1,7 @@
 import { PendingFrames } from './pending.js';
 import { spawnFrameState } from '../process-state.js';
 import type { ClientFrame, RemoteProcessState, ServerFrame, ShellHistoryRun } from '../protocol-frames.js';
+import type { ResumeReset } from '../../harness/auto-resume.js';
 
 // One remote process id's I/O, and every map that is keyed by one. Kept out of `RemoteChannel`
 // because the channel's own job is the transport's state machine — authenticating, framing,
@@ -20,6 +21,9 @@ export type SessionListener = {
   onGateEvent?: (message: string, capturedAt: number, replayed: boolean, capture?: string) => void;
   // The harness's current busy/ready state, and whether the transition should mark the tab unread.
   onBusyTransition?: (busy: boolean, unread: boolean) => void;
+  // A recognized subscription limit and the reset clause it states. Only a remote harness's
+  // `PtySession` takes one — see `createRemotePtySession` in `./pty-session.js`.
+  onResumeEvent?: (reset: ResumeReset, capturedAt: number, replayed: boolean, capture?: string) => void;
 };
 
 type SpawnFrame = Extract<ClientFrame, { type: 'spawn' }>;
@@ -27,6 +31,7 @@ type OutputFrame = Extract<ServerFrame, { type: 'output' }>;
 type HistoryFrame = Extract<ServerFrame, { type: 'shell-history' }>;
 type GateEventFrame = Extract<ServerFrame, { type: 'gate-event' }>;
 type BusyTransitionFrame = Extract<ServerFrame, { type: 'busy-transition' }>;
+type ResumeEventFrame = Extract<ServerFrame, { type: 'resume-event' }>;
 type ExitFrame = Extract<ServerFrame, { type: 'exit' }>;
 
 export type SessionRouterHandlers = {
@@ -61,6 +66,7 @@ export class SessionRouter {
       if (frame.type === 'shell-history') { listener.onHistory?.(frame.runs); continue; }
       if (frame.type === 'gate-event') { listener.onGateEvent?.(frame.message, frame.capturedAt, true, frame.capture); continue; }
       if (frame.type === 'busy-transition') { listener.onBusyTransition?.(frame.busy, frame.unread); continue; }
+      if (frame.type === 'resume-event') { listener.onResumeEvent?.(frame.reset, frame.capturedAt, true, frame.capture); continue; }
       this.sessions.delete(id);
       listener.onExit(frame.exitCode);
     }
@@ -115,6 +121,14 @@ export class SessionRouter {
   busyTransition(frame: BusyTransitionFrame): void {
     const listener = this.sessions.get(frame.id);
     if (listener) listener.onBusyTransition?.(frame.busy, frame.unread);
+    else if (this.holding) this.pending.hold(frame);
+  }
+
+  // Held the same way a gate event is: a limit detected the instant an attach replays it must
+  // reach the rebuilt tab, whose listener registers a moment after the replay lands.
+  resumeEvent(frame: ResumeEventFrame): void {
+    const listener = this.sessions.get(frame.id);
+    if (listener) listener.onResumeEvent?.(frame.reset, frame.capturedAt, false, frame.capture);
     else if (this.holding) this.pending.hold(frame);
   }
 

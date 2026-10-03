@@ -50,11 +50,11 @@ describe('harnessRuntime', () => {
   it('builds a real local screen reader and calls captureWiring for a local tab', () => {
     const managers = makeManagers();
     const runtime = harnessRuntime({
-      managers, name: 'claude', label: 'claude', id: 'pty-1', cwd: '/repo', autoApprove: false, channel: undefined,
+      managers, name: 'claude', label: 'claude', id: 'pty-1', cwd: '/repo', autoApprove: false, autoResume: true, channel: undefined,
     });
     try {
       expect(runtime.reader).toBeInstanceOf(HarnessScreenReader);
-      expect(captureWiring).toHaveBeenCalledWith(managers, 'claude', 'claude', 'pty-1', false);
+      expect(captureWiring).toHaveBeenCalledWith(managers, 'claude', 'claude', 'pty-1', false, true);
       expect(recorderMock.instances).toHaveLength(1);
     } finally { runtime.dispose(); }
   });
@@ -62,7 +62,7 @@ describe('harnessRuntime', () => {
   it('builds no screen reader and skips captureWiring for a remote tab', () => {
     const managers = makeManagers('remote transcript source');
     const runtime = harnessRuntime({
-      managers, name: 'claude', label: 'claude', id: 'r1', cwd: '/repo', autoApprove: true,
+      managers, name: 'claude', label: 'claude', id: 'r1', cwd: '/repo', autoApprove: true, autoResume: false,
       channel: {} as unknown as RemoteChannel,
     });
     try {
@@ -81,7 +81,7 @@ describe('harnessRuntime', () => {
   it('disposes cleanly with no reader to dispose (a remote tab\'s runtime)', () => {
     const managers = makeManagers();
     const runtime = harnessRuntime({
-      managers, name: 'claude', label: 'claude', id: 'r1', cwd: '/repo', autoApprove: false,
+      managers, name: 'claude', label: 'claude', id: 'r1', cwd: '/repo', autoApprove: false, autoResume: false,
       channel: {} as unknown as RemoteChannel,
     });
     expect(() => runtime.dispose()).not.toThrow();

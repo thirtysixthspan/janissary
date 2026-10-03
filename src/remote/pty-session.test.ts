@@ -13,6 +13,8 @@ import { notify } from '../notifications/index.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
 import { HARNESS_IDLE_ESCALATION_MS, disposeHarnessIdleEscalations } from '../harness/idle-notification.js';
 import type { Managers } from '../managers.js';
+import type { ScheduleManager } from '../schedule/manager.js';
+import type { ScheduleEntry } from '../schedule/types.js';
 import type { Tab } from '../tab/types.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
@@ -39,8 +41,9 @@ function attachedChannel() {
   return { channel, sent };
 }
 
-function makeManagers(tabs: Tab[]): Managers {
+function makeManagers(tabs: Tab[], schedule?: Partial<ScheduleManager>): Managers {
   return {
+    schedule: { add: vi.fn(), cancel: vi.fn(), ...schedule },
     tab: {
       tabs,
       cwdOf: vi.fn(() => '/repo'),
@@ -160,6 +163,70 @@ describe('createRemotePtySession', () => {
       type: 'spawn', id: 'r1', program: 'claude', command: 'claude',
       mode: 'pty', harness: 'claude', cols: 80, rows: 24, autoApprove: true,
     }]);
+  });
+
+  it('sends the autoResume flag on the spawn frame', () => {
+    const { channel, sent } = attachedChannel();
+    createRemotePtySession(channel, makeManagers([]), {
+      id: 'r1', program: 'codex', command: 'codex', harness: 'codex', cols: 80, rows: 24, autoResume: true,
+    }, vi.fn());
+    expect(sent).toEqual([{
+      type: 'spawn', id: 'r1', program: 'codex', command: 'codex',
+      mode: 'pty', harness: 'codex', cols: 80, rows: 24, autoResume: true,
+    }]);
+  });
+
+  describe('the scheduled resume on a remote harness tab', () => {
+    const reset = { kind: 'at', time: { hour: 13, minute: 20 } } as const;
+
+    function resumeTab(): { channel: RemoteChannel; sent: RemoteFrame[]; tab: Tab; add: ReturnType<typeof vi.fn> } {
+      const { channel, sent } = attachedChannel();
+      const tab = makeTab('codex', 'red');
+      tab.harness = { name: 'codex', program: 'codex', ptyId: 'r1', status: 'running' };
+      const add = vi.fn();
+      createRemotePtySession(channel, makeManagers([tab], { add }), {
+        id: 'r1', program: 'codex', command: 'codex', harness: 'codex', cols: 80, rows: 24, agentName: 'codex',
+      }, vi.fn());
+      return { channel, sent, tab, add };
+    }
+
+    it('turns a resume-event into a scheduled entry, a notification with the capture, and the flag', () => {
+      const { channel, tab, add } = resumeTab();
+      channel.receive(`${encodeFrame({
+        type: 'resume-event', id: 'r1', reset, capturedAt: 1_700_000_000_000, capture: 'the screen text',
+      })}
+`);
+
+      expect(add).toHaveBeenCalledTimes(1);
+      const [label, entry] = add.mock.calls[0] as unknown as [string, ScheduleEntry];
+      expect(label).toBe('codex');
+      expect(entry.id).toBe('auto-resume');
+      expect(entry.command).toBe('resume the task you were working on.');
+      expect(entry.recurring).toBe(false);
+      expect(entry.nextRun).toBeGreaterThan(Date.now());
+      expect(vi.mocked(writeCaptureFile)).toHaveBeenCalledWith('codex', 1_700_000_000_000, 'the screen text');
+      expect(vi.mocked(notify)).toHaveBeenCalledWith(
+        expect.anything(), 'auto-resume', 'codex', expect.stringMatching(/^Hit a usage limit; resuming at /),
+        { openFile: '/project/.janissary/captures/claude-now.txt', detectedAt: undefined },
+      );
+      expect(tab.harness?.autoResumeState).toBe('scheduled');
+    });
+
+    it('acknowledges delivery when the scheduler says the entry landed', () => {
+      const { channel, sent, add } = resumeTab();
+      channel.receive(`${encodeFrame({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000 })}\n`);
+      (add.mock.calls[0][2] as () => void)();
+      expect(sent).toContainEqual({ type: 'resume-ack', id: 'r1' });
+    });
+
+    it('resumes at once for a report replayed long after its reset, rather than waiting a day', () => {
+      const { channel, add } = resumeTab();
+      channel.receive(`${encodeFrame({
+        type: 'resume-event', id: 'r1', reset: { kind: 'at', time: { hour: 1, minute: 0 } }, capturedAt: 1000,
+      })}\n`);
+      const entry = add.mock.calls[0][1] as unknown as ScheduleEntry;
+      expect(entry.nextRun).toBeLessThanOrEqual(Date.now() + 60_000);
+    });
   });
 
   // Translation of the far side's gate-event/busy-transition reports into exactly what a local

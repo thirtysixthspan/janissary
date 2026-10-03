@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { parseHarnessCommand } from './command-parse.js';
 import { supportsHarnessAutoApprove } from './auto-approve.js';
+import { supportsHarnessAutoResume } from './auto-resume.js';
 import type * as AutoApprove from './auto-approve.js';
+import type * as AutoResume from './auto-resume.js';
 
 // Every bundled harness has a gate detector, so the unsupported-harness refusal is reachable only by
 // stubbing the support predicate; it otherwise passes through to the real gate table.
@@ -10,19 +12,36 @@ vi.mock('./auto-approve.js', async (importOriginal) => {
   return { ...actual, supportsHarnessAutoApprove: vi.fn(actual.supportsHarnessAutoApprove) };
 });
 
-afterEach(() => { vi.mocked(supportsHarnessAutoApprove).mockReset(); });
+vi.mock('./auto-resume.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof AutoResume>();
+  return { ...actual, supportsHarnessAutoResume: vi.fn(actual.supportsHarnessAutoResume) };
+});
+
+afterEach(() => {
+  vi.mocked(supportsHarnessAutoApprove).mockReset();
+  vi.mocked(supportsHarnessAutoResume).mockReset();
+});
 
 // The helpers (findFlagValue, splitWithClause, parseHarnessFlags, parseLabelSubcommand) are
 // module-private, so every branch is reached through the exported entry point.
 
 describe('parseHarnessCommand — launch form', () => {
-  it('defaults a supported harness to workspace, auto-approve, and the e2e browser', () => {
+  it('defaults a supported harness to workspace, auto-approve, the e2e browser, and auto-resume where recognized', () => {
+    expect(parseHarnessCommand('harness codex')).toEqual({
+      name: 'codex',
+      workspace: true,
+      offline: false,
+      autoApprove: true,
+      browser: true,
+      autoResume: true,
+    });
     expect(parseHarnessCommand('harness claude')).toEqual({
       name: 'claude',
       workspace: true,
       offline: false,
       autoApprove: true,
       browser: true,
+      autoResume: false,
     });
   });
 
@@ -88,6 +107,7 @@ describe('parseHarnessCommand — launch form', () => {
       offline: true,
       autoApprove: true,
       browser: true,
+      autoResume: true,
       model: 'gpt-5',
       effort: 'low',
       label: 'bot',
@@ -206,7 +226,7 @@ describe('parseHarnessCommand — on <address> clause', () => {
   // is never read as a clause.
   it('leaves an on inside a with <prompt> clause as prompt text', () => {
     expect(parseHarnessCommand('harness claude with turn it on devbox')).toEqual({
-      name: 'claude', workspace: true, offline: false, autoApprove: true, browser: true,
+      name: 'claude', workspace: true, offline: false, autoApprove: true, browser: true, autoResume: false,
       prompt: 'turn it on devbox',
     });
   });
@@ -226,6 +246,7 @@ describe('parseHarnessCommand — with <prompt> clause', () => {
       offline: false,
       autoApprove: true,
       browser: true,
+      autoResume: false,
       prompt: 'fix the -w flag',
     });
   });
@@ -286,6 +307,14 @@ describe('parseHarnessCommand — error paths', () => {
     expect(parseHarnessCommand('harness opencode -y')).toEqual({
       error: expect.stringMatching(/^-y\/--yes is only supported for the .+ harnesses\.$/),
     });
+  });
+
+  it('errors when --auto-resume is asked of a harness without a limit detector', () => {
+    vi.mocked(supportsHarnessAutoResume).mockReturnValue(false);
+    expect(parseHarnessCommand('harness claude --auto-resume')).toEqual({
+      error: expect.stringMatching(/^--auto-resume is only supported for the .+ harnesses\.$/),
+    });
+    expect(parseHarnessCommand('harness claude --auto-resume')).toEqual({ error: '--auto-resume is only supported for the codex harnesses.' });
   });
 
   it('errors when --model has no value', () => {

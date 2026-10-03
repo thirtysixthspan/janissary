@@ -448,12 +448,17 @@ issuing tab of a profile launch). Attaching a parked session is not a new launch
 
 ### What is computed where
 
-A remote harness tab's permission-gate detection, auto-approve keystroke injection, and busy/ready
-status are computed **server-side**, inside `janus remote-serve` — not locally from the streamed
-terminal bytes. This is what lets all three keep working while the tab is detached (see [[harness]]
+A remote harness tab's permission-gate detection, auto-approve keystroke injection, busy/ready
+status, and subscription-limit detection are computed **server-side**, inside `janus remote-serve` —
+not locally from the streamed
+terminal bytes. This is what lets all of them keep working while the tab is detached (see [[harness]]
 and "Detached-session auto-accept, notifications, and captures" below); the local
 side is a consumer of what the remote reports, live while attached and replayed on the next attach
-when it wasn't. Asciicast recordings, by contrast, are still computed **locally** from the streamed
+when it wasn't. The one thing that is **not** done far side is the resume itself: a detected limit is
+reported with the reset the harness stated, and the client turns that into a scheduled entry in its
+own scheduler, types the prompt, and acknowledges delivery — because only the client owns the clock
+the reset is stated in and the schedule the entry belongs to (see [[harness]] § Auto-resume after a
+usage limit). Asciicast recordings, by contrast, are still computed **locally** from the streamed
 bytes, exactly as for a local harness — a detached remote harness produces no recording for the gap,
 since there is no local process to write one. Detaching closes the tab's recording file and stops its
 local transcript polling, and the attach that brings the tab back starts a fresh recording file

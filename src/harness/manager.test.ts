@@ -645,6 +645,18 @@ describe('HarnessManager auto-approve', () => {
     expect(tabs.at(-1)?.autoApprove).toBe(true);
   });
 
+  // A profile entry has no autoResume field, so the launch default applies: on for a harness whose
+  // limit screen the app recognizes, off for one it does not.
+  it.each([
+    ['codex', true],
+    ['claude', false],
+  ])('opens a %s profile entry with autoResume %s', (tool, expected) => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openFromProfile({ name: tool, tool, workspace: true }, tool, 2, '#fff', 'janus');
+    expect(tabs.at(-1)?.autoResume).toBe(expected);
+  });
+
   it('registers the workspace clone dir as the tab\'s cwd, so `files` defaults to it', () => {
     const { managers } = makeManagers();
     const setCwd = vi.fn();
@@ -681,6 +693,13 @@ describe('HarnessManager launch dialog view', () => {
     const manager = new HarnessManager(managers);
     manager.openLaunchDialog();
     expect(manager.harnessLaunchView()!.autoApprove).toEqual(['claude', 'opencode', 'codex']);
+  });
+
+  it('delivers the harnesses that accept auto-resume while open', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openLaunchDialog();
+    expect(manager.harnessLaunchView()!.autoResume).toEqual(['codex']);
   });
 
   it('returns null again after the dialog is closed', () => {

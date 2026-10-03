@@ -394,6 +394,110 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
   });
 });
 
+// The app appends an entry of its own — a scheduled resume is the only such caller — so append
+// must leave the user's own timers alone and announce the change the schedule surfaces read.
+describe('ScheduleManager add', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  function harness(): { managers: Managers; tab: Tab; input: ReturnType<typeof vi.fn> } {
+    const { managers, tab } = makeManagers({
+      view: 'harness',
+      harness: { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' },
+    });
+    const input = vi.fn();
+    (managers.pty as unknown as { input: typeof input }).input = input;
+    return { managers, tab, input };
+  }
+
+  function resume(at: number): ScheduleEntry {
+    return { id: 'auto-resume', command: 'resume the task you were working on.', spec: 'at 1:21pm', nextRun: at, recurring: false };
+  }
+
+  it('appends beside the tab own entries instead of replacing them', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [{ id: 'standup', command: 'report', spec: 'every 1d', nextRun: Date.now() + 60_000, recurring: true, timeOfDay: { hour: 9, minute: 0 } }]);
+
+    mgr.add('janus', resume(Date.now() + 60_000));
+    expect(mgr.get('janus')?.map((e) => e.id)).toEqual(['standup', 'auto-resume']);
+  });
+
+  it('creates the list for a tab that has no schedule yet', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    mgr.add('janus', resume(Date.now() + 60_000));
+    expect(mgr.get('janus')).toHaveLength(1);
+  });
+
+  it('replaces an entry carrying the same id rather than adding a second row under it', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    mgr.add('janus', resume(Date.now() + 60_000));
+    mgr.add('janus', resume(Date.now() + 120_000));
+    expect(mgr.get('janus')).toHaveLength(1);
+    expect(mgr.get('janus')?.[0].nextRun).toBe(Date.now() + 120_000);
+  });
+
+  it('emits a state change so the schedule window picks the new row up', () => {
+    const { managers } = harness();
+    const emit = vi.spyOn(messageBus, 'emit');
+    const mgr = new ScheduleManager(managers);
+    mgr.add('janus', resume(Date.now() + 60_000));
+    expect(emit).toHaveBeenCalledWith('schedules', { type: 'changed' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('runs the fired hook once, after the entry is delivered, and drops it', () => {
+    const { managers, input } = harness();
+    const mgr = new ScheduleManager(managers);
+    const onFired = vi.fn();
+    mgr.add('janus', resume(Date.now()), onFired);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(onFired).toHaveBeenCalledTimes(1);
+    expect(input.mock.calls[0]?.[0]).toBe('p1');
+    expect(input.mock.calls[0]?.[1]).toContain('resume the task you were working on.');
+    vi.advanceTimersByTime(5000);
+    expect(onFired).toHaveBeenCalledTimes(1);
+    mgr.stop();
+  });
+
+  it('does not run the fired hook on a tick where delivery had to wait', () => {
+    const { managers, tab } = harness();
+    tab.harness!.ptyId = '';
+    const mgr = new ScheduleManager(managers);
+    const onFired = vi.fn();
+    mgr.add('janus', resume(Date.now()), onFired);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(onFired).not.toHaveBeenCalled();
+    tab.harness!.ptyId = 'p1';
+    vi.advanceTimersByTime(1000);
+    expect(onFired).toHaveBeenCalledTimes(1);
+    mgr.stop();
+  });
+
+  it('drops a hook when its entry is cancelled or cleared, so it can never fire later', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    const cancelled = vi.fn();
+    const cleared = vi.fn();
+    mgr.add('janus', resume(Date.now() - 1000), cancelled);
+    mgr.cancel('janus', 'auto-resume');
+    mgr.add('janus', resume(Date.now() - 1000), cleared);
+    mgr.clearAll();
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(cancelled).not.toHaveBeenCalled();
+    expect(cleared).not.toHaveBeenCalled();
+    mgr.stop();
+  });
+});
+
 describe('ScheduleManager schedule launch dialog', () => {
   function makeMgr(tabs: Partial<Tab>[], activeLabel: string): ScheduleManager {
     const managers = {

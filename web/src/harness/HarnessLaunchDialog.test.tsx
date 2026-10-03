@@ -9,6 +9,7 @@ const view: HarnessLaunchView = {
   names: ['claude', 'opencode', 'codex'],
   models: { claude: ['opus', 'sonnet'], opencode: ['opencode-go/glm-5.2'], codex: [] },
   autoApprove: ['claude', 'codex'],
+  autoResume: ['codex'],
 };
 
 function makeClient() {
@@ -103,6 +104,49 @@ describe('HarnessLaunchDialog', () => {
     });
   });
 
+  it('offers Auto-resume for exactly the harnesses the delivered catalog lists', () => {
+    const { getByLabelText, getByText, container } = renderDialog();
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'codex' } });
+    const resume = getByLabelText(/Auto-resume/) as HTMLInputElement;
+    expect(resume.disabled).toBe(false);
+    expect(resume.checked).toBe(true);
+    expect(getByText(/Auto-resume \(--auto-resume\) — codex only/)).toBeTruthy();
+  });
+
+  it('disables and clears Auto-resume for a harness with no limit detector', () => {
+    const { getByLabelText, container } = renderDialog({ ...view, autoResume: ['codex'] });
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'codex' } });
+    fireEvent.click(getByLabelText(/Auto-resume/));
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'claude' } });
+    const resume = getByLabelText(/Auto-resume/) as HTMLInputElement;
+    expect(resume.disabled).toBe(true);
+    expect(resume.checked).toBe(false);
+  });
+
+  it('defaults Auto-resume off and disabled when the catalog lists no harness for it', () => {
+    const { getByLabelText } = renderDialog({ ...view, autoResume: [] });
+    const resume = getByLabelText(/Auto-resume/) as HTMLInputElement;
+    expect(resume.disabled).toBe(true);
+    expect(resume.checked).toBe(false);
+  });
+
+  it('submits --no-auto-resume when a recognized harness has it unchecked', () => {
+    const { getByText, getByLabelText, container, send } = renderDialog();
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'codex' } });
+    fireEvent.click(getByLabelText(/Auto-resume/));
+    fireEvent.click(getByText('Create'));
+    expect(send).toHaveBeenNthCalledWith(1, {
+      method: 'command', params: { text: 'harness codex --no-auto-resume' },
+    });
+  });
+
+  it('submits nothing extra for auto-resume while it is on, since that is the default', () => {
+    const { getByText, container, send } = renderDialog();
+    fireEvent.change(container.querySelector('select')!, { target: { value: 'codex' } });
+    fireEvent.click(getByText('Create'));
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness codex' } });
+  });
+
   it('disables the Model dropdown for a harness with an empty catalog (codex)', () => {
     const { getByLabelText, container } = renderDialog();
     const modelSelect = () => [...container.querySelectorAll('select')][1] as HTMLSelectElement;
@@ -120,7 +164,7 @@ describe('HarnessLaunchDialog', () => {
     fireEvent.click(getByText('Create'));
     expect(send).toHaveBeenNthCalledWith(1, {
       method: 'command',
-      params: { text: 'harness claude --no-workspace --no-auto-approve --model sonnet' },
+      params: { text: 'harness claude --no-workspace --no-auto-approve --no-auto-resume --model sonnet' },
     });
     expect(send).toHaveBeenNthCalledWith(2, { method: 'closeHarnessLaunch', params: {} });
   });
@@ -174,7 +218,7 @@ describe('HarnessLaunchDialog', () => {
     const { getByText, getByLabelText, send } = renderDialog();
     fireEvent.change(getByLabelText(/Effort/), { target: { value: 'high' } });
     fireEvent.click(getByText('Create'));
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --effort high' } });
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --no-auto-resume --effort high' } });
   });
 
   it('renders the E2E browser checkbox, defaulted on', () => {
@@ -195,7 +239,7 @@ describe('HarnessLaunchDialog', () => {
     const { getByText, getByLabelText, send } = renderDialog();
     fireEvent.click(getByLabelText(/E2E browser/));
     fireEvent.click(getByText('Create'));
-    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --no-browser' } });
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'harness claude --no-browser --no-auto-resume' } });
   });
 
   it('remembers the E2E browser checkbox across reopen', () => {

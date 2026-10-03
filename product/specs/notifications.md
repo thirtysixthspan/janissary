@@ -143,6 +143,8 @@ These event types can produce a notification line:
 - **`manual`** — an explicit `notify <message>` (see below).
 - **`auto-approve`** — a harness launched with `-y` auto-approves one of its own
   permission prompts (see `harness.md`).
+- **`auto-resume`** — a harness hit a subscription limit and the app scheduled a resume for the
+  moment the limit resets, named as `Hit a usage limit; resuming at <time>` (see `harness.md`).
 - **`editor-suggest`** — an in-editor persona-suggestion request fails or comes back empty (see
   `editor-tab.md`).
 - **`question`** — an ACP agent issues a question command while its owning tab is not focused
@@ -214,7 +216,7 @@ These event types can produce a notification line:
 
 The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
-`.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`,
+`.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
@@ -225,7 +227,8 @@ background tab.
 
 An ambient event on the **currently active** tab never produces a notification — only background
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
-events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `editor-suggest`,
+events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
+`editor-suggest`,
 `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, and
 `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
@@ -268,7 +271,8 @@ not displace that navigator; the two share the side (see `sidebars.md`). The fee
 queue, so the burst's earlier notifications are already in it when it appears.
 
 A **replayed** notification — one whose caller reports a time it detected earlier, such as an
-`auto-approve` queued by a detached remote harness and delivered on reattach (see [[remote-server]])
+`auto-approve` or `auto-resume` queued by a detached remote harness and delivered on reattach (see
+[[remote-server]])
 — reaches the queue, the record, and the feed, but never a toast: a toast carries no time and could
 not honestly represent something that happened hours or days ago. Replays still count toward the
 burst window, so a reattach delivering several of them docks the feed open: silence in the corner,

@@ -59,13 +59,16 @@ dialog over the command bar instead of returning a usage error. The dialog is a 
 choosing the harness and its launch flags with controls rather than typing the command by hand. It
 offers: a harness selector (claude, opencode, codex), a **Label** field (the `as <label>` name), a
 **Workspace** toggle (`-w`), an **Offline** toggle (`--offline`), an **E2E browser** toggle (`-b`),
-an **Auto-approve** toggle (`-y`), a **Model** dropdown, and an **Effort** dropdown.
+an **Auto-approve** toggle (`-y`), an **Auto-resume** toggle (`--auto-resume`), a **Model** dropdown,
+and an **Effort** dropdown.
 
 The form enforces the flag constraints so it can only ever build a valid command: **Auto-approve** is
 enabled only for a harness that accepts `-y` — today claude, opencode, and codex all do, so switching
 between them keeps its checked state — and a harness without auto-approve support would clear and
 disable it. The dialog offers Auto-approve for exactly the harnesses the `harness` command accepts
-`-y` for, so the two can never disagree about which harnesses support it. **E2E browser** stays
+`-y` for, so the two can never disagree about which harnesses support it. **Auto-resume** follows the
+same rule against the harnesses the command accepts `--auto-resume` for — today codex alone, so
+switching to claude or opencode clears and disables it. **E2E browser** stays
 enabled for every harness, since none rejects it. It starts checked, matching the command's default,
 and unchecking it adds `--no-browser` to the built command. The **Model** dropdown lists
 the selected harness's known models and is disabled when that harness has no model catalog. The
@@ -468,6 +471,84 @@ An ACP agent can separately ask the human a free-text or multiple-choice questio
 auto-approve and does not change how harness permission prompts are recognized or answered. See
 [[agent-questions]].
 
+### Auto-resume after a usage limit (`--auto-resume` / `--no-auto-resume`)
+
+A harness tab can also stop for a reason no permission prompt covers: the subscription or usage limit
+it is running out of. The harness prints a limit banner naming the moment it will accept work again
+and then waits. This feature reads that moment out of the banner and has the harness pick the task
+back up on its own.
+
+Auto-resume is **on by default** for every harness whose limit screen the app recognizes, which
+today means **codex**. `--auto-resume` confirms the default; `--no-auto-resume` opts out and wins if
+both are present. A harness with no recognized limit screen refuses the flag:
+`--auto-resume is only supported for the codex harnesses.` The flag is deliberately long-form only —
+it has no short letter, unlike `-y`. Auto-resume is per launch and in-memory: like auto-approve, it
+is never persisted or restored on `--relaunch`.
+
+claude is absent because it resumes itself — it waits for the limit and carries on by default. opencode
+is absent for a different reason: when a subscription limit hits, it prints nothing at all and hangs
+mid-generation, so there is no screen text to recognize.
+
+**Recognition.** The app reads the same rendered-screen captures taken for
+[screen capture](#screen-capture), about a second after output settles, and needs two things in the
+last three non-blank rows of that screen: the limit wording, and the reset it states. Three reset
+forms are read, in the shapes codex prints them:
+
+- a clock time — `try again at 1:20 PM`, `1:20pm` or `13:20`, all the same time;
+- a date and a clock time — `try again at Jul 8th, 2026 10:59 AM`, the weekly-window form, whose
+  year is read and ignored;
+- a duration — `try again in 4 hours 23 minutes`, whose tokens are added together.
+
+A stated duration longer than **24 hours** is not trusted, and no resume is scheduled for it — the
+tab is still recognized and still badged, exactly as it is today. A limit that states no reset at
+all (`Try again later.`) is likewise recognized and badged, and nothing is scheduled: inventing a
+delay would be indistinguishable from guessing wrong. Restricting recognition to the trailing rows is
+what keeps it to a *live* blockage — a limit banner the harness later quotes in its scrollback sits
+far from the bottom of the screen and must not schedule anything. The apostrophe in the banner is
+accepted in either form, since codex prints a typographic one.
+
+**What happens next.** The resume is scheduled as an ordinary one-shot entry on the tab's own
+schedule, named `auto-resume`, for one minute after the stated reset — the reset is the earliest
+moment the harness will take work, so the wait is for it and the minute is a margin. The schedule
+window and the `schedules` tab therefore show it like any other timer (`schedule list` lists it,
+`schedule cancel auto-resume` stops it), and if the harness is not running yet when it comes due the
+delivery retries on a later tick. When it fires, the text `resume the task you were working on.` is
+typed into the harness and submitted — the harness has no way to know it was interrupted, so it is
+told plainly. The delivery is recorded in the feed like any other scheduled command.
+
+A reset that has *already* passed by the time the screen is recognized — codex prints its reset time
+without seconds, so a limit hit at 7:36:15 against a reset at 7:36:40 states a time that is already
+gone — resumes a minute from now rather than being pushed to the next occurrence of that clock time.
+The same rule covers a banner read long after the fact, including one replayed on reattach.
+
+**One resume per blockage.** The same screen redrawn unchanged schedules nothing further, and after a
+resume is delivered the tab stops: it does not retry a limit the first attempt did not clear, so a
+wall the user has to clear — `upgrade your plan`, `Quota exceeded` — is never typed at. If the
+blockage goes away before the resume is due — the user bought credits, or the limit was advisory —
+the pending entry is cancelled. A tab closed or exited in the meantime loses the entry silently,
+like any other harness timer: harness schedules live in memory and end with the tab. Nothing is
+written to the tab's transcript.
+
+**The parked tab is quiet.** While a resume is pending the tab's dot stops blinking immediately — the
+harness is waiting, not working, the same rule a recognized permission prompt follows — and the tab is
+**not** badged unread, and is never escalated into a `harness-idle` notification thirty seconds later.
+Nothing is waiting on the user, so a badge would be noise. Normal busy/idle tracking resumes once the
+resume is delivered, so a tab that goes idle again while hidden badges then as it always would.
+
+**What the user sees.** Scheduling a resume records an `auto-resume` notification,
+`<label>: Hit a usage limit; resuming at 1:21pm`, carrying the same clickable capture link an
+auto-approval gets (see [[notifications]]). The tab's metadata row shows an **Auto-resume** flag
+while the setting is armed and again once the resume has been typed in, and a green **Auto-resuming**
+flag while one is pending — see Metadata row in `tabs.md`.
+
+For a remote harness tab, detection runs on the far side, exactly as gate detection does, but the
+resume is scheduled and delivered by the client: the far side reports the limit and the reset it
+parsed, and the client — which owns the clock the reset is stated in and the schedule the entry
+belongs to — schedules the entry, types the prompt, and acknowledges delivery so the far side will
+report a fresh limit. A limit detected while the tab is detached queues and replays on the next
+attach like any other report, and its reset has usually passed by then, so the tab rejoins on
+reattach. See [[remote-server]].
+
 ## Harness tab data
 
 A harness tab is distinguished by `view: 'harness'` and carries a **harness payload**:
@@ -484,6 +565,9 @@ A harness tab is distinguished by `view: 'harness'` and carries a **harness payl
   closes before it could be read.
 - **provisionError** — set only when a `-w` launch's workspace clone fails; shown in place of the
   empty terminal, and the tab closes automatically shortly after.
+- **autoResumeState** — where an auto-resume tab is in its own lifecycle: absent while merely armed,
+  `scheduled` while a resume is waiting on a usage limit, and `resumed` once it has been typed in.
+  This is what the metadata row's auto-resume flag reads (see Metadata row in `tabs.md`).
 
 ## Layout
 
@@ -654,8 +738,9 @@ working takes effect immediately. A harness can go silent the moment it returns 
 (claude 2.1.282 writes one burst and then nothing), so the screen is re-read once more about a
 second after output stops. That settle capture supplies the confirming idle reading. The dot
 therefore stops about two seconds after the harness's last output, never waiting for its next.
-The settle capture reaches busy tracking only; auto-approve never sees it, so it cannot make an
-answered permission prompt look stuck.
+The settle capture reaches busy tracking only; neither auto-approve nor auto-resume ever sees it, so
+it can neither make an answered permission prompt look stuck nor re-schedule a resume for a limit
+already acted on.
 
 Status changes show in the tab strip the moment they are recognized, whether or not the harness
 tab is the active one — a backgrounded harness's dot starts and stops blinking live, without
@@ -688,6 +773,13 @@ immediately — the harness is waiting on the user, not working — and if nothi
 prompt (the tab was launched with `--no-auto-approve`, or auto-approve has stood down on a prompt it
 could not clear), the tab is marked unread right away rather than waiting on the usual working→idle
 debounce.
+
+A harness tab parked on a scheduled auto-resume follows the same rule for the dot — it stops blinking
+at once, since the harness is waiting rather than working — but never badges: the app is about to bring
+the tab back by itself, so nothing is waiting on the user and the thirty-second `harness-idle`
+escalation below is never armed for it either. A limit screen the app cannot schedule a resume for
+gets no such exemption: it badges and escalates exactly as any other stop (see
+[Auto-resume after a usage limit](#auto-resume-after-a-usage-limit---auto-resume----no-auto-resume)).
 
 A harness without its own recognition signals keeps the previous coarse behavior — the dot blinks
 for as long as the process is alive. All three launchable harnesses have signals today, so this

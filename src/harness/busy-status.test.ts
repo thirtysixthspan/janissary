@@ -161,6 +161,16 @@ describe('BusyTracker', () => {
     expect(new BusyTracker().current()).toBe(true);
   });
 
+  it('reports a parked tab as not-busy and never unread, whatever the stuck flag says', () => {
+    const parked = 'waiting';
+    const tracker = new BusyTracker();
+    expect(tracker.observe(capture(parked), 'claude', true, true)).toEqual({ busy: false, unread: false });
+    expect(tracker.current()).toBe(false);
+    // Unparked on the same screen, the ordinary debounced path takes over again.
+    tracker.observe(capture(parked, CLAUDE_BUSY_TITLE), 'claude', false, false);
+    expect(tracker.current()).toBe(true);
+  });
+
   it('reports a gate as not-busy with unread following the `stuck` flag it is given', () => {
     const gate = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
     expect(new BusyTracker().observe(capture(gate), 'claude', true)).toEqual({ busy: false, unread: true });
@@ -461,7 +471,8 @@ describe('busyStatusHandler idle escalation', () => {
       },
       notifications: new NotificationQueue(),
     } as unknown as Managers;
-    const busy = busyStatusHandler(name, name, managers, approver);
+    const resumer = { isParked: false };
+    const busy = busyStatusHandler(name, name, managers, approver, resumer);
     if (!busy) throw new Error(`no busy entry for ${name}`);
     const handler = (next: ScreenCapture) => {
       approver?.onCapture(next);
@@ -469,7 +480,10 @@ describe('busyStatusHandler idle escalation', () => {
     };
     const messages = () => managers.notifications.all.map((n) => n.message);
     current = managers;
-    return { handler, harness, janus, managers, messages, tabs, makeActive: (i: number) => { activeIndex = i; } };
+    return {
+      handler, harness, janus, managers, messages, tabs, resumer,
+      makeActive: (i: number) => { activeIndex = i; },
+    };
   }
 
   let current: Managers | undefined;
@@ -512,6 +526,27 @@ describe('busyStatusHandler idle escalation', () => {
 
     vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS);
     expect(fixture.messages()).toEqual(["Agent 'claude' is waiting"]);
+  });
+
+  it('arms nothing for a tab parked on a scheduled resume, which the app is recovering itself', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    fixture.resumer.isParked = true;
+    fixture.handler(capture('You have hit your usage limit, try again at 1:20 PM'));
+
+    expect(fixture.harness.hasUnread).toBeUndefined();
+    expect(fixture.managers.tab.isBusy('claude')).toBe(false);
+    vi.advanceTimersByTime(HARNESS_IDLE_ESCALATION_MS * 2);
+    expect(fixture.messages()).toEqual([]);
+  });
+
+  it('badges a limit the app will not schedule a resume for, exactly as it does today', () => {
+    const fixture = make();
+    fixture.handler(capture('anything', CLAUDE_BUSY_TITLE));
+    const limited = capture('You have hit your usage limit. Try again later.', CLAUDE_IDLE_TITLE);
+    fixture.handler(limited);
+    fixture.handler(limited);
+    expect(fixture.harness.hasUnread).toBe(true);
   });
 
   it('arms for nothing on a tab the user is looking at', () => {

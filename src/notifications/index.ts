@@ -38,6 +38,9 @@ import { deliverNotification } from './deliver.js';
 // stayed badged long enough to be worth saying out loud, the escalation a backgrounded fleet
 // otherwise leaves silent. It is explicit rather than ambient: the badge has no toggle and neither
 // does this, because a badge the app raised on its own is not something the user opted into either.
+// `auto-resume` reports a harness hitting a subscription limit, naming the moment its resume will be
+// typed in — the counterpart to `auto-approve`, and explicit for the same reason: the app decided it,
+// on the tab's behalf, and the one line saying so is what a user watching a different tab needs.
 export type NotificationEventType =
   | 'schedule-late'
   | 'remote-session-terminated'
@@ -50,6 +53,7 @@ export type NotificationEventType =
   | 'harness-idle'
   | 'manual'
   | 'auto-approve'
+  | 'auto-resume'
   | 'editor-suggest'
   | 'question'
   | 'transcript-unavailable'
@@ -106,6 +110,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'harness-idle': true,
   manual: true,
   'auto-approve': true,
+  'auto-resume': true,
   'editor-suggest': true,
   question: true,
   'transcript-unavailable': true,

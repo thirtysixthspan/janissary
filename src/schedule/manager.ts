@@ -52,6 +52,10 @@ export class ScheduleManager {
     return { targets, active: this.managers.tab.cur().label };
   }
 
+  // The per-tab `onFired` hooks, keyed by tab and entry id. Held apart from the entries themselves
+  // because a caller-supplied callback has no business on a type agent tabs persist.
+  private hooks = new Map<string, () => void>();
+
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
   start(): void {
     this.timer = setInterval(() => this.tick(), 1000);
@@ -81,9 +85,25 @@ export class ScheduleManager {
     this.announceChange();
   }
 
+  // Add one entry to a tab's schedule, replacing any entry carrying the same id. `onFired` runs once
+  // the entry has actually been delivered, and never on a tick where delivery had to wait — a retry
+  // is not a firing — so a caller that appends an entry learns the outcome without owning a timer of
+  // its own. The hook is held beside the entry rather than on `ScheduleEntry`, which agent tabs
+  // persist. For a harness tab: an entry the app appends itself lands in a schedule the user also
+  // owns, and this appends to it rather than replacing it.
+  add(label: string, entry: ScheduleEntry, onFired?: () => void): void {
+    const current = this.schedules.get(label) ?? [];
+    this.schedules.set(label, [...current.filter((e) => e.id !== entry.id), entry]);
+    this.forgetHook(label, entry.id);
+    if (onFired) this.hooks.set(hookKey(label, entry.id), onFired);
+    this.announceChange();
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
   // Forget a tab's schedule (on tab close).
   delete(label: string): void {
     this.schedules.delete(label);
+    this.forgetHooks(label);
     this.announceChange();
   }
 
@@ -97,6 +117,7 @@ export class ScheduleManager {
     const next = current.filter((e) => e.id !== id);
     if (next.length === current.length) return false;
     this.schedules.set(label, next);
+    this.forgetHook(label, id);
     const tab = this.managers.tab.byLabel(label);
     if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
     messageBus.emit('state', { type: 'dirty' });
@@ -109,6 +130,7 @@ export class ScheduleManager {
     for (const [label, entries] of this.schedules) {
       if (entries.length === 0) continue;
       this.schedules.set(label, []);
+      this.forgetHooks(label);
       const tab = this.managers.tab.byLabel(label);
       if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
       changed = true;
@@ -169,6 +191,7 @@ export class ScheduleManager {
     for (const e of sched) {
       if (e.nextRun > now || delivered >= budget || !this.fire(tab, e)) { remaining.push(e); continue; }
       delivered++;
+      this.fireHook(tab.label, e.id);
       if (now - e.nextRun > SCHEDULE_LATE_THRESHOLD_MS) {
         const duration = formatLateDuration(now - e.nextRun);
         const cause = e.nextRun < this.lastResume ? ' (system was asleep)' : '';
@@ -195,4 +218,28 @@ export class ScheduleManager {
     notify(this.managers, 'schedule-fire', tab.label, e.command);
     return true;
   }
+
+  // Hand a delivered entry's caller its outcome, once. The hook is dropped as it runs, so a later
+  // entry reusing the id is not answered by this one's callback.
+  private fireHook(label: string, id: string): void {
+    const key = hookKey(label, id);
+    const hook = this.hooks.get(key);
+    if (!hook) return;
+    this.hooks.delete(key);
+    hook();
+  }
+
+  private forgetHook(label: string, id: string): void {
+    this.hooks.delete(hookKey(label, id));
+  }
+
+  private forgetHooks(label: string): void {
+    for (const key of this.hooks.keys()) {
+      if (key.startsWith(`${label} `)) this.hooks.delete(key);
+    }
+  }
+}
+
+function hookKey(label: string, id: string): string {
+  return `${label} ${id}`;
 }

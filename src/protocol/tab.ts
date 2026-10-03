@@ -42,6 +42,8 @@ export type HarnessLaunchView = {
   models: Record<string, string[]>;
   // The harnesses that accept auto-approve (`-y`), in `names` order.
   autoApprove: string[];
+  // The harnesses that accept auto-resume (`--auto-resume`), in `names` order.
+  autoResume: string[];
 };
 
 export type QuestionKind = 'ask' | 'approve';
@@ -71,8 +73,8 @@ export type TabView = {
   // workspace or a dir inside it — ordinary tabs render `cwd` as before.
   cwdDisplay?: string;
   // Identifiers of this tab's currently-active flags ('provisioning' or 'workspaced', 'autoApprove'
-  // or 'autoApproved', 'browser' or 'browserInUse'), for the metadata row's flag display. Empty when
-  // none are active.
+  // or 'autoApproved', 'autoResume' or 'autoResuming', 'browser' or 'browserInUse'), for the metadata
+  // row's flag display. Empty when none are active.
   flags?: string[];
   // Set when this tab's process runs on another host: the metadata row's leading host chip.
   remote?: RemoteTargetView;

@@ -22,6 +22,7 @@ export type HarnessObserverOptions = {
   id: string;
   cwd: string;
   autoApprove: boolean;
+  autoResume: boolean;
   channel: RemoteChannel | undefined;
   // The tab's e2e browser, for a `-b` launch. Not an observer, but a per-PTY resource the runtime
   // owns and disposes on the same path — see the comment on `HarnessRuntime`.
@@ -39,9 +40,9 @@ export type HarnessObserverOptions = {
 // reports land locally instead. A recording failure is reported once in the notifications feed, for
 // the same reason an ssh tab's is: a silent gap would defeat the point of an audit recording.
 export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime {
-  const { managers, name, label, id, cwd, autoApprove, channel } = options;
+  const { managers, name, label, id, cwd, autoApprove, autoResume, channel } = options;
   const dims = managers.pty.spawnDimensions();
-  const capture = channel ? undefined : captureWiring(managers, name, label, id, autoApprove);
+  const capture = channel ? undefined : captureWiring(managers, name, label, id, autoApprove, autoResume);
   const reader = channel ? undefined : new HarnessScreenReader(id, dims.cols, dims.rows, capture?.handler);
   const recorder = new HarnessRecorder(id, label, HARNESS_COMMANDS[name], dims.cols, dims.rows, () => {
     notify(managers, 'harness-recording-failed', label);
@@ -50,7 +51,7 @@ export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime 
   const tailer = source
     ? new HarnessTranscriptTailer(label, source, () => { notify(managers, 'transcript-unavailable', label); })
     : undefined;
-  return new HarnessRuntime(reader, recorder, tailer, capture?.autoApprover, options.browser);
+  return new HarnessRuntime(reader, recorder, tailer, capture?.autoApprover, capture?.autoResumer, options.browser);
 }
 
 // The observer pair for an ssh tab: a screen reader (no capture handler — auto-approve and busy

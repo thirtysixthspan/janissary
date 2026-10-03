@@ -106,6 +106,7 @@ export function startSessionAttach(
         group: creator.group, groupColor: creator.groupColor,
         dotColor: distinctColor(managers.tab.tabs.map((tab) => tab.dotColor)),
         autoApprove: record.processes.find((process) => process.id === spawnId)?.autoApprove ?? false,
+        autoResume: record.processes.find((process) => process.id === spawnId)?.autoResume ?? false,
         browser: false, remote: address, resume: resumed,
         ...(spawnId !== undefined && { resumePtyId: spawnId }),
       });

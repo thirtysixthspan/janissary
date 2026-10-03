@@ -2,11 +2,6 @@
 
 ## ready
 
-* auto-resume feature. similar to auto-approve, except will match on blockages due to subscription limits. Resume time will be extracted from the text and the agent will be told to resume the task at hand one minute after the given time. A tab blocked waiting on a resume will not throw an unread flag. the scheduled resume task will leverage the existing scheduling input to harnesses. No auto resume will be needed for harnesses that auto resume on their own like claude and opencode.  
-For example:
-■ You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to
-purchase more credits or try again at 1:20 PM.
-
 * a new `shell tab` implemented as a plugin. The tab contains a pseudo terminal that launches zshell. The tab derives the following features from the agent tab: command line, identical metadata bar, same popups, menus and keybindings.
 
 * A new type of AI task that runs in a workspaced agent tab, can spawn and terminate new agent tabs and harness tabs as part of doing its work. the first task would be to call plan-a-new-feature, then build-a-feature, then pull-request-review, then work-an-issue on the pull-request backlog until the backlog is clear. 

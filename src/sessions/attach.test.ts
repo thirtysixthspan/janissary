@@ -89,9 +89,12 @@ describe('startSessionAttach', () => {
 
   it('restores a recorded harness auto-approve setting', async () => {
     const h = harness();
-    const saved = { ...record(), processes: [{ id: 'rpty1', label: 'claude', kind: 'harness' as const, harness: 'claude', autoApprove: true }] };
+    const saved = {
+      ...record(),
+      processes: [{ id: 'rpty1', label: 'claude', kind: 'harness' as const, harness: 'claude', autoApprove: true, autoResume: true }],
+    };
     await startSessionAttach(h.managers, saved);
-    expect(h.managers.harness.attachRemote).toHaveBeenCalledWith(expect.objectContaining({ autoApprove: true }));
+    expect(h.managers.harness.attachRemote).toHaveBeenCalledWith(expect.objectContaining({ autoApprove: true, autoResume: true }));
   });
 
   it('does not restore any tab for an unanswered query', async () => {

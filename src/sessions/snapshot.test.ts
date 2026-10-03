@@ -111,9 +111,9 @@ describe('recordOf process rows', () => {
   });
 
   it('carries the auto-approve flag when the spawn frame carried one', () => {
-    const record = recordOf(withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude', autoApprove: true }]), 7);
+    const record = recordOf(withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude', autoApprove: true, autoResume: true }]), 7);
 
-    expect(record?.processes[0]).toMatchObject({ autoApprove: true });
+    expect(record?.processes[0]).toMatchObject({ autoApprove: true, autoResume: true });
   });
 
   // A joined agent tab's shell already carries that tab's label as its agent name, so it is listed
