@@ -48,9 +48,44 @@ function openHarness(readFile: FileSystemPort['readFile']) {
 }
 
 describe('remote file cache', () => {
+  it('keeps same-named files at different roots separate and saves to their original destinations', async () => {
+    const writeFile = vi.fn().mockResolvedValue({ ok: true });
+    const { managers, file, url } = setup(writeFile);
+    const filesystem = remoteFileFor(file)!.filesystem;
+    const second = materializeRemoteFile('devbox', 'claude', 'src/notes.txt', Buffer.from('other'), {
+      filesystem, root: '/remote/ws/subdir', relPath: 'src/notes.txt', label: 'files',
+    });
+    const secondUrl = managers.tab.registerFile(second);
+    managers.tab.openEditorTab({ name: 'notes.txt', path: second, size: '5 B', url: secondUrl });
+
+    expect(second).not.toBe(file);
+    expect(readFileSync(file, 'utf8')).toBe('remote');
+    expect(readFileSync(second, 'utf8')).toBe('other');
+    await saveFile(managers, url, 'first edit');
+    await saveFile(managers, secondUrl, 'second edit');
+    expect(writeFile.mock.calls).toEqual([
+      ['/remote/ws', 'src/notes.txt', Buffer.from('first edit')],
+      ['/remote/ws/subdir', 'src/notes.txt', Buffer.from('second edit')],
+    ]);
+    clearRemoteFileCacheForWorkspace('devbox', 'claude');
+    expect(existsSync(file)).toBe(false);
+    expect(existsSync(second)).toBe(false);
+  });
+
+  it('reuses the same cache identity when two roots reach the same remote file', () => {
+    const { file } = setup(vi.fn(() => ({ ok: true })));
+    const record = remoteFileFor(file)!;
+    const same = materializeRemoteFile('devbox', 'claude', 'notes.txt', Buffer.from('refreshed'), {
+      ...record, root: '/remote/ws/src', relPath: 'notes.txt',
+    });
+    expect(same).toBe(file);
+    expect(readFileSync(file, 'utf8')).toBe('refreshed');
+    expect(remoteFileFor(file)).toMatchObject({ root: '/remote/ws/src', relPath: 'notes.txt' });
+  });
+
   it('keeps the relative path and registration metadata', () => {
     const { file } = setup(vi.fn(() => ({ ok: true })));
-    expect(file).toMatch(/remote-files\/devbox\/claude\/src\/notes\.txt$/);
+    expect(file).toMatch(/remote-files\/devbox\/claude\/[a-f0-9]{64}\/notes\.txt$/);
     expect(readFileSync(file, 'utf8')).toBe('remote');
     expect(remoteFileFor(file)?.relPath).toBe('src/notes.txt');
   });
@@ -61,8 +96,8 @@ describe('remote file cache', () => {
     await openNavigatorFile(managers, state, 'files', 'src/notes.txt', 'edit');
     expect(managers.remote.workspaceLabelOf).toHaveBeenCalledWith('joined');
     expect(managers.openFile.edit).toHaveBeenCalledWith(
-      expect.stringContaining('/remote-files/devbox/creator/src/notes.txt'),
-      expect.stringContaining('/remote-files/devbox/creator/src/notes.txt'),
+      expect.stringMatching(/remote-files\/devbox\/creator\/[a-f0-9]{64}\/notes\.txt$/),
+      expect.stringMatching(/remote-files\/devbox\/creator\/[a-f0-9]{64}\/notes\.txt$/),
       'files',
     );
   });
@@ -178,7 +213,7 @@ describe('materializeRemoteFile outside the cache', () => {
     const project = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));
     initRemoteFileCache(project);
     const file = materializeRemoteFile('../devbox', 'a/b', 'a.txt', Buffer.from('x'), record);
-    expect(file).toContain(path.join('remote-files', '.._devbox', 'a_b', 'a.txt'));
+    expect(file).toContain(path.join('remote-files', '.._devbox', 'a_b'));
     expect(existsSync(file)).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { containedPath } from '../batch-paths.js';
 import type { FileSystemPort } from '../filesystem-port.js';
@@ -26,8 +27,10 @@ export function materializeRemoteFile(
 ): string {
   if (!cacheRoot) throw new Error('Remote file cache is not initialized.');
   const workspace = path.join(cacheRoot, safeSegment(host), safeSegment(workspaceLabel));
-  const file = containedPath(workspace, relPath);
-  if (!file) throw new Error('The path is outside the remote file cache.');
+  const remotePath = containedPath(record.root, relPath);
+  if (!remotePath) throw new Error('The path is outside the remote file cache.');
+  const identity = createHash('sha256').update(remotePath).digest('hex');
+  const file = path.join(workspace, identity, path.basename(remotePath));
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, content);
   records.set(path.resolve(file), record);

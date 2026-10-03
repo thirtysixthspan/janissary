@@ -496,6 +496,8 @@ writes, and every mutation execute on the remote against the provisioned workspa
 path is resolved within that workspace; an escaping path is refused. Remote file content travels to
 the local cache for ordinary openers, and editor saves travel back over the same channel.
 
+Changing a remote navigator's root does not change which file an open editor saves. Files with the same name in different remote directories stay distinct, and opening the same remote file from another navigator root reuses that file's editor. A read or create already in progress retains its original destination when the navigator moves to another directory.
+
 An operation that can report per-path failure — a write, a move, a rename, a delete, a paste, an
 undo or redo replay, singly or in batch — reports it that way whatever went wrong, including a
 connection that ended before the reply arrived and an error the remote replied with. The user sees

@@ -4,17 +4,6 @@
 
 ## development
 
-* Preserve each remote file's identity when a navigator changes its root.
-
-Existing Debt: The remote cache identifies files by host, workspace label, and a path relative to the current navigator root, while its write-back record separately holds the root that gives that path meaning. Severity: 6/10
-
-Existing Risk: 8/10 - Opening two different remote files with the same relative name after changing the navigator root overwrites one cache entry and its write-back destination, so an existing editor can save its buffer to the wrong remote file.
-
-Proposal Risk: 3/10 - Distinct remote paths have distinct cache entries, but cached content can still become stale when another process changes the same remote file.
-
-Proposal: In `src/file-navigator/manager/files.ts`, both `openNavigatorFile` and `createNavigatorFile` pass a root-relative name to `materializeRemoteFile` in `src/file-navigator/remote/file-cache.ts`; that function writes to the same local path and replaces `records` without including `record.root` in the identity. `rerootTree` in `src/file-navigator/navigation.ts` changes `state.root`, so opening `notes.txt` at `/workspace` and then at `/workspace/subdir` can alias even within one session. Derive the cache file key from the normalized absolute remote path formed from the captured root and relative path, using an encoding or digest that cannot turn path segments into traversal; keep it beneath the existing workspace cache directory so workspace cleanup still owns all its files. The same absolute remote file reached from two navigator roots should resolve to one key, while different absolute paths must resolve to different keys. Keep `RemoteFileRecord` bound to the exact root and relative path used for that read, and have both open and create use the same identity helper. Extend `src/file-navigator/remote/file-cache.test.ts` and `src/file-navigator/manager/files.test.ts` with the two-root collision and same-file-from-two-roots cases, asserting both cached bytes and the destination reached by `src/editor/save.ts`; current tests cover single-root materialization, write-back failures, orphan refusal, and workspace cleanup but do not cover this identity collision.
-
-
 * Serialize Git sync cycles that mutate the shared workspace clone.
 
 Existing Debt: GitSync shares one clone and deduplicates its provisioning, but every open, resync, and save independently starts Git operations against that clone's index and rebase state. Severity: 6/10
