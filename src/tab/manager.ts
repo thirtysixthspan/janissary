@@ -220,7 +220,11 @@ export class TabManager extends TabTranscriptState {
       workspace?.dir,
       workspace?.offline,
       undefined,
-      { shell: options.shell, args: options.args },
+      // An absent `args` means the shell itself here, not a command run through it. This resource has
+      // no command to run — the caller's business is the shell — and forwarding `undefined` would let
+      // `spawnPty` fall back to `shellCommandArgs` with the empty command it was given, producing an
+      // interactive shell whose one command is the empty string.
+      { shell: options.shell, args: options.args ?? [] },
     );
     return { ptyId, ...this.managers.pty.spawnDimensions(), running: this.managers.pty.isRunning(ptyId) };
   }

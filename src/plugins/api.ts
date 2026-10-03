@@ -103,8 +103,10 @@ export type TabPluginTerminal = {
 export type TabPluginTerminalOptions = {
   // Where the terminal starts. A workspaced tab's clone, or the project root.
   cwd: string;
-  // The shell to run, and the argv to run it with. Omit `args` to run one command through the
-  // shell; pass `[]` to run the shell itself, which is what a terminal a person types into wants.
+  // The shell to run, and the argv to run it with. `args` defaults to none, which runs the shell as
+  // the user configured it — its startup files load and it reads its own rc. There is deliberately no
+  // "run one command through the shell" case here, unlike the host's own terminals: a plugin wanting a
+  // command's output wants it back, which a spawned terminal does not give it.
   shell?: string;
   args?: string[];
   // Confinement for a terminal started in a workspace clone, mirroring the sandbox the tab's own

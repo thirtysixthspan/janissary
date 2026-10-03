@@ -365,6 +365,19 @@ describe('TabManager queue', () => {
     expect(managers.pty.adopt).toHaveBeenCalledWith('pty2', tab.label);
   });
 
+  it('runs the shell itself when no argv is named, rather than a command through it', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh' });
+
+    // `undefined` would reach `spawnPty`'s fallback and produce `-i -c ''` — an interactive shell
+    // whose one command is the empty string.
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      '', 'zsh', '', '/repo', undefined, undefined, undefined,
+      { shell: '/bin/zsh', args: [] },
+    );
+  });
+
   it('refuses a second terminal when an open tab already holds this instance key', () => {
     const { tm, managers } = makeTabManagerWithManagers();
 

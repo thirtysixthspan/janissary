@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make a terminal spawned without `args` be the shell itself, rather than a shell running an empty command.
-
-Existing Issue: `TabPluginTerminalOptions.args` is optional and `TabManager.spawnTerminal` in `src/tab/manager.ts` forwards it as given, so `spawnPty` falls back to `shellCommandArgs` with the empty command it was handed and spawns an interactive shell whose only command is the empty string. Severity: 4/10
-
-Existing Risk: 5/10 - The call a plugin author is most likely to write, `spawnTerminal({ cwd })`, opens something that looks like a shell tab and behaves like a shell that has already run its only command, so the failure is discovered by using it rather than by reading the signature.
-
-Proposal Risk: 2/10 - The defaulting goes at the resource boundary only, so the shell plugin's explicit `args: []` and every existing `spawnPty` caller keep the meaning they have today.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: default a terminal spawned without args to the shell itself". In `src/tab/manager.ts`, normalize the options before spawning so an absent `args` becomes `[]` instead of being forwarded as `undefined` into the fallback inside `src/pty.ts`, and state that in the `TabPluginTerminalOptions` declaration comment in `src/plugins/api.ts` and in the `spawnTerminal` section of `documentation/developer-documentation/tab-plugins.md`. Keep the distinction `src/pty.ts` already draws — at that layer an omitted `args` still means "run this command through the shell", because that is what its own callers mean — so put the defaulting at the resource boundary rather than in `spawnPty`, and keep `src/pty.test.ts`'s coverage of the two meanings passing untouched. Add a case to `src/tab/manager.test.ts` asserting that a `spawnTerminal` with no `args` reaches `spawnPty` with an empty argv.
-
-
 * Give a plugin the per-tab identity `useStatusWindows` re-arms on, which the plugin contract does not currently expose.
 
 Existing Issue: The hook's own documentation in `web/src/shared/status-windows/useStatusWindows.ts` says `activeKey` is the tab's label and that a tab becoming active re-arms the auto-show, and every host caller passes `tab.label`, but `TabPluginClientCapabilities` carries no label, so the shell tab's metadata row passes the constant `'shell'`. Severity: 4/10
