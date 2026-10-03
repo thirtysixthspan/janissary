@@ -10,7 +10,8 @@ function initialFields(view: HarnessLaunchView): HarnessLaunchFields {
   const name = view.names[0] ?? 'claude';
   return {
     name, label: '', workspace: true, offline: false, browser: true,
-    autoApprove: autoApproveSupported(view, name), model: '', effort: '',
+    autoApprove: autoApproveSupported(view, name), autoResume: autoResumeSupported(view, name),
+    model: '', effort: '',
   };
 }
 
@@ -20,6 +21,11 @@ const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
 // dialog only ever builds a command the command parser will accept.
 function autoApproveSupported(view: HarnessLaunchView, name: string): boolean {
   return view.autoApprove.includes(name);
+}
+
+// Whether `name` accepts auto-resume (`--auto-resume`), read from the same delivered catalog.
+function autoResumeSupported(view: HarnessLaunchView, name: string): boolean {
+  return view.autoResume.includes(name);
 }
 
 // Remembered across reopen within a single app run (module-level, never persisted to disk).
@@ -40,6 +46,8 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
   const models = view.models[fields.name] ?? [];
   const autoApproveEnabled = autoApproveSupported(view, fields.name);
   const autoApproveNames = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(view.autoApprove);
+  const autoResumeEnabled = autoResumeSupported(view, fields.name);
+  const autoResumeNames = new Intl.ListFormat('en', { style: 'long', type: 'conjunction' }).format(view.autoResume);
 
   const update = useCallback((patch: Partial<HarnessLaunchFields>) => {
     setFields((prev) => {
@@ -47,6 +55,8 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
       if (!(view.models[next.name] ?? []).includes(next.model)) next.model = '';
       if (!autoApproveSupported(view, next.name)) next.autoApprove = false;
       else if (patch.name !== undefined && !autoApproveSupported(view, prev.name)) next.autoApprove = true;
+      if (!autoResumeSupported(view, next.name)) next.autoResume = false;
+      else if (patch.name !== undefined && !autoResumeSupported(view, prev.name)) next.autoResume = true;
       remembered = next;
       return next;
     });
@@ -89,6 +99,15 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
               onChange={(e) => update({ autoApprove: e.target.checked })}
             />
             Auto-approve (-y) — {autoApproveNames} only
+          </label>
+          <label className={`harness-launch-check${autoResumeEnabled ? '' : ' disabled'}`}>
+            <input
+              type="checkbox"
+              checked={fields.autoResume}
+              disabled={!autoResumeEnabled}
+              onChange={(e) => update({ autoResume: e.target.checked })}
+            />
+            Auto-resume (--auto-resume) — {autoResumeNames} only
           </label>
           <label>Model
             <select value={fields.model} disabled={models.length === 0} onChange={(e) => update({ model: e.target.value })}>

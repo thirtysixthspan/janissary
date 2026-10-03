@@ -239,6 +239,23 @@ describe('buildTabView', () => {
     expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toEqual(['autoApproved']);
   });
 
+  it('reports the auto-resume flag, swapping to autoResuming while a resume is waiting', () => {
+    const tab = makeTab('codex', '#fff');
+    tab.autoResume = true;
+    tab.harness = { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' };
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toEqual(['autoResume']);
+    tab.harness.autoResumeState = 'scheduled';
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toEqual(['autoResuming']);
+    tab.harness.autoResumeState = 'resumed';
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toEqual(['autoResume']);
+  });
+
+  it('reports no auto-resume flag for a tab launched with the setting off', () => {
+    const tab = makeTab('codex', '#fff');
+    tab.harness = { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' };
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).flags).toEqual([]);
+  });
+
   describe('while the workspace is provisioning', () => {
     const flagsOf = (tab: Tab, workspaceOf?: (label: string) => string | undefined, cloning?: (dir: string) => boolean) =>
       buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p, undefined, workspaceOf, undefined, cloning).flags;

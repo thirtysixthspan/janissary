@@ -4,7 +4,7 @@ import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-l
 function fields(overrides: Partial<HarnessLaunchFields> = {}): HarnessLaunchFields {
   return {
     name: 'claude', label: '', workspace: true, offline: false, browser: true,
-    autoApprove: true, model: '', effort: '', ...overrides,
+    autoApprove: true, autoResume: true, model: '', effort: '', ...overrides,
   };
 }
 
@@ -33,6 +33,14 @@ describe('buildHarnessLaunchCommand', () => {
     expect(buildHarnessLaunchCommand(fields({ autoApprove: false }))).toBe('harness claude --no-auto-approve');
   });
 
+  it('adds --no-auto-resume when autoResume is disabled', () => {
+    expect(buildHarnessLaunchCommand(fields({ autoResume: false }))).toBe('harness claude --no-auto-resume');
+  });
+
+  it('appends nothing for auto-resume when it is on, since that is the default', () => {
+    expect(buildHarnessLaunchCommand(fields({ autoResume: true }))).toBe('harness claude');
+  });
+
   it('adds --no-browser when the e2e browser is off', () => {
     expect(buildHarnessLaunchCommand(fields({ browser: false }))).toBe('harness claude --no-browser');
   });
@@ -52,14 +60,14 @@ describe('buildHarnessLaunchCommand', () => {
   it('assembles every flag in a fixed order', () => {
     const command = buildHarnessLaunchCommand(fields({
       name: 'claude', label: 'quality', workspace: true, offline: true, browser: false,
-      autoApprove: true, model: '', effort: 'high',
+      autoApprove: true, autoResume: true, model: '', effort: 'high',
     }));
     expect(command).toBe('harness claude as quality --offline --no-browser --effort high');
   });
 
   it('combines every opt-out in the fixed flag order', () => {
-    expect(buildHarnessLaunchCommand(fields({ workspace: false, browser: false, autoApprove: false }))).toBe(
-      'harness claude --no-workspace --no-browser --no-auto-approve',
-    );
+    expect(buildHarnessLaunchCommand(fields({
+      workspace: false, browser: false, autoApprove: false, autoResume: false,
+    }))).toBe('harness claude --no-workspace --no-browser --no-auto-approve --no-auto-resume');
   });
 });

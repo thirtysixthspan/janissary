@@ -6,8 +6,10 @@ import { SessionRouter, type SessionListener } from './sessions.js';
 // covers the gate-event/busy-transition routing the auto-accept-while-detached plan adds, following
 // the same hold-until-listener contract `output`/`shell-history`/`exit` already have.
 
-function listener(): SessionListener & { onOutput: ReturnType<typeof vi.fn>; onExit: ReturnType<typeof vi.fn>; onGateEvent: ReturnType<typeof vi.fn>; onBusyTransition: ReturnType<typeof vi.fn> } {
-  return { onOutput: vi.fn(), onExit: vi.fn(), onGateEvent: vi.fn(), onBusyTransition: vi.fn() };
+function listener(): SessionListener & { onOutput: ReturnType<typeof vi.fn>; onExit: ReturnType<typeof vi.fn>; onGateEvent: ReturnType<typeof vi.fn>; onBusyTransition: ReturnType<typeof vi.fn>; onResumeEvent: ReturnType<typeof vi.fn> } {
+  return {
+    onOutput: vi.fn(), onExit: vi.fn(), onGateEvent: vi.fn(), onBusyTransition: vi.fn(), onResumeEvent: vi.fn(),
+  };
 }
 
 describe('SessionRouter — gate-event', () => {
@@ -40,6 +42,42 @@ describe('SessionRouter — gate-event', () => {
     router.attach('r1', l);
     expect(calls).toEqual(['output:before', 'gate:Auto-approved a permission prompt', 'output:after']);
     expect(l.onGateEvent).toHaveBeenCalledWith('Auto-approved a permission prompt', 1000, true, 'text');
+  });
+});
+
+describe('SessionRouter — resume-event', () => {
+  const reset = { kind: 'at', time: { hour: 13, minute: 20 } } as const;
+
+  it('delivers live to a registered listener', () => {
+    const router = new SessionRouter({});
+    const l = listener();
+    router.attach('r1', l);
+    router.resumeEvent({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000, capture: 'text' });
+    expect(l.onResumeEvent).toHaveBeenCalledWith(reset, 1000, false, 'text');
+  });
+
+  it('is held for an id whose tab is still being built, then delivered on attach as a replay', () => {
+    const router = new SessionRouter({});
+    router.openHold();
+    router.resumeEvent({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000 });
+    const l = listener();
+    router.attach('r1', l);
+    expect(l.onResumeEvent).toHaveBeenCalledWith(reset, 1000, true, undefined);
+  });
+
+  it('is dropped for an unregistered id on an ordinary channel, and after the hold closes', () => {
+    const router = new SessionRouter({});
+    router.resumeEvent({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000 });
+    const open = listener();
+    router.attach('r1', open);
+    expect(open.onResumeEvent).not.toHaveBeenCalled();
+    const holding = new SessionRouter({});
+    holding.openHold();
+    holding.resumeEvent({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000 });
+    holding.discardUnclaimed();
+    const late = listener();
+    holding.attach('r1', late);
+    expect(late.onResumeEvent).not.toHaveBeenCalled();
   });
 });
 

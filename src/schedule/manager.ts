@@ -14,6 +14,11 @@ import { typeIntoHarness } from '../harness/input.js';
 // five seconds regardless of what wall-clock gap counts as a resume.
 const SCHEDULE_LATE_THRESHOLD_MS = 5000;
 
+// What a caller that appended an entry through `add` wants told about its fate: `fired` once the
+// entry has been delivered, `removed` when it leaves the schedule any other way. Both are optional
+// and both are reported at most once.
+type EntryHooks = { fired?: () => void; removed?: () => void };
+
 // Owns the per-tab scheduled commands (keyed by tab label) and the 1-second firing loop: at each tick
 // it fires any entry whose next-run time has passed, reschedules recurring ones, and drops one-shots.
 // The controller owns the tabs and persistence; this module owns the schedule state and timing.
@@ -52,6 +57,13 @@ export class ScheduleManager {
     return { targets, active: this.managers.tab.cur().label };
   }
 
+  // The per-entry hooks a caller registered through `add`, keyed by tab and then entry id. Two
+  // maps rather than one joined key, so no label can be mistaken for part of an id — a profile
+  // harness entry's name may contain a space, and `codex team 2` must not read as an entry called
+  // `2 …` on `codex team`. Held apart from the entries themselves because a caller-supplied
+  // callback has no business on a type agent tabs persist.
+  private hooks = new Map<string, Map<string, EntryHooks>>();
+
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
   start(): void {
     this.timer = setInterval(() => this.tick(), 1000);
@@ -81,9 +93,38 @@ export class ScheduleManager {
     this.announceChange();
   }
 
+  // Add one entry to a tab's schedule, replacing any entry carrying the same id. The two hooks are
+  // how a caller that appends an entry learns what became of it without owning a timer of its own:
+  // `onFired` runs once the entry has actually been delivered, and never on a tick where delivery had
+  // to wait — a retry is not a firing — while `onRemoved` runs when the entry leaves the schedule any
+  // other way, the user cancelling it or the tab closing. Hooks are held beside the entry rather than
+  // on `ScheduleEntry`, which agent tabs persist. For a harness tab: an entry the app appends itself
+  // lands in a schedule the user also owns, and this appends to it rather than replacing it. An
+  // agent tab's schedule is written to its state file here, as `tick` and the `schedule` command do.
+  add(label: string, entry: ScheduleEntry, hooks?: EntryHooks): void {
+    const current = this.schedules.get(label) ?? [];
+    const next = [...current.filter((e) => e.id !== entry.id), entry];
+    this.schedules.set(label, next);
+    this.forgetHook(label, entry.id);
+    if (hooks) this.entryHooks(label, entry.id, hooks);
+    this.persist(label, next);
+    this.announceChange();
+    messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // Write a tab's schedule into its state file, for the tabs whose schedules outlive the process.
+  // `TabManager.persist` writes agent tabs only, so a harness tab's — memory-only by design — is
+  // simply not written, and a closed tab's label resolves to nothing and is skipped.
+  private persist(label: string, entries: ScheduleEntry[]): void {
+    const tab = this.managers.tab.byLabel(label);
+    if (!tab) return;
+    this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: entries }));
+  }
+
   // Forget a tab's schedule (on tab close).
   delete(label: string): void {
     this.schedules.delete(label);
+    this.removeHooks(label);
     this.announceChange();
   }
 
@@ -97,6 +138,7 @@ export class ScheduleManager {
     const next = current.filter((e) => e.id !== id);
     if (next.length === current.length) return false;
     this.schedules.set(label, next);
+    this.removedHook(label, id);
     const tab = this.managers.tab.byLabel(label);
     if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
     messageBus.emit('state', { type: 'dirty' });
@@ -109,6 +151,7 @@ export class ScheduleManager {
     for (const [label, entries] of this.schedules) {
       if (entries.length === 0) continue;
       this.schedules.set(label, []);
+      this.removeHooks(label);
       const tab = this.managers.tab.byLabel(label);
       if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
       changed = true;
@@ -169,6 +212,7 @@ export class ScheduleManager {
     for (const e of sched) {
       if (e.nextRun > now || delivered >= budget || !this.fire(tab, e)) { remaining.push(e); continue; }
       delivered++;
+      this.fireHook(tab.label, e.id);
       if (now - e.nextRun > SCHEDULE_LATE_THRESHOLD_MS) {
         const duration = formatLateDuration(now - e.nextRun);
         const cause = e.nextRun < this.lastResume ? ' (system was asleep)' : '';
@@ -194,5 +238,44 @@ export class ScheduleManager {
     this.managers.command.dispatchTo(tab.label, `${e.command} ## scheduled ##`, { detect: false });
     notify(this.managers, 'schedule-fire', tab.label, e.command);
     return true;
+  }
+
+  // Hand a delivered entry's caller its outcome, once. The hooks are dropped as they run, so a
+  // later entry reusing the id is not answered by this one's callbacks.
+  private fireHook(label: string, id: string): void {
+    const hooks = this.hooks.get(label)?.get(id);
+    if (!hooks) return;
+    this.forgetHook(label, id);
+    hooks.fired?.();
+  }
+
+  // An entry left the schedule without being delivered — the user cancelled it, or a tab close or a
+  // clear took the whole set. Its caller learns that too, so a pending action it is displaying does
+  // not outlive the entry backing it. Reported exactly once, and never for an entry that was never
+  // there.
+  private removedHook(label: string, id: string): void {
+    const hooks = this.hooks.get(label)?.get(id);
+    if (!hooks) return;
+    this.forgetHook(label, id);
+    hooks.removed?.();
+  }
+
+  private forgetHook(label: string, id: string): void {
+    const forTab = this.hooks.get(label);
+    forTab?.delete(id);
+    if (forTab?.size === 0) this.hooks.delete(label);
+  }
+
+  private removeHooks(label: string): void {
+    const forTab = this.hooks.get(label);
+    if (!forTab) return;
+    this.hooks.delete(label);
+    for (const hooks of forTab.values()) hooks.removed?.();
+  }
+
+  private entryHooks(label: string, id: string, hooks: EntryHooks): void {
+    const forTab = this.hooks.get(label) ?? new Map<string, EntryHooks>();
+    forTab.set(id, hooks);
+    this.hooks.set(label, forTab);
   }
 }

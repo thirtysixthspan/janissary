@@ -142,12 +142,28 @@
 // `content` field to decide. A version-21 peer would read the single layer as double-encoded and
 // hand the navigator base64 text as file contents, so it is refused here instead.
 //
-// Version 23 adds `browser-started`, sent when a session's e2e browser comes up and is listening, so
+// Version 23 adds `browser-started`, sent when a session's e2E browser comes up and is listening, so
 // the local tab's browser flag can show a browser in use rather than only an endpoint. A version-22
 // remote never sends it, so the flag would never light, and a version-22 local side would refuse the
 // frame as unknown.
 // Version 24 makes rename overwrite consent explicit; older peers would ignore the consent flag.
-export const REMOTE_PROTOCOL_VERSION = 24;
+//
+// Version 25 extends the version-18 detection split to subscription limits: a remote harness that
+// stops on a usage limit reports it and lets the client schedule the resume. Three changes travel
+// together, for the same reason version 18's did — a version-24 peer knows none of them, so a remote
+// codex tab would come up silently unable to auto-resume rather than visibly failing:
+//  - `spawn` gains `autoResume`, telling the far side whether this harness process should watch for a
+//    limit screen at all. A version-24 remote ignores the field and reports nothing.
+//  - `resume-event` reports a recognized limit, carrying the reset the harness stated as the detector
+//    parsed it (`ResumeReset`: a clock time, a date, or a duration), when it was seen, and — inline,
+//    base64-encoded like `output` — the triggering screen capture, so the client writes the same
+//    capture file a local detector would have. It travels through the existing detached-peer replay
+//    buffer unchanged, so one reached while detached queues and replays exactly like `output` does.
+//    The reset travels unresolved on purpose: only the client owns the clock the reset is stated in
+//    and the schedule the entry belongs to.
+//  - `resume-ack` answers one, telling the far side the entry has been delivered so its detector
+//    re-arms. Delivery can fail indefinitely, so it cannot infer that from its own screen.
+export const REMOTE_PROTOCOL_VERSION = 25;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -181,6 +197,7 @@ function toWire(frame: RemoteFrame): Record<string, unknown> {
   }
   if (frame.type === 'acp-prompt' || frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'gate-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
+  if (frame.type === 'resume-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
   if (frame.type === 'capture-reply' && frame.text !== undefined) return { ...frame, text: encodeText(frame.text) };
   return { ...frame };
 }

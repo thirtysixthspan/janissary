@@ -94,7 +94,14 @@ export function renameItem(
   const oldAbsolute = containedPath(root, relPath);
   if (!oldAbsolute) return failureResult(OUTSIDE_ROOT_REASON);
   const newAbsolute = path.join(path.dirname(oldAbsolute), newName);
-  if (exists(newAbsolute)) {
+  // A new name differing from the old only by case can never be a different entry: where the
+  // filesystem folds case the two spellings *are* one path, and where it does not, the destination
+  // simply does not exist. So it is answered by the rename itself rather than by the conflict check
+  // below, which would otherwise refuse it on a case-folding filesystem that reports a different
+  // inode for each spelling — a real filesystem, not a hypothetical one.
+  const oldName = path.basename(oldAbsolute);
+  const caseOnlyRename = newName !== oldName && newName.toLowerCase() === oldName.toLowerCase();
+  if (exists(newAbsolute) && !caseOnlyRename) {
     let sameEntry = false;
     try {
       const [sourceStat, destinationStat] = [lstatSync(oldAbsolute), lstatSync(newAbsolute)];

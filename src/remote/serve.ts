@@ -121,6 +121,7 @@ export class RemoteServer {
     case 'input': { this.peer?.input(frame); this.processes?.input(frame.id, frame.data); return; }
     case 'resize': { this.processes?.resize(frame.id, frame.cols, frame.rows); return; }
     case 'kill': { this.processes?.kill(frame.id); return; }
+    case 'resume-ack': { this.processes?.resumeDelivered(frame.id); return; }
     case 'capture-request': { answerCaptureRequest(frame, this.processes, this.lookupRoot(frame.origin), (f) => this.emit(f)); return; }
     case 'filesystem-open': {
       if (!this.files) { this.refuse('No remote workspace has been provisioned.'); return; }

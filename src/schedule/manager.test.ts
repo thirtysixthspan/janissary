@@ -394,6 +394,211 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
   });
 });
 
+// The app appends an entry of its own — a scheduled resume is the only such caller — so append
+// must leave the user's own timers alone and announce the change the schedule surfaces read.
+describe('ScheduleManager add', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  function harness(): { managers: Managers; tab: Tab; input: ReturnType<typeof vi.fn> } {
+    const { managers, tab } = makeManagers({
+      view: 'harness',
+      harness: { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' },
+    });
+    const input = vi.fn();
+    (managers.pty as unknown as { input: typeof input }).input = input;
+    return { managers, tab, input };
+  }
+
+  // The harness fixture plus a second tab whose label extends the first's, for the case where a
+  // joined key would read one tab's entry id as another's.
+  function twoHarnessTabs(): { managers: Managers; input: ReturnType<typeof vi.fn> } {
+    const { managers } = harness();
+    const second = { label: 'codex team 2', view: 'harness', harness: { name: 'codex', program: 'codex', ptyId: 'p2', status: 'running' } };
+    const input = vi.fn();
+    const tab = managers.tab as unknown as { allLabels: () => string[]; byLabel: (l: string) => unknown };
+    tab.allLabels = () => ['codex team', 'codex team 2'];
+    const first = { label: 'codex team', view: 'harness', harness: { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' } };
+    tab.byLabel = (label: string) => (label === 'codex team' ? first : label === 'codex team 2' ? second : undefined);
+    (managers.pty as unknown as { input: typeof input }).input = input;
+    return { managers, input };
+  }
+
+  function resume(at: number): ScheduleEntry {
+    return { id: 'auto-resume', command: 'resume the task you were working on.', spec: 'at 1:21pm', nextRun: at, recurring: false };
+  }
+
+  it('appends beside the tab own entries instead of replacing them', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [{ id: 'standup', command: 'report', spec: 'every 1d', nextRun: Date.now() + 60_000, recurring: true, timeOfDay: { hour: 9, minute: 0 } }]);
+
+    mgr.add('janus', resume(Date.now() + 60_000));
+    expect(mgr.get('janus')?.map((e) => e.id)).toEqual(['standup', 'auto-resume']);
+  });
+
+  it('creates the list for a tab that has no schedule yet', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    mgr.add('janus', resume(Date.now() + 60_000));
+    expect(mgr.get('janus')).toHaveLength(1);
+  });
+
+  it('replaces an entry carrying the same id rather than adding a second row under it', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    mgr.add('janus', resume(Date.now() + 60_000));
+    mgr.add('janus', resume(Date.now() + 120_000));
+    expect(mgr.get('janus')).toHaveLength(1);
+    expect(mgr.get('janus')?.[0].nextRun).toBe(Date.now() + 120_000);
+  });
+
+  it('emits a state change so the schedule window picks the new row up', () => {
+    const { managers } = harness();
+    const emit = vi.spyOn(messageBus, 'emit');
+    const mgr = new ScheduleManager(managers);
+    mgr.add('janus', resume(Date.now() + 60_000));
+    expect(emit).toHaveBeenCalledWith('schedules', { type: 'changed' });
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('runs the fired hook once, after the entry is delivered, and drops it', () => {
+    const { managers, input } = harness();
+    const mgr = new ScheduleManager(managers);
+    const onFired = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('janus', resume(Date.now()), onFired);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(onFired.fired).toHaveBeenCalledTimes(1);
+    expect(input.mock.calls[0]?.[0]).toBe('p1');
+    expect(input.mock.calls[0]?.[1]).toContain('resume the task you were working on.');
+    vi.advanceTimersByTime(5000);
+    expect(onFired.fired).toHaveBeenCalledTimes(1);
+    mgr.stop();
+  });
+
+  it('does not run the fired hook on a tick where delivery had to wait', () => {
+    const { managers, tab } = harness();
+    tab.harness!.ptyId = '';
+    const mgr = new ScheduleManager(managers);
+    const onFired = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('janus', resume(Date.now()), onFired);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(onFired.fired).not.toHaveBeenCalled();
+    tab.harness!.ptyId = 'p1';
+    vi.advanceTimersByTime(1000);
+    expect(onFired.fired).toHaveBeenCalledTimes(1);
+    mgr.stop();
+  });
+
+  it('tells a caller its entry was removed rather than delivered, and never fires it afterwards', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    const cancelled = { fired: vi.fn(), removed: vi.fn() };
+    const cleared = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('janus', resume(Date.now() - 1000), cancelled);
+    mgr.cancel('janus', 'auto-resume');
+    mgr.add('janus', resume(Date.now() - 1000), cleared);
+    mgr.clearAll();
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(cancelled.removed).toHaveBeenCalledTimes(1);
+    expect(cancelled.fired).not.toHaveBeenCalled();
+    expect(cleared.removed).toHaveBeenCalledTimes(1);
+    expect(cleared.fired).not.toHaveBeenCalled();
+    mgr.stop();
+  });
+
+  it('reports a removal once, and not again for an entry id nothing holds', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    const hooks = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('janus', resume(Date.now() - 1000), hooks);
+    mgr.cancel('janus', 'auto-resume');
+    mgr.cancel('janus', 'auto-resume');
+    expect(hooks.removed).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a removal when the tab closes with the entry still on its schedule', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    const hooks = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('janus', resume(Date.now() + 60_000), hooks);
+    mgr.closeTab('janus');
+    expect(hooks.removed).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps one tab hooks separate from a longer tab label sharing its prefix', () => {
+    const { managers } = harness();
+    const mgr = new ScheduleManager(managers);
+    const shorter = { fired: vi.fn(), removed: vi.fn() };
+    const longer = { fired: vi.fn(), removed: vi.fn() };
+    // A profile harness entry's name may contain a space, so these two labels differ only by a
+    // suffix — the case a single joined key cannot tell apart.
+    mgr.add('codex team', resume(Date.now() + 60_000), shorter);
+    mgr.add('codex team 2', resume(Date.now() - 1000), longer);
+    mgr.clearAll();
+    expect(shorter.removed).toHaveBeenCalledTimes(1);
+    expect(longer.removed).toHaveBeenCalledTimes(1);
+  });
+
+  it('delivers a longer label entry after the shorter label schedule was cleared', () => {
+    // Two harness tabs whose labels differ only by a suffix, both due at once.
+    const { managers, input } = twoHarnessTabs();
+    const mgr = new ScheduleManager(managers);
+    const fired = { fired: vi.fn(), removed: vi.fn() };
+    mgr.add('codex team', resume(Date.now() + 60_000), { fired: vi.fn(), removed: vi.fn() });
+    mgr.add('codex team 2', resume(Date.now() - 1000), fired);
+    mgr.set('codex team', []);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+    expect(fired.fired).toHaveBeenCalledTimes(1);
+    expect(input.mock.calls[0]?.[1]).toContain('resume the task');
+    mgr.stop();
+  });
+});
+
+// An app-added entry on an agent tab has to reach the state file, or it is lost on relaunch until
+// some unrelated schedule change happens to make a tick write the list.
+describe('ScheduleManager add persistence', () => {
+  // Each case restores its own spy: `vi.spyOn` hands back the same mock for an already-spied method,
+  // so a case that leaves it installed hands its call history to the next one that asserts on it.
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('writes an agent tab state file carrying the new entry', () => {
+    const { managers, saveSpy } = withRealTabManager({ label: 'bekir' });
+    const mgr = managers.schedule;
+    mgr.add('bekir', { id: 'standup', command: 'report', spec: 'every 1d', nextRun: Date.now() + 60_000, recurring: true, timeOfDay: { hour: 9, minute: 0 } });
+
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(saveSpy.mock.calls.at(-1)?.[0]).toMatchObject({
+      schedule: [expect.objectContaining({ id: 'standup' })],
+    });
+  });
+
+  it('writes no state file for a harness tab, whose schedule is memory-only by design', () => {
+    const { managers, saveSpy } = withRealTabManager({
+      label: 'codex', view: 'harness', harness: { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' },
+    });
+    managers.schedule.add('codex', { id: 'auto-resume', command: 'resume', spec: 'once', nextRun: Date.now() + 60_000, recurring: false });
+
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing for a tab that has since closed', () => {
+    const { managers, saveSpy } = withRealTabManager({ label: 'bekir' });
+    managers.tab.tabs.length = 0;
+    managers.schedule.add('bekir', { id: 'x', command: 'y', spec: 'once', nextRun: 1, recurring: false });
+
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('ScheduleManager schedule launch dialog', () => {
   function makeMgr(tabs: Partial<Tab>[], activeLabel: string): ScheduleManager {
     const managers = {

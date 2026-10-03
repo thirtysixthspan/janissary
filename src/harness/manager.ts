@@ -7,6 +7,7 @@ import { isKnownModel, modelsFor } from './models.js';
 import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
 import { autoApproveHarnessNames, supportsHarnessAutoApprove } from './auto-approve.js';
+import { autoResumeHarnessNames, supportsHarnessAutoResume } from './auto-resume.js';
 import { sshRuntime } from './observers.js';
 import { HarnessTabSpawn } from './tab-spawn.js';
 import type { SpawnTabOptions } from './spawn-options.js';
@@ -121,7 +122,7 @@ export class HarnessManager extends HarnessTabSpawn {
   harnessLaunchView(): HarnessLaunchView | null {
     if (!this.launchDialogOpen) return null;
     const models = Object.fromEntries(HARNESS_NAMES.map((name) => [name, modelsFor(name)]));
-    return { names: HARNESS_NAMES, models, autoApprove: autoApproveHarnessNames() };
+    return { names: HARNESS_NAMES, models, autoApprove: autoApproveHarnessNames(), autoResume: autoResumeHarnessNames() };
   }
 
   // Open (and focus) a harness tab running `name`, labeled `label` if given (otherwise `name`).
@@ -132,7 +133,7 @@ export class HarnessManager extends HarnessTabSpawn {
   // the next free name past every one already `tried`.
   private open(launch: HarnessLaunch, retry?: { creator: Tab; tried: readonly string[] }): string | undefined {
     const {
-      name, workspace, offline, autoApprove, browser, label: label_, model, effort, prompt, remote,
+      name, workspace, offline, autoApprove, autoResume, browser, label: label_, model, effort, prompt, remote,
     } = launch;
     const creator = retry?.creator ?? this.managers.tab.cur();
     const explicit = label_ !== undefined;
@@ -154,7 +155,7 @@ export class HarnessManager extends HarnessTabSpawn {
     const group = creator?.group ?? 1;
     const groupColor = creator?.groupColor ?? dotColor;
     this.spawnTab({
-      name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, browser, model, effort, ready, remote,
+      name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, autoResume, browser, model, effort, ready, remote,
       ...(nameRetry && { nameRetry }),
     });
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
@@ -183,6 +184,7 @@ export class HarnessManager extends HarnessTabSpawn {
     this.spawnTab({
       name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
       group, groupColor, dotColor, autoApprove: entry.autoApprove ?? supportsHarnessAutoApprove(entry.tool),
+      autoResume: supportsHarnessAutoResume(entry.tool),
       browser: entry.browser ?? true, model: entry.model, effort: entry.effort, ready, remote,
       ...(remote && { nameRetry: { creator, explicit: true, tried: [unique], relaunch: () => {} } }),
     });

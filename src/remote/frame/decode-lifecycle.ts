@@ -25,13 +25,14 @@ export function decodeAttach(record: Record<string, unknown>): DecodeResult {
 }
 
 export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
-  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove } = record;
+  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove, autoResume } = record;
   if (!nonEmptyString(id) || !nonEmptyString(program) || !nonEmptyString(command)
     || !(mode === 'pty' || mode === 'pipe') || !optionalNonEmptyString(harness)
     || !positiveInteger(cols) || !positiveInteger(rows)
     || !(offline === undefined || typeof offline === 'boolean')
     || !(browser === undefined || typeof browser === 'boolean')
     || !(autoApprove === undefined || typeof autoApprove === 'boolean')
+    || !(autoResume === undefined || typeof autoResume === 'boolean')
     || !optionalNonEmptyString(agentName)) return malformed('spawn');
   return {
     type: 'spawn', id, program, command, mode, cols, rows,
@@ -39,6 +40,7 @@ export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
     ...(offline !== undefined && { offline }),
     ...(browser !== undefined && { browser }),
     ...(autoApprove !== undefined && { autoApprove }),
+    ...(autoResume !== undefined && { autoResume }),
     ...(agentName !== undefined && { agentName }),
   };
 }

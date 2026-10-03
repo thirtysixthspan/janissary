@@ -5,6 +5,9 @@ export type HarnessLaunchFields = {
   workspace: boolean;
   offline: boolean;
   autoApprove: boolean;
+  // Scheduling a resume for a recognized subscription-limit screen, on by default for a harness
+  // whose limit screen is recognized; unchecked submits the opt-out.
+  autoResume: boolean;
   // The e2e browser, on by default (`--no-browser` opts out): a headless browser for the tab and the
   // endpoint the harness drives it through. Every harness accepts it, so unlike auto-approve there
   // is no per-harness disabling.
@@ -29,6 +32,7 @@ export function buildHarnessLaunchCommand(fields: HarnessLaunchFields): string {
   if (fields.offline) parts.push('--offline');
   if (!fields.browser) parts.push('--no-browser');
   if (!fields.autoApprove) parts.push('--no-auto-approve');
+  if (!fields.autoResume) parts.push('--no-auto-resume');
   if (fields.model) parts.push('--model', fields.model);
   const effort = fields.effort.trim();
   if (effort) parts.push('--effort', effort);
