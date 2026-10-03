@@ -156,28 +156,29 @@ export class JanusClient {
 
   renameTab(index: number, title: string): void { this.send({ method: 'renameTab', params: { index, title } }); }
 
-  // Set an editor tab's file name from the metadata row's rename input. Fire-and-forget, same as
-  // editorSync: the renamed view comes back over the next state broadcast.
+  // Set an editor tab's file name from the metadata row's rename input. Fire-and-forget:
+  // the renamed view comes back over the next state broadcast.
   renameEditorFile(url: string, name: string): void { this.send({ method: 'renameEditorFile', params: { url, name } }); }
 
   // Commit the tab's one file to origin on the current branch, revision history the same as the
   // navigator's commit: the save happens first, client-side, then this arms the cycle. Fire-and-
-  // forget, same as editorSync.
+  // forget, same as renameEditorFile.
   commitEditorFile(url: string, message: string): void { this.send({ method: 'commitEditorFile', params: { url, message } }); }
 
 
-  // Sync an editor tab's in-progress buffer to the server as transient draft state. Fire-and-forget:
-  // no reply is awaited, and a sync lost to a closed socket is simply dropped (see send()).
-  editorSync(url: string, content: string): void { this.send({ method: 'editorSync', params: { url, content } }); }
+  // Acknowledge transient draft updates so their owner can recover a lost snapshot after reconnect.
+  editorSync(url: string, content: string): Promise<RequestResult<unknown>> {
+    return this.request({ method: 'editorSync', params: { url, content } });
+  }
 
   // Report the current sidebar/tab-area sizes after a manual resize completes. Fire-and-forget,
-  // same as editorSync.
+  // same as renameEditorFile.
   reportLayout(sidebarLeft: number, sidebarRight: number, tabAreaPct: number): void {
     this.send({ method: 'reportLayout', params: { sidebarLeft, sidebarRight, tabAreaPct } });
   }
 
   // Sync a page tab's currently visible text (from the extension content script) to the server as
-  // transient snapshot state. Fire-and-forget, same as editorSync. (Page snapshots reach the
+  // transient snapshot state. (Page snapshots reach the
   // server's plugin context through the plugin intent path — see src/plugins/context.ts and
   // src/plugins/page/activate.ts — not through a sync call here.)
 

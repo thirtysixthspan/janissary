@@ -4,17 +4,6 @@
 
 ## development
 
-* Resynchronize the current editor draft after reconnection and track acknowledged content separately from attempted sends.
-
-Existing Debt: The editor draft hook marks text as synchronized before a fire-and-forget send that can be dropped, and it has no connection subscription to repair the server's cached draft after reconnecting. Severity: 5/10
-
-Existing Risk: 5/10 - An edit made during a connection interruption can remain absent from the server after reconnection, leaving monitors to report an older draft or disk content until another text change occurs.
-
-Proposal Risk: 2/10 - An acknowledged draft snapshot converges again after reconnecting, although monitors can still lag during the debounce interval or an active outage.
-
-Proposal: `web/src/editor/useEditorSync.ts` assigns `lastSyncedRef.current` before calling `JanusClient.editorSync` in `web/src/ws.ts`; that method delegates to `RpcExchange.send` in `web/src/rpc-exchange.ts`, which drops calls when the socket is not open. Reopening the connection sends only `init`, and neither reconnection nor a cursor-only change resubmits the missed text. `syncEditorBuffer` in `src/editor/sync.ts` replaces the tab's transient draft, which `currentContent` in `src/monitor/editor-feed.ts` prefers over disk, so this is a stale snapshot rather than a failed disk save. Give the editor draft path an acknowledgement through the existing `editorSync` RPC and let a small coordinator beside the hook retain the latest desired text separately from the last acknowledged text. Subscribe the hook to `JanusClient.onConnectionStatus`, resend the current applicable draft when connected, and scope acknowledgement handling to the current URL and connection generation so a late result cannot mark a newer draft delivered. Coalesce pending edits, release the subscription and timer on unmount, and retain the initial-load and cursor-only suppression rules. Keep reconnection recovery specific to replacing editor draft state; preserve the generic transport's existing behavior for mutating commands. Extend `web/src/editor/useEditorSync.test.ts`, which currently covers only initial load, debounce, cursor motion, and unmount, with a dropped send followed by reconnect without typing, edits during an outstanding acknowledgement, and cleanup before reconnect. Preserve the no-command-replay assertions in `web/src/ws.test.ts` and draft-over-disk behavior in `src/monitor/editor-feed.test.ts`; record the draft recovery behavior in `product/specs/editor-tab.md`.
-
-
 ## deferred
 
 * Give the clipboard-history plugin an owned store instance and feed its popup through an injected subscription hook. — deferred: complexity 8/10, requires an instance-owned plugin lifecycle plus an injected React subscription adapter across the store, plugin entry, popup, and three test files.
