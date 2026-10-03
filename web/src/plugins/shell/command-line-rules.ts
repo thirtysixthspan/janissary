@@ -22,13 +22,14 @@ export function shellLine(text: string): string {
 }
 
 // The control characters a terminal would send for the keys the application claims for itself, named
-// rather than written literally so the file holds no invisible characters.
+// rather than written literally so the file holds no invisible characters. Module scope, not exported:
+// `controlCharacterFor` below is the whole of the module's answer to that question.
 // `Ctrl+C` is deliberately absent from the unconditional case: whether it interrupts or copies depends
 // on whether the bar holds a selection, which only the handler knows.
 const INTERRUPT = 3;
 const END_OF_INPUT = 4;
 const SUSPEND = 26;
-export const CONTROL_KEYS = {
+const CONTROL_KEYS = {
   'ctrl+c': String.fromCodePoint(INTERRUPT),
   'ctrl+d': String.fromCodePoint(END_OF_INPUT),
   'ctrl+z': String.fromCodePoint(SUSPEND),
@@ -41,14 +42,4 @@ export type ControlKey = keyof typeof CONTROL_KEYS;
 export function controlCharacterFor(key: ControlKey, hasSelection: boolean): string | undefined {
   if (key === 'ctrl+c' && hasSelection) return undefined;
   return CONTROL_KEYS[key];
-}
-
-// The command bar's own Up/Down recall walks the lines it has sent, which is the complete history of
-// this shell: nothing can be typed into the terminal directly, so there is nowhere else a command
-// could have come from.
-export function recallLine(lines: readonly string[], index: number, direction: 'older' | 'newer'): number {
-  const next = direction === 'older' ? index - 1 : index + 1;
-  if (next < 0) return 0;
-  if (next >= lines.length) return lines.length - 1;
-  return next;
 }

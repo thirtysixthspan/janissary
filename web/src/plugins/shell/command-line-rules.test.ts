@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  controlCharacterFor, recallLine, routeFor, shellLine,
+  controlCharacterFor, routeFor, shellLine,
 } from './command-line-rules';
 
 describe('shell command line rules', () => {
@@ -36,20 +36,5 @@ describe('shell command line rules', () => {
     // The other two keep their meaning: a selection in the command bar is text, not a running program.
     expect(controlCharacterFor('ctrl+d', true)).toBe(String.fromCodePoint(4));
     expect(controlCharacterFor('ctrl+z', true)).toBe(String.fromCodePoint(26));
-  });
-
-  it('walks the sent lines and stops at either end', () => {
-    const sent = ['one', 'two', 'three'];
-
-    expect(recallLine(sent, 3, 'older')).toBe(2);
-    expect(recallLine(sent, 2, 'newer')).toBe(2);
-    // Past the newest line there is nothing newer, so the walk stays there rather than wrapping.
-    expect(recallLine(sent, 2, 'newer')).toBe(2);
-    expect(recallLine(sent, 0, 'older')).toBe(0);
-  });
-
-  it('walks a single-line history without moving off it', () => {
-    expect(recallLine(['only'], 1, 'older')).toBe(0);
-    expect(recallLine(['only'], 0, 'older')).toBe(0);
   });
 });
