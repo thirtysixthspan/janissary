@@ -40,10 +40,13 @@ Most entries are typed by a user or authored in a profile, but the app appends o
 harness tab that hits a subscription limit schedules its own resume, as a one-shot entry named
 `auto-resume` carrying the prompt to type in (see [[harness]] § Auto-resume after a usage limit).
 It is an ordinary entry in every respect — it appears in the schedule window and the `schedules` tab,
-`schedule cancel auto-resume` removes it, it is retried while the harness is not running, and it
+`schedule cancel auto-resume in <label>` removes it, it is retried while the harness is not running,
+and it
 fires like anything else — and it is *appended* to whatever else that tab already has, so a user's
 own timers on the same tab are untouched. An app-added entry replaces an earlier entry of the same id
-rather than piling a second row under it, and a user who cancels it simply stops waiting.
+rather than piling a second row under it, and a user who cancels it simply stops waiting. The
+`in <label>` clause is what reaches it, for the same reason every other harness timer needs one: a
+harness tab cannot run commands itself.
 
 ### Sleep and overdue commands
 

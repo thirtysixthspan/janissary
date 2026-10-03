@@ -510,9 +510,12 @@ accepted in either form, since codex prints a typographic one.
 **What happens next.** The resume is scheduled as an ordinary one-shot entry on the tab's own
 schedule, named `auto-resume`, for one minute after the stated reset — the reset is the earliest
 moment the harness will take work, so the wait is for it and the minute is a margin. The schedule
-window and the `schedules` tab therefore show it like any other timer (`schedule list` lists it,
-`schedule cancel auto-resume` stops it), and if the harness is not running yet when it comes due the
-delivery retries on a later tick. When it fires, the text `resume the task you were working on.` is
+window and the `schedules` tab therefore show it like any other timer, and if the harness is not
+running yet when it comes due the
+delivery retries on a later tick. A user cancels it from another tab with
+`schedule cancel auto-resume in <label>` — the `in <tab>` clause is required, because a harness tab
+has no command line of its own (see [[scheduling]]). When it fires, the text
+`resume the task you were working on.` is
 typed into the harness and submitted — the harness has no way to know it was interrupted, so it is
 told plainly. The delivery is recorded in the feed like any other scheduled command.
 
