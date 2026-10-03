@@ -60,7 +60,8 @@ its real length. Nothing in the player shortens it.
 
 A recording of a session that is **still running** is followed: new output extends the timeline, the
 metadata line reads `live`, and reaching the end holds the last frame and continues rather than
-stopping.
+stopping. The badge reports the session rather than the last thing it said, so it stays on while a
+session sits waiting for your next prompt.
 
 A recording of a session that has **ended** simply plays out. Speed is the way through an unattended
 run rather than silence. See

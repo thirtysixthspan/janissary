@@ -9,11 +9,11 @@ import { formatClock, formatStartedAt } from './format';
 // A reason appears here rather than in place of the player: a recording that will not parse, or one
 // with no events yet, still opens as a player, so the first good frame has somewhere to go.
 export function AsciicastMeta({
-  header, duration, growing, exitStatus, problem,
+  header, duration, live, exitStatus, problem,
 }: {
   header: CastHeader | undefined;
   duration: number;
-  growing: boolean;
+  live: boolean;
   exitStatus?: number;
   problem?: string;
 }) {
@@ -25,7 +25,7 @@ export function AsciicastMeta({
         exitStatus !== undefined && `exit ${exitStatus}`]
         .filter((fact): fact is string => !!fact)
         .join(' · ')}
-      {growing && <span className="asciicast-live">live</span>}
+      {live && <span className="asciicast-live">live</span>}
       {problem && <span className="asciicast-problem">{problem}</span>}
     </div>
   );

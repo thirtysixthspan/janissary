@@ -209,7 +209,59 @@ describe('AsciicastTab', () => {
     field.remove();
   });
 
-  it('renders the host\'s own split control rather than one of its own', async () => {
+  it('badges a session that is still recording however long it stays quiet', async () => {
+  // A poll that brought nothing new used to drop the badge, which made a live session waiting on the
+  // next prompt indistinguishable from one that had finished. Silence is not an ending, so the badge
+  // now reports the session rather than the last packet.
+  const fetchMock = vi.fn();
+  fetchMock.mockResolvedValueOnce(new Response(encode(HEADER + '[0, "o", "one"]\n')));
+  fetchMock.mockResolvedValue(new Response(new ArrayBuffer(0), { status: 206 }));
+  vi.stubGlobal('fetch', fetchMock);
+  const asked: string[] = [];
+  render(<AsciicastTab
+    payload={makePayload({ finished: false })}
+    capabilities={makeCapabilities({
+      intent: async <Result,>(name: string) => { asked.push(name); return { live: true } as Result; },
+    })}
+  />);
+
+  await waitFor(() => expect(document.querySelector('.asciicast-live')).not.toBeNull());
+  // Every poll past the first read found nothing, and the badge is still there because the host says
+  // the session is still writing the recording.
+  await waitFor(() => expect(asked).toEqual(['liveness']));
+  expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
+  expect(document.querySelector('.asciicast-live')).not.toBeNull();
+});
+
+it('drops the badge once the host says nothing is writing the recording', async () => {
+  const fetchMock = vi.fn();
+  fetchMock.mockResolvedValueOnce(new Response(encode(HEADER + '[0, "o", "one"]\n')));
+  fetchMock.mockResolvedValue(new Response(new ArrayBuffer(0), { status: 206 }));
+  vi.stubGlobal('fetch', fetchMock);
+  render(<AsciicastTab
+    payload={makePayload({ finished: false })}
+    capabilities={makeCapabilities({ intent: async <Result,>() => ({ live: false }) as Result })}
+  />);
+
+  await waitFor(() => expect(document.querySelector('.asciicast-live')).not.toBeNull());
+  // The host's answer is that the session has ended, so the badge goes with it.
+  await waitFor(() => expect(document.querySelector('.asciicast-live')).toBeNull());
+});
+
+it('never badges a recording that was finished when it opened, and never asks about it', async () => {
+  const asked: string[] = [];
+  renderTab(makePayload(), makeCapabilities({
+    intent: async <Result,>(name: string) => { asked.push(name); return { live: true } as Result; },
+  }));
+  await waitFor(() => expect(screen.getByLabelText('Pause')).toBeDefined());
+
+  // Nothing is writing this file and the host has said so, so there is nothing left to ask it about.
+  await new Promise((resolve) => { setTimeout(resolve, 1000); });
+  expect(document.querySelector('.asciicast-live')).toBeNull();
+  expect(asked).toEqual([]);
+});
+
+it('renders the host\'s own split control rather than one of its own', async () => {
     renderTab(makePayload(), makeCapabilities({
       splitAction: <button type="button" className="tab-split">Split</button>,
     }));

@@ -170,8 +170,10 @@ The asciicast tab:
   and a seek bar. Every one is a button as well as a chord — Space or `p`, `,` and `.`, `[` and `]` —
   and there are no markers;
 - **follows a live session**: while the session is still recording, the timeline extends as output
-  arrives, the metadata line reads `live`, and reaching the end of what has been recorded holds the
-  last frame and continues rather than reporting the playback finished;
+  arrives, the metadata line reads `live` for as long as the session lasts — however long it goes
+  without producing output, which for an agent between two prompts is most of the time — and reaching
+  the end of what has been recorded holds the last frame and continues rather than reporting the
+  playback finished;
 - **plays at the timing it was recorded at**, silences at their real length. A recording is the only
   record of what a session did, and shortening the gaps would make a run that waited ten minutes
   indistinguishable from one that answered in ten seconds;

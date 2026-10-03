@@ -155,7 +155,7 @@ describe('asciicast opener', () => {
       .toThrow(new TabPluginRejection('A terminal recording has no external viewer.'));
   });
 
-  it('rejects an unknown intent name against a real payload, and has no intents of its own', () => {
+  it('rejects an unknown intent name against a real payload', () => {
     const file = recording('claude-2026-10-01T14-32-05-123Z.cast');
     const { capabilities, opened } = fakeCapabilities();
     activate().opener.inline(file, capabilities);
@@ -163,5 +163,46 @@ describe('asciicast opener', () => {
     // The rejection is thrown rather than answered, which is what every guarded plugin call does.
     expect(() => activate().intent({ intent: 'rewind', payload: {}, tabPayload: payload }, capabilities))
       .toThrow(new TabPluginRejection('unknown asciicast intent "rewind"'));
+  });
+
+  it('answers the one question the recording itself cannot: is a tab still writing it', () => {
+    const file = recording('claude-2026-10-01T14-32-05-123Z.cast');
+    // Asked once when the tab opens and again every time a poll brings nothing new, so the answer has
+    // to reach the client rather than being folded into the payload the tab already holds. These are
+    // the host's own capabilities rather than a fake, so the tab list decides the answer as it does in
+    // the running app.
+    const live = hostCapabilities(file, { live: true });
+    activate().opener.inline(file, live.capabilities);
+    const finished = hostCapabilities(file);
+    activate().opener.inline(file, finished.capabilities);
+
+    expect(activate().intent({
+      intent: 'liveness', payload: null, tabPayload: live.opened[0].payload,
+    }, live.capabilities)).toEqual({ live: true });
+    expect(activate().intent({
+      intent: 'liveness', payload: null, tabPayload: finished.opened[0].payload,
+    }, finished.capabilities)).toEqual({ live: false });
+  });
+
+  it('answers the liveness question for the recording its own tab is holding', () => {
+    const file = recording('claude-2026-10-01T14-32-05-123Z.cast');
+    const { capabilities, isRecordingLive, opened } = fakeCapabilities({ live: true });
+    activate().opener.inline(file, capabilities);
+    isRecordingLive.mockClear();
+
+    activate().intent({ intent: 'liveness', payload: null, tabPayload: opened[0].payload }, capabilities);
+
+    // The host is asked about the recording the tab is holding rather than about anything a client
+    // named — which is the whole reason the intent takes no argument.
+    expect(isRecordingLive).toHaveBeenCalledWith(file);
+  });
+
+  it('rejects an argument to the one intent that takes none', () => {
+    const file = recording('claude-2026-10-01T14-32-05-123Z.cast');
+    const { capabilities, opened } = fakeCapabilities();
+    activate().opener.inline(file, capabilities);
+    expect(() => activate().intent({
+      intent: 'liveness', payload: { path: '/tmp/other.cast' }, tabPayload: opened[0].payload,
+    }, capabilities)).toThrow(new TabPluginRejection('invalid liveness payload'));
   });
 });

@@ -18,14 +18,19 @@ export function AsciicastTab({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { resourceUrl, active, splitAction, dock } = capabilities;
-  const source = useAsciicastSource(resourceUrl(payload.url), active);
+  // Whether the session writing this recording is still running: the host's answer at open, and the
+  // host again whenever a poll brings nothing new. A recording still being written is followed and
+  // holds at the end of what has been recorded rather than reporting the playback finished, and it is
+  // badged for as long as the session lasts rather than for as long as it keeps talking.
+  const askLive = async (): Promise<boolean> => {
+    const answer = await capabilities.intent<{ live: boolean }>('liveness', null);
+    return answer.live;
+  };
+  const source = useAsciicastSource({
+    url: resourceUrl(payload.url), active, liveAtOpen: !payload.finished, askLive,
+  });
   const terminal = useAsciicastTerminal(source.header, containerRef, capabilities);
-  // A recording still being written is followed and holds at the end of what has been recorded rather
-  // than reporting the playback finished. Both facts are needed: the server's answer says the recording
-  // was not being written when the tab opened, and new bytes arriving say it is being written now —
-  // and a first read always brings bytes, so either alone would put every freshly opened recording
-  // into the live state for a moment.
-  const playback = usePlayback(source.events, terminal, !payload.finished && source.growing);
+  const playback = usePlayback(source.events, terminal, source.live);
 
   useEffect(() => { if (!active) playback.pause(); }, [active, playback]);
 
@@ -71,7 +76,7 @@ export function AsciicastTab({
         <AsciicastMeta
           header={source.header}
           duration={playback.duration}
-          growing={source.growing}
+          live={source.live}
           exitStatus={source.exitStatus}
           problem={source.error}
         />
