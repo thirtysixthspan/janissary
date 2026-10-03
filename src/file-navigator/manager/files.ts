@@ -10,7 +10,7 @@ export function openNavigatorFile(
   managers: Managers, state: FilesTabState, label: string, relPath: string,
   command: FileOpenerChoice['command'],
 ): MaybePromise<void> {
-  const remote = state.remote;
+  const { remote, root, filesystem } = state;
   if (!remote) {
     openMaterialized(managers, label, path.resolve(state.root, relPath), command);
     return;
@@ -19,11 +19,11 @@ export function openNavigatorFile(
     notify(managers, 'file-operation', label, 'Remote files cannot be opened externally. Edit or open the file in a tab instead.');
     return;
   }
-  return mapMaybe(state.filesystem.readFile(state.root, relPath), (content) => {
-    const workspaceLabel = managers.remote.workspaceLabelOf(state.ownerLabel ?? label) ?? state.ownerLabel ?? label;
+  const workspaceLabel = managers.remote.workspaceLabelOf(state.ownerLabel ?? label) ?? state.ownerLabel ?? label;
+  return mapMaybe(filesystem.readFile(root, relPath), (content) => {
     const file = materializeRemoteFile(
       remote.host, workspaceLabel, relPath, content,
-      { filesystem: state.filesystem, root: state.root, relPath, label },
+      { filesystem, root, relPath, label },
     );
     openMaterialized(managers, label, file, command);
   });
@@ -32,13 +32,16 @@ export function openNavigatorFile(
 export function createNavigatorFile(
   managers: Managers, state: FilesTabState, label: string, destination: string,
 ): MaybePromise<void> {
-  return mapMaybe(state.filesystem.createFile(state.root, destination), (result) => {
+  const { remote, root, filesystem } = state;
+  const workspaceLabel = remote
+    ? managers.remote.workspaceLabelOf(state.ownerLabel ?? label) ?? state.ownerLabel ?? label
+    : undefined;
+  return mapMaybe(filesystem.createFile(root, destination), (result) => {
     if (!result.ok) { notify(managers, 'file-operation', label, result.reason); return; }
-    if (!state.remote) { void openNavigatorFile(managers, state, label, result.value.path, 'edit'); return; }
-    const workspaceLabel = managers.remote.workspaceLabelOf(state.ownerLabel ?? label) ?? state.ownerLabel ?? label;
+    if (!remote) { void openNavigatorFile(managers, state, label, result.value.path, 'edit'); return; }
     const file = materializeRemoteFile(
-      state.remote.host, workspaceLabel, result.value.path, new Uint8Array(),
-      { filesystem: state.filesystem, root: state.root, relPath: result.value.path, label },
+      remote.host, workspaceLabel!, result.value.path, new Uint8Array(),
+      { filesystem, root, relPath: result.value.path, label },
     );
     const opened = managers.openFile.edit(`edit ${file}`, file, label);
     const tab = opened && managers.tab.tabs.find((candidate) => candidate.label === opened.label);

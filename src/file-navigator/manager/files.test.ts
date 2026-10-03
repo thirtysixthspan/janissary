@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createNavigatorDirectory, createNavigatorFile, openNavigatorFile } from './files.js';
-import { initRemoteFileCache } from '../remote/file-cache.js';
+import { initRemoteFileCache, remoteFileFor } from '../remote/file-cache.js';
 import { NOTIFICATIONS_LABEL } from '../../notifications/tab.js';
 import { NotificationQueue } from '../../notifications/queue.js';
 import type { FilesTabState } from '../state.js';
@@ -28,7 +28,7 @@ function makeManagers() {
   const notifications = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
   const editor = { label: 'editor-1', log: [], editor: { path: '' } };
   const tabs = [active, notifications, editor];
-  const edit = vi.fn(() => editor);
+  const edit = vi.fn((_command: string, _file: string, _label: string) => editor);
   const run = vi.fn();
   const append = vi.fn();
   const workspaceLabelOf = vi.fn(() => 'creator' as string | undefined);
@@ -54,6 +54,22 @@ function remoteState(filesystem: Partial<FileSystemPort>, ownerLabel?: string): 
 const readFile = () => vi.fn().mockResolvedValue(Buffer.from('remote bytes'));
 
 describe('openNavigatorFile', () => {
+  it('keeps the read destination when the navigator changes root and port before the answer', async () => {
+    initRemoteFileCache(project());
+    const { managers, edit } = makeManagers();
+    let answer!: (content: Uint8Array) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
+    const filesystem = { readFile: vi.fn(() => new Promise<Uint8Array>((resolve) => { answer = resolve; })) };
+    const state = remoteState(filesystem, 'joined');
+    const opening = openNavigatorFile(managers, state, 'files', 'a.ts', 'edit');
+    state.root = '/remote/ws/other';
+    state.filesystem = {} as FileSystemPort;
+    answer(Buffer.from('original'));
+    await opening;
+    const file = edit.mock.calls[0][1];
+    expect(remoteFileFor(file)).toMatchObject({ root: '/remote/ws', filesystem, relPath: 'a.ts' });
+  });
+
   it('opens a local file for edit in a tab of its own', () => {
     const { managers, edit, run } = makeManagers();
     const state = stateFor({});
@@ -77,7 +93,7 @@ describe('openNavigatorFile', () => {
     await openNavigatorFile(managers, remoteState({ readFile: readFile() }, 'joined'), 'files', 'a.ts', 'edit');
     expect(workspaceLabelOf).toHaveBeenCalledWith('joined');
     expect(edit).toHaveBeenCalledWith(
-      expect.stringContaining('remote-files/devbox/creator/a.ts'), expect.any(String), 'files',
+      expect.stringMatching(/remote-files\/devbox\/creator\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
     );
   });
 
@@ -89,19 +105,36 @@ describe('openNavigatorFile', () => {
     owned.workspaceLabelOf.mockReturnValue(undefined);
     await openNavigatorFile(owned.managers, remoteState({ readFile: readFile() }, 'joined'), 'files', 'a.ts', 'edit');
     expect(owned.edit).toHaveBeenCalledWith(
-      expect.stringContaining('remote-files/devbox/joined/a.ts'), expect.any(String), 'files',
+      expect.stringMatching(/remote-files\/devbox\/joined\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
     );
 
     const orphan = makeManagers();
     orphan.workspaceLabelOf.mockReturnValue(undefined);
     await openNavigatorFile(orphan.managers, remoteState({ readFile: readFile() }), 'files', 'a.ts', 'edit');
     expect(orphan.edit).toHaveBeenCalledWith(
-      expect.stringContaining('remote-files/devbox/files/a.ts'), expect.any(String), 'files',
+      expect.stringMatching(/remote-files\/devbox\/files\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
     );
   });
 });
 
 describe('createNavigatorFile', () => {
+  it('keeps the create destination when the navigator changes root and port before the answer', async () => {
+    initRemoteFileCache(project());
+    const { managers, edit } = makeManagers();
+    type Created = Awaited<ReturnType<FileSystemPort['createFile']>>;
+    let answer!: (result: Created) => void;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
+    const filesystem = { createFile: vi.fn(() => new Promise<Created>((resolve) => { answer = resolve; })) };
+    const state = remoteState(filesystem, 'joined');
+    const creating = createNavigatorFile(managers, state, 'files', 'new.ts');
+    state.root = '/remote/ws/other';
+    state.filesystem = {} as FileSystemPort;
+    answer({ ok: true, value: { path: 'new.ts' } });
+    await creating;
+    const file = edit.mock.calls[0][1];
+    expect(remoteFileFor(file)).toMatchObject({ root: '/remote/ws', filesystem, relPath: 'new.ts' });
+  });
+
   it('reports the refusal and opens nothing when the filesystem refuses', () => {
     const { managers, edit, append } = makeManagers();
     const createFile = vi.fn(() => ({ ok: false, reason: 'a file already holds that name' }));
@@ -130,7 +163,7 @@ describe('createNavigatorFile', () => {
     await createNavigatorFile(managers, state, 'files', 'src/new.ts');
     expect(workspaceLabelOf).toHaveBeenCalledWith('joined');
     expect(edit).toHaveBeenCalledWith(
-      expect.stringContaining('remote-files/devbox/creator/src/new.ts'), expect.any(String), 'files',
+      expect.stringMatching(/remote-files\/devbox\/creator\/[a-f0-9]{64}\/new\.ts$/), expect.any(String), 'files',
     );
     expect(editor.editor).toMatchObject({ newFile: true });
   });
@@ -142,14 +175,14 @@ describe('createNavigatorFile', () => {
     owned.workspaceLabelOf.mockReturnValue(undefined);
     await createNavigatorFile(owned.managers, remoteState({ createFile: created() }, 'joined'), 'files', 'a.ts');
     expect(owned.edit).toHaveBeenCalledWith(
-      expect.stringContaining('remote-files/devbox/joined/a.ts'), expect.any(String), 'files',
+      expect.stringMatching(/remote-files\/devbox\/joined\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
     );
 
     const orphan = makeManagers();
     orphan.workspaceLabelOf.mockReturnValue(undefined);
     await createNavigatorFile(orphan.managers, remoteState({ createFile: created() }), 'files', 'a.ts');
     expect(orphan.edit).toHaveBeenCalledWith(
-      expect.stringContaining('remote-files/devbox/files/a.ts'), expect.any(String), 'files',
+      expect.stringMatching(/remote-files\/devbox\/files\/[a-f0-9]{64}\/a\.ts$/), expect.any(String), 'files',
     );
   });
 });
