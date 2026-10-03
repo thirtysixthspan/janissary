@@ -94,7 +94,7 @@ The codex matcher reads the capture's rows, takes **the last three non-blank one
 
 ### 2. The observer — `HarnessAutoResumer` in the same module
 
-Constructed with callbacks and no `Managers` reference, exactly like `HarnessAutoApprover`, so the same class runs locally and far side. The local wiring passes `schedule`, `cancel`, `onScheduled` and `onDelivered`; the far side passes only `onScheduled`.
+Constructed with callbacks and no `Managers` reference, exactly like `HarnessAutoApprover`, so the same class runs locally and far side. The local wiring passes `schedule`, `cancel`, `onScheduled` and `onSettled`; the far side passes only `onScheduled`.
 
 Its state is three fields: the text it last acted on, the instant already scheduled for the current blockage, and the id of the entry it appended. `onCapture` proceeds in this order:
 
@@ -105,7 +105,7 @@ Its state is three fields: the text it last acted on, the instant already schedu
 5. Otherwise compute the instant. If it equals the one already acted on, return — this is the one-resume-per-blockage rule.
 6. Otherwise record it, append the entry, and report.
 
-`onDelivered` clears the pending id — the entry is gone from the tab's schedule — and reports the delivery so the strip flag turns green-then-plain. `isParked` is true from the moment a blockage is acted on until the screen changes, which is the window busy tracking is told about.
+`onSettled` clears the pending id — the entry has left the tab's schedule, delivered or withdrawn — and reports it, so the strip flag leaves `Auto-resuming` either way. The name says neither outcome because the entry's does not: a resume the user cancelled is not a resume that landed. `isParked` is true from the moment a blockage is acted on until the screen changes, which is the window busy tracking is told about.
 
 The observer holds no OS resource: the entry it appended belongs to the tab's schedule and dies with the tab, exactly as a profile's one-shot launch prompt does.
 
@@ -121,7 +121,9 @@ The observer holds no OS resource: the entry it appended belongs to the tab's sc
 
 ### 4. The schedule
 
-`ScheduleManager` gains `add(label, entry, onFired?)`: append (creating the list when the tab has none), announce the change so the schedule window and schedules tab refresh, and return the entry. `onFired` is invoked once, after a successful delivery, and never on a tick where delivery had to wait — a retry is not a firing. It exists so the owner of delivery remains the owner while the observer learns when its entry actually landed, which is what flips the strip flag; the alternative, a second timer inside the observer, was rejected because it would duplicate the scheduler's timing, its retry rule and its one-entry-per-tick budget.
+`ScheduleManager` gains `add(label, entry, hooks?)`: append (creating the list when the tab has none), replace any entry carrying the same id, announce the change so the schedule window and schedules tab refresh, and write a non-harness tab's schedule to its state file the way `tick` and the `schedule` command do. `hooks` is an `EntryHooks` pair — `fired` runs once after a successful delivery and never on a tick where delivery had to wait, since a retry is not a firing; `removed` runs when the entry leaves the schedule any other way, which is the user cancelling it, a clear, or the tab closing. It exists so the owner of delivery stays the owner while the observer learns what became of its entry: `fired` is what flips the strip flag from scheduled to resumed, and `removed` is what stops the strip claiming a pending resume for an entry a user has withdrawn. The alternative, a second timer inside the observer, was rejected because it would duplicate the scheduler's timing, its retry rule and its one-entry-per-tick budget.
+
+The hooks are keyed by tab and then entry id, in two maps rather than one joined key: a profile harness entry's name may contain a space, and `codex team 2` must not read as an entry of `codex team`.
 
 `fireDue` already applies that budget to harness tabs, so a tab holding both a user's timer and a resume never sees two prompts concatenated in one tick.
 
@@ -181,16 +183,18 @@ Named so they read as choices rather than oversights:
 
 Mirror the existing per-module suites; every file named here already exists except the two new modules' own suites.
 
-- `src/harness/auto-resume.test.ts` (new): the example text as one row and as the two-row wrap, with **both** apostrophe forms in the limit wording; all three reset forms — `try again at 1:20 PM` / `1:20pm` / `13:20`, `try again at Jul 8th, 2026 10:59 AM`, and `try again in 4 hours 20 minutes` (tokens summed); a date with no time → no match; a duration past 24 hours → no match; the limit wording with no clause → no match; a limit message with unrelated output below it → no match; a harness absent from the table → no match. `resumeInstant`: the one-minute margin, the midnight rollover, a dated reset in the past rolling to next year, and a stated time already in the past clamping to `now + margin` (the case that would otherwise be a day late). The observer: one schedule for a screen redrawn unchanged; a changed screen with a different stated reset schedules once more; a cleared blockage cancels the pending entry and re-arms; `onDelivered` clears the pending id and moves the flag from scheduled to resumed; `isParked` is false for an unsupported harness.
-- `src/harness/auto-resume-wire.test.ts` (new): the local wiring appends through `ScheduleManager.add` rather than `set` (so an existing entry survives), and the notification carries the capture file link.
-- `src/schedule/manager.test.ts`: `add` appends without disturbing existing entries and announces the change; `onFired` runs once after a successful delivery and not on a tick where the harness was not running.
-- `src/harness/busy-status.test.ts`: a parked tab commits `busy: false, unread: false` on the first capture with no debounce, arms no `harness-idle` escalation, and returns to normal tracking once the resumer reports delivery; a limit screen with no usable reset leaves the badge alone; an existing gate and recap case must keep passing.
+- `src/harness/auto-resume.test.ts` (new): the example text as one row and as the two-row wrap, with **both** apostrophe forms in the limit wording; all three reset forms — `try again at 1:20 PM` / `1:20pm` / `13:20`, `try again at Jul 8th, 2026 10:59 AM`, and `try again in 4 hours 20 minutes` (tokens summed); a date with no time → no match; a duration past 24 hours → no match; the limit wording with no clause → no match; a limit message with unrelated output below it → no match; a harness absent from the table → no match. `resumeInstant`: the one-minute margin, the midnight rollover, a dated reset in the past rolling to next year, and a stated time already in the past clamping to `now + margin` (the case that would otherwise be a day late). The observer: one schedule for a screen redrawn unchanged; a changed screen with a different stated reset schedules once more; a cleared blockage cancels the pending entry and re-arms; `onSettled` clears the pending id and moves the flag from scheduled to resumed; `isParked` is false for an unsupported harness.
+- `src/harness/auto-resume-wire.test.ts` (new): the local wiring appends through `ScheduleManager.add` rather than `set` (so an existing entry survives), the notification carries the capture file link, and the flag reaches `resumed` from either hook — a delivery and a withdrawal both mean nothing is pending.
+- `src/schedule/manager.test.ts`: `add` appends without disturbing existing entries, replaces one carrying the same id rather than doubling the row, and announces the change; `fired` runs once after a successful delivery and not on a tick where the harness was not running; `removed` runs exactly once for an entry cancelled, cleared or dropped with its tab, and never for an entry replaced through `add`; two tabs whose labels differ only by a suffix keep their hooks apart, and the longer one's entry still fires after the shorter one's schedule was replaced.
+- `src/harness/busy-status.test.ts`: a parked tab commits `busy: false, unread: false` on the first capture with no debounce, arms no `harness-idle` escalation, and returns to normal tracking once the resumer reports the entry settled; a limit screen with no usable reset leaves the badge alone; an existing gate and recap case must keep passing.
 - `src/harness/command-parse.test.ts`: default on for codex, `--no-auto-resume` opting out, `--auto-resume` refused for claude and opencode with the exact refusal text.
-- `src/harness/manager.test.ts`, `src/harness/capture/wire.test.ts` and `src/harness/observers.test.ts`: `Tab.autoResume` is set from the launch and reaches the wiring, `harnessLaunchView()` carries `autoResume: ['codex']`, and a tab launched with `--no-auto-resume` builds no resumer.
+- `src/harness/manager.test.ts` and `src/harness/observers.test.ts`: `Tab.autoResume` is set from the launch and reaches the wiring, a profile entry takes the launch default per harness, and `harnessLaunchView()` carries `autoResume: ['codex']`.
+- `src/harness/capture/wire.test.ts`: an ordinary capture reaches the approver, then the resumer, then the busy handler — in that order, since the handler reads the parked state as of the same capture — a settled re-read reaches the busy handler alone, `autoResume` false builds no resumer, and `autoApprove` false still feeds one.
 - `src/remote/protocol.test.ts`: `resume-event` round-trips with a base64 capture, `resume-ack` is admitted, and a version-24 peer is still refused by `parseHandshake`.
 - `web/src/harness/HarnessLaunchDialog.test.tsx`: the checkbox is enabled, defaulted and labelled for codex; disabled for claude and opencode; `--no-auto-resume` is submitted when unchecked and nothing extra when checked.
 - `web/src/shared/AgentTabMeta.test.tsx`: the three flag states render as `Auto-resume`, green `Auto-resuming`, and `Auto-resume` again.
 - The typed `HarnessLaunchView` fixtures in `web/src/harness/HarnessLaunchDialog.test.tsx`, `web/src/ws.test.ts` and `web/src/useServerState.test.ts` all gain the new field.
+- `src/remote/pty-session.test.ts`, `src/remote/serve-processes.test.ts` and `src/remote/channel/sessions.test.ts`: the spawn frame carries `autoResume`, a `resume-event` becomes a scheduled entry plus a notification plus the flag, delivery sends `resume-ack`, a replayed report whose reset has passed resumes at once, the far side reports a limit instead of acting on it and stops reporting once acknowledged, and a report arriving before its tab is built is held and delivered on attach.
 - Regression: the auto-approve, busy-status, observers, screen, schedule, sessions, remote and launch-dialog suites must pass unchanged.
 
 ## Specs and docs
@@ -199,10 +203,10 @@ Update in the same change, per `AGENTS.md`:
 
 - `product/specs/harness.md` — a new `### Auto-resume after a usage limit` section beside Auto-approve covering the registry, the recognized text with its tail-position and apostrophe rules, all three reset forms and the 24-hour ceiling, the one-minute margin, the parked-tab dot and badge silence, the schedule entry, the flag states and the notification; the launch-dialog bullet gains the Auto-resume checkbox; § Busy/ready status gains the parked rule beside the existing gate rule; § Screen capture notes the resumer as a capture consumer that never sees the settle capture; the harness tab-data list gains the new field.
 - `product/specs/notifications.md` — the `auto-resume` event and its capture link.
-- `product/specs/scheduling.md` — that the app itself may append an entry to a harness tab's schedule, named `auto-resume` and delivered verbatim like any other, inside § Firing.
+- `product/specs/scheduling.md` — a new section for the entry the app adds for itself: appended beside the tab's own timers, replaced by id rather than doubled, cancellable by the user, and reachable only through the `in <tab>` clause.
 - `product/specs/remote-server.md` — the far-side detection split, beside the version-18 gate/busy description.
 - `product/specs/profiles.md` — that a harness entry has no `autoResume` field, so the launch default applies to a profile-opened tab.
-- `help.md` and `documentation/user-documentation/advanced-agents/harness.md` — the flag, the flag states, and what a parked tab looks like.
+- `help.md` and `documentation/user-documentation/advanced-agents/harness.md` — the launch option, the flag and its three states, what a parked tab looks like, and the cancel command with the `in <tab>` clause it needs; `documentation/user-documentation/tab-types/notifications.md` gains the new capture link; the New harness dialog screenshot is recaptured for the new toggle.
 
 ## Autonomous decisions taken while building
 
@@ -214,7 +218,11 @@ Recorded here rather than silently, because each one departs from what this plan
 - **`resume-ack` is sent on delivery only, not on cancellation.** Nothing on the client watches a remote tab's screen, so the only cancellation it can perform is a user's own `schedule cancel auto-resume`; the far side re-arms by seeing its screen change, which is the same rule a local observer follows. Adding a cancel hook to `ScheduleManager` for that would be a second hook with one speculative caller.
 - **`resumeEntry` lives in `src/harness/auto-resume.ts`, not the wire module.** Two callers build the identical entry — the local wiring and a remote session's replayed report — so it belongs beside the prompt and the id it is made of rather than in one of them.
 
+- **A pending resume the user withdraws reports it too.** `ScheduleManager.add`'s hook pair carries `removed` alongside `fired` so that `schedule cancel auto-resume in <label>`, a `clear`, or a closing tab all put the strip back to plain `Auto-resume`. Without it a cancelled entry left the tab claiming a pending resume that would never be typed. An entry *replaced* through `add` reports neither: it was never removed, and it is still on the schedule under its new instant.
+
 ## Verification
+
+The parts a machine without a codex subscription to exhaust can still check: the launch dialog offering Auto-resume for exactly the harnesses the parser accepts it for, `harness claude --auto-resume` refused, an armed codex tab carrying an unhighlighted `Auto-resume` bolt, a `--no-auto-resume` tab carrying none, `schedule cancel auto-resume in <label>` answering on a tab with no such entry, and a user timer reaching the same harness tab through `in <tab>`.
 
 ```bash
 ./scripts/run.mjs check-diff
