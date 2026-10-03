@@ -17,6 +17,10 @@ import { type ClientPluginRegistration } from './registry';
 
 const CLIENT_ACTIVATION_MS = 5000;
 
+// What a plugin that claimed no chord reads. A shared constant so the common case keeps one identity
+// rather than a fresh empty array on every render.
+const NO_CHORDS: readonly string[] = [];
+
 class PluginErrorBoundary extends Component<{
   children: React.ReactNode;
   onFailure(error: unknown): void;
@@ -146,6 +150,16 @@ export function PluginBody({
   // stable, or a plugin would drop its dirty state every time the host rebuilt this callback.
   const onDirtyHandleRef = useRef(onDirtyHandle);
   onDirtyHandleRef.current = onDirtyHandle;
+  // The chord ids the host accepted for this plugin, taken from the tab's own wire view rather than
+  // from the declaration the client cannot read. Held in a ref keyed by their joined form because the
+  // view is rebuilt on every state broadcast: a fresh array each time would rebuild the capability
+  // object with it, and a plugin tab must keep its capabilities stable while it is merely on screen.
+  const claimedChords = plugin.chords ?? NO_CHORDS;
+  const chordsRef = useRef(claimedChords);
+  if (chordsRef.current !== claimedChords && chordsRef.current.join(' ') !== claimedChords.join(' ')) {
+    chordsRef.current = claimedChords;
+  }
+  const chords = chordsRef.current;
   const registerDirty = useCallback((handle: TabDirtyHandle | null) => {
     onDirtyHandleRef.current?.(handle);
   }, []);
@@ -158,9 +172,9 @@ export function PluginBody({
   );
   const capabilities = useMemo(
     () => createPluginClientCapabilities(
-      host, pluginId, label, client, active, dock, close, splitAction, registerDirty,
+      host, pluginId, label, client, active, dock, close, splitAction, registerDirty, chords,
     ),
-    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction],
+    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

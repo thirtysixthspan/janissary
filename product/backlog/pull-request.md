@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Read the shell plugin's chord claim from the wire view the host already sends, rather than keeping a second copy of it on the client.
-
-Existing Issue: The plan requires the claim to ride `PluginTabView.chords` precisely so that no client keeps its own copy, and `src/tab/view.ts` populates that field from the declaration, but nothing on the client reads it and `web/src/plugins/shell/ShellTab.tsx` declares a separate `CLAIMED_CHORDS` literal. Severity: 5/10
-
-Existing Risk: 5/10 - The claim the host validates at activation and the claim the client honours are two independent literals, so editing the manifest's `chords` leaves the server validating one set while the tab claims another, and neither side can see the other's copy, so the divergence is silent.
-
-Proposal Risk: 3/10 - The claim then rides a field rebuilt on every state broadcast, so the registration effect must not depend on its identity or it will drop and retake the chord between two keypresses.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: take the plugin chord claim from the tab wire view". Thread the claimed ids down to the plugin body: `web/src/plugins/PluginTabLayer.tsx` already receives the whole `TabView` and `web/src/plugins/PluginBody.tsx` is handed `tab.plugin`, so pass `plugin.chords` through to the shell body and delete the `CLAIMED_CHORDS` literal and the comment claiming a plugin cannot read its own declaration. Because `usePluginChordClaims` in `web/src/plugins/PluginChords.tsx` lists its `chords` argument among the effect's dependencies, key that effect on a stable serialization of the ids, such as a joined string, so a fresh array identity per broadcast does not unregister and reregister the claim. The chord cases in `web/src/plugins/shell/ShellTab.test.tsx` and `web/src/useWindowKeys.test.ts` cover precedence and must keep passing; add a case asserting a claim changed in the declaration is honoured with no client literal present.
-
-
 * Release every terminal a plugin starts in one payload factory, not only the first.
 
 Existing Issue: `withResources` in `src/tab/openers.ts` collects the ids it spawned but returns only `terminals[0]` for adoption, so a factory that starts a second terminal leaves it registered under the empty label it was spawned with, and the focus-an-existing-tab path adopts the new terminal onto the tab that already existed. Severity: 5/10

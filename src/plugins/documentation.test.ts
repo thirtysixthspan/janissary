@@ -22,7 +22,7 @@ const COUNT_WORDS = [
 // this server-side test cannot import without dragging the client entry into the server graph. Raise
 // it in the same change that adds a client capability, or the assertion below passes for the wrong
 // reason once the two drift apart.
-const CLIENT_CAPABILITY_COUNT_WORD = 'twelve';
+const CLIENT_CAPABILITY_COUNT_WORD = 'thirteen';
 
 describe('tab plugin developer documentation', () => {
   it('shows the fixture manifest the repository actually ships', () => {

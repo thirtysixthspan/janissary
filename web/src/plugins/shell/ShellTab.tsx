@@ -75,10 +75,12 @@ const AGENT_ICON = { prefix: 'fas' as const, iconName: 'plus' as const };
 // shell has no turn — the bar's colour is the only thing it has to say.
 const DOT_COLOR = '#7ee787';
 
-// The one chord this plugin's declaration claims, written out here to mirror the manifest: the claim
-// rides the tab's wire view, but a plugin cannot read its own declaration, and the host's own
-// `validateDeclaration` still refuses a malformed id at activation.
-const CLAIMED_CHORDS = ['ctrl+r'];
+// The one chord this plugin's declaration claims is not written out here. The claim is data the host
+  // validated at activation and sends on this tab's view, so it is read from `claimedChords` rather
+  // than restated — a second copy would be a second thing able to disagree with the claim actually
+// enforced, with nothing to notice when it did. Absent means the declaration claimed none, which is
+// the same as claiming nothing.
+const NO_CHORDS: readonly string[] = [];
 
 export function ShellTab({ payload, capabilities }: Properties) {
   const inputReference = useRef<HTMLTextAreaElement>(null);
@@ -189,7 +191,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   // `Ctrl+R` is claimed by this plugin's declaration, so it reaches this tab while it is the visible
   // one and belongs to the application everywhere else. The window handler consults the claim before
   // its own table, which is the whole of the rule and needs nothing here.
-  usePluginChordClaims('shell', CLAIMED_CHORDS, capabilities.active, useCallback(() => {
+  usePluginChordClaims('shell', capabilities.claimedChords ?? NO_CHORDS, capabilities.active, useCallback(() => {
     setHistoryOpen((open) => !open);
   }, []));
 

@@ -58,6 +58,11 @@ export function usePluginChords(): PluginChordRegistry {
 // goes through a ref so that changing what the handler does does not re-register the claim — which
 // would drop and retake the chord in the same tick, and a key pressed inside that window would fall
 // through to the application.
+//
+// The claim list is keyed by its joined form, and read through a ref, for the same reason. It arrives
+// on the tab's wire view, which the host rebuilds on every state broadcast, so depending on the
+// array's identity would release and retake the claim continuously and open exactly that window to
+// ordinary use.
 export function usePluginChordClaims(
   pluginId: string,
   chords: readonly string[],
@@ -67,10 +72,14 @@ export function usePluginChordClaims(
   const registry = usePluginChords();
   const handlerRef = useRef(handler);
   handlerRef.current = handler;
+  const chordsRef = useRef(chords);
+  chordsRef.current = chords;
+  const claimed = chords.join(' ');
   useEffect(() => {
-    if (!active || chords.length === 0) return;
-    const releases = chords.map((chordId) =>
+    const ids = chordsRef.current;
+    if (!active || ids.length === 0) return;
+    const releases = ids.map((chordId) =>
       registry.register(pluginId, chordId, () => { handlerRef.current(); }));
     return () => { for (const release of releases) release(); };
-  }, [registry, pluginId, active, chords]);
+  }, [registry, pluginId, active, claimed]);
 }

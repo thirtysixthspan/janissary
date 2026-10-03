@@ -140,6 +140,12 @@ export type TabPluginClientCapabilities = {
   // host-owned, and a plugin that lays itself out differently in a narrow sidebar reads it here
   // rather than measuring the host's frame or sniffing its DOM.
   dock: 'left' | 'right' | null;
+  // The chord ids this plugin's declaration claimed, as the host accepted them at activation and sends
+  // them on this tab's view. Read them here rather than writing them out in the plugin: a second copy
+  // is a second thing that can disagree with the claim actually enforced, and nothing would notice
+  // when it did. Optional, like `attachTerminal`, so the plugin fixtures that build a capability
+  // object are not churned for a field none of them claims; absent means the declaration claimed none.
+  claimedChords?: readonly string[];
   // Close this tab. Unlike `splitAction` this is a callback rather than a host-rendered control,
   // because a plugin may need to close on something other than a click of its own button — an
   // embedded cross-origin page swallows the host's Cmd+W and has to answer for it itself.
@@ -181,10 +187,12 @@ export function createPluginClientCapabilities(
   onClose: () => void,
   splitAction?: ReactNode,
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void,
+  claimedChords: readonly string[] = [],
 ): TabPluginClientCapabilities {
   return {
     active,
     dock,
+    claimedChords,
     close: onClose,
     registerDirtyHandle: onDirtyHandle,
     resourceUrl,

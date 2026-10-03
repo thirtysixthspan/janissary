@@ -74,6 +74,7 @@ function makeCapabilities(overrides: {
   dispatched?: boolean;
   completions?: { matches: string[]; newInput: string; newCursor: number };
   status?: { running: boolean };
+  claimedChords?: readonly string[];
 } = {}) {
   const written: Written = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -111,6 +112,9 @@ function makeCapabilities(overrides: {
     openFileNavigator: vi.fn(),
     launchAgentHere: vi.fn(),
     reportFailure: vi.fn(),
+    // What the host accepted at activation and put on this tab's view — the shell manifest claims
+    // `ctrl+r`, so that is the default here too.
+    claimedChords: overrides.claimedChords ?? ['ctrl+r'],
   } as unknown as TabPluginClientCapabilities;
   return {
     capabilities, closed, handle, resized, written,
@@ -418,5 +422,23 @@ describe('ShellTab', () => {
     const { chords } = renderTab();
 
     expect(chords.run('ctrl+g')).toBe(false);
+  });
+
+  it('claims whatever chord the host sent, rather than one written out beside it', async () => {
+    // `ctrl+t` is not in the shell manifest; if the body honoured its own copy of the claim this
+    // would still be `ctrl+r` and the case below would pass for the wrong reason.
+    const { chords } = renderTab({ claimedChords: ['ctrl+t'] });
+
+    expect(chords.run('ctrl+r')).toBe(false);
+    chords.run('ctrl+t');
+
+    await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
+  });
+
+  it('claims nothing when the tab carries no claim at all', () => {
+    const { chords } = renderTab({ claimedChords: [] });
+
+    expect(chords.run('ctrl+r')).toBe(false);
+    expect(document.querySelector('.shell-history')).toBeNull();
   });
 });
