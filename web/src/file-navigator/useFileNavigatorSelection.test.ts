@@ -10,6 +10,8 @@ import {
   selectFromPointer,
   selectionFromRestore,
   toggleSelection,
+} from './file/navigator-selection';
+import {
   useFileNavigatorSelection,
 } from './useFileNavigatorSelection';
 import { collectNavigatorSelections } from './file/navigator-selection-registry';

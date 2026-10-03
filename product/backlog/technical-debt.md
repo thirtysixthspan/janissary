@@ -4,17 +4,6 @@
 
 ## development
 
-* Move the file navigator's selection rules into a pure module so menu actions no longer import a React hook module.
-
-Existing Debt: The navigator action service imports `normalizeOperationPaths` from `useFileNavigatorSelection`, while the pure sibling-selection module imports its state type from the same hook module, reversing §8 (the four layers) and leaving selection transitions, operation scoping, and React lifecycle in one owner. Severity: 6/10
-
-Existing Risk: 4/10 - Changes to selection lifecycle also touch the module defining which paths delete and commit actions receive, so UI maintenance can accidentally alter operation scope for selected directories and descendants.
-
-Proposal Risk: 2/10 - Selection rules gain an independent dependency boundary and retain their direct assertions, but a mistaken import or moved constant could still change selection initialization or restoration and would need the existing hook and overlay tests to expose it.
-
-Proposal: Create `web/src/file-navigator/file/navigator-selection.ts` for `FileNavigatorSelection`, `TreeRestoreHint`, `EMPTY_SELECTION`, and the pure selection functions currently in `web/src/file-navigator/useFileNavigatorSelection.ts`, including the private ancestor lookup; keep state, callbacks, effects, and registry publication in the hook and import its rules directly from the new module. Retarget the runtime `normalizeOperationPaths` imports in `web/src/file-navigator/file/navigator-menu-actions.ts` and `web/src/file-navigator/use-file-navigator-row-events.ts`, and the state-type import in `web/src/file-navigator/file/navigator-siblings.ts`, without re-export shims. The hook has six production importers, but only those three need import changes; its return shape and remaining callers stay compatible. Retarget the pure-function imports in `web/src/file-navigator/useFileNavigatorSelection.test.ts`, `web/src/file-navigator/FileNavigatorOverlays.test.tsx`, and the type import in `web/src/file-navigator/file/navigator-siblings.test.ts`; preserve the assertions for descendant suppression, parent-row exclusion, rename reconciliation, restore revisions, root changes, and registry cleanup. Those tests already exercise the pure functions without rendering, so the gain is removing upward dependencies rather than introducing their first unit-test seam.
-
-
 * Give the clipboard-history plugin an owned store instance and feed its popup through an injected subscription hook.
 
 Existing Debt: The clipboard-history store keeps entries, selection, configuration, subscribers, and capture teardown at module scope, and its popup imports the store's live functions directly, violating §7 (service classes are framework-free and injected) and §8 (the four layers), with store and popup tests resetting the same global history. Severity: 8/10

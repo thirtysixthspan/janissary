@@ -13,7 +13,7 @@ import type { FileNavigatorMenuActions } from './file/navigator-menu-items';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { createFileNavigatorActions } from './file/navigator-menu-actions';
-import { normalizeOperationPaths } from './useFileNavigatorSelection';
+import { normalizeOperationPaths } from './file/navigator-selection';
 
 type Drag = ReturnType<typeof useFileNavigatorDrag>;
 type Rename = ReturnType<typeof useFileNavigatorRename>;

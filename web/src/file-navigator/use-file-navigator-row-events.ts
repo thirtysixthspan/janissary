@@ -1,7 +1,8 @@
 import { useRef, useState, type RefObject } from 'react';
 import type React from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import { normalizeOperationPaths, type useFileNavigatorSelection } from './useFileNavigatorSelection';
+import { normalizeOperationPaths } from './file/navigator-selection';
+import type { useFileNavigatorSelection } from './useFileNavigatorSelection';
 import type { useFileNavigatorDrag } from './useFileNavigatorDrag';
 import { fileActivation } from './file/activation';
 
