@@ -563,6 +563,42 @@ describe('ScheduleManager add', () => {
   });
 });
 
+// An app-added entry on an agent tab has to reach the state file, or it is lost on relaunch until
+// some unrelated schedule change happens to make a tick write the list.
+describe('ScheduleManager add persistence', () => {
+  // Each case restores its own spy: `vi.spyOn` hands back the same mock for an already-spied method,
+  // so a case that leaves it installed hands its call history to the next one that asserts on it.
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('writes an agent tab state file carrying the new entry', () => {
+    const { managers, saveSpy } = withRealTabManager({ label: 'bekir' });
+    const mgr = managers.schedule;
+    mgr.add('bekir', { id: 'standup', command: 'report', spec: 'every 1d', nextRun: Date.now() + 60_000, recurring: true, timeOfDay: { hour: 9, minute: 0 } });
+
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+    expect(saveSpy.mock.calls.at(-1)?.[0]).toMatchObject({
+      schedule: [expect.objectContaining({ id: 'standup' })],
+    });
+  });
+
+  it('writes no state file for a harness tab, whose schedule is memory-only by design', () => {
+    const { managers, saveSpy } = withRealTabManager({
+      label: 'codex', view: 'harness', harness: { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' },
+    });
+    managers.schedule.add('codex', { id: 'auto-resume', command: 'resume', spec: 'once', nextRun: Date.now() + 60_000, recurring: false });
+
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing for a tab that has since closed', () => {
+    const { managers, saveSpy } = withRealTabManager({ label: 'bekir' });
+    managers.tab.tabs.length = 0;
+    managers.schedule.add('bekir', { id: 'x', command: 'y', spec: 'once', nextRun: 1, recurring: false });
+
+    expect(saveSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('ScheduleManager schedule launch dialog', () => {
   function makeMgr(tabs: Partial<Tab>[], activeLabel: string): ScheduleManager {
     const managers = {

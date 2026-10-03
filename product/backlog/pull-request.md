@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Make `ScheduleManager.add` persist an agent tab's schedule, so an app-added entry on one cannot vanish on relaunch.
-
-Existing Issue: `add` writes to the in-memory map and announces the change but never calls `TabManager.persist`, while `tick` persists the whole list on any tick that changes it and the `schedule` command persists explicitly — so an entry appended by `add` on an agent tab reaches the state file only when some later, unrelated schedule change causes a tick to write it. No caller does this today; every `add` call site is a harness tab, whose schedules are memory-only by design. Severity: 3/10
-
-Existing Risk: 2/10 - Nothing reaches it, so the trap is latent rather than live: the first non-harness caller inherits a method whose contract silently differs from the command path beside it.
-
-Proposal Risk: 2/10 - Persisting on every add writes the agent's state file once per append, which is the same cost the `schedule` command already pays.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1525: have ScheduleManager.add persist a non-harness tab's schedule". Mirror what `src/commands/schedule.ts`'s `persistSchedule` helper does after its `set`: in `add`, look the tab up with `managers.tab.byLabel(label)` and, when it is not a harness tab, call `managers.tab.persist(managers.tab.buildAgentState(tab, { schedule: this.schedules.get(label) }))`. The lookup already returns undefined for a closed tab, which covers the "nothing to persist" case without a second check. Add a case to `src/schedule/manager.test.ts` using the file's existing `withRealTabManager` fixture, which runs the real `TabManager.persist` path: add an entry to an agent tab, assert the agent state file receives it, and add the harness-tab counterpart asserting no persist happens there. `src/commands/schedule.ts` and the manager's own `cancel` path must keep passing untouched.
-
 * Correct the pull request description and the user documentation to say a harness tab's resume is cancelled with `schedule cancel auto-resume in <label>`, since a bare `schedule cancel` targets the issuing tab.
 
 Existing Issue: Both the pull request's "How to verify" step 9 and the new "Resuming after a usage limit" section in `documentation/user-documentation/advanced-agents/harness.md` tell the user to run `schedule cancel auto-resume`, but a harness tab has no command bar and `schedule cancel` without an `in <tab>` clause operates on the issuing tab's own schedule, so from an agent tab it answers `No scheduled command "auto-resume".` Severity: 3/10

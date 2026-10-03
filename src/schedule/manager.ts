@@ -99,14 +99,26 @@ export class ScheduleManager {
   // to wait — a retry is not a firing — while `onRemoved` runs when the entry leaves the schedule any
   // other way, the user cancelling it or the tab closing. Hooks are held beside the entry rather than
   // on `ScheduleEntry`, which agent tabs persist. For a harness tab: an entry the app appends itself
-  // lands in a schedule the user also owns, and this appends to it rather than replacing it.
+  // lands in a schedule the user also owns, and this appends to it rather than replacing it. An
+  // agent tab's schedule is written to its state file here, as `tick` and the `schedule` command do.
   add(label: string, entry: ScheduleEntry, hooks?: EntryHooks): void {
     const current = this.schedules.get(label) ?? [];
-    this.schedules.set(label, [...current.filter((e) => e.id !== entry.id), entry]);
+    const next = [...current.filter((e) => e.id !== entry.id), entry];
+    this.schedules.set(label, next);
     this.forgetHook(label, entry.id);
     if (hooks) this.entryHooks(label, entry.id, hooks);
+    this.persist(label, next);
     this.announceChange();
     messageBus.emit('state', { type: 'dirty' });
+  }
+
+  // Write a tab's schedule into its state file, for the tabs whose schedules outlive the process.
+  // `TabManager.persist` writes agent tabs only, so a harness tab's — memory-only by design — is
+  // simply not written, and a closed tab's label resolves to nothing and is skipped.
+  private persist(label: string, entries: ScheduleEntry[]): void {
+    const tab = this.managers.tab.byLabel(label);
+    if (!tab) return;
+    this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: entries }));
   }
 
   // Forget a tab's schedule (on tab close).
