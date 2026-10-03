@@ -12,10 +12,11 @@ follows describes the behavior.
 ## One way in, one way out
 
 The terminal is **output only**. It is never given keyboard focus, clicking it hands focus back to
-the command bar, and the command bar holds focus whenever the tab is the visible one. Nothing can be
-typed into the terminal directly — every keystroke goes through the command bar beneath it, which is
-what makes the tab's shape the same as an agent tab's: one line you type into, one area that shows
-the result.
+the command bar, and the command bar holds focus whenever the tab is the visible one. It also refuses
+input on its own terms, so a stray keystroke cannot reach zsh even if something else were to move the
+focus. Nothing can be typed into the terminal directly — every keystroke goes through the command bar
+beneath it, which is what makes the tab's shape the same as an agent tab's: one line you type into,
+one area that shows the result.
 
 That has two consequences a user meets immediately.
 
