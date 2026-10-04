@@ -60,6 +60,16 @@ export class PseudoterminalManager {
     return this.ptys.has(ptyId);
   }
 
+  // Whether a session is still registered *and* belongs to one of `labels`. Distinct from `isRunning`,
+  // which answers for whatever id it is handed and is right for the host's own callers: pty ids come
+  // from a plain counter, so a plugin holding one could enumerate them and learn which other processes
+  // in the window are alive. The owner is read from the registry rather than tracked beside it, so the
+  // answer cannot drift from the session `closeTab` reaps.
+  isRunningFor(ptyId: string, labels: readonly string[]): boolean {
+    const entry = this.ptys.get(ptyId);
+    return entry !== undefined && labels.includes(entry.tabLabel);
+  }
+
   // Spawn a PTY whose bytes are handed to `handlers.onData` instead of being published on the bus —
   // a remote channel's `ssh -t … janus remote-serve` session, whose output is a framed transport
   // rather than a terminal stream once its handshake lands. It is registered like any other PTY so

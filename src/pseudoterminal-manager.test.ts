@@ -192,6 +192,36 @@ describe('PseudoterminalManager', () => {
     expect(() => { manager.adopt('ghost', 'shell'); }).not.toThrow();
   });
 
+  // Pty ids come from a plain counter, so a plugin holding one could enumerate them and learn which
+  // other processes in the window are alive. `isRunningFor` is the scoped answer, and it reads the
+  // owner from the registry rather than from a set tracked beside it — so it cannot answer for a tab
+  // that has closed.
+  it('isRunningFor answers only for a session one of the given labels owns', () => {
+    const { managers } = makeManagers([makeTab('shell', 'red'), makeTab('main', 'blue')]);
+    const manager = new PseudoterminalManager(managers);
+    manager.spawn('', 'zsh', '', '/repo', undefined, undefined, undefined, { shell: '/bin/zsh', args: [] });
+    manager.adopt('pty1', 'shell');
+
+    expect(manager.isRunningFor('pty1', ['shell'])).toBe(true);
+    expect(manager.isRunningFor('pty1', ['shell', 'shell2'])).toBe(true);
+    expect(manager.isRunningFor('pty1', ['main'])).toBe(false);
+    expect(manager.isRunningFor('pty1', [])).toBe(false);
+    expect(manager.isRunningFor('ghost', ['shell'])).toBe(false);
+  });
+
+  it('isRunningFor stops answering once closeTab has reaped the session', () => {
+    const { managers } = makeManagers([makeTab('shell', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+    const id = manager.spawn('shell', 'zsh', '', '/repo');
+
+    expect(manager.isRunningFor(id, ['shell'])).toBe(true);
+    manager.closeTab('shell');
+
+    // The plugin tab still holds the payload of the shell that just exited, and this is how it finds
+    // out. A tracked set beside the tab manager would have to be pruned here to say the same thing.
+    expect(manager.isRunningFor(id, ['shell'])).toBe(false);
+  });
+
   it('closeTab kills and forgets only the PTYs owned by that tab', () => {
     const { managers } = makeManagers([makeTab('main', 'red'), makeTab('other', 'blue')]);
     const manager = new PseudoterminalManager(managers);

@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Answer `terminalRunning` only for terminals the calling plugin spawned, rather than for any pty id it is handed.
-
-Existing Issue: `createPluginContext` in `src/plugins/context.ts` answers `terminalRunning` with `managers.pty.isRunning(ptyId)` for whatever id the caller supplies, while the type comment in `src/plugins/api.ts` and the capability's own bullet in `documentation/developer-documentation/tab-plugins.md` both describe it as reporting on "a terminal this plugin spawned". Severity: 4/10
-
-Existing Risk: 3/10 - Pty ids come from a plain counter in `src/pty.ts`, so a plugin can enumerate them and learn which other processes in the window are alive, and the answer widens by default the moment it carries anything more than a boolean.
-
-Proposal Risk: 2/10 - Scoping the answer turns a capability whose contract was a claim into one that enforces it, and a plugin that was guessing ids now gets `false` rather than an answer it should not have had.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: scope terminalRunning to the calling plugin's own terminals". The ids a plugin legitimately holds are the ones its own payload factory received from `spawnTerminal`, which `withResources` in `src/tab/openers.ts` already collects and `openPluginTab` adopts, so the host has exactly the set it needs. Track those ids per plugin record — a `Set` beside the record in `src/plugins/status.ts`, added in the same place the terminal is adopted, or a map from plugin id to ids inside `TabManager` next to `spawnTerminal` and `adoptTerminal` — and have `terminalRunning` in `src/plugins/context.ts` answer `false` for an id outside it rather than consulting `isRunning`. The factory is the only place a plugin can learn an id, so nothing legitimate breaks. Add the two cases to `src/plugins/shell-capabilities.test.ts` beside the existing `terminalRunning` case: the id the plugin's own factory received answers truthfully, and an id belonging to no plugin of this caller answers `false`; the second fails today. `src/plugins/shell/activate.test.ts` stubs the capability object and keeps passing untouched. While there, correct the wording in `documentation/developer-documentation/tab-plugins.md` only if the enforcement lands — the existing bullet already says what the behaviour should be, so no doc change is needed if it does.

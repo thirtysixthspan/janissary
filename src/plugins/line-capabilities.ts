@@ -17,7 +17,12 @@ export function lineCapabilities(input: {
   answeringLabel?: string;
   isEnabled: () => boolean;
 }): Pick<TabPluginServerCapabilities, 'originTab' | 'dispatchLine' | 'completeLine' | 'terminalRunning'> {
-  const { managers, origin, answeringLabel, isEnabled } = input;
+  const { managers, declaration, origin, answeringLabel, isEnabled } = input;
+  // The labels of this plugin's own open tabs — the only terminals whose ids a plugin can legitimately
+  // hold, because a payload factory is the only scope in which it may start one.
+  const ownTabLabels = () => managers.tab.tabs
+    .filter((tab) => tab.plugin?.id === declaration.id)
+    .map((tab) => tab.label);
   return {
     originTab: () => {
       if (!isEnabled()) return null;
@@ -42,6 +47,10 @@ export function lineCapabilities(input: {
       return managers.command.dispatchLine(answering ? answeringLabel : origin.label, line);
     },
     completeLine: (line, cursor) => (isEnabled() ? complete(managers, line, cursor) : { matches: [], newInput: line, newCursor: cursor }),
-    terminalRunning: (ptyId) => isEnabled() && managers.pty.isRunning(ptyId),
+    // Scoped to this plugin's own tabs rather than to whatever id it was handed. Pty ids come from a
+    // plain counter, so an unscoped answer lets a plugin enumerate them and learn which other
+    // processes in the window are alive — and the contract has always said "a terminal this plugin
+    // spawned", which is the question asked here.
+    terminalRunning: (ptyId) => isEnabled() && managers.pty.isRunningFor(ptyId, ownTabLabels()),
   };
 }

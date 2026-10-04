@@ -225,18 +225,61 @@ describe('completeLine', () => {
 });
 
 describe('terminalRunning', () => {
-  it('asks the pty manager, which is the only thing that knows', () => {
-    const isRunning = vi.fn(() => true);
-    const { managers } = makeManagers({ pty: { isRunning } as never });
+  // The labels the plugin's own tabs hold, which is what the answer is scoped to. A plugin tab of its
+  // own is what `openPluginTab` would have minted, and what `PseudoterminalManager.adopt` re-points a
+  // spawned terminal at.
+  function withPluginTabs(pty: { isRunningFor: unknown }, tabs: { label: string; pluginId?: string }[]) {
+    const { managers, ...rest } = makeManagers();
+    (managers.tab as unknown as { tabs: unknown }).tabs = tabs.map((tab) => ({
+      label: tab.label, ...(tab.pluginId && { plugin: { id: tab.pluginId, instanceKey: tab.label } }),
+    }));
+    Object.assign(managers, { pty });
+    return { managers: managers as Managers, ...rest };
+  }
+
+  function ptyFor(running: Record<string, boolean>) {
+    return {
+      isRunningFor: vi.fn((ptyId: string, labels: readonly string[]) =>
+        running[ptyId] === true && labels.length > 0),
+    };
+  }
+
+  it('answers truthfully for a terminal one of the plugin\'s own tabs holds', () => {
+    const { managers } = withPluginTabs(ptyFor({ pty7: true }), [{ label: 'shell1', pluginId: 'shell' }]);
 
     expect(contextFor(['terminalRunning'], managers).terminalRunning('pty7')).toBe(true);
-    expect(isRunning).toHaveBeenCalledWith('pty7');
+  });
+
+  // Pty ids come from a plain counter, so an unscoped answer lets a plugin enumerate them and learn
+  // which other processes in the window are alive.
+  it('refuses an id belonging to a tab of another plugin', () => {
+    const { managers } = withPluginTabs(ptyFor({ pty7: true }), [{ label: 'image1', pluginId: 'image' }]);
+
+    expect(contextFor(['terminalRunning'], managers).terminalRunning('pty7')).toBe(false);
+  });
+
+  it('answers for any of the plugin\'s own tabs, not only the most recent one', () => {
+    const { managers } = withPluginTabs(ptyFor({ pty7: true }), [
+      { label: 'image1', pluginId: 'image' }, { label: 'shell1', pluginId: 'shell' }, { label: 'shell2', pluginId: 'shell' },
+    ]);
+
+    expect(contextFor(['terminalRunning'], managers).terminalRunning('pty7')).toBe(true);
   });
 
   it('reports a terminal that has gone as not running', () => {
-    const { managers } = makeManagers({ pty: { isRunning: vi.fn(() => false) } as never });
+    const { managers } = withPluginTabs(ptyFor({}), [{ label: 'shell1', pluginId: 'shell' }]);
 
     expect(contextFor(['terminalRunning'], managers).terminalRunning('pty7')).toBe(false);
+  });
+
+  it('answers nothing at all once the plugin has been disabled', () => {
+    const { managers } = makeManagers({ pty: { isRunningFor: vi.fn(() => true) } as never });
+    const capabilities = createPluginContext(
+      managers, declaration(['terminalRunning']), activationFor(), { label: 'janus', command: 'zsh' },
+      () => false, [],
+    );
+
+    expect(capabilities.terminalRunning('pty7')).toBe(false);
   });
 });
 
