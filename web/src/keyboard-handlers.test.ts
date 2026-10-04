@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
+import { handleRouteChooserKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
+import { handlePickerKey } from './shared/picker-keyboard';
 import type { RouteChooserView, TabView } from '@shared/protocol';
 import type { TabNavEntry } from './pickers/tab-nav-match';
 
