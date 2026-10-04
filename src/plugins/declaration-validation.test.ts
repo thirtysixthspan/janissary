@@ -110,7 +110,9 @@ describe('chord claim validation', () => {
   // A chord id is compared against the application's table by string, so a typo is a claim that can
   // never fire — which is the plugin's own mistake to hear about, not a key silently doing nothing.
   it('refuses a chord id that is not in the canonical shape', async () => {
-    for (const chord of ['Ctrl+R', 'ctrl-', 'ctrl++', '']) {
+    for (const chord of [
+      'Ctrl+R', 'ctrl-', 'ctrl++', '', 'shift+ctrl+r', 'alt+shift+r', 'ctrl+ctrl+r', 'meta+meta+f',
+    ]) {
       const host = await activateWith(manifest({ chords: [chord] }), activation());
       expect(host.statusFor('fixture')?.state).toBe('disabled');
       expect(host.statusFor('fixture')?.reason).toContain(`claims malformed chord id "${chord}"`);

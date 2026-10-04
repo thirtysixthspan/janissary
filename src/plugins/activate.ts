@@ -41,9 +41,9 @@ function validateDeclaration(declaration: TabPluginDeclaration): void {
   }
 }
 
-// Modifiers in the fixed order `app-chords.ts` documents, then a lowercase key name — the exact shape
-// `eventChordId` writes, so a claim is comparable with the application's own table by string.
-const chordIdPattern = /^(?:(?:meta|ctrl|shift|alt)\+)*[a-z0-9]+$/u;
+// Optional modifier groups enforce the fixed order `meta`, `ctrl`, `shift`, `alt` and allow each only
+// once, followed by a lowercase key name — exactly the shape `eventChordId` writes.
+const chordIdPattern = /^(?:meta\+)?(?:ctrl\+)?(?:shift\+)?(?:alt\+)?[a-z0-9]+$/u;
 
 // A command claim with no handler is answered as a rejection when the command runs, because it has a
 // caller and a transcript to answer into. A notification has neither, so a declaration naming a topic

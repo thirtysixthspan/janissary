@@ -57,17 +57,6 @@ Proposal Risk: 2/10 - Tab-scoped registrations and a deterministic focused-tab r
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: keep simultaneous plugin chord claims per tab". Change the registration identity and cleanup closure in `web/src/plugins/PluginChords.tsx` to include the tab label, and resolve a chord against the tab that currently owns keyboard focus rather than the first registry entry. Add a regression with two shell tabs visible in different surfaces: Ctrl+R must open the focused tab's history, hiding the other tab must not clear the remaining registration, and releasing both must hand Ctrl+R back to the application. Keep the existing shell chord cases in `web/src/plugins/shell/ShellTab.test.tsx` and `web/src/useWindowKeys.test.ts` passing.
 
 
-* Fix the functionality gap where noncanonical chord claims silently fail.
-
-Existing Issue: `chordIdPattern` in `src/plugins/activate.ts` accepts reordered or repeated modifiers such as `shift+ctrl+r`, although `eventChordId` emits modifiers in the fixed `meta`, `ctrl`, `shift`, `alt` order, so activation succeeds for a chord the client never matches. Severity: 4/10
-
-Existing Risk: 4/10 - A plugin author can ship a claim that looks valid in its manifest but never runs, leaving its key binding silently unavailable instead of failing activation with a useful reason.
-
-Proposal Risk: 1/10 - Rejecting noncanonical modifier order and duplicates makes malformed claims fail at activation; the formatter's canonical order still has to be kept in sync with the documented chord format.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: reject noncanonical plugin chord identifiers". Replace the permissive expression in `src/plugins/activate.ts` with validation that enforces the fixed modifier order and rejects repeated modifiers before comparing a declaration with client events. Add invalid-order and duplicate-modifier cases to `src/plugins/declaration-validation.test.ts`, while retaining the accepted canonical ids and the shell's `ctrl+r` claim.
-
-
 * Close the user-documentation debt around the new shell tab.
 
 Existing Issue: `documentation/user-documentation/command-bar/shell.md` describes only the transcript shell and `documentation/user-documentation/command-bar/commands.md` omits `zsh`, so the new output-only shell tab and its routing and key behavior appear only in the in-app help and contributor specs. Severity: 4/10
