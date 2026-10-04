@@ -60,6 +60,11 @@ transcript to search and the queue belongs to agents — which is the same in ev
 `Ctrl+R` opens this tab's own history while it is the visible one, listing the lines its command bar
 has sent. Focus any other tab and `Ctrl+R` opens the application's history picker again.
 
+The list is driven by the keyboard without ever taking it from the command bar: `↑`/`↓` move the
+selection, `Return` puts the chosen line back in the bar, and `Escape` closes it. Picking a row with
+the mouse does the same, and either way the bar is where the keyboard is afterwards, so a recalled line
+can be edited or run.
+
 ## The metadata row
 
 The row shows the working directory the shell started in, a workspace mark when that directory is a

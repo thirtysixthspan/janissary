@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Return focus to the command bar when the shell history popup closes, and give the popup the keys the application's own history picker has.
-
-Existing Issue: `web/src/plugins/shell/ShellHistoryPopup.tsx` focuses itself on mount and nothing hands focus back, so after Escape or after picking a line the focused element is removed from the document and the keyboard lands on the body, leaving a recalled line that cannot be edited or run. Severity: 5/10
-
-Existing Risk: 4/10 - Every use of `Ctrl+R` in a shell tab ends with a dead keyboard, and the list it opens can only be dismissed with the mouse or Escape because it handles no other key.
-
-Proposal Risk: 1/10 - The bar keeps focus throughout, exactly as it does under the application's own history picker, and the popup becomes a list the keyboard can drive rather than one it cannot.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: restore focus and key handling in the shell history popup". Drop the mount-time `focus()` in `web/src/plugins/shell/ShellHistoryPopup.tsx` so the command bar keeps the keyboard, which is what `web/src/pickers/HistoryPicker.tsx` does — the application's picker never takes focus because `web/src/App.tsx`'s key handler owns Up, Down, Return and Escape while the bar stays focused. Add `Up`, `Down`, `Return` and `Escape` to the popup's own window listener, mirroring the handlers in `web/src/pickers/picker/key-bindings.ts` and `web/src/pickers/useHistPicker.ts`: a selected index moves with the arrows, `Return` calls `onPick` with the selected line, and `Escape` calls `onClose`. As a belt-and-braces measure, refocus `inputReference` from `onClose` and from `onPick` in `web/src/plugins/shell/ShellTab.tsx` so a close by any route returns the keyboard to the bar. Track the selected index in the popup's own state and render the selected row with the same class the application pickers use, so what the user is about to run is visible. `web/src/plugins/shell/ShellTab.test.tsx` gains the cases: the bar still holds focus with the popup open, `Up` then `Return` puts the second-newest line in the bar, `Escape` closes and refocuses the bar, and picking a row does the same.
-
 * Correct the pull request description's summary table, which claims that a bare `theme` opens the theme picker in a shell tab when nothing appears.
 
 Existing Issue: The description's table row for `theme` says it opens the theme picker and that the application gets first refusal on every line, while the same description's manual-test section says bare `theme` is claimed by the application and its answer is appended to a transcript a shell tab never draws — the two halves of one document disagree, and the table is the half a reviewer reads first. Severity: 5/10

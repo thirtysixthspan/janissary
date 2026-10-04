@@ -61,6 +61,15 @@
   outline: none;
 }
 
+/* The application's pickers mark the row under the keyboard with `selected`, so this one does too and
+   looks the same doing it. Scoped to this row class rather than reusing `.picker-row` outright, which
+   would bring that class's own padding and layout in with it. */
+.shell-history-row.selected,
+.shell-history-row.selected:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+
 .shell-history-empty {
   padding: 4px 12px;
   color: var(--muted, #8b949e);

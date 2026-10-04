@@ -117,6 +117,11 @@ export function ShellTab({ payload, capabilities }: Properties) {
   });
 
   const onBarKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // The history popup is modal over the bar while it is open, exactly as the agent tab's own history
+    // picker is: its window listener owns Up, Down, Return and Escape. Handling them here as well would
+    // mean one ArrowUp both moved its selection and rewrote the bar, since the bar's recall walks the
+    // very lines the popup lists.
+    if (historyOpen) return;
     // The shell's own control keys, before the baseline keymap: that one returns early on any held
     // modifier, so without this they would reach the window handler and be lost.
     const control = controlKeyOf(event);
@@ -144,7 +149,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
       return;
     }
     bar.onKeyDown(event);
-  }, [bar, capabilities, draft, write]);
+  }, [bar, capabilities, draft, historyOpen, write]);
 
   // `Ctrl+R` is claimed by this plugin's declaration, so it reaches this tab while it is the visible
   // one and belongs to the application everywhere else. The window handler consults the claim before
@@ -182,8 +187,8 @@ export function ShellTab({ payload, capabilities }: Properties) {
       {historyOpen && (
         <ShellHistoryPopup
           lines={sent.toReversed()}
-          onPick={(line) => { setDraft(line); setHistoryOpen(false); }}
-          onClose={() => { setHistoryOpen(false); }}
+          onPick={(line) => { setDraft(line); setHistoryOpen(false); inputReference.current?.focus(); }}
+          onClose={() => { setHistoryOpen(false); inputReference.current?.focus(); }}
         />
       )}
     </div>

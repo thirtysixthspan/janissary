@@ -545,6 +545,63 @@ describe('ShellTab', () => {
     expect(screen.getByText('connections')).toBeInTheDocument();
   });
 
+  it('keeps the keyboard in the command bar while its history popup is open', async () => {
+    const { chords } = renderTab();
+    await waitFor(() => { expect(document.activeElement).toBe(bar()); });
+
+    chords.run('ctrl+r');
+
+    // The popup took focus on mount and nothing handed it back, so after Escape or a pick the focused
+    // element was removed from the document and the keyboard landed on the body.
+    await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
+    expect(document.activeElement).toBe(bar());
+  });
+
+  it('puts the second-newest line in the bar on Up then Return', async () => {
+    const { chords, releaseDispatch } = renderTab({ dispatched: false });
+    for (const line of ['first', 'second']) {
+      fireEvent.change(bar(), { target: { value: line } });
+      fireEvent.keyDown(bar(), { key: 'Enter' });
+      await act(async () => { releaseDispatch(); });
+    }
+
+    chords.run('ctrl+r');
+    await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
+    // The popup lists newest first, so one Up from the highlighted newest line is the one before it.
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(document.querySelector('.shell-history-row.selected')?.textContent).toBe('first');
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    await waitFor(() => { expect(bar().value).toBe('first'); });
+    expect(document.querySelector('.shell-history')).toBeNull();
+  });
+
+  it('closes the history popup on Escape and gives the keyboard back to the bar', async () => {
+    const { chords } = renderTab();
+    chords.run('ctrl+r');
+    await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
+
+    fireEvent.keyDown(bar(), { key: 'Escape' });
+
+    await waitFor(() => { expect(document.querySelector('.shell-history')).toBeNull(); });
+    expect(document.activeElement).toBe(bar());
+  });
+
+  it('gives the keyboard back to the bar when a history row is clicked', async () => {
+    const { chords, releaseDispatch } = renderTab({ dispatched: false });
+    fireEvent.change(bar(), { target: { value: 'only' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    chords.run('ctrl+r');
+    await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
+    fireEvent.click(screen.getByText('only'));
+
+    await waitFor(() => { expect(document.querySelector('.shell-history')).toBeNull(); });
+    expect(bar().value).toBe('only');
+    expect(document.activeElement).toBe(bar());
+  });
+
   it('claims nothing when the tab carries no claim at all', () => {
     const { chords } = renderTab({ claimedChords: [] });
 
