@@ -4,6 +4,27 @@
 
 ## development
 
+* Replace the shared transcript and terminal widgets' full client prop with narrow callbacks so these surfaces can render and operate without depending on the application transport service.
+
+Existing Debt: `web/src/shared/transcript/Transcript.tsx` and `web/src/shared/transcript/TerminalCard.tsx` accept `JanusClient`, build command intents, send the PTY kill request, and pass the service into `web/src/shared/terminal/useXterm.ts`, which also sends PTY input, resize, and terminal-color reports; this couples shared components and hooks to the app transport in violation of §5 (components render, they do not decide), §7 (services are injected at the edge), and §8 (layers import downward only). Severity: 7/10
+
+Existing Risk: 6/10 - A change to the WebSocket client or its protocol methods reaches a shared rendering layer used by agent tabs, notifications, and harness terminals, while render and interaction tests must construct the full client even when they exercise only one intent.
+
+Proposal Risk: 3/10 - Narrow callback contracts make the shared UI independent of JanusClient, but wiring a callback to the wrong PTY or command remains possible and could be missed if interaction coverage is weakened.
+
+Proposal: Replace the `client` prop on `web/src/shared/transcript/Transcript.tsx` with the existing `TranscriptIntents` callbacks from `web/src/shared/transcript/transcript-intents.ts`, and pass a narrow set of PTY callbacks to `web/src/shared/transcript/TerminalCard.tsx` and `web/src/shared/terminal/useXterm.ts` for attach, input, resize, color reporting, and kill. Construct those callbacks at the callers in `web/src/agent-tabs/AgentTabBody.tsx`, `web/src/agent-tabs/InactiveAgentTabBody.tsx`, `web/src/NotificationsTab.tsx`, and `web/src/harness/HarnessTab.tsx`; keep the generic transcript and terminal modules independent of `web/src/ws.ts`. There are three production transcript callers and two production `useXterm` callers (`TerminalCard` and `HarnessTab`), so the seam is contained to these shared widgets and their adapters. Preserve the command routing and scroll behavior pinned by `web/src/shared/transcript/transcript-intents.test.ts`, `web/src/shared/transcript/Transcript.test.tsx`, and `web/src/shared/transcript/Transcript.pin.test.tsx`, as well as PTY lifecycle and kill behavior pinned by `web/src/shared/transcript/TerminalCard.test.tsx` and `web/src/harness/HarnessTab.test.tsx`; add focused tests for `useXterm` input, resize, and attach cleanup because it has no direct test today.
+
+
+* Move the reusable picker key handler into the shared layer so the overlay plugin contract no longer reaches into app-shell keyboard handling.
+
+Existing Debt: `web/src/overlay-plugins/api.ts` re-exports `handlePickerKey` from `web/src/keyboard-handlers.ts`, so the overlay-plugin feature depends on an app-shell module for its list navigation rule, violating §3 (dependencies flow one way) and §8 (layers import downward only). Severity: 6/10
+
+Existing Risk: 4/10 - The overlay contract carries a source dependency on a general app keyboard module, so splitting or relocating app-level handlers couples plugin API maintenance to unrelated host keyboard changes.
+
+Proposal Risk: 1/10 - A shared pure handler removes the layer inversion; the remaining risk is limited to future callers choosing not to use that shared rule.
+
+Proposal: Move the `handlePickerKey` implementation into a new `web/src/shared/picker-keyboard.ts` module. Have `web/src/keyboard-handlers.ts` import and re-export it so `web/src/useWindowKeys.ts` and existing direct consumers keep their current path, and have `web/src/overlay-plugins/api.ts` import it from the shared module instead of re-exporting it from the app shell. This changes two production modules and adds one shared module without changing the overlay plugin contract; `web/src/keyboard-handlers.test.ts` already pins clamped arrow movement, Return selection, Escape closing, and unhandled keys, while `web/src/overlay-plugins/clipboard-history/paste-routing.test.tsx` covers the plugin integration.
+
 ## deferred
 
 * Give the clipboard-history plugin an owned store instance and feed its popup through an injected subscription hook. — deferred: complexity 8/10, requires an instance-owned plugin lifecycle plus an injected React subscription adapter across the store, plugin entry, popup, and three test files.
