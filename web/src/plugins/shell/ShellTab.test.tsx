@@ -20,6 +20,7 @@ interface FakeTerminal {
   disposed: boolean;
   options: Record<string, unknown>;
   resizes: { cols: number; rows: number }[];
+  focusCalls: number;
 }
 
 vi.mock('@xterm/xterm', () => ({
@@ -27,6 +28,7 @@ vi.mock('@xterm/xterm', () => ({
     written: string[] = [];
     disposed = false;
     resizes: { cols: number; rows: number }[] = [];
+    focusCalls = 0;
     options: Record<string, unknown>;
 
     constructor(options: Record<string, unknown>) {
@@ -41,6 +43,8 @@ vi.mock('@xterm/xterm', () => ({
     hasSelection() { return false; }
     getSelection() { return ''; }
     clearSelection() {}
+    onData() { return { dispose: () => {} }; }
+    focus() { this.focusCalls += 1; }
     get cols() { return 100; }
     get rows() { return 30; }
   },
@@ -243,6 +247,17 @@ describe('ShellTab', () => {
     const { capabilities } = renderTab({ overlayOwnsCommandBar: true });
     fireEvent.keyDown(bar(), { key: 'Tab' });
     expect(capabilities.intent).not.toHaveBeenCalledWith('complete', expect.anything());
+  });
+
+  it('moves focus between the command bar and terminal with Shift+Tab', () => {
+    renderTab();
+    const terminal = terminals.at(-1)!;
+
+    fireEvent.keyDown(bar(), { key: 'Tab', shiftKey: true });
+    expect(terminal.focusCalls).toBe(1);
+
+    fireEvent.keyDown(document.querySelector('.shell-body')!, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(bar());
   });
 
   it('loads the selected queued command into its own bar and edits that queue entry', () => {
@@ -617,20 +632,17 @@ describe('ShellTab', () => {
   it('holds focus in the command bar rather than the terminal', async () => {
     renderTab();
 
-    // The bar is the only input path, so a tab that has just become visible focuses it rather than
-    // leaving the caret wherever the last click happened to land.
+    // A tab that has just become visible starts with the command bar focused.
     await waitFor(() => { expect(document.activeElement).toBe(bar()); });
   });
 
-  it('returns focus to the command bar when the terminal is clicked', () => {
+  it('focuses the terminal when it is clicked', () => {
     renderTab();
     const body = document.querySelector('.shell-body')!;
-    const active = globalThis.document.activeElement as HTMLElement | null;
-    active?.blur();
 
     fireEvent.mouseDown(body);
 
-    expect(globalThis.document.activeElement).toBe(bar());
+    expect(terminals.at(-1)?.focusCalls).toBe(1);
   });
 
   it('claims Ctrl+R while its tab is visible, and the host spends the claim on it', async () => {

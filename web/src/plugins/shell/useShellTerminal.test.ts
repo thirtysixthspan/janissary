@@ -5,6 +5,8 @@ import { useShellTerminal } from './useShellTerminal';
 
 const terminals: { written: string[]; disposed: boolean; options: Record<string, unknown> }[] = [];
 const fitCalls: number[] = [];
+const terminalDataHandlers: ((data: string) => void)[] = [];
+const terminalFocusCalls: number[] = [];
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
@@ -24,6 +26,8 @@ vi.mock('@xterm/xterm', () => ({
     hasSelection() { return false; }
     getSelection() { return ''; }
     clearSelection() {}
+    onData(handler: (data: string) => void) { terminalDataHandlers.push(handler); }
+    focus() { terminalFocusCalls.push(1); }
     get cols() { return 120; }
     get rows() { return 40; }
   },
@@ -46,6 +50,8 @@ vi.stubGlobal('ResizeObserver', class {
 beforeEach(() => {
   terminals.length = 0;
   fitCalls.length = 0;
+  terminalDataHandlers.length = 0;
+  terminalFocusCalls.length = 0;
 });
 
 function makeHandle(into: {
@@ -107,6 +113,22 @@ describe('useShellTerminal', () => {
     expect(written).toEqual(['ls -la\n']);
   });
 
+  it('forwards keystrokes from the focused terminal through its attached handle', () => {
+    const { written } = harness();
+
+    act(() => { terminalDataHandlers[0]?.('ls\n'); });
+
+    expect(written).toEqual(['ls\n']);
+  });
+
+  it('focuses the terminal on request', () => {
+    const { result } = harness();
+
+    act(() => { result.current.focus(); });
+
+    expect(terminalFocusCalls).toEqual([1]);
+  });
+
   it('reports an exit to the tab', () => {
     const { exitHandlers, onExit } = harness();
 
@@ -137,13 +159,11 @@ describe('useShellTerminal', () => {
     expect(() => { result.current.write('x'); }).not.toThrow();
   });
 
-  it('refuses a terminal that would take keystrokes', () => {
+  it('accepts keystrokes when focused and shows a terminal cursor', () => {
     harness();
 
-    // Nothing may be typed into this terminal directly: the command line is the only input path, and
-    // this is what makes that structural rather than a matter of where focus happens to be.
-    expect(terminals[0].options.disableStdin).toBe(true);
-    expect(terminals[0].options.cursorBlink).toBe(false);
+    expect(terminals[0].options.disableStdin).toBe(false);
+    expect(terminals[0].options.cursorBlink).toBe(true);
   });
 
   it('survives a tab switch, which hands it a fresh capability object', () => {

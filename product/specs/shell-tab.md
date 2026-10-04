@@ -9,18 +9,17 @@ The tab is contributed by a **bundled tab plugin** rather than by the applicatio
 [[tab-plugins]]). Nothing about it changes because of that: `zsh` is in every build, and what
 follows describes the behavior.
 
-## One way in, one way out
+## Choose where keys go
 
-The terminal is **output only**. It is never given keyboard focus, clicking it hands focus back to
-the command bar, and the command bar holds focus whenever the tab is the visible one. It also refuses
-input on its own terms, so a stray keystroke cannot reach zsh even if something else were to move the
-focus. Nothing can be typed into the terminal directly — every keystroke goes through the command bar
-beneath it, which is what makes the tab's shape the same as an agent tab's: one line you type into,
-one area that shows the result.
+The shell tab has two keyboard surfaces: the command bar and the terminal. The command bar is focused
+when the tab opens. Click the terminal or press `Shift+Tab` from the command bar to type directly into
+zsh; press `Shift+Tab` again to return to the command bar. Keystrokes go to whichever surface has
+focus.
 
-That has two consequences a user meets immediately.
+The command bar offers application commands before sending an unrecognized line to zsh. Typing
+directly in the terminal sends keys to zsh without that application routing.
 
-**A line means one of two things.** A leading `!` forces the shell: the rest of the line is sent to
+**A command-bar line means one of two things.** A leading `!` forces the shell: the rest of the line is sent to
 zsh and nothing else happens. Without it, the line is offered to the application first — if it names a
 command, that command runs in this tab and the shell never sees it; if it names nothing, the line
 goes to zsh. So `ls` runs a shell command and `theme` opens the theme picker, and a word that
@@ -66,8 +65,7 @@ nothing can be typed into the terminal. `Ctrl+C` copies the command line's own s
 it holds one, so copying by keyboard still works.
 
 `Up` and `Down` walk the lines the command bar has sent, exactly as the agent tab's bar walks its
-tab's command history. Because nothing can be typed into the terminal directly, that list is the
-whole of this shell's history rather than a subset of one. Ghost suggestions instead draw from the
+tab's command history. Commands typed directly into the terminal remain in zsh's own history. Ghost suggestions instead draw from the
 global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
 a suggestion.
 

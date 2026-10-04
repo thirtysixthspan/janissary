@@ -24,12 +24,14 @@ type Options = {
 // the shell received and leave two subscriptions for the tab to leak.
 export type ShellTerminalHandle = {
   write(data: string): void;
+  focus(): void;
 };
 
 export function useShellTerminal({
   ptyId, containerRef, attachTerminal, onExit,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
+  const terminalRef = useRef<Terminal | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
   // `attachTerminal` is read through a ref rather than closed over, and deliberately kept out of the
@@ -53,13 +55,8 @@ export function useShellTerminal({
       fontFamily: styles.getPropertyValue('--mono').trim() || 'monospace',
       fontSize: Number(styles.getPropertyValue('--terminal-font-size').replace('px', '')) || 13.5,
       lineHeight: Number(styles.getPropertyValue('--terminal-line-height').replace('px', '')) || 1.2,
-      // A terminal that is never focused should not advertise a caret. The cursor belongs to the
-      // command line, and two of them blinking on one screen reads as two places to type.
-      cursorBlink: false,
-      // The structural half of "nothing is typed in here directly": with stdin off the emulator has no
-      // textarea to type into even if it were focused. The command line holds focus either way — see
-      // the terminal's pointer handler in `ShellTab`.
-      disableStdin: true,
+      cursorBlink: true,
+      disableStdin: false,
       theme: { background: colors.bg, foreground: colors.fg },
     });
     const fit = new FitAddon();
@@ -89,6 +86,8 @@ export function useShellTerminal({
 
     const handle = attach(ptyId, (data) => { terminal.write(data); });
     handleRef.current = handle;
+    terminalRef.current = terminal;
+    terminal.onData((data) => { handleRef.current?.write(data); });
     handle.onExit(() => { exitRef.current(); });
     resize();
 
@@ -96,6 +95,7 @@ export function useShellTerminal({
       observer.disconnect();
       handle.detach();
       handleRef.current = null;
+      terminalRef.current = null;
       unregisterTerminalSelection(container);
       terminal.dispose();
     };
@@ -103,5 +103,6 @@ export function useShellTerminal({
 
   return {
     write: (data) => { handleRef.current?.write(data); },
+    focus: () => { terminalRef.current?.focus(); },
   };
 }

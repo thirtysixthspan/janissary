@@ -4,9 +4,6 @@
 
 * the shell should show no command line
 
-* shift + tab should move the keyboard focus between the terminal and the command bar. the keyboard focus will determine where keypresses are sent in the shell tab.
-
-
 * in the shell tab, open file navigator here button in the metadata tab should open a file navigator in the current working directory of the shell
 
 * in the shell tab, plus button in the metadata tab should open a new shell tab in the current working directory of the current shell

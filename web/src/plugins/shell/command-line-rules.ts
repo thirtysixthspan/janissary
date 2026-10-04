@@ -1,9 +1,8 @@
 // What one line typed into the shell tab's command line means, decided without any I/O.
 //
-// The bar is the only input path in this tab, so every keystroke in it is either a key the shell
-// understands, a key the terminal would have sent, or a line for the application. These three pure
-// functions are the whole of that decision, split out from the component so each rule can be checked
-// on its own rather than through a render.
+// A submitted bar line can be routed to the shell or the application. Direct terminal keystrokes
+// bypass this rule and go to zsh. These pure functions are split out from the component so each
+// routing rule can be checked on its own rather than through a render.
 
 // `!` as the first character forces the shell. Everything else is offered to the application first,
 // which is what makes a word that happens to name a command behave like one — and what makes `!` the

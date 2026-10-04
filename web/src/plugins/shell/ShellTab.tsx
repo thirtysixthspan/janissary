@@ -32,8 +32,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const terminalReference = useRef<HTMLDivElement>(null);
   const appBar = useAppCommandBar();
   const [draft, setDraft] = useState('');
-  // Every line the bar has sent, oldest first — the complete history of this shell, because nothing can
-  // be typed into the terminal directly.
+  // Lines the bar has sent, oldest first. Direct terminal input belongs to zsh's own history.
   const [sent, setSent] = useState<string[]>([]);
   const [matches, setMatches] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -67,7 +66,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     return () => { insertions.delete(label); };
   }, [appBar.pluginCommandLineInsertions, capabilities.label]);
 
-  const { write } = useShellTerminal({
+  const { write, focus: focusTerminal } = useShellTerminal({
     ptyId: payload.ptyId,
     containerRef: terminalReference,
     attachTerminal: capabilities.attachTerminal,
@@ -151,6 +150,12 @@ export function ShellTab({ payload, capabilities }: Properties) {
 
   const onBarKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (appBar.blockingOverlayOpen) return;
+    if (event.key === 'Tab' && event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      focusTerminal();
+      return;
+    }
     if (handleQueueKey(event, queueOpen, draft, appBar.onDeleteQueued)) return;
     if (appBar.overlayOwnsCommandBar) return;
     if (event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 't') {
@@ -183,7 +188,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     bar.onKeyDown(event);
   }, [
     appBar.blockingOverlayOpen, appBar.onDeleteQueued, appBar.overlayOwnsCommandBar,
-    bar, capabilities, draft, historyOpen, queueOpen, write,
+    bar, capabilities, draft, focusTerminal, historyOpen, queueOpen, write,
   ]);
 
   // `Ctrl+R` is claimed by this plugin's declaration, so it reaches this tab while it is the visible
@@ -196,13 +201,17 @@ export function ShellTab({ payload, capabilities }: Properties) {
   return (
     <div className="tab-body shell-tab">
       <ShellTabMeta payload={payload} capabilities={capabilities} />
-      {/* Clicking the terminal hands focus straight back to the command line rather than taking it: the
-          bar is the only input path, and a terminal that looked focused but was not would be worse than
-          one that plainly is not. */}
+      {/* Clicking the terminal gives it focus so xterm sends keystrokes to the attached shell. */}
       <div
         className="harness-body shell-body"
         ref={terminalReference}
-        onMouseDown={() => { inputReference.current?.focus(); }}
+        onMouseDown={() => { focusTerminal(); }}
+        onKeyDownCapture={(event) => {
+          if (event.key !== 'Tab' || !event.shiftKey) return;
+          event.preventDefault();
+          event.stopPropagation();
+          inputReference.current?.focus();
+        }}
       />
       <CommandBarShell
         value={draft}
