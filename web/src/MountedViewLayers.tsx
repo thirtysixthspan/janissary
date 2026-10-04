@@ -29,6 +29,7 @@ type Properties = {
   // The full overlay stack, rendered over the current editor tab: a key the buffer does not bind
   // reaches the window handler, so any overlay can open there. `overlayOpen` says one is on screen.
   pickerOverlays?: React.ReactNode;
+  quickOpenOverlay?: React.ReactNode;
   overlayOpen?: boolean;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
   // `HarnessTab.harnessKeyFilter`), and Ctrl+Shift+V or Cmd+Shift+V opens whatever overlay the clipboard plugin
@@ -61,7 +62,7 @@ function TabBodyDiv({
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
-  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, overlayOpen,
+  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, quickOpenOverlay, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
 }: Properties) {
@@ -121,6 +122,7 @@ export function MountedViewLayers({
                 {navOpen && onPickTab && (
                   <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
                 )}
+                {t.plugin?.id === 'shell' && quickOpenOverlay}
                 {t.plugin?.id === 'shell' && contributedOverlay}
               </>
             ) : undefined}

@@ -11,6 +11,7 @@ import type { PickerCommands } from './picker-commands';
 export type AppCommandBar = {
   intercept(line: string): boolean;
   ghostHistory: string[];
+  blockingOverlayOpen?: boolean;
 };
 
 const AppCommandBarContext = createContext<AppCommandBar | null>(null);

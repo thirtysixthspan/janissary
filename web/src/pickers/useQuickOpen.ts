@@ -21,6 +21,7 @@ export function useQuickOpen(client: JanusClient) {
   // window was closed — by any path, including a plain close, not just a re-open — is dropped.
   const requestRef = useRef(0);
   const openRef = useRef(false);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const setQuickOpenOpen = useCallback((open: boolean) => { openRef.current = open; setQuickOpenOpenState(open); }, []);
 
   const deferredQuery = useDeferredValue(quickOpenQuery);
@@ -30,6 +31,7 @@ export function useQuickOpen(client: JanusClient) {
   );
 
   const openQuickOpen = useCallback(() => {
+    returnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setQuickOpenQuery('');
     setQuickOpenIndex(0);
     setQuickOpenOpen(true);
@@ -47,6 +49,7 @@ export function useQuickOpen(client: JanusClient) {
   }, [client, setQuickOpenOpen]);
 
   const closeQuickOpen = useCallback(() => setQuickOpenOpen(false), [setQuickOpenOpen]);
+  const restoreQuickOpenFocus = useCallback(() => returnFocusRef.current?.focus(), []);
 
   // Enter opens the selected file via the `edit` command, using an absolute path — the returned
   // paths are relative to `root` (the launch dir), not necessarily the active tab's own cwd (Decision 5).
@@ -59,5 +62,6 @@ export function useQuickOpen(client: JanusClient) {
     quickOpenOpen, quickOpenQuery, quickOpenIndex, quickOpenLoading, quickOpenResults,
     setQuickOpenQuery, setQuickOpenIndex, setQuickOpenOpen,
     openQuickOpen, closeQuickOpen, pickQuickOpenFile,
+    restoreQuickOpenFocus,
   };
 }

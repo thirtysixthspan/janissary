@@ -32,6 +32,23 @@ describe('useQuickOpen', () => {
     expect(client.request).toHaveBeenCalledWith({ method: 'projectFiles', params: {} });
   });
 
+  it('restores focus to the element that opened Quick Open', () => {
+    let hook: ReturnType<typeof useQuickOpen> | undefined;
+    const client = { send: vi.fn(), request: vi.fn(() => new Promise(() => { /* never resolves */ })) } as unknown as JanusClient;
+    const opener = document.createElement('textarea');
+    document.body.append(opener);
+    opener.focus();
+    render(React.createElement(TestComponent, { client, onHook: (h) => { hook = h; } }));
+    act(() => hook!.openQuickOpen());
+    const fallback = document.createElement('input');
+    document.body.append(fallback);
+    fallback.focus();
+    act(() => hook!.restoreQuickOpenFocus());
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+    fallback.remove();
+  });
+
   it('stores the fetched root/paths and clears loading once the request resolves', async () => {
     let hook: ReturnType<typeof useQuickOpen> | undefined;
     const { promise, resolve } = withResolvers<RequestResult<{ root: string; paths: string[] }>>();

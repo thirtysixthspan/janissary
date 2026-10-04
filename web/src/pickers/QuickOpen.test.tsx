@@ -9,7 +9,7 @@ function renderQuickOpen(overrides: Partial<React.ComponentProps<typeof QuickOpe
   const onChangeSelected = vi.fn();
   const onPick = vi.fn();
   const onClose = vi.fn();
-  const commandInputRef = { current: document.createElement('textarea') };
+  const restoreFocus = vi.fn();
   const utils = render(
     <QuickOpen
       query=""
@@ -20,11 +20,11 @@ function renderQuickOpen(overrides: Partial<React.ComponentProps<typeof QuickOpe
       loading={false}
       onPick={onPick}
       onClose={onClose}
-      commandInputRef={commandInputRef}
+      restoreFocus={restoreFocus}
       {...overrides}
     />,
   );
-  return { ...utils, onChangeQuery, onChangeSelected, onPick, onClose, commandInputRef };
+  return { ...utils, onChangeQuery, onChangeSelected, onPick, onClose, restoreFocus };
 }
 
 const results: FuzzyMatchResult[] = [
@@ -77,12 +77,11 @@ describe('QuickOpen', () => {
     expect(onPick).not.toHaveBeenCalled();
   });
 
-  it('Escape calls onClose and refocuses the command input', () => {
-    const { onClose, commandInputRef } = renderQuickOpen({ query: 'app', results });
-    const focusSpy = vi.spyOn(commandInputRef.current!, 'focus');
+  it('Escape closes and restores focus to the bar that opened it', () => {
+    const { onClose, restoreFocus } = renderQuickOpen({ query: 'app', results });
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
     expect(onClose).toHaveBeenCalled();
-    expect(focusSpy).toHaveBeenCalled();
+    expect(restoreFocus).toHaveBeenCalled();
   });
 
   it('typed characters flow through onChangeQuery', () => {

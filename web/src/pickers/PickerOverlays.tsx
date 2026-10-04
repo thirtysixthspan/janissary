@@ -30,7 +30,7 @@ export function PickerOverlays({
   taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   profiles, profilePickerIndex, onPickProfile,
   quickOpenQuery, onChangeQuickOpenQuery, quickOpenResults, quickOpenIndex, onChangeQuickOpenIndex,
-  quickOpenLoading, onPickQuickOpen, onCloseQuickOpen, commandInputRef,
+  quickOpenLoading, onPickQuickOpen, onCloseQuickOpen, restoreQuickOpenFocus,
 }: PickerOverlayView) {
   switch (firstOpenOverlay(overlays)) {
   // `route` is what put this case in play, so it is non-null here; the compiler cannot see that
@@ -49,7 +49,7 @@ export function PickerOverlays({
       <QuickOpen
         query={quickOpenQuery} onChangeQuery={onChangeQuickOpenQuery} results={quickOpenResults}
         selected={quickOpenIndex} onChangeSelected={onChangeQuickOpenIndex} loading={quickOpenLoading}
-        onPick={onPickQuickOpen} onClose={onCloseQuickOpen} commandInputRef={commandInputRef}
+        onPick={onPickQuickOpen} onClose={onCloseQuickOpen} restoreFocus={restoreQuickOpenFocus}
       />
     );
   }

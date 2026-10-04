@@ -173,7 +173,7 @@ export function App({ client }: { client: JanusClient }) {
 
   return (
     <PluginChordProvider registry={pluginChords}>
-      <AppCommandBarProvider bar={{ intercept: interceptCommandLine, ghostHistory: globalHistory }}>
+      <AppCommandBarProvider bar={{ intercept: interceptCommandLine, ghostHistory: globalHistory, blockingOverlayOpen: pickers.view.overlays.quickOpen }}>
       <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}

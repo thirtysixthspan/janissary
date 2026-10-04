@@ -137,6 +137,7 @@ type AppBarOptions = {
   activeTab?: number;
   guard?: (index: number) => boolean;
   ghostHistory?: string[];
+  blockingOverlayOpen?: boolean;
 };
 
 type AppBarOpeners = Record<
@@ -165,7 +166,7 @@ function AppBar({ chords, options, openQuitConfirm, openers, children }: {
   });
   return (
     <PluginChordProvider registry={chords}>
-      <AppCommandBarProvider bar={{ intercept, ghostHistory: options.ghostHistory ?? [] }}>{children}</AppCommandBarProvider>
+      <AppCommandBarProvider bar={{ intercept, ghostHistory: options.ghostHistory ?? [], blockingOverlayOpen: options.blockingOverlayOpen }}>{children}</AppCommandBarProvider>
     </PluginChordProvider>
   );
 }
@@ -208,6 +209,11 @@ function bar(): HTMLTextAreaElement {
 }
 
 describe('ShellTab', () => {
+  it('disables shell input while Quick Open is visible', () => {
+    renderTab({ blockingOverlayOpen: true });
+    expect(bar()).toBeDisabled();
+  });
+
   it('uses the tab dot color for the command bar dot', () => {
     const { container } = renderTab({ dotColor: 'rgb(12, 34, 56)' });
     expect(container.querySelector(':scope .command-area .dot')).toHaveStyle({ color: 'rgb(12, 34, 56)' });
