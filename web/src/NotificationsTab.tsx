@@ -1,9 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import type { BufferLine } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { Transcript } from './shared/transcript/Transcript';
 import { DockCycleHeader } from './shared/DockCycleHeader';
 import { onNotificationsKey } from './notifications-handlers';
+import { transcriptIntents } from './shared/transcript/transcript-intents';
+import { ptyActions } from './shared/terminal/pty-actions';
 
 // The keys the feed scrolls on; they are kept from reaching the window-level bindings.
 const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown']);
@@ -23,6 +25,8 @@ const noop = () => {};
 
 export function NotificationsTab({ lines, client, index, dock }: Properties) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const intents = useMemo(() => transcriptIntents((call) => client.send(call)), [client]);
+  const terminalActions = useMemo(() => ptyActions(client), [client]);
   // Scroll the feed from the keyboard while it holds focus (click or tab to focus it). Handled
   // per-element rather than globally so a docked feed never steals arrows from another active tab.
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -35,7 +39,8 @@ export function NotificationsTab({ lines, client, index, dock }: Properties) {
       {dock && <DockCycleHeader dock={dock} client={client} index={index} classPrefix="notifications" />}
       <Transcript
         lines={lines.toReversed()}
-        client={client}
+        intents={intents}
+        ptyActions={terminalActions}
         onToggleCollapse={noop}
         onPromptClick={noop}
         scrollRef={scrollRef}
