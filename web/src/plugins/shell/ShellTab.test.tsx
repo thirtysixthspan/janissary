@@ -136,19 +136,24 @@ type AppBarOptions = {
   guard?: (index: number) => boolean;
 };
 
+type AppBarOpeners = Record<
+  'openPicker' | 'openThemePicker' | 'openAppThemePicker' | 'openQueue' | 'openTaskPicker' | 'openProfilePicker',
+  () => void
+>;
+
 function tab(label: string): TabView {
   return { label, number: 1, group: 0, busy: false, hasUnread: false } as unknown as TabView;
 }
 
-function AppBar({ chords, options, openQuitConfirm, children }: {
+function AppBar({ chords, options, openQuitConfirm, openers, children }: {
   chords: PluginChordRegistry;
   options: AppBarOptions;
   openQuitConfirm: () => void;
+  openers: AppBarOpeners;
   children: ReactNode;
 }) {
   const intercept = useAppCommandLine({
-    openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {},
-    openQueue: () => {}, openTaskPicker: () => {}, openProfilePicker: () => {},
+    ...openers,
     navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
     tabs: options.tabs ?? [tab('shell1')],
     activeTab: options.activeTab ?? 0,
@@ -169,12 +174,18 @@ function mountShell(
 ) {
   const chords = createPluginChordRegistry();
   const openQuitConfirm = vi.fn();
+  // Spies rather than no-ops, so a case can tell which overlay a bare word opened rather than only that
+  // the line was intercepted.
+  const openers: AppBarOpeners = {
+    openPicker: vi.fn(), openThemePicker: vi.fn(), openAppThemePicker: vi.fn(),
+    openQueue: vi.fn(), openTaskPicker: vi.fn(), openProfilePicker: vi.fn(),
+  };
   const view = render(
-    <AppBar chords={chords} options={options} openQuitConfirm={openQuitConfirm}>
+    <AppBar chords={chords} options={options} openQuitConfirm={openQuitConfirm} openers={openers}>
       <ShellTab payload={payload} capabilities={capabilities} />
     </AppBar>,
   );
-  return { chords, openQuitConfirm, ...view };
+  return { chords, openQuitConfirm, openers, ...view };
 }
 
 function renderTab(options: Parameters<typeof makeCapabilities>[0] & AppBarOptions = {}) {
@@ -607,6 +618,31 @@ describe('ShellTab', () => {
 
     expect(chords.run('ctrl+r')).toBe(false);
     expect(document.querySelector('.shell-history')).toBeNull();
+  });
+
+  it('opens a bare word\'s own picker rather than offering the word to the server', async () => {
+    const { capabilities, openers, releaseDispatch, written } = renderTab({ dispatched: true });
+
+    fireEvent.change(bar(), { target: { value: 'theme' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    // `product/specs/shell-tab.md` says `theme` opens the theme picker in a shell tab, so the bar runs
+    // the application's own interception rather than asking the dispatcher and showing nothing.
+    expect(openers.openAppThemePicker).toHaveBeenCalledTimes(1);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', expect.anything());
+    expect(written).toEqual([]);
+  });
+
+  it('runs a claimed word carrying an argument, because the bare word is what opens the overlay', async () => {
+    const { capabilities, releaseDispatch, written } = renderTab({ dispatched: true });
+
+    fireEvent.change(bar(), { target: { value: 'theme dark' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'theme dark');
+    expect(written).toEqual([]);
   });
 
   it('asks before quitting the application, and offers the line to nobody', () => {

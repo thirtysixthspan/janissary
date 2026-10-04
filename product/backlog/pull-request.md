@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's summary table, which claims that a bare `theme` opens the theme picker in a shell tab when nothing appears.
-
-Existing Issue: The description's table row for `theme` says it opens the theme picker and that the application gets first refusal on every line, while the same description's manual-test section says bare `theme` is claimed by the application and its answer is appended to a transcript a shell tab never draws — the two halves of one document disagree, and the table is the half a reviewer reads first. Severity: 5/10
-
-Existing Risk: 3/10 - A reviewer approves the routing on the strength of the table and ships a promise the implementation cannot keep, and a user who follows it concludes the shell tab is broken rather than that the word collides.
-
-Proposal Risk: 1/10 - The description then matches the code, and `theme dark` remains the way to run the command, so nothing about the routing moves.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: correct the description's claim that bare theme opens the theme picker". The behaviour is already right and documented: `product/specs/shell-tab.md` says a command that answers with text rather than opening something records that text in the tab's transcript and nothing appears on screen, and `web/src/plugins/shell/ShellTab.tsx` reaches the server's `theme` handler through the `dispatch` intent exactly as any other unclaimed word is reached. Rewrite the `theme` row of the description's summary table to say what happens — the application claims the word and answers into the tab's transcript, which the terminal does not draw, so nothing is visible — and point at `theme dark` and `!theme` as the two forms that do something a user can see. While in the same table, check the `Ctrl+C` row that says it copies with a selection in the bar: `controlKeyOf` in `web/src/plugins/shell/ShellTab.tsx` declines any chord carrying Shift or Meta, so `Ctrl+Shift+C` reaches the application rather than the shell, and the row's scope should say so if that distinction is intended. Do not change any behaviour for this entry. `web/src/plugins/shell/ShellTab.test.tsx` keeps passing untouched, and `product/specs/shell-tab.md` needs no edit because it already says the right thing.
-
 * Document the three new client capabilities with a bullet each, rather than leaving them only in the changelog line.
 
 Existing Issue: `documentation/developer-documentation/tab-plugins.md` adds bullets for `label` and `claimedChords` to its client capability list but none for `attachTerminal`, `openFileNavigator` or `launchAgentHere`, which appear only inside the v1 changelog sentence, although the plan's documentation section promised the file "gains a bullet per new capability". Severity: 5/10
