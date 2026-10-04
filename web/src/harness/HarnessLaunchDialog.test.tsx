@@ -9,7 +9,7 @@ const view: HarnessLaunchView = {
   names: ['claude', 'opencode', 'codex'],
   models: { claude: ['opus', 'sonnet'], opencode: ['opencode-go/glm-5.2'], codex: [] },
   autoApprove: ['claude', 'codex'],
-  autoResume: ['codex'],
+  autoResume: ['opencode', 'codex'],
 };
 
 function makeClient() {
@@ -110,11 +110,22 @@ describe('HarnessLaunchDialog', () => {
     const resume = getByLabelText(/Auto-resume/) as HTMLInputElement;
     expect(resume.disabled).toBe(false);
     expect(resume.checked).toBe(true);
-    expect(getByText(/Auto-resume \(--auto-resume\) — codex only/)).toBeTruthy();
+    expect(getByText(/Auto-resume \(--auto-resume\) — opencode and codex only/)).toBeTruthy();
+  });
+
+  it('offers Auto-resume for each harness the catalog lists, not only the first', () => {
+    const { getByLabelText, container } = renderDialog();
+    const select = container.querySelector('select')!;
+    for (const name of view.autoResume) {
+      fireEvent.change(select, { target: { value: name } });
+      const resume = getByLabelText(/Auto-resume/) as HTMLInputElement;
+      expect(resume.disabled).toBe(false);
+      expect(resume.checked).toBe(true);
+    }
   });
 
   it('disables and clears Auto-resume for a harness with no limit detector', () => {
-    const { getByLabelText, container } = renderDialog({ ...view, autoResume: ['codex'] });
+    const { getByLabelText, container } = renderDialog({ ...view, autoResume: ['opencode', 'codex'] });
     fireEvent.change(container.querySelector('select')!, { target: { value: 'codex' } });
     fireEvent.click(getByLabelText(/Auto-resume/));
     fireEvent.change(container.querySelector('select')!, { target: { value: 'claude' } });
