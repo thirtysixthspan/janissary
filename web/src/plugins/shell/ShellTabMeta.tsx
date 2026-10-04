@@ -22,7 +22,11 @@ export function ShellTabMeta({ payload, capabilities }: {
   // auto-show, and returning to this one shows its connections panel again as an agent tab's would.
   // The fallback is what a host that reports no label would get — one identity for every shell tab, so
   // the auto-show fires on mount rather than on each activation.
-  const windows = useStatusWindows(capabilities.label ?? 'shell');
+  const windows = useStatusWindows(capabilities.label ?? 'shell', {
+    active: capabilities.active,
+    connectionsHaveContent: payload.connections.length > 0,
+    scheduleHasContent: payload.schedule.length > 0,
+  });
   return (
     <>
       <div className="tab-meta">
@@ -81,4 +85,3 @@ export function ShellTabMeta({ payload, capabilities }: {
     </>
   );
 }
-

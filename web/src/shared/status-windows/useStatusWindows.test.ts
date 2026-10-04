@@ -83,4 +83,35 @@ describe('useStatusWindows', () => {
     expect(result.current.connections.visible).toBe(true);
     expect(result.current.schedule.visible).toBe(true);
   });
+
+  it('re-arms when a window gains its first row after the initial auto-show ends', () => {
+    const { result, rerender } = renderHook(
+      ({ hasContent }) => useStatusWindows('shell', { active: true, connectionsHaveContent: hasContent }),
+      { initialProps: { hasContent: false } },
+    );
+
+    act(() => { vi.advanceTimersByTime(5300); });
+    expect(result.current.connections.visible).toBe(false);
+
+    rerender({ hasContent: true });
+
+    expect(result.current.connections.visible).toBe(true);
+    expect(result.current.connections.opacity).toBe(1);
+  });
+
+  it('re-arms a hidden tab when it becomes active again', () => {
+    const { result, rerender } = renderHook(
+      ({ active }) => useStatusWindows('shell', { active, connectionsHaveContent: true }),
+      { initialProps: { active: true } },
+    );
+
+    act(() => { vi.advanceTimersByTime(5300); });
+    expect(result.current.connections.visible).toBe(false);
+
+    rerender({ active: false });
+    expect(result.current.connections.visible).toBe(false);
+
+    rerender({ active: true });
+    expect(result.current.connections.visible).toBe(true);
+  });
 });

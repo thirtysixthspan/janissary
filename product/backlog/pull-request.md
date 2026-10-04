@@ -46,17 +46,6 @@ Proposal Risk: 2/10 - Routing each operation through the shell tab that received
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: target docked shell actions at the shell tab". Pass the plugin tab's label or focused surface into `web/src/shared/command-bar/AppCommandBar.tsx` so bare close classification and `CloseSaveGuard` use the shell tab, and update `web/src/useCmdW.ts` to resolve Cmd+W against the focused sidebar selection when a docked shell command bar has focus. Change `src/commands/agent.ts` and `src/profile/new-agent.ts` to use the `{ label, index }` command context supplied by `CommandManager.dispatchLine` rather than `TabManager.cur()`. Keep named `close <name>` behavior unchanged. Add tests with one center tab and a docked shell proving bare `close` and Cmd+W close the shell without opening the quit dialog or closing the center tab, and that `agent` uses the shell tab's context; retain the existing tests in `web/src/shared/command-bar/AppCommandBar.test.tsx` and `web/src/useCmdW.test.tsx`.
 
 
-* Fix the functionality gap in status-window auto-show after reactivation or late rows.
-
-Existing Issue: `useStatusWindows` now watches only `activeKey`, while `ShellTabMeta` passes the shell's stable label instead of its `active` state and the hook no longer re-arms when `hasContent` changes, so a shell tab does not auto-show its windows when revisited or when rows arrive after the first timer expires. Severity: 6/10
-
-Existing Risk: 5/10 - A returning shell tab or a tab that gains a connection or schedule after the initial five-second window leaves its status panels hidden until the user notices and hovers or clicks the button.
-
-Proposal Risk: 2/10 - Explicit activation and content transitions re-arm the timer while `StatusPanels` continues to suppress empty windows; the auto-show remains time-limited as designed.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: rearm status windows on activation and late rows". Update `web/src/shared/status-windows/useStatusWindows.ts` to distinguish a tab becoming active from its stable label and to re-arm when a window changes from empty to non-empty, without moving the panel's empty-row rendering rule into the hook. Pass the active signal from `web/src/plugins/shell/ShellTabMeta.tsx` and preserve the appropriate active-key behavior for the other status-window callers. Add tests in `web/src/shared/status-windows/useStatusWindows.test.ts` for rows arriving after the old timer expires and in `web/src/plugins/shell/ShellTab.test.tsx` for hiding and reactivating a shell tab; retain the existing fade and pin behavior.
-
-
 * Fix the functionality gap when multiple visible plugin tabs claim the same chord.
 
 Existing Issue: `createPluginChordRegistry` stores claims under only `pluginId` and chord, so two visible shell tabs overwrite each other's handler and either tab's cleanup deletes the shared entry, making Ctrl+R open the wrong shell's history or stop working. Severity: 6/10

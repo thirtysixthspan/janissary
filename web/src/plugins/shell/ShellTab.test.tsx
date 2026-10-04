@@ -180,12 +180,18 @@ function mountShell(
     openPicker: vi.fn(), openThemePicker: vi.fn(), openAppThemePicker: vi.fn(),
     openQueue: vi.fn(), openTaskPicker: vi.fn(), openProfilePicker: vi.fn(),
   };
-  const view = render(
+  const renderShell = (nextPayload = payload, nextCapabilities = capabilities) => (
     <AppBar chords={chords} options={options} openQuitConfirm={openQuitConfirm} openers={openers}>
-      <ShellTab payload={payload} capabilities={capabilities} />
-    </AppBar>,
+      <ShellTab payload={nextPayload} capabilities={nextCapabilities} />
+    </AppBar>
   );
-  return { chords, openQuitConfirm, openers, ...view };
+  const view = render(renderShell());
+  return {
+    chords, openQuitConfirm, openers, ...view,
+    rerenderShell: (nextPayload = payload, nextCapabilities = capabilities) => {
+      view.rerender(renderShell(nextPayload, nextCapabilities));
+    },
+  };
 }
 
 function renderTab(options: Parameters<typeof makeCapabilities>[0] & AppBarOptions = {}) {
@@ -554,6 +560,29 @@ describe('ShellTab', () => {
 
     mountShell({ ...PAYLOAD, connections: rows }, makeCapabilities({ label: 'shell2' }).capabilities);
     expect(screen.getByText('connections')).toBeInTheDocument();
+  });
+
+  it('re-arms status windows when the shell tab becomes active again', () => {
+    vi.useFakeTimers();
+    const rows = [{ text: 'zsh', kind: 'terminal' as const }];
+    const { capabilities } = makeCapabilities();
+    const view = mountShell({ ...PAYLOAD, connections: rows }, capabilities);
+    try {
+      expect(screen.getByText('zsh')).toBeInTheDocument();
+      act(() => { vi.advanceTimersByTime(5300); });
+      expect(screen.queryByText('zsh')).not.toBeInTheDocument();
+
+      capabilities.active = false;
+      act(() => { view.rerenderShell(); });
+      expect(screen.queryByText('zsh')).not.toBeInTheDocument();
+
+      capabilities.active = true;
+      act(() => { view.rerenderShell(); });
+      expect(screen.getByText('zsh')).toBeInTheDocument();
+    } finally {
+      view.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it('keeps the keyboard in the command bar while its history popup is open', async () => {

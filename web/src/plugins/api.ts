@@ -74,7 +74,11 @@ export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedI
 // holding only its own payload can render them — the host pushes those rows into the payload when
 // they change. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { StatusPanels } from '../shared/status-windows/StatusPanels';
-export { useStatusWindows, type StatusWindowHandlers } from '../shared/status-windows/useStatusWindows';
+export {
+  useStatusWindows,
+  type StatusWindowHandlers,
+  type StatusWindowOptions,
+} from '../shared/status-windows/useStatusWindows';
 // The two controls that open those windows, published with them for the same reason: a row offering
 // the windows without the buttons to open them would compute rows it can never show. `statusButton`
 // builds a button's props from a window's handlers and whether it has rows, which is the only pairing

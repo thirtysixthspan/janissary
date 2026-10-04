@@ -71,7 +71,10 @@ The row shows the working directory the shell started in, a workspace mark when 
 workspace clone, and the actions a shell tab can act on: **open file navigator here**, **new agent
 here**, the split control, and the connections and schedule windows.
 
-The connections window includes the tab's own `zsh` terminal as soon as the shell tab opens.
+The connections window includes the tab's own `zsh` terminal as soon as the shell tab opens. The
+connections and schedule windows auto-show for five seconds whenever the tab becomes visible, then
+fade over 300 ms unless pinned or hovered. If an empty window gains its first row after that interval,
+it auto-shows again; a window with no rows stays hidden.
 
 There is no **open transcript** control, because there is no transcript: the terminal replaced it. The
 working directory shown is the one the shell started in and does not follow a `cd`, so a shell that
