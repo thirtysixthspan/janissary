@@ -18,6 +18,7 @@ import { useTranscriptScroll } from './shared/transcript/useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
+import { AppCommandBarProvider, useAppCommandLine } from './shared/command-bar/AppCommandBar';
 import { usePickerOverlays } from './pickers/usePickerOverlays';
 import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
 import { useLayoutState } from './useLayoutState';
@@ -160,10 +161,19 @@ export function App({ client }: { client: JanusClient }) {
     canSearch, lines, search, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
   });
 
+  // The same interception, published to every plugin tab below so a line typed into one of their bars
+  // is answered here rather than sent to the server unchecked. The provider is the sibling of
+  // `PluginChordProvider` for the same reason: both are app-level state a mounted plugin body has to
+  // reach, and neither can be threaded down through the tab tree without changing a dozen signatures.
+  const interceptCommandLine = useAppCommandLine({
+    ...pickers.commands, tabs, activeTab, openQuitConfirm: guardedOpenQuitConfirm, guardRef,
+  });
+
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
     <PluginChordProvider registry={pluginChords}>
+      <AppCommandBarProvider bar={{ intercept: interceptCommandLine }}>
       <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
@@ -189,6 +199,7 @@ export function App({ client }: { client: JanusClient }) {
       confirmUnsavedQuit={confirmUnsavedQuit} cancelUnsavedQuit={cancelUnsavedQuit}
       guardRef={guardRef}
       />
+      </AppCommandBarProvider>
     </PluginChordProvider>
   );
 }

@@ -21,12 +21,17 @@ one area that shows the result.
 That has two consequences a user meets immediately.
 
 **A line means one of two things.** A leading `!` forces the shell: the rest of the line is sent to
-zsh and nothing else happens. Without it, the line is offered to the application first — if it names
-a command, that command runs in this tab and the shell never sees it; if it names nothing, the line
+zsh and nothing else happens. Without it, the line is offered to the application first — if it names a
+command, that command runs in this tab and the shell never sees it; if it names nothing, the line
 goes to zsh. So `ls` runs a shell command and `theme` opens the theme picker, and a word that
 collides with a command name is swallowed by the command. A shell waiting at a `read` prompt, or
 asking for a password, cannot be given `theme` or `files` without the `!` prefix. The command bar
 warns about none of this; `!` is the override, and it is documented in `help`.
+
+First refusal means what it says. A line the application answers itself — a bare word that opens a
+picker, `quit`, or a `close` that would take the last tab with it — is answered here rather than sent
+onward, so `quit` typed in a shell tab asks the same confirmation it asks anywhere else (see
+[[quit-confirmation]]), and a bare word opens the same picker.
 
 A command that answers with text rather than opening something — `help`, for one — records that text
 in this tab's transcript. A shell tab draws a terminal in place of a transcript, so nothing appears

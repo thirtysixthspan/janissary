@@ -14,6 +14,19 @@ export { renderMarkdown } from '../shared/transcript/markdown';
 export { CommandBarShell, type CommandBarShellProperties } from '../shared/command-bar/CommandBarShell';
 export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/useCommandBarKeys';
 
+// The application's own interception of a typed line, published beside the bar above and for the same
+// reason: a plugin bar that offers every line to the server lets `quit` and a last-tab `close` tear the
+// window down with nothing asked, because the interception that catches them lives in the agent tab's
+// submit chain and a plugin bar never runs it. A plugin body asks this one question before it sends
+// anything, and gets the same answer the agent tab's bar would give. The provider is the sibling of
+// `PluginChordProvider` for the same reason both exist: app-level state a mounted plugin body has to
+// reach. `useAppCommandBar` throws without it rather than answering "nothing is intercepted".
+export {
+  AppCommandBarProvider,
+  useAppCommandBar,
+  type AppCommandBar,
+} from '../shared/command-bar/AppCommandBar';
+
 // The host's "double-click to rename, Enter or blur to commit, Escape to cancel" field, published on
 // the same terms and for the same reason: a plugin that renames something should rename it the way
 // the tab strip and the file navigator already do.

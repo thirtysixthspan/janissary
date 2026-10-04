@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CommandBarShell, useCommandBarKeys, usePluginChordClaims } from '../api';
+import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTerminal } from './useShellTerminal';
@@ -27,6 +27,7 @@ const NO_CHORDS: readonly string[] = [];
 export function ShellTab({ payload, capabilities }: Properties) {
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const terminalReference = useRef<HTMLDivElement>(null);
+  const appBar = useAppCommandBar();
   const [draft, setDraft] = useState('');
   // Every line the bar has sent, oldest first — the complete history of this shell, because nothing can
   // be typed into the terminal directly.
@@ -84,6 +85,11 @@ export function ShellTab({ payload, capabilities }: Properties) {
     // never sees it. The decision is the host's, because the command table is; this plugin asks rather
     // than keeping a copy of a list that would go stale the moment a command was added.
     //
+    // First refusal is the host's *interception*, asked before the line is offered at all: a bare word
+    // it opens a picker for, and `quit` or a `close` that would take the last tab with it, are answered
+    // here rather than sent to a dispatcher where `quit` is a bare exit emit with nothing asked.
+    if (appBar.intercept(text)) return;
+    //
     // The payload is the line itself, which is the only shape `isShellDispatch` accepts — anything else
     // is a request this plugin did not describe, and the host refuses it rather than guessing.
     void capabilities.intent<{ dispatched: boolean }>('dispatch', text)
@@ -97,7 +103,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
       // leaving an unhandled rejection. The line is not written either way: a refused dispatch has not
       // established that the shell should have had it.
       .catch(() => { capabilities.reportFailure('shell dispatch intent refused'); });
-  }, [capabilities, write]);
+  }, [appBar, capabilities, write]);
 
   const bar = useCommandBarKeys({
     value: draft,

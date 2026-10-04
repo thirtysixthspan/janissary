@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { type ReactNode } from 'react';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
+import type { TabView } from '@shared/protocol';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
-import { PluginChordProvider, createPluginChordRegistry } from '../PluginChords';
+import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistry } from '../PluginChords';
+import { AppCommandBarProvider, useAppCommandLine } from '../../shared/command-bar/AppCommandBar';
 import { ShellTab } from './ShellTab';
 
 // The emulator and its fit addon are stubbed so the tab's own logic — routing, focus, the chord claim —
@@ -124,15 +126,61 @@ function makeCapabilities(overrides: {
   };
 }
 
-function renderTab(options: Parameters<typeof makeCapabilities>[0] = {}) {
-  const made = makeCapabilities(options);
-  const chords = createPluginChordRegistry();
-  const view = render(
+// The application state a plugin tab's bar reaches in the running application: the interception every
+// command bar runs, plus the chord registry. Built here through the same hook `App.tsx` uses, so the
+// cases below exercise the real classification rather than a stand-in that always answers "not
+// intercepted" and would pass whatever the tab did.
+type AppBarOptions = {
+  tabs?: TabView[];
+  activeTab?: number;
+  guard?: (index: number) => boolean;
+};
+
+function tab(label: string): TabView {
+  return { label, number: 1, group: 0, busy: false, hasUnread: false } as unknown as TabView;
+}
+
+function AppBar({ chords, options, openQuitConfirm, children }: {
+  chords: PluginChordRegistry;
+  options: AppBarOptions;
+  openQuitConfirm: () => void;
+  children: ReactNode;
+}) {
+  const intercept = useAppCommandLine({
+    openPicker: () => {}, openThemePicker: () => {}, openAppThemePicker: () => {},
+    openQueue: () => {}, openTaskPicker: () => {}, openProfilePicker: () => {},
+    navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
+    tabs: options.tabs ?? [tab('shell1')],
+    activeTab: options.activeTab ?? 0,
+    openQuitConfirm,
+    guardRef: { current: options.guard ?? null },
+  });
+  return (
     <PluginChordProvider registry={chords}>
-      <ShellTab payload={PAYLOAD} capabilities={made.capabilities} />
-    </PluginChordProvider>,
+      <AppCommandBarProvider bar={{ intercept }}>{children}</AppCommandBarProvider>
+    </PluginChordProvider>
   );
-  return { ...made, chords, ...view };
+}
+
+function mountShell(
+  payload: ShellPayload,
+  capabilities: TabPluginClientCapabilities,
+  options: AppBarOptions = {},
+) {
+  const chords = createPluginChordRegistry();
+  const openQuitConfirm = vi.fn();
+  const view = render(
+    <AppBar chords={chords} options={options} openQuitConfirm={openQuitConfirm}>
+      <ShellTab payload={payload} capabilities={capabilities} />
+    </AppBar>,
+  );
+  return { chords, openQuitConfirm, ...view };
+}
+
+function renderTab(options: Parameters<typeof makeCapabilities>[0] & AppBarOptions = {}) {
+  const made = makeCapabilities(options);
+  const view = mountShell(PAYLOAD, made.capabilities, options);
+  return { ...made, ...view };
 }
 
 function bar(): HTMLTextAreaElement {
@@ -151,11 +199,7 @@ describe('ShellTab', () => {
     expect(screen.queryByLabelText('Workspaced')).not.toBeInTheDocument();
     unmount();
 
-    render(
-      <PluginChordProvider registry={createPluginChordRegistry()}>
-        <ShellTab payload={{ ...PAYLOAD, workspace: true }} capabilities={makeCapabilities().capabilities} />
-      </PluginChordProvider>,
-    );
+    mountShell({ ...PAYLOAD, workspace: true }, makeCapabilities().capabilities);
     expect(screen.getByLabelText('Workspaced')).toBeInTheDocument();
   });
 
@@ -189,14 +233,7 @@ describe('ShellTab', () => {
   });
 
   it('offers the two status-window buttons, without which the windows it renders are unreachable', () => {
-    render(
-      <PluginChordProvider registry={createPluginChordRegistry()}>
-        <ShellTab
-          payload={{ ...PAYLOAD, connections: [{ text: 'zsh', kind: 'terminal' }] }}
-          capabilities={makeCapabilities().capabilities}
-        />
-      </PluginChordProvider>,
-    );
+    mountShell({ ...PAYLOAD, connections: [{ text: 'zsh', kind: 'terminal' }] }, makeCapabilities().capabilities);
 
     // The host pushes connection and schedule rows into this payload on every change. Rendering the
     // panels without the controls that open them computes rows nothing can ever show.
@@ -215,14 +252,7 @@ describe('ShellTab', () => {
   });
 
   it('renders the host\'s own connections window from the pushed rows', () => {
-    render(
-      <PluginChordProvider registry={createPluginChordRegistry()}>
-        <ShellTab
-          payload={{ ...PAYLOAD, connections: [{ text: 'zsh', kind: 'terminal' }] }}
-          capabilities={makeCapabilities().capabilities}
-        />
-      </PluginChordProvider>,
-    );
+    mountShell({ ...PAYLOAD, connections: [{ text: 'zsh', kind: 'terminal' }] }, makeCapabilities().capabilities);
 
     // The panel auto-shows for five seconds on activation, which is the host's own behavior rather
     // than anything this plugin does with it.
@@ -431,11 +461,7 @@ describe('ShellTab', () => {
     const intent = capabilities.intent as unknown as { mockImplementation: (fn: () => unknown) => void };
     intent.mockImplementation(() => Promise.reject(new Error('Plugin intent "terminal-status" failed')));
 
-    render(
-      <PluginChordProvider registry={createPluginChordRegistry()}>
-        <ShellTab payload={PAYLOAD} capabilities={capabilities} />
-      </PluginChordProvider>,
-    );
+    mountShell(PAYLOAD, capabilities);
 
     await waitFor(() => { expect(capabilities.reportFailure).toHaveBeenCalled(); });
   });
@@ -511,25 +537,11 @@ describe('ShellTab', () => {
     // Two tabs, two labels: the hook re-arms its auto-show when this changes, so a constant would
     // leave the second tab's windows armed only once at mount.
     const rows = [{ text: 'zsh', kind: 'terminal' as const }];
-    const first = render(
-      <PluginChordProvider registry={createPluginChordRegistry()}>
-        <ShellTab
-          payload={{ ...PAYLOAD, connections: rows }}
-          capabilities={makeCapabilities({ label: 'shell' }).capabilities}
-        />
-      </PluginChordProvider>,
-    );
+    const first = mountShell({ ...PAYLOAD, connections: rows }, makeCapabilities({ label: 'shell' }).capabilities);
     expect(screen.getByText('connections')).toBeInTheDocument();
     first.unmount();
 
-    render(
-      <PluginChordProvider registry={createPluginChordRegistry()}>
-        <ShellTab
-          payload={{ ...PAYLOAD, connections: rows }}
-          capabilities={makeCapabilities({ label: 'shell2' }).capabilities}
-        />
-      </PluginChordProvider>,
-    );
+    mountShell({ ...PAYLOAD, connections: rows }, makeCapabilities({ label: 'shell2' }).capabilities);
     expect(screen.getByText('connections')).toBeInTheDocument();
   });
 
@@ -538,5 +550,52 @@ describe('ShellTab', () => {
 
     expect(chords.run('ctrl+r')).toBe(false);
     expect(document.querySelector('.shell-history')).toBeNull();
+  });
+
+  it('asks before quitting the application, and offers the line to nobody', () => {
+    const { capabilities, openQuitConfirm, releaseDispatch } = renderTab();
+
+    fireEvent.change(bar(), { target: { value: 'quit' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    releaseDispatch();
+
+    // `src/commands/quit.ts` is a bare exit emit with nothing asked anywhere on the path, so a shell
+    // tab offering this line unguarded tore down every tab, shell, terminal and browser in the window.
+    expect(openQuitConfirm).toHaveBeenCalledTimes(1);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', expect.anything());
+  });
+
+  it('asks before a close that would take the last tab with it, by either spelling', () => {
+    for (const line of ['close', 'exit', 'close shell1']) {
+      const made = renderTab();
+      fireEvent.change(bar(), { target: { value: line } });
+      fireEvent.keyDown(bar(), { key: 'Enter' });
+
+      expect(made.openQuitConfirm, line).toHaveBeenCalledTimes(1);
+      made.unmount();
+    }
+  });
+
+  it('closes another tab directly, which is what a close that would not quit has always done here', async () => {
+    const { capabilities, openQuitConfirm, releaseDispatch } = renderTab({
+      tabs: [tab('shell1'), tab('other')],
+    });
+
+    fireEvent.change(bar(), { target: { value: 'close other' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(openQuitConfirm).not.toHaveBeenCalled();
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'close other');
+  });
+
+  it('runs a close the application claims through the same interception it uses everywhere', async () => {
+    const { capabilities, releaseDispatch } = renderTab({ tabs: [tab('shell1'), tab('other')] });
+
+    fireEvent.change(bar(), { target: { value: 'exit' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'exit');
   });
 });
