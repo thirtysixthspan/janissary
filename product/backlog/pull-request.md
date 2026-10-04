@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Document the three new client capabilities with a bullet each, rather than leaving them only in the changelog line.
-
-Existing Issue: `documentation/developer-documentation/tab-plugins.md` adds bullets for `label` and `claimedChords` to its client capability list but none for `attachTerminal`, `openFileNavigator` or `launchAgentHere`, which appear only inside the v1 changelog sentence, although the plan's documentation section promised the file "gains a bullet per new capability". Severity: 5/10
-
-Existing Risk: 4/10 - The three capabilities a plugin tab with a terminal actually needs are the hardest to discover from the page a plugin author reads, so the next plugin grows its own pty plumbing and its own file-navigator and new-agent RPCs instead of using the published ones.
-
-Proposal Risk: 1/10 - Documentation only; the capability object and every existing caller stay exactly as they are.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: document attachTerminal, openFileNavigator and launchAgentHere in the client capability list". In `documentation/developer-documentation/tab-plugins.md`, add one bullet each to the list under "Client entry and capabilities" that begins "The component receives `payload` ... plus", placed beside the `label` and `claimedChords` bullets this pull request already added. `attachTerminal` needs the most: say what the returned handle offers, that bytes already produced are flushed before it returns, that `detach` releases the attachment and must be called on teardown or a hidden tab keeps a live subscription, and that it is optional so a plugin with no terminal is unaffected. `openFileNavigator` and `launchAgentHere` need the sentence already on their type comments in `web/src/plugins/api.ts` — they are the tab-scoped RPCs the agent row's own two buttons send, which is not the same thing as dispatching `files` or `agent`, because the latter roots the new tab differently. Take the wording from those comments rather than writing new prose. Confirm afterwards that `src/plugins/documentation.test.ts` still passes, since it reads this file for the capability counts and the manifest fixture; the client count is a literal in that test (`CLIENT_CAPABILITY_COUNT_WORD`) and the bullets do not change it, so raise it only if the count is genuinely wrong — `web/src/plugins/api.ts` is the thing to count against.
-
 * Leave headroom in the three host files this diff pushes to within four lines of the file-size ceiling.
 
 Existing Issue: The diff ends `src/tab/manager.ts` at 198 counted lines, `src/plugins/host.ts` at 197 and `src/plugins/context.ts` at 196, against the `max-lines` limit of 200 in `eslint.config.mjs`, and the plan watched two other files for this and named neither of these three. Severity: 4/10
