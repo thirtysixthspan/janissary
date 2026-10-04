@@ -24,7 +24,7 @@
 
 
 
-
+* connection and schedule popups should show below the metadata bar, not cover it.
 
 
 
