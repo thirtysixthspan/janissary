@@ -11,7 +11,7 @@ const SHELL_STATUS_HOOKS = String.raw`autoload -Uz add-zsh-hook; _janus_preexec(
 
 export type AttachTerminal = (
   ptyId: string, onData: (data: string) => void,
-) => PluginTerminal;
+) => PluginTerminal | Promise<PluginTerminal>;
 
 type Options = {
   ptyId: string;
@@ -95,17 +95,27 @@ export function useShellTerminal({
     });
     observer.observe(container);
 
-    const handle = attach(ptyId, (data) => { terminal.write(data); });
-    handleRef.current = handle;
     terminalRef.current = terminal;
-    terminal.onData((data) => { handleRef.current?.write(data); });
-    handle.write(SHELL_STATUS_HOOKS);
-    handle.onExit(() => { exitRef.current(); });
-    resize();
+    let disposed = false;
+    const onAttached = (handle: PluginTerminal) => {
+      if (disposed) { handle.detach(); return; }
+      handleRef.current = handle;
+      terminal.onData((data) => { handleRef.current?.write(data); });
+      handle.write(SHELL_STATUS_HOOKS);
+      handle.onExit(() => { exitRef.current(); });
+      resize();
+    };
+    const attachment = attach(ptyId, (data) => { terminal.write(data); });
+    if (attachment instanceof Promise) {
+      void attachment.then(onAttached).catch(() => { /* The server refused a terminal not owned by this tab. */ });
+    } else {
+      onAttached(attachment);
+    }
 
     return () => {
+      disposed = true;
       observer.disconnect();
-      handle.detach();
+      handleRef.current?.detach();
       handleRef.current = null;
       terminalRef.current = null;
       unregisterTerminalSelection(container);

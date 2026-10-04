@@ -31,8 +31,9 @@ export type CoreRpcCall =
   | { method: 'answerQuestion'; params: { tab: string; id: string; answer: string | null } }
   | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
-  | { method: 'ptyInput'; params: { id: string; data: string } }
-  | { method: 'ptyResize'; params: { id: string; cols: number; rows: number } }
+  | { method: 'ptyInput'; params: { id: string; data: string; tab?: string } }
+  | { method: 'ptyResize'; params: { id: string; cols: number; rows: number; tab?: string } }
+  | { method: 'pluginTerminalAttach'; params: { id: string; tab: string } }
   | { method: 'ptyKill'; params: { id: string } }
   // The terminal colors a pty-backed surface resolved, reported once after it mounts so the session's
   // recording carries the foreground and background it ran under. The server holds app theme names,

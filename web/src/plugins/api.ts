@@ -205,7 +205,7 @@ export type TabPluginClientCapabilities = {
   // `detach` releases the attachment; call it on teardown, or a hidden tab keeps a live subscription
   // to a terminal nothing is rendering. Optional, like `registerDirtyHandle`, because a plugin with no
   // terminal behaves exactly as it did before this existed.
-  attachTerminal?(ptyId: string, onData: (data: string) => void): PluginTerminal;
+  attachTerminal?(ptyId: string, onData: (data: string) => void): Promise<PluginTerminal>;
   // The two metadata-row actions that are tab-scoped RPCs rather than commands: open a file navigator
   // rooted at this tab, and launch an agent in this tab's directory. Capabilities rather than a
   // dispatched command line because the two are not the same thing — the agent action roots the new
@@ -248,7 +248,11 @@ export function createPluginClientCapabilities(
       return result.value;
     },
     splitAction: splitAction ?? null,
-    attachTerminal: (ptyId, onData) => {
+    attachTerminal: async (ptyId, onData) => {
+      const authorization = await client.request<{ ok: boolean; value?: boolean }>({
+        method: 'pluginTerminalAttach', params: { id: ptyId, tab: label },
+      });
+      if (!authorization.ok || !authorization.value) throw new Error('terminal does not belong to this plugin tab');
       const exitHandlers = new Set<() => void>();
       const stopListening = client.onPtyExit((id) => {
         if (id !== ptyId) return;
@@ -258,8 +262,8 @@ export function createPluginClientCapabilities(
       // plugin attaching late still renders whatever the shell said before it did.
       const detachBytes = client.attachPty(ptyId, onData);
       return {
-        write: (data) => { client.send({ method: 'ptyInput', params: { id: ptyId, data } }); },
-        resize: (cols, rows) => { client.send({ method: 'ptyResize', params: { id: ptyId, cols, rows } }); },
+        write: (data) => { client.send({ method: 'ptyInput', params: { id: ptyId, data, tab: label } }); },
+        resize: (cols, rows) => { client.send({ method: 'ptyResize', params: { id: ptyId, cols, rows, tab: label } }); },
         onExit: (handler) => { exitHandlers.add(handler); },
         detach: () => { detachBytes(); stopListening(); exitHandlers.clear(); },
       };

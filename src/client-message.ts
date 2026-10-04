@@ -53,6 +53,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   projectFiles: 'deferred',
   promoteToTerminal: 'ack',
   ptyInput: 'ack',
+  pluginTerminalAttach: 'result',
   ptyKill: 'ack',
   ptyResize: 'ack',
   pluginFailed: 'ack',

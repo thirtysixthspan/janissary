@@ -19,6 +19,32 @@ let host: PluginHost;
 beforeEach(() => { host = createPluginHost(); });
 
 describe('createPluginClientCapabilities', () => {
+  it('authorizes a terminal attachment against the owning tab before listening', async () => {
+    const { client, send } = makeClient(async () => ({ ok: true, value: true }));
+    const attachPty = vi.fn(() => vi.fn());
+    Object.assign(client, { attachPty, onPtyExit: vi.fn(() => vi.fn()) });
+    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    const onData = vi.fn();
+    const terminal = await capabilities.attachTerminal?.('pty1', onData);
+    terminal?.write('echo hello');
+    terminal?.resize(120, 40);
+    expect(client.request).toHaveBeenCalledWith({
+      method: 'pluginTerminalAttach', params: { id: 'pty1', tab: 'shell-1' },
+    });
+    expect(attachPty).toHaveBeenCalledWith('pty1', onData);
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'ptyInput', params: { id: 'pty1', data: 'echo hello', tab: 'shell-1' } });
+    expect(send).toHaveBeenNthCalledWith(2, { method: 'ptyResize', params: { id: 'pty1', cols: 120, rows: 40, tab: 'shell-1' } });
+  });
+
+  it('refuses to attach to a terminal owned by another tab', async () => {
+    const { client } = makeClient(async () => ({ ok: true, value: false }));
+    const attachPty = vi.fn();
+    Object.assign(client, { attachPty });
+    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    await expect(capabilities.attachTerminal?.('pty2', vi.fn())).rejects.toThrow('terminal does not belong');
+    expect(attachPty).not.toHaveBeenCalled();
+  });
+
   it('builds an authenticated resource URL from the session token', () => {
     history.replaceState(null, '', '/?token=s3cr3t%2Ftoken');
     const { client } = makeClient();

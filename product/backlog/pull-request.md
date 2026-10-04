@@ -4,17 +4,6 @@
 
 * the shell should show no command line
 
-* Close the security gap in plugin terminal attachment ownership.
-
-Existing Issue: `createPluginClientCapabilities` installs `attachTerminal` for every plugin and passes its raw `ptyId` to `client.attachPty`, `ptyInput`, and `ptyResize`, while PTY ids are sequential and the server-side input and resize paths do not check which tab owns an id. Severity: 8/10
-
-Existing Risk: 7/10 - A faulty plugin can guess another PTY id, observe a harness or SSH session's output, or inject keystrokes into a process it does not own.
-
-Proposal Risk: 2/10 - A host-authorized attachment bound to the owning plugin tab prevents accidental cross-tab access; bundled plugin code still runs at host trust as documented.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: bind terminal attachment to its owning plugin tab". Replace the arbitrary-id path in `web/src/plugins/api.ts` with a host-authorized terminal handle tied to the requesting plugin tab, and enforce ownership for attachment, output delivery, input, and resize through `src/pseudoterminal-manager.ts`, `src/controller/tab-adapter.ts`, `src/message/handler.ts`, and `src/protocol/core-rpc.ts`. Do not treat the predictable `ptyN` identifier alone as authorization. Add tests proving a plugin can attach to and control its own spawned terminal but cannot observe, write to, or resize a terminal owned by another tab; retain the shell's existing byte, resize, and exit coverage in `web/src/plugins/shell/useShellTerminal.test.ts`.
-
-
 * Deliver the plan's bare-word picker behavior from the shell command bar.
 
 Existing Issue: The shared `AppCommandBar` invokes picker openers for shell-tab submissions, but `PickerOverlays` is rendered only for agent, editor, and harness bodies and is not rendered by `PluginTabLayer`, so commands such as `theme`, `hist`, and `tasks` set hidden picker state without displaying a picker. Severity: 7/10

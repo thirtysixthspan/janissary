@@ -228,13 +228,13 @@ describe('handle', () => {
   it('routes ptyInput', () => {
     const controller = makeController();
     dispatchCall(controller, 9, { method: 'ptyInput', params: { id: 'p1', data: 'ls\n' } });
-    expect(controller.ptyInput).toHaveBeenCalledWith('p1', 'ls\n');
+    expect(controller.ptyInput).toHaveBeenCalledWith('p1', 'ls\n', undefined);
   });
 
   it('routes ptyResize', () => {
     const controller = makeController();
     dispatchCall(controller, 10, { method: 'ptyResize', params: { id: 'p1', cols: 100, rows: 40 } });
-    expect(controller.ptyResize).toHaveBeenCalledWith('p1', 100, 40);
+    expect(controller.ptyResize).toHaveBeenCalledWith('p1', 100, 40, undefined);
   });
 
   it('routes ptyKill', () => {

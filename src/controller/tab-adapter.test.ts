@@ -25,7 +25,7 @@ function makeManagers(labels: string[] = ['agent']) {
     },
     notifications: new NotificationQueue(),
     shell: { promoteRunning: vi.fn() },
-    pty: { input: vi.fn(), resizeOne: vi.fn(), kill: vi.fn(), resize: vi.fn() },
+    pty: { input: vi.fn(), resizeOne: vi.fn(), kill: vi.fn(), resize: vi.fn(), isRunningFor: vi.fn((id, labels) => id === 'pty1' && labels.includes('owner')) },
   } as unknown as Managers;
   // The fixture's own no-op would shadow the recorder, so the two are merged with the recorder last.
   Object.assign((managers.tab as Record<string, unknown>), { setActiveTab });
@@ -33,6 +33,31 @@ function makeManagers(labels: string[] = ['agent']) {
 }
 
 describe('tab adapter focus', () => {
+  it('authorizes attachment only for the tab that owns the terminal', () => {
+    const { managers } = makeManagers();
+    const adapter = createTabControllerAdapter(managers);
+    expect(adapter.pluginTerminalAttach('pty1', 'owner')).toBe(true);
+    expect(adapter.pluginTerminalAttach('pty2', 'owner')).toBe(false);
+  });
+
+  it('ignores plugin input and resize for a terminal owned by another tab', () => {
+    const { managers } = makeManagers();
+    const adapter = createTabControllerAdapter(managers);
+    adapter.ptyInput('pty2', 'intrusion', 'owner');
+    adapter.ptyResize('pty2', 120, 40, 'owner');
+    expect(managers.pty.input).not.toHaveBeenCalled();
+    expect(managers.pty.resizeOne).not.toHaveBeenCalled();
+  });
+
+  it('forwards plugin input and resize for its own terminal', () => {
+    const { managers } = makeManagers();
+    const adapter = createTabControllerAdapter(managers);
+    adapter.ptyInput('pty1', 'owned input', 'owner');
+    adapter.ptyResize('pty1', 100, 32, 'owner');
+    expect(managers.pty.input).toHaveBeenCalledWith('pty1', 'owned input');
+    expect(managers.pty.resizeOne).toHaveBeenCalledWith('pty1', 100, 32);
+  });
+
   // Addressing a tab by label has to go through the index the tab manager holds, or a rename or a
   // close would leave the client focusing a position rather than the tab it named.
   it('focusTab activates the index the label resolves to', () => {

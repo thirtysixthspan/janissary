@@ -37,8 +37,9 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   answerQuestion: (p) => isString(p.tab) && isString(p.id) && (p.answer === null || isString(p.answer)),
   complete: (p) => isString(p.text) && isInteger(p.cursor),
   resize: (p) => isInteger(p.cols) && isInteger(p.rows),
-  ptyInput: (p) => isString(p.id) && isString(p.data),
-  ptyResize: (p) => isString(p.id) && isInteger(p.cols) && isInteger(p.rows),
+  ptyInput: (p) => isString(p.id) && isString(p.data) && (p.tab === undefined || isString(p.tab)),
+  ptyResize: (p) => isString(p.id) && isInteger(p.cols) && isInteger(p.rows) && (p.tab === undefined || isString(p.tab)),
+  pluginTerminalAttach: (p) => isString(p.id) && isString(p.tab),
   ptyKill: (p) => isString(p.id),
   reportLayout: (p) => isFiniteNumber(p.sidebarLeft) && isFiniteNumber(p.sidebarRight) && isFiniteNumber(p.tabAreaPct),
   // Checked as plain strings here and as hex colors at the point of use: this decoder's job is

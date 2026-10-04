@@ -61,9 +61,11 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     }
     case 'resize': { controller.resize(message.params.cols, message.params.rows); break;
     }
-    case 'ptyInput': { controller.ptyInput(message.params.id, message.params.data); break;
+    case 'ptyInput': { controller.ptyInput(message.params.id, message.params.data, message.params.tab); break;
     }
-    case 'ptyResize': { controller.ptyResize(message.params.id, message.params.cols, message.params.rows); break;
+    case 'ptyResize': { controller.ptyResize(message.params.id, message.params.cols, message.params.rows, message.params.tab); break;
+    }
+    case 'pluginTerminalAttach': { return controller.pluginTerminalAttach(message.params.id, message.params.tab);
     }
     case 'ptyKill': { controller.ptyKill(message.params.id); break;
     }

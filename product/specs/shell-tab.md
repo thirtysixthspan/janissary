@@ -138,6 +138,9 @@ The tab is an ordinary plugin tab in the rest: live and in-memory, never persist
 by `--relaunch`, dockable into either sidebar, and splittable. Selecting text with the pointer and
 right-clicking offers the same **Copy** every other terminal surface offers.
 
+Its terminal connection belongs only to that shell tab. A plugin tab cannot attach to, type into, or
+resize a terminal owned by another tab.
+
 A paste into the command bar becomes one editable line, subject to the same `!` and command-resolution
 rules as anything typed, so a multi-line paste is not run a line at a time and nothing is sent to zsh
 before it has been seen.
