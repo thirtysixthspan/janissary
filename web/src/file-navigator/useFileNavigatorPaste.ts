@@ -1,9 +1,10 @@
 import { useState, useSyncExternalStore } from 'react';
-import type { BulkConflictPolicy, BulkMoveResult, FileNavigatorRow } from '@shared/protocol';
+import type { BulkConflictPolicy, FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { newFileTargetDir } from './file/navigator-new-file';
 import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, subscribeClipboard, type ClipboardMode } from './file/navigator-clipboard';
 import { basename, dirname } from '../shared/rel-path';
+import { requestFileNavigatorMutation } from './file-navigator-request';
 
 type PendingPasteConflict = {
   sources: string[];
@@ -36,7 +37,7 @@ export function useFileNavigatorPaste(client: JanusClient, label: string, absolu
     policy?: BulkConflictPolicy,
     sourceHost?: string,
   ) => {
-    const result = await client.request<BulkMoveResult>({
+    const result = await requestFileNavigatorMutation(client, {
       method: 'pasteFileNavigatorItems',
       params: { label, sources, destinationPath, mode, policy, sourceHost },
     });

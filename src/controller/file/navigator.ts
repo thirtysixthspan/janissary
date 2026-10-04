@@ -4,7 +4,7 @@
 // limit — see `ai/guidelines/code-guidelines.md`.
 import { reportOperationFailure } from '../../file-navigator/operation-report.js';
 import type { Managers } from '../../managers.js';
-import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution, UndoRedoResult } from '../../protocol.js';
+import type { BatchResult, BulkConflictPolicy, BulkMoveResult, FileNavigatorDetail, FileOpenerChoice, FileOpenerResolution, RenameFileNavigatorResult, UndoRedoResult } from '../../protocol.js';
 import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
 
 export function fileNavigatorToggle(managers: Managers, index: number, path: string): void {
@@ -105,7 +105,7 @@ export function deleteFileNavigatorItems(
 
 export function renameFileNavigatorItem(
   managers: Managers, label: string, relPath: string, newName: string, overwrite?: boolean,
-): MaybePromise<BatchResult | { conflict: true }> {
+): MaybePromise<RenameFileNavigatorResult> {
   if (!isOpenTab(managers, label)) return { total: 0, failedPaths: [] };
   return mapMaybe(managers.fileNavigator.rename(label, relPath, newName, overwrite), (result) => {
     if (!('conflict' in result)) reportOperationFailure(managers, label, 'rename', result);

@@ -4,16 +4,6 @@
 
 ## development
 
-* Bind file navigator mutation replies to their RPC methods so conflict handling cannot silently drift between server and client.
-
-Existing Debt: Navigator mutation parameters belong to the shared wire contract, but their reply types are chosen independently at each generic client request and erased to unknown by the server dispatcher, leaving the method-to-result relationship unchecked. Severity: 6/10
-
-Existing Risk: 5/10 - A changed or incorrectly selected reply type can still compile while move, paste, rename, or history handling misses a conflict or reads a missing result field.
-
-Proposal Risk: 2/10 - A shared method-to-result contract catches incompatible producer and consumer changes during typechecking, but malformed wire data still requires runtime validation and can violate that contract.
-
-Proposal: Start with the six methods `moveFileNavigatorItem`, `moveFileNavigatorItems`, `pasteFileNavigatorItems`, `renameFileNavigatorItem`, `undoFileNavigatorItem`, and `redoFileNavigatorItem`. In `src/protocol/file-navigator.ts`, define a result map using the existing `BulkMoveResult`, `BatchResult`, and `UndoRedoResult` types and a named rename result for `BatchResult | { conflict: true }`; expose the contract through `src/protocol.ts` alongside `FileNavigatorRpcCall`. In `src/message/file-navigator.ts`, put those six handlers behind a mapped handler table that checks each method's extracted parameters and synchronous or asynchronous result against that contract, delegating to the existing controller methods in `src/controller/file/navigator.ts`. Add a focused request adapter beside the navigator hooks that infers the reply from the method and calls the existing `JanusClient.request` transport internally; migrate `web/src/file-navigator/useFileNavigatorMoveOperations.ts`, `web/src/file-navigator/useFileNavigatorPaste.ts`, and `web/src/file-navigator/useFileNavigatorRename.ts` so callers no longer supply an unrelated result generic or repeat the rename response shape. Keep the transport machinery in `web/src/rpc-exchange.ts`, the wire encoding, and other RPC families outside this increment. Preserve the routing and reply cases in `src/message/file-navigator.test.ts`, controller conflict results in `src/controller/file/navigator.test.ts`, move and history retries in `web/src/file-navigator/useFileNavigatorMoveOperations.test.ts`, paste conflict and clipboard behavior in `web/src/file-navigator/useFileNavigatorPaste.test.ts`, and rename interactions in `web/src/file-navigator/FileNavigatorTab.test.tsx`. Add compile-time assertions for method-specific reply inference and rejection of an incompatible server result: existing runtime tests exercise supplied fixtures but do not establish that a method and its claimed reply type agree.
-
 ## deferred
 
 * Give the clipboard-history plugin an owned store instance and feed its popup through an injected subscription hook. — deferred: complexity 8/10, requires an instance-owned plugin lifecycle plus an injected React subscription adapter across the store, plugin entry, popup, and three test files.
