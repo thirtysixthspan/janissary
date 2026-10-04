@@ -35,6 +35,8 @@ export const shellManifest = {
     // capability `activate.ts` reaches for has to be named here or `restrictToDeclared` replaces it
     // with one that throws.
     'terminalRunning',
+    'queueLine',
+    'nextQueuedLine',
     'openOrFocusTab',
     'updateTab',
     'setUnread',

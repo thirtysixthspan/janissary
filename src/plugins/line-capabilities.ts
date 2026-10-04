@@ -16,8 +16,12 @@ export function lineCapabilities(input: {
   origin: PluginFailureOrigin;
   answeringLabel?: string;
   isEnabled: () => boolean;
-}): Pick<TabPluginServerCapabilities, 'originTab' | 'dispatchLine' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning'> {
+}): Pick<
+  TabPluginServerCapabilities,
+  'originTab' | 'dispatchLine' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning' | 'queueLine' | 'nextQueuedLine'
+> {
   const { managers, declaration, origin, answeringLabel, isEnabled } = input;
+  const queueLabel = () => answeringLabel ?? origin.label;
   // The labels of this plugin's own open tabs — the only terminals whose ids a plugin can legitimately
   // hold, because a payload factory is the only scope in which it may start one.
   const ownTabLabels = () => managers.tab.tabs
@@ -58,5 +62,11 @@ export function lineCapabilities(input: {
     // processes in the window are alive — and the contract has always said "a terminal this plugin
     // spawned", which is the question asked here.
     terminalRunning: (ptyId) => isEnabled() && managers.pty.isRunningFor(ptyId, ownTabLabels()),
+    // The answering tab's own queue, never another's: a line typed into a plugin tab's command line
+    // waits in that tab, which is where the queue popup over it looks.
+    queueLine: (line) => {
+      if (isEnabled()) managers.tab.enqueue(queueLabel(), line);
+    },
+    nextQueuedLine: () => (isEnabled() ? managers.tab.dequeue(queueLabel()) ?? null : null),
   };
 }

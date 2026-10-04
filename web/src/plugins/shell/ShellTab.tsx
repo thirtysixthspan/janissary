@@ -9,6 +9,8 @@ import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
 import { reportShellCwd } from './report-shell-cwd';
 import { useShellSubmit } from './useShellSubmit';
+import { useShellCommandQueue } from './useShellCommandQueue';
+import type { ShellCommandQueue } from './shell-command-queue';
 import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { NO_CHORDS, NO_QUEUE_ITEMS } from './shell-tab-constants';
@@ -38,6 +40,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [commandRunning, setCommandRunning] = useState(payload.commandRunning ?? false);
   const queueWasOpen = useRef(false);
+  const queueReference = useRef<ShellCommandQueue | null>(null);
   const draftReference = useRef(draft);
   draftReference.current = draft;
   const queueOpen = appBar.queueOpen ?? false;
@@ -73,6 +76,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     attachTerminal: capabilities.attachTerminal,
     onCommandRunning: useCallback((running: boolean) => {
       setCommandRunning(running);
+      queueReference.current?.setBusy(running);
       void capabilities.intent<{ updated: boolean }>('command-state', { running }).catch(() => {
         capabilities.reportFailure('shell command status intent failed');
       });
@@ -99,7 +103,12 @@ export function ShellTab({ payload, capabilities }: Properties) {
     if (capabilities.active) inputReference.current?.focus();
   }, [capabilities.active]);
 
-  const submit = useShellSubmit({ appBar, capabilities, display, setMatches, setSent, write });
+  const run = useShellSubmit({ appBar, capabilities, display, setMatches, setSent, write });
+  const { queue, submit } = useShellCommandQueue(capabilities, run, payload.commandRunning ?? false, (line) => {
+    setMatches([]);
+    setSent((previous) => [...previous, line]);
+  });
+  queueReference.current = queue;
 
   const bar = useCommandBarKeys({
     value: draft,
@@ -194,6 +203,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         ghost={bar.ghost}
         dotColor={capabilities.dotColor ?? DOT_COLOR}
         busy={commandRunning}
+        label={commandRunning ? 'queue' : undefined}
         autoFocus
         ariaLabel="Shell command"
         above={matches.length > 1 ? (

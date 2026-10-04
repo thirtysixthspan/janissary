@@ -2,8 +2,6 @@
 
 # pull-request
 
-* when the shell is busy running a command, the command line should read `queue >` and any commands entered go into the command queue. once the shell is no longer busy the command queue is drained one command at a time.
-
 * when launching a new shell from an existing shell using the button in the metadata line, the new shell should open in the same working directory.
 
 * the popups should be flush left without overlapping the color bar on the right of the tab, and flush against the command bar. 

@@ -8,7 +8,7 @@ import {
 } from '../api.js';
 import {
   isEmptyShellIntent, isShellCommandState, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellPayload,
-  type ShellCommandState, type ShellCompleteRequest, type ShellPayload,
+  type ShellCommandState, type ShellCompleteRequest, type ShellPayload, type ShellQueuedLine,
 } from './shared.js';
 import { openShellTab } from './open-tab.js';
 
@@ -60,6 +60,8 @@ export function activate(): TabPluginActivation {
         cwd: TabPluginIntentEntry<ShellPayload, string>;
         dispatch: TabPluginIntentEntry<ShellPayload, string>;
         complete: TabPluginIntentEntry<ShellPayload, ShellCompleteRequest>;
+        queue: TabPluginIntentEntry<ShellPayload, string>;
+        dequeue: TabPluginIntentEntry<ShellPayload, undefined>;
       }
     >('shell', isShellPayload, {
       // Asked once on mount. A tab whose shell exited while no browser was attached holds the payload
@@ -99,6 +101,19 @@ export function activate(): TabPluginActivation {
         payload: isShellCompleteRequest,
         run: (_tabPayload, request, capabilities) =>
           capabilities.completeLine(request.line, request.cursor),
+      },
+      // A line the bar submitted while zsh was busy, and the next one to run once it is not. The
+      // client decides when to drain, because only it hears zsh return to its prompt.
+      queue: {
+        payload: isShellDispatch,
+        run: (_tabPayload, line, capabilities) => {
+          capabilities.queueLine(line);
+          return { queued: true };
+        },
+      },
+      dequeue: {
+        payload: isEmptyShellIntent,
+        run: (_tabPayload, _payload, capabilities): ShellQueuedLine => ({ line: capabilities.nextQueuedLine() }),
       },
     }),
   };

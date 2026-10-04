@@ -30,6 +30,8 @@ export type TabPluginCapabilityName =
   | 'dispatchLineWithOutput'
   | 'completeLine'
   | 'terminalRunning'
+  | 'queueLine'
+  | 'nextQueuedLine'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -60,6 +62,8 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   dispatchLineWithOutput: true,
   completeLine: true,
   terminalRunning: true,
+  queueLine: true,
+  nextQueuedLine: true,
   rejectRequest: true,
   reportFailure: true,
 };

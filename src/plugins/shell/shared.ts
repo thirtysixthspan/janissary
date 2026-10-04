@@ -55,7 +55,10 @@ export type ShellPayload = {
   commandRunning?: boolean;
 };
 
-export type ShellIntent = 'terminal-status' | 'dispatch' | 'complete' | 'cwd';
+export type ShellIntent = 'terminal-status' | 'dispatch' | 'complete' | 'cwd' | 'queue' | 'dequeue';
+
+// The front of this tab's command queue, or `null` once it is empty.
+export type ShellQueuedLine = { line: string | null };
 
 export type ShellTerminalStatus = { running: boolean };
 

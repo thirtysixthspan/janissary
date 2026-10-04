@@ -43,6 +43,14 @@ If the shell tab is docked in a sidebar, the picker appears over that shell ther
 the picker and are not sent to zsh. The terminal colors follow the application theme, including when
 the picker applies a different theme.
 
+While zsh is running a command, the command line reads `queue >`. A line submitted then goes into the
+shell tab's command queue instead of reaching zsh or the application, and it is recorded in the bar's
+history as it is queued. When zsh returns to its prompt, the queue drains one line at a time, oldest
+first: each line runs exactly as if it had just been submitted, and a line sent to zsh waits for zsh's
+next prompt before the following entry runs. Lines the application answers itself run straight on to
+the next entry. A line submitted while the queue is still draining joins the back of the queue, so
+nothing overtakes a line already waiting. Keys typed directly into the terminal are never queued.
+
 The `queue` command and `Ctrl+E` open the application's queue popup over the shell tab. The selected
 queued line appears in the shell command bar; typing edits it, and Backspace or Delete on an empty bar
 removes it. Arrow keys change the selected queue entry, Return leaves the popup open without submitting,

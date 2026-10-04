@@ -342,6 +342,52 @@ describe('terminalRunning', () => {
   });
 });
 
+describe('queueLine and nextQueuedLine', () => {
+  function withQueue() {
+    const enqueue = vi.fn();
+    const dequeue = vi.fn((): string | undefined => 'ls');
+    const { managers } = makeManagers();
+    Object.assign(managers.tab, { enqueue, dequeue });
+    return { managers, enqueue, dequeue };
+  }
+
+  function answeringContext(managers: Managers, isEnabled = () => true) {
+    return createPluginContext(
+      managers, declaration(['queueLine', 'nextQueuedLine']), activationFor(), { label: 'janus', command: 'zsh' },
+      isEnabled, [], 'shell1',
+    );
+  }
+
+  it('queues a line on the answering tab and takes the front of that same queue', () => {
+    const { managers, enqueue, dequeue } = withQueue();
+    const capabilities = answeringContext(managers);
+
+    capabilities.queueLine('ls -la');
+
+    expect(enqueue).toHaveBeenCalledWith('shell1', 'ls -la');
+    expect(capabilities.nextQueuedLine()).toBe('ls');
+    expect(dequeue).toHaveBeenCalledWith('shell1');
+  });
+
+  it('answers null once the queue is empty', () => {
+    const { managers, dequeue } = withQueue();
+    dequeue.mockReturnValue(undefined);
+
+    expect(answeringContext(managers).nextQueuedLine()).toBeNull();
+  });
+
+  it('touches no queue after the plugin has been disabled', () => {
+    const { managers, enqueue, dequeue } = withQueue();
+    const capabilities = answeringContext(managers, () => false);
+
+    capabilities.queueLine('ls');
+
+    expect(capabilities.nextQueuedLine()).toBeNull();
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(dequeue).not.toHaveBeenCalled();
+  });
+});
+
 describe('each of them is declaration-gated', () => {
   it('refuses every one the declaration did not name', () => {
     const { managers } = makeManagers();
@@ -352,5 +398,7 @@ describe('each of them is declaration-gated', () => {
     expect(() => capabilities.dispatchLineWithOutput('help')).toThrow('used capability "dispatchLineWithOutput" without declaring it');
     expect(() => capabilities.completeLine('l', 1)).toThrow('used capability "completeLine" without declaring it');
     expect(() => capabilities.terminalRunning('pty1')).toThrow('used capability "terminalRunning" without declaring it');
+    expect(() => { capabilities.queueLine('ls'); }).toThrow('used capability "queueLine" without declaring it');
+    expect(() => capabilities.nextQueuedLine()).toThrow('used capability "nextQueuedLine" without declaring it');
   });
 });

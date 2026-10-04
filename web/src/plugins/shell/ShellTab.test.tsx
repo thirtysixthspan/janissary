@@ -341,6 +341,46 @@ describe('ShellTab', () => {
     expect(capabilities.intent).toHaveBeenCalledWith('command-state', { running: true });
   });
 
+  it('reads queue on its command line while zsh is executing a command', () => {
+    renderTab();
+    expect(document.querySelector('.command-area .command')).not.toHaveTextContent('queue');
+
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('C'); });
+
+    expect(document.querySelector('.command-area .command')).toHaveTextContent('queue');
+  });
+
+  it('queues a line submitted while zsh is busy and runs it when zsh returns to its prompt', async () => {
+    const queued: string[] = [];
+    const { capabilities, releaseDispatch, written } = renderTab({ dispatched: false });
+    const intent = capabilities.intent as unknown as {
+      getMockImplementation: () => (name: string, payload: unknown) => unknown;
+      mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
+    };
+    const answer = intent.getMockImplementation();
+    intent.mockImplementation(async (name, payload) => {
+      if (name === 'queue') { queued.push(payload as string); return { queued: true }; }
+      if (name === 'dequeue') return { line: queued.shift() ?? null };
+      return answer(name, payload);
+    });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('C'); });
+
+    fireEvent.change(bar(), { target: { value: '!ls -la' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    await waitFor(() => { expect(queued).toEqual(['!ls -la']); });
+    expect(written).toEqual([]);
+    expect(bar().value).toBe('');
+
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('D'); });
+    releaseDispatch();
+
+    await waitFor(() => { expect(written).toEqual(['ls -la\n']); });
+    expect(queued).toEqual([]);
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(bar().value).toBe('!ls -la');
+  });
+
   it('sends the current directory from zsh to the plugin intent', () => {
     const { capabilities } = renderTab();
 

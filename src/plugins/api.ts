@@ -246,6 +246,12 @@ export type TabPluginServerCapabilities = {
   // is in-memory only, so the tab is still there holding the payload of a shell that finished minutes
   // ago. This is how a tab learns that and closes rather than waiting for input that can never arrive.
   terminalRunning(ptyId: string): boolean;
+  // Add one line to the back of the answering tab's command queue — the same queue an agent tab
+  // holds, which the state broadcast lists and the queue popup edits — so a plugin tab with a command
+  // line can hold lines while its own process is busy rather than keeping a second queue of its own.
+  queueLine(line: string): void;
+  // Remove and return the front of the answering tab's command queue, or `null` when it is empty.
+  nextQueuedLine(): string | null;
   rejectRequest(reason: string): never;
   reportFailure(reason: unknown): never;
 };

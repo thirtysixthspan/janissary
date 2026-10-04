@@ -244,6 +244,25 @@ describe('shell plugin activation', () => {
     expect(() => ask(capabilities, 'complete', { line: 'l' })).toThrow(TabPluginRejection);
   });
 
+  it('queues a line on its own tab and hands back the front of that queue', () => {
+    const { capabilities } = fakeCapabilities();
+    const queued: string[] = [];
+    Object.assign(capabilities, {
+      queueLine: vi.fn((line: string) => { queued.push(line); }),
+      nextQueuedLine: vi.fn(() => queued.shift() ?? null),
+    });
+
+    expect(ask(capabilities, 'queue', 'ls -la')).toEqual({ queued: true });
+    expect(ask(capabilities, 'dequeue', null)).toEqual({ line: 'ls -la' });
+    expect(ask(capabilities, 'dequeue', null)).toEqual({ line: null });
+  });
+
+  it('rejects a queued line that is not a string', () => {
+    const { capabilities } = fakeCapabilities();
+
+    expect(() => ask(capabilities, 'queue', { line: 'ls' })).toThrow(TabPluginRejection);
+  });
+
   it('merges pushed host state into the tab payload without losing the terminal', () => {
     const { capabilities, updated } = fakeCapabilities();
     const rows = [{ text: 'zsh', kind: 'terminal' }];
