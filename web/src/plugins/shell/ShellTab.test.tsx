@@ -169,6 +169,19 @@ describe('ShellTab', () => {
     expect(capabilities.launchAgentHere).toHaveBeenCalledTimes(1);
   });
 
+  it('gives each of its own row buttons a glyph, so the control has a size and can be pressed', () => {
+    renderTab();
+
+    // A `{ prefix, iconName }` descriptor carries no path data, so `FontAwesomeIcon` resolves it
+    // against a library the plugin cannot add to — and an unregistered name renders nothing at all.
+    // The button then collapses to its own padding: present, zero-height, and impossible to click.
+    for (const selector of ['.tab-open-files', '.tab-launch-agent']) {
+      const button = document.querySelector(`.shell-tab ${selector}`);
+      expect(button, `${selector} is missing`).not.toBeNull();
+      expect(button?.querySelector('svg'), `${selector} has no glyph`).not.toBeNull();
+    }
+  });
+
   it('renders no transcript control, because the terminal replaced the transcript', () => {
     renderTab();
 

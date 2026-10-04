@@ -1,8 +1,8 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  StatusPanels, StatusWindowButton, connectionsWindowIcon, scheduleWindowIcon, statusButton,
-  useStatusWindows, workspacedIcon,
+  StatusPanels, StatusWindowButton, connectionsWindowIcon, newTabIcon, openFilesIcon, scheduleWindowIcon,
+  statusButton, useStatusWindows, workspacedIcon,
   type TabPluginClientCapabilities,
 } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -41,7 +41,7 @@ export function ShellTabMeta({ payload, capabilities }: {
             title={payload.workspace ? 'Open file navigator in this workspace' : 'Open file navigator here'}
             onClick={() => capabilities.openFileNavigator?.()}
           >
-            <FontAwesomeIcon icon={FILES_ICON} />
+            <FontAwesomeIcon icon={openFilesIcon} />
           </button>
           <button
             type="button"
@@ -49,7 +49,7 @@ export function ShellTabMeta({ payload, capabilities }: {
             title={payload.workspace ? 'New agent in this workspace' : 'New agent here'}
             onClick={() => capabilities.launchAgentHere?.()}
           >
-            <FontAwesomeIcon icon={AGENT_ICON} />
+            <FontAwesomeIcon icon={newTabIcon} />
           </button>
           {/* The two status windows, and the buttons that open them. Rendering the panels without these
               is how the host pushed rows into this payload that nothing could ever show: the shell does
@@ -82,7 +82,3 @@ export function ShellTabMeta({ payload, capabilities }: {
   );
 }
 
-// The two glyphs this row's own buttons carry, spelled out because a plugin may not import the host's
-// icon module — `workspacedIcon` is published only because the workspace flag needs it.
-const FILES_ICON = { prefix: 'fas' as const, iconName: 'folder-open' as const };
-const AGENT_ICON = { prefix: 'fas' as const, iconName: 'plus' as const };

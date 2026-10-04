@@ -45,8 +45,14 @@ export { isTextEntryElement } from '../shared/text-entry';
 // same reason the dialog is: a remote tab's metadata row and the sessions tab both show the state of
 // the same connections, and a plugin drawing its own icon for detach would be the drift this surface
 // exists to prevent. Both are additive, so `TAB_PLUGIN_API_VERSION` does not move.
+//
+// The icons are published as the host's own icon objects rather than as `{ prefix, iconName }`
+// descriptors. A descriptor carries no path data, so `FontAwesomeIcon` has to resolve it against a
+// library the plugin cannot add to, and an unregistered name renders nothing at all — a control with
+// no glyph and no size, which is invisible rather than obviously broken. `openFilesIcon` and
+// `newTabIcon` are here for that reason: a metadata row of a plugin's own cannot draw its buttons.
 export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedIcon, connectionsWindowIcon, scheduleWindowIcon } from '../shared/icons';
+export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon } from '../shared/icons';
 
 // The host's own floating status panels and the visibility hook that drives them, published for the
 // same reason and on the same terms: a plugin whose tab offers the connections and schedule buttons

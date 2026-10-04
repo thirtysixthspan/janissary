@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Establish whether the shell tab's file navigator button is operable, which this run could not confirm.
-
-Existing Issue: The row's file navigator button is present — the row's structure check finds it — but a click on it timed out waiting for the element to become visible in two consecutive runs. Severity: 4/10
-
-Existing Risk: 5/10 - If the button cannot be pressed, one of the three controls the shell row is supposed to share with the agent tab does nothing, and a user opening a shell tab has no route to a file navigator from it.
-
-Proposal Risk: 3/10 - Until it is reproduced the cause is unknown, so a fix may be speculative and the real fault may be a layer above the button.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: reproduce the shell tab file navigator button not accepting a click". Generated step G3, on a fresh scratch instance: open a shell tab with `zsh`, wait for the row, then click `.shell-tab .tab-open-files`. Observed `locator.click: Timeout 30000ms exceeded` on two runs, once with the report "element is not visible" while the shell tab was hidden behind another tab and once with the shell tab visible and focused. `src/plugins/shell/ShellTab.tsx` renders the button and calls `capabilities.openFileNavigator?.()`, and that capability sends `openFileNavigatorFor` with the tab's own label, so the wiring exists. What is not established is why the element is not actionable in the second case: checked and ruled out are that the button is absent, which a row check disproves, and that the tab is hidden, which the tab strip contradicts. Check whether something covers the row — the completion strip `above` the command bar, or the `StatusPanels` overlay rendered by the same row — by asserting `document.elementFromPoint` at the button's centre, and whether the tab the driver clicked is the one the row belongs to when more than one shell tab is open. Report what that shows before changing anything. re-observed on 2026-10-03: the probe this entry asks for could not be run — the attached browser stopped serving sessions, with two consecutive `page.goto` failures against an app that answered `200` moments earlier and exited as soon as a session attached, which ends the test run rather than the finding. The button itself remains unconfirmed either way, and the row it lives in has since moved to `web/src/plugins/shell/ShellTabMeta.tsx`.
