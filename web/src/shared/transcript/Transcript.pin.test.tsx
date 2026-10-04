@@ -2,8 +2,9 @@ import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { BufferLine } from '@shared/protocol';
-import type { JanusClient } from '../../ws';
 import { Transcript } from './Transcript';
+import { transcriptIntents } from './transcript-intents';
+import { ptyActions } from '../terminal/pty-actions';
 
 vi.mock('../terminal/useXterm', () => ({
   useXterm: vi.fn(() => ({ focus: () => {}, selection: { view: null } })),
@@ -19,7 +20,9 @@ vi.stubGlobal('ResizeObserver', class {
   disconnect() { resize = undefined; }
 });
 
-const client = { send: vi.fn() } as unknown as JanusClient;
+const client = { send: vi.fn(), attachPty: vi.fn(() => () => {}) };
+const intents = transcriptIntents(client.send);
+const terminalActions = ptyActions(client);
 
 function outputLines(count: number): BufferLine[] {
   return Array.from({ length: count }, (_, i) => ({ type: 'output', text: `line ${i}` }));
@@ -44,7 +47,8 @@ function renderTranscript(pinToBottom?: boolean) {
   const view = (lines: BufferLine[]) => (
     <Transcript
       lines={lines}
-      client={client}
+      intents={intents}
+      ptyActions={terminalActions}
       onToggleCollapse={() => {}}
       onPromptClick={() => {}}
       scrollRef={scrollRef}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { TabView, BufferLine } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { Transcript } from '../shared/transcript/Transcript';
@@ -15,6 +15,8 @@ import { tabBodyBorder } from '../shared/tab/body-border';
 import { agentTabIntents } from '../shared/agent-tab-intents';
 import { remoteSessionControl } from '../shared/remote-session-control';
 import { copyText } from '../shared/system-clipboard';
+import { transcriptIntents } from '../shared/transcript/transcript-intents';
+import { ptyActions } from '../shared/terminal/pty-actions';
 
 type Properties = {
   current: TabView;
@@ -53,6 +55,8 @@ export function AgentTabBody({
 }: Properties) {
   const statusWindows = useStatusWindows(current.label, current.connections.length > 0, current.schedule.length > 0);
   const intents = agentTabIntents(client, current.label, 'openTranscriptFor');
+  const transcriptActions = useMemo(() => transcriptIntents((call) => client.send(call)), [client]);
+  const terminalActions = useMemo(() => ptyActions(client), [client]);
   return (
     <div
       className="tab-body"
@@ -81,7 +85,8 @@ export function AgentTabBody({
       <div className="main">
         <Transcript
           lines={lines}
-          client={client}
+          intents={transcriptActions}
+          ptyActions={terminalActions}
           onToggleCollapse={intents.onToggleCollapse}
           onPromptClick={(text) => runCommand(text)}
           scrollRef={transcriptReference}
