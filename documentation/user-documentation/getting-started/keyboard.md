@@ -9,15 +9,15 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | Key | Action |
 |---|---|
 | `Return` | Execute the input line |
-| `Ctrl+C` | Quit the application |
+| `Ctrl+C` | Quit the application; with a shell tab's command bar focused, interrupt zsh or copy selected command text |
 | `←` | Move the input cursor left |
 | `→` | Move the input cursor right |
 | `Shift+←` / `Cmd+Shift+[` | Switch to the previous tab |
 | `Shift+→` / `Cmd+Shift+]` | Switch to the next tab |
 | `Ctrl+←` | Move the current tab one position left, within its group |
 | `Ctrl+→` | Move the current tab one position right, within its group |
-| `↑` | Walk backward through command history |
-| `↓` | Walk forward through command history |
+| `↑` | Walk backward through command history; in a shell tab, recall a line sent from that tab's command bar |
+| `↓` | Walk forward through command history; in a shell tab, recall a line sent from that tab's command bar |
 | `Shift+↑` / `Ctrl+↑` | Scroll the transcript up with acceleration |
 | `Shift+↓` / `Ctrl+↓` | Scroll the transcript down with acceleration |
 | `Ctrl+P` | Scroll the transcript up one line |
@@ -25,7 +25,9 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `PageUp` | Scroll the transcript up by half a terminal height |
 | `PageDown` | Scroll the transcript down by half a terminal height |
 | `Escape` | Reset the transcript scroll to the bottom |
-| `Ctrl+R` | Open the command history picker |
+| `Ctrl+R` | Open the command history picker; on a visible shell tab, open that tab's own history |
+| `Ctrl+D` (shell tab) | Send end-of-input to zsh while its command bar is focused |
+| `Ctrl+Z` (shell tab) | Suspend the running zsh command while its command bar is focused |
 | `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup — everything you have copied this session, newest at the bottom; choosing an entry pastes it at the cursor. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+A` | Open the task picker |
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |

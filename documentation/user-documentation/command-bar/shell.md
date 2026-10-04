@@ -104,3 +104,15 @@ Some programs need a terminal without ever saying so — a `sudo` password promp
 A real terminal also means commands behave the way they do in one: output comes back in color, and `git log` or `git diff` open a pager instead of printing everything at once.
 
 If you'd rather have none of this, set `interactiveShellDetection` to `false` in `.janissary/config.json`. Commands then run through plain pipes and only the built-in list of interactive programs applies — though anything already remembered still opens a terminal.
+
+## Open a zsh shell tab
+
+Type `zsh` to open a separate tab with a live zsh terminal. This is different from running a command with `shell` or taking over the current tab with `shell --pty`.
+
+The terminal is output-only: it never takes keyboard focus, and you cannot type into it directly. Use the command bar under it. Each line goes to Janissary first. A recognized application command runs there and never reaches zsh; an unclaimed line goes to zsh. Prefix a line with `!` to send it straight to zsh, even when it matches an application command.
+
+The shell starts in the workspace clone of the tab that opened it, when that tab has one. Otherwise it starts in the project directory. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files.
+
+`↑` and `↓` recall lines sent from this tab's command bar. `Ctrl+R` opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
+
+With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.

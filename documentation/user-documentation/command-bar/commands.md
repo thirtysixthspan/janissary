@@ -21,6 +21,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
 | `plugins` | List the [bundled tab plugins](/user-documentation/command-bar/plugins) with their version and state |
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a conversation by its title |
+| `zsh` | Open a separate [zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) |
 | `quit` / `/quit` | Exit the application, after confirmation |
 
 ## `help`

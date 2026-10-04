@@ -57,17 +57,6 @@ Proposal Risk: 2/10 - Tab-scoped registrations and a deterministic focused-tab r
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: keep simultaneous plugin chord claims per tab". Change the registration identity and cleanup closure in `web/src/plugins/PluginChords.tsx` to include the tab label, and resolve a chord against the tab that currently owns keyboard focus rather than the first registry entry. Add a regression with two shell tabs visible in different surfaces: Ctrl+R must open the focused tab's history, hiding the other tab must not clear the remaining registration, and releasing both must hand Ctrl+R back to the application. Keep the existing shell chord cases in `web/src/plugins/shell/ShellTab.test.tsx` and `web/src/useWindowKeys.test.ts` passing.
 
 
-* Close the user-documentation debt around the new shell tab.
-
-Existing Issue: `documentation/user-documentation/command-bar/shell.md` describes only the transcript shell and `documentation/user-documentation/command-bar/commands.md` omits `zsh`, so the new output-only shell tab and its routing and key behavior appear only in the in-app help and contributor specs. Severity: 4/10
-
-Existing Risk: 4/10 - A user browsing the documentation site cannot discover the new tab or tell its `!` override, separate history, and terminal-input rules from the existing `shell` command.
-
-Proposal Risk: 1/10 - The user guide will distinguish the two shell experiences, while its existing short command reference can still point readers to the detailed behavior.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: document the shell tab for users". Extend `documentation/user-documentation/command-bar/shell.md` with the `zsh` shell tab's output-only terminal, application-first routing and `!` override, workspace start, history, and control keys; add `zsh` to `documentation/user-documentation/command-bar/commands.md` and the shell-specific `Ctrl+R`/`Ctrl+C`/`Ctrl+D`/`Ctrl+Z` behavior to `documentation/user-documentation/getting-started/keyboard.md`. Keep the user-facing explanation consistent with `product/specs/shell-tab.md`, and verify the existing documentation links and VitePress build.
-
-
 * Close the type-drift debt in the shell completion result.
 
 Existing Issue: `src/plugins/shell/shared.ts` independently declares `ShellCompletion` with `matches`, `newInput`, and `newCursor`, while `src/completion/types.ts` defines the `CompletionResult` returned by `completeLine`, and no test ties the two shapes together. Severity: 4/10
