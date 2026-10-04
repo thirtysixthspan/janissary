@@ -3,14 +3,13 @@ import type { AgentState } from '../agent/types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
-import { SHELL_NAME, shellName } from '../shell/manager.js';
 import { abbreviatePath } from '../paths.js';
 import { messageBus } from '../bus.js';
 import { TabTranscriptState } from './transcript/state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { FileRegistry } from './file-registry.js';
 import { placeProfileTabSelection } from './split-selection.js';
-import { assertTerminalCwd } from './terminal-cwd.js';
+import { spawnPluginTerminal } from './plugin-terminals.js';
 import { disposeDwell } from './dwell.js';
 import * as tabOperations from './operations.js';
 import { tabRuntime } from './runtime.js';
@@ -210,25 +209,9 @@ export class TabManager extends TabTranscriptState {
   // Starts a terminal on behalf of a plugin tab's payload factory. The label is deliberately not a
   // tab's: none exists yet, so the caller adopts the id onto the label `addPluginTab` mints. A
   // workspace in the options is confined exactly as that tab's own shell is, and the plugin never
-  // learns how.
+  // learns how. The body lives in `plugin-terminals.ts`, which also holds the bound on `cwd`.
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal {
-    assertTerminalCwd(this.launchDir, options.cwd);
-    const workspace = options.workspace;
-    const ptyId = this.managers.pty.spawn(
-      '',
-      options.shell ? shellName(options.shell) : SHELL_NAME,
-      '',
-      options.cwd,
-      workspace?.dir,
-      workspace?.offline,
-      undefined,
-      // An absent `args` means the shell itself here, not a command run through it. This resource has
-      // no command to run — the caller's business is the shell — and forwarding `undefined` would let
-      // `spawnPty` fall back to `shellCommandArgs` with the empty command it was given, producing an
-      // interactive shell whose one command is the empty string.
-      { shell: options.shell, args: options.args ?? [] },
-    );
-    return { ptyId, ...this.managers.pty.spawnDimensions(), running: this.managers.pty.isRunning(ptyId) };
+    return spawnPluginTerminal(this.managers.pty, this.launchDir, options);
   }
 
   adoptTerminal(ptyId: string, label: string): void {

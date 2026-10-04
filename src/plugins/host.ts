@@ -17,10 +17,10 @@ import { subscribeHostChannels } from './host-channels.js';
 import { runPluginDefaultMenuAction } from './default-menu.js';
 import { closedTabReason, reportClientFailure, runPluginIntent, type PluginRequestPort } from './requests.js';
 import type { Subscription } from '../bus.js';
-import { contributionRejection } from './rejections.js';
 import { runPluginSelectionAction } from './selection.js';
 import { recordStatus, type PluginRecord, type TabPluginStatus } from './status.js';
 import { startPluginActivation } from './start-activation.js';
+import { buildPluginRecords } from './host-records.js';
 import { closePluginTabs } from './teardown.js';
 import { noteInOriginTab } from './transcript-note.js';
 
@@ -32,7 +32,7 @@ export type TabPluginHostOptions = {
 };
 
 export class TabPluginHost {
-  private readonly records = new Map<string, PluginRecord>();
+  private readonly records: Map<string, PluginRecord>;
   private readonly disabledTabPlugins = new Map<string, string>();
   private readonly activationTimeoutMs: number;
   private readonly handlerTimeoutMs: number;
@@ -47,17 +47,7 @@ export class TabPluginHost {
   ) {
     this.activationTimeoutMs = options.activationTimeoutMs ?? 1000;
     this.handlerTimeoutMs = options.handlerTimeoutMs ?? 5000;
-    for (const declaration of declarations) {
-      if (this.records.has(declaration.id)) {
-        throw new Error(`Duplicate tab plugin id "${declaration.id}"`);
-      }
-      // A claim refused while a registry was being built starts life already disabled, rather than
-      // having taken the app down with it while those registries were being built.
-      const rejection = contributionRejection(declaration.id);
-      this.records.set(declaration.id, rejection === undefined
-        ? { declaration, state: 'declared' }
-        : { declaration, state: 'disabled', reason: rejection });
-    }
+    this.records = buildPluginRecords(declarations);
     this.subscriptions = subscribeHostChannels({
       managers,
       records: () => [...this.records.values()],

@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Leave headroom in the three host files this diff pushes to within four lines of the file-size ceiling.
-
-Existing Issue: The diff ends `src/tab/manager.ts` at 198 counted lines, `src/plugins/host.ts` at 197 and `src/plugins/context.ts` at 196, against the `max-lines` limit of 200 in `eslint.config.mjs`, and the plan watched two other files for this and named neither of these three. Severity: 4/10
-
-Existing Risk: 3/10 - The next change to any of the three fails lint on a count rather than on a design, and the cheapest repair at that point is to compact a file or drop a comment, which is what the code guidelines exist to prevent.
-
-Proposal Risk: 2/10 - The extraction moves code without changing behaviour, but touching three load-bearing host modules in one change is where an unnoticed mistake would hide, so each move wants its own verification.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: extract from the three host files left within four lines of max-lines". Run `./scripts/run.mjs lint-files` first to read the exact counts rather than trusting the estimate, then extract rather than compact, in the order the seam is cleanest. `src/plugins/context.ts`: `createPluginContext` builds the whole capability object inline and the natural seam is the four terminal-and-line capabilities this pull request added — `originTab`, `dispatchLine`, `completeLine` and `terminalRunning` — which depend only on `managers`, `declaration`, `origin`, `answeringLabel` and `isEnabled`, so they move into a new module under `src/plugins/` that `createPluginContext` composes; `declaredResources` is the other candidate and belongs beside it. `src/plugins/host.ts`: the host gained a second subscription and a fifth constructor option, and `subscribeHostChannels` in `src/plugins/host-channels.ts` already exists to hold the wiring, so move the `records`/`invoke`/`disable` port construction there too. `src/tab/manager.ts`: the three new terminal methods are already a cohesive group and depend on `this.managers.pty` alone, so move them into a small module that takes the `PseudoterminalManager` as a parameter, which also keeps `src/tab/openers.ts`'s `OpenTarget` interface honest. Every call site keeps its current signature — `src/tab/opening-state.ts` declares the three abstract methods and `src/tab/openers.ts` consumes them through `OpenTarget`, and both are satisfied by delegation. `src/plugins/shell-capabilities.test.ts`, `src/tab/manager.test.ts` and `src/plugins/shell/activate.test.ts` cover the behaviour being moved and must pass untouched; if a case has to change, that is a signal the seam was drawn in the wrong place.
-
 * Answer `terminalRunning` only for terminals the calling plugin spawned, rather than for any pty id it is handed.
 
 Existing Issue: `createPluginContext` in `src/plugins/context.ts` answers `terminalRunning` with `managers.pty.isRunning(ptyId)` for whatever id the caller supplies, while the type comment in `src/plugins/api.ts` and the capability's own bullet in `documentation/developer-documentation/tab-plugins.md` both describe it as reporting on "a terminal this plugin spawned". Severity: 4/10

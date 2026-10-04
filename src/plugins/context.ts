@@ -9,7 +9,6 @@ import {
   type TabPluginCapabilityName,
   type TabPluginDeclaration,
   type TabPluginNotificationTopic,
-  type TabPluginResources,
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
@@ -18,7 +17,8 @@ import { isInsideRoot } from './files.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
 import { liveRecordingPaths } from './live-recordings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
-import { complete } from '../controller/completion.js';
+import { declaredResources } from './declared-resources.js';
+import { lineCapabilities } from './line-capabilities.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
@@ -55,24 +55,6 @@ function restrictToDeclared(
     };
   }
   return restricted;
-}
-
-// `spawnTerminal` is granted on the resources a payload factory receives rather than on the
-// capability object, because a tab's label does not exist until its factory returns — so it is gated
-// here, on the declaration field that asks for it. `restrictToDeclared` walks the capability set and
-// cannot reach a resource. The refusal matches the capability one: it throws the message a plugin
-// author is looking for, rather than handing back a resource that quietly does nothing.
-function declaredResources(
-  declaration: TabPluginDeclaration,
-  resources: TabPluginResources,
-): TabPluginResources {
-  if (declaration.spawnTerminal) return resources;
-  return {
-    ...resources,
-    spawnTerminal: () => {
-      throw new Error('used resource "spawnTerminal" without declaring it');
-    },
-  };
 }
 
 // The checks a plugin-produced tab value must pass, shared by the creation and update paths so a
@@ -218,30 +200,9 @@ export function createPluginContext(
     // True only while an open tab's recorder is still writing this very file. The host owns the
     // recorders, so the host is what answers; a plugin reaches no tab list of its own to ask.
     isRecordingLive: (absPath) => isEnabled() && liveRecordingPaths(managers).has(absPath),
-    originTab: () => {
-      if (!isEnabled()) return null;
-      const tab = managers.tab.byLabel(origin.label);
-      if (!tab) return null;
-      return {
-        label: tab.label,
-        cwd: managers.tab.cwdOf(origin.label) ?? managers.tab.launchDir,
-        ...(tab.workspaceDir && {
-          workspace: { dir: tab.workspaceDir, offline: tab.offline ?? false },
-        }),
-      };
-    },
-    // The tab a dispatched line runs in. That is the tab answering when the host named one — a line
-    // typed into a plugin tab's own command line runs in that tab — and the tab a command was invoked
-    // from otherwise, which is all a command or selection action has. An answering tab that has since
-    // closed falls back rather than addressing a label with no tab behind it, which would silently drop
-    // the output on the floor.
-    dispatchLine: (line) => {
-      if (!isEnabled()) return false;
-      const answering = answeringLabel && managers.tab.byLabel(answeringLabel);
-      return managers.command.dispatchLine(answering ? answeringLabel : origin.label, line);
-    },
-    completeLine: (line, cursor) => (isEnabled() ? complete(managers, line, cursor) : { matches: [], newInput: line, newCursor: cursor }),
-    terminalRunning: (ptyId) => isEnabled() && managers.pty.isRunning(ptyId),
+    // The four a plugin tab needs to be a place a line can be typed and a process can be checked on,
+    // moved out whole because they depend on nothing here beyond what they are handed.
+    ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },
