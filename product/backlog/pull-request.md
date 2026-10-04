@@ -18,8 +18,6 @@
 
 * in the shell tab, plus button in the metadata tab should open a new shell tab in the current working directory of the current shell
 
-* connection and schedule popups should show below the metadata bar, not cover it.
-
 
 * the shell tab dot should blink when a shell command is running.
 

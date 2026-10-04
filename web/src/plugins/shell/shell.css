@@ -8,6 +8,9 @@
   flex: 1 1 auto;
 }
 
+.shell-tab-header { position: relative; flex: 0 0 auto; }
+.shell-tab-header .status-panels { top: 100%; right: 10px; }
+
 .shell-tab .tab-meta {
   flex: 0 0 auto;
 }

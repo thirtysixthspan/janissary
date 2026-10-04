@@ -89,6 +89,7 @@ The connections window includes the tab's own `zsh` terminal as soon as the shel
 connections and schedule windows auto-show for five seconds whenever the tab becomes visible, then
 fade over 300 ms unless pinned or hovered. If an empty window gains its first row after that interval,
 it auto-shows again; a window with no rows stays hidden.
+Both popups begin below the metadata row, which remains visible.
 
 There is no **open transcript** control, because there is no transcript: the terminal replaced it. The
 working directory shown is the one the shell started in and does not follow a `cd`, so a shell that

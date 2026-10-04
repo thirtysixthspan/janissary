@@ -28,7 +28,7 @@ export function ShellTabMeta({ payload, capabilities }: {
     scheduleHasContent: payload.schedule.length > 0,
   });
   return (
-    <>
+    <div className="shell-tab-header">
       <div className="tab-meta">
         <span className="tab-cwd">{payload.cwd}</span>
         <span className="tab-flags">
@@ -82,6 +82,6 @@ export function ShellTabMeta({ payload, capabilities }: {
         scheduleWindow={windows.schedule}
         interactive
       />
-    </>
+    </div>
   );
 }

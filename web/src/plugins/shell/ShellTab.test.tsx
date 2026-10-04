@@ -313,6 +313,10 @@ describe('ShellTab', () => {
     // than anything this plugin does with it.
     expect(screen.getByText('connections')).toBeInTheDocument();
     expect(screen.getByText('zsh')).toBeInTheDocument();
+    expect(document.querySelector('.shell-tab-header .tab-meta')).not.toBeNull();
+    expect(document.querySelector('.shell-tab-header .status-panels')).not.toBeNull();
+    const styles = readFileSync('web/src/plugins/shell/shell.css', 'utf8');
+    expect(styles).toContain('.shell-tab-header .status-panels { top: 100%; right: 10px; }');
   });
 
   it('sends a line the host does not claim to the shell', async () => {
