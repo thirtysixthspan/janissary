@@ -11,7 +11,7 @@
 export type LineRoute = 'shell' | 'application';
 
 export function routeFor(text: string): LineRoute {
-  return text.startsWith('!') ? 'shell' : 'application';
+  return text.startsWith('!') || text.trim().toLowerCase() === 'clear' ? 'shell' : 'application';
 }
 
 // The line as the shell receives it: the `!` is a routing marker and is not part of it. `!` alone

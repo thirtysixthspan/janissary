@@ -4,7 +4,7 @@
 | ------- | ----------- |
 | `help` | List available commands |
 | `state` | Show agent state fields (truncated) |
-| `clear` | Clear the output log |
+| `clear` | Clear the output log in an agent tab; in a shell tab, clear the terminal (use `/clear` to clear its output log) |
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
 | `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |

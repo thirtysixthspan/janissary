@@ -8,6 +8,9 @@ describe('shell command line rules', () => {
     expect(routeFor('ls')).toBe('application');
     expect(routeFor('theme')).toBe('application');
     expect(routeFor('!theme')).toBe('shell');
+    expect(routeFor('clear')).toBe('shell');
+    expect(routeFor(' CLEAR ')).toBe('shell');
+    expect(routeFor('/clear')).toBe('application');
     // Not the first character: a `!` mid-line is an ordinary character to a shell and to a command.
     expect(routeFor('echo !')).toBe('application');
   });

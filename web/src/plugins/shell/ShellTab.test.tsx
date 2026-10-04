@@ -301,6 +301,14 @@ describe('ShellTab', () => {
     await waitFor(() => { expect(written).toEqual(['ls -la\n']); });
   });
 
+  it('sends clear directly to the shell terminal', async () => {
+    const { capabilities, written } = renderTab();
+    fireEvent.change(bar(), { target: { value: 'clear' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await waitFor(() => { expect(written).toEqual([`clear${String.fromCodePoint(10)}`]); });
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'clear');
+  });
+
   it('asks the host about a line as the bare string its own guard accepts', async () => {
     const { capabilities, releaseDispatch } = renderTab({ dispatched: false });
 

@@ -23,7 +23,6 @@
 * typing `theme` into the zsh tab should launch the theme picker popup.
 
 
-* in the shell tab, teh clear command should be sent to the terminal
 
 
 

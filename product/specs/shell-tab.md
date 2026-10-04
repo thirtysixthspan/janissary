@@ -26,7 +26,8 @@ command, that command runs in this tab and the shell never sees it; if it names 
 goes to zsh. So `ls` runs a shell command and `theme` opens the theme picker, and a word that
 collides with a command name is swallowed by the command. A shell waiting at a `read` prompt, or
 asking for a password, cannot be given `theme` or `files` without the `!` prefix. The command bar
-warns about none of this; `!` is the override, and it is documented in `help`.
+warns about none of this; `!` is the override, and it is documented in `help`. The bare `clear`
+command is sent directly to zsh so it clears the terminal, while `/clear` still clears the app transcript.
 
 First refusal means what it says. A line the application answers itself — a bare word that opens a
 picker, `quit` or `/quit`, or `close` or `/close` that would take the last tab with it — is answered
