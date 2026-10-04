@@ -118,6 +118,14 @@ export function ShellTab({ payload, capabilities }: Properties) {
   });
 
   const onBarKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 't') {
+      event.preventDefault();
+      event.stopPropagation();
+      void capabilities.intent<{ dispatched: boolean }>('dispatch', 'zsh').catch(() => {
+        capabilities.reportFailure('shell dispatch intent failed');
+      });
+      return;
+    }
     // The history popup is modal over the bar while it is open, exactly as the agent tab's own history
     // picker is: its window listener owns Up, Down, Return and Escape. Handling them here as well would
     // mean one ArrowUp both moved its selection and rewrote the bar, since the bar's recall walks the
@@ -176,7 +184,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         onChange={(next) => { setDraft(next); setMatches([]); }}
         onKeyDown={onBarKeyDown}
         ghost={bar.ghost}
-        dotColor={DOT_COLOR}
+        dotColor={capabilities.dotColor ?? DOT_COLOR}
         autoFocus
         ariaLabel="Shell command"
         above={matches.length > 1 ? (

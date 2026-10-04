@@ -119,6 +119,7 @@ export function PluginBody({
   client,
   active,
   dock = null,
+  dotColor,
   onClose,
   onSplit,
   onDirtyHandle,
@@ -128,6 +129,7 @@ export function PluginBody({
   client: JanusClient;
   active: boolean;
   dock?: 'left' | 'right' | null;
+  dotColor?: string;
   onClose: () => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
@@ -172,9 +174,9 @@ export function PluginBody({
   );
   const capabilities = useMemo(
     () => createPluginClientCapabilities(
-      host, pluginId, label, client, active, dock, close, splitAction, registerDirty, chords,
+      host, pluginId, label, client, active, dock, close, splitAction, registerDirty, chords, dotColor,
     ),
-    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords],
+    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

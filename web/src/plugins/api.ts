@@ -174,6 +174,7 @@ export type TabPluginClientCapabilities = {
   // always knows the label, but fourteen plugin fixtures build this object and none of them keys
   // anything by it. Absent means "no per-tab identity is available to you".
   label?: string;
+  dotColor?: string;
   // Which sidebar this tab is docked into, or `null` when it sits in the centre strip. Placement is
   // host-owned, and a plugin that lays itself out differently in a narrow sidebar reads it here
   // rather than measuring the host's frame or sniffing its DOM.
@@ -226,12 +227,14 @@ export function createPluginClientCapabilities(
   splitAction?: ReactNode,
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void,
   claimedChords: readonly string[] = [],
+  dotColor?: string,
 ): TabPluginClientCapabilities {
   return {
     active,
     dock,
     label,
     claimedChords,
+    dotColor,
     close: onClose,
     registerDirtyHandle: onDirtyHandle,
     resourceUrl,

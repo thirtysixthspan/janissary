@@ -78,6 +78,7 @@ function makeCapabilities(overrides: {
   status?: { running: boolean };
   claimedChords?: readonly string[];
   label?: string;
+  dotColor?: string;
 } = {}) {
   const written: Written = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -118,6 +119,7 @@ function makeCapabilities(overrides: {
     // What the host accepted at activation and put on this tab's view — the shell manifest claims
     // `ctrl+r`, so that is the default here too.
     claimedChords: overrides.claimedChords ?? ['ctrl+r'],
+    dotColor: overrides.dotColor,
     label: overrides.label ?? 'shell',
   } as unknown as TabPluginClientCapabilities;
   return {
@@ -206,6 +208,17 @@ function bar(): HTMLTextAreaElement {
 }
 
 describe('ShellTab', () => {
+  it('uses the tab dot color for the command bar dot', () => {
+    const { container } = renderTab({ dotColor: 'rgb(12, 34, 56)' });
+    expect(container.querySelector(':scope .command-area .dot')).toHaveStyle({ color: 'rgb(12, 34, 56)' });
+  });
+  it('opens a sibling shell with Cmd+T through the current shell tab', () => {
+    const { capabilities, written } = renderTab();
+    fireEvent.keyDown(bar(), { key: 't', metaKey: true });
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'zsh');
+    expect(written).toEqual([]);
+  });
+
   it('renders the working directory in the metadata row', () => {
     renderTab();
 

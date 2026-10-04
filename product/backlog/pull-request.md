@@ -10,7 +10,6 @@
 
 * the task picker popup should work in the shell tab just as in the agent tab.
 
-* cmd+t should open a new zsh in the same working directory without creating a new workspace
 
 * cmd+p should open the Quick Open file finder in the shell tab just as in the agent tab.
 
@@ -24,7 +23,6 @@
 
 * typing `theme` into the zsh tab should launch the theme picker popup.
 
-* the dot color in the command bar should the same color at the tab dot.
 
 * in the shell tab, teh clear command should be sent to the terminal
 

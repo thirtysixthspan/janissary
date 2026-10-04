@@ -42,7 +42,11 @@ tab's bar asks, and shows the same strip when there is a choice to make. The she
 of its own. One match completes the line, several matches show the choice strip, and no matches leave
 the line unchanged.
 
+The command bar's status dot uses the same color as the shell tab's dot.
+
 ## Keys
+
+`Cmd+T` opens another zsh tab from this shell. The new shell starts in the same working directory and shares its workspace confinement and offline setting. It does not create an agent workspace. In other tabs, `Cmd+T` keeps opening a new agent tab.
 
 `Ctrl+C`, `Ctrl+D` and `Ctrl+Z` in the command line send interrupt, end-of-input and suspend to the
 shell — the characters a terminal would send, and the only way to stop a runaway command now that

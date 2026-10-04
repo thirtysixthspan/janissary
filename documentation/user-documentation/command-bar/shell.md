@@ -115,4 +115,6 @@ The shell starts in the working directory of the tab that opened it. It shares t
 
 `↑` and `↓` recall lines sent from this tab's command bar. `Ctrl+R` opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
 
+Press `Cmd+T` to open another zsh tab in the same working directory and workspace. In other tabs, `Cmd+T` opens a new agent tab.
+
 With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.

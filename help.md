@@ -71,7 +71,7 @@
 | `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead in an agent tab whose terminal has taken over |
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
 | `Ctrl+O` | Move the running command into a full-tab terminal to type to it (no-op when nothing is running) |
-| `Cmd+T` | Open a new agent tab (same as typing `agent`) |
+| `Cmd+T` | Open a new agent tab (same as typing `agent`), or another zsh tab in the same directory and workspace when a shell tab's command bar has focus |
 | `Ctrl+C` / `Ctrl+D` / `Ctrl+Z` (shell tab) | Send interrupt, end-of-input, or suspend to the shell — the characters a terminal would send. `Ctrl+C` copies the command line's own selection instead when it holds one. These apply only while a `shell` tab's command bar has the focus |
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Cmd+F` | Open the search bar in the transcript; in an editor tab, open the fuzzy line search over the buffer |

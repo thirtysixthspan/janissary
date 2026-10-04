@@ -43,6 +43,7 @@ export function PluginTabLayer({
       {tab.plugin && (
         <PluginBody
           plugin={tab.plugin} label={tab.label} client={client}
+          dotColor={tab.dotColor}
           active={tab.label === current.label} onClose={onClose} onSplit={onSplit}
           onDirtyHandle={onDirtyHandle}
         />
