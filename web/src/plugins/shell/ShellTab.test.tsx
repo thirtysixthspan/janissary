@@ -770,9 +770,13 @@ describe('ShellTab', () => {
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
     // The popup puts the newest line at the bottom, like the application picker, so Up moves older.
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
-    expect(document.querySelector('.shell-history .picker-row.selected')?.textContent).toBe('first');
+    await waitFor(() => {
+      expect(document.querySelector('.shell-history .picker-row.selected')?.textContent).toBe('first');
+    });
     fireEvent.keyDown(bar(), { key: 'ArrowDown' });
-    expect(document.querySelector('.shell-history .picker-row.selected')?.textContent).toBe('second');
+    await waitFor(() => {
+      expect(document.querySelector('.shell-history .picker-row.selected')?.textContent).toBe('second');
+    });
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
     fireEvent.keyDown(bar(), { key: 'Enter' });
 
