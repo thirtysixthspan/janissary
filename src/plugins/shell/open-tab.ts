@@ -8,6 +8,11 @@ import { SHELL_PROGRAM, type ShellPayload } from './shared.js';
 // `spawnTerminal` is called inside the payload factory rather than beside `openOrFocusTab`, because
 // that factory is the only scope in which a plugin may start a process: a tab's label is allocated
 // after the factory returns, and the host adopts the terminal onto the label it then mints.
+function isInside(root: string, directory: string): boolean {
+  const base = root.endsWith('/') ? root : `${root}/`;
+  return directory === root || directory.startsWith(base);
+}
+
 export function openShellTab(
   capabilities: TabPluginServerCapabilities,
   instanceKey: string,
@@ -15,7 +20,10 @@ export function openShellTab(
   const origin = capabilities.originTab();
   if (!origin) return;
   const workspace = origin.workspace;
-  const cwd = origin.cwd;
+  // A shell that has `cd`-ed out of the project leaves its tab recording a directory no terminal may
+  // start in, so the new shell starts where its workspace or project does rather than not at all.
+  const allowed = isInside(origin.root, origin.cwd) || (workspace !== undefined && isInside(workspace.dir, origin.cwd));
+  const cwd = allowed ? origin.cwd : workspace?.dir ?? origin.root;
 
   capabilities.openOrFocusTab(instanceKey, (resources: TabPluginResources) => {
     const terminal = resources.spawnTerminal({

@@ -388,6 +388,35 @@ describe('queueLine and nextQueuedLine', () => {
   });
 });
 
+describe('recordCwd', () => {
+  function contextWith(isEnabled: () => boolean) {
+    const setCwd = vi.fn();
+    const { managers } = makeManagers();
+    Object.assign(managers.tab, { setCwd });
+    const capabilities = createPluginContext(
+      managers, declaration(['recordCwd']), activationFor(), { label: 'janus', command: 'zsh' },
+      isEnabled, [], 'shell1',
+    );
+    return { capabilities, setCwd };
+  }
+
+  it('records the directory on the answering tab', () => {
+    const { capabilities, setCwd } = contextWith(() => true);
+
+    capabilities.recordCwd('/repo/src');
+
+    expect(setCwd).toHaveBeenCalledWith('shell1', '/repo/src');
+  });
+
+  it('records nothing after the plugin has been disabled', () => {
+    const { capabilities, setCwd } = contextWith(() => false);
+
+    capabilities.recordCwd('/repo/src');
+
+    expect(setCwd).not.toHaveBeenCalled();
+  });
+});
+
 describe('each of them is declaration-gated', () => {
   it('refuses every one the declaration did not name', () => {
     const { managers } = makeManagers();
@@ -400,5 +429,6 @@ describe('each of them is declaration-gated', () => {
     expect(() => capabilities.terminalRunning('pty1')).toThrow('used capability "terminalRunning" without declaring it');
     expect(() => { capabilities.queueLine('ls'); }).toThrow('used capability "queueLine" without declaring it');
     expect(() => capabilities.nextQueuedLine()).toThrow('used capability "nextQueuedLine" without declaring it');
+    expect(() => { capabilities.recordCwd('/repo'); }).toThrow('used capability "recordCwd" without declaring it');
   });
 });

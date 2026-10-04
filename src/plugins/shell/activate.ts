@@ -87,6 +87,7 @@ export function activate(): TabPluginActivation {
       cwd: {
         payload: isShellCwd,
         run: (tabPayload, cwd, capabilities) => {
+          capabilities.recordCwd(cwd);
           capabilities.updateTab(tabPayload.instanceKey, () => ({
             payload: { ...tabPayload, cwd },
           }));

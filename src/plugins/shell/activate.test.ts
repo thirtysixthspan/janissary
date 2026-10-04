@@ -32,6 +32,7 @@ function fakeCapabilities(overrides: {
     })),
     completeLine: vi.fn(() => overrides.completions ?? { matches: [], newInput: '', newCursor: 0 }),
     terminalRunning: vi.fn(() => overrides.running ?? true),
+    recordCwd: vi.fn(),
     openOrFocusTab: (key: string, factory: (resources: { spawnTerminal(options: Spawn): { ptyId: string; cols: number; rows: number } }) => TabPluginPayload) => {
       opened.push({
         key,
@@ -115,11 +116,11 @@ describe('shell plugin activation', () => {
   });
 
   it('starts at the issuing tab\'s directory when it has no workspace', () => {
-    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'harness1', cwd: '/srv', root: '/repo' } });
+    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'harness1', cwd: '/repo/srv', root: '/repo' } });
 
     activate().command?.('', capabilities);
 
-    expect(spawns[0].cwd).toBe('/srv');
+    expect(spawns[0].cwd).toBe('/repo/srv');
     expect(spawns[0].workspace).toBeUndefined();
   });
 
@@ -176,6 +177,39 @@ describe('shell plugin activation', () => {
     expect(updated).toEqual([{
       key: 'shell-1', payload: { ...PAYLOAD, cwd: '/repo/subdir' },
     }]);
+  });
+
+  it('records the reported cwd as its tab\'s working directory, where a sibling shell starts', () => {
+    const { capabilities } = fakeCapabilities();
+
+    ask(capabilities, 'cwd', '/repo/subdir');
+
+    expect(capabilities.recordCwd).toHaveBeenCalledWith('/repo/subdir');
+  });
+
+  it('starts a sibling shell in the issuing shell\'s current directory', () => {
+    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'shell1', cwd: '/repo/src/deep', root: '/repo' } });
+
+    activate().command?.('', capabilities);
+
+    expect(spawns[0].cwd).toBe('/repo/src/deep');
+  });
+
+  it('starts in the project root when the issuing shell has left it', () => {
+    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'shell1', cwd: '/tmp', root: '/repo' } });
+
+    activate().command?.('', capabilities);
+
+    expect(spawns[0].cwd).toBe('/repo');
+  });
+
+  it('starts in the workspace clone when a workspaced shell has left the project', () => {
+    const workspace = { dir: '/repo/.janissary/workspace/one', offline: false };
+    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'shell1', cwd: '/repository-elsewhere', root: '/repo', workspace } });
+
+    activate().command?.('', capabilities);
+
+    expect(spawns[0].cwd).toBe(workspace.dir);
   });
 
   it('rejects a cwd that is not an absolute path', () => {

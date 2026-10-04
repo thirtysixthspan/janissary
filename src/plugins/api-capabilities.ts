@@ -32,6 +32,7 @@ export type TabPluginCapabilityName =
   | 'terminalRunning'
   | 'queueLine'
   | 'nextQueuedLine'
+  | 'recordCwd'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -64,6 +65,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   terminalRunning: true,
   queueLine: true,
   nextQueuedLine: true,
+  recordCwd: true,
   rejectRequest: true,
   reportFailure: true,
 };

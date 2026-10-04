@@ -18,10 +18,10 @@ export function lineCapabilities(input: {
   isEnabled: () => boolean;
 }): Pick<
   TabPluginServerCapabilities,
-  'originTab' | 'dispatchLine' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning' | 'queueLine' | 'nextQueuedLine'
+  'originTab' | 'dispatchLine' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning' | 'queueLine' | 'nextQueuedLine' | 'recordCwd'
 > {
   const { managers, declaration, origin, answeringLabel, isEnabled } = input;
-  const queueLabel = () => answeringLabel ?? origin.label;
+  const lineLabel = () => answeringLabel ?? origin.label;
   // The labels of this plugin's own open tabs — the only terminals whose ids a plugin can legitimately
   // hold, because a payload factory is the only scope in which it may start one.
   const ownTabLabels = () => managers.tab.tabs
@@ -65,8 +65,13 @@ export function lineCapabilities(input: {
     // The answering tab's own queue, never another's: a line typed into a plugin tab's command line
     // waits in that tab, which is where the queue popup over it looks.
     queueLine: (line) => {
-      if (isEnabled()) managers.tab.enqueue(queueLabel(), line);
+      if (isEnabled()) managers.tab.enqueue(lineLabel(), line);
     },
-    nextQueuedLine: () => (isEnabled() ? managers.tab.dequeue(queueLabel()) ?? null : null),
+    nextQueuedLine: () => (isEnabled() ? managers.tab.dequeue(lineLabel()) ?? null : null),
+    // The answering tab's own record only, for the same reason: a shell that changed directory moves
+    // where its tab's next shell, file navigator and completion start, and no other tab's.
+    recordCwd: (cwd) => {
+      if (isEnabled()) managers.tab.setCwd(lineLabel(), cwd);
+    },
   };
 }

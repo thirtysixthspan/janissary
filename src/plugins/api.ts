@@ -252,6 +252,9 @@ export type TabPluginServerCapabilities = {
   queueLine(line: string): void;
   // Remove and return the front of the answering tab's command queue, or `null` when it is empty.
   nextQueuedLine(): string | null;
+  // Record the answering tab's working directory — the one `originTab` reports and the host's own
+  // actions on that tab start from — for a plugin whose process can change directory on its own.
+  recordCwd(cwd: string): void;
   rejectRequest(reason: string): never;
   reportFailure(reason: unknown): never;
 };

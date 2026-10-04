@@ -141,7 +141,7 @@ installed, and the startup screen is cleared before the plain prompt appears.
 
 Each shell keeps its workspace alive until it closes. Closing the source tab does not remove a clone still used by a shell. The clone is removed after its final owning tab closes.
 
-Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. A new shell inherits the shell's workspace and offline mode. A new agent shares the shell's workspace and offline mode too.
+Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. That recorded directory follows zsh's current directory, so after a `cd` the **new shell here** button and `Cmd+T` start the new shell where this one now is. When zsh has moved outside the project root, and outside its workspace clone when it has one, the new shell starts in the workspace clone or the project root instead, because a terminal may only start inside the project. A new shell inherits the shell's workspace and offline mode. A new agent shares the shell's workspace and offline mode too.
 
 When docked, bare `close` and `Cmd+W` act on the shell tab whose command bar has focus. An `agent` command uses that shell tab as its source for the new agent's working directory and group.
 

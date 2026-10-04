@@ -124,6 +124,6 @@ When a command finishes while the zsh tab is hidden, it gets an unread flag. If 
 
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.
 
-Press `Cmd+T` to open another zsh tab in the same working directory and workspace. In other tabs, `Cmd+T` opens a new agent tab.
+Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh tab in the directory this shell is currently in, with the same workspace. In other tabs, `Cmd+T` opens a new agent tab.
 
 With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.
