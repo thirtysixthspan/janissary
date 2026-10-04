@@ -1,5 +1,6 @@
 import { isBrowserCommandLine, BROWSER_PRIMER } from '../browser/command.js';
 import { isQuestionCommandLine, QUESTION_PRIMER, runQuestionCommand } from '../question-command.js';
+import { DELEGATION_PRIMER, isDelegationCommandLine, runDelegation } from './delegation.js';
 import { findLastCommandLine } from './command-line.js';
 import type { Managers } from '../managers.js';
 
@@ -25,6 +26,10 @@ export type AcpTool = {
 // so order is the tie-break and the database entry stays last — its `match` accepts anything, making
 // it the fall-through for a command no other tool recognized. Extraction does not use table order:
 // the reply's last line that any tool recognizes is the command, whichever tool owns it.
+//
+// Delegation owns `agent`, `send`, and `msg` in one entry rather than three: they share a single
+// primer, and splitting them would repeat that primer once per verb. It sits ahead of the database
+// fall-through for the same reason `browser` and `question` do.
 export function createAcpToolTable(managers: Managers): AcpTool[] {
   return [
     {
@@ -38,6 +43,12 @@ export function createAcpToolTable(managers: Managers): AcpTool[] {
       match: (command) => /^question\b/i.test(command),
       run: (label, command) => runQuestionCommand(command, label, managers.questions),
       isCommandLine: (line) => isQuestionCommandLine(line),
+    },
+    {
+      primer: DELEGATION_PRIMER,
+      match: (command) => /^(agent|send|msg)\b/i.test(command),
+      run: (label, command) => runDelegation(managers, label, command),
+      isCommandLine: (line) => isDelegationCommandLine(line),
     },
     {
       primer: managers.database.primer,

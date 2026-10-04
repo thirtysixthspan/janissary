@@ -7,7 +7,7 @@
 | `clear` | Clear the output log |
 | `quit` | Exit the application (asks for confirmation) |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `exit` is an alias |
-| `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |
+| `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; `--model <model-id>` picks the model its agent runs on; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |
 | `next` | Switch to the next tab |
 | `hist` | Open command history picker |
 | `clip` | Open the clipboard-history popup: everything copied in this session, newest at the bottom (Ctrl+Shift+V or Cmd+Shift+V); choosing an entry pastes it at the cursor rather than running it |

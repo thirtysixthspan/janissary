@@ -9,6 +9,11 @@ vi.mock('../question-command.js', () => ({
   QUESTION_PRIMER: 'question primer text',
   runQuestionCommand: vi.fn(() => 'question ran'),
 }));
+vi.mock('./delegation.js', () => ({
+  DELEGATION_PRIMER: 'delegation primer text',
+  isDelegationCommandLine: vi.fn((line: string) => /^(agent|send|msg) /.test(line)),
+  runDelegation: vi.fn(() => 'delegation ran'),
+}));
 
 import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
 
@@ -27,13 +32,22 @@ const setup = () => {
 describe('createAcpToolTable', () => {
   it('joins every entry fragment into the primer, in table order', () => {
     const { tools } = setup();
-    expect(toolPrimer(tools)).toBe('browser primer text\n\nquestion primer text\n\ndb primer text');
+    expect(toolPrimer(tools)).toBe('browser primer text\n\nquestion primer text\n\ndelegation primer text\n\ndb primer text');
   });
 
   it('lists the database entry last, so it is the fall-through', () => {
     const { tools } = setup();
     expect(tools.at(-1)!.match('anything at all')).toBe(true);
     expect(tools.slice(0, -1).some((tool) => tool.match('anything at all'))).toBe(false);
+  });
+
+  it('claims the delegation verbs ahead of the database fall-through', () => {
+    const { tools } = setup();
+    const database = tools.at(-1)!;
+    for (const command of ['agent scout', 'send scout go', 'msg scout request go']) {
+      expect(database.match(command)).toBe(true);
+      expect(tools.slice(0, -1).some((tool) => tool.match(command))).toBe(true);
+    }
   });
 });
 
@@ -55,6 +69,14 @@ describe('toolRunner', () => {
     const { tools, runInTab } = setup();
     expect(toolRunner(tools, 'tab1')('select 1')).toBe('db ran');
     expect(runInTab).toHaveBeenCalledWith('tab1', 'select 1');
+  });
+
+  it('routes each delegation verb to the delegation entry, not the database', () => {
+    const { tools, runInTab } = setup();
+    for (const command of ['agent scout --model m', 'send scout go', 'msg scout request go']) {
+      expect(toolRunner(tools, 'tab1')(command)).toBe('delegation ran');
+    }
+    expect(runInTab).not.toHaveBeenCalled();
   });
 });
 

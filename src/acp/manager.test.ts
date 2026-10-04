@@ -544,4 +544,48 @@ describe('AcpManager model resolution', () => {
     });
     expect(onDone).toHaveBeenCalledWith('ACP: no opencode model is available in the harness catalog.');
   });
+
+  // The `--model` the `agent` command recorded on a delegated worker's tab.
+  const withChosenModel = (model: string) => {
+    const harness = setup();
+    const tabs = (harness.managers as unknown as { tab: { tabs: { label: string; acpModel?: string }[] } }).tab.tabs;
+    tabs.push({ label: 'scout', acpModel: model });
+    return harness;
+  };
+
+  it('launches a tab on the model its launch chose, ahead of the preferred one', () => {
+    withOpencodeModels(['google/gemini-3.1-flash-lite', 'opencode-go/glm-5.3']);
+    const { acp } = withChosenModel('opencode-go/glm-5.3');
+
+    acp.run('scout', 'acp hello');
+    mocks.connectAcp.mock.calls[0][0].onConnect();
+
+    expect(launchedModel()).toBe('opencode-go/glm-5.3');
+    expect(acp.label('scout')).toBe('opencode-go/glm-5.3');
+  });
+
+  it('uses a chosen model even when the catalog offers none, since the launch already accepted it', () => {
+    withOpencodeModels([]);
+    const { acp, append } = withChosenModel('opencode-go/glm-5.3');
+
+    acp.run('scout', 'acp hello');
+
+    expect(mocks.connectAcp).toHaveBeenCalled();
+    expect(append).not.toHaveBeenCalledWith('scout', expect.objectContaining({
+      output: 'ACP: no opencode model is available in the harness catalog.',
+    }));
+  });
+
+  it('keeps a chosen model across a reset', () => {
+    withOpencodeModels(['opencode-go/glm-5.3']);
+    const { acp } = withChosenModel('opencode-go/glm-5.3');
+
+    acp.run('scout', 'acp hello');
+    expect(acp.close('scout')).toBe(true);
+    acp.run('scout', 'acp hello again');
+
+    expect(mocks.connectAcp).toHaveBeenCalledTimes(2);
+    expect((mocks.connectAcp.mock.calls[1][0] as { env: Record<string, string> }).env.OPENCODE_CONFIG_CONTENT)
+      .toBe(JSON.stringify({ model: 'opencode-go/glm-5.3' }));
+  });
 });

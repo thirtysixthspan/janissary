@@ -17,6 +17,9 @@ export type RemoteAgentLaunch = {
   creator?: Tab;
   address: RemoteAddress;
   offline: boolean;
+  // `--model <model-id>` from the launching `agent` command. Recorded on the tab, and carried to the
+  // remote host in the ACP launch environment, so the agent there runs the model this side approved.
+  model?: string;
   cwd: string;
   presentation?: PlaceAgentOptions['presentation'];
   out: (text: string) => void;
@@ -37,9 +40,9 @@ export type RemoteAgentLaunch = {
  * transcript comes back.
  */
 export function startRemoteAgent(managers: Managers, launch: RemoteAgentLaunch): void {
-  const { resolved, creator, address, offline, cwd, presentation, out } = launch;
+  const { resolved, creator, address, offline, model, cwd, presentation, out } = launch;
   placeAgent(managers, {
-    resolved, creator, cwd, offline, busy: true, presentation,
+    resolved, creator, cwd, offline, model, busy: true, presentation,
     remote: { address: address.address, host: address.host },
   });
   const remote = startRemoteLaunch(managers, resolved, address, cwd, launch.resume);

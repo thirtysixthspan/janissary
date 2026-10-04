@@ -21,6 +21,8 @@ inherits the same confinement.
 
 A conversation's ACP agent is also confined to its own private workspace. An ordinary agent launched from the conversation's metadata row uses the same directory as its sandbox workspace. That workspace belongs to the durable conversation rather than to a tab or project clone, and closing the conversation tab or shutting down the application does not sweep it. See [[conversations]].
 
+An agent tab opened by another agent is confined exactly as one opened by a person: `agent <name>` hands the new tab its own fresh clone, and that clone is what gets sandboxed, so a delegated worker's agent, shell, and anything they spawn are all confined to it. Nothing about the delegation is exempt — see [[acp]] and [[agents]].
+
 ### Filesystem policy
 
 Rule ordering follows Seatbelt's "last matching rule wins" semantic: broad allow → `$HOME` deny →

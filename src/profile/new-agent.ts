@@ -1,5 +1,6 @@
 import { parseAgentCommand } from '../agent/commands.js';
 import type { AgentCommand } from '../agent/types.js';
+import { isKnownModel } from '../harness/models.js';
 import { resolveLocalLaunchName } from '../launch-name/local.js';
 import { poolCandidates } from '../launch-name/check.js';
 import { sandboxNotice } from '../sandbox/index.js';
@@ -24,7 +25,16 @@ export function newAgentOp(managers: Managers, command: string): void {
   const creator = managers.tab.cur();
   const out = (text: string) => managers.tab.append(creator.label, { input: command, output: text });
   if (parsed.remoteError) { out(parsed.remoteError); return; }
+  if (parsed.modelError) { out(parsed.modelError); return; }
+  // Refused before any workspace work: a model the catalog does not offer would otherwise fail much
+  // later and far less clearly, inside the agent binary. Checked against the opencode list because
+  // that is the list an agent tab's ACP session resolves from.
+  if (parsed.model && !isKnownModel('opencode', parsed.model)) { out(unknownModel(parsed.model)); return; }
   launchAgent(managers, { parsed, creator, out }, []);
+}
+
+function unknownModel(model: string): string {
+  return `Unknown model "${model}" for harness "opencode" — add it to harness-models.json.`;
 }
 
 // `tried` is every label a remote host has already reported running during this launch, passed
@@ -42,7 +52,7 @@ function launchAgent(managers: Managers, launch: AgentLaunch, tried: readonly st
   if (parsed.remote) {
     const cwd = managers.tab.cwdOf(creator.label) ?? process.cwd();
     startRemoteAgent(managers, {
-      resolved, creator, address: parsed.remote, offline: parsed.offline, cwd, out,
+      resolved, creator, address: parsed.remote, offline: parsed.offline, model: parsed.model, cwd, out,
       nameRetry: {
         creator: creator.label, explicit, tried: [...tried, resolved],
         relaunch: (next) => { launchAgent(managers, launch, next); },
@@ -52,7 +62,7 @@ function launchAgent(managers: Managers, launch: AgentLaunch, tried: readonly st
   }
 
   if (!parsed.workspace) {
-    placeAgent(managers, { resolved, creator, cwd: process.cwd(), offline: parsed.offline });
+    placeAgent(managers, { resolved, creator, cwd: process.cwd(), offline: parsed.offline, model: parsed.model });
     out(`Agent "${resolved}" ready.`);
     return;
   }
@@ -67,7 +77,8 @@ function startWorkspaceAgent(managers: Managers, launch: AgentLaunch, resolved: 
   // "ready" message and sandbox notice fire once the clone actually resolves, not before, so the
   // tab isn't announced ready while it's still empty.
   placeAgent(managers, {
-    resolved, creator, cwd: result.dir, workspaceDir: result.dir, offline: parsed.offline, busy: true,
+    resolved, creator, cwd: result.dir, workspaceDir: result.dir, offline: parsed.offline,
+    model: parsed.model, busy: true,
   });
   wireProvisioning(
     resolved,

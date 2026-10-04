@@ -15,7 +15,7 @@ export function parseSendCommand(input: string): { label: string; text: string }
   return { label, text };
 }
 
-function deliverTo(target: Tab, text: string, managers: CommandManagers): string | null {
+export function deliverTo(target: Tab, text: string, managers: CommandManagers): string | null {
   if (target.view === 'harness') {
     if (target.harness?.status !== 'running') return `Tab "${target.label}" is not a running harness.`;
     typeIntoHarness(managers.pty, target.harness.ptyId, target.harness.name, text);

@@ -23,6 +23,8 @@ The `opencode` binary must be installed, authenticated, and on your `PATH`. If y
 
 The model comes from the OpenCode list in the harness model catalog — the same list [harnesses](/user-documentation/advanced-agents/harness) and monitors draw on, and the same one a project replaces by adding `.janissary/harness-models.json`. A built-in default is preferred while the catalog still offers it; otherwise `acp` uses the first model on the list, so overriding the catalog changes what `acp` runs too. The status popup shows the model the session actually started with. If your override leaves the OpenCode list empty there is nothing to run, and `acp` says so instead of starting a session.
 
+To put one tab on a specific model — so a delegated worker can run a different one from the tab that handed it work — open it with `agent <name> --model <model-id>`. The choice sticks for that tab's life, including across `acp reset`. See [Delegating to agents](/user-documentation/advanced-agents/delegating-to-agents).
+
 ## One conversation per tab
 
 The first `acp` prompt in a tab starts the agent; later prompts in the same tab continue the same conversation, so the agent remembers what came before. Each tab has its own separate session, and the agent runs in the tab's current working directory.
@@ -43,7 +45,7 @@ An active session also appears in the tab's connections list under its provider 
 
 When answering needs data, the agent can run the app's own `db`, `browser`, and `question` commands on its own: query a SQLite database, fetch a web page, read its content, ask you a question. Each command it runs, and the result, is fed back to it so it can continue, up to a limit of 8 steps per prompt. If it hits the limit, the transcript shows `(stopped after 8 tool steps)`.
 
-These automatic steps appear collapsed in the transcript as a tool-step entry. Click it, or press `Ctrl+T`, to expand and see exactly what the agent ran. Only `db`, `browser`, and `question` are available to it; the agent cannot run shell commands or anything else.
+These automatic steps appear collapsed in the transcript as a tool-step entry. Click it, or press `Ctrl+T`, to expand and see exactly what the agent ran. Only `db`, `browser`, and `question` are available to it, plus the [delegation](/user-documentation/advanced-agents/delegating-to-agents) commands `agent`, `send`, and `msg`; the agent cannot run shell commands or anything else.
 
 ## Usage errors
 

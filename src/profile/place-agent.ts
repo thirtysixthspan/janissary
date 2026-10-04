@@ -12,6 +12,9 @@ export type PlaceAgentOptions = {
   cwd: string;
   workspaceDir?: string;
   offline: boolean;
+  // `--model <model-id>` from the launching `agent` command, validated against the harness catalog
+  // by the caller. Recorded on the tab so its ACP session runs on that model.
+  model?: string;
   // Marks the tab busy on creation (a launch still waiting on its clone or its ssh channel).
   // Everything typed in the meantime queues through the ordinary busy-tab command queue.
   busy?: boolean;
@@ -25,13 +28,17 @@ export type PlaceAgentOptions = {
 
 // Build the agent tab, insert it into its creator's group, set its cwd, focus it, and persist.
 export function placeAgent(managers: Managers, options: PlaceAgentOptions): void {
-  const { resolved, creator, cwd, workspaceDir, offline, busy, remote, presentation } = options;
+  const { resolved, creator, cwd, workspaceDir, offline, model, busy, remote, presentation } = options;
   const dotColor = presentation?.dotColor ?? distinctColor(managers.tab.tabs.map((t) => t.dotColor));
   const group = presentation?.group ?? creator?.group ?? 1;
   const groupColor = presentation?.groupColor ?? creator?.groupColor ?? dotColor;
   const tab = makeTab(resolved, dotColor, managers.tab.tabs.length + 1, [], [], workspaceDir, group, groupColor);
   tab.toolStepsExpanded = false;
   tab.offline = offline;
+  // Inherited from the creator the same way `group` is, so a chain of delegated agents is one more
+  // link each time; the root tab has no creator and is depth 0.
+  tab.agentDepth = (creator?.agentDepth ?? 0) + 1;
+  if (model) tab.acpModel = model;
   if (remote) tab.remote = remote;
   managers.tab.insertTabInGroup(tab);
   managers.tab.setCwd(resolved, cwd);

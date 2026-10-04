@@ -14,5 +14,7 @@ Closing a tab releases its queue (`AgentCommunicationManager.closeTab`, called f
 
 On the sender's side, the sent message is entered into the sender's transcript as `→ <to> (<kind>): <text>`, so the sender has a record of what they sent.
 
+An ACP agent may send `msg`, `send`, and `agent` itself: they are part of the autonomous tool loop an `acp` prompt runs (see [[acp]]), and carry the meanings described here and in [[send]]. A `msg` the tool loop emits is always treated as a `request`, whatever kind the agent wrote, because a tool result is only useful as an answer — and its captured output is screened before it becomes the agent's next prompt. A messaged command bypasses the recipient's busy queue in this path exactly as it does for a typed one, so a poll against a busy worker reports that worker's most recent dispatch rather than a queued one.
+
 `broadcast <all|agent[,agent...]> <info|request|command> <text>` sends the same message to multiple agents at once. `all` (or `*`) targets every other agent; a comma-separated list targets a specific set. The sender is always excluded, and the result reports which recipients were reached and any unknown names. The kind accepts the same `i`/`r`/`c` aliases as `msg`.
 

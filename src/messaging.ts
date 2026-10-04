@@ -5,7 +5,7 @@ export type ParsedMsg = { to: string; kind: MessageKind; text: string };
 
 export type ParsedBroadcast = { targets: string[] | 'all'; kind: MessageKind; text: string };
 
-const KIND_ALIASES: Record<string, MessageKind> = {
+export const KIND_ALIASES: Record<string, MessageKind> = {
   i: 'info', info: 'info', informational: 'info',
   r: 'request', req: 'request', request: 'request',
   c: 'command', cmd: 'command', command: 'command',

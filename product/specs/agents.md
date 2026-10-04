@@ -14,6 +14,18 @@ Creates a new workspaced agent tab with a random unused name from the pool. See 
 
 Creates a new workspaced agent tab with the specified name. See the Tabs section. `--workspace` (or `-w`) explicitly confirms the default; `--no-workspace` starts the agent in the project checkout instead.
 
+### `--model <model-id>` clause
+
+`agent <name> --model <model-id>` opens the tab on a chosen model, so two agent tabs can run different ones. `--model=<model-id>` is the same command. The clause never becomes part of the tab name, and it may appear before or after the name and after an `on <address>` clause.
+
+The model is checked against the harness catalog's OpenCode list — the same list the tab's ACP session otherwise resolves from (see [[acp]]) — and an unknown one is refused before any workspace work begins, so a bad model never leaves a half-made clone behind:
+
+`Unknown model "<model-id>" for harness "opencode" — add it to harness-models.json.`
+
+A `--model` with no value after it is a usage error, answered with `Usage: agent <name> --model <model-id>.` A `--model` immediately followed by another flag takes that flag as its value, so `agent <name> --model --offline` is refused as an unknown model rather than silently reading as no model.
+
+The choice is remembered for the tab's life, so an `acp reset` and the next prompt run on it again. On a remote launch it is checked against the catalog on the machine that launched, and the model then travels to the far host with the agent's launch environment.
+
 ### `on <address>` clause
 
 `agent <name> on <address>` runs the agent's shell on another host over one ssh session, in a

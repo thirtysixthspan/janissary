@@ -10,6 +10,8 @@ The agent command is hardcoded to OpenCode: `opencode acp`. There is no configur
 
 The model comes from the harness catalog's OpenCode list — the same catalog the monitor and conversation sessions read, and the same one a project replaces with `.janissary/harness-models.json` (see [[harness]]). `google/gemini-3.1-flash-lite` is preferred while the catalog offers it; otherwise the first model the list does offer is used, so a project that overrides the catalog runs one of its own models rather than a built-in one. An OpenCode list with nothing in it refuses the prompt with a message instead of launching.
 
+A tab opened with `agent <name> --model <model-id>` runs on that model instead, so a delegated worker can be put on a different one from the tab that delegated to it. The chosen model is remembered for the tab's life, so `acp reset` and the next prompt run on it again. The catalog check happens when the tab is launched, not per prompt; see [[agents]].
+
 The connections panel and status popup show the model the session actually launched with.
 
 ### Connection lifecycle
@@ -28,14 +30,14 @@ The agent is instructed (via the prompt primer) to write its replies in **GitHub
 
 The reply text is shown as the model's own words alone, with no surrounding banner or delimiter lines — the streamed and finished reply carries exactly what the model wrote, keeping it visually distinct from tool-call output only by its markdown formatting and position in the transcript.
 
-### Database and browser assistance (autonomous tool loop)
+### Database, browser, and delegation assistance (autonomous tool loop)
 
-The `db` grammar (`DB_PRIMER` in `src/db.ts`) and the `browser` grammar (`BROWSER_PRIMER` in `src/browser-command.ts`) are both prepended to every user `acp` prompt (but not to the tool-result follow-ups within a loop), so the agent stays aware of the syntax even when a session is reused, and is instructed to end a reply with exactly one command on its own final line when it needs data. `BROWSER_PRIMER` exposes a deliberately simplified surface — `browser goto`, `browser content`, `browser eval` only — and the host handles window/headless/mode management (auto-launching headless and auto-opening a window).
+The `db` grammar (`DB_PRIMER` in `src/db.ts`), the `browser` grammar (`BROWSER_PRIMER` in `src/browser-command.ts`), and the delegation grammar (which covers `agent`, `send`, and `msg`) are all prepended to every user `acp` prompt (but not to the tool-result follow-ups within a loop), so the agent stays aware of the syntax even when a session is reused, and is instructed to end a reply with exactly one command on its own final line when it needs data. `BROWSER_PRIMER` exposes a deliberately simplified surface — `browser goto`, `browser content`, `browser eval` only — and the host handles window/headless/mode management (auto-launching headless and auto-opening a window).
 
 The `acp` handler then drives an autonomous loop (`runAcpToolLoop` in `src/acp-loop.ts`, wired with rendering/execution callbacks in `src/cli.tsx`):
 
 1. The agent's reply streams into a transcript entry (the first turn shows the user's prompt; continuation turns have no prompt line).
-2. On completion, the reply is scanned bottom-up (tolerating a code fence or a `$ `/`> ` prefix, cleaned by `cleanCommandLine` in `src/acp/command-line.ts`) for a command. The command is the reply's last line that any tool recognizes as its own — browser, question, or database — whichever tool owns it, so a reply that mentions `browser goto` early and ends with a `db sqlite query` runs the database command. When the command's text also appears earlier in the reply, only the last copy is removed from the displayed reply. The tool table's fixed order (browser, then question, then database) decides only which tool runs an emitted command, with the database tool last so it takes anything the others do not claim.
+2. On completion, the reply is scanned bottom-up (tolerating a code fence or a `$ `/`> ` prefix, cleaned by `cleanCommandLine` in `src/acp/command-line.ts`) for a command. The command is the reply's last line that any tool recognizes as its own — browser, question, delegation, or database — whichever tool owns it, so a reply that mentions `browser goto` early and ends with a `db sqlite query` runs the database command. When the command's text also appears earlier in the reply, only the last copy is removed from the displayed reply. The tool table's fixed order (browser, then question, then delegation, then database) decides only which tool runs an emitted command, with the database tool last so it takes anything the others do not claim.
 3. If a command is found, it is executed immediately — `runBrowserInTab` for `browser` (async), `runDbInTab`/`runDbCommand` for `db` (sync) — shown in the transcript as its own command entry (input = the command, output = the result), and the output is sent back to the agent as a follow-up prompt asking it to continue or give a final answer. The loop is async-capable: `runCommand` may return a `Promise`, which the loop awaits (a sync command still completes in the same tick).
 4. The loop repeats until the agent replies with no command, or a cap of 8 tool steps is reached (a `(stopped after 8 tool steps)` notice is logged in that case).
 
@@ -44,6 +46,14 @@ A freshly connected agent (e.g. OpenCode loading its model on the first prompt) 
 Only `db` and `browser` commands are auto-run — the agent cannot execute arbitrary shell. `db` is also dispatchable through `runCaptureInTab` (the shared command-capture path used by `msg …request`), which executes a resolved `db` command via `runDbCommand` rather than refusing it as an app command, so a `db` command also works as an inter-agent `request`. (`browser` is not yet offered through that inter-agent path.)
 
 The tool loop always runs on the machine janissary itself is running on, regardless of where the agent does. A remote agent asked to inspect a database is therefore inspecting *this* machine's database files, and a `browser` command drives *this* machine's browser — not the remote workspace's.
+
+### Delegation
+
+The delegation grammar lets an ACP agent hand work to other agents. `agent [<name>] [--model <model-id>]` opens a worker tab, `send <worker> <text…>` hands it a line without waiting, and `msg <worker> request <text…>` runs a command in its tab and returns what the worker produced as the agent's next prompt. All three carry the meanings they have in the command bar — see [[agents]], [[send]], and [[messaging]] — so `msg <worker> request acp "<task>"` blocks until that worker finishes its prompt and answers with its complete reply.
+
+Delegation is capped at depth 2. A tab is depth 0 if nothing created it, and one more than its creator otherwise, so a worker's own worker may delegate once more and a tab at depth 2 is refused with a line naming the limit. The cap applies to the tool only: a person typing `agent` by hand is not capped.
+
+A worker's answer is screened before it is handed back. Harness-shaped control text — a `<system-reminder>`-style tag, or a line opening with `Human:` or `Assistant:` — is neutralized rather than deleted, and one `[harness: neutralized …]` line naming what was matched is prepended. Text naming a permission setting is left verbatim, because naming one is not impersonating the host. An answer with nothing to neutralize comes back unchanged.
 
 ### `acp` command
 

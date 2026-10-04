@@ -35,4 +35,11 @@ export type AgentCommand = {
   // `--offline`: adds a network-deny rule to the tab's sandbox profile (workspaced tabs only —
   // see src/sandbox/index.ts). Ignored (but still parsed and stored) when the tab isn't workspaced.
   offline: boolean;
+  // `--model <model-id>`: the model this tab's ACP session runs on, validated by the caller against
+  // the harness catalog's opencode list. Absent when the flag was not given, which leaves the tab on
+  // whatever `AcpManager` resolves for itself.
+  model?: string;
+  // A `--model` with no value. Carried the same way as `remoteError` so the caller reports it
+  // instead of launching on a missing model.
+  modelError?: string;
 };

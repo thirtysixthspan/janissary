@@ -150,7 +150,7 @@ export class AcpManager {
       onDone?.(STILL_CONNECTING);
       return;
     }
-    const model = resolveAcpModel();
+    const model = this.managers.tab.byLabel(label)?.acpModel ?? resolveAcpModel();
     if (!model) {
       this.managers.tab.append(label, { input: command, output: NO_ACP_MODEL });
       onDone?.(NO_ACP_MODEL);

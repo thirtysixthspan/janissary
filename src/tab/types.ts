@@ -297,6 +297,15 @@ export type Tab = {
   // The group's bar color, fixed when the group is first assigned (the color of its first
   // agent). Stored per tab so it never shifts when tabs are moved or a group member is closed.
   groupColor: string;
+  // `--model <model-id>` from the `agent` command that opened this tab: the model its ACP session
+  // runs on. In-memory only, like `pageSnapshot` and `editorDraft` — never read when building
+  // persisted AgentState, because nothing rebuilds a `Tab` from one. The connections panel shows the
+  // model the session actually launched with, so this never reaches a client.
+  acpModel?: string;
+  // How many `agent` launches deep this tab sits: 0 for the root tab, one more than its creator's.
+  // The ACP tool loop refuses to delegate past `MAX_AGENT_DEPTH`, so this is what stops a delegated
+  // worker from growing a tree of workers. In-memory only, as above.
+  agentDepth?: number;
   log: LogEntry[];
   cmdHistory: string[];
   cmdHistoryIdx: number;
