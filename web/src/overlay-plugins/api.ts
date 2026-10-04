@@ -110,4 +110,4 @@ export type OverlayPluginLoader = () => Promise<{ default: OverlayPluginModule }
 // move clamped at both ends with no wraparound, Return chooses, and Escape closes. A plugin that
 // wrote its own arrow handling would be the drift the shared rule exists to prevent, and this way
 // `handlePickerKey` stays the one definition of what a modal list does with the keyboard.
-export { handlePickerKey } from '../keyboard-handlers';
+export { handlePickerKey } from '../shared/picker-keyboard';

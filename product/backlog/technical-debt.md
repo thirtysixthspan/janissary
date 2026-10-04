@@ -4,16 +4,6 @@
 
 ## development
 
-* Move the reusable picker key handler into the shared layer so the overlay plugin contract no longer reaches into app-shell keyboard handling.
-
-Existing Debt: `web/src/overlay-plugins/api.ts` re-exports `handlePickerKey` from `web/src/keyboard-handlers.ts`, so the overlay-plugin feature depends on an app-shell module for its list navigation rule, violating §3 (dependencies flow one way) and §8 (layers import downward only). Severity: 6/10
-
-Existing Risk: 4/10 - The overlay contract carries a source dependency on a general app keyboard module, so splitting or relocating app-level handlers couples plugin API maintenance to unrelated host keyboard changes.
-
-Proposal Risk: 1/10 - A shared pure handler removes the layer inversion; the remaining risk is limited to future callers choosing not to use that shared rule.
-
-Proposal: Move the `handlePickerKey` implementation into a new `web/src/shared/picker-keyboard.ts` module. Have `web/src/keyboard-handlers.ts` import and re-export it so `web/src/useWindowKeys.ts` and existing direct consumers keep their current path, and have `web/src/overlay-plugins/api.ts` import it from the shared module instead of re-exporting it from the app shell. This changes two production modules and adds one shared module without changing the overlay plugin contract; `web/src/keyboard-handlers.test.ts` already pins clamped arrow movement, Return selection, Escape closing, and unhandled keys, while `web/src/overlay-plugins/clipboard-history/paste-routing.test.tsx` covers the plugin integration.
-
 ## deferred
 
 * Give the clipboard-history plugin an owned store instance and feed its popup through an injected subscription hook. — deferred: complexity 8/10, requires an instance-owned plugin lifecycle plus an injected React subscription adapter across the store, plugin entry, popup, and three test files.
