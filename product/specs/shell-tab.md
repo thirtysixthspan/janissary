@@ -39,6 +39,10 @@ picker, `quit` or `/quit`, or `close` or `/close` that would take the last tab w
 here rather than sent onward. A quit typed in a shell tab asks the same confirmation it asks anywhere
 else (see [[quit-confirmation]]), and a bare word opens the same picker.
 
+`state` in a shell tab shows the shell tab's own fields — its name, working directory, command queue,
+and the rest an agent tab's state holds — built from the open tab, since a shell tab is never saved.
+The reply is rendered as markdown in the terminal like any other command reply.
+
 `nav`, or `nav <query>`, submitted from the shell command bar opens the fuzzy tab navigator over the
 shell tab, pre-filled with the query, exactly as it does from an agent tab's bar; submitting `nav`
 while the navigator is open closes it. Neither reaches zsh.

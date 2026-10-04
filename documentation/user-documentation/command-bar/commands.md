@@ -30,7 +30,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 ## `state`
 
-`state` prints what the current tab has saved, one field per block, so you can see exactly what `janus --relaunch` would bring back:
+`state` prints what the current tab has saved, one field per block with its name in bold and its value in code, so you can see exactly what `janus --relaunch` would bring back:
 
 ```
 > state
@@ -40,7 +40,7 @@ Each tab's state is one JSON file under `.janissary/state/`, named after the tab
 
 The transcript is not in that file. It is kept separately, one file per tab under `.janissary/transcripts/`, and `--relaunch` reads it from there.
 
-A tab with no state file reports `No state file found for "<label>".` That is the answer for the `janus` tab on a fresh launch, for every view tab such as an [image](/user-documentation/tab-types/image-viewer) or [page](/user-documentation/tab-types/web-pages) tab, and for a [remote agent](/user-documentation/advanced-agents/remote-agents), since a tab whose shell lives on another machine keeps nothing here.
+An agent tab with no state file reports `No state file found for "<label>".` That is the answer for the `janus` tab on a fresh launch and for a [remote agent](/user-documentation/advanced-agents/remote-agents), since a tab whose shell lives on another machine keeps nothing here. A tab that is never saved, such as a [zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab), shows the same fields read from the open tab instead, which is how `state` works from a shell tab's command bar.
 
 Work that lands after you close a tab does not put that tab back. A scheduled command that fires, or a shell command that finishes, minutes after the tab is gone writes nothing, so the tab stays closed on the next `--relaunch`. The state directory is wiped on an ordinary launch and kept on `--relaunch`; see [Resuming a session](/user-documentation/getting-started/startup#resuming-a-session-with-relaunch).
 
