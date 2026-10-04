@@ -2,6 +2,8 @@
 
 # pull-request
 
+* in the shell tab, ctrl+g should triger the tab nav 
+
 * Close the security gap caused by losing a shell tab's workspace ownership.
 
 Existing Issue: `openShellTab` stores the source cwd and workspace only in `ShellPayload`, while `makePluginTab` leaves the server `Tab` without `runtime.cwd` or `workspaceDir` and the shell takes no workspace reference, so host actions fall back to project or process defaults and closing the source can remove the clone under the live shell. Severity: 9/10
