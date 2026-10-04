@@ -89,7 +89,7 @@ function runAgent(managers: Managers, label: string, command: string): string {
   const parsed = parseAgentCommand(command);
   if (parsed.modelError) return parsed.modelError;
   if (parsed.model && !isKnownModel('opencode', parsed.model)) return unknownAgentModel(parsed.model);
-  managers.profile.newAgent(command);
+  managers.profile.newAgent(command, label);
   if (parsed.name === '') return 'Opening a new agent. This tab is told its name when it is ready.';
   return `Opening agent "${parsed.name}". This tab is told when it is ready; \`msg ${parsed.name} request state\` reads its transcript.`;
 }

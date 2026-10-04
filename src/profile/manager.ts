@@ -83,8 +83,11 @@ export class ProfileManager {
     this.finish(openProfileEntries(loaded, this.managers, parsed.name, label, out), out);
   }
 
-  newAgent(command: string): void {
-    newAgentOp(this.managers, command);
+  // `creatorLabel` names the tab the new agent is a child of, which decides its group and its
+  // delegation depth. Omitted by the command bar, which parents to the active tab; the delegation
+  // tool passes its own tab so a worker joins the tree of the agent that opened it.
+  newAgent(command: string, creatorLabel?: string): void {
+    newAgentOp(this.managers, command, creatorLabel);
   }
 
   // Launch a bare, auto-named agent tab rooted at the named source tab's cwd, joining its group —

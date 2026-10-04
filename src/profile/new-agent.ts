@@ -20,9 +20,15 @@ type AgentLaunch = { parsed: AgentCommand; creator: Tab; out: (text: string) => 
 // goes to the notifications feed), then places the tab immediately (no `--workspace`), hands it to
 // the remote launch path (`on <address>`), or places it busy and wires up the clone's ready/fail
 // callbacks. `placeAgent` is shared with `newAgentAt`.
-export function newAgentOp(managers: Managers, command: string): void {
+//
+// `creatorLabel` names the tab the new one is a child of, which is what decides its group and its
+// delegation depth. The command bar passes none and gets the active tab, as it always has. The
+// delegation tool passes its own tab, so a worker is parented to the agent that opened it rather than
+// to whichever tab happened to be focused when the launch ran — otherwise the depth counter never
+// climbs and the depth cap cannot engage. A label that names no live tab falls back to the active one.
+export function newAgentOp(managers: Managers, command: string, creatorLabel?: string): void {
   const parsed = parseAgentCommand(command);
-  const creator = managers.tab.cur();
+  const creator = (creatorLabel === undefined ? undefined : managers.tab.byLabel(creatorLabel)) ?? managers.tab.cur();
   const out = (text: string) => managers.tab.append(creator.label, { input: command, output: text });
   if (parsed.remoteError) { out(parsed.remoteError); return; }
   if (parsed.modelError) { out(parsed.modelError); return; }

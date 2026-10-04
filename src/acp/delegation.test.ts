@@ -12,10 +12,14 @@ import type { Managers } from '../managers.js';
 // One `Managers` stub for the verbs, shaped like the ones in `tool-table.test.ts` and
 // `new-agent.test.ts`: the delegating tab's own group and depth, a tab list the target checks read,
 // and spies for each dispatch target. An absent `depth` is a tab nothing created — the root tab.
+// `focused` names the tab `cur()` returns, which is what a launch reads its creator from when the
+// command bar is the caller, so it defaults to the delegating tab and is varied only where the
+// distinction is the point.
 function harness(
   own: { group?: number; depth?: number } | undefined,
   targets: { label: string; group: number; view?: string }[],
   workerSays = 'worker said this',
+  focused?: string,
 ) {
   const newAgent = vi.fn();
   const dispatchTo = vi.fn();
@@ -23,12 +27,13 @@ function harness(
   const append = vi.fn();
   const self = { label: 'janus', group: own?.group, agentDepth: own?.depth, harness: { status: 'running', ptyId: 'janus', name: 'claude' } };
   const others = targets.map((t) => ({ ...t, harness: { status: 'running', ptyId: t.label, name: 'claude' } }));
+  const all = [...others, self];
   const managers = {
     tab: {
-      tabs: [...others, self],
-      byLabel: (label: string) => (label === 'janus' ? self : others.find((t) => t.label === label)),
+      tabs: all,
+      byLabel: (label: string) => all.find((t) => t.label === label),
       append,
-      cur: () => self,
+      cur: () => all.find((t) => t.label === (focused ?? 'janus')) ?? self,
     },
     profile: { newAgent },
     command: { dispatchTo },
@@ -54,11 +59,19 @@ describe('runDelegation — the depth cap cannot be routed around', () => {
     expect(newAgent).not.toHaveBeenCalled();
   });
 
-  it('opens a worker below the cap', () => {
+  it('opens a worker below the cap, parented to the delegating tab', () => {
     const { managers, newAgent } = harness({ group: 1, depth: MAX_AGENT_DEPTH - 1 }, []);
     expect(runDelegation(managers, 'janus', 'agent kaptan --no-workspace'))
       .toContain('Opening agent "kaptan"');
-    expect(newAgent).toHaveBeenCalledWith('agent kaptan --no-workspace');
+    expect(newAgent).toHaveBeenCalledWith('agent kaptan --no-workspace', 'janus');
+  });
+
+  it('parents the worker to the delegating tab, not to whichever tab is focused', () => {
+    // Focus is what a launch used to read its creator from, so a delegating tab that is not the
+    // focused one is exactly the case that made the depth counter climb from the wrong parent.
+    const { managers, newAgent } = harness({ group: 1, depth: 1 }, [{ label: 'other', group: 3 }], 'worker said this', 'other');
+    expect(runDelegation(managers, 'janus', 'agent kaptan --no-workspace')).toContain('Opening agent "kaptan"');
+    expect(newAgent).toHaveBeenCalledWith('agent kaptan --no-workspace', 'janus');
   });
 
   it('treats a tab nothing created as depth 0', () => {

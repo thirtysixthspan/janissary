@@ -76,11 +76,13 @@ Cannot delegate: this tab is already 2 agent launches deep, which is the limit. 
 
 The cap is on delegation, not on you: typing `agent` by hand is never refused. It is there because every worker is a whole clone plus a live model session, and without a bound one prompt could grow a tree of them.
 
+The depth follows the delegation tree, not the tab strip: a worker an agent opened is always one level deeper than that agent, whichever tab is focused when it opens. So a worker's own worker is the deepest tab that can open another, and you can nest workers by hand as deep as you like.
+
 ## How far delegation reaches
 
 Two limits bound what an agent may do through delegation, and both answer with a single line rather than acting.
 
-**It reaches only the agents it opened.** A tab inherits its creator's group, and naming a tab in a different group is refused:
+**It reaches only the agents it opened.** A worker joins the group of the tab that opened it, so naming a tab in a different group is refused:
 
 ```
 Cannot delegate to "other": it is not one of your own agents.

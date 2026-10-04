@@ -53,7 +53,7 @@ The delegation grammar lets an ACP agent hand work to other agents. `agent [<nam
 
 Every way an `agent` command can be refused is reported to the agent as its next prompt rather than as a success: the depth cap, a `--model` with no value, and a model the catalog does not offer. A launch refused that way opens no tab.
 
-Delegation is capped at depth 2. A tab is depth 0 if nothing created it, and one more than its creator otherwise, so a worker's own worker may delegate once more and a tab at depth 2 is refused with a line naming the limit. The cap applies to the tool only: a person typing `agent` by hand is not capped.
+Delegation is capped at depth 2. A tab is depth 0 if nothing created it, and one more than its creator otherwise. A worker opened by delegation is always a child of the tab that delegated, whatever tab is focused when the launch runs, so a depth-1 worker's own worker is depth 2 and a tab at depth 2 is refused with a line naming the limit. A person typing `agent` in the command bar still parents the new tab to the tab they typed in, and is not capped.
 
 Delegation reaches only the delegating tab's own agents. A tab inherits its creator's group, and a `send` or `msg` naming a tab in a different group is refused, as is one naming a tab that is not open. Only `acp`, `state`, and `db` may be run in another tab; anything else — another built-in, a shell command, or an unprefixed line the probabilistic router would send somewhere — is refused before it executes. `send` narrows that to `acp` alone, except against a harness tab, where `send` types literal text into its terminal the way it always does. A person typing `msg` or `send` in the command bar is not subject to either limit.
 

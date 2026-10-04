@@ -159,3 +159,65 @@ describe('newAgentOp — delegation depth', () => {
     expect(managers.tab.tabs.at(-1)!.agentDepth).toBe(2);
   });
 });
+
+describe('newAgentOp — an explicit creator', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    root = mkdtempSync(path.join(tmpdir(), 'janus-newagent-creator-'));
+    loadHarnessModels(root);
+    vi.spyOn(messageBus, 'emit').mockReturnValue(undefined);
+  });
+
+  afterAll(() => {
+    if (root) rmSync(root, { recursive: true, force: true });
+  });
+
+  // The delegation tool names the tab whose loop asked for the worker. Reading the creator from focus
+  // instead is what kept a delegated worker at depth 1 and left the depth cap unable to engage.
+  it('parents the tab to the named creator even when another tab is active', () => {
+    const janus = makeTab('janus', 'red');
+    janus.group = 4;
+    janus.agentDepth = 1;
+    const { managers } = makeManagers(janus);
+    newAgentOp(managers, 'agent scout --no-workspace');
+    const worker = managers.tab.tabs.at(-1)!;
+    expect(worker.label).toBe('scout');
+
+    // A second tab takes the focus, as it would if the human looked away mid-turn.
+    const other = makeTab('durus', 'blue');
+    other.group = 9;
+    other.agentDepth = 0;
+    managers.tab.tabs.push(other);
+    (managers.tab as unknown as { cur: () => unknown }).cur = () => other;
+
+    newAgentOp(managers, 'agent kaptan --no-workspace', 'janus');
+    const child = managers.tab.tabs.at(-1)!;
+    expect(child.label).toBe('kaptan');
+    expect(child.agentDepth).toBe(2);
+    expect(child.group).toBe(4);
+  });
+
+  it('falls back to the active tab when the named creator does not exist', () => {
+    const janus = makeTab('janus', 'red');
+    janus.group = 2;
+    janus.agentDepth = 0;
+    const { managers } = makeManagers(janus);
+
+    newAgentOp(managers, 'agent scout --no-workspace', 'ghost');
+    const worker = managers.tab.tabs.at(-1)!;
+    expect(worker.label).toBe('scout');
+    expect(worker.agentDepth).toBe(1);
+    expect(worker.group).toBe(2);
+  });
+
+  it('reports a refusal to the named creator rather than to the active tab', () => {
+    const janus = makeTab('janus', 'red');
+    const { managers, appended } = makeManagers(janus);
+    const other = makeTab('durus', 'blue');
+    managers.tab.tabs.push(other);
+    (managers.tab as unknown as { cur: () => unknown }).cur = () => other;
+
+    newAgentOp(managers, 'agent scout --no-workspace --model not/a-model', 'janus');
+    expect(appended).toEqual([{ input: 'agent scout --no-workspace --model not/a-model', output: 'Unknown model "not/a-model" for harness "opencode" — add it to harness-models.json.' }]);
+  });
+});
