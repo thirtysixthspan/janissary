@@ -165,6 +165,10 @@ right-clicking offers the same **Copy** every other terminal surface offers.
 Its terminal connection belongs only to that shell tab. A plugin tab cannot attach to, type into, or
 resize a terminal owned by another tab.
 
+Dragging rows from the file navigator onto the shell tab's command bar highlights the bar and, on
+release, inserts their names at its caret exactly as the agent tab's bar does (see
+[[file-navigator-tab]]). Nothing is sent to zsh until the line is submitted.
+
 A paste into the command bar becomes one editable line, subject to the same `!` and command-resolution
 rules as anything typed, so a multi-line paste is not run a line at a time and nothing is sent to zsh
 before it has been seen.

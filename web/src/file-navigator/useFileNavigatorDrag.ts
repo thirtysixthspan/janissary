@@ -7,6 +7,7 @@ import { joinCommandPaths, joinDropFileNames } from './file/navigator-relative-p
 import { useFileNavigatorMoveOperations } from './useFileNavigatorMoveOperations';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { editorDropHandle, harnessDropHandle } from '../shared/drop-registry';
+import { createCommandBarDropTarget } from './command-bar-drop-target';
 
 const DRAG_THRESHOLD_PX = 4;
 
@@ -47,7 +48,9 @@ export function useFileNavigatorDrag(
   // a gesture ends — mouse-up, blur, Escape, the public `drop`, and unmount — so a gesture can
   // never outlive the surface that started it.
   const endGestureRef = useRef<(() => void) | null>(null);
-  const overCommandBarRef = useRef(false);
+  const latestDropRef = useRef(dropRef);
+  latestDropRef.current = dropRef;
+  const [commandBar] = useState(() => createCommandBarDropTarget(() => latestDropRef.current?.current));
   const overEditorRef = useRef<string | null>(null);
   const overHarnessRef = useRef<string | null>(null);
 
@@ -56,25 +59,21 @@ export function useFileNavigatorDrag(
     endGestureRef.current = null;
   };
 
-  const setCommandBarHighlighted = (active: boolean) => {
-    overCommandBarRef.current = active;
-    dropRef?.current?.setDropHighlighted(active);
-  };
   const resetGestureState = () => {
     gestureRef.current = null;
     setDraggedPath(null);
     setDraggedCount(0);
     setDragPosition(null);
     setDropTarget(null);
-    setCommandBarHighlighted(false);
+    commandBar.clear();
     overEditorRef.current = null;
     overHarnessRef.current = null;
   };
   const drop = () => {
     const gesture = gestureRef.current;
     try {
-      if (gesture?.started && overCommandBarRef.current) {
-        dropRef?.current?.insertAtCaret(joinDropFileNames(absoluteRoot, gesture.sourcePaths, remoteHost, ' '));
+      if (gesture?.started && commandBar.isOver()) {
+        commandBar.insert(joinDropFileNames(absoluteRoot, gesture.sourcePaths, remoteHost, ' '));
         return;
       }
       // Keyed by the label on the editor body under the pointer, so the drop lands in that editor or
@@ -123,8 +122,9 @@ export function useFileNavigatorDrag(
       setDraggedCount(gesture.sourcePaths.length);
     }
     setDragPosition({ x: event.clientX, y: event.clientY });
-    const overBar = hoveredElement(event.clientX, event.clientY, '[data-command-bar]') !== null;
-    if (overBar !== overCommandBarRef.current) setCommandBarHighlighted(overBar);
+    const bar = hoveredElement(event.clientX, event.clientY, '[data-command-bar]');
+    commandBar.hover(bar);
+    const overBar = bar !== null;
     const overEditor = overBar ? null : hoveredEditor(event.clientX, event.clientY);
     overEditorRef.current = overEditor;
     const overHarness = overBar || overEditor !== null ? null : hoveredHarnessPty(event.clientX, event.clientY);
@@ -183,11 +183,10 @@ export function useFileNavigatorDrag(
   useEffect(() => () => {
     gestureRef.current = null;
     releaseGestureListeners();
-    overCommandBarRef.current = false;
-    dropRef?.current?.setDropHighlighted(false);
+    commandBar.clear();
     overEditorRef.current = null;
     overHarnessRef.current = null;
-  }, [dropRef]);
+  }, [commandBar]);
 
   return {
     draggedPath,

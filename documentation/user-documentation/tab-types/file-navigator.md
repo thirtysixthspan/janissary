@@ -226,7 +226,7 @@ to try next. If items failed for different reasons, each shown name is paired wi
 You can also drag selected rows onto the command bar of the active tab to insert their file names at
 the caret without moving anything. Remote paths use `<host>:<absolute path on that host>`,
 separated by single spaces, and replace any selected command text. This works when the navigator
-is docked and a plain tab is active in the center. It does not work for a view tab, the file tree
+is docked and a plain tab or a shell tab is active in the center. It does not work for a view tab, the file tree
 itself, or transcript search — nor for a harness tab, whose terminal takes the drop directly instead
 (below). Names are inserted exactly as computed, without quotes,
 even when a name contains spaces.

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* drag and drop from the file-navigator into the command bar should work for the shell tab, just like in the agent tab.
-
 * opening the file navigator from the shell tab metadata bar should open the navigator in teh current working directory of the shell.
 
 * when an application command is run that has an output, it should be interpreted as markdown and rendered into the shell as rendered markdown and not raw markdown.

@@ -205,6 +205,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         busy={commandRunning}
         label={commandRunning ? 'queue' : undefined}
         autoFocus
+        acceptsFileDrops
         ariaLabel="Shell command"
         above={matches.length > 1 ? (
           <div className="completions">

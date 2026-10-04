@@ -4,7 +4,7 @@ import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { useFileNavigatorDrag as useFileNavigatorDragImplementation } from './useFileNavigatorDrag';
 import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from '../shared/drop-handles';
-import { registerEditorDrop, registerHarnessDrop } from '../shared/drop-registry';
+import { registerCommandBarDrop, registerEditorDrop, registerHarnessDrop } from '../shared/drop-registry';
 
 function makeRows(): FileNavigatorRow[] {
   return [
@@ -333,6 +333,26 @@ describe('useFileNavigatorDrag', () => {
 
       expect(dropHandle.insertAtCaret).toHaveBeenCalledWith('notes.txt');
       expect(client.send).not.toHaveBeenCalled();
+    });
+
+    it('a drag released over a command bar that registered its own handle inserts there, not through dropRef', () => {
+      const client = { send: vi.fn() } as unknown as JanusClient;
+      const dropRef = { current: makeDropHandle() };
+      const shellBar = makeDropHandle();
+      const { result } = renderHook(() => useFileNavigatorDrag(makeRows(), client, dropRef));
+      const bar = makeCommandBarElement();
+      registeredHarnesses.push(registerCommandBarDrop(bar, shellBar));
+      document.elementFromPoint = vi.fn().mockReturnValue(bar);
+
+      act(() => { result.current.onRowMouseDown({ path: 'src/notes.txt' } as FileNavigatorRow, downEvent(0, 0)); });
+      act(() => { globalThis.dispatchEvent(new MouseEvent('mousemove', { clientX: 20, clientY: 0 })); });
+      expect(shellBar.setDropHighlighted).toHaveBeenLastCalledWith(true);
+      act(() => { result.current.drop(); });
+
+      expect(shellBar.insertAtCaret).toHaveBeenCalledWith('notes.txt');
+      expect(shellBar.setDropHighlighted).toHaveBeenLastCalledWith(false);
+      expect(dropRef.current.insertAtCaret).not.toHaveBeenCalled();
+      expect(dropRef.current.setDropHighlighted).not.toHaveBeenCalledWith(true);
     });
 
     it('hovering the command-bar marker highlights it and unhighlighting on move-away clears it', () => {
