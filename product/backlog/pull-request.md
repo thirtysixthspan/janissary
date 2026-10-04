@@ -56,13 +56,3 @@ Proposal Risk: 2/10 - Tab-scoped registrations and a deterministic focused-tab r
 
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: keep simultaneous plugin chord claims per tab". Change the registration identity and cleanup closure in `web/src/plugins/PluginChords.tsx` to include the tab label, and resolve a chord against the tab that currently owns keyboard focus rather than the first registry entry. Add a regression with two shell tabs visible in different surfaces: Ctrl+R must open the focused tab's history, hiding the other tab must not clear the remaining registration, and releasing both must hand Ctrl+R back to the application. Keep the existing shell chord cases in `web/src/plugins/shell/ShellTab.test.tsx` and `web/src/useWindowKeys.test.ts` passing.
 
-
-* Correct the pull request description's claim that `theme dark` changes syntax highlighting.
-
-Existing Issue: The Additional test case 3 paragraph says `theme dark` changes the syntax theme, while `src/commands/theme.ts` changes the application theme and only `theme sync` changes syntax highlighting. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer may accept the manual check as evidence for syntax-theme behavior even though it exercises application-theme dispatch.
-
-Proposal Risk: 1/10 - The manual check will accurately describe the behavior it exercises, while the implementation and intended command-routing coverage remain unchanged.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: correct the theme command claim in the PR description". In the Additional test case 3 paragraph of the PR body, change the statement that `theme dark` changes the syntax theme to say that it changes the application theme. Keep `theme dark` as the command-dispatch/history case and verify the wording against `src/commands/theme.ts`, `help.md`, and `product/plans/complete/shell-bar-theme-description.md`.
