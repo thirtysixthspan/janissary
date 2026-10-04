@@ -52,7 +52,7 @@ export type ShellPayload = {
   commandRunning?: boolean;
 };
 
-export type ShellIntent = 'terminal-status' | 'dispatch' | 'complete';
+export type ShellIntent = 'terminal-status' | 'dispatch' | 'complete' | 'cwd';
 
 export type ShellTerminalStatus = { running: boolean };
 
@@ -65,6 +65,10 @@ export type ShellDispatchResult = { dispatched: boolean };
 // second one, so a plugin holding a ptyId and a command line needs exactly one wire route.
 export type ShellCompleteRequest = { line: string; cursor: number };
 export type ShellCommandState = { running: boolean };
+
+export function isShellCwd(value: unknown): value is string {
+  return typeof value === 'string' && value.startsWith('/');
+}
 
 // The completion the application's own command bar shows, re-declared for the same import-free reason
 // as the rows above. `matches`, `newInput` and `newCursor` are the application's own shape: a single

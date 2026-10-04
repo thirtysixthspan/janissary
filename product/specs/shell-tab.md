@@ -104,8 +104,8 @@ it auto-shows again; a window with no rows stays hidden.
 Both popups begin below the metadata row, which remains visible.
 
 There is no **open transcript** control, because there is no transcript: the terminal replaced it. The
-working directory shown is the one the shell started in and does not follow a `cd`, so a shell that
-has moved elsewhere still shows where it was opened.
+working directory shown follows the shell's current directory. It updates after a `cd` and when zsh
+returns to its prompt after a command.
 
 ## Where the shell starts
 

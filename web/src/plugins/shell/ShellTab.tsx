@@ -8,6 +8,7 @@ import { handleCompletionDismissKey, handleQueueKey, handleShellControlKey } fro
 import { insertCommandAtCaret } from './insert-command-at-caret';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
+import { reportShellCwd } from './report-shell-cwd';
 import './shell.css';
 
 type Properties = {
@@ -76,6 +77,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         capabilities.reportFailure('shell command status intent failed');
       });
     }, [capabilities]),
+    onCwd: (cwd) => { reportShellCwd(capabilities, cwd); },
     // The tab closes when the shell exits: no exited state and no way to start another, so a closed
     // tab is the honest representation of a shell that is no longer running.
     onExit: useCallback(() => { capabilities.close(); }, [capabilities]),

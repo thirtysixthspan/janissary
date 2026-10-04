@@ -141,6 +141,21 @@ describe('shell plugin activation', () => {
     }]);
   });
 
+  it('updates its metadata directory when the terminal reports a cwd', () => {
+    const { capabilities, updated } = fakeCapabilities();
+
+    expect(ask(capabilities, 'cwd', '/repo/subdir')).toEqual({ updated: true });
+    expect(updated).toEqual([{
+      key: 'shell-1', payload: { ...PAYLOAD, cwd: '/repo/subdir' },
+    }]);
+  });
+
+  it('rejects a cwd that is not an absolute path', () => {
+    const { capabilities } = fakeCapabilities();
+
+    expect(() => ask(capabilities, 'cwd', 'relative/path')).toThrow(TabPluginRejection);
+  });
+
   it('rejects a malformed command state', () => {
     const { capabilities } = fakeCapabilities();
 

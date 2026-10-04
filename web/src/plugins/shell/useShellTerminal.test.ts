@@ -7,7 +7,7 @@ const terminals: { written: string[]; disposed: boolean; options: Record<string,
 const fitCalls: number[] = [];
 const terminalDataHandlers: ((data: string) => void)[] = [];
 const terminalFocusCalls: number[] = [];
-const oscHandlers: ((data: string) => boolean)[] = [];
+const oscHandlers: { id: number; handle: (data: string) => boolean }[] = [];
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
@@ -29,7 +29,7 @@ vi.mock('@xterm/xterm', () => ({
     clearSelection() {}
     onData(handler: (data: string) => void) { terminalDataHandlers.push(handler); }
     focus() { terminalFocusCalls.push(1); }
-    parser = { registerOscHandler: (_id: number, handler: (data: string) => boolean) => { oscHandlers.push(handler); return { dispose() {} }; } };
+    parser = { registerOscHandler: (id: number, handler: (data: string) => boolean) => { oscHandlers.push({ id, handle: handler }); return { dispose() {} }; } };
     get cols() { return 120; }
     get rows() { return 40; }
   },
@@ -86,12 +86,13 @@ function harness(overrides: { attachTerminal?: undefined } = {}) {
     });
   const onExit = vi.fn();
   const onCommandRunning = vi.fn();
+  const onCwd = vi.fn();
   const container = document.createElement('div');
   const containerRef = { current: container };
   const view = renderHook(() => useShellTerminal({
-    ptyId: 'pty7', containerRef, attachTerminal, onExit, onCommandRunning,
+    ptyId: 'pty7', containerRef, attachTerminal, onExit, onCommandRunning, onCwd,
   }));
-  return { byteCallbacks, container, exitHandlers, handle, onExit, onCommandRunning, resized, detached, written, ...view };
+  return { byteCallbacks, container, exitHandlers, handle, onExit, onCommandRunning, onCwd, resized, detached, written, ...view };
 }
 
 describe('useShellTerminal', () => {
@@ -137,10 +138,17 @@ describe('useShellTerminal', () => {
     const { onCommandRunning, written } = harness();
 
     expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
-    expect(oscHandlers[0]?.('C')).toBe(true);
-    expect(oscHandlers[0]?.('D')).toBe(true);
+    expect(oscHandlers.find(({ id }) => id === 133)?.handle('C')).toBe(true);
+    expect(oscHandlers.find(({ id }) => id === 133)?.handle('D')).toBe(true);
 
     expect(onCommandRunning.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('reports the path from zsh current-directory markers', () => {
+    const { onCwd } = harness();
+
+    expect(oscHandlers.find(({ id }) => id === 7)?.handle('file://localhost/work/child%20dir')).toBe(true);
+    expect(onCwd).toHaveBeenCalledWith('/work/child dir');
   });
 
   it('reports an exit to the tab', () => {
@@ -167,6 +175,7 @@ describe('useShellTerminal', () => {
       containerRef: { current: container },
       attachTerminal: undefined,
       onExit: vi.fn(), onCommandRunning: vi.fn(),
+      onCwd: vi.fn(),
     }));
 
     expect(terminals).toHaveLength(0);
@@ -186,7 +195,7 @@ describe('useShellTerminal', () => {
     const first = vi.fn((_id: string, _onData: (data: string) => void) => makeHandle());
     const { rerender, unmount } = renderHook(
       ({ attachTerminal }) => useShellTerminal({
-        ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(), onCommandRunning: vi.fn(),
+        ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(),
       }),
       { initialProps: { attachTerminal: first } },
     );

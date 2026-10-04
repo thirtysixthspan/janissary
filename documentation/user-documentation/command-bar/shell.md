@@ -113,6 +113,8 @@ The terminal is output-only: it never takes keyboard focus, and you cannot type 
 
 The shell starts in the working directory of the tab that opened it. It shares that tab's workspace and offline mode when present, and keeps the workspace alive even if you close the original tab. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files.
 
+The shell tab's metadata row follows zsh's current working directory as you change it.
+
 `↑` and `↓` recall lines sent from this tab's command bar. `Ctrl+R` opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
 
 Press `Cmd+T` to open another zsh tab in the same working directory and workspace. In other tabs, `Cmd+T` opens a new agent tab.

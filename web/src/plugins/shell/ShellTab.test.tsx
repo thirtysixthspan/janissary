@@ -14,7 +14,7 @@ import { ShellTab } from './ShellTab';
 // is what is under test rather than xterm.js's renderer, which jsdom cannot run. The stub records what
 // it was handed, so a resize or a teardown assertion still has something to look at.
 const terminals: FakeTerminal[] = [];
-const commandStateHandlers: ((data: string) => boolean)[] = [];
+const commandStateHandlers: { id: number; handle: (data: string) => boolean }[] = [];
 
 interface FakeTerminal {
   written: string[];
@@ -46,8 +46,8 @@ vi.mock('@xterm/xterm', () => ({
     clearSelection() {}
     onData() { return { dispose: () => {} }; }
     parser = {
-      registerOscHandler: (_id: number, handler: (data: string) => boolean) => {
-        commandStateHandlers.push(handler);
+      registerOscHandler: (id: number, handler: (data: string) => boolean) => {
+        commandStateHandlers.push({ id, handle: handler });
         return { dispose: () => {} };
       },
     };
@@ -328,10 +328,18 @@ describe('ShellTab', () => {
 
   it('blinks the command bar dot while zsh is executing a command', () => {
     const { capabilities } = renderTab();
-    act(() => { commandStateHandlers.at(-1)?.('C'); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('C'); });
 
     expect(document.querySelector('.command-area .dot')).toHaveClass('busy');
     expect(capabilities.intent).toHaveBeenCalledWith('command-state', { running: true });
+  });
+
+  it('sends the current directory from zsh to the plugin intent', () => {
+    const { capabilities } = renderTab();
+
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 7)?.handle('file://localhost/work/child%20dir'); });
+
+    expect(capabilities.intent).toHaveBeenCalledWith('cwd', '/work/child dir');
   });
   it('opens a sibling shell with Cmd+T through the current shell tab', () => {
     const { capabilities, written } = renderTab();
