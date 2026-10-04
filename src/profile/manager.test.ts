@@ -760,3 +760,43 @@ describe('ProfileManager.newAgentAt', () => {
   });
 
 });
+
+describe('ProfileManager.newAgent', () => {
+  // The delegation tool names the tab whose loop asked for the worker and `newAgentOp` resolves the
+  // creator from that name. The link between the two is this pass-through, and neither end's own test
+  // can see it: the delegation tests stub `profile` out entirely, and the `newAgentOp` tests call it
+  // directly. The two tabs below sit in different groups at different depths, so the group and depth a
+  // worker lands on say which of the two creators was used.
+  it('forwards a creator label, so the worker is parented to that tab rather than the active one', () => {
+    const janus = makeTab('janus', 'red');
+    janus.group = 3;
+    janus.agentDepth = 1;
+    const durus = makeTab('durus', 'blue');
+    durus.group = 7;
+    durus.agentDepth = 0;
+    const { managers } = makeManagers(durus, [janus, durus]);
+
+    new ProfileManager(managers).newAgent('agent scout --no-workspace', 'janus');
+
+    const worker = managers.tab.tabs.at(-1)!;
+    expect(worker.label).toBe('scout');
+    expect(worker.group).toBe(3);
+    expect(worker.agentDepth).toBe(2);
+  });
+
+  it('parents to the active tab when no label is given, as the command bar does', () => {
+    const janus = makeTab('janus', 'red');
+    janus.group = 3;
+    janus.agentDepth = 1;
+    const durus = makeTab('durus', 'blue');
+    durus.group = 7;
+    durus.agentDepth = 0;
+    const { managers } = makeManagers(durus, [janus, durus]);
+
+    new ProfileManager(managers).newAgent('agent scout --no-workspace');
+
+    const worker = managers.tab.tabs.at(-1)!;
+    expect(worker.group).toBe(7);
+    expect(worker.agentDepth).toBe(1);
+  });
+});

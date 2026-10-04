@@ -38,7 +38,14 @@ An unknown creator label falls back to the active tab rather than failing: the d
 
 - A launch naming a creator parents the new tab to it even when a different tab is active, so the child's `agentDepth` is the named tab's plus one and its `group` is the named tab's.
 - A launch naming a creator that does not exist falls back to the active tab rather than throwing.
+- A refusal reports to the named creator rather than to the active tab.
 - The existing cases, which cover the focus-based default, must keep passing untouched — that is the command bar's behavior and is not what is changing.
+
+`src/profile/manager.test.ts`, for the pass-through between the two ends:
+
+- Two tabs in different groups at different depths, so the group and depth a worker lands on say which creator was used: `newAgent('agent scout --no-workspace', 'janus')` parents to `janus`, and the same call with no label parents to the active tab.
+
+That middle case is not optional. Neither end's own test can see it — the delegation tests stub `managers.profile` out entirely, and the `newAgentOp` tests call it directly — so without it the link between the two halves of the fix is untested and reverting it silently keeps every suite green. Verified by reverting each of the three links in turn and confirming exactly the case covering it fails.
 
 ## Out of scope
 
