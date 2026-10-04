@@ -20,6 +20,7 @@ const teardown: (() => void)[] = [];
 afterEach(() => {
   while (teardown.length > 0) teardown.pop()?.();
   document.body.replaceChildren();
+  Reflect.deleteProperty(document, 'execCommand');
 });
 
 function editorBuffer(label: string) {
@@ -79,6 +80,24 @@ describe('pasting into an editor buffer from a popup opened by its chord', () =>
     expect(pasteAtCaret).toHaveBeenCalledWith('clicked text');
     expect(isContributedOverlayOpen(PLUGIN)).toBe(false);
     expect(document.activeElement).toBe(textarea);
+  });
+});
+
+describe('pasting into a plugin command bar', () => {
+  it('inserts the chosen entry and returns focus to the shell command bar', () => {
+    const commandBar = document.createElement('textarea');
+    commandBar.dataset.commandBar = '';
+    document.body.append(commandBar);
+    commandBar.focus();
+    const execCommand = vi.fn();
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand });
+    const { overlay } = openFrom(commandBar);
+    act(() => { record('shell command'); });
+
+    act(() => { overlay.onKey(new KeyboardEvent('keydown', { key: 'Enter' })); });
+
+    expect(execCommand).toHaveBeenCalledWith('insertText', false, 'shell command');
+    expect(document.activeElement).toBe(commandBar);
   });
 });
 

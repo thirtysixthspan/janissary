@@ -116,8 +116,13 @@ export function MountedViewLayers({
               else tabHandles.current.delete(t.label);
               onPluginDirty?.(t.label, handle?.isDirty() ?? false);
             }}
-            overlay={navOpen && t.label === current.label && onPickTab ? (
-              <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
+            overlay={t.label === current.label ? (
+              <>
+                {navOpen && onPickTab && (
+                  <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
+                )}
+                {t.plugin?.id === 'shell' && contributedOverlay}
+              </>
             ) : undefined}
           />
         ))}

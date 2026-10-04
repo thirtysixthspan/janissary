@@ -8,8 +8,6 @@
 
 * the metadata bar should show the current working directory of the shell
 
-* the clipboard-history popup should work in the shell tab just as in the agent tab.
-
 * the queue popup should work in the shell tab just as in the agent tab.
 
 * the task picker popup should work in the shell tab just as in the agent tab.

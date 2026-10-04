@@ -55,7 +55,10 @@ vi.mock('./plugins/registry', () => {
     };
   });
   return {
-    clientPluginRegistry: new Map([['video', { schemaVersion: 1, Component }]]),
+    clientPluginRegistry: new Map([
+      ['video', { schemaVersion: 1, Component }],
+      ['shell', { schemaVersion: 1, Component }],
+    ]),
   };
 });
 
@@ -86,11 +89,11 @@ function makeHarnessTab(label: string, ptyId: string): TabView {
   } as unknown as TabView;
 }
 
-function makePluginTab(label: string, url: string): TabView {
+function makePluginTab(label: string, url: string, id = 'video'): TabView {
   return {
     label, view: 'plugin' as const, dotColor: '#ff0', groupColor: '#ccc',
     plugin: {
-      id: 'video', schemaVersion: 1,
+      id, schemaVersion: 1,
       payload: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url, player: 'QuickTime Player' },
     },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],
@@ -407,6 +410,34 @@ describe('MountedViewLayers', () => {
     );
 
     expect(container.querySelector('.tab-nav-picker')).toBeNull();
+  });
+
+  it('renders a contributed overlay inside only the current shell plugin tab', () => {
+    const tabs = [makePluginTab('shell', '/current.mp4', 'shell'), makePluginTab('other', '/other.mp4')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        contributedOverlay: React.createElement('div', { className: 'clipboard-history' }),
+      }),
+    );
+    const bodies = [...container.querySelectorAll('.tab-body')];
+
+    expect(bodies[0].querySelector('.clipboard-history')).toBeTruthy();
+    expect(bodies[1].querySelector('.clipboard-history')).toBeNull();
+  });
+
+  it('does not render a contributed overlay inside another plugin tab', () => {
+    const tabs = [makePluginTab('plugin', '/current.mp4')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        contributedOverlay: React.createElement('div', { className: 'clipboard-history' }),
+      }),
+    );
+
+    expect(container.querySelector('.clipboard-history')).toBeNull();
   });
 
   // A key the editor buffer does not bind reaches the window handler, so any overlay can open while

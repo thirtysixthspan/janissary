@@ -26,7 +26,7 @@ Each entry shows one line: the first line of non-space text, which is not always
 
 `Ctrl+V` and `Cmd+V` are untouched. In an editor tab they are the browser's own paste, as they are everywhere else in the application.
 
-The popup renders on an agent tab, an editor tab, and a harness or ssh tab. Those are the only tabs with an overlay surface at all. A markdown, image, pdf, page, video, sql, or conversations tab has none, so there is nowhere to paste into and nothing appears there — but the chord is still answered on such a tab, and the popup it opens takes the keyboard until `Escape` or `Return` dismisses it.
+The popup renders on an agent tab, an editor tab, a harness or ssh tab, and the shell plugin tab. The shell tab's command bar is a paste target, so selecting an entry inserts it at the caret without running it. A markdown, image, pdf, page, video, sql, or conversations tab has no paste target, so nothing appears there — but the chord is still answered on such a tab, and the popup it opens takes the keyboard until `Escape` or `Return` dismisses it.
 
 ### Choosing an entry
 
