@@ -74,6 +74,26 @@ Cannot delegate: this tab is already 2 agent launches deep, which is the limit. 
 
 The cap is on delegation, not on you: typing `agent` by hand is never refused. It is there because every worker is a whole clone plus a live model session, and without a bound one prompt could grow a tree of them.
 
+## How far delegation reaches
+
+Two limits bound what an agent may do through delegation, and both answer with a single line rather than acting.
+
+**It reaches only the agents it opened.** A tab inherits its creator's group, and naming a tab in a different group is refused:
+
+```
+Cannot delegate to "other": it is not one of your own agents.
+```
+
+**Only three commands may run in another tab** — `acp` (a prompt), `state` (a transcript poll), and `db` (a query). Anything else, including a shell command, is refused before it runs:
+
+```
+Cannot run "quit" in another tab: delegation may only run acp, db, state there. Do the work yourself, or ask the human.
+```
+
+`send` is narrower still: against an agent tab only `acp` is allowed. Against a harness tab `send` types literal text into its terminal, which is what it is for.
+
+Neither limit applies to you. Typing `msg` and `send` in the command bar keeps their full behavior.
+
 ## A worker's answer is screened
 
 A worker's answer reaches the delegating agent screened. Harness-shaped text — a `<system-reminder>`-style tag, or a line opening with `Human:` or `Assistant:` — is neutralized rather than deleted, and one line is added at the top naming what was:

@@ -53,6 +53,8 @@ The delegation grammar lets an ACP agent hand work to other agents. `agent [<nam
 
 Delegation is capped at depth 2. A tab is depth 0 if nothing created it, and one more than its creator otherwise, so a worker's own worker may delegate once more and a tab at depth 2 is refused with a line naming the limit. The cap applies to the tool only: a person typing `agent` by hand is not capped.
 
+Delegation reaches only the delegating tab's own agents. A tab inherits its creator's group, and a `send` or `msg` naming a tab in a different group is refused, as is one naming a tab that is not open. Only `acp`, `state`, and `db` may be run in another tab; anything else — another built-in, a shell command, or an unprefixed line the probabilistic router would send somewhere — is refused before it executes. `send` narrows that to `acp` alone, except against a harness tab, where `send` types literal text into its terminal the way it always does. A person typing `msg` or `send` in the command bar is not subject to either limit.
+
 A worker's answer is screened before it is handed back. Harness-shaped control text — a `<system-reminder>`-style tag, or a line opening with `Human:` or `Assistant:` — is neutralized rather than deleted, and one `[harness: neutralized …]` line naming what was matched is prepended. Text naming a permission setting is left verbatim, because naming one is not impersonating the host. An answer with nothing to neutralize comes back unchanged.
 
 ### `acp` command

@@ -20,6 +20,10 @@ Delegation stops two launches deep. You are depth 0, a worker you open is depth 
 worker may open one more of its own. A worker at depth 2 is refused. When a worker asks you
 to delegate further, give it the work itself instead of another worker.
 
+You may only delegate to tabs you opened — anything else answers `Cannot delegate to "…": it
+is not one of your own agents.` — and only `acp`, `state`, and `db` may be run in another tab.
+Anything else is refused; there is no shell. `send` allows only `acp` against an agent tab.
+
 ## One delegation is three steps
 
 **1. Open a worker.** `agent <name>` opens it in a fresh workspace clone. Add

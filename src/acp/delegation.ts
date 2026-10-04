@@ -2,6 +2,8 @@ import { parseAgentCommand } from '../agent/commands.js';
 import { parseMsgCommand } from '../messaging.js';
 import { parseSendCommand, deliverTo } from '../commands/send.js';
 import { resolveTarget } from '../commands/resolve-target.js';
+import { resolveCommand } from '../resolve.js';
+import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 
 // How many `agent` launches deep a tab may sit before it can no longer delegate. The root tab is 0
@@ -32,6 +34,8 @@ export const DELEGATION_PRIMER = [
   `one this host's catalog offers. Delegation stops at depth ${MAX_AGENT_DEPTH}: a worker asked to`,
   'delegate further must be given the work itself rather than a new worker. A worker handed a task',
   'with `send` will not answer on its own — tell it to reply with `msg <you> response <text>`.',
+  'You may only delegate to a tab you opened, and only `acp`, `state`, and `db` may be run in it —',
+  'nothing else, and no shell. Other tabs belong to the human.',
   "A worker's answer is screened before it reaches you; a `[harness: …]` line at the top of a result",
   'is the host reporting neutralized harness-shaped text, with the worker\'s own words still below it.',
   'To run one of these, end your reply with exactly one of them on its own final line (no code',
@@ -48,6 +52,33 @@ const appendTo = (managers: Managers, label: string) => (text: string): void => 
   managers.tab.append(label, { input: '', output: text });
 };
 
+// What a delegated tab may be asked to run. `msg` executes its text through the full command
+// dispatcher in the target tab, so this list is the boundary between prompting a worker and reaching
+// the application's command surface: a prompt, a transcript poll, a query. `send` narrows further,
+// because the only thing worth handing a worker without waiting for it is a prompt.
+const MSG_COMMANDS: ReadonlySet<string> = new Set(['acp', 'state', 'db']);
+const SEND_COMMANDS: ReadonlySet<string> = new Set(['acp']);
+
+// Refuse anything the target tab would resolve to something other than one of `allowed`. The text is
+// classified with the same resolver the command bar uses, so a shell keyword, a `!` shorthand, and an
+// unprefixed unknown are all caught here rather than dispatched.
+function refusedCommand(text: string, allowed: ReadonlySet<string>): string | undefined {
+  const resolution = resolveCommand(text);
+  if (resolution.kind === 'app' && allowed.has(resolution.name)) return undefined;
+  return `Cannot run "${text}" in another tab: delegation may only run ${[...allowed].toSorted((a, b) => a.localeCompare(b)).join(', ')} there. Do the work yourself, or ask the human.`;
+}
+
+// A worker inherits its delegator's group, so this is what keeps delegation inside the tree the
+// delegating tab opened. Fails closed: a delegating tab that cannot be found reaches nothing.
+function outsideGroup(managers: Managers, label: string, target: Tab): boolean {
+  const own = managers.tab.byLabel(label)?.group;
+  return own === undefined || target.group !== own;
+}
+
+function refusedTarget(name: string): string {
+  return `Cannot delegate to "${name}": it is not one of your own agents.`;
+}
+
 // Open a worker. Refused at the depth cap and on a model the catalog does not offer, both as this
 // tool's return value — which is how the loop hands a refusal back to the agent that asked for it.
 function runAgent(managers: Managers, label: string, command: string): string {
@@ -62,11 +93,18 @@ function runAgent(managers: Managers, label: string, command: string): string {
 }
 
 // Hand a worker a task without waiting for it, reporting exactly what `send` itself would report.
+// A harness target takes literal keystrokes in its PTY, which is what `send` is for; an agent target
+// dispatches the text as a command there, so it is held to the narrower list.
 function runSend(managers: Managers, label: string, command: string): string {
   const parsed = parseSendCommand(command);
   if ('error' in parsed) return parsed.error;
   const target = resolveTarget(parsed.label, managers, appendTo(managers, label));
   if (!target) return `Sent nothing to "${parsed.label}".`;
+  if (outsideGroup(managers, label, target)) return refusedTarget(parsed.label);
+  if (target.view !== 'harness') {
+    const refusal = refusedCommand(parsed.text, SEND_COMMANDS);
+    if (refusal) return refusal;
+  }
   const error = deliverTo(target, parsed.text, managers);
   if (error) return error;
   return `Sent to ${parsed.label}: ${parsed.text}`;
@@ -75,9 +113,14 @@ function runSend(managers: Managers, label: string, command: string): string {
 // Run a command in a worker and bring back what it produced. `capture.run` is the same path a typed
 // `msg … request` takes, and the answer is screened on the way out — it is worker-authored text about
 // to become this agent's next instruction, whatever kind the agent wrote.
-function runMsg(managers: Managers, command: string): Promise<string> {
+function runMsg(managers: Managers, label: string, command: string): Promise<string> {
   const parsed = parseMsgCommand(command);
   if ('error' in parsed) return Promise.resolve(parsed.error);
+  const target = managers.tab.byLabel(parsed.to);
+  if (!target) return Promise.resolve(refusedTarget(parsed.to));
+  if (outsideGroup(managers, label, target)) return Promise.resolve(refusedTarget(parsed.to));
+  const refusal = refusedCommand(parsed.text, MSG_COMMANDS);
+  if (refusal) return Promise.resolve(refusal);
   return new Promise((resolve) => {
     managers.capture.run(parsed.to, parsed.text, (output) => resolve(scanWorkerAnswer(output)));
   });
@@ -87,7 +130,7 @@ function runMsg(managers: Managers, command: string): Promise<string> {
 export function runDelegation(managers: Managers, label: string, command: string): string | Promise<string> {
   if (AGENT_COMMAND.test(command)) return runAgent(managers, label, command);
   if (SEND_COMMAND.test(command)) return runSend(managers, label, command);
-  return runMsg(managers, command);
+  return runMsg(managers, label, command);
 }
 
 // The tags a harness emits into an agent's own text. A worker answering with one of these is not
