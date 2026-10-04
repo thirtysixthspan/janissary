@@ -537,7 +537,8 @@ describe('ShellTab', () => {
     // What the window key handler does on the application's behalf: consult the registry first.
     chords.run('ctrl+r');
 
-    await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
+    await waitFor(() => { expect(document.querySelector('.picker.shell-history')).not.toBeNull(); });
+    expect(document.querySelector('.shell-history .picker-title')?.textContent).toBe('history');
     expect(screen.getByText('No commands sent yet')).toBeInTheDocument();
   });
 
@@ -622,9 +623,12 @@ describe('ShellTab', () => {
 
     chords.run('ctrl+r');
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
-    // The popup lists newest first, so one Up from the highlighted newest line is the one before it.
+    // The popup puts the newest line at the bottom, like the application picker, so Up moves older.
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
-    expect(document.querySelector('.shell-history-row.selected')?.textContent).toBe('first');
+    expect(document.querySelector('.shell-history .picker-row.selected')?.textContent).toBe('first');
+    fireEvent.keyDown(bar(), { key: 'ArrowDown' });
+    expect(document.querySelector('.shell-history .picker-row.selected')?.textContent).toBe('second');
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
     fireEvent.keyDown(bar(), { key: 'Enter' });
 
     await waitFor(() => { expect(bar().value).toBe('first'); });

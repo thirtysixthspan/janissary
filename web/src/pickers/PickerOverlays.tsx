@@ -1,5 +1,5 @@
 import React from 'react';
-import { HistoryPicker } from './HistoryPicker';
+import { HistoryPicker } from '../shared/command-bar/HistoryPicker';
 import { ThemePicker } from './ThemePicker';
 import { RouteChooser } from './RouteChooser';
 import { TabNavPicker } from './TabNavPicker';

@@ -61,7 +61,10 @@ command bar, exactly as in an agent tab. `Cmd+F` and `Ctrl+E` do nothing here �
 transcript to search and the queue belongs to agents — which is the same in every plugin tab.
 
 `Ctrl+R` opens this tab's own history while it is the visible one, listing the lines its command bar
-has sent. Focus any other tab and `Ctrl+R` opens the application's history picker again.
+has sent, oldest first with the newest line selected at the bottom. It uses the same presentation and
+keyboard navigation as the application's history picker, but Return puts the selected line back in the
+command bar without running it. Focus any other tab and `Ctrl+R` opens the application's history picker
+again.
 
 The list is driven by the keyboard without ever taking it from the command bar: `↑`/`↓` move the
 selection, `Return` puts the chosen line back in the bar, and `Escape` closes it. Picking a row with

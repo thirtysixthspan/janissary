@@ -187,8 +187,8 @@ export function ShellTab({ payload, capabilities }: Properties) {
       />
       {historyOpen && (
         <ShellHistoryPopup
-          lines={sent.toReversed()}
-          onPick={(line) => { setDraft(line); setHistoryOpen(false); inputReference.current?.focus(); }}
+          lines={sent}
+          onPick={(line) => { setDraft(line); }}
           onClose={() => { setHistoryOpen(false); inputReference.current?.focus(); }}
         />
       )}

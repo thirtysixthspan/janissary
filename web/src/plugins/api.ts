@@ -108,6 +108,8 @@ export { usePluginChordClaims, type PluginChordHandler } from './PluginChords';
 // identical copy before this, kept in step only by comments. Additive, so `TAB_PLUGIN_API_VERSION`
 // does not move.
 export { nextListSelection } from '../shared/list-selection';
+export { HistoryPicker } from '../shared/command-bar/HistoryPicker';
+export { handlePickerKey } from '../keyboard-handlers';
 
 // The one clipboard writer, published so a plugin's copy reaches the same capture seam every other
 // copy in the application does rather than being invisible to the clipboard history. The optional

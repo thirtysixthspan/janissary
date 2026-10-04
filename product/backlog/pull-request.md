@@ -8,8 +8,6 @@
 
 * the metadata bar should show the current working directory of the shell
 
-* the history picker triggered by ctrl+r in teh shell tab should be styled and use the same key input as the history picker in the agent tab.
-
 * the clipboard-history popup should work in the shell tab just as in the agent tab.
 
 * the queue popup should work in the shell tab just as in the agent tab.

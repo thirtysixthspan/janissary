@@ -33,4 +33,20 @@ describe('HistoryPicker', () => {
     fireEvent.click(container.querySelectorAll('.picker-row')[1]);
     expect(onPick).toHaveBeenCalledWith('cmd2');
   });
+
+  it('adds an optional class to the shared picker', () => {
+    const { container } = render(React.createElement(HistoryPicker, {
+      items: [], selected: 0, onPick: vi.fn(), className: 'shell-history',
+    }));
+
+    expect(container.querySelector('.picker.shell-history')).toBeTruthy();
+  });
+
+  it('uses a caller-provided empty message', () => {
+    const { getByText } = render(React.createElement(HistoryPicker, {
+      items: [], selected: 0, onPick: vi.fn(), emptyMessage: 'No commands sent yet',
+    }));
+
+    expect(getByText('No commands sent yet')).toBeTruthy();
+  });
 });
