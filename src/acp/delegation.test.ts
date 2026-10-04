@@ -66,6 +66,27 @@ describe('runDelegation — the depth cap cannot be routed around', () => {
     expect(runDelegation(managers, 'janus', 'agent kaptan')).toContain('Opening agent "kaptan"');
     expect(newAgent).toHaveBeenCalled();
   });
+
+  it('refuses a model the catalog does not offer, and launches nothing', () => {
+    const { managers, newAgent } = harness({ group: 1 }, []);
+    expect(runDelegation(managers, 'janus', 'agent kaptan --model not/a-model'))
+      .toBe('Unknown model "not/a-model" for harness "opencode" — add it to harness-models.json.');
+    expect(newAgent).not.toHaveBeenCalled();
+  });
+
+  it('refuses a --model with no value', () => {
+    const { managers, newAgent } = harness({ group: 1 }, []);
+    expect(runDelegation(managers, 'janus', 'agent kaptan --model'))
+      .toBe('Usage: agent <name> --model <model-id>.');
+    expect(newAgent).not.toHaveBeenCalled();
+  });
+
+  it('omits the transcript hint for a pool-name launch, whose name it cannot know', () => {
+    const { managers } = harness({ group: 1 }, []);
+    const result = runDelegation(managers, 'janus', 'agent --no-workspace');
+    expect(result).toContain('Opening a new agent');
+    expect(result).not.toContain('msg ');
+  });
 });
 
 describe('runDelegation — reaching only your own workers', () => {

@@ -3,6 +3,8 @@ import { parseMsgCommand } from '../messaging.js';
 import { parseSendCommand, deliverTo } from '../commands/send.js';
 import { resolveTarget } from '../commands/resolve-target.js';
 import { resolveCommand } from '../resolve.js';
+import { isKnownModel } from '../harness/models.js';
+import { unknownAgentModel } from '../profile/new-agent.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 
@@ -79,17 +81,21 @@ function refusedTarget(name: string): string {
   return `Cannot delegate to "${name}": it is not one of your own agents.`;
 }
 
-// Open a worker. Refused at the depth cap and on a model the catalog does not offer, both as this
-// tool's return value — which is how the loop hands a refusal back to the agent that asked for it.
+// Open a worker. Every way this can be refused comes back as the tool's own result, which is how the
+// loop hands a refusal to the agent that asked for it: the depth cap, a `--model` with no value, and a
+// model the catalog does not offer. The catalog check is repeated from `newAgentOp` on purpose — that
+// one refuses before a clone starts for a person typing the command, and this one stops the tool
+// claiming success for a launch it knows will be refused.
 function runAgent(managers: Managers, label: string, command: string): string {
   if ((managers.tab.byLabel(label)?.agentDepth ?? 0) >= MAX_AGENT_DEPTH) {
     return `Cannot delegate: this tab is already ${MAX_AGENT_DEPTH} agent launches deep, which is the limit. Do the work here, or hand it to a worker with \`send\`.`;
   }
   const parsed = parseAgentCommand(command);
   if (parsed.modelError) return parsed.modelError;
+  if (parsed.model && !isKnownModel('opencode', parsed.model)) return unknownAgentModel(parsed.model);
   managers.profile.newAgent(command);
-  const named = parsed.name === '' ? 'a new agent' : parsed.name;
-  return `Opening agent "${named}". This tab is told when it is ready; \`msg ${named} request state\` reads its transcript.`;
+  if (parsed.name === '') return 'Opening a new agent. This tab is told its name when it is ready.';
+  return `Opening agent "${parsed.name}". This tab is told when it is ready; \`msg ${parsed.name} request state\` reads its transcript.`;
 }
 
 // Hand a worker a task without waiting for it, reporting exactly what `send` itself would report.

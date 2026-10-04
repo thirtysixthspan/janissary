@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle the case where the agent tool reports a refused worker launch to the agent as a success, so a delegating agent acts on a worker that was never opened.
-
-Existing Issue: `runAgent` in `src/acp/delegation.ts` checks only the depth cap and the `modelError` usage case before calling `managers.profile.newAgent` and then unconditionally returns "Opening agent …", while the catalog refusal for an unknown model is raised later inside `newAgentOp` as a transcript line, so a reply ending `agent scout --model not/a-model` produces both a success-shaped tool result and the refusal line; the same return value also builds its follow-up hint from `parsed.name`, which is empty for a pool-name launch and yields the unusable `msg a new agent request state`. Severity: 4/10
-
-Existing Risk: 4/10 - The delegating agent's next prompt is the success message, so it goes on to send the task to a tab that does not exist and spends several of its eight steps recovering from a refusal it was never told about.
-
-Proposal Risk: 2/10 - The tool's result becomes a faithful account of what happened, and an agent that is refused twice learns to stop asking.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1536: make the agent tool's result reflect whether the worker actually opened". In `runAgent` in `src/acp/delegation.ts`, apply the same `isKnownModel('opencode', model)` check that `newAgentOp` in `src/profile/new-agent.ts` performs, using the same wording, and return that refusal instead of calling `profile.newAgent`; the launch-time check stays where it is, because it is what protects a person typing the command and what refuses before a clone starts. For the hint, branch on whether `parsed.name` is empty and omit the `msg … request state` sentence entirely for a pool-name launch rather than interpolating a placeholder, since the pool name is only chosen inside `newAgentOp`. The two checks now agree, and the depth refusal, the usage refusal, and the catalog refusal are all returned the same way as every other tool error. Cover both new branches in `src/acp/delegation.test.ts`, which the entry above is already extending.
-
-
 * Avoid the duplication where sending to a tab that does not exist is reported twice, once in the transcript and once as the tool result.
 
 Existing Issue: `runSend` in `src/acp/delegation.ts` passes `appendTo(managers, label)` as `resolveTarget`'s report callback, and `resolveTarget` in `src/commands/resolve-target.ts` appends `No tab named "<label>".` to the delegating tab before returning undefined, which `runSend` then follows with its own `Sent nothing to "<label>".` return value, so one failed send appears twice. Severity: 3/10

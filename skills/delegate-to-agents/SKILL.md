@@ -36,7 +36,10 @@ agent scout --model opencode-go/glm-5.3
 ```
 
 The tab opens immediately and this tab is told when the clone is ready. Wait for that line
-before handing over work.
+before handing over work. If the launch is refused — an unknown model, a `--model` with no
+value, the depth limit — nothing opens and the refusal is your next prompt; do not carry on
+as if a worker existed. A bare `agent` picks a name from the pool, so you will not know it
+until this tab says so.
 
 **2. Give it the task.** Two shapes, and the difference is whether you want the answer now.
 

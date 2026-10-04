@@ -29,11 +29,11 @@ export function newAgentOp(managers: Managers, command: string): void {
   // Refused before any workspace work: a model the catalog does not offer would otherwise fail much
   // later and far less clearly, inside the agent binary. Checked against the opencode list because
   // that is the list an agent tab's ACP session resolves from.
-  if (parsed.model && !isKnownModel('opencode', parsed.model)) { out(unknownModel(parsed.model)); return; }
+  if (parsed.model && !isKnownModel('opencode', parsed.model)) { out(unknownAgentModel(parsed.model)); return; }
   launchAgent(managers, { parsed, creator, out }, []);
 }
 
-function unknownModel(model: string): string {
+export function unknownAgentModel(model: string): string {
   return `Unknown model "${model}" for harness "opencode" — add it to harness-models.json.`;
 }
 
