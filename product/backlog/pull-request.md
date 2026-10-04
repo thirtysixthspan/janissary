@@ -1,3 +1,13 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Correct the plan's own verification step, which names a model the harness catalog does not offer, so following it produces an unknown-model refusal instead of a tab.
+
+Existing Issue: Verification step 1 of the plan reads "1. `agent scout --model google/gemini-3.1-pro` opens a workspaced tab whose connections-panel row reads `acp:google/gemini-3.1-pro` once a prompt connects.", but `harness-models.json` lists `google/gemini-3.1-pro-preview` and no `google/gemini-3.1-pro`, so the launch is refused with `Unknown model "google/gemini-3.1-pro" for harness "opencode" — add it to harness-models.json.` and no tab opens; observed on 3 of 3 attempts across two fresh app instances, with the tab count unchanged each time. Severity: 3/10
+
+Existing Risk: 2/10 - A reviewer or agent following the plan's verification finds the feature's headline example failing while the code is right, and either reads the refusal as a bug in `--model` or edits the catalog to make a nonexistent model pass.
+
+Proposal Risk: 1/10 - The step names a model that exists, so following it demonstrates the behavior it was written to demonstrate.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1536: correct the plan verification step that names a model the catalog does not offer". Edit Verification step 1 of `product/plans/complete/delegate-to-agents.md` to use `google/gemini-3.1-pro-preview`, which the catalog's `opencode` list does offer, and to expect the connections-panel row to read `acp:google/gemini-3.1-pro-preview`. Check the rest of that file for the same id: `grep -rn "gemini-3\.1-pro" product/plans/complete/delegate-to-agents.md` should return only lines carrying the `-preview` suffix after the edit, since `refresh-harness-model-catalog.md` and `scheduled-harness-via-profile.md` already record the catalog's spelling and must not be touched. The pull request's own **How to verify** already uses `opencode-go/glm-5.3`, which the catalog does offer, so leave every step there as the author wrote it; only the plan needs the correction. No code changes, and the catalog itself must not gain an entry — the validation is behaving correctly and is what makes the step's mistake visible.
