@@ -469,7 +469,7 @@ describe('ShellTab', () => {
     expect(written).toEqual([]);
   });
 
-  it('keeps a line the application claimed out of the shell history', async () => {
+  it('records an intercepted application command in shell history', async () => {
     const { releaseDispatch, written } = renderTab({ dispatched: true });
 
     fireEvent.change(bar(), { target: { value: 'theme' } });
@@ -477,9 +477,21 @@ describe('ShellTab', () => {
     await act(async () => { releaseDispatch(); });
     expect(written).toEqual([]);
 
-    // Up recalls the lines the bar has sent, so a claimed line must not become one of them.
+    // Up recalls handled application commands even though none of them reached the terminal.
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
-    expect(bar().value).toBe('');
+    expect(bar().value).toBe('theme');
+  });
+
+  it('records a dispatched application command in shell history', async () => {
+    const { releaseDispatch, written } = renderTab({ dispatched: true });
+
+    fireEvent.change(bar(), { target: { value: 'help' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(written).toEqual([]);
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(bar().value).toBe('help');
   });
 
   it('records a line the shell was sent as recallable history', async () => {

@@ -10,8 +10,6 @@
 
 * the path in the metadatabar should render the shortcuts $root and $workspace as part of the path when appropriate.
 
-* application commands should be added to the command history when executed, not just shell commands.
-
 * the following keybindings for agent tabs should apply to the shell tab navigation
 Shift+↑ / Shift+↓	Scroll the transcript up / down (accelerated — distance doubles each second)
 Ctrl+↑ / Ctrl+↓	Scroll the transcript up / down (accelerated)

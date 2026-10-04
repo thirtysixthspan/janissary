@@ -71,8 +71,9 @@ shell — the characters a terminal would send, and the only way to stop a runaw
 nothing can be typed into the terminal. `Ctrl+C` copies the command line's own selection instead when
 it holds one, so copying by keyboard still works.
 
-`Up` and `Down` walk the lines the command bar has sent, exactly as the agent tab's bar walks its
-tab's command history. Commands typed directly into the terminal remain in zsh's own history. Ghost suggestions instead draw from the
+`Up` and `Down` walk the lines the command bar has sent or the application has handled, exactly as the
+agent tab's bar walks its tab's command history. Commands typed directly into the terminal remain in
+zsh's own history. Ghost suggestions instead draw from the
 global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
 a suggestion.
 

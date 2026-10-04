@@ -117,7 +117,7 @@ The terminal colors follow the application theme. Choosing a theme in the `theme
 
 The shell tab's metadata row follows zsh's current working directory as you change it.
 
-`↑` and `↓` recall lines sent from this tab's command bar. `Ctrl+R` opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
+`↑` and `↓` recall lines sent from this tab's command bar, including application commands handled there. `Ctrl+R` opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
 
 Press `Cmd+T` to open another zsh tab in the same working directory and workspace. In other tabs, `Cmd+T` opens a new agent tab.
 
