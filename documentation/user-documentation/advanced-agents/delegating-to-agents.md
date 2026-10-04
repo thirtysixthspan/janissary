@@ -46,7 +46,9 @@ A worker you blocked on with `msg … request acp` needs no such instruction —
 msg scout request state
 ```
 
-Each poll is one step of the 8-step limit that applies to a whole `acp` prompt, so poll for a shape you can read at a glance rather than in a loop. A poll reports the worker's most recent dispatch — a command sent to a busy worker does not queue behind what it is already doing.
+Each poll is one step of the 8-step limit that applies to a whole `acp` prompt, so poll for a shape you can read at a glance rather than in a loop. A poll reports the worker's most recent dispatch: a messaged command — which is what a poll is — runs in the worker straight away rather than queueing, so a poll taken mid-turn can show the one before it.
+
+`send` is the opposite. It queues behind whatever the worker is already doing and returns to you as soon as it has handed the line over, so a task you sent to a busy worker has not started yet — wait for the worker to go idle before polling, or expect the first poll to show its previous dispatch.
 
 For a long unattended run, a [harness tab](/user-documentation/advanced-agents/harness) is the better tool: open one with `harness <name> as <label> --model <model-id>` and read it with `harness capture <label>` for the screen as it is now, or `harness transcript <label>` for the harness's own session history. You have to open that one yourself — an `acp` agent cannot.
 

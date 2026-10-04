@@ -78,9 +78,12 @@ msg scout request state
 ```
 
 Each poll is one of this turn's eight tool steps, so poll for a shape you can read at a
-glance rather than in a tight loop. A poll shows the worker's most recent dispatch; a command
-sent to a busy worker is not queued behind what it is already doing, so a poll taken while it
-is mid-turn can still show the previous one.
+glance rather than in a tight loop. A poll shows the worker's most recent dispatch: a
+messaged command — which is what a poll is — runs in the worker straight away rather than
+queueing, so a poll taken while the worker is mid-turn can still show the one before it.
+`send` is the opposite: it queues behind whatever the worker is already doing and comes back
+to you as soon as it has handed the line over, so a task you sent to a busy worker has not
+started yet.
 
 For a long run, do not poll at all. Ask the human to open a `harness` tab instead —
 `harness <name> as <label> --model <model-id>` — and read it with `harness capture <label>`
