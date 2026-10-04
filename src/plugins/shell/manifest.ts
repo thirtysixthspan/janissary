@@ -36,6 +36,7 @@ export const shellManifest = {
     'terminalRunning',
     'openOrFocusTab',
     'updateTab',
+    'setUnread',
     'rejectRequest',
     'reportFailure',
   ],

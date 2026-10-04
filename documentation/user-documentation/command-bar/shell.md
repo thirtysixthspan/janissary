@@ -117,6 +117,8 @@ The terminal colors follow the application theme. Choosing a theme in the `theme
 
 The shell tab's metadata row follows zsh's current working directory as you change it.
 
+When a command finishes while the zsh tab is hidden, it gets an unread flag. If the flag remains unread and hidden for 30 seconds, Janissary raises the same `Agent '<tab>' is waiting` notification used for harness tabs. Starting another command clears the flag and its pending notification.
+
 `↑` and `↓` recall lines sent from this tab's command bar, including application commands handled there. `Ctrl+R` opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
 
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.

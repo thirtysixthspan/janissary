@@ -95,12 +95,13 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies twenty-two capabilities:
+The host supplies twenty-three capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `notifyUser(text, options?)` reports one line to the notifications feed. Text plus, at most, one file to link — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. A link is how you offer something too long to read in place, the way the `sql` plugin links the whole result of a query from a line that only says how many rows came back; it is an absolute path opened with the host's ordinary `edit`, not a `registerFile` reference, because a notification outlives the tab that produced it. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way. A line is attributed to the tab you were invoked from, which a `notify` handler doesn't have, so pass `tab` with one of your own instance keys — `notifyUser(text, { tab: key })` — to have the line carry that tab's name and colour instead. A key you have no open tab for falls back to the invoking tab, so you can't attribute a line to a tab you don't own.
 - `openOrFocusTab(instanceKey, factory)` focuses or creates a plugin tab.
 - `updateTab(instanceKey, factory)` replaces what one of your own tabs already shows.
+- `setUnread(instanceKey, unread)` sets the unread badge on one of your own tabs. Raising it arms the standard 30-second waiting notification only when the tab is eligible for a badge; clearing it cancels the pending notification.
 - `dockTab(instanceKey, dock)` docks one of your own tabs into `'left'` or `'right'`, or undocks it back to the centre strip with `null`.
 - `snapshotTab(instanceKey, text)` caches the text currently visible in one of your own tabs, so a monitor watching it has something to feed on.
 - `openClaimedFiles(target)` runs the host's `open` pipeline for `target`, pinned to your opener.
@@ -302,7 +303,7 @@ Add server tests for declaration claims, playable/external routes, payload valid
 
 - Initial bundled-only tab-view contract.
 - Static opener, web-target, command, and notification contributions, with `command` and `notify` handlers on the activation.
-- Twenty-two server and fourteen client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. `readSettings` and `saveSettings` followed, so the search tab can remember its toggles in `.janissary/config.json` without a plugin reaching the config itself. `isRecordingLive` and the client-side `copyText` followed for the asciicast tab, which has to tell a live recording from a finished one and has its own terminal to copy out of. All are additive optional capabilities, so the API integer is unchanged.
+- Twenty-three server and fourteen client capabilities. `projectFileList` and `openInEditor` were added within v1, for the search tab: a plugin that scans the repository reads the same gitignore-aware list Quick Open searches, and one that has to put a user on a specific line opens an editor tab through the ordinary `edit` pipeline rather than growing a second open path. `readSettings` and `saveSettings` followed, so the search tab can remember its toggles in `.janissary/config.json` without a plugin reaching the config itself. `isRecordingLive` and the client-side `copyText` followed for the asciicast tab, which has to tell a live recording from a finished one and has its own terminal to copy out of. `setUnread` lets the shell tab raise a background waiting badge with the same delayed notification as a harness tab. All are additive optional capabilities, so the API integer is unchanged.
 - Versioned generic tab payload plus `pluginIntent` and `pluginFailed` RPCs.
 - Two-level failure model: `rejectRequest` answers one bad request, `reportFailure` disables.
 - `notifyUser` takes an optional `tab` instance key, attributing the line to one of the plugin's own tabs. Additive, so still v1.

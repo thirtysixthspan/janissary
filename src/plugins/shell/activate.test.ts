@@ -22,6 +22,7 @@ function fakeCapabilities(overrides: {
 } = {}) {
   const opened: { key: string; value: TabPluginPayload }[] = [];
   const updated: { key: string; payload: unknown }[] = [];
+  const unreadChanges: { key: string; unread: boolean }[] = [];
   const spawns: Spawn[] = [];
   const origin = 'origin' in overrides ? overrides.origin : { label: 'agent1', cwd: '/repo' };
   const capabilities = {
@@ -43,16 +44,22 @@ function fakeCapabilities(overrides: {
     updateTab: (key: string, factory: () => { payload: unknown }) => {
       updated.push({ key, payload: factory().payload });
     },
+    setUnread: (key: string, unread: boolean) => { unreadChanges.push({ key, unread }); },
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
-  return { capabilities, opened, spawns, updated };
+  return { capabilities, opened, spawns, updated, unreadChanges };
 }
 
 // Asks the tab question the way the host does, so the guard's own verdict is what is asserted.
-function ask(capabilities: TabPluginServerCapabilities, intent: string, payload?: unknown) {
+function ask(
+  capabilities: TabPluginServerCapabilities,
+  intent: string,
+  payload?: unknown,
+  tabPayload: ShellPayload = PAYLOAD,
+) {
   return activate().intent(
-    { tab: 'shell1', intent, payload, tabPayload: PAYLOAD },
+    { tab: 'shell1', intent, payload, tabPayload },
     capabilities,
   );
 }
@@ -133,12 +140,29 @@ describe('shell plugin activation', () => {
   });
 
   it('updates its own payload when the terminal reports a command state', () => {
-    const { capabilities, updated } = fakeCapabilities();
+    const { capabilities, updated, unreadChanges } = fakeCapabilities();
 
     expect(ask(capabilities, 'command-state', { running: true })).toEqual({ updated: true });
     expect(updated).toEqual([{
       key: 'shell-1', payload: { ...PAYLOAD, commandRunning: true },
     }]);
+    expect(unreadChanges).toEqual([{ key: 'shell-1', unread: false }]);
+  });
+
+  it('raises unread when a previously running command finishes', () => {
+    const { capabilities, unreadChanges } = fakeCapabilities();
+
+    expect(ask(capabilities, 'command-state', { running: false }, { ...PAYLOAD, commandRunning: true }))
+      .toEqual({ updated: true });
+    expect(unreadChanges).toEqual([{ key: 'shell-1', unread: true }]);
+  });
+
+  it('does not raise unread for an idle status without a running-to-idle transition', () => {
+    const { capabilities, unreadChanges } = fakeCapabilities();
+
+    ask(capabilities, 'command-state', { running: false });
+
+    expect(unreadChanges).toEqual([]);
   });
 
   it('updates its metadata directory when the terminal reports a cwd', () => {

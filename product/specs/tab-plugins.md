@@ -94,6 +94,8 @@ An update aimed at a tab that is no longer open, or one belonging to a different
 
 An update may begin serving a file the tab did not hold before, which is what lets a view grow — the audio plugin's playlist gaining a track. A file registered this way belongs to the tab being updated exactly as one registered when it opened does, so closing the tab releases everything it ever served and nothing else.
 
+`setUnread(instanceKey, unread)` changes the badge only on one of the calling plugin's own open tabs. Raising it uses the same eligibility rule as transcript output: the tab must be hidden and undocked. If the badge is raised, the host arms the standard thirty-second waiting notification; if it is cleared, the pending notification is cancelled. An unknown or closed instance key is a no-op.
+
 A plugin whose tab identity *is* what the tab shows may move that identity with an update — an embedded page navigating to another address is the one case in this version. The tab keeps its place, name, and served files; only what reopening it now refers to changes. An identity another of the same plugin's open tabs already holds is refused, and the rest of the update still applies.
 
 ### Being told when host state changes

@@ -179,6 +179,9 @@ export type TabPluginServerCapabilities = {
   // reference it registers is recorded against the tab being updated, so closing that tab releases
   // what the update served exactly as it releases what the open served.
   updateTab(instanceKey: string, factory: (resources: TabPluginResources) => TabPluginTabUpdate): void;
+  // Set the unread badge on one of this plugin's tabs. Raising it arms the standard waiting
+  // notification; clearing it cancels that notification.
+  setUnread(instanceKey: string, unread: boolean): void;
   // Dock one of this plugin's own tabs into a sidebar, or `null` to undock it back to the centre
   // strip and make it active. Addressed by instance key like `updateTab`, so a key with no open tab
   // is a silent no-op and a plugin can never move another plugin's tab.

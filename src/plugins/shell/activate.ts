@@ -74,6 +74,8 @@ export function activate(): TabPluginActivation {
       'command-state': {
         payload: isShellCommandState,
         run: (tabPayload, state, capabilities) => {
+          if (state.running) capabilities.setUnread(tabPayload.instanceKey, false);
+          else if (tabPayload.commandRunning) capabilities.setUnread(tabPayload.instanceKey, true);
           capabilities.updateTab(tabPayload.instanceKey, () => ({
             payload: { ...tabPayload, commandRunning: state.running },
           }));

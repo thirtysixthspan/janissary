@@ -19,6 +19,7 @@ import { liveRecordingPaths } from './live-recordings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 import { declaredResources } from './declared-resources.js';
 import { lineCapabilities } from './line-capabilities.js';
+import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
@@ -141,6 +142,17 @@ export function createPluginContext(
         validateTabValue(activation, update);
         return update;
       });
+    },
+    setUnread: (instanceKey, unread) => {
+      if (!isEnabled()) return;
+      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
+      if (!tab) return;
+      if (unread) {
+        if (managers.tab.markUnread(tab.label)) armHarnessIdleEscalation(managers, tab.label);
+      } else {
+        managers.tab.clearUnread(tab.label);
+        cancelHarnessIdleEscalation(managers, tab.label);
+      }
     },
     // Placement, addressed like `updateTab` so a plugin reaches only its own tab, and delegating to
     // the same `setDock` the client's dock-cycle control uses — there is still one docking path.
