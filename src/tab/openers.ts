@@ -23,8 +23,13 @@ interface OpenTarget {
   killTerminal(ptyId: string): void;
 }
 
-function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }): void {
+function activate(
+  target: OpenTarget,
+  result: { tabs: Tab[]; activeTab: number },
+  afterApply?: () => void,
+): void {
   target.applyOpenResult(result);
+  afterApply?.();
   messageBus.emit('state', { type: 'dirty' });
 }
 
@@ -99,21 +104,19 @@ export function openPluginTab(
     payload: created.payload,
     fileRefs,
     sourceLabel,
-  }));
-  // The terminals were spawned before this tab had a label, so they are adopted onto the one just
-  // minted. From here they are ordinary tab-owned PTYs: the per-tab release walk kills them on close,
-  // and the tab's connection list names them. Every one the factory started is adopted, not just the
-  // first — one left on the label it was spawned under would belong to no tab, and neither the
-  // per-tab walk nor a plugin disable would ever release it.
-  //
-  // The tab is always the one `addPluginTab` just made: the de-dupe above returns before the factory
-  // runs, so no tab can already hold this instance key by the time it is reached.
-  const minted = target.tabs.find(
-    (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
-  );
-  if (minted !== undefined) {
-    for (const ptyId of terminalIds) target.adoptTerminal(ptyId, minted.label);
-  }
+  }), () => {
+    // The terminals were spawned before this tab had a label, so they are adopted onto the one just
+    // minted. Adopt before publishing state so the first host-state delivery sees every terminal row.
+    // Every terminal the factory started is adopted, not just the first — one left on the label it was
+    // spawned under would belong to no tab, and neither the per-tab walk nor a plugin disable would
+    // ever release it.
+    const minted = target.tabs.find(
+      (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
+    );
+    if (minted !== undefined) {
+      for (const ptyId of terminalIds) target.adoptTerminal(ptyId, minted.label);
+    }
+  });
 }
 
 

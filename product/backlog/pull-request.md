@@ -46,17 +46,6 @@ Proposal Risk: 2/10 - Routing each operation through the shell tab that received
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: target docked shell actions at the shell tab". Pass the plugin tab's label or focused surface into `web/src/shared/command-bar/AppCommandBar.tsx` so bare close classification and `CloseSaveGuard` use the shell tab, and update `web/src/useCmdW.ts` to resolve Cmd+W against the focused sidebar selection when a docked shell command bar has focus. Change `src/commands/agent.ts` and `src/profile/new-agent.ts` to use the `{ label, index }` command context supplied by `CommandManager.dispatchLine` rather than `TabManager.cur()`. Keep named `close <name>` behavior unchanged. Add tests with one center tab and a docked shell proving bare `close` and Cmd+W close the shell without opening the quit dialog or closing the center tab, and that `agent` uses the shell tab's context; retain the existing tests in `web/src/shared/command-bar/AppCommandBar.test.tsx` and `web/src/useCmdW.test.tsx`.
 
 
-* Fix the functionality gap that hides a shell's terminal connection on first open.
-
-Existing Issue: `openPluginTab` emits `state:dirty` through `activate` before it adopts the freshly spawned PTY, so `hostState` fingerprints an empty connection list and no state event after `adoptTerminal` tells the shell tab that its `terminal:zsh` row now exists. Severity: 6/10
-
-Existing Risk: 6/10 - The first shell view says there are no active connections and omits its own `zsh` terminal until some unrelated state mutation happens to trigger another host-state delivery.
-
-Proposal Risk: 2/10 - Adopting the PTY before the first state broadcast, or emitting a state update after adoption, makes the initial connection row available; later connection changes still use the same host-state channel.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: deliver the shell terminal row on first host-state push". In `src/tab/openers.ts`, ensure `adoptTerminal` runs before the `state:dirty` signal that first invokes `src/plugins/host-state.ts`, or emit a second dirty signal after adoption. Add an integration regression in `src/plugins/host-state.test.ts` or `src/tab/manager.test.ts` that opens a shell through a payload factory and verifies its first host-state delivery contains `terminal:zsh` without requiring another state mutation; keep the existing adoption and host-state fingerprint tests passing.
-
-
 * Fix the functionality gap in status-window auto-show after reactivation or late rows.
 
 Existing Issue: `useStatusWindows` now watches only `activeKey`, while `ShellTabMeta` passes the shell's stable label instead of its `active` state and the hook no longer re-arms when `hasContent` changes, so a shell tab does not auto-show its windows when revisited or when rows arrive after the first timer expires. Severity: 6/10

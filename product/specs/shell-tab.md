@@ -71,6 +71,8 @@ The row shows the working directory the shell started in, a workspace mark when 
 workspace clone, and the actions a shell tab can act on: **open file navigator here**, **new agent
 here**, the split control, and the connections and schedule windows.
 
+The connections window includes the tab's own `zsh` terminal as soon as the shell tab opens.
+
 There is no **open transcript** control, because there is no transcript: the terminal replaced it. The
 working directory shown is the one the shell started in and does not follow a `cd`, so a shell that
 has moved elsewhere still shows where it was opened.

@@ -5,6 +5,8 @@ import type { TabPluginActivation, TabPluginServerCapabilities } from './api.js'
 import type { PluginRecord } from './status.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
+import { makeTab } from '../tab/index.js';
+import { openPluginTab } from '../tab/openers.js';
 
 function pluginTab(label: string, instanceKey: string, payload?: unknown): Tab {
   const held = payload ?? { ptyId: 'pty1' };
@@ -92,6 +94,40 @@ describe('host state delivery', () => {
       connections: [{ text: 'zsh', kind: 'terminal' }],
       schedule: [{ id: 's1', spec: 'every 1h', next: 'in 1h', recurring: true }],
     }, expect.anything());
+  });
+
+  it('includes a spawned terminal in the first host-state delivery for a plugin tab', () => {
+    const tabs = [makeTab('agent1', '#fff')];
+    const connections: Record<string, { text: string; kind: 'terminal' }[]> = {};
+    const { handler, port } = makePort({ tabs, connections });
+    const target = {
+      tabs,
+      activeTab: 0,
+      setActiveTab: () => {},
+      applyOpenResult(result: { tabs: Tab[]; activeTab: number }) {
+        tabs.splice(0, tabs.length, ...result.tabs);
+      },
+      registerFile: (file: string) => file,
+      openFiles: new Map<string, string>(),
+      spawnTerminal: vi.fn(() => ({ ptyId: 'pty7', cols: 80, rows: 24, running: true })),
+      adoptTerminal: vi.fn((_ptyId: string, label: string) => {
+        connections[label] = [{ text: 'zsh', kind: 'terminal' }];
+      }),
+      killTerminal: vi.fn(),
+    };
+
+    subscribe(port);
+    openPluginTab(target, 'shell', 'shell', 'shell-1', 1, 'agent1', (resources) => {
+      const terminal = resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: { ptyId: terminal.ptyId } };
+    });
+
+    expect(target.adoptTerminal).toHaveBeenCalledWith('pty7', 'shell');
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({ connections: [{ text: 'zsh', kind: 'terminal' }] }),
+      expect.anything(),
+    );
   });
 
   it('delivers once for a tab and then not at all while nothing about it changes', () => {
