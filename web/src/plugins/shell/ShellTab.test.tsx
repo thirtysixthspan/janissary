@@ -559,6 +559,19 @@ describe('ShellTab', () => {
     expect(document.querySelector('.completions')?.textContent).toBe('ls  lsof');
   });
 
+  it('dismisses completion choices on Escape without changing the command line', async () => {
+    renderTab({ completions: { matches: ['ls', 'lsof'], newInput: 'ls', newCursor: 2 } });
+
+    fireEvent.change(bar(), { target: { value: 'l' } });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    await waitFor(() => { expect(document.querySelector('.completions')).not.toBeNull(); });
+
+    fireEvent.keyDown(bar(), { key: 'Escape' });
+
+    expect(document.querySelector('.completions')).toBeNull();
+    expect(bar().value).toBe('l');
+  });
+
   it('accepts a single completion without showing a strip', async () => {
     renderTab({ completions: { matches: ['ls'], newInput: 'ls', newCursor: 2 } });
 

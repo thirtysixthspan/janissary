@@ -4,7 +4,7 @@ import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTerminal } from './useShellTerminal';
 import { routeFor, shellLine } from './command-line-rules';
-import { handleQueueKey, handleShellControlKey } from './command-bar-keys';
+import { handleCompletionDismissKey, handleQueueKey, handleShellControlKey } from './command-bar-keys';
 import { insertCommandAtCaret } from './insert-command-at-caret';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
@@ -177,6 +177,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     // mean one ArrowUp both moved its selection and rewrote the bar, since the bar's recall walks the
     // very lines the popup lists.
     if (historyOpen) return;
+    if (handleCompletionDismissKey(event, matches.length > 1, () => { setMatches([]); })) return;
     // The shell's own control keys, before the baseline keymap: that one returns early on any held
     // modifier, so without this they would reach the window handler and be lost.
     if (handleShellControlKey(event, inputReference.current, capabilities.copyText, write)) return;
@@ -194,7 +195,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     bar.onKeyDown(event);
   }, [
     appBar.blockingOverlayOpen, appBar.onDeleteQueued, appBar.overlayOwnsCommandBar,
-    bar, capabilities, draft, focusTerminal, historyOpen, queueOpen, write,
+    bar, capabilities, draft, focusTerminal, historyOpen, matches.length, queueOpen, write,
   ]);
 
   // `Ctrl+R` is claimed by this plugin's declaration, so it reaches this tab while it is the visible

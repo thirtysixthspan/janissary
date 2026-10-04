@@ -2,8 +2,6 @@
 
 # pull-request
 
-* hitting escape should remove the tab completion popup
-
 * the shell path in the metadata row should track the current working directory of the shell thoguhout the session. as the user changes path, the path in the metadata row should update.
 
 * remove all shell prompt formatting and leave only `> ` by sending the following to the shell when it launches and before the output becomes visible to the user - export PROMPT='> ' 
@@ -29,5 +27,4 @@ Shift+↑ / Shift+↓	Scroll the transcript up / down (accelerated — distance 
 Ctrl+↑ / Ctrl+↓	Scroll the transcript up / down (accelerated)
 Page Up / Page Down	Scroll the transcript up / down by half terminal height
 Escape	Reset scroll to bottom
-
 

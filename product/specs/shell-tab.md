@@ -53,7 +53,8 @@ on screen for it.
 tab's bar asks, and shows the same strip when there is a choice to make. The shell tab keeps no list
 of its own. One match completes the line, several matches show the choice strip with two spaces
 between choices, and no matches leave
-the line unchanged.
+the line unchanged. When several choices are visible, `Escape` closes the strip and leaves the
+command line unchanged.
 
 `Ctrl+A` and `tasks` open the shared task picker over the shell tab. Choosing a task inserts its
 `execute …` command at the shell command bar's caret and leaves it there for you to edit or submit.

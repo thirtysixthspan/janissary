@@ -16,6 +16,17 @@ export function handleQueueKey(
   return false;
 }
 
+export function handleCompletionDismissKey(
+  event: { key: string; preventDefault(): void },
+  choicesVisible: boolean,
+  clearChoices: () => void,
+): boolean {
+  if (event.key !== 'Escape' || !choicesVisible) return false;
+  event.preventDefault();
+  clearChoices();
+  return true;
+}
+
 export function handleShellControlKey(
   event: { key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean; preventDefault(): void },
   element: HTMLTextAreaElement | null,
