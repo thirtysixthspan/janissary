@@ -3,6 +3,7 @@ import type { TabPluginClientCapabilities } from '../api';
 import type { ShellDispatchResult } from '@shared/plugins/shell/shared';
 import { routeFor, shellLine } from './command-line-rules';
 import { formatDispatchedCommand } from './format-dispatched-command';
+import { markdownToAnsi } from './markdown-to-ansi';
 
 // Runs one command-bar line and answers whether it was written to zsh, which is what tells a
 // draining queue to wait for zsh's next prompt before running the line after it. `record` is false
@@ -34,7 +35,7 @@ export function useShellSubmit(input: {
       const result = await capabilities.intent<ShellDispatchResult>('dispatch', text);
       remember(text);
       if (result.dispatched) {
-        display(formatDispatchedCommand(text, result.output));
+        display(formatDispatchedCommand(text, markdownToAnsi(result.output)));
         return false;
       }
       write(`${text}\n`);

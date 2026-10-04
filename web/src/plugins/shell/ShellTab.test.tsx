@@ -561,6 +561,21 @@ describe('ShellTab', () => {
     expect(terminal.written).toContain('\r\u{1B}[2K> help\r\nfirst line\r\nsecond line\r\n> ');
   });
 
+  it('renders a claimed command\'s markdown reply as styled terminal text rather than raw markup', async () => {
+    const escape = String.fromCodePoint(0x1B);
+    const { releaseDispatch, terminal } = renderTab({ dispatched: true, output: '## Usage\n\nRun **zsh**' });
+
+    fireEvent.change(bar(), { target: { value: 'help' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    const shown = terminal.written.at(-1) ?? '';
+    expect(shown).toContain(`${escape}[1mUsage${escape}[22m`);
+    expect(shown).toContain(`Run ${escape}[1mzsh${escape}[22m`);
+    expect(shown).not.toContain('**');
+    expect(shown).not.toContain('##');
+  });
+
   it('records an intercepted application command in shell history', async () => {
     const { releaseDispatch, written } = renderTab({ dispatched: true });
 

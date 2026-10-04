@@ -57,7 +57,12 @@ removes it. Arrow keys change the selected queue entry, Return leaves the popup 
 and Escape closes it and clears the bar.
 
 An application command that answers with text rather than opening something — `help`, for one — is
-shown in the terminal as a command line, followed by its reply on the next line. Neither line is sent
+shown in the terminal as a command line, followed by its reply on the next line. The reply is markdown, as
+it is in an agent tab's transcript, and is rendered for the terminal rather than shown as raw markup:
+headings and bold text are bold, the top heading underlined, italic and struck-through text keep
+their styles, inline and fenced code is colored and code blocks are indented, list items get bullets
+or numbers, quotes get a bar, links show their target after the text, and tables are lined up in
+columns under a bold header. Neither line is sent
 to zsh. Commands that open a picker keep their existing behavior.
 
 **Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
