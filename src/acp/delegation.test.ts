@@ -10,20 +10,24 @@ import { KIND_ALIASES } from '../messaging.js';
 import type { Managers } from '../managers.js';
 
 // One `Managers` stub for the verbs, shaped like the ones in `tool-table.test.ts` and
-// `new-agent.test.ts`: a tab list the group check reads, and spies for each dispatch target.
-function harness(own: { group?: number } | undefined, targets: { label: string; group: number; view?: string }[]) {
+// `new-agent.test.ts`: the delegating tab's own group and depth, a tab list the target checks read,
+// and spies for each dispatch target. An absent `depth` is a tab nothing created — the root tab.
+function harness(
+  own: { group?: number; depth?: number } | undefined,
+  targets: { label: string; group: number; view?: string }[],
+) {
   const newAgent = vi.fn();
   const dispatchTo = vi.fn();
   const captureRun = vi.fn((_label: string, _text: string, reply: (out: string) => void) => reply('worker said this'));
   const append = vi.fn();
+  const self = { label: 'janus', group: own?.group, agentDepth: own?.depth, harness: { status: 'running', ptyId: 'janus', name: 'claude' } };
+  const others = targets.map((t) => ({ ...t, harness: { status: 'running', ptyId: t.label, name: 'claude' } }));
   const managers = {
     tab: {
-      tabs: targets.map((t) => ({ ...t, harness: { status: 'running', ptyId: t.label, name: 'claude' } })),
-      byLabel: (label: string) => (own && label === 'janus'
-        ? { label: 'janus', group: own.group, harness: { status: 'running', ptyId: 'janus', name: 'claude' } }
-        : targets.find((t) => t.label === label)),
+      tabs: [...others, self],
+      byLabel: (label: string) => (label === 'janus' ? self : others.find((t) => t.label === label)),
       append,
-      cur: () => ({ label: 'janus' }),
+      cur: () => self,
     },
     profile: { newAgent },
     command: { dispatchTo },
@@ -32,6 +36,36 @@ function harness(own: { group?: number } | undefined, targets: { label: string; 
   } as unknown as Managers;
   return { managers, newAgent, dispatchTo, captureRun, append, pty: (managers as unknown as { pty: { input: ReturnType<typeof vi.fn> } }).pty };
 }
+
+describe('runDelegation — the depth cap cannot be routed around', () => {
+  it('refuses to open a worker through msg, which is how the cap was bypassed', async () => {
+    const { managers, newAgent, captureRun } = harness({ group: 1 }, [{ label: 'scout', group: 1 }]);
+    const result = await runDelegation(managers, 'janus', 'msg scout request agent kaptan');
+    expect(result).toContain('may only run');
+    expect(captureRun).not.toHaveBeenCalled();
+    expect(newAgent).not.toHaveBeenCalled();
+  });
+
+  it('refuses the agent verb at the cap', () => {
+    const { managers, newAgent } = harness({ group: 1, depth: MAX_AGENT_DEPTH }, []);
+    expect(runDelegation(managers, 'janus', 'agent kaptan'))
+      .toContain(`already ${MAX_AGENT_DEPTH} agent launches deep`);
+    expect(newAgent).not.toHaveBeenCalled();
+  });
+
+  it('opens a worker below the cap', () => {
+    const { managers, newAgent } = harness({ group: 1, depth: MAX_AGENT_DEPTH - 1 }, []);
+    expect(runDelegation(managers, 'janus', 'agent kaptan --no-workspace'))
+      .toContain('Opening agent "kaptan"');
+    expect(newAgent).toHaveBeenCalledWith('agent kaptan --no-workspace');
+  });
+
+  it('treats a tab nothing created as depth 0', () => {
+    const { managers, newAgent } = harness({ group: 1 }, []);
+    expect(runDelegation(managers, 'janus', 'agent kaptan')).toContain('Opening agent "kaptan"');
+    expect(newAgent).toHaveBeenCalled();
+  });
+});
 
 describe('runDelegation — reaching only your own workers', () => {
   it('refuses a command outside the allowlist without running it', async () => {

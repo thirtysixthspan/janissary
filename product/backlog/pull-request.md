@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the functionality gap that lets the delegation depth cap be bypassed through `msg`, making the bound this pull request adds advisory rather than enforced.
-
-Existing Issue: The cap lives only in `runAgent` in `src/acp/delegation.ts`, but `runMsg` hands the same text to `managers.capture.run`, which resolves `agent` as a registered command and calls `ProfileManager.newAgent` → `newAgentOp` in `src/profile/new-agent.ts`, and that path contains no depth check, so a tab already at the cap can still open a worker with `msg <some-tab> request agent <name>`. Severity: 6/10
-
-Existing Risk: 5/10 - The plan introduces the cap as the property that keeps a delegation tree finite, and a reader of the primer concludes it holds, so the bound fails exactly when a misbehaving agent looks for the cheapest way around it.
-
-Proposal Risk: 2/10 - With `agent` outside the delegation allowlist the only route to a new tab is the capped tool path, so the bound becomes structural, and the residual is a human typing `agent` by hand, which is meant to be uncapped.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1536: make the delegation depth cap unreachable by bypassing it". The allowlist work in the entry above closes this incidentally, because `msg` would then refuse `agent` before dispatch: confirm that the two entries land together rather than shipping the cap fix alone, since the cap alone is not sufficient. Add a regression test in `src/acp/delegation.test.ts` that a tab at `MAX_AGENT_DEPTH` is refused by the `agent` verb and that no tab is created by the `msg` route either, by asserting `managers.profile.newAgent` was never called. Do not move the check into `newAgentOp`: that would cap a person typing `agent` by hand, which `product/plans/complete/delegate-to-agents.md` decision 19 deliberately excludes and `product/specs/agents.md` does not mention.
-
-
 * Deliver the plan's missing test for the delegation depth refusal, which is the one behavior in this pull request no test exercises.
 
 Existing Issue: The Tests section of the plan names "the depth refusal at the cap and its absence below it" among the cases for `src/acp/delegation.test.ts`, but that file covers only `isDelegationCommandLine`, `DELEGATION_PRIMER`, and `scanWorkerAnswer`, and no test anywhere calls `runDelegation`, so the cap check, the three dispatch branches, and the answer scan's wiring into the `msg` return value are all untested. Severity: 5/10
