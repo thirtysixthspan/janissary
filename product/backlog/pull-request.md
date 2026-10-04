@@ -15,7 +15,6 @@
 
 * shift + tab should move the keyboard focus between the terminal and the command bar. the keyboard focus will determine where keypresses are sent in the shell tab.
 
-* paste from keyboard in the context menu in the command bar open the clipboard-history popup and past into the command bar
 
 * in the shell tab, open file navigator here button in the metadata tab should open a file navigator in the current working directory of the shell
 
