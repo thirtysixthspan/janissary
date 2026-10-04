@@ -1,11 +1,15 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseManager } from './manager.js';
+import { DatabaseBrowser } from './browser.js';
 import { runDatabaseCommand } from './index.js';
 import { initDbDir, closeAllConnections, listOpenConnections } from '../connections.js';
 import { DB_PRIMER } from './primer.js';
+import type { DatabaseGridQuery } from '../protocol.js';
+
+type BrowseMethod = 'create' | 'schema' | 'query' | 'run' | 'updateCell' | 'insertRow' | 'deleteRow' | 'exportObject';
 
 describe('DatabaseManager', () => {
   let dir = '';
@@ -158,5 +162,42 @@ describe('the browser side of DatabaseManager', () => {
     const view = manager.readView();
     expect(view.databases.map((entry) => entry.name)).toContain('readme');
     expect(view.results.map((entry) => entry.requestId)).toContain('r2');
+  });
+});
+
+// The `browse*` surface is a facade: the sql plugin addresses a request by id, and each method here
+// forwards to the browser that owns the bookkeeping, so the manager never has to know a request id
+// exists. Spying on the browser's prototype keeps the real forwarding under test while leaving
+// SQLite out of it — what matters is that each verb and its arguments arrive unaltered.
+describe('DatabaseManager browser forwarding', () => {
+  const grid: DatabaseGridQuery = { object: 'orders', filters: [], global: '', order: [], limit: 10, offset: 0 };
+
+  const cases: [string, string, (m: DatabaseManager) => void, unknown[]][] = [
+    ['create', 'browseCreate', (m) => m.browseCreate('shop', 'r1'), ['shop', 'r1']],
+    ['schema', 'browseSchema', (m) => m.browseSchema('shop', 'r2'), ['shop', 'r2']],
+    ['query', 'browseQuery', (m) => m.browseQuery('shop', 'r3', grid), ['shop', 'r3', grid]],
+    ['run', 'browseRun', (m) => m.browseRun('shop', 'r4', 'select 1', true), ['shop', 'r4', 'select 1', true]],
+    ['updateCell', 'browseUpdateCell', (m) => m.browseUpdateCell('shop', 'r5', '3', 'total', null), ['shop', 'r5', '3', 'total', null]],
+    ['insertRow', 'browseInsertRow', (m) => m.browseInsertRow('shop', 'r6', 'orders', [{ column: 'total', value: '7' }]), ['shop', 'r6', 'orders', [{ column: 'total', value: '7' }]]],
+    ['deleteRow', 'browseDeleteRow', (m) => m.browseDeleteRow('shop', 'r7', '3'), ['shop', 'r7', '3']],
+    ['exportObject', 'browseExport', (m) => m.browseExport('shop', 'r8', grid, 'csv'), ['shop', 'r8', grid, 'csv']],
+  ];
+
+  it.each(cases)('forwards %s unchanged through %s', (browserMethod, _facade, call, expected) => {
+    const spy = vi.spyOn(DatabaseBrowser.prototype, browserMethod as BrowseMethod).mockReturnValue(undefined);
+
+    call(new DatabaseManager());
+
+    expect(spy).toHaveBeenCalledWith(...expected);
+    spy.mockRestore();
+  });
+
+  it('keeps a null cell value null rather than coercing it to an empty string', () => {
+    const spy = vi.spyOn(DatabaseBrowser.prototype, 'updateCell').mockReturnValue(undefined);
+
+    new DatabaseManager().browseUpdateCell('shop', 'r5', '3', 'note', null);
+
+    expect(spy).toHaveBeenCalledWith('shop', 'r5', '3', 'note', null);
+    spy.mockRestore();
   });
 });
