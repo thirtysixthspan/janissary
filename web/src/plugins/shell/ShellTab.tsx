@@ -10,6 +10,9 @@ import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
 import { reportShellCwd } from './report-shell-cwd';
 import { recordShellCommand } from './record-shell-command';
+import { useShellScrollKeys } from './useShellScrollKeys';
+import { useShellTerminalStatus } from './useShellTerminalStatus';
+import { NO_CHORDS, NO_QUEUE_ITEMS } from './shell-tab-constants';
 import './shell.css';
 
 type Properties = {
@@ -25,9 +28,6 @@ const DOT_COLOR = '#7ee787';
   // than restated — a second copy would be a second thing able to disagree with the claim actually
 // enforced, with nothing to notice when it did. Absent means the declaration claimed none, which is
 // the same as claiming nothing.
-const NO_CHORDS: readonly string[] = [];
-const NO_QUEUE_ITEMS: string[] = [];
-
 export function ShellTab({ payload, capabilities }: Properties) {
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const terminalReference = useRef<HTMLDivElement>(null);
@@ -68,7 +68,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     return () => { insertions.delete(label); };
   }, [appBar.pluginCommandLineInsertions, capabilities.label]);
 
-  const { write, focus: focusTerminal } = useShellTerminal({
+  const { write, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTerminal({
     ptyId: payload.ptyId,
     containerRef: terminalReference,
     attachTerminal: capabilities.attachTerminal,
@@ -84,26 +84,15 @@ export function ShellTab({ payload, capabilities }: Properties) {
     onExit: useCallback(() => { capabilities.close(); }, [capabilities]),
   });
 
-  // A shell that died while no browser was attached left this tab holding its payload with no way to
-  // hear about it: the exit event went to nobody, and a plugin tab is in-memory only. Asking on mount
-  // is what keeps such a tab from waiting for input that can never arrive.
-  useEffect(() => {
-    let cancelled = false;
-    // `null` and not `undefined`: the request is serialized with `JSON.stringify`, which drops a key
-    // whose value is `undefined`, and the server's `pluginIntent` guard requires the key to be there.
-    // An absent key is refused before the plugin is asked, so the one intent carrying no data would be
-    // the one that never arrives. `isEmptyShellIntent` accepts both, so `null` is equally a valid
-    // "nothing" on the far side.
-    void capabilities.intent<{ running: boolean }>('terminal-status', null).then((status) => {
-      if (!cancelled && !status.running) capabilities.close();
-    }).catch(() => {
-      // A refusal here is this plugin's own request being malformed or its plugin disabled, not
-      // anything the user did. Reporting it crosses the failure boundary instead of leaving an
-      // unhandled rejection in the console on every mount.
-      if (!cancelled) capabilities.reportFailure('shell terminal-status intent failed');
-    });
-    return () => { cancelled = true; };
-  }, [capabilities]);
+  useShellScrollKeys({
+    active: capabilities.active,
+    blocked: Boolean(appBar.blockingOverlayOpen) || Boolean(appBar.overlayOwnsCommandBar),
+    rows: terminalRows,
+    scrollLines,
+    scrollToBottom,
+  });
+
+  useShellTerminalStatus(capabilities);
 
   // Focus belongs to the command line at all times, and a tab that has just become the visible one is
   // exactly when it would otherwise be sitting on the body after a click elsewhere.

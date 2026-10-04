@@ -71,6 +71,9 @@ shell — the characters a terminal would send, and the only way to stop a runaw
 nothing can be typed into the terminal. `Ctrl+C` copies the command line's own selection instead when
 it holds one, so copying by keyboard still works.
 
+`Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and
+`Page Down` move by half a terminal screen, and `Escape` returns to the bottom of the scrollback.
+
 `Up` and `Down` walk the lines the command bar has sent or the application has handled, exactly as the
 agent tab's bar walks its tab's command history. Commands typed directly into the terminal remain in
 zsh's own history. Ghost suggestions instead draw from the

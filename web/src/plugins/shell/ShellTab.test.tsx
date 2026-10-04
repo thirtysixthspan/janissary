@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react';
 import { readFileSync } from 'node:fs';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import type { TabView } from '@shared/protocol';
@@ -22,6 +22,8 @@ interface FakeTerminal {
   options: Record<string, unknown>;
   resizes: { cols: number; rows: number }[];
   focusCalls: number;
+  scrollCalls: number[];
+  bottomCalls: number;
 }
 
 vi.mock('@xterm/xterm', () => ({
@@ -30,6 +32,8 @@ vi.mock('@xterm/xterm', () => ({
     disposed = false;
     resizes: { cols: number; rows: number }[] = [];
     focusCalls = 0;
+    scrollCalls: number[] = [];
+    bottomCalls = 0;
     options: Record<string, unknown>;
 
     constructor(options: Record<string, unknown>) {
@@ -52,6 +56,8 @@ vi.mock('@xterm/xterm', () => ({
       },
     };
     focus() { this.focusCalls += 1; }
+    scrollLines(amount: number) { this.scrollCalls.push(amount); }
+    scrollToBottom() { this.bottomCalls += 1; }
     get cols() { return 100; }
     get rows() { return 30; }
   },
@@ -352,6 +358,28 @@ describe('ShellTab', () => {
     renderTab();
 
     expect(screen.getByText('/repo')).toBeInTheDocument();
+  });
+
+  it('scrolls the active xterm terminal with transcript navigation keys', () => {
+    renderTab();
+
+    fireEvent.keyDown(document.body, { key: 'PageUp' });
+    fireEvent.keyDown(document.body, { key: 'ArrowDown', ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+
+    expect(terminals.at(-1)?.scrollCalls).toEqual([-15, 1]);
+    expect(terminals.at(-1)?.bottomCalls).toBe(1);
+  });
+
+  it('leaves scroll keys alone while inactive or while an application overlay owns input', () => {
+    renderTab({ active: false });
+    fireEvent.keyDown(document.body, { key: 'PageDown' });
+    expect(terminals.at(-1)?.scrollCalls).toEqual([]);
+    cleanup();
+
+    renderTab({ overlayOwnsCommandBar: true });
+    fireEvent.keyDown(document.body, { key: 'PageDown' });
+    expect(terminals.at(-1)?.scrollCalls).toEqual([]);
   });
 
   it('marks the row as workspaced only when the shell started in a workspace', () => {

@@ -119,6 +119,8 @@ The shell tab's metadata row follows zsh's current working directory as you chan
 
 `↑` and `↓` recall lines sent from this tab's command bar, including application commands handled there. `Ctrl+R` opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
 
+`Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.
+
 Press `Cmd+T` to open another zsh tab in the same working directory and workspace. In other tabs, `Cmd+T` opens a new agent tab.
 
 With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.

@@ -9,9 +9,3 @@
 * commands with transcript output like 'help' should render the command into the shell without executing it, and, on a new line, print the output into the shell without executing it. it should look like the command went to the shell and then returned the result even though it is an application command.
 
 * the path in the metadatabar should render the shortcuts $root and $workspace as part of the path when appropriate.
-
-* the following keybindings for agent tabs should apply to the shell tab navigation
-Shift+↑ / Shift+↓	Scroll the transcript up / down (accelerated — distance doubles each second)
-Ctrl+↑ / Ctrl+↓	Scroll the transcript up / down (accelerated)
-Page Up / Page Down	Scroll the transcript up / down by half terminal height
-Escape	Reset scroll to bottom

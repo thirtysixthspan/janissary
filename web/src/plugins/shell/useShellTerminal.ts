@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import {
@@ -30,6 +30,9 @@ type Options = {
 export type ShellTerminalHandle = {
   write(data: string): void;
   focus(): void;
+  scrollLines(amount: number): void;
+  scrollToBottom(): void;
+  rows(): number;
 };
 
 function shellTerminalTheme() {
@@ -152,8 +155,10 @@ export function useShellTerminal({
     };
   }, [ptyId, containerRef]);
 
-  return {
-    write: (data) => { handleRef.current?.write(data); },
-    focus: () => { terminalRef.current?.focus(); },
-  };
+  const write = useCallback((data: string) => { handleRef.current?.write(data); }, []);
+  const focus = useCallback(() => { terminalRef.current?.focus(); }, []);
+  const scrollLines = useCallback((amount: number) => { terminalRef.current?.scrollLines(amount); }, []);
+  const scrollToBottom = useCallback(() => { terminalRef.current?.scrollToBottom(); }, []);
+  const rows = useCallback(() => terminalRef.current?.rows ?? 0, []);
+  return { write, focus, scrollLines, scrollToBottom, rows };
 }
