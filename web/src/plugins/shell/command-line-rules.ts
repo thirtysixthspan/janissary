@@ -13,6 +13,13 @@ export function routeFor(text: string): LineRoute {
   return text.startsWith('!') || text.trim().toLowerCase() === 'clear' ? 'shell' : 'application';
 }
 
+// A bare `hist`, matched the way the application's bar matches its bare words. In a shell tab it opens
+// this tab's own history — the list `Ctrl+R` opens — because the application's picker lists the
+// active tab's server-side history, which a shell tab's command line never writes to.
+export function opensShellHistory(text: string): boolean {
+  return text.trim().toLowerCase() === 'hist';
+}
+
 // The line as the shell receives it: the `!` is a routing marker and is not part of it. `!` alone
 // sends nothing, so a stray marker does not submit a blank command.
 export function shellLine(text: string): string {

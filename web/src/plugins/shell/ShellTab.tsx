@@ -103,7 +103,8 @@ export function ShellTab({ payload, capabilities }: Properties) {
     if (capabilities.active) inputReference.current?.focus();
   }, [capabilities.active]);
 
-  const run = useShellSubmit({ appBar, capabilities, display, setMatches, setSent, write });
+  const openHistory = useCallback(() => { setHistoryOpen(true); }, []);
+  const run = useShellSubmit({ appBar, capabilities, display, openHistory, setMatches, setSent, write });
   const { queue, submit } = useShellCommandQueue(capabilities, run, payload.commandRunning ?? false, (line) => {
     setMatches([]);
     setSent((previous) => [...previous, line]);

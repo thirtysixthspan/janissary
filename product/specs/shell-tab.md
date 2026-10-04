@@ -100,7 +100,9 @@ tab navigator, `Cmd+P` quick open and `Cmd+Shift+F` the project search, all with
 command bar, exactly as in an agent tab. `Cmd+F` and `Ctrl+E` do nothing here — a plugin tab has no
 transcript to search and the queue belongs to agents — which is the same in every plugin tab.
 
-`Ctrl+R` opens this tab's own history while it is the visible one, listing the lines its command bar
+`Ctrl+R` opens this tab's own history while it is the visible one, and a bare `hist` submitted from the
+command bar opens the same list rather than the application's history picker, which a shell tab's
+command line never adds to. `hist` itself is not added to the list. It lists the lines its command bar
 has sent, oldest first with the newest line selected at the bottom. It uses the same presentation and
 keyboard navigation as the application's history picker, but Return puts the selected line back in the
 command bar without running it. Focus any other tab and `Ctrl+R` opens the application's history picker

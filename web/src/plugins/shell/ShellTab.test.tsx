@@ -828,6 +828,23 @@ describe('ShellTab', () => {
     expect(screen.getByText('No commands sent yet')).toBeInTheDocument();
   });
 
+  it('opens the same history for hist as for Ctrl+R, listing the lines the bar sent', async () => {
+    const { capabilities, openers, written } = renderTab();
+    fireEvent.change(bar(), { target: { value: '!ls -la' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await waitFor(() => { expect(written).toEqual(['ls -la\n']); });
+
+    fireEvent.change(bar(), { target: { value: 'hist' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    await waitFor(() => { expect(document.querySelector('.picker.shell-history')).not.toBeNull(); });
+    const rows = [...document.querySelectorAll('.shell-history .picker-row')].map((row) => row.textContent);
+    expect(rows).toEqual(['!ls -la']);
+    expect(openers.openPicker).not.toHaveBeenCalled();
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'hist');
+    expect(written).toEqual(['ls -la\n']);
+  });
+
   it('claims nothing at all while its tab is hidden, so the application keeps the chord', () => {
     const { chords } = renderTab({ active: false });
 

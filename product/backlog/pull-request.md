@@ -2,8 +2,6 @@
 
 # pull-request
 
-* running `hist` or `ctrl+r` should result in the hitory picker appearing with the same content. right now the `hist` picker is empty.
-
 * the nav command should launch the fuzzy navigation popup 
 
 * shift+tab when the shell has focus should cause the command bar to have focus. shift+tab when the command bar has focus should cause the shell to have focus. this does not work.

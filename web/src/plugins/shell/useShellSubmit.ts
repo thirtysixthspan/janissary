@@ -1,7 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellDispatchResult } from '@shared/plugins/shell/shared';
-import { routeFor, shellLine } from './command-line-rules';
+import { opensShellHistory, routeFor, shellLine } from './command-line-rules';
 import { formatDispatchedCommand } from './format-dispatched-command';
 import { markdownToAnsi } from './markdown-to-ansi';
 
@@ -15,8 +15,9 @@ export function useShellSubmit(input: {
   setMatches: Dispatch<SetStateAction<string[]>>;
   setSent: Dispatch<SetStateAction<string[]>>;
   write: (data: string) => void;
+  openHistory: () => void;
 }) {
-  const { appBar, capabilities, display, setMatches, setSent, write } = input;
+  const { appBar, capabilities, display, openHistory, setMatches, setSent, write } = input;
   return useCallback(async (text: string, record = true): Promise<boolean> => {
     setMatches([]);
     const remember = (line: string) => { if (record) setSent((previous) => [...previous, line]); };
@@ -26,6 +27,12 @@ export function useShellSubmit(input: {
       write(`${line}\n`);
       remember(text);
       return true;
+    }
+    // Not recorded, so the list it opens is the same one `Ctrl+R` opens rather than one with `hist`
+    // newly at the bottom.
+    if (opensShellHistory(text)) {
+      openHistory();
+      return false;
     }
     if (appBar.intercept(text, capabilities.label)) {
       remember(text);
@@ -44,5 +51,5 @@ export function useShellSubmit(input: {
       capabilities.reportFailure('shell dispatch intent refused');
       return false;
     }
-  }, [appBar, capabilities, display, setMatches, setSent, write]);
+  }, [appBar, capabilities, display, openHistory, setMatches, setSent, write]);
 }

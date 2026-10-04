@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  controlCharacterFor, routeFor, shellLine,
+  controlCharacterFor, opensShellHistory, routeFor, shellLine,
 } from './command-line-rules';
 
 describe('shell command line rules', () => {
@@ -13,6 +13,14 @@ describe('shell command line rules', () => {
     expect(routeFor('/clear')).toBe('application');
     // Not the first character: a `!` mid-line is an ordinary character to a shell and to a command.
     expect(routeFor('echo !')).toBe('application');
+  });
+
+  it('reads a bare hist, in any case and spacing, as this tab\'s own history', () => {
+    expect(opensShellHistory('hist')).toBe(true);
+    expect(opensShellHistory('  HIST ')).toBe(true);
+    expect(opensShellHistory('hist foo')).toBe(false);
+    expect(opensShellHistory('!hist')).toBe(false);
+    expect(opensShellHistory('history')).toBe(false);
   });
 
   it('strips the marker before the shell sees the line', () => {
