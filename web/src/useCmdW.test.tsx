@@ -4,12 +4,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { useDialogKeyboard } from './shared/useDialogKeyboard';
 import { useCmdW } from './useCmdW';
 
-function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen }: {
+function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen, focusedIndex }: {
   closeTab: (n: number) => void;
   active: number;
   quitOpen: boolean;
   pickerOpen: boolean;
   routeOpen: boolean;
+  focusedIndex?: number;
 }) {
   const activeTabRef = useRef(active);
   activeTabRef.current = active;
@@ -19,7 +20,9 @@ function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen }: {
   pickerOpenRef.current = pickerOpen;
   const routeRef = useRef(routeOpen ? {} : null);
   routeRef.current = routeOpen ? {} : null;
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
+  const focusedIndexRef = useRef(focusedIndex);
+  focusedIndexRef.current = focusedIndex;
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, focusedIndexRef);
 
   return null;
 }
@@ -54,6 +57,13 @@ describe('useCmdW', () => {
     render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />);
     dispatchKey('w', { ctrlKey: true });
     expect(closeTab).toHaveBeenCalledWith(2);
+  });
+
+  it('closes the focused docked shell tab instead of the center tab', () => {
+    const closeTab = vi.fn();
+    render(<TestComponent closeTab={closeTab} active={2} focusedIndex={5} quitOpen={false} pickerOpen={false} routeOpen={false} />);
+    dispatchKey('w', { metaKey: true });
+    expect(closeTab).toHaveBeenCalledWith(5);
   });
 
   it('ignores lowercase w without modifier', () => {

@@ -8,6 +8,7 @@ export function useCmdW(
   quitConfirmOpenRef: React.RefObject<boolean>,
   pickerOpenRef: React.RefObject<boolean>,
   routeRef: React.RefObject<unknown>,
+  focusedTabIndexRef?: React.RefObject<number | undefined>,
 ) {
   useEffect(() => {
     const onCloseTab = (e: KeyboardEvent) => {
@@ -15,11 +16,11 @@ export function useCmdW(
       if (e.defaultPrevented || isModalOpen()) return;
       if (pickerOpenRef.current || routeRef.current || quitConfirmOpenRef.current) return;
       e.preventDefault();
-      closeTab(activeTabRef.current ?? 0);
+      closeTab(focusedTabIndexRef?.current ?? activeTabRef.current ?? 0);
     };
     // A tab body that hosts a cross-origin surface never lets this listener see the chord at all —
     // answering for that is the plugin's own job, through its `close` capability.
     globalThis.addEventListener('keydown', onCloseTab, { capture: true });
     return () => globalThis.removeEventListener('keydown', onCloseTab, { capture: true });
-  }, [closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef]);
+  }, [closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, focusedTabIndexRef]);
 }

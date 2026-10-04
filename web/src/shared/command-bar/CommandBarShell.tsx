@@ -27,6 +27,8 @@ export type CommandBarShellProperties = {
   autoFocus?: boolean;
   disabled?: boolean;
   ariaLabel?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
 };
 
 // The command bar's chrome and the one behavior inseparable from it. Presentational otherwise:
@@ -34,7 +36,7 @@ export type CommandBarShellProperties = {
 // is built from `useCommandBarKeys`.
 export function CommandBarShell({
   value, onChange, onKeyDown, inputRef, ghost, above, trailing, label, rootRef,
-  dotColor = 'var(--accent)', busy = false, autoFocus = false, disabled = false, ariaLabel,
+  dotColor = 'var(--accent)', busy = false, autoFocus = false, disabled = false, ariaLabel, onFocus, onBlur,
 }: CommandBarShellProperties) {
   // Auto-resize: shrink to one row first so `scrollHeight` reflects the actual content, then
   // grow to fit. Runs after every value change (typing, paste, history recall, ghost accept,
@@ -68,6 +70,8 @@ export function CommandBarShell({
             spellCheck={false}
             onChange={(event) => { onChange(event.target.value); }}
             onKeyDown={onKeyDown}
+            onFocus={onFocus}
+            onBlur={onBlur}
           />
         </div>
         {trailing !== undefined && <span className="command-trailing">{trailing}</span>}

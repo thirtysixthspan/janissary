@@ -123,6 +123,8 @@ Each shell keeps its workspace alive until it closes. Closing the source tab doe
 
 Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. A new shell inherits the shell's workspace and offline mode. A new agent shares the shell's workspace and offline mode too.
 
+When docked, bare `close` and `Cmd+W` act on the shell tab whose command bar has focus. An `agent` command uses that shell tab as its source for the new agent's working directory and group.
+
 One tab per `zsh`, always. `zsh` twice opens two tabs even in the same directory, because a shell is
 stateful and refocusing the first would take its foreground program and its directory away from the
 second.

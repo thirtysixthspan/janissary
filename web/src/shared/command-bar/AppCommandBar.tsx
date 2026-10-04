@@ -13,6 +13,7 @@ export type AppCommandBar = {
   ghostHistory: string[];
   blockingOverlayOpen?: boolean;
   overlayOwnsCommandBar?: boolean;
+  onFocusTab?: (label: string | undefined) => void;
   queueOpen?: boolean;
   queueIndex?: number;
   queueItems?: string[];
@@ -56,7 +57,7 @@ export function useAppCommandLine(params: PickerCommands & {
   } = params;
 
   return useCallback((line: string, sourceTab?: string): boolean => {
-    const verdict = classifyCommandBarSubmit(line, tabs, activeTab);
+    const verdict = classifyCommandBarSubmit(line, tabs, activeTab, sourceTab);
     if (verdict.kind === 'overlay') {
       const opened = openCommandBarOverlay(verdict.command, {
         openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,

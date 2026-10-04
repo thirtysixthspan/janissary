@@ -288,6 +288,21 @@ describe('ProfileManager.newAgent', () => {
     expect(appended).toEqual([{ input: 'agent bob --no-workspace', output: 'Agent "bob" ready.' }]);
   });
 
+  it('creates an agent from the command source tab rather than the active center tab', () => {
+    const active = makeTab('janus', 'red');
+    const shell = makeTab('shell', 'blue');
+    shell.group = 7;
+    shell.groupColor = 'purple';
+    const { managers } = makeManagers(active, [active, shell]);
+    Object.assign(managers.tab, { cwdOf: (label: string) => label === 'shell' ? '/shell/work' : '/proj' });
+    const manager = new ProfileManager(managers);
+
+    manager.newAgent('agent bob --no-workspace', { label: 'shell', index: 1 });
+
+    expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(expect.objectContaining({ group: 7, groupColor: 'purple' }));
+    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/shell/work');
+  });
+
   it('reports a workspace-creation error and never creates the tab', () => {
     const janus = makeTab('janus', 'red');
     const { managers, appended } = makeManagers(janus);

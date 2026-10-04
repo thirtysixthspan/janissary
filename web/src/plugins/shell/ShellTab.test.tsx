@@ -135,7 +135,7 @@ function makeCapabilities(overrides: {
     // `ctrl+r`, so that is the default here too.
     claimedChords: overrides.claimedChords ?? ['ctrl+r'],
     dotColor: overrides.dotColor,
-    label: overrides.label ?? 'shell',
+    label: overrides.label ?? 'shell1',
   } as unknown as TabPluginClientCapabilities;
   return {
     capabilities, closed, handle, resized, written,
@@ -160,6 +160,7 @@ type AppBarOptions = {
   onEditQueued?: (text: string) => void;
   onDeleteQueued?: () => void;
   pluginCommandLineInsertions?: PluginCommandLineInsertions;
+  onFocusTab?: (label: string | undefined) => void;
 };
 
 type AppBarOpeners = Record<
@@ -193,6 +194,7 @@ function AppBar({ chords, options, openQuitConfirm, openers, children }: {
         ghostHistory: options.ghostHistory ?? [],
         blockingOverlayOpen: options.blockingOverlayOpen,
         overlayOwnsCommandBar: options.overlayOwnsCommandBar,
+        onFocusTab: options.onFocusTab,
         queueOpen: options.queueOpen,
         queueIndex: options.queueIndex,
         queueItems: options.queueItems,
@@ -242,6 +244,15 @@ function bar(): HTMLTextAreaElement {
 }
 
 describe('ShellTab', () => {
+  it('reports its focused command bar to the application', () => {
+    const onFocusTab = vi.fn();
+    renderTab({ onFocusTab });
+    fireEvent.focus(bar());
+    expect(onFocusTab).toHaveBeenCalledWith('shell1');
+    fireEvent.blur(bar());
+    expect(onFocusTab).toHaveBeenLastCalledWith(undefined);
+  });
+
   it('places clipboard history above the command bar', () => {
     const styles = readFileSync('web/src/plugins/shell/shell.css', 'utf8');
     expect(styles).toContain('.shell-tab .picker.clipboard-history { bottom: 40px; max-height: 50%; }');
@@ -304,7 +315,7 @@ describe('ShellTab', () => {
     fireEvent.change(bar(), { target: { value: 'echo done' } });
     bar().setSelectionRange(5, 5);
 
-    act(() => { pluginCommandLineInsertions.current.get('shell')?.('execute ./ai/tasks/build.md'); });
+    act(() => { pluginCommandLineInsertions.current.get('shell1')?.('execute ./ai/tasks/build.md'); });
 
     expect(bar()).toHaveValue('echo execute ./ai/tasks/build.mddone');
     expect(written).toEqual([]);

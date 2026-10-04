@@ -4,5 +4,5 @@ export const command: Command = {
   name: 'agent',
   match: (command_) => /^agent\b/i.test(command_),
   samples: ['agent', 'agent bob'],
-  run: (command, context, managers) => { managers.profile.newAgent(command); },
+  run: (command, context, managers) => { managers.profile.newAgent(command, context); },
 };

@@ -87,6 +87,17 @@ describe('useAppCommandLine', () => {
     expect(openers.openProfilePicker).toHaveBeenCalledTimes(1);
   });
 
+  it('routes a bare close from a docked shell to that shell tab', () => {
+    const guard = vi.fn(() => false);
+    const { intercept, openQuitConfirm } = build({
+      tabs: [tab('agent'), tab('shell-left', { dock: 'left' })], guard,
+    });
+
+    expect(intercept('close', 'shell-left')).toBe(false);
+    expect(guard).toHaveBeenCalledWith(1);
+    expect(openQuitConfirm).not.toHaveBeenCalled();
+  });
+
   it('reports which plugin tab opened a bare-word picker', () => {
     const onPickerOpen = vi.fn();
     const { intercept } = build({ onPickerOpen });

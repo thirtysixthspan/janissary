@@ -44,6 +44,7 @@ export function App({ client }: { client: JanusClient }) {
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
   const [pickerSourceTab, setPickerSourceTab] = useState<string>();
+  const [focusedPluginTab, setFocusedPluginTab] = useState<string>();
   // Server-driven "New harness" launch dialog (null when closed).
   const [harnessLaunch, setHarnessLaunch] = useState<HarnessLaunchView | null>(null);
   // Server-driven "New schedule" dialog (null when closed).
@@ -127,6 +128,10 @@ export function App({ client }: { client: JanusClient }) {
   const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef } = useCmdWRefs(
     activeTab, quitConfirmOpen, unsavedQuitOpen, pickers.overlays, pickers.route,
   );
+  const focusedPluginTabIndexRef = useRef<number | undefined>(undefined);
+  const focusedPluginTabIndex = focusedPluginTab === undefined
+    ? -1 : tabs.findIndex((tab) => tab.label === focusedPluginTab);
+  focusedPluginTabIndexRef.current = focusedPluginTabIndex < 0 ? undefined : focusedPluginTabIndex;
 
   const closeTab = useCallback((index: number) => {
     if (closeQuitsApp(tabs, index)) { guardedOpenQuitConfirm(); return; }
@@ -156,7 +161,7 @@ export function App({ client }: { client: JanusClient }) {
 
   useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, shellHandles, inputReference));
 
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, focusedPluginTabIndexRef);
 
   // Live snapshot + callbacks read by the window key handler, so it never has to re-register. Every
   // overlay-owned field arrives in one bag; only search's two are the app shell's to add.
@@ -187,6 +192,7 @@ export function App({ client }: { client: JanusClient }) {
         ghostHistory: globalHistory,
         blockingOverlayOpen: pickers.view.overlays.quickOpen,
         overlayOwnsCommandBar: commandBarSuppressed(pickers.view.overlays),
+        onFocusTab: setFocusedPluginTab,
         queueOpen: pickers.view.overlays.queue,
         queueIndex: pickers.view.queueIndex,
         queueItems: pickers.view.queueItems,

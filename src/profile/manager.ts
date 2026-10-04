@@ -83,8 +83,8 @@ export class ProfileManager {
     this.finish(openProfileEntries(loaded, this.managers, parsed.name, label, out), out);
   }
 
-  newAgent(command: string): void {
-    newAgentOp(this.managers, command);
+  newAgent(command: string, context?: { label: string; index: number }): void {
+    newAgentOp(this.managers, command, context);
   }
 
   // Launch a bare, auto-named agent tab rooted at the named source tab's cwd, joining its group —

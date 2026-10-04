@@ -229,6 +229,8 @@ export function ShellTab({ payload, capabilities }: Properties) {
           if (queueOpen) appBar.onEditQueued?.(next);
         }}
         onKeyDown={onBarKeyDown}
+        onFocus={() => { appBar.onFocusTab?.(capabilities.label); }}
+        onBlur={() => { appBar.onFocusTab?.(undefined); }}
         ghost={bar.ghost}
         dotColor={capabilities.dotColor ?? DOT_COLOR}
         busy={commandRunning}

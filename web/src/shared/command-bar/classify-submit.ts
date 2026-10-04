@@ -24,22 +24,24 @@ export type CommandBarVerdict =
 // dialog in front of it: the quit confirmation for a close that would quit the app, and the save guard
 // for one it would not. The target is the active tab for a bare close and the named tab for
 // `close <name>` — either spelling quits when its target is the last non-docked tab.
-function classifyClose(trimmed: string, tabs: TabView[], activeTab: number): CommandBarVerdict {
+function classifyClose(trimmed: string, tabs: TabView[], activeTab: number, sourceTab?: string): CommandBarVerdict {
   if (!isCloseCommand(trimmed)) return { kind: 'run' };
   const parsed = parseClose(trimmed);
   const index = 'name' in parsed
     ? tabs.findIndex((tab) => matchesLabelOrAlias(tab, parsed.name))
-    : activeTab;
+    : sourceTab === undefined ? activeTab : tabs.findIndex((tab) => tab.label === sourceTab);
   // A close naming a tab that is not open is not a close at all, so the line runs and the server
   // answers for it. Swallowing it here would report nothing for a command the user did type.
   if (index === -1) return { kind: 'run' };
   return closeQuitsApp(tabs, index) ? { kind: 'confirm-quit' } : { kind: 'confirm-close', index };
 }
 
-export function classifyCommandBarSubmit(text: string, tabs: TabView[], activeTab: number): CommandBarVerdict {
+export function classifyCommandBarSubmit(
+  text: string, tabs: TabView[], activeTab: number, sourceTab?: string,
+): CommandBarVerdict {
   const trimmed = text.trim().toLowerCase();
   const command = trimmed.replace(/^\//, '');
   if (command === 'quit') return { kind: 'confirm-quit' };
   if (isBareOpener(trimmed) || overlayClaimedByCommand(trimmed)) return { kind: 'overlay', command: trimmed };
-  return classifyClose(command, tabs, activeTab);
+  return classifyClose(command, tabs, activeTab, sourceTab);
 }
