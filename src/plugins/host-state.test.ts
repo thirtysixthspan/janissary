@@ -139,6 +139,47 @@ describe('host state delivery', () => {
     expect(handler).toHaveBeenCalledTimes(2);
   });
 
+  it('delivers to a tab that took a label a closed tab had held', () => {
+    const connections = { shell1: [{ text: 'zsh', kind: 'terminal' }] };
+    const tabs: Tab[] = [pluginTab('shell1', 'shell-1')];
+    const { handler, port } = makePort({ tabs, connections });
+
+    subscribe(port);
+    fireState();
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    // The second shell tab in a session is `shell1` again once the first has gone, and its rows are
+    // the same because the same terminal is on them. Under a map keyed by label that is the
+    // fingerprint already on file, so this tab is never delivered at all and its connections window
+    // says there are none for the whole life of the tab.
+    tabs.length = 0;
+    tabs.push(pluginTab('shell1', 'shell-2'));
+    fireState();
+
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenLastCalledWith(
+      expect.objectContaining({ instanceKey: 'shell-2' }), expect.anything(),
+    );
+  });
+
+  it('delivers again to a tab whose instance key returned after its own tab closed', () => {
+    // The mirror of the case above, and the reason the memory is pruned rather than only re-keyed: a
+    // plugin is free to reuse an instance key it has used before, and a fingerprint still on file for
+    // that key would silence the tab exactly as a reused label did.
+    const connections = { shell1: [{ text: 'zsh', kind: 'terminal' }] };
+    const tabs: Tab[] = [pluginTab('shell1', 'shell-1')];
+    const { handler, port } = makePort({ tabs, connections });
+
+    subscribe(port);
+    fireState();
+    tabs.length = 0;
+    fireState();
+    tabs.push(pluginTab('shell9', 'shell-1'));
+    fireState();
+
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
   it('delivers a slice the declaration did not name as empty rather than as its rows', () => {
     const { handler, port } = makePort({
       tabs: [pluginTab('shell1', 'shell-1')],

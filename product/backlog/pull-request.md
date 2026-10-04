@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Remember what the host state channel pushed per tab instance rather than per tab label, so a reused label cannot silence a new tab's first delivery.
-
-Existing Issue: `src/plugins/host-state.ts` keeps its `lastPushed` fingerprints in a map keyed by tab label and never removes an entry when that tab closes, so a tab given the label a closed one held computes the fingerprint already on file and is never delivered its rows at all. Severity: 6/10
-
-Existing Risk: 5/10 - The second shell tab opened in a session draws a connections window with nothing in it and a button that says there are none, for the whole life of that tab, which is the "rows computed and drawn nowhere" state this channel was built to remove.
-
-Proposal Risk: 1/10 - The memory becomes per instance instead of per label, so a live tab's window keeps filling exactly as before and the only thing that changes is that a fresh tab is always fresh.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key the host-state fingerprint by instance key so a reused tab label still gets its first push". In `src/plugins/host-state.ts`, key the per-tab fingerprint by `tab.plugin.instanceKey` rather than `tab.label`. The instance key is the one field on a plugin tab that is unique per invocation and stable for the tab's life — `nextInstanceKey` in `src/plugins/shell/activate.ts` mints a fresh one for every `zsh` — so a new tab can never collide with a closed one's memory, and `removeTabAt` in `src/tab/reorder.ts` preserves `plugin` across the fresh `Tab` object it builds for every survivor, which a `WeakMap` keyed on the tab itself would not survive. The rows themselves are still read with the label, since that is what `connectionsFor` and `scheduleView` take; only the memory changes. Consider pruning entries whose instance key is no longer among the plugin's open tabs in the same pass, so a long session does not accumulate one entry per shell tab ever opened. Extend `src/plugins/host-state.test.ts` with the case it does not have: deliver for tab `shell1`, take the tab away, add a new tab that also carries the label `shell1` with the same rows, fire `state: dirty` again, and assert the handler is called a second time — that fails against the label-keyed map today. The existing delivery-once, redelivery-on-change and re-entrancy cases keep passing untouched, and `src/plugins/shell/activate.test.ts` is unaffected because the plugin's own payload still starts with empty rows and still receives its first delivery.
-
 * Return focus to the command bar when the shell history popup closes, and give the popup the keys the application's own history picker has.
 
 Existing Issue: `web/src/plugins/shell/ShellHistoryPopup.tsx` focuses itself on mount and nothing hands focus back, so after Escape or after picking a line the focused element is removed from the document and the keyboard lands on the body, leaving a recalled line that cannot be edited or run. Severity: 5/10

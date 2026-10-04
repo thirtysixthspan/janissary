@@ -34,6 +34,13 @@ export type TabPluginHostStatePort = {
 // `state` bus fires on essentially every keystroke-driven change in the application, so comparing
 // first is the whole point: without it a shell tab would be handed its own state thousands of times
 // a minute and every one of those would be a payload update and a broadcast.
+//
+// Keyed by instance key rather than by tab label. A label is reused — the second shell tab in a
+// session is `shell1` again once the first has gone — and a fingerprint on file under a name the next
+// tab also carries would be computed already, so that tab would never be delivered its rows at all.
+// The instance key is the one field unique per invocation and stable for the tab's life, which
+// `nextInstanceKey` mints afresh for every tab and `removeTabAt` preserves across the `Tab` object it
+// rebuilds for each survivor. A `WeakMap` keyed on the tab itself would not survive that rebuild.
 const lastPushed = new WeakMap<PluginRecord, Map<string, string>>();
 
 // One tab's two slices, rendered to compare by value. JSON is the honest comparison here because both
@@ -97,17 +104,25 @@ function dispatch(port: TabPluginHostStatePort): void {
     // is synchronous. A map still unpublished is invisible to that pass, which builds its own empty
     // map, sees the tab as never pushed, and delivers again — for as long as the tab keeps emitting.
     lastPushed.set(record, pushed);
+    const open = new Set<string>();
     for (const tab of port.managers.tab.tabs) {
       if (tab.plugin?.id !== record.declaration.id) continue;
+      const instanceKey = tab.plugin.instanceKey;
+      open.add(instanceKey);
       const slice = readSlice(
-        port, tab.label, tab.plugin.instanceKey, tab.plugin.payload, record.declaration,
+        port, tab.label, instanceKey, tab.plugin.payload, record.declaration,
       );
       const print = fingerprint(slice);
-      if (pushed.get(tab.label) === print) continue;
+      if (pushed.get(instanceKey) === print) continue;
       // Recorded before the call, so a handler that throws does not leave the tab looking stale and
       // retrying on every subsequent mutation for the rest of the session.
-      pushed.set(tab.label, print);
+      pushed.set(instanceKey, print);
       void deliver(port, record, slice);
+    }
+    // A closed tab's memory goes with it. Keyed per instance, an entry outlives the tab it described,
+    // so a session that opened a hundred shell tabs would still be holding a hundred fingerprints.
+    for (const instanceKey of pushed.keys()) {
+      if (!open.has(instanceKey)) pushed.delete(instanceKey);
     }
   }
 }
