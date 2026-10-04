@@ -2,8 +2,6 @@
 
 # pull-request
 
-* opening the file navigator from the shell tab metadata bar should open the navigator in teh current working directory of the shell.
-
 * when an application command is run that has an output, it should be interpreted as markdown and rendered into the shell as rendered markdown and not raw markdown.
 
 * running `hist` or `ctrl+r` should result in the hitory picker appearing with the same content. right now the `hist` picker is empty.
