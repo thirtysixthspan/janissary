@@ -27,7 +27,7 @@
 * connection and schedule popups should show below the metadata bar, not cover it.
 
 
-
+* the shell tab dot should blink when a shell command is running.
 
 
 * Close the security gap in plugin terminal attachment ownership.
