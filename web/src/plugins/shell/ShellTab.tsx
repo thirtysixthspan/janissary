@@ -238,7 +238,11 @@ export function ShellTab({ payload, capabilities }: Properties) {
         ariaLabel="Shell command"
         above={matches.length > 1 ? (
           <div className="completions">
-            {matches.map((match) => <span key={match} className="completion">{match}</span>)}
+            {matches.map((match, index) => (
+              <span key={match} className="completion">
+                {index > 0 && '  '}{match}
+              </span>
+            ))}
           </div>
         ) : undefined}
       />

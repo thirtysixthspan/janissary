@@ -51,7 +51,8 @@ on screen for it.
 
 **Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
 tab's bar asks, and shows the same strip when there is a choice to make. The shell tab keeps no list
-of its own. One match completes the line, several matches show the choice strip, and no matches leave
+of its own. One match completes the line, several matches show the choice strip with two spaces
+between choices, and no matches leave
 the line unchanged.
 
 `Ctrl+A` and `tasks` open the shared task picker over the shell tab. Choosing a task inserts its

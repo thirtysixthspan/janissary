@@ -2,9 +2,6 @@
 
 # pull-request
 
-* tab completion results should nto be joined without spaces. This is an example bad output:
-AGENTS.mdaicareer scenariosCLAUDE.mdclimate-ai.jsonlguidanceinterviewsjob searchlinkedinmagda_kufrej_gistsnotesprepproductresumestemp
-
 * hitting escape should remove the tab completion popup
 
 * the shell path in the metadata row should track the current working directory of the shell thoguhout the session. as the user changes path, the path in the metadata row should update.
@@ -32,6 +29,5 @@ Shift+↑ / Shift+↓	Scroll the transcript up / down (accelerated — distance 
 Ctrl+↑ / Ctrl+↓	Scroll the transcript up / down (accelerated)
 Page Up / Page Down	Scroll the transcript up / down by half terminal height
 Escape	Reset scroll to bottom
-
 
 

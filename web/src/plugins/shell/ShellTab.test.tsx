@@ -556,6 +556,7 @@ describe('ShellTab', () => {
 
     await waitFor(() => { expect(screen.getByText('lsof')).toBeInTheDocument(); });
     expect(screen.getByText('ls')).toBeInTheDocument();
+    expect(document.querySelector('.completions')?.textContent).toBe('ls  lsof');
   });
 
   it('accepts a single completion without showing a strip', async () => {
