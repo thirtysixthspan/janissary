@@ -89,6 +89,8 @@ A plugin-contributed overlay ranks below all nine, so a chord pressed while one 
 
 A contributed overlay takes the command bar's keys while it is open, exactly as a built-in one does, and none of them disables the bar outright.
 
+The history, clipboard-history, queue, tab-navigation, Quick Open, application-theme, and syntax-theme popups render above the command bar and stay inside the tab's colored left edge. On plugin tabs, the host positions these overlays against the tab body; on an agent tab, they stay within the transcript area.
+
 While an overlay is open it claims every keystroke: nothing underneath it scrolls the transcript,
 switches tabs, or reorders them, and the shortcuts that open the other overlays do nothing until it
 is dismissed. Quick Open holds its own text input and handles its own typing, arrows, Enter, and

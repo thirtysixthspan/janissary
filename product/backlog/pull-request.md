@@ -2,8 +2,6 @@
 
 # pull-request
 
-* all popups should render above the command bar, not on top of it. This should be that same positioning as in the agent tab. it should not overlap the left colored border of the tab. history picker, clipboard picker, queue picker, tab navigator, quick file finder, theme picker, syntax theme picker.
-
 * when a shell tab is no longer busy and is in teh background it should throw an unread badge like the agent tab. the unread badge should have the same notfication logic as when the harness tab throws a flag.
 
 * commands with transcript output like 'help' should render the command into the shell without executing it, and, on a new line, print the output into the shell without executing it. it should look like the command went to the shell and then returned the result even though it is an application command.

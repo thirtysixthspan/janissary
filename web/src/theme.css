@@ -301,7 +301,7 @@ html, body, #root {
 .tab .tab-dirty { font-size: 1.1em; line-height: 1; color: var(--accent, var(--fg)); }
 
 /* The active tab's window body (transcript + command line), with the agent-colored left edge. */
-.tab-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.tab-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 /* Main area (transcript + floating status panels) */
 .main { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -509,6 +509,9 @@ html, body, #root {
   background: var(--bg-soft); border-top: 1px solid var(--border);
   box-shadow: 0 -6px 24px rgb(0 0 0 / 40%);
 }
+/* Host overlays are siblings of plugin bodies, so anchor them to the tab frame and lift them over
+   its command bar. Pickers inside an agent tab's `.main` keep that smaller containing block. */
+.tab-body > .picker { left: 8px; right: 0; bottom: 40px; }
 .picker-title { padding: 4px 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
 .picker-section {
   padding: 3px 10px; color: var(--muted); cursor: default;
