@@ -34,6 +34,50 @@ const WRAPPED_FOOTER = [
   '┃   ⇆ select  enter confirm',
 ].join('\n');
 
+// The same external-directory prompt as opencode draws it beside its own sidebar, which takes the
+// right of the screen and squeezes the permission panel until opencode truncates the hint footer
+// that trails the option row — `enter confirm` arrives as `enter conf`. Copied from the screen in
+// product/backlog/issues.md, where a sidebar makes auto-approve stop clearing the prompt.
+const SIDEBAR_TRUNCATED_HINT = [
+  '  ┃                                                                                [ ] Implement the issue changes and',
+  '  ┃  △ Permission required                                                             update relevant specs',
+  '  ┃    ← Access external directory /Users/someone/dev/janissary/web/src                 [ ] Run the required diff-scoped',
+  '  ┃                                                                                    checks and report results',
+  '  ┃  Patterns',
+  '  ┃',
+  '  ┃  - /Users/someone/dev/janissary/web/src/*',
+  '  ┃                                                                                /Users/someone/dev/janissary/.janissary/workspace/',
+  '  ┃                                                                                opencode:feat-shell-tab',
+  '  ┃   Allow once   Allow always   Reject  ctrl+f fullscreen  ⇆ select  enter conf',
+  '  ┃                                                                                • OpenCode 1.18.32',
+].join('\n');
+
+// The same prompt at a width wide enough for the whole hint to survive the sidebar, where the only
+// thing a sidebar costs the panel is the title row's exact text: opencode paints the sidebar into
+// the same screen rows, so that row carries the sidebar's text beside the title.
+const SIDEBAR_WHOLE_HINT = [
+  '┃                                                                                        [ ] Drain: address dispatched line',
+  '  ┃  △ Permission required                                                                 to answering tab (finding 4)',
+  '  ┃    ← Access external directory /Users/someone/dev/janissary/.janissary/workspace/agent/opencode       [ ] Drain: chord claim from wire',
+  '  ┃                                                                                       view (finding 5)',
+  '  ┃  Patterns                                                                               [ ] Drain: adopt/release every',
+  '  ┃                                                                                       spawned terminal (finding 6)',
+  '  ┃  - /Users/someone/dev/janissary/.janissary/workspace/agent/opencode/*',
+  '  ┃                                                                                        /Users/someone/dev/janissary/.janissary/workspace/',
+  '  ┃                                                                                        agent:feat-shell-tab',
+  '  ┃   Allow once   Allow always   Reject               ctrl+f fullscreen  ⇆ select  enter confirm',
+  '  ┃                                                                                        • OpenCode 1.18.32',
+].join('\n');
+
+// The same prompt with the hint clipped past the confirm hint entirely, as a narrower panel leaves
+// only the select hint of the trailing group.
+const SIDEBAR_HINT_CLIPPED_TO_SELECT = [
+  '  ┃  △ Permission required',
+  '  ┃    ← Edit src/index.ts',
+  '  ┃',
+  '  ┃   Allow once   Allow always   Reject  ⇆ select',
+].join('\n');
+
 const BORDERLESS = [
   '△ Permission required',
   '  ← Access external directory /tmp',
@@ -55,6 +99,18 @@ describe('detectOpencodePermissionGate', () => {
 
   it('matches a prompt rendered without the panel border', () => {
     expect(detectOpencodePermissionGate(BORDERLESS)).toBe(true);
+  });
+
+  it('matches a prompt whose title row also carries the sidebar’s text', () => {
+    expect(detectOpencodePermissionGate(SIDEBAR_WHOLE_HINT)).toBe(true);
+  });
+
+  it('matches a prompt whose hint footer is truncated by opencode’s sidebar', () => {
+    expect(detectOpencodePermissionGate(SIDEBAR_TRUNCATED_HINT)).toBe(true);
+  });
+
+  it('matches a prompt whose hint footer is clipped before the confirm hint', () => {
+    expect(detectOpencodePermissionGate(SIDEBAR_HINT_CLIPPED_TO_SELECT)).toBe(true);
   });
 
   it('does not match ordinary output', () => {

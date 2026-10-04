@@ -229,7 +229,7 @@ selected-row Enter contract as claude, not a literal `y` — and records the sam
 permission prompt` notification with a capture link. A gate-shaped menu that has scrolled above
 codex's live input composer is treated as stale and not answered.
 
-For opencode, the app recognizes its permission panel by structure as well: the exact
+For opencode, the app recognizes its permission panel by structure as well: the
 `△ Permission required` title, then an option row led by `Allow once` that also offers `Reject`,
 then the `enter confirm` hint on that row or below it. The request line, path, and patterns between
 them vary and are not part of the match, and the prompt is recognized whether or not it offers
@@ -239,6 +239,13 @@ prompt` notification with a capture link. opencode's follow-up stages (the `Alwa
 confirmation after choosing `Allow always` by hand, and the feedback input after `Reject`) carry a
 different title and are never answered. opencode draws the prompt full-screen in place of its input
 box and removes it once answered, so a resolved prompt cannot linger on screen to be answered again.
+
+The panel is still recognized while opencode's own sidebar is on screen beside it, at any width.
+opencode paints the two into the same screen rows, so a sidebar's text shares the title's row and
+the title is read from the start of that row; and a sidebar leaves the panel too narrow for the
+hint, which opencode then shortens rather than wrapping, so a clipped `enter conf` — or the
+`⇆ select` that leads the hint and outlives the clipping — identifies the prompt as well as the
+whole hint does.
 
 ### End-to-end browser (`-b` / `--no-browser`)
 
