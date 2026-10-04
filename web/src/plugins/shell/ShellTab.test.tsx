@@ -171,7 +171,8 @@ type AppBarOptions = {
 };
 
 type AppBarOpeners = Record<
-  'openPicker' | 'openThemePicker' | 'openAppThemePicker' | 'openQueue' | 'openTaskPicker' | 'openProfilePicker',
+  'openPicker' | 'openThemePicker' | 'openAppThemePicker' | 'openQueue' | 'openTaskPicker' | 'openProfilePicker'
+  | 'openTabNavWithQuery',
   () => void
 >;
 
@@ -188,7 +189,7 @@ function AppBar({ chords, options, openQuitConfirm, openers, children }: {
 }) {
   const intercept = useAppCommandLine({
     ...openers,
-    navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
+    navOpen: false, setNavOpen: () => {},
     tabs: options.tabs ?? [tab('shell1')],
     activeTab: options.activeTab ?? 0,
     openQuitConfirm,
@@ -224,7 +225,7 @@ function mountShell(
   // the line was intercepted.
   const openers: AppBarOpeners = {
     openPicker: vi.fn(), openThemePicker: vi.fn(), openAppThemePicker: vi.fn(),
-    openQueue: vi.fn(), openTaskPicker: vi.fn(), openProfilePicker: vi.fn(),
+    openQueue: vi.fn(), openTaskPicker: vi.fn(), openProfilePicker: vi.fn(), openTabNavWithQuery: vi.fn(),
   };
   const renderShell = (nextPayload = payload, nextCapabilities = capabilities) => (
     <AppBar chords={chords} options={options} openQuitConfirm={openQuitConfirm} openers={openers}>
@@ -826,6 +827,17 @@ describe('ShellTab', () => {
     await waitFor(() => { expect(document.querySelector('.picker.shell-history')).not.toBeNull(); });
     expect(document.querySelector('.shell-history .picker-title')?.textContent).toBe('history');
     expect(screen.getByText('No commands sent yet')).toBeInTheDocument();
+  });
+
+  it('opens the fuzzy tab navigator for nav, on the query typed after it, without reaching zsh', async () => {
+    const { capabilities, openers, written } = renderTab();
+
+    fireEvent.change(bar(), { target: { value: 'nav docs' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    await waitFor(() => { expect(openers.openTabNavWithQuery).toHaveBeenCalledWith('docs'); });
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'nav docs');
+    expect(written).toEqual([]);
   });
 
   it('opens the same history for hist as for Ctrl+R, listing the lines the bar sent', async () => {

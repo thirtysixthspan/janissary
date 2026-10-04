@@ -12,6 +12,7 @@ type Options = {
   guard?: (index: number) => boolean;
   openers?: Partial<AppCommandBar>;
   onPickerOpen?: (sourceTab: string | undefined) => void;
+  navOpen?: boolean;
 };
 
 function build(options: Options = {}) {
@@ -21,17 +22,19 @@ function build(options: Options = {}) {
     ...options.openers,
   };
   const openQuitConfirm = vi.fn();
+  const setNavOpen = vi.fn();
+  const openTabNavWithQuery = vi.fn();
   const guardRef = { current: options.guard ?? null } as RefObject<((index: number) => boolean) | null>;
   const { result } = renderHook(() => useAppCommandLine({
     ...openers,
-    navOpen: false, setNavOpen: () => {}, openTabNavWithQuery: () => {},
+    navOpen: options.navOpen ?? false, setNavOpen, openTabNavWithQuery,
     tabs: options.tabs ?? [tab('shell1')],
     activeTab: options.activeTab ?? 0,
     openQuitConfirm,
     guardRef,
     onPickerOpen: options.onPickerOpen,
   }));
-  return { intercept: result.current, openers, openQuitConfirm };
+  return { intercept: result.current, openers, openQuitConfirm, setNavOpen, openTabNavWithQuery };
 }
 
 describe('useAppCommandLine', () => {
@@ -104,6 +107,24 @@ describe('useAppCommandLine', () => {
 
     expect(intercept('theme', 'shell-left')).toBe(true);
     expect(onPickerOpen).toHaveBeenCalledWith('shell-left');
+  });
+
+  it('opens the tab navigator on nav\'s query from any bar, and reports which tab opened it', () => {
+    const onPickerOpen = vi.fn();
+    const { intercept, openTabNavWithQuery, setNavOpen } = build({ onPickerOpen });
+
+    expect(intercept('nav shell', 'shell1')).toBe(true);
+    expect(openTabNavWithQuery).toHaveBeenCalledWith('shell');
+    expect(onPickerOpen).toHaveBeenCalledWith('shell1');
+    expect(setNavOpen).not.toHaveBeenCalled();
+  });
+
+  it('closes the tab navigator when nav is submitted while it is open', () => {
+    const { intercept, openTabNavWithQuery, setNavOpen } = build({ navOpen: true });
+
+    expect(intercept('nav')).toBe(true);
+    expect(setNavOpen).toHaveBeenCalledWith(false);
+    expect(openTabNavWithQuery).not.toHaveBeenCalled();
   });
 
   it('offers an ordinary line onward, and the `!` override with it', () => {

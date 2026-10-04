@@ -37,6 +37,10 @@ picker, `quit` or `/quit`, or `close` or `/close` that would take the last tab w
 here rather than sent onward. A quit typed in a shell tab asks the same confirmation it asks anywhere
 else (see [[quit-confirmation]]), and a bare word opens the same picker.
 
+`nav`, or `nav <query>`, submitted from the shell command bar opens the fuzzy tab navigator over the
+shell tab, pre-filled with the query, exactly as it does from an agent tab's bar; submitting `nav`
+while the navigator is open closes it. Neither reaches zsh.
+
 The bare `theme` picker appears over the shell tab. While it is open, the application's arrow,
 Return, and Escape handling controls the selection, applies the chosen theme, or dismisses the picker.
 If the shell tab is docked in a sidebar, the picker appears over that shell there; its keys stay with

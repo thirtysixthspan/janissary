@@ -36,6 +36,16 @@ function classifyClose(trimmed: string, tabs: TabView[], activeTab: number, sour
   return closeQuitsApp(tabs, index) ? { kind: 'confirm-quit' } : { kind: 'confirm-close', index };
 }
 
+// The query a `nav` line opens the tab navigator on — empty for a bare `nav` — or nothing when the line
+// is not `nav`. Not a bare word in the overlay table: it carries an argument and toggles the navigator
+// closed when it is already open, which only the caller holding that state can decide.
+export function navCommandQuery(text: string): string | undefined {
+  const trimmed = text.trim();
+  const command = trimmed.toLowerCase();
+  if (command !== 'nav' && !command.startsWith('nav ')) return undefined;
+  return trimmed.slice(3).trim();
+}
+
 export function classifyCommandBarSubmit(
   text: string, tabs: TabView[], activeTab: number, sourceTab?: string,
 ): CommandBarVerdict {

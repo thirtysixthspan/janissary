@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, type ReactNode, type RefObject } from 'react';
 import type { TabView } from '@shared/protocol';
-import { classifyCommandBarSubmit } from './classify-submit';
+import { classifyCommandBarSubmit, navCommandQuery } from './classify-submit';
 import { openCommandBarOverlay } from './bare-openers';
 import type { PickerCommands } from './picker-commands';
 
@@ -53,7 +53,7 @@ export function useAppCommandLine(params: PickerCommands & {
   const {
     tabs, activeTab, openQuitConfirm, guardRef,
     openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,
-    onPickerOpen,
+    onPickerOpen, navOpen, setNavOpen, openTabNavWithQuery,
   } = params;
 
   return useCallback((line: string, sourceTab?: string): boolean => {
@@ -69,9 +69,18 @@ export function useAppCommandLine(params: PickerCommands & {
     // A close of one tab is the client's to guard, because only the client knows whether that tab
     // holds unsaved work. The guard declining is not a refusal, so the line runs as it always did.
     if (verdict.kind === 'confirm-close') return guardRef.current?.(verdict.index) === true;
-    return false;
+    const navQuery = navCommandQuery(line);
+    if (navQuery === undefined) return false;
+    if (navOpen) {
+      setNavOpen(false);
+    } else {
+      openTabNavWithQuery(navQuery);
+      onPickerOpen?.(sourceTab);
+    }
+    return true;
   }, [
     tabs, activeTab, openQuitConfirm, guardRef,
     openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker, onPickerOpen,
+    navOpen, setNavOpen, openTabNavWithQuery,
   ]);
 }

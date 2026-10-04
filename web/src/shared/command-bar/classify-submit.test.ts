@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import { classifyCommandBarSubmit } from './classify-submit';
+import { classifyCommandBarSubmit, navCommandQuery } from './classify-submit';
 import { declareOverlayClaims } from '../contributed-overlays';
 
 const tab = (label: string, overrides: Partial<TabView> = {}) => ({ label, ...overrides }) as TabView;
@@ -13,6 +13,19 @@ afterEach(() => { while (claimed.length > 0) claimed.pop()?.(); });
 function claimCommand(command: string): void {
   claimed.push(declareOverlayClaims('fixture', { chords: [], command }));
 }
+
+describe('navCommandQuery', () => {
+  it('reads nav, with or without a query, in any case and spacing', () => {
+    expect(navCommandQuery('nav')).toBe('');
+    expect(navCommandQuery('  NAV  ')).toBe('');
+    expect(navCommandQuery('nav Shell 2 ')).toBe('Shell 2');
+  });
+
+  it('is nothing for a word that merely starts with nav', () => {
+    expect(navCommandQuery('navigate')).toBeUndefined();
+    expect(navCommandQuery('!nav')).toBeUndefined();
+  });
+});
 
 describe('classifyCommandBarSubmit', () => {
   const tabs = [tab('janus'), tab('image', { view: 'plugin', title: 'alpha.png' }), tab('files', { dock: 'left' })];
