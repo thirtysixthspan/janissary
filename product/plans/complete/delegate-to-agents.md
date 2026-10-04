@@ -1,258 +1,127 @@
 # Delegate to agents skill
 
-**Complexity: 6/10** — a new `--model` flag on the `agent` command lifted out by the parser's existing token walk, recorded as an in-memory tab field the ACP model resolver prefers, one delegation entry in the ACP tool table that dispatches to manager calls the command bar already makes, and the bounds the new capability needs to be safe to expose: a delegation-depth cap, a command allowlist and group scope on what it may reach, and a scan of a worker's answer before it re-enters its parent's context. No new protocol message, no persistence field, no web-client work.
+**Complexity: 6/10** — a model-selecting `--model` clause on `agent`, one delegation tool in the ACP loop, and the boundaries needed to keep delegation within a worker's own group, depth, and command surface. The feature also screens worker replies before they become their parent's next instruction. It adds no protocol message, persistent model field, or web-client behavior.
 
 ## Summary
 
-Teach an agent to hand repository work to other agents running different models, follow their transcripts while they work, and collect their responses.
+An ACP agent can open a worker, give it a task, inspect its transcript while it works, and collect its answer. `agent`, `send`, and `msg` use the existing command meanings, with limits enforced by the ACP delegation runner. The `agent` command can select the worker's OpenCode model from the harness catalog.
 
-The repository already holds every primitive: `agent <name>` opens a disposable workspaced agent tab, `msg <agent> request <command>` runs a command in another agent tab and returns the captured output as a `response`, and `send <agent> <text>` hands a line to a tab without waiting for it. What is missing is that an **ACP agent cannot reach any of it** — the `acp` tool loop teaches exactly three commands (`browser`, `question`, `db`), so an agent driven by `acp <prompt>` can ask a question or read a database but cannot open a tab or talk to another tab. And an agent tab's ACP model is fixed: `AcpManager.resolveAcpModel` returns `google/gemini-3.1-flash-lite` from the harness catalog with no way for anyone, human or agent, to choose another.
-
-So this feature adds the three delegation verbs to the ACP tool loop, gives `agent` a `--model` flag, writes the skill that tells an agent how to use them together, and adds the bounds that exposing delegation safely requires: how deep a delegation tree may go, how far into the application delegation may reach, and what happens to a worker's answer before it becomes its parent's next instruction.
+A delegated worker is parented to the tab whose ACP tool loop opened it, regardless of which tab is focused. Its group and delegation depth therefore follow the delegating agent. A depth cap, same-group target check, and command allowlist bound the new reach; `msg` replies are screened for harness-shaped control text before they return to the parent.
 
 ## Design decisions
 
-Every decision below was reached autonomously under the instruction to work without asking; each records the answer chosen and the evidence behind it. No user answer is claimed anywhere in this plan.
+1. **Keep delegation in the existing ACP tool loop.** One `AcpTool` entry supplies the primer, command recognizer, and runner for `agent`, `send`, and `msg`. It is ordered after `browser` and `question` and before the database fall-through.
 
-1. **Extend the existing ACP tool loop; do not invent a delegation grammar.** `createAcpToolTable` in `src/acp/tool-table.ts` is already the registry that derives a tool's primer, extractor, and runner from one `AcpTool` entry — "so a new tool is one entry rather than three lists that can disagree." `question` is the exact precedent for an asynchronous tool: `runQuestionCommand` returns `string | Promise<string>` and `runAcpToolLoop` awaits it and feeds the result back as the next prompt. Delegation is the same shape, so it belongs in the same registry rather than beside it.
+2. **Reuse the command bar's operations.** `agent` calls `ProfileManager.newAgent`; `send` resolves the target and uses `deliverTo`; `msg` uses `CaptureManager.run`. The ACP loop adds no separate launch, delivery, or capture implementation.
 
-2. **Reuse the existing command spellings verbatim — `agent`, `send`, `msg`.** An agent that has learned Janissary's command bar should not have to learn a second dialect to delegate. The entry's `run` calls the same manager the command bar calls, so the tool loop and the command bar cannot disagree about what `agent bekir` means. `managers.capture.run` is the whole of `msg`'s runner — it is already what `AgentCommunicationManager.handle` calls for a `request` (`src/agent/communication-manager.ts`, the `kind === 'request'` branch), and `managers.capture` is already constructed on the `Managers` registry.
+3. **Use `send` for handoff and `msg` for a returned result.** `send <worker> acp <task>` returns immediately and queues through the ordinary dispatch path. `msg <worker> request acp <task>` waits for the captured output. Polling with `msg <worker> request state` reads the worker's formatted state. A messaged command goes directly through capture and does not wait behind the worker's busy queue.
 
-3. **`send`'s runner reuses `deliverTo` rather than reimplementing delivery.** `deliverTo` in `src/commands/send.ts` already distinguishes a harness tab (type into its PTY via `typeIntoHarness`), an agent tab (`managers.command.dispatchTo`), and a tab that accepts nothing (`Tab "<label>" does not accept input.`). Export it and call it, so the tool cannot drift from the command bar on any of the three. Resolve the target with `resolveTarget` from `src/commands/resolve-target.ts`, which handles the display-alias case and the standard `No tab named "<label>".` refusal, exactly as `send`, `queue`, and `close` do.
+4. **Choose models at launch.** `agent` accepts `--model <model-id>` and `--model=<model-id>` in any position around the name and `on <address>` clause. The model is validated against the local OpenCode catalog before workspace work, stored on the in-memory tab, and used by its ACP session, including after `acp reset`. Remote launches carry the chosen model in the ACP launch environment. A missing value is a usage error; a model value that is another flag is checked as a model and refused when unknown.
 
-4. **The three verbs are `agent`, `send`, and `msg`.** `agent` opens the worker. `send` hands over a task without waiting, which is what makes the work observable. `msg` returns the response. The tool loop adds no orchestration of its own.
+5. **Keep command-bar creator behavior and pass the ACP creator explicitly.** A command-bar launch omits `creatorLabel` and uses the active tab as before. The delegation runner passes its own tab label through `ProfileManager.newAgent` and `newAgentOp`, so the worker inherits that tab's group and depth even if another tab is focused. If the named creator has disappeared, `newAgentOp` falls back to the active tab.
 
-5. **`msg` returns the worker's final reply by way of `msg <worker> request acp "<task>"`.** `acp` already registers a `capture` hook (`src/commands/acp.ts`), and `CaptureManager.run` routes a command with one straight to it — so that composition already answers the sender with the worker's complete final reply, and the tool loop turns it into the delegating agent's next prompt. That single line is the whole "receive the response" clause; nothing new computes it.
+6. **Cap recursion at depth 2.** A root tab without an `agentDepth` field counts as depth 0; each agent created by `placeAgent` is one deeper than its creator. The cap is checked in the ACP `agent` runner, not in the human command bar. `msg` cannot bypass it by running `agent` in a worker because `agent` is outside the `msg` allowlist.
 
-6. **Transcript while the worker runs is `send` plus a `state` peek, not a new streaming channel.** `send <worker> acp "<task>"` returns immediately; `msg <worker> request state` returns the worker tab's own formatted state, whose `log` field is that tab's transcript (`formatState` in `src/state-format.ts` prints the last ten lines behind a `... (N lines omitted)` marker). Polling across successive tool steps is how a delegating agent watches a worker work. No new protocol message, no per-chunk event, no web-client change — which also keeps clear of the reason the deferred `multiagent` plan refused live streaming (`product/plans/draft/multiagent.md`): every chunk is currently a whole-state broadcast.
+7. **Restrict targets to the delegator's group and commands.** `msg` may run only `acp`, `state`, and `db`; `send` may dispatch only `acp` to an agent. `send` to a harness still types literal input into its terminal. Both verbs refuse targets outside the delegator's group, missing targets, and calls whose delegating tab cannot be found.
 
-7. **A messaged command does not queue behind a busy worker; `send` does.** `CaptureManager.runCommand` calls `managers.command.executeCommand`, which runs the command directly rather than through `dispatchTo`'s `dispatchOrRun` gate (`src/command/manager.ts`), so a messaged command bypasses the busy-tab queue. `deliverTo` takes the other path — `managers.command.dispatchTo` — so a `send` to a busy worker queues behind whatever it is already doing. `product/specs/messaging.md` documents the capture contract without mentioning the queue. This feature changes neither; the skill and the documentation page state the split explicitly, because widening "a messaged command does not queue" into "a command does not queue" is what made an agent conclude a handover to a busy worker had started.
+8. **Return refusals once, as tool results.** Invalid model choices, depth limits, command restrictions, and target errors are returned to the ACP loop so the agent can respond to them. A pool-name `agent` launch omits the `msg` hint because the chosen name is not known yet. The send target resolver's transcript callback is suppressed so a missing target produces one result line rather than also appending a second line.
 
-8. **`agent <name> --model <model-id>` is validated against the harness catalog, with `harness`'s refusal wording.** `HarnessManager.run` refuses an unknown model with `Unknown model "X" for harness "Y" — add it to harness-models.json.` before it opens anything, and the ACP path refuses an empty catalog with `ACP: no opencode model is available in the harness catalog.` A worker on a model the catalog does not list would fail later and far less clearly inside the agent binary, so the check happens at launch, against `modelsFor('opencode')` — the same list `resolveAcpModel` already reads, so a project that overrides `.janissary/harness-models.json` governs worker models too. The `agent` verb applies the same check itself and returns that refusal rather than launching, because a tool result is what the delegating agent reads as its next prompt; the launch-time check stays where it is, since it is what refuses before a clone starts for a person typing the command. Both call sites share one exported refusal string rather than each holding the wording.
+9. **Screen only worker answers returned by `msg`.** The scan neutralizes a fixed set of harness-shaped control tags and backslashes `Human:` or `Assistant:` turn markers. It prepends one `[harness: …]` line when it changes anything and leaves ordinary answers byte-identical. Permission-setting mentions, browser output, and database output are not rewritten.
 
-9. **Validation applies to a remote launch too, and the model reaches the remote host.** `HarnessManager.run` validates before `open`, and `open` handles the remote case, so a remote harness already validates against the *local* catalog. The agent path should match: `agent <name> on <host> --model <id>` validates locally and records the model on the tab. It then travels in the launch environment the way it already does for remote tabs — `acpLaunchFor` puts it in `OPENCODE_CONFIG_CONTENT` (`src/acp/launch.ts`), and `createRemoteAcpSession` sends that launch across the channel — so the far host runs the model the local catalog approved. The tab field is still needed locally, because `AcpManager.run` computes the model before it knows whether the tab is remote.
+10. **Teach the workflow in a prose skill.** The primer describes the syntax and hard limits. `skills/delegate-to-agents/SKILL.md` explains when to delegate, when to poll, how to choose a model, how to report back after `send`, and how the existing harness worker tools differ. The eight-tool-step loop cap remains unchanged.
 
-10. **The model is an in-memory tab field, not a persisted one.** `AgentState` is written by `buildAgentStateFromTab` and read back only by the `state` command and `loadAllAgentStates` — nothing rebuilds a `Tab` from it, so an agent tab does not survive a relaunch and a persisted model would be read by nobody. Follow the tab fields the codebase already marks in-memory-only (`pageSnapshot`, `editorDraft` in `src/tab/types.ts`, each commented "never read when building persisted AgentState"): add the field to `Tab`, set it in `placeAgent` beside `tab.offline = offline`, and persist nothing. That keeps `buildAgentStateFromTab`, the `state` command, and the state-fields paragraph in `documentation/user-documentation/command-bar/commands.md` untouched.
+## Design constraints
 
-11. **The model is consumed when the ACP session first connects, and `acp reset` re-reads it.** ACP chooses its model at `initialize`, and nothing in Janissary exercises a mid-session change (that is the declined `setSessionMode`/`unstable_setSessionModel` backlog entry), so a per-tab field read by `AcpManager.run` is the honest granularity. Because `AcpManager.session` only builds a launch when it has no session for the label, a reset clears the session and the next `run` resolves the tab's field again — a chosen model survives `acp reset`, and a tab with no chosen model keeps resolving through `resolveAcpModel()` and keeps the empty-catalog refusal.
-
-12. **No protocol or web-client change.** `TabView.acp` and the connections panel already show `acp:<provider/model>` for whatever model a session launched with, because `AcpManager` records it at the handshake. A worker launched with `--model` therefore displays its model with no new field, no new RPC, and no client work.
-
-13. **One `delegation` entry, placed before the database entry, rather than three.** `createAcpToolTable` resolves a run by "first match over an ordered array," and the database entry's `match` is `() => true` — it is the fall-through, so the delegation verbs must precede it. Three separate entries would satisfy that but would also repeat the delegation primer three times, since `toolPrimer` joins every entry's primer. One entry whose `match` accepts all three and whose `run` dispatches to the right handler is the smaller mechanism, keeps the primer singular, and matches how the database entry already dispatches internally.
-
-14. **The recognizers must be tight.** `send` and `msg` carry free text as their payload, so each must demand its whole argument count — `send` needs a target and text, `msg` needs a target, a kind, and text — or a line that merely mentions one of these words would be claimed. The `msg` kind set covers every alias in `KIND_ALIASES`, which a test asserts against that exported set rather than a restated list.
-
-15. **No total tab-count cap is added here, but delegation depth is capped.** Tab lifecycle, workspace removal, and name-clash refusal are already governed (`product/specs/AGENTS.md`, `workspaced-agent.md`); the five-per-group cap belongs to the deferred general orchestration plan (`product/plans/deferred/agent-self-service-tab-orchestration.md`), whose scope this feature deliberately does not preempt. The pool of agent names is the only natural breadth bound, and it already refuses when exhausted. Depth is different, and is this feature's own responsibility — see decision 19.
-
-16. **The skill is `skills/delegate-to-agents/SKILL.md`, prose only, no scripts.** It follows `skills/ask-user/SKILL.md`: the primer reaches every ACP agent unconditionally, and the skill carries the workflow the primer cannot — which worker shape to pick, when to block for a response versus poll, and what to do about the loop's step cap. `diagram-design` is the only skill with a `scripts/` directory, and it needs Python importers this feature does not.
-
-17. **The skill documents both worker shapes, and the plan adds nothing to the harness half.** A harness tab already takes `--model` and already exposes `harness capture <name>` (a point-in-time screen snapshot) and `harness transcript <name>` (the harness's own normalized session transcript, including subagent activity). Those are the better tools for a long unattended playbook; the ACP half is the better tool for a bounded task whose answer should come back as command output. `harness` is not in the tool table, so an ACP delegating agent reaches the harness shape only through the human — the skill says so rather than implying otherwise.
-
-18. **Two independent limits are documented rather than removed.** `runAcpToolLoop` caps a turn at eight tool steps, which bounds how many polls a delegating agent can make per turn; and the tool table is built per `run` (`src/acp/manager.ts`, `const tools = createAcpToolTable(this.managers)`) with the joined primer prepended to the first prompt only, so a reused session keeps the syntax in front of it the same way the existing three tools do.
-
-19. **Delegation is capped at depth 2, because this feature is what makes recursion possible.** Claude Code bounds its subagent tree three ways — nesting depth, concurrent subagents, and total spend (`code.claude.com/docs/en/agent-sdk/subagents`), and documents `maxTurns` per subagent in its agent frontmatter — because "a subagent can spawn subagents of its own, so one prompt can grow into a tree of agents." Janissary has the same exposure the moment `agent` enters the tool table: every agent tab is an ACP agent with the same table, so a delegated worker can delegate, and each `agent -w` is a whole git clone plus a live subprocess with its own model spend. Nothing in the repository bounds that. Two levels is the smallest cap that still allows the coordinator → worker → verifier shape the research describes as legitimate ("a review subagent dispatching verifier subagents per finding") while making a runaway tree impossible: a tab at depth 2 is refused.
-
-    The counter rides the tab as an in-memory field, incremented in `placeAgent` from the creator's (which is 0 for the root tab), exactly as `group` already propagates there — the same code path, the same inheritance, one more number. The creator has to be the tab that delegated, though, and the tab the launch would otherwise read it from is whichever one is focused: a worker is opened while its parent's turn is running, which is not the tab the human happens to be looking at. So the `agent` verb names its own tab as the creator and `newAgentOp` takes an optional creator label, resolving the active tab only when none is given — which is what the command bar always does. Without it the depth counter never climbs for a delegated worker and the cap cannot engage at all. The same label decides the group, so a worker lands in its delegator's group rather than in the group of the focused tab.
-
-    The refusal is enforced in the `agent` tool's runner, not in `newAgentOp`: a human typing `agent` by hand is a deliberate act and is not capped, matching how a person may always open tabs by hand. A tab at the cap is refused with a line naming the cap, so the delegating agent learns the boundary rather than retrying. A label naming no live tab falls back to the active one rather than failing the launch.
-
-20. **A worker's answer is scanned before it becomes its parent's next instruction.** This is the sharpest edge the feature introduces. `msg <worker> request acp "<task>"` makes a worker model free text the delegating agent reads as its next prompt, and that text is the only channel by which one agent instructs another — so a worker that has been misled by a file, a page, or its own output can aim words at its parent's tool use. Claude Code treats this as a real class: it scans a subagent's final message for control-tag imitation (neutralizing a tag only the harness emits, such as `<system-reminder>`), permission-configuration mentions (kept verbatim), and turn markers (`Human:`/`Assistant:`, backslashed so they cannot imitate a boundary), prepending a `[harness: …]` marker line naming what matched and never rewording the worker's text otherwise. There are filed reports of exactly this failure, including a depth-2 subagent fabricating a complete `<system-reminder>` + `<task-notification>` block with a payload inside it.
-
-    The scan is a pure function in the new delegation module, applied to the text the `msg` tool returns, mirroring that three-category treatment: neutralize a harness-shaped control tag by breaking its opening bracket, backslash a `Human:`/`Assistant:` line prefix, and prepend a `[harness: …]` line naming the matches. It never deletes or rewrites the worker's own sentences, so the answer stays usable. Web and database tool results are **not** scanned — that is a separate, larger surface with its own tradeoffs, and scoping this to the one channel this feature creates is what keeps it small enough to be correct.
-
-21. **Delegation reaches only its own group, and only three commands.** Reusing the command bar's dispatch wholesale is what makes the tool trustworthy, and it is also what makes it dangerous: `msg <tab> request <text>` resolves its text with `resolveCommand` and runs any registered command in the named tab, so `quit`, `close`, `harness`, `schedule`, and shell commands were all reachable from a tab the agent did not own, where the three tools the table previously held were each confined to their own tab. A delegating agent is not a person at a keyboard, so it needs the reach bounded rather than merely documented.
-
-    Two guards, both answered as ordinary tool return values so they reach the agent as its next prompt. The text is classified with the same `resolveCommand` the capture path uses and refused unless it resolves to `acp`, `state`, or `db` — which catches a shell keyword, a `!` shorthand, and an unprefixed unknown alike, since none of them is an allowlisted application command. `send` narrows the list to `acp` against an agent tab, because the only thing worth handing a worker without waiting is a prompt, while a harness target takes literal keystrokes in its PTY, which is what `send` is for. Separately, the target must be in the delegating tab's group: a tab inherits its creator's group, and a delegated launch names the delegating tab as that creator (decision 19), so a worker's group is its delegator's and the documented workflow is untouched. A delegating tab that cannot be found fails closed, and one naming a target that is not open is refused the same way.
-
-    Group-scoped targeting in general — globs, sets, cross-group delegation — belongs to the deferred orchestration plan, so this implements only the two limits delegation itself needs.
-
-22. **A refused launch is reported as a refusal, not as a success.** The `agent` verb's return value *is* the delegating agent's next prompt, so returning "Opening agent …" for a launch `newAgentOp` was about to refuse left the agent acting on a worker that never existed, with the refusal visible only as a transcript line it might not read. The verb therefore applies the catalog check itself and returns the refusal without launching. It also stops building its follow-up hint from `parsed.name` for a pool-name launch, where that name is empty and the hint read `msg a new agent request state` — the pool name is only chosen inside `newAgentOp`, so the sentence is omitted rather than interpolated with a placeholder.
-
-23. **One refusal, one line.** `runSend` passed a transcript-appending callback to `resolveTarget`, which writes `No tab named "<label>".` to the delegating tab before returning undefined, and then returned its own `Sent nothing to "<label>".` on top — one failed send, two lines. `resolveTarget` is kept for its alias resolution and its `undefined` return; only its report callback is discarded, and the refusal is returned from the verb with the wording a person would have seen.
-
-## Gaps this plan adds (Step 2 research)
-
-Research against Claude Code's subagent system — the category leader for delegation to another agent on a chosen model — surfaced two capabilities the plan did not originally have. Both are consequences of the delegation path itself rather than adjacent features, so both were added:
-
-| Gap | What the leader has | Complexity |
-| --- | --- | --- |
-| Depth/concurrency bound on the delegation tree | Caps nesting depth, concurrency, and spend; `maxTurns` per subagent | medium |
-| Scanning a worker's answer before it re-enters its parent's context | Three-category scan of a subagent's final message with a `[harness: …]` marker | medium |
-
-Considered and **declined**, recorded here so no later phase proposes them again: a per-invocation model override on an already-running session (the launch-time `--model` covers the feature's clause, and mid-session switching is the already-declined `setSessionModel` backlog entry); a workflow/fan-out tool for coordinating many agents at once (already `product/plans/draft/multiagent.md`, and the declined "acting on a set of tabs in one command" backlog entry); resuming a worker with its history intact (already inherent — a worker's ACP session persists across prompts in its tab); per-worker git-worktree isolation (`agent -w` gives a stronger whole clone); a background-execution flag (`send` already is it); and viewing what a worker changed (the already-declined `workspace diff <label>` backlog entry). Per-worker tool allowlists — Claude Code's `tools:` frontmatter and `Agent(worker, researcher)` spawn scoping — are declined as belonging to the deferred orchestration plan's group-scoped surface, and are listed under Out of scope.
+Delegation includes two safeguards alongside the workflow: a depth limit prevents an unbounded worker tree, and a narrow answer scan prevents harness-shaped control text in a worker reply from masquerading as host instructions. The implementation does not add concurrency or spend accounting, scan browser or database results, or create a general tab-orchestration surface.
 
 ## What already exists (reuse, don't rebuild)
 
 | Need | Existing mechanism | Where |
 | --- | --- | --- |
-| Open a workspaced agent tab | `agent <name>`, name pool and clash refusal, clone provisioning | `newAgentOp` in `src/profile/new-agent.ts`, `placeAgent` in `src/profile/place-agent.ts` |
-| Create the tab, local or remote | `placeAgent`, already called by both `newAgentOp` and `startRemoteAgent` | `src/profile/place-agent.ts`, `src/profile/remote-agent.ts` |
-| Lift a value-taking flag out of a command | the token walk in `splitAgentClauses`; `findFlagValue` is the harness precedent | `src/agent/commands.ts`, `src/harness/command-parse.ts` |
-| Report a parse failure without a new channel | the `remoteError` field and the `out(...)` that reports it | `AgentCommand` in `src/agent/types.ts`, `newAgentOp` in `src/profile/new-agent.ts` |
-| Choose a model on a spawned tab, validated | `harness --model` + `isKnownModel`, validated before `open` | `HarnessManager.run` in `src/harness/manager.ts` |
-| Resolve a model against the catalog | `modelsFor`, `isKnownModel`, project override | `src/harness/models.ts` |
-| Pick the ACP model's default | `resolveAcpModel` preferring `PREFERRED_ACP_MODEL` | `src/acp/manager.ts` |
-| Carry a model into the launch | `acpLaunchFor` → `OPENCODE_CONFIG_CONTENT` | `src/acp/launch.ts` |
-| Run a command in another tab and get text back | `managers.capture.run` — what a `request` already uses | `src/capture/manager.ts`, `src/agent/communication-manager.ts` |
-| Return a worker's final reply | the `capture` hook on the `acp` command | `src/commands/acp.ts` |
-| Deliver a line to a tab, by tab kind | `deliverTo` (harness PTY / agent dispatch / refusal) | `src/commands/send.ts` |
-| Resolve a target by label or alias | `resolveTarget` | `src/commands/resolve-target.ts` |
-| Ask a tab for its transcript | `state` → `formatState`, whose `log` is the tab transcript | `src/commands/state.ts`, `src/state-format.ts` |
-| Agent-to-agent messages and responses | `msg`/`broadcast`, FIFO queue, `response` kind, `KIND_ALIASES` | `src/commands/msg.ts`, `src/messaging.ts` |
-| Register a new ACP tool | `AcpTool`, `createAcpToolTable`, `toolPrimer`/`toolRunner`/`toolExtractor` | `src/acp/tool-table.ts` |
-| Await an async tool result | `runAcpToolLoop` awaiting `runCommand` | `src/acp/loop.ts` |
-| Host a tool's primer and recognizers | `src/question-command.ts` (usage text, parser, `is…CommandLine`, primer) | `src/question-command.ts` |
-| An agent-facing skill | `skills/ask-user/SKILL.md` shape and tone | `skills/ask-user/` |
-| Inherit a property from the creating tab | `group`/`groupColor` inheritance in `placeAgent` | `src/profile/place-agent.ts` |
-| Refuse a command with a line the agent reads | the tool's return value, fed back as the next prompt | `src/acp/loop.ts` |
-| A pure text transform with its own tests | `isRateLimitError`, `cleanCommandLine`, `parseQuestionCommand` | `src/acp/rate-limit.ts`, `src/acp/command-line.ts` |
-| Show the launched model | `AcpManager.label` → `TabView.acp`, connections panel | `src/acp/manager.ts`, `src/protocol/tab.ts` |
-| An in-memory-only tab field | `pageSnapshot` / `editorDraft` | `src/tab/types.ts` |
+| Open an agent tab and provision its workspace | `newAgentOp`, `placeAgent`, and the launch paths | `src/profile/new-agent.ts`, `src/profile/place-agent.ts` |
+| Select and validate a model | Harness catalog helpers and ACP default resolution | `src/harness/models.ts`, `src/acp/manager.ts` |
+| Carry the selected model to an ACP process | `acpLaunchFor` and the launch environment | `src/acp/launch.ts` |
+| Deliver input by tab kind | `deliverTo` | `src/commands/send.ts` |
+| Capture a command response | `CaptureManager.run` and the `acp` capture hook | `src/capture/manager.ts`, `src/commands/acp.ts` |
+| Resolve a tab target | `resolveTarget` | `src/commands/resolve-target.ts` |
+| Inspect a worker transcript | `state` and `formatState` | `src/commands/state.ts`, `src/state-format.ts` |
+| Register and await ACP tools | `AcpTool`, the tool table, and the async loop | `src/acp/tool-table.ts`, `src/acp/loop.ts` |
+| Inherit group and other launch state | `placeAgent` | `src/profile/place-agent.ts` |
 
 ## Proposed changes
 
 ### The `agent` command's `--model` flag
 
-Extend the token walk in `splitAgentClauses` (`src/agent/commands.ts`) so `--model <value>` and `--model=<value>` are lifted out alongside the `-w`/`--no-workspace`/`--offline` flags and the `on <address>` clause, never becoming part of the tab name. The walk already indexes forward past a consumed token for `on`, so this is the same shape extended to a flag that carries a value; carry the result on the local `AgentClauses` type as an optional model and on `AgentCommand` as `model`.
+The token walk in `splitAgentClauses` removes both model flag spellings from the agent name and carries the selected value on `AgentCommand`. A valueless clause carries `modelError`; a following flag is consumed as its value and then refused by the catalog check. `newAgentOp` validates against `isKnownModel('opencode', model)` before creating a workspace and shares the refusal wording with the ACP delegation runner.
 
-A `--model` with no value is a usage error, reported through a `modelError` field mirroring the existing `remote`/`remoteError` pair, and surfaced by `newAgentOp`'s existing `out(...)` early return. This is the `parseHarnessCommand` behavior of refusing a valueless `--model`, expressed with the shape this command already has rather than introducing a second error channel.
-
-A `--model` immediately followed by another flag (`agent scout --model --offline`) takes `--offline` as its value, exactly as `findFlagValue` does for `harness`. The catalog check is the backstop: `--offline` is not a model, so the launch is refused with the unknown-model wording.
-
-Validate in `newAgentOp` before any workspace work begins, with `isKnownModel('opencode', model)`, refusing with a string this module exports so the `agent` verb can refuse with the same one (decision 22): `Unknown model "<model>" for harness "opencode" — add it to harness-models.json.` — `harness`'s wording with the harness name the ACP path actually uses. Refusing before `managers.workspace.create` means a bad flag never leaves a half-provisioned workspace behind. Because `out` writes to the creator's label, the refusal a delegated launch produces lands on the tab that asked for the worker rather than on whichever tab was focused.
-
-Thread the value into `placeAgent`'s options and set it on the tab beside `tab.offline = offline`. `placeAgent` is the single creation point for both the local and the remote agent paths (`startRemoteAgent` in `src/profile/remote-agent.ts` calls it too), so one call site covers both.
-
-Extend `resolveAgentName` only insofar as it already runs `splitAgentClauses`; the flag is lifted out before `nameFrom` sees the words, so the typed name is unchanged.
+`placeAgent` records a valid choice as `acpModel` on the tab. The field is in-memory only, and `AcpManager.run` prefers it to the catalog default. The model is passed through local and remote launch paths; the existing launch environment sends it to a remote ACP process.
 
 ### The ACP session's model
 
-Add an optional model field to the agent tab shape, in-memory only, and have `AcpManager.run` prefer `managers.tab.byLabel(label)`'s field over `resolveAcpModel()`, keeping the empty-catalog refusal for tabs that named no model. The session already records whatever model it launched with, so the connections panel needs no change.
-
-`AcpManager.session` builds its launch only when the label has no session, which is what makes a chosen model survive `acp reset` (decision 11).
+The ACP session uses the tab's `acpModel` when present and otherwise retains the preferred catalog model, fallback-to-first-model behavior, and empty-catalog refusal. Resetting the session causes the next prompt to resolve the same tab choice again. The connection label continues to show the model actually launched.
 
 ### The ACP tool table
 
-Add one new module, `src/acp/delegation.ts`, holding the delegation primer, the line recognizers, the depth constant, the command allowlists, the group check, and the answer scan, in the shape `src/question-command.ts` uses for a tool's grammar. Keeping them out of `tool-table.ts` leaves that file's registry a flat list of entries and keeps both files well inside the 200-line limit.
+`src/acp/delegation.ts` holds the shared primer, recognizers, delegation runner, depth constant, command allowlists, group check, and reply scan. `createAcpToolTable` registers it as one entry for `agent`, `send`, and `msg`, before the database catch-all.
 
-Register one entry in `createAcpToolTable`, ordered `browser`, `question`, `delegation`, then the database entry — delegation must precede the database fall-through (decision 13), and `browser` and `question` before it is harmless because each claims only its own command name.
-
-Its `match` accepts `agent`, `send`, and `msg`; its `run` dispatches to the manager call the command bar makes for whichever verb was emitted: `managers.profile.newAgent` for `agent`, handed the delegating tab's label as well as the command; `resolveTarget` plus the exported `deliverTo` for `send`; `managers.capture.run` wrapped in a `Promise` for `msg`, with the parsed recipient and text taken from `parseMsgCommand` in `src/messaging.js`.
-
-The `agent` verb returns a refusal rather than launching for each way it can fail — the depth cap, a `--model` with no value, and a model the catalog does not offer — and omits its `msg … request state` hint for a pool-name launch, whose name it cannot know (decision 22). The `send` and `msg` verbs discard `resolveTarget`'s report callback and return its refusal themselves, so one failure is one line (decision 23).
-
-`src/acp/delegation.ts` also holds the depth constant, the allowlists, the group check, and the answer scan (decisions 19, 20, and 21), so the tool table's registry, the primer, the recognizers, the bounds, and the scan all live in one module beside each other rather than spread across `tool-table.ts` and `manager.ts`.
+The agent verb launches through `ProfileManager.newAgent(command, creatorLabel)`. The creator label is the delegating ACP tab, so the launch tree is independent of focus. The command bar still calls `newAgent` without a label and continues to use the active tab. The send verb uses target resolution and `deliverTo`; the msg verb parses the existing message syntax and returns captured output after screening it.
 
 ### How far delegation reaches
 
-Two guards in the same module, both answered as ordinary tool return values.
+The runner classifies requested text through the application's command resolver before it dispatches. A `msg` may run `acp`, `state`, or `db`; `send` may dispatch `acp` to an agent, while harness targets receive the literal line. Targets must be open and share the delegating tab's group. A missing delegator fails closed.
 
-A command allowlist: classify the text with `resolveCommand` from `src/resolve.ts` — the same resolver `src/capture/manager.ts` uses — and refuse unless the result is an application command on the list. `msg` allows `acp`, `state`, and `db`; `send` allows `acp` alone, and only against an agent tab, since a harness target receives literal keystrokes rather than a dispatched command. Refusing before dispatch is what catches a shell keyword, a `!` shorthand, and an unprefixed unknown alike.
-
-A group check: compare the target tab's `group` with the delegating tab's, and refuse a mismatch with `Cannot delegate to "<name>": it is not one of your own agents.` A tab inherits its creator's group, and a delegated launch names the delegating tab as that creator (decision 19), so a worker's group is its delegator's. A delegating tab that cannot be found refuses everything, and a target that is not open is refused with the same line.
-
-Both limits are stated in `DELEGATION_PRIMER` as well, so the agent learns them without reading the skill.
+The primer states these limits. A refusal is returned through the tool loop rather than appended separately to the delegator's transcript. A missing `send` target therefore produces one refusal result.
 
 ### The delegation depth cap
 
-Add an in-memory depth field to the tab shape and set it in `placeAgent` from the creator's, the same way `group` is inherited there — the root tab has no creator and is depth 0. Nothing reads it except the `agent` tool's runner, which refuses when the delegating tab is already at `MAX_AGENT_DEPTH`.
-
-Keep the constant next to the check rather than in a config file: it is a property of the delegation design, not a user setting, and `AGENTS.md`'s config surface is `.janissary/config.json`, which this does not need to grow.
-
-The refusal is the tool's return value, so it reaches the delegating agent as its next prompt — the same path every other tool error takes — rather than as a notification nobody is watching.
-
-### Threading the delegating tab through as the creator
-
-The depth counter and the group a worker lands on both come from the creator tab, and `newAgentOp` would otherwise read that creator from `managers.tab.cur()` — the focused tab, which is not the delegating one while its turn runs. `newAgentOp` therefore takes an optional `creatorLabel` and resolves the creator from it, falling back to the active tab when it is absent (the command bar's case) or names no live tab. `ProfileManager.newAgent` forwards the label, and the `agent` verb passes its own tab.
-
-`placeAgent` and its depth and group arithmetic are untouched: every launch path below `newAgentOp` — `launchAgent`, `startWorkspaceAgent`, and `startRemoteAgent` — already takes the resolved creator and passes it on, so one parameter covers the local, workspace, and remote launches alike, and a remote worker's depth and group travel with it. `newAgentAt` and `newAgentInWorkspace` supply their own creator and are unaffected.
+`placeAgent` sets `agentDepth` to the creator's depth plus one, defaulting to one when the creator is a root tab with no depth field. The ACP `agent` runner refuses when the delegator is already at `MAX_AGENT_DEPTH`, which is 2. Human command-bar launches remain uncapped.
 
 ### Scanning a worker's answer
 
-Add a pure function to `src/acp/delegation.ts` that takes a worker's returned text and returns the text safe to hand back as an instruction, and apply it to the `msg` tool's resolved answer only.
-
-Three categories, each mirroring the leader's treatment: a harness-shaped control tag opening (`<system-reminder>`, `<task-notification>`, `<system>`, and the `</` closing form) is neutralized by inserting a backslash after the opening angle bracket, which breaks the tag without deleting the worker's sentence; a line beginning `Human:` or `Assistant:` gets a backslash before its colon so it cannot imitate a turn boundary; and a permission-configuration mention (`.claude/settings.json`, `bypassPermissions`, `--dangerously-skip-permissions`) is left verbatim, as the leader leaves it, since naming a setting is not impersonating the harness.
-
-When anything was neutralized, prepend one `[harness: …]` line naming the categories matched. When nothing matched, return the text untouched, so the common case is byte-identical to today.
-
-Keep the patterns as module-level constants in the same file — an array of tag names and a small set of markers — rather than a regex that grows to swallow prose, and give the tag list a fixed vocabulary so the check cannot be widened by a worker choosing an unfamiliar tag name.
+`scanWorkerAnswer` is applied to the text returned by `msg`'s capture callback. It breaks recognized harness control tags and turn-marker prefixes while preserving the worker's wording, and prepends a single marker line naming matches. If there are no matches, the original text is returned unchanged. The scan does not process browser or database results.
 
 ### The skill
 
-Add `skills/delegate-to-agents/SKILL.md` with frontmatter `name` matching its directory and a `description` that names the capability and when to reach for it, in the folded style `skills/agent-merge-changes/SKILL.md` uses.
-
-The body teaches, in order: what delegation is for and when not to use it; the three-command shape of one delegation (open, hand over, collect) with a worked example for a bounded task answered inline and one for a long playbook polled while it runs; how to choose a model (`--model` against the catalog, and `harness --model` for the harness shape, with the note that a human opens a harness tab since `harness` is not in the tool table); the transcript-as-it-works loop (`send` then `msg … request state`), including that each poll costs one of the turn's eight tool steps and that a long watch belongs in `harness capture`/`harness transcript`, and that a messaged command runs in the worker immediately while `send` queues behind whatever the worker is already doing; that delegation reaches only tabs the agent opened and only `acp`, `state`, and `db` in them; that delegation is capped at depth 2, so a worker asked to delegate further must be given the work itself rather than a new worker; that a refused launch is reported as a refusal and nothing opened; that a worker's answer is screened before it is handed back, so a `[harness: …]` line at the top of a result is the host reporting neutralized harness-shaped text and the worker's own words are still there underneath; the failure modes — an unknown model, a name already taken, a worker that dies mid-prompt, a still-connecting remote tab, which already answers `ACP: the remote session is still connecting.` — and what the agent should do about each; and the rule that a worker handed a task with `send` must be told to report back with `msg <sender> response <text>`, because the delegating agent will not be blocking on the reply.
-
-The skill names `harness capture <name>` and `harness transcript <name>` for the harness worker shape without adding anything to either.
+`skills/delegate-to-agents/SKILL.md` teaches the blocking `msg … request acp` path and the nonblocking `send` plus `msg … request state` path, model selection, the group/command/depth bounds, screened replies, and failure handling. It also describes the existing harness capture/transcript options without adding harness capabilities or scripts.
 
 ### Specs
 
-`product/specs/acp.md` gains the delegation tools in its tool-loop section — which currently names three tools and says "an ACP agent's entire tool surface is the three commands its primer teaches it" in the declined `features.md` entry — and a note in "Which model runs" that a tab may be launched on a chosen model.
-
-`product/specs/AGENTS.md` documents `--model` on the `agent` command under `### agent <name> command`, its catalog validation and refusal wording, and that the model travels to a remote host in the launch environment.
-
-`product/specs/messaging.md` records that a messaged `agent` or `send` issued from the ACP tool loop follows the same capture contract as a typed one, and notes the queue bypass as inherited behavior rather than a change.
-
-`product/specs/agent-guidance.md` gains a skills section naming the delegation skill, since the file currently documents only `AGENTS.md` and `CLAUDE.md`.
-
-`product/specs/sandbox.md` records that a delegated worker's tab is confined by the same Seatbelt profile as any other workspaced agent tab — delegation hands over a clone that is already sandboxed, and the spec should say so where it enumerates what a workspaced tab may reach.
-
-`product/specs/tabs.md` says which tab an agent is created from: the active tab when a person types `agent`, and the delegating tab when another agent asks for the worker, so a worker lands in its own agent's group rather than in the group of whichever tab happened to be focused.
+`product/specs/acp.md` documents the chosen model, delegation verbs, the depth and reach limits, answer screening, and the local tool-loop boundary for remote ACP sessions. `product/specs/agents.md` documents both model flag spellings, placement, catalog validation, refusals, and remote launch behavior. `product/specs/messaging.md` distinguishes capture requests from queued sends. `product/specs/agent-guidance.md` names the new skill; `product/specs/sandbox.md` records that delegated workspace clones use the ordinary sandbox; and `product/specs/tabs.md` states that a delegated worker inherits its creator's group even when another tab is focused.
 
 ### Help and documentation
 
-`help.md`'s `agent` row gains `--model`. No new command rows: `agent`, `send`, and `msg` already have them.
-
-Add `documentation/user-documentation/advanced-agents/delegating-to-agents.md` covering the workflow, both worker shapes, the model choice, the depth cap, how far delegation reaches, and the answer scan, and link it in the Advanced Agents section of `documentation/.vitepress/config.mts`.
-
-No change to the state-fields paragraph in `documentation/user-documentation/command-bar/commands.md`, because the model is not persisted (decision 10).
+The `agent` row in `help.md` describes `--model`; existing `send` and `msg` rows remain. The advanced-agent delegation page describes both worker shapes, model choice, limits, screening, and failure cases, and is linked from the documentation sidebar. The feature's ready backlog entry is removed.
 
 ## Tests
 
-Server, colocated as `src/**/*.test.ts`:
-
-- `src/agent/commands.test.ts` — **new file** (the directory has `names`, `state`, and `communication-manager` tests only). `--model <value>` and `--model=<value>` are lifted out of the tab name in every position — before the name, after it, after `on <address>`; a valueless `--model` yields `modelError`; a `--model` followed by another flag takes it as the value; `resolveAgentName` returns the name without the flag; `-w`, `--offline`, and `on` behavior is unchanged.
-- `src/profile/new-agent.test.ts` — **new file**. A model reaches the created tab through `placeAgent`; an unknown model is refused with the catalog wording and never reaches `managers.workspace.create`; a valueless `--model` is a usage error; the default path sets no model; the remote path carries the model into `startRemoteAgent`; a created tab inherits its creator's depth plus one, a root tab's child is depth 1, and a chain of creators climbs one each time; a launch naming a creator parents the tab to that creator — its depth and its group — even while a different tab is active; a named creator that does not exist falls back to the active tab rather than throwing; and a refusal reports to the named creator rather than to the active tab. The cases covering the focus-based default run untouched, because that is the command bar's behavior.
-- `src/acp/manager.test.ts` — **extend**. A tab's chosen model is what `acp` launches with and what `AcpManager.label` reports; a tab without one still resolves through `resolveAcpModel`; an empty catalog with no chosen model still refuses; a chosen model is used even when the catalog offers none, since the launch already accepted it; a model survives `acp reset`.
-- `src/acp/tool-table.test.ts` — **extend**. The delegation entry matches all three verbs and resolves ahead of the database fall-through; a `send`/`msg` line is claimed by delegation and a `browser`/`db` line by its own tool; the joined primer contains the delegation section exactly once, in table order.
-- `src/profile/manager.test.ts` — **extend**. A creator label is forwarded from `newAgent` to `newAgentOp`, so two tabs in different groups at different depths say which creator a worker was parented to, and the same call without a label parents to the active tab. Neither end's own test can see that link — the delegation tests stub `profile` out and the `newAgentOp` tests call it directly — so this case is what keeps the two halves of the creator threading connected.
-- `src/acp/delegation.test.ts` — **new file**. Each recognizer against its own valid shapes, the `KIND_ALIASES` spellings, and its near-misses; the depth refusal at the cap, its absence below it, a tab nothing created counting as depth 0, and `msg … request agent <name>` refused with `profile.newAgent` never called, which is the route the cap was bypassed through; `profile.newAgent` called with the delegating tab's label as its second argument, including when another tab is focused; the scan neutralizing a control-tag opener, backslashing a turn-marker prefix, leaving a permission-config mention verbatim, prepending exactly one `[harness: …]` line when anything matched, and returning ordinary prose byte-identical; every verb reached through `runDelegation` rather than through its private helper, including the scan applied to the text the `msg` result carries; the command allowlist refusing `quit`, a shell keyword, a `!` shorthand, and an unprefixed unknown, and admitting `acp`, `state`, and `db`; `send` narrowed to `acp` against an agent tab and unrestricted against a harness one; a tab in another group and a tab that is not open both refused; a delegating tab that cannot be found refusing everything; and a failed `send` producing one line with nothing appended to the delegating tab.
-
-No web tests: nothing under `web/src/` changes.
+- `src/agent/commands.test.ts` covers both model spellings, positions around names and remote clauses, missing values, flag-looking values, name resolution, and unchanged workspace/remote clauses.
+- `src/profile/new-agent.test.ts` covers model validation before workspace creation, local and remote model propagation, default model behavior, depth inheritance, and selecting the named creator instead of the focused tab.
+- `src/profile/manager.test.ts` covers creator-label pass-through and the unchanged active-tab default.
+- `src/acp/manager.test.ts` covers the selected model, fallback resolution, empty catalog, connection label, and persistence across `acp reset`.
+- `src/acp/tool-table.test.ts` covers tool ordering, matching, and the single delegation primer.
+- `src/acp/delegation.test.ts` covers recognizers and aliases, each verb, model and depth refusals, group and command boundaries, the creator label when focus differs, reply scanning, and single-line send errors.
 
 ## Out of scope
 
-- Harness tabs as a new capability. `harness --model`, `harness capture`, and `harness transcript` already exist; the skill documents them and nothing is added.
-- The general agent-facing tab-orchestration surface (`open`, `files`, `close`, `schedule`, `broadcast`, group-scoped targets in general, a `JANUSSARY_TAB_PRIMER`) in `product/plans/deferred/agent-self-service-tab-orchestration.md`. This feature adds the three verbs delegation needs and the two limits delegation itself requires, and stops there.
-- Per-worker tool allowlists and spawn scoping — Claude Code's `tools:` frontmatter and `Agent(worker, researcher)` — which shape a worker's role rather than bound what it may reach, and belong to that deferred surface.
-- Concurrency and spend caps on the delegation tree, alongside the depth cap this plan does add. A spend figure needs usage accounting, which is a separate deferred backlog entry.
-- `fanout` — N models in one tab — in `product/plans/draft/multiagent.md`.
-- A per-invocation model override on an already-running session; mid-session switching is the already-declined `setSessionModel` backlog entry.
-- Scanning `browser` and `db` tool results for injection, which is a separate and larger surface than the one channel this feature creates.
-- Exposing commands as MCP tools, the other half of the ACP integration, already declined in `product/backlog/features.md`.
-- A cap on total delegated tabs, which belongs to the deferred orchestration plan.
-- New protocol messages, RPCs, tab-view fields, persistence fields, or web-client changes.
-- Changing the queueing behavior of either verb: a messaged command still bypasses the busy gate and `send` still queues through it.
-- A `scripts/` directory in the skill, and any Python.
-- Model cost or usage accounting, and central model selection (a separate deferred backlog entry).
-- Moving the depth check itself out of the `agent` verb: it already measures the right tab there, which is what keeps a person typing `agent` by hand uncapped.
-- Changing the creator of the other agent-launch paths, `newAgentAt` and `newAgentInWorkspace`, which pass their own creator to `placeAgent` and are unaffected by a creator label.
+- A harness-specific delegation tool. Existing `harness --model`, `harness capture`, and `harness transcript` remain available to people and are described by the skill.
+- A general agent-facing tab-orchestration surface, cross-group targeting, per-worker tool allowlists, or spawn scoping.
+- Concurrency, total delegated-tab, cost, or usage limits beyond the depth cap.
+- Fan-out across multiple models, central model selection, or changing the model of an already-running session.
+- Scanning browser or database results, exposing commands as MCP tools, or adding a harness tool to the ACP table.
+- New protocol messages, web-client behavior, or persisted model/depth fields.
+- Changing the existing queue semantics: `send` dispatches through the busy queue, while a messaged command uses the capture path directly.
+- Scripts or Python in the skill.
 
 ## Verification
 
-`./scripts/run.mjs check-diff` after the implementation changes.
+The implementation was developed with `./scripts/run.mjs check-diff`.
 
-Manual, in a running app with an attached E2E browser. Every step is typed from an agent tab's command bar, and each `agent` step uses a name no earlier step took, because a name already in use is refused as a clash:
+Manual behavior to verify in a running app:
 
-1. `agent scout --model google/gemini-3.1-pro-preview` opens a workspaced tab whose connections-panel row reads `acp:google/gemini-3.1-pro-preview` once a prompt connects.
-2. `agent scout --model not/a-model` is refused with the catalog wording and opens no tab.
-3. `agent scout --model` is a usage error and opens no tab.
-4. `agent scout --model --offline` is refused as an unknown model.
-5. `agent atlas --model google/gemini-3.1-flash-lite` and `agent yavuz --model=google/gemini-3.1-flash-lite` both open a tab, so the refusals above are the catalog rather than a parser that rejects every `--model`.
-6. From an ACP agent, one delegation round: a reply ending in `agent scout --model <id>`, then a reply ending in `msg scout request acp "<task>"`, returns the worker's answer as the next prompt.
-7. A fire-and-forget delegation: `send scout acp "<task>"` returns at once, and a following `msg scout request state` returns the worker's transcript.
-8. A depth-2 tab asked to delegate is refused with the cap named; the same command from the root tab opens a tab.
-9. `msg scout request quit` and `msg scout request shell ls` are refused, and `msg scout request acp "…"` still reaches the worker.
-10. `msg <a tab in another group> request acp "…"` is refused.
-11. A worker whose answer contains `<system-reminder>` comes back with the tag neutralized and one `[harness: …]` line at the top; an ordinary answer comes back unchanged.
-12. `harness capture scout` and `harness transcript scout` still behave as documented for a harness worker.
+1. `agent scout --model <catalog-model>` and `agent scout --model=<catalog-model>` open tabs whose ACP connection row names the selected model; `acp reset` retains that choice.
+2. An unknown model and a valueless `--model` each refuse before a tab or workspace is created. `--model --offline` treats `--offline` as the model value and refuses it.
+3. A delegating agent can open a worker, send it a task, poll its state, or block for its `acp` answer. The worker is in the delegator's group even if another tab is focused.
+4. A depth-2 worker cannot delegate further, while a person can still type `agent` at any depth.
+5. `msg` refuses a command outside `acp`, `state`, and `db`, a `send` to an agent refuses anything except `acp`, and cross-group or missing targets are refused. `send` to a same-group harness types literal input.
+6. A worker reply containing a recognized harness control tag or turn marker returns with the relevant text neutralized and one `[harness: …]` line; ordinary text is unchanged.
+7. Existing `harness capture` and `harness transcript` behavior remains available for harness workers.
