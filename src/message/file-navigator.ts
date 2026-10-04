@@ -1,5 +1,6 @@
 import type { Controller } from '../controller.js';
-import type { ClientMessage } from '../protocol.js';
+import type { ClientMessage, FileNavigatorMutationResults, FileNavigatorRpcCall } from '../protocol.js';
+import type { MaybePromise } from '../maybe-promise.js';
 import { unhandledClientMethod } from '../client-message.js';
 
 type FileNavigatorMessage = Extract<ClientMessage, {
@@ -13,6 +14,47 @@ type FileNavigatorMessage = Extract<ClientMessage, {
     | 'undoFileNavigatorItem' | 'redoFileNavigatorItem'
     | 'reportFileNavigatorSelection' | 'pasteFileNavigatorItems';
 }>;
+
+type FileNavigatorMutationMethod = keyof FileNavigatorMutationResults;
+type MutationParams<Method extends FileNavigatorMutationMethod> = Extract<
+  FileNavigatorRpcCall,
+  { method: Method }
+>['params'];
+
+export type FileNavigatorMutationHandlers = {
+  [Method in FileNavigatorMutationMethod]: (
+    controller: Controller,
+    params: MutationParams<Method>,
+  ) => MaybePromise<FileNavigatorMutationResults[Method]>;
+};
+
+const mutationHandlers = {
+  moveFileNavigatorItem: (controller, params) => controller.moveFileNavigatorItem(
+    params.label, params.fromRelPath, params.toRelPath, params.overwrite,
+  ),
+  moveFileNavigatorItems: (controller, params) => controller.moveFileNavigatorItems(
+    params.label, params.sourcePaths, params.destinationPath, params.policy,
+  ),
+  pasteFileNavigatorItems: (controller, params) => {
+    if (params.sourceHost === undefined) {
+      return controller.pasteFileNavigatorItems(
+        params.label, params.sources, params.destinationPath, params.mode, params.policy,
+      );
+    }
+    return controller.pasteFileNavigatorItems(
+      params.label, params.sources, params.destinationPath, params.mode, params.policy, params.sourceHost,
+    );
+  },
+  renameFileNavigatorItem: (controller, params) => controller.renameFileNavigatorItem(
+    params.label, params.relPath, params.newName, params.overwrite,
+  ),
+  undoFileNavigatorItem: (controller, params) => controller.undoFileNavigatorItem(
+    params.label, params.overwrite, params.skipConflicts,
+  ),
+  redoFileNavigatorItem: (controller, params) => controller.redoFileNavigatorItem(
+    params.label, params.overwrite, params.skipConflicts,
+  ),
+} satisfies FileNavigatorMutationHandlers;
 
 async function fileNavigatorSearch(controller: Controller, index: number): Promise<unknown> {
   try {
@@ -40,33 +82,13 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     case 'fileNavigatorReroot': { controller.fileNavigatorReroot(message.params.index, message.params.path); break;
     }
     case 'moveFileNavigatorItem': {
-      return controller.moveFileNavigatorItem(
-        message.params.label, message.params.fromRelPath, message.params.toRelPath, message.params.overwrite,
-      );
+      return mutationHandlers.moveFileNavigatorItem(controller, message.params);
     }
     case 'moveFileNavigatorItems': {
-      return controller.moveFileNavigatorItems(
-        message.params.label,
-        message.params.sourcePaths,
-        message.params.destinationPath,
-        message.params.policy,
-      );
+      return mutationHandlers.moveFileNavigatorItems(controller, message.params);
     }
     case 'pasteFileNavigatorItems': {
-      if (message.params.sourceHost === undefined) {
-        return controller.pasteFileNavigatorItems(
-          message.params.label, message.params.sources, message.params.destinationPath,
-          message.params.mode, message.params.policy,
-        );
-      }
-      return controller.pasteFileNavigatorItems(
-        message.params.label,
-        message.params.sources,
-        message.params.destinationPath,
-        message.params.mode,
-        message.params.policy,
-        message.params.sourceHost,
-      );
+      return mutationHandlers.pasteFileNavigatorItems(controller, message.params);
     }
     case 'deleteFileNavigatorItem': {
       return controller.deleteFileNavigatorItem(message.params.label, message.params.relPath);
@@ -75,9 +97,7 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
       return controller.deleteFileNavigatorItems(message.params.label, message.params.paths);
     }
     case 'renameFileNavigatorItem': {
-      return controller.renameFileNavigatorItem(
-        message.params.label, message.params.relPath, message.params.newName, message.params.overwrite,
-      );
+      return mutationHandlers.renameFileNavigatorItem(controller, message.params);
     }
     case 'fileNavigatorSearch': {
       return fileNavigatorSearch(controller, message.params.index);
@@ -109,18 +129,10 @@ export function dispatchFileNavigatorMessage(controller: Controller, message: Fi
     case 'runFileNavigatorSelectionAction': { controller.runFileNavigatorSelectionAction(message.params.index, message.params.paths, message.params.action); break;
     }
     case 'undoFileNavigatorItem': {
-      return controller.undoFileNavigatorItem(
-        message.params.label,
-        message.params.overwrite,
-        message.params.skipConflicts,
-      );
+      return mutationHandlers.undoFileNavigatorItem(controller, message.params);
     }
     case 'redoFileNavigatorItem': {
-      return controller.redoFileNavigatorItem(
-        message.params.label,
-        message.params.overwrite,
-        message.params.skipConflicts,
-      );
+      return mutationHandlers.redoFileNavigatorItem(controller, message.params);
     }
     default: { return unhandledClientMethod(message);
     }

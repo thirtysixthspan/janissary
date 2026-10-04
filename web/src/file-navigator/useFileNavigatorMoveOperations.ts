@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import type { BulkConflictPolicy, BulkMoveResult, UndoRedoResult } from '@shared/protocol';
+import type { BulkConflictPolicy } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { basename } from '../shared/rel-path';
+import { requestFileNavigatorMutation } from './file-navigator-request';
 
 type Method = 'undoFileNavigatorItem' | 'redoFileNavigatorItem';
 type PendingConflict =
@@ -35,7 +36,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, label: strin
     title: string,
     policy?: BulkConflictPolicy,
   ) => {
-    const result = await client.request<BulkMoveResult>({
+    const result = await requestFileNavigatorMutation(client, {
       method: 'moveFileNavigatorItems',
       params: { label, sourcePaths, destinationPath, policy },
     });
@@ -63,7 +64,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, label: strin
   // it — including one inside a collapsed folder whose rows the client never loaded — and its
   // conflict answer opens the same dialog a visible conflict does.
   const sendScalarMove = async (fromRelPath: string, toRelPath: string) => {
-    const result = await client.request<BulkMoveResult>({
+    const result = await requestFileNavigatorMutation(client, {
       method: 'moveFileNavigatorItem',
       params: { label, fromRelPath, toRelPath },
     });
@@ -89,7 +90,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, label: strin
   };
 
   const history = async (method: Method) => {
-    const result = await client.request<UndoRedoResult>({ method, params: { label } });
+    const result = await requestFileNavigatorMutation(client, { method, params: { label } });
     if (!result.ok) { setPendingConflict(null); return; }
     const source = method === 'undoFileNavigatorItem' ? 'undo' : 'redo';
     if (result.value.conflict) {
@@ -121,7 +122,7 @@ export function useFileNavigatorMoveOperations(client: JanusClient, label: strin
       return;
     }
     if (pendingConflict.kind === 'history') {
-      void client.request<UndoRedoResult>({
+      void requestFileNavigatorMutation(client, {
         method: pendingConflict.method,
         params: {
           label,
