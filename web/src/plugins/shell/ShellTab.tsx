@@ -174,8 +174,10 @@ export function ShellTab({ payload, capabilities }: Properties) {
     setHistoryOpen((open) => !open);
   }, []));
 
+  // `data-claims-shift-tab` stands the application's section cycling down for keys inside this tab,
+  // which it otherwise takes in the capture phase before either surface's own Shift+Tab can run.
   return (
-    <div className="tab-body shell-tab">
+    <div className="tab-body shell-tab" data-claims-shift-tab>
       <ShellTabMeta payload={payload} capabilities={capabilities} />
       {/* Clicking the terminal gives it focus so xterm sends keystrokes to the attached shell. */}
       <div

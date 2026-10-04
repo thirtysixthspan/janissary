@@ -2,7 +2,5 @@
 
 # pull-request
 
-* shift+tab when the shell has focus should cause the command bar to have focus. shift+tab when the command bar has focus should cause the shell to have focus. this does not work.
-
 * the state command should work in the shell tab just like the agent tab but output in rendered markdown
  

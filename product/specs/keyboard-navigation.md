@@ -33,7 +33,7 @@
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
 | Tab | Complete the token at the cursor: a file path, a `msg`/`broadcast` agent name, a `connection close` connection string, or a `browser` subcommand / window id |
-| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog is open, so focus stays inside the dialog. Left to an editor tab's text buffer, where it outdents (see [[editor-tab]]), and to a pending question panel's controls, where it moves backward between the panel's buttons (see [[agent-questions]]). |
+| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog is open, so focus stays inside the dialog. Left to an editor tab's text buffer, where it outdents (see [[editor-tab]]), to a pending question panel's controls, where it moves backward between the panel's buttons (see [[agent-questions]]), and to a shell tab, where it moves between the terminal and the command bar (see [[shell-tab]]). |
 
 The UI is composed of up to four **application sections**: the left sidebar, the center action
 area, the right sidebar, and the reporting section below it. A section exists only when it holds
@@ -50,7 +50,9 @@ such as its metadata row, Shift+Tab still moves to the next section.
 A pending question panel's buttons and text field are a second exception: the chord steps backward
 through the panel's buttons there, so focus stays in the panel. The panel is non-modal, so Shift+Tab
 from the command line or any other control outside it still moves to the next section.
-Both exceptions use the same mechanism: `useSectionNav` stands down when the key lands on or inside an
+A shell tab is the third exception: anywhere inside it, Shift+Tab moves focus between its terminal and
+its command bar (see [[shell-tab]]) rather than to the next section.
+All three exceptions use the same mechanism: `useSectionNav` stands down when the key lands on or inside an
 element marked `data-claims-shift-tab`.
 
 A focused editor tab's text buffer captures only the keys it binds itself: printable characters, the

@@ -9,6 +9,7 @@ import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistr
 import { AppCommandBarProvider, useAppCommandLine } from '../../shared/command-bar/AppCommandBar';
 import type { PluginCommandLineInsertions } from '../../shared/command-bar/AppCommandBar';
 import { ShellTab } from './ShellTab';
+import { useSectionNav } from '../../useSectionNav';
 
 // The emulator and its fit addon are stubbed so the tab's own logic — routing, focus, the chord claim —
 // is what is under test rather than xterm.js's renderer, which jsdom cannot run. The stub records what
@@ -287,6 +288,24 @@ describe('ShellTab', () => {
 
     expect(fireEvent.keyDown(document.querySelector('.shell-body')!, { key: 'Tab', shiftKey: true })).toBe(false);
     expect(document.activeElement).toBe(bar());
+  });
+
+  it('keeps Shift+Tab from the application\'s section cycling, which listens ahead of it', () => {
+    const focusCenter = vi.fn();
+    function SectionNav() {
+      useSectionNav([tab('shell1')], focusCenter);
+      return null;
+    }
+    render(<SectionNav />);
+    renderTab();
+    const terminal = terminals.at(-1)!;
+
+    fireEvent.keyDown(bar(), { key: 'Tab', shiftKey: true });
+    expect(terminal.focusCalls).toBe(1);
+
+    fireEvent.keyDown(document.querySelector('.shell-body')!, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(bar());
+    expect(focusCenter).not.toHaveBeenCalled();
   });
 
   it('loads the selected queued command into its own bar and edits that queue entry', () => {
