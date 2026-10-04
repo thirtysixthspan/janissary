@@ -148,7 +148,8 @@ tab's name behaves like clicking any other UI control rather than highlighting t
 
 Today there are four possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
 git clone (including a remote tab, whose clone lives on the other host), **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
-only — see Auto-approve permissions in `harness.md`), **auto-resuming** (the same bolt), shown when
+only — see Auto-approve permissions in `harness.md`), **auto-resuming** (a wand-and-sparkles icon of
+its own), shown when
 auto-resume is enabled on a harness tab (see Auto-resume after a usage limit in `harness.md`), and
 **E2E browser** (a globe icon), shown for a tab
 launched with the e2e browser, which is every harness tab not launched with `--no-browser` (harness
@@ -167,7 +168,9 @@ the bolt turns the same green and its tooltip reads "Auto-approval". It stays gr
 the tab's life, for a local tab and a remote one alike. A stand-down on a prompt auto-approval could
 not clear does not light it.
 
-The auto-resume flag shares that bolt and has three looks. A tab merely armed for it reads
+The auto-resume flag draws a glyph of its own rather than the bolt, because auto-approve and
+auto-resume can both be shown on one tab and two identical icons with different tooltips read as one
+flag seen twice. It has three looks. A tab merely armed for it reads
 "Auto-resume" in plain ink; while a scheduled resume is waiting on a usage limit it turns green and
 reads "Auto-resuming"; once the resume has been typed into the harness it goes back to plain
 "Auto-resume".
