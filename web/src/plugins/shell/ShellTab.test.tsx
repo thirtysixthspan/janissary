@@ -327,14 +327,16 @@ describe('ShellTab', () => {
     expect(screen.getByLabelText('Workspaced')).toBeInTheDocument();
   });
 
-  it('sends the file navigator and new agent RPCs from its own row buttons', () => {
-    const { capabilities } = renderTab();
+  it('opens a file navigator and sibling shell from its own row buttons', async () => {
+    const { capabilities, releaseDispatch } = renderTab({ dispatched: true });
 
     fireEvent.click(screen.getByTitle('Open file navigator here'));
-    fireEvent.click(screen.getByTitle('New agent here'));
+    fireEvent.click(screen.getByTitle('New shell here'));
 
     expect(capabilities.openFileNavigator).toHaveBeenCalledTimes(1);
-    expect(capabilities.launchAgentHere).toHaveBeenCalledTimes(1);
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'zsh');
+    await act(async () => { releaseDispatch(); });
+    expect(capabilities.reportFailure).not.toHaveBeenCalled();
   });
 
   it('gives each of its own row buttons a glyph, so the control has a size and can be pressed', () => {

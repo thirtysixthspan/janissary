@@ -88,7 +88,7 @@ can be edited or run.
 ## The metadata row
 
 The row shows the working directory the shell started in, a workspace mark when that directory is a
-workspace clone, and the actions a shell tab can act on: **open file navigator here**, **new agent
+workspace clone, and the actions a shell tab can act on: **open file navigator here**, **new shell
 here**, the split control, and the connections and schedule windows.
 
 The connections window includes the tab's own `zsh` terminal as soon as the shell tab opens. The
@@ -117,7 +117,7 @@ that ignored `.zshrc` would have no `PATH` additions, no aliases, and no prompt 
 
 Each shell keeps its workspace alive until it closes. Closing the source tab does not remove a clone still used by a shell. The clone is removed after its final owning tab closes.
 
-Completion and the metadata row's file-navigator and new-agent actions use the shell tab's recorded directory even when another tab is selected. A new agent shares the shell's workspace and offline mode.
+Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. A new shell inherits the shell's workspace and offline mode. A new agent shares the shell's workspace and offline mode too.
 
 One tab per `zsh`, always. `zsh` twice opens two tabs even in the same directory, because a shell is
 stateful and refocusing the first would take its foreground program and its directory away from the

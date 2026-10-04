@@ -4,9 +4,6 @@
 
 * the shell should show no command line
 
-* in the shell tab, plus button in the metadata tab should open a new shell tab in the current working directory of the current shell
-
-
 * the shell tab dot should blink when a shell command is running.
 
 

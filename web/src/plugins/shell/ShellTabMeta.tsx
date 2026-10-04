@@ -50,8 +50,14 @@ export function ShellTabMeta({ payload, capabilities }: {
           <button
             type="button"
             className="tab-launch-agent"
-            title={payload.workspace ? 'New agent in this workspace' : 'New agent here'}
-            onClick={() => capabilities.launchAgentHere?.()}
+            title={payload.workspace ? 'New shell in this workspace' : 'New shell here'}
+            onClick={() => {
+              void capabilities.intent<{ dispatched: boolean }>('dispatch', 'zsh')
+                .then((result) => {
+                  if (!result.dispatched) capabilities.reportFailure('shell sibling command was not handled');
+                })
+                .catch(() => { capabilities.reportFailure('shell sibling command failed'); });
+            }}
           >
             <FontAwesomeIcon icon={newTabIcon} />
           </button>
