@@ -2,9 +2,47 @@
 
 # pull-request
 
-* in the shell tab, ctrl+g should triger the tab nav 
+* in the shell tab, ctrl+g should trigger and show the tab nav 
+
+* ghost text should be supported in the command bar of the shell tab
 
 * Close the security gap caused by losing a shell tab's workspace ownership.
+
+* the shell should show no command line
+
+* the metadata bar should show the current working directory of the shell
+
+* the history picker triggered by ctrl+r in teh shell tab should be styled and use the same key input as the history picker in the agent tab.
+
+* the clipboard-history popup should work in the shell tab just as in the agent tab.
+
+* the queue popup should work in the shell tab just as in the agent tab.
+
+* the task picker popup should work in the shell tab just as in the agent tab.
+
+* cmd+t should open a new zsh in the same working directory without creating a new workspace
+
+* cmd+p should open the Quick Open file finder in the shell tab just as in the agent tab.
+
+* shift + tab should move the keyboard focus between the terminal and the command bar. the keyboard focus will determine where keypresses are sent in the shell tab.
+
+* paste from keyboard in the context menu in the command bar open the clipboard-history popup and past into the command bar
+
+* in the shell tab, open file navigator here button in the metadata tab should open a file navigator in the current working directory of the shell
+
+* in the shell tab, plus button in the metadata tab should open a new shell tab in the current working directory of the current shell
+
+* typing `theme` into the zsh tab should launch the theme picker popup.
+
+* the dot color in the command bar should the same color at the tab dot.
+
+* in the shell tab, teh clear command should be sent to the terminal
+
+
+
+
+
+
 
 Existing Issue: `openShellTab` stores the source cwd and workspace only in `ShellPayload`, while `makePluginTab` leaves the server `Tab` without `runtime.cwd` or `workspaceDir` and the shell takes no workspace reference, so host actions fall back to project or process defaults and closing the source can remove the clone under the live shell. Severity: 9/10
 
