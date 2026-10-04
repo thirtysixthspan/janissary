@@ -13,6 +13,7 @@
 }
 
 .shell-tab .picker.shell-history { bottom: 40px; max-height: 50%; }
+.shell-tab .picker.clipboard-history { bottom: 40px; max-height: 50%; }
 
 /* Docked into a sidebar the terminal has little room and the popup less; the history list stays
    readable by scrolling rather than by giving up rows. */

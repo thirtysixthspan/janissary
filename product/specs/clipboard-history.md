@@ -24,6 +24,8 @@ Each entry shows one line: the first line of non-space text, which is not always
 
 `Ctrl+Shift+V` or `Cmd+Shift+V`, the `clip` command, or **Paste from clipboard…** in the right-click menu. Either chord suppresses the browser's own shortcut on it ("paste as plain text" or "paste and match style"). All three routes open the same popup in the same place: anchored above the command line, in the shape of the command-history popup (see [[history]]). It opens even with nothing copied, showing `(no clipboard history)`.
 
+In a shell tab, the popup sits above the command bar and leaves the bar visible beneath it.
+
 `Ctrl+V` and `Cmd+V` are untouched. In an editor tab they are the browser's own paste, as they are everywhere else in the application.
 
 The popup renders on an agent tab, an editor tab, a harness or ssh tab, and the shell plugin tab. The shell tab's command bar is a paste target, so selecting an entry inserts it at the caret without running it. A markdown, image, pdf, page, video, sql, or conversations tab has no paste target, so nothing appears there — but the chord is still answered on such a tab, and the popup it opens takes the keyboard until `Escape` or `Return` dismisses it.

@@ -18,8 +18,6 @@
 
 * in the shell tab, plus button in the metadata tab should open a new shell tab in the current working directory of the current shell
 
-* the paste clipboard history popup should render above the command bar and not cover it.
-
 * connection and schedule popups should show below the metadata bar, not cover it.
 
 

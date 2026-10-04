@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react';
+import { readFileSync } from 'node:fs';
 import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -215,6 +216,11 @@ function bar(): HTMLTextAreaElement {
 }
 
 describe('ShellTab', () => {
+  it('places clipboard history above the command bar', () => {
+    const styles = readFileSync('web/src/plugins/shell/shell.css', 'utf8');
+    expect(styles).toContain('.shell-tab .picker.clipboard-history { bottom: 40px; max-height: 50%; }');
+  });
+
   it('disables shell input while Quick Open is visible', () => {
     renderTab({ blockingOverlayOpen: true });
     expect(bar()).toBeDisabled();
