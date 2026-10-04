@@ -22,7 +22,7 @@
 
 * typing `theme` into the zsh tab should launch the theme picker popup.
 
-* the command history popup shoudl render above the command bar and not cover it.
+* the paste clipboard history popup should render above the command bar and not cover it.
 
 * connection and schedule popups should show below the metadata bar, not cover it.
 
