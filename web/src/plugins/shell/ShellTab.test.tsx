@@ -134,6 +134,7 @@ type AppBarOptions = {
   tabs?: TabView[];
   activeTab?: number;
   guard?: (index: number) => boolean;
+  ghostHistory?: string[];
 };
 
 type AppBarOpeners = Record<
@@ -162,7 +163,7 @@ function AppBar({ chords, options, openQuitConfirm, openers, children }: {
   });
   return (
     <PluginChordProvider registry={chords}>
-      <AppCommandBarProvider bar={{ intercept }}>{children}</AppCommandBarProvider>
+      <AppCommandBarProvider bar={{ intercept, ghostHistory: options.ghostHistory ?? [] }}>{children}</AppCommandBarProvider>
     </PluginChordProvider>
   );
 }
@@ -437,6 +438,20 @@ describe('ShellTab', () => {
     expect(bar().value).toBe('first');
     fireEvent.keyDown(bar(), { key: 'ArrowDown' });
     expect(bar().value).toBe('second');
+  });
+
+  it('shows and accepts a ghost suggestion from the application global history', () => {
+    const { written } = renderTab({ ghostHistory: ['git status'] });
+    const input = bar();
+
+    fireEvent.change(input, { target: { value: 'git' } });
+
+    expect(document.querySelector('.ghost')?.textContent).toBe('git status');
+    input.setSelectionRange(3, 3);
+    fireEvent.keyDown(input, { key: 'ArrowRight' });
+
+    expect(input.value).toBe('git status');
+    expect(written).toEqual([]);
   });
 
   it('leaves a paste in the bar rather than running it', () => {

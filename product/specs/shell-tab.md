@@ -51,7 +51,9 @@ it holds one, so copying by keyboard still works.
 
 `Up` and `Down` walk the lines the command bar has sent, exactly as the agent tab's bar walks its
 tab's command history. Because nothing can be typed into the terminal directly, that list is the
-whole of this shell's history rather than a subset of one.
+whole of this shell's history rather than a subset of one. Ghost suggestions instead draw from the
+global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
+a suggestion.
 
 Every other chord belongs to the application, unchanged: `Ctrl+A` opens the task picker, `Ctrl+G` the
 tab navigator, `Cmd+P` quick open and `Cmd+Shift+F` the project search, all with the cursor in the

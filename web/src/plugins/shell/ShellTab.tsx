@@ -112,6 +112,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     // The bar recalls the lines it has sent, oldest first. Nothing else can reach this shell, so this
     // is the whole of its history rather than a subset of one.
     history: sent,
+    ghostHistory: appBar.ghostHistory,
     onSubmit: submit,
     onClear: () => { setMatches([]); },
   });

@@ -10,6 +10,7 @@ import type { PickerCommands } from './picker-commands';
 // `close` that would take the last tab with it — opens the same confirmation, from either bar.
 export type AppCommandBar = {
   intercept(line: string): boolean;
+  ghostHistory: string[];
 };
 
 const AppCommandBarContext = createContext<AppCommandBar | null>(null);
