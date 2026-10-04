@@ -13,10 +13,14 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
   };
 }
 
-function TestComponent({ tab, onHook }: { tab: TabView | undefined; onHook: (hook: ReturnType<typeof useQueuePicker>) => void }) {
+function TestComponent({ tab, onHook, onRecall }: {
+  tab: TabView | undefined;
+  onHook: (hook: ReturnType<typeof useQueuePicker>) => void;
+  onRecall?: (text: string) => void;
+}) {
   const client = { send: vi.fn() } as never;
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const recallRef = useRef<((text: string) => void) | null>(null);
+  const recallRef = useRef(onRecall ?? null);
   const hook = useQueuePicker(client, tab, inputRef, recallRef);
   onHook(hook);
   return null;
@@ -37,6 +41,18 @@ describe('useQueuePicker', () => {
     render(<TestComponent tab={tab} onHook={(h) => { hook = h; }} />);
     act(() => hook!.openQueue());
     expect(hook!.queueOpen).toBe(false);
+  });
+
+  it('opens for a shell tab without recalling into the hidden agent command bar', () => {
+    let hook: ReturnType<typeof useQueuePicker> | undefined;
+    const onRecall = vi.fn();
+    const tab = makeTab({ view: 'plugin', plugin: { id: 'shell' } as never });
+    render(<TestComponent tab={tab} onHook={(h) => { hook = h; }} onRecall={onRecall} />);
+
+    act(() => hook!.openQueue());
+
+    expect(hook!.queueOpen).toBe(true);
+    expect(onRecall).not.toHaveBeenCalled();
   });
 
   it('sends editQueuedCommand with the current queueIndex', () => {

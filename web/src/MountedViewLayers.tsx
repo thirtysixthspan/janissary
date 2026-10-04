@@ -123,9 +123,10 @@ export function MountedViewLayers({
                 {navOpen && onPickTab && (
                   <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
                 )}
-                {t.plugin?.id === 'shell' && quickOpenOverlay}
-                {t.plugin?.id === 'shell' && appThemePickerOverlay}
-                {t.plugin?.id === 'shell' && contributedOverlay}
+                {t.plugin?.id === 'shell' && pickerOverlays}
+                {t.plugin?.id === 'shell' && !pickerOverlays && quickOpenOverlay}
+                {t.plugin?.id === 'shell' && !pickerOverlays && appThemePickerOverlay}
+                {t.plugin?.id === 'shell' && !pickerOverlays && contributedOverlay}
               </>
             ) : undefined}
           />

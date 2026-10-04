@@ -179,6 +179,11 @@ export function App({ client }: { client: JanusClient }) {
         ghostHistory: globalHistory,
         blockingOverlayOpen: pickers.view.overlays.quickOpen,
         overlayOwnsCommandBar: commandBarSuppressed(pickers.view.overlays),
+        queueOpen: pickers.view.overlays.queue,
+        queueIndex: pickers.view.queueIndex,
+        queueItems: pickers.view.queueItems,
+        onEditQueued: pickers.onEditQueued,
+        onDeleteQueued: pickers.onDeleteQueued,
       }}>
       <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}

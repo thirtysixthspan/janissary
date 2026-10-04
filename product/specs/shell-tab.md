@@ -37,6 +37,11 @@ else (see [[quit-confirmation]]), and a bare word opens the same picker.
 The bare `theme` picker appears over the shell tab. While it is open, the application's arrow,
 Return, and Escape handling controls the selection, applies the chosen theme, or dismisses the picker.
 
+The `queue` command and `Ctrl+E` open the application's queue popup over the shell tab. The selected
+queued line appears in the shell command bar; typing edits it, and Backspace or Delete on an empty bar
+removes it. Arrow keys change the selected queue entry, Return leaves the popup open without submitting,
+and Escape closes it and clears the bar.
+
 A command that answers with text rather than opening something — `help`, for one — records that text
 in this tab's transcript. A shell tab draws a terminal in place of a transcript, so nothing appears
 on screen for it.

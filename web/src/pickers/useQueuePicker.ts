@@ -13,8 +13,10 @@ export function useQueuePicker(
   recallRef: React.RefObject<((text: string) => void) | null>,
 ) {
   const items = useMemo(() => current?.commandQueue ?? [], [current]);
-  // `Ctrl+E` / `queue` no-ops when the exposed tab isn't an agent tab (mirroring `canSearch`).
+  // Shell tabs have their own command bar, so selection is mirrored by that bar instead of the
+  // hidden agent input. Other plugin tabs still do not own a queue command line.
   const isAgentTab = current?.view === undefined || current?.view === 'agent';
+  const isShellTab = current?.view === 'plugin' && current.plugin?.id === 'shell';
   const [queueOpen, setQueueOpen] = useState(false);
   const [queueIndex, setQueueIndexState] = useState(0);
 
@@ -27,15 +29,17 @@ export function useQueuePicker(
   const selectQueueIndex = useCallback((index: number) => {
     setQueueIndexState(index);
     const text = items[index];
-    if (text !== undefined) recallRef.current?.(text);
-    inputRef.current?.focus();
-  }, [items, inputRef, recallRef]);
+    if (!isShellTab) {
+      if (text !== undefined) recallRef.current?.(text);
+      inputRef.current?.focus();
+    }
+  }, [items, inputRef, isShellTab, recallRef]);
 
   const openQueue = useCallback(() => {
-    if (!isAgentTab) return;
+    if (!isAgentTab && !isShellTab) return;
     setQueueOpen(true);
     selectQueueIndex(0);
-  }, [isAgentTab, selectQueueIndex]);
+  }, [isAgentTab, isShellTab, selectQueueIndex]);
 
   // Closing the popup (Escape) also clears the command line: the selected row's text was copied
   // there for editing, and leaving it behind after dismissing the popup would be confusing.

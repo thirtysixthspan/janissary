@@ -23,6 +23,7 @@ const DOT_COLOR = '#7ee787';
 // enforced, with nothing to notice when it did. Absent means the declaration claimed none, which is
 // the same as claiming nothing.
 const NO_CHORDS: readonly string[] = [];
+const NO_QUEUE_ITEMS: string[] = [];
 
 export function ShellTab({ payload, capabilities }: Properties) {
   const inputReference = useRef<HTMLTextAreaElement>(null);
@@ -34,6 +35,20 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const [sent, setSent] = useState<string[]>([]);
   const [matches, setMatches] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const queueWasOpen = useRef(false);
+  const queueOpen = appBar.queueOpen ?? false;
+  const queueIndex = appBar.queueIndex ?? 0;
+  const queueItems = appBar.queueItems ?? NO_QUEUE_ITEMS;
+
+  useEffect(() => {
+    if (queueOpen) {
+      setDraft(queueItems[queueIndex] ?? '');
+      inputReference.current?.focus();
+    } else if (queueWasOpen.current) {
+      setDraft('');
+    }
+    queueWasOpen.current = queueOpen;
+  }, [queueIndex, queueItems, queueOpen]);
 
   const { write } = useShellTerminal({
     ptyId: payload.ptyId,
@@ -119,6 +134,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
 
   const onBarKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (appBar.blockingOverlayOpen) return;
+    if (handleQueueKey(event, queueOpen, draft, appBar.onDeleteQueued)) return;
     if (appBar.overlayOwnsCommandBar) return;
     if (event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 't') {
       event.preventDefault();
@@ -160,7 +176,10 @@ export function ShellTab({ payload, capabilities }: Properties) {
       return;
     }
     bar.onKeyDown(event);
-  }, [appBar.blockingOverlayOpen, appBar.overlayOwnsCommandBar, bar, capabilities, draft, historyOpen, write]);
+  }, [
+    appBar.blockingOverlayOpen, appBar.onDeleteQueued, appBar.overlayOwnsCommandBar,
+    bar, capabilities, draft, historyOpen, queueOpen, write,
+  ]);
 
   // `Ctrl+R` is claimed by this plugin's declaration, so it reaches this tab while it is the visible
   // one and belongs to the application everywhere else. The window handler consults the claim before
@@ -184,7 +203,11 @@ export function ShellTab({ payload, capabilities }: Properties) {
         value={draft}
         disabled={appBar.blockingOverlayOpen}
         inputRef={inputReference}
-        onChange={(next) => { setDraft(next); setMatches([]); }}
+        onChange={(next) => {
+          setDraft(next);
+          setMatches([]);
+          if (queueOpen) appBar.onEditQueued?.(next);
+        }}
         onKeyDown={onBarKeyDown}
         ghost={bar.ghost}
         dotColor={capabilities.dotColor ?? DOT_COLOR}
@@ -225,4 +248,20 @@ function controlKeyOf(event: {
   if (key === 'd') return 'ctrl+d';
   if (key === 'z') return 'ctrl+z';
   return undefined;
+}
+
+function handleQueueKey(
+  event: React.KeyboardEvent<HTMLTextAreaElement>,
+  queueOpen: boolean,
+  draft: string,
+  onDeleteQueued?: () => void,
+): boolean {
+  if (!queueOpen) return false;
+  if (['Enter', 'ArrowUp', 'ArrowDown'].includes(event.key)) return true;
+  if ((event.key === 'Backspace' || event.key === 'Delete') && draft === '') {
+    event.preventDefault();
+    onDeleteQueued?.();
+    return true;
+  }
+  return false;
 }

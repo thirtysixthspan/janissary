@@ -140,6 +140,11 @@ type AppBarOptions = {
   ghostHistory?: string[];
   blockingOverlayOpen?: boolean;
   overlayOwnsCommandBar?: boolean;
+  queueOpen?: boolean;
+  queueIndex?: number;
+  queueItems?: string[];
+  onEditQueued?: (text: string) => void;
+  onDeleteQueued?: () => void;
 };
 
 type AppBarOpeners = Record<
@@ -173,6 +178,11 @@ function AppBar({ chords, options, openQuitConfirm, openers, children }: {
         ghostHistory: options.ghostHistory ?? [],
         blockingOverlayOpen: options.blockingOverlayOpen,
         overlayOwnsCommandBar: options.overlayOwnsCommandBar,
+        queueOpen: options.queueOpen,
+        queueIndex: options.queueIndex,
+        queueItems: options.queueItems,
+        onEditQueued: options.onEditQueued,
+        onDeleteQueued: options.onDeleteQueued,
       }}>{children}</AppCommandBarProvider>
     </PluginChordProvider>
   );
@@ -230,6 +240,35 @@ describe('ShellTab', () => {
     const { capabilities } = renderTab({ overlayOwnsCommandBar: true });
     fireEvent.keyDown(bar(), { key: 'Tab' });
     expect(capabilities.intent).not.toHaveBeenCalledWith('complete', expect.anything());
+  });
+
+  it('loads the selected queued command into its own bar and edits that queue entry', () => {
+    const onEditQueued = vi.fn();
+    renderTab({ queueOpen: true, queueItems: ['next command', 'later command'], onEditQueued });
+
+    expect(bar()).toHaveValue('next command');
+    fireEvent.change(bar(), { target: { value: 'edited command' } });
+
+    expect(onEditQueued).toHaveBeenCalledWith('edited command');
+  });
+
+  it('deletes the selected queue entry when Backspace is pressed on an empty line', () => {
+    const onDeleteQueued = vi.fn();
+    renderTab({ queueOpen: true, queueItems: ['next command'], onDeleteQueued });
+
+    fireEvent.change(bar(), { target: { value: '' } });
+    fireEvent.keyDown(bar(), { key: 'Backspace' });
+
+    expect(onDeleteQueued).toHaveBeenCalledOnce();
+    expect(bar()).toHaveValue('');
+  });
+
+  it('does not submit the selected queue line when Return is pressed', () => {
+    const { written } = renderTab({ queueOpen: true, queueItems: ['next command'] });
+
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    expect(written).toEqual([]);
   });
 
   it('uses the tab dot color for the command bar dot', () => {

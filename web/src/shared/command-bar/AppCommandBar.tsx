@@ -13,6 +13,11 @@ export type AppCommandBar = {
   ghostHistory: string[];
   blockingOverlayOpen?: boolean;
   overlayOwnsCommandBar?: boolean;
+  queueOpen?: boolean;
+  queueIndex?: number;
+  queueItems?: string[];
+  onEditQueued?: (text: string) => void;
+  onDeleteQueued?: () => void;
 };
 
 const AppCommandBarContext = createContext<AppCommandBar | null>(null);

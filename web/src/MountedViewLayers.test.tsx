@@ -442,6 +442,21 @@ describe('MountedViewLayers', () => {
     expect(bodies[1].querySelector('.app-theme-picker')).toBeNull();
   });
 
+  it('renders the shared queue popup over only the current shell plugin tab', () => {
+    const tabs = [makePluginTab('shell', '/current.mp4', 'shell'), makePluginTab('other', '/other.mp4')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        pickerOverlays: React.createElement('div', { className: 'queue-overlay' }),
+      }),
+    );
+    const bodies = [...container.querySelectorAll('.tab-body')];
+
+    expect(bodies[0].querySelector('.queue-overlay')).toBeTruthy();
+    expect(bodies[1].querySelector('.queue-overlay')).toBeNull();
+  });
+
   it('does not render a contributed overlay inside another plugin tab', () => {
     const tabs = [makePluginTab('plugin', '/current.mp4')];
     const { container } = render(
