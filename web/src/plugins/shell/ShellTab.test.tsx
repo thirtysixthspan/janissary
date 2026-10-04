@@ -273,10 +273,10 @@ describe('ShellTab', () => {
     renderTab();
     const terminal = terminals.at(-1)!;
 
-    fireEvent.keyDown(bar(), { key: 'Tab', shiftKey: true });
+    expect(fireEvent.keyDown(bar(), { key: 'Tab', shiftKey: true })).toBe(false);
     expect(terminal.focusCalls).toBe(1);
 
-    fireEvent.keyDown(document.querySelector('.shell-body')!, { key: 'Tab', shiftKey: true });
+    expect(fireEvent.keyDown(document.querySelector('.shell-body')!, { key: 'Tab', shiftKey: true })).toBe(false);
     expect(document.activeElement).toBe(bar());
   });
 

@@ -13,8 +13,8 @@ follows describes the behavior.
 
 The shell tab has two keyboard surfaces: the command bar and the terminal. The command bar is focused
 when the tab opens. Click the terminal or press `Shift+Tab` from the command bar to type directly into
-zsh; press `Shift+Tab` again to return to the command bar. Keystrokes go to whichever surface has
-focus.
+zsh; press `Shift+Tab` again to return to the command bar. Both transitions prevent the browser's
+default focus traversal, and keystrokes go to whichever surface has focus.
 
 The command bar offers application commands before sending an unrecognized line to zsh. Typing
 directly in the terminal sends keys to zsh without that application routing.
