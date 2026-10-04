@@ -27,6 +27,7 @@ export function openShellTab(
       ...(workspace && { workspace }),
     });
     const payload: ShellPayload = {
+      instanceKey,
       ptyId: terminal.ptyId,
       cwd,
       workspace: workspace !== undefined,

@@ -19,6 +19,8 @@ focus.
 The command bar offers application commands before sending an unrecognized line to zsh. Typing
 directly in the terminal sends keys to zsh without that application routing.
 
+The shell tab's status dot blinks while zsh is running a command and stops when zsh returns to its prompt.
+
 **A command-bar line means one of two things.** A leading `!` forces the shell: the rest of the line is sent to
 zsh and nothing else happens. Without it, the line is offered to the application first — if it names a
 command, that command runs in this tab and the shell never sees it; if it names nothing, the line

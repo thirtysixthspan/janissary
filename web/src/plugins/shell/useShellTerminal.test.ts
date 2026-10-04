@@ -7,6 +7,7 @@ const terminals: { written: string[]; disposed: boolean; options: Record<string,
 const fitCalls: number[] = [];
 const terminalDataHandlers: ((data: string) => void)[] = [];
 const terminalFocusCalls: number[] = [];
+const oscHandlers: ((data: string) => boolean)[] = [];
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
@@ -28,6 +29,7 @@ vi.mock('@xterm/xterm', () => ({
     clearSelection() {}
     onData(handler: (data: string) => void) { terminalDataHandlers.push(handler); }
     focus() { terminalFocusCalls.push(1); }
+    parser = { registerOscHandler: (_id: number, handler: (data: string) => boolean) => { oscHandlers.push(handler); return { dispose() {} }; } };
     get cols() { return 120; }
     get rows() { return 40; }
   },
@@ -52,6 +54,7 @@ beforeEach(() => {
   fitCalls.length = 0;
   terminalDataHandlers.length = 0;
   terminalFocusCalls.length = 0;
+  oscHandlers.length = 0;
 });
 
 function makeHandle(into: {
@@ -82,12 +85,13 @@ function harness(overrides: { attachTerminal?: undefined } = {}) {
       return handle;
     });
   const onExit = vi.fn();
+  const onCommandRunning = vi.fn();
   const container = document.createElement('div');
   const containerRef = { current: container };
   const view = renderHook(() => useShellTerminal({
-    ptyId: 'pty7', containerRef, attachTerminal, onExit,
+    ptyId: 'pty7', containerRef, attachTerminal, onExit, onCommandRunning,
   }));
-  return { byteCallbacks, container, exitHandlers, handle, onExit, resized, detached, written, ...view };
+  return { byteCallbacks, container, exitHandlers, handle, onExit, onCommandRunning, resized, detached, written, ...view };
 }
 
 describe('useShellTerminal', () => {
@@ -110,7 +114,7 @@ describe('useShellTerminal', () => {
 
     act(() => { result.current.write('ls -la\n'); });
 
-    expect(written).toEqual(['ls -la\n']);
+    expect(written.at(-1)).toBe('ls -la\n');
   });
 
   it('forwards keystrokes from the focused terminal through its attached handle', () => {
@@ -118,7 +122,7 @@ describe('useShellTerminal', () => {
 
     act(() => { terminalDataHandlers[0]?.('ls\n'); });
 
-    expect(written).toEqual(['ls\n']);
+    expect(written.at(-1)).toBe('ls\n');
   });
 
   it('focuses the terminal on request', () => {
@@ -127,6 +131,16 @@ describe('useShellTerminal', () => {
     act(() => { result.current.focus(); });
 
     expect(terminalFocusCalls).toEqual([1]);
+  });
+
+  it('reports command start and prompt markers from the zsh integration', () => {
+    const { onCommandRunning, written } = harness();
+
+    expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
+    expect(oscHandlers[0]?.('C')).toBe(true);
+    expect(oscHandlers[0]?.('D')).toBe(true);
+
+    expect(onCommandRunning.mock.calls).toEqual([[true], [false]]);
   });
 
   it('reports an exit to the tab', () => {
@@ -152,7 +166,7 @@ describe('useShellTerminal', () => {
       ptyId: 'pty7',
       containerRef: { current: container },
       attachTerminal: undefined,
-      onExit: vi.fn(),
+      onExit: vi.fn(), onCommandRunning: vi.fn(),
     }));
 
     expect(terminals).toHaveLength(0);
@@ -172,7 +186,7 @@ describe('useShellTerminal', () => {
     const first = vi.fn((_id: string, _onData: (data: string) => void) => makeHandle());
     const { rerender, unmount } = renderHook(
       ({ attachTerminal }) => useShellTerminal({
-        ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(),
+        ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(), onCommandRunning: vi.fn(),
       }),
       { initialProps: { attachTerminal: first } },
     );

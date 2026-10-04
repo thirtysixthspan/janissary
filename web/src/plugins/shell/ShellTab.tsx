@@ -15,8 +15,7 @@ type Properties = {
   capabilities: TabPluginClientCapabilities;
 };
 
-// The row's dot. Static, and never busy: an agent tab's dot reports that a turn is in flight, and a
-// shell has no turn — the bar's colour is the only thing it has to say.
+// The status dot uses the same green as the shell terminal's own row.
 const DOT_COLOR = '#7ee787';
 
 // The one chord this plugin's declaration claims is not written out here. The claim is data the host
@@ -36,6 +35,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const [sent, setSent] = useState<string[]>([]);
   const [matches, setMatches] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [commandRunning, setCommandRunning] = useState(payload.commandRunning ?? false);
   const queueWasOpen = useRef(false);
   const draftReference = useRef(draft);
   draftReference.current = draft;
@@ -70,6 +70,12 @@ export function ShellTab({ payload, capabilities }: Properties) {
     ptyId: payload.ptyId,
     containerRef: terminalReference,
     attachTerminal: capabilities.attachTerminal,
+    onCommandRunning: useCallback((running: boolean) => {
+      setCommandRunning(running);
+      void capabilities.intent<{ updated: boolean }>('command-state', { running }).catch(() => {
+        capabilities.reportFailure('shell command status intent failed');
+      });
+    }, [capabilities]),
     // The tab closes when the shell exits: no exited state and no way to start another, so a closed
     // tab is the honest representation of a shell that is no longer running.
     onExit: useCallback(() => { capabilities.close(); }, [capabilities]),
@@ -225,6 +231,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         onKeyDown={onBarKeyDown}
         ghost={bar.ghost}
         dotColor={capabilities.dotColor ?? DOT_COLOR}
+        busy={commandRunning}
         autoFocus
         ariaLabel="Shell command"
         above={matches.length > 1 ? (

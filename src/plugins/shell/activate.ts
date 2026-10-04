@@ -7,8 +7,8 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import {
-  isEmptyShellIntent, isShellCompleteRequest, isShellDispatch, isShellPayload,
-  type ShellCompleteRequest, type ShellPayload,
+  isEmptyShellIntent, isShellCommandState, isShellCompleteRequest, isShellDispatch, isShellPayload,
+  type ShellCommandState, type ShellCompleteRequest, type ShellPayload,
 } from './shared.js';
 import { openShellTab } from './open-tab.js';
 
@@ -56,6 +56,7 @@ export function activate(): TabPluginActivation {
       ShellPayload,
       {
         'terminal-status': TabPluginIntentEntry<ShellPayload, undefined>;
+        'command-state': TabPluginIntentEntry<ShellPayload, ShellCommandState>;
         dispatch: TabPluginIntentEntry<ShellPayload, string>;
         complete: TabPluginIntentEntry<ShellPayload, ShellCompleteRequest>;
       }
@@ -68,6 +69,15 @@ export function activate(): TabPluginActivation {
         run: (tabPayload, _payload, capabilities) => ({
           running: capabilities.terminalRunning(tabPayload.ptyId),
         }),
+      },
+      'command-state': {
+        payload: isShellCommandState,
+        run: (tabPayload, state, capabilities) => {
+          capabilities.updateTab(tabPayload.instanceKey, () => ({
+            payload: { ...tabPayload, commandRunning: state.running },
+          }));
+          return { updated: true };
+        },
       },
       dispatch: {
         payload: isShellDispatch,

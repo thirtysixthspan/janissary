@@ -7,7 +7,7 @@ import {
 } from './shared.js';
 
 const PAYLOAD = {
-  ptyId: 'pty1', cwd: '/repo', workspace: false, cols: 80, rows: 24,
+  instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/repo', workspace: false, cols: 80, rows: 24,
   connections: [], schedule: [],
 };
 
@@ -81,7 +81,9 @@ describe('shell shared contract', () => {
   });
 
   it('rejects a payload missing any field it declares', () => {
-    for (const field of ['ptyId', 'cwd', 'workspace', 'cols', 'rows', 'connections', 'schedule'] as const) {
+    for (const field of [
+      'instanceKey', 'ptyId', 'cwd', 'workspace', 'cols', 'rows', 'connections', 'schedule',
+    ] as const) {
       const partial: Record<string, unknown> = { ...PAYLOAD };
       delete partial[field];
       expect(isShellPayload(partial)).toBe(false);
@@ -91,6 +93,7 @@ describe('shell shared contract', () => {
   it('rejects a field of the wrong type', () => {
     expect(isShellPayload({ ...PAYLOAD, cols: '80' })).toBe(false);
     expect(isShellPayload({ ...PAYLOAD, workspace: 'yes' })).toBe(false);
+    expect(isShellPayload({ ...PAYLOAD, commandRunning: 'yes' })).toBe(false);
   });
 
   it('rejects an array and null, which are not a payload', () => {

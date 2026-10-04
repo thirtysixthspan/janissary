@@ -6,6 +6,9 @@ import {
   type PluginTerminal,
 } from '../api';
 
+const SHELL_STATUS_HOOKS = String.raw`autoload -Uz add-zsh-hook; _janus_preexec() { printf '\033]133;C\a'; }; _janus_precmd() { printf '\033]133;D\a'; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd
+`;
+
 export type AttachTerminal = (
   ptyId: string, onData: (data: string) => void,
 ) => PluginTerminal;
@@ -14,6 +17,7 @@ type Options = {
   ptyId: string;
   containerRef: React.RefObject<HTMLDivElement | null>;
   attachTerminal: AttachTerminal | undefined;
+  onCommandRunning: (running: boolean) => void;
   // Called when the shell behind this terminal exits. A plugin tab has nowhere else to hear it: the
   // event is broadcast once, to whoever happened to be connected at the time.
   onExit: () => void;
@@ -28,12 +32,14 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, containerRef, attachTerminal, onExit,
+  ptyId, containerRef, attachTerminal, onExit, onCommandRunning,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
+  const runningRef = useRef(onCommandRunning);
+  runningRef.current = onCommandRunning;
   // `attachTerminal` is read through a ref rather than closed over, and deliberately kept out of the
   // effect's dependencies below. It arrives on a capability object the host rebuilds whenever the tab
   // becomes visible or hidden, so depending on its identity tore the emulator down and built a new one
@@ -62,6 +68,11 @@ export function useShellTerminal({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(container);
+    terminal.parser.registerOscHandler(133, (data) => {
+      if (data === 'C') runningRef.current(true);
+      else if (data === 'D') runningRef.current(false);
+      return data === 'C' || data === 'D';
+    });
     // One fit, once the attachment exists: fitting before it can do nothing useful, because the size
     // has nowhere to go until there is a process on the other end.
     const resize = () => {
@@ -88,6 +99,7 @@ export function useShellTerminal({
     handleRef.current = handle;
     terminalRef.current = terminal;
     terminal.onData((data) => { handleRef.current?.write(data); });
+    handle.write(SHELL_STATUS_HOOKS);
     handle.onExit(() => { exitRef.current(); });
     resize();
 

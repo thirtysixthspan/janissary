@@ -8,7 +8,7 @@ import { activate } from './activate.js';
 import { SHELL_PROGRAM, isShellPayload, type ShellPayload } from './shared.js';
 
 const PAYLOAD: ShellPayload = {
-  ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
+  instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
   connections: [], schedule: [],
 };
 
@@ -66,7 +66,7 @@ describe('shell plugin activation', () => {
     expect(opened).toHaveLength(1);
     expect(opened[0].value.title).toBe('shell');
     expect(opened[0].value.payload).toMatchObject({
-      ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
+      instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
     });
   });
 
@@ -130,6 +130,21 @@ describe('shell plugin activation', () => {
     const { capabilities } = fakeCapabilities({ running: false });
 
     expect(ask(capabilities, 'terminal-status', undefined)).toEqual({ running: false });
+  });
+
+  it('updates its own payload when the terminal reports a command state', () => {
+    const { capabilities, updated } = fakeCapabilities();
+
+    expect(ask(capabilities, 'command-state', { running: true })).toEqual({ updated: true });
+    expect(updated).toEqual([{
+      key: 'shell-1', payload: { ...PAYLOAD, commandRunning: true },
+    }]);
+  });
+
+  it('rejects a malformed command state', () => {
+    const { capabilities } = fakeCapabilities();
+
+    expect(() => ask(capabilities, 'command-state', { running: 'yes' })).toThrow(TabPluginRejection);
   });
 
   it('rejects an unknown intent name without disabling', () => {

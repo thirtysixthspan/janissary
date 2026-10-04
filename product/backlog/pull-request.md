@@ -4,9 +4,6 @@
 
 * the shell should show no command line
 
-* the shell tab dot should blink when a shell command is running.
-
-
 * Close the security gap in plugin terminal attachment ownership.
 
 Existing Issue: `createPluginClientCapabilities` installs `attachTerminal` for every plugin and passes its raw `ptyId` to `client.attachPty`, `ptyInput`, and `ptyResize`, while PTY ids are sequential and the server-side input and resize paths do not check which tab owns an id. Severity: 8/10

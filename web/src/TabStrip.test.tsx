@@ -117,6 +117,24 @@ describe('TabStrip', () => {
     expect(container.querySelector('.dot.busy')).toBeInTheDocument();
   });
 
+  it('blinks the shell tab dot while its payload reports a running command', () => {
+    const tab = makeTab({
+      view: 'plugin',
+      plugin: {
+        id: 'shell', schemaVersion: 1,
+        payload: {
+          instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/tmp', workspace: false,
+          cols: 80, rows: 24, connections: [], schedule: [], commandRunning: true,
+        },
+      },
+    } as unknown as Partial<TabView>);
+    const { container } = render(
+      <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+    );
+
+    expect(container.querySelector('.dot.busy')).toBeInTheDocument();
+  });
+
   // The badge is suppressed on the tab the user is looking at, so a badged tab has to be a
   // non-active one. It still carries the flag while it is active — a glance is not a read — but
   // drawing it there would flicker for the three seconds before the badge comes off.

@@ -14,6 +14,7 @@ import { ShellTab } from './ShellTab';
 // is what is under test rather than xterm.js's renderer, which jsdom cannot run. The stub records what
 // it was handed, so a resize or a teardown assertion still has something to look at.
 const terminals: FakeTerminal[] = [];
+const commandStateHandlers: ((data: string) => boolean)[] = [];
 
 interface FakeTerminal {
   written: string[];
@@ -44,6 +45,12 @@ vi.mock('@xterm/xterm', () => ({
     getSelection() { return ''; }
     clearSelection() {}
     onData() { return { dispose: () => {} }; }
+    parser = {
+      registerOscHandler: (_id: number, handler: (data: string) => boolean) => {
+        commandStateHandlers.push(handler);
+        return { dispose: () => {} };
+      },
+    };
     focus() { this.focusCalls += 1; }
     get cols() { return 100; }
     get rows() { return 30; }
@@ -63,7 +70,7 @@ vi.stubGlobal('ResizeObserver', class {
 });
 
 const PAYLOAD: ShellPayload = {
-  ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
+  instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
   connections: [], schedule: [],
 };
 
@@ -90,7 +97,9 @@ function makeCapabilities(overrides: {
   const resized: { cols: number; rows: number }[] = [];
   const closed: number[] = [];
   const handle: PluginTerminal = {
-    write: (data) => { written.push(data); },
+    write: (data) => {
+      if (!data.startsWith('autoload -Uz add-zsh-hook')) written.push(data);
+    },
     resize: (cols, rows) => { resized.push({ cols, rows }); },
     onExit: vi.fn(),
     detach: vi.fn(),
@@ -304,6 +313,14 @@ describe('ShellTab', () => {
   it('uses the tab dot color for the command bar dot', () => {
     const { container } = renderTab({ dotColor: 'rgb(12, 34, 56)' });
     expect(container.querySelector(':scope .command-area .dot')).toHaveStyle({ color: 'rgb(12, 34, 56)' });
+  });
+
+  it('blinks the command bar dot while zsh is executing a command', () => {
+    const { capabilities } = renderTab();
+    act(() => { commandStateHandlers.at(-1)?.('C'); });
+
+    expect(document.querySelector('.command-area .dot')).toHaveClass('busy');
+    expect(capabilities.intent).toHaveBeenCalledWith('command-state', { running: true });
   });
   it('opens a sibling shell with Cmd+T through the current shell tab', () => {
     const { capabilities, written } = renderTab();

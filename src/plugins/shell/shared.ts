@@ -34,6 +34,7 @@ export type ShellScheduleRow = {
 };
 
 export type ShellPayload = {
+  instanceKey: string;
   // The pseudo-terminal this tab owns. The host keeps the process; this is the handle its client
   // attaches to, and the id never reaches any other plugin.
   ptyId: string;
@@ -48,6 +49,7 @@ export type ShellPayload = {
   // here by design: a plugin cannot read host state, so the windows it renders fill in afterwards.
   connections: ShellConnectionRow[];
   schedule: ShellScheduleRow[];
+  commandRunning?: boolean;
 };
 
 export type ShellIntent = 'terminal-status' | 'dispatch' | 'complete';
@@ -62,6 +64,7 @@ export type ShellDispatchResult = { dispatched: boolean };
 // The completion the application's command bar would show. Carried by the same intent rather than a
 // second one, so a plugin holding a ptyId and a command line needs exactly one wire route.
 export type ShellCompleteRequest = { line: string; cursor: number };
+export type ShellCommandState = { running: boolean };
 
 // The completion the application's own command bar shows, re-declared for the same import-free reason
 // as the rows above. `matches`, `newInput` and `newCursor` are the application's own shape: a single
@@ -103,6 +106,7 @@ function isScheduleRow(value: unknown): value is ShellScheduleRow {
 
 export function isShellPayload(value: unknown): value is ShellPayload {
   return isRecord(value)
+    && typeof value.instanceKey === 'string'
     && typeof value.ptyId === 'string'
     && typeof value.cwd === 'string'
     && typeof value.workspace === 'boolean'
@@ -111,7 +115,8 @@ export function isShellPayload(value: unknown): value is ShellPayload {
     && Array.isArray(value.connections)
     && value.connections.every(isConnectionRow)
     && Array.isArray(value.schedule)
-    && value.schedule.every(isScheduleRow);
+    && value.schedule.every(isScheduleRow)
+    && (value.commandRunning === undefined || typeof value.commandRunning === 'boolean');
 }
 
 // The one intent that carries no payload at all, so absent and null are the only two shapes that can
@@ -130,6 +135,10 @@ export function isShellCompleteRequest(value: unknown): value is ShellCompleteRe
   return isRecord(value)
     && typeof value.line === 'string'
     && typeof value.cursor === 'number';
+}
+
+export function isShellCommandState(value: unknown): value is ShellCommandState {
+  return isRecord(value) && typeof value.running === 'boolean';
 }
 
 export function isTerminalStatus(value: unknown): value is ShellTerminalStatus {
