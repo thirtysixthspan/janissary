@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { DockCycleHeader } from '../shared/DockCycleHeader';
@@ -16,12 +16,14 @@ export function DockedPluginBody({
   visible,
   client,
   onClose,
+  overlay,
 }: {
   tab: TabView;
   index: number;
   visible: boolean;
   client: JanusClient;
   onClose: () => void;
+  overlay?: ReactNode;
 }) {
   const [actionsTarget, setActionsTarget] = useState<HTMLSpanElement | null>(null);
   if (!tab.plugin) return null;
@@ -36,6 +38,7 @@ export function DockedPluginBody({
           onClose={onClose}
         />
       </DockedActionsContext.Provider>
+      {overlay}
     </div>
   );
 }

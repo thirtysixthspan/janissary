@@ -11,6 +11,7 @@ type Options = {
   activeTab?: number;
   guard?: (index: number) => boolean;
   openers?: Partial<AppCommandBar>;
+  onPickerOpen?: (sourceTab: string | undefined) => void;
 };
 
 function build(options: Options = {}) {
@@ -28,6 +29,7 @@ function build(options: Options = {}) {
     activeTab: options.activeTab ?? 0,
     openQuitConfirm,
     guardRef,
+    onPickerOpen: options.onPickerOpen,
   }));
   return { intercept: result.current, openers, openQuitConfirm };
 }
@@ -83,6 +85,14 @@ describe('useAppCommandLine', () => {
     expect(openers.openPicker).toHaveBeenCalledTimes(1);
     expect(intercept('profile launch')).toBe(true);
     expect(openers.openProfilePicker).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports which plugin tab opened a bare-word picker', () => {
+    const onPickerOpen = vi.fn();
+    const { intercept } = build({ onPickerOpen });
+
+    expect(intercept('theme', 'shell-left')).toBe(true);
+    expect(onPickerOpen).toHaveBeenCalledWith('shell-left');
   });
 
   it('offers an ordinary line onward, and the `!` override with it', () => {

@@ -29,6 +29,7 @@ type Properties = {
   // The full overlay stack, rendered over the current editor tab: a key the buffer does not bind
   // reaches the window handler, so any overlay can open there. `overlayOpen` says one is on screen.
   pickerOverlays?: React.ReactNode;
+  pickerSourceTab?: string;
   quickOpenOverlay?: React.ReactNode;
   overlayOpen?: boolean;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
@@ -62,7 +63,7 @@ function TabBodyDiv({
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
-  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, quickOpenOverlay, overlayOpen,
+  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, pickerSourceTab, quickOpenOverlay, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
   appThemePickerOverlay,
@@ -97,7 +98,7 @@ export function MountedViewLayers({
             overlayOpen={overlayOpen}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
-          {t.label === current.label && pickerOverlays}
+          {(pickerSourceTab ? pickerSourceTab === t.label : t.label === current.label) && pickerOverlays}
         </TabBodyDiv>
       ))}
 
@@ -123,7 +124,7 @@ export function MountedViewLayers({
                 {navOpen && onPickTab && (
                   <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
                 )}
-                {t.plugin?.id === 'shell' && pickerOverlays}
+                {t.plugin?.id === 'shell' && pickerOverlays && (pickerSourceTab ? pickerSourceTab === t.label : t.label === current.label) && pickerOverlays}
                 {t.plugin?.id === 'shell' && !pickerOverlays && quickOpenOverlay}
                 {t.plugin?.id === 'shell' && !pickerOverlays && appThemePickerOverlay}
                 {t.plugin?.id === 'shell' && !pickerOverlays && contributedOverlay}

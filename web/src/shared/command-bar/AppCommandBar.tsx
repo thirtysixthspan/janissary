@@ -9,7 +9,7 @@ import type { PickerCommands } from './picker-commands';
 // classification the agent tab's chain uses, so a bare word opens the same picker, and `quit` — or a
 // `close` that would take the last tab with it — opens the same confirmation, from either bar.
 export type AppCommandBar = {
-  intercept(line: string): boolean;
+  intercept(line: string, sourceTab?: string): boolean;
   ghostHistory: string[];
   blockingOverlayOpen?: boolean;
   overlayOwnsCommandBar?: boolean;
@@ -47,18 +47,22 @@ export function useAppCommandLine(params: PickerCommands & {
   activeTab: number;
   openQuitConfirm: () => void;
   guardRef: RefObject<((index: number) => boolean) | null>;
-}): (line: string) => boolean {
+  onPickerOpen?: (sourceTab: string | undefined) => void;
+}): (line: string, sourceTab?: string) => boolean {
   const {
     tabs, activeTab, openQuitConfirm, guardRef,
     openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,
+    onPickerOpen,
   } = params;
 
-  return useCallback((line: string): boolean => {
+  return useCallback((line: string, sourceTab?: string): boolean => {
     const verdict = classifyCommandBarSubmit(line, tabs, activeTab);
     if (verdict.kind === 'overlay') {
-      return openCommandBarOverlay(verdict.command, {
+      const opened = openCommandBarOverlay(verdict.command, {
         openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,
       });
+      if (opened) onPickerOpen?.(sourceTab);
+      return opened;
     }
     if (verdict.kind === 'confirm-quit') { openQuitConfirm(); return true; }
     // A close of one tab is the client's to guard, because only the client knows whether that tab
@@ -67,6 +71,6 @@ export function useAppCommandLine(params: PickerCommands & {
     return false;
   }, [
     tabs, activeTab, openQuitConfirm, guardRef,
-    openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker,
+    openPicker, openThemePicker, openAppThemePicker, openQueue, openTaskPicker, openProfilePicker, onPickerOpen,
   ]);
 }

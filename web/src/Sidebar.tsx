@@ -24,6 +24,7 @@ export const DEFAULT_WIDTH_PX = 300;
 // or the border divider on the sidebar's inner edge.
 export function Sidebar({
   side, tabs, client, dropRef, targetCwd,
+  pickerOverlays, pickerSourceTab,
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   width = DEFAULT_WIDTH_PX, onWidthChange, focusView, onNotificationsVisibilityChange,
 }: {
@@ -43,6 +44,8 @@ export function Sidebar({
   // `useLayoutState.ts`.
   focusView?: 'files' | 'notifications';
   onNotificationsVisibilityChange?: (visible: boolean) => void;
+  pickerOverlays?: React.ReactNode;
+  pickerSourceTab?: string;
 }) {
   const onResize = useCallback((down: React.MouseEvent, move: MouseEvent) => {
     const delta = side === 'left' ? move.clientX - down.clientX : down.clientX - move.clientX;
@@ -110,6 +113,7 @@ export function Sidebar({
             index={e.index}
             visible={e.tab.label === current.tab.label}
             client={client}
+            overlay={pickerSourceTab === e.tab.label ? pickerOverlays : undefined}
             onClose={() => client.send({ method: 'closeTab', params: { label: e.tab.label } })}
           />
         ))}

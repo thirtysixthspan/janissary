@@ -4,17 +4,6 @@
 
 * the shell should show no command line
 
-* Deliver the plan's bare-word picker behavior from the shell command bar.
-
-Existing Issue: The shared `AppCommandBar` invokes picker openers for shell-tab submissions, but `PickerOverlays` is rendered only for agent, editor, and harness bodies and is not rendered by `PluginTabLayer`, so commands such as `theme`, `hist`, and `tasks` set hidden picker state without displaying a picker. Severity: 7/10
-
-Existing Risk: 7/10 - A shell-tab user gets no visible response to commands documented as opening a picker, while the window handler can route keys into the invisible modal state and the shell bar can still submit lines.
-
-Proposal Risk: 2/10 - Rendering the application-owned picker for the active plugin tab and making the shell bar respect its modal state restores the interaction without duplicating picker behavior.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: render application pickers from plugin tabs". Pass the existing `PickerOverlays` and blocking state through `web/src/AppMain.tsx` and `web/src/MountedViewLayers.tsx` to the active plugin body in `web/src/plugins/PluginTabLayer.tsx` and `web/src/plugins/DockedPluginBody.tsx`, and have `web/src/plugins/shell/ShellTab.tsx` defer key handling and submission while an application picker is open. Reuse the existing picker components and handlers rather than adding shell-specific copies. Add an integration case showing that bare `theme` opens a visible picker in a shell tab, that its arrows and Return/Escape work, and that no line reaches the PTY; keep the agent-picker coverage in `web/src/shared/command-bar/AppCommandBar.test.tsx` passing.
-
-
 * Fix the functionality gap that routes docked-shell commands to the center tab.
 
 Existing Issue: `AppCommandBar` classifies a bare close against the center `activeTab`, `useCmdW` closes `activeTabRef`, and the `agent` command reads `TabManager.cur()` instead of its supplied command context, while a docked shell can focus its own command bar without changing the center selection, so its close and agent actions target the center tab. Severity: 7/10

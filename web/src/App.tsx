@@ -20,7 +20,7 @@ import { useAppWindowKeys } from './useAppWindowKeys';
 import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
 import { AppCommandBarProvider, useAppCommandLine } from './shared/command-bar/AppCommandBar';
 import { usePickerOverlays } from './pickers/usePickerOverlays';
-import { commandBarSuppressed } from './pickers/overlay-registry';
+import { commandBarSuppressed, firstOpenOverlay } from './pickers/overlay-registry';
 import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
@@ -43,6 +43,7 @@ export function App({ client }: { client: JanusClient }) {
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [pickerSourceTab, setPickerSourceTab] = useState<string>();
   // Server-driven "New harness" launch dialog (null when closed).
   const [harnessLaunch, setHarnessLaunch] = useState<HarnessLaunchView | null>(null);
   // Server-driven "New schedule" dialog (null when closed).
@@ -100,6 +101,10 @@ export function App({ client }: { client: JanusClient }) {
     inputRef: inputReference, recallRef: recallReference, dropRef: dropReference, focusHarness,
     pluginCommandLineInsertions,
   });
+
+  useEffect(() => {
+    if (!firstOpenOverlay(pickers.view.overlays)) setPickerSourceTab(undefined);
+  }, [pickers.view.overlays]);
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   // Every dirty-capable tab handle, editor and plugin alike, keyed by tab label. The close guard,
@@ -170,6 +175,7 @@ export function App({ client }: { client: JanusClient }) {
   // reach, and neither can be threaded down through the tab tree without changing a dozen signatures.
   const interceptCommandLine = useAppCommandLine({
     ...pickers.commands, tabs, activeTab, openQuitConfirm: guardedOpenQuitConfirm, guardRef,
+    onPickerOpen: setPickerSourceTab,
   });
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
@@ -191,7 +197,7 @@ export function App({ client }: { client: JanusClient }) {
       <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-      pickers={pickers.view} tabs={tabs}
+      pickers={pickers.view} pickerSourceTab={pickerSourceTab} tabs={tabs}
       search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
       onCommandBarSubmit={onCommandBarSubmit}
       quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}

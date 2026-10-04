@@ -125,7 +125,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     // First refusal is the host's *interception*, asked before the line is offered at all: a bare word
     // it opens a picker for, and `quit` or a `close` that would take the last tab with it, are answered
     // here rather than sent to a dispatcher where `quit` is a bare exit emit with nothing asked.
-    if (appBar.intercept(text)) return;
+    if (appBar.intercept(text, capabilities.label)) return;
     //
     // The payload is the line itself, which is the only shape `isShellDispatch` accepts — anything else
     // is a request this plugin did not describe, and the host refuses it rather than guessing.
