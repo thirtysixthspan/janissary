@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import { useOverlayPlugins, type UseOverlayPluginsOptions } from './useOverlayPlugins';
 import {
-  contributedOverlayOnScreen, contributedOverlays, openContributedOverlay, overlayClaimedByCommand, registerContributedOverlay,
+  contributedOverlayOnScreen, contributedOverlays, openContributedOverlay, openOverlayForCommand, overlayClaimedByCommand, registerContributedOverlay,
 } from './shared/contributed-overlays';
 import { captureCopiedText } from './shared/clipboard-captures';
 
@@ -132,5 +132,94 @@ describe('useOverlayPlugins', () => {
     view.unmount();
 
     expect(overlayClaimedByCommand('clip')).toBe(false);
+  });
+});
+
+// What the hook wires into the host, rather than what the host does with it: the two callbacks the
+// host would otherwise have to reach the rest of the app to call, and the seam that lets a feature open
+// an overlay without importing the plugin layer.
+describe('what useOverlayPlugins wires into the host', () => {
+  // The shared `render` fixes its options, and each case here needs its own client to assert against
+  // — and one of them needs to rerender with a different `currentTab` closure.
+  function mount(overrides: Partial<UseOverlayPluginsOptions> = {}) {
+    const view = renderHook(({ opts }: { opts: UseOverlayPluginsOptions }) => useOverlayPlugins(opts), {
+      initialProps: { opts: options(15, overrides) },
+    });
+    teardown.push(view.unmount);
+    return { ...view, rerenderWith: (next: Partial<UseOverlayPluginsOptions>) => {
+      view.rerender({ opts: options(15, next) });
+    } };
+  }
+
+  async function mountWithClipboard(overrides: Partial<UseOverlayPluginsOptions> = {}) {
+    const view = mount(overrides);
+    await vi.waitFor(() => {
+      expect(contributedOverlays().map((overlay) => overlay.name)).toContain('clipboard-history');
+    });
+    return view;
+  }
+
+  function clipboardOverlay() {
+    return contributedOverlays().find((entry) => entry.name === 'clipboard-history');
+  }
+
+  it('opens an overlay from the command word, through the seam the host installs', async () => {
+    render();
+    expect(overlayClaimedByCommand('clip')).toBe(true);
+
+    expect(openOverlayForCommand('clip', null)).toBe(true);
+
+    await vi.waitFor(() => { expect(contributedOverlayOnScreen()?.name).toBe('clipboard-history'); });
+  });
+
+  // The paste capability is built here rather than imported by the plugin, so the tab and the harness
+  // focus are read through refs — a tab switch between opening the overlay and choosing an entry has
+  // to paste into the tab the user is looking at now, and focus the PTY they pasted into.
+  it('pastes a chosen entry into the harness tab that is exposed now', async () => {
+    const client = stubClient();
+    const focusHarness = vi.fn();
+    const harnessTab = { kind: 'agent', label: 'agent', harness: { ptyId: 'pty-9' } } as unknown as TabView;
+    await mountWithClipboard({ client, currentTab: () => harnessTab, focusHarness });
+    captureCopiedText('copied into the terminal');
+
+    act(() => { openContributedOverlay('clipboard-history', null); });
+    act(() => { clipboardOverlay()?.onKey(new KeyboardEvent('keydown', { key: 'Enter' })); });
+
+    expect(vi.mocked(client.send)).toHaveBeenCalledWith({
+      method: 'ptyInput', params: { id: 'pty-9', data: 'copied into the terminal' },
+    });
+    expect(focusHarness).toHaveBeenCalledWith('pty-9');
+  });
+
+  // Read at paste time, so a value captured when the host was built would paste into the tab the user
+  // was looking at when the window opened rather than the one in front of them.
+  it('reads the exposed tab through a ref, so a later tab is the one pasted into', async () => {
+    const client = stubClient();
+    const other = { kind: 'agent', label: 'other', harness: { ptyId: 'pty-2' } } as unknown as TabView;
+    const view = await mountWithClipboard({ client, currentTab: () => TAB });
+
+    view.rerenderWith({ client, currentTab: () => other });
+    captureCopiedText('after the switch');
+
+    act(() => { openContributedOverlay('clipboard-history', null); });
+    act(() => { clipboardOverlay()?.onKey(new KeyboardEvent('keydown', { key: 'Enter' })); });
+
+    expect(vi.mocked(client.send)).toHaveBeenCalledWith({
+      method: 'ptyInput', params: { id: 'pty-2', data: 'after the switch' },
+    });
+  });
+
+  // An overlay plugin owns no tab, so it has no transcript to write a failure into. The one surface a
+  // user actually watches is the notifications feed, which is what `notify` is.
+  it('reports a plugin that could not be activated through the notifications feed', async () => {
+    const client = stubClient();
+    const view = mount({ client });
+
+    await expect(view.result.current.activate('no-such-plugin')).resolves.toBe(false);
+
+    expect(vi.mocked(client.send)).toHaveBeenCalledWith({
+      method: 'command',
+      params: { text: 'notify Overlay plugin "no-such-plugin" disabled: has no loader.' },
+    });
   });
 });

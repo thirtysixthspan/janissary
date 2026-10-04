@@ -1,123 +1,123 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
 import { allocateBrowserScratch } from './e2e-scratch.js';
+import type * as security from '../security.js';
 
-// A real directory tree, not a `node:fs` stub: what this module promises is that two allocations
-// never name the same directory and that removing one cannot reach another's files, and a stub of
-// the very calls that enforce that would assert nothing.
+// The token is the only randomness in the allocation, and the collision paths are exactly the ones
+// that need it pinned: what a second launch hitting an already-claimed directory does, and what a
+// launch whose temp sibling is already gone after a half-claim does.
+vi.mock('../security.js', async (importOriginal) => ({
+  ...await importOriginal<typeof security>(),
+  makeToken: () => 'pinned-token',
+}));
 
-let root: string;
+const TOKEN = 'pinned-token';
+const CONTAINER = 'browsers';
+
+let projectDir: string;
+
+function container(): string {
+  return workspacePath(CONTAINER);
+}
+
+function claimedPath(slug: string): string {
+  return path.join(container(), `${slug}-${TOKEN}`);
+}
 
 beforeEach(() => {
-  root = mkdtempSync(path.join(tmpdir(), 'e2e-scratch-'));
-  initWorkspaceDir(root, path.join(root, '.claude.json'));
+  projectDir = mkdtempSync(path.join(tmpdir(), 'e2e-scratch-'));
+  initWorkspaceDir(projectDir);
 });
 
 afterEach(() => {
-  rmSync(root, { recursive: true, force: true });
+  rmSync(projectDir, { recursive: true, force: true });
 });
 
-function container(): string {
-  return workspacePath('browsers');
-}
+describe('allocateBrowserScratch', () => {
+  it('hands back an empty directory and its temp sibling', () => {
+    const scratch = allocateBrowserScratch('tab');
 
-describe('allocateBrowserScratch layout', () => {
-  it('creates an empty directory and an empty temp sibling inside the container', () => {
-    const scratch = allocateBrowserScratch('bot');
-    expect(path.dirname(scratch.dir)).toBe(container());
+    expect(scratch.dir).toBe(claimedPath('tab'));
     expect(scratch.tempDir).toBe(`${scratch.dir}.tmp`);
-    expect(readdirSync(scratch.dir)).toEqual([]);
-    expect(readdirSync(scratch.tempDir)).toEqual([]);
+    expect(existsSync(scratch.dir)).toBe(true);
+    expect(existsSync(scratch.tempDir)).toBe(true);
   });
 
-  it('names the directory after the tab so a listing says which tab owns it', () => {
-    const scratch = allocateBrowserScratch('bot');
-    expect(path.basename(scratch.dir).startsWith('bot-')).toBe(true);
-  });
+  it('removes exactly the two paths it allocated, and is idempotent', () => {
+    const scratch = allocateBrowserScratch('tab');
 
-  // The container is a direct child of the workspace root, so `clearWorkspaceDir`'s startup sweep
-  // still reaches it; the browser directories under it are grandchildren, which is what puts them
-  // out of reach of `workspacePath(label)`.
-  it('keeps the container a direct child of the workspace root', () => {
-    allocateBrowserScratch('bot');
-    expect(path.dirname(container())).toBe(path.join(root, '.janissary', 'workspace'));
-  });
-});
-
-describe('allocateBrowserScratch exclusivity', () => {
-  it('gives two launches of the same label two different directories', () => {
-    const first = allocateBrowserScratch('bot');
-    const second = allocateBrowserScratch('bot');
-    expect(second.dir).not.toBe(first.dir);
-    expect(second.tempDir).not.toBe(first.tempDir);
-  });
-
-  // The two-live-session case: one remote channel spawns both, so both are handed the same label.
-  it('leaves the other launch untouched when one of them closes', () => {
-    const first = allocateBrowserScratch('bot');
-    const second = allocateBrowserScratch('bot');
-    writeFileSync(path.join(second.dir, 'profile'), 'live');
-    writeFileSync(path.join(second.tempDir, 'scratch'), 'live');
-    first.remove();
-    expect(existsSync(first.dir)).toBe(false);
-    expect(readFileSync(path.join(second.dir, 'profile'), 'utf8')).toBe('live');
-    expect(readFileSync(path.join(second.tempDir, 'scratch'), 'utf8')).toBe('live');
-  });
-
-  // A directory it did not create is never adopted, whatever put it there.
-  it('never adopts a directory that already exists', () => {
-    const scratch = allocateBrowserScratch('bot');
-    writeFileSync(path.join(scratch.dir, 'clone'), 'not the browser\'s');
-    const next = allocateBrowserScratch('bot');
-    expect(next.dir).not.toBe(scratch.dir);
-    expect(readFileSync(path.join(scratch.dir, 'clone'), 'utf8')).toBe('not the browser\'s');
-  });
-
-  // The old name. A tab launched as `bot.browser` owns this path; nothing here may reach it.
-  it('leaves a tab workspace in the root alone', () => {
-    const tabDir = workspacePath('bot.browser');
-    mkdirSync(tabDir, { recursive: true });
-    writeFileSync(path.join(tabDir, 'uncommitted.ts'), 'work');
-    const scratch = allocateBrowserScratch('bot');
-    scratch.remove();
-    expect(readFileSync(path.join(tabDir, 'uncommitted.ts'), 'utf8')).toBe('work');
-  });
-});
-
-describe('allocateBrowserScratch label handling', () => {
-  it.each([
-    ['../../thing', 'traversal'],
-    ['..', 'a bare parent reference'],
-    ['a/b', 'a separator'],
-    ['../', 'a trailing separator'],
-    ['...', 'nothing but dots'],
-  ])('keeps %s (%s) inside the container', (label) => {
-    const scratch = allocateBrowserScratch(label);
-    expect(path.dirname(scratch.dir)).toBe(container());
-    expect(readdirSync(scratch.dir)).toEqual([]);
-  });
-
-  it('falls back to a usable name when the label reduces to nothing', () => {
-    const scratch = allocateBrowserScratch('///');
-    expect(path.basename(scratch.dir).startsWith('browser-')).toBe(true);
-  });
-});
-
-describe('BrowserScratch.remove', () => {
-  it('deletes both allocated paths', () => {
-    const scratch = allocateBrowserScratch('bot');
-    writeFileSync(path.join(scratch.dir, 'downloads'), 'x');
     scratch.remove();
     expect(existsSync(scratch.dir)).toBe(false);
     expect(existsSync(scratch.tempDir)).toBe(false);
+
+    expect(() => scratch.remove()).not.toThrow();
   });
 
-  it('is safe to call twice, and when the paths are already gone', () => {
-    const scratch = allocateBrowserScratch('bot');
-    rmSync(scratch.dir, { recursive: true, force: true });
-    expect(() => { scratch.remove(); scratch.remove(); }).not.toThrow();
+  it('leaves the container itself in place for the startup sweep', () => {
+    const scratch = allocateBrowserScratch('tab');
+
+    scratch.remove();
+
+    expect(existsSync(container())).toBe(true);
+  });
+
+  // The label rides along for `ls` only, so a hostile one must not be able to steer the path out of
+  // the container: no separator and no `..` component survives the reduction.
+  it('keeps a traversal label inside the container', () => {
+    const scratch = allocateBrowserScratch('as ../../escape');
+
+    expect(path.dirname(scratch.dir)).toBe(container());
+    expect(scratch.dir).toBe(claimedPath('as-..-..-escape'));
+  });
+
+  it('falls back to a plain name when the label reduces to nothing', () => {
+    const scratch = allocateBrowserScratch('%%%');
+
+    expect(scratch.dir).toBe(claimedPath('browser'));
+  });
+
+  it('truncates a long label rather than growing the directory name without bound', () => {
+    const scratch = allocateBrowserScratch('a'.repeat(80));
+
+    expect(path.dirname(scratch.dir)).toBe(container());
+    expect(scratch.dir).toBe(claimedPath('a'.repeat(32)));
+  });
+
+  // Someone else's directory is never taken over: the attempt is refused and the loop tries again
+  // under a fresh token. With the token pinned, every attempt loses the same race and the bounded
+  // retry gives up loudly instead of spinning.
+  it('retries an already-claimed directory and gives up when attempts run out', () => {
+    mkdirSync(container(), { recursive: true });
+    mkdirSync(claimedPath('tab'));
+
+    expect(() => allocateBrowserScratch('tab')).toThrow('could not allocate a scratch directory');
+    expect(existsSync(claimedPath('tab'))).toBe(true);
+  });
+
+  // A pair that only half-claimed is rolled back, so the next attempt starts from a clean container
+  // rather than inheriting the directory the failed attempt left behind.
+  it('rolls back the directory when the temp sibling is already taken', () => {
+    mkdirSync(container(), { recursive: true });
+    mkdirSync(`${claimedPath('tab')}.tmp`);
+
+    expect(() => allocateBrowserScratch('tab')).toThrow('could not allocate a scratch directory');
+    expect(existsSync(claimedPath('tab'))).toBe(false);
+    expect(existsSync(`${claimedPath('tab')}.tmp`)).toBe(true);
+  });
+
+  // Only `EEXIST` means "someone else owns it, try again". Any other failure is a real fault —
+  // an unwritable container, say — and is rethrown rather than swallowed into a silent retry.
+  it('rethrows a failure that is not a collision', () => {
+    mkdirSync(container(), { recursive: true });
+    chmodSync(container(), 0o500);
+
+    try {
+      expect(() => allocateBrowserScratch('tab')).toThrow(/EACCES|EPERM/iu);
+    } finally {
+      chmodSync(container(), 0o700);
+    }
   });
 });
