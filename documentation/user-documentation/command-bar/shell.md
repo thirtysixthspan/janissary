@@ -113,6 +113,8 @@ The command bar starts focused. Click the terminal or press `Shift+Tab` to type 
 
 The shell starts in the working directory of the tab that opened it. It shares that tab's workspace and offline mode when present, and keeps the workspace alive even if you close the original tab. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt.
 
+The terminal colors follow the application theme. Choosing a theme in the `theme` picker updates the shell terminal too.
+
 The shell tab's metadata row follows zsh's current working directory as you change it.
 
 `↑` and `↓` recall lines sent from this tab's command bar. `Ctrl+R` opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.

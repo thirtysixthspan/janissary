@@ -38,7 +38,8 @@ else (see [[quit-confirmation]]), and a bare word opens the same picker.
 The bare `theme` picker appears over the shell tab. While it is open, the application's arrow,
 Return, and Escape handling controls the selection, applies the chosen theme, or dismisses the picker.
 If the shell tab is docked in a sidebar, the picker appears over that shell there; its keys stay with
-the picker and are not sent to zsh.
+the picker and are not sent to zsh. The terminal colors follow the application theme, including when
+the picker applies a different theme.
 
 The `queue` command and `Ctrl+E` open the application's queue popup over the shell tab. The selected
 queued line appears in the shell command bar; typing edits it, and Backspace or Delete on an empty bar

@@ -1,4 +1,4 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PluginTerminal } from '../api';
 import { useShellTerminal } from './useShellTerminal';
@@ -202,6 +202,40 @@ describe('useShellTerminal', () => {
 
     expect(terminals[0].options.disableStdin).toBe(false);
     expect(terminals[0].options.cursorBlink).toBe(true);
+  });
+
+  it('refreshes xterm colors when the application theme changes', async () => {
+    const root = document.documentElement;
+    const previous = {
+      foreground: root.style.getPropertyValue('--terminal-fg'),
+      background: root.style.getPropertyValue('--terminal-bg'),
+      theme: root.dataset.theme,
+    };
+    root.style.setProperty('--terminal-fg', '#111111');
+    root.style.setProperty('--terminal-bg', '#222222');
+    const { unmount } = harness();
+
+    expect(terminals[0]?.options.theme).toEqual({ foreground: '#111111', background: '#222222' });
+
+    root.style.setProperty('--terminal-fg', '#aaaaaa');
+    root.style.setProperty('--terminal-bg', '#bbbbbb');
+    root.dataset.theme = 'nord';
+    await waitFor(() => {
+      expect(terminals[0]?.options.theme).toEqual({ foreground: '#aaaaaa', background: '#bbbbbb' });
+    });
+    const updatedTheme = terminals[0]?.options.theme;
+
+    unmount();
+    root.dataset.theme = 'dark';
+    await Promise.resolve();
+    expect(terminals[0]?.options.theme).toBe(updatedTheme);
+
+    if (previous.foreground) root.style.setProperty('--terminal-fg', previous.foreground);
+    else root.style.removeProperty('--terminal-fg');
+    if (previous.background) root.style.setProperty('--terminal-bg', previous.background);
+    else root.style.removeProperty('--terminal-bg');
+    if (previous.theme === undefined) delete root.dataset.theme;
+    else root.dataset.theme = previous.theme;
   });
 
   it('survives a tab switch, which hands it a fresh capability object', () => {

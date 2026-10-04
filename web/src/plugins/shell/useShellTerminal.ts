@@ -32,6 +32,11 @@ export type ShellTerminalHandle = {
   focus(): void;
 };
 
+function shellTerminalTheme() {
+  const colors = terminalColors();
+  return { background: colors.bg, foreground: colors.fg };
+}
+
 export function useShellTerminal({
   ptyId, containerRef, attachTerminal, onExit, onCommandRunning, onCwd,
 }: Options): ShellTerminalHandle {
@@ -59,19 +64,22 @@ export function useShellTerminal({
     if (!container || !attach) return;
 
     const styles = getComputedStyle(document.documentElement);
-    const colors = terminalColors();
     const terminal = new Terminal({
       fontFamily: styles.getPropertyValue('--mono').trim() || 'monospace',
       fontSize: Number(styles.getPropertyValue('--terminal-font-size').replace('px', '')) || 13.5,
       lineHeight: Number(styles.getPropertyValue('--terminal-line-height').replace('px', '')) || 1.2,
       cursorBlink: true,
       disableStdin: false,
-      theme: { background: colors.bg, foreground: colors.fg },
+      theme: shellTerminalTheme(),
     });
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(container);
     container.classList.add('shell-initializing');
+    const themeObserver = new MutationObserver(() => {
+      terminal.options.theme = shellTerminalTheme();
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     terminal.parser.registerOscHandler(133, (data) => {
       switch (data) {
       case 'C': { runningRef.current(true); break; }
@@ -135,6 +143,7 @@ export function useShellTerminal({
     return () => {
       disposed = true;
       observer.disconnect();
+      themeObserver.disconnect();
       handleRef.current?.detach();
       handleRef.current = null;
       terminalRef.current = null;
