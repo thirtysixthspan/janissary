@@ -10,6 +10,7 @@ import { TabTranscriptState } from './transcript/state.js';
 import { buildAgentStateFromTab } from './agent-state.js';
 import { FileRegistry } from './file-registry.js';
 import { placeProfileTabSelection } from './split-selection.js';
+import { assertTerminalCwd } from './terminal-cwd.js';
 import { disposeDwell } from './dwell.js';
 import * as tabOperations from './operations.js';
 import { tabRuntime } from './runtime.js';
@@ -211,6 +212,7 @@ export class TabManager extends TabTranscriptState {
   // workspace in the options is confined exactly as that tab's own shell is, and the plugin never
   // learns how.
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal {
+    assertTerminalCwd(this.launchDir, options.cwd);
     const workspace = options.workspace;
     const ptyId = this.managers.pty.spawn(
       '',

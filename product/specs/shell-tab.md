@@ -74,7 +74,10 @@ has moved elsewhere still shows where it was opened.
 
 `zsh` in a tab that has a workspace clone starts the shell inside that clone, confined the same way
 that tab's own shell is — which is the point of a disposable clone. Anywhere else, it starts in the
-project's root directory.
+project's root directory. Both are inside the project root, and a shell cannot be started anywhere
+else: a terminal only ever runs in a directory inside that root. A remote agent tab is therefore not a
+place a shell tab can be opened from — its working directory belongs to the other host, and there is
+nothing here to start a shell in.
 
 The shell is always zsh, named outright rather than taken from the environment, so the tab is a zsh
 tab whatever the user's login shell happens to be. It is a fully interactive zsh reading its own

@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Refuse a terminal working directory outside the project root, the way the file resources in the same object already refuse one.
-
-Existing Issue: `TabManager.spawnTerminal` in `src/tab/manager.ts` passes `options.cwd` straight to `PseudoterminalManager.spawn` with no path check, so the new resource starts an interactive process in whatever directory a plugin names, in the very resources object whose `registerFile` and whose `openInEditor` capability both refuse a path outside `launchDir`. Severity: 7/10
-
-Existing Risk: 6/10 - A plugin that declares `spawnTerminal` can put a fully interactive, unconfined zsh in `~/.ssh` or `/etc` and read and write through it over the pty channel the host already carries, with nothing in the declaration saying which directories are in bounds.
-
-Proposal Risk: 2/10 - The bound becomes a host-side check a plugin cannot argue with, but confinement is still opt-in through the `workspace` option, so a terminal inside the root is still an unconfined shell.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: refuse a spawnTerminal working directory outside the project root". `isInsideRoot` in `src/plugins/files.ts` is the boundary `openInEditor` already uses against `managers.tab.launchDir`, and the plugin import boundary in `eslint.plugin-boundaries.mjs` lets a plugin's server module reach that module, so the helper is already available where the check belongs. Apply it in `TabManager.spawnTerminal` in `src/tab/manager.ts` and decide deliberately what the refusal is: throwing matches the message a capability refusal uses, and `withResources` in `src/tab/openers.ts` already turns a throwing factory into a killed terminal and no tab, which is the right outcome. Confirm before choosing it that both of the shell plugin's own directories survive — the project root, and a workspace clone under `.janissary/workspace/`, which is inside `launchDir` — and check the remote-tab case, where `originTab` reports a `cwd` the host may not own. Correct the `cwd` comment on `TabPluginTerminalOptions` in `src/plugins/api.ts`, which currently says only "Where the terminal starts", and the `spawnTerminal` declaration comment beside it, so the bound is stated where a plugin author reads it; `documentation/developer-documentation/tab-plugins.md`'s `spawnTerminal` changelog entry records the same sentence, and `product/specs/tab-plugins.md`'s bundled-shell-plugin section is the other place that describes the resource's reach. Add the cases beside the existing `spawnTerminal` argv case in `src/tab/manager.test.ts`: a `cwd` outside the launch root is refused and starts nothing, and one inside it still spawns. `src/plugins/shell/activate.test.ts` keeps passing untouched, since the shell plugin's own directories are inside the root.
-
 * Remember what the host state channel pushed per tab instance rather than per tab label, so a reused label cannot silence a new tab's first delivery.
 
 Existing Issue: `src/plugins/host-state.ts` keeps its `lastPushed` fingerprints in a map keyed by tab label and never removes an entry when that tab closes, so a tab given the label a closed one held computes the fingerprint already on file and is never delivered its rows at all. Severity: 6/10

@@ -46,10 +46,12 @@ function makeTabManager(): TabManager {
 }
 
 // The managers alongside, for the cases that assert on what the tab manager asked of them -- a
-// terminal adopted onto a new label, a process killed after a factory failed.
+// terminal adopted onto a new label, a process killed after a factory failed. The project directory is
+// fixed rather than the process's own, because `spawnTerminal` refuses a `cwd` outside it and the cases
+// below name one.
 function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
   const managers = {} as Managers;
-  managers.tab = new TabManager(managers);
+  managers.tab = new TabManager(managers, '/repo');
   Object.assign(managers, makeManagers());
   return { tm: managers.tab, managers };
 }
@@ -374,6 +376,41 @@ describe('TabManager queue', () => {
     // whose one command is the empty string.
     expect(managers.pty.spawn).toHaveBeenCalledWith(
       '', 'zsh', '', '/repo', undefined, undefined, undefined,
+      { shell: '/bin/zsh', args: [] },
+    );
+  });
+
+  it('refuses to start a terminal outside the project root, and starts nothing', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    // A terminal is a fully interactive shell, so the bound `openInEditor` puts on a plugin's file
+    // path is the bound here too: `/etc` is nowhere inside `/repo`, so no process begins.
+    expect(() => tm.spawnTerminal({ cwd: '/etc', shell: '/bin/zsh' })).toThrow(/outside the project root/);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('leaves no tab behind when a factory asks for a terminal outside the project root', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    const before = tm.tabs.length;
+
+    expect(() => tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      const terminal = resources.spawnTerminal({ cwd: '/root/.ssh', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: { ptyId: terminal.ptyId } };
+    })).toThrow(/outside the project root/);
+
+    expect(tm.tabs).toHaveLength(before);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('starts a terminal whose working directory is inside the project root', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.spawnTerminal({ cwd: '/repo/.janissary/workspace/bekir', shell: '/bin/zsh' });
+
+    // A workspace clone is where the bundled shell plugin starts a workspaced tab's shell, so the
+    // bound has to admit it.
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      '', 'zsh', '', '/repo/.janissary/workspace/bekir', undefined, undefined, undefined,
       { shell: '/bin/zsh', args: [] },
     );
   });

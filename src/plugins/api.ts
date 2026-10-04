@@ -101,7 +101,9 @@ export type TabPluginTerminal = {
 };
 
 export type TabPluginTerminalOptions = {
-  // Where the terminal starts. A workspaced tab's clone, or the project root.
+  // Where the terminal starts. It must be inside the project root — the same bound `openInEditor`
+  // places on a plugin's path — and the host refuses a `cwd` outside it rather than starting an
+  // unconfined shell there. A workspaced tab's clone is inside the root, so naming one is allowed.
   cwd: string;
   // The shell to run, and the argv to run it with. `args` defaults to none, which runs the shell as
   // the user configured it — its startup files load and it reads its own rc. There is deliberately no
@@ -116,9 +118,11 @@ export type TabPluginTerminalOptions = {
 
 export type TabPluginResources = {
   registerFile(absPath: string): string;
-  // Start a terminal this tab will own. The host releases it when the tab closes, when the plugin is
-  // disposed, and when the plugin is disabled — the plugin never holds a process handle, so there is
-  // nothing for it to leak. Callable only from inside a payload factory.
+  // Start a terminal this tab will own, in a directory inside the project root. The host releases it
+  // when the tab closes, when the plugin is disposed, and when the plugin is disabled — the plugin
+  // never holds a process handle, so there is nothing for it to leak. Callable only from inside a
+  // payload factory, and only for a `cwd` inside the project root: a terminal is a fully interactive
+  // shell, so the host holds that line where it holds a plugin's file paths.
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
 };
 
