@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TaskRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
+import type { PluginCommandLineInsertions } from '../shared/command-bar/AppCommandBar';
 import { flattenVisibleTaskRows } from './task-picker-keys';
 import { firstSelectable, normalizeIndex } from './sectioned-rows';
 import { insertIntoCommandLine } from './populate-command-line';
@@ -22,6 +23,8 @@ export function useTaskPicker(
   harnessPtyId: string | undefined,
   dropRef: React.RefObject<CommandInputDropHandle | null>,
   focusHarness: (ptyId: string) => void,
+  pluginCommandLineInsertions?: PluginCommandLineInsertions,
+  shellLabel?: string,
 ) {
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [taskPickerIndex, setTaskPickerIndex] = useState(0);
@@ -45,9 +48,15 @@ export function useTaskPicker(
     const command = source === 'janissary'
       ? `execute $janissary/ai/tasks/${path}`
       : `execute ./ai/tasks/${path}`;
-    insertIntoCommandLine(command, client, harnessPtyId, dropRef, focusHarness);
+    if (harnessPtyId) {
+      insertIntoCommandLine(command, client, harnessPtyId, dropRef, focusHarness);
+    } else if (shellLabel) {
+      pluginCommandLineInsertions?.current.get(shellLabel)?.(command);
+    } else {
+      insertIntoCommandLine(command, client, undefined, dropRef, focusHarness);
+    }
     setTaskPickerOpen(false);
-  }, [tasks, client, harnessPtyId, dropRef, focusHarness]);
+  }, [tasks, client, harnessPtyId, dropRef, focusHarness, pluginCommandLineInsertions, shellLabel]);
 
   const toggleTaskDir = useCallback((path: string) => {
     setExpandedTaskDirs((prev) => {

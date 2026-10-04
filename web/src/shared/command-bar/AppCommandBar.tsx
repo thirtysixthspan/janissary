@@ -18,7 +18,10 @@ export type AppCommandBar = {
   queueItems?: string[];
   onEditQueued?: (text: string) => void;
   onDeleteQueued?: () => void;
+  pluginCommandLineInsertions?: PluginCommandLineInsertions;
 };
+
+export type PluginCommandLineInsertions = { current: Map<string, (text: string) => void> };
 
 const AppCommandBarContext = createContext<AppCommandBar | null>(null);
 

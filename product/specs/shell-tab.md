@@ -51,6 +51,9 @@ tab's bar asks, and shows the same strip when there is a choice to make. The she
 of its own. One match completes the line, several matches show the choice strip, and no matches leave
 the line unchanged.
 
+`Ctrl+A` and `tasks` open the shared task picker over the shell tab. Choosing a task inserts its
+`execute …` command at the shell command bar's caret and leaves it there for you to edit or submit.
+
 The command bar's status dot uses the same color as the shell tab's dot.
 
 ## Keys

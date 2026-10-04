@@ -27,6 +27,7 @@ function TestComponent({ client, current, onHook }: {
     tasks: [], profiles: [],
     runCommand: () => {},
     inputRef: createRef(), recallRef: createRef(), dropRef: createRef(), focusHarness: () => {},
+    pluginCommandLineInsertions: { current: new Map() },
   });
   onHook(hook);
   return null;

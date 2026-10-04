@@ -48,6 +48,7 @@ export function App({ client }: { client: JanusClient }) {
   // Server-driven "New schedule" dialog (null when closed).
   const [scheduleLaunch, setScheduleLaunch] = useState<ScheduleLaunchView | null>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
+  const pluginCommandLineInsertions = useRef(new Map<string, (text: string) => void>());
   // Assigned `CommandInput`'s `recall` (the `guardRef` pattern); shared by the queue and task
   // pickers so a selected row's text lands in the command line without submitting.
   const recallReference = useRef<((text: string) => void) | null>(null);
@@ -97,6 +98,7 @@ export function App({ client }: { client: JanusClient }) {
   const pickers = usePickerOverlays({
     client, current, tabs, syntaxTheme, tasks, profiles, runCommand,
     inputRef: inputReference, recallRef: recallReference, dropRef: dropReference, focusHarness,
+    pluginCommandLineInsertions,
   });
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
@@ -184,6 +186,7 @@ export function App({ client }: { client: JanusClient }) {
         queueItems: pickers.view.queueItems,
         onEditQueued: pickers.onEditQueued,
         onDeleteQueued: pickers.onDeleteQueued,
+        pluginCommandLineInsertions,
       }}>
       <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}

@@ -7,6 +7,7 @@ import type { TabView } from '@shared/protocol';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
 import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistry } from '../PluginChords';
 import { AppCommandBarProvider, useAppCommandLine } from '../../shared/command-bar/AppCommandBar';
+import type { PluginCommandLineInsertions } from '../../shared/command-bar/AppCommandBar';
 import { ShellTab } from './ShellTab';
 
 // The emulator and its fit addon are stubbed so the tab's own logic — routing, focus, the chord claim —
@@ -145,6 +146,7 @@ type AppBarOptions = {
   queueItems?: string[];
   onEditQueued?: (text: string) => void;
   onDeleteQueued?: () => void;
+  pluginCommandLineInsertions?: PluginCommandLineInsertions;
 };
 
 type AppBarOpeners = Record<
@@ -183,6 +185,7 @@ function AppBar({ chords, options, openQuitConfirm, openers, children }: {
         queueItems: options.queueItems,
         onEditQueued: options.onEditQueued,
         onDeleteQueued: options.onDeleteQueued,
+        pluginCommandLineInsertions: options.pluginCommandLineInsertions,
       }}>{children}</AppCommandBarProvider>
     </PluginChordProvider>
   );
@@ -268,6 +271,18 @@ describe('ShellTab', () => {
 
     fireEvent.keyDown(bar(), { key: 'Enter' });
 
+    expect(written).toEqual([]);
+  });
+
+  it('registers task insertion at its own caret without submitting to the shell', () => {
+    const pluginCommandLineInsertions: PluginCommandLineInsertions = { current: new Map() };
+    const { written } = renderTab({ pluginCommandLineInsertions });
+    fireEvent.change(bar(), { target: { value: 'echo done' } });
+    bar().setSelectionRange(5, 5);
+
+    act(() => { pluginCommandLineInsertions.current.get('shell')?.('execute ./ai/tasks/build.md'); });
+
+    expect(bar()).toHaveValue('echo execute ./ai/tasks/build.mddone');
     expect(written).toEqual([]);
   });
 

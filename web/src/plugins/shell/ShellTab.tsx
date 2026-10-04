@@ -3,7 +3,9 @@ import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordCla
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTerminal } from './useShellTerminal';
-import { controlCharacterFor, routeFor, shellLine, type ControlKey } from './command-line-rules';
+import { routeFor, shellLine } from './command-line-rules';
+import { handleQueueKey, handleShellControlKey } from './command-bar-keys';
+import { insertCommandAtCaret } from './insert-command-at-caret';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
 import './shell.css';
@@ -36,6 +38,8 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const [matches, setMatches] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const queueWasOpen = useRef(false);
+  const draftReference = useRef(draft);
+  draftReference.current = draft;
   const queueOpen = appBar.queueOpen ?? false;
   const queueIndex = appBar.queueIndex ?? 0;
   const queueItems = appBar.queueItems ?? NO_QUEUE_ITEMS;
@@ -49,6 +53,19 @@ export function ShellTab({ payload, capabilities }: Properties) {
     }
     queueWasOpen.current = queueOpen;
   }, [queueIndex, queueItems, queueOpen]);
+
+  useEffect(() => {
+    const insertions = appBar.pluginCommandLineInsertions?.current;
+    const label = capabilities.label;
+    if (!insertions || !label) return;
+    insertions.set(label, (text) => {
+      const element = inputReference.current;
+      if (!element) return;
+      element.focus();
+      insertCommandAtCaret(element, draftReference.current, text);
+    });
+    return () => { insertions.delete(label); };
+  }, [appBar.pluginCommandLineInsertions, capabilities.label]);
 
   const { write } = useShellTerminal({
     ptyId: payload.ptyId,
@@ -151,19 +168,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     if (historyOpen) return;
     // The shell's own control keys, before the baseline keymap: that one returns early on any held
     // modifier, so without this they would reach the window handler and be lost.
-    const control = controlKeyOf(event);
-    if (control) {
-      const element = inputReference.current;
-      const selection = element ? selectionIn(element) : '';
-      const character = controlCharacterFor(control, Boolean(selection));
-      if (character === undefined) {
-        if (selection) capabilities.copyText(selection);
-      } else {
-        write(character);
-      }
-      event.preventDefault();
-      return;
-    }
+    if (handleShellControlKey(event, inputReference.current, capabilities.copyText, write)) return;
     if (event.key === 'Tab') {
       event.preventDefault();
       void capabilities.intent<ShellCompletion>('complete', {
@@ -228,40 +233,4 @@ export function ShellTab({ payload, capabilities }: Properties) {
       )}
     </div>
   );
-}
-
-// The selected text inside the command line, which is what decides whether `Ctrl+C` copies or
-// interrupts. Read from the element rather than the document because a selection elsewhere on the
-// page is none of this bar's business.
-function selectionIn(element: HTMLTextAreaElement): string {
-  return element.selectionStart === element.selectionEnd ? '' : element.value.slice(
-    element.selectionStart, element.selectionEnd,
-  );
-}
-
-function controlKeyOf(event: {
-  key: string; ctrlKey: boolean; metaKey: boolean; shiftKey: boolean;
-}): ControlKey | undefined {
-  if (!event.ctrlKey || event.metaKey || event.shiftKey) return undefined;
-  const key = event.key.toLowerCase();
-  if (key === 'c') return 'ctrl+c';
-  if (key === 'd') return 'ctrl+d';
-  if (key === 'z') return 'ctrl+z';
-  return undefined;
-}
-
-function handleQueueKey(
-  event: React.KeyboardEvent<HTMLTextAreaElement>,
-  queueOpen: boolean,
-  draft: string,
-  onDeleteQueued?: () => void,
-): boolean {
-  if (!queueOpen) return false;
-  if (['Enter', 'ArrowUp', 'ArrowDown'].includes(event.key)) return true;
-  if ((event.key === 'Backspace' || event.key === 'Delete') && draft === '') {
-    event.preventDefault();
-    onDeleteQueued?.();
-    return true;
-  }
-  return false;
 }

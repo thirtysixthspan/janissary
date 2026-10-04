@@ -4,9 +4,6 @@
 
 * the shell should show no command line
 
-* the task picker popup should work in the shell tab just as in the agent tab.
-
-
 * shift + tab should move the keyboard focus between the terminal and the command bar. the keyboard focus will determine where keypresses are sent in the shell tab.
 
 
