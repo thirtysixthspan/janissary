@@ -2,8 +2,6 @@
 
 # pull-request
 
-* remove all shell prompt formatting and leave only `> ` by sending the following to the shell when it launches and before the output becomes visible to the user - export PROMPT='> '
-
 * pre and post hooks should be added when the shell launches but before the output become visilbe to the user.
 
 * all popups should render above the command bar, not on top of it. This should be that same positioning as in the agent tab. it should not overlap the left colored border of the tab. history picker, clipboard picker, queue picker, tab navigator, quick file finder, theme picker, syntax theme picker.

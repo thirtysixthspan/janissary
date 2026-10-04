@@ -98,7 +98,7 @@ function makeCapabilities(overrides: {
   const closed: number[] = [];
   const handle: PluginTerminal = {
     write: (data) => {
-      if (!data.startsWith('autoload -Uz add-zsh-hook')) written.push(data);
+      if (!data.startsWith("export PROMPT='> '")) written.push(data);
     },
     resize: (cols, rows) => { resized.push({ cols, rows }); },
     onExit: vi.fn(),

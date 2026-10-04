@@ -116,8 +116,8 @@ nothing here to start a shell in.
 
 The shell is always zsh, named outright rather than taken from the environment, so the tab is a zsh
 tab whatever the user's login shell happens to be. It is a fully interactive zsh reading its own
-startup files, which every other shell the application spawns deliberately does not do: a terminal
-that ignored `.zshrc` would have no `PATH` additions, no aliases, and no prompt of the user's own.
+startup files, then sets its prompt to `> ` so user prompt formatting does not change the shell tab's
+terminal display.
 
 ## Lifetime
 

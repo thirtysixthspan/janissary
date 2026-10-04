@@ -137,6 +137,7 @@ describe('useShellTerminal', () => {
   it('reports command start and prompt markers from the zsh integration', () => {
     const { onCommandRunning, written } = harness();
 
+    expect(written[0]).toContain("export PROMPT='> '");
     expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
     expect(oscHandlers.find(({ id }) => id === 133)?.handle('C')).toBe(true);
     expect(oscHandlers.find(({ id }) => id === 133)?.handle('D')).toBe(true);
