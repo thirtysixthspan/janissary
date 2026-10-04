@@ -12,27 +12,39 @@ export type PluginChordHandler = () => void;
 // Keyed by plugin id and chord together, so two plugins claiming the same chord cannot overwrite each
 // other, and releasing one is releasing only its own claim.
 export type PluginChordRegistry = {
-  register(pluginId: string, chordId: string, handler: PluginChordHandler): () => void;
-  run(chordId: string): boolean;
+  register(pluginId: string, tabLabel: string, chordId: string, handler: PluginChordHandler): () => void;
+  run(chordId: string, focusedTabLabel?: string): boolean;
 };
 
 export function createPluginChordRegistry(): PluginChordRegistry {
   const claims = new Map<string, PluginChordHandler>();
   return {
-    register: (pluginId, chordId, handler) => {
-      const key = `${pluginId} ${chordId}`;
+    register: (pluginId, tabLabel, chordId, handler) => {
+      const key = `${pluginId} ${tabLabel} ${chordId}`;
       claims.set(key, handler);
       return () => { claims.delete(key); };
     },
     // No claim registered means the application keeps the chord, which is what makes a declaration that
     // claims one nothing ever answers for harmless rather than a swallowed key.
-    run: (chordId) => {
+    run: (chordId, focusedTabLabel) => {
+      if (focusedTabLabel !== undefined) {
+        const suffix = ` ${focusedTabLabel} ${chordId}`;
+        for (const [key, handler] of claims) {
+          if (!key.endsWith(suffix)) continue;
+          handler();
+          return true;
+        }
+        return false;
+      }
+      let match: PluginChordHandler | undefined;
       for (const [key, handler] of claims) {
         if (!key.endsWith(` ${chordId}`)) continue;
-        handler();
-        return true;
+        if (match) return false;
+        match = handler;
       }
-      return false;
+      if (!match) return false;
+      match();
+      return true;
     },
   };
 }
@@ -65,6 +77,7 @@ export function usePluginChords(): PluginChordRegistry {
 // ordinary use.
 export function usePluginChordClaims(
   pluginId: string,
+  tabLabel: string,
   chords: readonly string[],
   active: boolean,
   handler: PluginChordHandler,
@@ -74,12 +87,14 @@ export function usePluginChordClaims(
   handlerRef.current = handler;
   const chordsRef = useRef(chords);
   chordsRef.current = chords;
+  const currentLabel = useRef(tabLabel);
+  currentLabel.current = tabLabel;
   const claimed = chords.join(' ');
   useEffect(() => {
     const ids = chordsRef.current;
     if (!active || ids.length === 0) return;
     const releases = ids.map((chordId) =>
-      registry.register(pluginId, chordId, () => { handlerRef.current(); }));
+      registry.register(pluginId, currentLabel.current, chordId, () => { handlerRef.current(); }));
     return () => { for (const release of releases) release(); };
-  }, [registry, pluginId, active, claimed]);
+  }, [registry, pluginId, tabLabel, active, claimed]);
 }

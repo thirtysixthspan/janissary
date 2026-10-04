@@ -26,7 +26,7 @@ export function DockedPluginBody({
   const [actionsTarget, setActionsTarget] = useState<HTMLSpanElement | null>(null);
   if (!tab.plugin) return null;
   return (
-    <div className="sidebar-plugin" style={{ display: visible ? 'flex' : 'none' }}>
+    <div className="sidebar-plugin" data-tab-label={tab.label} style={{ display: visible ? 'flex' : 'none' }}>
       <DockCycleHeader dock={tab.dock} client={client} index={index} classPrefix="sidebar-plugin">
         <span className="sidebar-plugin-actions" ref={setActionsTarget} />
       </DockCycleHeader>

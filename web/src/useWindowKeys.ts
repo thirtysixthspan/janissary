@@ -188,7 +188,8 @@ function handleChordKeys(
 ): boolean {
   const chordId = eventChordId(e);
   if (chordId === undefined) return false;
-  if (chords.run(chordId)) { e.preventDefault(); return true; }
+  const target = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-tab-label]') : null;
+  if (chords.run(chordId, target?.dataset.tabLabel)) { e.preventDefault(); return true; }
   if (e.metaKey && metaChordOpener(e, snap, cb)) return true;
   if (e.ctrlKey) {
     const opener = ctrlChordOpener(appChordAction(chordId), cb);
@@ -226,4 +227,3 @@ export function useWindowKeys(
     };
   }, [client, stateRef, callbacksRef, handleScrollKey, handleScrollKeyUp, chords]);
 }
-

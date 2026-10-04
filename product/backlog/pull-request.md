@@ -61,15 +61,3 @@ Existing Risk: 6/10 - A user trying to close a docked shell can close or prompt 
 Proposal Risk: 2/10 - Routing each operation through the shell tab that received it preserves docked close semantics and source-relative agent creation; other global shortcuts still need their own target if they become tab-specific.
 
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: target docked shell actions at the shell tab". Pass the plugin tab's label or focused surface into `web/src/shared/command-bar/AppCommandBar.tsx` so bare close classification and `CloseSaveGuard` use the shell tab, and update `web/src/useCmdW.ts` to resolve Cmd+W against the focused sidebar selection when a docked shell command bar has focus. Change `src/commands/agent.ts` and `src/profile/new-agent.ts` to use the `{ label, index }` command context supplied by `CommandManager.dispatchLine` rather than `TabManager.cur()`. Keep named `close <name>` behavior unchanged. Add tests with one center tab and a docked shell proving bare `close` and Cmd+W close the shell without opening the quit dialog or closing the center tab, and that `agent` uses the shell tab's context; retain the existing tests in `web/src/shared/command-bar/AppCommandBar.test.tsx` and `web/src/useCmdW.test.tsx`.
-
-
-* Fix the functionality gap when multiple visible plugin tabs claim the same chord.
-
-Existing Issue: `createPluginChordRegistry` stores claims under only `pluginId` and chord, so two visible shell tabs overwrite each other's handler and either tab's cleanup deletes the shared entry, making Ctrl+R open the wrong shell's history or stop working. Severity: 6/10
-
-Existing Risk: 6/10 - A shell selected in a sidebar can steal Ctrl+R from a focused shell elsewhere, and hiding either one can remove the remaining visible shell's claim.
-
-Proposal Risk: 2/10 - Tab-scoped registrations and a deterministic focused-tab resolution prevent one shell from replacing or releasing another's handler, while the application still receives unclaimed chords.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: keep simultaneous plugin chord claims per tab". Change the registration identity and cleanup closure in `web/src/plugins/PluginChords.tsx` to include the tab label, and resolve a chord against the tab that currently owns keyboard focus rather than the first registry entry. Add a regression with two shell tabs visible in different surfaces: Ctrl+R must open the focused tab's history, hiding the other tab must not clear the remaining registration, and releasing both must hand Ctrl+R back to the application. Keep the existing shell chord cases in `web/src/plugins/shell/ShellTab.test.tsx` and `web/src/useWindowKeys.test.ts` passing.
-

@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useWindowKeys } from './useWindowKeys';
@@ -560,7 +560,7 @@ describe('useWindowKeys', () => {
     function claimed(chordId: string) {
       const chords = createPluginChordRegistry();
       const handler = vi.fn();
-      chords.register('shell', chordId, handler);
+      chords.register('shell', 'shell', chordId, handler);
       return { chords, handler };
     }
 
@@ -575,10 +575,37 @@ describe('useWindowKeys', () => {
       expect(openPicker).not.toHaveBeenCalled();
     });
 
+    it('keeps same-plugin claims per tab and dispatches to the tab that holds focus', () => {
+      const chords = createPluginChordRegistry();
+      const first = vi.fn();
+      const second = vi.fn();
+      const releaseFirst = chords.register('shell', 'shell1', 'ctrl+r', first);
+      const releaseSecond = chords.register('shell', 'shell2', 'ctrl+r', second);
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+      const focusedBar = document.createElement('textarea');
+      focusedBar.dataset.tabLabel = 'shell2';
+      document.body.append(focusedBar);
+      focusedBar.focus();
+
+      fireEvent.keyDown(focusedBar, { key: 'r', ctrlKey: true });
+      expect(first).not.toHaveBeenCalled();
+      expect(second).toHaveBeenCalledOnce();
+
+      releaseFirst();
+      fireEvent.keyDown(focusedBar, { key: 'r', ctrlKey: true });
+      expect(second).toHaveBeenCalledTimes(2);
+
+      releaseSecond();
+      fireEvent.keyDown(focusedBar, { key: 'r', ctrlKey: true });
+      expect(openPicker).toHaveBeenCalledOnce();
+      focusedBar.remove();
+    });
+
     it('reverts to the application action once the claim is released', () => {
       const chords = createPluginChordRegistry();
       const handler = vi.fn();
-      const release = chords.register('shell', 'ctrl+r', handler);
+      const release = chords.register('shell', 'shell', 'ctrl+r', handler);
       const openPicker = vi.fn();
       render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
 

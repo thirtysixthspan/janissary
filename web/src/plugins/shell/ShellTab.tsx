@@ -163,7 +163,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   // `Ctrl+R` is claimed by this plugin's declaration, so it reaches this tab while it is the visible
   // one and belongs to the application everywhere else. The window handler consults the claim before
   // its own table, which is the whole of the rule and needs nothing here.
-  usePluginChordClaims('shell', capabilities.claimedChords ?? NO_CHORDS, capabilities.active, useCallback(() => {
+  usePluginChordClaims('shell', capabilities.label ?? 'shell', capabilities.claimedChords ?? NO_CHORDS, capabilities.active, useCallback(() => {
     setHistoryOpen((open) => !open);
   }, []));
 

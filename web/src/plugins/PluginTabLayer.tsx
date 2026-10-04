@@ -33,6 +33,7 @@ export function PluginTabLayer({
     <div
       className="tab-body"
       data-pane-index={index}
+      data-tab-label={tab.label}
       style={{
         borderLeft: tabBodyBorder(tab.dotColor, tab.label === current.label),
         display: visible ? 'flex' : 'none',
