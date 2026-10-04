@@ -1,4 +1,4 @@
-export const SHELL_PAYLOAD_SCHEMA_VERSION = 1;
+export const SHELL_PAYLOAD_SCHEMA_VERSION = 2;
 
 // The zsh binary this plugin spawns, named outright rather than taken from `$SHELL`: the tab is a
 // zsh tab whatever the user's login shell happens to be, which is what makes `zsh` an honest command
@@ -38,10 +38,13 @@ export type ShellPayload = {
   // The pseudo-terminal this tab owns. The host keeps the process; this is the handle its client
   // attaches to, and the id never reaches any other plugin.
   ptyId: string;
-  // The working directory the shell started in, and whether that is a workspace clone — the two
-  // things the metadata row shows. Neither moves while the shell runs: the row reports where the
-  // shell was opened, not where a `cd` has since taken it.
+  // The shell's current working directory, updated by zsh's cwd markers and displayed in the
+  // metadata row. The root and workspace context below stay fixed for the life of this shell.
   cwd: string;
+  // The project root and workspace clone are display context only; `cwd` remains the absolute path
+  // all shell actions and cwd updates use.
+  root: string;
+  workspaceDir?: string;
   workspace: boolean;
   cols: number;
   rows: number;
@@ -113,6 +116,8 @@ export function isShellPayload(value: unknown): value is ShellPayload {
     && typeof value.instanceKey === 'string'
     && typeof value.ptyId === 'string'
     && typeof value.cwd === 'string'
+    && typeof value.root === 'string'
+    && (value.workspaceDir === undefined || typeof value.workspaceDir === 'string')
     && typeof value.workspace === 'boolean'
     && typeof value.cols === 'number'
     && typeof value.rows === 'number'

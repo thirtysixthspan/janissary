@@ -8,14 +8,14 @@ import { activate } from './activate.js';
 import { SHELL_PROGRAM, isShellPayload, type ShellPayload } from './shared.js';
 
 const PAYLOAD: ShellPayload = {
-  instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
+  instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
   connections: [], schedule: [],
 };
 
 type Spawn = { cwd: string; shell?: string; args?: string[]; workspace?: { dir: string; offline?: boolean } };
 
 function fakeCapabilities(overrides: {
-  origin?: { label: string; cwd: string; workspace?: { dir: string; offline?: boolean } } | null;
+  origin?: { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean } } | null;
   running?: boolean;
   dispatched?: boolean;
   completions?: { matches: string[]; newInput: string; newCursor: number };
@@ -24,7 +24,7 @@ function fakeCapabilities(overrides: {
   const updated: { key: string; payload: unknown }[] = [];
   const unreadChanges: { key: string; unread: boolean }[] = [];
   const spawns: Spawn[] = [];
-  const origin = 'origin' in overrides ? overrides.origin : { label: 'agent1', cwd: '/repo' };
+  const origin = 'origin' in overrides ? overrides.origin : { label: 'agent1', cwd: '/repo', root: '/repo' };
   const capabilities = {
     originTab: () => origin ?? null,
     dispatchLineWithOutput: vi.fn(async () => ({
@@ -75,7 +75,7 @@ describe('shell plugin activation', () => {
     expect(opened).toHaveLength(1);
     expect(opened[0].value.title).toBe('shell');
     expect(opened[0].value.payload).toMatchObject({
-      instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
+      instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
     });
   });
 
@@ -101,7 +101,7 @@ describe('shell plugin activation', () => {
 
   it('starts in the workspace clone when the issuing tab has one', () => {
     const { capabilities, opened, spawns } = fakeCapabilities({
-      origin: { label: 'agent1', cwd: '/clone/subdir', workspace: { dir: '/clone', offline: true } },
+      origin: { label: 'agent1', cwd: '/clone/subdir', root: '/repo', workspace: { dir: '/clone', offline: true } },
     });
 
     activate().command?.('', capabilities);
@@ -109,11 +109,13 @@ describe('shell plugin activation', () => {
     expect(spawns[0]).toEqual({
       cwd: '/clone/subdir', shell: SHELL_PROGRAM, args: [], workspace: { dir: '/clone', offline: true },
     });
-    expect(opened[0].value.payload).toMatchObject({ cwd: '/clone/subdir', workspace: true });
+    expect(opened[0].value.payload).toMatchObject({
+      cwd: '/clone/subdir', root: '/repo', workspaceDir: '/clone', workspace: true,
+    });
   });
 
   it('starts at the issuing tab\'s directory when it has no workspace', () => {
-    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'harness1', cwd: '/srv' } });
+    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'harness1', cwd: '/srv', root: '/repo' } });
 
     activate().command?.('', capabilities);
 

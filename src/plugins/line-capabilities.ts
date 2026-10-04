@@ -31,6 +31,7 @@ export function lineCapabilities(input: {
       return {
         label: tab.label,
         cwd: managers.tab.cwdOf(tab.label) ?? managers.tab.launchDir,
+        root: managers.tab.launchDir,
         ...(tab.workspaceDir && {
           workspace: { dir: tab.workspaceDir, offline: tab.offline ?? false },
         }),

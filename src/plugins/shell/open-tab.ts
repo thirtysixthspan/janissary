@@ -30,6 +30,8 @@ export function openShellTab(
       instanceKey,
       ptyId: terminal.ptyId,
       cwd,
+      root: origin.root,
+      ...(workspace && { workspaceDir: workspace.dir }),
       workspace: workspace !== undefined,
       cols: terminal.cols,
       rows: terminal.rows,

@@ -57,7 +57,7 @@ vi.mock('./plugins/registry', () => {
   return {
     clientPluginRegistry: new Map([
       ['video', { schemaVersion: 1, Component }],
-      ['shell', { schemaVersion: 1, Component }],
+      ['shell', { schemaVersion: 2, Component }],
     ]),
   };
 });
@@ -93,7 +93,7 @@ function makePluginTab(label: string, url: string, id = 'video'): TabView {
   return {
     label, view: 'plugin' as const, dotColor: '#ff0', groupColor: '#ccc',
     plugin: {
-      id, schemaVersion: 1,
+      id, schemaVersion: id === 'shell' ? 2 : 1,
       payload: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url, player: 'QuickTime Player' },
     },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],

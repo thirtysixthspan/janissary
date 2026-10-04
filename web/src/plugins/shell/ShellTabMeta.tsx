@@ -6,6 +6,7 @@ import {
   type TabPluginClientCapabilities,
 } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
+import { formatShellCwd } from './format-shell-cwd';
 
 // The shell tab's own metadata row.
 //
@@ -30,7 +31,7 @@ export function ShellTabMeta({ payload, capabilities }: {
   return (
     <div className="shell-tab-header">
       <div className="tab-meta">
-        <span className="tab-cwd">{payload.cwd}</span>
+        <span className="tab-cwd">{formatShellCwd(payload.cwd, payload.root, payload.workspaceDir)}</span>
         <span className="tab-flags">
           {payload.workspace && (
             <span className="tab-flag tab-flag--active" role="img" aria-label="Workspaced" title="Workspaced">

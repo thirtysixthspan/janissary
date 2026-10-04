@@ -7,7 +7,7 @@ import {
 } from './shared.js';
 
 const PAYLOAD = {
-  instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/repo', workspace: false, cols: 80, rows: 24,
+  instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
   connections: [], schedule: [],
 };
 
@@ -16,7 +16,7 @@ const PAYLOAD = {
 // host produced would fail the plugin's guard — disabling the plugin on a shape the host itself made.
 describe('shell shared contract', () => {
   it('declares a payload schema version the host can compare', () => {
-    expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(1);
+    expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(2);
   });
 
   it('keeps its completion result assignable to and from the application result', () => {

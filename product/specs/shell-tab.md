@@ -100,9 +100,11 @@ can be edited or run.
 
 ## The metadata row
 
-The row shows the working directory the shell started in, a workspace mark when that directory is a
-workspace clone, and the actions a shell tab can act on: **open file navigator here**, **new shell
-here**, the split control, and the connections and schedule windows.
+The row shows the working directory the shell started in, shortened to `$root` or `$workspace/<name>`
+when it is inside the project or workspace clone. The stored directory stays absolute for shell actions.
+It shows a workspace mark when that directory is a workspace clone, and the actions a shell tab can
+act on: **open file navigator here**, **new shell here**, the split control, and the connections and
+schedule windows.
 
 The connections window includes the tab's own `zsh` terminal as soon as the shell tab opens. The
 connections and schedule windows auto-show for five seconds whenever the tab becomes visible, then

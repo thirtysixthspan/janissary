@@ -230,7 +230,7 @@ export type TabPluginServerCapabilities = {
   // capabilities and nothing else, so this is the only way one learns what the user was standing in
   // when they asked for it. The host already resolves that tab for `note` and `openOrFocusTab`;
   // this makes the same resolution readable rather than new.
-  originTab(): { label: string; cwd: string; workspace?: { dir: string; offline?: boolean } } | null;
+  originTab(): { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean } } | null;
   // Offer one line to the application's own command dispatcher, answering whether it ran. A line that
   // resolves to a command runs as that command in the tab this was called from; a line that resolves
   // to nothing is the caller's to handle. Deliberately one call rather than a resolve-then-decide

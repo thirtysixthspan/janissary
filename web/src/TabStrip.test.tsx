@@ -121,9 +121,9 @@ describe('TabStrip', () => {
     const tab = makeTab({
       view: 'plugin',
       plugin: {
-        id: 'shell', schemaVersion: 1,
+        id: 'shell', schemaVersion: 2,
         payload: {
-          instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/tmp', workspace: false,
+          instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/tmp', root: '/repo', workspace: false,
           cols: 80, rows: 24, connections: [], schedule: [], commandRunning: true,
         },
       },

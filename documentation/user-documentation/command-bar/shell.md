@@ -115,7 +115,8 @@ The shell starts in the working directory of the tab that opened it. It shares t
 
 The terminal colors follow the application theme. Choosing a theme in the `theme` picker updates the shell terminal too.
 
-The shell tab's metadata row follows zsh's current working directory as you change it.
+The shell tab's metadata row follows zsh's current working directory as you change it, shortening paths
+inside the project to `$root` and paths inside the workspace clone to `$workspace/<name>`.
 
 When a command finishes while the zsh tab is hidden, it gets an unread flag. If the flag remains unread and hidden for 30 seconds, Janissary raises the same `Agent '<tab>' is waiting` notification used for harness tabs. Starting another command clears the flag and its pending notification.
 

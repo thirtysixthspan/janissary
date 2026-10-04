@@ -70,7 +70,7 @@ describe('originTab', () => {
   it('reports the tab a command was invoked from, with the directory it works in', () => {
     const { managers } = makeManagers();
 
-    expect(contextFor(['originTab'], managers).originTab()).toEqual({ label: 'janus', cwd: '/repo' });
+    expect(contextFor(['originTab'], managers).originTab()).toEqual({ label: 'janus', cwd: '/repo', root: '/repo' });
   });
 
   it('reports the workspace clone and its offline flag when the tab has one', () => {
@@ -78,7 +78,7 @@ describe('originTab', () => {
     byLabel.mockReturnValue({ label: 'janus', workspaceDir: '/clone', offline: true } as never);
 
     expect(contextFor(['originTab'], managers).originTab()).toEqual({
-      label: 'janus', cwd: '/repo', workspace: { dir: '/clone', offline: true },
+      label: 'janus', cwd: '/repo', root: '/repo', workspace: { dir: '/clone', offline: true },
     });
   });
 
@@ -268,7 +268,7 @@ describe('completeLine', () => {
       'l', 1, '/repo/clone/subdir', ['janus', 'shell'], [], expect.any(Object),
     );
     expect(managers.connection.completionConnections).toHaveBeenCalledWith('shell');
-    expect(capabilities.originTab()).toEqual({ label: 'shell', cwd: '/repo/clone/subdir' });
+    expect(capabilities.originTab()).toEqual({ label: 'shell', cwd: '/repo/clone/subdir', root: '/repo' });
   });
   it('answers with an empty result rather than calling through once the plugin has been disabled', () => {
     const { managers } = makeManagers();

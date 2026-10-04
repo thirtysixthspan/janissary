@@ -76,7 +76,7 @@ vi.stubGlobal('ResizeObserver', class {
 });
 
 const PAYLOAD: ShellPayload = {
-  instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', workspace: false, cols: 80, rows: 24,
+  instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
   connections: [], schedule: [],
 };
 
@@ -358,7 +358,18 @@ describe('ShellTab', () => {
   it('renders the working directory in the metadata row', () => {
     renderTab();
 
-    expect(screen.getByText('/repo')).toBeInTheDocument();
+    expect(screen.getByText('$root/')).toBeInTheDocument();
+  });
+
+  it('renders a workspace cwd with its workspace shortcut', () => {
+    mountShell({
+      ...PAYLOAD,
+      cwd: '/repo/.janissary/workspace/alex/src',
+      workspace: true,
+      workspaceDir: '/repo/.janissary/workspace/alex',
+    }, makeCapabilities().capabilities);
+
+    expect(screen.getByText('$workspace/alex/src')).toBeInTheDocument();
   });
 
   it('scrolls the active xterm terminal with transcript navigation keys', () => {

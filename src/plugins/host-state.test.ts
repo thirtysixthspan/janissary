@@ -12,7 +12,7 @@ function pluginTab(label: string, instanceKey: string, payload?: unknown): Tab {
   const held = payload ?? { ptyId: 'pty1' };
   return {
     label,
-    plugin: { id: 'shell', instanceKey, schemaVersion: 1, payload: held, fileRefs: [], sourceLabel: 'agent1' },
+    plugin: { id: 'shell', instanceKey, schemaVersion: 2, payload: held, fileRefs: [], sourceLabel: 'agent1' },
   } as unknown as Tab;
 }
 
@@ -118,7 +118,7 @@ describe('host state delivery', () => {
     };
 
     subscribe(port);
-    openPluginTab(target, 'shell', 'shell', 'shell-1', 1, 'agent1', (resources) => {
+    openPluginTab(target, 'shell', 'shell', 'shell-1', 2, 'agent1', (resources) => {
       const terminal = resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
       return { title: 'shell', payload: { ptyId: terminal.ptyId } };
     });
