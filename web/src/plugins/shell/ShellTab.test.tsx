@@ -260,9 +260,10 @@ describe('ShellTab', () => {
     expect(onFocusTab).toHaveBeenLastCalledWith(undefined);
   });
 
-  it('places clipboard history above the command bar', () => {
+  it('seats clipboard and shell history on top of the command bar at its measured height', () => {
     const styles = readFileSync('web/src/plugins/shell/shell.css', 'utf8');
-    expect(styles).toContain('.shell-tab .picker.clipboard-history { bottom: 40px; max-height: 50%; }');
+    expect(styles).toContain('.shell-tab .picker.clipboard-history { bottom: var(--command-bar-height, 0px); max-height: 50%; }');
+    expect(styles).toContain('.shell-tab .picker.shell-history { bottom: var(--command-bar-height, 0px); max-height: 50%; }');
   });
 
   it('disables shell input while Quick Open is visible', () => {

@@ -9,12 +9,12 @@ function declarations(selector: string): string {
 }
 
 describe('picker positioning', () => {
-  it('anchors plugin popups to the tab body above the command bar and past its colored edge', () => {
+  it('seats plugin popups on the command bar and flush beside the colored edge', () => {
     expect(declarations('.tab-body')).toContain('position: relative');
     const popup = declarations('.tab-body > .picker');
 
-    expect(popup).toContain('left: 8px');
-    expect(popup).toContain('bottom: 40px');
+    expect(popup).toContain('left: 0');
+    expect(popup).toContain('bottom: var(--command-bar-height, 0px)');
     expect(popup).toContain('right: 0');
   });
 

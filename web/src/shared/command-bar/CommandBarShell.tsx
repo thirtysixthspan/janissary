@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { statusDotIcon, promptIcon } from '../icons';
+import { useCommandBarInset } from './useCommandBarInset';
 
 export type CommandBarShellProperties = {
   value: string;
@@ -38,6 +39,10 @@ export function CommandBarShell({
   value, onChange, onKeyDown, inputRef, ghost, above, trailing, label, rootRef,
   dotColor = 'var(--accent)', busy = false, autoFocus = false, disabled = false, ariaLabel, onFocus, onBlur,
 }: CommandBarShellProperties) {
+  const ownRoot = useRef<HTMLDivElement>(null);
+  const root = rootRef ?? ownRoot;
+  useCommandBarInset(root);
+
   // Auto-resize: shrink to one row first so `scrollHeight` reflects the actual content, then
   // grow to fit. Runs after every value change (typing, paste, history recall, ghost accept,
   // Shift+Enter newline, submit-clear).
@@ -49,7 +54,7 @@ export function CommandBarShell({
   }, [value, inputRef]);
 
   return (
-    <div className="command-area" data-doc-shot="command-bar" data-command-bar ref={rootRef}>
+    <div className="command-area" data-doc-shot="command-bar" data-command-bar ref={root}>
       {above}
       <div className="command" onClick={() => inputRef.current?.focus()}>
         <span className={`dot${busy ? ' busy' : ''}`} style={{ color: dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>

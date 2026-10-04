@@ -509,9 +509,10 @@ html, body, #root {
   background: var(--bg-soft); border-top: 1px solid var(--border);
   box-shadow: 0 -6px 24px rgb(0 0 0 / 40%);
 }
-/* Host overlays are siblings of plugin bodies, so anchor them to the tab frame and lift them over
-   its command bar. Pickers inside an agent tab's `.main` keep that smaller containing block. */
-.tab-body > .picker { left: 8px; right: 0; bottom: 40px; }
+/* Host overlays are siblings of plugin bodies, so anchor them to the tab frame and seat them on
+   its command bar, whose height the bar publishes on the frame. `left: 0` is the inside of the
+   frame's colored left border. Pickers inside an agent tab's `.main` keep that smaller containing block. */
+.tab-body > .picker { left: 0; right: 0; bottom: var(--command-bar-height, 0px); }
 .picker-title { padding: 4px 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
 .picker-section {
   padding: 3px 10px; color: var(--muted); cursor: default;

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* the popups should be flush left without overlapping the color bar on the right of the tab, and flush against the command bar. 
-
 * drag and drop from the file-navigator into the command bar should work for the shell tab, just like in the agent tab.
 
 * opening the file navigator from the shell tab metadata bar should open the navigator in teh current working directory of the shell.
