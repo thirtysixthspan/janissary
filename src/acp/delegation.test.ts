@@ -173,6 +173,13 @@ describe('runDelegation — send', () => {
       .toBe('Cannot delegate to "kitab": it is not one of your own agents.');
     expect(dispatchTo).not.toHaveBeenCalled();
   });
+
+  it('reports a tab that is not open once, not in the transcript and again as the result', async () => {
+    const { managers, dispatchTo, append } = harness({ group: 1 }, []);
+    expect(await runDelegation(managers, 'janus', 'send ghost go')).toBe('No tab named "ghost".');
+    expect(append).not.toHaveBeenCalled();
+    expect(dispatchTo).not.toHaveBeenCalled();
+  });
 });
 
 describe('isDelegationCommandLine', () => {

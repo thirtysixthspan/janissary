@@ -50,10 +50,6 @@ export function isDelegationCommandLine(line: string): boolean {
   return AGENT_COMMAND.test(line) || SEND_COMMAND.test(line) || MSG_COMMAND.test(line);
 }
 
-const appendTo = (managers: Managers, label: string) => (text: string): void => {
-  managers.tab.append(label, { input: '', output: text });
-};
-
 // What a delegated tab may be asked to run. `msg` executes its text through the full command
 // dispatcher in the target tab, so this list is the boundary between prompting a worker and reaching
 // the application's command surface: a prompt, a transcript poll, a query. `send` narrows further,
@@ -104,8 +100,11 @@ function runAgent(managers: Managers, label: string, command: string): string {
 function runSend(managers: Managers, label: string, command: string): string {
   const parsed = parseSendCommand(command);
   if ('error' in parsed) return parsed.error;
-  const target = resolveTarget(parsed.label, managers, appendTo(managers, label));
-  if (!target) return `Sent nothing to "${parsed.label}".`;
+  // `resolveTarget` is kept for its alias resolution and its undefined return, but its report
+  // callback is discarded: the refusal is returned here instead, so the agent reads it once and the
+  // delegating tab's transcript keeps recording the commands it ran rather than this outcome.
+  const target = resolveTarget(parsed.label, managers, () => {});
+  if (!target) return `No tab named "${parsed.label}".`;
   if (outsideGroup(managers, label, target)) return refusedTarget(parsed.label);
   if (target.view !== 'harness') {
     const refusal = refusedCommand(parsed.text, SEND_COMMANDS);
