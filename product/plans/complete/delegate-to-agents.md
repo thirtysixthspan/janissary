@@ -211,7 +211,7 @@ No web tests: nothing under `web/src/` changes.
 
 Manual, in a running app with an attached E2E browser:
 
-1. `agent scout --model google/gemini-3.1-pro` opens a workspaced tab whose connections-panel row reads `acp:google/gemini-3.1-pro` once a prompt connects.
+1. `agent scout --model google/gemini-3.1-pro-preview` opens a workspaced tab whose connections-panel row reads `acp:google/gemini-3.1-pro-preview` once a prompt connects.
 2. `agent scout --model not/a-model` is refused with the catalog wording and opens no tab.
 3. `agent scout --model` is a usage error and opens no tab.
 4. `agent scout --model --offline` is refused as an unknown model.
