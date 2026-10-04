@@ -8,7 +8,7 @@ The agent command is hardcoded to OpenCode: `opencode acp`. There is no configur
 
 ### Which model runs
 
-The model comes from the harness catalog's OpenCode list — the same catalog the monitor and conversation sessions read, and the same one a project replaces with `.janissary/harness-models.json` (see [[harness]]). `google/gemini-3.1-flash-lite` is preferred while the catalog offers it; otherwise the first model the list does offer is used, so a project that overrides the catalog runs one of its own models rather than a built-in one. An OpenCode list with nothing in it refuses the prompt with a message instead of launching.
+The model comes from the harness catalog's OpenCode list — the same catalog the monitor and conversation sessions read, and the same one a project replaces with `.janissary/harness-models.json` (see [[harness]]). `google/gemini-3.1-flash-lite` is preferred while the catalog offers it; otherwise the first model the list does offer is used, so a project that overrides the catalog runs one of its own models rather than a built-in one. An OpenCode list with nothing in it refuses the prompt with a message instead of launching, unless the tab named a model of its own.
 
 A tab opened with `agent <name> --model <model-id>` runs on that model instead, so a delegated worker can be put on a different one from the tab that delegated to it. The chosen model is remembered for the tab's life, so `acp reset` and the next prompt run on it again. The catalog check happens when the tab is launched, not per prompt; see [[agents]].
 
@@ -43,7 +43,7 @@ The `acp` handler then drives an autonomous loop (`runAcpToolLoop` in `src/acp-l
 
 A freshly connected agent (e.g. OpenCode loading its model on the first prompt) sometimes returns an empty first reply; the loop retries the first turn once — reusing the same transcript entry — before treating an empty reply as a final answer, so the first `acp` request no longer comes back empty.
 
-Only `db` and `browser` commands are auto-run — the agent cannot execute arbitrary shell. `db` is also dispatchable through `runCaptureInTab` (the shared command-capture path used by `msg …request`), which executes a resolved `db` command via `runDbCommand` rather than refusing it as an app command, so a `db` command also works as an inter-agent `request`. (`browser` is not yet offered through that inter-agent path.)
+Four grammars are auto-run for the agent: `db` and `browser` for their own purposes, `question`, and the delegation commands within the bounds Delegation describes below — the agent still cannot execute arbitrary shell. `db` is also dispatchable through `runCaptureInTab` (the shared command-capture path used by `msg …request`), which executes a resolved `db` command via `runDbCommand` rather than refusing it as an app command, so a `db` command also works as an inter-agent `request`. (`browser` is not yet offered through that inter-agent path.)
 
 The tool loop always runs on the machine janissary itself is running on, regardless of where the agent does. A remote agent asked to inspect a database is therefore inspecting *this* machine's database files, and a `browser` command drives *this* machine's browser — not the remote workspace's.
 
@@ -71,7 +71,7 @@ A worker's answer is screened before it is handed back. Harness-shaped control t
 
 `acp <prompt>` works in a tab launched with `agent <name> on <address>` (see [[remote-server]]), and the agent runs **on that host**, inside the workspace clone the host provisioned — so it sees the files the tab is actually working on rather than anything on the local machine. Nothing about the tab reads differently: replies stream in as formatted Markdown, the busy dot blinks while awaiting the agent, and the connections panel and status popup show the same `acp:<provider/model>` row and label a local session shows, with no host marker anywhere.
 
-The ACP client itself is hosted by the remote, so what crosses the ssh channel is prompt text and reply chunks rather than JSON-RPC. Which agent and which model run are still decided locally and sent across, so a remote session cannot silently disagree with a local one about the model. The autonomous tool loop and its `db`, `browser`, and `question` commands stay on the local machine — see Database and browser assistance above.
+The ACP client itself is hosted by the remote, so what crosses the ssh channel is prompt text and reply chunks rather than JSON-RPC. Which agent and which model run are still decided locally and sent across, so a remote session cannot silently disagree with a local one about the model. The autonomous tool loop and its `db`, `browser`, and `question` commands stay on the local machine — a remote agent reaches this machine's databases and browser, and a delegation command opens its worker here — see Database, browser, and delegation assistance above.
 
 A prompt issued before the remote session is established — while ssh is still authenticating, for instance — is refused rather than queued, with the single line `ACP: the remote session is still connecting.` and no busy state. Retyping it once the tab has finished connecting works. The same refusal is what an inter-agent `msg <tab> request …` addressed to a still-connecting remote tab receives as its answer.
 
