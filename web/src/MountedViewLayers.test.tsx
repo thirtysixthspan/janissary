@@ -367,6 +367,48 @@ describe('MountedViewLayers', () => {
     expect(container.querySelector('.tab-nav-picker')).toBeNull();
   });
 
+  it('renders the tab navigator inside the current plugin tab', () => {
+    const tabs = [makePluginTab('plugin', '/current.mp4'), makePluginTab('other', '/other.mp4')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        navOpen: true, navQuery: '', navIndex: 0, onPickTab: vi.fn(),
+      }),
+    );
+    const bodies = [...container.querySelectorAll('.tab-body')];
+
+    expect(bodies[0].querySelector('.tab-nav-picker')).toBeTruthy();
+    expect(bodies[1].querySelector('.tab-nav-picker')).toBeNull();
+  });
+
+  it('does not render the tab navigator in an inactive plugin tab', () => {
+    const tabs = [makePluginTab('plugin', '/current.mp4'), makePluginTab('other', '/other.mp4')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[1], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        navOpen: true, navQuery: '', navIndex: 0, onPickTab: vi.fn(),
+      }),
+    );
+    const bodies = [...container.querySelectorAll('.tab-body')];
+
+    expect(bodies[0].querySelector('.tab-nav-picker')).toBeNull();
+    expect(bodies[1].querySelector('.tab-nav-picker')).toBeTruthy();
+  });
+
+  it('does not render the tab navigator in a plugin tab when it is closed', () => {
+    const tabs = [makePluginTab('plugin', '/current.mp4')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+      }),
+    );
+
+    expect(container.querySelector('.tab-nav-picker')).toBeNull();
+  });
+
   // A key the editor buffer does not bind reaches the window handler, so any overlay can open while
   // an editor tab is current; it has to be drawn there, and only over the tab on screen.
   it('renders the overlay stack inside the current editor tab and tells every editor it is open', () => {

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { tabBodyBorder } from '../shared/tab/body-border';
@@ -16,6 +17,7 @@ export function PluginTabLayer({
   onClose,
   onSplit,
   onDirtyHandle,
+  overlay,
 }: {
   tab: TabView;
   index: number;
@@ -25,6 +27,7 @@ export function PluginTabLayer({
   onClose: () => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
+  overlay?: ReactNode;
 }) {
   return (
     <div
@@ -44,6 +47,7 @@ export function PluginTabLayer({
           onDirtyHandle={onDirtyHandle}
         />
       )}
+      {overlay}
     </div>
   );
 }

@@ -116,6 +116,9 @@ export function MountedViewLayers({
               else tabHandles.current.delete(t.label);
               onPluginDirty?.(t.label, handle?.isDirty() ?? false);
             }}
+            overlay={navOpen && t.label === current.label && onPickTab ? (
+              <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
+            ) : undefined}
           />
         ))}
       {current.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}

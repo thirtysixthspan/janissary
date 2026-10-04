@@ -2,8 +2,6 @@
 
 # pull-request
 
-* in the shell tab, ctrl+g should trigger and show the tab nav 
-
 * ghost text should be supported in the command bar of the shell tab
 
 * Close the security gap caused by losing a shell tab's workspace ownership.
