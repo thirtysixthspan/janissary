@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's missing test for the delegation depth refusal, which is the one behavior in this pull request no test exercises.
-
-Existing Issue: The Tests section of the plan names "the depth refusal at the cap and its absence below it" among the cases for `src/acp/delegation.test.ts`, but that file covers only `isDelegationCommandLine`, `DELEGATION_PRIMER`, and `scanWorkerAnswer`, and no test anywhere calls `runDelegation`, so the cap check, the three dispatch branches, and the answer scan's wiring into the `msg` return value are all untested. Severity: 5/10
-
-Existing Risk: 4/10 - The cap is the pull request's answer to unbounded delegation trees, and a change that removed or inverted the comparison would pass every test in the suite.
-
-Proposal Risk: 1/10 - Behavior is pinned by direct tests of the cap and of each dispatch branch, so a regression names itself.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1536: cover the delegation depth cap and the runDelegation dispatch". Extend `src/acp/delegation.test.ts` with a `managers` stub carrying `tab.byLabel` returning a tab whose `agentDepth` is `MAX_AGENT_DEPTH` and one returning a lower value, and assert `runDelegation` refuses the first with the cap message and calls `managers.profile.newAgent` for the second, treating the tab's absent `agentDepth` as depth 0. Add one case per dispatch branch: a command matching `AGENT_COMMAND` reaches `profile.newAgent` with the command verbatim, one matching `SEND_COMMAND` reaches `resolveTarget` and `deliverTo`, and one reaching `runMsg` resolves through `managers.capture.run` with the worker's text passed to `scanWorkerAnswer` — mock `capture.run` to invoke its callback with a string containing `<system-reminder>` and assert the resolved promise begins with the `[harness: neutralized …]` line. Mirror the stub style already used in `src/acp/tool-table.test.ts` and `src/profile/new-agent.test.ts` so the file keeps one way of building a `Managers` value. The existing pure-function cases must keep passing untouched.
-
-
 * Handle the case where the agent tool reports a refused worker launch to the agent as a success, so a delegating agent acts on a worker that was never opened.
 
 Existing Issue: `runAgent` in `src/acp/delegation.ts` checks only the depth cap and the `modelError` usage case before calling `managers.profile.newAgent` and then unconditionally returns "Opening agent …", while the catalog refusal for an unknown model is raised later inside `newAgentOp` as a transcript line, so a reply ending `agent scout --model not/a-model` produces both a success-shaped tool result and the refusal line; the same return value also builds its follow-up hint from `parsed.name`, which is empty for a pool-name launch and yields the unusable `msg a new agent request state`. Severity: 4/10
