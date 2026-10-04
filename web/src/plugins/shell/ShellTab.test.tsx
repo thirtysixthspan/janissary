@@ -658,6 +658,29 @@ describe('ShellTab', () => {
     expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', expect.anything());
   });
 
+  it('asks before slash-prefixed quit and last-tab close commands without dispatching them', () => {
+    for (const line of ['/quit', '/close', '/exit']) {
+      const made = renderTab();
+      fireEvent.change(bar(), { target: { value: line } });
+      fireEvent.keyDown(bar(), { key: 'Enter' });
+
+      expect(made.openQuitConfirm, line).toHaveBeenCalledTimes(1);
+      expect(made.capabilities.intent, line).not.toHaveBeenCalledWith('dispatch', expect.anything());
+      made.unmount();
+    }
+  });
+
+  it('puts a slash-prefixed named close through the save guard instead of dispatching it', () => {
+    const guard = vi.fn(() => true);
+    const { capabilities } = renderTab({ tabs: [tab('shell1'), tab('other')], guard });
+
+    fireEvent.change(bar(), { target: { value: '/close other' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    expect(guard).toHaveBeenCalledWith(1);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', expect.anything());
+  });
+
   it('asks before a close that would take the last tab with it, by either spelling', () => {
     for (const line of ['close', 'exit', 'close shell1']) {
       const made = renderTab();

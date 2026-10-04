@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - A host-owned cwd and workspace reference keeps follow-on a
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: preserve shell-tab workspace ownership and context". In `src/tab/openers.ts`, `src/tab/creators.ts`, and `src/tab/index.ts`, retain the source tab's host-owned cwd, workspace directory, and offline setting on a shell tab when its factory starts a terminal, and retain the workspace through `WorkspaceManager.retain`; let the existing release in `src/tab/cleanup.ts` drop that reference when the shell tab closes. Make `originTab` and `completeLine` in `src/plugins/line-capabilities.ts`, plus the metadata-row actions in `src/file-navigator/open.ts` and `src/profile/manager.ts`, resolve against that server-owned state so nested `zsh`, completion, file navigation, and agent creation use the shell's actual directory and confinement. Do not use `ShellPayload.cwd` or `ShellPayload.workspace` as authority for sandboxing. Add regression coverage that a shell opened from a workspaced agent keeps the clone after the source closes, that a nested shell inherits the workspace and offline mode, and that the file-navigator and new-agent actions use the shell's context; preserve the existing coverage in `src/plugins/shell/activate.test.ts`, `src/tab/manager.test.ts`, and `src/controller.test.ts`.
 
 
-* Fix the functionality gap that lets slash-prefixed quit and close bypass confirmation.
-
-Existing Issue: `classifyCommandBarSubmit` recognizes only bare `quit`, `close`, and `exit`, but `resolveCommand` strips a leading slash before dispatch, so `/quit`, `/close`, and `/exit` reach the server without the quit or save guard. Severity: 9/10
-
-Existing Risk: 9/10 - `/quit` can discard registered unsaved work and terminate the session without the confirmation the command bar promises, while `/close` can discard a guarded tab.
-
-Proposal Risk: 2/10 - Normalizing the supported slash prefix before classification sends every supported spelling through the existing guard, with the server still resolving the same built-in command afterwards.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: guard slash-prefixed quit and close commands". Normalize the leading slash in `web/src/shared/command-bar/classify-submit.ts` using the same rule as `src/resolve.ts` before classifying `quit`, `close`, or `exit`. Add cases for `/quit`, `/close`, `/exit`, and `/close <name>` to `web/src/shared/command-bar/classify-submit.test.ts`, and verify through `web/src/plugins/shell/ShellTab.test.tsx` that the slash spellings open the quit/save guard instead of dispatching. Keep the existing confirmation behavior for bare commands unchanged.
-
-
 * Close the security gap in plugin terminal attachment ownership.
 
 Existing Issue: `createPluginClientCapabilities` installs `attachTerminal` for every plugin and passes its raw `ptyId` to `client.attachPty`, `ptyInput`, and `ptyResize`, while PTY ids are sequential and the server-side input and resize paths do not check which tab owns an id. Severity: 8/10

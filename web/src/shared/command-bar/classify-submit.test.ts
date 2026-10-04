@@ -22,6 +22,14 @@ describe('classifyCommandBarSubmit', () => {
     expect(classifyCommandBarSubmit('  QUIT  ', tabs, 0)).toEqual({ kind: 'confirm-quit' });
   });
 
+  it('normalizes one leading slash before classifying quit and close commands', () => {
+    expect(classifyCommandBarSubmit('/quit', tabs, 0)).toEqual({ kind: 'confirm-quit' });
+    expect(classifyCommandBarSubmit('/close', tabs, 1)).toEqual({ kind: 'confirm-close', index: 1 });
+    expect(classifyCommandBarSubmit('/exit', tabs, 0)).toEqual({ kind: 'confirm-close', index: 0 });
+    expect(classifyCommandBarSubmit('/close alpha.png', tabs, 0))
+      .toEqual({ kind: 'confirm-close', index: 1 });
+  });
+
   it('is not a quit for a word that merely contains one', () => {
     expect(classifyCommandBarSubmit('quitter', tabs, 0)).toEqual({ kind: 'run' });
     expect(classifyCommandBarSubmit('echo quit', tabs, 0)).toEqual({ kind: 'run' });
@@ -77,6 +85,8 @@ describe('classifyCommandBarSubmit', () => {
     const lastCenter = [tab('janus', { dock: 'right' }), tab('image', { title: 'alpha.png' })];
     expect(classifyCommandBarSubmit('close', lastCenter, 1)).toEqual({ kind: 'confirm-quit' });
     expect(classifyCommandBarSubmit('exit', [tab('janus')], 0)).toEqual({ kind: 'confirm-quit' });
+    expect(classifyCommandBarSubmit('/close', lastCenter, 1)).toEqual({ kind: 'confirm-quit' });
+    expect(classifyCommandBarSubmit('/exit', [tab('janus')], 0)).toEqual({ kind: 'confirm-quit' });
   });
 
   // The named spelling quits exactly when the bare one would, so it is confirmed exactly as often —
@@ -85,6 +95,7 @@ describe('classifyCommandBarSubmit', () => {
     const lastCenter = [tab('janus', { dock: 'right' }), tab('image', { title: 'alpha.png' })];
     expect(classifyCommandBarSubmit('close alpha.png', lastCenter, 0)).toEqual({ kind: 'confirm-quit' });
     expect(classifyCommandBarSubmit('close janus', [tab('janus')], 0)).toEqual({ kind: 'confirm-quit' });
+    expect(classifyCommandBarSubmit('/close alpha.png', lastCenter, 0)).toEqual({ kind: 'confirm-quit' });
   });
 
   it('never quits for a docked tab, however few center tabs remain', () => {

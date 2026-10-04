@@ -29,9 +29,9 @@ asking for a password, cannot be given `theme` or `files` without the `!` prefix
 warns about none of this; `!` is the override, and it is documented in `help`.
 
 First refusal means what it says. A line the application answers itself — a bare word that opens a
-picker, `quit`, or a `close` that would take the last tab with it — is answered here rather than sent
-onward, so `quit` typed in a shell tab asks the same confirmation it asks anywhere else (see
-[[quit-confirmation]]), and a bare word opens the same picker.
+picker, `quit` or `/quit`, or `close` or `/close` that would take the last tab with it — is answered
+here rather than sent onward. A quit typed in a shell tab asks the same confirmation it asks anywhere
+else (see [[quit-confirmation]]), and a bare word opens the same picker.
 
 A command that answers with text rather than opening something — `help`, for one — records that text
 in this tab's transcript. A shell tab draws a terminal in place of a transcript, so nothing appears

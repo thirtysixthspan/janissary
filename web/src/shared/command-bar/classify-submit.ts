@@ -38,7 +38,8 @@ function classifyClose(trimmed: string, tabs: TabView[], activeTab: number): Com
 
 export function classifyCommandBarSubmit(text: string, tabs: TabView[], activeTab: number): CommandBarVerdict {
   const trimmed = text.trim().toLowerCase();
-  if (trimmed === 'quit') return { kind: 'confirm-quit' };
+  const command = trimmed.replace(/^\//, '');
+  if (command === 'quit') return { kind: 'confirm-quit' };
   if (isBareOpener(trimmed) || overlayClaimedByCommand(trimmed)) return { kind: 'overlay', command: trimmed };
-  return classifyClose(trimmed, tabs, activeTab);
+  return classifyClose(command, tabs, activeTab);
 }

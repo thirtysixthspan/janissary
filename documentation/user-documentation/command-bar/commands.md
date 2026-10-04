@@ -21,7 +21,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
 | `plugins` | List the [bundled tab plugins](/user-documentation/command-bar/plugins) with their version and state |
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a conversation by its title |
-| `quit` | Exit the application, after confirmation |
+| `quit` / `/quit` | Exit the application, after confirmation |
 
 ## `help`
 
@@ -75,7 +75,7 @@ A picker needs a screen, so a command that arrives from somewhere without one an
 
 <img class="agent-float" src="/agents/selim-south.png" alt="" />
 
-Typed by you, `quit` is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
+Typed by you, `quit` (or `/quit`) is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
 
 A `quit` nobody typed is not asked about. A [schedule](/user-documentation/automation/scheduling) that fires a `quit`, or another tab telling this one to `quit`, exits the app outright, with no dialog and no unsaved-changes guard.
 
