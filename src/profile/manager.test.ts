@@ -514,6 +514,18 @@ describe('ProfileManager.newAgent — launch-name clashes', () => {
 });
 
 describe('ProfileManager.newAgentAt', () => {
+  it('preserves a shell workspace, subdirectory, and offline mode', () => {
+    const source = makeTab('shell', 'red', 1, [], [], '/clone');
+    source.view = 'plugin';
+    source.offline = true;
+    const managers = makeAtManagers([source], { shell: '/clone/subdir' });
+    new ProfileManager(managers).newAgentAt('shell');
+    expect(managers.workspace.retain).toHaveBeenCalledWith('/clone');
+    expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceDir: '/clone', offline: true }),
+    );
+    expect(managers.tab.setCwd).toHaveBeenCalledWith(expect.any(String), '/clone/subdir');
+  });
   function makeAtManagers(tabs: Tab[], cwdByLabel: Record<string, string>): Managers {
     return {
       tab: {

@@ -114,6 +114,7 @@ describe('host state delivery', () => {
         connections[label] = [{ text: 'zsh', kind: 'terminal' }];
       }),
       killTerminal: vi.fn(),
+      retainWorkspace: vi.fn(),
     };
 
     subscribe(port);

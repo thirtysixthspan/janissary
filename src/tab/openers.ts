@@ -8,6 +8,7 @@ import {
   addPluginTab, addEditorTab, addFilesTab, addNotificationsTab,
 } from './creators.js';
 import { releaseFileReference } from './file-registry.js';
+import { tabRuntime } from './runtime.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
 // the TabManager type) so this module has no import cycle back to tab-manager.ts.
@@ -21,6 +22,7 @@ interface OpenTarget {
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
   adoptTerminal(ptyId: string, label: string): void;
   killTerminal(ptyId: string): void;
+  retainWorkspace(directory: string): void;
 }
 
 function activate(
@@ -42,6 +44,7 @@ function activate(
 function withResources<Result>(
   target: OpenTarget,
   factory: (resources: TabPluginResources) => Result,
+  source?: Tab,
 ): { result: Result; fileRefs: string[]; terminalIds: string[] } {
   const fileRefs: string[] = [];
   const terminals: string[] = [];
@@ -56,7 +59,12 @@ function withResources<Result>(
       },
       spawnTerminal: (options) => {
         if (!acceptingResources) throw new Error('plugin tab resources are no longer available');
-        const terminal = target.spawnTerminal(options);
+        const terminal = target.spawnTerminal(source ? {
+          ...options,
+          workspace: source.workspaceDir
+            ? { dir: source.workspaceDir, offline: source.offline ?? false }
+            : undefined,
+        } : options);
         terminals.push(terminal.ptyId);
         return terminal;
       },
@@ -96,7 +104,8 @@ export function openPluginTab(
   // `sourceLabel` rather than by whatever happens to be focused when the factory finally runs.
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
-  const { result: created, fileRefs, terminalIds } = withResources(target, factory);
+  const source = target.tabs[sourceIndex];
+  const { result: created, fileRefs, terminalIds } = withResources(target, factory, source);
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
@@ -114,6 +123,12 @@ export function openPluginTab(
       (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
     );
     if (minted !== undefined) {
+      if (terminalIds.length > 0 && source) {
+        tabRuntime(minted).cwd = source.runtime?.cwd;
+        minted.workspaceDir = source.workspaceDir;
+        minted.offline = source.offline;
+        if (minted.workspaceDir) target.retainWorkspace(minted.workspaceDir);
+      }
       for (const ptyId of terminalIds) target.adoptTerminal(ptyId, minted.label);
     }
   });
@@ -138,7 +153,7 @@ export function updatePluginTab(
     (candidate) => candidate.plugin?.id === pluginId && candidate.plugin.instanceKey === instanceKey,
   );
   if (!tab?.plugin) return;
-  const { result: update, fileRefs, terminalIds } = withResources(target, factory);
+  const { result: update, fileRefs, terminalIds } = withResources(target, factory, tab);
   const rekeyed = update.instanceKey !== undefined && update.instanceKey !== instanceKey
     && target.tabs.every((candidate) => candidate.plugin?.id !== pluginId
       || candidate.plugin.instanceKey !== update.instanceKey);

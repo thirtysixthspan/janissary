@@ -3,8 +3,8 @@ import type { Managers } from '../managers.js';
 import type { CompletionResult } from '../completion/types.js';
 import { listPersonas } from '../personas.js';
 
-export function complete(managers: Managers, text: string, cursor: number): CompletionResult {
-  const tab = managers.tab.cur();
+export function complete(managers: Managers, text: string, cursor: number, label?: string): CompletionResult {
+  const tab = (label ? managers.tab.byLabel(label) : undefined) ?? managers.tab.cur();
   const cwd = managers.tab.cwdOf(tab.label) ?? process.cwd();
   const labels = managers.tab.allLabels();
   const actionTabs = managers.tab.tabs.filter((t) => t.view !== 'monitor');

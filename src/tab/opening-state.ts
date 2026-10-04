@@ -22,6 +22,10 @@ export abstract class TabOpeningState extends TabQueueState {
     super();
   }
 
+  retainWorkspace(directory: string): void {
+    this.managers.workspace.retain(directory);
+  }
+
   openPluginTab(
     pluginId: string, labelPrefix: string, instanceKey: string, schemaVersion: number,
     sourceLabel: string, factory: (resources: TabPluginResources) => TabPluginPayload,

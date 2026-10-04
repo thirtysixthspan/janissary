@@ -88,9 +88,7 @@ has moved elsewhere still shows where it was opened.
 
 ## Where the shell starts
 
-`zsh` in a tab that has a workspace clone starts the shell inside that clone, confined the same way
-that tab's own shell is — which is the point of a disposable clone. Anywhere else, it starts in the
-project's root directory. Both are inside the project root, and a shell cannot be started anywhere
+`zsh` starts in the issuing tab's working directory. When that tab has a workspace clone, the shell inherits its workspace confinement and offline mode, including when opened from another shell tab. Otherwise it starts without workspace confinement. The starting directory must be inside the project root, and a shell cannot be started anywhere
 else: a terminal only ever runs in a directory inside that root. A remote agent tab is therefore not a
 place a shell tab can be opened from — its working directory belongs to the other host, and there is
 nothing here to start a shell in.
@@ -101,6 +99,10 @@ startup files, which every other shell the application spawns deliberately does 
 that ignored `.zshrc` would have no `PATH` additions, no aliases, and no prompt of the user's own.
 
 ## Lifetime
+
+Each shell keeps its workspace alive until it closes. Closing the source tab does not remove a clone still used by a shell. The clone is removed after its final owning tab closes.
+
+Completion and the metadata row's file-navigator and new-agent actions use the shell tab's recorded directory even when another tab is selected. A new agent shares the shell's workspace and offline mode.
 
 One tab per `zsh`, always. `zsh` twice opens two tabs even in the same directory, because a shell is
 stateful and refocusing the first would take its foreground program and its directory away from the

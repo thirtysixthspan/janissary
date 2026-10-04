@@ -96,7 +96,7 @@ export class ProfileManager {
     if (!creator) return;
     const resolved = this.poolName(label);
     if (resolved === undefined) return;
-    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
+    const cwd = this.managers.tab.cwdOf(label) ?? this.managers.tab.launchDir;
 
     if (creator.remote) {
       if (!this.managers.remote.attach(resolved, label)) {
@@ -122,7 +122,7 @@ export class ProfileManager {
 
     this.managers.workspace.retain(creator.workspaceDir);
     placeAgent(this.managers, {
-      resolved, creator, cwd: creator.workspaceDir, workspaceDir: creator.workspaceDir, offline: false,
+      resolved, creator, cwd, workspaceDir: creator.workspaceDir, offline: creator.offline ?? false,
     });
   }
 

@@ -15,7 +15,7 @@ export function openShellTab(
   const origin = capabilities.originTab();
   if (!origin) return;
   const workspace = origin.workspace;
-  const cwd = workspace?.dir ?? origin.cwd;
+  const cwd = origin.cwd;
 
   capabilities.openOrFocusTab(instanceKey, (resources: TabPluginResources) => {
     const terminal = resources.spawnTerminal({

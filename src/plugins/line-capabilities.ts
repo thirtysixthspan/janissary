@@ -26,11 +26,11 @@ export function lineCapabilities(input: {
   return {
     originTab: () => {
       if (!isEnabled()) return null;
-      const tab = managers.tab.byLabel(origin.label);
+      const tab = managers.tab.byLabel(answeringLabel ?? origin.label);
       if (!tab) return null;
       return {
         label: tab.label,
-        cwd: managers.tab.cwdOf(origin.label) ?? managers.tab.launchDir,
+        cwd: managers.tab.cwdOf(tab.label) ?? managers.tab.launchDir,
         ...(tab.workspaceDir && {
           workspace: { dir: tab.workspaceDir, offline: tab.offline ?? false },
         }),
@@ -46,7 +46,7 @@ export function lineCapabilities(input: {
       const answering = answeringLabel && managers.tab.byLabel(answeringLabel);
       return managers.command.dispatchLine(answering ? answeringLabel : origin.label, line);
     },
-    completeLine: (line, cursor) => (isEnabled() ? complete(managers, line, cursor) : { matches: [], newInput: line, newCursor: cursor }),
+    completeLine: (line, cursor) => (isEnabled() ? complete(managers, line, cursor, answeringLabel ?? origin.label) : { matches: [], newInput: line, newCursor: cursor }),
     // Scoped to this plugin's own tabs rather than to whatever id it was handed. Pty ids come from a
     // plain counter, so an unscoped answer lets a plugin enumerate them and learn which other
     // processes in the window are alive — and the contract has always said "a terminal this plugin

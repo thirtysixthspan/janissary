@@ -2,8 +2,6 @@
 
 # pull-request
 
-* Close the security gap caused by losing a shell tab's workspace ownership.
-
 * the shell should show no command line
 
 * the metadata bar should show the current working directory of the shell
@@ -34,15 +32,6 @@
 
 
 
-
-
-Existing Issue: `openShellTab` stores the source cwd and workspace only in `ShellPayload`, while `makePluginTab` leaves the server `Tab` without `runtime.cwd` or `workspaceDir` and the shell takes no workspace reference, so host actions fall back to project or process defaults and closing the source can remove the clone under the live shell. Severity: 9/10
-
-Existing Risk: 9/10 - A click on `New agent in this workspace` can launch an unconfined agent, a nested `zsh` loses the Seatbelt workspace, and closing the source agent can recursively remove uncommitted workspace files while the shell still uses them.
-
-Proposal Risk: 2/10 - A host-owned cwd and workspace reference keeps follow-on actions and shells in the intended clone until its final tab closes; the deliberate unconfined behavior of a non-workspaced shell remains.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: preserve shell-tab workspace ownership and context". In `src/tab/openers.ts`, `src/tab/creators.ts`, and `src/tab/index.ts`, retain the source tab's host-owned cwd, workspace directory, and offline setting on a shell tab when its factory starts a terminal, and retain the workspace through `WorkspaceManager.retain`; let the existing release in `src/tab/cleanup.ts` drop that reference when the shell tab closes. Make `originTab` and `completeLine` in `src/plugins/line-capabilities.ts`, plus the metadata-row actions in `src/file-navigator/open.ts` and `src/profile/manager.ts`, resolve against that server-owned state so nested `zsh`, completion, file navigation, and agent creation use the shell's actual directory and confinement. Do not use `ShellPayload.cwd` or `ShellPayload.workspace` as authority for sandboxing. Add regression coverage that a shell opened from a workspaced agent keeps the clone after the source closes, that a nested shell inherits the workspace and offline mode, and that the file-navigator and new-agent actions use the shell's context; preserve the existing coverage in `src/plugins/shell/activate.test.ts`, `src/tab/manager.test.ts`, and `src/controller.test.ts`.
 
 
 * Close the security gap in plugin terminal attachment ownership.

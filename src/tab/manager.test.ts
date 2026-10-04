@@ -15,7 +15,7 @@ import { UNREAD_DWELL_MS } from './dwell.js';
 function makeManagers(): Managers {
   let spawned = 0;
   return {
-    workspace: { remove: vi.fn(), cancel: vi.fn() },
+    workspace: { remove: vi.fn(), cancel: vi.fn(), retain: vi.fn(), release: vi.fn() },
     shell: { close: vi.fn(), closeTab: vi.fn() },
     acp: { close: vi.fn(), closeTab: vi.fn() },
     browser: { closeTab: vi.fn() },
@@ -326,6 +326,59 @@ describe('TabManager queue', () => {
 
     const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
     expect(managers.pty.adopt).toHaveBeenCalledWith('pty1', tab.label);
+  });
+
+  it('retains the source workspace through shell and nested-shell lifetimes', () => {
+    vi.useFakeTimers();
+    try {
+      const { tm, managers } = makeTabManagerWithManagers();
+      const source = makeTab('worker', 'red', 2, [], [], '/repo/clone');
+      source.offline = true;
+      tm.tabs.push(source);
+      tm.setCwd(source.label, '/repo/clone/subdir');
+      let references = 1;
+      vi.mocked(managers.workspace.retain).mockImplementation(() => { references += 1; });
+      vi.mocked(managers.workspace.release).mockImplementation(() => { references -= 1; });
+      const factory = (resources: TabPluginResources) => {
+        resources.spawnTerminal({ cwd: '/repo/clone/subdir' });
+        return { title: 'shell', payload: { cwd: '/wrong', workspace: false } };
+      };
+      tm.openPluginTab('shell', 'shell', 'first', 1, source.label, factory);
+      const shell = tm.cur();
+      expect(shell).toMatchObject({ workspaceDir: '/repo/clone', offline: true });
+      expect(tm.cwdOf(shell.label)).toBe('/repo/clone/subdir');
+      expect(references).toBe(2);
+      tm.closeTab(tm.tabs.findIndex((tab) => tab.label === source.label));
+      vi.runOnlyPendingTimers();
+      expect(references).toBe(1);
+      tm.openPluginTab('shell', 'shell', 'nested', 1, shell.label, factory);
+      const nested = tm.cur();
+      expect(nested).toMatchObject({ workspaceDir: '/repo/clone', offline: true });
+      expect(managers.pty.spawn).toHaveBeenLastCalledWith(
+        '', expect.any(String), '', '/repo/clone/subdir', '/repo/clone', true,
+        undefined, expect.any(Object),
+      );
+      tm.closeTab(tm.tabs.findIndex((tab) => tab.label === shell.label));
+      vi.runOnlyPendingTimers();
+      expect(references).toBe(1);
+      tm.closeTab(tm.tabs.findIndex((tab) => tab.label === nested.label));
+      vi.runOnlyPendingTimers();
+      expect(references).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not retain a workspace for nonterminal tabs or failed factories', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    tm.tabs[0].workspaceDir = '/repo/clone';
+    tm.openPluginTab('image', 'image', 'image', 1, 'janus', () => ({ title: 'image', payload: {} }));
+    expect(tm.cur().workspaceDir).toBeUndefined();
+    expect(() => tm.openPluginTab('shell', 'shell', 'failed', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo' });
+      throw new Error('failed factory');
+    })).toThrow('failed factory');
+    expect(managers.workspace.retain).not.toHaveBeenCalled();
   });
 
   it('kills a terminal rather than leaving it running when the factory that started it fails', () => {

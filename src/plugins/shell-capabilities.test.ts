@@ -11,6 +11,11 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import { createPluginContext } from './context.js';
+import { completeCommandLine } from '../completion/index.js';
+
+vi.mock('../completion/index.js', () => ({
+  completeCommandLine: vi.fn(() => ({ matches: [], newInput: 'l', newCursor: 1 })),
+}));
 
 // The capabilities added for the shell tab: where the command came from, what a line means, what the
 // bar would complete it to, and whether the terminal behind a tab is still there. Each is a narrow
@@ -211,6 +216,25 @@ describe('spawnTerminal as a declared resource', () => {
 });
 
 describe('completeLine', () => {
+  it('completes against the answering shell while another tab is selected', () => {
+    const { managers, byLabel, tabs } = makeManagers();
+    tabs.push({ label: 'shell', dotColor: '#aaa', log: [] });
+    byLabel.mockImplementation((label) => tabs.find((tab) => tab.label === label));
+    managers.tab.allLabels = () => tabs.map((tab) => tab.label);
+    vi.mocked(managers.tab.cwdOf).mockImplementation((label) => label === 'shell' ? '/repo/clone/subdir' : '/repo');
+    managers.connection = { completionConnections: vi.fn(() => []) } as unknown as Managers['connection'];
+    managers.monitor = { namesFor: vi.fn(() => []) } as unknown as Managers['monitor'];
+    const capabilities = createPluginContext(
+      managers, declaration(['completeLine', 'originTab']), activationFor(),
+      { label: 'janus', command: 'zsh' }, () => true, [], 'shell',
+    );
+    capabilities.completeLine('l', 1);
+    expect(completeCommandLine).toHaveBeenLastCalledWith(
+      'l', 1, '/repo/clone/subdir', ['janus', 'shell'], [], expect.any(Object),
+    );
+    expect(managers.connection.completionConnections).toHaveBeenCalledWith('shell');
+    expect(capabilities.originTab()).toEqual({ label: 'shell', cwd: '/repo/clone/subdir' });
+  });
   it('answers with an empty result rather than calling through once the plugin has been disabled', () => {
     const { managers } = makeManagers();
     const capabilities = createPluginContext(

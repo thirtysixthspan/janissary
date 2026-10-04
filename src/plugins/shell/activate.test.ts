@@ -92,15 +92,15 @@ describe('shell plugin activation', () => {
 
   it('starts in the workspace clone when the issuing tab has one', () => {
     const { capabilities, opened, spawns } = fakeCapabilities({
-      origin: { label: 'agent1', cwd: '/ignored', workspace: { dir: '/clone', offline: true } },
+      origin: { label: 'agent1', cwd: '/clone/subdir', workspace: { dir: '/clone', offline: true } },
     });
 
     activate().command?.('', capabilities);
 
     expect(spawns[0]).toEqual({
-      cwd: '/clone', shell: SHELL_PROGRAM, args: [], workspace: { dir: '/clone', offline: true },
+      cwd: '/clone/subdir', shell: SHELL_PROGRAM, args: [], workspace: { dir: '/clone', offline: true },
     });
-    expect(opened[0].value.payload).toMatchObject({ cwd: '/clone', workspace: true });
+    expect(opened[0].value.payload).toMatchObject({ cwd: '/clone/subdir', workspace: true });
   });
 
   it('starts at the issuing tab\'s directory when it has no workspace', () => {
