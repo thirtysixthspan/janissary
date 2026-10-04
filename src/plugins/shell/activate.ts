@@ -93,7 +93,7 @@ export function activate(): TabPluginActivation {
       },
       dispatch: {
         payload: isShellDispatch,
-        run: (_tabPayload, line, capabilities) => ({ dispatched: capabilities.dispatchLine(line) }),
+        run: (_tabPayload, line, capabilities) => capabilities.dispatchLineWithOutput(line),
       },
       complete: {
         payload: isShellCompleteRequest,

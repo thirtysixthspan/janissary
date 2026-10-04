@@ -134,6 +134,26 @@ export class CommandManager {
     return true;
   }
 
+  async dispatchLineWithOutput(label: string, input: string): Promise<{ dispatched: boolean; output: string }> {
+    const resolution = resolveCommand(input);
+    if (resolution.kind === 'output') {
+      this.managers.tab.append(label, { input, output: resolution.output, markdown: true });
+      return { dispatched: true, output: resolution.output };
+    }
+    if (resolution.kind !== 'app') return { dispatched: false, output: '' };
+
+    const output: string[] = [];
+    const subscription = messageBus.on('transcript', 'entry:appended', (event) => {
+      if (event.type === 'entry:appended' && event.tabLabel === label) output.push(event.entry.output);
+    });
+    try {
+      await this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label));
+    } finally {
+      subscription.unsubscribe();
+    }
+    return { dispatched: true, output: output.join('\n') };
+  }
+
   async executeCommand(name: string, command: string, label: string, index: number): Promise<void> {
     const cmd = findCommand(name, command);
     if (!cmd) return;

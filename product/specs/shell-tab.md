@@ -48,9 +48,9 @@ queued line appears in the shell command bar; typing edits it, and Backspace or 
 removes it. Arrow keys change the selected queue entry, Return leaves the popup open without submitting,
 and Escape closes it and clears the bar.
 
-A command that answers with text rather than opening something — `help`, for one — records that text
-in this tab's transcript. A shell tab draws a terminal in place of a transcript, so nothing appears
-on screen for it.
+An application command that answers with text rather than opening something — `help`, for one — is
+shown in the terminal as a command line, followed by its reply on the next line. Neither line is sent
+to zsh. Commands that open a picker keep their existing behavior.
 
 **Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
 tab's bar asks, and shows the same strip when there is a choice to make. The shell tab keeps no list

@@ -172,6 +172,41 @@ describe('dispatchLine', () => {
   });
 });
 
+describe('dispatchLineWithOutput', () => {
+  function withDispatcher() {
+    const dispatchLineWithOutput = vi.fn(async () => ({ dispatched: true, output: 'response' }));
+    const { byLabel, managers } = makeManagers({ command: { dispatchLineWithOutput } as never });
+    return { byLabel, managers, dispatchLineWithOutput };
+  }
+
+  it('returns the application command output from the answering tab', async () => {
+    const { byLabel, managers, dispatchLineWithOutput } = withDispatcher();
+    byLabel.mockReturnValue({ label: 'shell1' } as never);
+    const capabilities = createPluginContext(
+      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'zsh' },
+      () => true, [], 'shell1',
+    );
+
+    await expect(capabilities.dispatchLineWithOutput('help')).resolves.toEqual({
+      dispatched: true, output: 'response',
+    });
+    expect(dispatchLineWithOutput).toHaveBeenCalledWith('shell1', 'help');
+  });
+
+  it('returns no output after the plugin has been disabled', async () => {
+    const { managers, dispatchLineWithOutput } = withDispatcher();
+    const capabilities = createPluginContext(
+      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'zsh' },
+      () => false, [],
+    );
+
+    await expect(capabilities.dispatchLineWithOutput('help')).resolves.toEqual({
+      dispatched: false, output: '',
+    });
+    expect(dispatchLineWithOutput).not.toHaveBeenCalled();
+  });
+});
+
 describe('spawnTerminal as a declared resource', () => {
   // The gate lives where the resources are handed over rather than in `restrictToDeclared`, which
   // walks the capability set and cannot see a resource.
@@ -314,6 +349,7 @@ describe('each of them is declaration-gated', () => {
 
     expect(() => capabilities.originTab()).toThrow('used capability "originTab" without declaring it');
     expect(() => capabilities.dispatchLine('ls')).toThrow('used capability "dispatchLine" without declaring it');
+    expect(() => capabilities.dispatchLineWithOutput('help')).toThrow('used capability "dispatchLineWithOutput" without declaring it');
     expect(() => capabilities.completeLine('l', 1)).toThrow('used capability "completeLine" without declaring it');
     expect(() => capabilities.terminalRunning('pty1')).toThrow('used capability "terminalRunning" without declaring it');
   });

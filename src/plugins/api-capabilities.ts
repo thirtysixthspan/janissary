@@ -27,6 +27,7 @@ export type TabPluginCapabilityName =
   | 'isRecordingLive'
   | 'originTab'
   | 'dispatchLine'
+  | 'dispatchLineWithOutput'
   | 'completeLine'
   | 'terminalRunning'
   | 'rejectRequest'
@@ -56,6 +57,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   isRecordingLive: true,
   originTab: true,
   dispatchLine: true,
+  dispatchLineWithOutput: true,
   completeLine: true,
   terminalRunning: true,
   rejectRequest: true,

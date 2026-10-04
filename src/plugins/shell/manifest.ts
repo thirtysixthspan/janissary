@@ -28,6 +28,7 @@ export const shellManifest = {
   capabilities: [
     'originTab',
     'dispatchLine',
+    'dispatchLineWithOutput',
     'completeLine',
     // `terminalRunning` is what the mount-time status question asks, so leaving it out does not fail
     // the declaration — it fails the question, and a failed question is a broken plugin. Every

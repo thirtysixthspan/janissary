@@ -29,6 +29,7 @@ type Options = {
 // the shell received and leave two subscriptions for the tab to leak.
 export type ShellTerminalHandle = {
   write(data: string): void;
+  display(data: string): void;
   focus(): void;
   scrollLines(amount: number): void;
   scrollToBottom(): void;
@@ -156,9 +157,10 @@ export function useShellTerminal({
   }, [ptyId, containerRef]);
 
   const write = useCallback((data: string) => { handleRef.current?.write(data); }, []);
+  const display = useCallback((data: string) => { terminalRef.current?.write(data); }, []);
   const focus = useCallback(() => { terminalRef.current?.focus(); }, []);
   const scrollLines = useCallback((amount: number) => { terminalRef.current?.scrollLines(amount); }, []);
   const scrollToBottom = useCallback(() => { terminalRef.current?.scrollToBottom(); }, []);
   const rows = useCallback(() => terminalRef.current?.rows ?? 0, []);
-  return { write, focus, scrollLines, scrollToBottom, rows };
+  return { write, display, focus, scrollLines, scrollToBottom, rows };
 }

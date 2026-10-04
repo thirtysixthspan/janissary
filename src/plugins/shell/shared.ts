@@ -59,7 +59,7 @@ export type ShellTerminalStatus = { running: boolean };
 // What the host decided about one line: `dispatched` is true when the application claimed it as a
 // command, false when it resolved to nothing and the shell should have it. The client writes a
 // `false` line to the terminal itself — the decision is the host's, because the command table is.
-export type ShellDispatchResult = { dispatched: boolean };
+export type ShellDispatchResult = { dispatched: boolean; output: string };
 
 // The completion the application's command bar would show. Carried by the same intent rather than a
 // second one, so a plugin holding a ptyId and a command line needs exactly one wire route.

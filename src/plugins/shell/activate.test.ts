@@ -27,7 +27,9 @@ function fakeCapabilities(overrides: {
   const origin = 'origin' in overrides ? overrides.origin : { label: 'agent1', cwd: '/repo' };
   const capabilities = {
     originTab: () => origin ?? null,
-    dispatchLine: vi.fn(() => overrides.dispatched ?? false),
+    dispatchLineWithOutput: vi.fn(async () => ({
+      dispatched: overrides.dispatched ?? false, output: overrides.dispatched ? 'command output' : '',
+    })),
     completeLine: vi.fn(() => overrides.completions ?? { matches: [], newInput: '', newCursor: 0 }),
     terminalRunning: vi.fn(() => overrides.running ?? true),
     openOrFocusTab: (key: string, factory: (resources: { spawnTerminal(options: Spawn): { ptyId: string; cols: number; rows: number } }) => TabPluginPayload) => {
@@ -213,17 +215,17 @@ describe('shell plugin activation', () => {
     )).toThrow(/invalid shell tab payload/);
   });
 
-  it('offers the host\'s answer to a dispatched line', () => {
+  it('offers the host\'s answer to a dispatched line', async () => {
     const { capabilities } = fakeCapabilities({ dispatched: true });
 
-    expect(ask(capabilities, 'dispatch', 'ls')).toEqual({ dispatched: true });
-    expect(capabilities.dispatchLine).toHaveBeenCalledWith('ls');
+    await expect(ask(capabilities, 'dispatch', 'ls')).resolves.toEqual({ dispatched: true, output: 'command output' });
+    expect(capabilities.dispatchLineWithOutput).toHaveBeenCalledWith('ls');
   });
 
-  it('offers a line the host does not claim as undispatched, so the shell gets it', () => {
+  it('offers a line the host does not claim as undispatched, so the shell gets it', async () => {
     const { capabilities } = fakeCapabilities({ dispatched: false });
 
-    expect(ask(capabilities, 'dispatch', 'ls -la')).toEqual({ dispatched: false });
+    await expect(ask(capabilities, 'dispatch', 'ls -la')).resolves.toEqual({ dispatched: false, output: '' });
   });
 
   it('returns the host\'s own completion for a line', () => {

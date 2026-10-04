@@ -3,13 +3,12 @@ import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordCla
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTerminal } from './useShellTerminal';
-import { routeFor, shellLine } from './command-line-rules';
 import { handleCompletionDismissKey, handleQueueKey, handleShellControlKey } from './command-bar-keys';
 import { insertCommandAtCaret } from './insert-command-at-caret';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
 import { reportShellCwd } from './report-shell-cwd';
-import { recordShellCommand } from './record-shell-command';
+import { useShellSubmit } from './useShellSubmit';
 import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { NO_CHORDS, NO_QUEUE_ITEMS } from './shell-tab-constants';
@@ -68,7 +67,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     return () => { insertions.delete(label); };
   }, [appBar.pluginCommandLineInsertions, capabilities.label]);
 
-  const { write, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTerminal({
+  const { write, display, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTerminal({
     ptyId: payload.ptyId,
     containerRef: terminalReference,
     attachTerminal: capabilities.attachTerminal,
@@ -100,39 +99,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     if (capabilities.active) inputReference.current?.focus();
   }, [capabilities.active]);
 
-  const submit = useCallback((text: string) => {
-    setMatches([]);
-    if (routeFor(text) === 'shell') {
-      // `!` is the override, so the marker itself is never part of what the shell receives.
-      const line = shellLine(text);
-      if (!line) return;
-      write(`${line}\n`);
-      setSent((previous) => [...previous, text]);
-      return;
-    }
-    // Otherwise the application gets first refusal: a line it claims runs as that command and the shell
-    // never sees it. The decision is the host's, because the command table is; this plugin asks rather
-    // than keeping a copy of a list that would go stale the moment a command was added.
-    //
-    // First refusal is the host's *interception*, asked before the line is offered at all: a bare word
-    // it opens a picker for, and `quit` or a `close` that would take the last tab with it, are answered
-    // here rather than sent to a dispatcher where `quit` is a bare exit emit with nothing asked.
-    if (recordShellCommand(text, appBar.intercept(text, capabilities.label), setSent)) return;
-    //
-    // The payload is the line itself, which is the only shape `isShellDispatch` accepts — anything else
-    // is a request this plugin did not describe, and the host refuses it rather than guessing.
-    void capabilities.intent<{ dispatched: boolean }>('dispatch', text)
-      .then((result) => {
-        if (recordShellCommand(text, result.dispatched, setSent)) return;
-        write(`${text}\n`);
-        setSent((previous) => [...previous, text]);
-      })
-      // A refusal here means this plugin sent a payload its own guard rejects, which is a bug in the
-      // plugin rather than anything the user typed, so it crosses the failure boundary instead of
-      // leaving an unhandled rejection. The line is not written either way: a refused dispatch has not
-      // established that the shell should have had it.
-      .catch(() => { capabilities.reportFailure('shell dispatch intent refused'); });
-  }, [appBar, capabilities, write]);
+  const submit = useShellSubmit({ appBar, capabilities, display, setMatches, setSent, write });
 
   const bar = useCommandBarKeys({
     value: draft,

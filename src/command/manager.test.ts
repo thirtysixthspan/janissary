@@ -74,6 +74,38 @@ describe('CommandManager async commands', () => {
   });
 });
 
+describe('CommandManager dispatchLineWithOutput', () => {
+  it('returns the output from an output-only application command', async () => {
+    const { managers } = makeManagers();
+
+    const result = await managers.command.dispatchLineWithOutput('janus', 'help');
+
+    expect(result.dispatched).toBe(true);
+    expect(result.output.length).toBeGreaterThan(0);
+    expect(managers.tab.cur().log.at(-1)?.output).toBe(result.output);
+  });
+
+  it('captures output appended by the existing async command executor', async () => {
+    const { managers } = makeManagers();
+    vi.spyOn(managers.command, 'executeCommand').mockImplementation(async (_name, command, label) => {
+      await Promise.resolve();
+      managers.tab.append(label, { input: command, output: 'async response' });
+    });
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'theme dark')).resolves.toEqual({
+      dispatched: true, output: 'async response',
+    });
+  });
+
+  it('leaves shell and unknown lines undispatched', async () => {
+    const { managers } = makeManagers();
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'ls -la')).resolves.toEqual({
+      dispatched: false, output: '',
+    });
+  });
+});
+
 
 describe('CommandManager queue gate', () => {
   it('runs directly when the tab is idle with an empty queue', () => {

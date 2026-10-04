@@ -93,6 +93,7 @@ function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void 
 function makeCapabilities(overrides: {
   active?: boolean;
   dispatched?: boolean;
+  output?: string;
   completions?: { matches: string[]; newInput: string; newCursor: number };
   status?: { running: boolean };
   claimedChords?: readonly string[];
@@ -121,7 +122,7 @@ function makeCapabilities(overrides: {
       if (name === 'terminal-status') return overrides.status ?? { running: true };
       if (name === 'dispatch') {
         await answered;
-        return { dispatched: overrides.dispatched ?? false };
+        return { dispatched: overrides.dispatched ?? false, output: overrides.output ?? '' };
       }
       if (name === 'complete') {
         return overrides.completions ?? { matches: [], newInput: '', newCursor: 0 };
@@ -242,7 +243,7 @@ function mountShell(
 function renderTab(options: Parameters<typeof makeCapabilities>[0] & AppBarOptions = {}) {
   const made = makeCapabilities(options);
   const view = mountShell(PAYLOAD, made.capabilities, options);
-  return { ...made, ...view };
+  return { ...made, ...view, terminal: terminals.at(-1)! };
 }
 
 function bar(): HTMLTextAreaElement {
@@ -495,6 +496,17 @@ describe('ShellTab', () => {
     await act(async () => { releaseDispatch(); });
 
     expect(written).toEqual([]);
+  });
+
+  it('displays a claimed application command and its reply without sending either to zsh', async () => {
+    const { releaseDispatch, terminal, written } = renderTab({ dispatched: true, output: 'first line\nsecond line' });
+
+    fireEvent.change(bar(), { target: { value: 'help' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(written).toEqual([]);
+    expect(terminal.written).toContain('\r\u{1B}[2K> help\r\nfirst line\r\nsecond line\r\n> ');
   });
 
   it('records an intercepted application command in shell history', async () => {
