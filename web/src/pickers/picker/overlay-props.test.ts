@@ -1,3 +1,5 @@
+import React from 'react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { mountedPickerOverlayProps } from './overlay-props';
 import { buildPickerOverlayView } from './overlay-view';
@@ -37,6 +39,7 @@ describe('mountedPickerOverlayProps', () => {
   it('projects exactly the fields a mounted tab body takes', () => {
     const byName = (a: string, b: string) => a.localeCompare(b);
     expect(Object.keys(mountedPickerOverlayProps(view)).toSorted(byName)).toEqual([
+      'appThemePickerOverlay',
       'contributedOverlay',
       'navIndex', 'navOpen', 'navQuery', 'onPickTab', 'onPickTask', 'onToggleTaskDir',
       'taskPickerIndex', 'taskPickerOpen', 'taskRows',
@@ -45,5 +48,15 @@ describe('mountedPickerOverlayProps', () => {
 
   it('carries no contributed overlay when no plugin has one open', () => {
     expect(mountedPickerOverlayProps(view).contributedOverlay).toBeUndefined();
+  });
+
+  it('projects the existing app theme picker only when its registered overlay is open', () => {
+    const closed = mountedPickerOverlayProps({ ...view, overlays: { ...view.overlays, appTheme: false } });
+    expect(closed.appThemePickerOverlay).toBeUndefined();
+
+    const open = mountedPickerOverlayProps({ ...view, theme: 'dark', appThemePickerIndex: 0 });
+    render(React.createElement(React.Fragment, null, open.appThemePickerOverlay));
+    expect(screen.getByText('theme')).toBeInTheDocument();
+    expect(screen.getByText('dark').closest('.picker-row')).toHaveClass('selected');
   });
 });

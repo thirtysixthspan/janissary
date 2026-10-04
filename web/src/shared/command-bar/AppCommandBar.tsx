@@ -12,6 +12,7 @@ export type AppCommandBar = {
   intercept(line: string): boolean;
   ghostHistory: string[];
   blockingOverlayOpen?: boolean;
+  overlayOwnsCommandBar?: boolean;
 };
 
 const AppCommandBarContext = createContext<AppCommandBar | null>(null);

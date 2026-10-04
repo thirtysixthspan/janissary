@@ -119,6 +119,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
 
   const onBarKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (appBar.blockingOverlayOpen) return;
+    if (appBar.overlayOwnsCommandBar) return;
     if (event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 't') {
       event.preventDefault();
       event.stopPropagation();
@@ -159,7 +160,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
       return;
     }
     bar.onKeyDown(event);
-  }, [appBar.blockingOverlayOpen, bar, capabilities, draft, historyOpen, write]);
+  }, [appBar.blockingOverlayOpen, appBar.overlayOwnsCommandBar, bar, capabilities, draft, historyOpen, write]);
 
   // `Ctrl+R` is claimed by this plugin's declaration, so it reaches this tab while it is the visible
   // one and belongs to the application everywhere else. The window handler consults the claim before

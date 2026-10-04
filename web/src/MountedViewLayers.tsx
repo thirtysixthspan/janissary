@@ -65,6 +65,7 @@ export function MountedViewLayers({
   visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, quickOpenOverlay, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
+  appThemePickerOverlay,
 }: Properties) {
   return (
     <>
@@ -123,6 +124,7 @@ export function MountedViewLayers({
                   <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
                 )}
                 {t.plugin?.id === 'shell' && quickOpenOverlay}
+                {t.plugin?.id === 'shell' && appThemePickerOverlay}
                 {t.plugin?.id === 'shell' && contributedOverlay}
               </>
             ) : undefined}

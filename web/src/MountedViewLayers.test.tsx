@@ -427,6 +427,21 @@ describe('MountedViewLayers', () => {
     expect(bodies[1].querySelector('.clipboard-history')).toBeNull();
   });
 
+  it('renders the app theme picker over only the current shell plugin tab', () => {
+    const tabs = [makePluginTab('shell', '/current.mp4', 'shell'), makePluginTab('other', '/other.mp4')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        appThemePickerOverlay: React.createElement('div', { className: 'app-theme-picker' }),
+      }),
+    );
+    const bodies = [...container.querySelectorAll('.tab-body')];
+
+    expect(bodies[0].querySelector('.app-theme-picker')).toBeTruthy();
+    expect(bodies[1].querySelector('.app-theme-picker')).toBeNull();
+  });
+
   it('does not render a contributed overlay inside another plugin tab', () => {
     const tabs = [makePluginTab('plugin', '/current.mp4')];
     const { container } = render(

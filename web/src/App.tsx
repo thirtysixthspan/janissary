@@ -20,6 +20,7 @@ import { useAppWindowKeys } from './useAppWindowKeys';
 import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
 import { AppCommandBarProvider, useAppCommandLine } from './shared/command-bar/AppCommandBar';
 import { usePickerOverlays } from './pickers/usePickerOverlays';
+import { commandBarSuppressed } from './pickers/overlay-registry';
 import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
@@ -173,7 +174,12 @@ export function App({ client }: { client: JanusClient }) {
 
   return (
     <PluginChordProvider registry={pluginChords}>
-      <AppCommandBarProvider bar={{ intercept: interceptCommandLine, ghostHistory: globalHistory, blockingOverlayOpen: pickers.view.overlays.quickOpen }}>
+      <AppCommandBarProvider bar={{
+        intercept: interceptCommandLine,
+        ghostHistory: globalHistory,
+        blockingOverlayOpen: pickers.view.overlays.quickOpen,
+        overlayOwnsCommandBar: commandBarSuppressed(pickers.view.overlays),
+      }}>
       <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}

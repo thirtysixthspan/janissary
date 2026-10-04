@@ -138,6 +138,7 @@ type AppBarOptions = {
   guard?: (index: number) => boolean;
   ghostHistory?: string[];
   blockingOverlayOpen?: boolean;
+  overlayOwnsCommandBar?: boolean;
 };
 
 type AppBarOpeners = Record<
@@ -166,7 +167,12 @@ function AppBar({ chords, options, openQuitConfirm, openers, children }: {
   });
   return (
     <PluginChordProvider registry={chords}>
-      <AppCommandBarProvider bar={{ intercept, ghostHistory: options.ghostHistory ?? [], blockingOverlayOpen: options.blockingOverlayOpen }}>{children}</AppCommandBarProvider>
+      <AppCommandBarProvider bar={{
+        intercept,
+        ghostHistory: options.ghostHistory ?? [],
+        blockingOverlayOpen: options.blockingOverlayOpen,
+        overlayOwnsCommandBar: options.overlayOwnsCommandBar,
+      }}>{children}</AppCommandBarProvider>
     </PluginChordProvider>
   );
 }
@@ -212,6 +218,12 @@ describe('ShellTab', () => {
   it('disables shell input while Quick Open is visible', () => {
     renderTab({ blockingOverlayOpen: true });
     expect(bar()).toBeDisabled();
+  });
+
+  it('leaves application overlay keys to the window handler', () => {
+    const { capabilities } = renderTab({ overlayOwnsCommandBar: true });
+    fireEvent.keyDown(bar(), { key: 'Tab' });
+    expect(capabilities.intent).not.toHaveBeenCalledWith('complete', expect.anything());
   });
 
   it('uses the tab dot color for the command bar dot', () => {
