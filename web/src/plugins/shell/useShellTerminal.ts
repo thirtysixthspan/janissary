@@ -6,7 +6,7 @@ import {
   type PluginTerminal,
 } from '../api';
 
-const SHELL_STATUS_HOOKS = String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { printf '\033]133;C\a'; }; _janus_emit_cwd() { printf '\033]7;file://%s%s\a' "$HOST" "$PWD"; }; _janus_precmd() { printf '\033]133;D\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd
+const SHELL_STATUS_HOOKS = String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { printf '\033]133;C\a'; }; _janus_emit_cwd() { printf '\033]7;file://%s%s\a' "$HOST" "$PWD"; }; _janus_precmd() { printf '\033]133;D\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd; printf '\033]133;E\a'
 `;
 
 export type AttachTerminal = (
@@ -71,10 +71,18 @@ export function useShellTerminal({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(container);
+    container.classList.add('shell-initializing');
     terminal.parser.registerOscHandler(133, (data) => {
-      if (data === 'C') runningRef.current(true);
-      else if (data === 'D') runningRef.current(false);
-      return data === 'C' || data === 'D';
+      switch (data) {
+      case 'C': { runningRef.current(true); break; }
+      case 'D': { runningRef.current(false); break; }
+      case 'E': {
+        terminal.clear();
+        container.classList.remove('shell-initializing');
+        break;
+      }
+      }
+      return ['C', 'D', 'E'].includes(data);
     });
     terminal.parser.registerOscHandler(7, (data) => {
       try {

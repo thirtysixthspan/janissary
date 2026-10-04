@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { PluginTerminal } from '../api';
 import { useShellTerminal } from './useShellTerminal';
 
-const terminals: { written: string[]; disposed: boolean; options: Record<string, unknown> }[] = [];
+const terminals: { written: string[]; disposed: boolean; options: Record<string, unknown>; clearCalls: number }[] = [];
 const fitCalls: number[] = [];
 const terminalDataHandlers: ((data: string) => void)[] = [];
 const terminalFocusCalls: number[] = [];
@@ -13,11 +13,12 @@ vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     written: string[] = [];
     disposed = false;
+    clearCalls = 0;
     options: Record<string, unknown>;
 
     constructor(options: Record<string, unknown>) {
       this.options = options;
-      terminals.push(this as unknown as { written: string[]; disposed: boolean; options: Record<string, unknown> });
+      terminals.push(this as unknown as { written: string[]; disposed: boolean; options: Record<string, unknown>; clearCalls: number });
     }
 
     loadAddon() {}
@@ -27,6 +28,7 @@ vi.mock('@xterm/xterm', () => ({
     hasSelection() { return false; }
     getSelection() { return ''; }
     clearSelection() {}
+    clear() { this.clearCalls += 1; }
     onData(handler: (data: string) => void) { terminalDataHandlers.push(handler); }
     focus() { terminalFocusCalls.push(1); }
     parser = { registerOscHandler: (id: number, handler: (data: string) => boolean) => { oscHandlers.push({ id, handle: handler }); return { dispose() {} }; } };
@@ -143,6 +145,18 @@ describe('useShellTerminal', () => {
     expect(oscHandlers.find(({ id }) => id === 133)?.handle('D')).toBe(true);
 
     expect(onCommandRunning.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('keeps startup output hidden until the zsh hooks are installed', () => {
+    const { container, written } = harness();
+
+    expect(container).toHaveClass('shell-initializing');
+    expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
+    expect(written[0]).toContain('add-zsh-hook precmd _janus_precmd');
+    expect(oscHandlers.find(({ id }) => id === 133)?.handle('E')).toBe(true);
+
+    expect(terminals[0].clearCalls).toBe(1);
+    expect(container).not.toHaveClass('shell-initializing');
   });
 
   it('reports the path from zsh current-directory markers', () => {

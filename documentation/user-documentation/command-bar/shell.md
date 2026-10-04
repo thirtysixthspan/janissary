@@ -111,7 +111,7 @@ Type `zsh` to open a separate tab with a live zsh terminal. This is different fr
 
 The terminal is output-only: it never takes keyboard focus, and you cannot type into it directly. Use the command bar under it. Each line goes to Janissary first. A recognized application command runs there and never reaches zsh; an unclaimed line goes to zsh. Prefix a line with `!` to send it straight to zsh, even when it matches an application command.
 
-The shell starts in the working directory of the tab that opened it. It shares that tab's workspace and offline mode when present, and keeps the workspace alive even if you close the original tab. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The shell tab then uses a plain `> ` prompt.
+The shell starts in the working directory of the tab that opened it. It shares that tab's workspace and offline mode when present, and keeps the workspace alive even if you close the original tab. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt.
 
 The shell tab's metadata row follows zsh's current working directory as you change it.
 

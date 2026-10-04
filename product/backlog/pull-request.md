@@ -2,8 +2,6 @@
 
 # pull-request
 
-* pre and post hooks should be added when the shell launches but before the output become visilbe to the user.
-
 * all popups should render above the command bar, not on top of it. This should be that same positioning as in the agent tab. it should not overlap the left colored border of the tab. history picker, clipboard picker, queue picker, tab navigator, quick file finder, theme picker, syntax theme picker.
 
 * shift+tab should bound the keyboard input focus back and forth between the command line and the shell.  This does not work currently.

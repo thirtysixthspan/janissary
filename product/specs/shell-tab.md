@@ -117,7 +117,8 @@ nothing here to start a shell in.
 The shell is always zsh, named outright rather than taken from the environment, so the tab is a zsh
 tab whatever the user's login shell happens to be. It is a fully interactive zsh reading its own
 startup files, then sets its prompt to `> ` so user prompt formatting does not change the shell tab's
-terminal display.
+terminal display. The terminal stays hidden until its pre-command and post-command hooks are
+installed, and the startup screen is cleared before the plain prompt appears.
 
 ## Lifetime
 

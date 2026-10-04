@@ -8,6 +8,8 @@
   flex: 1 1 auto;
 }
 
+.shell-body.shell-initializing { visibility: hidden; }
+
 .shell-tab-header { position: relative; flex: 0 0 auto; }
 .shell-tab-header .status-panels { top: 100%; right: 10px; }
 
