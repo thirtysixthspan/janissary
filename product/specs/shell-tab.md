@@ -39,7 +39,8 @@ on screen for it.
 
 **Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
 tab's bar asks, and shows the same strip when there is a choice to make. The shell tab keeps no list
-of its own.
+of its own. One match completes the line, several matches show the choice strip, and no matches leave
+the line unchanged.
 
 ## Keys
 

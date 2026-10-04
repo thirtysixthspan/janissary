@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { AcpRef, ConnectionView, ScheduleView } from '../protocol.js';
+import type { CompletionResult } from '../../completion/types.js';
 import {
   isEmptyShellIntent, isShellCompleteRequest, isShellDispatch, isShellPayload,
-  SHELL_PAYLOAD_SCHEMA_VERSION,
+  SHELL_PAYLOAD_SCHEMA_VERSION, type ShellCompletion,
 } from './shared.js';
 
 const PAYLOAD = {
@@ -16,6 +17,14 @@ const PAYLOAD = {
 describe('shell shared contract', () => {
   it('declares a payload schema version the host can compare', () => {
     expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(1);
+  });
+
+  it('keeps its completion result assignable to and from the application result', () => {
+    const completion: CompletionResult = { matches: ['ls', 'lsof'], newInput: 'ls', newCursor: 2 };
+    const shellCompletion: ShellCompletion = completion;
+    const roundTrip: CompletionResult = shellCompletion;
+
+    expect(roundTrip).toEqual(completion);
   });
 
   it('accepts every ConnectionView the protocol admits', () => {

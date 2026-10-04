@@ -57,17 +57,6 @@ Proposal Risk: 2/10 - Tab-scoped registrations and a deterministic focused-tab r
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: keep simultaneous plugin chord claims per tab". Change the registration identity and cleanup closure in `web/src/plugins/PluginChords.tsx` to include the tab label, and resolve a chord against the tab that currently owns keyboard focus rather than the first registry entry. Add a regression with two shell tabs visible in different surfaces: Ctrl+R must open the focused tab's history, hiding the other tab must not clear the remaining registration, and releasing both must hand Ctrl+R back to the application. Keep the existing shell chord cases in `web/src/plugins/shell/ShellTab.test.tsx` and `web/src/useWindowKeys.test.ts` passing.
 
 
-* Close the type-drift debt in the shell completion result.
-
-Existing Issue: `src/plugins/shell/shared.ts` independently declares `ShellCompletion` with `matches`, `newInput`, and `newCursor`, while `src/completion/types.ts` defines the `CompletionResult` returned by `completeLine`, and no test ties the two shapes together. Severity: 4/10
-
-Existing Risk: 4/10 - A future completion-result change can compile on the server while the shell client continues to assert the old generic intent result and breaks completion at runtime.
-
-Proposal Risk: 2/10 - A type-level pin catches a server/client shape change before release, though both sides still need to agree on the meaning of each completion field.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: pin the shell completion result shape". In `src/plugins/shell/shared.test.ts`, pin `ShellCompletion` to `CompletionResult` from `src/completion/types.ts` in both assignable directions, or replace the duplicate with an allowed type-only shared import if the plugin boundary permits it. Keep the runtime import-free rule for `src/plugins/shell/shared.ts`; the existing completion intent and `web/src/plugins/shell/ShellTab.test.tsx` cases should continue to pass.
-
-
 * Correct the pull request description's claim that `theme dark` changes syntax highlighting.
 
 Existing Issue: The Additional test case 3 paragraph says `theme dark` changes the syntax theme, while `src/commands/theme.ts` changes the application theme and only `theme sync` changes syntax highlighting. Severity: 3/10
