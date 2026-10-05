@@ -5,3 +5,5 @@
 * when 2 shells are open, executing a command like `ls` in a tab will cause the tab dot to continuously blink. this doesnt happen when a single shell tab is open.
 
 * the application theme should apply to the shell tab terminal content.
+
+* notification popup in the shell tab should show entirely below the metadata bar.
