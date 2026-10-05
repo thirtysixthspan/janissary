@@ -30,6 +30,12 @@ export class ShellCommandQueue {
     if (!running) void this.drain();
   }
 
+  // A line queued by another tab changes the shared queue without going through submit. Wake an
+  // idle shell so that line receives the same command-bar routing as one queued locally.
+  wake(): void {
+    if (!this.busy) void this.drain();
+  }
+
   // Queues the line and answers true while zsh is busy or the queue is draining, so a new line never
   // overtakes one already waiting. Answers false when the caller should run the line itself.
   submit(line: string): boolean {

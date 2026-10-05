@@ -114,7 +114,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const { queue, submit } = useShellCommandQueue(capabilities, run, payload.commandRunning ?? false, (line) => {
     setMatches([]);
     setSent((previous) => appendShellHistory(previous, line));
-  });
+  }, queueItems);
   queueReference.current = queue;
 
   const bar = useCommandBarKeys({

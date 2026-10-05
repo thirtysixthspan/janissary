@@ -69,6 +69,11 @@ next prompt before the following entry runs. Lines the application answers itsel
 the next entry. A line submitted while the queue is still draining joins the back of the queue, so
 nothing overtakes a line already waiting. Keys typed directly into the terminal are never queued.
 
+Another tab can append a line with `queue <shell-tab> <command>`. The line joins the same FIFO as
+commands queued from this shell's own bar. If zsh is idle, it runs right away through the shell bar's
+application-command routing; if zsh is busy, it waits for the prompt before draining. The issuing tab
+records `→ <shell-tab> (queued): <command>`.
+
 The `queue` command and `Ctrl+E` open the application's queue popup over the shell tab. The selected
 queued line appears in the shell command bar; typing edits it, and Backspace or Delete on an empty bar
 removes it. Arrow keys change the selected queue entry, Return leaves the popup open without submitting,

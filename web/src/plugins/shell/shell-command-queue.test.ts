@@ -35,6 +35,30 @@ describe('ShellCommandQueue', () => {
     expect(pending).toEqual(['ls']);
   });
 
+  it('wakes an idle shell to drain a line queued by another tab', async () => {
+    const { queue, pending, ran, transport } = makeQueue();
+    pending.push('ls -al');
+
+    queue.wake();
+    await settle();
+
+    expect(ran).toEqual(['ls -al']);
+    expect(transport.dequeue).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for the prompt when another tab queues a line while zsh is busy', async () => {
+    const { queue, pending, ran } = makeQueue({ busy: true });
+    pending.push('ls');
+
+    queue.wake();
+    await settle();
+
+    expect(ran).toEqual([]);
+    queue.setBusy(false);
+    await settle();
+    expect(ran).toEqual(['ls']);
+  });
+
   it('runs one queued shell line per prompt', async () => {
     const { queue, pending, ran } = makeQueue({ busy: true });
     queue.submit('first');

@@ -25,12 +25,13 @@ export const command: Command = {
     if ('error' in parsed) { append(parsed.error); return; }
     const target = resolveTarget(parsed.label, managers, append);
     if (!target) return;
-    if (target.view !== undefined && target.view !== 'agent') {
+    const pluginTerminal = target.view === 'plugin' && managers.pty.terminalIdFor(target.label) !== undefined;
+    if (target.view !== undefined && target.view !== 'agent' && !pluginTerminal) {
       append(`Tab "${parsed.label}" has no command queue.`);
       return;
     }
     managers.tab.enqueue(target.label, parsed.text);
-    managers.command.drainQueue(target.label);
+    if (!pluginTerminal) managers.command.drainQueue(target.label);
     append(`→ ${parsed.label} (queued): ${parsed.text}`);
   },
 };

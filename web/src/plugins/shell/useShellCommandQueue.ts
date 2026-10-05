@@ -13,6 +13,7 @@ export function useShellCommandQueue(
   run: (line: string, record?: boolean) => Promise<boolean>,
   initiallyBusy: boolean,
   onQueued: (line: string) => void,
+  queuedLines: readonly string[],
 ): { queue: ShellCommandQueue; submit: (line: string) => void } {
   const capabilitiesReference = useRef(capabilities);
   capabilitiesReference.current = capabilities;
@@ -42,6 +43,9 @@ export function useShellCommandQueue(
     queue.attach();
     return () => { queue.dispose(); };
   }, [queue]);
+  useEffect(() => {
+    if (queuedLines.length > 0) queue.wake();
+  }, [queue, queuedLines]);
   const onQueuedReference = useRef(onQueued);
   onQueuedReference.current = onQueued;
   const submit = useCallback((line: string) => {
