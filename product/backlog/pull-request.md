@@ -6,4 +6,6 @@
 Error seen: Tab "shell" cannot run scheduled commands.	
 
 * empty commands, for example only containing whitespace should be excluded from the command history.
- 
+
+* command history should only show the first line of a multiline command and show the number of lines in a postfix the same way that the copy paste clipboard menu does.
+
