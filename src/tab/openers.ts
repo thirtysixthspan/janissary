@@ -9,6 +9,7 @@ import {
 } from './creators.js';
 import { releaseFileReference } from './file-registry.js';
 import { tabRuntime } from './runtime.js';
+import type { LaunchNameRow } from '../launch-name/check.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
 // the TabManager type) so this module has no import cycle back to tab-manager.ts.
@@ -93,6 +94,7 @@ export function openPluginTab(
   sourceLabel: string,
   factory: (resources: TabPluginResources) => TabPluginPayload,
   agentNamed = false,
+  rows: readonly LaunchNameRow[] = [],
 ): void {
   const existing = target.tabs.find(
     (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
@@ -117,7 +119,7 @@ export function openPluginTab(
     payload: created.payload,
     fileRefs,
     sourceLabel,
-  }, agentNamed), () => {
+  }, agentNamed, rows), () => {
     // The terminals were spawned before this tab had a label, so they are adopted onto the one just
     // minted. Adopt before publishing state so the first host-state delivery sees every terminal row.
     // Every terminal the factory started is adopted, not just the first — one left on the label it was

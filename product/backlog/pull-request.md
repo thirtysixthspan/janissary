@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Name shell tabs with the same launch-name check unnamed agents use, so a shell cannot take a name held by a detached or provisioning session.
-
-Existing Issue: `unusedAgentName` picks a pool name using only open tab labels, while unnamed agents go through `checkLaunchName`, which also refuses names held by session rows in provisioning, active, reconnecting or detached state, so shells are not named "exactly as an unnamed agent tab is" as the spec says. Severity: 3/10
-
-Existing Risk: 3/10 - A shell takes the name of a detached remote agent, and reattaching or relaunching that agent then clashes with an open tab label.
-
-Proposal Risk: 1/10 - Shell and agent naming share one rule, with residual risk only in passing session rows into the tab creator.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: name shell tabs through the launch-name check". In `src/tab/unique-labels.ts`, replace `unusedAgentName`'s `resolveAgentName` call with `checkLaunchName` from `src/launch-name/check.ts` using `poolCandidates()` and the sessions rows (`managers.sessions.view()`), the same inputs `resolveLocalLaunchName` in `src/launch-name/local.ts` uses, falling back to `uniquePluginLabel` when no name is accepted; thread the session rows through `addPluginTab` in `src/tab/creators.ts` and its caller in `src/tab/openers.ts`. Add a `src/tab/creators.test.ts` case with a detached session row holding the first pool name, asserting the shell takes the next one; keep the existing naming tests passing.
-
-
 * Remove the unused `dispatchLine` capability and share one execute-and-capture helper between the shell dispatch path and message capture.
 
 Existing Issue: `dispatchLine` was added to the v1 plugin contract, its capability list, the line capabilities, `CommandManager` and the shell manifest, but nothing calls it, and `dispatchLineWithOutput` copies the subscribe, execute, unsubscribe capture from `CaptureManager.runCommand`, while `ShellIntent` in the shell's shared module is unused and stale and `isTerminalStatus` has no production caller. Severity: 4/10

@@ -5,6 +5,7 @@ import {
 import { distinctColor } from './colors.js';
 import { insertTabInGroup } from './utils.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
+import type { LaunchNameRow } from '../launch-name/check.js';
 import {
   uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, unusedAgentName,
 } from './unique-labels.js';
@@ -19,10 +20,10 @@ function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAn
 
 export function addPluginTab(
   tabs: Tab[], activeTab: number, labelPrefix: string, title: string, plugin: PluginTabRecord,
-  agentNamed = false,
+  agentNamed = false, rows: readonly LaunchNameRow[] = [],
 ): TabAndActive {
   const creator = tabs[activeTab];
-  const agentName = agentNamed ? unusedAgentName(tabs) : undefined;
+  const agentName = agentNamed ? unusedAgentName(tabs, rows) : undefined;
   const label = agentName ?? uniquePluginLabel(tabs, labelPrefix);
   const shownTitle = agentName ?? title;
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));

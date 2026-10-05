@@ -33,6 +33,7 @@ export abstract class TabOpeningState extends TabQueueState {
   ): void {
     tabOpeners.openPluginTab(
       this, pluginId, labelPrefix, instanceKey, schemaVersion, sourceLabel, factory, agentNamed,
+      agentNamed ? this.managers.sessions.view() : [],
     );
   }
 
