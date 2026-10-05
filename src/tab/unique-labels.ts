@@ -1,4 +1,5 @@
 import type { Tab } from './types.js';
+import { resolveAgentName } from '../agent/commands.js';
 
 function uniqueLabel(used: Set<string>, prefix: string): string {
   if (!used.has(prefix)) return prefix;
@@ -9,6 +10,10 @@ function uniqueLabel(used: Set<string>, prefix: string): string {
 
 export function uniquePluginLabel(tabs: Tab[], prefix: string): string {
   return uniqueLabel(new Set(tabs.map((t) => t.label)), prefix);
+}
+
+export function unusedAgentName(tabs: Tab[]): string | undefined {
+  return resolveAgentName('agent', tabs.map((t) => t.label)) ?? undefined;
 }
 
 

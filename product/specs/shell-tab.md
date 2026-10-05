@@ -2,8 +2,10 @@
 
 A **shell tab** is a tab whose body is a live pseudo terminal running zsh, laid out exactly like an
 agent tab: the metadata row on top, the terminal where the transcript would be, and the command line
-beneath it. Type `zsh` in any tab's command bar to open one; the tab is named `shell`, so a second is
-`shell2`.
+beneath it. Type `zsh` in any tab's command bar to open one. Each shell tab is named from the agent-name
+pool exactly as an unnamed agent tab is — a name no open tab already holds — and the tab strip shows
+that name, so two shells read as two distinct tabs and either can be addressed by name. Once every
+name in the pool is held by an open tab, a new shell tab is named `shell`, then `shell-2`, and so on.
 
 The tab is contributed by a **bundled tab plugin** rather than by the application core (see
 [[tab-plugins]]). Nothing about it changes because of that: `zsh` is in every build, and what

@@ -131,6 +131,7 @@ export function createPluginContext(
           validateTabValue(activation, created);
           return created;
         },
+        declaration.agentNamedTabs === true,
       );
     },
     // Unlike `openOrFocusTab`, this does not require the originating tab to still exist: the target

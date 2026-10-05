@@ -6,7 +6,7 @@ import { distinctColor } from './colors.js';
 import { insertTabInGroup } from './utils.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import {
-  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel,
+  uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, unusedAgentName,
 } from './unique-labels.js';
 
 type TabAndActive = { tabs: Tab[]; activeTab: number };
@@ -19,14 +19,17 @@ function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAn
 
 export function addPluginTab(
   tabs: Tab[], activeTab: number, labelPrefix: string, title: string, plugin: PluginTabRecord,
+  agentNamed = false,
 ): TabAndActive {
   const creator = tabs[activeTab];
-  const label = uniquePluginLabel(tabs, labelPrefix);
+  const agentName = agentNamed ? unusedAgentName(tabs) : undefined;
+  const label = agentName ?? uniquePluginLabel(tabs, labelPrefix);
+  const shownTitle = agentName ?? title;
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makePluginTab(label, dotColor, tabs.length + 1, group, groupColor, title, plugin);
-  return finalizeTab(tabs, tab, label, title);
+  const tab = makePluginTab(label, dotColor, tabs.length + 1, group, groupColor, shownTitle, plugin);
+  return finalizeTab(tabs, tab, label, shownTitle);
 }
 
 

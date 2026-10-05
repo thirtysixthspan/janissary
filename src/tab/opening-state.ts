@@ -29,9 +29,10 @@ export abstract class TabOpeningState extends TabQueueState {
   openPluginTab(
     pluginId: string, labelPrefix: string, instanceKey: string, schemaVersion: number,
     sourceLabel: string, factory: (resources: TabPluginResources) => TabPluginPayload,
+    agentNamed = false,
   ): void {
     tabOpeners.openPluginTab(
-      this, pluginId, labelPrefix, instanceKey, schemaVersion, sourceLabel, factory,
+      this, pluginId, labelPrefix, instanceKey, schemaVersion, sourceLabel, factory, agentNamed,
     );
   }
 

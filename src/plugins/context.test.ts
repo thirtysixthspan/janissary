@@ -307,6 +307,23 @@ describe('capability revocation', () => {
       .not.toThrow();
   });
 
+  it('asks the tab manager for an agent name only when the declaration does', () => {
+    const { managers } = makeManagers();
+    const openPluginTab = managers.tab.openPluginTab as unknown as ReturnType<typeof vi.fn>;
+    const activation = activationFor();
+    const named = createPluginContext(
+      managers, { ...declaration(TAB_PLUGIN_CAPABILITY_NAMES), agentNamedTabs: true }, activation, origin, () => true,
+    );
+    const plain = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activation, origin, () => true,
+    );
+
+    named.openOrFocusTab('one', () => ({ title: 'shell', payload: {} }));
+    plain.openOrFocusTab('two', () => ({ title: 'shell', payload: {} }));
+
+    expect(openPluginTab.mock.calls.map((call) => call.at(-1))).toEqual([true, false]);
+  });
+
   it('queues a claimed open for the host rather than running it inside the guarded call', () => {
     const openRequests: string[] = [];
     const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES, () => true, openRequests);

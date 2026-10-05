@@ -13,6 +13,7 @@ export const shellManifest = {
   apiVersion: TAB_PLUGIN_API_VERSION,
   payloadSchemaVersion: SHELL_PAYLOAD_SCHEMA_VERSION,
   tabLabelPrefix: 'shell',
+  agentNamedTabs: true,
   fileExtensions: {},
   command: 'zsh',
   // Claimed rather than refused, and honoured only while a shell tab is the visible one: the

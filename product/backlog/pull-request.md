@@ -2,8 +2,6 @@
 
 # pull-request
 
-* shell tabs should be labeled using agent names just like agent tabs.
-
 * shell tabs should be able to be targets of scheduled commands. 
 Error seen: Tab "shell" cannot run scheduled commands.	
 

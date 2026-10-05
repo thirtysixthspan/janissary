@@ -69,6 +69,7 @@ Literal imports make the modules visible to TypeScript, Vite, Knip, and tests wh
 | `webTargets` | no | Claims the `open` command's web branch: an `http`/`https` address, or any address preceded by the `page` keyword |
 | `editGesture` | no | `open external` for a file-navigator edit activation |
 | `command` | no | One case-insensitive first-token command |
+| `agentNamedTabs` | no | Name each tab from the agent-name pool, as an unnamed agent tab is, and show that name as its title; `tabLabelPrefix` and your title are the fallback once every name is held |
 | `playable` | no | Every extension in `fileExtensions` is something `play` may dispatch to your inline opener |
 | `spawnTerminal` | no | Asks for the `spawnTerminal` resource — the right to start a process from a payload factory, in a directory inside the project root. Without it, calling that resource throws rather than quietly doing nothing |
 | `notifications` | no | Host topics to be told about; a declaration naming one must supply `notify` |

@@ -40,6 +40,10 @@ export type TabPluginDeclaration = {
   // rather than a list of its own, so the playable types cannot drift from the claimed ones: a
   // plugin claims what it owns once and says of that set whether any of it plays.
   playable?: boolean;
+  // Names this plugin's tabs from the agent-name pool, as an unnamed agent tab is named, instead of
+  // from `tabLabelPrefix`. The drawn name is the tab's title as well as its label. The prefix and the
+  // plugin's own title remain the fallback once every name in the pool is held by an open tab.
+  agentNamedTabs?: boolean;
   // Asks for the `spawnTerminal` resource: the right to start a process from a payload factory, in
   // any directory the plugin names. A flag rather than a capability entry because the terminal cannot
   // be started as one — a tab's label does not exist until its factory returns, so it is started there

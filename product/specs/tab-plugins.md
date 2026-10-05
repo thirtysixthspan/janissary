@@ -24,6 +24,8 @@ Core openers and commands resolve before plugin contributions. An extension, a c
 
 A plugin's declared command is a second route into that plugin's own opener, never a second route into the registry. A target the command asks the host to open is refused unless it resolves to that plugin — including a web target, so `video https://example.com` and `video page notes.txt` report a non-video file rather than opening a browser tab.
 
+A plugin may declare its tabs **agent-named**: each new tab then takes a name from the agent-name pool that no open tab holds, exactly as an unnamed agent tab does, and shows that name as its title. The declared label prefix and the plugin's own title remain the fallback once every pool name is held.
+
 A plugin may also declare its claimed extensions **playable**: every file type in `fileExtensions` is then something `play <file>` dispatches to that plugin's inline opener, resolved through the same registry `open` uses. It is a flag over the extensions the plugin already claims rather than a list of its own, so the playable types cannot drift from the claimed ones, and it is what lets `play` be a core command: `play` is a built-in, so a plugin cannot claim it as a command of its own, and the file type is what decides which plugin plays a given file. A plugin that claims an extension without declaring it playable — an image viewer, say — is never a `play` target, so a file no player claims is refused by name rather than opened by whatever can read it.
 
 A plugin that asks to be told when host state changes but supplies no handler for it never activates successfully, and is reported as disabled with that reason.
@@ -230,7 +232,7 @@ Everything it does with SQL goes through the `databases` topic, so it reaches th
 
 ### Bundled shell plugin
 
-The shell plugin is the first one whose tab owns a process rather than a file or a record, and the only one that claims a chord. It is reached by its command alone — it claims no file extensions and both of its open presentations refuse — and its tab is named `shell`, so a second one is `shell2`. The command is `zsh` rather than `shell` because `shell` is a reserved route name and a claim on it would be refused at registration.
+The shell plugin is the first one whose tab owns a process rather than a file or a record, and the only one that claims a chord. It is reached by its command alone — it claims no file extensions and both of its open presentations refuse — and it declares its tabs **agent-named**, so each shell tab takes a name from the agent-name pool that no open tab holds, shown as both its label and its title, and falls back to `shell`, `shell-2` once the pool is exhausted. The command is `zsh` rather than `shell` because `shell` is a reserved route name and a claim on it would be refused at registration.
 
 It is also the only plugin that starts a terminal, and the shape of that is deliberate: a terminal may only be started from inside the window in which a tab's payload is being built, because a tab's label is allocated only after that window closes, and the host adopts the terminal onto the label it then mints. That is what puts the terminal under the ordinary per-tab release — closing the tab takes the process with it, through the same walk every other per-tab resource uses — and what makes the terminal show up as one of the tab's own connections. A payload factory that fails after starting one kills it rather than leaving a process nothing owns.
 
