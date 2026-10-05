@@ -104,6 +104,20 @@ function harness(overrides: { attachTerminal?: undefined } = {}) {
   return { byteCallbacks, container, copyText, exitHandlers, handle, onExit, onCommandRunning, onCwd, resized, detached, written, ...view };
 }
 
+function osc(id: number): (data: string) => boolean {
+  const handler = oscHandlers.find((entry) => entry.id === id);
+  if (!handler) throw new Error(`no OSC ${String(id)} handler registered`);
+  return handler.handle;
+}
+
+// The nonce the hooks were installed with, read back from the setup line the terminal wrote: the
+// markers a test feeds must carry it exactly as zsh's would.
+function hookNonce(written: string[]): string {
+  const match = /133;E;([0-9a-f]+)/.exec(written[0] ?? '');
+  if (!match?.[1]) throw new Error('no signed setup marker in the hook line');
+  return match[1];
+}
+
 describe('useShellTerminal', () => {
   it('renders the bytes the attachment hands it', () => {
     const { byteCallbacks } = harness();
@@ -190,13 +204,59 @@ describe('useShellTerminal', () => {
 
   it('reports command start and prompt markers from the zsh integration', () => {
     const { onCommandRunning, written } = harness();
+    const nonce = hookNonce(written);
 
     expect(written[0]).toContain("export PROMPT='> '");
     expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
-    expect(oscHandlers.find(({ id }) => id === 133)?.handle('C')).toBe(true);
-    expect(oscHandlers.find(({ id }) => id === 133)?.handle('D')).toBe(true);
+    expect(osc(133)(`C;${nonce}`)).toBe(true);
+    expect(osc(133)(`D;${nonce}`)).toBe(true);
 
     expect(onCommandRunning.mock.calls).toEqual([[true], [false]]);
+  });
+
+  it('ignores status markers that do not carry the nonce its hooks were installed with', () => {
+    const onCommand = vi.fn();
+    const onCommandRunning = vi.fn();
+    const onCwd = vi.fn();
+    const container = document.createElement('div');
+    const written: string[] = [];
+    renderHook(() => useShellTerminal({
+      ptyId: 'pty7', containerRef: { current: container },
+      attachTerminal: () => makeHandle({ written }),
+      onExit: vi.fn(), onCommandRunning, onCwd, onCommand, copyText: vi.fn(),
+    }));
+    const forged = 'f'.repeat(32);
+
+    for (const marker of ['C', `C;${btoa('rm -rf ~')}`, `C;${forged};${btoa('rm -rf ~')}`, 'D', `D;${forged}`, 'E', `E;${forged}`]) {
+      expect(osc(133)(marker)).toBe(true);
+    }
+    expect(osc(7)('file://localhost/etc')).toBe(true);
+    expect(osc(7)(`${forged};file://localhost/etc`)).toBe(true);
+
+    expect(onCommandRunning).not.toHaveBeenCalled();
+    expect(onCommand).not.toHaveBeenCalled();
+    expect(onCwd).not.toHaveBeenCalled();
+    expect(terminals[0].clearCalls).toBe(0);
+    expect(container).toHaveClass('shell-initializing');
+
+    const nonce = hookNonce(written);
+    osc(133)(`C;${nonce};${btoa('ls')}`);
+    osc(133)(`D;${nonce}`);
+    osc(7)(`${nonce};file://localhost/work`);
+    osc(133)(`E;${nonce}`);
+
+    expect(onCommandRunning.mock.calls).toEqual([[true], [false]]);
+    expect(onCommand.mock.calls).toEqual([['ls']]);
+    expect(onCwd.mock.calls).toEqual([['/work']]);
+    expect(terminals[0].clearCalls).toBe(1);
+    expect(container).not.toHaveClass('shell-initializing');
+  });
+
+  it('installs its hooks with a fresh nonce on each attachment', () => {
+    const first = harness();
+    const second = harness();
+
+    expect(hookNonce(first.written)).not.toBe(hookNonce(second.written));
   });
 
   it('reports the command line a start marker carries as well as the running state', () => {
@@ -209,8 +269,9 @@ describe('useShellTerminal', () => {
       onExit: vi.fn(), onCommandRunning, onCwd: vi.fn(), onCommand, copyText: vi.fn(),
     }));
 
-    expect(written[0]).toContain(String.raw`printf '\033]133;C;%s\a'`);
-    expect(oscHandlers.find(({ id }) => id === 133)?.handle(`C;${btoa('git status')}`)).toBe(true);
+    const nonce = hookNonce(written);
+    expect(written[0]).toContain(String.raw`printf '\033]133;C;${nonce};%s\a'`);
+    expect(osc(133)(`C;${nonce};${btoa('git status')}`)).toBe(true);
 
     expect(onCommandRunning.mock.calls).toEqual([[true]]);
     expect(onCommand.mock.calls).toEqual([['git status']]);
@@ -228,7 +289,7 @@ describe('useShellTerminal', () => {
     const startup = written[0]?.trimEnd() ?? '';
     const encoded = btoa(String.fromCodePoint(...new TextEncoder().encode(startup)));
 
-    expect(oscHandlers.find(({ id }) => id === 133)?.handle(`C;${encoded}`)).toBe(true);
+    expect(osc(133)(`C;${hookNonce(written)};${encoded}`)).toBe(true);
     expect(onCommand).not.toHaveBeenCalled();
     expect(onCommandRunning).toHaveBeenCalledWith(true);
   });
@@ -239,16 +300,16 @@ describe('useShellTerminal', () => {
     expect(container).toHaveClass('shell-initializing');
     expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
     expect(written[0]).toContain('add-zsh-hook precmd _janus_precmd');
-    expect(oscHandlers.find(({ id }) => id === 133)?.handle('E')).toBe(true);
+    expect(osc(133)(`E;${hookNonce(written)}`)).toBe(true);
 
     expect(terminals[0].clearCalls).toBe(1);
     expect(container).not.toHaveClass('shell-initializing');
   });
 
   it('reports the path from zsh current-directory markers', () => {
-    const { onCwd } = harness();
+    const { onCwd, written } = harness();
 
-    expect(oscHandlers.find(({ id }) => id === 7)?.handle('file://localhost/work/child%20dir')).toBe(true);
+    expect(osc(7)(`${hookNonce(written)};file://localhost/work/child%20dir`)).toBe(true);
     expect(onCwd).toHaveBeenCalledWith('/work/child dir');
   });
 

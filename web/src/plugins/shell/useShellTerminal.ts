@@ -6,14 +6,12 @@ import {
   type PluginTerminal,
 } from '../api';
 import { shellTerminalTheme } from './shell-terminal-theme';
-import { decodeShellCommand } from './shell-command-marker';
+import { readShellCwd, readShellMarker } from './shell-command-marker';
+import { createShellMarkerNonce, shellStatusHooks } from './shell-status-hooks';
 import { insertMarkdownBlock } from './markdown-block';
 import { formatDispatchedCommand } from './format-dispatched-command';
 import { markdownToAnsi } from './markdown-to-ansi';
 import { stripTerminalControls } from './strip-terminal-controls';
-
-const SHELL_STATUS_HOOKS = String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { local line=$1; [[ -z $line ]] && line=$3; printf '\033]133;C;%s\a' "$(print -rn -- "$line" | base64 | tr -d '\n')"; }; _janus_emit_cwd() { printf '\033]7;file://%s%s\a' "$HOST" "$PWD"; }; _janus_precmd() { printf '\033]133;D\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd; printf '\033]133;E\a'
-`;
 
 export type AttachTerminal = (
   ptyId: string, onData: (data: string) => void,
@@ -99,13 +97,14 @@ export function useShellTerminal({
       terminal.options.theme = shellTerminalTheme();
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    const nonce = createShellMarkerNonce();
+    const hooks = shellStatusHooks(nonce);
     terminal.parser.registerOscHandler(133, (data) => {
-      const [marker] = data.split(';', 1);
-      switch (marker) {
+      const marker = readShellMarker(data, nonce);
+      switch (marker?.kind) {
       case 'C': {
         runningRef.current(true);
-        const command = decodeShellCommand(data);
-        if (command !== undefined && command !== SHELL_STATUS_HOOKS.trimEnd()) commandRef.current?.(command);
+        if (marker.command !== undefined && marker.command !== hooks.trimEnd()) commandRef.current?.(marker.command);
         break;
       }
       case 'D': { runningRef.current(false); break; }
@@ -115,15 +114,12 @@ export function useShellTerminal({
         break;
       }
       }
-      return ['C', 'D', 'E'].includes(marker);
+      // An unsigned C, D or E is ignored, but still consumed like a signed one.
+      return ['C', 'D', 'E'].includes(data.split(';', 1)[0]);
     });
     terminal.parser.registerOscHandler(7, (data) => {
-      try {
-        const url = new URL(data);
-        if (url.protocol === 'file:') cwdRef.current(decodeURIComponent(url.pathname));
-      } catch {
-        return true;
-      }
+      const cwd = readShellCwd(data, nonce);
+      if (cwd !== undefined) cwdRef.current(cwd);
       return true;
     });
     // One fit, once the attachment exists: fitting before it can do nothing useful, because the size
@@ -154,7 +150,7 @@ export function useShellTerminal({
       if (disposed) { handle.detach(); return; }
       handleRef.current = handle;
       terminal.onData((data) => { handleRef.current?.write(data); });
-      handle.write(SHELL_STATUS_HOOKS);
+      handle.write(hooks);
       handle.onExit(() => { exitRef.current(); });
       resize();
     };

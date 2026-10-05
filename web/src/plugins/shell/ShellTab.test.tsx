@@ -10,6 +10,12 @@ import { AppCommandBarProvider, useAppCommandLine } from '../../shared/command-b
 import type { PluginCommandLineInsertions } from '../../shared/command-bar/AppCommandBar';
 import { ShellTab } from './ShellTab';
 import { useSectionNav } from '../../useSectionNav';
+import type { createShellMarkerNonce, shellStatusHooks } from './shell-status-hooks';
+
+type ShellStatusHooksModule = {
+  createShellMarkerNonce: typeof createShellMarkerNonce;
+  shellStatusHooks: typeof shellStatusHooks;
+};
 
 // The emulator and its fit addon are stubbed so the tab's own logic — routing, focus, the chord claim —
 // is what is under test rather than xterm.js's renderer, which jsdom cannot run. The stub records what
@@ -68,6 +74,14 @@ vi.mock('@xterm/xterm', () => ({
 vi.mock('@xterm/addon-fit', () => ({
   FitAddon: class { fit() {} activate() {} dispose() {} },
 }));
+
+// A fixed nonce, so the markers these tests feed are signed exactly as the installed hooks would sign
+// them. `useShellTerminal.test.ts` covers the nonce itself and the markers that lack it.
+vi.mock('./shell-status-hooks', async (importOriginal) => ({
+  ...await importOriginal<ShellStatusHooksModule>(),
+  createShellMarkerNonce: () => 'n0nce',
+}));
+const NONCE = 'n0nce';
 
 // jsdom has no ResizeObserver, and the terminal registers one. Stubbed rather than installed globally
 // so nothing else in the suite can see it.
@@ -357,7 +371,7 @@ describe('ShellTab', () => {
 
   it('blinks the command bar dot while zsh is executing a command', () => {
     const { capabilities } = renderTab();
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('C'); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE}`); });
 
     expect(document.querySelector('.command-area .dot')).toHaveClass('busy');
     expect(capabilities.intent).toHaveBeenCalledWith('command-state', { running: true });
@@ -367,7 +381,7 @@ describe('ShellTab', () => {
     renderTab();
     expect(document.querySelector('.command-area .command')).not.toHaveTextContent('queue');
 
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('C'); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE}`); });
 
     expect(document.querySelector('.command-area .command')).toHaveTextContent('queue');
   });
@@ -385,7 +399,7 @@ describe('ShellTab', () => {
       if (name === 'dequeue') return { line: queued.shift() ?? null };
       return answer(name, payload);
     });
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('C'); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE}`); });
 
     fireEvent.change(bar(), { target: { value: '!ls -la' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
@@ -394,7 +408,7 @@ describe('ShellTab', () => {
     expect(written).toEqual([]);
     expect(bar().value).toBe('');
 
-    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('D'); });
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`D;${NONCE}`); });
     releaseDispatch();
 
     await waitFor(() => { expect(written).toEqual(['ls -la\n']); });
@@ -406,7 +420,7 @@ describe('ShellTab', () => {
   it('sends the current directory from zsh to the plugin intent', () => {
     const { capabilities } = renderTab();
 
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 7)?.handle('file://localhost/work/child%20dir'); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 7)?.handle(`${NONCE};file://localhost/work/child%20dir`); });
 
     expect(capabilities.intent).toHaveBeenCalledWith('cwd', '/work/child dir');
   });
@@ -649,7 +663,7 @@ describe('ShellTab', () => {
   it('records a command typed into the terminal as recallable history', () => {
     renderTab();
 
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${btoa('git status')}`); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE};${btoa('git status')}`); });
 
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
     expect(bar().value).toBe('git status');
@@ -658,8 +672,8 @@ describe('ShellTab', () => {
   it('keeps a whitespace-only terminal command out of history and trims a padded one', () => {
     renderTab();
 
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${btoa('  pwd  ')}`); });
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${btoa(' \t ')}`); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE};${btoa('  pwd  ')}`); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE};${btoa(' \t ')}`); });
 
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
     expect(bar().value).toBe('pwd');
@@ -674,8 +688,8 @@ describe('ShellTab', () => {
     await act(async () => { releaseDispatch(); });
     expect(written).toEqual(['ls -la\n']);
 
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${btoa('ls -la')}`); });
-    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('D'); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE};${btoa('ls -la')}`); });
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`D;${NONCE}`); });
     fireEvent.change(bar(), { target: { value: 'hist' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
 

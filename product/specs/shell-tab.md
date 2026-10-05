@@ -192,6 +192,17 @@ path in normal form, with no `.` or `..` segment, no doubled slash, and no trail
 root. zsh always reports its directory that way, so any other report is refused and the recorded
 directory stays where it was.
 
+The tab trusts only the markers its own zsh hooks print. Each time the tab attaches to its terminal it
+generates a random nonce and installs the hooks with it, and every marker they emit carries it: the
+command-start marker (`OSC 133;C;<nonce>;<base64 command>`), the prompt marker (`133;D;<nonce>`), the
+setup-complete marker (`133;E;<nonce>`) and the directory report (`OSC 7;<nonce>;file://<host><path>`).
+The nonce is written into the hook functions themselves, never into a shell variable a child process
+could read. A marker without the right nonce is ignored, so a program's output — a `cat` of a crafted
+file, or a remote host reached over `ssh` — cannot mark the shell busy or idle, add a command to this
+tab's history, change the recorded directory, or clear and reveal the terminal. Because each attach
+installs the hooks with a new nonce, markers from the hooks an earlier attach installed are ignored
+until zsh runs the new setup line.
+
 ## Where the shell starts
 
 `zsh` starts in the issuing tab's working directory. When that tab has a workspace clone, the shell inherits its workspace confinement and offline mode, including when opened from another shell tab. Otherwise it starts without workspace confinement. The starting directory must be inside the project root, and a shell cannot be started anywhere

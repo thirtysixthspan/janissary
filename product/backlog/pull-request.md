@@ -5,17 +5,6 @@
 * the msg command to a shell tab, of each type, should be supported.
 
 
-* Authenticate the shell tab's command and directory markers so program output cannot forge them.
-
-Existing Issue: The OSC 133 `C`/`D`/`E` and OSC 7 handlers in the shell terminal accept any matching sequence in PTY output, so any program's output (a `cat` of a crafted file, a remote host over `ssh`) can plant commands in shell history, mark zsh idle mid-command, or change the directory the server records. Severity: 6/10
-
-Existing Risk: 6/10 - A forged `133;D` marks zsh idle while a program is running, so queued lines are written into that program's stdin (a password prompt or a remote shell), and forged `C` and OSC 7 markers corrupt history and the recorded cwd.
-
-Proposal Risk: 3/10 - Markers without the per-session nonce are ignored, though a program that can read the hook text from the terminal scrollback before it is cleared could still learn the nonce.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: authenticate shell hook markers with a per-session nonce". In `web/src/plugins/shell/useShellTerminal.ts`, generate a random nonce per attachment (`crypto.getRandomValues`), build `SHELL_STATUS_HOOKS` from a function that embeds it in every emitted marker (for example `133;C;<nonce>;<b64>`, `133;D;<nonce>`, `133;E;<nonce>`, and a private `1337;JanusCwd;<nonce>;<b64-path>` or an OSC 7 variant carrying it), and have the OSC handlers ignore any marker whose nonce does not match. Update `web/src/plugins/shell/shell-command-marker.ts` (`decodeShellCommand`) and its test for the new field layout, and keep the startup-hook history exclusion working by comparing against the generated hook text. If the remount entry about retyping hooks is resolved first, keep the nonce stable for the life of the PTY rather than per mount. Add `web/src/plugins/shell/useShellTerminal.test.ts` cases that markers without or with a wrong nonce do not change running state, history or cwd, and that correctly-signed markers still do.
-
-
 * Install the shell tab's startup hooks once per terminal rather than retyping them on every mount.
 
 Existing Issue: `useShellTerminal` writes the whole hook-setup line into the PTY and hides the terminal until the `133;E` marker on every attach, and attaching happens on every mount, including docking, undocking and a browser reload of an already-running shell. Severity: 7/10
