@@ -69,6 +69,39 @@ describe('useCommandBarInset', () => {
     expect(observers[0].disconnected).toBe(true);
   });
 
+  it('publishes on the host frame when a plugin draws its own tab body inside it', () => {
+    stubResizeObserver();
+    const view = render(
+      <div className="tab-body" data-testid="frame">
+        <div className="tab-body shell-tab" data-testid="plugin"><Bar /></div>
+      </div>,
+    );
+    const frame = view.getByTestId('frame');
+    const plugin = view.getByTestId('plugin');
+
+    setHeight(view.getByTestId('bar'), 41);
+    observers[0].callback();
+
+    expect(frame.style.getPropertyValue(COMMAND_BAR_HEIGHT)).toBe('41px');
+    expect(plugin.style.getPropertyValue(COMMAND_BAR_HEIGHT)).toBe('');
+
+    view.unmount();
+
+    expect(frame.style.getPropertyValue(COMMAND_BAR_HEIGHT)).toBe('');
+  });
+
+  it('publishes on the docked frame when a plugin draws its own tab body inside it', () => {
+    stubResizeObserver();
+    const view = render(
+      <div className="sidebar-plugin" data-testid="frame">
+        <div className="tab-body shell-tab" data-testid="plugin"><Bar /></div>
+      </div>,
+    );
+
+    expect(view.getByTestId('frame').style.getPropertyValue(COMMAND_BAR_HEIGHT)).toBe('0px');
+    expect(view.getByTestId('plugin').style.getPropertyValue(COMMAND_BAR_HEIGHT)).toBe('');
+  });
+
   it('publishes nothing outside a tab frame', () => {
     stubResizeObserver();
     const view = frameAround('elsewhere');
