@@ -160,14 +160,14 @@ describe('AgentTabMeta', () => {
     const flag = getByRole('img', { name: 'Auto-resume' });
     expect(flag).toHaveAttribute('title', 'Auto-resume');
     expect(flag).not.toHaveClass('tab-flag--active');
-    expect(flag.querySelector('svg[data-icon="wand-sparkles"]')).not.toBeNull();
+    expect(flag.querySelector('svg[data-icon="stopwatch"]')).not.toBeNull();
   });
 
   it('renders the waiting auto-resume flag as that same glyph, marked active for its green highlight', () => {
     const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoResuming']} />);
     const flag = getByRole('img', { name: 'Auto-resuming' });
     expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
-    expect(flag.querySelector('svg[data-icon="wand-sparkles"]')).not.toBeNull();
+    expect(flag.querySelector('svg[data-icon="stopwatch"]')).not.toBeNull();
   });
 
   it('never draws the auto-approve bolt for an auto-resume flag, since both can show at once', () => {
