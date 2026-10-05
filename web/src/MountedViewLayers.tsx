@@ -31,7 +31,6 @@ type Properties = {
   // reaches the window handler, so any overlay can open there. `overlayOpen` says one is on screen.
   pickerOverlays?: React.ReactNode;
   pickerSourceTab?: string;
-  quickOpenOverlay?: React.ReactNode;
   overlayOpen?: boolean;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
   // `HarnessTab.harnessKeyFilter`), and Ctrl+Shift+V or Cmd+Shift+V opens whatever overlay the clipboard plugin
@@ -64,11 +63,16 @@ function TabBodyDiv({
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
-  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, pickerSourceTab, quickOpenOverlay, overlayOpen,
+  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, pickerSourceTab, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
-  appThemePickerOverlay,
 }: Properties) {
+  const pluginOverlay = (t: TabView) => {
+    if (hostsCommandBar(t)) return (!pickerSourceTab || pickerSourceTab === t.label) && pickerOverlays;
+    return navOpen && onPickTab && (
+      <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
+    );
+  };
   return (
     <>
       {indexedTabs(tabs, isHarnessTabView).map(({ t, index }) => (
@@ -120,17 +124,7 @@ export function MountedViewLayers({
               else tabHandles.current.delete(t.label);
               onPluginDirty?.(t.label, handle?.isDirty() ?? false);
             }}
-            overlay={t.label === current.label ? (
-              <>
-                {navOpen && onPickTab && (
-                  <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
-                )}
-                {hostsCommandBar(t) && pickerOverlays && (pickerSourceTab ? pickerSourceTab === t.label : t.label === current.label) && pickerOverlays}
-                {hostsCommandBar(t) && !pickerOverlays && quickOpenOverlay}
-                {hostsCommandBar(t) && !pickerOverlays && appThemePickerOverlay}
-                {hostsCommandBar(t) && !pickerOverlays && contributedOverlay}
-              </>
-            ) : undefined}
+            overlay={t.label === current.label ? pluginOverlay(t) : undefined}
           />
         ))}
       {current.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}

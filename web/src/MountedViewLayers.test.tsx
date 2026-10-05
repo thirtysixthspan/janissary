@@ -6,6 +6,10 @@ import type { HarnessTabHandle } from './shared/tab/handles';
 import type { DirtyTabHandle } from './shared/tab/handles';
 import { MountedViewLayers } from './MountedViewLayers';
 import { createPluginHost, PluginHostProvider } from './plugins/host';
+import { PickerOverlays } from './pickers/PickerOverlays';
+import { buildOverlayOpenState, type OverlayOpenSources } from './pickers/overlay-registry';
+import { buildPickerOverlayView } from './pickers/picker/overlay-view';
+import { pickerStateFixture } from './pickers/picker/state-test-fixture';
 
 vi.mock('./harness/HarnessTab', () => {
   const { forwardRef, useImperativeHandle, createElement } = React;
@@ -99,6 +103,15 @@ function makePluginTab(label: string, url: string, id = 'video', hostsCommandBar
     },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],
   } as unknown as TabView;
+}
+
+// The production overlay stack with only the named overlays open.
+function overlayStack(open: Partial<OverlayOpenSources>) {
+  const overlays = buildOverlayOpenState({
+    route: null, themePickerOpen: false, appThemePickerOpen: false, quickOpenOpen: false, navOpen: false,
+    pickerOpen: false, queueOpen: false, taskPickerOpen: false, profilePickerOpen: false, ...open,
+  });
+  return React.createElement(PickerOverlays, { ...buildPickerOverlayView(pickerStateFixture()), overlays });
 }
 
 function makeHarnessHandles() {
@@ -413,34 +426,50 @@ describe('MountedViewLayers', () => {
     expect(container.querySelector('.tab-nav-picker')).toBeNull();
   });
 
-  it('renders a contributed overlay inside only the current shell plugin tab', () => {
+  // A shell draws the same overlay stack the app shell builds, so the navigator it already holds is
+  // the only one over the tab.
+  it('renders exactly one tab navigator over the current shell plugin tab', () => {
+    const tabs = [makePluginTab('shell', '/current.mp4', 'shell')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        navOpen: true, navQuery: '', navIndex: 0, onPickTab: vi.fn(),
+        pickerOverlays: overlayStack({ navOpen: true }),
+      }),
+    );
+
+    expect(container.querySelectorAll('.tab-nav-picker')).toHaveLength(1);
+  });
+
+  it('renders the app theme picker from the overlay stack over only the current shell plugin tab', () => {
     const tabs = [makePluginTab('shell', '/current.mp4', 'shell'), makePluginTab('other', '/other.mp4')];
     const { container } = render(
       React.createElement(MountedViewLayers, {
         tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
         harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        pickerOverlays: overlayStack({ appThemePickerOpen: true }),
+      }),
+    );
+    const bodies = [...container.querySelectorAll('.tab-body')];
+
+    expect(bodies[0].querySelector('.theme-swatch')).toBeTruthy();
+    expect(bodies[1].querySelector('.theme-swatch')).toBeNull();
+  });
+
+  // The harness-only contributed overlay never reaches a shell: the stack is its one route there.
+  it('draws a contributed overlay over a shell once, from the overlay stack', () => {
+    const tabs = [makePluginTab('shell', '/current.mp4', 'shell')];
+    const { container } = render(
+      React.createElement(MountedViewLayers, {
+        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        pickerOverlays: React.createElement('div', { className: 'clipboard-history' }),
         contributedOverlay: React.createElement('div', { className: 'clipboard-history' }),
       }),
     );
-    const bodies = [...container.querySelectorAll('.tab-body')];
 
-    expect(bodies[0].querySelector('.clipboard-history')).toBeTruthy();
-    expect(bodies[1].querySelector('.clipboard-history')).toBeNull();
-  });
-
-  it('renders the app theme picker over only the current shell plugin tab', () => {
-    const tabs = [makePluginTab('shell', '/current.mp4', 'shell'), makePluginTab('other', '/other.mp4')];
-    const { container } = render(
-      React.createElement(MountedViewLayers, {
-        tabs, current: tabs[0], client: { send: vi.fn() } as never, closeTab: vi.fn(),
-        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
-        appThemePickerOverlay: React.createElement('div', { className: 'app-theme-picker' }),
-      }),
-    );
-    const bodies = [...container.querySelectorAll('.tab-body')];
-
-    expect(bodies[0].querySelector('.app-theme-picker')).toBeTruthy();
-    expect(bodies[1].querySelector('.app-theme-picker')).toBeNull();
+    expect(container.querySelectorAll('.clipboard-history')).toHaveLength(1);
   });
 
   it('renders the shared queue popup over only the current shell plugin tab', () => {

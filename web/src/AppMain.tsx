@@ -14,7 +14,6 @@ import { PickerOverlays } from './pickers/PickerOverlays';
 import { commandBarDisabled, commandBarSuppressed, firstOpenOverlay } from './pickers/overlay-registry';
 import type { PickerOverlayView } from './pickers/picker/overlay-view';
 import { mountedPickerOverlayProps } from './pickers/picker/overlay-props';
-import { QuickOpen } from './pickers/QuickOpen';
 import type { TabEntry } from './tab-entries';
 import type { LayoutState } from './useLayoutState';
 import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './shared/tab/handles';
@@ -117,15 +116,6 @@ export function AppMain({
           onPluginDirty,
           pickerOverlays,
           pickerSourceTab,
-          quickOpenOverlay: pickers.overlays.quickOpen ? (
-            <QuickOpen
-              query={pickers.quickOpenQuery} onChangeQuery={pickers.onChangeQuickOpenQuery}
-              results={pickers.quickOpenResults} selected={pickers.quickOpenIndex}
-              onChangeSelected={pickers.onChangeQuickOpenIndex} loading={pickers.quickOpenLoading}
-              onPick={pickers.onPickQuickOpen} onClose={pickers.onCloseQuickOpen}
-              restoreFocus={pickers.restoreQuickOpenFocus}
-            />
-          ) : undefined,
           overlayOpen: firstOpenOverlay(pickers.overlays) !== undefined,
           ...mountedPickerOverlayProps(pickers),
         }}

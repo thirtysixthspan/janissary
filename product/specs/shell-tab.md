@@ -55,7 +55,9 @@ The reply is rendered as markdown in the terminal like any other command reply.
 
 `nav`, or `nav <query>`, submitted from the shell command bar opens the fuzzy tab navigator over the
 shell tab, pre-filled with the query, exactly as it does from an agent tab's bar; submitting `nav`
-while the navigator is open closes it. Neither reaches zsh.
+while the navigator is open closes it. Neither reaches zsh. The shell draws its overlays from the
+same overlay stack as an agent tab, so one navigator appears over it, whether `nav` or `Ctrl+G`
+opened it.
 
 The bare `theme` picker appears over the shell tab. While it is open, the application's arrow,
 Return, and Escape handling controls the selection, applies the chosen theme, or dismisses the picker.

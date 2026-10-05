@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Remove the shell overlay branches in the mounted view layers that never render, and stop drawing two tab navigators over a shell tab.
-
-Existing Issue: `MountedViewLayers` renders `quickOpenOverlay`, `appThemePickerOverlay` and `contributedOverlay` for a shell only when `pickerOverlays` is absent, but `AppMain` always passes it, so those branches and the elements built for them are dead, and with the navigator open over a shell both the explicit `TabNavPicker` and `pickerOverlays`' own navigator render. Severity: 4/10
-
-Existing Risk: 4/10 - Two stacked tab navigators appear over a shell tab, and the dead props and their tests describe a rendering path production never takes.
-
-Proposal Risk: 1/10 - One navigator and no unused props, with residual risk only in tests that relied on the dead path.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: remove dead shell overlay branches and the duplicate tab navigator". In `web/src/MountedViewLayers.tsx`, delete the three `!pickerOverlays && ...` shell branches and render the explicit `TabNavPicker` only for plugin tabs that do not receive `pickerOverlays`; remove the now-unused `quickOpenOverlay`/`appThemePickerOverlay`/`contributedOverlay` props from `web/src/AppMain.tsx` and the element built for them in `web/src/pickers/picker/overlay-props.ts` if nothing else consumes it. Update `web/src/MountedViewLayers.test.tsx` so its shell cases pass real `pickerOverlays`, and add a case with a shell tab, `navOpen`, and `pickerOverlays` expecting exactly one `.tab-nav-picker`.
-
-
 * Use the existing shared textarea splice helper in the shell tab instead of a copy.
 
 Existing Issue: `insertCommandAtCaret` in the shell plugin is a line-for-line copy of `spliceIntoTextarea` in the shared command-bar module, with no test of its own. Severity: 2/10

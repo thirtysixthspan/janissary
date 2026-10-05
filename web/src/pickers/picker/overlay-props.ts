@@ -1,9 +1,7 @@
-import React from 'react';
+import type React from 'react';
 import type { VisibleTaskRow } from '../task-picker-keys';
 import type { PickerOverlayView } from './overlay-view';
 import { contributedOverlayOnScreen } from '../../shared/contributed-overlays';
-import { AppThemePicker } from '../AppThemePicker';
-import { APP_THEMES } from '@shared/app-themes';
 
 // Ctrl+A/Ctrl+G task-picker and tab-navigator overlay props, shared by every component that
 // renders those two overlays on top of a mounted tab body.
@@ -20,7 +18,6 @@ export type PickerOverlayProps = {
   // A contributed overlay is not one of the two above but reaches a harness tab the same way: its
   // chord passes out of the terminal, so the popup it opens has to render over it.
   contributedOverlay?: React.ReactNode;
-  appThemePickerOverlay?: React.ReactNode;
 };
 
 // The subset of the overlay view a mounted tab body renders. Only these two overlays, plus whatever
@@ -40,13 +37,5 @@ export function mountedPickerOverlayProps(view: PickerOverlayView): PickerOverla
     navIndex: view.navIndex,
     onPickTab: view.onPickTab,
     contributedOverlay: contributed ? contributed.render(null) : undefined,
-    appThemePickerOverlay: view.overlays.appTheme ? (
-      React.createElement(AppThemePicker, {
-        themes: APP_THEMES,
-        active: view.theme,
-        selected: view.appThemePickerIndex,
-        onPick: view.onPickAppTheme,
-      })
-    ) : undefined,
   };
 }
