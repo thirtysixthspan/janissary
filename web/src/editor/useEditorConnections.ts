@@ -17,7 +17,7 @@ export type EditorConnectionsApi = {
 };
 
 export function useEditorConnections(client: JanusClient, tab: TabView): EditorConnectionsApi {
-  const windows = useStatusWindows(tab.label);
+  const windows = useStatusWindows(tab.label, { connectionsHaveContent: tab.connections.length > 0 });
 
   // There is no connection to close without the editor payload that names the file, so a tab missing
   // it is left alone rather than dereferenced — the row simply does nothing.

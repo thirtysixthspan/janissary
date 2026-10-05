@@ -35,7 +35,11 @@ export function HarnessTabLayer({
 }: Properties) {
   const isActive = t.label === current.label;
   const scheduleOnly = t.harness.name !== 'ssh';
-  const statusWindows = useStatusWindows(current.label);
+  const statusWindows = useStatusWindows(current.label, {
+    active: isActive,
+    connectionsHaveContent: !scheduleOnly && t.connections.length > 0,
+    scheduleHasContent: t.schedule.length > 0,
+  });
   return (
     <div
       className="tab-body"

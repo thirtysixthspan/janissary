@@ -51,7 +51,10 @@ export function AgentTabBody({
   search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef, onSplit,
 }: Properties) {
-  const statusWindows = useStatusWindows(current.label);
+  const statusWindows = useStatusWindows(current.label, {
+    connectionsHaveContent: current.connections.length > 0,
+    scheduleHasContent: current.schedule.length > 0,
+  });
   const intents = agentTabIntents(client, current.label, 'openTranscriptFor');
   return (
     <div

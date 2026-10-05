@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
@@ -29,7 +29,7 @@ function setup(tab: TabView = makeTab(), commandDrafts: CommandDrafts = new Map(
   const result = render(
     <InactiveAgentTabBody tab={tab} client={client} onSplit={onSplit} commandDrafts={commandDrafts} />,
   );
-  return { ...result, send, onSplit, request, commandDrafts };
+  return { ...result, client, send, onSplit, request, commandDrafts };
 }
 
 describe('InactiveAgentTabBody', () => {
@@ -102,6 +102,21 @@ describe('InactiveAgentTabBody', () => {
     fireEvent.change(input, { target: { value: 'half typed more' } });
     expect(drafts.get('agent2')).toBe('half typed more');
     expect(drafts.get('janus')).toBe('other tab');
+  });
+
+  it('auto-shows the connections window again when the tab gains its first connection', () => {
+    vi.useFakeTimers();
+    try {
+      const { container, rerender, client, onSplit, commandDrafts } = setup();
+      act(() => { vi.advanceTimersByTime(5300); });
+      expect(container.querySelector('.status-panels')).toBeNull();
+
+      const tab = makeTab({ connections: [{ text: 'shell: zsh', kind: 'shell' }] });
+      rerender(<InactiveAgentTabBody tab={tab} client={client} onSplit={onSplit} commandDrafts={commandDrafts} />);
+      expect(screen.getByText('connections')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('opens the ACP transcript for a connection row carrying an acpRef', () => {

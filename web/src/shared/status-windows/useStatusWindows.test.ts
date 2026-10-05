@@ -99,6 +99,20 @@ describe('useStatusWindows', () => {
     expect(result.current.connections.opacity).toBe(1);
   });
 
+  it('reports a pinned window hidden while its tab is inactive', () => {
+    const { result, rerender } = renderHook(
+      ({ active }) => useStatusWindows('harness', { active, scheduleHasContent: true }),
+      { initialProps: { active: true } },
+    );
+
+    act(() => { vi.advanceTimersByTime(5300); });
+    act(() => { result.current.schedule.onButtonClick(); });
+    expect(result.current.schedule.visible).toBe(true);
+
+    rerender({ active: false });
+    expect(result.current.schedule.visible).toBe(false);
+  });
+
   it('re-arms a hidden tab when it becomes active again', () => {
     const { result, rerender } = renderHook(
       ({ active }) => useStatusWindows('shell', { active, connectionsHaveContent: true }),

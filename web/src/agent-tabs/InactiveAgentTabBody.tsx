@@ -24,7 +24,10 @@ type Properties = {
 export function InactiveAgentTabBody({ tab, client, onSplit, commandDrafts }: Properties) {
   const transcriptReference = useRef<HTMLDivElement>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
-  const statusWindows = useStatusWindows(tab.label);
+  const statusWindows = useStatusWindows(tab.label, {
+    connectionsHaveContent: tab.connections.length > 0,
+    scheduleHasContent: tab.schedule.length > 0,
+  });
   const intents = agentTabIntents(client, tab.label, 'openTranscriptFor');
   return (
     <div

@@ -84,7 +84,7 @@ function useSingleStatusWindow(activeKey: string, active: boolean, hasContent: b
   };
 
   return {
-    visible: state.pinned || state.hovered || state.autoPhase !== 'none',
+    visible: active && (state.pinned || state.hovered || state.autoPhase !== 'none'),
     opacity: state.autoPhase === 'fading' ? 0 : 1,
     onButtonEnter: enter,
     onButtonLeave: leave,
@@ -96,11 +96,12 @@ function useSingleStatusWindow(activeKey: string, active: boolean, hasContent: b
 
 // Per-tab visibility/timer state for the connections and schedule windows, shared by the meta bar
 // (buttons) and the panels (windows) for a given tab. `activeKey` is a stable identity (the tab's
-// label); callers that keep hidden tabs mounted also supply `active` so reactivation can re-arm.
+// label); callers that keep hidden tabs mounted also supply `active`, so reactivation re-arms and an
+// inactive tab reports no window visible, even a pinned one.
 //
-// No "does this window have anything in it" argument: the panel that renders the rows already refuses
-// to draw an empty one, so passing the same test here was the same fact stated twice — and it made
-// this hook unusable by a plugin holding rows rather than a whole `TabView`.
+// The content flags are not what keeps an empty window hidden: the panel that renders the rows already
+// refuses to draw one. They exist so a window that gains its first row auto-shows again, and every
+// caller passes them for that reason.
 export function useStatusWindows(activeKey: string, options: StatusWindowOptions = {}) {
   const active = options.active ?? true;
   return {
