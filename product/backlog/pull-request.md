@@ -4,3 +4,5 @@
 
 * commands executed in the terminal should go into the command history
 
+* shell tabs should be labeled using agent names just like agent tabs.
+
