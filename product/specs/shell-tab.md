@@ -202,6 +202,13 @@ A shell tab can hold scheduled commands (see [[scheduling]]): `schedule` from it
 offers it as a target. Its entries appear in the schedule window. When one falls due, the command is
 typed into zsh as a line, exactly as if entered at the terminal. The schedule lives as long as the tab.
 
+`send`, `queue`, and `schedule` accept a plugin tab as a target by one rule: the tab owns a live
+terminal (`ownsTerminal` in `src/tab/plugin-terminals.ts`). They share that check so they cannot
+disagree about which shell tabs take input. A plugin tab without a terminal answers `send` with
+`Tab "<label>" does not accept input.`, answers `queue` with `Tab "<label>" has no command queue.`,
+refuses `schedule … in <label>` with `Tab "<label>" cannot run scheduled commands.`, and is not
+offered as a target in the "New schedule" dialog.
+
 There is no **open transcript** control, because there is no transcript: the terminal replaced it. The
 working directory shown follows the shell's current directory. It updates after a `cd` and when zsh
 returns to its prompt after a command. A reported directory is recorded only when it is an absolute

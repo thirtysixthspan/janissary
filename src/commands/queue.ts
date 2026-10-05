@@ -1,5 +1,6 @@
 import type { Command } from './types.js';
 import { resolveTarget } from './resolve-target.js';
+import { ownsTerminal } from '../tab/plugin-terminals.js';
 
 /** Parse a `queue <agent> <command...>` command (the leading `queue` is optional). */
 export function parseQueueCommand(input: string): { label: string; text: string } | { error: string } {
@@ -25,7 +26,7 @@ export const command: Command = {
     if ('error' in parsed) { append(parsed.error); return; }
     const target = resolveTarget(parsed.label, managers, append);
     if (!target) return;
-    const pluginTerminal = target.view === 'plugin' && managers.pty.terminalIdFor(target.label) !== undefined;
+    const pluginTerminal = ownsTerminal(target, managers.pty);
     if (target.view !== undefined && target.view !== 'agent' && !pluginTerminal) {
       append(`Tab "${parsed.label}" has no command queue.`);
       return;

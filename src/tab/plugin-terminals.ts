@@ -1,4 +1,5 @@
 import type { PseudoterminalManager } from '../pseudoterminal-manager.js';
+import type { Tab } from './types.js';
 import { SHELL_NAME, shellName } from '../shell/manager.js';
 import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import { TabPluginRejection } from '../plugins/api-capabilities.js';
@@ -12,6 +13,13 @@ import { errorFirstLine } from '../error-text.js';
 //
 // `pty` and `launchDir` arrive per call rather than being captured at construction, because
 // `managers.pty` is assigned after the tab manager is built.
+
+export function ownsTerminal(
+  tab: Pick<Tab, 'label' | 'view'>,
+  pty: Pick<PseudoterminalManager, 'terminalIdFor'>,
+): boolean {
+  return tab.view === 'plugin' && pty.terminalIdFor(tab.label) !== undefined;
+}
 
 export function spawnPluginTerminal(
   pty: PseudoterminalManager,

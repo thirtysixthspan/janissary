@@ -3,6 +3,7 @@ import type { Tab } from '../tab/types.js';
 import type { CommandManagers } from './types.js';
 import { resolveTarget } from './resolve-target.js';
 import { typeIntoHarness } from '../harness/input.js';
+import { ownsTerminal } from '../tab/plugin-terminals.js';
 
 /** Parse a `send <label> <text...>` command (the leading `send` is optional). */
 export function parseSendCommand(input: string): { label: string; text: string } | { error: string } {
@@ -21,10 +22,7 @@ function deliverTo(target: Tab, text: string, managers: CommandManagers): string
     typeIntoHarness(managers.pty, target.harness.ptyId, target.harness.name, text);
     return null;
   }
-  if (target.view === 'plugin') {
-    if (managers.pty.terminalIdFor(target.label) === undefined) {
-      return `Tab "${target.label}" does not accept input.`;
-    }
+  if (ownsTerminal(target, managers.pty)) {
     managers.tab.enqueue(target.label, text);
     return null;
   }

@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Share one predicate for "a plugin tab that owns a terminal" across send, queue and schedule targeting.
-
-Existing Issue: The check that a tab is a plugin tab owning a live terminal is written separately in `send`, `queue` and the schedule target filter, so the three rules for which tabs accept shell input can diverge. Severity: 3/10
-
-Existing Risk: 3/10 - A later change to terminal ownership updated in one place leaves `send`, `queue` and `schedule` disagreeing about whether a shell tab is a valid target.
-
-Proposal Risk: 1/10 - One exported predicate used in three places, with no behavior change expected.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: share the terminal-owning plugin tab predicate". Add an exported `ownsTerminal(tab, managers)` (or a method on `TabManager` in `src/tab/manager.ts`) beside the plugin terminal ownership code in `src/tab/plugin-terminals.ts`, and replace the inline checks in `src/commands/send.ts` (`deliverTo`), `src/commands/queue.ts` (`run`) and `src/schedule/targets.ts` (`canRunSchedules`). Existing `src/commands/send.test.ts`, `src/commands/queue.test.ts` and `src/commands/schedule.test.ts` shell-tab cases must keep passing; add a small unit test for the predicate.
-
-
 * Store the host-state delivery fingerprint on the plugin tab record instead of a module-level map keyed by plugin and instance.
 
 Existing Issue: `src/plugins/host-state.ts` keeps `lastPushed`, a module-level `WeakMap<PluginRecord, Map<instanceKey, fingerprint>>` cleaned by a manual sweep, which is the parallel per-tab map that architecture principle 2 and the plugin guidelines rule out. Severity: 3/10
