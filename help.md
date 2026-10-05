@@ -64,7 +64,7 @@
 | `Page Up` / `Page Down` | Scroll the transcript up / down by half terminal height |
 | `Escape` | Reset scroll to bottom |
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
-| `Ctrl+R` | Open command history picker. On a visible `shell` tab, opens that tab's own history instead — the lines its command bar has sent — and the application picks the chord back up as soon as you focus another tab |
+| `Ctrl+R` | Open command history picker. On a visible `shell` tab, opens that tab's own history instead — the lines its command bar has sent and the commands typed into its terminal — and the application picks the chord back up as soon as you focus another tab |
 | `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (`clip`); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
 | `Ctrl+E` | Open the queue picker to send a command to another agent tab (no-op on a tab that is not an agent tab) |

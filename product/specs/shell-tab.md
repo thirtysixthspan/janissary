@@ -101,9 +101,11 @@ it holds one, so copying by keyboard still works.
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and
 `Page Down` move by half a terminal screen, and `Escape` returns to the bottom of the scrollback.
 
-`Up` and `Down` walk the lines the command bar has sent or the application has handled, exactly as the
-agent tab's bar walks its tab's command history. Commands typed directly into the terminal remain in
-zsh's own history. Ghost suggestions instead draw from the
+`Up` and `Down` walk the tab's command history, exactly as the agent tab's bar walks its tab's command
+history. It holds the lines the command bar has sent or the application has handled, and every command
+typed directly into the terminal, in the order they ran. A line sent from the bar appears once, as it
+was typed in the bar, even though zsh also reports running it; a command typed into the terminal is
+recorded exactly as zsh received it, including one spanning several lines. Ghost suggestions instead draw from the
 global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
 a suggestion.
 
@@ -114,8 +116,9 @@ transcript to search and the queue belongs to agents — which is the same in ev
 
 `Ctrl+R` opens this tab's own history while it is the visible one, and a bare `hist` submitted from the
 command bar opens the same list rather than the application's history picker, which a shell tab's
-command line never adds to. `hist` itself is not added to the list. It lists the lines its command bar
-has sent, oldest first with the newest line selected at the bottom. It uses the same presentation and
+command line never adds to. `hist` itself is not added to the list. It lists the tab's command
+history — the lines its command bar has sent and the commands typed into its terminal — oldest first
+with the newest line selected at the bottom. It uses the same presentation and
 keyboard navigation as the application's history picker, but Return puts the selected line back in the
 command bar without running it. Focus any other tab and `Ctrl+R` opens the application's history picker
 again.

@@ -6,8 +6,9 @@ import {
   type PluginTerminal,
 } from '../api';
 import { shellTerminalTheme } from './shell-terminal-theme';
+import { decodeShellCommand } from './shell-command-marker';
 
-const SHELL_STATUS_HOOKS = String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { printf '\033]133;C\a'; }; _janus_emit_cwd() { printf '\033]7;file://%s%s\a' "$HOST" "$PWD"; }; _janus_precmd() { printf '\033]133;D\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd; printf '\033]133;E\a'
+const SHELL_STATUS_HOOKS = String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { local line=$1; [[ -z $line ]] && line=$3; printf '\033]133;C;%s\a' "$(print -rn -- "$line" | base64 | tr -d '\n')"; }; _janus_emit_cwd() { printf '\033]7;file://%s%s\a' "$HOST" "$PWD"; }; _janus_precmd() { printf '\033]133;D\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd; printf '\033]133;E\a'
 `;
 
 export type AttachTerminal = (
@@ -20,6 +21,7 @@ type Options = {
   attachTerminal: AttachTerminal | undefined;
   onCommandRunning: (running: boolean) => void;
   onCwd: (cwd: string) => void;
+  onCommand?: (command: string) => void;
   // Called when the shell behind this terminal exits. A plugin tab has nowhere else to hear it: the
   // event is broadcast once, to whoever happened to be connected at the time.
   onExit: () => void;
@@ -38,7 +40,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, containerRef, attachTerminal, onExit, onCommandRunning, onCwd,
+  ptyId, containerRef, attachTerminal, onExit, onCommandRunning, onCwd, onCommand,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -48,6 +50,8 @@ export function useShellTerminal({
   runningRef.current = onCommandRunning;
   const cwdRef = useRef(onCwd);
   cwdRef.current = onCwd;
+  const commandRef = useRef(onCommand);
+  commandRef.current = onCommand;
   // `attachTerminal` is read through a ref rather than closed over, and deliberately kept out of the
   // effect's dependencies below. It arrives on a capability object the host rebuilds whenever the tab
   // becomes visible or hidden, so depending on its identity tore the emulator down and built a new one
@@ -81,8 +85,14 @@ export function useShellTerminal({
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     terminal.parser.registerOscHandler(133, (data) => {
-      switch (data) {
-      case 'C': { runningRef.current(true); break; }
+      const [marker] = data.split(';', 1);
+      switch (marker) {
+      case 'C': {
+        runningRef.current(true);
+        const command = decodeShellCommand(data);
+        if (command !== undefined) commandRef.current?.(command);
+        break;
+      }
       case 'D': { runningRef.current(false); break; }
       case 'E': {
         terminal.clear();
@@ -90,7 +100,7 @@ export function useShellTerminal({
         break;
       }
       }
-      return ['C', 'D', 'E'].includes(data);
+      return ['C', 'D', 'E'].includes(marker);
     });
     terminal.parser.registerOscHandler(7, (data) => {
       try {

@@ -147,6 +147,23 @@ describe('useShellTerminal', () => {
     expect(onCommandRunning.mock.calls).toEqual([[true], [false]]);
   });
 
+  it('reports the command line a start marker carries as well as the running state', () => {
+    const onCommand = vi.fn();
+    const onCommandRunning = vi.fn();
+    const written: string[] = [];
+    renderHook(() => useShellTerminal({
+      ptyId: 'pty7', containerRef: { current: document.createElement('div') },
+      attachTerminal: () => makeHandle({ written }),
+      onExit: vi.fn(), onCommandRunning, onCwd: vi.fn(), onCommand,
+    }));
+
+    expect(written[0]).toContain(String.raw`printf '\033]133;C;%s\a'`);
+    expect(oscHandlers.find(({ id }) => id === 133)?.handle(`C;${btoa('git status')}`)).toBe(true);
+
+    expect(onCommandRunning.mock.calls).toEqual([[true]]);
+    expect(onCommand.mock.calls).toEqual([['git status']]);
+  });
+
   it('keeps startup output hidden until the zsh hooks are installed', () => {
     const { container, written } = harness();
 

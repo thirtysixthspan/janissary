@@ -13,6 +13,7 @@ import { useShellCommandQueue } from './useShellCommandQueue';
 import type { ShellCommandQueue } from './shell-command-queue';
 import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
+import { useTerminalCommandHistory } from './useTerminalCommandHistory';
 import { NO_CHORDS, NO_QUEUE_ITEMS } from './shell-tab-constants';
 import './shell.css';
 
@@ -70,10 +71,12 @@ export function ShellTab({ payload, capabilities }: Properties) {
     return () => { insertions.delete(label); };
   }, [appBar.pluginCommandLineInsertions, capabilities.label]);
 
+  const terminalHistory = useTerminalCommandHistory(setSent);
   const { write, display, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTerminal({
     ptyId: payload.ptyId,
     containerRef: terminalReference,
     attachTerminal: capabilities.attachTerminal,
+    onCommand: terminalHistory.onCommand,
     onCommandRunning: useCallback((running: boolean) => {
       setCommandRunning(running);
       queueReference.current?.setBusy(running);
@@ -104,7 +107,9 @@ export function ShellTab({ payload, capabilities }: Properties) {
   }, [capabilities.active]);
 
   const openHistory = useCallback(() => { setHistoryOpen(true); }, []);
-  const run = useShellSubmit({ appBar, capabilities, display, openHistory, setMatches, setSent, write });
+  const run = useShellSubmit({
+    appBar, capabilities, display, expectCommand: terminalHistory.expect, openHistory, setMatches, setSent, write,
+  });
   const { queue, submit } = useShellCommandQueue(capabilities, run, payload.commandRunning ?? false, (line) => {
     setMatches([]);
     setSent((previous) => [...previous, line]);

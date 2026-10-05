@@ -120,7 +120,7 @@ inside the project to `$root` and paths inside the workspace clone to `$workspac
 
 When a command finishes while the zsh tab is hidden, it gets an unread flag. If the flag remains unread and hidden for 30 seconds, Janissary raises the same `Agent '<tab>' is waiting` notification used for harness tabs. Starting another command clears the flag and its pending notification.
 
-`↑` and `↓` recall lines sent from this tab's command bar, including application commands handled there. `Ctrl+R`, or typing `hist` in the command bar, opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
+`↑` and `↓` recall lines sent from this tab's command bar, including application commands handled there, and commands typed directly into the terminal. `Ctrl+R`, or typing `hist` in the command bar, opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
 
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.
 

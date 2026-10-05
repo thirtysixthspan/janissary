@@ -633,6 +633,32 @@ describe('ShellTab', () => {
     expect(bar().value).toBe('ls -la');
   });
 
+  it('records a command typed into the terminal as recallable history', () => {
+    renderTab();
+
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${btoa('git status')}`); });
+
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(bar().value).toBe('git status');
+  });
+
+  it('records a line the bar sent once, even after zsh reports running it', async () => {
+    const { releaseDispatch, written } = renderTab({ dispatched: false });
+    fireEvent.change(bar(), { target: { value: 'ls -la' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+    expect(written).toEqual(['ls -la\n']);
+
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${btoa('ls -la')}`); });
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle('D'); });
+    fireEvent.change(bar(), { target: { value: 'hist' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    await waitFor(() => { expect(document.querySelector('.picker.shell-history')).not.toBeNull(); });
+    const rows = [...document.querySelectorAll('.shell-history .picker-row')].map((row) => row.textContent);
+    expect(rows).toEqual(['ls -la']);
+  });
+
   it('sends a marker-prefixed line to the shell whatever the application would claim', async () => {
     const { capabilities, written } = renderTab({ dispatched: true });
 

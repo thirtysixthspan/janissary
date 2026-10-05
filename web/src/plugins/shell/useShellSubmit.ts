@@ -15,16 +15,21 @@ export function useShellSubmit(input: {
   setMatches: Dispatch<SetStateAction<string[]>>;
   setSent: Dispatch<SetStateAction<string[]>>;
   write: (data: string) => void;
+  expectCommand: (line: string) => void;
   openHistory: () => void;
 }) {
-  const { appBar, capabilities, display, openHistory, setMatches, setSent, write } = input;
+  const { appBar, capabilities, display, expectCommand, openHistory, setMatches, setSent, write } = input;
   return useCallback(async (text: string, record = true): Promise<boolean> => {
     setMatches([]);
     const remember = (line: string) => { if (record) setSent((previous) => [...previous, line]); };
+    const runInShell = (line: string) => {
+      expectCommand(line);
+      write(`${line}\n`);
+    };
     if (routeFor(text) === 'shell') {
       const line = shellLine(text);
       if (!line) return false;
-      write(`${line}\n`);
+      runInShell(line);
       remember(text);
       return true;
     }
@@ -45,11 +50,11 @@ export function useShellSubmit(input: {
         display(formatDispatchedCommand(text, markdownToAnsi(result.output)));
         return false;
       }
-      write(`${text}\n`);
+      runInShell(text);
       return true;
     } catch {
       capabilities.reportFailure('shell dispatch intent refused');
       return false;
     }
-  }, [appBar, capabilities, display, openHistory, setMatches, setSent, write]);
+  }, [appBar, capabilities, display, expectCommand, openHistory, setMatches, setSent, write]);
 }
