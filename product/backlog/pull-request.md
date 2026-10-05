@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Open a sibling shell with `Cmd+T` when the shell's terminal has focus, as the spec says.
-
-Existing Issue: `Cmd+T` is handled in `ShellTab`'s command-bar key handler only, so with the terminal focused the window handler opens an agent tab instead of another zsh tab. Severity: 4/10
-
-Existing Risk: 4/10 - A user typing in the terminal presses `Cmd+T` expecting a new shell and gets a new agent tab in the wrong place.
-
-Proposal Risk: 2/10 - The chord is claimed for the whole visible shell tab through the declared-chord path, with residual risk only if the terminal's xterm key handler swallows the keydown before the window listener.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: open a sibling shell with Cmd+T from the focused terminal". Declare the new-tab chord in the shell manifest's chord list in `src/plugins/shell/manifest.ts` (check the chord-id validation in `src/plugins/declared-resources.ts` and `src/tab/view.ts` accepts it), handle it in `web/src/plugins/shell/ShellTab.tsx` through `usePluginChordClaims` alongside the existing `Ctrl+R` claim by dispatching `zsh` the way the bar handler does, and remove the bar-only branch so there is one path. Confirm `web/src/useWindowKeys.ts` consults plugin claims before `newAgentTab`. Add a `ShellTab.test.tsx` case that a `Cmd+T` keydown with the terminal focused dispatches `zsh`, and a `web/src/useWindowKeys.test.ts` case that the claim beats the agent default; update `src/plugins/declaration-validation.test.ts` if the chord list is pinned.
-
-
 * Route clicks on links inside shell reply decorations to the application's link opener instead of navigating the app window.
 
 Existing Issue: Reply decorations set `innerHTML` from the transcript markdown renderer and enable pointer events, but have no click handler, unlike the transcript, which prevents default and calls its link opener. Severity: 5/10

@@ -1,13 +1,14 @@
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 
 // A chord a plugin tab claims while it is the visible one. The handler runs instead of the
-// application's action; it returns nothing, because a chord handler's only job is to have run.
+// application's action; it returns nothing, because a chord handler's only job is to have run. It is
+// told which chord fired, so a body claiming several can answer each through one registration.
 //
 // Registered by the mounted body while the host reports that tab visible, and released the moment it
 // does not. That is the whole of the precedence rule: a claim exists exactly while the tab the user is
 // looking at is on screen, so focusing anything else hands the chord straight back to the application
 // without anything having to be undone.
-export type PluginChordHandler = () => void;
+export type PluginChordHandler = (chordId: string) => void;
 
 // Keyed by plugin id and chord together, so two plugins claiming the same chord cannot overwrite each
 // other, and releasing one is releasing only its own claim.
@@ -33,7 +34,7 @@ export function createPluginChordRegistry(): PluginChordRegistry {
       const suffix = ` ${focusedTabLabel} ${chordId}`;
       for (const [key, handler] of claims) {
         if (!key.endsWith(suffix)) continue;
-        handler();
+        handler(chordId);
         return true;
       }
       return false;
@@ -86,7 +87,7 @@ export function usePluginChordClaims(
     const ids = chordsRef.current;
     if (!active || ids.length === 0) return;
     const releases = ids.map((chordId) =>
-      registry.register(pluginId, currentLabel.current, chordId, () => { handlerRef.current(); }));
+      registry.register(pluginId, currentLabel.current, chordId, () => { handlerRef.current(chordId); }));
     return () => { for (const release of releases) release(); };
   }, [registry, pluginId, tabLabel, active, claimed]);
 }

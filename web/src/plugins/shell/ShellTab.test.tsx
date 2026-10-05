@@ -156,8 +156,8 @@ function makeCapabilities(overrides: {
     launchAgentHere: vi.fn(),
     reportFailure: vi.fn(),
     // What the host accepted at activation and put on this tab's view — the shell manifest claims
-    // `ctrl+r`, so that is the default here too.
-    claimedChords: overrides.claimedChords ?? ['ctrl+r'],
+    // `ctrl+r` and `meta+t`, so that is the default here too.
+    claimedChords: overrides.claimedChords ?? ['ctrl+r', 'meta+t'],
     dotColor: overrides.dotColor,
     label: overrides.label ?? 'shell1',
   } as unknown as TabPluginClientCapabilities;
@@ -425,11 +425,25 @@ describe('ShellTab', () => {
 
     expect(capabilities.intent).toHaveBeenCalledWith('cwd', '/work/child dir');
   });
-  it('opens a sibling shell with Cmd+T through the current shell tab', () => {
-    const { capabilities, written } = renderTab();
-    fireEvent.keyDown(bar(), { key: 't', metaKey: true });
+  it('opens a sibling shell when the host spends its Cmd+T claim, without opening its history', () => {
+    const { capabilities, chords, written } = renderTab();
+
+    expect(chords.run('meta+t', 'shell1')).toBe(true);
+
     expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'zsh');
+    expect(document.querySelector('.shell-history')).toBeNull();
     expect(written).toEqual([]);
+  });
+
+  // The bar answering Cmd+T itself was a second path that only worked with the bar focused. Leaving
+  // the key alone is what lets the window handler spend the claim from the terminal and the bar alike.
+  it('leaves Cmd+T in the command bar to the window handler and its claim', () => {
+    const { capabilities } = renderTab();
+
+    const handled = !fireEvent.keyDown(bar(), { key: 't', metaKey: true });
+
+    expect(handled).toBe(false);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'zsh');
   });
 
   it('renders the working directory in the metadata row', () => {

@@ -14,7 +14,7 @@ import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { useTerminalCommandHistory } from './useTerminalCommandHistory';
 import { appendShellHistory } from './shell-history';
-import { NO_CHORDS, NO_QUEUE_ITEMS, SHELL_DOT_COLOR } from './shell-tab-constants';
+import { NEW_SHELL_CHORD, NO_CHORDS, NO_QUEUE_ITEMS, SHELL_DOT_COLOR } from './shell-tab-constants';
 import './shell.css';
 
 type Properties = {
@@ -22,11 +22,12 @@ type Properties = {
   capabilities: TabPluginClientCapabilities;
 };
 
-// The one chord this plugin's declaration claims is not written out here. The claim is data the host
-  // validated at activation and sends on this tab's view, so it is read from `claimedChords` rather
-  // than restated — a second copy would be a second thing able to disagree with the claim actually
+// The chords this plugin's declaration claims are not listed here. The claim is data the host
+// validated at activation and sends on this tab's view, so it is read from `claimedChords` rather
+// than restated — a second copy would be a second thing able to disagree with the claim actually
 // enforced, with nothing to notice when it did. Absent means the declaration claimed none, which is
-// the same as claiming nothing.
+// the same as claiming nothing. The body names only the one chord whose answer differs from the
+// history toggle, so it can tell which claimed chord fired.
 export function ShellTab({ payload, capabilities }: Properties) {
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const terminalReference = useRef<HTMLDivElement>(null);
@@ -128,14 +129,6 @@ export function ShellTab({ payload, capabilities }: Properties) {
     }
     if (handleQueueKey(event, queueOpen, draft, appBar.onDeleteQueued)) return;
     if (appBar.overlayOwnsCommandBar) return;
-    if (event.metaKey && !event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 't') {
-      event.preventDefault();
-      event.stopPropagation();
-      void capabilities.intent<{ dispatched: boolean }>('dispatch', 'zsh').catch(() => {
-        capabilities.reportFailure('shell dispatch intent failed');
-      });
-      return;
-    }
     // The history popup is modal over the bar while it is open, exactly as the agent tab's own history
     // picker is: its window listener owns Up, Down, Return and Escape. Handling them here as well would
     // mean one ArrowUp both moved its selection and rewrote the bar, since the bar's recall walks the
@@ -162,12 +155,19 @@ export function ShellTab({ payload, capabilities }: Properties) {
     bar, capabilities, draft, focusTerminal, historyOpen, matches.length, queueOpen, write,
   ]);
 
-  // `Ctrl+R` is claimed by this plugin's declaration, so it reaches this tab while it is the visible
-  // one and belongs to the application everywhere else. The window handler consults the claim before
-  // its own table, which is the whole of the rule and needs nothing here.
-  usePluginChordClaims('shell', capabilities.label ?? 'shell', capabilities.claimedChords ?? NO_CHORDS, capabilities.active, useCallback(() => {
-    setHistoryOpen((open) => !open);
-  }, []));
+  // `Ctrl+R` and `Cmd+T` are claimed by this plugin's declaration, so they reach this tab while it is
+  // the visible one and belong to the application everywhere else. The window handler consults the
+  // claim before its own table, which is the whole of the rule and needs nothing here. Being a window
+  // chord rather than a bar key is what lets `Cmd+T` open a sibling shell with the terminal focused.
+  usePluginChordClaims('shell', capabilities.label ?? 'shell', capabilities.claimedChords ?? NO_CHORDS, capabilities.active, useCallback((chordId: string) => {
+    if (chordId !== NEW_SHELL_CHORD) {
+      setHistoryOpen((open) => !open);
+      return;
+    }
+    void capabilities.intent<{ dispatched: boolean }>('dispatch', 'zsh').catch(() => {
+      capabilities.reportFailure('shell dispatch intent failed');
+    });
+  }, [capabilities]));
 
   // `data-claims-shift-tab` stands the application's section cycling down for keys inside this tab,
   // which it otherwise takes in the capture phase before either surface's own Shift+Tab can run.

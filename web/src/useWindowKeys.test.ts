@@ -655,6 +655,42 @@ describe('useWindowKeys', () => {
       expect(openPicker).toHaveBeenCalledOnce();
     });
 
+    // The shell claims Cmd+T so the terminal, which has no key handler for it, opens a sibling shell
+    // rather than letting the keydown fall through to the application's new agent tab.
+    it('spends a Cmd+T claim from focus inside the claiming tab instead of opening an agent tab', () => {
+      const { chords, handler } = claimed('meta+t');
+      const runCommand = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { runCommand } }));
+      const tabBody = document.createElement('div');
+      tabBody.dataset.tabLabel = 'shell';
+      const terminalInput = document.createElement('textarea');
+      tabBody.append(terminalInput);
+      document.body.append(tabBody);
+      terminalInput.focus();
+
+      const handled = !fireEvent.keyDown(terminalInput, { key: 't', metaKey: true });
+
+      expect(handled).toBe(true);
+      expect(handler).toHaveBeenCalledExactlyOnceWith('meta+t');
+      expect(runCommand).not.toHaveBeenCalled();
+      tabBody.remove();
+    });
+
+    it('opens an agent tab for Cmd+T pressed inside a tab that holds no claim on it', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const runCommand = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { runCommand } }));
+      const tabBody = document.createElement('div');
+      tabBody.dataset.tabLabel = 'shell';
+      document.body.append(tabBody);
+
+      fireEvent.keyDown(tabBody, { key: 't', metaKey: true });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(runCommand).toHaveBeenCalledExactlyOnceWith('agent');
+      tabBody.remove();
+    });
+
     it('leaves an unclaimed chord with the application', () => {
       const { chords } = claimed('ctrl+r');
       const openTabNav = vi.fn();

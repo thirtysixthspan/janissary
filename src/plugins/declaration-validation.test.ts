@@ -119,6 +119,13 @@ describe('chord claim validation', () => {
     }
   });
 
+  it('accepts every chord the bundled shell manifest claims', async () => {
+    const host = await activateWith(manifest({ chords: shellManifest.chords }), activation());
+
+    expect(shellManifest.chords).toEqual(['ctrl+r', 'meta+t']);
+    expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+
   it('accepts a declaration that claims no chord', async () => {
     const host = await activateWith(manifest(), activation());
 

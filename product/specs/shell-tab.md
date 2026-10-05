@@ -121,6 +121,8 @@ The command bar's status dot uses the same color as the shell tab's dot.
 
 `Cmd+T` opens another zsh tab from this shell. The new shell starts in the same working directory and shares its workspace confinement and offline setting. It does not create an agent workspace. In other tabs, `Cmd+T` keeps opening a new agent tab.
 
+`Cmd+T` works the same with the terminal focused as with the command bar focused, and when the keyboard rests on the page with the shell as the current tab. It is a chord the shell plugin's declaration claims beside `Ctrl+R`, so like `Ctrl+R` it belongs to the shell only while the shell is the visible tab, or the selected entry in the sidebar it is docked to. `Cmd+T` pressed in an agent tab's command bar beside a docked shell still opens a new agent tab.
+
 `Ctrl+C`, `Ctrl+D` and `Ctrl+Z` in the command line send interrupt, end-of-input and suspend to the
 shell — the characters a terminal would send. The terminal also accepts direct input when focused.
 `Ctrl+C` copies the command line's own selection instead when it holds one, so copying by keyboard
