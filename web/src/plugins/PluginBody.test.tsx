@@ -40,7 +40,7 @@ function registration(loader: ClientPluginLoader): ClientPluginRegistration {
 
 const acceptsAnyPayload = (value: unknown): value is unknown => value !== undefined;
 
-function body(id = 'fixture', label = id) {
+function body(id = 'fixture', label = id, active = true) {
   const fixture = client();
   const view = { plugin: plugin(id) };
   return {
@@ -48,7 +48,7 @@ function body(id = 'fixture', label = id) {
     element: (
       <PluginBody
         plugin={view.plugin} label={label} client={fixture.value}
-        active onClose={() => {}}
+        active={active} onClose={() => {}}
       />
     ),
   };
@@ -216,6 +216,22 @@ describe('PluginBody command bar scope', () => {
     render(<AppCommandBarProvider bar={{ intercept, ghostHistory: [] }}>{element}</AppCommandBarProvider>);
     fireEvent.click(await screen.findByText('ask'));
 
-    expect(intercept).toHaveBeenCalledWith('theme', 'shell-left');
+    expect(intercept).toHaveBeenCalledWith('theme', 'shell-left', true);
+  });
+
+  // The host, not the plugin, knows whether a body is on screen, and a hidden one must open no picker.
+  it('tells the application when the body asking is not on screen', async () => {
+    const intercept = vi.fn(() => true);
+    function Reader() {
+      const bar = useAppCommandBar();
+      return <button type="button" onClick={() => { bar.intercept('tasks'); }}>ask</button>;
+    }
+    registry.set('fixture', registration(async () => ({ default: Reader, isPayload: acceptsAnyPayload })));
+    const { element } = body('fixture', 'shell-hidden', false);
+
+    render(<AppCommandBarProvider bar={{ intercept, ghostHistory: [] }}>{element}</AppCommandBarProvider>);
+    fireEvent.click(await screen.findByText('ask'));
+
+    expect(intercept).toHaveBeenCalledWith('tasks', 'shell-hidden', false);
   });
 });

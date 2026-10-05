@@ -14,7 +14,7 @@ import type { PickerOverlayView } from './pickers/picker/overlay-view';
 // body sees the popup only when that tab is its own. Each tab's own command queue is read off the
 // state broadcast, so a line another tab queues for a shell reaches that shell however it is shown.
 export function useAppCommandBarState(input: {
-  intercept: (line: string, sourceTab?: string) => boolean;
+  intercept: (line: string, sourceTab?: string, sourceVisible?: boolean) => boolean;
   ghostHistory: string[];
   pickers: { view: PickerOverlayView; onEditQueued: (text: string) => void; onDeleteQueued: () => void };
   queueTab: string | undefined;

@@ -5,7 +5,8 @@ export type CommandLineInsertion = (text: string) => void;
 // answers — which tab the queue popup is open over, each tab's own command queue — and is never handed
 // to a plugin as it stands: `scopeAppCommandBar` narrows it to the one tab a body renders in first.
 export type AppCommandBarState = {
-  intercept(line: string, sourceTab?: string): boolean;
+  // `sourceVisible` is false when the source tab's body is not on screen, which opens no picker.
+  intercept(line: string, sourceTab?: string, sourceVisible?: boolean): boolean;
   ghostHistory: string[];
   blockingOverlayOpen?: boolean;
   overlayOwnsCommandBar?: boolean;
@@ -52,15 +53,17 @@ const NO_LINES: readonly string[] = [];
 // from the caller, so a plugin body cannot run a line as another tab, report another tab as focused,
 // or edit a queue popup that is open over a different tab. The popup's state reaches only the tab it
 // belongs to; every other tab sees it closed and empty, which is what keeps one popup from rewriting
-// every mounted bar.
+// every mounted bar. `active` is whether the body is on screen, which the host knows and the
+// application does not: a line from a hidden body is classified the same way but opens no picker.
 export function scopeAppCommandBar(
   state: AppCommandBarState,
   label: string,
   registerCommandLineInsertion: AppCommandBar['registerCommandLineInsertion'],
+  active = true,
 ): AppCommandBar {
   const ownsQueue = state.queueTab === label;
   return {
-    intercept: (line) => state.intercept(line, label),
+    intercept: (line) => state.intercept(line, label, active),
     ghostHistory: state.ghostHistory,
     blockingOverlayOpen: state.blockingOverlayOpen === true,
     overlayOwnsCommandBar: state.overlayOwnsCommandBar === true,

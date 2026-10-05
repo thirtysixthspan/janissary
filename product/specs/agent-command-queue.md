@@ -41,7 +41,10 @@ blinking. Submitting text at this point queues it rather than running it.
 
 `Ctrl+E` (or the `queue` command) opens a `queue` popup over the command line, listing the
 exposed tab's queued commands in order, front (the next one to run) at the top. It no-ops if the
-exposed tab is not an agent tab. When the queue is empty it shows `(no commands queued)`.
+exposed tab is not an agent tab. When the queue is empty it shows `(no commands queued)`. A `queue`
+typed into a shell tab's bar opens the popup for that shell instead, even when the shell is docked in
+a sidebar and an agent tab is exposed; its rows, edits and deletes are then the shell's (see
+[[shell-tab]]).
 
 Opening the popup selects the front entry, which copies its text into the command line,
 overwriting whatever was there. The command line is the popup's only edit surface:

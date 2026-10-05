@@ -105,3 +105,30 @@ describe('tab adapter notifications', () => {
     expect(tabs.filter((tab) => tab.label === NOTIFICATIONS_LABEL)).toHaveLength(1);
   });
 });
+
+describe('tab adapter command queue', () => {
+  function withQueueEdits() {
+    const { managers } = makeManagers(['agent', 'shell1']);
+    const editQueued = vi.fn();
+    const deleteQueued = vi.fn();
+    Object.assign((managers.tab as Record<string, unknown>), { editQueued, deleteQueued });
+    return { adapter: createTabControllerAdapter(managers), editQueued, deleteQueued };
+  }
+
+  // A queue popup open over a docked shell edits that shell's queue while an agent is the active tab.
+  it('edits and deletes in the named tab\'s queue', () => {
+    const { adapter, editQueued, deleteQueued } = withQueueEdits();
+    adapter.editQueuedCommand(1, 'ls', 'shell1');
+    adapter.deleteQueuedCommand(0, 'shell1');
+    expect(editQueued).toHaveBeenCalledWith('shell1', 1, 'ls');
+    expect(deleteQueued).toHaveBeenCalledWith('shell1', 0);
+  });
+
+  it('edits and deletes in the active tab\'s queue when no tab is named', () => {
+    const { adapter, editQueued, deleteQueued } = withQueueEdits();
+    adapter.editQueuedCommand(0, 'pwd');
+    adapter.deleteQueuedCommand(2);
+    expect(editQueued).toHaveBeenCalledWith('agent', 0, 'pwd');
+    expect(deleteQueued).toHaveBeenCalledWith('agent', 2);
+  });
+});

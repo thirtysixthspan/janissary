@@ -24,7 +24,7 @@ Harness, image, page, Markdown, editor, file navigator, monitor, notification, a
 
 ## Edit queued commands
 
-Press `Ctrl+E`, or enter the bare `queue` command, to open the queue popup for the exposed agent or shell tab. The next command to run appears at the top. When the queue is empty, the popup shows `(no commands queued)`.
+Press `Ctrl+E`, or enter the bare `queue` command, to open the queue popup for the exposed agent or shell tab. Entering `queue` in a shell docked in a sidebar opens the popup for that shell, even when an agent tab is exposed. The next command to run appears at the top. When the queue is empty, the popup shows `(no commands queued)`.
 
 <img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
 

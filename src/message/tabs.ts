@@ -28,9 +28,10 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     }
     case 'promoteToTerminal': { controller.promoteToTerminal(); break;
     }
-    case 'editQueuedCommand': { controller.editQueuedCommand(message.params.index, message.params.text); break;
+    case 'editQueuedCommand': {
+      controller.editQueuedCommand(message.params.index, message.params.text, message.params.tab); break;
     }
-    case 'deleteQueuedCommand': { controller.deleteQueuedCommand(message.params.index); break;
+    case 'deleteQueuedCommand': { controller.deleteQueuedCommand(message.params.index, message.params.tab); break;
     }
     case 'moveTab': { controller.moveTab(message.params.dir); break;
     }

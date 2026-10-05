@@ -10,8 +10,8 @@ export type TabControllerAdapter = {
   reorderTabTo(from: number, to: number): void;
   closeTab(label: string): void;
   renameTab(index: number, title: string): void;
-  editQueuedCommand(index: number, text: string): void;
-  deleteQueuedCommand(index: number): void;
+  editQueuedCommand(index: number, text: string, tab?: string): void;
+  deleteQueuedCommand(index: number, tab?: string): void;
   toggleCollapse(): void;
   revealNotifications(): void;
   promoteToTerminal(): void;
@@ -36,8 +36,8 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
       if (index !== -1) managers.tab.closeTab(index);
     },
     renameTab: (index, title) => managers.tab.renameTab(index, title),
-    editQueuedCommand: (index, text) => managers.tab.editQueued(managers.tab.cur().label, index, text),
-    deleteQueuedCommand: (index) => managers.tab.deleteQueued(managers.tab.cur().label, index),
+    editQueuedCommand: (index, text, tab) => managers.tab.editQueued(tab ?? managers.tab.cur().label, index, text),
+    deleteQueuedCommand: (index, tab) => managers.tab.deleteQueued(tab ?? managers.tab.cur().label, index),
     toggleCollapse: () => managers.tab.toggleCollapse(),
     revealNotifications: () => escalateToFeed(managers),
     promoteToTerminal: () => managers.shell.promoteRunning(managers.tab.cur().label),

@@ -30,9 +30,10 @@ export function isBareOpener(command: string): boolean {
 
 // Opens the overlay a command bar's verdict named, and reports whether it opened one. The bare table
 // first and the plugin seam second, which is the order the agent bar's own chain has always used: a
-// built-in word is the application's before it is anything else's.
-export function openCommandBarOverlay(command: string, pickers: BareOpeners): boolean {
+// built-in word is the application's before it is anything else's. `sourceTab` is the tab whose bar the
+// word was typed into, handed to the opener so a picker raised from a plugin bar opens for that tab.
+export function openCommandBarOverlay(command: string, pickers: BareOpeners, sourceTab?: string): boolean {
   const opener = OPENERS[command];
-  if (opener) { pickers[opener](); return true; }
+  if (opener) { pickers[opener](sourceTab); return true; }
   return openOverlayForCommand(command, null);
 }

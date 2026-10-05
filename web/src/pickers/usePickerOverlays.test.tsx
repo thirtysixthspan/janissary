@@ -104,8 +104,68 @@ describe('usePickerOverlays', () => {
     const client = fakeClient();
     const hook = mount(agentTab(), client);
     act(() => hook().onDeleteQueued());
-    expect(client.send).toHaveBeenCalledWith({ method: 'deleteQueuedCommand', params: { index: 0 } });
+    expect(client.send).toHaveBeenCalledWith({ method: 'deleteQueuedCommand', params: { index: 0, tab: 'agent1' } });
     act(() => hook().onEditQueued('edited'));
-    expect(client.send).toHaveBeenCalledWith({ method: 'editQueuedCommand', params: { index: 0, text: 'edited' } });
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'editQueuedCommand', params: { index: 0, text: 'edited', tab: 'agent1' },
+    });
+  });
+});
+
+function dockedShell(): TabView {
+  return {
+    label: 'shell1', cwd: '/w', bufferLines: [], cmdHistory: [], commandQueue: ['make test'],
+    view: 'plugin', dock: 'left', plugin: { id: 'shell', hostsCommandBar: true },
+  } as unknown as TabView;
+}
+
+// The app records a plugin bar's tab as the picker's source after the opener runs; these mount the
+// hook with that source already recorded, the way the app renders once it has.
+function mountWithSource(sourceTab: string | undefined) {
+  const client = fakeClient();
+  const insertIntoShell = vi.fn();
+  const insertIntoAgent = vi.fn();
+  const dropRef = { current: { insertAtCaret: insertIntoAgent, setDropHighlighted: vi.fn() } };
+  let hook: Hook | undefined;
+  function Source() {
+    hook = usePickerOverlays({
+      client, current: agentTab(), sourceTab, tabs: [agentTab(), dockedShell()], syntaxTheme: 'monokai',
+      tasks: [{ path: 'fix.md', name: 'fix', depth: 0, dir: false, source: 'project' }], profiles: [],
+      runCommand: () => {},
+      inputRef: createRef(), recallRef: createRef(), dropRef, focusHarness: () => {},
+      pluginCommandLineInsertions: { current: new Map([['shell1', insertIntoShell]]) },
+    });
+    return null;
+  }
+  render(<Source />);
+  return { hook: () => hook!, client, insertIntoShell, insertIntoAgent };
+}
+
+describe('usePickerOverlays with a picker raised from a docked shell', () => {
+  it('lists and edits the shell\'s queue while an agent is the current tab', () => {
+    const { hook, client } = mountWithSource('shell1');
+    expect(hook().view.queueItems).toEqual(['make test']);
+    act(() => hook().onEditQueued('make lint'));
+    expect(client.send).toHaveBeenCalledWith({
+      method: 'editQueuedCommand', params: { index: 0, text: 'make lint', tab: 'shell1' },
+    });
+  });
+
+  it('inserts a picked task into the shell\'s bar rather than the agent\'s', () => {
+    const { hook, insertIntoShell, insertIntoAgent } = mountWithSource('shell1');
+    act(() => hook().commands.openTaskPicker('shell1'));
+    act(() => hook().keys.pickTask('fix.md'));
+    expect(insertIntoShell).toHaveBeenCalledWith('execute ./ai/tasks/fix.md');
+    expect(insertIntoAgent).not.toHaveBeenCalled();
+  });
+
+  it('acts on the current tab when no source is recorded, or the source is no longer open', () => {
+    for (const source of [undefined, 'gone']) {
+      const { hook, insertIntoShell, insertIntoAgent } = mountWithSource(source);
+      expect(hook().view.queueItems).toEqual(['queued one', 'queued two']);
+      act(() => hook().keys.pickTask('fix.md'));
+      expect(insertIntoAgent).toHaveBeenCalledWith('execute ./ai/tasks/fix.md');
+      expect(insertIntoShell).not.toHaveBeenCalled();
+    }
   });
 });

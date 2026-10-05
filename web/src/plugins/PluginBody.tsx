@@ -191,7 +191,7 @@ export function PluginBody({
   // The command-bar state a body reaches is bound to this tab here, by the host, rather than by a label
   // the plugin passes: a plugin cannot then act on the bar, queue or focus of a tab it does not own.
   return (
-    <AppCommandBarTabScope label={label}>
+    <AppCommandBarTabScope label={label} active={active}>
       {contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail)}
     </AppCommandBarTabScope>
   );

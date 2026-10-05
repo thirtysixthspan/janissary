@@ -111,6 +111,34 @@ describe('useAppCommandLine', () => {
     expect(onPickerOpen).toHaveBeenCalledWith('shell-left');
   });
 
+  // The queue popup decides at open time whether it opens and what it selects, before the source is
+  // recorded, so the opener itself is told which tab asked.
+  it('tells the opener which plugin tab asked for it', () => {
+    const { intercept, openers } = build({ tabs: [tab('agent'), tab('shell-left', { dock: 'left' })] });
+
+    expect(intercept('queue', 'shell-left')).toBe(true);
+    expect(openers.openQueue).toHaveBeenCalledWith('shell-left');
+  });
+
+  // A shell draining a queued tasks line behind another tab would otherwise open a picker nobody can
+  // see that still takes the modal keys of the tab in front.
+  it.each(['tasks', 'queue', 'theme', 'nav'])('opens nothing for %s from a tab that is not on screen', (line) => {
+    const onPickerOpen = vi.fn();
+    const { intercept, openers, openTabNavWithQuery } = build({ onPickerOpen });
+
+    expect(intercept(line, 'shell1', false)).toBe(true);
+    for (const opener of Object.values(openers)) expect(opener).not.toHaveBeenCalled();
+    expect(openTabNavWithQuery).not.toHaveBeenCalled();
+    expect(onPickerOpen).not.toHaveBeenCalled();
+  });
+
+  it('still confirms a quit typed in a tab that is not on screen', () => {
+    const { intercept, openQuitConfirm } = build();
+
+    expect(intercept('quit', 'shell1', false)).toBe(true);
+    expect(openQuitConfirm).toHaveBeenCalledTimes(1);
+  });
+
   it('opens the tab navigator on nav\'s query from any bar, and reports which tab opened it', () => {
     const onPickerOpen = vi.fn();
     const { intercept, openTabNavWithQuery, setNavOpen } = build({ onPickerOpen });
@@ -139,10 +167,10 @@ describe('useAppCommandLine', () => {
   });
 });
 
-function scopedBar(state: AppCommandBarState, label?: string) {
+function scopedBar(state: AppCommandBarState, label?: string, active?: boolean) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <AppCommandBarProvider bar={state}>
-      {label === undefined ? children : <AppCommandBarTabScope label={label}>{children}</AppCommandBarTabScope>}
+      {label === undefined ? children : <AppCommandBarTabScope label={label} active={active}>{children}</AppCommandBarTabScope>}
     </AppCommandBarProvider>
   );
   return renderHook(() => useAppCommandBar(), { wrapper });
@@ -161,9 +189,17 @@ describe('useAppCommandBar', () => {
     const { result } = scopedBar({ intercept, ghostHistory: [], onFocusTab }, 'shell-left');
 
     expect(result.current.intercept('theme')).toBe(true);
-    expect(intercept).toHaveBeenCalledWith('theme', 'shell-left');
+    expect(intercept).toHaveBeenCalledWith('theme', 'shell-left', true);
     result.current.onFocusChange(true);
     expect(onFocusTab).toHaveBeenLastCalledWith('shell-left');
+  });
+
+  it('carries whether the scoped body is on screen into the interception', () => {
+    const intercept = vi.fn(() => true);
+    const { result } = scopedBar({ intercept, ghostHistory: [] }, 'shell-hidden', false);
+
+    result.current.intercept('tasks');
+    expect(intercept).toHaveBeenCalledWith('tasks', 'shell-hidden', false);
   });
 
   it('registers a picked-line insertion under the scoped tab and keeps one registration across renders', () => {

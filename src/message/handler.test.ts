@@ -168,13 +168,21 @@ describe('handle', () => {
   it('routes editQueuedCommand', () => {
     const controller = makeController();
     dispatchCall(controller, 19, { method: 'editQueuedCommand', params: { index: 0, text: 'echo hi' } });
-    expect(controller.editQueuedCommand).toHaveBeenCalledWith(0, 'echo hi');
+    expect(controller.editQueuedCommand).toHaveBeenCalledWith(0, 'echo hi', undefined);
   });
 
   it('routes deleteQueuedCommand', () => {
     const controller = makeController();
     dispatchCall(controller, 20, { method: 'deleteQueuedCommand', params: { index: 0 } });
-    expect(controller.deleteQueuedCommand).toHaveBeenCalledWith(0);
+    expect(controller.deleteQueuedCommand).toHaveBeenCalledWith(0, undefined);
+  });
+
+  it('routes the tab a queue edit or delete names', () => {
+    const controller = makeController();
+    dispatchCall(controller, 21, { method: 'editQueuedCommand', params: { index: 1, text: 'ls', tab: 'shell1' } });
+    dispatchCall(controller, 22, { method: 'deleteQueuedCommand', params: { index: 2, tab: 'shell1' } });
+    expect(controller.editQueuedCommand).toHaveBeenCalledWith(1, 'ls', 'shell1');
+    expect(controller.deleteQueuedCommand).toHaveBeenCalledWith(2, 'shell1');
   });
 
   it('routes moveTab', () => {

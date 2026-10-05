@@ -48,9 +48,15 @@ describe('scopeAppCommandBar', () => {
     bar.onFocusChange(true);
     bar.onFocusChange(false);
 
-    expect(app.intercept).toHaveBeenCalledWith('close', 'shell1');
+    expect(app.intercept).toHaveBeenCalledWith('close', 'shell1', true);
     expect(onFocusTab).toHaveBeenNthCalledWith(1, 'shell1');
     expect(onFocusTab).toHaveBeenNthCalledWith(2, undefined);
+  });
+
+  it('intercepts a line from a body that is not on screen as such', () => {
+    const app = state();
+    scopeAppCommandBar(app, 'shell1', register, false).intercept('tasks');
+    expect(app.intercept).toHaveBeenCalledWith('tasks', 'shell1', false);
   });
 
   it('reads its own command queue rather than the queue the popup lists', () => {

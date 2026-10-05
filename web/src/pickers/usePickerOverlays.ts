@@ -23,6 +23,10 @@ import { usePopulatePickers } from './usePopulatePickers';
 type Input = {
   client: JanusClient;
   current: TabView | undefined;
+  // The tab whose plugin bar raised the open picker, when one did. The queue and task pickers act on
+  // that tab rather than on the current one, so a picker raised from a docked shell edits its queue and
+  // inserts into its bar.
+  sourceTab?: string;
   tabs: TabView[];
   syntaxTheme: string;
   tasks: TaskRow[];
@@ -66,13 +70,18 @@ export function usePickerOverlays(input: Input): {
   onEditQueued: (text: string) => void;
   onDeleteQueued: () => void;
 } {
-  const { client, current, tabs, syntaxTheme, tasks, profiles, pluginCommandLineInsertions } = input;
+  const { client, current, sourceTab, tabs, syntaxTheme, tasks, profiles, pluginCommandLineInsertions } = input;
   const { runCommand, inputRef, recallRef, dropRef, focusHarness } = input;
 
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
-  const queueItems = useMemo(() => current?.commandQueue ?? [], [current]);
-  const harnessPtyId = current?.view === 'harness' ? current.harness?.ptyId : undefined;
+  // The tab the queue and task pickers act on: the source tab while it is open, else the current tab.
+  const pickerTab = useMemo(
+    () => tabs.find((tab) => tab.label === sourceTab) ?? current,
+    [tabs, sourceTab, current],
+  );
+  const queueItems = useMemo(() => pickerTab?.commandQueue ?? [], [pickerTab]);
+  const harnessPtyId = pickerTab?.view === 'harness' ? pickerTab.harness?.ptyId : undefined;
 
   const route = useRouteChooser(client);
   const themes = useThemePicker(syntaxTheme, runCommand);
@@ -80,8 +89,8 @@ export function usePickerOverlays(input: Input): {
   const history = useHistPicker(recent, runCommand);
   const nav = useTabNav(client, tabs);
   const quick = useQuickOpen(client);
-  const queue = useQueuePicker(client, current, inputRef, recallRef);
-  const shellLabel = hostsCommandBar(current) ? current?.label : undefined;
+  const queue = useQueuePicker(client, pickerTab, inputRef, recallRef, tabs);
+  const shellLabel = hostsCommandBar(pickerTab) ? pickerTab?.label : undefined;
   const populate = usePopulatePickers(
     tasks, profiles, recallRef, inputRef, client, harnessPtyId, dropRef, focusHarness,
     pluginCommandLineInsertions, shellLabel,

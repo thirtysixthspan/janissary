@@ -99,14 +99,17 @@ export function App({ client }: { client: JanusClient }) {
   // the window key handler, the command bar's interception chain, the server state stream — so none
   // of them restates the others' fields (see `pickers/usePickerOverlays`).
   const pickers = usePickerOverlays({
-    client, current, tabs, syntaxTheme, tasks, profiles, runCommand,
+    client, current, sourceTab: pickerSourceTab, tabs, syntaxTheme, tasks, profiles, runCommand,
     inputRef: inputReference, recallRef: recallReference, dropRef: dropReference, focusHarness,
     pluginCommandLineInsertions,
   });
 
+  // A source is forgotten once no overlay is open, and when its tab closes under an open picker, which
+  // then draws over and acts on the current tab rather than over a tab that is no longer there.
   useEffect(() => {
-    if (!firstOpenOverlay(pickers.view.overlays)) setPickerSourceTab(undefined);
-  }, [pickers.view.overlays]);
+    const sourceOpen = tabs.some((tab) => tab.label === pickerSourceTab);
+    if (!firstOpenOverlay(pickers.view.overlays) || !sourceOpen) setPickerSourceTab(undefined);
+  }, [pickers.view.overlays, tabs, pickerSourceTab]);
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   // Every dirty-capable tab handle, editor and plugin alike, keyed by tab label. The close guard,

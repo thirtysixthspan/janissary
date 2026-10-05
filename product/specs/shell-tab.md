@@ -135,6 +135,18 @@ command line unchanged.
 The shared pickers and the queue popup treat the shell this way because its declaration carries
 `hostsCommandBar`, not because the application knows the shell plugin by name (see [[tab-plugins]]).
 
+A picker opened from a shell's bar belongs to that shell, including a shell docked in a sidebar while
+an agent tab is current. It appears over the shell, a task picked from `tasks` lands in the shell's
+bar rather than the agent's, and `queue` lists, edits and deletes the shell's own queued lines rather
+than the agent's. If the shell closes while its picker is open, the picker moves to the current tab
+and acts on that tab instead.
+
+A shell that is not on screen opens no picker. That covers a shell hidden behind another centre tab
+and a docked shell behind another entry in its sidebar. A picker word reaching it, such as a queued
+`tasks`, `queue`, `theme` or `nav` line draining in the background, is recorded in the bar's history
+and the queue moves on to its next line. Nothing appears, so no unseen picker takes the arrow, Return
+and Escape keys from the tab in front.
+
 The command bar's status dot uses the same color as the shell tab's dot.
 
 ## Keys

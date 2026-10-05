@@ -83,7 +83,7 @@ describe('useQueuePicker', () => {
     }
     render(<C />);
     hook!.onEditQueued('edited');
-    expect(send).toHaveBeenCalledWith({ method: 'editQueuedCommand', params: { index: 0, text: 'edited' } });
+    expect(send).toHaveBeenCalledWith({ method: 'editQueuedCommand', params: { index: 0, text: 'edited', tab: 'janus' } });
   });
 
   it('sends deleteQueuedCommand with the current queueIndex', () => {
@@ -98,6 +98,59 @@ describe('useQueuePicker', () => {
     }
     render(<C />);
     hook!.onDeleteQueued();
-    expect(send).toHaveBeenCalledWith({ method: 'deleteQueuedCommand', params: { index: 0 } });
+    expect(send).toHaveBeenCalledWith({ method: 'deleteQueuedCommand', params: { index: 0, tab: 'janus' } });
+  });
+});
+
+describe('useQueuePicker raised from a shell while an agent is current', () => {
+  const shell = makeTab({
+    label: 'shell1', view: 'plugin', dock: 'left', commandQueue: ['make test'],
+    plugin: { id: 'shell', hostsCommandBar: true } as never,
+  });
+
+  function SourceComponent({ tab, onHook, onRecall }: {
+    tab: TabView;
+    onHook: (hook: ReturnType<typeof useQueuePicker>) => void;
+    onRecall: (text: string) => void;
+  }) {
+    const client = { send: vi.fn() } as never;
+    const inputRef = useRef<HTMLTextAreaElement>(null);
+    const recallRef = useRef(onRecall);
+    onHook(useQueuePicker(client, tab, inputRef, recallRef, [makeTab(), shell]));
+    return null;
+  }
+
+  // The opener runs before the app records the shell as the source, so the popup's tab is still the
+  // agent; the opener's own argument is what keeps the agent's queued line out of the agent bar.
+  it('opens for the shell without recalling the agent\'s queued line into the agent bar', () => {
+    let hook: ReturnType<typeof useQueuePicker> | undefined;
+    const onRecall = vi.fn();
+    render(<SourceComponent tab={makeTab()} onHook={(h) => { hook = h; }} onRecall={onRecall} />);
+
+    act(() => hook!.openQueue('shell1'));
+
+    expect(hook!.queueOpen).toBe(true);
+    expect(onRecall).not.toHaveBeenCalled();
+  });
+
+  it('does not open for a source tab that is not open', () => {
+    let hook: ReturnType<typeof useQueuePicker> | undefined;
+    render(<SourceComponent tab={makeTab()} onHook={(h) => { hook = h; }} onRecall={vi.fn()} />);
+
+    act(() => hook!.openQueue('gone'));
+
+    expect(hook!.queueOpen).toBe(false);
+  });
+
+  it('leaves the agent bar alone when the shell\'s popup closes', () => {
+    let hook: ReturnType<typeof useQueuePicker> | undefined;
+    const onRecall = vi.fn();
+    render(<SourceComponent tab={shell} onHook={(h) => { hook = h; }} onRecall={onRecall} />);
+
+    act(() => hook!.openQueue('shell1'));
+    act(() => hook!.setQueueOpen(false));
+
+    expect(hook!.queueOpen).toBe(false);
+    expect(onRecall).not.toHaveBeenCalled();
   });
 });
