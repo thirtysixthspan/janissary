@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Keep the host's idle queue drain from running a shell tab's queued lines through the per-tab piped shell.
-
-Existing Issue: Shell-tab lines queued with `queueLine` live in the same per-tab queue the host drains in `drainQueueOp` when a tab leaves the busy set, and that drain runs every line through `CommandManager.run` without checking the tab's view, so an unclaimed line would run in the piped background shell instead of zsh. Severity: 5/10
-
-Existing Risk: 4/10 - If a shell tab ever enters the host busy set (for example an `acp` line dispatched from its bar) while lines are queued, those lines run invisibly in the wrong shell and the client's `dequeue` finds the queue empty.
-
-Proposal Risk: 2/10 - The host drain skips plugin tabs, whose queues only the plugin drains, with residual risk only if a plugin tab is later meant to share agent-queue semantics.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: keep the host idle drain away from shell-tab queues". In `src/command/queue.ts` (`drainQueueOp`), return without dequeuing when the tab at `index` is a plugin tab (`tab.view === 'plugin'` or `tab.plugin !== undefined`), mirroring the `isAgentTab` check `dispatchOrRunOp` already makes. Add a `src/command/manager.test.ts` (or `src/command/queue` test) case that a plugin tab with queued lines leaving the busy set keeps its queue intact and runs nothing; existing agent-queue drain tests must keep passing.
-
-
 * Open a sibling shell with `Cmd+T` when the shell's terminal has focus, as the spec says.
 
 Existing Issue: `Cmd+T` is handled in `ShellTab`'s command-bar key handler only, so with the terminal focused the window handler opens an agent tab instead of another zsh tab. Severity: 4/10

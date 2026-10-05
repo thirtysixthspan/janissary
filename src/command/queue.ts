@@ -33,7 +33,8 @@ export function drainQueueOp(
 ): void {
   for (;;) {
     const index = managers.tab.findIndex(label);
-    if (index === -1 || managers.tab.isBusy(label) || hasPendingRoute()) return;
+    if (index === -1 || managers.tab.tabs[index].view === 'plugin') return;
+    if (managers.tab.isBusy(label) || hasPendingRoute()) return;
     const command = managers.tab.dequeue(label);
     if (command === undefined) return;
     run(command, label, index);

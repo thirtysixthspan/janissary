@@ -6,7 +6,9 @@ is busy, anything submitted to it — typed on its own command line, or dispatch
 appended to the queue instead of running immediately. Non-agent tabs (harness, image, page, markdown, editor,
 files, monitor) have no agent command queue; input to them behaves exactly as before. Shell tabs have
 their own per-tab queue for command-bar lines, described in [[shell-tab]], and accept the `queue`
-command as a way to add a line to it.
+command as a way to add a line to it. Only the shell tab drains that queue: the busy → idle drain
+below never runs a shell tab's queued lines, even if the shell tab was marked busy, because a line
+it ran would go to the tab's background shell instead of zsh.
 
 ### Queueing and draining
 

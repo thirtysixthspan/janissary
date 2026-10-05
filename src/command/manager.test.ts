@@ -215,6 +215,21 @@ describe('CommandManager queue gate', () => {
     expect(managers.tab.queueFor('janus')).toEqual([]);
     expect(managers.tab.cur().log).toEqual([]);
   });
+
+  it('leaves a plugin tab\'s queue for the plugin when the tab leaves the busy set', async () => {
+    const { managers, recorder } = makeManagers();
+    managers.tab.tabs[0].view = 'plugin';
+    managers.tab.enqueue('janus', 'shell echo one');
+    managers.tab.enqueue('janus', 'clear');
+
+    managers.tab.addBusy('janus');
+    managers.tab.deleteBusy('janus');
+    await Promise.resolve();
+
+    expect(managers.tab.queueFor('janus')).toEqual(['shell echo one', 'clear']);
+    expect(recorder).toEqual([]);
+    expect(managers.shell.run).not.toHaveBeenCalled();
+  });
 });
 
 describe('CommandManager shell --pty flag', () => {
