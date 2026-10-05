@@ -1,5 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { ShellHookClaim } from '@shared/plugins/shell/shared';
 import type { PluginTerminal } from '../api';
 import { useShellTerminal } from './useShellTerminal';
 
@@ -76,7 +77,14 @@ function makeHandle(into: {
   };
 }
 
-function harness(overrides: { attachTerminal?: undefined } = {}) {
+// The server's answer to the first claim on a terminal with no hooks yet: install, with this nonce.
+function winClaim(nonce: string): Promise<ShellHookClaim> {
+  return Promise.resolve({ install: true, nonce });
+}
+
+function harness(overrides: {
+  attachTerminal?: undefined; hookNonce?: string; claimHooks?: (nonce: string) => Promise<ShellHookClaim>;
+} = {}) {
   const written: string[] = [];
   const resized: { cols: number; rows: number }[] = [];
   const exitHandlers: (() => void)[] = [];
@@ -97,11 +105,15 @@ function harness(overrides: { attachTerminal?: undefined } = {}) {
   const copyText = vi.fn();
   const container = document.createElement('div');
   const containerRef = { current: container };
+  const claimHooks = vi.fn(overrides.claimHooks ?? winClaim);
   const view = renderHook(() => useShellTerminal({
     ptyId: 'pty7', containerRef, attachTerminal, onExit, onCommandRunning, onCwd,
-    copyText,
+    copyText, hookNonce: overrides.hookNonce, claimHooks,
   }));
-  return { byteCallbacks, container, copyText, exitHandlers, handle, onExit, onCommandRunning, onCwd, resized, detached, written, ...view };
+  return {
+    byteCallbacks, claimHooks, container, copyText, exitHandlers, handle, onExit, onCommandRunning, onCwd, resized,
+    detached, written, ...view,
+  };
 }
 
 function osc(id: number): (data: string) => boolean {
@@ -111,12 +123,16 @@ function osc(id: number): (data: string) => boolean {
 }
 
 // The nonce the hooks were installed with, read back from the setup line the terminal wrote: the
-// markers a test feeds must carry it exactly as zsh's would.
-function hookNonce(written: string[]): string {
+// markers a test feeds must carry it exactly as zsh's would. The line goes out once the server has
+// answered the install claim, so this waits for it.
+async function hookNonce(written: string[]): Promise<string> {
+  await waitFor(() => { expect(written[0]).toMatch(/133;E;[0-9a-f]+/); });
   const match = /133;E;([0-9a-f]+)/.exec(written[0] ?? '');
   if (!match?.[1]) throw new Error('no signed setup marker in the hook line');
   return match[1];
 }
+
+const INSTALLED = 'a'.repeat(32);
 
 describe('useShellTerminal', () => {
   it('renders the bytes the attachment hands it', () => {
@@ -202,9 +218,9 @@ describe('useShellTerminal', () => {
     expect(terminalFocusCalls).toEqual([1]);
   });
 
-  it('reports command start and prompt markers from the zsh integration', () => {
+  it('reports command start and prompt markers from the zsh integration', async () => {
     const { onCommandRunning, written } = harness();
-    const nonce = hookNonce(written);
+    const nonce = await hookNonce(written);
 
     expect(written[0]).toContain("export PROMPT='> '");
     expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
@@ -214,7 +230,7 @@ describe('useShellTerminal', () => {
     expect(onCommandRunning.mock.calls).toEqual([[true], [false]]);
   });
 
-  it('ignores status markers that do not carry the nonce its hooks were installed with', () => {
+  it('ignores status markers that do not carry the nonce its hooks were installed with', async () => {
     const onCommand = vi.fn();
     const onCommandRunning = vi.fn();
     const onCwd = vi.fn();
@@ -224,7 +240,9 @@ describe('useShellTerminal', () => {
       ptyId: 'pty7', containerRef: { current: container },
       attachTerminal: () => makeHandle({ written }),
       onExit: vi.fn(), onCommandRunning, onCwd, onCommand, copyText: vi.fn(),
+      hookNonce: undefined, claimHooks: winClaim,
     }));
+    const nonce = await hookNonce(written);
     const forged = 'f'.repeat(32);
 
     for (const marker of ['C', `C;${btoa('rm -rf ~')}`, `C;${forged};${btoa('rm -rf ~')}`, 'D', `D;${forged}`, 'E', `E;${forged}`]) {
@@ -239,7 +257,6 @@ describe('useShellTerminal', () => {
     expect(terminals[0].clearCalls).toBe(0);
     expect(container).toHaveClass('shell-initializing');
 
-    const nonce = hookNonce(written);
     osc(133)(`C;${nonce};${btoa('ls')}`);
     osc(133)(`D;${nonce}`);
     osc(7)(`${nonce};file://localhost/work`);
@@ -252,14 +269,70 @@ describe('useShellTerminal', () => {
     expect(container).not.toHaveClass('shell-initializing');
   });
 
-  it('installs its hooks with a fresh nonce on each attachment', () => {
+  it('mints a fresh nonce for each terminal that has no hooks yet', async () => {
     const first = harness();
     const second = harness();
 
-    expect(hookNonce(first.written)).not.toBe(hookNonce(second.written));
+    expect(await hookNonce(first.written)).not.toBe(await hookNonce(second.written));
   });
 
-  it('reports the command line a start marker carries as well as the running state', () => {
+  it('claims the install with the nonce it minted and writes the setup line built from it', async () => {
+    const { claimHooks, written } = harness();
+    const nonce = await hookNonce(written);
+
+    expect(claimHooks.mock.calls).toEqual([[nonce]]);
+    expect(written).toHaveLength(1);
+  });
+
+  it('only re-attaches to a terminal whose hooks are installed, however often it mounts', () => {
+    const first = harness({ hookNonce: INSTALLED });
+    first.unmount();
+    const second = harness({ hookNonce: INSTALLED });
+
+    for (const mount of [first, second]) {
+      expect(mount.claimHooks).not.toHaveBeenCalled();
+      expect(mount.written).toEqual([]);
+      expect(mount.container).not.toHaveClass('shell-initializing');
+    }
+    expect(second.resized).toEqual([{ cols: 120, rows: 40 }]);
+    expect(terminals.map((terminal) => terminal.clearCalls)).toEqual([0, 0]);
+  });
+
+  it('acts on markers signed with the installed nonce after a re-attach', () => {
+    const { onCommandRunning, onCwd } = harness({ hookNonce: INSTALLED });
+
+    osc(133)(`C;${'f'.repeat(32)}`);
+    osc(133)(`C;${INSTALLED}`);
+    osc(7)(`${INSTALLED};file://localhost/work`);
+
+    expect(onCommandRunning.mock.calls).toEqual([[true]]);
+    expect(onCwd.mock.calls).toEqual([['/work']]);
+  });
+
+  it('writes nothing and reveals the terminal when another attach already won the install', async () => {
+    const { container, onCommandRunning, written } = harness({
+      claimHooks: () => Promise.resolve({ install: false, nonce: INSTALLED }),
+    });
+
+    await waitFor(() => { expect(container).not.toHaveClass('shell-initializing'); });
+    expect(written).toEqual([]);
+    osc(133)(`D;${INSTALLED}`);
+    expect(onCommandRunning.mock.calls).toEqual([[false]]);
+  });
+
+  it('still writes a won install whose answer arrives after the tab unmounted', async () => {
+    let release = () => {};
+    const { unmount, written } = harness({
+      claimHooks: (nonce) => new Promise((resolve) => { release = () => { resolve({ install: true, nonce }); }; }),
+    });
+
+    unmount();
+    release();
+
+    expect(await hookNonce(written)).toMatch(/^[0-9a-f]{32}$/);
+  });
+
+  it('reports the command line a start marker carries as well as the running state', async () => {
     const onCommand = vi.fn();
     const onCommandRunning = vi.fn();
     const written: string[] = [];
@@ -267,9 +340,10 @@ describe('useShellTerminal', () => {
       ptyId: 'pty7', containerRef: { current: document.createElement('div') },
       attachTerminal: () => makeHandle({ written }),
       onExit: vi.fn(), onCommandRunning, onCwd: vi.fn(), onCommand, copyText: vi.fn(),
+      hookNonce: undefined, claimHooks: winClaim,
     }));
 
-    const nonce = hookNonce(written);
+    const nonce = await hookNonce(written);
     expect(written[0]).toContain(String.raw`printf '\033]133;C;${nonce};%s\a'`);
     expect(osc(133)(`C;${nonce};${btoa('git status')}`)).toBe(true);
 
@@ -277,7 +351,7 @@ describe('useShellTerminal', () => {
     expect(onCommand.mock.calls).toEqual([['git status']]);
   });
 
-  it('does not add the injected shell status hooks to command history', () => {
+  it('does not add the injected shell status hooks to command history', async () => {
     const onCommand = vi.fn();
     const onCommandRunning = vi.fn();
     const written: string[] = [];
@@ -285,31 +359,35 @@ describe('useShellTerminal', () => {
       ptyId: 'pty7', containerRef: { current: document.createElement('div') },
       attachTerminal: () => makeHandle({ written }),
       onExit: vi.fn(), onCommandRunning, onCwd: vi.fn(), onCommand, copyText: vi.fn(),
+      hookNonce: undefined, claimHooks: winClaim,
     }));
+    const nonce = await hookNonce(written);
     const startup = written[0]?.trimEnd() ?? '';
     const encoded = btoa(String.fromCodePoint(...new TextEncoder().encode(startup)));
 
-    expect(osc(133)(`C;${hookNonce(written)};${encoded}`)).toBe(true);
+    expect(osc(133)(`C;${nonce};${encoded}`)).toBe(true);
     expect(onCommand).not.toHaveBeenCalled();
     expect(onCommandRunning).toHaveBeenCalledWith(true);
   });
 
-  it('keeps startup output hidden until the zsh hooks are installed', () => {
+  it('keeps startup output hidden until the zsh hooks are installed', async () => {
     const { container, written } = harness();
 
     expect(container).toHaveClass('shell-initializing');
+    const nonce = await hookNonce(written);
+    expect(container).toHaveClass('shell-initializing');
     expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
     expect(written[0]).toContain('add-zsh-hook precmd _janus_precmd');
-    expect(osc(133)(`E;${hookNonce(written)}`)).toBe(true);
+    expect(osc(133)(`E;${nonce}`)).toBe(true);
 
     expect(terminals[0].clearCalls).toBe(1);
     expect(container).not.toHaveClass('shell-initializing');
   });
 
-  it('reports the path from zsh current-directory markers', () => {
+  it('reports the path from zsh current-directory markers', async () => {
     const { onCwd, written } = harness();
 
-    expect(osc(7)(`${hookNonce(written)};file://localhost/work/child%20dir`)).toBe(true);
+    expect(osc(7)(`${await hookNonce(written)};file://localhost/work/child%20dir`)).toBe(true);
     expect(onCwd).toHaveBeenCalledWith('/work/child dir');
   });
 
@@ -336,7 +414,7 @@ describe('useShellTerminal', () => {
       ptyId: 'pty7',
       containerRef: { current: container },
       attachTerminal: undefined,
-      onExit: vi.fn(), onCommandRunning: vi.fn(), copyText: vi.fn(),
+      onExit: vi.fn(), onCommandRunning: vi.fn(), copyText: vi.fn(), hookNonce: undefined, claimHooks: winClaim,
       onCwd: vi.fn(),
     }));
 
@@ -392,6 +470,7 @@ describe('useShellTerminal', () => {
     const { rerender, unmount } = renderHook(
       ({ attachTerminal }) => useShellTerminal({
         ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(), copyText: vi.fn(),
+        hookNonce: undefined, claimHooks: winClaim,
       }),
       { initialProps: { attachTerminal: first } },
     );

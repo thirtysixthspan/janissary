@@ -155,6 +155,32 @@ describe('shell plugin activation', () => {
     expect(ask(capabilities, 'terminal-status', undefined)).toEqual({ running: false });
   });
 
+  it('stores the first install-hooks claim and tells that claimant to install', () => {
+    const { capabilities, updated } = fakeCapabilities();
+    const nonce = 'c'.repeat(32);
+
+    expect(ask(capabilities, 'install-hooks', nonce)).toEqual({ install: true, nonce });
+    expect(updated).toEqual([{ key: 'shell-1', payload: { ...PAYLOAD, hookNonce: nonce } }]);
+  });
+
+  it('hands a later claimant the installed nonce and stores nothing', () => {
+    const { capabilities, updated } = fakeCapabilities();
+    const installed = 'd'.repeat(32);
+
+    expect(ask(capabilities, 'install-hooks', 'e'.repeat(32), { ...PAYLOAD, hookNonce: installed }))
+      .toEqual({ install: false, nonce: installed });
+    expect(updated).toEqual([]);
+  });
+
+  it('rejects an install-hooks claim whose nonce is not one the client mints', () => {
+    const { capabilities, updated } = fakeCapabilities();
+
+    for (const nonce of ["'; rm -rf ~; '", 'C'.repeat(32), 'c'.repeat(31), 42]) {
+      expect(() => ask(capabilities, 'install-hooks', nonce)).toThrow(TabPluginRejection);
+    }
+    expect(updated).toEqual([]);
+  });
+
   it('updates its own payload when the terminal reports a command state', () => {
     const { capabilities, updated, unreadChanges } = fakeCapabilities();
 

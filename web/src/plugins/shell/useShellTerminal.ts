@@ -6,8 +6,10 @@ import {
   type PluginTerminal,
 } from '../api';
 import { shellTerminalTheme } from './shell-terminal-theme';
-import { readShellCwd, readShellMarker } from './shell-command-marker';
-import { createShellMarkerNonce, shellStatusHooks } from './shell-status-hooks';
+import { createShellMarkerNonce } from './shell-status-hooks';
+import {
+  SHELL_INITIALIZING, installShellHooks, registerShellMarkerHandlers, type ClaimShellHooks,
+} from './shell-marker-handlers';
 import { insertMarkdownBlock } from './markdown-block';
 import { formatDispatchedCommand } from './format-dispatched-command';
 import { markdownToAnsi } from './markdown-to-ansi';
@@ -28,6 +30,10 @@ type Options = {
   // Called when the shell behind this terminal exits. A plugin tab has nowhere else to hear it: the
   // event is broadcast once, to whoever happened to be connected at the time.
   onExit: () => void;
+  // The nonce the terminal's hooks were installed with, when an earlier attach installed them. Read
+  // once, at mount: with one, the mount only re-attaches and types nothing into the shell.
+  hookNonce: string | undefined;
+  claimHooks: ClaimShellHooks;
 };
 
 // What the tab writes to the shell through. One attachment, created once here: resizing and typing
@@ -44,7 +50,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, containerRef, attachTerminal, copyText, onExit, onCommandRunning, onCwd, onCommand,
+  ptyId, containerRef, attachTerminal, copyText, onExit, onCommandRunning, onCwd, onCommand, hookNonce, claimHooks,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -65,6 +71,10 @@ export function useShellTerminal({
   attachRef.current = attachTerminal;
   const copyTextRef = useRef(copyText);
   copyTextRef.current = copyText;
+  const hookNonceRef = useRef(hookNonce);
+  hookNonceRef.current = hookNonce;
+  const claimRef = useRef(claimHooks);
+  claimRef.current = claimHooks;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -92,35 +102,20 @@ export function useShellTerminal({
       copyTextRef.current(terminal.getSelection());
       return false;
     });
-    container.classList.add('shell-initializing');
+    // An installed nonce means a shell whose hooks are already running, possibly with a full-screen
+    // program in the foreground: nothing is hidden and nothing is typed. Only a terminal with no
+    // hooks yet stays hidden until its setup line has run.
+    const installed = hookNonceRef.current;
+    if (installed === undefined) container.classList.add(SHELL_INITIALIZING);
     const themeObserver = new MutationObserver(() => {
       terminal.options.theme = shellTerminalTheme();
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    const nonce = createShellMarkerNonce();
-    const hooks = shellStatusHooks(nonce);
-    terminal.parser.registerOscHandler(133, (data) => {
-      const marker = readShellMarker(data, nonce);
-      switch (marker?.kind) {
-      case 'C': {
-        runningRef.current(true);
-        if (marker.command !== undefined && marker.command !== hooks.trimEnd()) commandRef.current?.(marker.command);
-        break;
-      }
-      case 'D': { runningRef.current(false); break; }
-      case 'E': {
-        terminal.clear();
-        container.classList.remove('shell-initializing');
-        break;
-      }
-      }
-      // An unsigned C, D or E is ignored, but still consumed like a signed one.
-      return ['C', 'D', 'E'].includes(data.split(';', 1)[0]);
-    });
-    terminal.parser.registerOscHandler(7, (data) => {
-      const cwd = readShellCwd(data, nonce);
-      if (cwd !== undefined) cwdRef.current(cwd);
-      return true;
+    const nonce = { current: installed ?? createShellMarkerNonce() };
+    registerShellMarkerHandlers(terminal, container, nonce, {
+      running: (running) => { runningRef.current(running); },
+      command: (command) => { commandRef.current?.(command); },
+      cwd: (cwd) => { cwdRef.current(cwd); },
     });
     // One fit, once the attachment exists: fitting before it can do nothing useful, because the size
     // has nowhere to go until there is a process on the other end.
@@ -150,9 +145,9 @@ export function useShellTerminal({
       if (disposed) { handle.detach(); return; }
       handleRef.current = handle;
       terminal.onData((data) => { handleRef.current?.write(data); });
-      handle.write(hooks);
       handle.onExit(() => { exitRef.current(); });
       resize();
+      if (installed === undefined) installShellHooks(handle, container, nonce, claimRef.current);
     };
     const attachment = attach(ptyId, (data) => { terminal.write(data); });
     if (attachment instanceof Promise) {

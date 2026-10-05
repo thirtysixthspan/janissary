@@ -134,7 +134,8 @@ function makeCapabilities(overrides: {
   const { promise: answered, resolve: answerDispatch } = withResolvers<void>();
   const capabilities = {
     resourceUrl: (reference: string) => reference,
-    intent: vi.fn(async (name: string) => {
+    intent: vi.fn(async (name: string, payload?: unknown) => {
+      if (name === 'install-hooks') return { install: true, nonce: payload };
       if (name === 'terminal-status') return overrides.status ?? { running: true };
       if (name === 'dispatch') {
         await answered;
@@ -883,6 +884,29 @@ describe('ShellTab', () => {
 
     await waitFor(() => { expect(screen.getByLabelText('Shell command')).toBeInTheDocument(); });
     expect(closed).toEqual([]);
+  });
+
+  it('claims the hook install for a shell with none yet and types the setup line it won', async () => {
+    const made = makeCapabilities();
+    const writes = vi.spyOn(made.handle, 'write');
+
+    mountShell(PAYLOAD, made.capabilities);
+
+    await waitFor(() => {
+      expect(writes.mock.calls.some(([data]) => data.startsWith("export PROMPT='> '"))).toBe(true);
+    });
+    expect(made.capabilities.intent).toHaveBeenCalledWith('install-hooks', NONCE);
+  });
+
+  it('types no setup line into a shell whose hooks an earlier attach installed', async () => {
+    const made = makeCapabilities();
+    const writes = vi.spyOn(made.handle, 'write');
+
+    mountShell({ ...PAYLOAD, hookNonce: 'b'.repeat(32) }, made.capabilities);
+
+    await waitFor(() => { expect(made.capabilities.intent).toHaveBeenCalledWith('terminal-status', null); });
+    expect(made.capabilities.intent).not.toHaveBeenCalledWith('install-hooks', expect.anything());
+    expect(writes.mock.calls.some(([data]) => data.startsWith("export PROMPT='> '"))).toBe(false);
   });
 
   it('holds focus in the command bar rather than the terminal', async () => {

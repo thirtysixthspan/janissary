@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AcpRef, ConnectionView, ScheduleView } from '../protocol.js';
 import type { CompletionResult } from '../../completion/types.js';
 import {
-  isEmptyShellIntent, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellPayload,
+  isEmptyShellIntent, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellMarkerNonce, isShellPayload,
   SHELL_PAYLOAD_SCHEMA_VERSION, type ShellCompletion,
 } from './shared.js';
 
@@ -94,6 +94,20 @@ describe('shell shared contract', () => {
     expect(isShellPayload({ ...PAYLOAD, cols: '80' })).toBe(false);
     expect(isShellPayload({ ...PAYLOAD, workspace: 'yes' })).toBe(false);
     expect(isShellPayload({ ...PAYLOAD, commandRunning: 'yes' })).toBe(false);
+  });
+
+  it('accepts an absent or well-formed hook nonce and rejects any other', () => {
+    expect(isShellPayload({ ...PAYLOAD, hookNonce: '0123456789abcdef'.repeat(2) })).toBe(true);
+    expect(isShellPayload({ ...PAYLOAD, hookNonce: 'n0nce' })).toBe(false);
+    expect(isShellPayload({ ...PAYLOAD, hookNonce: 7 })).toBe(false);
+  });
+
+  it('accepts a marker nonce only in the shape the client mints', () => {
+    expect(isShellMarkerNonce('0123456789abcdef'.repeat(2))).toBe(true);
+    expect(isShellMarkerNonce('0123456789ABCDEF'.repeat(2))).toBe(false);
+    expect(isShellMarkerNonce('0'.repeat(33))).toBe(false);
+    expect(isShellMarkerNonce(`${'0'.repeat(31)};`)).toBe(false);
+    expect(isShellMarkerNonce(undefined)).toBe(false);
   });
 
   it('rejects an array and null, which are not a payload', () => {

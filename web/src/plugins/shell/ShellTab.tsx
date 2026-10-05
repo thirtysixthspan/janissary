@@ -2,12 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
-import { useShellTerminal } from './useShellTerminal';
+import { useShellTabTerminal } from './useShellTabTerminal';
 import { handleCompletionDismissKey, handleQueueKey, handleShellControlKey } from './command-bar-keys';
 import { insertCommandAtCaret } from './insert-command-at-caret';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
-import { reportShellCwd } from './report-shell-cwd';
 import { useShellSubmit } from './useShellSubmit';
 import { useShellCommandQueue } from './useShellCommandQueue';
 import type { ShellCommandQueue } from './shell-command-queue';
@@ -70,23 +69,15 @@ export function ShellTab({ payload, capabilities }: Properties) {
   }, [appBar.pluginCommandLineInsertions, capabilities.label]);
 
   const terminalHistory = useTerminalCommandHistory(setSent);
-  const { write, displayReply, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTerminal({
-    ptyId: payload.ptyId,
+  const { write, displayReply, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTabTerminal({
+    payload,
+    capabilities,
     containerRef: terminalReference,
-    attachTerminal: capabilities.attachTerminal,
-    copyText: capabilities.copyText,
     onCommand: terminalHistory.onCommand,
-    onCommandRunning: useCallback((running: boolean) => {
+    onCommandRunning: (running) => {
       setCommandRunning(running);
       queueReference.current?.setBusy(running);
-      void capabilities.intent<{ updated: boolean }>('command-state', { running }).catch(() => {
-        capabilities.reportFailure('shell command status intent failed');
-      });
-    }, [capabilities]),
-    onCwd: (cwd) => { reportShellCwd(capabilities, cwd); },
-    // The tab closes when the shell exits: no exited state and no way to start another, so a closed
-    // tab is the honest representation of a shell that is no longer running.
-    onExit: useCallback(() => { capabilities.close(); }, [capabilities]),
+    },
   });
 
   useShellScrollKeys({

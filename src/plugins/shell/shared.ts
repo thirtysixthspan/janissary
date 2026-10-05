@@ -53,6 +53,10 @@ export type ShellPayload = {
   connections: ShellConnectionRow[];
   schedule: ShellScheduleRow[];
   commandRunning?: boolean;
+  // The nonce the shell's status hooks were installed with. Absent until the first client to attach
+  // claims the install, then fixed for the life of the terminal: a later attach re-uses it rather
+  // than typing the setup line into whatever program holds the foreground.
+  hookNonce?: string;
 };
 
 export type ShellIntent = 'terminal-status' | 'dispatch' | 'complete' | 'cwd' | 'queue' | 'dequeue';
@@ -71,6 +75,10 @@ export type ShellDispatchResult = { dispatched: boolean; output: string };
 // second one, so a plugin holding a ptyId and a command line needs exactly one wire route.
 export type ShellCompleteRequest = { line: string; cursor: number };
 export type ShellCommandState = { running: boolean };
+
+// The answer to an `install-hooks` claim: `install` is true for exactly one claimant, and `nonce` is
+// the one the installed hooks sign their markers with, whichever client minted it.
+export type ShellHookClaim = { install: boolean; nonce: string };
 
 // An absolute path already in normal form: no empty, `.` or `..` segment and no trailing slash beyond
 // the root itself. zsh's `$PWD` is always written that way, so a real report never trips this, while
@@ -120,6 +128,12 @@ function isScheduleRow(value: unknown): value is ShellScheduleRow {
     && typeof value.recurring === 'boolean';
 }
 
+// The shape `createShellMarkerNonce` mints: 16 random bytes as lowercase hex. Checked because the
+// nonce is written into the hook functions zsh runs, so nothing else may stand in for one.
+export function isShellMarkerNonce(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{32}$/.test(value);
+}
+
 export function isShellPayload(value: unknown): value is ShellPayload {
   return isRecord(value)
     && typeof value.instanceKey === 'string'
@@ -134,7 +148,8 @@ export function isShellPayload(value: unknown): value is ShellPayload {
     && value.connections.every(isConnectionRow)
     && Array.isArray(value.schedule)
     && value.schedule.every(isScheduleRow)
-    && (value.commandRunning === undefined || typeof value.commandRunning === 'boolean');
+    && (value.commandRunning === undefined || typeof value.commandRunning === 'boolean')
+    && (value.hookNonce === undefined || isShellMarkerNonce(value.hookNonce));
 }
 
 // The one intent that carries no payload at all, so absent and null are the only two shapes that can

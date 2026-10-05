@@ -5,17 +5,6 @@
 * the msg command to a shell tab, of each type, should be supported.
 
 
-* Install the shell tab's startup hooks once per terminal rather than retyping them on every mount.
-
-Existing Issue: `useShellTerminal` writes the whole hook-setup line into the PTY and hides the terminal until the `133;E` marker on every attach, and attaching happens on every mount, including docking, undocking and a browser reload of an already-running shell. Severity: 7/10
-
-Existing Risk: 7/10 - Docking a shell or reloading the app while `vim`, `python`, `ssh` or a `sudo` prompt is in the foreground types the hook line into that program, leaves the terminal hidden until it exits, clears the scrollback on `E`, and raises a spurious unread badge and waiting notification.
-
-Proposal Risk: 3/10 - Hooks are installed exactly once for the PTY's life and remounts only re-attach, with residual risk around a client that attaches before the first install completes.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: install shell startup hooks once per terminal instead of on every mount". Record on the server whether a shell tab's PTY has been initialised: add an `initialized` boolean to the shell payload in `src/plugins/shell/shared.ts` (with its guard), set it through a new intent (for example `initialized`) in `src/plugins/shell/activate.ts` when the client sees `133;E`, and expose it to `web/src/plugins/shell/ShellTab.tsx`. In `web/src/plugins/shell/useShellTerminal.ts`, take an `initialized` option: when true, skip `handle.write(SHELL_STATUS_HOOKS)`, do not add the `shell-initializing` class, and do not clear on attach; when false, behave as today and report initialisation on `E`. Add `web/src/plugins/shell/useShellTerminal.test.ts` cases that mounting twice for the same pty with `initialized: true` writes no hooks and leaves the terminal visible, plus a `src/plugins/shell/activate.test.ts` case for the new intent and payload field. Update `product/specs/shell-tab.md`'s "Where the shell starts" section to say the hooks are installed once per shell.
-
-
 * Scope the published app command-bar state to the shell tab that owns it, so one tab's queue popup cannot overwrite every shell's draft, and wake an idle shell when another tab queues a line for it.
 
 Existing Issue: `AppCommandBarProvider`/`useAppCommandBar` give every plugin body the current tab's `queueOpen`, `queueIndex` and `queueItems`, the raw insertion map, `onFocusTab` and an `intercept` that takes any source tab, and `ShellTab`'s queue effect reacts to that global state ungated, while a line queued for an idle shell by `send` or `queue` from another tab never wakes that shell's drain. Severity: 7/10

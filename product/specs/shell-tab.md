@@ -192,16 +192,17 @@ path in normal form, with no `.` or `..` segment, no doubled slash, and no trail
 root. zsh always reports its directory that way, so any other report is refused and the recorded
 directory stays where it was.
 
-The tab trusts only the markers its own zsh hooks print. Each time the tab attaches to its terminal it
-generates a random nonce and installs the hooks with it, and every marker they emit carries it: the
+The tab trusts only the markers its own zsh hooks print. The hooks are installed with a random nonce,
+generated once per shell, and every marker they emit carries it: the
 command-start marker (`OSC 133;C;<nonce>;<base64 command>`), the prompt marker (`133;D;<nonce>`), the
 setup-complete marker (`133;E;<nonce>`) and the directory report (`OSC 7;<nonce>;file://<host><path>`).
 The nonce is written into the hook functions themselves, never into a shell variable a child process
 could read. A marker without the right nonce is ignored, so a program's output — a `cat` of a crafted
 file, or a remote host reached over `ssh` — cannot mark the shell busy or idle, add a command to this
-tab's history, change the recorded directory, or clear and reveal the terminal. Because each attach
-installs the hooks with a new nonce, markers from the hooks an earlier attach installed are ignored
-until zsh runs the new setup line.
+tab's history, change the recorded directory, or clear and reveal the terminal. The nonce is minted
+in the browser and kept in the tab's server-side payload (`hookNonce`) for the life of the shell, so a
+later attach reads it from there and trusts the markers of the hooks already running. A `hookNonce`
+must be 32 lowercase hex characters, because it is written into the hook functions zsh runs.
 
 ## Where the shell starts
 
@@ -225,6 +226,16 @@ tab whatever the user's login shell happens to be. It is a fully interactive zsh
 startup files, then sets its prompt to `> ` so user prompt formatting does not change the shell tab's
 terminal display. The terminal stays hidden until its pre-command and post-command hooks are
 installed, and the startup screen is cleared before the plain prompt appears.
+
+The hooks are installed once per shell, not once per attach. Docking, undocking, or reloading the browser mounts the tab again, and a mount whose shell already has hooks only
+re-attaches: it types nothing into the terminal, does not hide it, and does not clear it, so a `vim`,
+`python`, `ssh` or `sudo` prompt in the foreground is left alone. A re-attached terminal starts with
+an empty screen and shows the shell's output from that point on. Only a mount whose shell has no
+hooks yet claims the install, through the shell plugin's `install-hooks` intent: the first claim on a
+shell stores the claimant's nonce and tells it to type the setup line; any later claim, such as a
+second window attaching in the same moment, stores nothing and is handed the stored nonce, and that
+mount reveals its terminal without typing anything. A claim that wins is typed even if its tab
+unmounted while the answer was in flight, because the shell is already recorded as having hooks.
 
 ## Lifetime
 
