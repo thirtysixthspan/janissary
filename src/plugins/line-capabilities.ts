@@ -20,7 +20,7 @@ export function lineCapabilities(input: {
   deadline?: HandlerDeadline;
 }): Pick<
   TabPluginServerCapabilities,
-  'originTab' | 'dispatchLine' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning' | 'queueLine' | 'nextQueuedLine' | 'recordCwd'
+  'originTab' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning' | 'queueLine' | 'nextQueuedLine' | 'recordCwd'
 > {
   const { managers, declaration, origin, answeringLabel, isEnabled, deadline } = input;
   // The tab whose queue and recorded directory a line capability may change: the answering tab, or
@@ -56,11 +56,7 @@ export function lineCapabilities(input: {
     // from otherwise, which is all a command or selection action has. An answering tab that has since
     // closed falls back rather than addressing a label with no tab behind it, which would silently drop
     // the output on the floor.
-    dispatchLine: (line) => {
-      if (!isEnabled()) return false;
-      const answering = answeringLabel && managers.tab.byLabel(answeringLabel);
-      return managers.command.dispatchLine(answering ? answeringLabel : origin.label, line);
-    },
+    //
     // The command runs on the host's time, not the plugin's: it may be another plugin's command, a
     // large `open` or an agent launch, and a plugin must not be disabled for slowness that is not its
     // own. Only the wait is exempted — the plugin's work either side of it is still timed.

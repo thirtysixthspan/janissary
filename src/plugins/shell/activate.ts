@@ -50,10 +50,10 @@ export function activate(): TabPluginActivation {
       }));
     },
     // The three routes the client sends. `dispatch` and `complete` exist because the primitives behind
-    // them are server capabilities — `dispatchLine` and `completeLine` — and a plugin's only channel
-    // to the server is an intent, so each capability needs exactly one wire route of its own. One
-    // route rather than a resolve-then-decide pair for `dispatch`, so the application's command table
-    // is consulted once, in the one place that owns it.
+    // them are server capabilities — `dispatchLineWithOutput` and `completeLine` — and a plugin's only
+    // channel to the server is an intent, so each capability needs exactly one wire route of its own.
+    // One route rather than a resolve-then-decide pair for `dispatch`, so the application's command
+    // table is consulted once, in the one place that owns it.
     intent: defineIntents<
       ShellPayload,
       {

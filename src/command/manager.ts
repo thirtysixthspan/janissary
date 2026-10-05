@@ -9,6 +9,7 @@ import { recordGlobalHistory } from '../global-history.js';
 import type { Managers } from '../managers.js';
 import { dispatchOrRunOp, drainQueueOp } from './queue.js';
 import { errorText } from '../error-text.js';
+import { executeAndCapture } from '../capture/execute-and-capture.js';
 
 type PendingRoute = { label: string; cmd: string; choices: RouteChoice[] };
 
@@ -119,27 +120,16 @@ export class CommandManager {
     this.managers.pty.openInlinePty(label, command, program);
   }
 
-  // Offers one line to the ordinary dispatcher and answers whether the application claimed it.
+  // Offers one line to the ordinary dispatcher and answers whether the application claimed it, with
+  // the output it added to the tab.
   //
   // Deliberately narrower than `run`: a resolution to the `shell` route or to nothing at all is not
   // an application command, so both report `false` and the caller decides what they mean. What counts
   // as claimed is a registry entry or a built-in that answers with output — the two kinds `run`
   // handles without a route chooser or a shell in the middle.
-  dispatchLine(label: string, input: string): boolean {
-    const res = resolveCommand(input);
-    if (res.kind === 'output') {
-      this.managers.tab.append(label, { input, output: res.output, markdown: true });
-      return true;
-    }
-    if (res.kind !== 'app') return false;
-    void this.executeCommand(res.name, res.cmd, label, this.managers.tab.findIndex(label));
-    return true;
-  }
-
+  //
   // The wait is bounded because nothing else bounds it: the plugin asking is not charged for the
-  // command's runtime, so a command that never finishes would otherwise hold the caller forever. Past
-  // the limit the caller gets what was said so far; the command keeps running, and anything it says
-  // later lands in the tab's own record as it always would.
+  // command's runtime, so a command that never finishes would otherwise hold the caller forever.
   async dispatchLineWithOutput(
     label: string,
     input: string,
@@ -152,20 +142,11 @@ export class CommandManager {
     }
     if (resolution.kind !== 'app') return { dispatched: false, output: '' };
 
-    const output: string[] = [];
-    const subscription = messageBus.on('transcript', 'entry:appended', (event) => {
-      if (event.type === 'entry:appended' && event.tabLabel === label) output.push(event.entry.output);
-    });
-    let limit: ReturnType<typeof setTimeout> | undefined;
-    try {
-      await Promise.race([
-        this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label)),
-        new Promise<void>((resolve) => { limit = setTimeout(resolve, captureLimitMs); }),
-      ]);
-    } finally {
-      clearTimeout(limit);
-      subscription.unsubscribe();
-    }
+    const output = await executeAndCapture(
+      label,
+      () => this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label)),
+      captureLimitMs,
+    );
     return { dispatched: true, output: output.join('\n') };
   }
 

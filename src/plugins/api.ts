@@ -236,13 +236,12 @@ export type TabPluginServerCapabilities = {
   // this makes the same resolution readable rather than new. `remote` is set, and only then, when the
   // tab's session runs on another host: its directory belongs to that host, not to this filesystem.
   originTab(): { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean }; remote?: true } | null;
-  // Offer one line to the application's own command dispatcher, answering whether it ran. A line that
-  // resolves to a command runs as that command in the tab this was called from; a line that resolves
-  // to nothing is the caller's to handle. Deliberately one call rather than a resolve-then-decide
-  // pair: the application's command table is consulted once, in the one place that owns it, and is
-  // never copied into a plugin where a newly added command would be invisible.
-  dispatchLine(line: string): boolean;
-  // Dispatch one application command and return the output it adds to the answering tab's transcript.
+  // Offer one line to the application's own command dispatcher, answering whether it ran and with the
+  // output it added to the answering tab's transcript. A line that resolves to a command runs as that
+  // command in the tab this was called from; a line that resolves to nothing is the caller's to
+  // handle. Deliberately one call rather than a resolve-then-decide pair: the application's command
+  // table is consulted once, in the one place that owns it, and is never copied into a plugin where a
+  // newly added command would be invisible.
   dispatchLineWithOutput(line: string): Promise<{ dispatched: boolean; output: string }>;
   // The completion the application's command bar shows for a line, for a plugin whose tab has one.
   completeLine(line: string, cursor: number): CompletionResult;

@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Remove the unused `dispatchLine` capability and share one execute-and-capture helper between the shell dispatch path and message capture.
-
-Existing Issue: `dispatchLine` was added to the v1 plugin contract, its capability list, the line capabilities, `CommandManager` and the shell manifest, but nothing calls it, and `dispatchLineWithOutput` copies the subscribe, execute, unsubscribe capture from `CaptureManager.runCommand`, while `ShellIntent` in the shell's shared module is unused and stale and `isTerminalStatus` has no production caller. Severity: 4/10
-
-Existing Risk: 4/10 - The contract carries a permanent public capability with no caller and a manifest requesting it, and two copies of the output-capture seam drift, so a fix to one (for example honoring `Command.capture` hooks) misses the other.
-
-Proposal Risk: 2/10 - One capture helper and a smaller contract, with residual risk only if an out-of-tree plugin already declared `dispatchLine`.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: remove dispatchLine and share command output capture". Delete `dispatchLine` from `src/plugins/api.ts`, `src/plugins/api-capabilities.ts`, `src/plugins/line-capabilities.ts`, `src/command/manager.ts` and `src/plugins/shell/manifest.ts`, and remove or retarget its tests in `src/command/manager.test.ts` and `src/plugins/shell-capabilities.test.ts`; update `documentation/developer-documentation/tab-plugins.md` and `src/plugins/documentation.test.ts` if they list it. Extract an `executeAndCapture(label, run)` helper (in `src/capture/` or `src/command/`) that subscribes to `entry:appended` for the label, awaits the run, unsubscribes, and returns the joined output, and use it from both `CaptureManager.runCommand` in `src/capture/manager.ts` and `CommandManager.dispatchLineWithOutput`. Remove `ShellIntent` and, if still unused outside tests, `isTerminalStatus` from `src/plugins/shell/shared.ts` and its test. Existing `src/capture/*.test.ts` and `src/command/manager.test.ts` capture tests must keep passing.
-
-
 * Share one predicate for "a plugin tab that owns a terminal" across send, queue and schedule targeting.
 
 Existing Issue: The check that a tab is a plugin tab owning a live terminal is written separately in `send`, `queue` and the schedule target filter, so the three rules for which tabs accept shell input can diverge. Severity: 3/10

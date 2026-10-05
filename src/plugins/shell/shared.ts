@@ -59,12 +59,8 @@ export type ShellPayload = {
   hookNonce?: string;
 };
 
-export type ShellIntent = 'terminal-status' | 'dispatch' | 'complete' | 'cwd' | 'queue' | 'dequeue';
-
 // The front of this tab's command queue, or `null` once it is empty.
 export type ShellQueuedLine = { line: string | null };
-
-export type ShellTerminalStatus = { running: boolean };
 
 // What the host decided about one line: `dispatched` is true when the application claimed it as a
 // command, false when it resolved to nothing and the shell should have it. The client writes a
@@ -171,9 +167,5 @@ export function isShellCompleteRequest(value: unknown): value is ShellCompleteRe
 }
 
 export function isShellCommandState(value: unknown): value is ShellCommandState {
-  return isRecord(value) && typeof value.running === 'boolean';
-}
-
-export function isTerminalStatus(value: unknown): value is ShellTerminalStatus {
   return isRecord(value) && typeof value.running === 'boolean';
 }

@@ -30,7 +30,6 @@ export const shellManifest = {
   spawnTerminal: true,
   capabilities: [
     'originTab',
-    'dispatchLine',
     'dispatchLineWithOutput',
     'completeLine',
     // `terminalRunning` is what the mount-time status question asks, so leaving it out does not fail

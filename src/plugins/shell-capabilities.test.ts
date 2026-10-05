@@ -126,73 +126,45 @@ describe('originTab', () => {
   });
 });
 
-describe('dispatchLine', () => {
-  function withDispatcher(dispatched: boolean) {
-    const dispatchLine = vi.fn(() => dispatched);
-    const { byLabel, managers } = makeManagers({ command: { dispatchLine } as never });
-    return { byLabel, managers, dispatchLine };
-  }
-
-  it('reports a line the application claimed, having asked its own dispatcher', () => {
-    const { managers, dispatchLine } = withDispatcher(true);
-
-    expect(contextFor(['dispatchLine'], managers).dispatchLine('theme')).toBe(true);
-    // With no answering tab — a command or selection action — the line runs where the plugin was
-    // invoked from, which is the only tab such a call has.
-    expect(dispatchLine).toHaveBeenCalledWith('janus', 'theme');
-  });
-
-  it('runs a line in the tab answering it, rather than the tab the command came from', () => {
-    const { byLabel, managers, dispatchLine } = withDispatcher(true);
-    byLabel.mockReturnValue({ label: 'shell1' } as never);
-    const capabilities = createPluginContext(
-      managers, declaration(['dispatchLine']), activationFor(), { label: 'janus', command: 'zsh' },
-      () => true, [], 'shell1',
-    );
-
-    capabilities.dispatchLine('theme');
-
-    // The user typed this into the shell tab, so this is the tab the command belongs to.
-    expect(dispatchLine).toHaveBeenCalledWith('shell1', 'theme');
-  });
-
-  it('falls back to the invoking tab when the answering tab has closed', () => {
-    const { byLabel, managers, dispatchLine } = withDispatcher(true);
-    byLabel.mockReturnValue(undefined);
-    const capabilities = createPluginContext(
-      managers, declaration(['dispatchLine']), activationFor(), { label: 'janus', command: 'zsh' },
-      () => true, [], 'shell1',
-    );
-
-    capabilities.dispatchLine('theme');
-
-    // Addressing a label with no tab behind it would drop the command's output silently.
-    expect(dispatchLine).toHaveBeenCalledWith('janus', 'theme');
-  });
-
-  it('reports a line nothing claimed as unclaimed, so the shell can have it', () => {
-    const { managers } = withDispatcher(false);
-
-    expect(contextFor(['dispatchLine'], managers).dispatchLine('ls -la')).toBe(false);
-  });
-
-  it('reports nothing as unclaimed once the plugin has been disabled', () => {
-    const { managers } = withDispatcher(true);
-    const capabilities = createPluginContext(
-      managers, declaration(['dispatchLine']), activationFor(), { label: 'janus', command: 'zsh' },
-      () => false, [],
-    );
-
-    expect(capabilities.dispatchLine('theme')).toBe(false);
-  });
-});
-
 describe('dispatchLineWithOutput', () => {
-  function withDispatcher() {
-    const dispatchLineWithOutput = vi.fn(async () => ({ dispatched: true, output: 'response' }));
+  function withDispatcher(dispatched = true) {
+    const dispatchLineWithOutput = vi.fn(async () => (dispatched
+      ? { dispatched: true, output: 'response' }
+      : { dispatched: false, output: '' }));
     const { byLabel, managers } = makeManagers({ command: { dispatchLineWithOutput } as never });
     return { byLabel, managers, dispatchLineWithOutput };
   }
+
+  it('runs a line in the invoking tab when no tab is answering it', async () => {
+    const { managers, dispatchLineWithOutput } = withDispatcher();
+
+    await expect(contextFor(['dispatchLineWithOutput'], managers).dispatchLineWithOutput('theme'))
+      .resolves.toEqual({ dispatched: true, output: 'response' });
+    // With no answering tab — a command or selection action — the line runs where the plugin was
+    // invoked from, which is the only tab such a call has.
+    expect(dispatchLineWithOutput).toHaveBeenCalledWith('janus', 'theme');
+  });
+
+  it('falls back to the invoking tab when the answering tab has closed', async () => {
+    const { byLabel, managers, dispatchLineWithOutput } = withDispatcher();
+    byLabel.mockReturnValue(undefined);
+    const capabilities = createPluginContext(
+      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'zsh' },
+      () => true, [], 'shell1',
+    );
+
+    await capabilities.dispatchLineWithOutput('theme');
+
+    // Addressing a label with no tab behind it would drop the command's output silently.
+    expect(dispatchLineWithOutput).toHaveBeenCalledWith('janus', 'theme');
+  });
+
+  it('reports a line nothing claimed as unclaimed, so the shell can have it', async () => {
+    const { managers } = withDispatcher(false);
+
+    await expect(contextFor(['dispatchLineWithOutput'], managers).dispatchLineWithOutput('ls -la'))
+      .resolves.toEqual({ dispatched: false, output: '' });
+  });
 
   it('returns the application command output from the answering tab', async () => {
     const { byLabel, managers, dispatchLineWithOutput } = withDispatcher();
@@ -493,7 +465,6 @@ describe('each of them is declaration-gated', () => {
     const capabilities: TabPluginServerCapabilities = contextFor(['note'], managers);
 
     expect(() => capabilities.originTab()).toThrow('used capability "originTab" without declaring it');
-    expect(() => capabilities.dispatchLine('ls')).toThrow('used capability "dispatchLine" without declaring it');
     expect(() => capabilities.dispatchLineWithOutput('help')).toThrow('used capability "dispatchLineWithOutput" without declaring it');
     expect(() => capabilities.completeLine('l', 1)).toThrow('used capability "completeLine" without declaring it');
     expect(() => capabilities.terminalRunning('pty1')).toThrow('used capability "terminalRunning" without declaring it');
