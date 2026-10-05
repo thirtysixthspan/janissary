@@ -54,6 +54,31 @@ describe('TabPluginHost intent routing', () => {
     );
   });
 
+  it('hands each of two intents arriving together the payload the other left behind', async () => {
+    const fixture = setup((request) => {
+      const field = request.payload as Record<string, number>;
+      const tab = fixture.tabs[1];
+      tab.plugin = { ...tab.plugin!, payload: { ...(request.tabPayload as object), ...field } };
+      return null;
+    });
+
+    await Promise.all([
+      fixture.host.intent('fixture', 'merge', { running: 0 }),
+      fixture.host.intent('fixture', 'merge', { cwd: 1 }),
+    ]);
+
+    expect(fixture.tabs[1].plugin!.payload).toEqual({ secret: 'server payload', running: 0, cwd: 1 });
+  });
+
+  it('hands an intent the payload its tab holds when the handler runs, not when the request arrived', async () => {
+    const fixture = setup();
+
+    const pending = fixture.host.intent('fixture', 'echo', {});
+    fixture.tabs[1] = { ...fixture.tabs[1], plugin: { ...fixture.tabs[1].plugin!, payload: { secret: 'updated' } } };
+
+    await expect(pending).resolves.toMatchObject({ tabPayload: { secret: 'updated' } });
+  });
+
   it('rejects unknown, closed, and non-plugin tabs', async () => {
     const fixture = setup();
     await expect(fixture.host.intent('missing', 'echo', {}))
