@@ -280,7 +280,7 @@ export function createPluginClientCapabilities(
     },
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
     launchAgentHere: () => { client.send({ method: 'launchAgentFor', params: { label } }); },
-    openLink: (href) => { openTranscriptLink(href, transcriptIntents(client)); },
+    openLink: (href) => { openTranscriptLink(href, transcriptIntents((call) => client.send(call))); },
     // The report is deduplicated here rather than in the layer above, so the one-report-per-plugin
     // rule covers a plugin component reporting its own failure — a bad intent result, say — and not
     // just the load, schema, timeout, and render failures the host detects for it. The first report
