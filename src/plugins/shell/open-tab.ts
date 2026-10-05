@@ -1,4 +1,5 @@
 import type { TabPluginResources, TabPluginServerCapabilities } from '../api.js';
+import { isInsideRoot } from '../files.js';
 import { SHELL_PROGRAM, type ShellPayload } from './shared.js';
 
 // Opens one shell tab. Split out of `activate.ts` so that module holds the contract and nothing else:
@@ -8,10 +9,6 @@ import { SHELL_PROGRAM, type ShellPayload } from './shared.js';
 // `spawnTerminal` is called inside the payload factory rather than beside `openOrFocusTab`, because
 // that factory is the only scope in which a plugin may start a process: a tab's label is allocated
 // after the factory returns, and the host adopts the terminal onto the label it then mints.
-function isInside(root: string, directory: string): boolean {
-  const base = root.endsWith('/') ? root : `${root}/`;
-  return directory === root || directory.startsWith(base);
-}
 
 export function openShellTab(
   capabilities: TabPluginServerCapabilities,
@@ -22,7 +19,10 @@ export function openShellTab(
   const workspace = origin.workspace;
   // A shell that has `cd`-ed out of the project leaves its tab recording a directory no terminal may
   // start in, so the new shell starts where its workspace or project does rather than not at all.
-  const allowed = isInside(origin.root, origin.cwd) || (workspace !== undefined && isInside(workspace.dir, origin.cwd));
+  // Judged with the host's own resolved containment check, so a directory the host's spawn bound
+  // would refuse falls back here instead of reaching it.
+  const allowed = isInsideRoot(origin.root, origin.cwd)
+    || (workspace !== undefined && isInsideRoot(workspace.dir, origin.cwd));
   const cwd = allowed ? origin.cwd : workspace?.dir ?? origin.root;
 
   capabilities.openOrFocusTab(instanceKey, (resources: TabPluginResources) => {

@@ -218,6 +218,30 @@ describe('shell plugin activation', () => {
     expect(() => ask(capabilities, 'cwd', 'relative/path')).toThrow(TabPluginRejection);
   });
 
+  it('rejects a cwd carrying `..` segments and records nothing', () => {
+    const { capabilities, updated } = fakeCapabilities();
+
+    expect(() => ask(capabilities, 'cwd', '/repo/a/../../etc')).toThrow(TabPluginRejection);
+    expect(capabilities.recordCwd).not.toHaveBeenCalled();
+    expect(updated).toEqual([]);
+  });
+
+  it('starts in the project root when the issuing tab\'s directory only looks inside it as written', () => {
+    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'shell1', cwd: '/repo/a/../../etc', root: '/repo' } });
+
+    activate().command?.('', capabilities);
+
+    expect(spawns[0].cwd).toBe('/repo');
+  });
+
+  it('does not treat a sibling directory whose name starts with the root\'s as inside it', () => {
+    const { capabilities, spawns } = fakeCapabilities({ origin: { label: 'shell1', cwd: '/repo-evil/src', root: '/repo' } });
+
+    activate().command?.('', capabilities);
+
+    expect(spawns[0].cwd).toBe('/repo');
+  });
+
   it('rejects a malformed command state', () => {
     const { capabilities } = fakeCapabilities();
 

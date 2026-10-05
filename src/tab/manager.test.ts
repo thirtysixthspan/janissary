@@ -7,7 +7,7 @@ import { makeTab } from './index.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../agent/types.js';
 import type { ScheduleEntry } from '../schedule/types.js';
-import type { TabPluginResources } from '../plugins/api.js';
+import { TabPluginRejection, type TabPluginResources } from '../plugins/api.js';
 import * as agentState from '../agent/state.js';
 import { messageBus } from '../bus.js';
 import { UNREAD_DWELL_MS } from './dwell.js';
@@ -438,8 +438,30 @@ describe('TabManager queue', () => {
 
     // A terminal is a fully interactive shell, so the bound `openInEditor` puts on a plugin's file
     // path is the bound here too: `/etc` is nowhere inside `/repo`, so no process begins.
-    expect(() => tm.spawnTerminal({ cwd: '/etc', shell: '/bin/zsh' })).toThrow(/outside the project root/);
+    expect(() => tm.spawnTerminal({ cwd: '/etc', shell: '/bin/zsh' })).toThrow(
+      new TabPluginRejection('Cannot start a terminal in /etc: it is outside the project root /repo.'),
+    );
     expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('refuses a directory that is inside the project root only as written', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    expect(() => tm.spawnTerminal({ cwd: '/repo/a/../../etc', shell: '/bin/zsh' })).toThrow(TabPluginRejection);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('answers a terminal that cannot start as a rejection naming the directory', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    vi.mocked(managers.pty.spawn).mockImplementationOnce(() => {
+      throw new Error('posix_spawnp failed.\n    at spawn (node-pty)');
+    });
+
+    // A rejection rather than a plain error: one directory the process cannot start in is a bad
+    // request for one tab, and must not disable the plugin that owns every other shell.
+    expect(() => tm.spawnTerminal({ cwd: '/repo/gone', shell: '/bin/zsh' })).toThrow(
+      new TabPluginRejection('Cannot start a terminal in /repo/gone: posix_spawnp failed.'),
+    );
   });
 
   it('leaves no tab behind when a factory asks for a terminal outside the project root', () => {

@@ -72,8 +72,14 @@ export type ShellDispatchResult = { dispatched: boolean; output: string };
 export type ShellCompleteRequest = { line: string; cursor: number };
 export type ShellCommandState = { running: boolean };
 
+// An absolute path already in normal form: no empty, `.` or `..` segment and no trailing slash beyond
+// the root itself. zsh's `$PWD` is always written that way, so a real report never trips this, while
+// a crafted one such as `/repo/a/../../etc` would otherwise read as inside the project to any check
+// that compares the written path rather than the resolved one.
 export function isShellCwd(value: unknown): value is string {
-  return typeof value === 'string' && value.startsWith('/');
+  if (typeof value !== 'string' || !value.startsWith('/')) return false;
+  if (value === '/') return true;
+  return value.slice(1).split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
 }
 
 // The completion the application's own command bar shows, re-declared for the same import-free reason

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AcpRef, ConnectionView, ScheduleView } from '../protocol.js';
 import type { CompletionResult } from '../../completion/types.js';
 import {
-  isEmptyShellIntent, isShellCompleteRequest, isShellDispatch, isShellPayload,
+  isEmptyShellIntent, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellPayload,
   SHELL_PAYLOAD_SCHEMA_VERSION, type ShellCompletion,
 } from './shared.js';
 
@@ -121,5 +121,18 @@ describe('shell shared contract', () => {
     expect(isShellCompleteRequest({ line: 'l' })).toBe(false);
     expect(isShellCompleteRequest({ cursor: 1 })).toBe(false);
     expect(isShellCompleteRequest({ line: 'l', cursor: '1' })).toBe(false);
+  });
+
+  it('accepts a reported cwd only as an absolute path already in normal form', () => {
+    expect(isShellCwd('/')).toBe(true);
+    expect(isShellCwd('/repo/sub')).toBe(true);
+    expect(isShellCwd('/repo/.hidden')).toBe(true);
+    expect(isShellCwd('relative/path')).toBe(false);
+    expect(isShellCwd('/repo/a/../../etc')).toBe(false);
+    expect(isShellCwd('/repo/..')).toBe(false);
+    expect(isShellCwd('/repo/./sub')).toBe(false);
+    expect(isShellCwd('/repo//sub')).toBe(false);
+    expect(isShellCwd('/repo/')).toBe(false);
+    expect(isShellCwd(7)).toBe(false);
   });
 });

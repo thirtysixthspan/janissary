@@ -181,7 +181,10 @@ typed into zsh as a line, exactly as if entered at the terminal. The schedule li
 
 There is no **open transcript** control, because there is no transcript: the terminal replaced it. The
 working directory shown follows the shell's current directory. It updates after a `cd` and when zsh
-returns to its prompt after a command.
+returns to its prompt after a command. A reported directory is recorded only when it is an absolute
+path in normal form, with no `.` or `..` segment, no doubled slash, and no trailing slash beyond the
+root. zsh always reports its directory that way, so any other report is refused and the recorded
+directory stays where it was.
 
 ## Where the shell starts
 
@@ -189,6 +192,13 @@ returns to its prompt after a command.
 else: a terminal only ever runs in a directory inside that root. A remote agent tab is therefore not a
 place a shell tab can be opened from — its working directory belongs to the other host, and there is
 nothing here to start a shell in.
+
+Whether a directory is inside the project root, or inside the workspace clone, is judged on the path
+it resolves to, not the path as written, so `/repo/a/../../etc` is outside `/repo`. A terminal the
+application refuses to start, or one that fails to start, answers that one request in the issuing tab
+(`Cannot start a terminal in <dir>: it is outside the project root <root>.`, or `Cannot start a
+terminal in <dir>: <reason>.`) and opens no tab. Every other shell tab and its zsh keep running, and
+`zsh` keeps working.
 
 The shell is always zsh, named outright rather than taken from the environment, so the tab is a zsh
 tab whatever the user's login shell happens to be. It is a fully interactive zsh reading its own

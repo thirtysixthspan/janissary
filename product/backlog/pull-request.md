@@ -5,17 +5,6 @@
 * the msg command to a shell tab, of each type, should be supported.
 
 
-* Contain a refused shell terminal spawn as a rejection, and normalise the working directory a shell reports, so one bad directory cannot disable the shell plugin and close every shell.
-
-Existing Issue: The shell plugin checks the starting directory with a plain string prefix while the host's spawn bound resolves the path first, and the host's refusal is a plain `Error` that the plugin failure boundary treats as the plugin breaking, so any refused or failed spawn disables the shell plugin and closes every open shell tab. Severity: 8/10
-
-Existing Risk: 8/10 - A recorded cwd such as `/proj/a/../../etc` (reachable through an OSC 7 report printed by any program, since the `cwd` intent accepts any string starting with `/`) or a spawn that fails for another reason turns `zsh` or `Cmd+T` into the loss of every running shell and of `zsh` for the rest of the session.
-
-Proposal Risk: 3/10 - A refused spawn becomes a visible rejection in the issuing tab and the plugin stays enabled, though a spawn failure the host does not anticipate could still cross the boundary until every factory error is classified.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: contain a refused shell terminal spawn as a rejection and normalise reported shell cwds". In `src/plugins/shell/shared.ts`, tighten `isShellCwd` so it accepts only an absolute path equal to its own `path.posix.normalize` form (no `.`/`..` segments, no trailing slash beyond root). In `src/plugins/shell/open-tab.ts`, replace the string-prefix `isInside` with a resolved containment check (resolve both paths and compare with a separator boundary, matching `isInsideRoot` in `src/plugins/files.js`), so the plugin's fallback decision and the host's bound agree. In `src/tab/plugin-terminals.ts`, throw a `TabPluginRejection` (from `src/plugins/api.ts`) for the out-of-root refusal instead of a plain `Error`, and check that `withResources` in `src/tab/openers.ts` still kills any terminal started before the throw and rethrows; confirm in `src/plugins/invoke.ts` that a rejection yields `status: 'rejected'` and leaves the plugin enabled. Add tests: an `src/plugins/shell/activate.test.ts` case that a `cwd` intent with `..` segments is refused by the payload guard; a `src/plugins/shell-capabilities.test.ts` (or `src/tab/manager.test.ts`) case that an out-of-root spawn from a factory produces a rejection, no tab, no running pty, and the shell plugin still enabled with its other tabs open. Existing tests for `spawnPluginTerminal` bounds and for factory cleanup must keep passing.
-
-
 * Refuse to open a shell tab from a remote agent tab, as the shell-tab spec requires.
 
 Existing Issue: `openShellTab` never checks whether the origin tab is remote, so `zsh` typed in a remote agent tab silently opens a local shell at the project root, or at a local path that happens to match the remote one, while the spec says a remote agent tab is not a place a shell tab can be opened from. Severity: 5/10
