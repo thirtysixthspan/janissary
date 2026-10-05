@@ -93,7 +93,8 @@ When the terminal is in its normal buffer and can measure the reply, it is rende
 markdown rendering an agent tab's transcript uses, in the terminal's theme colors — in a block placed
 in the terminal's scrollback directly under the echoed command and followed by zsh's prompt. Its
 rendered content fits the block without an internal scrollbar, and the reply scrolls with the
-terminal without adding an application-window scrollbar. Its visible portion stays rendered while
+terminal without adding an application-window scrollbar. The decoration stays inside the terminal
+body and never covers the metadata row or tab strip. Its visible portion stays rendered while
 scrolling through it, even when its first row is above the viewport. The block is not terminal text,
 so terminal selection and search do not see it. When a full-screen program holds the terminal, or the reply cannot
 be measured or placed, it falls back to the styled terminal text described above.
