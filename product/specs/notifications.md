@@ -258,8 +258,9 @@ still there in the feed. A long message is clamped to two lines.
 It is visible for **4 seconds** and then fades out over **2 seconds**. Hovering a toast holds its
 clock, and returns a fading one to fully visible; moving away restarts it with the time that was
 left. **Clicking** a toast makes the feed visible and clears every toast on screen at once. The
-stack begins beneath the connection indicator and the floating status panels that already occupy
-that corner, so a toast never hides "Cannot reach session".
+stack begins beneath the connection indicator, the visible tab's metadata row, and the floating
+status panels that already occupy that corner, so a toast never hides "Cannot reach session" and
+never covers a tab's working directory or its row of actions — on a shell tab as on an agent tab.
 
 **A burst escalates to the feed.** On the third notification inside a ten-second window the
 notifications tab is made visible and every toast is removed at once — sustained activity is more

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 const TOAST_GAP_PX = 8;
 const MIN_TOAST_TOP_PX = 40;
-const STATUS_OBSTACLES = '.connection-status, .status-panels .panel';
+const STATUS_OBSTACLES = '.connection-status, .status-panels .panel, .tab-meta';
 
 function visibleBottom(root: ParentNode): number {
   let bottom = MIN_TOAST_TOP_PX - TOAST_GAP_PX;
