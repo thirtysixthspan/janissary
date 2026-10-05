@@ -1,7 +1,8 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import React, { useRef } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useWindowKeys } from './useWindowKeys';
+import { createPluginChordRegistry, type PluginChordRegistry } from './plugins/PluginChords';
 import { declareOverlayClaims, installOverlayOpener, openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
 
 const published: (() => void)[] = [];
@@ -32,6 +33,7 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 function TestComponent({
   route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, profilePickerOpen,
   canSearch, searchOpen, quickOpenOpen, handleScrollKey, callbacks, client,
+  chords = createPluginChordRegistry(), currentPluginTab,
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
@@ -45,6 +47,8 @@ function TestComponent({
   quickOpenOpen?: boolean;
   handleScrollKey?: (e: KeyboardEvent) => boolean;
   client?: { send: ReturnType<typeof vi.fn> };
+  chords?: PluginChordRegistry;
+  currentPluginTab?: string;
   callbacks?: Partial<{
     setRouteIndex: (s: (p: number) => number) => void;
     chooseRoute: (i: number) => void;
@@ -105,6 +109,7 @@ function TestComponent({
       { name: 'coding', source: 'project' as const },
     ],
     quickOpenOpen: quickOpenOpen ?? false,
+    currentPluginTab,
   });
   const cb = {
     setRouteIndex: vi.fn(),
@@ -139,7 +144,7 @@ function TestComponent({
   const cbRef = useRef(cb);
   cbRef.current = cb;
   const sendClient = client ?? { send: vi.fn() };
-  useWindowKeys(sendClient as never, stateRef as never, cbRef as never, handleScrollKey ?? vi.fn(() => false), vi.fn());
+  useWindowKeys(sendClient as never, stateRef as never, cbRef as never, handleScrollKey ?? vi.fn(() => false), vi.fn(), chords);
   return null;
 }
 
@@ -410,7 +415,7 @@ describe('useWindowKeys', () => {
       };
       const cbRef = useRef(cb);
       cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn());
+      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -436,7 +441,7 @@ describe('useWindowKeys', () => {
       };
       const cbRef = useRef(cb);
       cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn());
+      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -467,7 +472,7 @@ describe('useWindowKeys', () => {
       };
       const cbRef = useRef(cb);
       cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn());
+      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -529,7 +534,7 @@ describe('useWindowKeys', () => {
     const stateRef = { current: null } as never;
     const cbRef = { current: null } as never;
     function C() {
-      useWindowKeys(client as never, stateRef, cbRef, vi.fn(() => false), vi.fn());
+      useWindowKeys(client as never, stateRef, cbRef, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -549,5 +554,151 @@ describe('useWindowKeys', () => {
     expect(removeSpy).toHaveBeenCalledWith('keyup', expect.any(Function));
     addSpy.mockRestore();
     removeSpy.mockRestore();
+  });
+
+  // A plugin tab's chord claim inverts the overlay rule below it: an overlay chord cannot fire without
+  // the core chord, but a tab the user is looking at would otherwise have the key do nothing at all.
+  describe('a plugin tab chord claim', () => {
+    function claimed(chordId: string) {
+      const chords = createPluginChordRegistry();
+      const handler = vi.fn();
+      chords.register('shell', 'shell', chordId, handler);
+      return { chords, handler };
+    }
+
+    it('runs the plugin handler instead of the application action', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, currentPluginTab: 'shell', callbacks: { openPicker } }));
+
+      dispatchKey('r', { ctrlKey: true });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(openPicker).not.toHaveBeenCalled();
+    });
+
+    it('keeps same-plugin claims per tab and dispatches to the tab that holds focus', () => {
+      const chords = createPluginChordRegistry();
+      const first = vi.fn();
+      const second = vi.fn();
+      const releaseFirst = chords.register('shell', 'shell1', 'ctrl+r', first);
+      const releaseSecond = chords.register('shell', 'shell2', 'ctrl+r', second);
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+      const focusedBar = document.createElement('textarea');
+      focusedBar.dataset.tabLabel = 'shell2';
+      document.body.append(focusedBar);
+      focusedBar.focus();
+
+      fireEvent.keyDown(focusedBar, { key: 'r', ctrlKey: true });
+      expect(first).not.toHaveBeenCalled();
+      expect(second).toHaveBeenCalledOnce();
+
+      releaseFirst();
+      fireEvent.keyDown(focusedBar, { key: 'r', ctrlKey: true });
+      expect(second).toHaveBeenCalledTimes(2);
+
+      releaseSecond();
+      fireEvent.keyDown(focusedBar, { key: 'r', ctrlKey: true });
+      expect(openPicker).toHaveBeenCalledOnce();
+      focusedBar.remove();
+    });
+
+    it('reverts to the application action once the claim is released', () => {
+      const chords = createPluginChordRegistry();
+      const handler = vi.fn();
+      const release = chords.register('shell', 'shell', 'ctrl+r', handler);
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, currentPluginTab: 'shell', callbacks: { openPicker } }));
+
+      dispatchKey('r', { ctrlKey: true });
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      release();
+      dispatchKey('r', { ctrlKey: true });
+
+      // The application's history picker takes the chord back, which is what focusing another tab does.
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(openPicker).toHaveBeenCalledTimes(1);
+    });
+
+    // A docked shell holds its claim while it shows in the sidebar, but an agent tab's command bar sits
+    // inside no labelled tab, so the key typed there is the application's.
+    it('leaves a claimed chord with the application when focus is in a tab with no plugin label', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+      const agentBar = document.createElement('textarea');
+      document.body.append(agentBar);
+      agentBar.focus();
+
+      fireEvent.keyDown(agentBar, { key: 'r', ctrlKey: true });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(openPicker).toHaveBeenCalledOnce();
+      agentBar.remove();
+    });
+
+    it('gives a chord pressed with focus on the page to the current plugin tab only', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const openPicker = vi.fn();
+      const view = render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+
+      fireEvent.keyDown(document.body, { key: 'r', ctrlKey: true });
+      expect(handler).not.toHaveBeenCalled();
+      expect(openPicker).toHaveBeenCalledOnce();
+      view.unmount();
+
+      render(React.createElement(TestComponent, { chords, currentPluginTab: 'shell', callbacks: { openPicker } }));
+      fireEvent.keyDown(document.body, { key: 'r', ctrlKey: true });
+      expect(handler).toHaveBeenCalledOnce();
+      expect(openPicker).toHaveBeenCalledOnce();
+    });
+
+    // The shell claims Cmd+T so the terminal, which has no key handler for it, opens a sibling shell
+    // rather than letting the keydown fall through to the application's new agent tab.
+    it('spends a Cmd+T claim from focus inside the claiming tab instead of opening an agent tab', () => {
+      const { chords, handler } = claimed('meta+t');
+      const runCommand = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { runCommand } }));
+      const tabBody = document.createElement('div');
+      tabBody.dataset.tabLabel = 'shell';
+      const terminalInput = document.createElement('textarea');
+      tabBody.append(terminalInput);
+      document.body.append(tabBody);
+      terminalInput.focus();
+
+      const handled = !fireEvent.keyDown(terminalInput, { key: 't', metaKey: true });
+
+      expect(handled).toBe(true);
+      expect(handler).toHaveBeenCalledExactlyOnceWith('meta+t');
+      expect(runCommand).not.toHaveBeenCalled();
+      tabBody.remove();
+    });
+
+    it('opens an agent tab for Cmd+T pressed inside a tab that holds no claim on it', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const runCommand = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { runCommand } }));
+      const tabBody = document.createElement('div');
+      tabBody.dataset.tabLabel = 'shell';
+      document.body.append(tabBody);
+
+      fireEvent.keyDown(tabBody, { key: 't', metaKey: true });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(runCommand).toHaveBeenCalledExactlyOnceWith('agent');
+      tabBody.remove();
+    });
+
+    it('leaves an unclaimed chord with the application', () => {
+      const { chords } = claimed('ctrl+r');
+      const openTabNav = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openTabNav } }));
+
+      dispatchKey('g', { ctrlKey: true });
+
+      expect(openTabNav).toHaveBeenCalledTimes(1);
+    });
   });
 });

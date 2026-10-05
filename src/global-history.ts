@@ -39,6 +39,7 @@ function isHistoryEntry(x: unknown): x is HistoryEntry {
   return (
     typeof x === 'object' && x !== null &&
     typeof (x as HistoryEntry).command === 'string' &&
+    (x as HistoryEntry).command.trim() !== '' &&
     typeof (x as HistoryEntry).tab === 'string' &&
     typeof (x as HistoryEntry).timestamp === 'number'
   );
@@ -61,7 +62,7 @@ function suppressWrites(message: string): void {
 }
 
 function appendEntry(list: HistoryEntry[], entry: HistoryEntry): HistoryEntry[] {
-  if (list.at(-1)?.command === entry.command) return list;
+  if (entry.command.trim() === '' || list.at(-1)?.command === entry.command) return list;
   return [...list, entry].slice(-MAX_ENTRIES);
 }
 

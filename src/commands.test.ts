@@ -69,7 +69,7 @@ describe('findCommand fallback', () => {
 describe('getOutput("help")', () => {
   it('documents the queue command', () => {
     expect(helpText()).toContain('`queue`');
-    expect(helpText()).toContain('queue <agent> <command>');
+    expect(helpText()).toContain('queue <tab> <command>');
   });
 
   it('documents the Ctrl+E queue-picker key binding', () => {

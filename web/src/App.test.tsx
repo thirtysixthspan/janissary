@@ -889,7 +889,12 @@ it('positions toasts below the connection indicator and both multi-row status pa
   const { container } = render(
     <AppShell tabs={[]} client={shellClient} notificationsVisible={false}>
       <div className="main">
-        <StatusPanels tab={tab} connections={handlers} schedule={handlers} />
+        <StatusPanels
+          connections={tab.connections}
+          schedule={tab.schedule}
+          connectionsWindow={handlers}
+          scheduleWindow={handlers}
+        />
       </div>
       <MockStatusBounds />
     </AppShell>,

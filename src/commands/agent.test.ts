@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { command } from './agent.js';
 import { resolveAgentName, parseAgentCommand } from '../agent/commands.js';
 import { agentNames } from '../agent/names.js';
@@ -13,6 +13,15 @@ describe('agent command', () => {
     expect(command.match('AGENT bilal')).toBe(true);
     expect(command.match('agent')).toBe(true);
     expect(command.match('agent --workspace')).toBe(true);
+  });
+
+  it('passes the command source tab to agent creation', () => {
+    const newAgent = vi.fn();
+    const managers = { profile: { newAgent } } as never;
+
+    command.run('agent bob', { label: 'shell', index: 3 }, managers);
+
+    expect(newAgent).toHaveBeenCalledWith('agent bob', { label: 'shell', index: 3 });
   });
 
   it('does not match non-agent input', () => {

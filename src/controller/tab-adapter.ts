@@ -10,13 +10,14 @@ export type TabControllerAdapter = {
   reorderTabTo(from: number, to: number): void;
   closeTab(label: string): void;
   renameTab(index: number, title: string): void;
-  editQueuedCommand(index: number, text: string): void;
-  deleteQueuedCommand(index: number): void;
+  editQueuedCommand(index: number, text: string, tab?: string): void;
+  deleteQueuedCommand(index: number, tab?: string): void;
   toggleCollapse(): void;
   revealNotifications(): void;
   promoteToTerminal(): void;
-  ptyInput(id: string, data: string): void;
-  ptyResize(id: string, cols: number, rows: number): void;
+  ptyInput(id: string, data: string, tab?: string): void;
+  ptyResize(id: string, cols: number, rows: number, tab?: string): void;
+  pluginTerminalAttach(id: string, tab: string): boolean;
   ptyKill(id: string): void;
   reportTerminalColors(id: string, colors: { fg: string; bg: string }): void;
   resize(cols: number, rows: number): void;
@@ -35,13 +36,14 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
       if (index !== -1) managers.tab.closeTab(index);
     },
     renameTab: (index, title) => managers.tab.renameTab(index, title),
-    editQueuedCommand: (index, text) => managers.tab.editQueued(managers.tab.cur().label, index, text),
-    deleteQueuedCommand: (index) => managers.tab.deleteQueued(managers.tab.cur().label, index),
+    editQueuedCommand: (index, text, tab) => managers.tab.editQueued(tab ?? managers.tab.cur().label, index, text),
+    deleteQueuedCommand: (index, tab) => managers.tab.deleteQueued(tab ?? managers.tab.cur().label, index),
     toggleCollapse: () => managers.tab.toggleCollapse(),
     revealNotifications: () => escalateToFeed(managers),
     promoteToTerminal: () => managers.shell.promoteRunning(managers.tab.cur().label),
-    ptyInput: (id, data) => managers.pty.input(id, data),
-    ptyResize: (id, cols, rows) => managers.pty.resizeOne(id, cols, rows),
+    ptyInput: (id, data, tab) => { if (!tab || managers.pty.isRunningFor(id, [tab])) managers.pty.input(id, data); },
+    ptyResize: (id, cols, rows, tab) => { if (!tab || managers.pty.isRunningFor(id, [tab])) managers.pty.resizeOne(id, cols, rows); },
+    pluginTerminalAttach: (id, tab) => managers.pty.isRunningFor(id, [tab]),
     ptyKill: (id) => managers.pty.kill(id),
     reportTerminalColors: (id, colors) => managers.harness.reportTerminalColors(id, colors),
     resize: (cols, rows) => managers.pty.resize(cols, rows),

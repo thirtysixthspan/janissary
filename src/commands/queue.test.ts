@@ -50,6 +50,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; appended: string[] } {
       append: vi.fn((_label: string, entry: { output: string }) => { appended.push(entry.output); }),
       enqueue: vi.fn(),
     },
+    pty: { terminalIdFor: vi.fn() },
     command: { drainQueue: vi.fn() },
   } as unknown as Managers;
   return { managers, appended };
@@ -92,5 +93,27 @@ describe('queue command run (with an agent target)', () => {
     command.run('queue reviewer echo hi', { label: 'janus', index: 0 }, managers);
     expect(managers.tab.enqueue).toHaveBeenCalledWith('worker', 'echo hi');
     expect(appended).toEqual(['→ reviewer (queued): echo hi']);
+  });
+
+  it('queues for a plugin tab with an owned terminal without running the agent drain', () => {
+    const target = { ...makeAgentTab('shell'), view: 'plugin' as const };
+    const { managers, appended } = makeManagers([target]);
+    vi.mocked(managers.pty.terminalIdFor).mockReturnValue('shell-pty');
+
+    command.run('queue shell ls -al', { label: 'janus', index: 0 }, managers);
+
+    expect(managers.tab.enqueue).toHaveBeenCalledWith('shell', 'ls -al');
+    expect(managers.command.drainQueue).not.toHaveBeenCalled();
+    expect(appended).toEqual(['→ shell (queued): ls -al']);
+  });
+
+  it('refuses a plugin tab with no owned terminal', () => {
+    const target = { ...makeAgentTab('viewer'), view: 'plugin' as const };
+    const { managers, appended } = makeManagers([target]);
+
+    command.run('queue viewer ls', { label: 'janus', index: 0 }, managers);
+
+    expect(managers.tab.enqueue).not.toHaveBeenCalled();
+    expect(appended).toEqual(['Tab "viewer" has no command queue.']);
   });
 });

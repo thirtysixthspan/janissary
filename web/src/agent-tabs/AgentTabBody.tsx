@@ -53,7 +53,10 @@ export function AgentTabBody({
   search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef, onSplit,
 }: Properties) {
-  const statusWindows = useStatusWindows(current.label, current.connections.length > 0, current.schedule.length > 0);
+  const statusWindows = useStatusWindows(current.label, {
+    connectionsHaveContent: current.connections.length > 0,
+    scheduleHasContent: current.schedule.length > 0,
+  });
   const intents = agentTabIntents(client, current.label, 'openTranscriptFor');
   const transcriptActions = useMemo(() => transcriptIntents((call) => client.send(call)), [client]);
   const terminalActions = useMemo(() => ptyActions(client), [client]);
@@ -93,9 +96,10 @@ export function AgentTabBody({
           highlight={highlight}
         />
         <StatusPanels
-          tab={current}
-          connections={statusWindows.connections}
-          schedule={statusWindows.schedule}
+          connections={current.connections}
+          schedule={current.schedule}
+          connectionsWindow={statusWindows.connections}
+          scheduleWindow={statusWindows.schedule}
           interactive
           onOpenAcpTranscript={intents.onOpenAcpTranscript}
         />

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { TabManager } from './manager.js';
 import type { Managers } from '../managers.js';
+import { agentNames } from '../agent/names.js';
 
-function makeTabManager(): TabManager {
+function makeTabManager(extra: Record<string, unknown> = {}): TabManager {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
   Object.assign(managers, {
@@ -17,6 +18,7 @@ function makeTabManager(): TabManager {
     schedule: { delete: vi.fn() },
     questions: { cancelTab: vi.fn(), pendingFor: vi.fn() },
     database: { forgetTab: vi.fn(), closeAll: vi.fn() },
+    ...extra,
   } as unknown as Managers);
   return managers.tab;
 }
@@ -72,6 +74,17 @@ describe('TabOpeningState.openPluginTab', () => {
     expect(() => registerFile?.('/tmp/late.fixture'))
       .toThrow('plugin tab resources are no longer available');
     expect(tm.openFiles).toHaveLength(0);
+  });
+
+  it('names an agent-named tab past every pool name a sessions row still holds', () => {
+    const [free, ...held] = agentNames;
+    const view = vi.fn(() => held.map((label) => ({ label, kind: 'agent', state: 'detached', host: 'box' })));
+    const tm = makeTabManager({ sessions: { view } });
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', () => ({ title: 'shell', payload: {} }), true);
+
+    expect(view).toHaveBeenCalled();
+    expect(tm.tabs[tm.activeTab].label).toBe(free);
   });
 });
 

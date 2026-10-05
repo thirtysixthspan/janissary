@@ -38,15 +38,17 @@ export async function invokePlugin<Result>(
   isEnabled: () => boolean,
   timeoutMs: number,
   call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
+  answeringLabel?: string,
 ): Promise<PluginCallOutcome<Result>> {
   const openRequests: string[] = [];
-  const capabilities = createPluginContext(
-    managers, declaration, activation, origin, isEnabled, openRequests,
-  );
 
   let value: Result;
   try {
-    value = await guardPluginCall(() => call(capabilities), timeoutMs);
+    // The capabilities are built inside the guarded call because the ones that do host work on the
+    // plugin's behalf exempt that work from this deadline, and so need the deadline itself.
+    value = await guardPluginCall((deadline) => call(createPluginContext(
+      managers, declaration, activation, origin, isEnabled, openRequests, answeringLabel, deadline,
+    )), timeoutMs);
   } catch (error) {
     if (error instanceof TabPluginRejection) return { status: 'rejected', reason: error.message };
     return { status: 'failed', error };

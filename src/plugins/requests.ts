@@ -36,6 +36,7 @@ export type PluginRequestPort = {
     activation: TabPluginActivation,
     origin: PluginFailureOrigin,
     call: (capabilities: TabPluginServerCapabilities) => unknown,
+    answeringLabel?: string,
   ): Promise<PluginCallOutcome<unknown>>;
   disable(record: PluginRecord, error: unknown, origin: PluginFailureOrigin): string;
 };
@@ -50,6 +51,11 @@ function ownerOf(port: PluginRequestPort, tabLabel: string, missing?: string) {
   return { tab, plugin: tab.plugin, record };
 }
 
+function currentPayload(port: PluginRequestPort, tabLabel: string, arrived: unknown): unknown {
+  const tab = port.managers.tab.tabs.find((candidate) => candidate.label === tabLabel);
+  return tab?.plugin ? tab.plugin.payload : arrived;
+}
+
 export async function runPluginIntent(
   port: PluginRequestPort, tabLabel: string, intent: string, payload: unknown,
 ): Promise<unknown> {
@@ -62,8 +68,8 @@ export async function runPluginIntent(
   if (!activation) throw new Error(pluginFailureMessage(record.declaration.id, record.reason));
 
   const outcome = await port.invoke(record, activation, origin, (capabilities) => activation.intent(
-    { tab: tabLabel, intent, payload, tabPayload: plugin.payload }, capabilities,
-  ));
+    { tab: tabLabel, intent, payload, tabPayload: currentPayload(port, tabLabel, plugin.payload) }, capabilities,
+  ), tabLabel);
   if (outcome.status === 'rejected') throw new Error(outcome.reason);
   if (outcome.status === 'failed') {
     throw new Error(port.disable(record, outcome.error, origin), { cause: outcome.error });

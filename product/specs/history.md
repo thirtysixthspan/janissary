@@ -24,6 +24,8 @@ As the user types in the command bar, if the typed text is a prefix of a past co
 
 `Ctrl+R` (or the `hist` command) opens the history window listing the tab's recent history entries, ordered with the most recent at the bottom (nearest the command line); it is anchored to the bottom, spanning the width just above the command input. Up/Down move the selection, Return runs the selected command, and Escape closes the overlay without running anything. The window opens whenever `hist` / `Ctrl+R` is invoked; when there is no history yet it shows a `(no history)` placeholder.
 
+Each row shows one line, exactly as the clipboard-history popup shows a copy: the entry's first line of non-space text, followed by a muted `(N lines)` postfix when the entry spans more than one line. A line too long for the window is clipped before the postfix. Choosing a row recalls or runs the whole entry; the postfix is never part of it.
+
 ### Consecutive duplicate suppression
 
 If a command matches the last entry in the tab's history, it is not appended again.
@@ -42,7 +44,7 @@ Command history is persisted per-agent to `.janissary/state/<name>.json`. Each a
 
 ### Global history
 
-All commands across all tabs are recorded in a shared global history buffer. The buffer persists across application runs in the user's home directory. Consecutive duplicate commands are suppressed globally (regardless of which tab they were run in), and the buffer is capped at 1000 entries. The ghost-text suggestion draws from the global buffer, so a command typed in any tab (in any prior run) can ghost-complete in every tab. ArrowUp/ArrowDown recall and the `hist` picker remain per-tab.
+All commands across all tabs are recorded in a shared global history buffer. The buffer persists across application runs in the user's home directory. Consecutive duplicate commands are suppressed globally (regardless of which tab they were run in), and the buffer is capped at 1000 entries. A command that is empty or only whitespace is never recorded, and one already in the stored file is left out when the buffer loads, so neither ghost text nor the history picker can offer a blank entry. The ghost-text suggestion draws from the global buffer, so a command typed in any tab (in any prior run) can ghost-complete in every tab. ArrowUp/ArrowDown recall and the `hist` picker remain per-tab.
 
 Global-history updates atomically replace the stored file, so an interrupted or failed update leaves
 the previous valid history intact. A malformed history file or persistence failure produces a

@@ -1,5 +1,6 @@
 import type { Managers } from '../managers.js';
 import { getConfig } from '../config.js';
+import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { didOsOpen } from '../openers/os-open.js';
 import {
@@ -12,11 +13,15 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
+import type { HandlerDeadline } from './guard.js';
 import { projectFilesFor } from '../project/files.js';
 import { isInsideRoot } from './files.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
 import { liveRecordingPaths } from './live-recordings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
+import { declaredResources } from './declared-resources.js';
+import { lineCapabilities } from './line-capabilities.js';
+import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
@@ -88,6 +93,12 @@ export function createPluginContext(
   isEnabled: () => boolean,
   // Collects `openClaimedFiles` targets for the host to run once the guarded call has returned.
   openRequests: string[] = [],
+  // The tab whose client asked, when the call came from one — an intent, or a selection action on a
+  // plugin tab. Distinct from `origin`, which is the tab a *command* was invoked from and which stays
+  // that way for every capability.
+  answeringLabel?: string,
+  // The guarded call's clock, so a capability that runs host work the plugin waits on can stop it.
+  deadline?: HandlerDeadline,
 ): TabPluginServerCapabilities {
   return restrictToDeclared({
     note: (text) => {
@@ -120,10 +131,11 @@ export function createPluginContext(
         declaration.payloadSchemaVersion,
         origin.label,
         (resources) => {
-          const created = factory(resources);
+          const created = factory(declaredResources(declaration, resources));
           validateTabValue(activation, created);
           return created;
         },
+        declaration.agentNamedTabs === true,
       );
     },
     // Unlike `openOrFocusTab`, this does not require the originating tab to still exist: the target
@@ -131,10 +143,30 @@ export function createPluginContext(
     updateTab: (instanceKey, factory) => {
       if (!isEnabled()) return;
       managers.tab.updatePluginTab(declaration.id, instanceKey, (resources) => {
-        const update = factory(resources);
+        const update = factory(declaredResources(declaration, resources));
         validateTabValue(activation, update);
         return update;
       });
+    },
+    setUnread: (instanceKey, unread) => {
+      if (!isEnabled()) return;
+      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
+      if (!tab) return;
+      if (unread) {
+        if (managers.tab.markUnread(tab.label)) armHarnessIdleEscalation(managers, tab.label);
+      } else {
+        managers.tab.clearUnread(tab.label);
+        cancelHarnessIdleEscalation(managers, tab.label);
+      }
+    },
+    // The dot only, on the plugin's own record: a broadcast goes out when it changes, and nothing the
+    // host routes by — the tab's runtime busy flag — moves with it.
+    setBusy: (instanceKey, busy) => {
+      if (!isEnabled()) return;
+      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
+      if (!tab || (tab.plugin.busy ?? false) === busy) return;
+      tab.plugin.busy = busy;
+      messageBus.emit('state', { type: 'dirty' });
     },
     // Placement, addressed like `updateTab` so a plugin reaches only its own tab, and delegating to
     // the same `setDock` the client's dock-cycle control uses — there is still one docking path.
@@ -194,6 +226,9 @@ export function createPluginContext(
     // True only while an open tab's recorder is still writing this very file. The host owns the
     // recorders, so the host is what answers; a plugin reaches no tab list of its own to ask.
     isRecordingLive: (absPath) => isEnabled() && liveRecordingPaths(managers).has(absPath),
+    // The four a plugin tab needs to be a place a line can be typed and a process can be checked on,
+    // moved out whole because they depend on nothing here beyond what they are handed.
+    ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

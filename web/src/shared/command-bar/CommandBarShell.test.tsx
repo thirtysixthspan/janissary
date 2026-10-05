@@ -1,8 +1,9 @@
 import React, { createRef, useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { CommandBarShell, type CommandBarShellProperties } from './CommandBarShell';
+import { commandBarDropHandle } from '../drop-registry';
 
 type Overrides = Partial<Omit<CommandBarShellProperties, 'value' | 'onChange' | 'inputRef'>>;
 
@@ -110,5 +111,37 @@ describe('CommandBarShell', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     fireEvent.keyDown(input, { key: 'ArrowUp' });
     expect(onKeyDown).toHaveBeenCalledTimes(2);
+  });
+
+  it('publishes no drop target of its own unless it accepts file drops', () => {
+    const { rendered } = renderShell();
+    const bar = rendered.container.querySelector('[data-command-bar]')!;
+
+    expect(commandBarDropHandle(bar)).toBeUndefined();
+  });
+
+  it('accepts a file-navigator drop at its caret and highlights itself while hovered', async () => {
+    const { rendered, input } = renderShell({ acceptsFileDrops: true });
+    const bar = rendered.container.querySelector('[data-command-bar]')!;
+    await userEvent.type(input, 'cat ');
+    const handle = commandBarDropHandle(bar);
+
+    act(() => { handle?.setDropHighlighted(true); });
+    expect(bar).toHaveClass('drop-target');
+    act(() => { handle?.insertAtCaret('src/index.ts'); });
+
+    expect(input).toHaveValue('cat src/index.ts');
+    expect(input).toHaveFocus();
+    act(() => { handle?.setDropHighlighted(false); });
+    expect(bar).not.toHaveClass('drop-target');
+  });
+
+  it('withdraws its drop target when it unmounts', () => {
+    const { rendered } = renderShell({ acceptsFileDrops: true });
+    const bar = rendered.container.querySelector('[data-command-bar]')!;
+
+    rendered.unmount();
+
+    expect(commandBarDropHandle(bar)).toBeUndefined();
   });
 });

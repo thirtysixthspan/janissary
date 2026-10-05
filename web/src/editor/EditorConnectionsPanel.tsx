@@ -10,9 +10,10 @@ import type { EditorConnectionsApi } from './useEditorConnections';
 export function EditorConnectionsPanel({ tab, api }: { tab: TabView; api: EditorConnectionsApi }) {
   return (
     <StatusPanels
-      tab={tab}
-      connections={api.connections}
-      schedule={api.schedule}
+      connections={tab.connections}
+      schedule={[]}
+      connectionsWindow={api.windows.connections}
+      scheduleWindow={api.windows.schedule}
       interactive
       onCloseRow={api.closeRow}
       onOpenAcpTranscript={api.openAcpTranscript}

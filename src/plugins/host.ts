@@ -11,14 +11,16 @@ import { errorFirstLine } from '../error-text.js';
 import { invokePlugin, type PluginCallOutcome } from './invoke.js';
 import { openerPresentation } from './presentation.js';
 import { tabPluginLoaders } from './loaders.js';
-import { subscribeTabPluginNotifications, TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
+import { TAB_PLUGIN_NOTIFY_TIMEOUT_MS } from './notifications.js';
+import { TAB_PLUGIN_HOST_STATE_TIMEOUT_MS } from './host-state.js';
+import { subscribeHostChannels } from './host-channels.js';
 import { runPluginDefaultMenuAction } from './default-menu.js';
 import { closedTabReason, reportClientFailure, runPluginIntent, type PluginRequestPort } from './requests.js';
 import type { Subscription } from '../bus.js';
-import { contributionRejection } from './rejections.js';
 import { runPluginSelectionAction } from './selection.js';
 import { recordStatus, type PluginRecord, type TabPluginStatus } from './status.js';
 import { startPluginActivation } from './start-activation.js';
+import { buildPluginRecords } from './host-records.js';
 import { closePluginTabs } from './teardown.js';
 import { noteInOriginTab } from './transcript-note.js';
 
@@ -26,14 +28,15 @@ export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
   handlerTimeoutMs?: number;
   notifyTimeoutMs?: number;
+  hostStateTimeoutMs?: number;
 };
 
 export class TabPluginHost {
-  private readonly records = new Map<string, PluginRecord>();
+  private readonly records: Map<string, PluginRecord>;
   private readonly disabledTabPlugins = new Map<string, string>();
   private readonly activationTimeoutMs: number;
   private readonly handlerTimeoutMs: number;
-  private readonly notifications: Subscription[];
+  private readonly subscriptions: Subscription[];
   private disposed = false;
 
   constructor(
@@ -44,27 +47,19 @@ export class TabPluginHost {
   ) {
     this.activationTimeoutMs = options.activationTimeoutMs ?? 1000;
     this.handlerTimeoutMs = options.handlerTimeoutMs ?? 5000;
-    for (const declaration of declarations) {
-      if (this.records.has(declaration.id)) {
-        throw new Error(`Duplicate tab plugin id "${declaration.id}"`);
-      }
-      // A claim refused while a registry was being built starts life already disabled, rather than
-      // having taken the app down with it while those registries were being built.
-      const rejection = contributionRejection(declaration.id);
-      this.records.set(declaration.id, rejection === undefined
-        ? { declaration, state: 'declared' }
-        : { declaration, state: 'disabled', reason: rejection });
-    }
-    this.notifications = subscribeTabPluginNotifications({
+    this.records = buildPluginRecords(declarations);
+    this.subscriptions = subscribeHostChannels({
       managers,
       records: () => [...this.records.values()],
-      timeoutMs: options.notifyTimeoutMs ?? TAB_PLUGIN_NOTIFY_TIMEOUT_MS,
       invoke: (record, activation, origin, call, timeoutMs) => invokePlugin(
         managers, record.declaration, activation, origin,
         () => record.state === 'active' && !this.disposed, timeoutMs, call,
       ),
       disable: (record, error, origin) => { this.disable(record, error, origin); },
-    }, declarations.flatMap((declaration) => declaration.notifications ?? []));
+    }, declarations, {
+      notifyMs: options.notifyTimeoutMs ?? TAB_PLUGIN_NOTIFY_TIMEOUT_MS,
+      hostStateMs: options.hostStateTimeoutMs ?? TAB_PLUGIN_HOST_STATE_TIMEOUT_MS,
+    });
   }
 
   get declarations(): readonly TabPluginDeclaration[] {
@@ -118,7 +113,8 @@ export class TabPluginHost {
       record: (id) => this.records.get(id),
       closedTabReason: (tabLabel) => closedTabReason(this.records, this.disabledTabPlugins, tabLabel),
       ensureActive: (record, origin) => this.ensureActive(record, origin),
-      invoke: (record, activation, origin, call) => this.invoke(record, activation, origin, call),
+      invoke: (record, activation, origin, call, answeringLabel) =>
+        this.invoke(record, activation, origin, call, answeringLabel),
       disable: (record, error, origin) => this.disable(record, error, origin),
     };
   }
@@ -126,7 +122,7 @@ export class TabPluginHost {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    for (const subscription of this.notifications) subscription.unsubscribe();
+    for (const subscription of this.subscriptions) subscription.unsubscribe();
     for (const record of this.records.values()) this.disposeActivation(record);
   }
 
@@ -154,10 +150,11 @@ export class TabPluginHost {
     activation: TabPluginActivation,
     origin: PluginFailureOrigin,
     call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
+    answeringLabel?: string,
   ): Promise<PluginCallOutcome<Result>> {
     return invokePlugin(
       this.managers, record.declaration, activation, origin,
-      () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call,
+      () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call, answeringLabel,
     );
   }
 

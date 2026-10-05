@@ -19,6 +19,16 @@ export type PtyHandlers = {
   onExit: (id: string, exitCode: number) => void;
 };
 
+// Which shell runs the pseudo-terminal, and with what argv. Both default to the user's login shell
+// run through `shellCommandArgs`; a caller that needs the shell itself rather than one command run
+// through it supplies argv, and a caller that needs a particular shell names it. `args: []` is
+// meaningfully different from omitting it — the first runs the shell as the user configured it, the
+// second runs a single command through it.
+export type PtyLaunch = {
+  shell?: string;
+  args?: string[];
+};
+
 let counter = 0;
 
 /**
@@ -30,8 +40,7 @@ let counter = 0;
  * By default the command runs through an interactive, non-login shell (see `shellCommandArgs`), so a
  * harness binary installed by a version manager is found the way it is in the user's own terminal —
  * with the user's own PATH order intact, which a login shell's `path_helper` would rewrite.
- * `shellArgs` replaces that argv for callers that need the shell itself rather than one command run
- * through it — a tab's own PTY-backed shell, which must skip its startup files.
+ * `launch` replaces that choice: the shell to run and the argv to run it with.
  */
 export function spawnPty(
   program: string,
@@ -42,12 +51,12 @@ export function spawnPty(
   rows = 24,
   sandbox?: SandboxOptions,
   extraEnv?: NodeJS.ProcessEnv,
-  shellArgs?: string[],
+  launch?: PtyLaunch,
 ): PtySession {
   const id = `pty${++counter}`;
-  const shell = process.env.SHELL || 'bash';
+  const shell = launch?.shell || process.env.SHELL || 'bash';
   const { command: file, args, env } = sandboxSpawn(
-    { ...sandbox, selfBinaryHint: program }, shell, shellArgs ?? shellCommandArgs(shell, command),
+    { ...sandbox, selfBinaryHint: program }, shell, launch?.args ?? shellCommandArgs(shell, command),
   );
   const proc = pty.spawn(file, args, {
     name: 'xterm-256color',

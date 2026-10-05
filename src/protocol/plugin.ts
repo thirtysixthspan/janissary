@@ -4,6 +4,13 @@ export type PluginTabView = {
   id: string;
   schemaVersion: number;
   payload: unknown;
+  // The chords this plugin claimed in its declaration, carried with the tab rather than looked up on
+  // the client: the claim is server-side data, and a client that kept its own copy would be a second
+  // place for it to drift from the declaration that is actually enforced at activation.
+  chords?: readonly string[];
+  // Present when this plugin's declaration says its tabs host the application command bar, so the
+  // client opens its shared pickers and queue popup over the tab without knowing which plugin it is.
+  hostsCommandBar?: true;
 };
 
 export type PluginIntentRequest = { tab: string; intent: string; payload: unknown };

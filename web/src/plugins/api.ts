@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
 import { resourceUrl } from '../session-url';
 import { copyText as systemCopyText } from '../shared/system-clipboard';
+import { openTranscriptLink } from '../shared/transcript/open-link';
+import { transcriptIntents } from '../shared/transcript/transcript-intents';
 import type { PluginHost } from './host';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -13,6 +15,22 @@ export { renderMarkdown } from '../shared/transcript/markdown';
 // does not move — that constant versions what a manifest must declare, which this does not change.
 export { CommandBarShell, type CommandBarShellProperties } from '../shared/command-bar/CommandBarShell';
 export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/useCommandBarKeys';
+// The bar's caret insertion, published with it so a plugin splicing a picked line into its own bar
+// keeps the same undo entry and caret placement the agent tab's bar does. The shell tab shipped a
+// line-for-line copy of it before this. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { spliceIntoTextarea } from '../shared/command-bar/textarea-splice';
+
+// The application's own interception of a typed line, published beside the bar above and for the same
+// reason: a plugin bar that offers every line to the server lets `quit` and a last-tab `close` tear the
+// window down with nothing asked, because the interception that catches them lives in the agent tab's
+// submit chain and a plugin bar never runs it. A plugin body asks this one question before it sends
+// anything, and gets the same answer the agent tab's bar would give. What it reads is already bound to
+// its own tab by the host: the line is intercepted as typed there, the queue popup's state arrives only
+// while the popup is open over that tab, and a picked line is inserted into that tab's bar alone. The
+// providers are the app shell's and are not published; `useAppCommandBar` throws without them rather
+// than answering "nothing is intercepted".
+export { useAppCommandBar } from '../shared/command-bar/AppCommandBar';
+export type { AppCommandBar } from '../shared/command-bar/app-command-bar-scope';
 
 // The host's "double-click to rename, Enter or blur to commit, Escape to cancel" field, published on
 // the same terms and for the same reason: a plugin that renames something should rename it the way
@@ -31,7 +49,7 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 // drifts from the stylesheet, and should reach for the same platform check, because getting that
 // wrong breaks Cmd+C on exactly one platform and nowhere else to notice it.
 export { terminalColors, type TerminalColors } from '../shared/terminal/colors';
-export { isMacPlatform } from '../shared/terminal/terminal/keys';
+export { copySelectionChord, isMacPlatform } from '../shared/terminal/terminal/keys';
 export { PluginActionsHeader } from './PluginActionsHeader';
 
 // The application's answer to "is this a place typed text can go", published for the same reason and
@@ -45,14 +63,58 @@ export { isTextEntryElement } from '../shared/text-entry';
 // same reason the dialog is: a remote tab's metadata row and the sessions tab both show the state of
 // the same connections, and a plugin drawing its own icon for detach would be the drift this surface
 // exists to prevent. Both are additive, so `TAB_PLUGIN_API_VERSION` does not move.
+//
+// The icons are published as the host's own icon objects rather than as `{ prefix, iconName }`
+// descriptors. A descriptor carries no path data, so `FontAwesomeIcon` has to resolve it against a
+// library the plugin cannot add to, and an unregistered name renders nothing at all — a control with
+// no glyph and no size, which is invisible rather than obviously broken. `openFilesIcon` and
+// `newTabIcon` are here for that reason: a metadata row of a plugin's own cannot draw its buttons.
 export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon, terminateSessionIcon } from '../shared/icons';
+export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon } from '../shared/icons';
+
+// The host's own floating status panels and the visibility hook that drives them, published for the
+// same reason and on the same terms: a plugin whose tab offers the connections and schedule buttons
+// must offer the windows the rest of the application shows, not a second pair of panels that drift
+// from them. They take their rows as props rather than a whole `TabView` precisely so a plugin
+// holding only its own payload can render them — the host pushes those rows into the payload when
+// they change. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { StatusPanels } from '../shared/status-windows/StatusPanels';
+export {
+  useStatusWindows,
+  type StatusWindowHandlers,
+  type StatusWindowOptions,
+} from '../shared/status-windows/useStatusWindows';
+// The two controls that open those windows, published with them for the same reason: a row offering
+// the windows without the buttons to open them would compute rows it can never show. `statusButton`
+// builds a button's props from a window's handlers and whether it has rows, which is the only pairing
+// the host's own rows use.
+export { StatusWindowButton } from '../shared/status-windows/StatusWindowButton';
+export { statusButton, type StatusWindowButtonProps } from '../shared/status-windows/status-button';
+
+// The bridge a terminal registers its selection with, which is the only way the application's own
+// context menu learns what a right-click landed on: a terminal's selection is emulator state, so
+// `globalThis.getSelection()` finds nothing and the menu cannot work it out for itself. Published so a
+// plugin with its own terminal earns the same **Copy** entry the harness and takeover terminals get
+// rather than shipping a menu of its own. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export {
+  registerTerminalSelection,
+  unregisterTerminalSelection,
+} from '../shared/terminal/terminal/selection';
+
+// The seam a plugin tab claims a keyboard chord through while it is the visible one. The declaration
+// says which chords; the host's window handler asks this registry before its own table, so a claim
+// applies exactly while the tab the user is looking at is on screen and reverts the moment focus moves.
+// Published because the alternative is a plugin binding its own window listener, which cannot pre-empt
+// the application's and would therefore never fire for a chord the application owns.
+export { usePluginChordClaims, type PluginChordHandler } from './PluginChords';
 
 // The arrow/Home/End selection rule for a list of records, published so every plugin list moves its
 // current row the same way. The conversations, sessions, and schedules lists each carried their own
 // identical copy before this, kept in step only by comments. Additive, so `TAB_PLUGIN_API_VERSION`
 // does not move.
 export { nextListSelection } from '../shared/list-selection';
+export { HistoryPicker } from '../shared/command-bar/HistoryPicker';
+export { handlePickerKey } from '../keyboard-handlers';
 
 // The one clipboard writer, published so a plugin's copy reaches the same capture seam every other
 // copy in the application does rather than being invisible to the clipboard history. The optional
@@ -86,6 +148,18 @@ export type TabDirtyHandle = {
   focus(): void;
 };
 
+// One live terminal, attached for as long as the caller holds the handle. The bytes already travel
+// the application's own `pty` channel — this is the fourth consumer of it rather than a fifth
+// definition of one — so the plugin gains a terminal and no new transport.
+export type PluginTerminal = {
+  write(data: string): void;
+  resize(cols: number, rows: number): void;
+  // Called once when the process behind this terminal has exited. A plugin holding a terminal whose
+  // process is gone cannot tell: nothing on this side reports a death it did not witness.
+  onExit(handler: () => void): void;
+  detach(): void;
+};
+
 export type TabPluginClientCapabilities = {
   resourceUrl(reference: string): string;
   intent<Result>(name: string, payload: unknown): Promise<Result>;
@@ -98,10 +172,24 @@ export type TabPluginClientCapabilities = {
   // so anything a plugin binds globally (a window key listener, say) has to consult this rather than
   // assume it is on screen. The host owns the answer; a plugin must never read it off the DOM.
   active: boolean;
+  // This tab's own label, stable for as long as it is open. A plugin needs it wherever the host asks a
+  // view to key per-tab state on something — `useStatusWindows` re-arms its auto-show when this
+  // changes — and has no other way to learn it, since the capability object deliberately withholds the
+  // client and a plugin must not read the DOM. Optional for the reason `attachTerminal` is: the host
+  // always knows the label, but fourteen plugin fixtures build this object and none of them keys
+  // anything by it. Absent means "no per-tab identity is available to you".
+  label?: string;
+  dotColor?: string;
   // Which sidebar this tab is docked into, or `null` when it sits in the centre strip. Placement is
   // host-owned, and a plugin that lays itself out differently in a narrow sidebar reads it here
   // rather than measuring the host's frame or sniffing its DOM.
   dock: 'left' | 'right' | null;
+  // The chord ids this plugin's declaration claimed, as the host accepted them at activation and sends
+  // them on this tab's view. Read them here rather than writing them out in the plugin: a second copy
+  // is a second thing that can disagree with the claim actually enforced, and nothing would notice
+  // when it did. Optional, like `attachTerminal`, so the plugin fixtures that build a capability
+  // object are not churned for a field none of them claims; absent means the declaration claimed none.
+  claimedChords?: readonly string[];
   // Close this tab. Unlike `splitAction` this is a callback rather than a host-rendered control,
   // because a plugin may need to close on something other than a click of its own button — an
   // embedded cross-origin page swallows the host's Cmd+W and has to answer for it itself.
@@ -116,6 +204,25 @@ export type TabPluginClientCapabilities = {
   // cannot reach that helper, and a lazily loaded chunk that grows its own would be a second place a
   // copy is observed and could drift.
   copyText(text: string): void;
+  // Attach to a terminal this plugin's tab owns, by the id its payload carries, handing every byte it
+  // produces to `onData`. Bytes already produced are flushed into `onData` before this returns, so a
+  // plugin attaching late still renders what the shell said before it did. Returns a handle whose
+  // `detach` releases the attachment; call it on teardown, or a hidden tab keeps a live subscription
+  // to a terminal nothing is rendering. Optional, like `registerDirtyHandle`, because a plugin with no
+  // terminal behaves exactly as it did before this existed.
+  attachTerminal?(ptyId: string, onData: (data: string) => void): Promise<PluginTerminal>;
+  // The two metadata-row actions that are tab-scoped RPCs rather than commands: open a file navigator
+  // rooted at this tab, and launch an agent in this tab's directory. Capabilities rather than a
+  // dispatched command line because the two are not the same thing — the agent action roots the new
+  // tab at *this* tab's cwd and joins its group, which a command run in this tab does not. Optional
+  // for the same reason as `attachTerminal`.
+  openFileNavigator?(): void;
+  launchAgentHere?(): void;
+  // Open a link the way a click on it in an agent tab's transcript does: a web address through `open`,
+  // a `path:line` reference in an editor tab, and anything else not at all. A plugin rendering markdown
+  // of its own needs it because the default for an anchor click is to navigate the whole application
+  // window away. Optional for the same reason as `attachTerminal`.
+  openLink?(href: string): void;
   reportFailure(reason: string): void;
 };
 
@@ -129,10 +236,15 @@ export function createPluginClientCapabilities(
   onClose: () => void,
   splitAction?: ReactNode,
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void,
+  claimedChords: readonly string[] = [],
+  dotColor?: string,
 ): TabPluginClientCapabilities {
   return {
     active,
     dock,
+    label,
+    claimedChords,
+    dotColor,
     close: onClose,
     registerDirtyHandle: onDirtyHandle,
     resourceUrl,
@@ -146,6 +258,29 @@ export function createPluginClientCapabilities(
       return result.value;
     },
     splitAction: splitAction ?? null,
+    attachTerminal: async (ptyId, onData) => {
+      const authorization = await client.request<{ ok: boolean; value?: boolean }>({
+        method: 'pluginTerminalAttach', params: { id: ptyId, tab: label },
+      });
+      if (!authorization.ok || !authorization.value) throw new Error('terminal does not belong to this plugin tab');
+      const exitHandlers = new Set<() => void>();
+      const stopListening = client.onPtyExit((id) => {
+        if (id !== ptyId) return;
+        for (const handler of exitHandlers) handler();
+      });
+      // Buffered early output is flushed into `onData` by `attachPty` before this returns, so a
+      // plugin attaching late still renders whatever the shell said before it did.
+      const detachBytes = client.attachPty(ptyId, onData);
+      return {
+        write: (data) => { client.send({ method: 'ptyInput', params: { id: ptyId, data, tab: label } }); },
+        resize: (cols, rows) => { client.send({ method: 'ptyResize', params: { id: ptyId, cols, rows, tab: label } }); },
+        onExit: (handler) => { exitHandlers.add(handler); },
+        detach: () => { detachBytes(); stopListening(); exitHandlers.clear(); },
+      };
+    },
+    openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
+    launchAgentHere: () => { client.send({ method: 'launchAgentFor', params: { label } }); },
+    openLink: (href) => { openTranscriptLink(href, transcriptIntents((call) => client.send(call))); },
     // The report is deduplicated here rather than in the layer above, so the one-report-per-plugin
     // rule covers a plugin component reporting its own failure — a bad intent result, say — and not
     // just the load, schema, timeout, and render failures the host detects for it. The first report

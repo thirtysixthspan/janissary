@@ -12,7 +12,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `open [external] [page] <target>` | Open a file, a web page, or an external application; see [Opening files and pages](/user-documentation/tab-types/opening-files) |
 | `edit <file>[:line]` | Open a file for editing, picking the editor by file type; see [Opening a file to change it](/user-documentation/tab-types/opening-files#opening-a-file-to-change-it-edit) |
-| `clear` | Empty the current tab's transcript — other tabs are unaffected |
+| `clear` | Empty the current tab's transcript — other tabs are unaffected. In a shell tab, `clear` clears the terminal; use `/clear` to empty the transcript |
 | `rename [newname]` | Set (or, bare, clear) the tab's display alias — see [Tabs](/user-documentation/getting-started/tabs) |
 | `theme [name]` | Switch the application color theme; bare form opens a picker |
 | `syntax theme [name]` | Switch the editor syntax theme; bare form opens a picker |
@@ -21,7 +21,8 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
 | `plugins` | List the [bundled tab plugins](/user-documentation/command-bar/plugins) with their version and state |
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a conversation by its title |
-| `quit` | Exit the application, after confirmation |
+| `zsh` | Open a separate [zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) |
+| `quit` / `/quit` | Exit the application, after confirmation |
 
 ## `help`
 
@@ -29,7 +30,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 ## `state`
 
-`state` prints what the current tab has saved, one field per block, so you can see exactly what `janus --relaunch` would bring back:
+`state` prints what the current tab has saved, one field per block with its name in bold and its value in code, so you can see exactly what `janus --relaunch` would bring back:
 
 ```
 > state
@@ -39,7 +40,7 @@ Each tab's state is one JSON file under `.janissary/state/`, named after the tab
 
 The transcript is not in that file. It is kept separately, one file per tab under `.janissary/transcripts/`, and `--relaunch` reads it from there.
 
-A tab with no state file reports `No state file found for "<label>".` That is the answer for the `janus` tab on a fresh launch, for every view tab such as an [image](/user-documentation/tab-types/image-viewer) or [page](/user-documentation/tab-types/web-pages) tab, and for a [remote agent](/user-documentation/advanced-agents/remote-agents), since a tab whose shell lives on another machine keeps nothing here.
+An agent tab with no state file reports `No state file found for "<label>".` That is the answer for the `janus` tab on a fresh launch and for a [remote agent](/user-documentation/advanced-agents/remote-agents), since a tab whose shell lives on another machine keeps nothing here. A tab that is never saved, such as a [zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab), shows the same fields read from the open tab instead, which is how `state` works from a shell tab's command bar.
 
 Work that lands after you close a tab does not put that tab back. A scheduled command that fires, or a shell command that finishes, minutes after the tab is gone writes nothing, so the tab stays closed on the next `--relaunch`. The state directory is wiped on an ordinary launch and kept on `--relaunch`; see [Resuming a session](/user-documentation/getting-started/startup#resuming-a-session-with-relaunch).
 
@@ -75,7 +76,7 @@ A picker needs a screen, so a command that arrives from somewhere without one an
 
 <img class="agent-float" src="/agents/selim-south.png" alt="" />
 
-Typed by you, `quit` is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
+Typed by you, `quit` (or `/quit`) is the only command that exits the whole app, and it always asks first: a dialog reading "Are you sure you want to quit?" with **Quit (y)** and **Cancel (n)** buttons. **Cancel** is selected by default, so a stray `Enter` is safe. Press `y` to confirm or `n` / `Escape` to cancel; `←`/`→` move the selection. While the dialog is open it traps all other input — clicks outside it and other keys do nothing.
 
 A `quit` nobody typed is not asked about. A [schedule](/user-documentation/automation/scheduling) that fires a `quit`, or another tab telling this one to `quit`, exits the app outright, with no dialog and no unsaved-changes guard.
 

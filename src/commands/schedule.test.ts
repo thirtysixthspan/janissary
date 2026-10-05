@@ -36,8 +36,11 @@ describe('schedule command run', () => {
       { label: 'janus' },
       { label: 'claude', title: 'Reviewer', view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' } },
       { label: 'notes', view: 'markdown' },
+      { label: 'bekir', view: 'plugin' },
+      { label: 'video', view: 'plugin' },
     ];
     managers = {
+      pty: { terminalIdFor: (label: string) => (label === 'bekir' ? 'pty4' : undefined) },
       schedule: {
         get: (label: string) => schedules.get(label),
         set: (label: string, next: ScheduleEntry[]) => { schedules.set(label, next); },
@@ -182,6 +185,24 @@ describe('schedule command run', () => {
   it('errors when the target tab is a view that cannot run commands', () => {
     run('schedule x in notes every 5m echo hi');
     expect(outputs.at(-1)).toBe('Tab "notes" cannot run scheduled commands.');
+    expect(schedules.size).toBe(0);
+  });
+
+  it('accepts a plugin tab that owns a terminal, such as a shell tab', () => {
+    run('schedule fetch in bekir every 5m git fetch');
+    expect(schedules.get('bekir')?.[0]).toMatchObject({ id: 'fetch', command: 'git fetch' });
+    expect(outputs.at(-1)).toContain('Scheduled fetch in bekir');
+  });
+
+  it('accepts a schedule issued from a shell tab for itself', () => {
+    tab = { label: 'bekir', index: 3 };
+    run('schedule fetch every 5m git fetch');
+    expect(schedules.get('bekir')).toHaveLength(1);
+  });
+
+  it('still refuses a plugin tab with no terminal to type into', () => {
+    run('schedule x in video every 5m echo hi');
+    expect(outputs.at(-1)).toBe('Tab "video" cannot run scheduled commands.');
     expect(schedules.size).toBe(0);
   });
 });

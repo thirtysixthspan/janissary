@@ -45,6 +45,7 @@ const MAPPING: ReadonlyArray<[string, unknown, unknown]> = [
   ['quickOpenLoading', view.quickOpenLoading, state.quickOpenLoading],
   ['onPickQuickOpen', view.onPickQuickOpen, state.pickQuickOpenFile],
   ['onCloseQuickOpen', view.onCloseQuickOpen, state.closeQuickOpen],
+  ['restoreQuickOpenFocus', view.restoreQuickOpenFocus, state.restoreQuickOpenFocus],
   ['commandInputRef', view.commandInputRef, state.commandInputRef],
 ];
 

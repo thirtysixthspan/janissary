@@ -4,9 +4,11 @@ Guards against accidentally exiting the application from the `quit` command.
 
 ### Trigger
 
-Typing `quit` at the command line does not immediately exit. It opens a confirmation dialog reading "Are you sure you want to quit?" with two buttons, **Quit (y)** and **Cancel (n)**. The application only exits once the dialog is confirmed.
+Typing `quit` or `/quit` at a command bar does not immediately exit. It opens a confirmation dialog reading "Are you sure you want to quit?" with two buttons, **Quit (y)** and **Cancel (n)**. The application only exits once the dialog is confirmed.
 
-Typing `close` (or its alias `exit`) when only a single tab is open triggers the same dialog, because closing the last tab quits the app (see `tabs.md`). Cancelling leaves the tab open. Every other way of closing the last tab shows the same dialog too — the tab strip's × button, Cmd+W/Ctrl+W, and a page-view tab's own × button all behave identically. Only the tab's underlying process exiting on its own (not a user-initiated close) quits directly without the dialog.
+This is the rule for every command bar, whichever kind of tab it belongs to: typing `quit` in an agent tab, in a shell tab, or in any other plugin tab's bar asks the same question, and none of them exits without it.
+
+Typing `close` or its alias `exit` when only a single tab is open triggers the same dialog, because closing the last tab quits the app (see `tabs.md`). A single leading slash is also accepted, so `/close` and `/exit` receive the same confirmation. A named close such as `/close <name>` receives the same save or quit guard as `close <name>`. Cancelling leaves the tab open. Every other way of closing the last tab shows the same dialog too — the tab strip's × button, Cmd+W/Ctrl+W, and a page-view tab's own × button all behave identically. Only the tab's underlying process exiting on its own (not a user-initiated close) quits directly without the dialog.
 
 ### `exit` is not `quit`
 

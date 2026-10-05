@@ -1,10 +1,11 @@
 import React from 'react';
-import { act, render as renderBare, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render as renderBare, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { createPluginHost, PluginHostProvider, type PluginHost } from './host';
 import { PluginBody } from './PluginBody';
+import { AppCommandBarProvider, useAppCommandBar } from '../shared/command-bar/AppCommandBar';
 import {
   clientPlugin,
   type ClientPluginLoader,
@@ -39,7 +40,7 @@ function registration(loader: ClientPluginLoader): ClientPluginRegistration {
 
 const acceptsAnyPayload = (value: unknown): value is unknown => value !== undefined;
 
-function body(id = 'fixture', label = id) {
+function body(id = 'fixture', label = id, active = true) {
   const fixture = client();
   const view = { plugin: plugin(id) };
   return {
@@ -47,7 +48,7 @@ function body(id = 'fixture', label = id) {
     element: (
       <PluginBody
         plugin={view.plugin} label={label} client={fixture.value}
-        active onClose={() => {}}
+        active={active} onClose={() => {}}
       />
     ),
   };
@@ -199,5 +200,38 @@ describe('PluginBody failure isolation', () => {
         />,
       );
     }).toThrow('no PluginHostProvider above this plugin');
+  });
+});
+
+describe('PluginBody command bar scope', () => {
+  it('binds the command bar a plugin body reads to the tab the host rendered it for', async () => {
+    const intercept = vi.fn(() => true);
+    function Reader() {
+      const bar = useAppCommandBar();
+      return <button type="button" onClick={() => { bar.intercept('theme'); }}>ask</button>;
+    }
+    registry.set('fixture', registration(async () => ({ default: Reader, isPayload: acceptsAnyPayload })));
+    const { element } = body('fixture', 'shell-left');
+
+    render(<AppCommandBarProvider bar={{ intercept, ghostHistory: [] }}>{element}</AppCommandBarProvider>);
+    fireEvent.click(await screen.findByText('ask'));
+
+    expect(intercept).toHaveBeenCalledWith('theme', 'shell-left', true);
+  });
+
+  // The host, not the plugin, knows whether a body is on screen, and a hidden one must open no picker.
+  it('tells the application when the body asking is not on screen', async () => {
+    const intercept = vi.fn(() => true);
+    function Reader() {
+      const bar = useAppCommandBar();
+      return <button type="button" onClick={() => { bar.intercept('tasks'); }}>ask</button>;
+    }
+    registry.set('fixture', registration(async () => ({ default: Reader, isPayload: acceptsAnyPayload })));
+    const { element } = body('fixture', 'shell-hidden', false);
+
+    render(<AppCommandBarProvider bar={{ intercept, ghostHistory: [] }}>{element}</AppCommandBarProvider>);
+    fireEvent.click(await screen.findByText('ask'));
+
+    expect(intercept).toHaveBeenCalledWith('tasks', 'shell-hidden', false);
   });
 });

@@ -33,7 +33,7 @@
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
 | Tab | Complete the token at the cursor: a file path, a `msg`/`broadcast` agent name, a `connection close` connection string, or a `browser` subcommand / window id |
-| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog is open, so focus stays inside the dialog. Left to an editor tab's text buffer, where it outdents (see [[editor-tab]]), and to a pending question panel's controls, where it moves backward between the panel's buttons (see [[agent-questions]]). |
+| Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog is open, so focus stays inside the dialog. Left to an editor tab's text buffer, where it outdents (see [[editor-tab]]), to a pending question panel's controls, where it moves backward between the panel's buttons (see [[agent-questions]]), and to a shell tab, where it moves between the terminal and the command bar (see [[shell-tab]]). |
 
 The UI is composed of up to four **application sections**: the left sidebar, the center action
 area, the right sidebar, and the reporting section below it. A section exists only when it holds
@@ -50,7 +50,9 @@ such as its metadata row, Shift+Tab still moves to the next section.
 A pending question panel's buttons and text field are a second exception: the chord steps backward
 through the panel's buttons there, so focus stays in the panel. The panel is non-modal, so Shift+Tab
 from the command line or any other control outside it still moves to the next section.
-Both exceptions use the same mechanism: `useSectionNav` stands down when the key lands on or inside an
+A shell tab is the third exception: anywhere inside it, Shift+Tab moves focus between its terminal and
+its command bar (see [[shell-tab]]) rather than to the next section.
+All three exceptions use the same mechanism: `useSectionNav` stands down when the key lands on or inside an
 element marked `data-claims-shift-tab`.
 
 A focused editor tab's text buffer captures only the keys it binds itself: printable characters, the
@@ -88,6 +90,8 @@ which one keystrokes go to:
 A plugin-contributed overlay ranks below all nine, so a chord pressed while one of them is open never reaches it. Inside the plugin band the order plugins declared in decides, so two of them claiming the same moment resolve the same way every time. Only one overlay is ever on screen, and which surfaces render one is its own question: the clipboard-history popup ([[clipboard-history]]) renders on an agent tab, an editor tab, and a harness or ssh tab, and a markdown, image, pdf, page, video, sql, or conversations tab renders none at all — its chord is still answered there, and the overlay it opens claims the keyboard without anything to show.
 
 A contributed overlay takes the command bar's keys while it is open, exactly as a built-in one does, and none of them disables the bar outright.
+
+The history, clipboard-history, queue, tab-navigation, Quick Open, application-theme, and syntax-theme popups render above the command bar and stay inside the tab's colored left edge. On plugin tabs, the host positions these overlays against the tab body: each popup starts immediately beside the colored edge without covering it, spans to the tab's right side, and sits directly on top of the command bar at whatever height the bar currently has, so a multi-line draft or a completion strip never leaves a gap or an overlap. This holds whether the popup belongs to the plugin or to the application, so the clipboard-history, queue, tab-navigation, Quick Open, and theme popups opened over a shell tab rest on the shell's command bar exactly as its own history popup does. A plugin tab with no command bar has its popups sit at the bottom of the tab. On an agent tab, they stay within the transcript area.
 
 While an overlay is open it claims every keystroke: nothing underneath it scrolls the transcript,
 switches tabs, or reorders them, and the shortcuts that open the other overlays do nothing until it

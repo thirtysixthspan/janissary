@@ -41,6 +41,7 @@ export function pickerStateFixture(): PickerOverlaysState {
     quickOpenResults: [{ path: 'a/b.ts', index: 0, score: 1, ranges: [] }],
     setQuickOpenQuery: vi.fn(), setQuickOpenIndex: vi.fn(), setQuickOpenOpen: vi.fn(),
     openQuickOpen: vi.fn(), closeQuickOpen: vi.fn(), pickQuickOpenFile: vi.fn(),
+    restoreQuickOpenFocus: vi.fn(),
 
     queueOpen: true, queueIndex: 7, setQueueIndex: vi.fn(), setQueueOpen: vi.fn(),
     openQueue: vi.fn(), selectQueueIndex: vi.fn(), onEditQueued: vi.fn(), onDeleteQueued: vi.fn(),

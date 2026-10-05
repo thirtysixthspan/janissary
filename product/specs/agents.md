@@ -12,7 +12,7 @@ Creates a new workspaced agent tab with a random unused name from the pool. See 
 
 ### `agent <name>` command
 
-Creates a new workspaced agent tab with the specified name. See the Tabs section. `--workspace` (or `-w`) explicitly confirms the default; `--no-workspace` starts the agent in the project checkout instead.
+Creates a new workspaced agent tab with the specified name. See the Tabs section. `--workspace` (or `-w`) explicitly confirms the default; `--no-workspace` starts the agent in the project checkout instead. When the tab the command came from is a local, unworkspaced tab whose working directory is inside the project checkout, the new agent starts in that directory, so a subdirectory carries over. From a workspaced tab, a remote tab, or a tab whose directory is outside the checkout, it starts at the checkout root, so an unconfined agent never starts inside another tab's clone, which is deleted when that tab closes (`unconfinedAgentCwd` in `src/profile/inherited-cwd.ts`).
 
 ### `on <address>` clause
 

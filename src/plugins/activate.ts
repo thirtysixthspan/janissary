@@ -1,6 +1,7 @@
 import {
   TAB_PLUGIN_API_VERSION,
   isTabPluginCapability,
+  isTabPluginHostStateSlice,
   isTabPluginNotificationTopic,
   type TabPluginActivation,
   type TabPluginDeclaration,
@@ -25,7 +26,37 @@ function validateDeclaration(declaration: TabPluginDeclaration): void {
     if (isTabPluginNotificationTopic(topic)) continue;
     throw new Error(`subscribes to unknown notification topic "${topic}"`);
   }
+  const hostSlices = declaration.hostState ?? [];
+  for (const slice of hostSlices) {
+    if (isTabPluginHostStateSlice(slice)) continue;
+    throw new Error(`requests unknown host state slice "${slice}"`);
+  }
+  // A chord id is compared against the application's own table by string, so a typo would be a claim
+  // that can never fire. Refusing it here is the difference between a plugin that reports its own
+  // mistake and one that silently loses a key binding.
+  const chords = declaration.chords ?? [];
+  for (const chord of chords) {
+    if (chordIdPattern.test(chord)) continue;
+    throw new Error(`claims malformed chord id "${chord}"`);
+  }
+  validateCommandBarClaim(declaration);
 }
+
+// A tab hosting the command bar takes the application's queue popup, whose rows are that tab's own
+// command queue. The plugin fills it with `queueLine` and drains it with `nextQueuedLine`; a claim
+// without both would show a queue nothing ever runs, so it is refused before anything is offered.
+const COMMAND_BAR_CAPABILITIES = ['queueLine', 'nextQueuedLine'] as const;
+
+function validateCommandBarClaim(declaration: TabPluginDeclaration): void {
+  if (!declaration.hostsCommandBar) return;
+  const missing = COMMAND_BAR_CAPABILITIES.filter((name) => !declaration.capabilities.includes(name));
+  if (missing.length === 0) return;
+  throw new Error(`hosts the command bar but does not request "${missing.join('", "')}"`);
+}
+
+// Optional modifier groups enforce the fixed order `meta`, `ctrl`, `shift`, `alt` and allow each only
+// once, followed by a lowercase key name — exactly the shape `eventChordId` writes.
+const chordIdPattern = /^(?:meta\+)?(?:ctrl\+)?(?:shift\+)?(?:alt\+)?[a-z0-9]+$/u;
 
 // A command claim with no handler is answered as a rejection when the command runs, because it has a
 // caller and a transcript to answer into. A notification has neither, so a declaration naming a topic
@@ -56,6 +87,13 @@ function validateActivation(
   // could discover there is no handler — and the plain-text fallback would already be gone.
   if (declaration.editsOwnFiles && !activation.opener.edit) {
     throw new Error('contributes "edit" but provides no edit handler');
+  }
+  // Host state is pushed from the declaration alone, and a slice nothing consumes would leave the
+  // plugin's payload permanently short of what it declared it wanted — caught here rather than
+  // discovered as a window that never fills.
+  const slices = declaration.hostState ?? [];
+  if (slices.length > 0 && !activation.hostState) {
+    throw new Error(`requests "${slices.join('", "')}" but provides no hostState handler`);
   }
 }
 

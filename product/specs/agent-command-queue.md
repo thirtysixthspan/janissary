@@ -4,7 +4,11 @@ Every **agent** tab (`view` undefined or `'agent'`) has a command queue. While t
 is busy, anything submitted to it — typed on its own command line, or dispatched into it by
 `send`, a scheduled command, an accepted monitor suggestion, or `queue <agent> <command>` — is
 appended to the queue instead of running immediately. Non-agent tabs (harness, image, page, markdown, editor,
-files, monitor) have no queue; input to them behaves exactly as before.
+files, monitor) have no agent command queue; input to them behaves exactly as before. Shell tabs have
+their own per-tab queue for command-bar lines, described in [[shell-tab]], and accept the `queue`
+command as a way to add a line to it. Only the shell tab drains that queue: the busy → idle drain
+below never runs a shell tab's queued lines, even if the shell tab was marked busy, because a line
+it ran would go to the tab's background shell instead of zsh.
 
 ### Queueing and draining
 
@@ -37,7 +41,10 @@ blinking. Submitting text at this point queues it rather than running it.
 
 `Ctrl+E` (or the `queue` command) opens a `queue` popup over the command line, listing the
 exposed tab's queued commands in order, front (the next one to run) at the top. It no-ops if the
-exposed tab is not an agent tab. When the queue is empty it shows `(no commands queued)`.
+exposed tab is not an agent tab. When the queue is empty it shows `(no commands queued)`. A `queue`
+typed into a shell tab's bar opens the popup for that shell instead, even when the shell is docked in
+a sidebar and an agent tab is exposed; its rows, edits and deletes are then the shell's (see
+[[shell-tab]]).
 
 Opening the popup selects the front entry, which copies its text into the command line,
 overwriting whatever was there. The command line is the popup's only edit surface:
@@ -58,13 +65,16 @@ A keystroke that edits a row can race a concurrent removal of that same row (e.g
 draining while the popup is open); the edit is dropped in that case rather than misapplied to a
 different row.
 
-### `queue <agent> <command>` command
+### `queue <agent-or-shell-tab> <command>` command
 
-`queue <agent> <command...>` appends `command` to another agent's queue, regardless of that
+`queue <agent-or-shell-tab> <command...>` appends `command` to another agent's or shell tab's queue, regardless of that
 agent's busy state — an idle target with nothing else queued runs it immediately; a busy target
 (or one with entries already queued) keeps it queued behind the rest. Errors: `No tab named
-"<label>".` for an unknown target, `Tab "<label>" has no command queue.` for a non-agent target.
-On success the issuing tab's transcript records `→ <label> (queued): <command>`.
+"<label>".` for an unknown target, `Tab "<label>" has no command queue.` for a target without an
+agent or shell queue. On success the issuing tab's transcript records `→ <label> (queued): <command>`.
+A shell tab runs the line through its ordinary command-bar routing, so application commands still
+reach the application and unclaimed lines reach zsh. An idle shell drains a line added by another tab
+as soon as its queue updates; a busy shell drains it when zsh returns to its prompt.
 
 This is a different thing from the bare `queue` command (see "Queue popup" above), which opens
 the interactive picker for the *issuing* tab's own queue rather than appending to another tab's.

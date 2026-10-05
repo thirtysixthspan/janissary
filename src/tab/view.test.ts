@@ -12,6 +12,45 @@ describe('buildTabView', () => {
     expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path).pane).toBe('right');
   });
 
+  // Declaration facts ride the plugin tab's view so the client never decides them from a plugin id;
+  // each is omitted rather than sent empty, so a plugin claiming nothing costs no bytes.
+  describe('plugin declaration fields', () => {
+    function pluginTab(): Tab {
+      const tab = makeTab('shell', '#fff');
+      tab.view = 'plugin';
+      tab.plugin = {
+        id: 'shell', instanceKey: 'shell-1', schemaVersion: 2, payload: {}, fileRefs: [], sourceLabel: 'janus',
+      };
+      return tab;
+    }
+    const viewWith = (tab: Tab, declaration?: { chords?: readonly string[]; hostsCommandBar?: boolean }) =>
+      buildTabView(
+        tab, false, '/tmp', undefined, [], [], [], (p) => p,
+        undefined, undefined, undefined, undefined, () => declaration,
+      );
+
+    it('carries the command bar flag and chord claim from the declaration', () => {
+      const view = viewWith(pluginTab(), { chords: ['ctrl+r'], hostsCommandBar: true });
+
+      expect(view.plugin).toMatchObject({ id: 'shell', chords: ['ctrl+r'], hostsCommandBar: true });
+    });
+
+    it('omits both when the declaration claims neither', () => {
+      const view = viewWith(pluginTab(), { chords: [], hostsCommandBar: false });
+
+      expect(view.plugin && 'hostsCommandBar' in view.plugin).toBe(false);
+      expect(view.plugin && 'chords' in view.plugin).toBe(false);
+    });
+
+    it('marks the tab busy when its plugin lit the dot, beside the runtime flag', () => {
+      const tab = pluginTab();
+      expect(viewWith(tab).busy).toBe(false);
+
+      tab.plugin!.busy = true;
+      expect(viewWith(tab).busy).toBe(true);
+    });
+  });
+
   it('never includes editorDraft in the TabView sent to clients', () => {
     const tab = makeTab('agent-1', '#fff');
     tab.editor = { name: 'notes.txt', path: '/tmp/notes.txt', size: '8 B', url: '/open/1' };

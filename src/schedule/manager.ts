@@ -8,6 +8,7 @@ import { notify } from '../notifications/index.js';
 import { scheduleView, aggregatedScheduleView } from './views.js';
 import { formatLateDuration } from './display.js';
 import { typeIntoHarness } from '../harness/input.js';
+import { canRunSchedules } from './targets.js';
 
 // Independent of `resume-watch.ts`'s own threshold for "the machine was asleep": this one is the
 // user-visible lateness bar `product/specs/scheduling.md` documents as five seconds, and it stays
@@ -46,13 +47,12 @@ export class ScheduleManager {
   }
 
   // The launch dialog's target-tab catalog while open, or null when closed: the eligible tab
-  // labels (agent + harness tabs, the same predicate `resolveTargetTab` uses) plus the active
-  // tab's label as the default.
+  // labels (the same `canRunSchedules` predicate `resolveTargetTab` uses) plus the active tab's
+  // label as the default.
   scheduleLaunchView(): ScheduleLaunchView | null {
     if (!this.launchDialogOpen) return null;
-    const eligible = new Set<Tab['view'] | undefined>([undefined, 'agent', 'harness']);
     const targets = this.managers.tab.tabs
-      .filter((t) => eligible.has(t.view))
+      .filter((t) => canRunSchedules(t, this.managers))
       .map((t) => t.label);
     return { targets, active: this.managers.tab.cur().label };
   }
@@ -224,11 +224,19 @@ export class ScheduleManager {
     return isChanged ? remaining : undefined;
   }
 
-  // Deliver a due entry to its tab: typed into a harness PTY as a line of input, or dispatched
-  // through an agent tab's command pipeline. Returns false when delivery must wait (the harness
-  // is not running), leaving the entry due so it retries on a later tick.
+  // Deliver a due entry to its tab: typed into a harness PTY or a plugin tab's own terminal as a
+  // line of input, or dispatched through an agent tab's command pipeline. Returns false when
+  // delivery must wait (the harness is not running, or the terminal is gone), leaving the entry due
+  // so it retries on a later tick.
   private fire(tab: Tab, e: ScheduleEntry): boolean {
     if (tab.sessionTerminated || (tab.remote && !this.managers.remote.get(tab.label)?.attached)) return false;
+    if (tab.view === 'plugin') {
+      const ptyId = this.managers.pty.terminalIdFor(tab.label);
+      if (ptyId === undefined) return false;
+      this.managers.pty.input(ptyId, `${e.command}\n`);
+      notify(this.managers, 'schedule-fire', tab.label, e.command);
+      return true;
+    }
     if (tab.view === 'harness') {
       if (tab.harness?.status !== 'running' || !tab.harness.ptyId) return false;
       typeIntoHarness(this.managers.pty, tab.harness.ptyId, tab.harness.name, e.command);

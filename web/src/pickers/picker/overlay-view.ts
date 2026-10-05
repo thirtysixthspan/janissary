@@ -48,6 +48,7 @@ export type PickerOverlayView = {
   quickOpenLoading: boolean;
   onPickQuickOpen: (relPath: string) => void;
   onCloseQuickOpen: () => void;
+  restoreQuickOpenFocus: () => void;
   commandInputRef: React.RefObject<HTMLTextAreaElement | null>;
 };
 
@@ -70,6 +71,7 @@ export function buildPickerOverlayView(state: PickerOverlaysState): PickerOverla
     quickOpenResults: state.quickOpenResults, quickOpenIndex: state.quickOpenIndex,
     onChangeQuickOpenIndex: state.setQuickOpenIndex, quickOpenLoading: state.quickOpenLoading,
     onPickQuickOpen: state.pickQuickOpenFile, onCloseQuickOpen: state.closeQuickOpen,
+    restoreQuickOpenFocus: state.restoreQuickOpenFocus,
     commandInputRef: state.commandInputRef,
   };
 }

@@ -6,6 +6,7 @@ import { SCHEDULES_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/schedules/shar
 import { VIDEO_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/video/shared';
 import { CONVERSATIONS_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/conversations/shared';
 import { SQL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/sql/shared';
+import { SHELL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/shell/shared';
 import { clientPluginLoaders, clientPluginRegistry } from './registry';
 
 // The registry hardcodes each plugin's payload schema version so importing a shared contract cannot
@@ -19,6 +20,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('schedules')?.schemaVersion).toBe(SCHEDULES_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('shell')?.schemaVersion).toBe(SHELL_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('sql')?.schemaVersion).toBe(SQL_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('video')?.schemaVersion).toBe(VIDEO_PAYLOAD_SCHEMA_VERSION);
   });

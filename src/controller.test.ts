@@ -641,7 +641,7 @@ describe('Controller', () => {
     const { c } = makeController();
     c.dispatch('help'); // triggers a persist of the janus tab
     c.dispatch('state');
-    expect(allText(c)).toContain('name:');
+    expect(allText(c)).toContain('**name**: `janus`');
   });
 });
 

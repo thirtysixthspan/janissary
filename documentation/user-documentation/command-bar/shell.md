@@ -104,3 +104,32 @@ Some programs need a terminal without ever saying so — a `sudo` password promp
 A real terminal also means commands behave the way they do in one: output comes back in color, and `git log` or `git diff` open a pager instead of printing everything at once.
 
 If you'd rather have none of this, set `interactiveShellDetection` to `false` in `.janissary/config.json`. Commands then run through plain pipes and only the built-in list of interactive programs applies — though anything already remembered still opens a terminal.
+
+## Open a zsh shell tab
+
+Type `zsh` to open a separate tab with a live zsh terminal. This is different from running a command with `shell` or taking over the current tab with `shell --pty`.
+
+The command bar starts focused. Click the terminal or press `Shift+Tab` to type directly into zsh; press `Shift+Tab` again to return to the command bar. When you use the bar, each line goes to Janissary first. A recognized application command runs there and never reaches zsh; text replies such as `help` appear below the command as rendered markdown, with bold headings, colored code, bulleted lists, and lined-up tables. Long replies take the space they need in the terminal scrollback, without an internal scrollbar. As you scroll through a reply, the visible portion stays rendered even after its first row moves above the viewport. If a full-screen program is using the terminal or the reply cannot be measured or placed, it appears as styled terminal text instead. An unclaimed line goes to zsh. Prefix a line with `!` to send it straight to zsh, even when it matches an application command. While zsh is running a command, the command line reads `queue >` and anything you submit waits in the tab's command queue; the queued lines run one at a time as zsh returns to its prompt, and `Ctrl+E` shows them.
+
+A multi-line command stays editable in the bar until you submit it. If it goes to zsh, its lines are pasted together and submitted as one command.
+
+The shell starts in the working directory of the tab that opened it. A remote agent tab's directory is on the other machine, so `zsh` typed there opens nothing and answers `A shell tab cannot be opened from a remote tab.` It shares that tab's workspace and offline mode when present, and keeps the workspace alive even if you close the original tab. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt.
+
+The terminal is painted in the application theme's own colors — background, text, cursor, and selection — so a light theme gives a light terminal. Choosing a theme in the `theme` picker updates the shell terminal too.
+
+The shell tab's metadata row follows zsh's current working directory as you change it, shortening paths
+inside the project to `$root` and paths inside the workspace clone to `$workspace/<name>`. Its file-navigator button opens the navigator in that same directory.
+
+When a command finishes while the zsh tab is hidden, it gets an unread flag. If the flag remains unread and hidden for 30 seconds, Janissary raises the same `Agent '<tab>' is waiting` notification used for harness tabs. Starting another command clears the flag and its pending notification.
+
+`↑` and `↓` recall lines sent from this tab's command bar, including application commands handled there, and commands typed directly into the terminal. `Ctrl+R`, or typing `hist` in the command bar, opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
+
+The shell's setup command isn't included in that history.
+
+`Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.
+
+Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh tab in the directory this shell is currently in, with the same workspace. In other tabs, `Cmd+T` opens a new agent tab.
+
+With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.
+
+With the terminal focused, press `Ctrl+Shift+C` to copy its selection. On macOS, press `Cmd+C`. The copied text is available from your system clipboard and the clipboard-history popup.

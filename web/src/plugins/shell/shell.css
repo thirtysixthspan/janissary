@@ -1,0 +1,39 @@
+/* The shell tab's own terminal surface: the same body a harness tab renders, so the terminal fills
+   the space the agent tab's transcript fills and the command line below it is the agent tab's. The
+   height rule is added because this tab's terminal is the whole body rather than a card in a
+   transcript, so it takes the full height its container offers instead of growing with its content;
+   the background is the application theme's, matching the terminal painted inside it. */
+.harness-body.shell-body {
+  min-height: 0;
+  height: 100%;
+  flex: 1 1 auto;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.shell-body.shell-initializing { visibility: hidden; }
+
+/* An application command's markdown reply, rendered in a decoration over rows reserved for it in the
+   terminal's scrollback. It takes the transcript's markdown styles from `.line.markdown`; a resize
+   that makes the content taller than its reserved rows scrolls inside the block. */
+.shell-output-block {
+  box-sizing: border-box;
+  background: var(--bg);
+  font-family: var(--mono);
+  pointer-events: auto;
+}
+
+.shell-tab-header { position: relative; flex: 0 0 auto; }
+.shell-tab-header .status-panels { top: 100%; right: 10px; }
+
+.shell-tab .tab-meta {
+  flex: 0 0 auto;
+}
+
+.shell-tab .picker.shell-history { bottom: var(--command-bar-height, 0px); max-height: 50%; }
+.shell-tab .picker.clipboard-history { bottom: var(--command-bar-height, 0px); max-height: 50%; }
+
+/* Docked into a sidebar the terminal has little room and the popup less; the history list stays
+   readable by scrolling rather than by giving up rows. */
+.shell-tab[data-dock='left'] .picker.shell-history,
+.shell-tab[data-dock='right'] .picker.shell-history { left: 0; right: 0; }

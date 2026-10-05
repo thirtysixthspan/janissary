@@ -74,6 +74,56 @@ describe('CommandManager async commands', () => {
   });
 });
 
+describe('CommandManager dispatchLineWithOutput', () => {
+  it('returns the output from an output-only application command', async () => {
+    const { managers } = makeManagers();
+
+    const result = await managers.command.dispatchLineWithOutput('janus', 'help');
+
+    expect(result.dispatched).toBe(true);
+    expect(result.output.length).toBeGreaterThan(0);
+    expect(managers.tab.cur().log.at(-1)?.output).toBe(result.output);
+  });
+
+  it('captures output appended by the existing async command executor', async () => {
+    const { managers } = makeManagers();
+    vi.spyOn(managers.command, 'executeCommand').mockImplementation(async (_name, command, label) => {
+      await Promise.resolve();
+      managers.tab.append(label, { input: command, output: 'async response' });
+    });
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'theme dark')).resolves.toEqual({
+      dispatched: true, output: 'async response',
+    });
+  });
+
+  it('leaves shell and unknown lines undispatched', async () => {
+    const { managers } = makeManagers();
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'ls -la')).resolves.toEqual({
+      dispatched: false, output: '',
+    });
+  });
+
+  // Nothing above this wait bounds it any more — the plugin asking is not charged for the command's
+  // runtime — so a command that never finishes answers with what it said by the capture limit.
+  it('answers with the output so far when a command outlives the capture limit', async () => {
+    const { managers } = makeManagers();
+    const late = Promise.withResolvers<void>();
+    vi.spyOn(managers.command, 'executeCommand').mockImplementation(async (_name, command, label) => {
+      managers.tab.append(label, { input: command, output: 'started' });
+      await late.promise;
+      managers.tab.append(label, { input: command, output: 'finished' });
+    });
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'theme dark', 10)).resolves.toEqual({
+      dispatched: true, output: 'started',
+    });
+    late.resolve();
+    await vi.waitFor(() => { expect(managers.tab.cur().log.at(-1)?.output).toBe('finished'); });
+  });
+});
+
 
 describe('CommandManager queue gate', () => {
   it('runs directly when the tab is idle with an empty queue', () => {
@@ -164,6 +214,21 @@ describe('CommandManager queue gate', () => {
 
     expect(managers.tab.queueFor('janus')).toEqual([]);
     expect(managers.tab.cur().log).toEqual([]);
+  });
+
+  it('leaves a plugin tab\'s queue for the plugin when the tab leaves the busy set', async () => {
+    const { managers, recorder } = makeManagers();
+    managers.tab.tabs[0].view = 'plugin';
+    managers.tab.enqueue('janus', 'shell echo one');
+    managers.tab.enqueue('janus', 'clear');
+
+    managers.tab.addBusy('janus');
+    managers.tab.deleteBusy('janus');
+    await Promise.resolve();
+
+    expect(managers.tab.queueFor('janus')).toEqual(['shell echo one', 'clear']);
+    expect(recorder).toEqual([]);
+    expect(managers.shell.run).not.toHaveBeenCalled();
   });
 });
 

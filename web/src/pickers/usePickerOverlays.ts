@@ -4,6 +4,8 @@ import type { ProfileRow, RouteChooserView, TabView, TaskRow } from '@shared/pro
 import type { PickerCommands } from '../shared/command-bar/picker-commands';
 import type { JanusClient } from '../ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
+import type { PluginCommandLineInsertions } from '../shared/command-bar/AppCommandBar';
+import { hostsCommandBar } from '../shared/command-bar/hosts-command-bar';
 import { getRecentHistory } from '../history';
 import { buildOverlayOpenState } from './overlay-registry';
 import type { PickerOverlaysState } from './picker/overlays-state';
@@ -21,6 +23,10 @@ import { usePopulatePickers } from './usePopulatePickers';
 type Input = {
   client: JanusClient;
   current: TabView | undefined;
+  // The tab whose plugin bar raised the open picker, when one did. The queue and task pickers act on
+  // that tab rather than on the current one, so a picker raised from a docked shell edits its queue and
+  // inserts into its bar.
+  sourceTab?: string;
   tabs: TabView[];
   syntaxTheme: string;
   tasks: TaskRow[];
@@ -31,6 +37,7 @@ type Input = {
   dropRef: React.RefObject<CommandInputDropHandle | null>;
   // Puts the keyboard on the harness terminal with this PTY id, after the task picker types into it.
   focusHarness: (ptyId: string) => void;
+  pluginCommandLineInsertions: PluginCommandLineInsertions;
 };
 
 // The `commands` bag this hook builds, re-exported from the shared module both features name so a
@@ -63,13 +70,18 @@ export function usePickerOverlays(input: Input): {
   onEditQueued: (text: string) => void;
   onDeleteQueued: () => void;
 } {
-  const { client, current, tabs, syntaxTheme, tasks, profiles } = input;
+  const { client, current, sourceTab, tabs, syntaxTheme, tasks, profiles, pluginCommandLineInsertions } = input;
   const { runCommand, inputRef, recallRef, dropRef, focusHarness } = input;
 
   // The picker lists the tab's recent history, most recent at the bottom (suppressed when empty).
   const recent = useMemo(() => getRecentHistory(current?.cmdHistory ?? [], 10), [current]);
-  const queueItems = useMemo(() => current?.commandQueue ?? [], [current]);
-  const harnessPtyId = current?.view === 'harness' ? current.harness?.ptyId : undefined;
+  // The tab the queue and task pickers act on: the source tab while it is open, else the current tab.
+  const pickerTab = useMemo(
+    () => tabs.find((tab) => tab.label === sourceTab) ?? current,
+    [tabs, sourceTab, current],
+  );
+  const queueItems = useMemo(() => pickerTab?.commandQueue ?? [], [pickerTab]);
+  const harnessPtyId = pickerTab?.view === 'harness' ? pickerTab.harness?.ptyId : undefined;
 
   const route = useRouteChooser(client);
   const themes = useThemePicker(syntaxTheme, runCommand);
@@ -77,9 +89,11 @@ export function usePickerOverlays(input: Input): {
   const history = useHistPicker(recent, runCommand);
   const nav = useTabNav(client, tabs);
   const quick = useQuickOpen(client);
-  const queue = useQueuePicker(client, current, inputRef, recallRef);
+  const queue = useQueuePicker(client, pickerTab, inputRef, recallRef, tabs);
+  const shellLabel = hostsCommandBar(pickerTab) ? pickerTab?.label : undefined;
   const populate = usePopulatePickers(
     tasks, profiles, recallRef, inputRef, client, harnessPtyId, dropRef, focusHarness,
+    pluginCommandLineInsertions, shellLabel,
   );
 
   const overlays = buildOverlayOpenState({

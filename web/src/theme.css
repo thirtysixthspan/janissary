@@ -301,7 +301,7 @@ html, body, #root {
 .tab .tab-dirty { font-size: 1.1em; line-height: 1; color: var(--accent, var(--fg)); }
 
 /* The active tab's window body (transcript + command line), with the agent-colored left edge. */
-.tab-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.tab-body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 /* Main area (transcript + floating status panels) */
 .main { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -509,6 +509,10 @@ html, body, #root {
   background: var(--bg-soft); border-top: 1px solid var(--border);
   box-shadow: 0 -6px 24px rgb(0 0 0 / 40%);
 }
+/* Host overlays are siblings of plugin bodies, so anchor them to the tab frame and seat them on
+   its command bar, whose height the bar publishes on the frame. `left: 0` is the inside of the
+   frame's colored left border. Pickers inside an agent tab's `.main` keep that smaller containing block. */
+.tab-body > .picker { left: 0; right: 0; bottom: var(--command-bar-height, 0px); }
 .picker-title { padding: 4px 10px; color: var(--muted); border-bottom: 1px solid var(--border); }
 .picker-section {
   padding: 3px 10px; color: var(--muted); cursor: default;
@@ -565,15 +569,16 @@ html, body, #root {
 /* Clipboard history overlay (Ctrl+Shift+V / clip). It holds the keyboard while open; the selected row
    already shows where it is, so the root draws no focus ring. */
 .clipboard-history:focus { outline: none; }
-.clipboard-history-row { overflow: hidden; }
+.clipboard-history-row, .history-row { overflow: hidden; }
 /* One line per entry, clipped at the overlay's width. The truncation lives on the label rather than on
    the row because a row is a flex container and `text-overflow` does not reach the anonymous flex item
    a bare text child becomes — which is the same reason `.editor-find-text` carries it. The label is the
    one item that shrinks, so a long line is clipped before the `(N lines)` postfix and never pushes it
    off the row. */
-.clipboard-history-label { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.clipboard-history-lines { flex: none; margin-left: 8px; color: var(--muted); }
-.clipboard-history-row.selected .clipboard-history-lines { color: var(--bg); }
+.clipboard-history-label, .history-label { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.clipboard-history-lines, .history-lines { flex: none; margin-left: 8px; color: var(--muted); }
+.clipboard-history-row.selected .clipboard-history-lines,
+.history-row.selected .history-lines { color: var(--bg); }
 
 /* Quit confirmation dialog (modal: backdrop blocks all input outside the dialog) */
 .modal-backdrop {

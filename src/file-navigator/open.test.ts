@@ -56,6 +56,7 @@ function makeManagers(options: {
   const channel = { attachNavigator: vi.fn(), detachNavigator: vi.fn(), send: vi.fn() };
   const managers = {
     tab: {
+      launchDir: process.cwd(),
       tabs,
       byLabel: (label: string) => tabs.find((t) => t.label === label),
       cwdOf: () => source.cwd,
@@ -83,6 +84,12 @@ function makeManagers(options: {
 }
 
 describe('openOrRetarget', () => {
+  it('opens the addressed shell directory', () => {
+    const cwd = tree();
+    const { port, opened } = makeManagers({ source: { label: 'shell', cwd } });
+    openOrRetarget(port, 'shell');
+    expect(opened[0].root).toBe(cwd);
+  });
   it('opens a fresh navigator on a local directory, registered and watched', () => {
     const { managers, port, opened, setDock, setCwd } = makeManagers();
     const root = managers.tab.cwdOf?.('agent');

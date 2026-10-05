@@ -1,6 +1,7 @@
 import type { Tab } from './types.js';
 import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
+import type { TabPluginDeclaration } from '../plugins/api.js';
 import path from 'node:path';
 import { flattenBuffer } from './formatting.js';
 
@@ -25,11 +26,28 @@ export function buildTabViews(
     (label) => managers.remote.workspaceOf(label),
     (label) => managers.remote.reconnectingOf(label),
     (dir) => managers.workspace.provisioning(dir),
+    (pluginId) => managers.plugins.declarations.find((declaration) => declaration.id === pluginId),
   ));
+}
+
+type DeclaredViewFields = Pick<TabPluginDeclaration, 'chords' | 'hostsCommandBar'>;
+
+// The declaration facts a plugin tab's view carries. Each is omitted rather than sent empty or false,
+// so a plugin that claims nothing costs no bytes on every state broadcast, and so the client can tell
+// "claims none" from "the host did not say".
+function declaredFields(
+  declaration: DeclaredViewFields | undefined,
+): { chords?: readonly string[]; hostsCommandBar?: true } {
+  const claimed = declaration?.chords;
+  return {
+    ...(claimed && claimed.length > 0 && { chords: claimed }),
+    ...(declaration?.hostsCommandBar === true && { hostsCommandBar: true }),
+  };
 }
 
 // Converts one internal Tab into the wire-format TabView sent to the client — the shape the
 // client actually renders, as opposed to Tab's server-side bookkeeping fields.
+
 export function buildTabView(
   tab: Tab,
   busy: boolean,
@@ -47,6 +65,10 @@ export function buildTabView(
   // Whether a local clone into the given directory is still in flight — the only provisioning
   // signal a local `agent --workspace` tab has, since it carries no harness status.
   workspaceProvisioning?: (dir: string) => boolean,
+  // The plugin's declaration, for the chord ids it claimed and whether it hosts the command bar.
+  // Carried with the tab rather than looked up on the client, so a client holding its own copy is
+  // never a second place for either to drift from the declaration the host actually enforces.
+  declarationOf?: (pluginId: string) => DeclaredViewFields | undefined,
 ): TabView {
   const workspacePrefix = tab.workspaceDir ?? (tab.remote ? workspaceOf?.(tab.label) : undefined);
   const remoteProvisioning = workspaceOf !== undefined && tab.remote !== undefined
@@ -58,7 +80,8 @@ export function buildTabView(
     dotColor: tab.dotColor,
     group: tab.group,
     groupColor: tab.groupColor,
-    busy,
+    // A plugin lights its own tab's dot through `setBusy`, beside the host's runtime flag.
+    busy: busy || tab.plugin?.busy === true,
     hasUnread: !!tab.hasUnread,
     cwd: shorten(cwd),
     cwdDisplay: workspaceCwdDisplay(cwd, workspacePrefix),
@@ -97,6 +120,7 @@ export function buildTabView(
       id: tab.plugin.id,
       schemaVersion: tab.plugin.schemaVersion,
       payload: tab.plugin.payload,
+      ...declaredFields(declarationOf?.(tab.plugin.id)),
     } : undefined,
     harness: tab.harness,
     editor: tab.editor ? { ...tab.editor, path: shorten(tab.editor.path) } : undefined,

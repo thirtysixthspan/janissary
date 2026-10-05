@@ -72,6 +72,19 @@ describe('a plugin tab docked into a sidebar', () => {
     expect(screen.getByTestId('fixture-body')).toHaveTextContent('fixture body');
   });
 
+  it('shows the application picker over the docked plugin that opened it', async () => {
+    registerCountingPlugin('shell', () => {});
+    const client = { send: vi.fn() } as unknown as JanusClient;
+
+    render(
+      <Sidebar side="left" tabs={[pluginTab('shell-left', 'shell')]} client={client}
+        pickerSourceTab="shell-left" pickerOverlays={<div data-testid="app-picker">Theme choices</div>} />,
+    );
+
+    await waitFor(() => { expect(screen.getByTestId('shell-body')).toBeInTheDocument(); });
+    expect(screen.getByTestId('app-picker').closest('.sidebar-plugin')).toHaveAttribute('data-tab-label', 'shell-left');
+  });
+
   it('keeps every docked plugin mounted, showing only the selected one', async () => {
     const first = vi.fn();
     const second = vi.fn();

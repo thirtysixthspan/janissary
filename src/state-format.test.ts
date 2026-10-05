@@ -7,22 +7,17 @@ describe('formatState', () => {
     expect(result).toBe('No state file found for "testLabel".');
   });
 
-  it('formats a simple state object with primitive values', () => {
+  it('gives each scalar field a bold name and its value in inline code, one field per block', () => {
     const state = {
       name: 'test-agent',
       count: 42,
       active: true,
     };
     const result = formatState('myAgent', state);
-    expect(result).toContain('name:');
-    expect(result).toContain('test-agent');
-    expect(result).toContain('count:');
-    expect(result).toContain('42');
-    expect(result).toContain('active:');
-    expect(result).toContain('true');
+    expect(result).toBe('**name**: `test-agent`\n\n**count**: `42`\n\n**active**: `true`');
   });
 
-  it('formats state with nested objects', () => {
+  it('formats nested objects in a fenced block', () => {
     const state = {
       config: {
         timeout: 30,
@@ -30,23 +25,18 @@ describe('formatState', () => {
       },
     };
     const result = formatState('myAgent', state);
-    expect(result).toContain('config:');
-    expect(result).toContain('timeout:');
-    expect(result).toContain('retries:');
+    expect(result).toBe('**config**:\n\n```\n  timeout: 30\n  retries: 3\n```');
   });
 
-  it('formats state with array values', () => {
+  it('formats array values in a fenced block', () => {
     const state = {
       items: ['a', 'b', 'c'],
     };
     const result = formatState('myAgent', state);
-    expect(result).toContain('items:');
-    expect(result).toContain('a');
-    expect(result).toContain('b');
-    expect(result).toContain('c');
+    expect(result).toBe('**items**:\n\n```\n  - "a"\n  - "b"\n  - "c"\n```');
   });
 
-  it('formats state with array of objects', () => {
+  it('keeps an entry list\'s input and output layout inside its block', () => {
     const state = {
       history: [
         { input: 'cmd1', output: 'result1' },
@@ -54,10 +44,7 @@ describe('formatState', () => {
       ],
     };
     const result = formatState('myAgent', state);
-    expect(result).toContain('> cmd1');
-    expect(result).toContain('result1');
-    expect(result).toContain('> cmd2');
-    expect(result).toContain('result2');
+    expect(result).toBe('**history**:\n\n```\n> cmd1\n  result1\n> cmd2\n  result2\n```');
   });
 
   it('truncates large objects with omission message', () => {
@@ -67,8 +54,7 @@ describe('formatState', () => {
     }
     const state = { data: largeObj };
     const result = formatState('myAgent', state);
-    expect(result).toContain('...');
-    expect(result).toContain('lines omitted');
+    expect(result).toContain('```\n... (10 lines omitted)\n  field10: 10');
   });
 
   it('handles empty state object', () => {
@@ -82,8 +68,7 @@ describe('formatState', () => {
       message: '',
     };
     const result = formatState('myAgent', state);
-    expect(result).toContain('message:');
-    expect(result).toContain('<empty>');
+    expect(result).toBe('**message**: `<empty>`');
   });
 
   it('handles state with null and undefined values', () => {
@@ -92,8 +77,15 @@ describe('formatState', () => {
       undefVal: undefined,
     };
     const result = formatState('myAgent', state);
-    expect(result).toContain('nullVal:');
-    expect(result).toContain('<empty>');
-    expect(result).toContain('undefVal:');
+    expect(result).toBe('**nullVal**: `<empty>`\n\n**undefVal**: `<empty>`');
+  });
+
+  it('puts a multi-line string in a block rather than inline code', () => {
+    expect(formatState('myAgent', { title: 'one\ntwo' })).toBe('**title**:\n\n```\none\ntwo\n```');
+  });
+
+  it('fences a value with backticks so they cannot close its code early', () => {
+    expect(formatState('myAgent', { title: 'a `b` c' })).toBe('**title**: ``a `b` c``');
+    expect(formatState('myAgent', { cmdHistory: ['```'] })).toBe('**cmdHistory**:\n\n````\n  - "```"\n````');
   });
 });

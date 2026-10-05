@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JanusClient } from '../ws';
-import { createPluginClientCapabilities, nextListSelection } from './api';
+import { createPluginClientCapabilities, nextListSelection, spliceIntoTextarea } from './api';
 import { nextListSelection as sharedNextListSelection } from '../shared/list-selection';
+import { spliceIntoTextarea as sharedSpliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 import { createPluginHost, type PluginHost } from './host';
 
 function makeClient(request?: () => Promise<unknown>) {
@@ -19,6 +20,32 @@ let host: PluginHost;
 beforeEach(() => { host = createPluginHost(); });
 
 describe('createPluginClientCapabilities', () => {
+  it('authorizes a terminal attachment against the owning tab before listening', async () => {
+    const { client, send } = makeClient(async () => ({ ok: true, value: true }));
+    const attachPty = vi.fn(() => vi.fn());
+    Object.assign(client, { attachPty, onPtyExit: vi.fn(() => vi.fn()) });
+    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    const onData = vi.fn();
+    const terminal = await capabilities.attachTerminal?.('pty1', onData);
+    terminal?.write('echo hello');
+    terminal?.resize(120, 40);
+    expect(client.request).toHaveBeenCalledWith({
+      method: 'pluginTerminalAttach', params: { id: 'pty1', tab: 'shell-1' },
+    });
+    expect(attachPty).toHaveBeenCalledWith('pty1', onData);
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'ptyInput', params: { id: 'pty1', data: 'echo hello', tab: 'shell-1' } });
+    expect(send).toHaveBeenNthCalledWith(2, { method: 'ptyResize', params: { id: 'pty1', cols: 120, rows: 40, tab: 'shell-1' } });
+  });
+
+  it('refuses to attach to a terminal owned by another tab', async () => {
+    const { client } = makeClient(async () => ({ ok: true, value: false }));
+    const attachPty = vi.fn();
+    Object.assign(client, { attachPty });
+    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    await expect(capabilities.attachTerminal?.('pty2', vi.fn())).rejects.toThrow('terminal does not belong');
+    expect(attachPty).not.toHaveBeenCalled();
+  });
+
   it('builds an authenticated resource URL from the session token', () => {
     history.replaceState(null, '', '/?token=s3cr3t%2Ftoken');
     const { client } = makeClient();
@@ -107,6 +134,23 @@ describe('createPluginClientCapabilities', () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
+  // A plugin rendering markdown of its own opens a clicked link the way the transcript does, so the
+  // same link goes to the same place wherever it was rendered.
+  it('opens a web link and edits a file and line link, as the transcript does', () => {
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    capabilities.openLink?.('https://example.com/docs');
+    capabilities.openLink?.('src/foo.ts:42');
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'open https://example.com/docs' } });
+    expect(send).toHaveBeenNthCalledWith(2, { method: 'command', params: { text: 'edit src/foo.ts:42' } });
+  });
+
+  it('opens nothing for a link the application does not open', () => {
+    const { client, send } = makeClient();
+    createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn()).openLink?.('#section');
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('offers no split action when the host did not supply one', () => {
     const { client } = makeClient();
     expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).splitAction).toBeNull();
@@ -128,5 +172,11 @@ describe('nextListSelection', () => {
   it('publishes the shared list-selection rule itself', () => {
     expect(nextListSelection).toBe(sharedNextListSelection);
     expect(nextListSelection(3, 2, 'ArrowDown')).toBe(2);
+  });
+});
+
+describe('spliceIntoTextarea', () => {
+  it('publishes the shared command-bar caret insertion itself', () => {
+    expect(spliceIntoTextarea).toBe(sharedSpliceIntoTextarea);
   });
 });

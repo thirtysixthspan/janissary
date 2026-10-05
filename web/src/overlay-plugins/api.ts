@@ -14,6 +14,9 @@ import type { ContributedOverlay } from '../shared/contributed-overlays';
 
 export const OVERLAY_PLUGIN_API_VERSION = 1;
 
+// Shared display rule for overlays that show multiline text, so plugin rows match the host's pickers.
+export { displayLine } from '../shared/display-line';
+
 // A modifier chord. Modifiers are optional and default to absent, so `{ key: 'v', ctrl: true }` is
 // Ctrl+V and `{ key: 'v', ctrl: true, shift: true }` is a different chord from it.
 export type OverlayChord = {

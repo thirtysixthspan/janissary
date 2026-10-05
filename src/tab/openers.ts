@@ -1,10 +1,15 @@
 import type { Tab, EditorView, FileNavigatorView } from './types.js';
-import type { TabPluginPayload, TabPluginResources, TabPluginTabUpdate } from '../plugins/api.js';
+import type {
+  TabPluginPayload, TabPluginResources, TabPluginTabUpdate,
+  TabPluginTerminal, TabPluginTerminalOptions,
+} from '../plugins/api.js';
 import { messageBus } from '../bus.js';
 import {
   addPluginTab, addEditorTab, addFilesTab, addNotificationsTab,
 } from './creators.js';
 import { releaseFileReference } from './file-registry.js';
+import { tabRuntime } from './runtime.js';
+import type { LaunchNameRow } from '../launch-name/check.js';
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
 // the TabManager type) so this module has no import cycle back to tab-manager.ts.
@@ -15,23 +20,37 @@ interface OpenTarget {
   applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void;
   registerFile(path: string): string;
   openFiles: Map<string, string>;
+  spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
+  adoptTerminal(ptyId: string, label: string): void;
+  killTerminal(ptyId: string): void;
+  retainWorkspace(directory: string): void;
 }
 
-function activate(target: OpenTarget, result: { tabs: Tab[]; activeTab: number }): void {
+function activate(
+  target: OpenTarget,
+  result: { tabs: Tab[]; activeTab: number },
+  afterApply?: () => void,
+): void {
   target.applyOpenResult(result);
+  afterApply?.();
   messageBus.emit('state', { type: 'dirty' });
 }
 
 // Runs a plugin factory with a registration window open around it, and reports back every reference
-// it registered. The window closes as soon as the factory returns, so a plugin that stashed the
-// resources object cannot keep serving files from outside the call the host granted them for, and a
-// factory that throws leaves nothing served. Shared by the open and update paths so a reference
-// registered through one is scoped and released exactly as one registered through the other.
+// it registered and the terminals it started, if any, with the directory the first of them started
+// in. The window closes as soon as the factory
+// returns, so a plugin that stashed the resources object cannot keep serving files or running
+// processes from outside the call the host granted them for, and a factory that throws leaves nothing
+// behind. Shared by the open and update paths so a reference registered through one is scoped and
+// released exactly as one registered through the other.
 function withResources<Result>(
   target: OpenTarget,
   factory: (resources: TabPluginResources) => Result,
-): { result: Result; fileRefs: string[] } {
+  source?: Tab,
+): { result: Result; fileRefs: string[]; terminalIds: string[]; terminalCwd?: string } {
   const fileRefs: string[] = [];
+  const terminals: string[] = [];
+  let terminalCwd: string | undefined;
   let acceptingResources = true;
   try {
     const result = factory({
@@ -41,10 +60,25 @@ function withResources<Result>(
         fileRefs.push(reference.replace(/^\/open\//, ''));
         return reference;
       },
+      spawnTerminal: (options) => {
+        if (!acceptingResources) throw new Error('plugin tab resources are no longer available');
+        const terminal = target.spawnTerminal(source ? {
+          ...options,
+          workspace: source.workspaceDir
+            ? { dir: source.workspaceDir, offline: source.offline ?? false }
+            : undefined,
+        } : options);
+        terminals.push(terminal.ptyId);
+        terminalCwd ??= options.cwd;
+        return terminal;
+      },
     });
-    return { result, fileRefs };
+    return { result, fileRefs, terminalIds: terminals, terminalCwd };
   } catch (error) {
     for (const reference of fileRefs) target.openFiles.delete(reference);
+    // A factory that failed after starting a terminal must not leave the process running: no tab was
+    // created, so nothing would ever close it.
+    for (const ptyId of terminals) target.killTerminal(ptyId);
     throw error;
   } finally {
     acceptingResources = false;
@@ -59,6 +93,8 @@ export function openPluginTab(
   schemaVersion: number,
   sourceLabel: string,
   factory: (resources: TabPluginResources) => TabPluginPayload,
+  agentNamed = false,
+  rows: readonly LaunchNameRow[] = [],
 ): void {
   const existing = target.tabs.find(
     (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
@@ -74,7 +110,8 @@ export function openPluginTab(
   // `sourceLabel` rather than by whatever happens to be focused when the factory finally runs.
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
-  const { result: created, fileRefs } = withResources(target, factory);
+  const source = target.tabs[sourceIndex];
+  const { result: created, fileRefs, terminalIds, terminalCwd } = withResources(target, factory, source);
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
@@ -82,7 +119,28 @@ export function openPluginTab(
     payload: created.payload,
     fileRefs,
     sourceLabel,
-  }));
+  }, agentNamed, rows), () => {
+    // The terminals were spawned before this tab had a label, so they are adopted onto the one just
+    // minted. Adopt before publishing state so the first host-state delivery sees every terminal row.
+    // Every terminal the factory started is adopted, not just the first — one left on the label it was
+    // spawned under would belong to no tab, and neither the per-tab walk nor a plugin disable would
+    // ever release it.
+    const minted = target.tabs.find(
+      (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
+    );
+    if (minted !== undefined) {
+      // The directory the terminal really started in, not the source's: a plugin may start it
+      // elsewhere, as a shell does when its source has left the project, and the source's directory
+      // would otherwise stand until zsh's first report, which never comes for an unmounted shell.
+      if (terminalCwd !== undefined) tabRuntime(minted).cwd = terminalCwd;
+      if (terminalIds.length > 0 && source) {
+        minted.workspaceDir = source.workspaceDir;
+        minted.offline = source.offline;
+        if (minted.workspaceDir) target.retainWorkspace(minted.workspaceDir);
+      }
+      for (const ptyId of terminalIds) target.adoptTerminal(ptyId, minted.label);
+    }
+  });
 }
 
 
@@ -104,7 +162,7 @@ export function updatePluginTab(
     (candidate) => candidate.plugin?.id === pluginId && candidate.plugin.instanceKey === instanceKey,
   );
   if (!tab?.plugin) return;
-  const { result: update, fileRefs } = withResources(target, factory);
+  const { result: update, fileRefs, terminalIds } = withResources(target, factory, tab);
   const rekeyed = update.instanceKey !== undefined && update.instanceKey !== instanceKey
     && target.tabs.every((candidate) => candidate.plugin?.id !== pluginId
       || candidate.plugin.instanceKey !== update.instanceKey);
@@ -114,6 +172,8 @@ export function updatePluginTab(
     fileRefs: [...tab.plugin.fileRefs, ...fileRefs],
     ...(rekeyed && { instanceKey: update.instanceKey! }),
   };
+  // This tab exists already, so every terminal the factory started is adopted onto it.
+  for (const ptyId of terminalIds) target.adoptTerminal(ptyId, tab.label);
   if (update.title !== undefined) tab.title = update.title;
   messageBus.emit('state', { type: 'dirty' });
 }

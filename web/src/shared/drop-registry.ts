@@ -1,4 +1,4 @@
-import type { EditorDropHandle, HarnessDropHandle } from './drop-handles';
+import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from './drop-handles';
 
 // Where every visible drop target publishes the handle a file-navigator drag releases onto, keyed by
 // the value the target writes on its own element: a harness body's `data-harness-drop` carries its
@@ -28,3 +28,17 @@ export const registerHarnessDrop = harness.register;
 export const harnessDropHandle = harness.lookup;
 export const registerEditorDrop = editor.register;
 export const editorDropHandle = editor.lookup;
+
+// A command bar that opts in publishes under its own root element, which is the `[data-command-bar]`
+// element the navigator already finds under the pointer — so a plugin tab's bar receives its own
+// drop instead of the one handle the agent tab's command input publishes through `dropRef`.
+const commandBars = new WeakMap<Element, CommandInputDropHandle>();
+
+export function registerCommandBarDrop(element: Element, handle: CommandInputDropHandle): () => void {
+  commandBars.set(element, handle);
+  return () => { if (commandBars.get(element) === handle) commandBars.delete(element); };
+}
+
+export function commandBarDropHandle(element: Element): CommandInputDropHandle | undefined {
+  return commandBars.get(element);
+}

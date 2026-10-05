@@ -1,3 +1,4 @@
+import type React from 'react';
 import type { VisibleTaskRow } from '../task-picker-keys';
 import type { PickerOverlayView } from './overlay-view';
 import { contributedOverlayOnScreen } from '../../shared/contributed-overlays';

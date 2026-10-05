@@ -6,6 +6,7 @@ import { sandboxNotice } from '../sandbox/index.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { messageBus } from '../bus.js';
 import { placeAgent } from './place-agent.js';
+import { unconfinedAgentCwd } from './inherited-cwd.js';
 import { startRemoteAgent } from './remote-agent.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
@@ -19,9 +20,12 @@ type AgentLaunch = { parsed: AgentCommand; creator: Tab; out: (text: string) => 
 // goes to the notifications feed), then places the tab immediately (no `--workspace`), hands it to
 // the remote launch path (`on <address>`), or places it busy and wires up the clone's ready/fail
 // callbacks. `placeAgent` is shared with `newAgentAt`.
-export function newAgentOp(managers: Managers, command: string): void {
+export function newAgentOp(
+  managers: Managers, command: string, context?: { label: string; index: number },
+): void {
   const parsed = parseAgentCommand(command);
-  const creator = managers.tab.cur();
+  const creator = context ? managers.tab.byLabel(context.label) : managers.tab.cur();
+  if (!creator) return;
   const out = (text: string) => managers.tab.append(creator.label, { input: command, output: text });
   if (parsed.remoteError) { out(parsed.remoteError); return; }
   launchAgent(managers, { parsed, creator, out }, []);
@@ -52,7 +56,8 @@ function launchAgent(managers: Managers, launch: AgentLaunch, tried: readonly st
   }
 
   if (!parsed.workspace) {
-    placeAgent(managers, { resolved, creator, cwd: process.cwd(), offline: parsed.offline });
+    const cwd = unconfinedAgentCwd(creator, managers.tab.cwdOf(creator.label), managers.tab.launchDir);
+    placeAgent(managers, { resolved, creator, cwd, offline: parsed.offline });
     out(`Agent "${resolved}" ready.`);
     return;
   }

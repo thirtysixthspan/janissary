@@ -7,17 +7,27 @@ import { makeTab } from './index.js';
 import type { Managers } from '../managers.js';
 import type { AgentState } from '../agent/types.js';
 import type { ScheduleEntry } from '../schedule/types.js';
+import { TabPluginRejection, type TabPluginResources } from '../plugins/api.js';
 import * as agentState from '../agent/state.js';
 import { messageBus } from '../bus.js';
 import { UNREAD_DWELL_MS } from './dwell.js';
 
 function makeManagers(): Managers {
+  let spawned = 0;
   return {
-    workspace: { remove: vi.fn(), cancel: vi.fn() },
+    workspace: { remove: vi.fn(), cancel: vi.fn(), retain: vi.fn(), release: vi.fn() },
     shell: { close: vi.fn(), closeTab: vi.fn() },
     acp: { close: vi.fn(), closeTab: vi.fn() },
     browser: { closeTab: vi.fn() },
-    pty: { closeTab: vi.fn() },
+    pty: {
+      closeTab: vi.fn(),
+      // A distinct id per call, so a case can tell two terminals of one factory apart.
+      spawn: vi.fn(() => { spawned += 1; return `pty${spawned}`; }),
+      adopt: vi.fn(),
+      kill: vi.fn(),
+      spawnDimensions: vi.fn(() => ({ cols: 80, rows: 24 })),
+      isRunning: vi.fn(() => true),
+    },
     harness: { closeTab: vi.fn() },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
@@ -32,10 +42,18 @@ function makeManagers(): Managers {
 }
 
 function makeTabManager(): TabManager {
+  return makeTabManagerWithManagers().tm;
+}
+
+// The managers alongside, for the cases that assert on what the tab manager asked of them -- a
+// terminal adopted onto a new label, a process killed after a factory failed. The project directory is
+// fixed rather than the process's own, because `spawnTerminal` refuses a `cwd` outside it and the cases
+// below name one.
+function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
   const managers = {} as Managers;
-  managers.tab = new TabManager(managers);
+  managers.tab = new TabManager(managers, '/repo');
   Object.assign(managers, makeManagers());
-  return managers.tab;
+  return { tm: managers.tab, managers };
 }
 
 // Callers used to scan the public `tabs` array themselves and then check the returned record's
@@ -293,6 +311,227 @@ describe('TabManager queue', () => {
     tm.openPluginTab('image', 'image', '/test/a.png', 1, 'janus', () => payload('/test/a.png'));
     tm.openPluginTab('image', 'image', '/test/b.png', 1, 'janus', () => payload('/test/b.png'));
     expect(tm.tabs.length).toBe(3); // janus + a.png + b.png
+  });
+
+  // A plugin tab's label is allocated after its factory returns, so a terminal started in that factory
+  // is adopted onto the label the host then mints — which is what puts it under the ordinary per-tab
+  // release walk instead of needing a teardown path of its own.
+  it('adopts a terminal a plugin spawned onto the label its new tab was given', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      const terminal = resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: { ptyId: terminal.ptyId } };
+    });
+
+    const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
+    expect(managers.pty.adopt).toHaveBeenCalledWith('pty1', tab.label);
+  });
+
+  it('retains the source workspace through shell and nested-shell lifetimes', () => {
+    vi.useFakeTimers();
+    try {
+      const { tm, managers } = makeTabManagerWithManagers();
+      const source = makeTab('worker', 'red', 2, [], [], '/repo/clone');
+      source.offline = true;
+      tm.tabs.push(source);
+      tm.setCwd(source.label, '/repo/clone/subdir');
+      let references = 1;
+      vi.mocked(managers.workspace.retain).mockImplementation(() => { references += 1; });
+      vi.mocked(managers.workspace.release).mockImplementation(() => { references -= 1; });
+      const factory = (resources: TabPluginResources) => {
+        resources.spawnTerminal({ cwd: '/repo/clone/subdir' });
+        return { title: 'shell', payload: { cwd: '/wrong', workspace: false } };
+      };
+      tm.openPluginTab('shell', 'shell', 'first', 1, source.label, factory);
+      const shell = tm.cur();
+      expect(shell).toMatchObject({ workspaceDir: '/repo/clone', offline: true });
+      expect(tm.cwdOf(shell.label)).toBe('/repo/clone/subdir');
+      expect(references).toBe(2);
+      tm.closeTab(tm.tabs.findIndex((tab) => tab.label === source.label));
+      vi.runOnlyPendingTimers();
+      expect(references).toBe(1);
+      tm.openPluginTab('shell', 'shell', 'nested', 1, shell.label, factory);
+      const nested = tm.cur();
+      expect(nested).toMatchObject({ workspaceDir: '/repo/clone', offline: true });
+      expect(managers.pty.spawn).toHaveBeenLastCalledWith(
+        '', expect.any(String), '', '/repo/clone/subdir', '/repo/clone', true,
+        undefined, expect.any(Object),
+      );
+      tm.closeTab(tm.tabs.findIndex((tab) => tab.label === shell.label));
+      vi.runOnlyPendingTimers();
+      expect(references).toBe(1);
+      tm.closeTab(tm.tabs.findIndex((tab) => tab.label === nested.label));
+      vi.runOnlyPendingTimers();
+      expect(references).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('records the directory a new shell started in when its source has left the bound', () => {
+    const { tm } = makeTabManagerWithManagers();
+    const source = makeTab('worker', 'red', 2, [], [], '/repo/clone');
+    source.offline = true;
+    tm.tabs.push(source);
+    tm.setCwd(source.label, '/tmp');
+    tm.openPluginTab('shell', 'shell', 'fallback', 1, source.label, (resources) => {
+      resources.spawnTerminal({ cwd: '/repo/clone' });
+      return { title: 'shell', payload: {} };
+    });
+    const shell = tm.cur();
+    expect(tm.cwdOf(shell.label)).toBe('/repo/clone');
+    expect(shell).toMatchObject({ workspaceDir: '/repo/clone', offline: true });
+  });
+
+  it('records the project-root fallback rather than the source directory', () => {
+    const { tm } = makeTabManagerWithManagers();
+    tm.setCwd(tm.tabs[0].label, '/repo/a');
+    tm.openPluginTab('shell', 'shell', 'root', 1, tm.tabs[0].label, (resources) => {
+      resources.spawnTerminal({ cwd: '/repo' });
+      return { title: 'shell', payload: {} };
+    });
+    expect(tm.cwdOf(tm.cur().label)).toBe('/repo');
+  });
+
+  it('does not retain a workspace for nonterminal tabs or failed factories', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    tm.tabs[0].workspaceDir = '/repo/clone';
+    tm.openPluginTab('image', 'image', 'image', 1, 'janus', () => ({ title: 'image', payload: {} }));
+    expect(tm.cur().workspaceDir).toBeUndefined();
+    expect(() => tm.openPluginTab('shell', 'shell', 'failed', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo' });
+      throw new Error('failed factory');
+    })).toThrow('failed factory');
+    expect(managers.workspace.retain).not.toHaveBeenCalled();
+  });
+
+  it('kills a terminal rather than leaving it running when the factory that started it fails', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    expect(() => tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      throw new Error('produced an invalid payload');
+    })).toThrow(/invalid payload/);
+
+    expect(managers.pty.kill).toHaveBeenCalledWith('pty1');
+    expect(tm.tabs.some((candidate) => candidate.plugin?.instanceKey === 'shell-1')).toBe(false);
+  });
+
+  it('refuses to start a terminal outside a payload factory', () => {
+    const { tm } = makeTabManagerWithManagers();
+    let stashed: TabPluginResources | undefined;
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      stashed = resources;
+      return { title: 'shell', payload: {} };
+    });
+
+    expect(() => stashed?.spawnTerminal({ cwd: '/repo' })).toThrow(/no longer available/);
+  });
+
+  it('adopts every terminal one factory started, not only the first', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+
+    const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
+    // A terminal left on the label it was spawned under belongs to no tab, so nothing would ever
+    // release it — neither the per-tab walk nor a plugin disable.
+    expect(managers.pty.adopt).toHaveBeenCalledWith('pty1', tab.label);
+    expect(managers.pty.adopt).toHaveBeenCalledWith('pty2', tab.label);
+  });
+
+  it('runs the shell itself when no argv is named, rather than a command through it', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh' });
+
+    // `undefined` would reach `spawnPty`'s fallback and produce `-i -c ''` — an interactive shell
+    // whose one command is the empty string.
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      '', 'zsh', '', '/repo', undefined, undefined, undefined,
+      { shell: '/bin/zsh', args: [] },
+    );
+  });
+
+  it('refuses to start a terminal outside the project root, and starts nothing', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    // A terminal is a fully interactive shell, so the bound `openInEditor` puts on a plugin's file
+    // path is the bound here too: `/etc` is nowhere inside `/repo`, so no process begins.
+    expect(() => tm.spawnTerminal({ cwd: '/etc', shell: '/bin/zsh' })).toThrow(
+      new TabPluginRejection('Cannot start a terminal in /etc: it is outside the project root /repo.'),
+    );
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('refuses a directory that is inside the project root only as written', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    expect(() => tm.spawnTerminal({ cwd: '/repo/a/../../etc', shell: '/bin/zsh' })).toThrow(TabPluginRejection);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('answers a terminal that cannot start as a rejection naming the directory', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    vi.mocked(managers.pty.spawn).mockImplementationOnce(() => {
+      throw new Error('posix_spawnp failed.\n    at spawn (node-pty)');
+    });
+
+    // A rejection rather than a plain error: one directory the process cannot start in is a bad
+    // request for one tab, and must not disable the plugin that owns every other shell.
+    expect(() => tm.spawnTerminal({ cwd: '/repo/gone', shell: '/bin/zsh' })).toThrow(
+      new TabPluginRejection('Cannot start a terminal in /repo/gone: posix_spawnp failed.'),
+    );
+  });
+
+  it('leaves no tab behind when a factory asks for a terminal outside the project root', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    const before = tm.tabs.length;
+
+    expect(() => tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      const terminal = resources.spawnTerminal({ cwd: '/root/.ssh', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: { ptyId: terminal.ptyId } };
+    })).toThrow(/outside the project root/);
+
+    expect(tm.tabs).toHaveLength(before);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+  });
+
+  it('starts a terminal whose working directory is inside the project root', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.spawnTerminal({ cwd: '/repo/.janissary/workspace/bekir', shell: '/bin/zsh' });
+
+    // A workspace clone is where the bundled shell plugin starts a workspaced tab's shell, so the
+    // bound has to admit it.
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      '', 'zsh', '', '/repo/.janissary/workspace/bekir', undefined, undefined, undefined,
+      { shell: '/bin/zsh', args: [] },
+    );
+  });
+
+  it('refuses a second terminal when an open tab already holds this instance key', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+    const before = managers.pty.spawn.mock.calls.length;
+    // Same instance key: the de-dupe at the top of `openPluginTab` focuses the open tab and returns,
+    // so the factory never runs and no process is started for a tab that will not exist.
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+
+    expect(tm.tabs.filter((candidate) => candidate.plugin?.instanceKey === 'shell-1')).toHaveLength(1);
+    expect(managers.pty.spawn.mock.calls).toHaveLength(before);
   });
 
   it('openEditorTab bypasses de-dupe for a new-file view, allowing multiple untitled tabs', () => {
@@ -715,13 +954,6 @@ describe('TabManager renameTab for editor tabs', () => {
 });
 
 describe('TabManager retargetEditorTab', () => {
-  function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
-    const managers = {} as Managers;
-    managers.tab = new TabManager(managers);
-    Object.assign(managers, makeManagers());
-    return { tm: managers.tab, managers };
-  }
-
   it('updates the matching editor tab\'s path, name, url, and title, and rewatches at the new path', () => {
     const { tm, managers } = makeTabManagerWithManagers();
     const originalUrl = tm.registerFile('/tree/notes.txt');

@@ -1,4 +1,5 @@
-// How a copied block of text becomes the one line the popup shows.
+// How a block of text — a copy in the clipboard-history popup, an entry in the history picker —
+// becomes the one line its row shows.
 //
 // The rule is the first line of non-space text, which is not the same as the first line: a copy taken
 // from the middle of an indented block, or of output that starts with blank lines, has text the user

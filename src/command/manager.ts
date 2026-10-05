@@ -9,10 +9,13 @@ import { recordGlobalHistory } from '../global-history.js';
 import type { Managers } from '../managers.js';
 import { dispatchOrRunOp, drainQueueOp } from './queue.js';
 import { errorText } from '../error-text.js';
+import { executeAndCapture } from '../capture/execute-and-capture.js';
 
 type PendingRoute = { label: string; cmd: string; choices: RouteChoice[] };
 
-const ROUTE_BUSY = 'Another command is waiting for a route choice; run this again once it is answered.';
+const DISPATCH_CAPTURE_LIMIT_MS = 30_000;
+
+const ROUTE_BUSY ='Another command is waiting for a route choice; run this again once it is answered.';
 
 export class CommandManager {
   private pendingRoute: PendingRoute | null = null;
@@ -115,6 +118,36 @@ export class CommandManager {
     const command = res.cmd || fallbackShell;
     const program = res.cmd ? res.cmd.split(/\s+/, 1)[0] : fallbackShell.split('/').pop()!;
     this.managers.pty.openInlinePty(label, command, program);
+  }
+
+  // Offers one line to the ordinary dispatcher and answers whether the application claimed it, with
+  // the output it added to the tab.
+  //
+  // Deliberately narrower than `run`: a resolution to the `shell` route or to nothing at all is not
+  // an application command, so both report `false` and the caller decides what they mean. What counts
+  // as claimed is a registry entry or a built-in that answers with output — the two kinds `run`
+  // handles without a route chooser or a shell in the middle.
+  //
+  // The wait is bounded because nothing else bounds it: the plugin asking is not charged for the
+  // command's runtime, so a command that never finishes would otherwise hold the caller forever.
+  async dispatchLineWithOutput(
+    label: string,
+    input: string,
+    captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
+  ): Promise<{ dispatched: boolean; output: string }> {
+    const resolution = resolveCommand(input);
+    if (resolution.kind === 'output') {
+      this.managers.tab.append(label, { input, output: resolution.output, markdown: true });
+      return { dispatched: true, output: resolution.output };
+    }
+    if (resolution.kind !== 'app') return { dispatched: false, output: '' };
+
+    const output = await executeAndCapture(
+      label,
+      () => this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label)),
+      captureLimitMs,
+    );
+    return { dispatched: true, output: output.join('\n') };
   }
 
   async executeCommand(name: string, command: string, label: string, index: number): Promise<void> {

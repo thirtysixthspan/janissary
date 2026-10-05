@@ -12,10 +12,11 @@ export type CoreRpcCall =
   | { method: 'focusTab'; params: { label: string } }
   | { method: 'closeTab'; params: { label: string } }
   | { method: 'renameTab'; params: { index: number; title: string } }
-  // Patch or remove one entry in the active tab's command queue (see `queue.md`). Index-based
-  // against that tab's queue; no-ops server-side when the index is out of range.
-  | { method: 'editQueuedCommand'; params: { index: number; text: string } }
-  | { method: 'deleteQueuedCommand'; params: { index: number } }
+  // Patch or remove one entry in a tab's command queue (see `queue.md`): the named tab's, or the
+  // active tab's when none is named. Index-based against that tab's queue; no-ops server-side when
+  // the index is out of range or the named tab is not open.
+  | { method: 'editQueuedCommand'; params: { index: number; text: string; tab?: string } }
+  | { method: 'deleteQueuedCommand'; params: { index: number; tab?: string } }
   | { method: 'moveTab'; params: { dir: -1 | 1 } }
   | { method: 'moveTabToOtherPane'; params: { index: number } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
@@ -31,8 +32,9 @@ export type CoreRpcCall =
   | { method: 'answerQuestion'; params: { tab: string; id: string; answer: string | null } }
   | { method: 'complete'; params: { text: string; cursor: number } }
   | { method: 'resize'; params: { cols: number; rows: number } }
-  | { method: 'ptyInput'; params: { id: string; data: string } }
-  | { method: 'ptyResize'; params: { id: string; cols: number; rows: number } }
+  | { method: 'ptyInput'; params: { id: string; data: string; tab?: string } }
+  | { method: 'ptyResize'; params: { id: string; cols: number; rows: number; tab?: string } }
+  | { method: 'pluginTerminalAttach'; params: { id: string; tab: string } }
   | { method: 'ptyKill'; params: { id: string } }
   // The terminal colors a pty-backed surface resolved, reported once after it mounts so the session's
   // recording carries the foreground and background it ran under. The server holds app theme names,

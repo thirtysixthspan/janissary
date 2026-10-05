@@ -51,6 +51,7 @@ describe('PseudoterminalManager', () => {
     expect(manager.terminalsFor('main')).toEqual(['vim']);
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
       'vim', 'vim file.txt', '/repo', expect.anything(), 80, 24, expect.anything(), undefined,
+      undefined,
     );
   });
 
@@ -76,6 +77,7 @@ describe('PseudoterminalManager', () => {
 
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
       'vim', 'vim file.txt', '/repo', expect.anything(), 120, 40, expect.anything(), undefined,
+      undefined,
     );
   });
 
@@ -124,6 +126,16 @@ describe('PseudoterminalManager', () => {
     expect(manager.terminalsFor('other')).toEqual([]);
   });
 
+  it('terminalIdFor answers the id of a tab\'s own terminal, and nothing for a tab with none', () => {
+    const { managers } = makeManagers([makeTab('main', 'red'), makeTab('other', 'blue')]);
+    const manager = new PseudoterminalManager(managers);
+    const id = manager.spawn('', 'zsh', '', '/repo');
+    manager.adopt(id, 'main');
+
+    expect(manager.terminalIdFor('main')).toBe(id);
+    expect(manager.terminalIdFor('other')).toBeUndefined();
+  });
+
   it('killTerminal kills the tab\'s PTY running that program', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
     const manager = new PseudoterminalManager(managers);
@@ -162,8 +174,62 @@ describe('PseudoterminalManager', () => {
 
     expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
       'less', 'less file.txt', process.cwd(), expect.anything(), 80, 24, expect.anything(), undefined,
+      undefined,
     );
     expect(tab.activePty).toBe('pty1');
+  });
+
+  // A plugin tab's label does not exist while its payload factory runs, so the terminal is spawned
+  // against a stand-in and adopted afterwards. Adopting is what puts it under the ordinary per-tab
+  // release walk, so a closed shell tab takes its zsh with it rather than needing its own teardown.
+  it('adopt moves a session onto a tab label so closeTab reaches it', () => {
+    const { managers } = makeManagers([makeTab('shell', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+
+    const id = manager.spawn('', 'zsh', '', '/repo', undefined, undefined, undefined,
+      { shell: '/bin/zsh', args: [] });
+    manager.adopt(id, 'shell');
+
+    expect(manager.terminalsFor('shell')).toEqual(['zsh']);
+    manager.closeTab('shell');
+    expect(kill).toHaveBeenCalledTimes(1);
+  });
+
+  it('adopt on an unknown id is a no-op', () => {
+    const { managers } = makeManagers([makeTab('shell', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+
+    expect(() => { manager.adopt('ghost', 'shell'); }).not.toThrow();
+  });
+
+  // Pty ids come from a plain counter, so a plugin holding one could enumerate them and learn which
+  // other processes in the window are alive. `isRunningFor` is the scoped answer, and it reads the
+  // owner from the registry rather than from a set tracked beside it — so it cannot answer for a tab
+  // that has closed.
+  it('isRunningFor answers only for a session one of the given labels owns', () => {
+    const { managers } = makeManagers([makeTab('shell', 'red'), makeTab('main', 'blue')]);
+    const manager = new PseudoterminalManager(managers);
+    manager.spawn('', 'zsh', '', '/repo', undefined, undefined, undefined, { shell: '/bin/zsh', args: [] });
+    manager.adopt('pty1', 'shell');
+
+    expect(manager.isRunningFor('pty1', ['shell'])).toBe(true);
+    expect(manager.isRunningFor('pty1', ['shell', 'shell2'])).toBe(true);
+    expect(manager.isRunningFor('pty1', ['main'])).toBe(false);
+    expect(manager.isRunningFor('pty1', [])).toBe(false);
+    expect(manager.isRunningFor('ghost', ['shell'])).toBe(false);
+  });
+
+  it('isRunningFor stops answering once closeTab has reaped the session', () => {
+    const { managers } = makeManagers([makeTab('shell', 'red')]);
+    const manager = new PseudoterminalManager(managers);
+    const id = manager.spawn('shell', 'zsh', '', '/repo');
+
+    expect(manager.isRunningFor(id, ['shell'])).toBe(true);
+    manager.closeTab('shell');
+
+    // The plugin tab still holds the payload of the shell that just exited, and this is how it finds
+    // out. A tracked set beside the tab manager would have to be pruned here to say the same thing.
+    expect(manager.isRunningFor(id, ['shell'])).toBe(false);
   });
 
   it('closeTab kills and forgets only the PTYs owned by that tab', () => {

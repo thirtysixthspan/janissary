@@ -17,7 +17,11 @@ import { useCmdW } from './useCmdW';
 import { useTranscriptScroll } from './shared/transcript/useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
+import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
+import { AppCommandBarProvider, useAppCommandLine } from './shared/command-bar/AppCommandBar';
 import { usePickerOverlays } from './pickers/usePickerOverlays';
+import { firstOpenOverlay } from './pickers/overlay-registry';
+import { useAppCommandBarState } from './useAppCommandBarState';
 import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
@@ -27,6 +31,10 @@ import { collectNavigatorSelections } from './file-navigator/file/navigator-sele
 import { useOverlayPlugins } from './useOverlayPlugins';
 
 export function App({ client }: { client: JanusClient }) {
+  // One registry for the chords plugin tabs claim while visible, owned here because both the window
+  // key handler and every mounted plugin body live in this tree and have to be looking at the same
+  // one. Built once per mount; claims are re-established by each body's effect.
+  const [pluginChords] = useState(createPluginChordRegistry);
   const [tabs, setTabs] = useState<TabView[]>([]);
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryTab, setSecondaryTab] = useState<number>();
@@ -36,11 +44,14 @@ export function App({ client }: { client: JanusClient }) {
   const [syntaxTheme, setSyntaxTheme] = useState('github-dark');
   const [tasks, setTasks] = useState<TaskRow[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [pickerSourceTab, setPickerSourceTab] = useState<string>();
+  const [focusedPluginTab, setFocusedPluginTab] = useState<string>();
   // Server-driven "New harness" launch dialog (null when closed).
   const [harnessLaunch, setHarnessLaunch] = useState<HarnessLaunchView | null>(null);
   // Server-driven "New schedule" dialog (null when closed).
   const [scheduleLaunch, setScheduleLaunch] = useState<ScheduleLaunchView | null>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
+  const pluginCommandLineInsertions = useRef(new Map<string, (text: string) => void>());
   // Assigned `CommandInput`'s `recall` (the `guardRef` pattern); shared by the queue and task
   // pickers so a selected row's text lands in the command line without submitting.
   const recallReference = useRef<((text: string) => void) | null>(null);
@@ -88,9 +99,17 @@ export function App({ client }: { client: JanusClient }) {
   // the window key handler, the command bar's interception chain, the server state stream — so none
   // of them restates the others' fields (see `pickers/usePickerOverlays`).
   const pickers = usePickerOverlays({
-    client, current, tabs, syntaxTheme, tasks, profiles, runCommand,
+    client, current, sourceTab: pickerSourceTab, tabs, syntaxTheme, tasks, profiles, runCommand,
     inputRef: inputReference, recallRef: recallReference, dropRef: dropReference, focusHarness,
+    pluginCommandLineInsertions,
   });
+
+  // A source is forgotten once no overlay is open, and when its tab closes under an open picker, which
+  // then draws over and acts on the current tab rather than over a tab that is no longer there.
+  useEffect(() => {
+    const sourceOpen = tabs.some((tab) => tab.label === pickerSourceTab);
+    if (!firstOpenOverlay(pickers.view.overlays) || !sourceOpen) setPickerSourceTab(undefined);
+  }, [pickers.view.overlays, tabs, pickerSourceTab]);
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   // Every dirty-capable tab handle, editor and plugin alike, keyed by tab label. The close guard,
@@ -113,6 +132,10 @@ export function App({ client }: { client: JanusClient }) {
   const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef } = useCmdWRefs(
     activeTab, quitConfirmOpen, unsavedQuitOpen, pickers.overlays, pickers.route,
   );
+  const focusedPluginTabIndexRef = useRef<number | undefined>(undefined);
+  const focusedPluginTabIndex = focusedPluginTab === undefined
+    ? -1 : tabs.findIndex((tab) => tab.label === focusedPluginTab);
+  focusedPluginTabIndexRef.current = focusedPluginTabIndex < 0 ? undefined : focusedPluginTabIndex;
 
   const closeTab = useCallback((index: number) => {
     if (closeQuitsApp(tabs, index)) { guardedOpenQuitConfirm(); return; }
@@ -142,26 +165,45 @@ export function App({ client }: { client: JanusClient }) {
 
   useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, shellHandles, inputReference));
 
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, focusedPluginTabIndexRef);
 
   // Live snapshot + callbacks read by the window key handler, so it never has to re-register. Every
   // overlay-owned field arrives in one bag; only search's two are the app shell's to add.
   useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, {
     ...pickers.keys, canSearch, searchOpen: search.searchOpen, openSearch: () => search.open(''),
-  });
+    currentPluginTab: current?.plugin ? current.label : undefined,
+  }, pluginChords);
 
   const onCommandBarSubmit = useCommandBarSubmit({
     ...pickers.commands,
     canSearch, lines, search, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
   });
 
+  // The same interception, published to every plugin tab below so a line typed into one of their bars
+  // is answered here rather than sent to the server unchecked. The provider is the sibling of
+  // `PluginChordProvider` for the same reason: both are app-level state a mounted plugin body has to
+  // reach, and neither can be threaded down through the tab tree without changing a dozen signatures.
+  const interceptCommandLine = useAppCommandLine({
+    ...pickers.commands, tabs, activeTab, openQuitConfirm: guardedOpenQuitConfirm, guardRef,
+    onPickerOpen: setPickerSourceTab,
+  });
+  // The queue popup belongs to the tab a picker recorded as its source, and otherwise to the current
+  // tab, which is where it is drawn.
+  const appCommandBar = useAppCommandBarState({
+    intercept: interceptCommandLine, ghostHistory: globalHistory, pickers,
+    queueTab: pickerSourceTab ?? current?.label, tabs, onFocusTab: setFocusedPluginTab,
+    insertions: pluginCommandLineInsertions,
+  });
+
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
-    <AppMain
+    <PluginChordProvider registry={pluginChords}>
+      <AppCommandBarProvider bar={appCommandBar}>
+      <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-      pickers={pickers.view} tabs={tabs}
+      pickers={pickers.view} pickerSourceTab={pickerSourceTab} tabs={tabs}
       search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
       onCommandBarSubmit={onCommandBarSubmit}
       quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
@@ -182,6 +224,8 @@ export function App({ client }: { client: JanusClient }) {
       confirmQuit={confirmQuit} cancelQuit={cancelQuit}
       confirmUnsavedQuit={confirmUnsavedQuit} cancelUnsavedQuit={cancelUnsavedQuit}
       guardRef={guardRef}
-    />
+      />
+      </AppCommandBarProvider>
+    </PluginChordProvider>
   );
 }

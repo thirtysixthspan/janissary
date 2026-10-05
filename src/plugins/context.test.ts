@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -15,7 +15,18 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import { createPluginContext, isJsonCompatible } from './context.js';
+import { messageBus } from '../bus.js';
 import { TabPluginHost } from './host.js';
+
+const { armEscalation, cancelEscalation } = vi.hoisted(() => ({
+  armEscalation: vi.fn(),
+  cancelEscalation: vi.fn(),
+}));
+
+vi.mock('../harness/idle-notification.js', () => ({
+  armHarnessIdleEscalation: armEscalation,
+  cancelHarnessIdleEscalation: cancelEscalation,
+}));
 
 const origin = { label: 'janus', command: 'fixture' };
 
@@ -38,6 +49,7 @@ function makeManagers() {
       tabs, append, closeTab: vi.fn(), openPluginTab: vi.fn(), cur: () => tabs[0],
       launchDir: '/repo',
       ...fakeNotificationsHost(tabs),
+      pluginTabByInstanceKey: vi.fn(), markUnread: vi.fn(() => false), clearUnread: vi.fn(),
     },
     openFile: { runAs: vi.fn(async () => {}) },
     notifications: new NotificationQueue(),
@@ -55,9 +67,10 @@ function contextFor(
   capabilities: readonly TabPluginCapabilityName[],
   isEnabled: () => boolean = () => true,
   openRequests: string[] = [],
+  managers: Managers = makeManagers().managers,
 ): TabPluginServerCapabilities {
   return createPluginContext(
-    makeManagers().managers, declaration(capabilities), activationFor(), origin, isEnabled, openRequests,
+    managers, declaration(capabilities), activationFor(), origin, isEnabled, openRequests,
   );
 }
 
@@ -73,6 +86,8 @@ describe('declared capability enforcement', () => {
       .toThrow('used capability "openClaimedFiles" without declaring it');
     expect(() => capabilities.configuredViewer())
       .toThrow('used capability "configuredViewer" without declaring it');
+    expect(() => capabilities.setUnread('key', true))
+      .toThrow('used capability "setUnread" without declaring it');
   });
 
   it('refuses every capability when the declaration asked for none', () => {
@@ -117,6 +132,86 @@ describe('declared capability enforcement', () => {
     expect(append).toHaveBeenCalledWith('janus', expect.objectContaining({
       output: 'Tab plugin "fixture" disabled: used capability "openOrFocusTab" without declaring it.',
     }));
+  });
+});
+
+describe('setUnread', () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it('marks only a plugin-owned tab and arms escalation only when the badge was raised', () => {
+    const { managers } = makeManagers();
+    const tab = { label: 'shell1' };
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue(tab as never);
+    vi.mocked(managers.tab.markUnread).mockReturnValue(true);
+
+    contextFor(['setUnread'], () => true, [], managers).setUnread('shell-1', true);
+
+    expect(managers.tab.markUnread).toHaveBeenCalledWith('shell1');
+    expect(armEscalation).toHaveBeenCalledWith(managers, 'shell1');
+  });
+
+  it('does not arm escalation for an ineligible tab or an unknown instance', () => {
+    const { managers } = makeManagers();
+    const tab = { label: 'shell1' };
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue(tab as never);
+
+    contextFor(['setUnread'], () => true, [], managers).setUnread('shell-1', true);
+    expect(armEscalation).not.toHaveBeenCalled();
+
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue(undefined);
+    contextFor(['setUnread'], () => true, [], managers).setUnread('other-plugin-tab', true);
+    expect(managers.tab.markUnread).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the badge and cancels its pending escalation', () => {
+    const { managers } = makeManagers();
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue({ label: 'shell1' } as never);
+
+    contextFor(['setUnread'], () => true, [], managers).setUnread('shell-1', false);
+
+    expect(managers.tab.clearUnread).toHaveBeenCalledWith('shell1');
+    expect(cancelEscalation).toHaveBeenCalledWith(managers, 'shell1');
+  });
+});
+
+describe('setBusy', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('lights the dot on a plugin-owned tab and broadcasts the change', () => {
+    const { managers } = makeManagers();
+    const tab = { label: 'shell1', plugin: { id: 'fixture', instanceKey: 'shell-1' } as { busy?: boolean } };
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue(tab as never);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    contextFor(['setBusy'], () => true, [], managers).setBusy('shell-1', true);
+
+    expect(managers.tab.pluginTabByInstanceKey).toHaveBeenCalledWith('fixture', 'shell-1');
+    expect(tab.plugin.busy).toBe(true);
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('broadcasts nothing when the dot already shows the requested state', () => {
+    const { managers } = makeManagers();
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue({ label: 'shell1', plugin: {} } as never);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    contextFor(['setBusy'], () => true, [], managers).setBusy('shell-1', false);
+
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('ignores an instance key this plugin has no open tab for', () => {
+    const { managers } = makeManagers();
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue(undefined);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    expect(() => contextFor(['setBusy'], () => true, [], managers).setBusy('gone', true)).not.toThrow();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('is refused to a plugin that did not declare it', () => {
+    expect(() => contextFor(['note']).setBusy('shell-1', true))
+      .toThrow('used capability "setBusy" without declaring it');
   });
 });
 
@@ -252,6 +347,23 @@ describe('capability revocation', () => {
       .toThrow('produced an empty tab title');
     expect(() => { capabilities.openOrFocusTab('key', () => ({ title: 'fine', payload: {} })); })
       .not.toThrow();
+  });
+
+  it('asks the tab manager for an agent name only when the declaration does', () => {
+    const { managers } = makeManagers();
+    const openPluginTab = managers.tab.openPluginTab as unknown as ReturnType<typeof vi.fn>;
+    const activation = activationFor();
+    const named = createPluginContext(
+      managers, { ...declaration(TAB_PLUGIN_CAPABILITY_NAMES), agentNamedTabs: true }, activation, origin, () => true,
+    );
+    const plain = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activation, origin, () => true,
+    );
+
+    named.openOrFocusTab('one', () => ({ title: 'shell', payload: {} }));
+    plain.openOrFocusTab('two', () => ({ title: 'shell', payload: {} }));
+
+    expect(openPluginTab.mock.calls.map((call) => call.at(-1))).toEqual([true, false]);
   });
 
   it('queues a claimed open for the host rather than running it inside the guarded call', () => {

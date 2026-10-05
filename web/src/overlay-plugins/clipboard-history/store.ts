@@ -1,6 +1,5 @@
-import type { OverlayPluginItem } from '../api';
+import { displayLine, type OverlayPluginItem } from '../api';
 import { subscribeClipboardCopies } from '../../shared/clipboard-captures';
-import { displayLine } from './display';
 
 // The clipboard history, which the plugin owns rather than the host: the ordering, the dedupe, and
 // the cap are all this module's decisions, and they live inside the plugin's chunk rather than in the

@@ -12,7 +12,7 @@ type Properties = {
   loading: boolean;
   onPick: (relPath: string) => void;
   onClose: () => void;
-  commandInputRef: React.RefObject<HTMLTextAreaElement | null>;
+  restoreFocus: () => void;
 };
 
 function QuickOpenRow({ result, selected, onPick }: { result: FuzzyMatchResult; selected: boolean; onPick: () => void }) {
@@ -39,13 +39,13 @@ function quickOpenBody(query: string, loading: boolean, results: FuzzyMatchResul
 // ranked results list (modeled on `TabNavPicker`). Owns its own key handling — Up/Down/Enter/
 // Escape never reach the window handler — since, unlike the other pickers, it holds its own text
 // input (Decision 6).
-export function QuickOpen({ query, onChangeQuery, results, selected, onChangeSelected, loading, onPick, onClose, commandInputRef }: Properties) {
+export function QuickOpen({ query, onChangeQuery, results, selected, onChangeSelected, loading, onPick, onClose, restoreFocus }: Properties) {
   // Escape hands the keystroke's focus back to the command bar the overlay was raised from, so
   // closing it leaves the user where they can type the next command.
   const onKeyDown = useRankedOverlayKeys(
     selected, results.length, onChangeSelected,
     () => { const result = results[selected]; if (result) onPick(result.path); },
-    () => { onClose(); commandInputRef.current?.focus(); },
+    () => { onClose(); restoreFocus(); },
   );
 
   return (

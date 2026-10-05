@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { statusDotIcon, promptIcon } from '../icons';
+import { useCommandBarInset } from './useCommandBarInset';
+import { useCommandBarDrop } from './useCommandBarDrop';
 
 export type CommandBarShellProperties = {
   value: string;
@@ -27,6 +29,11 @@ export type CommandBarShellProperties = {
   autoFocus?: boolean;
   disabled?: boolean;
   ariaLabel?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  // Publishes this bar as a file-navigator drop target in its own right. The agent tab's bar leaves
+  // it off: it already answers drops through the application's `dropRef`.
+  acceptsFileDrops?: boolean;
 };
 
 // The command bar's chrome and the one behavior inseparable from it. Presentational otherwise:
@@ -34,8 +41,14 @@ export type CommandBarShellProperties = {
 // is built from `useCommandBarKeys`.
 export function CommandBarShell({
   value, onChange, onKeyDown, inputRef, ghost, above, trailing, label, rootRef,
-  dotColor = 'var(--accent)', busy = false, autoFocus = false, disabled = false, ariaLabel,
+  dotColor = 'var(--accent)', busy = false, autoFocus = false, disabled = false, ariaLabel, onFocus, onBlur,
+  acceptsFileDrops = false,
 }: CommandBarShellProperties) {
+  const ownRoot = useRef<HTMLDivElement>(null);
+  const root = rootRef ?? ownRoot;
+  useCommandBarInset(root);
+  useCommandBarDrop(root, inputRef, value, acceptsFileDrops);
+
   // Auto-resize: shrink to one row first so `scrollHeight` reflects the actual content, then
   // grow to fit. Runs after every value change (typing, paste, history recall, ghost accept,
   // Shift+Enter newline, submit-clear).
@@ -47,7 +60,7 @@ export function CommandBarShell({
   }, [value, inputRef]);
 
   return (
-    <div className="command-area" data-doc-shot="command-bar" data-command-bar ref={rootRef}>
+    <div className="command-area" data-doc-shot="command-bar" data-command-bar ref={root}>
       {above}
       <div className="command" onClick={() => inputRef.current?.focus()}>
         <span className={`dot${busy ? ' busy' : ''}`} style={{ color: dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
@@ -68,6 +81,8 @@ export function CommandBarShell({
             spellCheck={false}
             onChange={(event) => { onChange(event.target.value); }}
             onKeyDown={onKeyDown}
+            onFocus={onFocus}
+            onBlur={onBlur}
           />
         </div>
         {trailing !== undefined && <span className="command-trailing">{trailing}</span>}

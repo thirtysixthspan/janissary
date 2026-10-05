@@ -117,6 +117,30 @@ describe('TabStrip', () => {
     expect(container.querySelector('.dot.busy')).toBeInTheDocument();
   });
 
+  // The dot is host state the plugin sets through `setBusy`; the strip never reads a plugin's payload.
+  it('leaves the dot still for a shell payload reporting a running command without the host busy flag', () => {
+    const tab = makeTab({
+      view: 'plugin',
+      plugin: {
+        id: 'shell', schemaVersion: 2,
+        payload: {
+          instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/tmp', root: '/repo', workspace: false,
+          cols: 80, rows: 24, connections: [], schedule: [], commandRunning: true,
+        },
+      },
+    } as unknown as Partial<TabView>);
+    const { container, rerender } = render(
+      <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+    );
+
+    expect(container.querySelector('.dot.busy')).toBeNull();
+
+    rerender(
+      <TabStrip tabs={[{ ...tab, busy: true }]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+    );
+    expect(container.querySelector('.dot.busy')).toBeInTheDocument();
+  });
+
   // The badge is suppressed on the tab the user is looking at, so a badged tab has to be a
   // non-active one. It still carries the flag while it is active — a glance is not a read — but
   // drawing it there would flicker for the three seconds before the badge comes off.

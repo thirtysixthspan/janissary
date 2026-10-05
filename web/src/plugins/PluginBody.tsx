@@ -11,11 +11,16 @@ import type { TabView } from '@shared/protocol';
 import { errorText } from '@shared/error-text';
 import type { JanusClient } from '../ws';
 import { SplitTabButton } from '../shared/SplitTabButton';
+import { AppCommandBarTabScope } from '../shared/command-bar/AppCommandBar';
 import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
 import { usePluginHost } from './host';
 import { type ClientPluginRegistration } from './registry';
 
 const CLIENT_ACTIVATION_MS = 5000;
+
+// What a plugin that claimed no chord reads. A shared constant so the common case keeps one identity
+// rather than a fresh empty array on every render.
+const NO_CHORDS: readonly string[] = [];
 
 class PluginErrorBoundary extends Component<{
   children: React.ReactNode;
@@ -115,6 +120,7 @@ export function PluginBody({
   client,
   active,
   dock = null,
+  dotColor,
   onClose,
   onSplit,
   onDirtyHandle,
@@ -124,6 +130,7 @@ export function PluginBody({
   client: JanusClient;
   active: boolean;
   dock?: 'left' | 'right' | null;
+  dotColor?: string;
   onClose: () => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
@@ -146,6 +153,16 @@ export function PluginBody({
   // stable, or a plugin would drop its dirty state every time the host rebuilt this callback.
   const onDirtyHandleRef = useRef(onDirtyHandle);
   onDirtyHandleRef.current = onDirtyHandle;
+  // The chord ids the host accepted for this plugin, taken from the tab's own wire view rather than
+  // from the declaration the client cannot read. Held in a ref keyed by their joined form because the
+  // view is rebuilt on every state broadcast: a fresh array each time would rebuild the capability
+  // object with it, and a plugin tab must keep its capabilities stable while it is merely on screen.
+  const claimedChords = plugin.chords ?? NO_CHORDS;
+  const chordsRef = useRef(claimedChords);
+  if (chordsRef.current !== claimedChords && chordsRef.current.join(' ') !== claimedChords.join(' ')) {
+    chordsRef.current = claimedChords;
+  }
+  const chords = chordsRef.current;
   const registerDirty = useCallback((handle: TabDirtyHandle | null) => {
     onDirtyHandleRef.current?.(handle);
   }, []);
@@ -158,9 +175,9 @@ export function PluginBody({
   );
   const capabilities = useMemo(
     () => createPluginClientCapabilities(
-      host, pluginId, label, client, active, dock, close, splitAction, registerDirty,
+      host, pluginId, label, client, active, dock, close, splitAction, registerDirty, chords, dotColor,
     ),
-    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction],
+    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;
@@ -171,5 +188,11 @@ export function PluginBody({
   }, []);
 
   if (failed || host.failure(pluginId) !== undefined) return null;
-  return contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail);
+  // The command-bar state a body reaches is bound to this tab here, by the host, rather than by a label
+  // the plugin passes: a plugin cannot then act on the bar, queue or focus of a tab it does not own.
+  return (
+    <AppCommandBarTabScope label={label} active={active}>
+      {contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail)}
+    </AppCommandBarTabScope>
+  );
 }

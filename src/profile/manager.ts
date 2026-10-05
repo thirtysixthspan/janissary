@@ -10,6 +10,7 @@ import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import { newAgentOp } from './new-agent.js';
 import { placeAgent } from './place-agent.js';
+import { workspaceAgentCwd } from './inherited-cwd.js';
 import { messageBus } from '../bus.js';
 import { errorText } from '../error-text.js';
 
@@ -83,8 +84,8 @@ export class ProfileManager {
     this.finish(openProfileEntries(loaded, this.managers, parsed.name, label, out), out);
   }
 
-  newAgent(command: string): void {
-    newAgentOp(this.managers, command);
+  newAgent(command: string, context?: { label: string; index: number }): void {
+    newAgentOp(this.managers, command, context);
   }
 
   // Launch a bare, auto-named agent tab rooted at the named source tab's cwd, joining its group —
@@ -96,7 +97,7 @@ export class ProfileManager {
     if (!creator) return;
     const resolved = this.poolName(label);
     if (resolved === undefined) return;
-    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
+    const cwd = this.managers.tab.cwdOf(label) ?? this.managers.tab.launchDir;
 
     if (creator.remote) {
       if (!this.managers.remote.attach(resolved, label)) {
@@ -122,7 +123,10 @@ export class ProfileManager {
 
     this.managers.workspace.retain(creator.workspaceDir);
     placeAgent(this.managers, {
-      resolved, creator, cwd: creator.workspaceDir, workspaceDir: creator.workspaceDir, offline: false,
+      resolved, creator,
+      cwd: workspaceAgentCwd(creator.workspaceDir, this.managers.tab.cwdOf(label)),
+      workspaceDir: creator.workspaceDir,
+      offline: creator.offline ?? false,
     });
   }
 

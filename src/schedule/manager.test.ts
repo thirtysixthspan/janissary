@@ -197,6 +197,53 @@ describe('ScheduleManager tick', () => {
   });
 });
 
+describe('ScheduleManager delivery to a plugin tab that owns a terminal', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mocks.notify.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function shellTab(ptyId: string | undefined): { managers: Managers; input: ReturnType<typeof vi.fn> } {
+    const { managers } = makeManagers({ view: 'plugin' });
+    const input = vi.fn();
+    Object.assign(managers, { pty: { input, terminalIdFor: () => ptyId } });
+    return { managers, input };
+  }
+
+  const entry: ScheduleEntry = { id: 'fetch', command: 'git fetch', spec: 'once', nextRun: Date.now() - 1000, recurring: false };
+
+  it('types a due entry into the tab terminal as a line and announces it', () => {
+    const { managers, input } = shellTab('pty4');
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [{ ...entry, nextRun: Date.now() - 1000 }]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+
+    expect(input).toHaveBeenCalledWith('pty4', 'git fetch\n');
+    expect(mocks.notify).toHaveBeenCalledWith(managers, 'schedule-fire', 'janus', 'git fetch');
+    expect(mgr.get('janus')).toEqual([]);
+    mgr.stop();
+  });
+
+  it('keeps the entry due while the tab has no terminal to type into', () => {
+    const { managers, input } = shellTab(undefined);
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [{ ...entry, nextRun: Date.now() - 1000 }]);
+    mgr.start();
+
+    vi.advanceTimersByTime(1000);
+
+    expect(input).not.toHaveBeenCalled();
+    expect(mgr.get('janus')).toHaveLength(1);
+    mgr.stop();
+  });
+});
+
 describe('ScheduleManager one-shot prompt injection into a harness', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -625,6 +672,17 @@ describe('ScheduleManager schedule launch dialog', () => {
     ], 'claude');
     mgr.openScheduleLaunch();
     expect(mgr.scheduleLaunchView()).toEqual({ targets: ['janus', 'claude'], active: 'claude' });
+  });
+
+  it('lists a plugin tab that owns a terminal and leaves out one that does not', () => {
+    const tabs: Partial<Tab>[] = [{ label: 'janus' }, { label: 'bekir', view: 'plugin' }, { label: 'video', view: 'plugin' }];
+    const managers = {
+      tab: { tabs, cur: () => tabs[0] },
+      pty: { terminalIdFor: (label: string) => (label === 'bekir' ? 'pty4' : undefined) },
+    } as unknown as Managers;
+    const mgr = new ScheduleManager(managers);
+    mgr.openScheduleLaunch();
+    expect(mgr.scheduleLaunchView()).toEqual({ targets: ['janus', 'bekir'], active: 'janus' });
   });
 
   it('reflects closeScheduleLaunch back to null', () => {

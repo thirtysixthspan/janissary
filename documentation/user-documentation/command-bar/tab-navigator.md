@@ -6,7 +6,7 @@ With several tabs open, `Ctrl+G` (or the `nav` command) jumps straight to any of
 
 ## Opening the navigator
 
-`Ctrl+G` opens a window listing your open tabs — agent, harness, SSH, and viewer tabs alike — floating above the command bar, in the same spot the [history picker](/user-documentation/command-bar/history) appears. A tab you have [docked into a sidebar](/user-documentation/getting-started/tabs) is not in the list, since it is not in the center strip to jump to; the same goes for a monitor's [reporting tab](/user-documentation/automation/monitoring).
+`Ctrl+G` opens a window listing your open tabs — agent, harness, SSH, shell, and viewer tabs alike — floating above the command bar, in the same spot the [history picker](/user-documentation/command-bar/history) appears. A tab you have [docked into a sidebar](/user-documentation/getting-started/tabs) is not in the list, since it is not in the center strip to jump to; the same goes for a monitor's [reporting tab](/user-documentation/automation/monitoring).
 
 You can also type `nav` at the command bar, optionally followed by a starting query — `nav deploy` opens the navigator already filtered to "deploy". If the navigator is already open, pressing `Ctrl+G` again (or submitting `nav`) closes it instead of reopening it.
 

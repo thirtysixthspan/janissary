@@ -17,6 +17,7 @@ export function AppShell({
   tabNameMaxLength = 16, activeTabNameMaxLength = 50,
   sidebarLeftWidth, onSidebarLeftWidthChange, sidebarRightWidth, onSidebarRightWidthChange,
   focusLeft, focusRight,
+  pickerOverlays, pickerSourceTab,
 }: {
   tabs: TabView[];
   notificationsVisible: boolean;
@@ -32,6 +33,8 @@ export function AppShell({
   onSidebarRightWidthChange?: (width: number) => void;
   focusLeft?: 'files' | 'notifications';
   focusRight?: 'files' | 'notifications';
+  pickerOverlays?: React.ReactNode;
+  pickerSourceTab?: string;
 }) {
   const connectionStatus = useConnectionStatus(client);
   const [leftNotificationsVisible, setLeftNotificationsVisible] = useState(false);
@@ -46,6 +49,7 @@ export function AppShell({
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarLeftWidth} onWidthChange={onSidebarLeftWidthChange} focusView={focusLeft}
         onNotificationsVisibilityChange={setLeftNotificationsVisible}
+        pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
       />
       <div className="app-center"><ConnectionStatusLabel status={connectionStatus} />{children}</div>
       <Sidebar
@@ -54,6 +58,7 @@ export function AppShell({
         activeTabNameMaxLength={activeTabNameMaxLength}
         width={sidebarRightWidth} onWidthChange={onSidebarRightWidthChange} focusView={focusRight}
         onNotificationsVisibilityChange={setRightNotificationsVisible}
+        pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
       />
       <DefaultContextMenu client={client} />
       <ToastStack client={client} notificationsVisible={feedVisible} top={toastTop} />

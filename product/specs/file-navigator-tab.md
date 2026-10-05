@@ -397,8 +397,10 @@ is not present for a view tab (an image, a markdown preview, an editor, notifica
 tree itself when that tree is the active, non-docked tab), for a harness tab — whose terminal takes
 the drop directly instead — or while transcript search has replaced it. Dragging over where the
 command bar would otherwise be in any of these cases has no effect: no highlight, no insertion. In practice, dropping a row onto a command bar
-therefore only happens when the file navigator is docked into a sidebar while a different, plain tab is
+therefore only happens when the file navigator is docked into a sidebar while a different, plain tab or a shell tab is
 active in the center — a docked tree's own active-tab command bar is never a target for itself.
+A shell tab's command bar takes the drop into its own line, highlighted while the drag is over it,
+whether the shell is in the center or docked beside the tree.
 
 ### Dragging a row into an editor tab
 

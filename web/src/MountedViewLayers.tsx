@@ -11,6 +11,7 @@ import { QuestionPanel } from './QuestionPanel';
 import type { QuestionPanelHandle } from './shared/tab/handles';
 import { tabBodyBorder } from './shared/tab/body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
+import { hostsCommandBar } from './shared/command-bar/hosts-command-bar';
 import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab/view-guards';
 
 type Properties = {
@@ -29,6 +30,7 @@ type Properties = {
   // The full overlay stack, rendered over the current editor tab: a key the buffer does not bind
   // reaches the window handler, so any overlay can open there. `overlayOpen` says one is on screen.
   pickerOverlays?: React.ReactNode;
+  pickerSourceTab?: string;
   overlayOpen?: boolean;
   // Ctrl+A and Ctrl+G open the task picker and tab navigator from a focused harness tab (see
   // `HarnessTab.harnessKeyFilter`), and Ctrl+Shift+V or Cmd+Shift+V opens whatever overlay the clipboard plugin
@@ -61,10 +63,16 @@ function TabBodyDiv({
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
   tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
-  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, overlayOpen,
+  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, pickerSourceTab, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
 }: Properties) {
+  const pluginOverlay = (t: TabView) => {
+    if (hostsCommandBar(t)) return (!pickerSourceTab || pickerSourceTab === t.label) && pickerOverlays;
+    return navOpen && onPickTab && (
+      <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
+    );
+  };
   return (
     <>
       {indexedTabs(tabs, isHarnessTabView).map(({ t, index }) => (
@@ -95,7 +103,7 @@ export function MountedViewLayers({
             overlayOpen={overlayOpen}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
-          {t.label === current.label && pickerOverlays}
+          {(pickerSourceTab ? pickerSourceTab === t.label : t.label === current.label) && pickerOverlays}
         </TabBodyDiv>
       ))}
 
@@ -116,6 +124,7 @@ export function MountedViewLayers({
               else tabHandles.current.delete(t.label);
               onPluginDirty?.(t.label, handle?.isDirty() ?? false);
             }}
+            overlay={t.label === current.label ? pluginOverlay(t) : undefined}
           />
         ))}
       {current.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}

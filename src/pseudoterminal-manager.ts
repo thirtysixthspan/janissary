@@ -1,4 +1,4 @@
-import { spawnPty, type PtySession } from './pty.js';
+import { spawnPty, type PtyLaunch, type PtySession } from './pty.js';
 import type { SandboxOptions } from './sandbox/index.js';
 import { messageBus } from './bus.js';
 import { getProjectTokens } from './project/tokens.js';
@@ -24,10 +24,11 @@ export class PseudoterminalManager {
   // the owning tab's `label`, and return its id. Output and exit route back through the host.
   // `workspaceDir`/`offline`, when the owning tab is workspaced, confine the process via Seatbelt.
   // `extraEnv`, when given, is merged over the spawned process's environment (e.g. a harness-specific
-  // override that isn't part of Seatbelt confinement).
+  // override that isn't part of Seatbelt confinement). `launch` names the shell and its argv, for a
+  // tab whose body is a shell rather than a program run through one.
   spawn(
     label: string, program: string, command: string, cwd: string,
-    workspaceDir?: string, offline?: boolean, extraEnv?: NodeJS.ProcessEnv,
+    workspaceDir?: string, offline?: boolean, extraEnv?: NodeJS.ProcessEnv, launch?: PtyLaunch,
   ): string {
     const session = spawnPty(program, command, cwd, {
       onData: (id, data) => messageBus.emit('pty', { type: 'data', id, data }),
@@ -36,9 +37,37 @@ export class PseudoterminalManager {
       workspaceDir,
       offline,
       tokens: workspaceDir ? getProjectTokens() : undefined,
-    }, extraEnv);
+    }, extraEnv, launch);
     this.ptys.set(session.id, { session, tabLabel: label });
     return session.id;
+  }
+
+  // Re-point a freshly spawned entry at the label its owning tab was finally allocated.
+  //
+  // A plugin tab's label does not exist while its payload factory runs — `addPluginTab` mints it
+  // afterwards — so a plugin that spawns during that factory can only hand the id over and let the
+  // caller adopt it once the tab exists. Adopting rather than spawning against a stand-in label is
+  // what makes `closeTab` kill the session through the ordinary per-tab release walk, and what makes
+  // `terminalsFor` list it as one of that tab's own connections.
+  adopt(ptyId: string, label: string): void {
+    const entry = this.ptys.get(ptyId);
+    if (entry) entry.tabLabel = label;
+  }
+
+  // Whether a session is still registered. A plugin tab that reconnects to a shell that exited while
+  // it was away holds the payload of a process nobody told it about, and this is how it finds out.
+  isRunning(ptyId: string): boolean {
+    return this.ptys.has(ptyId);
+  }
+
+  // Whether a session is still registered *and* belongs to one of `labels`. Distinct from `isRunning`,
+  // which answers for whatever id it is handed and is right for the host's own callers: pty ids come
+  // from a plain counter, so a plugin holding one could enumerate them and learn which other processes
+  // in the window are alive. The owner is read from the registry rather than tracked beside it, so the
+  // answer cannot drift from the session `closeTab` reaps.
+  isRunningFor(ptyId: string, labels: readonly string[]): boolean {
+    const entry = this.ptys.get(ptyId);
+    return entry !== undefined && labels.includes(entry.tabLabel);
   }
 
   // Spawn a PTY whose bytes are handed to `handlers.onData` instead of being published on the bus —
@@ -58,7 +87,8 @@ export class PseudoterminalManager {
     const session = spawnPty(program, command, cwd, {
       onData: (_id, data) => handlers.onData(data),
       onExit: (id, exitCode) => { this.handleExit(id, exitCode); handlers.onExit(); },
-    }, this.cols, this.rows, options?.sandbox, undefined, options?.shellArgs);
+    }, this.cols, this.rows, options?.sandbox, undefined,
+    options?.shellArgs === undefined ? undefined : { args: options.shellArgs });
     this.ptys.set(session.id, { session, tabLabel: label, transport: true, onInput: handlers.onInput });
     return session;
   }
@@ -112,6 +142,13 @@ export class PseudoterminalManager {
 
   // The dimensions new PTYs spawn at, for observers that mirror a PTY's screen.
   spawnDimensions(): { cols: number; rows: number } { return { cols: this.cols, rows: this.rows }; }
+
+  terminalIdFor(label: string): string | undefined {
+    for (const [id, entry] of this.ptys) {
+      if (entry.tabLabel === label && !entry.transport) return id;
+    }
+    return undefined;
+  }
 
   // The program names of a tab's live PTYs, for the connections panel and completion
   // (`terminal:<program>`). A remote tab's ssh transport is skipped: it is listed as that tab's

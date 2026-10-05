@@ -25,6 +25,7 @@ type AppMainProps = Omit<
   // Every overlay's state, built once by `usePickerOverlays`. `PickerOverlays` takes exactly this
   // bag, and the two overlays a mounted harness tab renders are projected out of it below.
   pickers: PickerOverlayView;
+  pickerSourceTab?: string;
   tabs: TabView[];
   activeTab: number;
   secondaryTab?: number;
@@ -54,7 +55,7 @@ type AppMainProps = Omit<
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppMain({
   current, client, lines, runCommand, transcriptReference, highlight, inputReference,
-  pickers, tabs,
+  pickers, pickerSourceTab, tabs,
   search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, onEditQueued, onDeleteQueued, dropRef,
   activeTab, secondaryTab, windowFocused, actionEntries, reportingEntries, closeTab,
@@ -71,7 +72,7 @@ export function AppMain({
     <AgentTabBody
         current={current} client={client} lines={lines} runCommand={runCommand}
         transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-        pickerOverlays={pickerOverlays}
+        pickerOverlays={pickerSourceTab ? null : pickerOverlays}
         blockingOverlayOpen={commandBarSuppressed(pickers.overlays)}
         commandBarDisabled={commandBarDisabled(pickers.overlays)}
         queueOpen={pickers.overlays.queue}
@@ -93,6 +94,7 @@ export function AppMain({
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}
       focusLeft={focusLeft} focusRight={focusRight}
+      pickerOverlays={pickerOverlays} pickerSourceTab={pickerSourceTab}
     >
       <AppCenterActionArea
         entries={actionEntries} tabs={tabs} activeTab={activeTab} secondaryTab={secondaryTab}
@@ -113,6 +115,7 @@ export function AppMain({
           harnessHandles, tabHandles, questionPanelRef,
           onPluginDirty,
           pickerOverlays,
+          pickerSourceTab,
           overlayOpen: firstOpenOverlay(pickers.overlays) !== undefined,
           ...mountedPickerOverlayProps(pickers),
         }}

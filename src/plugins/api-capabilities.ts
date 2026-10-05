@@ -12,6 +12,8 @@ export type TabPluginCapabilityName =
   | 'notifyUser'
   | 'openOrFocusTab'
   | 'updateTab'
+  | 'setUnread'
+  | 'setBusy'
   | 'dockTab'
   | 'snapshotTab'
   | 'openClaimedFiles'
@@ -24,6 +26,13 @@ export type TabPluginCapabilityName =
   | 'readSettings'
   | 'saveSettings'
   | 'isRecordingLive'
+  | 'originTab'
+  | 'dispatchLineWithOutput'
+  | 'completeLine'
+  | 'terminalRunning'
+  | 'queueLine'
+  | 'nextQueuedLine'
+  | 'recordCwd'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -36,6 +45,8 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   notifyUser: true,
   openOrFocusTab: true,
   updateTab: true,
+  setUnread: true,
+  setBusy: true,
   dockTab: true,
   snapshotTab: true,
   openClaimedFiles: true,
@@ -48,6 +59,13 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   readSettings: true,
   saveSettings: true,
   isRecordingLive: true,
+  originTab: true,
+  dispatchLineWithOutput: true,
+  completeLine: true,
+  terminalRunning: true,
+  queueLine: true,
+  nextQueuedLine: true,
+  recordCwd: true,
   rejectRequest: true,
   reportFailure: true,
 };

@@ -9,8 +9,8 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
   ['focusTab', { label: 'one' }, [{}, { label: 3 }]],
   ['closeTab', { label: 'one' }, [{}, { label: 2 }, { index: 2 }]],
   ['renameTab', { index: 0, title: 'one' }, [{ index: 0 }, { index: 0, title: 1 }, { title: 'one' }]],
-  ['editQueuedCommand', { index: 0, text: 'ls' }, [{ index: 0 }, { index: 0, text: [] }]],
-  ['deleteQueuedCommand', { index: 1 }, [{ index: true }]],
+  ['editQueuedCommand', { index: 0, text: 'ls', tab: 'shell1' }, [{ index: 0 }, { index: 0, text: [] }, { index: 0, text: 'ls', tab: 3 }]],
+  ['deleteQueuedCommand', { index: 1, tab: 'shell1' }, [{ index: true }, { index: 1, tab: null }]],
   ['moveTab', { dir: -1 }, [{ dir: 0 }, { dir: '1' }, {}]],
   ['moveTabToOtherPane', { index: 0 }, [{ index: null }]],
   ['reorderTab', { dir: 1 }, [{ dir: 2 }]],
@@ -47,6 +47,11 @@ describe('core RPC params decoders', () => {
 
   it.each(CASES)('rejects malformed %s params', (method, _valid, invalid) => {
     for (const params of invalid) expect(CORE_PARAMS[method](params)).toBe(false);
+  });
+
+  it('accepts a queue edit or delete that names no tab', () => {
+    expect(CORE_PARAMS.editQueuedCommand({ index: 0, text: 'ls' })).toBe(true);
+    expect(CORE_PARAMS.deleteQueuedCommand({ index: 0 })).toBe(true);
   });
 
   it('accepts the editor scope of an ACP ref when both of its fields are present', () => {

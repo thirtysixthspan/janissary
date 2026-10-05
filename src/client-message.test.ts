@@ -58,6 +58,7 @@ describe('isClientMessage', () => {
       'moveFileNavigatorItem',
       'moveFileNavigatorItems',
       'pasteFileNavigatorItems',
+      'pluginTerminalAttach',
       'redoFileNavigatorItem',
       'remoteSession',
       'renameFileNavigatorItem',

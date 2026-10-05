@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { displayLine } from './display';
+import { displayLine } from './display-line';
 
-// The popup shows one line per entry: the first line of *non-space* text. Two cases make that
+// A list row shows one line per entry: the first line of *non-space* text. Two cases make that
 // different from "the first line", and both are what a copy taken from the middle of an indented
 // block or from output that opens with blank lines actually looks like.
 
