@@ -8,3 +8,6 @@
 > send aslan ls -al
 Tab "aslan" does not accept input.
 
+* shell tabs should be able to accept commands into the queue via the queue command.
+> queue dogan ls
+Tab "dogan" has no command queue.
