@@ -108,4 +108,126 @@ describe('useAsciicastTerminal', () => {
     render(header());
     expect(built[0].theme).toEqual({ background: '#111111', foreground: '#eeeeee' });
   });
+
+  // A recording has no program behind it to interrupt, so Ctrl+C is free to mean copy — the same
+  // chord it means in every other terminal. Everything that is not that chord stays with the
+  // terminal, including the ones a modifier makes a different chord entirely.
+  describe('the copy chord', () => {
+    function keyEvent(over: Record<string, unknown> = {}): Record<string, unknown> {
+      return { type: 'keydown', key: 'c', metaKey: true, ctrlKey: true, altKey: false, shiftKey: false, ...over };
+    }
+
+    it('copies the selection and swallows the key', () => {
+      const caps = capabilities();
+      term.getSelection.mockReturnValue('selected text');
+      const container = createRef<HTMLDivElement>();
+      container.current = document.createElement('div');
+      const view = renderHook(() => useAsciicastTerminal(header(), container, caps));
+      const [handler] = vi.mocked(term.attachCustomKeyEventHandler).mock.calls[0] as [(event: unknown) => boolean];
+
+      expect(handler(keyEvent())).toBe(false);
+      expect(vi.mocked(caps.copyText)).toHaveBeenCalledWith('selected text');
+      expect(view.result.current).toBeDefined();
+    });
+
+    it.each([
+      ['a key other than c', keyEvent({ key: 'v' })],
+      ['a release rather than a press', keyEvent({ type: 'keyup' })],
+      ['alt held', keyEvent({ altKey: true })],
+      ['shift held', keyEvent({ shiftKey: true })],
+      ['neither the mac nor the pc modifier held', keyEvent({ metaKey: false, ctrlKey: false })],
+    ])('leaves %s to the terminal', (_label, event) => {
+      const caps = capabilities();
+      term.getSelection.mockReturnValue('selected text');
+      const container = createRef<HTMLDivElement>();
+      container.current = document.createElement('div');
+      renderHook(() => useAsciicastTerminal(header(), container, caps));
+      const [handler] = vi.mocked(term.attachCustomKeyEventHandler).mock.calls[0] as [(event: unknown) => boolean];
+
+      expect(handler(event)).toBe(true);
+      expect(vi.mocked(caps.copyText)).not.toHaveBeenCalled();
+    });
+
+    it('leaves the chord alone when nothing is selected', () => {
+      const caps = capabilities();
+      term.getSelection.mockReturnValue('');
+      const container = createRef<HTMLDivElement>();
+      container.current = document.createElement('div');
+      renderHook(() => useAsciicastTerminal(header(), container, caps));
+      const [handler] = vi.mocked(term.attachCustomKeyEventHandler).mock.calls[0] as [(event: unknown) => boolean];
+
+      expect(handler(keyEvent())).toBe(true);
+      expect(vi.mocked(caps.copyText)).not.toHaveBeenCalled();
+    });
+  });
+
+  // A terminal is a state machine: the only way to arrive at an earlier frame is to have run the
+  // bytes before it. The timeline is therefore walked by index, so a seek forward costs only what it
+  // skipped rather than the whole recording behind it.
+  describe('renderUpTo', () => {
+    const events = [
+      { code: 'o' as const, time: 0, data: 'one' },
+      { code: 'r' as const, time: 1, data: { cols: 100, rows: 30 } },
+      { code: 'o' as const, time: 2, data: 'two' },
+      { code: 'x' as const, time: 3, data: 0 },
+    ];
+
+    function mounted() {
+      const { terminal } = render(header());
+      return terminal;
+    }
+
+    it('writes output and applies resizes up to the time asked for', () => {
+      mounted().renderUpTo(events, 2);
+
+      expect(term.write.mock.calls).toEqual([['one'], ['two']]);
+      expect(term.resize).toHaveBeenCalledWith(100, 30);
+    });
+
+    it('stops at the first event past the time asked for', () => {
+      mounted().renderUpTo(events, 0.5);
+
+      expect(term.write.mock.calls).toEqual([['one']]);
+      expect(term.resize).not.toHaveBeenCalled();
+    });
+
+    it('walks forward from where it left off, replaying nothing', () => {
+      const terminal = mounted();
+      terminal.renderUpTo(events, 0.5);
+      terminal.renderUpTo(events, 2.5);
+
+      expect(term.write.mock.calls).toEqual([['one'], ['two']]);
+      expect(term.reset).not.toHaveBeenCalled();
+    });
+
+    it('resets and replays from the start on a seek backwards', () => {
+      const terminal = mounted();
+      terminal.renderUpTo(events, 3);
+      term.write.mockClear();
+      terminal.renderUpTo(events, 0.5);
+
+      expect(term.reset).toHaveBeenCalled();
+      expect(term.write.mock.calls).toEqual([['one']]);
+    });
+
+    it('ignores an exit marker, which changes nothing on screen', () => {
+      mounted().renderUpTo(events, 3);
+
+      expect(term.write.mock.calls).toEqual([['one'], ['two']]);
+    });
+
+    // A resize recorded before the tab has been laid out has nowhere to go; the recording still plays.
+    it('swallows a resize the terminal will not take', () => {
+      term.resize.mockImplementationOnce(() => { throw new Error('not laid out yet'); });
+      mounted().renderUpTo(events, 2);
+
+      expect(term.write).toHaveBeenCalled();
+    });
+
+    it('does nothing when no terminal has been built', () => {
+      const { terminal } = render(undefined);
+      expect(() => terminal.renderUpTo(events, 3)).not.toThrow();
+      expect(term.write).not.toHaveBeenCalled();
+    });
+  });
 });

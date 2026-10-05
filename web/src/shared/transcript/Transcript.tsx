@@ -1,14 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { JanusClient } from '../../ws';
+import React, { useCallback, useEffect, useRef } from 'react';
 import type { BufferLine } from '@shared/protocol';
 import { renderLine } from './transcript-line';
 import type { LineHighlight } from './line-text';
-import { transcriptIntents } from './transcript-intents';
 import { TerminalCard } from './TerminalCard';
+import type { TranscriptIntents } from './transcript-intents';
+import type { PtyActions } from '../terminal/pty-actions';
 
 type Properties = {
   lines: BufferLine[];
-  client: JanusClient;
+  intents: TranscriptIntents;
+  ptyActions: PtyActions;
   onToggleCollapse: () => void;
   onPromptClick: (text: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
@@ -24,7 +25,7 @@ type Properties = {
   pinToBottom?: boolean;
 };
 
-export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scrollRef, highlight, showEmptyHint = true, pinToBottom = true }: Properties) {
+export function Transcript({ lines, intents, ptyActions, onToggleCollapse, onPromptClick, scrollRef, highlight, showEmptyHint = true, pinToBottom = true }: Properties) {
   const stick = useRef(true);
   // The scroll position auto-scroll has already accounted for. Scroll events are delivered
   // asynchronously, so the event a pin triggers can land after newer output has grown the content:
@@ -33,10 +34,6 @@ export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scr
   // counts as the user scrolling away.
   const lastTop = useRef(0);
   const contentReference = useRef<HTMLDivElement>(null);
-
-  // Memoized because the markdown line's click handler feeds a useCallback dependency array — a
-  // fresh intents object each render would rebuild that callback for every line.
-  const intents = useMemo(() => transcriptIntents(client), [client]);
 
   const pin = useCallback(() => {
     if (!pinToBottom) return;
@@ -81,7 +78,7 @@ export function Transcript({ lines, client, onToggleCollapse, onPromptClick, scr
         <div className="line empty-state">Type "help" for available commands.</div>
       )}
       {lines.map((line, index) => (line.type === 'terminal' && line.terminal
-        ? <TerminalCard key={line.terminal.ptyId} entry={line.terminal} client={client} />
+        ? <TerminalCard key={line.terminal.ptyId} entry={line.terminal} actions={ptyActions} />
         : renderLine(line, index, intents, onToggleCollapse, onPromptClick, highlight)))}
       </div>
     </div>

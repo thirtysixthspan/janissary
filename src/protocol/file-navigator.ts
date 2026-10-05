@@ -29,6 +29,18 @@ export type UndoRedoResult = Partial<BatchResult> & {
   conflict?: MoveConflict;
   conflicts?: MoveConflict[];
 };
+export type RenameFileNavigatorResult = BatchResult | { conflict: true };
+
+// The six file-navigator mutation RPCs that answer with a result. Keep the result paired with its
+// method so both the dispatcher and client request adapter can check their side of the contract.
+export type FileNavigatorMutationResults = {
+  moveFileNavigatorItem: BulkMoveResult;
+  moveFileNavigatorItems: BulkMoveResult;
+  pasteFileNavigatorItems: BulkMoveResult;
+  renameFileNavigatorItem: RenameFileNavigatorResult;
+  undoFileNavigatorItem: UndoRedoResult;
+  redoFileNavigatorItem: UndoRedoResult;
+};
 
 // One navigator's client-side selection, keyed by the tab `index` every other `fileNavigator*` RPC
 // uses. Paths are relative to that tree's root, matching the server's own `expanded` vocabulary.

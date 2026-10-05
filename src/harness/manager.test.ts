@@ -649,6 +649,7 @@ describe('HarnessManager auto-approve', () => {
   // limit screen the app recognizes, off for one it does not.
   it.each([
     ['codex', true],
+    ['opencode', true],
     ['claude', false],
   ])('opens a %s profile entry with autoResume %s', (tool, expected) => {
     const { managers, tabs } = makeManagers();
@@ -699,7 +700,7 @@ describe('HarnessManager launch dialog view', () => {
     const { managers } = makeManagers();
     const manager = new HarnessManager(managers);
     manager.openLaunchDialog();
-    expect(manager.harnessLaunchView()!.autoResume).toEqual(['codex']);
+    expect(manager.harnessLaunchView()!.autoResume).toEqual(['opencode', 'codex']);
   });
 
   it('returns null again after the dialog is closed', () => {

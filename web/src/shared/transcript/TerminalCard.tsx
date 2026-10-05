@@ -1,12 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { JanusClient } from '../../ws';
 import type { TerminalEntry } from '@shared/protocol';
+import type { PtyActions } from '../terminal/pty-actions';
 import { useXterm } from '../terminal/useXterm';
 import { SelectionOverlay } from '../terminal/SelectionOverlay';
 import { collapsedIcon } from '../icons';
 
-type Properties = { entry: TerminalEntry; client: JanusClient };
+type Properties = { entry: TerminalEntry; actions: PtyActions };
 
 // App-level chords (Shift/Ctrl+Arrow for tab switch/reorder, Ctrl+T for collapse) must reach the
 // window handler rather than the PTY so tab switching still works while a card is focused.
@@ -19,13 +19,13 @@ function cardKeyFilter(e: KeyboardEvent): boolean {
 // transcript flow; "maximize" pops it to fill the window. On exit it freezes (input detached) so
 // scrolling back still shows the session. App-level chords (Shift+Arrow, Ctrl+T) are not consumed
 // by the terminal — they bubble to the window handler so tab switching still works while focused.
-export function TerminalCard({ entry, client }: Properties) {
+export function TerminalCard({ entry, actions }: Properties) {
   const hostReference = useRef<HTMLDivElement>(null);
   const [maximized, setMaximized] = useState(false);
 
   const { selection } = useXterm({
     ptyId: entry.ptyId,
-    client,
+    actions,
     containerRef: hostReference,
     keyFilter: cardKeyFilter,
     exited: entry.status === 'exited',
@@ -41,7 +41,7 @@ export function TerminalCard({ entry, client }: Properties) {
         </span>
         <span className="spacer" />
         <button onClick={() => setMaximized((m) => !m)}>{maximized ? 'restore' : 'maximize'}</button>
-        {!isExited && <button onClick={() => client.send({ method: 'ptyKill', params: { id: entry.ptyId } })}>kill</button>}
+        {!isExited && <button onClick={() => actions.kill(entry.ptyId)}>kill</button>}
       </div>
       <div className="body" ref={hostReference} onClick={() => { /* xterm handles focus on click */ }}>
         <SelectionOverlay state={selection.view} screen={selection.screen} />

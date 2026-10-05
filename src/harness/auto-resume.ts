@@ -8,9 +8,10 @@ import type { ScheduleEntry, TimeOfDay } from '../schedule/types.js';
 // moment it will take work again, so the resume waits for it rather than racing it.
 export const RESUME_MARGIN_MS = 60_000;
 
-// The trailing rows a limit screen is read from. Three because the recognized message wraps across
-// two, and because a message the harness later quotes in its scrollback has anything the harness
-// printed since below it and is history, not a live blockage.
+// The trailing rows a limit screen is read from, for a harness whose banner ends the screen. Three
+// because codex's recognized message wraps across two, and because a message the harness later
+// quotes in its scrollback has anything the harness printed since below it and is history, not a
+// live blockage. A harness that paints its banner higher up declares its own count on its table row.
 const LIMIT_WINDOW_ROWS = 3;
 
 // How far ahead a stated duration is trusted. Matching what claude itself will wait for before it
@@ -30,6 +31,15 @@ export type ResumeReset =
 // of it, which is what lets a typographic apostrophe match without the pattern caring which one
 // codex printed.
 const LIMIT_PATTERN = /hit your usage limit[^]{0,200}?try again (at|in) ([^.;]+)/i;
+
+// opencode's usage-limit banner: `` `${limitName} usage limit` `` (or `Usage limit` when the response
+// names no window), then ` reached. It will reset in ${duration}.`. Every spelling of `limitName`
+// carries the same tail, so anchoring on it covers all of them at once. Its reset is always a
+// duration from now, so the literal `in` is captured as the keyword and the clause that follows is
+// read by the same arm codex's `try again in` clause uses. Both banner forms stay inside the 80
+// characters opencode shows — the longest, `monthly usage limit reached. It will reset in 10 days 19
+// hours.`, is 66 — so neither half is ever truncated away.
+const OPENCODE_LIMIT_PATTERN = /usage limit reached[^]{0,120}?it will reset (in) ([^.;]+)/i;
 
 // One `N<unit>` token of a stated duration, e.g. `4 days` or `23h`.
 const DURATION_TOKEN = /(\d+)\s*(m|h|d|w)/gi;
@@ -74,8 +84,9 @@ function relativeReset(clause: string): ResumeReset | undefined {
 export function detectResumeLimit(text: string, harnessName: string): ResumeReset | undefined {
   const entry = RESUME_TABLE[harnessName];
   if (!entry) return undefined;
-  const rows = text.split('\n').filter((row) => row.trim() !== '');
-  const match = entry.pattern.exec(rows.slice(-LIMIT_WINDOW_ROWS).join(' ').replaceAll(/\s+/g, ' '));
+  const lines = text.split('\n').filter((row) => row.trim() !== '');
+  const tail = lines.slice(-(entry.rows ?? LIMIT_WINDOW_ROWS)).join(' ').replaceAll(/\s+/g, ' ');
+  const match = entry.pattern.exec(tail);
   return match ? parseResetClause(match[1], match[2]) : undefined;
 }
 
@@ -98,15 +109,22 @@ function dateAt(reset: ResumeReset, now: Date): number {
   return date.getTime();
 }
 
-type ResumeEntry = { pattern: RegExp };
+type ResumeEntry = {
+  pattern: RegExp;
+  // The trailing rows this harness's banner is read from, when it does not end the screen. opencode
+  // paints its limit in the editor footer, so up to seven rows of input and hint chrome sit below the
+  // banner's first row. That costs no staleness the default guards against: opencode's message is not
+  // in the message stream, so however wide the window gets it never reaches a conversation turn.
+  rows?: number;
+};
 
 // Per-harness limit-screen detectors, one per bundled harness whose limit states a reset the app
 // can act on. Membership here is also the source of truth for which harnesses accept
 // `--auto-resume` (see supportsHarnessAutoResume) and which ones the launch dialog offers it for.
-// claude is absent because it resumes itself (`autoContinueAtUsageLimit`); opencode is absent
-// because it prints no limit at all when one hits — it hangs mid-generation.
+// claude is absent because it resumes itself (`autoContinueAtUsageLimit`).
 const RESUME_TABLE: Record<string, ResumeEntry> = {
   codex: { pattern: LIMIT_PATTERN },
+  opencode: { pattern: OPENCODE_LIMIT_PATTERN, rows: 8 },
 };
 
 // Whether `harnessName` has an installed limit-screen detector and therefore supports auto-resume.

@@ -251,6 +251,35 @@ describe('JanusClient', () => {
     );
   });
 
+  it('editorSync waits for its acknowledgement', async () => {
+    const client = new JanusClient();
+    let finished = false;
+    const sync = async () => {
+      const result = await client.editorSync('/open/1', 'draft');
+      finished = true;
+      return result;
+    };
+    const pending = sync();
+    await Promise.resolve();
+    expect(finished).toBe(false);
+    messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, result: 'ok' }) });
+    await expect(pending).resolves.toEqual({ ok: true, value: 'ok' });
+  });
+
+  it('editorSync reports an interrupted acknowledgement as failure', async () => {
+    const client = new JanusClient();
+    const pending = client.editorSync('/open/1', 'draft');
+    closeHandler!();
+    await expect(pending).resolves.toEqual({ ok: false, error: 'connection closed' });
+  });
+
+  it('editorSync reports a closed socket as unacknowledged', async () => {
+    inst.readyState = 3;
+    const client = new JanusClient();
+    await expect(client.editorSync('/open/1', 'draft')).resolves.toEqual({ ok: false });
+    expect(inst.send).not.toHaveBeenCalled();
+  });
+
   it('collect-tree-state answers with the registered collector records, carrying the request id', () => {
     const client = new JanusClient();
     client.registerStateCollector('fileNavigatorSelections', () => [

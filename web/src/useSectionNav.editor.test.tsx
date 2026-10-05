@@ -27,7 +27,10 @@ function makeClient(): JanusClient {
     const response = await fetch(url);
     return response.text();
   });
-  return { saveFile: vi.fn(), editorSync: vi.fn(), request, send: vi.fn(), readFile } as unknown as JanusClient;
+  return {
+    saveFile: vi.fn(), editorSync: vi.fn().mockResolvedValue({ ok: true, value: 'ok' }), request, send: vi.fn(), readFile,
+    connectionStatus: 'connected', onConnectionStatus: () => () => {},
+  } as unknown as JanusClient;
 }
 
 function Harness({ tabs, focusCenter }: { tabs: TabView[]; focusCenter: () => void }) {

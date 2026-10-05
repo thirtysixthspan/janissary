@@ -2,6 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { dispatchFileNavigatorMessage } from './file-navigator.js';
 import type { Controller } from '../controller.js';
 import type { ClientMessage } from '../protocol.js';
+import type { FileNavigatorMutationHandlers } from './file-navigator.js';
+
+// @ts-expect-error A scalar move handler must not return an unrelated rename conflict shape.
+const wrongMoveReply: FileNavigatorMutationHandlers['moveFileNavigatorItem'] = () => ({ conflict: true });
+void wrongMoveReply;
 
 const makeController = () =>
   ({

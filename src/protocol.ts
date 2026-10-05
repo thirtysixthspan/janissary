@@ -91,6 +91,8 @@ export type {
   BulkMoveResult,
   MoveConflict,
   UndoRedoResult,
+  RenameFileNavigatorResult,
+  FileNavigatorMutationResults,
   FileNavigatorSelectionRecord,
   FileNavigatorRpcCall,
 } from './protocol/file-navigator.js';

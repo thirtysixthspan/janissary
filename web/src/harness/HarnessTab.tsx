@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import type { JanusClient } from '../ws';
 import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
@@ -10,6 +10,7 @@ import { remoteSessionControl } from '../shared/remote-session-control';
 import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import type { HarnessTabHandle } from '../shared/tab/handles';
 import { useHarnessPtyDrop } from './useHarnessPtyDrop';
+import { ptyActions } from '../shared/terminal/pty-actions';
 
 type Properties = {
   harness: HarnessView; client: JanusClient; taskPickerOpen?: boolean; navOpen?: boolean; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTargetView; label: string;
@@ -36,9 +37,10 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
   active, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
+  const actions = useMemo(() => ptyActions(client), [client]);
   const { focus: focusTerm, selection } = useXterm({
     ptyId: harness.ptyId,
-    client,
+    actions,
     containerRef: hostReference,
     keyFilter: (e) => harnessKeyFilter(e, !!taskPickerOpen, !!navOpen),
     active: active !== false,

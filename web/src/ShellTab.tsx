@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
 import type { JanusClient } from './ws';
 import { useXterm } from './shared/terminal/useXterm';
 import { SelectionOverlay } from './shared/terminal/SelectionOverlay';
@@ -7,6 +7,7 @@ import { AgentTabMeta } from './shared/AgentTabMeta';
 import { remoteSessionControl } from './shared/remote-session-control';
 import type { ShellTabHandle } from './shared/tab/handles';
 import type { RemoteTargetView } from '@shared/protocol';
+import { ptyActions } from './shared/terminal/pty-actions';
 
 type Properties = {
   ptyId: string; client: JanusClient; label: string; cwd?: string; cwdDisplay?: string; flags?: string[]; remote?: RemoteTargetView;
@@ -27,9 +28,10 @@ export const ShellTab = forwardRef<ShellTabHandle, Properties>(function ShellTab
   ptyId, client, label, cwd, cwdDisplay, flags, remote, active, onSplit,
 }, ref) {
   const hostReference = useRef<HTMLDivElement>(null);
+  const actions = useMemo(() => ptyActions(client), [client]);
   const { focus: focusTerm, selection } = useXterm({
     ptyId,
-    client,
+    actions,
     containerRef: hostReference,
     keyFilter: shellKeyFilter,
     onMount: (term) => { term.focus(); },

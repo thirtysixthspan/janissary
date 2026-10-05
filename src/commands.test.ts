@@ -52,6 +52,20 @@ describe('command registry priority', () => {
   });
 });
 
+// `findCommand` first looks for the entry that both carries the name and claims the input, then falls
+// back to any entry of that name. The fallback is what a typed command reaches when the input has
+// already been reshaped on its way in, and what an unknown name comes back empty for.
+describe('findCommand fallback', () => {
+  it('falls back to the entry of that name when no match claims the input', () => {
+    const search = findCommand('search', '');
+    expect(search?.name).toBe('search');
+  });
+
+  it('returns undefined for a name the registry does not carry', () => {
+    expect(findCommand('no-such-command', '')).toBeUndefined();
+  });
+});
+
 describe('getOutput("help")', () => {
   it('documents the queue command', () => {
     expect(helpText()).toContain('`queue`');

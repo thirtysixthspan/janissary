@@ -73,12 +73,69 @@ describe('detectResumeLimit', () => {
     expect(detectResumeLimit(scrolled, 'codex')).toBeUndefined();
   });
 
-  it('refuses a harness with no detector', () => {
+  it('refuses a harness with no detector, and never reads one harness banner as another', () => {
     expect(detectResumeLimit(BANNER, 'claude')).toBeUndefined();
+    expect(detectResumeLimit(BANNER, 'opencode')).toBeUndefined();
+    expect(detectResumeLimit(opencodeFooter('', '1 hour 59 minutes'), 'codex')).toBeUndefined();
     expect(supportsHarnessAutoResume('claude')).toBe(false);
+    expect(supportsHarnessAutoResume('opencode')).toBe(true);
     expect(supportsHarnessAutoResume('codex')).toBe(true);
-    expect(autoResumeHarnessNames()).toEqual(['codex']);
-    expect(describeAutoResumeHarnesses()).toBe('codex');
+    expect(autoResumeHarnessNames()).toEqual(['opencode', 'codex']);
+    expect(describeAutoResumeHarnesses()).toBe('opencode and codex');
+  });
+});
+
+describe('detectResumeLimit in opencode', () => {
+  it('reads the duration from the banner with no window named and with the 5-hour window', () => {
+    expect(detectResumeLimit(opencodeFooter('', '1 hour 59 minutes'), 'opencode')).toEqual({
+      kind: 'in', ms: 3_600_000 + 59 * 60_000,
+    });
+    expect(detectResumeLimit(opencodeFooter('5 hour', '5 hours 23 minutes'), 'opencode')).toEqual({
+      kind: 'in', ms: 5 * 3_600_000 + 23 * 60_000,
+    });
+    expect(detectResumeLimit(opencodeFooter('', '15 minutes'), 'opencode')).toEqual({ kind: 'in', ms: 900_000 });
+    expect(detectResumeLimit(opencodeFooter('5 hour', '1 hour'), 'opencode')).toEqual({ kind: 'in', ms: 3_600_000 });
+  });
+
+  it('refuses a window whose duration is past the 24-hour ceiling', () => {
+    expect(detectResumeLimit(opencodeFooter('weekly', '2 days 3 hours'), 'opencode')).toBeUndefined();
+    expect(detectResumeLimit(opencodeFooter('monthly', '10 days 19 hours'), 'opencode')).toBeUndefined();
+  });
+
+  it('refuses a reset that states no duration it can read', () => {
+    expect(detectResumeLimit(opencodeFooter('', 'less than a minute'), 'opencode')).toBeUndefined();
+    expect(detectResumeLimit('Usage limit reached. Try again later.', 'opencode')).toBeUndefined();
+  });
+
+  it('reads both halves through the 80 characters opencode shows', () => {
+    const message = opencodeBanner('monthly', '10 days 19 hours');
+    expect(message.length).toBeGreaterThan(80);
+    expect(message.slice(0, 80)).toContain('usage limit reached. It will reset in 10 days');
+    // Refused only by the duration ceiling, never by truncation: the 5-hour form is the same length.
+    expect(detectResumeLimit(opencodeFooter('5 hour', '10 days 19 hours'), 'opencode')).toBeUndefined();
+    expect(detectResumeLimit(opencodeFooter('5 hour', '1 hour 59 minutes'), 'opencode')).toEqual({
+      kind: 'in', ms: 3_600_000 + 59 * 60_000,
+    });
+  });
+
+  it('reads the banner wrapped across two rows', () => {
+    const footer = opencodeFooter('', '1 hour 59 minutes');
+    const head = 'Usage limit reached. It will reset in';
+    expect(detectResumeLimit(`${head}\n${footer.slice(footer.indexOf(head) + head.length)}`, 'opencode'))
+      .toEqual({ kind: 'in', ms: 3_600_000 + 59 * 60_000 });
+  });
+
+  // opencode paints its banner in the editor footer, so the banner's first row sits above the input
+  // row, the hint row and the model row. Its own table row widens the window to reach them.
+  it('reads the banner with five rows of editor chrome below it', () => {
+    const chrome = ['▌ > ', '▌ ', '· anthropic/claude-opus-5 · high', '▌ esc to interrupt', ''];
+    const screen = [opencodeFooter('', '1 hour 59 minutes'), ...chrome].join('\n');
+    expect(detectResumeLimit(screen, 'opencode')).toEqual({ kind: 'in', ms: 3_600_000 + 59 * 60_000 });
+  });
+
+  it('stops reading the banner once its window has passed', () => {
+    const stale = [opencodeFooter('', '1 hour 59 minutes'), ...Array.from({ length: 8 }, () => '▌ > ')];
+    expect(detectResumeLimit(stale.join('\n'), 'opencode')).toBeUndefined();
   });
 });
 
@@ -120,11 +177,26 @@ function limit(clause: string): string {
   return `■ You’ve hit your usage limit. Upgrade to Pro, or try again ${clause}.`;
 }
 
-function makeResumer(overrides: Partial<{ scheduledAt: number[]; delivered: number; cancelled: number }> = {}) {
+// opencode's banner, as its session retry logic builds it: the usage window named when the response
+// carried one (`5 hour`, `weekly`, `monthly`), the sentence it derives from `retry-after`, and the
+// settings link it appends.
+function opencodeBanner(limitName: string, duration: string): string {
+  const name = limitName === '' ? 'Usage limit' : `${limitName} usage limit`;
+  return `${name} reached. It will reset in ${duration}. To continue using this model now, enable usage from your available balance - https://opencode.ai/workspace/wrk_01K6XGM22R6FM8JVABE9XDQXGH/go`;
+}
+
+// The footer row opencode paints from that banner: the message cut to 80 characters with an ellipsis,
+// then the affordance for reading it whole and the retry counter, on the same row.
+function opencodeFooter(limitName: string, duration: string): string {
+  const message = opencodeBanner(limitName, duration);
+  return `${message.length > 80 ? `${message.slice(0, 80)}…` : message} (click to expand) [retrying in ~2 hours attempt #1]`;
+}
+
+function makeResumer(overrides: Partial<{ harnessName: string; scheduledAt: number[]; delivered: number; cancelled: number }> = {}) {
   const scheduledAt: number[] = overrides.scheduledAt ?? [];
   const state = { delivered: 0, cancelled: 0 };
   const resumer = new HarnessAutoResumer({
-    harnessName: 'codex',
+    harnessName: overrides.harnessName ?? 'codex',
     schedule: (resumeAt) => { scheduledAt.push(resumeAt); return RESUME_ENTRY_ID; },
     cancel: () => { state.cancelled++; },
     onScheduled: () => {},
@@ -173,6 +245,13 @@ describe('HarnessAutoResumer', () => {
     });
     claude.onCapture(screen(BANNER));
     expect(claude.isParked).toBe(false);
+  });
+
+  it('schedules for an opencode banner, against the clock it was read on', () => {
+    const { resumer, scheduledAt } = makeResumer({ harnessName: 'opencode' });
+    resumer.onCapture(screen(opencodeFooter('', '1 hour 59 minutes')));
+    expect(scheduledAt).toEqual([pinned.getTime() + 3_600_000 + 59 * 60_000 + RESUME_MARGIN_MS]);
+    expect(resumer.isParked).toBe(true);
   });
 
   // Relative resets, so the two instants differ by the duration rather than by what time of day

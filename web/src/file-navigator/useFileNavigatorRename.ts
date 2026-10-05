@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { computeRename, hasRenameCollision, siblingNames } from './file/navigator-rename';
+import { requestFileNavigatorMutation } from './file-navigator-request';
 
 type PendingConflict = { relPath: string; newRelPath: string; newName: string };
 
@@ -30,7 +31,7 @@ export function useFileNavigatorRename(
   };
 
   const send = async (relPath: string, newName: string, newRelPath: string, overwrite = false) => {
-    const result = await client.request<{ total: number; failedPaths: string[] } | { conflict: true }>({
+    const result = await requestFileNavigatorMutation(client, {
       method: 'renameFileNavigatorItem', params: { label, relPath, newName, ...(overwrite && { overwrite }) },
     });
     if (!result.ok) return;

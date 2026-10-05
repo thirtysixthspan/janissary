@@ -43,8 +43,9 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
 function makeClient(saveError?: string) {
   const saveFile = vi.fn().mockResolvedValue(saveError);
   // The editor debounces a draft sync ~500ms after an edit; under load that timer can fire before
-  // the test unmounts, so the mock must implement editorSync or the fire-and-forget call throws.
-  const editorSync = vi.fn();
+  // the test unmounts, so the mock must acknowledge editorSync when it runs.
+  const editorSync = vi.fn().mockResolvedValue({ ok: true, value: 'ok' });
+  const onConnectionStatus = vi.fn(() => () => {});
   // useEditorSuggest fetches the persona list on mount and fires editorSuggest queries via the
   // same generic request(); default to no personas and no hunks so the suggestion surface is
   // inert unless a test opts in.
@@ -60,7 +61,7 @@ function makeClient(saveError?: string) {
   });
   const renameEditorFile = vi.fn();
   const commitEditorFile = vi.fn();
-  return { client: { saveFile, editorSync, request, send, readFile, renameEditorFile, commitEditorFile } as unknown as JanusClient, saveFile, request, send, renameEditorFile, commitEditorFile };
+  return { client: { saveFile, editorSync, onConnectionStatus, connectionStatus: 'connected', request, send, readFile, renameEditorFile, commitEditorFile } as unknown as JanusClient, saveFile, request, send, renameEditorFile, commitEditorFile };
 }
 
 async function renderLoaded(client: JanusClient, view = makeView(), tab = makeTab({ editor: view })) {

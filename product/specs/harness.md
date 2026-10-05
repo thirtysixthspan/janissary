@@ -67,8 +67,8 @@ enabled only for a harness that accepts `-y` — today claude, opencode, and cod
 between them keeps its checked state — and a harness without auto-approve support would clear and
 disable it. The dialog offers Auto-approve for exactly the harnesses the `harness` command accepts
 `-y` for, so the two can never disagree about which harnesses support it. **Auto-resume** follows the
-same rule against the harnesses the command accepts `--auto-resume` for — today codex alone, so
-switching to claude or opencode clears and disables it. **E2E browser** stays
+same rule against the harnesses the command accepts `--auto-resume` for — today opencode and codex,
+so switching to claude clears and disables it. **E2E browser** stays
 enabled for every harness, since none rejects it. It starts checked, matching the command's default,
 and unchecking it adds `--no-browser` to the built command. The **Model** dropdown lists
 the selected harness's known models and is disabled when that harness has no model catalog. The
@@ -229,7 +229,7 @@ selected-row Enter contract as claude, not a literal `y` — and records the sam
 permission prompt` notification with a capture link. A gate-shaped menu that has scrolled above
 codex's live input composer is treated as stale and not answered.
 
-For opencode, the app recognizes its permission panel by structure as well: the exact
+For opencode, the app recognizes its permission panel by structure as well: the
 `△ Permission required` title, then an option row led by `Allow once` that also offers `Reject`,
 then the `enter confirm` hint on that row or below it. The request line, path, and patterns between
 them vary and are not part of the match, and the prompt is recognized whether or not it offers
@@ -239,6 +239,13 @@ prompt` notification with a capture link. opencode's follow-up stages (the `Alwa
 confirmation after choosing `Allow always` by hand, and the feedback input after `Reject`) carry a
 different title and are never answered. opencode draws the prompt full-screen in place of its input
 box and removes it once answered, so a resolved prompt cannot linger on screen to be answered again.
+
+The panel is still recognized while opencode's own sidebar is on screen beside it, at any width.
+opencode paints the two into the same screen rows, so a sidebar's text shares the title's row and
+the title is read from the start of that row; and a sidebar leaves the panel too narrow for the
+hint, which opencode then shortens rather than wrapping, so a clipped `enter conf` — or the
+`⇆ select` that leads the hint and outlives the clipping — identifies the prompt as well as the
+whole hint does.
 
 ### End-to-end browser (`-b` / `--no-browser`)
 
@@ -479,29 +486,37 @@ and then waits. This feature reads that moment out of the banner and has the har
 back up on its own.
 
 Auto-resume is **on by default** for every harness whose limit screen the app recognizes, which
-today means **codex**. `--auto-resume` confirms the default; `--no-auto-resume` opts out and wins if
-both are present. A harness with no recognized limit screen refuses the flag:
-`--auto-resume is only supported for the codex harnesses.` The flag is deliberately long-form only —
-it has no short letter, unlike `-y`. Auto-resume is per launch and in-memory: like auto-approve, it
-is never persisted or restored on `--relaunch`.
+today means **opencode and codex**. `--auto-resume` confirms the default; `--no-auto-resume` opts out
+and wins if both are present. A harness with no recognized limit screen refuses the flag:
+`--auto-resume is only supported for the opencode and codex harnesses.` The flag is deliberately
+long-form only — it has no short letter, unlike `-y`. Auto-resume is per launch and in-memory: like
+auto-approve, it is never persisted or restored on `--relaunch`.
 
-claude is absent because it resumes itself — it waits for the limit and carries on by default. opencode
-is absent for a different reason: when a subscription limit hits, it prints nothing at all and hangs
-mid-generation, so there is no screen text to recognize.
+claude is absent because it resumes itself — it waits for the limit and carries on by default.
 
 **Recognition.** The app reads the same rendered-screen captures taken for
 [screen capture](#screen-capture), about a second after output settles, and needs two things in the
-last three non-blank rows of that screen: the limit wording, and the reset it states. Three reset
-forms are read, in the shapes codex prints them:
+trailing non-blank rows of that screen: the limit wording, and the reset it states. How many trailing
+rows is read is the harness's own: **three** for codex, whose banner ends the screen and wraps across
+two, and **eight** for opencode, which paints its banner in the footer above the input and hint rows.
+Three reset forms are read, in the shapes codex prints them:
 
 - a clock time — `try again at 1:20 PM`, `1:20pm` or `13:20`, all the same time;
 - a date and a clock time — `try again at Jul 8th, 2026 10:59 AM`, the weekly-window form, whose
   year is read and ignored;
 - a duration — `try again in 4 hours 23 minutes`, whose tokens are added together.
 
+opencode always states its reset as a duration — `Usage limit reached. It will reset in 1 hour 59
+minutes.`, with the window named ahead of it (`5 hour`, `weekly`, `monthly`) when the response names
+one — so it uses the duration arm alone. Its banner is cut to 80 characters on screen, and the
+limit wording plus the reset always fit inside that.
+
 A stated duration longer than **24 hours** is not trusted, and no resume is scheduled for it — the
-tab is still recognized and still badged, exactly as it is today. A limit that states no reset at
-all (`Try again later.`) is likewise recognized and badged, and nothing is scheduled: inventing a
+tab is still recognized and still badged, exactly as it is today. That covers opencode's **weekly** and
+**monthly** windows, which state `2 days 3 hours` and `10 days 19 hours`; only its five-hour window
+schedules a resume. A limit that states no reset at
+all (`Try again later.`, or opencode's `less than a minute`, which names no length) is likewise
+recognized and badged, and nothing is scheduled: inventing a
 delay would be indistinguishable from guessing wrong. Restricting recognition to the trailing rows is
 what keeps it to a *live* blockage — a limit banner the harness later quotes in its scrollback sits
 far from the bottom of the screen and must not schedule anything. The apostrophe in the banner is

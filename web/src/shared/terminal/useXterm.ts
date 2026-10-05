@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import type { JanusClient } from '../../ws';
+import type { PtyActions } from './pty-actions';
 import { altArrowSequence, copySelectionChord, isMacPlatform, shiftEnterSequence } from './terminal/keys';
 import { osc52ClipboardText } from './terminal/osc52';
 import { copyText } from '../system-clipboard';
@@ -11,7 +11,7 @@ import { useSelectionLayer } from './useSelectionLayer';
 
 type UseXtermOptions = {
   ptyId: string;
-  client: JanusClient;
+  actions: PtyActions;
   containerRef: React.RefObject<HTMLDivElement | null>;
   keyFilter?: (e: KeyboardEvent) => boolean;
   onMount?: (term: Terminal) => void;
@@ -28,7 +28,7 @@ export type UseXtermResult = {
 // attaches the PTY stream, forwards input, and observes container resizes.
 // Returns a stable `focus` function that forwards to the live terminal, plus the Shift+drag
 // selection layer's view and clear callback.
-export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, active, exited }: UseXtermOptions): UseXtermResult {
+export function useXterm({ ptyId, actions, containerRef, keyFilter, onMount, active, exited }: UseXtermOptions): UseXtermResult {
   const termRef = useRef<Terminal | null>(null);
   // Keep a ref to the latest filter so the handler closure never goes stale.
   const keyFilterRef = useRef(keyFilter);
@@ -71,14 +71,14 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
     const syncSize = () => {
       try {
         fit.fit();
-        client.send({ method: 'ptyResize', params: { id: ptyId, cols: term.cols, rows: term.rows } });
+        actions.resize(ptyId, term.cols, term.rows);
       } catch { /* ignore */ }
     };
     syncSize();
 
-    const detach = client.attachPty(ptyId, (data) => term.write(data));
-    const onInput = term.onData((data) => client.send({ method: 'ptyInput', params: { id: ptyId, data } }));
-    const sendKey = (data: string) => client.send({ method: 'ptyInput', params: { id: ptyId, data } });
+    const detach = actions.attach(ptyId, (data) => term.write(data));
+    const onInput = term.onData((data) => actions.input(ptyId, data));
+    const sendKey = (data: string) => actions.input(ptyId, data);
     const isMac = isMacPlatform();
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown') return true;
@@ -125,7 +125,7 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
       if (container) unregisterTerminalSelection(container);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps -- keyFilterRef carries the latest filter and selectionRef the latest selection layer; setup callbacks apply per PTY/client
-  }, [ptyId, client]);
+  }, [ptyId, actions]);
 
   // Report the colors this terminal resolved, once per PTY, so the session's recording carries the
   // foreground and background it ran under rather than whatever theme is active when it is replayed.
@@ -134,8 +134,8 @@ export function useXterm({ ptyId, client, containerRef, keyFilter, onMount, acti
   useEffect(() => {
     if (!ptyId) return;
     const { fg, bg } = terminalColors();
-    client.send({ method: 'reportTerminalColors', params: { id: ptyId, fg, bg } });
-  }, [ptyId, client]);
+    actions.reportColors(ptyId, fg, bg);
+  }, [ptyId, actions]);
 
   const focus = useCallback(() => termRef.current?.focus(), []);
   return useMemo(() => ({ focus, selection }), [focus, selection]);

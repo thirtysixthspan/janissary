@@ -155,19 +155,25 @@ describe('AgentTabMeta', () => {
     expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
   });
 
-  it('renders the armed auto-resume flag as the same bolt, unhighlighted', () => {
+  it('renders the armed auto-resume flag as its own glyph, unhighlighted', () => {
     const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoResume']} />);
     const flag = getByRole('img', { name: 'Auto-resume' });
     expect(flag).toHaveAttribute('title', 'Auto-resume');
     expect(flag).not.toHaveClass('tab-flag--active');
-    expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
+    expect(flag.querySelector('svg[data-icon="stopwatch"]')).not.toBeNull();
   });
 
-  it('renders the waiting auto-resume flag as the same bolt, marked active for its green highlight', () => {
+  it('renders the waiting auto-resume flag as that same glyph, marked active for its green highlight', () => {
     const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoResuming']} />);
     const flag = getByRole('img', { name: 'Auto-resuming' });
     expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
-    expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
+    expect(flag.querySelector('svg[data-icon="stopwatch"]')).not.toBeNull();
+  });
+
+  it('never draws the auto-approve bolt for an auto-resume flag, since both can show at once', () => {
+    const { getAllByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoApprove', 'autoResume']} />);
+    const resume = getAllByRole('img', { name: 'Auto-resume' })[0];
+    expect(resume.querySelector('svg[data-icon="bolt"]')).toBeNull();
   });
 
   it('renders the browser flag as a globe icon with its accessible label', () => {

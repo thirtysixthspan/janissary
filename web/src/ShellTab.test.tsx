@@ -25,13 +25,13 @@ describe('ShellTab', () => {
     expect(container.querySelector('.harness-body')).toBeInTheDocument();
   });
 
-  it('passes ptyId and client to useXterm', () => {
+  it('passes ptyId and adapted PTY actions to useXterm', () => {
     const client = fakeClient();
     mockedUseXterm.mockClear();
     render(<ShellTab ptyId="my-pty" label="shell" client={client} />);
     const opts = mockedUseXterm.mock.calls[0][0];
     expect(opts.ptyId).toBe('my-pty');
-    expect(opts.client).toBe(client);
+    expect(opts.actions).toEqual(expect.objectContaining({ attach: expect.any(Function), input: expect.any(Function) }));
   });
 
   it('passes the surface\'s activity to useXterm so a hidden tab clears its selection layer', () => {

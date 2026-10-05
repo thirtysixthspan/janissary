@@ -23,7 +23,8 @@ function makeClient(): JanusClient {
     return response.text();
   });
   return {
-    saveFile: vi.fn(), editorSync: vi.fn(), send: vi.fn(), readFile,
+    saveFile: vi.fn(), editorSync: vi.fn().mockResolvedValue({ ok: true, value: 'ok' }), send: vi.fn(), readFile,
+    connectionStatus: 'connected', onConnectionStatus: () => () => {},
     request: vi.fn().mockResolvedValue({ ok: true, value: { names: [], hunks: [] } }),
   } as unknown as JanusClient;
 }

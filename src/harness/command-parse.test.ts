@@ -49,6 +49,12 @@ describe('parseHarnessCommand — launch form', () => {
     expect(parseHarnessCommand('harness opencode')).toMatchObject({ workspace: true, autoApprove: true });
   });
 
+  it('defaults opencode to auto-resume as well, and lets --no-auto-resume opt it out', () => {
+    expect(parseHarnessCommand('harness opencode')).toMatchObject({ autoResume: true });
+    expect(parseHarnessCommand('harness opencode --auto-resume')).toMatchObject({ autoResume: true });
+    expect(parseHarnessCommand('harness opencode --no-auto-resume')).toMatchObject({ autoResume: false });
+  });
+
   it('accepts -y for opencode and lets --no-auto-approve opt it out', () => {
     expect(parseHarnessCommand('harness opencode -y')).toMatchObject({ name: 'opencode', autoApprove: true });
     expect(parseHarnessCommand('harness opencode --no-auto-approve')).toMatchObject({ autoApprove: false });
@@ -314,7 +320,7 @@ describe('parseHarnessCommand — error paths', () => {
     expect(parseHarnessCommand('harness claude --auto-resume')).toEqual({
       error: expect.stringMatching(/^--auto-resume is only supported for the .+ harnesses\.$/),
     });
-    expect(parseHarnessCommand('harness claude --auto-resume')).toEqual({ error: '--auto-resume is only supported for the codex harnesses.' });
+    expect(parseHarnessCommand('harness claude --auto-resume')).toEqual({ error: '--auto-resume is only supported for the opencode and codex harnesses.' });
   });
 
   it('errors when --model has no value', () => {
