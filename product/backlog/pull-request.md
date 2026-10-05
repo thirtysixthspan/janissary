@@ -2,8 +2,6 @@
 
 # pull-request
 
-* render the output of commands that return markdown, like help, in an xterm decoration.
-
 * shell tabs should accepot input from send commands. Observed error:
 > send aslan ls -al
 Tab "aslan" does not accept input.

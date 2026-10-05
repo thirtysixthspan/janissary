@@ -2,8 +2,6 @@ import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellDispatchResult } from '@shared/plugins/shell/shared';
 import { opensShellHistory, routeFor, shellLine } from './command-line-rules';
-import { formatDispatchedCommand } from './format-dispatched-command';
-import { markdownToAnsi } from './markdown-to-ansi';
 import { appendShellHistory } from './shell-history';
 
 // Runs one command-bar line and answers whether it was written to zsh, which is what tells a
@@ -12,14 +10,14 @@ import { appendShellHistory } from './shell-history';
 export function useShellSubmit(input: {
   appBar: { intercept: (line: string, sourceTab?: string) => boolean };
   capabilities: TabPluginClientCapabilities;
-  display: (data: string) => void;
+  displayReply: (line: string, markdown: string) => void;
   setMatches: Dispatch<SetStateAction<string[]>>;
   setSent: Dispatch<SetStateAction<string[]>>;
   write: (data: string) => void;
   expectCommand: (line: string) => void;
   openHistory: () => void;
 }) {
-  const { appBar, capabilities, display, expectCommand, openHistory, setMatches, setSent, write } = input;
+  const { appBar, capabilities, displayReply, expectCommand, openHistory, setMatches, setSent, write } = input;
   return useCallback(async (text: string, record = true): Promise<boolean> => {
     setMatches([]);
     const remember = (line: string) => { if (record) setSent((previous) => appendShellHistory(previous, line)); };
@@ -48,7 +46,7 @@ export function useShellSubmit(input: {
       const result = await capabilities.intent<ShellDispatchResult>('dispatch', text);
       remember(text);
       if (result.dispatched) {
-        display(formatDispatchedCommand(text, markdownToAnsi(result.output)));
+        displayReply(text, result.output);
         return false;
       }
       runInShell(text);
@@ -57,5 +55,5 @@ export function useShellSubmit(input: {
       capabilities.reportFailure('shell dispatch intent refused');
       return false;
     }
-  }, [appBar, capabilities, display, expectCommand, openHistory, setMatches, setSent, write]);
+  }, [appBar, capabilities, displayReply, expectCommand, openHistory, setMatches, setSent, write]);
 }

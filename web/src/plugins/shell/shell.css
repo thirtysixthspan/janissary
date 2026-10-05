@@ -12,6 +12,17 @@
 
 .shell-body.shell-initializing { visibility: hidden; }
 
+/* An application command's markdown reply, rendered in a decoration over rows reserved for it in the
+   terminal's scrollback. It takes the transcript's markdown styles from `.line.markdown`; a resize
+   that makes the content taller than its reserved rows scrolls inside the block. */
+.shell-output-block {
+  box-sizing: border-box;
+  overflow: hidden auto;
+  background: var(--bg);
+  font-family: var(--mono);
+  pointer-events: auto;
+}
+
 .shell-tab-header { position: relative; flex: 0 0 auto; }
 .shell-tab-header .status-panels { top: 100%; right: 10px; }
 

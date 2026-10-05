@@ -128,6 +128,14 @@ describe('useShellTerminal', () => {
     expect(written.at(-1)).toBe('ls\n');
   });
 
+  it('falls back to an ANSI reply when the terminal has no screen to place a rendered block on', () => {
+    const { result } = harness();
+
+    act(() => { result.current.displayReply('help', '**bold** reply'); });
+
+    expect(terminals[0].written.at(-1)).toBe('\r\u{1B}[2K> help\r\n\u{1B}[1mbold\u{1B}[22m reply\r\n> ');
+  });
+
   it('focuses the terminal on request', () => {
     const { result } = harness();
 
