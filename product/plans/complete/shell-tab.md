@@ -10,7 +10,7 @@ This bundled plugin opens a live `/bin/zsh` terminal with the agent tab's metada
 
 ## Design decisions
 
-**The tab is named `shell` and is opened by `zsh`.** `shell` is reserved as a core command name, so the plugin claims `zsh`; each invocation creates a distinct tab named `shell`, `shell2`, and so on.
+**The tab takes an agent name and is opened by `zsh`.** `shell` is reserved as a core command name, so the plugin claims `zsh`. Each invocation creates a distinct tab named from the agent-name pool by the same rule an unnamed agent launch uses: a name free of every open tab and of every session that could still come back under it. Once the pool is exhausted, the tab is named `shell`, then `shell-2`, and so on.
 
 **The terminal runs `/bin/zsh` with no arguments.** This loads the user's normal startup files and gives the terminal their PATH, aliases, and prompt. Its input is enabled. The command bar has focus on activation; clicking the terminal or pressing `Shift+Tab` from the bar focuses it, and `Shift+Tab` returns to the bar. Keystrokes go to the focused surface.
 
@@ -69,7 +69,7 @@ Server tests cover declaration validation, project-root cwd bounds, factory-scop
 ### Declined during gap research
 
 - Keeping the tab open after the shell exits: the tab closes with its process.
-- A tab name that follows `cd`: the metadata row reports the directory where the shell started.
+- Renaming the tab after a `cd`: the tab keeps the name it opened with, while the metadata row follows zsh's current directory.
 - A `zsh <path>` command form: the tab inherits the issuing tab's current directory.
 - A multi-line paste guard: pasted text becomes one editable command-bar line.
 - Rectangular block selection: xterm.js's existing selection behavior is used.

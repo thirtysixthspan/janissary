@@ -25,14 +25,3 @@ Existing Risk: 6/10 - A task picked from a docked shell's `tasks` picker is inse
 Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source falls back to the visible tab, with residual risk in any picker hook not yet keyed on the source tab.
 
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
-
-
-* Reconcile the shell-tab plan's stale statements about tab naming and directory tracking with its own later sections and the implementation.
-
-Existing Issue: The plan's design decisions still say each tab is named `shell`, `shell2` while its summary, the spec and the code use the agent-name pool with a `shell`, `shell-2` fallback, and its "Declined" list says the metadata row reports the starting directory while its design decisions and the code follow zsh's cwd. Severity: 2/10
-
-Existing Risk: 2/10 - A later agent reading the plan as the record of intent "fixes" the cwd tracking or the naming back to the declined or stale behavior.
-
-Proposal Risk: 1/10 - The plan agrees with itself and the spec, with no code change.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: reconcile the shell-tab plan's naming and cwd statements". In `product/plans/complete/shell-tab.md`, rewrite the "The tab is named `shell` and is opened by `zsh`" decision to describe agent-pool naming with the `shell`, `shell-2` fallback (matching `src/tab/creators.ts`, `src/tab/unique-labels.ts` and `product/specs/shell-tab.md`), and change the declined "A tab name that follows `cd`" bullet so it declines only renaming the tab, not cwd tracking in the metadata row. No code or spec changes.
