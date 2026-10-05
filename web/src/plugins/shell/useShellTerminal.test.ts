@@ -249,7 +249,7 @@ describe('useShellTerminal', () => {
       expect(osc(133)(marker)).toBe(true);
     }
     expect(osc(7)('file://localhost/etc')).toBe(true);
-    expect(osc(7)(`${forged};file://localhost/etc`)).toBe(true);
+    expect(osc(7)(`${forged};${btoa('/etc')}`)).toBe(true);
 
     expect(onCommandRunning).not.toHaveBeenCalled();
     expect(onCommand).not.toHaveBeenCalled();
@@ -259,7 +259,7 @@ describe('useShellTerminal', () => {
 
     osc(133)(`C;${nonce};${btoa('ls')}`);
     osc(133)(`D;${nonce}`);
-    osc(7)(`${nonce};file://localhost/work`);
+    osc(7)(`${nonce};${btoa('/work')}`);
     osc(133)(`E;${nonce}`);
 
     expect(onCommandRunning.mock.calls).toEqual([[true], [false]]);
@@ -303,7 +303,7 @@ describe('useShellTerminal', () => {
 
     osc(133)(`C;${'f'.repeat(32)}`);
     osc(133)(`C;${INSTALLED}`);
-    osc(7)(`${INSTALLED};file://localhost/work`);
+    osc(7)(`${INSTALLED};${btoa('/work')}`);
 
     expect(onCommandRunning.mock.calls).toEqual([[true]]);
     expect(onCwd.mock.calls).toEqual([['/work']]);
@@ -387,7 +387,7 @@ describe('useShellTerminal', () => {
   it('reports the path from zsh current-directory markers', async () => {
     const { onCwd, written } = harness();
 
-    expect(osc(7)(`${await hookNonce(written)};file://localhost/work/child%20dir`)).toBe(true);
+    expect(osc(7)(`${await hookNonce(written)};${btoa('/work/child dir')}`)).toBe(true);
     expect(onCwd).toHaveBeenCalledWith('/work/child dir');
   });
 

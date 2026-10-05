@@ -19,7 +19,14 @@ describe('shellStatusHooks', () => {
     expect(hooks).toContain(String.raw`printf '\033]133;C;abc123;%s\a'`);
     expect(hooks).toContain(String.raw`printf '\033]133;D;abc123\a'`);
     expect(hooks).toContain(String.raw`printf '\033]133;E;abc123\a'`);
-    expect(hooks).toContain(String.raw`printf '\033]7;abc123;file://%s%s\a' "$HOST" "$PWD"`);
+    expect(hooks).toContain(String.raw`printf '\033]7;abc123;%s\a'`);
+  });
+
+  it('reports the directory as the base64 of $PWD rather than a file URL', () => {
+    const hooks = shellStatusHooks('abc123');
+
+    expect(hooks).toContain(String.raw`_janus_emit_cwd() { printf '\033]7;abc123;%s\a' "$(print -rn -- "$PWD" | base64 | tr -d '\n')"; }`);
+    expect(hooks).not.toContain('file://');
   });
 
   it('writes the nonce only into the markers, never into a shell variable', () => {

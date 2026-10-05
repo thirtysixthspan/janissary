@@ -8,6 +8,6 @@ export function createShellMarkerNonce(): string {
 }
 
 export function shellStatusHooks(nonce: string): string {
-  return String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { local line=$1; [[ -z $line ]] && line=$3; printf '\033]133;C;${nonce};%s\a' "$(print -rn -- "$line" | base64 | tr -d '\n')"; }; _janus_emit_cwd() { printf '\033]7;${nonce};file://%s%s\a' "$HOST" "$PWD"; }; _janus_precmd() { printf '\033]133;D;${nonce}\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd; printf '\033]133;E;${nonce}\a'
+  return String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { local line=$1; [[ -z $line ]] && line=$3; printf '\033]133;C;${nonce};%s\a' "$(print -rn -- "$line" | base64 | tr -d '\n')"; }; _janus_emit_cwd() { printf '\033]7;${nonce};%s\a' "$(print -rn -- "$PWD" | base64 | tr -d '\n')"; }; _janus_precmd() { printf '\033]133;D;${nonce}\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd; printf '\033]133;E;${nonce}\a'
 `;
 }

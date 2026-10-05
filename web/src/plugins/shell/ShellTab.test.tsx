@@ -421,7 +421,7 @@ describe('ShellTab', () => {
   it('sends the current directory from zsh to the plugin intent', () => {
     const { capabilities } = renderTab();
 
-    act(() => { commandStateHandlers.findLast(({ id }) => id === 7)?.handle(`${NONCE};file://localhost/work/child%20dir`); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 7)?.handle(`${NONCE};${btoa('/work/child dir')}`); });
 
     expect(capabilities.intent).toHaveBeenCalledWith('cwd', '/work/child dir');
   });

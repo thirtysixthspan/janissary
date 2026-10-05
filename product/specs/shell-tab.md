@@ -195,10 +195,18 @@ path in normal form, with no `.` or `..` segment, no doubled slash, and no trail
 root. zsh always reports its directory that way, so any other report is refused and the recorded
 directory stays where it was.
 
+The directory is recorded byte-for-byte as zsh holds it. zsh sends `$PWD` base64-encoded rather than
+inside a `file://` URL, so a directory whose name contains `#`, `?`, `%`, a literal `%41`, a backslash,
+a space, or non-ASCII text is recorded exactly, not truncated, decoded a second time, or rewritten. A
+report whose payload is not base64 of UTF-8 text, including one in `file://` URL form, is ignored and
+the recorded directory stays where it was. The report names no host: only the zsh the tab installed
+its hooks in can sign one, and that zsh always runs on the local machine, so a report from another
+host, such as one an `ssh` session prints, never carries the nonce and is ignored.
+
 The tab trusts only the markers its own zsh hooks print. The hooks are installed with a random nonce,
 generated once per shell, and every marker they emit carries it: the
 command-start marker (`OSC 133;C;<nonce>;<base64 command>`), the prompt marker (`133;D;<nonce>`), the
-setup-complete marker (`133;E;<nonce>`) and the directory report (`OSC 7;<nonce>;file://<host><path>`).
+setup-complete marker (`133;E;<nonce>`) and the directory report (`OSC 7;<nonce>;<base64 path>`).
 The nonce is written into the hook functions themselves, never into a shell variable a child process
 could read. A marker without the right nonce is ignored, so a program's output — a `cat` of a crafted
 file, or a remote host reached over `ssh` — cannot mark the shell busy or idle, add a command to this

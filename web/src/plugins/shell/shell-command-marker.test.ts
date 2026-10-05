@@ -3,9 +3,12 @@ import { readShellCwd, readShellMarker } from './shell-command-marker';
 
 const NONCE = '0123456789abcdef0123456789abcdef';
 
+function base64(text: string): string {
+  return btoa(String.fromCodePoint(...new TextEncoder().encode(text)));
+}
+
 function start(command: string, nonce = NONCE): string {
-  const bytes = new TextEncoder().encode(command);
-  return `C;${nonce};${btoa(String.fromCodePoint(...bytes))}`;
+  return `C;${nonce};${base64(command)}`;
 }
 
 describe('readShellMarker', () => {
@@ -46,18 +49,35 @@ describe('readShellMarker', () => {
 });
 
 describe('readShellCwd', () => {
+  function report(path: string, nonce = NONCE): string {
+    return `${nonce};${base64(path)}`;
+  }
+
   it('decodes the path a signed directory report carries', () => {
-    expect(readShellCwd(`${NONCE};file://localhost/work/child%20dir`, NONCE)).toBe('/work/child dir');
+    expect(readShellCwd(report('/work/child dir'), NONCE)).toBe('/work/child dir');
+  });
+
+  it('keeps characters a URL would read specially exactly as zsh reported them', () => {
+    for (const path of ['/work/a#b', '/work/what?', '/work/100%', '/work/%41', String.raw`/work/back\slash`, '/work/ünï ✓', '/work/a;b']) {
+      expect(readShellCwd(report(path), NONCE)).toBe(path);
+    }
   });
 
   it('ignores a directory report that does not carry the nonce', () => {
-    expect(readShellCwd('file://localhost/etc', NONCE)).toBeUndefined();
-    expect(readShellCwd(`${'f'.repeat(32)};file://localhost/etc`, NONCE)).toBeUndefined();
+    expect(readShellCwd(base64('/etc'), NONCE)).toBeUndefined();
+    expect(readShellCwd(report('/etc', 'f'.repeat(32)), NONCE)).toBeUndefined();
   });
 
-  it('ignores a signed report that is not a file URL', () => {
-    expect(readShellCwd(`${NONCE};https://example.com/etc`, NONCE)).toBeUndefined();
-    expect(readShellCwd(`${NONCE};not a url`, NONCE)).toBeUndefined();
-    expect(readShellCwd(`${NONCE};file://localhost/bad%`, NONCE)).toBeUndefined();
+  it('ignores a report in file URL form, from this host or another', () => {
+    expect(readShellCwd(`${NONCE};file://localhost/etc`, NONCE)).toBeUndefined();
+    expect(readShellCwd(`${NONCE};file://remote.example.com/home/alex`, NONCE)).toBeUndefined();
+    expect(readShellCwd('file://remote.example.com/home/alex', NONCE)).toBeUndefined();
+  });
+
+  it('ignores a signed report whose payload is empty, not base64, or not UTF-8 text', () => {
+    expect(readShellCwd(NONCE, NONCE)).toBeUndefined();
+    expect(readShellCwd(`${NONCE};`, NONCE)).toBeUndefined();
+    expect(readShellCwd(`${NONCE};not base64!`, NONCE)).toBeUndefined();
+    expect(readShellCwd(`${NONCE};${btoa('ÿþ')}`, NONCE)).toBeUndefined();
   });
 });

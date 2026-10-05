@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Decode shell working-directory reports exactly, so paths containing `#`, `?`, `%` or a backslash are recorded correctly and reports from another host are ignored.
-
-Existing Issue: The zsh hook prints `$PWD` into an OSC 7 `file://` URL without percent-encoding it, and the client parses it with `new URL` and `decodeURIComponent`, so `#` and `?` truncate the path, `%` makes decoding throw and leaves the cwd stale, `%41` is decoded to `A`, `\` becomes `/`, and the hostname is ignored. Severity: 5/10
-
-Existing Risk: 5/10 - After `cd` into a directory whose name contains one of these characters, the metadata row, file navigator, new shells and new agents use the wrong directory, and an `ssh` session's OSC 7 is recorded as a local path.
-
-Proposal Risk: 2/10 - The path round-trips byte-for-byte and foreign hosts are ignored, with residual risk only for path bytes that are not valid UTF-8.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: decode shell OSC 7 working-directory reports exactly". In `web/src/plugins/shell/useShellTerminal.ts`, change `_janus_emit_cwd` in `SHELL_STATUS_HOOKS` to emit the path in an unambiguous form, either percent-encoded by zsh (`${(q)...}` is not URL encoding, so use a small zsh loop or `print -rn -- $PWD | base64` in a private marker) and change the OSC handler to strip the `file://<host>` prefix by hand, compare the host with the local `$HOST` value captured at hook install, and decode only what the hook encoded. Move the parse into a pure helper beside `web/src/plugins/shell/shell-command-marker.ts` with its own test file covering `#`, `?`, `%`, `%41`, `\`, spaces, and a foreign host. Update the existing `useShellTerminal.test.ts` case that feeds a pre-encoded `child%20dir` so it feeds what the real hook emits. If the marker-nonce entry has landed, carry the nonce in the same marker.
-
-
 * Keep the host's idle queue drain from running a shell tab's queued lines through the per-tab piped shell.
 
 Existing Issue: Shell-tab lines queued with `queueLine` live in the same per-tab queue the host drains in `drainQueueOp` when a tab leaves the busy set, and that drain runs every line through `CommandManager.run` without checking the tab's view, so an unclaimed line would run in the piped background shell instead of zsh. Severity: 5/10
