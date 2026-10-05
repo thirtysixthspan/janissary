@@ -7,4 +7,5 @@
 * shell tabs should be able to be targets of scheduled commands. 
 Error seen: Tab "shell" cannot run scheduled commands.	
 
-
+* empty commands, for example only containing whitespace should be excluded from the command history.
+ 
