@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Use the existing shared textarea splice helper in the shell tab instead of a copy.
-
-Existing Issue: `insertCommandAtCaret` in the shell plugin is a line-for-line copy of `spliceIntoTextarea` in the shared command-bar module, with no test of its own. Severity: 2/10
-
-Existing Risk: 2/10 - A fix to caret insertion (undo behavior, caret placement) lands in one copy and not the other, so clipboard and picker insertion behave differently in shell and agent bars.
-
-Proposal Risk: 1/10 - One helper published through the plugin API, with no behavior change expected.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: reuse spliceIntoTextarea in the shell tab". Export `spliceIntoTextarea` from `web/src/plugins/api.ts` (importing it from `web/src/shared/command-bar/textarea-splice.ts`), replace the uses of `insertCommandAtCaret` in `web/src/plugins/shell/` with it, and delete `web/src/plugins/shell/insert-command-at-caret.ts`. Add `spliceIntoTextarea` to the export assertions in `web/src/plugins/api.test.ts` if that test pins the surface; existing `ShellTab.test.tsx` clipboard and task insertion cases must keep passing.
-
-
 * Correct the pull request description's file list and behavior summary to match the branch.
 
 Existing Issue: The description lists 37 `product/plans/complete/*.md` files as removed although none exists on master or appears in the diff, omits the three follow-up plans, `product/backlog/pull-request.md` and `web/src/plugins/shell/shell-command-input.ts` with its test, and never mentions the terminal copy chord, the bracketed-paste multi-line submit, or the exclusion of startup hooks from shell history. Severity: 3/10

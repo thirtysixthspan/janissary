@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
+import { CommandBarShell, spliceIntoTextarea, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTabTerminal } from './useShellTabTerminal';
 import { handleCompletionDismissKey, handleQueueKey, handleShellControlKey } from './command-bar-keys';
-import { insertCommandAtCaret } from './insert-command-at-caret';
 import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
 import { useShellSubmit } from './useShellSubmit';
@@ -64,7 +63,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
       const element = inputReference.current;
       if (!element) return;
       element.focus();
-      insertCommandAtCaret(element, draftReference.current, text);
+      spliceIntoTextarea(element, draftReference.current, text);
     });
     return () => { insertions.delete(label); };
   }, [appBar.pluginCommandLineInsertions, capabilities.label]);

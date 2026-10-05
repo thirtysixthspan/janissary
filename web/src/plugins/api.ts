@@ -15,6 +15,10 @@ export { renderMarkdown } from '../shared/transcript/markdown';
 // does not move — that constant versions what a manifest must declare, which this does not change.
 export { CommandBarShell, type CommandBarShellProperties } from '../shared/command-bar/CommandBarShell';
 export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/useCommandBarKeys';
+// The bar's caret insertion, published with it so a plugin splicing a picked line into its own bar
+// keeps the same undo entry and caret placement the agent tab's bar does. The shell tab shipped a
+// line-for-line copy of it before this. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { spliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 
 // The application's own interception of a typed line, published beside the bar above and for the same
 // reason: a plugin bar that offers every line to the server lets `quit` and a last-tab `close` tear the

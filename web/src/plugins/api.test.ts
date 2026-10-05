@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JanusClient } from '../ws';
-import { createPluginClientCapabilities, nextListSelection } from './api';
+import { createPluginClientCapabilities, nextListSelection, spliceIntoTextarea } from './api';
 import { nextListSelection as sharedNextListSelection } from '../shared/list-selection';
+import { spliceIntoTextarea as sharedSpliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 import { createPluginHost, type PluginHost } from './host';
 
 function makeClient(request?: () => Promise<unknown>) {
@@ -171,5 +172,11 @@ describe('nextListSelection', () => {
   it('publishes the shared list-selection rule itself', () => {
     expect(nextListSelection).toBe(sharedNextListSelection);
     expect(nextListSelection(3, 2, 'ArrowDown')).toBe(2);
+  });
+});
+
+describe('spliceIntoTextarea', () => {
+  it('publishes the shared command-bar caret insertion itself', () => {
+    expect(spliceIntoTextarea).toBe(sharedSpliceIntoTextarea);
   });
 });
