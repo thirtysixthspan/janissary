@@ -74,4 +74,37 @@ describe('send delivery', () => {
     vi.advanceTimersByTime(50);
     expect(input).toHaveBeenCalledWith('p1', '\r');
   });
+
+  it('writes a line to a plugin tab that owns a terminal', () => {
+    const target = { label: 'shell', view: 'plugin', log: [], cmdHistory: [] };
+    const input = vi.fn();
+    const append = vi.fn();
+    const managers = {
+      tab: { tabs: [target], append },
+      pty: { terminalIdFor: vi.fn(() => 'shell-pty'), input },
+    };
+
+    command.run('send shell ls -al', { label: 'janus', index: 0 }, managers as never);
+
+    expect(managers.pty.terminalIdFor).toHaveBeenCalledWith('shell');
+    expect(input).toHaveBeenCalledWith('shell-pty', 'ls -al\n');
+    expect(append).toHaveBeenCalledWith('janus', { input: 'send shell ls -al', output: '→ shell: ls -al' });
+  });
+
+  it('keeps rejecting plugin tabs without an owned terminal', () => {
+    const target = { label: 'viewer', view: 'plugin', log: [], cmdHistory: [] };
+    const append = vi.fn();
+    const input = vi.fn();
+    const managers = {
+      tab: { tabs: [target], append },
+      pty: { terminalIdFor: vi.fn(), input },
+    };
+
+    command.run('send viewer ls', { label: 'janus', index: 0 }, managers as never);
+
+    expect(input).not.toHaveBeenCalled();
+    expect(append).toHaveBeenCalledWith('janus', {
+      input: 'send viewer ls', output: 'Tab "viewer" does not accept input.',
+    });
+  });
 });

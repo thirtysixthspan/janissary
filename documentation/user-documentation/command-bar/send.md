@@ -15,11 +15,11 @@ This is not [messaging](/user-documentation/command-bar/messaging). `msg` and `b
 
 ## What happens depends on the tab
 
-For a [harness](/user-documentation/advanced-agents/harness) or [SSH](/user-documentation/advanced-agents/harness#ssh-sessions) tab, the text is typed into the terminal and submitted, exactly like typing into it by hand. That's how you drive a running `claude` or `codex` session from somewhere else.
+For a [harness](/user-documentation/advanced-agents/harness) or [SSH](/user-documentation/advanced-agents/harness#ssh-sessions) tab, the text is typed into the terminal and submitted, exactly like typing into it by hand. That's how you drive a running `claude` or `codex` session from somewhere else. A [shell tab](/user-documentation/command-bar/shell) receives the line in its zsh terminal, where it runs as a shell command.
 
 For an agent tab, the text runs as a command in that tab's own pipeline — a shell command, a `db` query, anything you could type there. If that tab is busy, the command waits in its [queue](/user-documentation/command-bar/queue) instead of being lost.
 
-Nothing else accepts input. Image, page, markdown, editor, and other view tabs have no input line to deliver to.
+Other view tabs without a terminal do not accept input. Image, page, markdown, and editor tabs have no input line to deliver to.
 
 ## Where the result goes
 

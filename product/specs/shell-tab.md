@@ -23,6 +23,10 @@ else, does not move focus out of it.
 The command bar offers application commands before sending an unrecognized line to zsh. Typing
 directly in the terminal sends keys to zsh without that application routing.
 
+Another tab can run `send <shell-tab> <text>` to write the text and a newline to this tab's zsh,
+submitting the line as if it had been typed in the terminal. The sender records the ordinary `send`
+confirmation; zsh's output stays in this shell tab.
+
 The shell tab's status dot blinks while zsh is running a command and stops when zsh returns to its prompt. That holds with any number of shell tabs open: a command finishing at the same moment zsh reports its working directory still stops the dot, and the reported directory is still recorded.
 
 When a shell command finishes while its tab is hidden and undocked, the tab gets the unread badge. A visible or docked shell tab does not. The badge clears when the shell starts working again, or after the tab has been active for the unread dwell. If the badge remains unread and hidden for thirty seconds, the app raises the same `harness-idle` waiting notification used for harness tabs; raising the badge arms that notification only when the tab was eligible, and clearing the badge cancels it.

@@ -21,6 +21,12 @@ function deliverTo(target: Tab, text: string, managers: CommandManagers): string
     typeIntoHarness(managers.pty, target.harness.ptyId, target.harness.name, text);
     return null;
   }
+  if (target.view === 'plugin') {
+    const ptyId = managers.pty.terminalIdFor(target.label);
+    if (ptyId === undefined) return `Tab "${target.label}" does not accept input.`;
+    managers.pty.input(ptyId, `${text}\n`);
+    return null;
+  }
   if (target.view === undefined || target.view === 'agent') {
     managers.command.dispatchTo(target.label, text);
     return null;
