@@ -418,6 +418,35 @@ describe('ShellTab', () => {
     expect(bar().value).toBe('!ls -la');
   });
 
+  it('queues a second line submitted before zsh reports the first one as running', async () => {
+    const queued: string[] = [];
+    const { capabilities, written } = renderTab();
+    const intent = capabilities.intent as unknown as {
+      getMockImplementation: () => (name: string, payload: unknown) => unknown;
+      mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
+    };
+    const answer = intent.getMockImplementation();
+    intent.mockImplementation(async (name, payload) => {
+      if (name === 'queue') { queued.push(payload as string); return { queued: true }; }
+      if (name === 'dequeue') return { line: queued.shift() ?? null };
+      return answer(name, payload);
+    });
+
+    fireEvent.change(bar(), { target: { value: '!ssh host' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    fireEvent.change(bar(), { target: { value: '!ls' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    await waitFor(() => { expect(queued).toEqual(['!ls']); });
+    expect(written).toEqual(['ssh host\n']);
+
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE}`); });
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`D;${NONCE}`); });
+
+    await waitFor(() => { expect(written).toEqual(['ssh host\n', 'ls\n']); });
+    expect(queued).toEqual([]);
+  });
+
   it('sends the current directory from zsh to the plugin intent', () => {
     const { capabilities } = renderTab();
 
@@ -816,6 +845,8 @@ describe('ShellTab', () => {
     fireEvent.keyDown(bar(), { key: 'Enter' });
     await act(async () => { releaseDispatch(); });
     expect(written).toEqual(['first\n']);
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE}`); });
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`D;${NONCE}`); });
     fireEvent.change(bar(), { target: { value: 'second' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
     await act(async () => { releaseDispatch(); });
@@ -967,6 +998,8 @@ describe('ShellTab', () => {
     fireEvent.change(bar(), { target: { value: '!ls -la' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
     await waitFor(() => { expect(written).toEqual(['ls -la\n']); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE}`); });
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`D;${NONCE}`); });
 
     fireEvent.change(bar(), { target: { value: 'hist' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });

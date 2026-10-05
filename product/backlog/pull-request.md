@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Queue a second command-bar line submitted before zsh reports the first one as running.
-
-Existing Issue: The shell command queue only marks itself busy when `drain()` runs a line, so a line submitted directly from the bar leaves the queue idle until zsh's `133;C` marker arrives after a dispatch round-trip, and a second line submitted in that window is written straight into the PTY. Severity: 4/10
-
-Existing Risk: 4/10 - Typing `ssh host` then `ls` quickly sends `ls` into the starting program's input instead of queueing it, contradicting the spec that lines submitted while zsh is running are queued.
-
-Proposal Risk: 2/10 - Every line the bar sends to zsh marks the queue busy until zsh's prompt marker, with residual risk only if zsh never emits the marker for a line.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: mark the shell queue busy as soon as a bar line is sent to zsh". In `web/src/plugins/shell/shell-command-queue.ts`, add a `markBusy()` (or have `submit` own the run and set `busy` when the run reports the line went to zsh), and in `web/src/plugins/shell/useShellCommandQueue.ts` call it when `runReference.current(line)` resolves that the line was written to the PTY rather than handled by the application. Add a `web/src/plugins/shell/shell-command-queue.test.ts` case where two submits occur before any `C` marker and the second is enqueued and runs after `D`; keep the existing queue tests passing.
-
-
 * Name shell tabs with the same launch-name check unnamed agents use, so a shell cannot take a name held by a detached or provisioning session.
 
 Existing Issue: `unusedAgentName` picks a pool name using only open tab labels, while unnamed agents go through `checkLaunchName`, which also refuses names held by session rows in provisioning, active, reconnecting or detached state, so shells are not named "exactly as an unnamed agent tab is" as the spec says. Severity: 3/10

@@ -5,15 +5,16 @@ import { ShellCommandQueue } from './shell-command-queue';
 function makeQueue(options: { busy?: boolean; writesToShell?: (line: string) => boolean } = {}) {
   const pending: string[] = [];
   const ran: string[] = [];
+  const runner = vi.fn(async (line: string, _queued: boolean) => {
+    ran.push(line);
+    return options.writesToShell?.(line) ?? true;
+  });
   const transport = {
     enqueue: vi.fn(async (line: string) => { pending.push(line); }),
     dequeue: vi.fn(async () => pending.shift() ?? null),
   };
-  const queue = new ShellCommandQueue(transport, async (line) => {
-    ran.push(line);
-    return options.writesToShell?.(line) ?? true;
-  }, options.busy ?? false);
-  return { queue, pending, ran, transport };
+  const queue = new ShellCommandQueue(transport, runner, options.busy ?? false);
+  return { queue, pending, ran, runner, transport };
 }
 
 async function settle() {
@@ -21,11 +22,41 @@ async function settle() {
 }
 
 describe('ShellCommandQueue', () => {
-  it('leaves a line to the caller while zsh is idle', () => {
-    const { queue, transport } = makeQueue();
+  it('runs a line submitted while zsh is idle without queueing it', async () => {
+    const { queue, runner, transport } = makeQueue();
 
     expect(queue.submit('ls')).toBe(false);
+    await settle();
+
+    expect(runner).toHaveBeenCalledWith('ls', false);
     expect(transport.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('queues a second line submitted before zsh reports the first one as running', async () => {
+    const { queue, pending, ran, runner } = makeQueue();
+
+    expect(queue.submit('ssh host')).toBe(false);
+    expect(queue.submit('ls')).toBe(true);
+    await settle();
+    expect(ran).toEqual(['ssh host']);
+    expect(pending).toEqual(['ls']);
+
+    queue.setBusy(true);
+    queue.setBusy(false);
+    await settle();
+    expect(ran).toEqual(['ssh host', 'ls']);
+    expect(runner).toHaveBeenLastCalledWith('ls', true);
+  });
+
+  it('runs a line queued behind an application command once that command settles', async () => {
+    const { queue, pending, ran } = makeQueue({ writesToShell: (line) => line !== 'help' });
+
+    expect(queue.submit('help')).toBe(false);
+    expect(queue.submit('ls')).toBe(true);
+    await settle();
+
+    expect(ran).toEqual(['help', 'ls']);
+    expect(pending).toEqual([]);
   });
 
   it('queues a line while zsh is busy', () => {

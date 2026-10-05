@@ -7,7 +7,8 @@ import { ShellCommandQueue } from './shell-command-queue';
 // both are rebuilt on renders that change nothing about the queue, and a new instance would forget
 // that a drain was already under way.
 // The returned `submit` is what the bar calls: it queues the line while zsh is busy, recording it in
-// the bar's history through `onQueued` as it would have been had it run, and runs it otherwise.
+// the bar's history through `onQueued` as it would have been had it run, and otherwise has the queue
+// run it, so a line submitted before zsh reports this one running still waits its turn.
 export function useShellCommandQueue(
   capabilities: TabPluginClientCapabilities,
   run: (line: string, record?: boolean) => Promise<boolean>,
@@ -38,7 +39,7 @@ export function useShellCommandQueue(
         return null;
       }
     },
-  }, (line) => runReference.current(line, false), initiallyBusy));
+  }, (line, queued) => runReference.current(line, !queued), initiallyBusy));
   useEffect(() => {
     queue.attach();
     return () => { queue.dispose(); };
@@ -49,11 +50,7 @@ export function useShellCommandQueue(
   const onQueuedReference = useRef(onQueued);
   onQueuedReference.current = onQueued;
   const submit = useCallback((line: string) => {
-    if (queue.submit(line)) {
-      onQueuedReference.current(line);
-      return;
-    }
-    void runReference.current(line);
+    if (queue.submit(line)) onQueuedReference.current(line);
   }, [queue]);
   return { queue, submit };
 }

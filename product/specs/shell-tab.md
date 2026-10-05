@@ -68,7 +68,11 @@ history as it is queued. When zsh returns to its prompt, the queue drains one li
 first: each line runs exactly as if it had just been submitted, and a line sent to zsh waits for zsh's
 next prompt before the following entry runs. Lines the application answers itself run straight on to
 the next entry. A line submitted while the queue is still draining joins the back of the queue, so
-nothing overtakes a line already waiting. Keys typed directly into the terminal are never queued.
+nothing overtakes a line already waiting. The same holds from the moment a bar line is submitted to
+an idle shell: until that line settles, and when it went to zsh until zsh's next prompt, a further
+line is queued even though zsh has not yet reported the first one as running. Typing `ssh host` and
+then `ls` quickly therefore queues `ls` rather than typing it into the program `ssh host` starts.
+Keys typed directly into the terminal are never queued.
 
 Another tab can append a line with `queue <shell-tab> <command>`. The line joins the same FIFO as
 commands queued from this shell's own bar. If zsh is idle, it runs right away through the shell bar's

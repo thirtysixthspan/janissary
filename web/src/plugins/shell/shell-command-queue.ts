@@ -8,8 +8,9 @@ export type ShellQueueTransport = {
 };
 
 // Runs one line and answers whether it was written to zsh. A line zsh received has to finish before
-// the next queued one runs, so the drain stops there and resumes at zsh's next prompt.
-export type ShellLineRunner = (line: string) => Promise<boolean>;
+// the next queued one runs, so the drain stops there and resumes at zsh's next prompt. `queued` is
+// true for a line taken from the queue, which was recorded in the bar's history when it was queued.
+export type ShellLineRunner = (line: string, queued: boolean) => Promise<boolean>;
 
 export class ShellCommandQueue {
   private busy: boolean;
@@ -37,11 +38,16 @@ export class ShellCommandQueue {
   }
 
   // Queues the line and answers true while zsh is busy or the queue is draining, so a new line never
-  // overtakes one already waiting. Answers false when the caller should run the line itself.
+  // overtakes one already waiting. Otherwise runs it now and answers false. That run counts as a drain
+  // until it settles, because zsh's command markers arrive only after the line has been written: a
+  // second line submitted before then must wait behind the first rather than reach zsh's input.
   submit(line: string): boolean {
-    if (!this.busy && !this.draining) return false;
-    void this.transport.enqueue(line);
-    return true;
+    if (this.busy || this.draining) {
+      void this.transport.enqueue(line);
+      return true;
+    }
+    void this.drain(line);
+    return false;
   }
 
   // Stops a drain from asking a closed tab for its next line. Paired with `attach` so a remount —
@@ -54,16 +60,17 @@ export class ShellCommandQueue {
     this.disposed = true;
   }
 
-  private async drain(): Promise<void> {
+  private async drain(submitted?: string): Promise<void> {
     if (this.draining) return;
     this.draining = true;
     try {
+      if (submitted !== undefined && await this.run(submitted, false)) this.busy = true;
       while (!this.busy && !this.disposed) {
         const line = await this.transport.dequeue();
         if (line === null || this.disposed) return;
         // Busy until zsh's next prompt says otherwise: the command markers arrive after the line is
         // written, and the next entry must not slip in ahead of them.
-        if (await this.run(line)) this.busy = true;
+        if (await this.run(line, true)) this.busy = true;
       }
     } finally {
       this.draining = false;
