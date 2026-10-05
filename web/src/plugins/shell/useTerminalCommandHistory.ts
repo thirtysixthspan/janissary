@@ -1,5 +1,6 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
 import { PendingShellLines } from './pending-shell-lines';
+import { appendShellHistory } from './shell-history';
 
 export function useTerminalCommandHistory(setSent: Dispatch<SetStateAction<string[]>>): {
   expect: (line: string) => void;
@@ -8,7 +9,7 @@ export function useTerminalCommandHistory(setSent: Dispatch<SetStateAction<strin
   const [pending] = useState(() => new PendingShellLines());
   const expect = useCallback((line: string) => { pending.expect(line); }, [pending]);
   const onCommand = useCallback((command: string) => {
-    if (!pending.claim(command)) setSent((previous) => [...previous, command]);
+    if (!pending.claim(command)) setSent((previous) => appendShellHistory(previous, command));
   }, [pending, setSent]);
   return { expect, onCommand };
 }

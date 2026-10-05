@@ -14,6 +14,7 @@ import type { ShellCommandQueue } from './shell-command-queue';
 import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { useTerminalCommandHistory } from './useTerminalCommandHistory';
+import { appendShellHistory } from './shell-history';
 import { NO_CHORDS, NO_QUEUE_ITEMS } from './shell-tab-constants';
 import './shell.css';
 
@@ -112,7 +113,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   });
   const { queue, submit } = useShellCommandQueue(capabilities, run, payload.commandRunning ?? false, (line) => {
     setMatches([]);
-    setSent((previous) => [...previous, line]);
+    setSent((previous) => appendShellHistory(previous, line));
   });
   queueReference.current = queue;
 

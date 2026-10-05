@@ -107,7 +107,9 @@ it holds one, so copying by keyboard still works.
 history. It holds the lines the command bar has sent or the application has handled, and every command
 typed directly into the terminal, in the order they ran. A line sent from the bar appears once, as it
 was typed in the bar, even though zsh also reports running it; a command typed into the terminal is
-recorded exactly as zsh received it, including one spanning several lines. Ghost suggestions instead draw from the
+recorded as zsh received it, including one spanning several lines. Every entry is stored without
+leading or trailing whitespace, and a command that is empty or only whitespace is never recorded.
+Ghost suggestions instead draw from the
 global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
 a suggestion.
 

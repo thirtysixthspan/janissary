@@ -75,6 +75,29 @@ describe('global-history', () => {
     expect(globalCommands()).toEqual(['good']);
   });
 
+  it('leaves out blank commands already in the file', () => {
+    const home = makeHome();
+    const dir = path.join(home, '.janissary');
+    mkdirSync(dir, { recursive: true });
+    const entries = [
+      { command: 'kept', tab: 't1', timestamp: 1000 },
+      { command: '', tab: 't1', timestamp: 2000 },
+      { command: ' \t\n ', tab: 't1', timestamp: 3000 },
+    ];
+    writeFileSync(path.join(dir, 'history.json'), JSON.stringify(entries));
+    initGlobalHistory(home);
+    expect(globalCommands()).toEqual(['kept']);
+  });
+
+  it('records nothing for a blank command', () => {
+    const home = makeHome();
+    initGlobalHistory(home);
+    recordGlobalHistory(' '.repeat(3), 'tab-a');
+    recordGlobalHistory('\n', 'tab-a');
+    initGlobalHistory(home);
+    expect(globalCommands()).toEqual([]);
+  });
+
   it('records an entry and the file round-trips through a re-init', () => {
     const home = makeHome();
     initGlobalHistory(home);

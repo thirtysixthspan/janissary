@@ -642,6 +642,18 @@ describe('ShellTab', () => {
     expect(bar().value).toBe('git status');
   });
 
+  it('keeps a whitespace-only terminal command out of history and trims a padded one', () => {
+    renderTab();
+
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${btoa('  pwd  ')}`); });
+    act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${btoa(' \t ')}`); });
+
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(bar().value).toBe('pwd');
+    fireEvent.keyDown(bar(), { key: 'ArrowUp' });
+    expect(bar().value).toBe('pwd');
+  });
+
   it('records a line the bar sent once, even after zsh reports running it', async () => {
     const { releaseDispatch, written } = renderTab({ dispatched: false });
     fireEvent.change(bar(), { target: { value: 'ls -la' } });
