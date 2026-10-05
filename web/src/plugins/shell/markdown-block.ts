@@ -30,7 +30,7 @@ export function insertMarkdownBlock(terminal: Terminal, line: string, markdown: 
   const height = measure(screen, html);
   const rowHeight = screen.clientHeight / terminal.rows;
   if (height <= 0 || !Number.isFinite(rowHeight) || rowHeight <= 0) return false;
-  const rows = Math.min(Math.ceil(height / rowHeight), terminal.rows - 2);
+  const rows = Math.ceil(height / rowHeight);
   terminal.write(`\r\u{1B}[2K> ${line}\r\n${'\r\n'.repeat(rows)}`, () => {
     const marker = terminal.registerMarker(-rows);
     const decoration = terminal.registerDecoration({ marker, width: terminal.cols, height: rows, layer: 'top' });

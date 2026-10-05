@@ -17,7 +17,6 @@
    that makes the content taller than its reserved rows scrolls inside the block. */
 .shell-output-block {
   box-sizing: border-box;
-  overflow: hidden auto;
   background: var(--bg);
   font-family: var(--mono);
   pointer-events: auto;
