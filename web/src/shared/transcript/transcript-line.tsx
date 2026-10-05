@@ -3,7 +3,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { viewCaptureIcon, promptIcon, collapsedIcon } from '../icons';
 import type { BufferLine } from '@shared/protocol';
 import { renderMarkdown } from './markdown';
-import { isFileLineLink, linkifyMarkdown } from './file-link';
+import { linkifyMarkdown } from './file-link';
+import { openTranscriptLink } from './open-link';
 import type { TranscriptIntents } from './transcript-intents';
 import {
   highlightText, hitForLine, renderOutputText, renderTextContent, type LineHighlight,
@@ -12,16 +13,14 @@ import { RunningLine } from './running-line';
 
 // Markdown renders sanitized HTML via dangerouslySetInnerHTML, so a matched substring can't be
 // safely wrapped inline — the whole block gets the search-hit class as a fallback instead.
-function Markdown({ text, hit, onLinkClick }: { text: string; hit: boolean; onLinkClick: (url: string) => void }) {
+function Markdown({ text, hit, onLinkClick }: { text: string; hit: boolean; onLinkClick: (url: string) => boolean }) {
   const linkedText = useMemo(() => linkifyMarkdown(text), [text]);
   const html = useMemo(() => renderMarkdown(linkedText), [linkedText]);
   const onClick = useCallback((e: React.MouseEvent) => {
     const anchor = (e.target as HTMLElement).closest('a');
     if (!anchor) return;
     const href = anchor.getAttribute('href');
-    if (!href) return;
-    if (/^https?:\/\//i.test(href)) { e.preventDefault(); onLinkClick(href); return; }
-    if (isFileLineLink(href)) { e.preventDefault(); onLinkClick(href); }
+    if (href && onLinkClick(href)) e.preventDefault();
   }, [onLinkClick]);
   if (html === undefined) return <div className={`line output${hit ? ' search-hit' : ''}`}>{text}</div>;
   return (
@@ -69,10 +68,7 @@ function renderMarkdownLine(
   hit: boolean,
   intents: TranscriptIntents,
 ): React.ReactNode {
-  return <Markdown key={index} text={line.text} hit={hit} onLinkClick={(url) => {
-    if (isFileLineLink(url)) intents.onEditFile(url);
-    else intents.onOpenFile(url);
-  }} />;
+  return <Markdown key={index} text={line.text} hit={hit} onLinkClick={(url) => openTranscriptLink(url, intents)} />;
 }
 
 function renderPromptLine(

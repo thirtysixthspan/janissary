@@ -24,6 +24,8 @@ type Options = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   attachTerminal: AttachTerminal | undefined;
   copyText: (text: string) => void;
+  // Opens a link clicked in a rendered reply. Absent, a click on one still never navigates the window.
+  openLink?: (href: string) => void;
   onCommandRunning: (running: boolean) => void;
   onCwd: (cwd: string) => void;
   onCommand?: (command: string) => void;
@@ -50,7 +52,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, containerRef, attachTerminal, copyText, onExit, onCommandRunning, onCwd, onCommand, hookNonce, claimHooks,
+  ptyId, containerRef, attachTerminal, copyText, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce, claimHooks,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -71,6 +73,8 @@ export function useShellTerminal({
   attachRef.current = attachTerminal;
   const copyTextRef = useRef(copyText);
   copyTextRef.current = copyText;
+  const openLinkRef = useRef(openLink);
+  openLinkRef.current = openLink;
   const hookNonceRef = useRef(hookNonce);
   hookNonceRef.current = hookNonce;
   const claimRef = useRef(claimHooks);
@@ -174,7 +178,8 @@ export function useShellTerminal({
     const terminal = terminalRef.current;
     const line = stripTerminalControls(rawLine);
     const markdown = stripTerminalControls(rawMarkdown);
-    if (!terminal || insertMarkdownBlock(terminal, line, markdown)) return;
+    const openReplyLink = (href: string) => { openLinkRef.current?.(href); };
+    if (!terminal || insertMarkdownBlock(terminal, line, markdown, openReplyLink)) return;
     terminal.write(formatDispatchedCommand(line, markdownToAnsi(markdown)));
   }, []);
   const focus = useCallback(() => { terminalRef.current?.focus(); }, []);

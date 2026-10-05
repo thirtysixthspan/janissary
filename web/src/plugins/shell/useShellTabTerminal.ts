@@ -23,6 +23,7 @@ export function useShellTabTerminal({
     containerRef,
     attachTerminal: capabilities.attachTerminal,
     copyText: capabilities.copyText,
+    openLink: (href) => { capabilities.openLink?.(href); },
     hookNonce: payload.hookNonce,
     claimHooks: (nonce) => claimShellHooks(capabilities, nonce),
     onCommand,

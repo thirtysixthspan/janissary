@@ -105,6 +105,11 @@ scrolling through it, even when its first row is above the viewport. The block i
 so terminal selection and search do not see it. When a full-screen program holds the terminal, or the reply cannot
 be measured or placed, it falls back to the styled terminal text described above.
 
+A link in a reply rendered as HTML opens the way the same link opens from an agent tab's transcript: a
+web address opens through `open`, and a `path:line` reference opens in an editor tab. A click on any
+link in the block never navigates the application window, so a link the application does not open
+does nothing.
+
 **Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
 tab's bar asks, and shows the same strip when there is a choice to make. The shell tab keeps no list
 of its own. One match completes the line, several matches show the choice strip with two spaces

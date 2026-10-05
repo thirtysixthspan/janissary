@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
 import { resourceUrl } from '../session-url';
 import { copyText as systemCopyText } from '../shared/system-clipboard';
+import { openTranscriptLink } from '../shared/transcript/open-link';
+import { transcriptIntents } from '../shared/transcript/transcript-intents';
 import type { PluginHost } from './host';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -213,6 +215,11 @@ export type TabPluginClientCapabilities = {
   // for the same reason as `attachTerminal`.
   openFileNavigator?(): void;
   launchAgentHere?(): void;
+  // Open a link the way a click on it in an agent tab's transcript does: a web address through `open`,
+  // a `path:line` reference in an editor tab, and anything else not at all. A plugin rendering markdown
+  // of its own needs it because the default for an anchor click is to navigate the whole application
+  // window away. Optional for the same reason as `attachTerminal`.
+  openLink?(href: string): void;
   reportFailure(reason: string): void;
 };
 
@@ -270,6 +277,7 @@ export function createPluginClientCapabilities(
     },
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
     launchAgentHere: () => { client.send({ method: 'launchAgentFor', params: { label } }); },
+    openLink: (href) => { openTranscriptLink(href, transcriptIntents(client)); },
     // The report is deduplicated here rather than in the layer above, so the one-report-per-plugin
     // rule covers a plugin component reporting its own failure — a bad intent result, say — and not
     // just the load, schema, timeout, and render failures the host detects for it. The first report

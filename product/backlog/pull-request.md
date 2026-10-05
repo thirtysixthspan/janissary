@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Route clicks on links inside shell reply decorations to the application's link opener instead of navigating the app window.
-
-Existing Issue: Reply decorations set `innerHTML` from the transcript markdown renderer and enable pointer events, but have no click handler, unlike the transcript, which prevents default and calls its link opener. Severity: 5/10
-
-Existing Risk: 5/10 - Clicking an `https://` link in a `help` reply navigates the whole Janissary window away, dropping the user out of the app.
-
-Proposal Risk: 2/10 - Anchor clicks open through the same path the transcript uses, with residual risk only for non-anchor interactive markup the renderer might add later.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: route link clicks in shell reply decorations to the app link opener". Find how `web/src/agent-tabs/` transcript lines intercept anchor clicks (`transcript-line.tsx`) and what opener they call; publish an equivalent `openLink(href)` on the plugin client capabilities in `web/src/plugins/api.ts` if one is not already exposed. In `web/src/plugins/shell/markdown-block.ts` (`fill` or the block creation), add a click listener on the decoration element that, for a click inside an `a[href]`, calls `preventDefault()` and the opener; pass the opener in from `useShellTerminal.ts`. Add a `web/src/plugins/shell/markdown-block.test.ts` case that clicking an anchor calls `preventDefault` and the opener with its href.
-
-
 * Queue a second command-bar line submitted before zsh reports the first one as running.
 
 Existing Issue: The shell command queue only marks itself busy when `drain()` runs a line, so a line submitted directly from the bar leaves the queue idle until zsh's `133;C` marker arrives after a dispatch round-trip, and a second line submitted in that window is written straight into the PTY. Severity: 4/10

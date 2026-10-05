@@ -57,7 +57,7 @@ describe('insertMarkdownBlock', () => {
   it('reserves rows under the echoed command and renders the reply into a decoration over them', () => {
     const fake = fakeTerminal({ probeHeight: 48, screenHeight: 240, rows: 20 });
 
-    expect(insertMarkdownBlock(fake.terminal, 'help', '# Commands\n\n| a | b |\n| - | - |\n| 1 | 2 |')).toBe(true);
+    expect(insertMarkdownBlock(fake.terminal, 'help', '# Commands\n\n| a | b |\n| - | - |\n| 1 | 2 |', vi.fn())).toBe(true);
 
     expect(fake.written[0]).toBe(`\r\u{1B}[2K> help\r\n${'\r\n'.repeat(4)}`);
     expect(fake.markers).toEqual([-1]);
@@ -75,7 +75,7 @@ describe('insertMarkdownBlock', () => {
   it('reserves the full measured height for a reply taller than the viewport', () => {
     const fake = fakeTerminal({ probeHeight: 240, screenHeight: 240, rows: 4 });
 
-    expect(insertMarkdownBlock(fake.terminal, 'help', 'a long reply')).toBe(true);
+    expect(insertMarkdownBlock(fake.terminal, 'help', 'a long reply', vi.fn())).toBe(true);
 
     expect(fake.written[0]).toBe(`\r\u{1B}[2K> help\r\n${'\r\n'.repeat(4)}`);
     expect(fake.markers).toEqual([-1]);
@@ -84,7 +84,7 @@ describe('insertMarkdownBlock', () => {
 
   it('keeps the visible portion rendered after the first row scrolls above the viewport', () => {
     const fake = fakeTerminal({ probeHeight: 180, screenHeight: 300, rows: 5, markerLine: 10, viewportY: 9 });
-    insertMarkdownBlock(fake.terminal, 'help', 'a tall reply');
+    insertMarkdownBlock(fake.terminal, 'help', 'a tall reply', vi.fn());
     const element = document.createElement('div');
 
     fake.render(element);
@@ -98,7 +98,7 @@ describe('insertMarkdownBlock', () => {
 
   it('keeps decorations hidden while the terminal uses its alternate buffer', () => {
     const fake = fakeTerminal();
-    insertMarkdownBlock(fake.terminal, 'help', 'hello');
+    insertMarkdownBlock(fake.terminal, 'help', 'hello', vi.fn());
     const element = document.createElement('div');
 
     fake.active.type = 'alternate';
@@ -109,7 +109,7 @@ describe('insertMarkdownBlock', () => {
 
   it('fills the decoration once however often it is rendered', () => {
     const fake = fakeTerminal();
-    insertMarkdownBlock(fake.terminal, 'help', 'hello');
+    insertMarkdownBlock(fake.terminal, 'help', 'hello', vi.fn());
     const element = document.createElement('div');
     fake.render(element);
     element.append(document.createElement('span'));
@@ -118,21 +118,63 @@ describe('insertMarkdownBlock', () => {
     expect(element.querySelectorAll('span')).toHaveLength(1);
   });
 
+  it('opens a clicked link through the opener instead of navigating the window', () => {
+    const fake = fakeTerminal();
+    const openLink = vi.fn();
+    insertMarkdownBlock(fake.terminal, 'help', 'See [the docs](https://example.com/docs) for more.', openLink);
+    const element = document.createElement('div');
+    fake.render(element);
+    const anchor = element.querySelector('a');
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    anchor?.dispatchEvent(click);
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(openLink).toHaveBeenCalledWith('https://example.com/docs');
+  });
+
+  it('leaves a click outside any link alone', () => {
+    const fake = fakeTerminal();
+    const openLink = vi.fn();
+    insertMarkdownBlock(fake.terminal, 'help', 'See [the docs](https://example.com/docs) for more.', openLink);
+    const element = document.createElement('div');
+    fake.render(element);
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    element.querySelector('p')?.dispatchEvent(click);
+
+    expect(click.defaultPrevented).toBe(false);
+    expect(openLink).not.toHaveBeenCalled();
+  });
+
+  it('opens a clicked link once however often the block is rendered', () => {
+    const fake = fakeTerminal();
+    const openLink = vi.fn();
+    insertMarkdownBlock(fake.terminal, 'help', '[the docs](https://example.com/docs)', openLink);
+    const element = document.createElement('div');
+    fake.render(element);
+    fake.render(element);
+
+    element.querySelector('a')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+    expect(openLink).toHaveBeenCalledOnce();
+  });
+
   it('places nothing when the reply measures nothing', () => {
     const fake = fakeTerminal({ probeHeight: 0 });
-    expect(insertMarkdownBlock(fake.terminal, 'help', 'hello')).toBe(false);
+    expect(insertMarkdownBlock(fake.terminal, 'help', 'hello', vi.fn())).toBe(false);
     expect(fake.written).toEqual([]);
   });
 
   it('places nothing while a full-screen program holds the alternate buffer', () => {
     const fake = fakeTerminal({ buffer: 'alternate' });
-    expect(insertMarkdownBlock(fake.terminal, 'help', 'hello')).toBe(false);
+    expect(insertMarkdownBlock(fake.terminal, 'help', 'hello', vi.fn())).toBe(false);
     expect(fake.written).toEqual([]);
   });
 
   it('places nothing before the terminal has a screen to measure against', () => {
     const fake = fakeTerminal({ withScreen: false });
-    expect(insertMarkdownBlock(fake.terminal, 'help', 'hello')).toBe(false);
+    expect(insertMarkdownBlock(fake.terminal, 'help', 'hello', vi.fn())).toBe(false);
     expect(fake.written).toEqual([]);
   });
 });

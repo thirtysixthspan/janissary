@@ -63,6 +63,8 @@ Patterns like `src/foo.ts:42` or `tests/test.py:10:5` in output and markdown lin
 
 Clicking a file:line link opens the file in an **editor tab** (same as typing `edit <filepath>:<line>`), with the cursor placed on the target line and scrolled to the middle of the tab (see Editor Tab → Scrolling).
 
+A web address is never a file:line link, even when it ends in `:<digits>` (`https://example.com/src/a.ts:12`): clicking it opens the address (same as typing `open <url>`), in output and markdown lines alike. The routing lives in `openTranscriptLink` (`web/src/shared/transcript/open-link.ts`), which a shell tab's rendered replies use too (see [[shell-tab]]).
+
 ### Re-running a prompt line
 
 Double-clicking a previous command's prompt line re-runs that command. The double-clickable

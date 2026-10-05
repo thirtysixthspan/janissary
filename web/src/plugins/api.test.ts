@@ -133,6 +133,23 @@ describe('createPluginClientCapabilities', () => {
     expect(close).toHaveBeenCalledOnce();
   });
 
+  // A plugin rendering markdown of its own opens a clicked link the way the transcript does, so the
+  // same link goes to the same place wherever it was rendered.
+  it('opens a web link and edits a file and line link, as the transcript does', () => {
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    capabilities.openLink?.('https://example.com/docs');
+    capabilities.openLink?.('src/foo.ts:42');
+    expect(send).toHaveBeenNthCalledWith(1, { method: 'command', params: { text: 'open https://example.com/docs' } });
+    expect(send).toHaveBeenNthCalledWith(2, { method: 'command', params: { text: 'edit src/foo.ts:42' } });
+  });
+
+  it('opens nothing for a link the application does not open', () => {
+    const { client, send } = makeClient();
+    createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn()).openLink?.('#section');
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it('offers no split action when the host did not supply one', () => {
     const { client } = makeClient();
     expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).splitAction).toBeNull();

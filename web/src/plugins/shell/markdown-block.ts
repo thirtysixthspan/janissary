@@ -17,11 +17,23 @@ function measure(screen: HTMLElement, html: string, rowHeight: number): number {
   return height;
 }
 
-function fill(element: HTMLElement, html: string): void {
+// A reply's links open through the application, never by navigating its window: every anchor click
+// is stopped, and the opener decides which hrefs it knows how to open.
+function routeLinkClicks(element: HTMLElement, openLink: (href: string) => void): void {
+  element.addEventListener('click', (event) => {
+    const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!anchor || !element.contains(anchor)) return;
+    event.preventDefault();
+    openLink(anchor.getAttribute('href') ?? '');
+  });
+}
+
+function fill(element: HTMLElement, html: string, openLink: (href: string) => void): void {
   if (element.dataset.shellOutput === 'filled') return;
   element.dataset.shellOutput = 'filled';
   element.classList.add(...BLOCK_CLASSES);
   element.innerHTML = html;
+  routeLinkClicks(element, openLink);
 }
 
 function position(element: HTMLElement, terminal: Terminal, markerLine: number, rows: number): void {
@@ -38,7 +50,9 @@ function position(element: HTMLElement, terminal: Terminal, markerLine: number, 
   element.style.display = visible ? 'block' : 'none';
 }
 
-export function insertMarkdownBlock(terminal: Terminal, line: string, markdown: string): boolean {
+export function insertMarkdownBlock(
+  terminal: Terminal, line: string, markdown: string, openLink: (href: string) => void,
+): boolean {
   const html = renderMarkdown(markdown);
   const screen = terminal.element?.querySelector<HTMLElement>('.xterm-screen');
   if (html === undefined || !screen || terminal.buffer.active.type !== 'normal' || terminal.rows < 3) return false;
@@ -51,7 +65,7 @@ export function insertMarkdownBlock(terminal: Terminal, line: string, markdown: 
     const marker = terminal.registerMarker(-1);
     const decoration = terminal.registerDecoration({ marker, width: terminal.cols, height: rows, layer: 'top' });
     decoration?.onRender((element) => {
-      fill(element, html);
+      fill(element, html, openLink);
       position(element, terminal, marker.line, rows);
     });
     terminal.write('> ');
