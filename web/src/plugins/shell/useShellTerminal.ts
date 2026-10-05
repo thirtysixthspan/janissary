@@ -73,6 +73,7 @@ export function useShellTerminal({
 
     const styles = getComputedStyle(document.documentElement);
     const terminal = new Terminal({
+      allowProposedApi: true,
       fontFamily: styles.getPropertyValue('--mono').trim() || 'monospace',
       fontSize: Number(styles.getPropertyValue('--terminal-font-size').replace('px', '')) || 13.5,
       lineHeight: Number(styles.getPropertyValue('--terminal-line-height').replace('px', '')) || 1.2,

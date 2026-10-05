@@ -106,6 +106,12 @@ describe('useShellTerminal', () => {
     expect(terminals[0].written).toEqual(['hello from zsh']);
   });
 
+  it('enables xterm proposed APIs for inline markdown decorations', () => {
+    harness();
+
+    expect(terminals[0].options).toMatchObject({ allowProposedApi: true });
+  });
+
   it('reports its fitted size to the process once it is attached', () => {
     const { resized } = harness();
 

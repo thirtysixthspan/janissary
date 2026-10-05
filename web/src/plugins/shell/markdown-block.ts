@@ -26,11 +26,11 @@ function fill(element: HTMLElement, html: string): void {
 export function insertMarkdownBlock(terminal: Terminal, line: string, markdown: string): boolean {
   const html = renderMarkdown(markdown);
   const screen = terminal.element?.querySelector<HTMLElement>('.xterm-screen');
-  if (html === undefined || !screen || terminal.buffer.active.type !== 'normal') return false;
+  if (html === undefined || !screen || terminal.buffer.active.type !== 'normal' || terminal.rows < 3) return false;
   const height = measure(screen, html);
   const rowHeight = screen.clientHeight / terminal.rows;
   if (height <= 0 || !Number.isFinite(rowHeight) || rowHeight <= 0) return false;
-  const rows = Math.ceil(height / rowHeight);
+  const rows = Math.min(Math.ceil(height / rowHeight), terminal.rows - 2);
   terminal.write(`\r\u{1B}[2K> ${line}\r\n${'\r\n'.repeat(rows)}`, () => {
     const marker = terminal.registerMarker(-rows);
     const decoration = terminal.registerDecoration({ marker, width: terminal.cols, height: rows, layer: 'top' });

@@ -79,12 +79,13 @@ or numbers, quotes get a bar, links show their target after the text, and tables
 columns under a bold header. Neither line is sent
 to zsh. Commands that open a picker keep their existing behavior.
 
-Where the terminal can hold it, the reply is instead rendered as HTML — the same markdown rendering an
-agent tab's transcript uses, in the terminal's theme colors — in a block placed in the terminal's
-scrollback directly under the echoed command, sized to its content, scrolling with the terminal, and
-followed by zsh's prompt. The block is not terminal text, so terminal selection and search do not see
-it. When a full-screen program holds the terminal, or the reply cannot be measured, it falls back to
-the styled terminal text described above.
+When the terminal is in its normal buffer and can measure the reply, it is rendered as HTML — the same
+markdown rendering an agent tab's transcript uses, in the terminal's theme colors — in a block placed
+in the terminal's scrollback directly under the echoed command and followed by zsh's prompt. The block
+stays within the terminal's visible rows and scrolls internally when its content is taller than the
+available space; it also scrolls with the terminal. The block is not terminal text, so terminal
+selection and search do not see it. When a full-screen program holds the terminal, or the reply cannot
+be measured or placed, it falls back to the styled terminal text described above.
 
 **Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
 tab's bar asks, and shows the same strip when there is a choice to make. The shell tab keeps no list

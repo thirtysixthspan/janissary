@@ -55,6 +55,16 @@ describe('insertMarkdownBlock', () => {
     expect(element.querySelector(':scope table td')?.textContent).toBe('1');
   });
 
+  it('keeps a reply taller than the viewport inside the visible decoration rows', () => {
+    const fake = fakeTerminal({ probeHeight: 240, screenHeight: 240, rows: 4 });
+
+    expect(insertMarkdownBlock(fake.terminal, 'help', 'a long reply')).toBe(true);
+
+    expect(fake.written[0]).toBe(`\r\u{1B}[2K> help\r\n${'\r\n'.repeat(2)}`);
+    expect(fake.markers).toEqual([-2]);
+    expect(fake.decorations[0]?.height).toBe(2);
+  });
+
   it('fills the decoration once however often it is rendered', () => {
     const fake = fakeTerminal();
     insertMarkdownBlock(fake.terminal, 'help', 'hello');
