@@ -10,6 +10,7 @@ import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import { newAgentOp } from './new-agent.js';
 import { placeAgent } from './place-agent.js';
+import { workspaceAgentCwd } from './inherited-cwd.js';
 import { messageBus } from '../bus.js';
 import { errorText } from '../error-text.js';
 
@@ -122,7 +123,10 @@ export class ProfileManager {
 
     this.managers.workspace.retain(creator.workspaceDir);
     placeAgent(this.managers, {
-      resolved, creator, cwd, workspaceDir: creator.workspaceDir, offline: creator.offline ?? false,
+      resolved, creator,
+      cwd: workspaceAgentCwd(creator.workspaceDir, this.managers.tab.cwdOf(label)),
+      workspaceDir: creator.workspaceDir,
+      offline: creator.offline ?? false,
     });
   }
 

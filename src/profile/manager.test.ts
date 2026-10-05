@@ -294,13 +294,55 @@ describe('ProfileManager.newAgent', () => {
     shell.group = 7;
     shell.groupColor = 'purple';
     const { managers } = makeManagers(active, [active, shell]);
-    Object.assign(managers.tab, { cwdOf: (label: string) => label === 'shell' ? '/shell/work' : '/proj' });
+    Object.assign(managers.tab, { cwdOf: (label: string) => label === 'shell' ? '/proj/shell/work' : '/proj' });
     const manager = new ProfileManager(managers);
 
     manager.newAgent('agent bob --no-workspace', { label: 'shell', index: 1 });
 
     expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(expect.objectContaining({ group: 7, groupColor: 'purple' }));
-    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/shell/work');
+    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/proj/shell/work');
+  });
+
+  it('starts a --no-workspace agent from a workspaced source in the project checkout, not the clone', () => {
+    const source = makeTab('claude', 'red', 1, [], [], '/proj/.janissary/workspace/claude');
+    const { managers } = makeManagers(source);
+    Object.assign(managers.tab, { cwdOf: () => '/proj/.janissary/workspace/claude/src' });
+
+    new ProfileManager(managers).newAgent('agent bob --no-workspace');
+
+    expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(expect.objectContaining({ workspaceDir: undefined }));
+    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/proj');
+  });
+
+  it('starts a --no-workspace agent from a remote source in the project checkout', () => {
+    const source = makeTab('claude', 'red');
+    source.remote = { host: 'devbox', address: 'devbox:/srv/project' };
+    const { managers } = makeManagers(source);
+    Object.assign(managers.tab, { cwdOf: () => '/proj/remote-looking/path' });
+
+    new ProfileManager(managers).newAgent('agent bob --no-workspace');
+
+    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/proj');
+  });
+
+  it('starts a --no-workspace agent in the project checkout when the source cwd is outside it', () => {
+    const source = makeTab('janus', 'red');
+    const { managers } = makeManagers(source);
+    Object.assign(managers.tab, { cwdOf: () => '/tmp/elsewhere' });
+
+    new ProfileManager(managers).newAgent('agent bob --no-workspace');
+
+    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/proj');
+  });
+
+  it('does not treat a sibling directory sharing the checkout prefix as inside it', () => {
+    const source = makeTab('janus', 'red');
+    const { managers } = makeManagers(source);
+    Object.assign(managers.tab, { cwdOf: () => '/proj-evil/src' });
+
+    new ProfileManager(managers).newAgent('agent bob --no-workspace');
+
+    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/proj');
   });
 
   it('reports a workspace-creation error and never creates the tab', () => {
@@ -641,6 +683,19 @@ describe('ProfileManager.newAgentAt', () => {
     );
     expect(managers.tab.setCwd).toHaveBeenCalledWith(expect.any(String), '/janus-workspaces/claude');
     expect(managers.tab.addBusy).not.toHaveBeenCalled();
+  });
+
+  it('starts a workspaced source\'s new agent at the clone root when the source cwd left the clone', () => {
+    const source = makeTab('claude', 'red', 1, [], [], '/janus-workspaces/claude');
+    const managers = makeAtManagers([source], { claude: '/tmp/outside' });
+
+    new ProfileManager(managers).newAgentAt('claude');
+
+    expect(managers.workspace.retain).toHaveBeenCalledWith('/janus-workspaces/claude');
+    expect(managers.tab.insertTabInGroup).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceDir: '/janus-workspaces/claude' }),
+    );
+    expect(managers.tab.setCwd).toHaveBeenCalledWith(expect.any(String), '/janus-workspaces/claude');
   });
 
   it('places an agent directly in a supplied durable workspace', () => {

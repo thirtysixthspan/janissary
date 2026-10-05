@@ -8,7 +8,7 @@ A workspaced agent is an agent tab with its own cloned workspace. This workspace
 
 ### Workspace agent tab
 
-`agent <name>` creates a tab with a cloned workspace by default — a `git clone` of the root repository's `origin` remote, detected from the current directory. The workspace is created at `.janissary/workspace/<name>/` and the agent's shell spawns there. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out and starts the agent in the project checkout instead. If both forms are present, `--no-workspace` wins.
+`agent <name>` creates a tab with a cloned workspace by default — a `git clone` of the root repository's `origin` remote, detected from the current directory. The workspace is created at `.janissary/workspace/<name>/` and the agent's shell spawns there. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out and starts the agent in the project checkout instead, or in the source tab's subdirectory of it when the source is local, unworkspaced, and inside the checkout (see [[agents]]). If both forms are present, `--no-workspace` wins.
 
 If no git repository is found from the current directory, or the repository has no `origin` remote, an error is shown and no tab is created.
 
@@ -30,7 +30,7 @@ rewrite the configuration is ignored, so it never stops the clone and its scratc
 deleted or stops later workspaces from being removed. Leftover cleanup reports that failure instead,
 as described below.
 
-The "New agent here" button (➕) in a tab's metadata row creates a new agent tab rooted at that tab's directory. When the source tab is workspaced, the new agent joins that exact workspace instead of cloning another one. Its `cwd` and workspace directory are the source tab's existing clone, it is immediately ready, and both tabs hold a reference to the clone. On a remote source it also joins the source's existing ssh channel and runs in the same remote workspace without another authentication prompt. The `agent` and `harness` command forms remain fresh-clone operations; the metadata button is the only route that joins an existing workspace.
+The "New agent here" button (➕) in a tab's metadata row creates a new agent tab rooted at that tab's directory. When the source tab is workspaced, the new agent joins that exact workspace instead of cloning another one. Its workspace directory is the source tab's existing clone. Its `cwd` is the source tab's current directory when that directory is inside the clone, so a subdirectory carries over, and the root of the clone otherwise, because a confined agent may not start outside the one directory its sandbox profile allows (`workspaceAgentCwd` in `src/profile/inherited-cwd.ts`). It is immediately ready, and both tabs hold a reference to the clone. On a remote source it also joins the source's existing ssh channel and runs in the same remote workspace without another authentication prompt. The `agent` and `harness` command forms remain fresh-clone operations; the metadata button is the only route that joins an existing workspace.
 
 ### Workspace harness tab
 

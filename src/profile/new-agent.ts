@@ -6,6 +6,7 @@ import { sandboxNotice } from '../sandbox/index.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { messageBus } from '../bus.js';
 import { placeAgent } from './place-agent.js';
+import { unconfinedAgentCwd } from './inherited-cwd.js';
 import { startRemoteAgent } from './remote-agent.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
@@ -55,7 +56,7 @@ function launchAgent(managers: Managers, launch: AgentLaunch, tried: readonly st
   }
 
   if (!parsed.workspace) {
-    const cwd = managers.tab.cwdOf(creator.label) ?? process.cwd();
+    const cwd = unconfinedAgentCwd(creator, managers.tab.cwdOf(creator.label), managers.tab.launchDir);
     placeAgent(managers, { resolved, creator, cwd, offline: parsed.offline });
     out(`Agent "${resolved}" ready.`);
     return;
