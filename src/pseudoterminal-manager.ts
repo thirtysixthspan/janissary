@@ -143,6 +143,13 @@ export class PseudoterminalManager {
   // The dimensions new PTYs spawn at, for observers that mirror a PTY's screen.
   spawnDimensions(): { cols: number; rows: number } { return { cols: this.cols, rows: this.rows }; }
 
+  terminalIdFor(label: string): string | undefined {
+    for (const [id, entry] of this.ptys) {
+      if (entry.tabLabel === label && !entry.transport) return id;
+    }
+    return undefined;
+  }
+
   // The program names of a tab's live PTYs, for the connections panel and completion
   // (`terminal:<program>`). A remote tab's ssh transport is skipped: it is listed as that tab's
   // `ssh:<destination>` row instead of masquerading as one of its processes.

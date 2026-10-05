@@ -52,7 +52,7 @@ schedule list in claude
 schedule cancel standup in claude
 ```
 
-The timer then belongs to the target tab — it shows in *that* tab's schedule window and fires there; your tab just gets the confirmation. Agent and harness tabs are valid targets; view tabs are refused with `Tab "<label>" cannot run scheduled commands.`, and a name that matches nothing with `No tab named "<label>".` The `in <tab>` form is also the only way to manage a harness tab's timers, since a harness has no command bar of its own.
+The timer then belongs to the target tab — it shows in *that* tab's schedule window and fires there; your tab just gets the confirmation. Agent, harness, and shell tabs are valid targets — a due timer in a shell tab is typed into its zsh as a line, as if you had entered it at the terminal; view tabs are refused with `Tab "<label>" cannot run scheduled commands.`, and a name that matches nothing with `No tab named "<label>".` The `in <tab>` form is also the only way to manage a harness tab's timers, since a harness has no command bar of its own.
 
 ## How firing behaves
 
@@ -95,6 +95,6 @@ Like the [notifications feed](/user-documentation/tab-types/notifications), the 
 
 In the web app, typing bare `schedule` — the word with nothing after it — opens a **New schedule** dialog instead of printing the `Usage:` message. (The terminal app still prints `Usage:` for a bare `schedule`.)
 
-The dialog has a name field, a target-tab dropdown (agent and harness tabs only, defaulting to the tab you're on), a schedule-type selector covering all five forms above, the inputs that type needs, and a command field. **Schedule** stays disabled until the name, command, and that type's required inputs are filled in; submitting it is equivalent to typing the same `schedule` command by hand, so a duplicate name or parse problem shows up as a transcript line just like it would from the command bar. **Cancel** or `Escape` closes it without scheduling anything. Your entries are remembered if you reopen the dialog later in the same session.
+The dialog has a name field, a target-tab dropdown (agent, harness, and shell tabs, defaulting to the tab you're on), a schedule-type selector covering all five forms above, the inputs that type needs, and a command field. **Schedule** stays disabled until the name, command, and that type's required inputs are filled in; submitting it is equivalent to typing the same `schedule` command by hand, so a duplicate name or parse problem shows up as a transcript line just like it would from the command bar. **Cancel** or `Escape` closes it without scheduling anything. Your entries are remembered if you reopen the dialog later in the same session.
 
 The dialog only creates new timers — manage existing ones with `schedule list` / `cancel` / `clear`, or the schedules tab above.

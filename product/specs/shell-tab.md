@@ -144,6 +144,11 @@ fade over 300 ms unless pinned or hovered. If an empty window gains its first ro
 it auto-shows again; a window with no rows stays hidden.
 Both popups begin below the metadata row, which remains visible.
 
+A shell tab can hold scheduled commands (see [[scheduling]]): `schedule` from its own command bar, or
+`schedule … in <shell tab>` from another tab, attaches the entry to it, and the "New schedule" dialog
+offers it as a target. Its entries appear in the schedule window. When one falls due, the command is
+typed into zsh as a line, exactly as if entered at the terminal. The schedule lives as long as the tab.
+
 There is no **open transcript** control, because there is no transcript: the terminal replaced it. The
 working directory shown follows the shell's current directory. It updates after a `cd` and when zsh
 returns to its prompt after a command.

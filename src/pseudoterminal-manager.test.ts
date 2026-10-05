@@ -126,6 +126,16 @@ describe('PseudoterminalManager', () => {
     expect(manager.terminalsFor('other')).toEqual([]);
   });
 
+  it('terminalIdFor answers the id of a tab\'s own terminal, and nothing for a tab with none', () => {
+    const { managers } = makeManagers([makeTab('main', 'red'), makeTab('other', 'blue')]);
+    const manager = new PseudoterminalManager(managers);
+    const id = manager.spawn('', 'zsh', '', '/repo');
+    manager.adopt(id, 'main');
+
+    expect(manager.terminalIdFor('main')).toBe(id);
+    expect(manager.terminalIdFor('other')).toBeUndefined();
+  });
+
   it('killTerminal kills the tab\'s PTY running that program', () => {
     const { managers } = makeManagers([makeTab('main', 'red')]);
     const manager = new PseudoterminalManager(managers);
