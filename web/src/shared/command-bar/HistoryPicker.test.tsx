@@ -20,6 +20,27 @@ describe('HistoryPicker', () => {
     expect(getByText('cmd2')).toBeTruthy();
   });
 
+  it('shows a multi-line entry as its first line with a line count', () => {
+    const { container } = render(React.createElement(HistoryPicker, {
+      items: ['for f in *; do\n  echo $f\ndone', 'ls'], selected: 0, onPick: vi.fn(),
+    }));
+    const rows = container.querySelectorAll('.picker-row');
+
+    expect(rows[0].querySelector('.history-label')?.textContent).toBe('for f in *; do');
+    expect(rows[0].querySelector('.history-lines')?.textContent).toBe('(3 lines)');
+    expect(rows[1].querySelector('.history-label')?.textContent).toBe('ls');
+    expect(rows[1].querySelector('.history-lines')).toBeNull();
+  });
+
+  it('picks the whole multi-line entry, never the line shown', () => {
+    const onPick = vi.fn();
+    const { container } = render(React.createElement(HistoryPicker, {
+      items: ['first\nsecond'], selected: 0, onPick,
+    }));
+    fireEvent.click(container.querySelector('.picker-row')!);
+    expect(onPick).toHaveBeenCalledWith('first\nsecond');
+  });
+
   it('marks the selected item with the selected class', () => {
     const { container } = render(React.createElement(HistoryPicker, { items: ['cmd1', 'cmd2'], selected: 1, onPick: vi.fn() }));
     const rows = container.querySelectorAll('.picker-row');

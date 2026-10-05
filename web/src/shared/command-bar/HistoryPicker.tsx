@@ -1,4 +1,5 @@
 import React from 'react';
+import { displayLine } from '../display-line';
 
 // The Ctrl+R / `hist` overlay listing the tab's most frequent history entries. Up/Down move the
 // selection, Return runs the selected command, Escape closes — handled by the app's key handler; a
@@ -20,15 +21,19 @@ export function HistoryPicker({
       {items.length === 0 ? (
         <div className="picker-row picker-empty">{emptyMessage}</div>
       ) : (
-        items.map((command, index) => (
-          <div
-            key={index}
-            className={`picker-row${index === selected ? ' selected' : ''}`}
-            onClick={() => onPick(command)}
-          >
-            {command}
-          </div>
-        ))
+        items.map((command, index) => {
+          const { label, postfix } = displayLine(command);
+          return (
+            <div
+              key={index}
+              className={`picker-row history-row${index === selected ? ' selected' : ''}`}
+              onClick={() => onPick(command)}
+            >
+              <span className="history-label">{label}</span>
+              {postfix && <span className="history-lines">{postfix}</span>}
+            </div>
+          );
+        })
       )}
     </div>
   );

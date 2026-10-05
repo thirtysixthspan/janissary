@@ -123,7 +123,8 @@ command bar opens the same list rather than the application's history picker, wh
 command line never adds to. `hist` itself is not added to the list. It lists the tab's command
 history — the lines its command bar has sent and the commands typed into its terminal — oldest first
 with the newest line selected at the bottom. It uses the same presentation and
-keyboard navigation as the application's history picker, but Return puts the selected line back in the
+keyboard navigation as the application's history picker — a multi-line command shows as its first line
+with a `(N lines)` postfix, and is put back whole — but Return puts the selected line back in the
 command bar without running it. Focus any other tab and `Ctrl+R` opens the application's history picker
 again.
 

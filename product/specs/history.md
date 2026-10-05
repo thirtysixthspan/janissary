@@ -24,6 +24,8 @@ As the user types in the command bar, if the typed text is a prefix of a past co
 
 `Ctrl+R` (or the `hist` command) opens the history window listing the tab's recent history entries, ordered with the most recent at the bottom (nearest the command line); it is anchored to the bottom, spanning the width just above the command input. Up/Down move the selection, Return runs the selected command, and Escape closes the overlay without running anything. The window opens whenever `hist` / `Ctrl+R` is invoked; when there is no history yet it shows a `(no history)` placeholder.
 
+Each row shows one line, exactly as the clipboard-history popup shows a copy: the entry's first line of non-space text, followed by a muted `(N lines)` postfix when the entry spans more than one line. A line too long for the window is clipped before the postfix. Choosing a row recalls or runs the whole entry; the postfix is never part of it.
+
 ### Consecutive duplicate suppression
 
 If a command matches the last entry in the tab's history, it is not appended again.
