@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Correct the pull request description's file list and behavior summary to match the branch.
-
-Existing Issue: The description lists 37 `product/plans/complete/*.md` files as removed although none exists on master or appears in the diff, omits the three follow-up plans, `product/backlog/pull-request.md` and `web/src/plugins/shell/shell-command-input.ts` with its test, and never mentions the terminal copy chord, the bracketed-paste multi-line submit, or the exclusion of startup hooks from shell history. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer verifying the file list hunts for deletions that do not exist and approves three user-visible behaviors the description never asked them to check.
-
-Proposal Risk: 1/10 - The description matches the diff, with residual drift only from commits added after the correction.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: correct the description's file list and behavior summary". In the pull request body's "Files changed" section, delete the 37 "remove the consolidated fix plan" bullets, add bullets for `product/plans/complete/shell-tab-ignore-startup-history.md`, `product/plans/complete/shell-tab-keyboard-copy.md`, `product/plans/complete/shell-tab-multiline-submit.md`, `product/backlog/pull-request.md`, and `web/src/plugins/shell/shell-command-input.test.ts` and `web/src/plugins/shell/shell-command-input.ts`; in "What" and "How to verify", add one sentence each for `Ctrl+Shift+C`/`Cmd+C` terminal copy, multi-line commands submitted to zsh as one bracketed paste, and the setup hook being kept out of shell history. Compare the final list against `git diff origin/master...HEAD --name-only` before applying. Leave every other paragraph and the title untouched.
-
-
 * Reconcile the shell-tab plan's stale statements about tab naming and directory tracking with its own later sections and the implementation.
 
 Existing Issue: The plan's design decisions still say each tab is named `shell`, `shell2` while its summary, the spec and the code use the agent-name pool with a `shell`, `shell-2` fallback, and its "Declined" list says the metadata row reports the starting directory while its design decisions and the code follow zsh's cwd. Severity: 2/10
