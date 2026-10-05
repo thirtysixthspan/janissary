@@ -82,7 +82,7 @@
 | `Page Up` / `Page Down` | Scroll the transcript up / down by half terminal height |
 | `Escape` | Reset scroll to bottom |
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
-| `Ctrl+E` | Open the queue picker to send a command to another agent tab (also opens over a shell tab; a no-op on any other tab that is not an agent tab) |
+| `Ctrl+E` | Open the queue picker for the current agent or shell tab (no-op on other tabs) |
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
 | `Ctrl+O` | Move the running command into a full-tab terminal to type to it (no-op when nothing is running) |
 | `Cmd+F` | Open the search bar in the transcript; in an editor tab, open the fuzzy line search over the buffer |

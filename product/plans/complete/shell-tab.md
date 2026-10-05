@@ -6,7 +6,7 @@
 
 > a new `shell tab` implemented as a plugin. The tab contains a pseudo terminal that launches zshell. The tab derives the following features from the agent tab: command line, identical metadata bar, same popups, menus and keybindings.
 
-This bundled plugin opens a live `/bin/zsh` terminal with the agent tab's metadata row and command bar. The terminal can receive direct keyboard input when focused. The command bar also accepts application commands and routes other lines to zsh, with `!` forcing the shell. The tab owns the terminal process, reports its working directory and workspace, and provides the applicable application pickers, status windows, context menu, and key bindings.
+This bundled plugin opens a live `/bin/zsh` terminal with the agent tab's metadata row and command bar. Its tab is named from the agent-name pool when a name is free, falling back to `shell`, `shell-2`, and so on when the pool is exhausted. The command bar accepts application commands first and routes unclaimed lines to zsh, with `!` forcing the shell. It captures text replies as rendered markdown decorations when xterm can measure them, with styled ANSI text as a fallback. The shell tab owns the terminal process and workspace lifetime, reports zsh's current directory and command state, and provides the applicable application pickers, scheduled and queued commands, status windows, copy context, and key bindings.
 
 ## Design decisions
 
@@ -18,13 +18,15 @@ This bundled plugin opens a live `/bin/zsh` terminal with the agent tab's metada
 
 **The shell tab uses shared application chrome where available.** It has the published command bar and key handling, task picker, queue picker, theme picker, Quick Open, file navigator, tab navigator, search, clipboard history, and shared completion. Popups that support docked views render over a docked shell tab. Clipboard history inserts at the command-bar caret and remains editable. Terminal selection participates in the application's copy context menu.
 
-**The metadata row is plugin markup.** It follows the agent row's structure and styling, exposes the applicable file navigator, new-agent, and split actions, and omits the transcript control. Connections and schedule windows use the host's status panels and receive only their declared host-state slices. The shell's dot follows whether a zsh command is running.
+The shared command bar also owns application interception, command history presentation, file drops, and the published popup inset. The shell adds its own FIFO drain for lines queued while zsh is busy, the queue popup, shell command and terminal-input history, terminal scroll keys, and `Ctrl+R` for its own history while visible. Bare `hist` opens the same history popup. A command added by `send` or `queue` from another tab enters the shell's bar path; application commands remain application commands, while unclaimed lines reach zsh. Scheduled lines are typed directly into the terminal when due.
+
+**The metadata row is plugin markup.** It follows the agent row's structure and styling, displays the current cwd with `$root` or `$workspace/<name>` shortcuts while retaining absolute paths for actions, exposes file navigator, new-shell, and split actions, and omits the transcript control. Connections and schedule windows use the host's status panels and receive only their declared host-state slices. The connections slice includes the shell's own terminal. The shell's dot follows zsh command state, and finishing a background command raises the ordinary unread badge and delayed waiting notification.
 
 **Terminal ownership follows the tab.** A terminal is spawned only from the payload factory, then adopted by the host under the allocated tab label. Closing the tab releases its process. The client closes the tab when it hears the process exit and checks terminal liveness on mount to handle a shell that exited while no client was connected.
 
-**The shell starts in the issuing tab's working directory.** When that tab belongs to a workspace, the shell uses the same workspace and offline mode. `Cmd+T` in the shell command bar opens another shell in the same directory and workspace. Each invocation opens a new tab.
+**The shell starts in the issuing tab's working directory.** When that tab belongs to a workspace, the shell uses the same workspace and offline mode. Its cwd follows zsh's OSC 7 reports, so `cd` updates the metadata and file navigator target. A sibling shell inherits the current cwd when it remains inside the project or workspace; otherwise it falls back to the workspace directory or project root. `Cmd+T` opens a sibling shell, and each `zsh` invocation opens a new tab. The workspace remains alive until its final owning tab closes.
 
-**The command bar maintains its own history.** Up and Down recall lines it sent, ghost history offers application-wide history, and `Ctrl+R` opens the shell's sent-line picker while the shell tab is visible. The declared chord is returned to the application on other tabs. Completion uses the application's completion service. `Ctrl+C`, `Ctrl+D`, and `Ctrl+Z` send the corresponding terminal control characters; `Ctrl+C` copies selected command-bar text instead.
+**The command bar and terminal share shell history.** Up and Down recall trimmed nonblank commands sent through the bar and commands reported by zsh, with bar-sent commands appearing once. Ghost history remains application-wide. `Ctrl+R` and bare `hist` open the shell's own history while it is visible; the declared chord returns to the application elsewhere. Completion uses the application's completion service. `Ctrl+C`, `Ctrl+D`, and `Ctrl+Z` send terminal control characters while the command bar is focused; `Ctrl+C` copies selected command-bar text instead. `Shift+Tab` stays within the bar and terminal, and shell terminal scrolling follows the transcript's navigation keys.
 
 **The plugin has narrow declared access.** It declares terminal spawning, terminal attachment, command dispatch and completion, liveness, tab operations, and the `connections` and `schedule` host-state slices it renders. A terminal attachment is bound to its owning tab, so the plugin cannot attach to an unrelated terminal.
 
@@ -51,7 +53,7 @@ This bundled plugin opens a live `/bin/zsh` terminal with the agent tab's metada
 
 ## Tests
 
-Server tests cover declaration validation, project-root cwd bounds, factory-scoped spawning and cleanup, per-tab terminal attachment ownership, tab creation with the source cwd/workspace, host-state delivery, dispatch and completion, and terminal liveness. Client tests cover interactive terminal input and focus, command routing and `!`, shell control keys, completion and history, application picker behavior, status display, clipboard insertion, and terminal teardown. Shared tests cover declared chord precedence, capability scoping, and status-window behavior.
+Server tests cover declaration validation, project-root cwd bounds, factory-scoped spawning and cleanup, per-tab terminal attachment ownership, tab creation with the source cwd/workspace, cwd recording, host-state delivery, current-payload intent handling, dispatch output capture and completion, terminal liveness, unread state, scheduled commands, and send/queue delivery. Client tests cover interactive terminal input and focus, command routing and `!`, shell control keys, completion and history (including zsh-reported terminal commands), FIFO queueing, application picker behavior, status display, clipboard insertion, file drops, popup positioning, terminal theme and teardown, and markdown decoration sizing, fallback, clipping, and scrollback visibility. Shared tests cover declared chord precedence, capability scoping, command-bar interception, and status-window behavior.
 
 ## Out of scope
 
@@ -61,6 +63,8 @@ Server tests cover declaration validation, project-root cwd bounds, factory-scop
 - Giving the plugin unrestricted access to the PTY registry or another tab's terminal.
 - Replacing the application's existing command, completion, picker, or status-window services with plugin-specific copies.
 - Adding a transcript to the shell tab.
+- Recording terminal-entered commands in global ghost history; those commands remain in the shell tab's own history and zsh's history.
+- Persisting shell tabs, their queues, or their schedules across application restarts.
 
 ### Declined during gap research
 
@@ -76,4 +80,4 @@ None. The command name, terminal program and startup, focus behavior, line routi
 
 ## Verification
 
-Manual review should confirm that `zsh` opens a distinct shell tab in the issuing tab's cwd and workspace; the terminal accepts input after focus moves to it; `Shift+Tab` returns focus to the bar; application commands run in the app, unclaimed lines reach zsh, and `!` forces zsh; shell history, completion, control keys, status windows, clipboard history, and available pickers work in the shell tab; docked pickers appear over the shell; and closing the tab or exiting zsh releases the process.
+Manual review should confirm that `zsh` opens a distinct, agent-named shell tab in the issuing tab's cwd and workspace; zsh startup hooks install before the plain prompt appears; direct terminal input and `Shift+Tab` focus switching work; application commands run in the app, unclaimed lines reach zsh, and `!` forces zsh; queue, send, schedules, history, completion, scroll keys, status windows, unread notifications, clipboard history, drops, and available pickers follow their described routing; theme changes update xterm; markdown replies render as clipped scrollback decorations with styled-text fallback; docked popups sit above the command bar; and closing the tab or exiting zsh releases its process and eventually its workspace.

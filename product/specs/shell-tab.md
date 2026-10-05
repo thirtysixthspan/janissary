@@ -116,9 +116,9 @@ The command bar's status dot uses the same color as the shell tab's dot.
 `Cmd+T` opens another zsh tab from this shell. The new shell starts in the same working directory and shares its workspace confinement and offline setting. It does not create an agent workspace. In other tabs, `Cmd+T` keeps opening a new agent tab.
 
 `Ctrl+C`, `Ctrl+D` and `Ctrl+Z` in the command line send interrupt, end-of-input and suspend to the
-shell — the characters a terminal would send, and the only way to stop a runaway command now that
-nothing can be typed into the terminal. `Ctrl+C` copies the command line's own selection instead when
-it holds one, so copying by keyboard still works.
+shell — the characters a terminal would send. The terminal also accepts direct input when focused.
+`Ctrl+C` copies the command line's own selection instead when it holds one, so copying by keyboard
+still works.
 
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and
 `Page Down` move by half a terminal screen, and `Escape` returns to the bottom of the scrollback.
@@ -156,7 +156,7 @@ can be edited or run.
 
 ## The metadata row
 
-The row shows the working directory the shell started in, shortened to `$root` or `$workspace/<name>`
+The row shows the shell's current working directory, shortened to `$root` or `$workspace/<name>`
 when it is inside the project or workspace clone. The stored directory stays absolute for shell actions.
 It shows a workspace mark when that directory is a workspace clone, and the actions a shell tab can
 act on: **open file navigator here**, **new shell here**, the split control, and the connections and
