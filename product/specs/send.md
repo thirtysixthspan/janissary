@@ -26,7 +26,7 @@ the same file.
 | --- | --- |
 | Harness (`view === 'harness'`, `harness.status === 'running'`) | the text typed into the PTY as one burst write, followed by a separately delayed carriage return so the harness executes the line (matches xterm's own Enter key). For codex, whose composer otherwise classifies the burst as a paste and suppresses a quick Enter as a newline, the write is framed with bracketed-paste markers (`ESC[200~ … ESC[201~`) so it takes the explicit-paste path and the delayed Enter always submits. |
 | Agent (`view` undefined or `'agent'`) | `dispatchTo(label, text)` — runs `text` as a command in that tab's own command pipeline; queues behind whatever else is queued if the target is currently busy (see [[agent-command-queue]]). |
-| Shell tab (plugin tab with an owned terminal) | The text and a newline are written to the terminal, submitting it to zsh. |
+| Shell tab (plugin tab with an owned terminal) | The text joins the shell tab's FIFO command queue and runs through its command bar: application commands run in the app, and unclaimed lines are submitted to zsh. |
 | Harness that has exited | error: `Tab "<label>" is not a running harness.` |
 | Plugin without an owned terminal, image / page / markdown view | error: `Tab "<label>" does not accept input.` |
 | No such tab | error: `No tab named "<label>".` |

@@ -11,11 +11,11 @@ send worker db sqlite list
 
 Name the tab by its label, the way it appears in the strip. A tab you renamed answers to its display name too. `Tab` completes the name against every open tab, so you rarely have to type it in full. Tab numbers don't work here — `send 2 …` looks for a tab actually named `2`.
 
-This is not [messaging](/user-documentation/command-bar/messaging). `msg` and `broadcast` put a message in another agent's inbox for it to read; `send` puts text on that tab's input line and presses Return.
+This is not [messaging](/user-documentation/command-bar/messaging). `msg` and `broadcast` put a message in another agent's inbox for it to read; `send` submits a line to the target tab's input.
 
 ## What happens depends on the tab
 
-For a [harness](/user-documentation/advanced-agents/harness) or [SSH](/user-documentation/advanced-agents/harness#ssh-sessions) tab, the text is typed into the terminal and submitted, exactly like typing into it by hand. That's how you drive a running `claude` or `codex` session from somewhere else. A [shell tab](/user-documentation/command-bar/shell) receives the line in its zsh terminal, where it runs as a shell command.
+For a [harness](/user-documentation/advanced-agents/harness) or [SSH](/user-documentation/advanced-agents/harness#ssh-sessions) tab, the text is typed into the terminal and submitted, exactly like typing into it by hand. That's how you drive a running `claude` or `codex` session from somewhere else. A [shell tab](/user-documentation/command-bar/shell) receives the line through its command bar: application commands run in the app, while unclaimed lines go to zsh. The line joins the shell's FIFO queue and waits for zsh's prompt when the shell is busy.
 
 For an agent tab, the text runs as a command in that tab's own pipeline — a shell command, a `db` query, anything you could type there. If that tab is busy, the command waits in its [queue](/user-documentation/command-bar/queue) instead of being lost.
 

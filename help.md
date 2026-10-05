@@ -43,7 +43,7 @@
 | `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
 | `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab — a feed of background-tab events (see `.janissary/config.json` to enable events) |
 | `notify` | `notify <message>` pushes a custom line into the notifications feed |
-| `send` | Deliver a line of input to a harness or shell terminal, or run a command in an agent tab |
+| `send` | Deliver a line to a harness, submit through a shell tab's command bar, or run a command in an agent tab |
 | `queue` | Queue a command for another agent or shell tab (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |

@@ -23,9 +23,10 @@ else, does not move focus out of it.
 The command bar offers application commands before sending an unrecognized line to zsh. Typing
 directly in the terminal sends keys to zsh without that application routing.
 
-Another tab can run `send <shell-tab> <text>` to write the text and a newline to this tab's zsh,
-submitting the line as if it had been typed in the terminal. The sender records the ordinary `send`
-confirmation; zsh's output stays in this shell tab.
+Another tab can run `send <shell-tab> <text>` to submit a line through this shell's command bar.
+Application commands run in the app; an unclaimed line goes to zsh. The line joins the shell's FIFO
+queue, so it waits for zsh's prompt when the shell is busy. The sender records the ordinary `send`
+confirmation; command output stays in this shell tab.
 
 The shell tab's status dot blinks while zsh is running a command and stops when zsh returns to its prompt. That holds with any number of shell tabs open: a command finishing at the same moment zsh reports its working directory still stops the dot, and the reported directory is still recorded.
 

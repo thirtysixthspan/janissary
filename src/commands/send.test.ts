@@ -75,19 +75,20 @@ describe('send delivery', () => {
     expect(input).toHaveBeenCalledWith('p1', '\r');
   });
 
-  it('writes a line to a plugin tab that owns a terminal', () => {
+  it('queues a line for the command bar of a plugin tab that owns a terminal', () => {
     const target = { label: 'shell', view: 'plugin', log: [], cmdHistory: [] };
     const input = vi.fn();
     const append = vi.fn();
     const managers = {
-      tab: { tabs: [target], append },
+      tab: { tabs: [target], append, enqueue: vi.fn() },
       pty: { terminalIdFor: vi.fn(() => 'shell-pty'), input },
     };
 
     command.run('send shell ls -al', { label: 'janus', index: 0 }, managers as never);
 
     expect(managers.pty.terminalIdFor).toHaveBeenCalledWith('shell');
-    expect(input).toHaveBeenCalledWith('shell-pty', 'ls -al\n');
+    expect(managers.tab.enqueue).toHaveBeenCalledWith('shell', 'ls -al');
+    expect(input).not.toHaveBeenCalled();
     expect(append).toHaveBeenCalledWith('janus', { input: 'send shell ls -al', output: '→ shell: ls -al' });
   });
 
