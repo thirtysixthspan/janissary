@@ -7,6 +7,7 @@ type Fake = {
   written: string[];
   markers: number[];
   decorations: { width?: number; height?: number; layer?: string }[];
+  probeLineHeights: string[];
   render: (element: HTMLElement) => void;
   active: { type: string; viewportY: number };
 };
@@ -16,15 +17,23 @@ function fakeTerminal({
   markerLine = 0, viewportY = 0,
 } = {}): Fake {
   const element = document.createElement('div');
+  const probeLineHeights: string[] = [];
   if (withScreen) {
     const screen = document.createElement('div');
     screen.className = 'xterm-screen';
     Object.defineProperties(screen, { clientHeight: { value: screenHeight }, clientWidth: { value: 800 } });
+    const append = screen.append.bind(screen);
+    vi.spyOn(screen, 'append').mockImplementation((...nodes) => {
+      const probe = nodes.find((node) => node instanceof HTMLElement && node.classList.contains('shell-output-block'));
+      if (probe instanceof HTMLElement) probeLineHeights.push(probe.style.lineHeight);
+      append(...nodes);
+    });
     element.append(screen);
   }
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(probeHeight);
   const fake: Fake = {
     terminal: undefined as unknown as Terminal, written: [], markers: [], decorations: [], render: () => {},
+    probeLineHeights,
     active: { type: buffer, viewportY },
   };
   fake.terminal = {
@@ -53,6 +62,7 @@ describe('insertMarkdownBlock', () => {
     expect(fake.written[0]).toBe(`\r\u{1B}[2K> help\r\n${'\r\n'.repeat(4)}`);
     expect(fake.markers).toEqual([-1]);
     expect(fake.decorations).toEqual([{ width: 100, height: 4, layer: 'top' }]);
+    expect(fake.probeLineHeights).toEqual(['12px']);
     expect(fake.written.at(-1)).toBe('> ');
 
     const element = document.createElement('div');

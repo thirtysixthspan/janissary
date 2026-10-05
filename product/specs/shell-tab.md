@@ -91,11 +91,11 @@ to zsh. Commands that open a picker keep their existing behavior.
 
 When the terminal is in its normal buffer and can measure the reply, it is rendered as HTML — the same
 markdown rendering an agent tab's transcript uses, in the terminal's theme colors — in a block placed
-in the terminal's scrollback directly under the echoed command and followed by zsh's prompt. The block
-expands to the full measured height of the reply without an internal scrollbar, and scrolls with the
-terminal. Its visible portion stays rendered while scrolling through it, even when its first row is
-above the viewport. The block is not terminal text, so terminal
-selection and search do not see it. When a full-screen program holds the terminal, or the reply cannot
+in the terminal's scrollback directly under the echoed command and followed by zsh's prompt. Its
+rendered content fits the block without an internal scrollbar, and the reply scrolls with the
+terminal without adding an application-window scrollbar. Its visible portion stays rendered while
+scrolling through it, even when its first row is above the viewport. The block is not terminal text,
+so terminal selection and search do not see it. When a full-screen program holds the terminal, or the reply cannot
 be measured or placed, it falls back to the styled terminal text described above.
 
 **Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
