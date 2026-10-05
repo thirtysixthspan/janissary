@@ -36,7 +36,8 @@ function activate(
 }
 
 // Runs a plugin factory with a registration window open around it, and reports back every reference
-// it registered and the terminal it started, if any. The window closes as soon as the factory
+// it registered and the terminals it started, if any, with the directory the first of them started
+// in. The window closes as soon as the factory
 // returns, so a plugin that stashed the resources object cannot keep serving files or running
 // processes from outside the call the host granted them for, and a factory that throws leaves nothing
 // behind. Shared by the open and update paths so a reference registered through one is scoped and
@@ -45,9 +46,10 @@ function withResources<Result>(
   target: OpenTarget,
   factory: (resources: TabPluginResources) => Result,
   source?: Tab,
-): { result: Result; fileRefs: string[]; terminalIds: string[] } {
+): { result: Result; fileRefs: string[]; terminalIds: string[]; terminalCwd?: string } {
   const fileRefs: string[] = [];
   const terminals: string[] = [];
+  let terminalCwd: string | undefined;
   let acceptingResources = true;
   try {
     const result = factory({
@@ -66,10 +68,11 @@ function withResources<Result>(
             : undefined,
         } : options);
         terminals.push(terminal.ptyId);
+        terminalCwd ??= options.cwd;
         return terminal;
       },
     });
-    return { result, fileRefs, terminalIds: terminals };
+    return { result, fileRefs, terminalIds: terminals, terminalCwd };
   } catch (error) {
     for (const reference of fileRefs) target.openFiles.delete(reference);
     // A factory that failed after starting a terminal must not leave the process running: no tab was
@@ -106,7 +109,7 @@ export function openPluginTab(
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
   const source = target.tabs[sourceIndex];
-  const { result: created, fileRefs, terminalIds } = withResources(target, factory, source);
+  const { result: created, fileRefs, terminalIds, terminalCwd } = withResources(target, factory, source);
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
@@ -124,8 +127,11 @@ export function openPluginTab(
       (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
     );
     if (minted !== undefined) {
+      // The directory the terminal really started in, not the source's: a plugin may start it
+      // elsewhere, as a shell does when its source has left the project, and the source's directory
+      // would otherwise stand until zsh's first report, which never comes for an unmounted shell.
+      if (terminalCwd !== undefined) tabRuntime(minted).cwd = terminalCwd;
       if (terminalIds.length > 0 && source) {
-        tabRuntime(minted).cwd = source.runtime?.cwd;
         minted.workspaceDir = source.workspaceDir;
         minted.offline = source.offline;
         if (minted.workspaceDir) target.retainWorkspace(minted.workspaceDir);

@@ -369,6 +369,31 @@ describe('TabManager queue', () => {
     }
   });
 
+  it('records the directory a new shell started in when its source has left the bound', () => {
+    const { tm } = makeTabManagerWithManagers();
+    const source = makeTab('worker', 'red', 2, [], [], '/repo/clone');
+    source.offline = true;
+    tm.tabs.push(source);
+    tm.setCwd(source.label, '/tmp');
+    tm.openPluginTab('shell', 'shell', 'fallback', 1, source.label, (resources) => {
+      resources.spawnTerminal({ cwd: '/repo/clone' });
+      return { title: 'shell', payload: {} };
+    });
+    const shell = tm.cur();
+    expect(tm.cwdOf(shell.label)).toBe('/repo/clone');
+    expect(shell).toMatchObject({ workspaceDir: '/repo/clone', offline: true });
+  });
+
+  it('records the project-root fallback rather than the source directory', () => {
+    const { tm } = makeTabManagerWithManagers();
+    tm.setCwd(tm.tabs[0].label, '/repo/a');
+    tm.openPluginTab('shell', 'shell', 'root', 1, tm.tabs[0].label, (resources) => {
+      resources.spawnTerminal({ cwd: '/repo' });
+      return { title: 'shell', payload: {} };
+    });
+    expect(tm.cwdOf(tm.cur().label)).toBe('/repo');
+  });
+
   it('does not retain a workspace for nonterminal tabs or failed factories', () => {
     const { tm, managers } = makeTabManagerWithManagers();
     tm.tabs[0].workspaceDir = '/repo/clone';

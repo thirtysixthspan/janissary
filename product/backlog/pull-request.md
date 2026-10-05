@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Record the directory a new shell's terminal actually started in, not the source tab's directory.
-
-Existing Issue: `openPluginTab` sets the new shell tab's recorded cwd to `source.runtime?.cwd`, while the shell plugin may have started the terminal in the workspace clone or project root because the source cwd was outside the allowed bound. Severity: 4/10
-
-Existing Risk: 4/10 - After a shell `cd /tmp` and `Cmd+T`, the new shell runs at the project root while completion, open-file-navigator-here and new agents use `/tmp` until a browser mounts the tab and zsh reports its cwd, which never happens for a shell opened with no client attached.
-
-Proposal Risk: 2/10 - The recorded directory matches the terminal's starting directory from the moment the tab exists, with residual drift only until the first OSC 7 report after a `cd`.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: record a new shell's actual starting cwd". In `src/tab/openers.ts`, have `withResources` capture the `cwd` passed to each `spawnTerminal` call alongside `terminalIds`, and in `openPluginTab`'s `afterApply` set `tabRuntime(minted).cwd` from the spawned terminal's cwd rather than from `source.runtime?.cwd`. Extend the existing "retains the source workspace" case in `src/tab/manager.test.ts` with a source cwd outside the root, asserting the recorded cwd equals the spawned cwd; existing shell-open tests in `src/plugins/shell/activate.test.ts` must keep passing.
-
-
 * Decode shell working-directory reports exactly, so paths containing `#`, `?`, `%` or a backslash are recorded correctly and reports from another host are ignored.
 
 Existing Issue: The zsh hook prints `$PWD` into an OSC 7 `file://` URL without percent-encoding it, and the client parses it with `new URL` and `decodeURIComponent`, so `#` and `?` truncate the path, `%` makes decoding throw and leaves the cwd stale, `%41` is decoded to `A`, `\` becomes `/`, and the hostname is ignored. Severity: 5/10
