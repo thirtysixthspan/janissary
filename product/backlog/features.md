@@ -2,7 +2,8 @@
 
 ## ready
 
-* new AI task remove-an-existing-feature.md - removes all related code, tests, specs, documentation. extracts the feature from other features without breaking the features, verifies remaining features still work. assures no dead code remains.   
+* new AI task remove-an-existing-feature.md - removes all related code, tests, specs, documentation. extracts the feature from other features without breaking the features, verifies remaining features still work. assures no dead code remains. 
+similar in design to how plan-a-feature asks about the boundry of adding a new feature, this task asks questions to determine what needs to be done to remove the feature and leave every other feature still working uninterrupted. asks clarifying questions about the scope of the removal.    
 
 * A new type of AI task that runs in a workspaced agent tab, can spawn and terminate new agent tabs and harness tabs as part of doing its work. the first task would be to call plan-a-new-feature, then build-a-feature, then pull-request-review, then work-an-issue on the pull-request backlog until the backlog is clear. 
 
