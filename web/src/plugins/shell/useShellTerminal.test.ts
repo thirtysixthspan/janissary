@@ -172,6 +172,14 @@ describe('useShellTerminal', () => {
     expect(terminals[0].written.at(-1)).toBe('\r\u{1B}[2K> help\r\n\u{1B}[1mbold\u{1B}[22m reply\r\n> ');
   });
 
+  it('writes a fallback reply without the control sequences its text carried', () => {
+    const { result } = harness();
+
+    act(() => { result.current.displayReply('help\u{1B}[6n', 'moved\u{1B}]7;file:///tmp\u{7} here\u{1B}[6n'); });
+
+    expect(terminals[0].written.at(-1)).toBe('\r\u{1B}[2K> help\r\nmoved here\r\n> ');
+  });
+
   it('focuses the terminal on request', () => {
     const { result } = harness();
 

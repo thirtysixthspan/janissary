@@ -252,4 +252,12 @@ command-resolution rules as anything typed. When a multi-line command is routed 
 it as one bracketed paste followed by one submit key, so its embedded newlines do not execute the
 lines separately.
 
+A line the tab sends to zsh carries text only. Escape sequences, carriage returns, and every other C0
+control except newline and tab are removed first, along with DEL and the C1 controls, so a pasted
+line, a clipboard-history entry, a line from `send` or `queue`, or a dropped file name cannot end the
+bracketed paste early or submit part of the line. The same removal applies to an application reply
+and its echoed command line before either reaches the terminal, so a reply cannot make the terminal
+answer a query into zsh or change its state. Control keys pressed in the command bar (`Ctrl+C`,
+`Ctrl+D`, `Ctrl+Z`) are unaffected.
+
 See also [[tab-plugins]], [[shell]], [[agents]], and [[tabs]].

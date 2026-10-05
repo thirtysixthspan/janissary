@@ -5,17 +5,6 @@
 * the msg command to a shell tab, of each type, should be supported.
 
 
-* Strip terminal control sequences from text the shell tab writes to zsh and to its own terminal, so a multi-line command cannot break out of its bracketed paste.
-
-Existing Issue: `shellCommandInput` frames multi-line commands in bracketed-paste markers without removing an embedded `ESC[201~`, single-line commands are written raw, and the fallback reply path writes application reply text through `markdownToAnsi` into xterm without stripping ESC, C0 or C1 characters. Severity: 7/10
-
-Existing Risk: 7/10 - A pasted line, clipboard-history entry, `send`/`queue` text or dropped file name carrying `ESC[201~` ends the paste early so each following line executes separately, and query sequences in a fallback reply make xterm answer into the PTY.
-
-Proposal Risk: 2/10 - Only printable text, newlines and tabs reach the paste and the fallback renderer, with residual risk limited to escape forms the stripper's pattern does not cover.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: strip terminal control sequences from shell input and fallback replies". Add a pure `stripTerminalControls(text)` to a new module in `web/src/plugins/shell/` that removes `\x1b` and the sequences it introduces, C0 controls other than `\n` and `\t`, `\x7f`, and C1 controls (`\x80`-`\x9f`), with a linear regex that passes `security/detect-unsafe-regex`. Apply it in `web/src/plugins/shell/shell-command-input.ts` before framing (both single-line and multi-line paths) and in `web/src/plugins/shell/useShellTerminal.ts` `displayReply`'s fallback path to the markdown text and the echoed command line before `markdownToAnsi`/`formatDispatchedCommand`. Do not touch the control-key path in `web/src/plugins/shell/command-bar-keys.ts`, which deliberately sends `\x03`/`\x04`/`\x1a`. Add tests to `web/src/plugins/shell/shell-command-input.test.ts` for `a\x1b[201~\nb` and for a single line containing `\x1b` and `\x03`, and to `web/src/plugins/shell/markdown-to-ansi.test.ts` (or the new module's test) for `\x1b]7;...\x07` and `\x1b[6n` input; the existing multi-line framing test in `web/src/plugins/shell/ShellTab.test.tsx` must keep passing.
-
-
 * Authenticate the shell tab's command and directory markers so program output cannot forge them.
 
 Existing Issue: The OSC 133 `C`/`D`/`E` and OSC 7 handlers in the shell terminal accept any matching sequence in PTY output, so any program's output (a `cat` of a crafted file, a remote host over `ssh`) can plant commands in shell history, mark zsh idle mid-command, or change the directory the server records. Severity: 6/10

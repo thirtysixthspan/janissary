@@ -10,6 +10,7 @@ import { decodeShellCommand } from './shell-command-marker';
 import { insertMarkdownBlock } from './markdown-block';
 import { formatDispatchedCommand } from './format-dispatched-command';
 import { markdownToAnsi } from './markdown-to-ansi';
+import { stripTerminalControls } from './strip-terminal-controls';
 
 const SHELL_STATUS_HOOKS = String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { local line=$1; [[ -z $line ]] && line=$3; printf '\033]133;C;%s\a' "$(print -rn -- "$line" | base64 | tr -d '\n')"; }; _janus_emit_cwd() { printf '\033]7;file://%s%s\a' "$HOST" "$PWD"; }; _janus_precmd() { printf '\033]133;D\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd; printf '\033]133;E\a'
 `;
@@ -178,8 +179,10 @@ export function useShellTerminal({
 
   const write = useCallback((data: string) => { handleRef.current?.write(data); }, []);
   const display = useCallback((data: string) => { terminalRef.current?.write(data); }, []);
-  const displayReply = useCallback((line: string, markdown: string) => {
+  const displayReply = useCallback((rawLine: string, rawMarkdown: string) => {
     const terminal = terminalRef.current;
+    const line = stripTerminalControls(rawLine);
+    const markdown = stripTerminalControls(rawMarkdown);
     if (!terminal || insertMarkdownBlock(terminal, line, markdown)) return;
     terminal.write(formatDispatchedCommand(line, markdownToAnsi(markdown)));
   }, []);
