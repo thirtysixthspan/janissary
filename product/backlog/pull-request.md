@@ -2,6 +2,8 @@
 
 # pull-request
 
+* render the output of commands that return markdown, like help, in an xterm decoration.
+
 * update help.md with a shell section and all the applicable key bindings. create a seperate global section to contain key bindings that apply everywhere.
 
 * shell tabs should accepot input from send commands. Observed error:
