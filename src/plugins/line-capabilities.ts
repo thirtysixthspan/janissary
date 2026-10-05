@@ -39,6 +39,7 @@ export function lineCapabilities(input: {
         ...(tab.workspaceDir && {
           workspace: { dir: tab.workspaceDir, offline: tab.offline ?? false },
         }),
+        ...(tab.remote && { remote: true as const }),
       };
     },
     // The tab a dispatched line runs in. That is the tab answering when the host named one — a line

@@ -191,7 +191,10 @@ directory stays where it was.
 `zsh` starts in the issuing tab's working directory. When that tab has a workspace clone, the shell inherits its workspace confinement and offline mode, including when opened from another shell tab. Otherwise it starts without workspace confinement. The starting directory must be inside the project root, and a shell cannot be started anywhere
 else: a terminal only ever runs in a directory inside that root. A remote agent tab is therefore not a
 place a shell tab can be opened from — its working directory belongs to the other host, and there is
-nothing here to start a shell in.
+nothing here to start a shell in. `zsh` typed in a remote agent tab answers that tab with `A shell tab
+cannot be opened from a remote tab.` and opens no tab, rather than starting a local shell the user
+could mistake for one on the remote host. The shell plugin learns the tab is remote from the
+`remote` flag on `originTab()`, and the refusal is a rejection, so the plugin stays enabled.
 
 Whether a directory is inside the project root, or inside the workspace clone, is judged on the path
 it resolves to, not the path as written, so `/repo/a/../../etc` is outside `/repo`. A terminal the

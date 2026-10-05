@@ -16,6 +16,7 @@ export function openShellTab(
 ): void {
   const origin = capabilities.originTab();
   if (!origin) return;
+  if (origin.remote) capabilities.rejectRequest('A shell tab cannot be opened from a remote tab.');
   const workspace = origin.workspace;
   // A shell that has `cd`-ed out of the project leaves its tab recording a directory no terminal may
   // start in, so the new shell starts where its workspace or project does rather than not at all.

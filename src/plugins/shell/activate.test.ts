@@ -15,7 +15,7 @@ const PAYLOAD: ShellPayload = {
 type Spawn = { cwd: string; shell?: string; args?: string[]; workspace?: { dir: string; offline?: boolean } };
 
 function fakeCapabilities(overrides: {
-  origin?: { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean } } | null;
+  origin?: { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean }; remote?: true } | null;
   running?: boolean;
   dispatched?: boolean;
   completions?: { matches: string[]; newInput: string; newCursor: number };
@@ -130,6 +130,17 @@ describe('shell plugin activation', () => {
     activate().command?.('', capabilities);
 
     expect(opened).toHaveLength(0);
+  });
+
+  it('refuses a remote tab, whose directory is on another host, and opens nothing', () => {
+    const { capabilities, opened, spawns } = fakeCapabilities({
+      origin: { label: 'remote1', cwd: '/repo', root: '/repo', remote: true },
+    });
+
+    expect(() => activate().command?.('', capabilities))
+      .toThrow(new TabPluginRejection('A shell tab cannot be opened from a remote tab.'));
+    expect(opened).toHaveLength(0);
+    expect(spawns).toHaveLength(0);
   });
 
   it('answers whether the terminal behind a tab is still running', () => {

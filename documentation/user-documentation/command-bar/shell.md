@@ -113,7 +113,7 @@ The command bar starts focused. Click the terminal or press `Shift+Tab` to type 
 
 A multi-line command stays editable in the bar until you submit it. If it goes to zsh, its lines are pasted together and submitted as one command.
 
-The shell starts in the working directory of the tab that opened it. It shares that tab's workspace and offline mode when present, and keeps the workspace alive even if you close the original tab. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt.
+The shell starts in the working directory of the tab that opened it. A remote agent tab's directory is on the other machine, so `zsh` typed there opens nothing and answers `A shell tab cannot be opened from a remote tab.` It shares that tab's workspace and offline mode when present, and keeps the workspace alive even if you close the original tab. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt.
 
 The terminal is painted in the application theme's own colors — background, text, cursor, and selection — so a light theme gives a light terminal. Choosing a theme in the `theme` picker updates the shell terminal too.
 

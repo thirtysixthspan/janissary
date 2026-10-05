@@ -89,6 +89,21 @@ describe('originTab', () => {
     expect(contextFor(['originTab'], managers).originTab()?.workspace).toBeUndefined();
   });
 
+  it('reports a tab whose session runs on another host as remote', () => {
+    const { byLabel, managers } = makeManagers();
+    byLabel.mockReturnValue({ label: 'janus', remote: { address: 'box', host: 'box' } } as never);
+
+    expect(contextFor(['originTab'], managers).originTab()).toEqual({
+      label: 'janus', cwd: '/repo', root: '/repo', remote: true,
+    });
+  });
+
+  it('omits the remote flag entirely for a local tab', () => {
+    const { managers } = makeManagers();
+
+    expect(contextFor(['originTab'], managers).originTab()).not.toHaveProperty('remote');
+  });
+
   it('answers nothing for a tab that has gone, rather than inventing one', () => {
     const { byLabel, managers } = makeManagers();
     byLabel.mockReturnValue(undefined);

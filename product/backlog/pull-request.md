@@ -5,17 +5,6 @@
 * the msg command to a shell tab, of each type, should be supported.
 
 
-* Refuse to open a shell tab from a remote agent tab, as the shell-tab spec requires.
-
-Existing Issue: `openShellTab` never checks whether the origin tab is remote, so `zsh` typed in a remote agent tab silently opens a local shell at the project root, or at a local path that happens to match the remote one, while the spec says a remote agent tab is not a place a shell tab can be opened from. Severity: 5/10
-
-Existing Risk: 5/10 - A user in a remote tab believes they are getting a shell on the remote host and runs commands against the local checkout instead.
-
-Proposal Risk: 2/10 - The command answers with a clear refusal in the remote tab, though a future remote-shell feature would need to revisit the rule deliberately.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: refuse to open a shell tab from a remote agent tab". In `src/plugins/line-capabilities.ts`, have `originTab` report whether the origin tab is remote (add an optional `remote: true` field to the origin shape declared in `src/plugins/api.ts`, documented in the contract and in `documentation/developer-documentation/tab-plugins.md`), sourcing it from the tab record the same way other remote checks do (`tab.remote`). In `src/plugins/shell/open-tab.ts`, when the origin is remote, call `capabilities.rejectRequest(...)` (or the contract's equivalent rejection path) with a message such as `A shell tab cannot be opened from a remote tab.` and return without calling `openOrFocusTab`. Add an `src/plugins/shell/activate.test.ts` case for a remote origin asserting no tab is opened and the rejection is reported, and update `src/plugins/documentation.test.ts` if it pins the origin shape. `product/specs/shell-tab.md` already states the rule; add the exact refusal text there.
-
-
 * Run application commands dispatched from a shell bar outside the shell plugin's handler deadline, so another command's slowness cannot disable the shell plugin.
 
 Existing Issue: The shell plugin's `dispatch` intent awaits `CommandManager.dispatchLineWithOutput`, which awaits the whole application command (including another plugin's activation and handler) inside the shell plugin's own 5000 ms intent deadline, contradicting the tab-plugins spec's statement that the deadline covers plugin work only. Severity: 7/10
