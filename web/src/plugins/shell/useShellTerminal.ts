@@ -104,7 +104,7 @@ export function useShellTerminal({
       case 'C': {
         runningRef.current(true);
         const command = decodeShellCommand(data);
-        if (command !== undefined) commandRef.current?.(command);
+        if (command !== undefined && command !== SHELL_STATUS_HOOKS.trimEnd()) commandRef.current?.(command);
         break;
       }
       case 'D': { runningRef.current(false); break; }

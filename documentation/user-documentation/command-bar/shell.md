@@ -122,6 +122,8 @@ When a command finishes while the zsh tab is hidden, it gets an unread flag. If 
 
 `↑` and `↓` recall lines sent from this tab's command bar, including application commands handled there, and commands typed directly into the terminal. `Ctrl+R`, or typing `hist` in the command bar, opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
 
+The shell's setup command isn't included in that history.
+
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.
 
 Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh tab in the directory this shell is currently in, with the same workspace. In other tabs, `Cmd+T` opens a new agent tab.

@@ -133,6 +133,8 @@ typed directly into the terminal, in the order they ran. A line sent from the ba
 was typed in the bar, even though zsh also reports running it; a command typed into the terminal is
 recorded as zsh received it, including one spanning several lines. Every entry is stored without
 leading or trailing whitespace, and a command that is empty or only whitespace is never recorded.
+The status hooks the tab installs in its shell are setup, not user commands, and never appear in this
+history.
 Ghost suggestions instead draw from the
 global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
 a suggestion.

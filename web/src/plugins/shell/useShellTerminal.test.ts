@@ -208,6 +208,23 @@ describe('useShellTerminal', () => {
     expect(onCommand.mock.calls).toEqual([['git status']]);
   });
 
+  it('does not add the injected shell status hooks to command history', () => {
+    const onCommand = vi.fn();
+    const onCommandRunning = vi.fn();
+    const written: string[] = [];
+    renderHook(() => useShellTerminal({
+      ptyId: 'pty7', containerRef: { current: document.createElement('div') },
+      attachTerminal: () => makeHandle({ written }),
+      onExit: vi.fn(), onCommandRunning, onCwd: vi.fn(), onCommand, copyText: vi.fn(),
+    }));
+    const startup = written[0]?.trimEnd() ?? '';
+    const encoded = btoa(String.fromCodePoint(...new TextEncoder().encode(startup)));
+
+    expect(oscHandlers.find(({ id }) => id === 133)?.handle(`C;${encoded}`)).toBe(true);
+    expect(onCommand).not.toHaveBeenCalled();
+    expect(onCommandRunning).toHaveBeenCalledWith(true);
+  });
+
   it('keeps startup output hidden until the zsh hooks are installed', () => {
     const { container, written } = harness();
 
