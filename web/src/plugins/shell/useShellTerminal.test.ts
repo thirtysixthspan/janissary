@@ -8,6 +8,8 @@ const fitCalls: number[] = [];
 const terminalDataHandlers: ((data: string) => void)[] = [];
 const terminalFocusCalls: number[] = [];
 const oscHandlers: { id: number; handle: (data: string) => boolean }[] = [];
+const terminalKeyHandlers: ((event: KeyboardEvent) => boolean)[] = [];
+let terminalSelection = '';
 
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
@@ -25,9 +27,10 @@ vi.mock('@xterm/xterm', () => ({
     open() {}
     dispose() { this.disposed = true; }
     write(data: string) { this.written.push(data); }
-    hasSelection() { return false; }
-    getSelection() { return ''; }
+    hasSelection() { return Boolean(terminalSelection); }
+    getSelection() { return terminalSelection; }
     clearSelection() {}
+    attachCustomKeyEventHandler(handler: (event: KeyboardEvent) => boolean) { terminalKeyHandlers.push(handler); }
     clear() { this.clearCalls += 1; }
     onData(handler: (data: string) => void) { terminalDataHandlers.push(handler); }
     focus() { terminalFocusCalls.push(1); }
@@ -57,6 +60,8 @@ beforeEach(() => {
   terminalDataHandlers.length = 0;
   terminalFocusCalls.length = 0;
   oscHandlers.length = 0;
+  terminalKeyHandlers.length = 0;
+  terminalSelection = '';
 });
 
 function makeHandle(into: {
@@ -89,12 +94,14 @@ function harness(overrides: { attachTerminal?: undefined } = {}) {
   const onExit = vi.fn();
   const onCommandRunning = vi.fn();
   const onCwd = vi.fn();
+  const copyText = vi.fn();
   const container = document.createElement('div');
   const containerRef = { current: container };
   const view = renderHook(() => useShellTerminal({
     ptyId: 'pty7', containerRef, attachTerminal, onExit, onCommandRunning, onCwd,
+    copyText,
   }));
-  return { byteCallbacks, container, exitHandlers, handle, onExit, onCommandRunning, onCwd, resized, detached, written, ...view };
+  return { byteCallbacks, container, copyText, exitHandlers, handle, onExit, onCommandRunning, onCwd, resized, detached, written, ...view };
 }
 
 describe('useShellTerminal', () => {
@@ -134,6 +141,29 @@ describe('useShellTerminal', () => {
     expect(written.at(-1)).toBe('ls\n');
   });
 
+  it('copies a terminal selection through the shared clipboard capability', () => {
+    const { copyText } = harness();
+    terminalSelection = 'selected terminal text';
+
+    const handled = terminalKeyHandlers[0]?.(new KeyboardEvent('keydown', {
+      key: 'c', ctrlKey: true, shiftKey: true,
+    }));
+
+    expect(handled).toBe(false);
+    expect(copyText).toHaveBeenCalledWith('selected terminal text');
+  });
+
+  it('leaves the copy chord for the shell when the terminal has no selection', () => {
+    const { copyText } = harness();
+
+    const handled = terminalKeyHandlers[0]?.(new KeyboardEvent('keydown', {
+      key: 'c', ctrlKey: true, shiftKey: true,
+    }));
+
+    expect(handled).toBe(true);
+    expect(copyText).not.toHaveBeenCalled();
+  });
+
   it('falls back to an ANSI reply when the terminal has no screen to place a rendered block on', () => {
     const { result } = harness();
 
@@ -168,7 +198,7 @@ describe('useShellTerminal', () => {
     renderHook(() => useShellTerminal({
       ptyId: 'pty7', containerRef: { current: document.createElement('div') },
       attachTerminal: () => makeHandle({ written }),
-      onExit: vi.fn(), onCommandRunning, onCwd: vi.fn(), onCommand,
+      onExit: vi.fn(), onCommandRunning, onCwd: vi.fn(), onCommand, copyText: vi.fn(),
     }));
 
     expect(written[0]).toContain(String.raw`printf '\033]133;C;%s\a'`);
@@ -220,7 +250,7 @@ describe('useShellTerminal', () => {
       ptyId: 'pty7',
       containerRef: { current: container },
       attachTerminal: undefined,
-      onExit: vi.fn(), onCommandRunning: vi.fn(),
+      onExit: vi.fn(), onCommandRunning: vi.fn(), copyText: vi.fn(),
       onCwd: vi.fn(),
     }));
 
@@ -275,7 +305,7 @@ describe('useShellTerminal', () => {
     const first = vi.fn((_id: string, _onData: (data: string) => void) => makeHandle());
     const { rerender, unmount } = renderHook(
       ({ attachTerminal }) => useShellTerminal({
-        ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(),
+        ptyId: 'pty7', containerRef, attachTerminal, onExit: vi.fn(), onCommandRunning: vi.fn(), onCwd: vi.fn(), copyText: vi.fn(),
       }),
       { initialProps: { attachTerminal: first } },
     );

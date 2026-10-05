@@ -120,6 +120,10 @@ shell — the characters a terminal would send. The terminal also accepts direct
 `Ctrl+C` copies the command line's own selection instead when it holds one, so copying by keyboard
 still works.
 
+With the terminal focused, `Ctrl+Shift+C` copies its selection; on macOS, `Cmd+C` does the same. The
+copy uses the shared clipboard writer, so the text is available from the system clipboard and the
+clipboard-history popup.
+
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and
 `Page Down` move by half a terminal screen, and `Escape` returns to the bottom of the scrollback.
 

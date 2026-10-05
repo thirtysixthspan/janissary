@@ -15,16 +15,13 @@ import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { useTerminalCommandHistory } from './useTerminalCommandHistory';
 import { appendShellHistory } from './shell-history';
-import { NO_CHORDS, NO_QUEUE_ITEMS } from './shell-tab-constants';
+import { NO_CHORDS, NO_QUEUE_ITEMS, SHELL_DOT_COLOR } from './shell-tab-constants';
 import './shell.css';
 
 type Properties = {
   payload: ShellPayload;
   capabilities: TabPluginClientCapabilities;
 };
-
-// The status dot uses the same green as the shell terminal's own row.
-const DOT_COLOR = '#7ee787';
 
 // The one chord this plugin's declaration claims is not written out here. The claim is data the host
   // validated at activation and sends on this tab's view, so it is read from `claimedChords` rather
@@ -77,6 +74,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     ptyId: payload.ptyId,
     containerRef: terminalReference,
     attachTerminal: capabilities.attachTerminal,
+    copyText: capabilities.copyText,
     onCommand: terminalHistory.onCommand,
     onCommandRunning: useCallback((running: boolean) => {
       setCommandRunning(running);
@@ -210,7 +208,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         onFocus={() => { appBar.onFocusTab?.(capabilities.label); }}
         onBlur={() => { appBar.onFocusTab?.(undefined); }}
         ghost={bar.ghost}
-        dotColor={capabilities.dotColor ?? DOT_COLOR}
+        dotColor={capabilities.dotColor ?? SHELL_DOT_COLOR}
         busy={commandRunning}
         label={commandRunning ? 'queue' : undefined}
         autoFocus

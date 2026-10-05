@@ -105,6 +105,7 @@
 | `Ctrl+C` / `Ctrl+D` / `Ctrl+Z` | Send interrupt, end-of-input, or suspend to the shell — the characters a terminal would send. `Ctrl+C` copies the command line's own selection instead when it holds one. These apply while the command line has the focus |
 | `Ctrl+R` / `hist` | Open this tab's own history: `↑` / `↓` move, Return puts the line back in the command line without running it, Escape closes. Focus another tab and `Ctrl+R` is the application's again |
 | `Ctrl+E` / `queue` | Open the queue popup: the selected queued line appears in the command line, typing edits it, Backspace or Delete on an empty line removes it, Escape closes it and clears the line |
+| `Ctrl+Shift+C` / `Cmd+C` on macOS (terminal focused) | Copy the terminal selection to the clipboard and clipboard history |
 | `Cmd+T` | Open another shell in the same directory, workspace, and offline mode |
 | `Cmd+F` | Does nothing — a shell tab has no transcript to search |
 

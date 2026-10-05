@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import {
-  registerTerminalSelection, unregisterTerminalSelection,
+  copySelectionChord, isMacPlatform, registerTerminalSelection, unregisterTerminalSelection,
   type PluginTerminal,
 } from '../api';
 import { shellTerminalTheme } from './shell-terminal-theme';
@@ -22,6 +22,7 @@ type Options = {
   ptyId: string;
   containerRef: React.RefObject<HTMLDivElement | null>;
   attachTerminal: AttachTerminal | undefined;
+  copyText: (text: string) => void;
   onCommandRunning: (running: boolean) => void;
   onCwd: (cwd: string) => void;
   onCommand?: (command: string) => void;
@@ -44,7 +45,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, containerRef, attachTerminal, onExit, onCommandRunning, onCwd, onCommand,
+  ptyId, containerRef, attachTerminal, copyText, onExit, onCommandRunning, onCwd, onCommand,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -63,6 +64,8 @@ export function useShellTerminal({
   // attachment changes when visibility does.
   const attachRef = useRef(attachTerminal);
   attachRef.current = attachTerminal;
+  const copyTextRef = useRef(copyText);
+  copyTextRef.current = copyText;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -84,6 +87,12 @@ export function useShellTerminal({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(container);
+    const isMac = isMacPlatform();
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.type !== 'keydown' || !copySelectionChord(event, isMac) || !terminal.hasSelection()) return true;
+      copyTextRef.current(terminal.getSelection());
+      return false;
+    });
     container.classList.add('shell-initializing');
     const themeObserver = new MutationObserver(() => {
       terminal.options.theme = shellTerminalTheme();

@@ -44,7 +44,7 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 // drifts from the stylesheet, and should reach for the same platform check, because getting that
 // wrong breaks Cmd+C on exactly one platform and nowhere else to notice it.
 export { terminalColors, type TerminalColors } from '../shared/terminal/colors';
-export { isMacPlatform } from '../shared/terminal/terminal/keys';
+export { copySelectionChord, isMacPlatform } from '../shared/terminal/terminal/keys';
 export { PluginActionsHeader } from './PluginActionsHeader';
 
 // The application's answer to "is this a place typed text can go", published for the same reason and

@@ -49,6 +49,7 @@ vi.mock('@xterm/xterm', () => ({
     hasSelection() { return false; }
     getSelection() { return ''; }
     clearSelection() {}
+    attachCustomKeyEventHandler() {}
     onData() { return { dispose: () => {} }; }
     parser = {
       registerOscHandler: (id: number, handler: (data: string) => boolean) => {
