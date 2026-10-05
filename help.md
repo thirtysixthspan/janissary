@@ -94,7 +94,7 @@
 | Key | Action |
 | --- | ------ |
 | `Shift+Tab` / click the terminal | Move between the command line and the terminal; typing in the terminal goes straight to zsh |
-| `Enter` | Run what is in the command line: an application command when it names one, otherwise sent to zsh. While zsh is running a command the line reads `queue >` and a submitted line waits in the tab's queue |
+| `Enter` | Run what is in the command line: an application command when it names one, otherwise sent to zsh. A multi-line command sent to zsh is pasted and submitted as one command. While zsh is running a command the line reads `queue >` and a submitted line waits in the tab's queue |
 | `!` prefix | Send the line straight to zsh, even when it names an application command |
 | `↑` / `↓` | Walk this tab's command history — lines the command bar sent and commands typed into the terminal |
 | `→` / `End` (at the end of input) | Accept the ghost suggestion from the global history |

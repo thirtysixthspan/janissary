@@ -2,6 +2,4 @@
 
 # pull-request
 
-* multiple lines in the command bar should be sent as a single command in the shell, not multiple commands.
-
 * the msg command to a shell tab, of each type, should be supported.

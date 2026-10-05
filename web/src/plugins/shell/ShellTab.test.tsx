@@ -538,6 +538,18 @@ describe('ShellTab', () => {
     await waitFor(() => { expect(written).toEqual(['ls -la\n']); });
   });
 
+  it('sends a multi-line bar command as one bracketed paste to the shell', async () => {
+    const { written } = renderTab();
+    const command = '!for f in *; do\n  echo "$f"\ndone';
+
+    fireEvent.change(bar(), { target: { value: command } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+
+    await waitFor(() => {
+      expect(written).toEqual(['\u{1B}[200~for f in *; do\n  echo "$f"\ndone\u{1B}[201~\r']);
+    });
+  });
+
   it('sends clear directly to the shell terminal', async () => {
     const { capabilities, written } = renderTab();
     fireEvent.change(bar(), { target: { value: 'clear' } });

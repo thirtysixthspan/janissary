@@ -228,8 +228,9 @@ Dragging rows from the file navigator onto the shell tab's command bar highlight
 release, inserts their names at its caret exactly as the agent tab's bar does (see
 [[file-navigator-tab]]). Nothing is sent to zsh until the line is submitted.
 
-A paste into the command bar becomes one editable line, subject to the same `!` and command-resolution
-rules as anything typed, so a multi-line paste is not run a line at a time and nothing is sent to zsh
-before it has been seen.
+A paste into the command bar remains one editable command, subject to the same `!` and
+command-resolution rules as anything typed. When a multi-line command is routed to zsh, the tab sends
+it as one bracketed paste followed by one submit key, so its embedded newlines do not execute the
+lines separately.
 
 See also [[tab-plugins]], [[shell]], [[agents]], and [[tabs]].

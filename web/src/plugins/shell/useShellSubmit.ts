@@ -3,6 +3,7 @@ import type { TabPluginClientCapabilities } from '../api';
 import type { ShellDispatchResult } from '@shared/plugins/shell/shared';
 import { opensShellHistory, routeFor, shellLine } from './command-line-rules';
 import { appendShellHistory } from './shell-history';
+import { shellCommandInput } from './shell-command-input';
 
 // Runs one command-bar line and answers whether it was written to zsh, which is what tells a
 // draining queue to wait for zsh's next prompt before running the line after it. `record` is false
@@ -23,7 +24,7 @@ export function useShellSubmit(input: {
     const remember = (line: string) => { if (record) setSent((previous) => appendShellHistory(previous, line)); };
     const runInShell = (line: string) => {
       expectCommand(line);
-      write(`${line}\n`);
+      write(shellCommandInput(line));
     };
     if (routeFor(text) === 'shell') {
       const line = shellLine(text);
