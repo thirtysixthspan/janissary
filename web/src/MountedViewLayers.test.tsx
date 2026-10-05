@@ -89,12 +89,13 @@ function makeHarnessTab(label: string, ptyId: string): TabView {
   } as unknown as TabView;
 }
 
-function makePluginTab(label: string, url: string, id = 'video'): TabView {
+function makePluginTab(label: string, url: string, id = 'video', hostsCommandBar = id === 'shell'): TabView {
   return {
     label, view: 'plugin' as const, dotColor: '#ff0', groupColor: '#ccc',
     plugin: {
       id, schemaVersion: id === 'shell' ? 2 : 1,
       payload: { name: 'clip.mp4', path: '/a/clip.mp4', size: '1 MB', url, player: 'QuickTime Player' },
+      ...(hostsCommandBar && { hostsCommandBar: true }),
     },
     connections: [], schedule: [], bufferLines: [], cmdHistory: [],
   } as unknown as TabView;
@@ -455,6 +456,20 @@ describe('MountedViewLayers', () => {
 
     expect(bodies[0].querySelector('.queue-overlay')).toBeTruthy();
     expect(bodies[1].querySelector('.queue-overlay')).toBeNull();
+  });
+
+  // The shared pickers follow the declaration carried on the tab's view, not the plugin's id.
+  it('renders the shared popups over a declared command-bar plugin of any id, and not over an undeclared shell id', () => {
+    const renderLayers = (tab: TabView) => render(
+      React.createElement(MountedViewLayers, {
+        tabs: [tab], current: tab, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+        harnessHandles: makeHarnessHandles(), tabHandles: makeEditorHandles(),
+        pickerOverlays: React.createElement('div', { className: 'queue-overlay' }),
+      }),
+    ).container;
+
+    expect(renderLayers(makePluginTab('term', '/a.mp4', 'terminal', true)).querySelector('.queue-overlay')).toBeTruthy();
+    expect(renderLayers(makePluginTab('shell', '/a.mp4', 'shell', false)).querySelector('.queue-overlay')).toBeNull();
   });
 
   it('does not render a contributed overlay inside another plugin tab', () => {

@@ -11,6 +11,7 @@ import { QuestionPanel } from './QuestionPanel';
 import type { QuestionPanelHandle } from './shared/tab/handles';
 import { tabBodyBorder } from './shared/tab/body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
+import { hostsCommandBar } from './shared/command-bar/hosts-command-bar';
 import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab/view-guards';
 
 type Properties = {
@@ -124,10 +125,10 @@ export function MountedViewLayers({
                 {navOpen && onPickTab && (
                   <TabNavPicker tabs={tabs} query={navQuery ?? ''} selected={navIndex ?? 0} onPick={onPickTab} />
                 )}
-                {t.plugin?.id === 'shell' && pickerOverlays && (pickerSourceTab ? pickerSourceTab === t.label : t.label === current.label) && pickerOverlays}
-                {t.plugin?.id === 'shell' && !pickerOverlays && quickOpenOverlay}
-                {t.plugin?.id === 'shell' && !pickerOverlays && appThemePickerOverlay}
-                {t.plugin?.id === 'shell' && !pickerOverlays && contributedOverlay}
+                {hostsCommandBar(t) && pickerOverlays && (pickerSourceTab ? pickerSourceTab === t.label : t.label === current.label) && pickerOverlays}
+                {hostsCommandBar(t) && !pickerOverlays && quickOpenOverlay}
+                {hostsCommandBar(t) && !pickerOverlays && appThemePickerOverlay}
+                {hostsCommandBar(t) && !pickerOverlays && contributedOverlay}
               </>
             ) : undefined}
           />

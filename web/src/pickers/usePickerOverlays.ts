@@ -5,6 +5,7 @@ import type { PickerCommands } from '../shared/command-bar/picker-commands';
 import type { JanusClient } from '../ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import type { PluginCommandLineInsertions } from '../shared/command-bar/AppCommandBar';
+import { hostsCommandBar } from '../shared/command-bar/hosts-command-bar';
 import { getRecentHistory } from '../history';
 import { buildOverlayOpenState } from './overlay-registry';
 import type { PickerOverlaysState } from './picker/overlays-state';
@@ -80,7 +81,7 @@ export function usePickerOverlays(input: Input): {
   const nav = useTabNav(client, tabs);
   const quick = useQuickOpen(client);
   const queue = useQueuePicker(client, current, inputRef, recallRef);
-  const shellLabel = current?.view === 'plugin' && current.plugin?.id === 'shell' ? current.label : undefined;
+  const shellLabel = hostsCommandBar(current) ? current?.label : undefined;
   const populate = usePopulatePickers(
     tasks, profiles, recallRef, inputRef, client, harnessPtyId, dropRef, focusHarness,
     pluginCommandLineInsertions, shellLabel,

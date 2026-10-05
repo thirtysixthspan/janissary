@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { TabView } from '@shared/protocol';
-import { isShellPayload } from '@shared/plugins/shell/shared';
 import { TAB_RENAME_MAX_LENGTH } from '@shared/config';
 import { statusDotIcon, unreadIcon } from './shared/icons';
 import { InlineEditInput } from './shared/InlineEditInput';
@@ -61,9 +60,6 @@ export function TabItem({
   // Dimmed when the window itself lacks OS focus (switched to another app/browser tab) — a
   // uniform cue independent of which in-app tab is active (see tabs.md's "never faded" rule).
   const borderColor = windowFocused ? tab.groupColor : `color-mix(in srgb, ${tab.groupColor} 60%, transparent)`;
-  const shellCommandRunning = tab.plugin?.id === 'shell'
-    && isShellPayload(tab.plugin.payload)
-    && tab.plugin.payload.commandRunning === true;
 
   return (
     <div
@@ -79,7 +75,7 @@ export function TabItem({
         onReorderMouseDown?.(e);
       }}
     >
-      <span className={`dot${tab.busy || shellCommandRunning ? ' busy' : ''}`} style={{ color: tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
+      <span className={`dot${tab.busy ? ' busy' : ''}`} style={{ color: tab.dotColor }}><FontAwesomeIcon icon={statusDotIcon} /></span>
       {editing ? (
         <InlineEditInput
           className="tab-rename-input"

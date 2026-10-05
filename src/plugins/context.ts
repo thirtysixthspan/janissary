@@ -1,5 +1,6 @@
 import type { Managers } from '../managers.js';
 import { getConfig } from '../config.js';
+import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { didOsOpen } from '../openers/os-open.js';
 import {
@@ -157,6 +158,15 @@ export function createPluginContext(
         managers.tab.clearUnread(tab.label);
         cancelHarnessIdleEscalation(managers, tab.label);
       }
+    },
+    // The dot only, on the plugin's own record: a broadcast goes out when it changes, and nothing the
+    // host routes by — the tab's runtime busy flag — moves with it.
+    setBusy: (instanceKey, busy) => {
+      if (!isEnabled()) return;
+      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
+      if (!tab || (tab.plugin.busy ?? false) === busy) return;
+      tab.plugin.busy = busy;
+      messageBus.emit('state', { type: 'dirty' });
     },
     // Placement, addressed like `updateTab` so a plugin reaches only its own tab, and delegating to
     // the same `setDock` the client's dock-cycle control uses — there is still one docking path.

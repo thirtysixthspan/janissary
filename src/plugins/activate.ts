@@ -39,6 +39,19 @@ function validateDeclaration(declaration: TabPluginDeclaration): void {
     if (chordIdPattern.test(chord)) continue;
     throw new Error(`claims malformed chord id "${chord}"`);
   }
+  validateCommandBarClaim(declaration);
+}
+
+// A tab hosting the command bar takes the application's queue popup, whose rows are that tab's own
+// command queue. The plugin fills it with `queueLine` and drains it with `nextQueuedLine`; a claim
+// without both would show a queue nothing ever runs, so it is refused before anything is offered.
+const COMMAND_BAR_CAPABILITIES = ['queueLine', 'nextQueuedLine'] as const;
+
+function validateCommandBarClaim(declaration: TabPluginDeclaration): void {
+  if (!declaration.hostsCommandBar) return;
+  const missing = COMMAND_BAR_CAPABILITIES.filter((name) => !declaration.capabilities.includes(name));
+  if (missing.length === 0) return;
+  throw new Error(`hosts the command bar but does not request "${missing.join('", "')}"`);
 }
 
 // Optional modifier groups enforce the fixed order `meta`, `ctrl`, `shift`, `alt` and allow each only

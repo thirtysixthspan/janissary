@@ -13,6 +13,7 @@ export type TabPluginCapabilityName =
   | 'openOrFocusTab'
   | 'updateTab'
   | 'setUnread'
+  | 'setBusy'
   | 'dockTab'
   | 'snapshotTab'
   | 'openClaimedFiles'
@@ -45,6 +46,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   openOrFocusTab: true,
   updateTab: true,
   setUnread: true,
+  setBusy: true,
   dockTab: true,
   snapshotTab: true,
   openClaimedFiles: true,

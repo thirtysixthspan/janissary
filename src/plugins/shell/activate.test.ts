@@ -23,6 +23,7 @@ function fakeCapabilities(overrides: {
   const opened: { key: string; value: TabPluginPayload }[] = [];
   const updated: { key: string; payload: unknown }[] = [];
   const unreadChanges: { key: string; unread: boolean }[] = [];
+  const busyChanges: { key: string; busy: boolean }[] = [];
   const spawns: Spawn[] = [];
   const origin = 'origin' in overrides ? overrides.origin : { label: 'agent1', cwd: '/repo', root: '/repo' };
   const capabilities = {
@@ -48,10 +49,11 @@ function fakeCapabilities(overrides: {
       updated.push({ key, payload: factory().payload });
     },
     setUnread: (key: string, unread: boolean) => { unreadChanges.push({ key, unread }); },
+    setBusy: (key: string, busy: boolean) => { busyChanges.push({ key, busy }); },
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
-  return { capabilities, opened, spawns, updated, unreadChanges };
+  return { capabilities, opened, spawns, updated, unreadChanges, busyChanges };
 }
 
 // Asks the tab question the way the host does, so the guard's own verdict is what is asserted.
@@ -205,6 +207,17 @@ describe('shell plugin activation', () => {
     ask(capabilities, 'command-state', { running: false });
 
     expect(unreadChanges).toEqual([]);
+  });
+
+  // The tab strip's dot is host state the core reads without knowing the shell's payload shape, so
+  // the shell sets it through the capability on every report, running and idle alike.
+  it('sets its tab\'s busy dot from each reported command state', () => {
+    const { capabilities, busyChanges } = fakeCapabilities();
+
+    ask(capabilities, 'command-state', { running: true });
+    ask(capabilities, 'command-state', { running: false }, { ...PAYLOAD, commandRunning: true });
+
+    expect(busyChanges).toEqual([{ key: 'shell-1', busy: true }, { key: 'shell-1', busy: false }]);
   });
 
   it('updates its metadata directory when the terminal reports a cwd', () => {

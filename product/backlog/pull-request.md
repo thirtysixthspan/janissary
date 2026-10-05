@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Replace the core's hard-coded checks for the shell plugin with declared plugin capabilities.
-
-Existing Issue: Core client code branches on `plugin?.id === 'shell'` in the mounted view layers, picker overlays and queue picker, and the tab strip imports the shell's payload guard to drive the busy dot, so the core depends on one plugin's id and payload shape. Severity: 4/10
-
-Existing Risk: 4/10 - The next plugin with a command bar silently gets none of the picker, queue or busy behavior, and a change to the shell payload breaks the tab strip, against the plugin guidelines' registry-over-conditionals rule.
-
-Proposal Risk: 2/10 - Behavior is driven by declared flags on the plugin and a host-set busy state, with residual risk in getting every former shell branch onto the new flag.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: replace hard-coded shell plugin checks with declared capabilities". Add a declaration flag (for example `hostsCommandBar: true`) to the plugin declaration in `src/plugins/api.ts`, validate it in `src/plugins/declared-resources.ts`, set it in `src/plugins/shell/manifest.ts`, and carry it on the tab's wire view in `src/tab/view.ts`. Replace the `plugin?.id === 'shell'` checks in `web/src/MountedViewLayers.tsx`, `web/src/pickers/usePickerOverlays.ts`, `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/useTaskPicker.ts` with that flag. For the busy dot, have the shell's `command-state` intent in `src/plugins/shell/activate.ts` set the tab's host busy or running state through a capability, and drop the `isShellPayload` import from `web/src/TabItem.tsx`. Keep `web/src/TabStrip.test.tsx`, `web/src/MountedViewLayers.test.tsx` and the picker tests passing and add a declaration-validation case for the flag.
-
-
 * Remove the shell overlay branches in the mounted view layers that never render, and stop drawing two tab navigators over a shell tab.
 
 Existing Issue: `MountedViewLayers` renders `quickOpenOverlay`, `appThemePickerOverlay` and `contributedOverlay` for a shell only when `pickerOverlays` is absent, but `AppMain` always passes it, so those branches and the elements built for them are dead, and with the navigator open over a shell both the explicit `TabNavPicker` and `pickerOverlays`' own navigator render. Severity: 4/10

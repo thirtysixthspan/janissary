@@ -52,6 +52,12 @@ export type TabPluginDeclaration = {
   // A workspace passed alongside it confines the process through Seatbelt exactly as that tab's own
   // shell is confined; without one it runs wherever the plugin said, like any other unconfined shell.
   spawnTerminal?: boolean;
+  // This plugin's tabs host the application command bar: the host's shared pickers open over such a
+  // tab and insert into its bar, and its queue popup lists and edits that tab's own command queue.
+  // Read by the host from the declaration and carried on the tab's view, so the client never decides
+  // it from a plugin id. A declaration carrying it must request `queueLine` and `nextQueuedLine`, the
+  // two capabilities that fill and drain the queue the popup shows.
+  hostsCommandBar?: boolean;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
   // An entry the default context menu offers for a text selection. A declaration carrying one must
@@ -186,6 +192,10 @@ export type TabPluginServerCapabilities = {
   // Set the unread badge on one of this plugin's tabs. Raising it arms the standard waiting
   // notification; clearing it cancels that notification.
   setUnread(instanceKey: string, unread: boolean): void;
+  // Light or clear the tab strip's busy dot on one of this plugin's tabs, addressed by instance key
+  // like `setUnread`; a key with no open tab is a no-op. It changes the dot alone: the host's own
+  // notion of a tab running a command, which `send` and `queue` consult, is not touched.
+  setBusy(instanceKey: string, busy: boolean): void;
   // Dock one of this plugin's own tabs into a sidebar, or `null` to undock it back to the centre
   // strip and make it active. Addressed by instance key like `updateTab`, so a key with no open tab
   // is a silent no-op and a plugin can never move another plugin's tab.

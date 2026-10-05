@@ -43,16 +43,32 @@ describe('useQueuePicker', () => {
     expect(hook!.queueOpen).toBe(false);
   });
 
-  it('opens for a shell tab without recalling into the hidden agent command bar', () => {
+  it('opens for a command-bar plugin tab without recalling into the hidden agent command bar', () => {
     let hook: ReturnType<typeof useQueuePicker> | undefined;
     const onRecall = vi.fn();
-    const tab = makeTab({ view: 'plugin', plugin: { id: 'shell' } as never });
+    const tab = makeTab({ view: 'plugin', plugin: { id: 'shell', hostsCommandBar: true } as never });
     render(<TestComponent tab={tab} onHook={(h) => { hook = h; }} onRecall={onRecall} />);
 
     act(() => hook!.openQueue());
 
     expect(hook!.queueOpen).toBe(true);
     expect(onRecall).not.toHaveBeenCalled();
+  });
+
+  // The declaration decides, not the plugin id: any plugin declaring the bar gets the popup, and the
+  // shell id without the declared flag does not.
+  it('follows the declared command-bar flag rather than the plugin id', () => {
+    let hook: ReturnType<typeof useQueuePicker> | undefined;
+    const declared = makeTab({ view: 'plugin', plugin: { id: 'terminal', hostsCommandBar: true } as never });
+    const { rerender } = render(<TestComponent tab={declared} onHook={(h) => { hook = h; }} />);
+    act(() => hook!.openQueue());
+    expect(hook!.queueOpen).toBe(true);
+    act(() => hook!.setQueueOpen(false));
+
+    const undeclared = makeTab({ view: 'plugin', plugin: { id: 'shell' } as never });
+    rerender(<TestComponent tab={undeclared} onHook={(h) => { hook = h; }} />);
+    act(() => hook!.openQueue());
+    expect(hook!.queueOpen).toBe(false);
   });
 
   it('sends editQueuedCommand with the current queueIndex', () => {

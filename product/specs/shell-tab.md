@@ -31,7 +31,7 @@ Application commands run in the app; an unclaimed line goes to zsh. The line joi
 queue, so it waits for zsh's prompt when the shell is busy. The sender records the ordinary `send`
 confirmation; command output stays in this shell tab.
 
-The shell tab's status dot blinks while zsh is running a command and stops when zsh returns to its prompt. That holds with any number of shell tabs open: a command finishing at the same moment zsh reports its working directory still stops the dot, and the reported directory is still recorded.
+The shell tab's status dot blinks while zsh is running a command and stops when zsh returns to its prompt. That holds with any number of shell tabs open: a command finishing at the same moment zsh reports its working directory still stops the dot, and the reported directory is still recorded. The shell lights the dot through the `setBusy` capability each time zsh reports a command starting or finishing; the tab strip itself reads nothing from the shell's payload (see [[tab-plugins]]).
 
 When a shell command finishes while its tab is hidden and undocked, the tab gets the unread badge. A visible or docked shell tab does not. The badge clears when the shell starts working again, or after the tab has been active for the unread dwell. If the badge remains unread and hidden for thirty seconds, the app raises the same `harness-idle` waiting notification used for harness tabs; raising the badge arms that notification only when the tab was eligible, and clearing the badge cancels it.
 
@@ -126,6 +126,8 @@ command line unchanged.
 
 `Ctrl+A` and `tasks` open the shared task picker over the shell tab. Choosing a task inserts its
 `execute …` command at the shell command bar's caret and leaves it there for you to edit or submit.
+The shared pickers and the queue popup treat the shell this way because its declaration carries
+`hostsCommandBar`, not because the application knows the shell plugin by name (see [[tab-plugins]]).
 
 The command bar's status dot uses the same color as the shell tab's dot.
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { JanusClient } from '../ws';
 import type { TabView } from '@shared/protocol';
+import { hostsCommandBar } from '../shared/command-bar/hosts-command-bar';
 
 // State and handlers for the Ctrl+E / `queue` command-queue picker (mirrors the `hist` picker's
 // shape in App, split out to keep App.tsx under the file-size limit). Selection (arrow move or
@@ -13,10 +14,10 @@ export function useQueuePicker(
   recallRef: React.RefObject<((text: string) => void) | null>,
 ) {
   const items = useMemo(() => current?.commandQueue ?? [], [current]);
-  // Shell tabs have their own command bar, so selection is mirrored by that bar instead of the
-  // hidden agent input. Other plugin tabs still do not own a queue command line.
+  // A plugin tab that declares it hosts the command bar mirrors selection in its own bar instead of
+  // the hidden agent input. Other plugin tabs do not own a queue command line.
   const isAgentTab = current?.view === undefined || current?.view === 'agent';
-  const isShellTab = current?.view === 'plugin' && current.plugin?.id === 'shell';
+  const isCommandBarTab = hostsCommandBar(current);
   const [queueOpen, setQueueOpen] = useState(false);
   const [queueIndex, setQueueIndexState] = useState(0);
 
@@ -29,17 +30,17 @@ export function useQueuePicker(
   const selectQueueIndex = useCallback((index: number) => {
     setQueueIndexState(index);
     const text = items[index];
-    if (!isShellTab) {
+    if (!isCommandBarTab) {
       if (text !== undefined) recallRef.current?.(text);
       inputRef.current?.focus();
     }
-  }, [items, inputRef, isShellTab, recallRef]);
+  }, [items, inputRef, isCommandBarTab, recallRef]);
 
   const openQueue = useCallback(() => {
-    if (!isAgentTab && !isShellTab) return;
+    if (!isAgentTab && !isCommandBarTab) return;
     setQueueOpen(true);
     selectQueueIndex(0);
-  }, [isAgentTab, isShellTab, selectQueueIndex]);
+  }, [isAgentTab, isCommandBarTab, selectQueueIndex]);
 
   // Closing the popup (Escape) also clears the command line: the selected row's text was copied
   // there for editing, and leaving it behind after dismissing the popup would be confusing.

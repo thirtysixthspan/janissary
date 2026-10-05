@@ -117,7 +117,8 @@ describe('TabStrip', () => {
     expect(container.querySelector('.dot.busy')).toBeInTheDocument();
   });
 
-  it('blinks the shell tab dot while its payload reports a running command', () => {
+  // The dot is host state the plugin sets through `setBusy`; the strip never reads a plugin's payload.
+  it('leaves the dot still for a shell payload reporting a running command without the host busy flag', () => {
     const tab = makeTab({
       view: 'plugin',
       plugin: {
@@ -128,10 +129,15 @@ describe('TabStrip', () => {
         },
       },
     } as unknown as Partial<TabView>);
-    const { container } = render(
+    const { container, rerender } = render(
       <TabStrip tabs={[tab]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
     );
 
+    expect(container.querySelector('.dot.busy')).toBeNull();
+
+    rerender(
+      <TabStrip tabs={[{ ...tab, busy: true }]} activeTab={0} onSelect={vi.fn()} onClose={vi.fn()} onRename={vi.fn()} tabNameMaxLength={100} />,
+    );
     expect(container.querySelector('.dot.busy')).toBeInTheDocument();
   });
 

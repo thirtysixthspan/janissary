@@ -28,6 +28,9 @@ export const shellManifest = {
   // Asked for explicitly: starting a process is the most powerful thing this plugin can do, and it
   // belongs in the declaration rather than arriving with every plugin.
   spawnTerminal: true,
+  // The tab's own command bar takes the application's shared pickers and queue popup, which the host
+  // decides from this flag rather than from the plugin's id.
+  hostsCommandBar: true,
   capabilities: [
     'originTab',
     'dispatchLineWithOutput',
@@ -43,6 +46,7 @@ export const shellManifest = {
     'openOrFocusTab',
     'updateTab',
     'setUnread',
+    'setBusy',
     'rejectRequest',
     'reportFailure',
   ],

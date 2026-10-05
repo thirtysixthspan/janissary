@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -15,6 +15,7 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import { createPluginContext, isJsonCompatible } from './context.js';
+import { messageBus } from '../bus.js';
 import { TabPluginHost } from './host.js';
 
 const { armEscalation, cancelEscalation } = vi.hoisted(() => ({
@@ -170,6 +171,47 @@ describe('setUnread', () => {
 
     expect(managers.tab.clearUnread).toHaveBeenCalledWith('shell1');
     expect(cancelEscalation).toHaveBeenCalledWith(managers, 'shell1');
+  });
+});
+
+describe('setBusy', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('lights the dot on a plugin-owned tab and broadcasts the change', () => {
+    const { managers } = makeManagers();
+    const tab = { label: 'shell1', plugin: { id: 'fixture', instanceKey: 'shell-1' } as { busy?: boolean } };
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue(tab as never);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    contextFor(['setBusy'], () => true, [], managers).setBusy('shell-1', true);
+
+    expect(managers.tab.pluginTabByInstanceKey).toHaveBeenCalledWith('fixture', 'shell-1');
+    expect(tab.plugin.busy).toBe(true);
+    expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('broadcasts nothing when the dot already shows the requested state', () => {
+    const { managers } = makeManagers();
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue({ label: 'shell1', plugin: {} } as never);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    contextFor(['setBusy'], () => true, [], managers).setBusy('shell-1', false);
+
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('ignores an instance key this plugin has no open tab for', () => {
+    const { managers } = makeManagers();
+    vi.mocked(managers.tab.pluginTabByInstanceKey).mockReturnValue(undefined);
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    expect(() => contextFor(['setBusy'], () => true, [], managers).setBusy('gone', true)).not.toThrow();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('is refused to a plugin that did not declare it', () => {
+    expect(() => contextFor(['note']).setBusy('shell-1', true))
+      .toThrow('used capability "setBusy" without declaring it');
   });
 });
 

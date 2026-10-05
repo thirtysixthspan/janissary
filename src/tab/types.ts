@@ -105,6 +105,9 @@ export type PluginTabRecord = {
   payload: unknown;
   fileRefs: string[];
   sourceLabel: string;
+  // Set by the plugin's `setBusy` capability and folded into the view's `busy` dot. Kept here rather
+  // than on `runtime.busy`, which is the host's own command-in-flight gate that `send` and `queue` read.
+  busy?: boolean;
 };
 
 // Plain-text editor view (opened via `open <file>` for text extensions, or `edit <file>` for any

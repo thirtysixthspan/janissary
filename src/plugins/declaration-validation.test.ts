@@ -133,6 +133,49 @@ describe('chord claim validation', () => {
   });
 });
 
+// The queue popup a command-bar tab takes lists that tab's own command queue, so a claim without the
+// two capabilities that fill and drain it would show lines nothing ever runs.
+describe('command bar claim validation', () => {
+  it('refuses a command bar claim missing the queue capabilities', async () => {
+    const host = await activateWith(manifest({ hostsCommandBar: true }), activation());
+
+    expect(host.statusFor('fixture')?.state).toBe('disabled');
+    expect(host.statusFor('fixture')?.reason)
+      .toContain('hosts the command bar but does not request "queueLine", "nextQueuedLine"');
+  });
+
+  it('names only the queue capability that is missing', async () => {
+    const host = await activateWith(manifest({
+      hostsCommandBar: true,
+      capabilities: ['note', 'openOrFocusTab', 'updateTab', 'queueLine', 'rejectRequest', 'reportFailure'],
+    }), activation());
+
+    expect(host.statusFor('fixture')?.reason)
+      .toContain('hosts the command bar but does not request "nextQueuedLine"');
+  });
+
+  it('accepts a command bar claim that requests both queue capabilities', async () => {
+    const host = await activateWith(manifest({
+      hostsCommandBar: true,
+      capabilities: [
+        'note', 'openOrFocusTab', 'updateTab', 'queueLine', 'nextQueuedLine', 'rejectRequest', 'reportFailure',
+      ],
+    }), activation());
+
+    expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+
+  it('accepts the bundled shell manifest, which hosts the command bar', async () => {
+    const host = await activateWith(
+      manifest({ hostsCommandBar: shellManifest.hostsCommandBar, capabilities: shellManifest.capabilities }),
+      activation(),
+    );
+
+    expect(shellManifest.hostsCommandBar).toBe(true);
+    expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+});
+
 // The failure mode this covers is silent and total: a capability an activation calls but its
 // declaration does not name is not refused at activation, it is replaced by a stub that throws — and
 // the plugin is then disabled the first time it is reached, which for a command means the command
