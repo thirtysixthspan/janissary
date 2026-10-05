@@ -81,13 +81,17 @@ Keys typed directly into the terminal are never queued.
 
 Another tab can append a line with `queue <shell-tab> <command>`. The line joins the same FIFO as
 commands queued from this shell's own bar. If zsh is idle, it runs right away through the shell bar's
-application-command routing; if zsh is busy, it waits for the prompt before draining. The issuing tab
-records `→ <shell-tab> (queued): <command>`.
+application-command routing; if zsh is busy, it waits for the prompt before draining. That holds
+whether the shell is the current tab, docked in a sidebar, or hidden behind another tab: the shell
+watches its own queue, and a line queued for a different tab never makes it look for one. `send
+<shell-tab> <text>` queues the same way. The issuing tab records `→ <shell-tab> (queued): <command>`.
 
 The `queue` command and `Ctrl+E` open the application's queue popup over the shell tab. The selected
 queued line appears in the shell command bar; typing edits it, and Backspace or Delete on an empty bar
 removes it. Arrow keys change the selected queue entry, Return leaves the popup open without submitting,
-and Escape closes it and clears the bar.
+and Escape closes it and clears the bar. Only the shell the popup is open over takes part: a popup
+opened over an agent tab, or over another shell, leaves every other shell's unsent line and focus
+exactly as they were, and typing into one of those bars edits no queue entry.
 
 An application command that answers with text rather than opening something — `help`, for one — is
 shown in the terminal as a command line, followed by its reply on the next line. The reply is markdown, as

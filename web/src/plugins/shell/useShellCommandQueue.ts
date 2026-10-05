@@ -44,6 +44,8 @@ export function useShellCommandQueue(
     queue.attach();
     return () => { queue.dispose(); };
   }, [queue]);
+  // `queuedLines` is this tab's own queue as the server last broadcast it, so a line `send` or `queue`
+  // added from another tab wakes an idle shell whether it is the current tab, docked, or hidden.
   useEffect(() => {
     if (queuedLines.length > 0) queue.wake();
   }, [queue, queuedLines]);

@@ -20,7 +20,8 @@ import { useAppWindowKeys } from './useAppWindowKeys';
 import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
 import { AppCommandBarProvider, useAppCommandLine } from './shared/command-bar/AppCommandBar';
 import { usePickerOverlays } from './pickers/usePickerOverlays';
-import { commandBarSuppressed, firstOpenOverlay } from './pickers/overlay-registry';
+import { firstOpenOverlay } from './pickers/overlay-registry';
+import { useAppCommandBarState } from './useAppCommandBarState';
 import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
@@ -183,24 +184,19 @@ export function App({ client }: { client: JanusClient }) {
     ...pickers.commands, tabs, activeTab, openQuitConfirm: guardedOpenQuitConfirm, guardRef,
     onPickerOpen: setPickerSourceTab,
   });
+  // The queue popup belongs to the tab a picker recorded as its source, and otherwise to the current
+  // tab, which is where it is drawn.
+  const appCommandBar = useAppCommandBarState({
+    intercept: interceptCommandLine, ghostHistory: globalHistory, pickers,
+    queueTab: pickerSourceTab ?? current?.label, tabs, onFocusTab: setFocusedPluginTab,
+    insertions: pluginCommandLineInsertions,
+  });
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
     <PluginChordProvider registry={pluginChords}>
-      <AppCommandBarProvider bar={{
-        intercept: interceptCommandLine,
-        ghostHistory: globalHistory,
-        blockingOverlayOpen: pickers.view.overlays.quickOpen,
-        overlayOwnsCommandBar: commandBarSuppressed(pickers.view.overlays),
-        onFocusTab: setFocusedPluginTab,
-        queueOpen: pickers.view.overlays.queue,
-        queueIndex: pickers.view.queueIndex,
-        queueItems: pickers.view.queueItems,
-        onEditQueued: pickers.onEditQueued,
-        onDeleteQueued: pickers.onDeleteQueued,
-        pluginCommandLineInsertions,
-      }}>
+      <AppCommandBarProvider bar={appCommandBar}>
       <AppMain
       current={current} client={client} lines={lines} runCommand={runCommand}
       transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}

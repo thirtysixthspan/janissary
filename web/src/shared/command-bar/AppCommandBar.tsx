@@ -1,42 +1,53 @@
-import { createContext, useCallback, useContext, type ReactNode, type RefObject } from 'react';
+import { createContext, useCallback, useContext, useMemo, type ReactNode, type RefObject } from 'react';
 import type { TabView } from '@shared/protocol';
 import { classifyCommandBarSubmit, navCommandQuery } from './classify-submit';
 import { openCommandBarOverlay } from './bare-openers';
 import type { PickerCommands } from './picker-commands';
+import {
+  scopeAppCommandBar,
+  type AppCommandBar,
+  type AppCommandBarState,
+  type CommandLineInsertion,
+} from './app-command-bar-scope';
 
-// The one question a plugin tab's command bar asks the application before it offers a line onward:
-// would the application's own bar have handled this instead of sending it? Answered with the same
-// classification the agent tab's chain uses, so a bare word opens the same picker, and `quit` — or a
-// `close` that would take the last tab with it — opens the same confirmation, from either bar.
-export type AppCommandBar = {
-  intercept(line: string, sourceTab?: string): boolean;
-  ghostHistory: string[];
-  blockingOverlayOpen?: boolean;
-  overlayOwnsCommandBar?: boolean;
-  onFocusTab?: (label: string | undefined) => void;
-  queueOpen?: boolean;
-  queueIndex?: number;
-  queueItems?: string[];
-  onEditQueued?: (text: string) => void;
-  onDeleteQueued?: () => void;
-  pluginCommandLineInsertions?: PluginCommandLineInsertions;
-};
+export type PluginCommandLineInsertions = { current: Map<string, CommandLineInsertion> };
 
-export type PluginCommandLineInsertions = { current: Map<string, (text: string) => void> };
+const AppCommandBarContext = createContext<AppCommandBarState | null>(null);
+const AppCommandBarTabContext = createContext<string | undefined>(undefined);
 
-const AppCommandBarContext = createContext<AppCommandBar | null>(null);
-
-export function AppCommandBarProvider({ bar, children }: { bar: AppCommandBar; children: ReactNode }) {
+// Provided once, by the app shell. Not published to plugins: a plugin body reads the state through
+// `useAppCommandBar`, already narrowed to its own tab.
+export function AppCommandBarProvider({ bar, children }: { bar: AppCommandBarState; children: ReactNode }) {
   return <AppCommandBarContext.Provider value={bar}>{children}</AppCommandBarContext.Provider>;
 }
 
+// Binds the tab a plugin body renders in. The host wraps every body in one with the label it already
+// knows, so a plugin never names a tab to this surface and so cannot name the wrong one.
+export function AppCommandBarTabScope({ label, children }: { label: string; children: ReactNode }) {
+  return <AppCommandBarTabContext.Provider value={label}>{children}</AppCommandBarTabContext.Provider>;
+}
+
+const NO_UNREGISTER = () => {};
+
 // Throws rather than answering "nothing is intercepted": a missing provider is a wiring mistake, and
 // answering quietly would leave every plugin bar's `quit` reaching the server unguarded — the one
-// thing this surface exists to prevent.
+// thing this surface exists to prevent. The insertion registration is built apart from the rest so it
+// keeps one identity while the app re-renders, and a body registering from an effect registers once.
 export function useAppCommandBar(): AppCommandBar {
-  const bar = useContext(AppCommandBarContext);
-  if (bar === null) throw new Error('no AppCommandBarProvider above this plugin tab');
-  return bar;
+  const state = useContext(AppCommandBarContext);
+  const label = useContext(AppCommandBarTabContext);
+  const register = state?.registerCommandLineInsertion;
+  const registerHere = useCallback(
+    (handler: CommandLineInsertion) => (register && label !== undefined ? register(label, handler) : NO_UNREGISTER),
+    [register, label],
+  );
+  const scoped = useMemo(
+    () => (state !== null && label !== undefined ? scopeAppCommandBar(state, label, registerHere) : null),
+    [state, label, registerHere],
+  );
+  if (state === null) throw new Error('no AppCommandBarProvider above this plugin tab');
+  if (scoped === null) throw new Error('no AppCommandBarTabScope around this plugin tab');
+  return scoped;
 }
 
 // Builds the interception from the state only the app shell holds. The six openers are read off the

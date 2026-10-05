@@ -11,6 +11,7 @@ import type { TabView } from '@shared/protocol';
 import { errorText } from '@shared/error-text';
 import type { JanusClient } from '../ws';
 import { SplitTabButton } from '../shared/SplitTabButton';
+import { AppCommandBarTabScope } from '../shared/command-bar/AppCommandBar';
 import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
 import { usePluginHost } from './host';
 import { type ClientPluginRegistration } from './registry';
@@ -187,5 +188,11 @@ export function PluginBody({
   }, []);
 
   if (failed || host.failure(pluginId) !== undefined) return null;
-  return contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail);
+  // The command-bar state a body reaches is bound to this tab here, by the host, rather than by a label
+  // the plugin passes: a plugin cannot then act on the bar, queue or focus of a tab it does not own.
+  return (
+    <AppCommandBarTabScope label={label}>
+      {contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail)}
+    </AppCommandBarTabScope>
+  );
 }

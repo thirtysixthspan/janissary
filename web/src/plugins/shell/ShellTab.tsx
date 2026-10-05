@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CommandBarShell, spliceIntoTextarea, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
+import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellCompletion, ShellPayload } from '@shared/plugins/shell/shared';
 import { useShellTabTerminal } from './useShellTabTerminal';
@@ -8,12 +8,13 @@ import { ShellHistoryPopup } from './ShellHistoryPopup';
 import { ShellTabMeta } from './ShellTabMeta';
 import { useShellSubmit } from './useShellSubmit';
 import { useShellCommandQueue } from './useShellCommandQueue';
+import { useApplicationBarEdits } from './useApplicationBarEdits';
 import type { ShellCommandQueue } from './shell-command-queue';
 import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { useTerminalCommandHistory } from './useTerminalCommandHistory';
 import { appendShellHistory } from './shell-history';
-import { NEW_SHELL_CHORD, NO_CHORDS, NO_QUEUE_ITEMS, SHELL_DOT_COLOR } from './shell-tab-constants';
+import { NEW_SHELL_CHORD, NO_CHORDS, SHELL_DOT_COLOR } from './shell-tab-constants';
 import './shell.css';
 
 type Properties = {
@@ -37,36 +38,9 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const [matches, setMatches] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [commandRunning, setCommandRunning] = useState(payload.commandRunning ?? false);
-  const queueWasOpen = useRef(false);
   const queueReference = useRef<ShellCommandQueue | null>(null);
-  const draftReference = useRef(draft);
-  draftReference.current = draft;
-  const queueOpen = appBar.queueOpen ?? false;
-  const queueIndex = appBar.queueIndex ?? 0;
-  const queueItems = appBar.queueItems ?? NO_QUEUE_ITEMS;
-
-  useEffect(() => {
-    if (queueOpen) {
-      setDraft(queueItems[queueIndex] ?? '');
-      inputReference.current?.focus();
-    } else if (queueWasOpen.current) {
-      setDraft('');
-    }
-    queueWasOpen.current = queueOpen;
-  }, [queueIndex, queueItems, queueOpen]);
-
-  useEffect(() => {
-    const insertions = appBar.pluginCommandLineInsertions?.current;
-    const label = capabilities.label;
-    if (!insertions || !label) return;
-    insertions.set(label, (text) => {
-      const element = inputReference.current;
-      if (!element) return;
-      element.focus();
-      spliceIntoTextarea(element, draftReference.current, text);
-    });
-    return () => { insertions.delete(label); };
-  }, [appBar.pluginCommandLineInsertions, capabilities.label]);
+  const queueOpen = appBar.queueOpen;
+  useApplicationBarEdits(appBar, inputReference, draft, setDraft);
 
   const terminalHistory = useTerminalCommandHistory(setSent);
   const { write, displayReply, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTabTerminal({
@@ -82,7 +56,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
 
   useShellScrollKeys({
     active: capabilities.active,
-    blocked: Boolean(appBar.blockingOverlayOpen) || Boolean(appBar.overlayOwnsCommandBar),
+    blocked: appBar.blockingOverlayOpen || appBar.overlayOwnsCommandBar,
     rows: terminalRows,
     scrollLines,
     scrollToBottom,
@@ -103,7 +77,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const { queue, submit } = useShellCommandQueue(capabilities, run, payload.commandRunning ?? false, (line) => {
     setMatches([]);
     setSent((previous) => appendShellHistory(previous, line));
-  }, queueItems);
+  }, appBar.queuedLines);
   queueReference.current = queue;
 
   const bar = useCommandBarKeys({
@@ -195,8 +169,8 @@ export function ShellTab({ payload, capabilities }: Properties) {
           if (queueOpen) appBar.onEditQueued?.(next);
         }}
         onKeyDown={onBarKeyDown}
-        onFocus={() => { appBar.onFocusTab?.(capabilities.label); }}
-        onBlur={() => { appBar.onFocusTab?.(undefined); }}
+        onFocus={() => { appBar.onFocusChange(true); }}
+        onBlur={() => { appBar.onFocusChange(false); }}
         ghost={bar.ghost}
         dotColor={capabilities.dotColor ?? SHELL_DOT_COLOR}
         busy={commandRunning}

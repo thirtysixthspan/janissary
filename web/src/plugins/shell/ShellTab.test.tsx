@@ -6,8 +6,8 @@ import type { ShellPayload } from '@shared/plugins/shell/shared';
 import type { TabView } from '@shared/protocol';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
 import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistry } from '../PluginChords';
-import { AppCommandBarProvider, useAppCommandLine } from '../../shared/command-bar/AppCommandBar';
-import type { PluginCommandLineInsertions } from '../../shared/command-bar/AppCommandBar';
+import { AppCommandBarProvider, AppCommandBarTabScope, useAppCommandLine } from '../../shared/command-bar/AppCommandBar';
+import { registerCommandLineInsertion, type CommandLineInsertion } from '../../shared/command-bar/app-command-bar-scope';
 import { ShellTab } from './ShellTab';
 import { useSectionNav } from '../../useSectionNav';
 import type { createShellMarkerNonce, shellStatusHooks } from './shell-status-hooks';
@@ -178,12 +178,14 @@ type AppBarOptions = {
   ghostHistory?: string[];
   blockingOverlayOpen?: boolean;
   overlayOwnsCommandBar?: boolean;
+  queueTab?: string;
   queueOpen?: boolean;
   queueIndex?: number;
   queueItems?: string[];
   onEditQueued?: (text: string) => void;
   onDeleteQueued?: () => void;
-  pluginCommandLineInsertions?: PluginCommandLineInsertions;
+  queuedLines?: Record<string, string[]>;
+  insertions?: Map<string, CommandLineInsertion>;
   onFocusTab?: (label: string | undefined) => void;
 };
 
@@ -197,8 +199,9 @@ function tab(label: string): TabView {
   return { label, number: 1, group: 0, busy: false, hasUnread: false } as unknown as TabView;
 }
 
-function AppBar({ chords, options, openQuitConfirm, openers, children }: {
+function AppBar({ chords, label, options, openQuitConfirm, openers, children }: {
   chords: PluginChordRegistry;
+  label: string;
   options: AppBarOptions;
   openQuitConfirm: () => void;
   openers: AppBarOpeners;
@@ -220,13 +223,18 @@ function AppBar({ chords, options, openQuitConfirm, openers, children }: {
         blockingOverlayOpen: options.blockingOverlayOpen,
         overlayOwnsCommandBar: options.overlayOwnsCommandBar,
         onFocusTab: options.onFocusTab,
+        queueTab: options.queueTab ?? 'shell1',
         queueOpen: options.queueOpen,
         queueIndex: options.queueIndex,
         queueItems: options.queueItems,
         onEditQueued: options.onEditQueued,
         onDeleteQueued: options.onDeleteQueued,
-        pluginCommandLineInsertions: options.pluginCommandLineInsertions,
-      }}>{children}</AppCommandBarProvider>
+        queuedLinesOf: (tabLabel) => options.queuedLines?.[tabLabel],
+        registerCommandLineInsertion: (tabLabel, handler) =>
+          registerCommandLineInsertion(options.insertions ?? new Map(), tabLabel, handler),
+      }}>
+        <AppCommandBarTabScope label={label}>{children}</AppCommandBarTabScope>
+      </AppCommandBarProvider>
     </PluginChordProvider>
   );
 }
@@ -244,16 +252,19 @@ function mountShell(
     openPicker: vi.fn(), openThemePicker: vi.fn(), openAppThemePicker: vi.fn(),
     openQueue: vi.fn(), openTaskPicker: vi.fn(), openProfilePicker: vi.fn(), openTabNavWithQuery: vi.fn(),
   };
-  const renderShell = (nextPayload = payload, nextCapabilities = capabilities) => (
-    <AppBar chords={chords} options={options} openQuitConfirm={openQuitConfirm} openers={openers}>
+  const renderShell = (nextPayload = payload, nextCapabilities = capabilities, nextOptions = options) => (
+    <AppBar
+      chords={chords} label={nextCapabilities.label ?? 'shell1'} options={nextOptions}
+      openQuitConfirm={openQuitConfirm} openers={openers}
+    >
       <ShellTab payload={nextPayload} capabilities={nextCapabilities} />
     </AppBar>
   );
   const view = render(renderShell());
   return {
     chords, openQuitConfirm, openers, ...view,
-    rerenderShell: (nextPayload = payload, nextCapabilities = capabilities) => {
-      view.rerender(renderShell(nextPayload, nextCapabilities));
+    rerenderShell: (nextPayload = payload, nextCapabilities = capabilities, nextOptions = options) => {
+      view.rerender(renderShell(nextPayload, nextCapabilities, nextOptions));
     },
   };
 }
@@ -354,15 +365,63 @@ describe('ShellTab', () => {
   });
 
   it('registers task insertion at its own caret without submitting to the shell', () => {
-    const pluginCommandLineInsertions: PluginCommandLineInsertions = { current: new Map() };
-    const { written } = renderTab({ pluginCommandLineInsertions });
+    const insertions = new Map<string, CommandLineInsertion>();
+    const { written } = renderTab({ insertions });
     fireEvent.change(bar(), { target: { value: 'echo done' } });
     bar().setSelectionRange(5, 5);
 
-    act(() => { pluginCommandLineInsertions.current.get('shell1')?.('execute ./ai/tasks/build.md'); });
+    act(() => { insertions.get('shell1')?.('execute ./ai/tasks/build.md'); });
 
     expect(bar()).toHaveValue('echo execute ./ai/tasks/build.mddone');
     expect(written).toEqual([]);
+  });
+
+  it('leaves its draft and focus alone while the queue popup opens and closes over another tab', () => {
+    const onEditQueued = vi.fn();
+    const popup = (queueOpen: boolean) => ({ queueTab: 'agent', queueOpen, queueItems: ['agent command'], onEditQueued });
+    const { capabilities, rerenderShell } = renderTab(popup(false));
+    fireEvent.change(bar(), { target: { value: 'unsent draft' } });
+    const elsewhere = document.createElement('button');
+    document.body.append(elsewhere);
+    elsewhere.focus();
+
+    rerenderShell(PAYLOAD, capabilities, popup(true));
+    expect(bar()).toHaveValue('unsent draft');
+    expect(document.activeElement).toBe(elsewhere);
+    fireEvent.change(bar(), { target: { value: 'unsent draft!' } });
+    expect(onEditQueued).not.toHaveBeenCalled();
+
+    rerenderShell(PAYLOAD, capabilities, popup(false));
+    expect(bar()).toHaveValue('unsent draft!');
+    elsewhere.remove();
+  });
+
+  it('drains a line another tab queued for it while zsh is idle', async () => {
+    const queued = ['!ls'];
+    const { capabilities, rerenderShell, written } = renderTab();
+    const intent = capabilities.intent as unknown as {
+      getMockImplementation: () => (name: string, payload: unknown) => unknown;
+      mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
+    };
+    const answer = intent.getMockImplementation();
+    intent.mockImplementation(async (name, payload) => {
+      if (name === 'dequeue') return { line: queued.shift() ?? null };
+      return answer(name, payload);
+    });
+
+    rerenderShell(PAYLOAD, capabilities, { queuedLines: { shell1: ['!ls'] } });
+
+    await waitFor(() => { expect(written).toEqual(['ls\n']); });
+    expect(queued).toEqual([]);
+  });
+
+  it('does not ask for its next line when a line is queued for another tab', async () => {
+    const { capabilities, rerenderShell } = renderTab();
+
+    rerenderShell(PAYLOAD, capabilities, { queuedLines: { agent: ['ls'] } });
+    await act(async () => {});
+
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dequeue', null);
   });
 
   it('uses the tab dot color for the command bar dot', () => {

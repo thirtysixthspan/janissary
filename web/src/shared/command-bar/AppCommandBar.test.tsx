@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import type { RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type { TabView } from '@shared/protocol';
-import { useAppCommandLine, type AppCommandBar } from './AppCommandBar';
+import { AppCommandBarProvider, AppCommandBarTabScope, useAppCommandBar, useAppCommandLine } from './AppCommandBar';
+import { registerCommandLineInsertion, type AppCommandBarState } from './app-command-bar-scope';
+import type { PickerCommands } from './picker-commands';
 
 const tab = (label: string, overrides: Partial<TabView> = {}) => ({ label, ...overrides }) as TabView;
 
@@ -10,7 +12,7 @@ type Options = {
   tabs?: TabView[];
   activeTab?: number;
   guard?: (index: number) => boolean;
-  openers?: Partial<AppCommandBar>;
+  openers?: Partial<PickerCommands>;
   onPickerOpen?: (sourceTab: string | undefined) => void;
   navOpen?: boolean;
 };
@@ -134,5 +136,67 @@ describe('useAppCommandLine', () => {
     expect(intercept('!quit')).toBe(false);
     expect(openQuitConfirm).not.toHaveBeenCalled();
     expect(openers.openAppThemePicker).not.toHaveBeenCalled();
+  });
+});
+
+function scopedBar(state: AppCommandBarState, label?: string) {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <AppCommandBarProvider bar={state}>
+      {label === undefined ? children : <AppCommandBarTabScope label={label}>{children}</AppCommandBarTabScope>}
+    </AppCommandBarProvider>
+  );
+  return renderHook(() => useAppCommandBar(), { wrapper });
+}
+
+describe('useAppCommandBar', () => {
+  it('throws outside a tab scope rather than answering for no tab', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    expect(() => scopedBar({ intercept: () => false, ghostHistory: [] })).toThrow('no AppCommandBarTabScope');
+    vi.restoreAllMocks();
+  });
+
+  it('answers for the tab its scope names, without the body naming one', () => {
+    const intercept = vi.fn(() => true);
+    const onFocusTab = vi.fn();
+    const { result } = scopedBar({ intercept, ghostHistory: [], onFocusTab }, 'shell-left');
+
+    expect(result.current.intercept('theme')).toBe(true);
+    expect(intercept).toHaveBeenCalledWith('theme', 'shell-left');
+    result.current.onFocusChange(true);
+    expect(onFocusTab).toHaveBeenLastCalledWith('shell-left');
+  });
+
+  it('registers a picked-line insertion under the scoped tab and keeps one registration across renders', () => {
+    const insertions = new Map<string, (text: string) => void>();
+    const state: AppCommandBarState = {
+      intercept: () => false,
+      ghostHistory: [],
+      registerCommandLineInsertion: (label, handler) => registerCommandLineInsertion(insertions, label, handler),
+    };
+    const { result, rerender } = scopedBar(state, 'shell1');
+    const first = result.current.registerCommandLineInsertion;
+    rerender();
+    expect(result.current.registerCommandLineInsertion).toBe(first);
+
+    const handler = vi.fn();
+    const unregister = first(handler);
+    insertions.get('shell1')?.('execute ./ai/tasks/build.md');
+    expect(handler).toHaveBeenCalledWith('execute ./ai/tasks/build.md');
+    unregister();
+    expect(insertions.has('shell1')).toBe(false);
+  });
+});
+
+describe('registerCommandLineInsertion', () => {
+  it('leaves a newer handler for the same tab in place when an older one unregisters', () => {
+    const insertions = new Map<string, (text: string) => void>();
+    const older = vi.fn();
+    const newer = vi.fn();
+    const unregisterOlder = registerCommandLineInsertion(insertions, 'shell1', older);
+    registerCommandLineInsertion(insertions, 'shell1', newer);
+
+    unregisterOlder();
+
+    expect(insertions.get('shell1')).toBe(newer);
   });
 });

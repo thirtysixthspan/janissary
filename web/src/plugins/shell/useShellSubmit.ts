@@ -10,7 +10,7 @@ import { stripTerminalControls } from './strip-terminal-controls';
 // draining queue to wait for zsh's next prompt before running the line after it. `record` is false
 // for a line drained from the queue: it was recorded in the bar's history when it was queued.
 export function useShellSubmit(input: {
-  appBar: { intercept: (line: string, sourceTab?: string) => boolean };
+  appBar: { intercept: (line: string) => boolean };
   capabilities: TabPluginClientCapabilities;
   displayReply: (line: string, markdown: string) => void;
   setMatches: Dispatch<SetStateAction<string[]>>;
@@ -41,7 +41,7 @@ export function useShellSubmit(input: {
       openHistory();
       return false;
     }
-    if (appBar.intercept(text, capabilities.label)) {
+    if (appBar.intercept(text)) {
       remember(text);
       return false;
     }

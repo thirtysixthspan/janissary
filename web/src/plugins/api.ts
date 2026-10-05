@@ -24,14 +24,13 @@ export { spliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 // reason: a plugin bar that offers every line to the server lets `quit` and a last-tab `close` tear the
 // window down with nothing asked, because the interception that catches them lives in the agent tab's
 // submit chain and a plugin bar never runs it. A plugin body asks this one question before it sends
-// anything, and gets the same answer the agent tab's bar would give. The provider is the sibling of
-// `PluginChordProvider` for the same reason both exist: app-level state a mounted plugin body has to
-// reach. `useAppCommandBar` throws without it rather than answering "nothing is intercepted".
-export {
-  AppCommandBarProvider,
-  useAppCommandBar,
-  type AppCommandBar,
-} from '../shared/command-bar/AppCommandBar';
+// anything, and gets the same answer the agent tab's bar would give. What it reads is already bound to
+// its own tab by the host: the line is intercepted as typed there, the queue popup's state arrives only
+// while the popup is open over that tab, and a picked line is inserted into that tab's bar alone. The
+// providers are the app shell's and are not published; `useAppCommandBar` throws without them rather
+// than answering "nothing is intercepted".
+export { useAppCommandBar } from '../shared/command-bar/AppCommandBar';
+export type { AppCommandBar } from '../shared/command-bar/app-command-bar-scope';
 
 // The host's "double-click to rename, Enter or blur to commit, Escape to cancel" field, published on
 // the same terms and for the same reason: a plugin that renames something should rename it the way
