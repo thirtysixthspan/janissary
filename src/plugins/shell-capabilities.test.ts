@@ -357,19 +357,31 @@ describe('terminalRunning', () => {
   });
 });
 
+// `shell1` is one of the shell plugin's own tabs, `image1` belongs to another plugin, and `janus` is
+// an agent tab. The queue and directory capabilities may change only the first.
+function withOwnedTabs(byLabel: ReturnType<typeof makeManagers>['byLabel']) {
+  const tabs = [
+    { label: 'shell1', plugin: { id: 'shell', instanceKey: 'shell1' } },
+    { label: 'image1', plugin: { id: 'image', instanceKey: 'image1' } },
+    { label: 'janus' },
+  ];
+  byLabel.mockImplementation((label) => tabs.find((tab) => tab.label === label) as never);
+}
+
 describe('queueLine and nextQueuedLine', () => {
   function withQueue() {
     const enqueue = vi.fn();
     const dequeue = vi.fn((): string | undefined => 'ls');
-    const { managers } = makeManagers();
+    const { byLabel, managers } = makeManagers();
+    withOwnedTabs(byLabel);
     Object.assign(managers.tab, { enqueue, dequeue });
     return { managers, enqueue, dequeue };
   }
 
-  function answeringContext(managers: Managers, isEnabled = () => true) {
+  function answeringContext(managers: Managers, isEnabled = () => true, answeringLabel: string | null = 'shell1') {
     return createPluginContext(
       managers, declaration(['queueLine', 'nextQueuedLine']), activationFor(), { label: 'janus', command: 'zsh' },
-      isEnabled, [], 'shell1',
+      isEnabled, [], answeringLabel ?? undefined,
     );
   }
 
@@ -401,16 +413,41 @@ describe('queueLine and nextQueuedLine', () => {
     expect(enqueue).not.toHaveBeenCalled();
     expect(dequeue).not.toHaveBeenCalled();
   });
+
+  // A command invoked from an agent tab has no answering tab, so the label falls back to the agent
+  // tab; its queue holds lines the user meant to run there, and is not this plugin's to change.
+  it('touches no queue of the agent tab a command was invoked from', () => {
+    const { managers, enqueue, dequeue } = withQueue();
+    const capabilities = answeringContext(managers, () => true, null);
+
+    capabilities.queueLine('rm -rf .');
+
+    expect(capabilities.nextQueuedLine()).toBeNull();
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(dequeue).not.toHaveBeenCalled();
+  });
+
+  it('touches no queue of a tab another plugin owns', () => {
+    const { managers, enqueue, dequeue } = withQueue();
+    const capabilities = answeringContext(managers, () => true, 'image1');
+
+    capabilities.queueLine('ls');
+
+    expect(capabilities.nextQueuedLine()).toBeNull();
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(dequeue).not.toHaveBeenCalled();
+  });
 });
 
 describe('recordCwd', () => {
-  function contextWith(isEnabled: () => boolean) {
+  function contextWith(isEnabled: () => boolean, answeringLabel: string | null = 'shell1') {
     const setCwd = vi.fn();
-    const { managers } = makeManagers();
+    const { byLabel, managers } = makeManagers();
+    withOwnedTabs(byLabel);
     Object.assign(managers.tab, { setCwd });
     const capabilities = createPluginContext(
       managers, declaration(['recordCwd']), activationFor(), { label: 'janus', command: 'zsh' },
-      isEnabled, [], 'shell1',
+      isEnabled, [], answeringLabel ?? undefined,
     );
     return { capabilities, setCwd };
   }
@@ -427,6 +464,24 @@ describe('recordCwd', () => {
     const { capabilities, setCwd } = contextWith(() => false);
 
     capabilities.recordCwd('/repo/src');
+
+    expect(setCwd).not.toHaveBeenCalled();
+  });
+
+  // The agent tab's directory decides where its completion, file navigator and new shells start, so
+  // a plugin command invoked from it must not move that.
+  it('records nothing on the agent tab a command was invoked from', () => {
+    const { capabilities, setCwd } = contextWith(() => true, null);
+
+    capabilities.recordCwd('/tmp');
+
+    expect(setCwd).not.toHaveBeenCalled();
+  });
+
+  it('records nothing on a tab another plugin owns', () => {
+    const { capabilities, setCwd } = contextWith(() => true, 'image1');
+
+    capabilities.recordCwd('/tmp');
 
     expect(setCwd).not.toHaveBeenCalled();
   });

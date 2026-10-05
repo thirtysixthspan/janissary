@@ -23,7 +23,14 @@ export function lineCapabilities(input: {
   'originTab' | 'dispatchLine' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning' | 'queueLine' | 'nextQueuedLine' | 'recordCwd'
 > {
   const { managers, declaration, origin, answeringLabel, isEnabled, deadline } = input;
-  const lineLabel = () => answeringLabel ?? origin.label;
+  // The tab whose queue and recorded directory a line capability may change: the answering tab, or
+  // the origin when there is none, and only when it is one of this plugin's own tabs. A command,
+  // selection action or menu handler invoked from an agent tab has no answering tab, and without
+  // this check it would reach that agent tab's queue and directory.
+  const ownLineLabel = () => {
+    const label = answeringLabel ?? origin.label;
+    return managers.tab.byLabel(label)?.plugin?.id === declaration.id ? label : undefined;
+  };
   // The labels of this plugin's own open tabs — the only terminals whose ids a plugin can legitimately
   // hold, because a payload factory is the only scope in which it may start one.
   const ownTabLabels = () => managers.tab.tabs
@@ -69,16 +76,21 @@ export function lineCapabilities(input: {
     // processes in the window are alive — and the contract has always said "a terminal this plugin
     // spawned", which is the question asked here.
     terminalRunning: (ptyId) => isEnabled() && managers.pty.isRunningFor(ptyId, ownTabLabels()),
-    // The answering tab's own queue, never another's: a line typed into a plugin tab's command line
-    // waits in that tab, which is where the queue popup over it looks.
+    // This plugin's own answering tab's queue, never another's: a line typed into a plugin tab's
+    // command line waits in that tab, which is where the queue popup over it looks.
     queueLine: (line) => {
-      if (isEnabled()) managers.tab.enqueue(lineLabel(), line);
+      const label = isEnabled() ? ownLineLabel() : undefined;
+      if (label) managers.tab.enqueue(label, line);
     },
-    nextQueuedLine: () => (isEnabled() ? managers.tab.dequeue(lineLabel()) ?? null : null),
-    // The answering tab's own record only, for the same reason: a shell that changed directory moves
-    // where its tab's next shell, file navigator and completion start, and no other tab's.
+    nextQueuedLine: () => {
+      const label = isEnabled() ? ownLineLabel() : undefined;
+      return label ? managers.tab.dequeue(label) ?? null : null;
+    },
+    // This plugin's own answering tab's record only, for the same reason: a shell that changed
+    // directory moves where its tab's next shell, file navigator and completion start, and no other tab's.
     recordCwd: (cwd) => {
-      if (isEnabled()) managers.tab.setCwd(lineLabel(), cwd);
+      const label = isEnabled() ? ownLineLabel() : undefined;
+      if (label) managers.tab.setCwd(label, cwd);
     },
   };
 }

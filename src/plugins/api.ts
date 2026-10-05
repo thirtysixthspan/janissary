@@ -251,14 +251,17 @@ export type TabPluginServerCapabilities = {
   // is in-memory only, so the tab is still there holding the payload of a shell that finished minutes
   // ago. This is how a tab learns that and closes rather than waiting for input that can never arrive.
   terminalRunning(ptyId: string): boolean;
-  // Add one line to the back of the answering tab's command queue — the same queue an agent tab
-  // holds, which the state broadcast lists and the queue popup edits — so a plugin tab with a command
-  // line can hold lines while its own process is busy rather than keeping a second queue of its own.
+  // Add one line to the back of this plugin's own answering tab's command queue — the same queue an
+  // agent tab holds, which the state broadcast lists and the queue popup edits — so a plugin tab with
+  // a command line can hold lines while its own process is busy rather than keeping a second queue of
+  // its own. Does nothing when that tab is not one of this plugin's own.
   queueLine(line: string): void;
-  // Remove and return the front of the answering tab's command queue, or `null` when it is empty.
+  // Remove and return the front of this plugin's own answering tab's command queue, or `null` when it
+  // is empty or that tab is not one of this plugin's own.
   nextQueuedLine(): string | null;
-  // Record the answering tab's working directory — the one `originTab` reports and the host's own
-  // actions on that tab start from — for a plugin whose process can change directory on its own.
+  // Record this plugin's own answering tab's working directory — the one `originTab` reports and the
+  // host's own actions on that tab start from — for a plugin whose process can change directory on
+  // its own. Does nothing when that tab is not one of this plugin's own.
   recordCwd(cwd: string): void;
   rejectRequest(reason: string): never;
   reportFailure(reason: unknown): never;

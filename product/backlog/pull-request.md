@@ -5,17 +5,6 @@
 * the msg command to a shell tab, of each type, should be supported.
 
 
-* Scope the line capabilities that change queues and working directories to the plugin's own tabs, as their documentation promises.
-
-Existing Issue: `queueLine`, `nextQueuedLine` and `recordCwd` in the plugin line capabilities act on `answeringLabel ?? origin.label` without checking that the tab belongs to the calling plugin, so any plugin's command, selection action or menu handler invoked from an agent tab can push to, pop from, or rewrite the recorded directory of that agent tab. Severity: 6/10
-
-Existing Risk: 6/10 - A plugin's command handler can silently drain or inject lines into an agent tab's command queue, which then runs them as commands, and can redirect where that tab's completion, file navigator and new shells start.
-
-Proposal Risk: 2/10 - The three capabilities become no-ops outside the plugin's own tabs, matching `updateTab`, `dockTab`, `setUnread` and `terminalRunning`, with residual risk only if a future capability is added without the same guard.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: scope queueLine, nextQueuedLine and recordCwd to the plugin's own tabs". In `src/plugins/line-capabilities.ts`, replace `lineLabel()` with a resolver that returns the answering or origin label only when `managers.tab.byLabel(label)?.plugin?.id === declaration.id`, and make `queueLine` and `recordCwd` no-ops and `nextQueuedLine` return `null` otherwise. Keep `dispatchLineWithOutput` and `completeLine` as they are, since running a command in the invoking tab is their documented purpose. Update the doc comments on these three capabilities in `src/plugins/api.ts` to say "this plugin's own answering tab". Add `src/plugins/shell-capabilities.test.ts` cases that invoke each of the three from a command context whose origin is an agent tab and assert the agent tab's queue and cwd are unchanged; existing shell-capability tests for the shell's own tab must keep passing.
-
-
 * Strip terminal control sequences from text the shell tab writes to zsh and to its own terminal, so a multi-line command cannot break out of its bracketed paste.
 
 Existing Issue: `shellCommandInput` frames multi-line commands in bracketed-paste markers without removing an embedded `ESC[201~`, single-line commands are written raw, and the fallback reply path writes application reply text through `markdownToAnsi` into xterm without stripping ESC, C0 or C1 characters. Severity: 7/10
