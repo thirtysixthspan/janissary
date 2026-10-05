@@ -53,35 +53,60 @@
 
 ### Key Bindings
 
+**Global key bindings** (work from every tab; where a tab's own controls below take a key, that tab says so):
+
+| Key | Action |
+| --- | ------ |
+| `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab |
+| `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
+| `Ctrl+R` | Open the command history picker (a shell tab opens its own history instead — see **Shell tab controls**) |
+| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (`clip`); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
+| `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
+| `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead in an agent tab whose terminal has taken over |
+| `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
+| `Cmd+Shift+F` | Open or focus the project-wide search tab |
+| `Cmd+T` | Open a new agent tab (same as typing `agent`); a shell tab opens another shell instead |
+| `Cmd+W` / `Ctrl+W` | Close the current tab (no-op while a picker or any modal dialog is open) |
+| `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. No-op while a modal dialog is open. A shell tab keeps the key for its own two surfaces; in an editor tab's text it outdents instead; in a pending question panel it moves backward between its buttons |
+
+**Command bar and agent tab controls**:
+
 | Key | Action |
 | --- | ------ |
 | `←` / `→` | Move cursor in the input field |
 | `↑` / `↓` | Previous / next command in history |
-| `Shift+←` / `Shift+→` / `Cmd+Shift+[` / `Cmd+Shift+]` | Switch to the previous / next tab |
-| `Ctrl+←` / `Ctrl+→` | Move the current tab left / right |
+| `Tab` | Complete a file path, a tab label for `msg` / `broadcast` / `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / monitor name / target |
+| `Enter` | Execute the current command |
 | `Shift+↑` / `Shift+↓` | Scroll the transcript up / down (accelerated — distance doubles each second) |
 | `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down (accelerated) |
 | `Page Up` / `Page Down` | Scroll the transcript up / down by half terminal height |
 | `Escape` | Reset scroll to bottom |
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
-| `Ctrl+R` | Open command history picker. On a visible `shell` tab, opens that tab's own history instead — the lines its command bar has sent and the commands typed into its terminal — and the application picks the chord back up as soon as you focus another tab |
-| `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (`clip`); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
-| `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
-| `Ctrl+E` | Open the queue picker to send a command to another agent tab (no-op on a tab that is not an agent tab) |
-| `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead in an agent tab whose terminal has taken over |
+| `Ctrl+E` | Open the queue picker to send a command to another agent tab (also opens over a shell tab; a no-op on any other tab that is not an agent tab) |
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
 | `Ctrl+O` | Move the running command into a full-tab terminal to type to it (no-op when nothing is running) |
-| `Cmd+T` | Open a new agent tab (same as typing `agent`), or another zsh tab in the same directory and workspace when a shell tab is active |
-| `Ctrl+C` / `Ctrl+D` / `Ctrl+Z` (shell tab) | Send interrupt, end-of-input, or suspend to the shell — the characters a terminal would send. `Ctrl+C` copies the command line's own selection instead when it holds one. These apply only while a `shell` tab's command bar has the focus |
-| `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Cmd+F` | Open the search bar in the transcript; in an editor tab, open the fuzzy line search over the buffer |
-| `Cmd+Shift+F` | Open or focus the project-wide search tab |
-| `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
-| `Cmd+W` / `Ctrl+W` | Close the current tab (no-op while a picker or any modal dialog is open) |
-| `Tab` | Complete a file path, a tab label for `msg` / `broadcast` / `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / monitor name / target |
-| `Shift+Tab` | Move keyboard focus to the next application section (left → center → right sidebar/panel → reporting), looping; the visible tab in that section gets focus. In a shell tab, move between its command line and terminal. No-op while a modal dialog is open. In an editor tab's text, outdents instead; in a pending question panel, moves backward between its buttons |
-| `Enter` | Execute the current command |
+| `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Ctrl+C` | Exit |
+
+**Shell tab controls** (active only while a shell tab is the visible one):
+
+| Key | Action |
+| --- | ------ |
+| `Shift+Tab` / click the terminal | Move between the command line and the terminal; typing in the terminal goes straight to zsh |
+| `Enter` | Run what is in the command line: an application command when it names one, otherwise sent to zsh. While zsh is running a command the line reads `queue >` and a submitted line waits in the tab's queue |
+| `!` prefix | Send the line straight to zsh, even when it names an application command |
+| `↑` / `↓` | Walk this tab's command history — lines the command bar sent and commands typed into the terminal |
+| `→` / `End` (at the end of input) | Accept the ghost suggestion from the global history |
+| `Tab` | Complete the line as the agent tab's bar does; several choices show a strip |
+| `Escape` | Close the completion strip when it is showing; otherwise return the terminal to the bottom of its scrollback |
+| `Shift+↑` / `Shift+↓` / `Ctrl+↑` / `Ctrl+↓` | Scroll the terminal up / down (accelerated) |
+| `Page Up` / `Page Down` | Scroll the terminal up / down by half a screen |
+| `Ctrl+C` / `Ctrl+D` / `Ctrl+Z` | Send interrupt, end-of-input, or suspend to the shell — the characters a terminal would send. `Ctrl+C` copies the command line's own selection instead when it holds one. These apply while the command line has the focus |
+| `Ctrl+R` / `hist` | Open this tab's own history: `↑` / `↓` move, Return puts the line back in the command line without running it, Escape closes. Focus another tab and `Ctrl+R` is the application's again |
+| `Ctrl+E` / `queue` | Open the queue popup: the selected queued line appears in the command line, typing edits it, Backspace or Delete on an empty line removes it, Escape closes it and clears the line |
+| `Cmd+T` | Open another shell in the same directory, workspace, and offline mode |
+| `Cmd+F` | Does nothing — a shell tab has no transcript to search |
 
 **Image tab controls** (active only while an image tab is focused):
 

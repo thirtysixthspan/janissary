@@ -34,6 +34,18 @@ describe('getOutput', () => {
     expect(result.text).toContain('Ctrl+C');
   });
 
+  it('separates the key bindings that work everywhere from the shell tab\'s own', () => {
+    const result = getOutput('help');
+    if (result.kind !== 'output') throw new Error('help produced no output');
+    const global = result.text.indexOf('**Global key bindings**');
+    const shell = result.text.indexOf('**Shell tab controls**');
+
+    expect(global).toBeGreaterThan(result.text.indexOf('### Key Bindings'));
+    expect(shell).toBeGreaterThan(global);
+    expect(result.text.slice(shell)).toContain('`Ctrl+C` / `Ctrl+D` / `Ctrl+Z`');
+    expect(result.text.slice(global, shell)).not.toContain('(shell tab)');
+  });
+
   it('is case insensitive', () => {
     const result = getOutput('HELP');
     expect(result.kind).toBe('output');

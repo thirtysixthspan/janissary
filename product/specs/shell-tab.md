@@ -115,8 +115,9 @@ a suggestion.
 
 Every other chord belongs to the application, unchanged: `Ctrl+A` opens the task picker, `Ctrl+G` the
 tab navigator, `Cmd+P` quick open and `Cmd+Shift+F` the project search, all with the cursor in the
-command bar, exactly as in an agent tab. `Cmd+F` and `Ctrl+E` do nothing here — a plugin tab has no
-transcript to search and the queue belongs to agents — which is the same in every plugin tab.
+command bar, exactly as in an agent tab. `Ctrl+E` opens the queue popup over the shell tab, as
+described above. `Cmd+F` does nothing here — a plugin tab has no transcript to search — which is the
+same in every plugin tab.
 
 `Ctrl+R` opens this tab's own history while it is the visible one, and a bare `hist` submitted from the
 command bar opens the same list rather than the application's history picker, which a shell tab's
