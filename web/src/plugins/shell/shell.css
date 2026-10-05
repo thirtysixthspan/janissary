@@ -1,11 +1,13 @@
 /* The shell tab's own terminal surface: the same body a harness tab renders, so the terminal fills
-   the space the agent tab's transcript fills and the command line below it is the agent tab's. Only
-   the height rule is added — this tab's terminal is the whole body rather than a card in a transcript,
-   so it takes the full height its container offers instead of growing with its content. */
+   the space the agent tab's transcript fills and the command line below it is the agent tab's. The
+   height rule is added because this tab's terminal is the whole body rather than a card in a
+   transcript, so it takes the full height its container offers instead of growing with its content;
+   the background is the application theme's, matching the terminal painted inside it. */
 .harness-body.shell-body {
   min-height: 0;
   height: 100%;
   flex: 1 1 auto;
+  background: var(--bg);
 }
 
 .shell-body.shell-initializing { visibility: hidden; }

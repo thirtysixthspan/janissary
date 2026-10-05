@@ -2,6 +2,4 @@
 
 # pull-request
 
-* the application theme should apply to the shell tab terminal content.
-
 * notification popup in the shell tab should show entirely below the metadata bar.

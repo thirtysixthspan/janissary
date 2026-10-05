@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import {
-  registerTerminalSelection, terminalColors, unregisterTerminalSelection,
+  registerTerminalSelection, unregisterTerminalSelection,
   type PluginTerminal,
 } from '../api';
+import { shellTerminalTheme } from './shell-terminal-theme';
 
 const SHELL_STATUS_HOOKS = String.raw`export PROMPT='> '; autoload -Uz add-zsh-hook; _janus_preexec() { printf '\033]133;C\a'; }; _janus_emit_cwd() { printf '\033]7;file://%s%s\a' "$HOST" "$PWD"; }; _janus_precmd() { printf '\033]133;D\a'; _janus_emit_cwd; }; _janus_chpwd() { _janus_emit_cwd; }; add-zsh-hook preexec _janus_preexec; add-zsh-hook precmd _janus_precmd; add-zsh-hook chpwd _janus_chpwd; _janus_emit_cwd; printf '\033]133;E\a'
 `;
@@ -35,11 +36,6 @@ export type ShellTerminalHandle = {
   scrollToBottom(): void;
   rows(): number;
 };
-
-function shellTerminalTheme() {
-  const colors = terminalColors();
-  return { background: colors.bg, foreground: colors.fg };
-}
 
 export function useShellTerminal({
   ptyId, containerRef, attachTerminal, onExit, onCommandRunning, onCwd,

@@ -50,8 +50,10 @@ while the navigator is open closes it. Neither reaches zsh.
 The bare `theme` picker appears over the shell tab. While it is open, the application's arrow,
 Return, and Escape handling controls the selection, applies the chosen theme, or dismisses the picker.
 If the shell tab is docked in a sidebar, the picker appears over that shell there; its keys stay with
-the picker and are not sent to zsh. The terminal colors follow the application theme, including when
-the picker applies a different theme.
+the picker and are not sent to zsh. The terminal content is painted in the application theme's own
+colors — its background, text, cursor, and selection match the rest of the tab, so a light theme
+gives a light terminal — and they change with the theme, including when the picker applies a
+different one. Harness terminals keep their shared dark terminal colors.
 
 While zsh is running a command, the command line reads `queue >`. A line submitted then goes into the
 shell tab's command queue instead of reaching zsh or the application, and it is recorded in the bar's

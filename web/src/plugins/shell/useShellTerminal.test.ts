@@ -207,21 +207,21 @@ describe('useShellTerminal', () => {
   it('refreshes xterm colors when the application theme changes', async () => {
     const root = document.documentElement;
     const previous = {
-      foreground: root.style.getPropertyValue('--terminal-fg'),
-      background: root.style.getPropertyValue('--terminal-bg'),
+      foreground: root.style.getPropertyValue('--fg'),
+      background: root.style.getPropertyValue('--bg'),
       theme: root.dataset.theme,
     };
-    root.style.setProperty('--terminal-fg', '#111111');
-    root.style.setProperty('--terminal-bg', '#222222');
+    root.style.setProperty('--fg', '#111111');
+    root.style.setProperty('--bg', '#222222');
     const { unmount } = harness();
 
-    expect(terminals[0]?.options.theme).toEqual({ foreground: '#111111', background: '#222222' });
+    expect(terminals[0]?.options.theme).toMatchObject({ foreground: '#111111', background: '#222222' });
 
-    root.style.setProperty('--terminal-fg', '#aaaaaa');
-    root.style.setProperty('--terminal-bg', '#bbbbbb');
+    root.style.setProperty('--fg', '#aaaaaa');
+    root.style.setProperty('--bg', '#bbbbbb');
     root.dataset.theme = 'nord';
     await waitFor(() => {
-      expect(terminals[0]?.options.theme).toEqual({ foreground: '#aaaaaa', background: '#bbbbbb' });
+      expect(terminals[0]?.options.theme).toMatchObject({ foreground: '#aaaaaa', background: '#bbbbbb' });
     });
     const updatedTheme = terminals[0]?.options.theme;
 
@@ -230,10 +230,10 @@ describe('useShellTerminal', () => {
     await Promise.resolve();
     expect(terminals[0]?.options.theme).toBe(updatedTheme);
 
-    if (previous.foreground) root.style.setProperty('--terminal-fg', previous.foreground);
-    else root.style.removeProperty('--terminal-fg');
-    if (previous.background) root.style.setProperty('--terminal-bg', previous.background);
-    else root.style.removeProperty('--terminal-bg');
+    if (previous.foreground) root.style.setProperty('--fg', previous.foreground);
+    else root.style.removeProperty('--fg');
+    if (previous.background) root.style.setProperty('--bg', previous.background);
+    else root.style.removeProperty('--bg');
     if (previous.theme === undefined) delete root.dataset.theme;
     else root.dataset.theme = previous.theme;
   });
