@@ -8,9 +8,13 @@ type Fake = {
   markers: number[];
   decorations: { width?: number; height?: number; layer?: string }[];
   render: (element: HTMLElement) => void;
+  active: { type: string; viewportY: number };
 };
 
-function fakeTerminal({ probeHeight = 48, screenHeight = 240, rows = 20, buffer = 'normal', withScreen = true } = {}): Fake {
+function fakeTerminal({
+  probeHeight = 48, screenHeight = 240, rows = 20, buffer = 'normal', withScreen = true,
+  markerLine = 0, viewportY = 0,
+} = {}): Fake {
   const element = document.createElement('div');
   if (withScreen) {
     const screen = document.createElement('div');
@@ -19,14 +23,17 @@ function fakeTerminal({ probeHeight = 48, screenHeight = 240, rows = 20, buffer 
     element.append(screen);
   }
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(probeHeight);
-  const fake: Fake = { terminal: undefined as unknown as Terminal, written: [], markers: [], decorations: [], render: () => {} };
+  const fake: Fake = {
+    terminal: undefined as unknown as Terminal, written: [], markers: [], decorations: [], render: () => {},
+    active: { type: buffer, viewportY },
+  };
   fake.terminal = {
     element,
     rows,
     cols: 100,
-    buffer: { active: { type: buffer } },
+    buffer: { active: fake.active },
     write: (data: string, callback?: () => void) => { fake.written.push(data); callback?.(); },
-    registerMarker: (offset: number) => { fake.markers.push(offset); return { line: 0 }; },
+    registerMarker: (offset: number) => { fake.markers.push(offset); return { line: markerLine }; },
     registerDecoration: (options: { width?: number; height?: number; layer?: string }) => {
       fake.decorations.push({ width: options.width, height: options.height, layer: options.layer });
       return { onRender: (handler: (element: HTMLElement) => void) => { fake.render = handler; } };
@@ -44,7 +51,7 @@ describe('insertMarkdownBlock', () => {
     expect(insertMarkdownBlock(fake.terminal, 'help', '# Commands\n\n| a | b |\n| - | - |\n| 1 | 2 |')).toBe(true);
 
     expect(fake.written[0]).toBe(`\r\u{1B}[2K> help\r\n${'\r\n'.repeat(4)}`);
-    expect(fake.markers).toEqual([-4]);
+    expect(fake.markers).toEqual([-1]);
     expect(fake.decorations).toEqual([{ width: 100, height: 4, layer: 'top' }]);
     expect(fake.written.at(-1)).toBe('> ');
 
@@ -61,8 +68,33 @@ describe('insertMarkdownBlock', () => {
     expect(insertMarkdownBlock(fake.terminal, 'help', 'a long reply')).toBe(true);
 
     expect(fake.written[0]).toBe(`\r\u{1B}[2K> help\r\n${'\r\n'.repeat(4)}`);
-    expect(fake.markers).toEqual([-4]);
+    expect(fake.markers).toEqual([-1]);
     expect(fake.decorations[0]?.height).toBe(4);
+  });
+
+  it('keeps the visible portion rendered after the first row scrolls above the viewport', () => {
+    const fake = fakeTerminal({ probeHeight: 180, screenHeight: 300, rows: 5, markerLine: 10, viewportY: 9 });
+    insertMarkdownBlock(fake.terminal, 'help', 'a tall reply');
+    const element = document.createElement('div');
+
+    fake.render(element);
+    expect(element.style.top).toBe('-60px');
+    expect(element.style.display).toBe('block');
+
+    fake.active.viewportY = 12;
+    fake.render(element);
+    expect(element.style.display).toBe('none');
+  });
+
+  it('keeps decorations hidden while the terminal uses its alternate buffer', () => {
+    const fake = fakeTerminal();
+    insertMarkdownBlock(fake.terminal, 'help', 'hello');
+    const element = document.createElement('div');
+
+    fake.active.type = 'alternate';
+    fake.render(element);
+
+    expect(element.style.display).toBe('none');
   });
 
   it('fills the decoration once however often it is rendered', () => {

@@ -2,8 +2,4 @@
 
 # pull-request
 
-* the shell decorations should expand to as large as required for the command output and not trigger scrollbars. 
-
-* the shell decorations must continue to be visible even when the first line is not visible in the scrollback. right now the decoration clears, leaving a large gap when scrolled out of view in teh history.
-
 * the send command to a shell tab should send to the command bar, not to the shell directly.
