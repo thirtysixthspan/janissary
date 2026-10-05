@@ -33,7 +33,7 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 function TestComponent({
   route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, profilePickerOpen,
   canSearch, searchOpen, quickOpenOpen, handleScrollKey, callbacks, client,
-  chords = createPluginChordRegistry(),
+  chords = createPluginChordRegistry(), currentPluginTab,
 }: {
   route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
@@ -48,6 +48,7 @@ function TestComponent({
   handleScrollKey?: (e: KeyboardEvent) => boolean;
   client?: { send: ReturnType<typeof vi.fn> };
   chords?: PluginChordRegistry;
+  currentPluginTab?: string;
   callbacks?: Partial<{
     setRouteIndex: (s: (p: number) => number) => void;
     chooseRoute: (i: number) => void;
@@ -108,6 +109,7 @@ function TestComponent({
       { name: 'coding', source: 'project' as const },
     ],
     quickOpenOpen: quickOpenOpen ?? false,
+    currentPluginTab,
   });
   const cb = {
     setRouteIndex: vi.fn(),
@@ -567,7 +569,7 @@ describe('useWindowKeys', () => {
     it('runs the plugin handler instead of the application action', () => {
       const { chords, handler } = claimed('ctrl+r');
       const openPicker = vi.fn();
-      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+      render(React.createElement(TestComponent, { chords, currentPluginTab: 'shell', callbacks: { openPicker } }));
 
       dispatchKey('r', { ctrlKey: true });
 
@@ -607,7 +609,7 @@ describe('useWindowKeys', () => {
       const handler = vi.fn();
       const release = chords.register('shell', 'shell', 'ctrl+r', handler);
       const openPicker = vi.fn();
-      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+      render(React.createElement(TestComponent, { chords, currentPluginTab: 'shell', callbacks: { openPicker } }));
 
       dispatchKey('r', { ctrlKey: true });
       expect(handler).toHaveBeenCalledTimes(1);
@@ -618,6 +620,39 @@ describe('useWindowKeys', () => {
       // The application's history picker takes the chord back, which is what focusing another tab does.
       expect(handler).toHaveBeenCalledTimes(1);
       expect(openPicker).toHaveBeenCalledTimes(1);
+    });
+
+    // A docked shell holds its claim while it shows in the sidebar, but an agent tab's command bar sits
+    // inside no labelled tab, so the key typed there is the application's.
+    it('leaves a claimed chord with the application when focus is in a tab with no plugin label', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const openPicker = vi.fn();
+      render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+      const agentBar = document.createElement('textarea');
+      document.body.append(agentBar);
+      agentBar.focus();
+
+      fireEvent.keyDown(agentBar, { key: 'r', ctrlKey: true });
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(openPicker).toHaveBeenCalledOnce();
+      agentBar.remove();
+    });
+
+    it('gives a chord pressed with focus on the page to the current plugin tab only', () => {
+      const { chords, handler } = claimed('ctrl+r');
+      const openPicker = vi.fn();
+      const view = render(React.createElement(TestComponent, { chords, callbacks: { openPicker } }));
+
+      fireEvent.keyDown(document.body, { key: 'r', ctrlKey: true });
+      expect(handler).not.toHaveBeenCalled();
+      expect(openPicker).toHaveBeenCalledOnce();
+      view.unmount();
+
+      render(React.createElement(TestComponent, { chords, currentPluginTab: 'shell', callbacks: { openPicker } }));
+      fireEvent.keyDown(document.body, { key: 'r', ctrlKey: true });
+      expect(handler).toHaveBeenCalledOnce();
+      expect(openPicker).toHaveBeenCalledOnce();
     });
 
     it('leaves an unclaimed chord with the application', () => {

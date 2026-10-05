@@ -159,7 +159,10 @@ with the newest line selected at the bottom. It uses the same presentation and
 keyboard navigation as the application's history picker — a multi-line command shows as its first line
 with a `(N lines)` postfix, and is put back whole — but Return puts the selected line back in the
 command bar without running it. Focus any other tab and `Ctrl+R` opens the application's history picker
-again.
+again. That holds for a docked shell too: while it shows in a sidebar, `Ctrl+R` pressed in an agent
+tab's command bar opens the application's picker, however many shells are docked. A shell that is the
+current tab keeps the chord when the keyboard rests on the page itself, such as after a click on its
+metadata row.
 
 The list is driven by the keyboard without ever taking it from the command bar: `↑`/`↓` move the
 selection, `Return` puts the chosen line back in the bar, and `Escape` closes it. Picking a row with

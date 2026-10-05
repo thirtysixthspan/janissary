@@ -22,6 +22,9 @@ export type StateSnapshot = PickerKeySnapshot & {
   // search bar instead of scrolling the transcript underneath it).
   canSearch: boolean;
   searchOpen: boolean;
+  // The current tab's label when it is a plugin tab. A chord pressed with focus on nothing at all is
+  // that tab's to claim, so a click on its metadata row does not hand its `Ctrl+R` to the application.
+  currentPluginTab?: string;
 };
 
 export type Callbacks = PickerKeyCallbacks & {
@@ -183,13 +186,21 @@ function exhaust(action: AppChordAction | undefined): never {
 // inverts what the overlay-plugin path below does and is deliberate: an overlay chord cannot fire
 // without the core chord, but a plugin tab the user is looking at would otherwise have the key do
 // nothing at all there.
+// The plugin tab a chord was pressed in: the labelled tab around the focused element, or the current
+// plugin tab when focus rests on the page itself. Focus inside an element no plugin tab encloses —
+// an agent tab's command bar — names no tab, so the application keeps the chord.
+function chordTabLabel(target: EventTarget | null, snap: StateSnapshot): string | undefined {
+  const focusOnPage = !(target instanceof Element) || target === document.body || target === document.documentElement;
+  if (focusOnPage) return snap.currentPluginTab;
+  return target.closest<HTMLElement>('[data-tab-label]')?.dataset.tabLabel;
+}
+
 function handleChordKeys(
   e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks, chords: PluginChordRegistry,
 ): boolean {
   const chordId = eventChordId(e);
   if (chordId === undefined) return false;
-  const target = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-tab-label]') : null;
-  if (chords.run(chordId, target?.dataset.tabLabel)) { e.preventDefault(); return true; }
+  if (chords.run(chordId, chordTabLabel(e.target, snap))) { e.preventDefault(); return true; }
   if (e.metaKey && metaChordOpener(e, snap, cb)) return true;
   if (e.ctrlKey) {
     const opener = ctrlChordOpener(appChordAction(chordId), cb);

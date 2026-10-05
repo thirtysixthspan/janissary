@@ -25,7 +25,7 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `PageUp` | Scroll the transcript up by half a terminal height |
 | `PageDown` | Scroll the transcript down by half a terminal height |
 | `Escape` | Reset the transcript scroll to the bottom |
-| `Ctrl+R` | Open the command history picker; on a visible shell tab, open that tab's own history |
+| `Ctrl+R` | Open the command history picker; in a shell tab, open that tab's own history |
 | `Ctrl+D` (shell tab) | Send end-of-input to zsh while its command bar is focused |
 | `Ctrl+Z` (shell tab) | Suspend the running zsh command while its command bar is focused |
 | `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup — everything you have copied this session, newest at the bottom; choosing an entry pastes it at the cursor. `Ctrl+V` and `Cmd+V` are untouched |

@@ -930,7 +930,7 @@ describe('ShellTab', () => {
 
     expect(document.querySelector('.shell-history')).toBeNull();
     // What the window key handler does on the application's behalf: consult the registry first.
-    chords.run('ctrl+r');
+    chords.run('ctrl+r', 'shell1');
 
     await waitFor(() => { expect(document.querySelector('.picker.shell-history')).not.toBeNull(); });
     expect(document.querySelector('.shell-history .picker-title')?.textContent).toBe('history');
@@ -968,14 +968,14 @@ describe('ShellTab', () => {
   it('claims nothing at all while its tab is hidden, so the application keeps the chord', () => {
     const { chords } = renderTab({ active: false });
 
-    expect(chords.run('ctrl+r')).toBe(false);
+    expect(chords.run('ctrl+r', 'shell1')).toBe(false);
     expect(document.querySelector('.shell-history')).toBeNull();
   });
 
   it('claims no chord the declaration does not name', () => {
     const { chords } = renderTab();
 
-    expect(chords.run('ctrl+g')).toBe(false);
+    expect(chords.run('ctrl+g', 'shell1')).toBe(false);
   });
 
   it('claims whatever chord the host sent, rather than one written out beside it', async () => {
@@ -983,8 +983,8 @@ describe('ShellTab', () => {
     // would still be `ctrl+r` and the case below would pass for the wrong reason.
     const { chords } = renderTab({ claimedChords: ['ctrl+t'] });
 
-    expect(chords.run('ctrl+r')).toBe(false);
-    chords.run('ctrl+t');
+    expect(chords.run('ctrl+r', 'shell1')).toBe(false);
+    chords.run('ctrl+t', 'shell1');
 
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
   });
@@ -1028,7 +1028,7 @@ describe('ShellTab', () => {
     const { chords } = renderTab();
     await waitFor(() => { expect(document.activeElement).toBe(bar()); });
 
-    chords.run('ctrl+r');
+    chords.run('ctrl+r', 'shell1');
 
     // The popup took focus on mount and nothing handed it back, so after Escape or a pick the focused
     // element was removed from the document and the keyboard landed on the body.
@@ -1044,7 +1044,7 @@ describe('ShellTab', () => {
       await act(async () => { releaseDispatch(); });
     }
 
-    chords.run('ctrl+r');
+    chords.run('ctrl+r', 'shell1');
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
     // The popup puts the newest line at the bottom, like the application picker, so Up moves older.
     fireEvent.keyDown(bar(), { key: 'ArrowUp' });
@@ -1064,7 +1064,7 @@ describe('ShellTab', () => {
 
   it('closes the history popup on Escape and gives the keyboard back to the bar', async () => {
     const { chords } = renderTab();
-    chords.run('ctrl+r');
+    chords.run('ctrl+r', 'shell1');
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
 
     fireEvent.keyDown(bar(), { key: 'Escape' });
@@ -1079,7 +1079,7 @@ describe('ShellTab', () => {
     fireEvent.keyDown(bar(), { key: 'Enter' });
     await act(async () => { releaseDispatch(); });
 
-    chords.run('ctrl+r');
+    chords.run('ctrl+r', 'shell1');
     await waitFor(() => { expect(document.querySelector('.shell-history')).not.toBeNull(); });
     fireEvent.click(screen.getByText('only'));
 
@@ -1091,7 +1091,7 @@ describe('ShellTab', () => {
   it('claims nothing when the tab carries no claim at all', () => {
     const { chords } = renderTab({ claimedChords: [] });
 
-    expect(chords.run('ctrl+r')).toBe(false);
+    expect(chords.run('ctrl+r', 'shell1')).toBe(false);
     expect(document.querySelector('.shell-history')).toBeNull();
   });
 

@@ -167,6 +167,7 @@ export function App({ client }: { client: JanusClient }) {
   // overlay-owned field arrives in one bag; only search's two are the app shell's to add.
   useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, {
     ...pickers.keys, canSearch, searchOpen: search.searchOpen, openSearch: () => search.open(''),
+    currentPluginTab: current?.plugin ? current.label : undefined,
   }, pluginChords);
 
   const onCommandBarSubmit = useCommandBarSubmit({

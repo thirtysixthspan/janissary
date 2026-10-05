@@ -25,26 +25,18 @@ export function createPluginChordRegistry(): PluginChordRegistry {
       return () => { claims.delete(key); };
     },
     // No claim registered means the application keeps the chord, which is what makes a declaration that
-    // claims one nothing ever answers for harmless rather than a swallowed key.
+    // claims one nothing ever answers for harmless rather than a swallowed key. Neither does a chord
+    // pressed in no plugin tab: an agent tab's body carries no label, and guessing the one visible
+    // claim would hand a docked shell a key typed into the agent beside it.
     run: (chordId, focusedTabLabel) => {
-      if (focusedTabLabel !== undefined) {
-        const suffix = ` ${focusedTabLabel} ${chordId}`;
-        for (const [key, handler] of claims) {
-          if (!key.endsWith(suffix)) continue;
-          handler();
-          return true;
-        }
-        return false;
-      }
-      let match: PluginChordHandler | undefined;
+      if (focusedTabLabel === undefined) return false;
+      const suffix = ` ${focusedTabLabel} ${chordId}`;
       for (const [key, handler] of claims) {
-        if (!key.endsWith(` ${chordId}`)) continue;
-        if (match) return false;
-        match = handler;
+        if (!key.endsWith(suffix)) continue;
+        handler();
+        return true;
       }
-      if (!match) return false;
-      match();
-      return true;
+      return false;
     },
   };
 }
