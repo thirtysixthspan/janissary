@@ -1,6 +1,7 @@
 import type { Managers } from '../managers.js';
 import { messageBus, type Subscription } from '../bus.js';
 import type { ConnectionView, ScheduleView } from '../protocol.js';
+import { tabRuntime } from '../tab/runtime.js';
 import type {
   TabPluginActivation, TabPluginDeclaration, TabPluginHostState, TabPluginServerCapabilities,
 } from './api.js';
@@ -30,24 +31,24 @@ export type TabPluginHostStatePort = {
   disable(record: PluginRecord, error: unknown, origin: PluginFailureOrigin): void;
 };
 
-// What each tab was last handed, so a push happens on a change rather than on every mutation. The
-// `state` bus fires on essentially every keystroke-driven change in the application, so comparing
-// first is the whole point: without it a shell tab would be handed its own state thousands of times
-// a minute and every one of those would be a payload update and a broadcast.
+// What a tab was last handed lives on the tab's own runtime record, so a push happens on a change
+// rather than on every mutation. The `state` bus fires on essentially every keystroke-driven change in
+// the application, so comparing first is the whole point: without it a shell tab would be handed its
+// own state thousands of times a minute and every one of those would be a payload update and a
+// broadcast.
 //
-// Keyed by instance key rather than by tab label. A label is reused — the second shell tab in a
-// session is `shell1` again once the first has gone — and a fingerprint on file under a name the next
-// tab also carries would be computed already, so that tab would never be delivered its rows at all.
-// The instance key is the one field unique per invocation and stable for the tab's life, which
-// `nextInstanceKey` mints afresh for every tab and `removeTabAt` preserves across the `Tab` object it
-// rebuilds for each survivor. A `WeakMap` keyed on the tab itself would not survive that rebuild.
-const lastPushed = new WeakMap<PluginRecord, Map<string, string>>();
-
-// One tab's two slices, rendered to compare by value. JSON is the honest comparison here because both
-// sides are the host's own already-plain view arrays, and a plugin payload must be JSON-compatible
-// anyway — so this compares exactly what the client would receive.
+// Held on the tab rather than in a map keyed by label or instance key, so the memory goes when the
+// tab does. A tab that takes a label or an instance key a closed tab held is a new tab with no memory
+// and is delivered its rows, while every rebuild of a surviving tab (`removeTabAt`'s spread,
+// `updatePluginTab`'s in-place update) carries the same runtime record along.
+//
+// One tab's two slices and its instance key, rendered to compare by value. The key is part of it so a
+// tab `updateTab` re-keyed is delivered again under the key the plugin now addresses it by. JSON is
+// the honest comparison here because both sides are the host's own already-plain view arrays, and a
+// plugin payload must be JSON-compatible anyway — so this compares exactly what the client would
+// receive.
 function fingerprint(slice: Slice): string {
-  return JSON.stringify([slice.connections, slice.schedule]);
+  return JSON.stringify([slice.instanceKey, slice.connections, slice.schedule]);
 }
 
 function requested(declaration: TabPluginDeclaration, field: 'connections' | 'schedule'): boolean {
@@ -98,31 +99,21 @@ function dispatch(port: TabPluginHostStatePort): void {
   for (const record of port.records()) {
     if (record.state !== 'active' || !record.activation?.hostState) continue;
     if ((record.declaration.hostState ?? []).length === 0) continue;
-    const pushed = lastPushed.get(record) ?? new Map<string, string>();
-    // Published *before* the loop, not after it. A delivery re-enters this function: the plugin's
-    // handler merges rows with `updateTab`, which emits `state: dirty` inline, and `messageBus.emit`
-    // is synchronous. A map still unpublished is invisible to that pass, which builds its own empty
-    // map, sees the tab as never pushed, and delivers again — for as long as the tab keeps emitting.
-    lastPushed.set(record, pushed);
-    const open = new Set<string>();
     for (const tab of port.managers.tab.tabs) {
       if (tab.plugin?.id !== record.declaration.id) continue;
-      const instanceKey = tab.plugin.instanceKey;
-      open.add(instanceKey);
       const slice = readSlice(
-        port, tab.label, instanceKey, tab.plugin.payload, record.declaration,
+        port, tab.label, tab.plugin.instanceKey, tab.plugin.payload, record.declaration,
       );
       const print = fingerprint(slice);
-      if (pushed.get(instanceKey) === print) continue;
-      // Recorded before the call, so a handler that throws does not leave the tab looking stale and
-      // retrying on every subsequent mutation for the rest of the session.
-      pushed.set(instanceKey, print);
+      const runtime = tabRuntime(tab);
+      if (runtime.hostStatePushed === print) continue;
+      // Recorded before the call, for two reasons. A delivery re-enters this function: the plugin's
+      // handler merges rows with `updateTab`, which emits `state: dirty` inline, and `messageBus.emit`
+      // is synchronous, so a tab not yet marked would be delivered again for as long as it keeps
+      // emitting. And a handler that throws must not leave the tab looking stale and retrying on every
+      // subsequent mutation for the rest of the session.
+      runtime.hostStatePushed = print;
       void deliver(port, record, slice);
-    }
-    // A closed tab's memory goes with it. Keyed per instance, an entry outlives the tab it described,
-    // so a session that opened a hundred shell tabs would still be holding a hundred fingerprints.
-    for (const instanceKey of pushed.keys()) {
-      if (!open.has(instanceKey)) pushed.delete(instanceKey);
     }
   }
 }

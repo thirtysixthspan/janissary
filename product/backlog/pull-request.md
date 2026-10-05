@@ -27,17 +27,6 @@ Proposal Risk: 3/10 - Pickers follow their source tab and an invisible source fa
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: key shell-raised pickers on their source tab". In `web/src/pickers/useTaskPicker.ts`, choose the insertion target from `pickerSourceTab ?? current.label` (and only use the shell insertion path when that tab is a shell); in `web/src/pickers/useQueuePicker.ts` and `web/src/pickers/usePickerOverlays.ts`, take `isShellTab`, `queueItems` and the edit/delete targets from the source tab's record instead of `current`. In `web/src/App.tsx`, where `pickerSourceTab` is set, refuse to set a source tab that is neither the current tab nor docked-and-visible (clear the source so the picker renders over the current tab), or skip opening a picker for an invisible source. Add App-level tests (in `web/src/App.test.tsx` or `web/src/pickers/useTaskPicker`/`useQueuePicker` tests) that a docked-shell `tasks` pick calls the shell's insertion handler and that an intercept from a hidden shell does not leave an unrendered modal picker; keep `web/src/pickers/useQueuePicker.test.tsx` passing.
 
 
-* Store the host-state delivery fingerprint on the plugin tab record instead of a module-level map keyed by plugin and instance.
-
-Existing Issue: `src/plugins/host-state.ts` keeps `lastPushed`, a module-level `WeakMap<PluginRecord, Map<instanceKey, fingerprint>>` cleaned by a manual sweep, which is the parallel per-tab map that architecture principle 2 and the plugin guidelines rule out. Severity: 3/10
-
-Existing Risk: 3/10 - A tab closed on a path the sweep does not see leaves a stale fingerprint, so a reused instance key can skip its first host-state push and show empty connection or schedule windows.
-
-Proposal Risk: 1/10 - The fingerprint lives and dies with the tab record, with residual risk only if tab rebuilds drop the runtime sub-record.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: keep the host-state fingerprint on the plugin tab record". Move the last-pushed fingerprint into the tab's runtime record via `tabRuntime(tab)` from `src/tab/runtime.ts` (as `src/harness/idle-notification.ts` does for its own per-tab state), read and write it in `src/plugins/host-state.ts`, and delete the `WeakMap` and its sweep. The label-reuse and change-detection cases in `src/plugins/host-state.test.ts` must keep passing unchanged.
-
-
 * Replace the core's hard-coded checks for the shell plugin with declared plugin capabilities.
 
 Existing Issue: Core client code branches on `plugin?.id === 'shell'` in the mounted view layers, picker overlays and queue picker, and the tab strip imports the shell's payload guard to drive the busy dot, so the core depends on one plugin's id and payload shape. Severity: 4/10

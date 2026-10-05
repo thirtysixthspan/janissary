@@ -253,6 +253,8 @@ export type TabRuntime = {
   queue: string[];
   // A harness tab's pending idle escalation, owned by `src/harness/idle-notification.ts`.
   idleEscalation?: NodeJS.Timeout;
+  // A plugin tab's last host-state delivery, fingerprinted, owned by `src/plugins/host-state.ts`.
+  hostStatePushed?: string;
 };
 
 export type Tab = {

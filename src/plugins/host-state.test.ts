@@ -7,6 +7,7 @@ import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { makeTab } from '../tab/index.js';
 import { openPluginTab } from '../tab/openers.js';
+import { removeTabAt } from '../tab/reorder.js';
 
 function pluginTab(label: string, instanceKey: string, payload?: unknown): Tab {
   const held = payload ?? { ptyId: 'pty1' };
@@ -27,9 +28,8 @@ function makePort(overrides: {
   const schedule = overrides.schedule ?? {};
   const slices = overrides.slices === undefined ? ['connections', 'schedule'] : overrides.slices;
   const handler = vi.fn();
-  // One record object for the life of the port, because the delivery remembers what it last pushed
-  // against it — a records() that built a fresh one per call would look like a plugin whose rows had
-  // never been pushed, and would therefore deliver on every signal.
+  // One record object for the life of the port, so a case can change its state and see the delivery
+  // follow it. What was last pushed is remembered on each tab, not on the record.
   const record = {
     declaration: { id: 'shell', ...(slices && { hostState: slices }) },
     state: 'active',
@@ -212,6 +212,45 @@ describe('host state delivery', () => {
     tabs.length = 0;
     fireState();
     tabs.push(pluginTab('shell9', 'shell-1'));
+    fireState();
+
+    expect(handler).toHaveBeenCalledTimes(2);
+  });
+
+  it('delivers again under the new key when a tab is re-keyed with unchanged rows', () => {
+    const tab = pluginTab('page1', 'https://a.example');
+    const { handler, port } = makePort({
+      tabs: [tab],
+      connections: { page1: [{ text: 'zsh', kind: 'terminal' }] },
+    });
+
+    subscribe(port);
+    fireState();
+    (tab.plugin as { instanceKey: string }).instanceKey = 'https://b.example';
+    fireState();
+
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(handler).toHaveBeenLastCalledWith(
+      expect.objectContaining({ instanceKey: 'https://b.example' }), expect.anything(),
+    );
+  });
+
+  it('remembers the last push on the tab, so a survivor carried into a rebuilt list is not re-sent', () => {
+    const tabs: Tab[] = [pluginTab('shell1', 'shell-1'), pluginTab('shell2', 'shell-2')];
+    const { handler, port } = makePort({
+      tabs,
+      connections: { shell2: [{ text: 'zsh', kind: 'terminal' }] },
+    });
+
+    subscribe(port);
+    fireState();
+    expect(handler).toHaveBeenCalledTimes(2);
+    expect(tabs[1].runtime?.hostStatePushed).toEqual(expect.any(String));
+
+    // Closing the first tab rebuilds every survivor with a spread, as `removeTabAt` does; the runtime
+    // record is carried along, so the second tab's memory survives and nothing is delivered again.
+    const survivors = removeTabAt(tabs, 0);
+    tabs.splice(0, tabs.length, ...survivors);
     fireState();
 
     expect(handler).toHaveBeenCalledTimes(2);
