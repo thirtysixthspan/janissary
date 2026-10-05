@@ -2,7 +2,7 @@
 
 # pull-request
 
-* the bottom of popups in the editor tab should be flush with the top of the command bar.
+* the bottom of popups in the shell tab should be flush with the top of the command bar.
 
 * when 2 shells are open, executing a command like `ls` in a tab will cause the tab dot to continuously blink. this doesnt happen when a single shell tab is open.
 
