@@ -1,5 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { PluginFailureOrigin } from './failure.js';
+import type { HandlerDeadline } from './guard.js';
 import { complete } from '../controller/completion.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
 
@@ -16,11 +17,12 @@ export function lineCapabilities(input: {
   origin: PluginFailureOrigin;
   answeringLabel?: string;
   isEnabled: () => boolean;
+  deadline?: HandlerDeadline;
 }): Pick<
   TabPluginServerCapabilities,
   'originTab' | 'dispatchLine' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning' | 'queueLine' | 'nextQueuedLine' | 'recordCwd'
 > {
-  const { managers, declaration, origin, answeringLabel, isEnabled } = input;
+  const { managers, declaration, origin, answeringLabel, isEnabled, deadline } = input;
   const lineLabel = () => answeringLabel ?? origin.label;
   // The labels of this plugin's own open tabs — the only terminals whose ids a plugin can legitimately
   // hold, because a payload factory is the only scope in which it may start one.
@@ -52,10 +54,14 @@ export function lineCapabilities(input: {
       const answering = answeringLabel && managers.tab.byLabel(answeringLabel);
       return managers.command.dispatchLine(answering ? answeringLabel : origin.label, line);
     },
+    // The command runs on the host's time, not the plugin's: it may be another plugin's command, a
+    // large `open` or an agent launch, and a plugin must not be disabled for slowness that is not its
+    // own. Only the wait is exempted — the plugin's work either side of it is still timed.
     dispatchLineWithOutput: (line) => {
       if (!isEnabled()) return Promise.resolve({ dispatched: false, output: '' });
       const answering = answeringLabel && managers.tab.byLabel(answeringLabel);
-      return managers.command.dispatchLineWithOutput(answering ? answeringLabel : origin.label, line);
+      const run = () => managers.command.dispatchLineWithOutput(answering ? answeringLabel : origin.label, line);
+      return deadline ? deadline.exempt(run) : run();
     },
     completeLine: (line, cursor) => (isEnabled() ? complete(managers, line, cursor, answeringLabel ?? origin.label) : { matches: [], newInput: line, newCursor: cursor }),
     // Scoped to this plugin's own tabs rather than to whatever id it was handed. Pty ids come from a

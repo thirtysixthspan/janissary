@@ -5,17 +5,6 @@
 * the msg command to a shell tab, of each type, should be supported.
 
 
-* Run application commands dispatched from a shell bar outside the shell plugin's handler deadline, so another command's slowness cannot disable the shell plugin.
-
-Existing Issue: The shell plugin's `dispatch` intent awaits `CommandManager.dispatchLineWithOutput`, which awaits the whole application command (including another plugin's activation and handler) inside the shell plugin's own 5000 ms intent deadline, contradicting the tab-plugins spec's statement that the deadline covers plugin work only. Severity: 7/10
-
-Existing Risk: 7/10 - A slow or hung application command typed in a shell bar (another plugin's command, a large `open`, an agent launch) trips the shell's guard, and the shell plugin is disabled with every shell tab and zsh process closed for a fault that is not its own.
-
-Proposal Risk: 3/10 - The shell's deadline covers only its own routing decision, though the reply capture still needs a bounded wait so a never-finishing command does not hold the bar forever.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1526: run shell-dispatched application commands outside the plugin handler deadline". Trace the intent path from `src/plugins/shell/activate.ts` (`dispatch`) through `src/plugins/line-capabilities.ts` (`dispatchLineWithOutput`) and the guarded intent runner in `src/plugins/host.ts`/`src/plugins/requests.ts`. Change the contract so the plugin's handler only resolves whether the line is an application command and returns immediately, and the host performs the command execution and output capture after the handler returns, the same way file-open requests are deferred past the handler (see how `openClaimedFiles` requests are queued in `src/plugins/invoke.ts`). The client in `web/src/plugins/shell/useShellSubmit.ts` should still receive the reply text, so either deliver it through a follow-up intent result or a host push to the tab. Add a `src/plugins/host-state.test.ts`- or `src/plugins/intent.test.ts`-style test where a dispatched line resolves to a deliberately slow command and assert the shell plugin remains enabled and its tabs remain open; keep `src/command/manager.test.ts` capture tests passing. Update `product/specs/tab-plugins.md` only if the contract wording changes.
-
-
 * Scope the line capabilities that change queues and working directories to the plugin's own tabs, as their documentation promises.
 
 Existing Issue: `queueLine`, `nextQueuedLine` and `recordCwd` in the plugin line capabilities act on `answeringLabel ?? origin.label` without checking that the tab belongs to the calling plugin, so any plugin's command, selection action or menu handler invoked from an agent tab can push to, pop from, or rewrite the recorded directory of that agent tab. Severity: 6/10

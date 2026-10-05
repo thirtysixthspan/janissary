@@ -12,6 +12,7 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
+import type { HandlerDeadline } from './guard.js';
 import { projectFilesFor } from '../project/files.js';
 import { isInsideRoot } from './files.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
@@ -95,6 +96,8 @@ export function createPluginContext(
   // plugin tab. Distinct from `origin`, which is the tab a *command* was invoked from and which stays
   // that way for every capability.
   answeringLabel?: string,
+  // The guarded call's clock, so a capability that runs host work the plugin waits on can stop it.
+  deadline?: HandlerDeadline,
 ): TabPluginServerCapabilities {
   return restrictToDeclared({
     note: (text) => {
@@ -215,7 +218,7 @@ export function createPluginContext(
     isRecordingLive: (absPath) => isEnabled() && liveRecordingPaths(managers).has(absPath),
     // The four a plugin tab needs to be a place a line can be typed and a process can be checked on,
     // moved out whole because they depend on nothing here beyond what they are handed.
-    ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled }),
+    ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

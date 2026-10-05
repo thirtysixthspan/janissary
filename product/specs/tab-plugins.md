@@ -30,7 +30,7 @@ A plugin may also declare its claimed extensions **playable**: every file type i
 
 A plugin that asks to be told when host state changes but supplies no handler for it never activates successfully, and is reported as disabled with that reason.
 
-Server activation has a 1000 ms deadline, as does handling one announcement of changed host state. Each opener, command handler, or intent has a 5000 ms deadline, covering plugin work only — files a command asks the host to open are dispatched after the handler returns, so a large wildcard open is never charged to the plugin. Concurrent first uses share one activation, and later uses reuse it.
+Server activation has a 1000 ms deadline, as does handling one announcement of changed host state. Each opener, command handler, or intent has a 5000 ms deadline, covering plugin work only — files a command asks the host to open are dispatched after the handler returns, so a large wildcard open is never charged to the plugin. Likewise, while a handler waits on an application command it asked the host to run (`dispatchLineWithOutput`, which the shell tab uses for every application command typed into its bar), the deadline's clock is stopped: that command may be another plugin's, a large `open` or an agent launch, and its runtime is the host's time. The handler's own work before and after the wait is still timed, so a handler that hangs on its own is still disabled with `handler timed out after 5000 ms`. The host waits at most 30 seconds for that command's reply; past that the handler receives the output captured so far, and the command keeps running. Concurrent first uses share one activation, and later uses reuse it.
 
 ### `plugins` command
 

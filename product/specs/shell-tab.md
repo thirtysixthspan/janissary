@@ -89,6 +89,12 @@ or numbers, quotes get a bar, links show their target after the text, and tables
 columns under a bold header. Neither line is sent
 to zsh. Commands that open a picker keep their existing behavior.
 
+A slow application command never disables the shell. Its runtime is not charged to the shell plugin's
+handler deadline (see [[tab-plugins]]), so a command that takes longer than five seconds — another
+plugin's command, a large `open`, an agent launch — leaves every shell tab and its zsh process open.
+The reply waits for the command for at most 30 seconds. A command still running then shows the output
+it had produced so far, and keeps running.
+
 When the terminal is in its normal buffer and can measure the reply, it is rendered as HTML — the same
 markdown rendering an agent tab's transcript uses, in the terminal's theme colors — in a block placed
 in the terminal's scrollback directly under the echoed command and followed by zsh's prompt. Its

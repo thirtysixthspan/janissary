@@ -104,6 +104,24 @@ describe('CommandManager dispatchLineWithOutput', () => {
       dispatched: false, output: '',
     });
   });
+
+  // Nothing above this wait bounds it any more — the plugin asking is not charged for the command's
+  // runtime — so a command that never finishes answers with what it said by the capture limit.
+  it('answers with the output so far when a command outlives the capture limit', async () => {
+    const { managers } = makeManagers();
+    const late = Promise.withResolvers<void>();
+    vi.spyOn(managers.command, 'executeCommand').mockImplementation(async (_name, command, label) => {
+      managers.tab.append(label, { input: command, output: 'started' });
+      await late.promise;
+      managers.tab.append(label, { input: command, output: 'finished' });
+    });
+
+    await expect(managers.command.dispatchLineWithOutput('janus', 'theme dark', 10)).resolves.toEqual({
+      dispatched: true, output: 'started',
+    });
+    late.resolve();
+    await vi.waitFor(() => { expect(managers.tab.cur().log.at(-1)?.output).toBe('finished'); });
+  });
 });
 
 

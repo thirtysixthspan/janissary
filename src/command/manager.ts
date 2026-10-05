@@ -12,7 +12,9 @@ import { errorText } from '../error-text.js';
 
 type PendingRoute = { label: string; cmd: string; choices: RouteChoice[] };
 
-const ROUTE_BUSY = 'Another command is waiting for a route choice; run this again once it is answered.';
+const DISPATCH_CAPTURE_LIMIT_MS = 30_000;
+
+const ROUTE_BUSY ='Another command is waiting for a route choice; run this again once it is answered.';
 
 export class CommandManager {
   private pendingRoute: PendingRoute | null = null;
@@ -134,7 +136,15 @@ export class CommandManager {
     return true;
   }
 
-  async dispatchLineWithOutput(label: string, input: string): Promise<{ dispatched: boolean; output: string }> {
+  // The wait is bounded because nothing else bounds it: the plugin asking is not charged for the
+  // command's runtime, so a command that never finishes would otherwise hold the caller forever. Past
+  // the limit the caller gets what was said so far; the command keeps running, and anything it says
+  // later lands in the tab's own record as it always would.
+  async dispatchLineWithOutput(
+    label: string,
+    input: string,
+    captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
+  ): Promise<{ dispatched: boolean; output: string }> {
     const resolution = resolveCommand(input);
     if (resolution.kind === 'output') {
       this.managers.tab.append(label, { input, output: resolution.output, markdown: true });
@@ -146,9 +156,14 @@ export class CommandManager {
     const subscription = messageBus.on('transcript', 'entry:appended', (event) => {
       if (event.type === 'entry:appended' && event.tabLabel === label) output.push(event.entry.output);
     });
+    let limit: ReturnType<typeof setTimeout> | undefined;
     try {
-      await this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label));
+      await Promise.race([
+        this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label)),
+        new Promise<void>((resolve) => { limit = setTimeout(resolve, captureLimitMs); }),
+      ]);
     } finally {
+      clearTimeout(limit);
       subscription.unsubscribe();
     }
     return { dispatched: true, output: output.join('\n') };
