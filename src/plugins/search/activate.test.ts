@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { activate } from './activate.js';
+import { compileMatcher } from './compile-matcher.js';
+import { fileMatches, matchFile } from './search-files.js';
+import type { ScanMatcherFactory } from './scan.js';
+import type { MatcherWorker } from './matcher-worker-protocol.js';
 import type { SearchIntent, SearchPayload } from './shared.js';
 
 const files: Record<string, string> = {
@@ -52,8 +56,18 @@ function searchActivation(contents: Record<string, string> = files) {
     const text = contents[absPath.replace('/repo/', '')];
     if (text === undefined) throw new Error('ENOENT');
     return text;
-  });
+  }, inlineMatcher);
 }
+
+const inlineMatcher: ScanMatcherFactory = (request) => {
+  const matcher = compileMatcher(request.query, request);
+  const worker: MatcherWorker = {
+    detect: async (lines) => matcher !== null && fileMatches(lines, matcher),
+    rows: async (relPath, text) => matcher === null ? [] : matchFile(relPath, text, matcher),
+    dispose: () => {},
+  };
+  return worker;
+};
 
 const query: SearchIntent = {
   query: 'todo', include: '', exclude: '', regex: false, matchCase: false, wholeWord: false,

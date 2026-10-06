@@ -125,6 +125,9 @@ count of matches or files, and the window shows the rows and nothing else. Three
 is running (over whatever rows have already arrived), **`No matches found for "<query>".`** when
 one settles with nothing, and the reason when a search fails.
 
+Each matching job has a one-second deadline. If one exceeds it, the search ends with an error reason;
+any rows already found remain visible, and a later query can run normally.
+
 ### Navigating and opening a result
 
 **Tab alternates between the search term and the results.** The two are the tab's only focusable
