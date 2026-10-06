@@ -1,8 +1,10 @@
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { compileMatcher, type Matcher } from './compile-matcher.js';
+import { patternError } from './compile-matcher.js';
 import { filterPaths } from './filter-paths.js';
-import { fileMatches, matchFile, splitLines } from './search-files.js';
+import { splitLines } from './search-files.js';
+import { createMatcherWorker } from './matching-worker.js';
+import type { MatcherWorker } from './matcher-worker-protocol.js';
 import type { SearchMatch } from './shared.js';
 
 // The editor tab's own limit, restated rather than imported because a plugin may not reach host
@@ -36,6 +38,7 @@ export type ScanQuery = {
   matchCase: boolean;
   wholeWord: boolean;
 };
+export type ScanMatcherFactory = (request: ScanQuery, signal: AbortSignal) => MatcherWorker;
 // A batch of rows as the scan finds them, or the two ways a scan can end without finding anything
 // more: `done` when it settled having found what it was going to, `error` when it could not finish.
 // The two are distinct — a cancelled scan reports neither, because a scan the user abandoned is not
@@ -51,6 +54,7 @@ export type ScanOptions = {
   // check, so a test asserting the size refusal has to state the size it means.
   readFile?: ScanRead;
   fileSize?: (absPath: string) => Promise<number | null>;
+  createMatcher?: ScanMatcherFactory;
 };
 export type ScanHandle = { cancel(): void };
 
@@ -108,6 +112,7 @@ type Runtime = {
   request: ScanQuery;
   read: ScanRead;
   sizeOf: SizeLookup;
+  createMatcher: NonNullable<ScanOptions['createMatcher']>;
   signal: AbortSignal;
   // Rows still to deliver before the search reaches its cap.
   remaining: number;
@@ -116,7 +121,7 @@ type Runtime = {
 // Phase two: turn every queued candidate into rows, one `onBatch` per file so the table fills
 // progressively. Aborted midway, the rows already delivered stand and the rest are dropped. A file
 // whose matches straddle the cap gives only the rows that fit, and the queue behind it is not read.
-async function deliver(queue: Candidate[], matcher: Matcher, runtime: Runtime): Promise<void> {
+async function deliver(queue: Candidate[], matcher: MatcherWorker, runtime: Runtime): Promise<void> {
   const { options, read, sizeOf, signal } = runtime;
   while (queue.length > 0 && runtime.remaining > 0) {
     if (signal.aborted) return;
@@ -125,7 +130,8 @@ async function deliver(queue: Candidate[], matcher: Matcher, runtime: Runtime): 
     const text = await readableText(candidate.absPath, read, sizeOf);
     if (signal.aborted) return;
     if (text === null) continue;
-    const rows = matchFile(candidate.relPath, text, matcher).slice(0, runtime.remaining);
+    const matchedRows = await matcher.rows(candidate.relPath, text);
+    const rows = matchedRows.slice(0, runtime.remaining);
     runtime.remaining -= rows.length;
     if (rows.length > 0) options.onBatch({ rows, done: false });
   }
@@ -133,7 +139,7 @@ async function deliver(queue: Candidate[], matcher: Matcher, runtime: Runtime): 
 
 // Phase one over one batch: read it and return the candidates that match at all.
 async function detect(
-  batch: readonly Candidate[], matcher: Matcher, runtime: Runtime,
+  batch: readonly Candidate[], matcher: MatcherWorker, runtime: Runtime,
 ): Promise<Candidate[]> {
   const texts = await readAll(
     batch.map((candidate) => candidate.absPath), runtime.read, runtime.sizeOf, READ_CONCURRENCY,
@@ -142,7 +148,8 @@ async function detect(
   for (const [offset, text] of texts.entries()) {
     const candidate = batch[offset];
     if (text === null || candidate === undefined) continue;
-    if (fileMatches(splitLines(text), matcher)) found.push(candidate);
+    const matches = await matcher.detect(splitLines(text));
+    if (matches) found.push(candidate);
   }
   return found;
 }
@@ -152,22 +159,29 @@ async function detect(
 // the whole of the prioritisation.
 async function run(runtime: Runtime): Promise<void> {
   const { options, request, signal } = runtime;
-  const matcher = compileMatcher(request.query, request);
-  if (!matcher) { options.onBatch({ rows: [], done: true }); return; }
-  const listed = await options.listFiles();
-  if (signal.aborted) return;
-  const candidates: Candidate[] = filterPaths(listed.paths, request.include, request.exclude)
-    .map((relPath) => ({ relPath, absPath: path.join(listed.root, relPath) }));
-  const pending: Candidate[] = [];
-
-  for (const batch of chunk(candidates, BATCH_SIZE)) {
-    if (signal.aborted) return;
-    if (runtime.remaining === 0) break;
-    pending.push(...await detect(batch, matcher, runtime));
-    await deliver(pending, matcher, runtime);
+  if (request.query === '' || patternError(request.query, request) !== null) {
+    options.onBatch({ rows: [], done: true });
+    return;
   }
+  const matcher = runtime.createMatcher(request, signal);
+  try {
+    const listed = await options.listFiles();
+    if (signal.aborted) return;
+    const candidates: Candidate[] = filterPaths(listed.paths, request.include, request.exclude)
+      .map((relPath) => ({ relPath, absPath: path.join(listed.root, relPath) }));
+    const pending: Candidate[] = [];
 
-  if (!signal.aborted) options.onBatch({ rows: [], done: true });
+    for (const batch of chunk(candidates, BATCH_SIZE)) {
+      if (signal.aborted) return;
+      if (runtime.remaining === 0) break;
+      pending.push(...await detect(batch, matcher, runtime));
+      await deliver(pending, matcher, runtime);
+    }
+
+    if (!signal.aborted) options.onBatch({ rows: [], done: true });
+  } finally {
+    matcher.dispose();
+  }
 }
 
 // Run one search over the project, streaming rows to `onBatch` as they are found.
@@ -194,7 +208,10 @@ export function startScan(options: ScanOptions, request: ScanQuery): ScanHandle 
   });
   const controller = new AbortController();
   const runtime: Runtime = {
-    options, request, read, sizeOf, signal: controller.signal, remaining: MAX_RESULTS,
+    options, request, read, sizeOf, signal: controller.signal,
+    createMatcher: options.createMatcher
+      ?? ((search, signal) => createMatcherWorker(search.query, search, signal)),
+    remaining: MAX_RESULTS,
   };
   // A rejection here would otherwise escape as an unhandled rejection while the tab sat in its
   // searching state forever, so it is reported through the same channel the rows arrive on. A scan

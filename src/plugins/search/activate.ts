@@ -12,7 +12,7 @@ import {
   type SearchIntent,
 } from './shared.js';
 import { SearchSession } from './session.js';
-import type { ScanRead } from './scan.js';
+import type { ScanMatcherFactory, ScanRead } from './scan.js';
 
 // Repository-wide search. Opens on no file, so the opener is the shared refusal; everything it shows
 // comes from its own scan rather than from a host topic, because a search is a question the user
@@ -20,12 +20,12 @@ import type { ScanRead } from './scan.js';
 //
 // `readFile` exists so a test can supply file contents without a filesystem; production reads the
 // real file, which is the only route a result's text can come from.
-export function activate(readFile?: ScanRead): TabPluginActivation {
+export function activate(readFile?: ScanRead, createMatcher?: ScanMatcherFactory): TabPluginActivation {
   // Built on first use and closed over by every handler, so the scan in flight, the rows accumulated
   // so far, and the tab identity are one object with the lifetime of the plugin.
   let session: SearchSession | null = null;
   const sessionFor = (capabilities: TabPluginServerCapabilities): SearchSession => {
-    session ??= new SearchSession(capabilities, readFile);
+    session ??= new SearchSession(capabilities, readFile, createMatcher);
     return session;
   };
 

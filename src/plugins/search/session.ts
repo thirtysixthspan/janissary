@@ -1,7 +1,7 @@
 import path from 'node:path';
 import type { TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
-import { startScan, type ScanHandle, type ScanRead } from './scan.js';
+import { startScan, type ScanHandle, type ScanMatcherFactory, type ScanRead } from './scan.js';
 import { patternError } from './compile-matcher.js';
 import { modesFrom, sameModes, type SearchModes } from './saved-modes.js';
 import type { SearchIntent, SearchMatch, SearchPayload } from './shared.js';
@@ -44,6 +44,7 @@ export class SearchSession {
     // the real file, which is the only route a result's text can come from — and because the
     // contents are already in hand when one is supplied, its size is the contents' own length.
     private contents?: ScanRead,
+    private createMatcher?: ScanMatcherFactory,
   ) {
     this.saved = modesFrom(capabilities.readSettings());
     this.payload = payloadOf(emptyPayload(), this.saved);
@@ -104,6 +105,7 @@ export class SearchSession {
           return null;
         }
       },
+      createMatcher: this.createMatcher,
       onBatch: (batch) => this.receive(batch.rows, batch.done, batch.error),
     }, request);
   }
