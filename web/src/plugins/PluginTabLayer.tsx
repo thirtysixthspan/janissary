@@ -45,7 +45,6 @@ export function PluginTabLayer({
         <PluginBody
           plugin={tab.plugin} label={tab.label} client={client}
           dotColor={tab.dotColor}
-          recording={tab.plugin.recording}
           active={tab.label === current.label} onClose={onClose} onSplit={onSplit}
           onDirtyHandle={onDirtyHandle}
         />

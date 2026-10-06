@@ -121,7 +121,6 @@ export function PluginBody({
   active,
   dock = null,
 dotColor,
-  recording,
   onClose,
   onSplit,
   onDirtyHandle,
@@ -132,7 +131,6 @@ dotColor,
   active: boolean;
   dock?: 'left' | 'right' | null;
   dotColor?: string;
-  recording?: string;
   onClose: () => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
@@ -165,6 +163,10 @@ dotColor,
     chordsRef.current = claimedChords;
   }
   const chords = chordsRef.current;
+  // This tab's recording, read off the envelope the tab was handed rather than passed beside it. The
+  // envelope is where the server puts it for every plugin tab, so a surface that renders one — the
+  // centre strip or a sidebar — reaches the same answer without a prop each has to remember to pass.
+  const recording = plugin.recording;
   const registerDirty = useCallback((handle: TabDirtyHandle | null) => {
     onDirtyHandleRef.current?.(handle);
   }, []);

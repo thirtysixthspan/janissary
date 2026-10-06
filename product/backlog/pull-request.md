@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Pass a docked plugin tab's recording through, so a shell tab docked into a sidebar gets a pressable recording flag rather than a permanently inert one.
-
-Existing Issue: `web/src/plugins/DockedPluginBody.tsx` renders `PluginBody` without a `recording` prop, so a docked plugin tab's capabilities carry neither `recording` nor `openRecording` and `ShellRecordingFlag` always takes its inert branch, which the new `product/specs/shell-tab.md` § The metadata row contradicts when it states the flag is pressable from the shell's first output. Severity: 6/10
-
-Existing Risk: 5/10 - A docked shell tab shows a grey recording flag forever that promises a recording and offers nothing, and nothing on screen distinguishes "not yet" from "never", so the control actively misleads.
-
-Proposal Risk: 2/10 - Threading the field through fixes it, leaving only the risk that a future docked surface forgets the prop again.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1549: pass a docked plugin tab's recording through to its metadata row". Add a `recording?: string` prop to `DockedPluginBody` in `web/src/plugins/DockedPluginBody.tsx`, pass `tab.plugin.recording` into it at the single call site in `web/src/Sidebar.tsx`, and forward it to the `PluginBody` it already renders, which `web/src/plugins/PluginBody.tsx` accepts and already threads into `createPluginClientCapabilities`. This mirrors what `web/src/plugins/PluginTabLayer.tsx` does for the centre strip, so the two surfaces stay in step. Add a case to the `DockedPluginBody` test file asserting that a plugin tab carrying a recording reaches its body with the capability present and its flag pressable, and one asserting it is absent when the tab has none; check the existing docked-body test file for the shape to mirror, since no case covers the recording field on either surface today. `web/src/shared/RecordingFlag.test.tsx` does not exist and is not needed here — the capability, not the component, is what is missing. Nothing else reads `DockedPluginBody`'s props, so the widening is contained.
-
-
 * Collapse the recording flag's two hand-written implementations into the one shared component, which the plugin's independence from the host's metadata row does not actually call for.
 
 Existing Issue: `web/src/shared/RecordingFlag.tsx` and `web/src/plugins/shell/ShellRecordingFlag.tsx` each implement the same rule — a button carrying `tab-flag tab-flag--active tab-recording` when pressable, a `span` carrying `tab-flag tab-recording` otherwise — and the plan's stated reason for the split, that the shell plugin keeps its independence from the host's `AgentTabMeta` markup, does not cover a component this pull request introduced, since the plugin api barrel at `web/src/plugins/api.ts` already re-exports shared components the way it re-exports `PluginActionsHeader`. Severity: 4/10
