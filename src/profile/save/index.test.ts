@@ -37,6 +37,10 @@ function pagePluginTab(label: string, dotColor: string, number: number, url: str
   });
 }
 
+function claudeTab(label: string, dotColor: string): Tab {
+  return makeHarnessTab(label, dotColor, 1, 1, dotColor, { name: 'claude', program: 'claude', ptyId: `pty-${label}`, status: 'running' });
+}
+
 function markdownPluginTab(label: string, dotColor: string, number: number, file: string): Tab {
   return makePluginTab(label, dotColor, number, 1, '#111', 'readme.md', {
     id: 'markdown', instanceKey: file, schemaVersion: 1,
@@ -96,7 +100,7 @@ describe('saveProfile', () => {
   });
 
   it('writes one tabs array in tab-strip order, with a type on every element and no tab object', async () => {
-    const bob = makeTab('bob', '#aaa');
+    const bob = claudeTab('bob', '#aaa');
     const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running' });
     const notes = makeEditorTab('notes', '#ddd', 1, 1, '#ddd', { name: 'notes.txt', path: '/notes.txt', size: '1KB', url: '/open/1' });
     const dockedFiles = { ...makeFilesTab('nav', '#444', 1, 1, '#444', { root: '~', absoluteRoot: '/home', rows: [] }), dock: 'left' as const };
@@ -106,7 +110,7 @@ describe('saveProfile', () => {
 
     const root = JSON.parse(readFileSync(profilePath('demo'), 'utf8')) as ProfileFile;
     expect(Object.keys(root)).toEqual(['tabs', 'layout']);
-    expect(root.tabs?.map((entry) => entry.type)).toEqual(['agent', 'files', 'harness', 'editor']);
+    expect(root.tabs?.map((entry) => entry.type)).toEqual(['harness', 'files', 'harness', 'editor']);
     expect(JSON.stringify(root.tabs)).not.toContain('"tab"');
   });
 
@@ -118,20 +122,6 @@ describe('saveProfile', () => {
 
     const root = JSON.parse(readFileSync(profilePath('demo'), 'utf8')) as ProfileFile;
     expect(root.tabs?.[0]).toEqual(expect.objectContaining({ type: 'harness', tool: 'claude' }));
-  });
-
-  it('writes one clean-template agent entry per agent tab, with flat presentation fields', async () => {
-    const bob = { ...makeTab('bob', '#aaa', 2, ['history line'], [{ input: 'ls', output: 'x' }], undefined, 3, '#bbb') };
-    const managers = makeManagers([bob], { bob: '/work/bob' });
-
-    await saveProfile('demo', managers);
-
-    expect(load('demo').entries).toEqual([
-      {
-        name: 'bob', active: false, cwd: '/work/bob', dotColor: '#aaa', number: 2,
-        group: 3, groupColor: '#bbb', focus: undefined, pane: 'left',
-      },
-    ]);
   });
 
   it('writes a harness entry with tool and flat presentation fields', async () => {
@@ -166,7 +156,7 @@ describe('saveProfile', () => {
   });
 
   it('writes focus only on the active main-area tab', async () => {
-    const bob = makeTab('bob', '#aaa');
+    const bob = claudeTab('bob', '#aaa');
     const claude = makeHarnessTab('claude', '#ccc', 1, 1, '#ccc', { name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running' });
     const notes = makeEditorTab('notes', '#ddd', 1, 1, '#ddd', { name: 'notes.txt', path: '/notes.txt', size: '1KB', url: '/open/1' });
     const managers = makeManagers([bob, claude, notes]);
@@ -179,14 +169,6 @@ describe('saveProfile', () => {
       expect.objectContaining({ name: 'claude', focus: true }),
     ]);
     expect(load('demo').editors[0]?.focus).toBeUndefined();
-  });
-
-  it('writes an agent entry cwd relative to the project root when it is under the root', async () => {
-    const managers = makeManagers([makeTab('bob', '#aaa')], { bob: '/proj/src/deep' }, [], '/proj');
-
-    await saveProfile('demo', managers);
-
-    expect(load('demo').entries).toEqual([expect.objectContaining({ cwd: '$root/src/deep' })]);
   });
 
   it('writes a harness entry cwd relative to the project root when it is under the root', async () => {
@@ -213,18 +195,6 @@ describe('saveProfile', () => {
 
     const entry = load('demo').entries[0] as Record<string, unknown>;
     expect(entry).toMatchObject({ tool: 'claude', remote: 'admin@devbox:/srv/proj', workspace: true });
-    expect(entry.cwd).toBeUndefined();
-  });
-
-  it('writes a remote agent entry with its address and no cwd', async () => {
-    const bekir = makeTab('bekir', '#aaa');
-    bekir.remote = { address: 'devbox', host: 'devbox' };
-    const managers = makeManagers([bekir], { bekir: '/srv/proj/.janissary/workspace/bekir' }, [], '/proj');
-
-    await saveProfile('demo', managers);
-
-    const entry = load('demo').entries[0] as Record<string, unknown>;
-    expect(entry).toMatchObject({ name: 'bekir', remote: 'devbox' });
     expect(entry.cwd).toBeUndefined();
   });
 
@@ -375,28 +345,32 @@ describe('saveProfile', () => {
     expect(load('demo').editors).toEqual([expect.objectContaining({ path: '$root/product/backlog/issues.md' })]);
   });
 
+  it('leaves agent tabs out of the profile and lists each under skipped', async () => {
+    const managers = makeManagers([makeTab('bob', '#aaa'), claudeTab('claude', '#ccc')]);
+
+    const summary = await saveProfile('demo', managers);
+
+    const root = JSON.parse(readFileSync(profilePath('demo'), 'utf8')) as ProfileFile;
+    expect(root.tabs?.map((entry) => entry.type)).toEqual(['harness']);
+    expect(summary.skipped).toEqual(['bob']);
+  });
+
   it('does not capture the root janus tab, and does not count or report it', async () => {
     const managers = makeManagers([makeTab('janus', '#000'), makeTab('bob', '#aaa')]);
 
     const summary = await saveProfile('demo', managers);
 
-    expect(load('demo').entries).toEqual([
-      {
-        name: 'bob', active: false, cwd: undefined, dotColor: '#aaa', number: 1, group: 1,
-        groupColor: '#aaa', focus: undefined, pane: 'left',
-      },
-    ]);
-    expect(summary.agents).toBe(1);
-    expect(summary.skipped).not.toContain('janus');
+    expect(load('demo').entries).toEqual([]);
+    expect(summary.skipped).toEqual(['bob']);
   });
 
-  it('captures a tab labeled janus if it is not the first tab', async () => {
+  it('reports a tab labeled janus as skipped if it is not the first tab', async () => {
     const managers = makeManagers([makeTab('bob', '#aaa'), makeTab('janus', '#000')]);
 
     const summary = await saveProfile('demo', managers);
 
-    expect(load('demo').entries.map((e) => e.name)).toEqual(['bob', 'janus']);
-    expect(summary.agents).toBe(2);
+    expect(load('demo').entries).toEqual([]);
+    expect(summary.skipped).toEqual(['bob', 'janus']);
   });
 
   it('captures docked file-navigator and notifications tabs, counting navigators on their own', async () => {
@@ -460,7 +434,7 @@ describe('saveProfile', () => {
     const staleDir = path.join(root, 'profiles', 'demo');
     mkdirSync(staleDir, { recursive: true });
     writeFileSync(path.join(staleDir, 'stale.json'), '{}');
-    const managers = makeManagers([makeTab('bob', '#aaa')]);
+    const managers = makeManagers([claudeTab('bob', '#aaa')]);
 
     await saveProfile('demo', managers);
 
@@ -542,7 +516,7 @@ describe('saveProfile on a project that has never had a profiles directory', () 
 describe('formatSaveSummary', () => {
   function makeSummary(overrides: Partial<SaveSummary> = {}): SaveSummary {
     return {
-      agents: 0, harnesses: 0, editors: 0, plugins: 0, ssh: 0,
+      harnesses: 0, editors: 0, plugins: 0, ssh: 0,
       fileNavigators: 0, monitors: 0, dockedViews: 0, skipped: [], notes: [], ...overrides,
     };
   }
@@ -553,24 +527,24 @@ describe('formatSaveSummary', () => {
 
   it('uses singular labels for a count of one', () => {
     const summary = makeSummary({
-      agents: 1, harnesses: 1, editors: 1, plugins: 1, ssh: 1,
+      harnesses: 1, editors: 1, plugins: 1, ssh: 1,
       fileNavigators: 1, monitors: 1, dockedViews: 1,
     });
 
     expect(formatSaveSummary('demo', summary)).toBe(
-      'Saved profile "demo": 1 agent, 1 harness, 1 editor tab, 1 plugin tab, '
+      'Saved profile "demo": 1 harness, 1 editor tab, 1 plugin tab, '
       + '1 ssh tab, 1 file navigator, layout, 1 monitor, 1 docked tab.',
     );
   });
 
   it('uses plural labels for counts greater than one', () => {
     const summary = makeSummary({
-      agents: 2, harnesses: 3, editors: 4, plugins: 2, ssh: 2,
+      harnesses: 3, editors: 4, plugins: 2, ssh: 2,
       fileNavigators: 2, monitors: 5, dockedViews: 6,
     });
 
     expect(formatSaveSummary('demo', summary)).toBe(
-      'Saved profile "demo": 2 agents, 3 harnesses, 4 editor tabs, 2 plugin tabs, '
+      'Saved profile "demo": 3 harnesses, 4 editor tabs, 2 plugin tabs, '
       + '2 ssh tabs, 2 file navigators, layout, 5 monitors, 6 docked tabs.',
     );
   });

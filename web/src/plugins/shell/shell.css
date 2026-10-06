@@ -30,8 +30,8 @@
   flex: 0 0 auto;
 }
 
-.shell-tab .picker.shell-history { bottom: var(--command-bar-height, 0px); max-height: 50%; }
-.shell-tab .picker.clipboard-history { bottom: var(--command-bar-height, 0px); max-height: 50%; }
+.shell-tab .picker.shell-history { bottom: var(--command-bar-height, 0); max-height: 50%; }
+.shell-tab .picker.clipboard-history { bottom: var(--command-bar-height, 0); max-height: 50%; }
 
 /* Docked into a sidebar the terminal has little room and the popup less; the history list stays
    readable by scrolling rather than by giving up rows. */

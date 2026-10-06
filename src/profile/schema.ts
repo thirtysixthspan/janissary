@@ -6,7 +6,7 @@
 import type { ProfileTabFile } from './types.js';
 import { checkField, isObject } from './schema-fields.js';
 import {
-  agentProblems, editorProblems, filesProblems, harnessProblems, notificationsProblems,
+  editorProblems, filesProblems, harnessProblems, notificationsProblems,
   pageProblems, pathProblems, pluginProblems, presentationProblems, schedulesProblems, sshProblems,
 } from './schema-tab-entry.js';
 
@@ -17,11 +17,10 @@ import {
 // `markdown` are the pre-plugin spellings of a `plugin` entry with that id and stay accepted so a
 // saved profile keeps launching.
 //
-// Keyed by `ProfileTabFile['type']`, so a twelfth kind added to that union fails to compile here
+// Keyed by `ProfileTabFile['type']`, so an eleventh kind added to that union fails to compile here
 // until it is classified — where the two hand-kept lists this replaced would have gone on rejecting
 // it on load with `type must be one of …` while the build stayed green.
 const TAB_KINDS: Record<ProfileTabFile['type'], boolean> = {
-  agent: true,
   harness: true,
   editor: true,
   files: true,
@@ -42,17 +41,23 @@ function isTabKind(value: unknown): value is ProfileTabFile['type'] {
   return typeof value === 'string' && Object.hasOwn(TAB_KINDS, value);
 }
 
+// An element that profiles no longer open but that older files still carry: accepted whatever its
+// other fields hold, and dropped by the loader before any opener sees it.
+export function isIgnoredTab(value: unknown): boolean {
+  return isObject(value) && value.type === 'agent';
+}
+
 // One element of the `tabs` array: an object carrying a recognized `type`, the presentation fields
 // its type allows, and whatever else that type requires.
 function tabProblems(value: unknown, loc: string): string[] {
   if (!isObject(value)) return [`${loc} must be an object`];
+  if (isIgnoredTab(value)) return [];
   const type = value.type;
   if (!isTabKind(type)) return [`${loc}: type must be one of ${TAB_TYPES.join(', ')}`];
   const shared = TAB_KINDS[type] ? presentationProblems(value, loc) : [];
   // No `default` arm: `type` is narrowed to the union, so a kind without a case leaves this
   // function without a return and fails to compile.
   switch (type) {
-  case 'agent': { return [...shared, ...agentProblems(value, loc)]; }
   case 'harness': { return [...shared, ...harnessProblems(value, loc)]; }
   case 'editor': { return [...shared, ...editorProblems(value, loc)]; }
   case 'files': { return [...shared, ...filesProblems(value, loc)]; }

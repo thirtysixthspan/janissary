@@ -1,24 +1,24 @@
 # Run Agents Beyond Your Laptops
 
-**Complexity: 8/10** — two genuinely different remote-spawn mechanisms are needed (ACP's stdio subprocess vs. PTY-based harness/shell), a new shared-connection-lifecycle subsystem, new profile/state semantics, and UI surface — a first-of-its-kind transport-location feature touching most of the launch path.
+**Complexity: 8/10** — two genuinely different remote-spawn mechanisms are needed (ACP's stdio subprocess vs. PTY-based harness/shell), a new shared-connection-lifecycle subsystem, new state semantics, and UI surface — a first-of-its-kind transport-location feature touching most of the launch path.
 
 ## Summary
 
-Allow Janissary to run agent tabs inside isolated sandboxes on a remote VM or cloud instance, connected over SSH. The user creates a remote profile that points at an SSH target; launching an agent against that profile starts the agent on the remote machine. The remote agent's output streams back to a local transcript tab, and the user interacts with it identically to a local agent — same commands, same scheduling, same monitoring. The compute location becomes transparent to the user, per the "identical control of local and remote resources" design principle.
+Allow Janissary to run agent tabs inside isolated sandboxes on a remote VM or cloud instance, connected over SSH. The user types `agent <name> on <address>` to start an agent on the remote machine; a harness is started remotely the same way, or by a profile harness entry carrying a `remote` field. The remote agent's output streams back to a local transcript tab, and the user interacts with it identically to a local agent — same commands, same scheduling, same monitoring. The compute location becomes transparent to the user, per the "identical control of local and remote resources" design principle.
 
 ## Decisions (to be confirmed with user)
 
 1. **Transport: SSH.** Remote execution uses SSH as the transport, reusing the existing `ssh` infrastructure (`src/ssh.ts`, `specs/ssh-tab.md`). No new protocol or daemon required.
-2. **Profile-based, not command-based.** A remote agent is created via a profile entry with a `remote` field pointing at an SSH host, rather than a one-off `agent --remote host` CLI flag. This makes remoting a persistent property of the agent, composable with scheduling, workspaces, and relaunch.
+2. **Command-based for agents.** A remote agent is created by the typed `agent <name> on <address>` command; profiles do not open agent tabs, so there is no profile route to one. The remote target is recorded on the tab (`tab.remote`), which is what makes it composable with scheduling, workspaces, and the sessions tab. A harness keeps both routes: the typed `harness … on <address>` and a profile harness entry with a `remote` field.
 3. **Bind mount / agent state file.** The remote agent's state file (`.janissary/state/<name>.json`) lives on the remote machine. A `--pull-state` flag copies it back to the local machine for local-continuation workflows (or vice versa with `--push-state` to resync).
-4. **Workspace handling.** If the profile specifies `--workspace`, the clone happens on the remote side into the remote `.janissary/workspace/<name>/`. No local clone unless `--local-workspace` is explicitly requested.
-5. **Shared session scope.** Tabs using the same remote profile share one SSH connection (multiplexed via SSH's `ControlMaster`), reducing connection overhead.
+4. **Workspace handling.** If the launch is workspaced, the clone happens on the remote side into the remote `.janissary/workspace/<name>/`. No local clone unless `--local-workspace` is explicitly requested.
+5. **Shared session scope.** Tabs using the same remote host share one SSH connection (multiplexed via SSH's `ControlMaster`), reducing connection overhead.
 
 ## The central fact this plan must be built around
 
 **ACP agent tabs and harness/shell tabs use two completely different subprocess mechanisms, so "remote agents" needs two different remote-spawn implementations, not one.**
 
-- ACP agents (`AgentState` profile entries — the plan's stated primary target, "launching an agent against that profile") never touch `node-pty`/`PseudoterminalManager` at all. `AcpManager.run()` → `AcpManager.session()` → `connectAcp()` (`src/acp.ts:25-39`) spawns the agent binary directly via `node:child_process.spawn(command, args, { stdio: ['pipe','pipe','pipe'], cwd, env })` and drives it as JSON-RPC over stdin/stdout (`ndJsonStream` from `@agentclientprotocol/sdk`). There is no PTY involved — the agent's "terminal" is a set of stdio pipes.
+- ACP agents (agent tabs opened by the typed `agent <name> on <address>` command — the plan's primary target) never touch `node-pty`/`PseudoterminalManager` at all. `AcpManager.run()` → `AcpManager.session()` → `connectAcp()` (`src/acp.ts:25-39`) spawns the agent binary directly via `node:child_process.spawn(command, args, { stdio: ['pipe','pipe','pipe'], cwd, env })` and drives it as JSON-RPC over stdin/stdout (`ndJsonStream` from `@agentclientprotocol/sdk`). There is no PTY involved — the agent's "terminal" is a set of stdio pipes.
 - Harness tabs (`ProfileHarnessEntry` profile entries) and shell tabs *do* go through `PseudoterminalManager.spawn()` (`src/pseudoterminal-manager.ts:20`), called from `HarnessManager.openFromProfile` (`src/harness-manager.ts:70`) via `managers.pty.spawn(label, program, command, cwd, workspaceDir, offline)`. This is the only place `node-pty` is actually used.
 
 The plan's original section 2 ("Remote PTY proxy" plugged into `PseudoterminalManager.spawn()`) only covers the harness/shell case. It does nothing for ACP agents, because there is no PTY step in their launch path to intercept. Making ACP agents remote needs a change in `src/acp.ts`/`connectAcp`, not in `PseudoterminalManager`. See the redesigned Proposed changes below — this is by far the most important correction in this pass.
@@ -29,8 +29,9 @@ The plan's original section 2 ("Remote PTY proxy" plugged into `PseudoterminalMa
 | --- | --- | --- |
 | SSH connection lifecycle, PTY management, key forwarding (for the interactive `ssh` tab, a *user-facing* SSH connection, separate concern from remote spawning) | `src/ssh.ts` / `src/ssh-manager.ts`, `specs/ssh-tab.md` | — |
 | Workspace cloning | `src/workspace.ts` / `WorkspaceManager` (`managers.workspace.create(name)`), used today by `ProfileManager.newAgent` (`src/profile-manager.ts:44`) for local clones only | `src/workspace.ts`, `src/profile-manager.ts:42-47` |
-| Structured, extensible profile-entry configuration | `ProfileEntry = AgentState | ProfileHarnessEntry` (`src/types.ts:221`) — profile files are plain `.json`, one per agent, parsed with a bare `JSON.parse` in `loadProfileEntries` (`src/profiles.ts:42-62`). Adding a `remote?: RemoteConfig` field to `AgentState`/`ProfileHarnessEntry` needs **no new parsing code** — `JSON.parse` already round-trips any field present in the file. | `src/profiles.ts:42-62`, `src/types.ts:221` |
-| Where profile entries actually get launched into tabs | `openProfileEntries` → `openAgentEntry` (ACP) / `openHarnessEntry` (harness) in `src/profile-agent-opener.ts:40-68,93-135`, invoked from `ProfileManager.run()` (`profile launch <name>`, `src/profile-manager.ts:11-31`) — **not** `src/commands/agent.ts`, which only handles the ad-hoc `agent <name>` command (`ProfileManager.newAgent`) and never reads a profile file at all. |
+| Remote target parsing for agents | `parseAgentCommand` (`src/agent/commands.ts`) already parses the `on <address>` clause of `agent <name> on <address>`, and `newAgentOp` (`src/profile/new-agent.ts`) hands a remote launch to `startRemoteAgent` (`src/profile/remote-agent.ts`), which places the tab with `tab.remote` set. | `src/agent/commands.ts`, `src/profile/new-agent.ts`, `src/profile/remote-agent.ts` |
+| Structured, extensible harness-entry configuration | `ProfileHarnessEntry` (`src/profile/types.ts`) — the one profile entry that launches an AI tab, already carrying a validated `remote` field (`src/profile/schema-tab-entry.ts`). | `src/profile/types.ts`, `src/profile/schema-tab-entry.ts` |
+| Where launches actually become tabs | Agents: `newAgentOp` → `startRemoteAgent` for the typed command. Harnesses: `openProfileEntries` → `openHarnessEntry` (`src/profile/agent-opener.ts`, `src/profile/entry-openers.ts`) for `profile launch <name>`, and the harness manager for the typed `harness` command. |
 | State persistence | Agent state is JSON, one file per agent, written via `TabManager.persist`/`buildAgentState` under `.janissary/state/<name>.json` | `src/tab-manager.ts` (`persist`, `buildAgentState`), `src/agent-state.ts` |
 
 ## Verified codebase facts that shape the design
@@ -41,10 +42,10 @@ The plan's original section 2 ("Remote PTY proxy" plugged into `PseudoterminalMa
 
 ## Proposed changes
 
-### 1. Profile model
+### 1. Remote model
 
-- Add `remote?: RemoteConfig` to `AgentState` and `ProfileHarnessEntry` (`src/types.ts`), where `RemoteConfig = { host: string; user?: string; port?: number; identityFile?: string }`. No new parsing code is needed for this by itself — `loadProfileEntries`'s plain `JSON.parse` (`src/profiles.ts:50`) already round-trips any field present in the `.json` file once the type includes it.
-- Validation (rejecting an empty `host`, requiring a non-loopback host) belongs in `openProfileEntries`/`openAgentEntry`/`openHarnessEntry` (`src/profile-agent-opener.ts`) — the actual point where an entry is turned into a running tab — not in a nonexistent `ProfileManager.parseProfile()` (no such method exists; profile files are validated where they're opened, not where they're loaded).
+- Agents: the remote target comes from the typed command's `on <address>` clause and is already stored on the tab as `tab.remote`; no profile model change is involved, since profiles do not open agent tabs.
+- Harnesses: a profile harness entry's `remote` field is the only profile-side input. Validation (rejecting an empty host, requiring a non-loopback host) belongs where each launch becomes a tab — `parseAgentCommand`/`startRemoteAgent` for agents and `openHarnessEntry` for harness entries — not in a nonexistent `ProfileManager.parseProfile()`.
 
 ### 2a. Remote ACP spawn (the primary case — see "central fact" above)
 
@@ -52,7 +53,7 @@ The plan's original section 2 ("Remote PTY proxy" plugged into `PseudoterminalMa
   - Skip `sandboxSpawn` entirely (it's a local macOS Seatbelt wrapper with no remote meaning — see Verified codebase facts).
   - Spawn `ssh` instead of the agent binary directly: `spawn('ssh', [...sshFlags(remote), '--', options.command, ...options.args], { cwd: undefined, stdio: ['pipe','pipe','pipe'], env })` (no local `cwd` — the command's own `cd` or a remote shell wrapper handles the remote working directory instead, since `child_process.spawn`'s `cwd` only applies locally).
   - Everything downstream (`ndJsonStream`, the ACP JSON-RPC client) is unchanged — SSH transparently pipes the remote process's stdio through the local `ssh` child process's stdio, so the existing protocol plumbing needs no changes at all. This is a small, contained change, not a new proxy module.
-- `AcpManager.session()`/`run()` (`src/acp-manager.ts:56,92-121`) thread the tab's `remote` config (from the profile entry that created it — see 2c) into the `AcpOptions` passed to `connectAcp`.
+- `AcpManager.session()`/`run()` (`src/acp-manager.ts:56,92-121`) thread the tab's `remote` config (from the `agent … on <address>` command that created it — see 2c) into the `AcpOptions` passed to `connectAcp`.
 
 ### 2b. Remote PTY proxy (harness/shell tabs only)
 
@@ -64,11 +65,12 @@ The plan's original section 2 ("Remote PTY proxy" plugged into `PseudoterminalMa
 
 ### 2c. Agent/harness launch flow
 
-- The integration point is `src/profile-agent-opener.ts`, not `src/commands/agent.ts` (which only handles the ad-hoc, profile-less `agent <name>` command — see "What already exists" table). Specifically:
-  - `openAgentEntry` (`src/profile-agent-opener.ts:40-50`): when `state.remote` is set, thread it through to wherever the tab's first ACP connection is established (see 2a) — since ACP connects lazily on first prompt (`AcpManager.session`), this likely means storing `remote` on the `Tab`/`AgentState` so `AcpManager.run()` can read it, mirroring how `cwd`/`context`/`schedule` are already threaded from `state` onto the tab today (lines 46-48).
-  - `openHarnessEntry` (`src/profile-agent-opener.ts:54-68`): when `entry.remote` is set, pass it through to `managers.harness.openFromProfile` → `managers.pty.spawn(...)` (see 2b).
-  - Workspace cloning: `openAgentEntry`/`openHarnessEntry` don't clone workspaces today — cloning only happens in the ad-hoc `ProfileManager.newAgent` path (`src/profile-manager.ts:42-47`, local-only). A remote workspace clone (`ssh <host> 'git clone <url> ...'`) is new logic with no local precedent to reuse; write it as a small remote-specific helper rather than trying to force `WorkspaceManager.create` (which assumes a local filesystem) to do double duty.
-- `--pull-state` / `--push-state`: since remote agents are launched via `profile launch <name>` (not `agent <name>`), these belong as new `profile` subcommands (`profile pull-state <name>` / `profile push-state <name>`, extending `PROFILE_USAGE` in `src/profiles.ts:64` and `parseProfileCommand`), not flags on `agent`. `agent --pull-state`/`--push-state` would be dead code, since `agent <name>` never has a `remote` config to pull from.
+- Agents enter through the typed command. Specifically:
+  - `newAgentOp` → `startRemoteAgent` (`src/profile/new-agent.ts`, `src/profile/remote-agent.ts`): the tab is already placed with `tab.remote`. Thread that through to wherever the tab's first ACP connection is established (see 2a) — since ACP connects lazily on first prompt (`AcpManager.session`), `AcpManager.run()` reads `tab.remote` when it builds the `AcpOptions`.
+- Harnesses enter through both the typed `harness` command and a profile harness entry:
+  - `openHarnessEntry` (`src/profile/entry-openers.ts`): when `entry.remote` is set, pass it through to `managers.harness.openFromProfile` → `managers.pty.spawn(...)` (see 2b).
+- Workspace cloning: a remote workspace clone (`ssh <host> 'git clone <url> ...'`) is new logic with no local precedent to reuse; write it as a small remote-specific helper rather than trying to force `WorkspaceManager.create` (which assumes a local filesystem) to do double duty.
+- `--pull-state` / `--push-state`: since remote agents are launched by `agent <name> on <address>`, these belong on that command (`agent <name> --pull-state` / `--push-state`, parsed by `parseAgentCommand` in `src/agent/commands.ts`), acting on the named tab's `tab.remote`.
 
 ### 3. Shared SSH connection manager
 
@@ -80,27 +82,27 @@ The plan's original section 2 ("Remote PTY proxy" plugged into `PseudoterminalMa
 
 ### 4. UI indicators
 
-- Web UI: remote agents show a small cloud/host indicator in the tab strip, appended to the tab label or as a tooltip. `TabView` gains a `remoteHost?: string` computed field derived from the tab's profile metadata.
+- Web UI: remote agents show a small cloud/host indicator in the tab strip, appended to the tab label or as a tooltip. `TabView` gains a `remoteHost?: string` computed field derived from the tab's `tab.remote`.
 - The connections panel is `web/src/StatusPanels.tsx` (not a `ConnectionsWindow`, which doesn't exist) — list the remote host alongside the SSH connection there. `ConnectionView` (`src/protocol.ts:10`) carries `text` and `kind`, not `name` — reuse `text` for the display string (e.g. `acp:build-agent@my-host`) rather than adding a `name` field.
 
 ### 5. Config and environment
 
-- `specs/application-config.md`: no new config keys. Remote host identity is profile-scoped, not global.
+- `specs/application-config.md`: no new config keys. Remote host identity is per tab (the `on <address>` it was launched with), not global.
 - `specs/ssh-tab.md`: add a cross-reference that the same SSH transport now also powers remote agent/harness spawning, alongside the interactive `ssh` tab.
 
 ### 6. Specs
 
-- New `specs/remote-agents.md`: profile-based remote execution, the ACP-vs-harness spawn distinction, `profile pull-state`/`push-state` workflow, shared connection model, remote workspace semantics, PTY proxy architecture, UI indicators.
-- `specs/agents.md`: one sentence in the agent creation section noting that agent profiles may include a `remote` key dispatching execution to a remote host.
-- `specs/profiles.md`: extend the profile structure documentation to include `remote`, and document the new `profile pull-state`/`push-state` subcommands.
+- New `specs/remote-agents.md`: remote execution through `agent … on <address>` and remote harness launches, the ACP-vs-harness spawn distinction, the `agent --pull-state`/`--push-state` workflow, shared connection model, remote workspace semantics, PTY proxy architecture, UI indicators.
+- `specs/agents.md`: document `--pull-state`/`--push-state` alongside the existing `on <address>` clause in the agent creation section.
+- `specs/profiles.md`: note that a harness entry's `remote` now runs through the shared connection model.
 
 ### 7. Tests (colocated, run via `./scripts/run.mjs check-diff`)
 
 - `src/acp.test.ts` (existing file): remote `AcpOptions` spawns `ssh` with the right flags/command instead of the local binary, and skips `sandboxSpawn` when `remote` is set.
 - `src/remote-pty.test.ts`: spawns against a local SSH session (test against `localhost` with key auth), verifies stdout/stderr streaming, exit code propagation, resize passthrough, connection-drop handling.
 - `src/remote-manager.test.ts`: connection sharing, ref-counting, idle cleanup.
-- `src/profile-agent-opener.test.ts` (existing file — verify before assuming): remote `AgentState`/`ProfileHarnessEntry` dispatch path (lightweight unit tests with mocked `AcpManager`/`PseudoterminalManager`), invalid-host rejection.
-- `src/profiles.test.ts` (existing file, if present — verify): `profile pull-state`/`push-state` command parsing.
+- `src/profile/remote-agent.test.ts` and `src/profile/entry-openers.test.ts` (existing files): the remote agent dispatch path from the typed command and the remote `ProfileHarnessEntry` dispatch path (lightweight unit tests with mocked `AcpManager`/`PseudoterminalManager`), invalid-host rejection.
+- `src/agent/commands.test.ts`: `agent --pull-state`/`--push-state` parsing.
 
 ## Out of scope
 
@@ -112,16 +114,16 @@ The plan's original section 2 ("Remote PTY proxy" plugged into `PseudoterminalMa
 ## Verification
 
 - `./scripts/run.mjs check-diff` after each implementation step.
-- Manual end-to-end check (requires SSH access to a real or loopback test host): create a profile entry with a `remote` field pointing at a reachable host, `profile launch <name>`, confirm the ACP agent tab connects and a prompt round-trips through the remote process; separately, a harness profile entry with `remote` set should open its tab and stream PTY output identically to a local harness tab. Kill the SSH connection mid-session and confirm the tab reports the drop rather than hanging.
+- Manual end-to-end check (requires SSH access to a real or loopback test host): type `agent <name> on <host>` against a reachable host, confirm the ACP agent tab connects and a prompt round-trips through the remote process; separately, a harness profile entry with `remote` set should open its tab and stream PTY output identically to a local harness tab. Kill the SSH connection mid-session and confirm the tab reports the drop rather than hanging.
 
 ## Implementation order
 
-1. Profile model: `RemoteConfig` type on `AgentState`/`ProfileHarnessEntry`, tests. No dependency on later steps — parsing is automatic via `JSON.parse` (see "What already exists").
+1. Remote model: a `RemoteConfig` type derived from the tab's `tab.remote` (agents) and a harness entry's `remote` (harnesses), tests. No dependency on later steps — both are already parsed (see "What already exists").
 2. Remote ACP spawn: `connectAcp`/`AcpOptions` changes in `src/acp.ts`, threaded through `AcpManager`, tests. Depends on step 1 for the `RemoteConfig` type.
 3. Remote PTY proxy: `src/remote-pty.ts` + integration into `PseudoterminalManager`, tests. Independent of step 2; can land in parallel.
-4. Launch-flow wiring: `src/profile-agent-opener.ts` validation + dispatch for both `openAgentEntry` (uses step 2) and `openHarnessEntry` (uses step 3), plus a remote workspace-clone helper, tests.
+4. Launch-flow wiring: validation + dispatch in `startRemoteAgent` for typed agents (uses step 2) and in `openHarnessEntry` for harness entries (uses step 3), plus a remote workspace-clone helper, tests.
 5. Shared connection manager: `src/remote-manager.ts`, tests. Depends on steps 2-3 existing to have connections to share.
-6. `profile pull-state`/`push-state`: extend `parseProfileCommand`/`PROFILE_USAGE` in `src/profiles.ts`, tests.
+6. `agent --pull-state`/`--push-state`: extend `parseAgentCommand` in `src/agent/commands.ts`, tests.
 7. UI indicators: `TabView.remoteHost` + `StatusPanels.tsx` + tab-strip indicator.
 8. Specs: new `remote-agents.md` + amendments to agents, profiles, ssh-tab, application-config.
 9. Public documentation.

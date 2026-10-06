@@ -3,11 +3,10 @@ import { collectProfileProblems } from './schema.js';
 import type { ProfileTabFile } from './types.js';
 
 // A minimal valid entry per tab kind. `TAB_KINDS` is keyed by `ProfileTabFile['type']`, so a
-// twelfth kind fails to compile in `schema.ts` — this is the runtime half: every kind the table
+// eleventh kind fails to compile in `schema.ts` — this is the runtime half: every kind the table
 // declares is actually accepted and dispatched to its own checker, rather than being listed and
 // then rejected.
 const MINIMAL: Record<ProfileTabFile['type'], Record<string, unknown>> = {
-  agent: { type: 'agent', name: 'one' },
   harness: { type: 'harness', name: 'one', tool: 'claude' },
   editor: { type: 'editor', path: 'README.md' },
   files: { type: 'files' },
@@ -21,9 +20,9 @@ const MINIMAL: Record<ProfileTabFile['type'], Record<string, unknown>> = {
 };
 
 // The kinds that occupy a place in the tab strip and so carry the flat presentation fields — the
-// nine the separate hand-kept `Set` used to restate. Checked through observable behavior: a bad
+// eight the separate hand-kept `Set` used to restate. Checked through observable behavior: a bad
 // `number` is a problem only where presentation fields apply.
-const PRESENTATION_KINDS = new Set(['agent', 'harness', 'editor', 'files', 'plugin', 'image', 'markdown', 'page', 'ssh']);
+const PRESENTATION_KINDS = new Set(['harness', 'editor', 'files', 'plugin', 'image', 'markdown', 'page', 'ssh']);
 
 const entries = Object.entries(MINIMAL) as Array<[ProfileTabFile['type'], Record<string, unknown>]>;
 
@@ -43,6 +42,12 @@ describe('tabProblems over every declared tab kind', () => {
     expect(collectProfileProblems({ tabs: [{ type: 'nope' }] })).toEqual([
       `tabs[0]: type must be one of ${Object.keys(MINIMAL).join(', ')}`,
     ]);
+  });
+
+  // Agent elements are no longer a kind, but older files still carry them: accepted without any
+  // field check rather than making the whole file malformed.
+  it('accepts an agent element whatever its other fields hold', () => {
+    expect(collectProfileProblems({ tabs: [{ type: 'agent', name: 5, number: 'two', log: 'x' }] })).toEqual([]);
   });
 });
 

@@ -3,7 +3,7 @@ import { abbreviatePath } from '../../paths.js';
 import { SYNC_WORKSPACE_NAME } from '../../git/sync.js';
 import type { Tab } from '../../tab/types.js';
 import type {
-  ProfileAgentTabFile, ProfileEditorTabFile, ProfileFilesTabFile, ProfileHarnessTabFile,
+  ProfileEditorTabFile, ProfileFilesTabFile, ProfileHarnessTabFile,
   ProfilePluginTabFile, ProfileSshTabFile,
   ProfileTabPresentation,
 } from '../types.js';
@@ -14,8 +14,8 @@ import { centerPane } from '../../tab/placement.js';
 
 // Entry builders for `profile save`: the inverse of the loader's partitioning pass. Each returns
 // one element of the profile's `tabs` array, carrying its `type` discriminator, the flat tab
-// presentation (`dotColor` → `color`), and whatever else its kind needs — for an agent or harness,
-// its own `name` (the tab label), since an array element has no filename to derive one from.
+// presentation (`dotColor` → `color`), and whatever else its kind needs — for a harness, its own
+// `name` (the tab label), since an array element has no filename to derive one from.
 // `JSON.stringify` drops `undefined`-valued fields on its own, so an unset optional (e.g. `cwd`,
 // `model`) is simply omitted rather than written as `null`.
 
@@ -39,17 +39,6 @@ function entryCwd(tab: Tab, managers: Managers): string | undefined {
   if (tab.remote) return undefined;
   const cwd = managers.tab.cwdOf(tab.label);
   return cwd ? portablePath(cwd, managers) : cwd;
-}
-
-export function writeAgentEntry(tab: Tab, managers: Managers): ProfileAgentTabFile {
-  return {
-    type: 'agent',
-    name: tab.label,
-    active: false,
-    remote: tab.remote?.address,
-    cwd: entryCwd(tab, managers),
-    ...presentation(tab, managers),
-  };
 }
 
 export function writeEditorEntry(tab: Tab, managers: Managers): ProfileEditorTabFile | undefined {

@@ -25,16 +25,20 @@ describe('validateProfile', () => {
 
   it('returns [] for a valid profile', () => {
     writeJson('ok', {
-      tabs: [{ type: 'agent', name: 'bob', active: false }, { type: 'harness', name: 'c', tool: 'claude' }],
+      tabs: [{ type: 'harness', name: 'bob', tool: 'claude' }, { type: 'harness', name: 'c', tool: 'claude' }],
       layout: { sidebar: { left: 300 } },
     });
     expect(validateProfile('ok')).toEqual([]);
   });
 
+  it('reports no problems for an agent element left in an older file', () => {
+    writeJson('old-agent', { tabs: [{ type: 'agent', name: 'bob', cwd: 5 }, { type: 'harness', name: 'c', tool: 'claude' }] });
+    expect(validateProfile('old-agent')).toEqual([]);
+  });
+
   it('accepts every tab type in one array', () => {
     writeJson('every', {
       tabs: [
-        { type: 'agent', name: 'a' },
         { type: 'harness', name: 'h', tool: 'claude' },
         { type: 'editor', path: 'notes.md' },
         { type: 'files', dock: 'left' },
@@ -83,7 +87,7 @@ describe('validateProfile', () => {
   it('reports a missing or unrecognized tab type, naming every valid one', () => {
     writeJson('bad-type', { tabs: [{ name: 'a' }, { type: 'terminal' }] });
     const problems = validateProfile('bad-type');
-    const expected = 'type must be one of agent, harness, editor, files, notifications, schedules, plugin, image, markdown, page, ssh';
+    const expected = 'type must be one of harness, editor, files, notifications, schedules, plugin, image, markdown, page, ssh';
     expect(problems).toEqual([`tabs[0]: ${expected}`, `tabs[1]: ${expected}`]);
   });
 
@@ -106,7 +110,7 @@ describe('validateProfile', () => {
   });
 
   it('locates a bad presentation field at the entry root, not under a tab object', () => {
-    writeJson('bad-presentation', { tabs: [{ type: 'agent', name: 'a', number: '2' }] });
+    writeJson('bad-presentation', { tabs: [{ type: 'harness', name: 'a', tool: 'claude', number: '2' }] });
     expect(validateProfile('bad-presentation')).toEqual(['tabs[0]: number must be a number']);
   });
 
@@ -128,7 +132,7 @@ describe('validateProfile', () => {
   it('accepts a valid editor entry even when its file does not exist', () => {
     writeJson('new-file', {
       tabs: [
-        { type: 'agent', name: 'left', pane: 'left' },
+        { type: 'harness', name: 'left', tool: 'claude', pane: 'left' },
         { type: 'harness', name: 'right', tool: 'claude', pane: 'right' },
         { type: 'editor', path: '$root/not-yet-created.txt', focus: true, pane: 'right' },
       ],
@@ -139,7 +143,7 @@ describe('validateProfile', () => {
   it('rejects invalid pane values for every pane-capable entry kind', () => {
     writeJson('bad-panes', {
       tabs: [
-        { type: 'agent', name: 'agent', pane: 'bottom' },
+        { type: 'plugin', id: 'image', path: 'a.png', pane: 'bottom' },
         { type: 'harness', name: 'harness', tool: 'claude', pane: 2 },
         { type: 'editor', path: 'notes.txt', pane: false },
       ],
@@ -223,7 +227,7 @@ describe('reportValidation', () => {
   });
 
   it('reports a single valid profile', () => {
-    writeJson('good', { tabs: [{ type: 'agent', name: 'bob', active: false }] });
+    writeJson('good', { tabs: [{ type: 'harness', name: 'bob', tool: 'claude' }] });
     expect(reportValidation('good')).toBe('Profile "good" is valid.');
   });
 
@@ -239,7 +243,7 @@ describe('reportValidation', () => {
   });
 
   it('validates every profile when given no name', () => {
-    writeJson('alpha', { tabs: [{ type: 'agent', name: 'a', active: false }] });
+    writeJson('alpha', { tabs: [{ type: 'harness', name: 'a', tool: 'claude' }] });
     writeJson('beta', { tabs: [{ type: 'harness', name: 'c' }] });
     const report = reportValidation(undefined);
     expect(report).toContain('Profile "alpha" is valid.');

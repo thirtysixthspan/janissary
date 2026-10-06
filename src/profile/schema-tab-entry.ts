@@ -40,26 +40,6 @@ export function presentationProblems(value: Record<string, unknown>, loc: string
   ];
 }
 
-// Every field the agent opener reads, so a hand-written entry that would break a launch part-way is
-// refused here instead: `cwd` goes through path expansion, and `log` and `schedule` are handed on
-// as records (an agent's `schedule` is saved entries, unlike a harness's list of specs).
-export function agentProblems(value: Record<string, unknown>, loc: string): string[] {
-  return [
-    ...checkField(value, 'name', 'string', loc, true),
-    ...checkField(value, 'remote', 'string', loc),
-    ...checkField(value, 'cwd', 'string', loc),
-    ...checkField(value, 'workspaceDir', 'string', loc),
-    ...checkField(value, 'title', 'string', loc),
-    ...checkField(value, 'active', 'boolean', loc),
-    ...checkField(value, 'offline', 'boolean', loc),
-    ...checkField(value, 'cmdHistory', 'string[]', loc),
-    ...checkField(value, 'context', 'string[]', loc),
-    ...checkField(value, 'commandQueue', 'string[]', loc),
-    ...checkField(value, 'log', 'object[]', loc),
-    ...checkField(value, 'schedule', 'object[]', loc),
-  ];
-}
-
 export function harnessProblems(value: Record<string, unknown>, loc: string): string[] {
   return [
     ...checkField(value, 'name', 'string', loc, true),

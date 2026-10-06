@@ -1,4 +1,3 @@
-import type { AgentState } from '../agent/types.js';
 import type { CenterPane, FileNavigatorDetail } from '../tab/types.js';
 
 export type ProfileRow = { name: string; source: 'project' | 'janissary' };
@@ -15,14 +14,13 @@ export type ProfileTabRuntime = {
   pane?: CenterPane;
 };
 
-// A profile entry describing a harness tab instead of an agent (discriminated by the presence of
-// `tool`). This is the runtime shape the openers consume — the loader maps a `harness` element of
-// the `tabs` array down to it. `schedule` entries are authored strings in the `schedule` command
-// grammar (minus `in <tab>`); `run` entries are commands typed into the harness once, shortly
-// after launch.
+// A profile entry describing a harness tab. This is the runtime shape the openers consume — the
+// loader maps a `harness` element of the `tabs` array down to it. `schedule` entries are authored
+// strings in the `schedule` command grammar (minus `in <tab>`); `run` entries are commands typed
+// into the harness once, shortly after launch.
 export type ProfileHarnessEntry = ProfileTabRuntime & {
-  // The tab label — the `name` field of the `harness` element, same as an agent entry's `name`.
-  // Every entry carries its own label since array elements have no filename to derive it from.
+  // The tab label — the `name` field of the `harness` element. Every entry carries its own label
+  // since array elements have no filename to derive it from.
   name: string;
   // Which harness binary to launch (`claude`, `opencode`, `codex`). Named `tool` rather than
   // `type`, which the `tabs` array uses for its own kind discriminator.
@@ -52,9 +50,6 @@ export type ProfileHarnessEntry = ProfileTabRuntime & {
   run?: string[];
   schedule?: string[];
 };
-
-export type ProfileAgentEntry = AgentState & { pane?: CenterPane };
-export type ProfileEntry = ProfileAgentEntry | ProfileHarnessEntry;
 
 // On-disk tab presentation, flat on the entry itself alongside its `type`. `color` is the on-disk
 // name of the runtime `dotColor`; every other field keeps its name.
@@ -105,9 +100,6 @@ export type ProfileViewEntry = ProfileTabRuntime & (
   | { type: 'ssh'; destination: string; options?: string[] }
 );
 
-export type ProfileAgentTabFile = { type: 'agent' }
-  & Omit<ProfileAgentEntry, keyof ProfileTabRuntime> & ProfileTabPresentation;
-
 export type ProfileHarnessTabFile = { type: 'harness' }
   & Omit<ProfileHarnessEntry, keyof ProfileTabRuntime> & ProfileTabPresentation;
 
@@ -139,7 +131,6 @@ export type ProfileSshTabFile = { type: 'ssh'; destination: string; options?: st
 // its root-level `type`. Array position breaks ties between equal (or absent) `number` values; it
 // is not itself the launch order.
 export type ProfileTabFile =
-  | ProfileAgentTabFile
   | ProfileHarnessTabFile
   | ProfileEditorTabFile
   | ProfileFilesTabFile
@@ -194,7 +185,7 @@ export type ProfileFile = {
 // The loader's structured result: the `tabs` array partitioned into the per-kind lists each opener
 // module consumes, parsed and validated once up front from the single profile file.
 export type LoadedProfile = {
-  entries: ProfileEntry[];
+  entries: ProfileHarnessEntry[];
   monitors: ProfileMonitor[];
   files: ProfileFilesEntry[];
   editors: ProfileEditorsEntry[];

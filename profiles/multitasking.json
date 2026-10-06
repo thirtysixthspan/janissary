@@ -1,17 +1,6 @@
 {
   "tabs": [
     {
-      "type": "agent",
-      "name": "janus",
-      "active": false,
-      "cwd": "$root/",
-      "color": "#5b9cff",
-      "number": 2,
-      "focus": true,
-      "group": 1,
-      "groupColor": "#5b9cff"
-    },
-    {
       "type": "harness",
       "name": "feature",
       "tool": "claude",

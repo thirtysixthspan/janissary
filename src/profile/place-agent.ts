@@ -18,17 +18,14 @@ export type PlaceAgentOptions = {
   // Set for an `on <address>` launch. `workspaceDir` deliberately stays undefined alongside it: the
   // clone is the remote's, and so is its removal.
   remote?: RemoteTarget;
-  // Set by a profile launch, which takes its colors and group from the profile rather than from a
-  // creator tab.
-  presentation?: { dotColor: string; group: number; groupColor: string };
 };
 
 // Build the agent tab, insert it into its creator's group, set its cwd, focus it, and persist.
 export function placeAgent(managers: Managers, options: PlaceAgentOptions): void {
-  const { resolved, creator, cwd, workspaceDir, offline, busy, remote, presentation } = options;
-  const dotColor = presentation?.dotColor ?? distinctColor(managers.tab.tabs.map((t) => t.dotColor));
-  const group = presentation?.group ?? creator?.group ?? 1;
-  const groupColor = presentation?.groupColor ?? creator?.groupColor ?? dotColor;
+  const { resolved, creator, cwd, workspaceDir, offline, busy, remote } = options;
+  const dotColor = distinctColor(managers.tab.tabs.map((t) => t.dotColor));
+  const group = creator?.group ?? 1;
+  const groupColor = creator?.groupColor ?? dotColor;
   const tab = makeTab(resolved, dotColor, managers.tab.tabs.length + 1, [], [], workspaceDir, group, groupColor);
   tab.toolStepsExpanded = false;
   tab.offline = offline;

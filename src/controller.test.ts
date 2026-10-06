@@ -46,6 +46,15 @@ afterEach(() => {
 
 const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l) => l.text).join('\n');
 
+// A one-tab profile whose `writer` tab is a harness entry, for the tests that only need a profile
+// launch to put a tab into a group of its own. The pty is a stand-in, so nothing is spawned.
+const writeWriterProfile = (root: string, profile: string, presentation: Record<string, unknown>) => {
+  mkdirSync(path.join(root, 'profiles'), { recursive: true });
+  const tabs = [{ type: 'harness', name: 'writer', tool: 'opencode', workspace: false, autoApprove: false, browser: false, ...presentation }];
+  writeFileSync(path.join(root, 'profiles', `${profile}.json`), JSON.stringify({ tabs }));
+  vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-writer-pty', program, write: vi.fn(), resize: vi.fn(), kill: vi.fn() }));
+};
+
 describe('Controller rootDir', () => {
   it('returns the constructor-supplied projectDir', () => {
     const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, '/some/project');
@@ -132,8 +141,7 @@ describe('Controller', () => {
   it('a launched profile forms its own group, distinct from the root', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-prof-'));
     initProfileDir(root); // profiles live under <root>/profiles/<name>
-    mkdirSync(path.join(root, 'profiles'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'writing.json'), JSON.stringify({ tabs: [{ type: 'agent', name: 'writer', active: false, color: '#6bcb77' }] }));
+    writeWriterProfile(root, 'writing', { color: '#6bcb77' });
     const { c } = makeController();
     c.dispatch('profile launch writing');
     const janus = c.view().find((t) => t.label === 'janus')!;
@@ -142,11 +150,10 @@ describe('Controller', () => {
     expect(writer.group).not.toBe(janus.group);
   });
 
-  it('honors a group number authored on a profile agent file', () => {
+  it('honors a group number authored on a profile entry', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-prof-grp-'));
     initProfileDir(root);
-    mkdirSync(path.join(root, 'profiles'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'team.json'), JSON.stringify({ tabs: [{ type: 'agent', name: 'writer', active: false, color: '#6bcb77', group: 7 }] }));
+    writeWriterProfile(root, 'team', { color: '#6bcb77', group: 7 });
     const { c } = makeController();
     c.dispatch('profile launch team');
     expect(c.view().find((t) => t.label === 'writer')!.group).toBe(7);
@@ -507,8 +514,7 @@ describe('Controller', () => {
   it('will not reorder a tab across a group boundary', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-reorder-'));
     initProfileDir(root);
-    mkdirSync(path.join(root, 'profiles'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'writing.json'), JSON.stringify({ tabs: [{ type: 'agent', name: 'writer', active: false, color: '#6bcb77' }] }));
+    writeWriterProfile(root, 'writing', { color: '#6bcb77' });
     const { c } = makeController();
     c.dispatch('profile launch writing'); // [janus(g1), writer(g2)], active = writer (index 1)
     c.reorderTab(-1); // would cross from group 2 into group 1 — blocked
@@ -1881,8 +1887,7 @@ describe('Controller direct RPC delegators', () => {
   it('complete() offers a group: target for each existing group once more than one exists', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-complete-groups-'));
     initProfileDir(root);
-    mkdirSync(path.join(root, 'profiles'), { recursive: true });
-    writeFileSync(path.join(root, 'profiles', 'team.json'), JSON.stringify({ tabs: [{ type: 'agent', name: 'writer', active: false, color: '#6bcb77', group: 7 }] }));
+    writeWriterProfile(root, 'team', { color: '#6bcb77', group: 7 });
     const { c } = makeController();
     c.dispatch('profile launch team');
     c.setActiveTab(0);
