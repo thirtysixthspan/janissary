@@ -121,7 +121,7 @@ function makeCapabilities(overrides: {
   const closed: number[] = [];
   const handle: PluginTerminal = {
     write: (data) => {
-      if (!data.startsWith("export PROMPT='> '")) written.push(data);
+      if (!data.startsWith("export PROMPT='%B>%b '")) written.push(data);
     },
     resize: (cols, rows) => { resized.push({ cols, rows }); },
     onExit: vi.fn(),
@@ -723,7 +723,7 @@ describe('ShellTab', () => {
     await act(async () => { releaseDispatch(); });
 
     expect(written).toEqual([]);
-    expect(terminal.written).toContain('\r\u{1B}[2K> help\r\nfirst line\r\nsecond line\r\n> ');
+    expect(terminal.written).toContain('\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\nfirst line\r\nsecond line\r\n\u{1B}[1m>\u{1B}[22m ');
   });
 
   it('renders a claimed command\'s markdown reply as styled terminal text rather than raw markup', async () => {
@@ -1012,7 +1012,7 @@ describe('ShellTab', () => {
     mountShell(PAYLOAD, made.capabilities);
 
     await waitFor(() => {
-      expect(writes.mock.calls.some(([data]) => data.startsWith("export PROMPT='> '"))).toBe(true);
+      expect(writes.mock.calls.some(([data]) => data.startsWith("export PROMPT='%B>%b '"))).toBe(true);
     });
     expect(made.capabilities.intent).toHaveBeenCalledWith('install-hooks', NONCE);
   });
@@ -1025,7 +1025,7 @@ describe('ShellTab', () => {
 
     await waitFor(() => { expect(made.capabilities.intent).toHaveBeenCalledWith('terminal-status', null); });
     expect(made.capabilities.intent).not.toHaveBeenCalledWith('install-hooks', expect.anything());
-    expect(writes.mock.calls.some(([data]) => data.startsWith("export PROMPT='> '"))).toBe(false);
+    expect(writes.mock.calls.some(([data]) => data.startsWith("export PROMPT='%B>%b '"))).toBe(false);
   });
 
   it('holds focus in the command bar rather than the terminal', async () => {

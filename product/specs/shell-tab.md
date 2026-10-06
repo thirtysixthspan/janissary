@@ -293,6 +293,11 @@ startup files, then sets its prompt to `> ` so user prompt formatting does not c
 terminal display. The terminal stays hidden until its pre-command and post-command hooks are
 installed, and the startup screen is cleared before the plain prompt appears.
 
+The prompt and the command line typed at it are bold, and command output is not, so each command
+stands apart from what it printed. That holds for a line typed in the terminal, a line the command bar
+sends to zsh, and the echoed line above an application command's reply, along with the prompt shown
+after that reply. A command keeps its bold in the scrollback after it runs.
+
 The hooks are installed once per shell, not once per attach. Docking, undocking, or reloading the browser mounts the tab again, and a mount whose shell already has hooks only
 re-attaches: it types nothing into the terminal, does not hide it, and does not clear it, so a `vim`,
 `python`, `ssh` or `sudo` prompt in the foreground is left alone. A re-attached terminal starts with

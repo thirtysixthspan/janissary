@@ -59,11 +59,11 @@ describe('insertMarkdownBlock', () => {
 
     expect(insertMarkdownBlock(fake.terminal, 'help', '# Commands\n\n| a | b |\n| - | - |\n| 1 | 2 |', vi.fn())).toBe(true);
 
-    expect(fake.written[0]).toBe(`\r\u{1B}[2K> help\r\n${'\r\n'.repeat(4)}`);
+    expect(fake.written[0]).toBe(`\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n${'\r\n'.repeat(4)}`);
     expect(fake.markers).toEqual([-1]);
     expect(fake.decorations).toEqual([{ width: 100, height: 4, layer: 'top' }]);
     expect(fake.probeLineHeights).toEqual(['12px']);
-    expect(fake.written.at(-1)).toBe('> ');
+    expect(fake.written.at(-1)).toBe('\u{1B}[1m>\u{1B}[22m ');
 
     const element = document.createElement('div');
     fake.render(element);
@@ -77,7 +77,7 @@ describe('insertMarkdownBlock', () => {
 
     expect(insertMarkdownBlock(fake.terminal, 'help', 'a long reply', vi.fn())).toBe(true);
 
-    expect(fake.written[0]).toBe(`\r\u{1B}[2K> help\r\n${'\r\n'.repeat(4)}`);
+    expect(fake.written[0]).toBe(`\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n${'\r\n'.repeat(4)}`);
     expect(fake.markers).toEqual([-1]);
     expect(fake.decorations[0]?.height).toBe(4);
   });
