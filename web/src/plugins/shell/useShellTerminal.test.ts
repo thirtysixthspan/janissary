@@ -199,7 +199,7 @@ describe('useShellTerminal', () => {
 
     act(() => { result.current.displayReply('help', '**bold** reply'); });
 
-    expect(terminals[0].written.at(-1)).toBe('\r\u{1B}[2K> help\r\n\u{1B}[1mbold\u{1B}[22m reply\r\n> ');
+    expect(terminals[0].written.at(-1)).toBe('\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\n\u{1B}[1mbold\u{1B}[22m reply\r\n\u{1B}[1m>\u{1B}[22m ');
   });
 
   it('writes a fallback reply without the control sequences its text carried', () => {
@@ -207,7 +207,7 @@ describe('useShellTerminal', () => {
 
     act(() => { result.current.displayReply('help\u{1B}[6n', 'moved\u{1B}]7;file:///tmp\u{7} here\u{1B}[6n'); });
 
-    expect(terminals[0].written.at(-1)).toBe('\r\u{1B}[2K> help\r\nmoved here\r\n> ');
+    expect(terminals[0].written.at(-1)).toBe('\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\nmoved here\r\n\u{1B}[1m>\u{1B}[22m ');
   });
 
   it('focuses the terminal on request', () => {
@@ -222,7 +222,7 @@ describe('useShellTerminal', () => {
     const { onCommandRunning, written } = harness();
     const nonce = await hookNonce(written);
 
-    expect(written[0]).toContain("export PROMPT='> '");
+    expect(written[0]).toContain("export PROMPT='%B>%b '");
     expect(written[0]).toContain('add-zsh-hook preexec _janus_preexec');
     expect(osc(133)(`C;${nonce}`)).toBe(true);
     expect(osc(133)(`D;${nonce}`)).toBe(true);

@@ -1,5 +1,6 @@
 import type { Terminal } from '@xterm/xterm';
 import { renderMarkdown } from '../api';
+import { SHELL_PROMPT, shellCommandLine } from './shell-prompt';
 
 const BLOCK_CLASSES = ['line', 'markdown', 'shell-output-block'];
 
@@ -61,14 +62,14 @@ export function insertMarkdownBlock(
   const height = measure(screen, html, rowHeight);
   if (height <= 0) return false;
   const rows = Math.ceil(height / rowHeight);
-  terminal.write(`\r\u{1B}[2K> ${line}\r\n${'\r\n'.repeat(rows)}`, () => {
+  terminal.write(`\r\u{1B}[2K${shellCommandLine(line)}\r\n${'\r\n'.repeat(rows)}`, () => {
     const marker = terminal.registerMarker(-1);
     const decoration = terminal.registerDecoration({ marker, width: terminal.cols, height: rows, layer: 'top' });
     decoration?.onRender((element) => {
       fill(element, html, openLink);
       position(element, terminal, marker.line, rows);
     });
-    terminal.write('> ');
+    terminal.write(SHELL_PROMPT);
   });
   return true;
 }

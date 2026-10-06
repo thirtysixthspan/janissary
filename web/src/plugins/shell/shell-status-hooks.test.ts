@@ -29,6 +29,13 @@ describe('shellStatusHooks', () => {
     expect(hooks).not.toContain('file://');
   });
 
+  it('sets a bold prompt and bolds the line typed or pasted at it, keeping the other highlight defaults', () => {
+    const hooks = shellStatusHooks('abc123');
+
+    expect(hooks.startsWith("export PROMPT='%B>%b '; ")).toBe(true);
+    expect(hooks).toContain('zle_highlight=(region:standout special:standout suffix:bold isearch:underline paste:bold default:bold);');
+  });
+
   it('writes the nonce only into the markers, never into a shell variable', () => {
     expect(shellStatusHooks('abc123').split('abc123')).toHaveLength(5);
   });
