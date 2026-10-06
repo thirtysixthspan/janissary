@@ -233,6 +233,6 @@ export default ts.config(
     // into whatever working directory it runs in, so nested copies appear under the repo and an
     // unanchored pattern misses them. One stray profile is ~10 MB of minified vendor bundles and
     // takes a full lint run from ~2 minutes to 15+.
-    ignores: ['dist/', 'web/dist/', 'node_modules/', '**/.janissary/', '**/coverage/', 'scripts/docs-screenshots/fixtures/', 'documentation/.vitepress/', 'chrome-extension/'],
+    ignores: ['dist/', 'temp/', 'web/dist/', 'node_modules/', '**/.janissary/', '**/coverage/', 'scripts/docs-screenshots/fixtures/', 'documentation/.vitepress/', 'chrome-extension/'],
   },
 );
