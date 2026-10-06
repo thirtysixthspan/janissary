@@ -58,7 +58,7 @@ function hostCapabilities(file: string, options: { live?: boolean } = {}) {
       },
       ...fakeNotificationsHost(tabs),
     },
-    harness: { recordingPathOf: (label: string) => (options.live && label === 'janus' ? file : undefined) },
+    harness: { liveRecordingPathOf: (label: string) => (options.live && label === 'janus' ? file : undefined) },
     openFile: { runAs: vi.fn(async () => {}) },
     notifications: new NotificationQueue(),
   } as unknown as Managers;

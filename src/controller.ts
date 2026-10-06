@@ -9,6 +9,7 @@ import { MANAGER_DISPOSE_ORDER, type Managers } from './managers.js';
 import type { AcpRef } from './protocol.js';
 import { buildStateEvent } from './state-event.js';
 import { openTranscriptFor, openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
+import { openRecordingFor } from './controller/recording.js';
 import { setClientLayout } from './client-layout.js';
 import { createControllerAdapters, type ControllerMembers } from './controller/create-adapters.js';
 
@@ -81,6 +82,7 @@ export class ControllerCore {
   openTranscriptFor(label: string): void { openTranscriptFor(this.managers, label); }
   openHarnessTranscriptFor(label: string): void { openHarnessTranscriptFor(this.managers, label); }
   openAcpTranscript(acpRef: AcpRef): void { openAcpTranscript(this.managers, acpRef); }
+  openRecordingFor(label: string): void { openRecordingFor(this.managers, label); }
   reportLayout(layout: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number }): void { setClientLayout(layout); }
 
   // Tab-completion for the command line (reuses the shared `completeCommandLine`): filesystem

@@ -40,6 +40,15 @@ function validateDeclaration(declaration: TabPluginDeclaration): void {
     throw new Error(`claims malformed chord id "${chord}"`);
   }
   validateCommandBarClaim(declaration);
+  validateRecordingClaim(declaration);
+}
+
+// A claim to record this plugin's terminals describes something the plugin has to be able to start in
+// the first place, so it is refused here rather than left silently unkept — a plugin whose declaration
+// promises a recording and gets none is a plugin that believes it is being recorded and is not.
+function validateRecordingClaim(declaration: TabPluginDeclaration): void {
+  if (!declaration.recordsTerminal || declaration.spawnTerminal) return;
+  throw new Error('records its terminals but does not ask to start them');
 }
 
 // A tab hosting the command bar takes the application's queue popup, whose rows are that tab's own

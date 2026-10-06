@@ -7,6 +7,7 @@ import {
 } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import { formatShellCwd } from './format-shell-cwd';
+import { ShellRecordingFlag } from './ShellRecordingFlag';
 
 // The shell tab's own metadata row.
 //
@@ -33,6 +34,7 @@ export function ShellTabMeta({ payload, capabilities }: {
       <div className="tab-meta">
         <span className="tab-cwd">{formatShellCwd(payload.cwd, payload.root, payload.workspaceDir)}</span>
         <span className="tab-flags">
+          <ShellRecordingFlag capabilities={capabilities} />
           {payload.workspace && (
             <span className="tab-flag tab-flag--active" role="img" aria-label="Workspaced" title="Workspaced">
               <FontAwesomeIcon icon={workspacedIcon} />

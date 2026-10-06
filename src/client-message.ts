@@ -48,6 +48,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   openAcpTranscript: 'ack',
   openFileNavigatorFor: 'ack',
   openHarnessTranscriptFor: 'ack',
+  openRecordingFor: 'ack',
   openTranscriptFor: 'ack',
   pasteFileNavigatorItems: 'result',
   projectFiles: 'deferred',

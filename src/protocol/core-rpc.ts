@@ -37,9 +37,11 @@ export type CoreRpcCall =
   | { method: 'pluginTerminalAttach'; params: { id: string; tab: string } }
   | { method: 'ptyKill'; params: { id: string } }
   // The terminal colors a pty-backed surface resolved, reported once after it mounts so the session's
-  // recording carries the foreground and background it ran under. The server holds app theme names,
-  // not the colors a theme defines, so it cannot work them out for itself.
-  | { method: 'reportTerminalColors'; params: { id: string; fg: string; bg: string } }
+  // recording carries the foreground and background it ran under, and the 16 ANSI colors when the
+  // surface resolves them. The server holds app theme names, not the colors a theme defines, so it
+  // cannot work them out for itself. `palette` is optional: a surface that reports without it still
+  // records `fg`/`bg` alone.
+  | { method: 'reportTerminalColors'; params: { id: string; fg: string; bg: string; palette?: readonly string[] } }
   // Report the client's current sidebar/tab-area sizes after a manual resize completes, so the
   // server always holds the latest values for `profile save` to read synchronously into a profile's
   // `layout` key. Client-only, no reply — the reverse of the server->client `layout` event.
@@ -61,6 +63,10 @@ export type CoreRpcCall =
   // No-ops when the tab has no transcript tailer or no transcript file yet. `label` is the
   // requesting harness tab's own label.
   | { method: 'openHarnessTranscriptFor'; params: { label: string } }
+  // Open the named tab's asciicast recording in the tab that plays it, triggered by the recording
+  // flag in a harness, ssh, or shell tab's metadata row. No-ops when the tab has no recording, which
+  // is the same thing the flag's disabled state says on screen. `label` is the requesting tab's own.
+  | { method: 'openRecordingFor'; params: { label: string } }
   // Write the ACP session identified by `acpRef` to a plain-text capture file and open it in a
   // read-only editor tab, triggered by the clipboard button on a connections-panel ACP row. An
   // empty exchange substitutes a `No transcript yet.` placeholder rather than no-opping.

@@ -10,8 +10,8 @@ import { deliverNotification } from './deliver.js';
 // auto-approved permission gate, `editor-suggest` is an in-editor persona-suggestion query's
 // failure or empty reply, `question` is an agent waiting for a human answer,
 // `transcript-unavailable` reports that a harness tab's session record could not be found, so the
-// tab is limited to screen snapshots, `ssh-recording-failed` and `harness-recording-failed` report
-// that an ssh tab's or a harness tab's session recording was abandoned, so nothing more of that
+// tab is limited to screen snapshots, `ssh-recording-failed`, `harness-recording-failed` and `shell-recording-failed` report
+// that an ssh tab's, a harness tab's, or a shell tab's session recording was abandoned, so nothing more of that
 // session lands on disk, and `file-operation`
 // reports a failed file-navigator copy, paste, move, delete, or undo/redo replay.
 // `open-unsupported` reports that `open` found no opener for a file's extension — a deliberate
@@ -59,6 +59,7 @@ export type NotificationEventType =
   | 'transcript-unavailable'
   | 'ssh-recording-failed'
   | 'harness-recording-failed'
+  | 'shell-recording-failed'
   | 'e2e-browser-gone'
   | 'file-operation'
   | 'open-unsupported'
@@ -116,6 +117,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'transcript-unavailable': true,
   'ssh-recording-failed': true,
   'harness-recording-failed': true,
+  'shell-recording-failed': true,
   'e2e-browser-gone': true,
   'file-operation': true,
   'open-unsupported': true,

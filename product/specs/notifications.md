@@ -160,6 +160,10 @@ These event types can produce a notification line:
 - **`harness-recording-failed`** — the same event for a harness tab, on the same terms: the line
   reads `harness recording failed`, is recorded once per tab and never repeated, fires even while
   that tab is the active one, and leaves the harness session itself unaffected.
+- **`shell-recording-failed`** — and again for a shell tab: the line reads `shell recording failed`,
+  is recorded once per tab and never repeated, fires even while that tab is the active one, and leaves
+  the shell running. The shell tab's recording flag stays and still opens whatever was written, so a
+  failed recording is a shorter file rather than a lost one (see [[shell-tab]]).
 - **`e2e-browser-gone`** — a `-b` tab's browser is no longer there: a launch that failed, a browser
   that exited, or a guard that died (see `harness.md`). The line names the tab it belonged to and
   carries the browser's own last words beneath the message. When the browser said anything at all,

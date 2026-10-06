@@ -194,6 +194,17 @@ export class TabManager extends TabTranscriptState {
     this.managers.pty.adopt(ptyId, label);
   }
 
+  // Start recording this terminal, now that it belongs to the named tab. Whether it is recorded at
+  // all is the owning plugin's declared business, asked of its declaration rather than of its id —
+  // the same question `buildTabViews` asks, through the same list — so a plugin that asked cannot be
+  // left believing it is recorded when it is not, and one that did not cannot have its terminal
+  // written to disk because of a name appearing here.
+  recordTerminal(ptyId: string, label: string, pluginId: string): void {
+    const declares = this.managers.plugins.declarations
+      .find((declaration) => declaration.id === pluginId)?.recordsTerminal === true;
+    if (declares) this.managers.harness.registerShellObservers(ptyId, label);
+  }
+
   killTerminal(ptyId: string): void {
     this.managers.pty.kill(ptyId);
   }

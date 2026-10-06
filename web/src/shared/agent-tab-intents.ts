@@ -12,12 +12,17 @@ export type AgentTabIntents = {
   onOpenTranscript: () => void;
   onToggleCollapse: () => void;
   onOpenAcpTranscript: (acpRef: AcpRef) => void;
+  // Only on a tab that has a recording, because it is the metadata row's own signal that there is
+  // one: the row draws its flag inert when this is absent and pressable when it is set, so the two
+  // cannot disagree. An agent tab never has one and so never sends it.
+  onOpenRecording?: () => void;
 };
 
 export function agentTabIntents(
   client: JanusClient,
   label: string,
   transcriptMethod: TranscriptMethod,
+  recording?: string,
 ): AgentTabIntents {
   return {
     onOpenFileNavigator: () => client.send({ method: 'openFileNavigatorFor', params: { label } }),
@@ -25,5 +30,8 @@ export function agentTabIntents(
     onOpenTranscript: () => client.send({ method: transcriptMethod, params: { label } }),
     onToggleCollapse: () => client.send({ method: 'toggleCollapse', params: {} }),
     onOpenAcpTranscript: (acpRef) => client.send({ method: 'openAcpTranscript', params: { acpRef } }),
+    ...(recording !== undefined && {
+      onOpenRecording: () => client.send({ method: 'openRecordingFor', params: { label } }),
+    }),
   };
 }

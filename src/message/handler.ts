@@ -43,6 +43,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'launchAgentFor':
     case 'openTranscriptFor':
     case 'openHarnessTranscriptFor':
+    case 'openRecordingFor':
     case 'openAcpTranscript': {
       return dispatchTabMessage(controller, message);
     }

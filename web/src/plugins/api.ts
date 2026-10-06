@@ -4,6 +4,7 @@ import { resourceUrl } from '../session-url';
 import { copyText as systemCopyText } from '../shared/system-clipboard';
 import { openTranscriptLink } from '../shared/transcript/open-link';
 import { transcriptIntents } from '../shared/transcript/transcript-intents';
+import type { TerminalColors } from '../shared/terminal/colors';
 import type { PluginHost } from './host';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -50,6 +51,11 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 // wrong breaks Cmd+C on exactly one platform and nowhere else to notice it.
 export { terminalColors, type TerminalColors } from '../shared/terminal/colors';
 export { copySelectionChord, isMacPlatform } from '../shared/terminal/terminal/keys';
+// The metadata row's flag table, published for the same reason and on the same terms: the shell
+// plugin's row deliberately does not import the host's `AgentTabMeta` markup, so it would otherwise
+// hand-write a second copy of the recording flag — and a flag whose icon or tooltip drifted between
+// the two rows is exactly the kind of difference nothing would report.
+export { tabFlagDisplay } from '../shared/tab/flag-display';
 export { PluginActionsHeader } from './PluginActionsHeader';
 
 // The application's answer to "is this a place typed text can go", published for the same reason and
@@ -218,6 +224,20 @@ export type TabPluginClientCapabilities = {
   // for the same reason as `attachTerminal`.
   openFileNavigator?(): void;
   launchAgentHere?(): void;
+  // This tab's asciicast recording, or absent before the tab's terminal has produced any output. Its
+  // presence is also what makes the recording flag pressable, so a plugin drawing that flag reads
+  // this field rather than keeping its own state — the host is the only thing that knows when the
+  // recorder opened its file. Only for a plugin whose declaration asked for `recordsTerminal`.
+  recording?: string;
+  // Open this tab's recording in the tab that plays it. Supplied together with `recording` and
+  // absent without it, for the same reason: an inert flag is a flag with no button behind it.
+  openRecording?(): void;
+  // Report the colors this plugin's own terminal resolved, so its session's recording carries the
+  // foreground, background and 16 ANSI colors it ran under rather than whatever theme is active when
+  // it is replayed. The same report the host's own terminal surfaces make through the same RPC; the
+  // server cannot work the colors out itself, because they live only in the web stylesheet. Optional
+  // because a plugin with no terminal of its own has nothing to report.
+  reportTerminalColors?(id: string, colors: TerminalColors): void;
   // Open a link the way a click on it in an agent tab's transcript does: a web address through `open`,
   // a `path:line` reference in an editor tab, and anything else not at all. A plugin rendering markdown
   // of its own needs it because the default for an anchor click is to navigate the whole application
@@ -238,6 +258,7 @@ export function createPluginClientCapabilities(
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void,
   claimedChords: readonly string[] = [],
   dotColor?: string,
+  recording?: string,
 ): TabPluginClientCapabilities {
   return {
     active,
@@ -280,7 +301,21 @@ export function createPluginClientCapabilities(
     },
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
     launchAgentHere: () => { client.send({ method: 'launchAgentFor', params: { label } }); },
+    // The two are supplied together or not at all: a plugin drawing the recording flag needs one
+    // answer to "does this tab have a recording", and a handler with no path behind it would be a
+    // button that opens nothing.
+    ...(recording !== undefined && {
+      recording,
+      openRecording: () => { client.send({ method: 'openRecordingFor', params: { label } }); },
+    }),
     openLink: (href) => { openTranscriptLink(href, transcriptIntents((call) => client.send(call))); },
+    reportTerminalColors: (id, colors) => {
+      const { fg, bg, palette } = colors;
+      client.send({
+        method: 'reportTerminalColors',
+        params: { id, fg, bg, ...(palette && { palette }) },
+      });
+    },
     // The report is deduplicated here rather than in the layer above, so the one-report-per-plugin
     // rule covers a plugin component reporting its own failure — a bad intent result, say — and not
     // just the load, schema, timeout, and render failures the host detects for it. The first report

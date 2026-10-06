@@ -435,6 +435,7 @@ describe('buildTabViews', () => {
         workspaceOf: overrides.workspaceOf ?? noWorkspace,
         reconnectingOf: overrides.reconnectingOf ?? (() => false),
       },
+      plugins: { declarations: [] },
     } as unknown as Managers;
   }
 
@@ -491,6 +492,40 @@ describe('buildTabViews', () => {
     const views = build([remoteTab('a')], remoteManagers({ workspaceOf: () => '/remote/a' }));
 
     expect(views[0]!.remote).toEqual({ host: 'devbox', address: 'devbox:/srv/project' });
+  });
+
+  // The recording flag is driven entirely by whether this field is present, so its absence has to
+  // mean "not yet" rather than "not applicable" — a tab waiting on its workspace still shows a plain
+  // flag, and only an agent tab, which never records at all, is told apart by its view discriminant.
+  it('sends no recording for a tab that has produced no output yet', () => {
+    const views = build([remoteTab('a'), makeTab('notes', '#fff')], remoteManagers());
+
+    expect(views[0]!.harness?.recording).toBeUndefined();
+    expect('recording' in (views[1]!.plugin ?? {})).toBe(false);
+  });
+
+  it('mirrors the recording onto a harness tab\'s own payload, where its row reads it', () => {
+    const tab = remoteTab('a', { recording: '/project/.janissary/recordings/a-2026.cast' });
+    const views = build([tab], remoteManagers());
+
+    expect(views[0]!.harness?.recording).toBe('/project/.janissary/recordings/a-2026.cast');
+  });
+
+  it('mirrors it onto a plugin tab\'s envelope too, so a shell tab\'s row reads the same field', () => {
+    const tab = makeTab('devbox', '#fff');
+    tab.view = 'plugin';
+    tab.plugin = { id: 'shell', instanceKey: 'k', schemaVersion: 2, payload: {}, fileRefs: [] };
+    tab.recording = '/project/.janissary/recordings/devbox-2026.cast';
+
+    expect(build([tab], remoteManagers())[0]!.plugin?.recording)
+      .toBe('/project/.janissary/recordings/devbox-2026.cast');
+  });
+
+  it('leaves an existing harness payload otherwise untouched', () => {
+    const tab = remoteTab('a');
+    const views = build([tab], remoteManagers());
+
+    expect(views[0]!.harness).toEqual({ name: 'claude', program: 'claude', ptyId: 'pty1', status: 'running' });
   });
 
   it('reads each tab\'s pending question from the question manager', () => {

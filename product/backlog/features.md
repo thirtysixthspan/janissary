@@ -2,8 +2,6 @@
 
 ## ready
 
-* Recording a shell tab's session to an asciicast, similar to harness and ssh tabs.
-
 * A new type of AI task that runs in a workspaced agent tab, can spawn and terminate new agent tabs and harness tabs as part of doing its work. the first task would be to call plan-a-new-feature, then build-a-feature, then pull-request-review, then work-an-issue on the pull-request backlog until the backlog is clear. 
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and receive the transcript as the agent works, and to recieve the response.

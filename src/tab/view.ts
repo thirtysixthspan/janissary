@@ -74,6 +74,10 @@ export function buildTabView(
   const remoteProvisioning = workspaceOf !== undefined && tab.remote !== undefined
     && workspaceOf(tab.label) === undefined;
   const provisioning = provisioningFlag(tab, remoteProvisioning, workspaceProvisioning);
+  // The tab's own record of its recording, which is set once and read here. Deliberately not looked
+  // up from the recorder: that is released when the PTY exits, and the tab — and the file — outlive
+  // it. Absent until the session has produced its first output.
+  const recording = tab.recording;
   return {
     label: tab.label,
     number: tab.number,
@@ -120,9 +124,14 @@ export function buildTabView(
       id: tab.plugin.id,
       schemaVersion: tab.plugin.schemaVersion,
       payload: tab.plugin.payload,
+      ...(recording !== undefined && { recording }),
       ...declaredFields(declarationOf?.(tab.plugin.id)),
     } : undefined,
-    harness: tab.harness,
+    // The harness-view payload is the tab's own, spread rather than rebuilt, so this one field is
+    // mirrored onto it wherever a harness or ssh tab's row looks for the rest of its facts.
+    harness: tab.harness && (recording === undefined
+      ? tab.harness
+      : { ...tab.harness, recording }),
     editor: tab.editor ? { ...tab.editor, path: shorten(tab.editor.path) } : undefined,
     // Deliberately NOT spreading `tab.editorDraft` here: the transient unsaved buffer is
     // server-only and must never be broadcast back to clients (see editor-live-buffer-sync plan).

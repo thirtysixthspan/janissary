@@ -21,11 +21,16 @@ looks at its extension and hands it to the tab that plays that kind of thing, so
 by the name of the session that wrote it whether or not that session is still running. A video plays
 the same way, with `play clip.mp4`, and a track with `play track.mp3`.
 
-Every [harness](/user-documentation/advanced-agents/harness#recordings) and SSH tab is recorded
+Every [harness](/user-documentation/advanced-agents/harness#recordings), SSH, and
+[shell](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) tab is recorded
 automatically, so this is the way to watch a session again: one still running, or one whose tab has
 closed and whose scrollback went with it. See
 [Playing a recording back](/user-documentation/advanced-agents/harness#playing-a-recording-back) for the
 full description.
+
+While the tab that made the recording is still open, you do not need its name: its
+[recording flag](/user-documentation/advanced-agents/harness#the-recording-flag) in the metadata row
+opens the recording directly, following it if the session is still running.
 
 ## What it looks like
 

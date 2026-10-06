@@ -90,6 +90,7 @@ describe('notificationText', () => {
     ['transcript-unavailable', 'no harness transcript found'],
     ['ssh-recording-failed', 'ssh recording failed'],
     ['harness-recording-failed', 'harness recording failed'],
+    ['shell-recording-failed', 'shell recording failed'],
   ] as const)('renders the fixed body for %s', (event, text) => {
     expect(notificationText(event, 'claude')).toBe(text);
   });

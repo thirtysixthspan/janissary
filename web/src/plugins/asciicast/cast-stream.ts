@@ -16,7 +16,10 @@ export type CastEvent =
   | { code: 'r'; time: number; data: CastResize }
   | { code: 'x'; time: number; data: number };
 
-export type CastColors = { fg: string; bg: string };
+// The recorded terminal's colors, as the header carries them. `palette` is the 16 ANSI colors in
+// ANSI order — a colon-joined string in the file, split here. Optional because a recording written
+// before this app recorded a palette has none, and its fourteen missing colors are the viewer's own.
+export type CastColors = { fg: string; bg: string; palette?: readonly string[] };
 
 export type CastHeader = {
   version: 2 | 3;
@@ -41,9 +44,13 @@ function readString(source: Record<string, unknown>, key: string): string {
 
 function readColors(term: Record<string, unknown> | undefined): CastColors | undefined {
   if (!term || !isRecord(term.theme)) return undefined;
-  const { fg, bg } = term.theme;
+  const { fg, bg, palette } = term.theme;
   if (typeof fg !== 'string' || typeof bg !== 'string') return undefined;
-  return { fg, bg };
+  // A palette of any other shape is dropped rather than guessed at: the theme below indexes sixteen
+  // slots by position, and a shorter list would silently shift every color after the gap.
+  if (typeof palette !== 'string') return { fg, bg };
+  const colors = palette.split(':');
+  return colors.length === 16 ? { fg, bg, palette: colors } : { fg, bg };
 }
 
 export function parseCastHeader(line: string): CastHeaderResult {

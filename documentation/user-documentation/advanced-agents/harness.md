@@ -248,7 +248,9 @@ Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [s
 
 Every harness session is recorded automatically. The full session, with its timing and colors, is written to a `.cast` file under `.janissary/recordings/` in your project, named `<label>-<timestamp>.cast`. The label is cleaned up on the way in: every character that isn't a letter, a digit, an underscore, or a dash becomes a dash, so `harness opencode as "my tab"` records as `my-tab-<timestamp>.cast`. Captures, transcripts, and browser logs use the same rule. You can review a recording after its tab has closed and its scrollback is gone — `play` plays it back inside the app (see [Playing a recording back](#playing-a-recording-back)), and `asciinema play` still works on the files. Recordings contain terminal output, terminal resizes, and the session's exit status when the tab's process reports one, so playback can follow changes in window size. Keystrokes are not recorded as input events; text echoed by a program is part of its output.
 
-Recording covers named harness tabs and dedicated SSH tabs. Interactive programs launched through `shell`, such as `shell vim`, are not recorded. The two kinds share one directory and are told apart by the file's header: a harness recording names the bare program in `command` and the tab label in `title`, while an SSH recording carries the full invocation you typed. That is worth knowing before you type one: an invocation with a secret passed in an ssh flag value puts that secret in a plaintext file under `.janissary/recordings/`.
+Recording covers named harness tabs, dedicated SSH tabs, and [shell tabs](/user-documentation/command-bar/shell#open-a-zsh-shell-tab). Interactive programs launched through `shell`, such as `shell vim`, are not recorded — a tab whose body is a terminal records, a program the `shell` command took a tab over to does not. The three kinds share one directory and are told apart by the file's header: a harness recording names the bare program in `command` and the tab label in `title`, an SSH recording carries the full invocation you typed, and a shell recording names the shell's own path (`/bin/zsh`). That is worth knowing before you type one: an invocation with a secret passed in an ssh flag value puts that secret in a plaintext file under `.janissary/recordings/`.
+
+A shell recording is the one case where something you typed can reach the file. No keystrokes are recorded as input events, but zsh echoes what you type back into the terminal, and that echo is part of the recorded output — so a password entered at a `sudo` or `psql` prompt is in the recording, where it would not be for a harness or SSH tab. The files never leave your machine and the directory is cleared at the next normal launch.
 
 Closing the harness tab or quitting the app closes the recording cleanly before the process ends.
 
@@ -256,7 +258,22 @@ A recording covers one stretch of time the tab is attached, so a session you det
 
 The file is created only once the harness produces its first output, so a harness that exits immediately (for example, a binary that isn't found) leaves no recording behind.
 
-The files are standard [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/), so they also drop into any asciicast web player, and reading one recorded by an older version or another tool works both ways. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
+The files are standard [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/), so they also drop into any asciicast web player, and reading one recorded by an older version or another tool works both ways. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions and shell tabs are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
+
+### The recording flag
+
+Every tab that records — harness, SSH and shell — carries a **recording** flag in the top row of its
+tab, drawn before the other flags. It appears as soon as the tab opens and is grey until the session
+produces its first output, then turns green. Clicking it opens that session's recording in the player,
+without naming the file:
+
+```
+harness opencode as devbox     → click the film flag on the devbox tab
+```
+
+A live session is followed as it records; a finished one plays through. The flag stays green and
+still works after the session has ended and the tab is still open, which is the way back into a
+harness recording after its process has exited.
 
 ### Playing a recording back
 
@@ -412,7 +429,7 @@ Before the tab opens, the `ssh <destination> […]` command itself is recorded i
 
 ### Recording an SSH session
 
-Every SSH session is recorded automatically, exactly like a harness session, to a `.cast` file under `.janissary/recordings/` named after the tab label. It records terminal output and resizes, without input events. Text echoed by the remote program is still output. The recording's header carries the full invocation you typed, so a stray file still names the host it came from. Two sessions to the same destination get separate files, matching their `devbox` / `devbox-2` labels.
+Every SSH session is recorded automatically, exactly like a harness session, to a `.cast` file under `.janissary/recordings/` named after the tab label. It records terminal output and resizes, without input events. Text echoed by the remote program is still output. The recording's header carries the full invocation you typed, so a stray file still names the host it came from. Two sessions to the same destination get separate files, matching their `devbox` / `devbox-2` labels. The tab's own [recording flag](#the-recording-flag) opens it without naming the file.
 
 That error output a failed connection takes with it does reach the recording: `ssh` prints it before exiting, so it's captured before the tab closes.
 

@@ -99,6 +99,37 @@ describe('host state declaration validation', () => {
   });
 });
 
+describe('recording claim validation', () => {
+  it('refuses a claim to record terminals that cannot start one', async () => {
+    const host = await activateWith(manifest({ recordsTerminal: true }), activation());
+
+    // A promise the host cannot keep: the plugin would believe its terminal was being recorded, and
+    // the flag in its metadata row would light for a file nothing ever wrote.
+    expect(host.statusFor('fixture')?.state).toBe('disabled');
+    expect(host.statusFor('fixture')?.reason).toContain('records its terminals but does not ask to start them');
+  });
+
+  it('accepts a claim paired with the one it depends on', async () => {
+    const host = await activateWith(
+      manifest({ spawnTerminal: true, recordsTerminal: true }),
+      activation(),
+    );
+
+    expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+
+  it('accepts a declaration that claims nothing about recording', async () => {
+    const host = await activateWith(manifest({ spawnTerminal: true }), activation());
+
+    expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+
+  it('ships the shell manifest with both claims, which is what makes a shell tab record', async () => {
+    expect(shellManifest.recordsTerminal).toBe(true);
+    expect(shellManifest.spawnTerminal).toBe(true);
+  });
+});
+
 describe('chord claim validation', () => {
   it('accepts the canonical ids the application\'s own table uses', async () => {
     const host = await activateWith(

@@ -23,6 +23,7 @@ interface OpenTarget {
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
   adoptTerminal(ptyId: string, label: string): void;
   killTerminal(ptyId: string): void;
+  recordTerminal(ptyId: string, label: string, pluginId: string): void;
   retainWorkspace(directory: string): void;
 }
 
@@ -140,6 +141,13 @@ export function openPluginTab(
         if (minted.workspaceDir) target.retainWorkspace(minted.workspaceDir);
       }
       for (const ptyId of terminalIds) target.adoptTerminal(ptyId, minted.label);
+      // Recording starts here rather than at the spawn above, and that placement is the whole reason
+      // this step sits after the adoption: a recording is named for the tab that owns it, and no tab
+      // owns the terminal until the label has been minted. Nothing is missed by waiting — the span
+      // between the two is synchronous, and a PTY's first output reaches the host on a later turn of
+      // the event loop — and in exchange the runtime is registered under its real label from the
+      // first moment, so closing the tab finds it with no relabelling anywhere.
+      for (const ptyId of terminalIds) target.recordTerminal(ptyId, minted.label, pluginId);
     }
   });
 }
@@ -173,8 +181,10 @@ export function updatePluginTab(
     fileRefs: [...tab.plugin.fileRefs, ...fileRefs],
     ...(rekeyed && { instanceKey: update.instanceKey! }),
   };
-  // This tab exists already, so every terminal the factory started is adopted onto it.
+  // This tab exists already, so every terminal the factory started is adopted onto it, and a
+  // terminal started here is recorded exactly as one started while the tab was opening would be.
   for (const ptyId of terminalIds) target.adoptTerminal(ptyId, tab.label);
+  for (const ptyId of terminalIds) target.recordTerminal(ptyId, tab.label, pluginId);
   if (update.title !== undefined) tab.title = update.title;
   messageBus.emit('state', { type: 'dirty' });
 }

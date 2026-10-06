@@ -97,7 +97,9 @@ file — and closed when the ssh process exits. Recordings are **cleared at a fr
 
 `play <file>` opens an asciicast tab playing that session's recording, following it while
 the session is still running; see [[harness-recording]] § Retrieval for what the player offers. The
-file is also playable outside the app with `asciinema play`. If a recording cannot be written, the ssh
+file is also playable outside the app with `asciinema play`. An ssh tab's own **recording** flag in its
+metadata row opens the same recording, following the session while it runs and playing it through
+afterwards (see [[harness-recording]] § The recording flag). If a recording cannot be written, the ssh
 session is unaffected and one `ssh recording failed` line appears in the notifications feed for that
 tab.
 

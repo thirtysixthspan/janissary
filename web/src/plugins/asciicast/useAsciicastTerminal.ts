@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Terminal } from '@xterm/xterm';
+import { Terminal, type ITheme } from '@xterm/xterm';
 import { isMacPlatform, terminalColors, type TabPluginClientCapabilities } from '../api';
 import type { CastEvent, CastHeader } from './cast-stream';
 
@@ -18,6 +18,21 @@ export type AsciicastTerminal = {
 };
 
 const FALLBACK_FONT_SIZE = 13.5;
+
+// The 16 ANSI slots in the order xterm's theme option names them, so a recorded palette lands in the
+// slot it was recorded for. Returns nothing when the recording carries no palette, which is every
+// recording written before this app recorded one — those play with xterm's own defaults, exactly as
+// they always have.
+const ANSI_SLOTS = [
+  'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
+  'brightBlack', 'brightRed', 'brightGreen', 'brightYellow',
+  'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite',
+] as const;
+
+function recordedTheme(palette: readonly string[] | undefined): Partial<ITheme> {
+  if (!palette) return {};
+  return Object.fromEntries(ANSI_SLOTS.map((slot, index) => [slot, palette[index]]));
+}
 
 export function useAsciicastTerminal(
   header: CastHeader | undefined,
@@ -38,7 +53,10 @@ export function useAsciicastTerminal(
     // and rebuilt — losing the bytes already written, since the cursor below is this hook's only
     // record of how far it got.
     if (!container || !header) return;
-    const palette = header.colors ?? terminalColors();
+    // The recording's own colors where it has them, the viewer's where it does not. Named `recorded`
+    // rather than `palette` because the sixteen are the palette inside it, and `palette.palette` is
+    // the kind of line that survives review because it compiles.
+    const recorded = header.colors ?? terminalColors();
     const styles = getComputedStyle(document.documentElement);
     // The app's own terminal font size, read the way `useXterm` reads it, so a recording in this tab is
     // the same text at the same size as the terminal beside it rather than a second scale of its own.
@@ -48,7 +66,7 @@ export function useAsciicastTerminal(
       cols: header.cols,
       rows: header.rows,
       cursorBlink: false,
-      theme: { background: palette.bg, foreground: palette.fg },
+      theme: { ...recordedTheme(recorded.palette), background: recorded.bg, foreground: recorded.fg },
       fontFamily: styles.getPropertyValue('--mono').trim() || 'monospace',
       fontSize,
     });

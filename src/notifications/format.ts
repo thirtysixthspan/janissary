@@ -66,6 +66,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'transcript-unavailable': { return 'no harness transcript found'; }
     case 'ssh-recording-failed': { return 'ssh recording failed'; }
     case 'harness-recording-failed': { return 'harness recording failed'; }
+    case 'shell-recording-failed': { return 'shell recording failed'; }
     case 'e2e-browser-gone': { return detail ?? 'e2e browser stopped'; }
   }
 }

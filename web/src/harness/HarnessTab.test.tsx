@@ -375,7 +375,9 @@ describe('HarnessTab', () => {
     const { container } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" flags={[]} />,
     );
-    expect(container.querySelectorAll('.tab-flag').length).toBe(0);
+    // Every harness tab carries the recording flag whether or not any other is active, so this asks
+    // about the flags the view carries rather than about the cluster as a whole.
+    expect(container.querySelectorAll('.tab-flag:not(.tab-recording)').length).toBe(0);
   });
 
   it('renders both flag emoji when both are present', () => {

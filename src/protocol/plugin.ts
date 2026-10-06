@@ -11,6 +11,10 @@ export type PluginTabView = {
   // Present when this plugin's declaration says its tabs host the application command bar, so the
   // client opens its shared pickers and queue popup over the tab without knowing which plugin it is.
   hostsCommandBar?: true;
+  // This tab's asciicast recording, mirrored from the server's own record of it. Present only for a
+  // plugin whose declaration asked for `recordsTerminal`, and only once the tab's terminal has
+  // produced output — a recording exists from the first byte, not from the spawn.
+  recording?: string;
 };
 
 export type PluginIntentRequest = { tab: string; intent: string; payload: unknown };

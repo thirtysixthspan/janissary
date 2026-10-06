@@ -128,13 +128,14 @@ export function useXterm({ ptyId, actions, containerRef, keyFilter, onMount, act
   }, [ptyId, actions]);
 
   // Report the colors this terminal resolved, once per PTY, so the session's recording carries the
-  // foreground and background it ran under rather than whatever theme is active when it is replayed.
+  // foreground and background it ran under rather than whatever theme is active when it is replayed,
+  // along with the 16 ANSI colors the asciicast header's `palette` wants.
   // The values are read at mount and not watched: a theme change afterwards must not rewrite the
   // colors an already-started session was recorded under.
   useEffect(() => {
     if (!ptyId) return;
-    const { fg, bg } = terminalColors();
-    actions.reportColors(ptyId, fg, bg);
+    const { fg, bg, palette } = terminalColors();
+    actions.reportColors(ptyId, fg, bg, palette);
   }, [ptyId, actions]);
 
   const focus = useCallback(() => termRef.current?.focus(), []);

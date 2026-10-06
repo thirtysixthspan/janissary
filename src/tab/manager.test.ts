@@ -26,7 +26,11 @@ function makeManagers(): Managers {
       spawnDimensions: vi.fn(() => ({ cols: 80, rows: 24 })),
       isRunning: vi.fn(() => true),
     },
-    harness: { closeTab: vi.fn() },
+    harness: { closeTab: vi.fn(), registerShellObservers: vi.fn() },
+    // Which plugins asked for their terminals to be recorded. Empty, so the cases below that assert
+    // on adoption and on a refused spawn are asserting about those and not about recording; the
+    // recording cases declare it themselves.
+    plugins: { declarations: [] as { id: string; recordsTerminal?: boolean }[] },
     fileNavigator: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn(), watch: vi.fn() },
     editorAcp: { closeTab: vi.fn() },
@@ -203,6 +207,47 @@ describe('TabManager queue', () => {
 
     const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
     expect(managers.pty.adopt).toHaveBeenCalledWith('pty1', tab.label);
+  });
+
+  it('records a plugin\'s terminal under the label its new tab was given, not the one it spawned under', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      const terminal = resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: { ptyId: terminal.ptyId } };
+    });
+
+    // The label is the whole reason recording starts after adoption rather than at spawn: the file is
+    // named for the tab, and the tab-close release matches on that same label.
+    const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
+    expect(managers.harness.registerShellObservers).toHaveBeenCalledWith('pty1', tab.label);
+  });
+
+  it('records nothing for a plugin whose declaration did not ask for it', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+
+    tm.openPluginTab('other', 'other', 'other-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/bash', args: [] });
+      return { title: 'other', payload: {} };
+    });
+
+    // The claim is read from the declaration rather than from a list of plugin names here, so a
+    // third-party plugin cannot quietly have its terminal's output written to disk.
+    expect(managers.harness.registerShellObservers).not.toHaveBeenCalled();
+  });
+
+  it('records every terminal one factory started, not only the first', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+
+    expect(managers.harness.registerShellObservers).toHaveBeenCalledTimes(2);
   });
 
   it('retains the source workspace through shell and nested-shell lifetimes', () => {
