@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { commands } from './commands/index.js';
 import { RESERVED_NON_COMMAND_NAMES } from './commands/reserved.js';
+import { selectHelpSection } from './help-sections.js';
 
 // What the classifier decided, rather than three meanings folded into `string | null` and told
 // apart by the leading words of a user-facing message. Two callers used to recover the third case
@@ -21,16 +22,37 @@ export const availableCommands = [
   ...commands.map((command) => command.name),
 ];
 
-let helpOutput: string | null = null;
+// `undefined` until the first `help`, then the file's text, or `null` when it could not be read.
+let helpMarkdown: string | null | undefined;
 
-function buildHelp(): string {
+function readHelpMarkdown(): string | null {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const helpPath = path.join(__dirname, '..', 'help.md');
   try {
     return readFileSync(helpPath, 'utf8').trim();
   } catch {
-    return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "shell " to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
+    return null;
   }
+}
+
+function fallbackHelp(): string {
+  return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "shell " to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
+}
+
+// Bare `help` is the whole file; `help <section>` is one section of it. Without the file there are no
+// sections to choose from, so both answer with the generated summary.
+function helpText(query: string | undefined): string {
+  if (helpMarkdown === undefined) helpMarkdown = readHelpMarkdown();
+  if (helpMarkdown === null) return fallbackHelp();
+  return query === undefined ? helpMarkdown : selectHelpSection(helpMarkdown, query);
+}
+
+// `help` with the section it names, if any; `undefined` for a command that is not `help` at all, such
+// as `helper`.
+function parseHelpCommand(command: string): { query: string | undefined } | undefined {
+  const [word, ...rest] = command.split(/\s+/);
+  if (word !== 'help') return undefined;
+  return { query: rest.length > 0 ? rest.join(' ') : undefined };
 }
 
 // The one place this message is built. It used to be spelled two different ways — this full form in
@@ -46,10 +68,8 @@ export function unknownCommandMessage(command: string): string {
 export const getOutput = (command: string): CommandOutput => {
   const trimmed = command.trim().toLowerCase();
 
-  if (trimmed === 'help') {
-    if (!helpOutput) helpOutput = buildHelp();
-    return { kind: 'output', text: helpOutput };
-  }
+  const help = parseHelpCommand(trimmed);
+  if (help) return { kind: 'output', text: helpText(help.query) };
   // Still reachable: an empty message passes through the capture path's registry loop unmatched.
   if (trimmed === '') return { kind: 'silent' };
   return { kind: 'unknown', text: unknownCommandMessage(trimmed) };

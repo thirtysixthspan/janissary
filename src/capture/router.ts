@@ -11,8 +11,9 @@ export function routeUnknownCommand(
   callback: (out: string) => void,
 ): void {
   const result = getOutput(trimmed);
+  // Only `help`, bare or with a section, answers with output, and its text is always markdown.
   if (result.kind === 'output') {
-    managers.tab.append(label, { input: text, output: result.text, markdown: trimmed === 'help' });
+    managers.tab.append(label, { input: text, output: result.text, markdown: true });
     callback(result.text);
     return;
   }

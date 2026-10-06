@@ -32,6 +32,19 @@ describe('routeUnknownCommand', () => {
     expect(appended).toHaveLength(1);
   });
 
+  it('records a help section reply as markdown', () => {
+    const { managers, appended } = makeManagers([]);
+    const callback = vi.fn();
+
+    routeUnknownCommand('help shell', 'help shell', 'tab1', managers, vi.fn(), callback);
+
+    expect(callback.mock.calls[0][0]).toContain('**Shell tab controls**');
+    expect(appended).toEqual([{
+      label: 'tab1',
+      entry: expect.objectContaining({ input: 'help shell', markdown: true }),
+    }]);
+  });
+
   it('routes to the db recognizer and rewrites the command when exactly one db is open', () => {
     const { managers } = makeManagers(['mydb']);
     const run = vi.fn();
