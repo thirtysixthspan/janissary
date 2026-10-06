@@ -1046,11 +1046,21 @@ describe('ShellTab', () => {
     await waitFor(() => { expect(document.activeElement).toBe(bar()); });
   });
 
-  it('focuses the terminal when it is clicked', () => {
+  it('returns focus to the command bar when the terminal is clicked once', () => {
     renderTab();
     const body = document.querySelector('.shell-body')!;
 
-    fireEvent.mouseDown(body);
+    fireEvent.click(body);
+
+    expect(document.activeElement).toBe(bar());
+    expect(terminals.at(-1)?.focusCalls).toBe(0);
+  });
+
+  it('focuses the terminal when it is double-clicked', () => {
+    renderTab();
+    const body = document.querySelector('.shell-body')!;
+
+    fireEvent.doubleClick(body);
 
     expect(terminals.at(-1)?.focusCalls).toBe(1);
   });

@@ -48,7 +48,7 @@
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
-| `zsh` | Open a shell tab through the bundled shell tab plugin, named from the agent-name pool like an agent tab: a live zsh terminal with the agent tab's metadata row and command line. The command line has focus when the tab opens; click the terminal or press `Shift+Tab` to type directly into zsh, then press `Shift+Tab` to return to the command line. A command-bar line runs as an application command when it names one, and otherwise goes to zsh; prefix it with `!` to force the shell. While zsh is running a command the line reads `queue >`, and a submitted line waits in the tab's command queue until zsh returns to its prompt. It starts in the issuing tab's working directory and shares its workspace and offline mode when present; the workspace stays alive until its last tab closes. A remote agent tab refuses it, since its directory is on the other machine |
+| `zsh` | Open a shell tab through the bundled shell tab plugin, named from the agent-name pool like an agent tab: a live zsh terminal with the agent tab's metadata row and command line. The command line has focus when the tab opens; double-click the terminal or press `Shift+Tab` to type directly into zsh, and press `Shift+Tab` again to return to the command line. A single click on the terminal returns focus to the command line. A command-bar line runs as an application command when it names one, and otherwise goes to zsh; prefix it with `!` to force the shell. While zsh is running a command the line reads `queue >`, and a submitted line waits in the tab's command queue until zsh returns to its prompt. It starts in the issuing tab's working directory and shares its workspace and offline mode when present; the workspace stays alive until its last tab closes. A remote agent tab refuses it, since its directory is on the other machine |
 
 ### Key Bindings
 
@@ -92,7 +92,7 @@
 
 | Key | Action |
 | --- | ------ |
-| `Shift+Tab` / click the terminal | Move between the command line and the terminal; typing in the terminal goes straight to zsh |
+| `Shift+Tab` / double-click the terminal | Move between the command line and the terminal; typing in the terminal goes straight to zsh. A single click on the terminal returns focus to the command line |
 | `Enter` | Run what is in the command line: an application command when it names one, otherwise sent to zsh. A multi-line command sent to zsh is pasted and submitted as one command. While zsh is running a command the line reads `queue >` and a submitted line waits in the tab's queue |
 | `!` prefix | Send the line straight to zsh, even when it names an application command |
 | `↑` / `↓` | Walk this tab's command history — lines the command bar sent and commands typed into the terminal |

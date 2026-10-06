@@ -156,7 +156,8 @@ export function ShellTab({ payload, capabilities }: Properties) {
         data-doc-shot="shell-view"
         ref={terminalReference}
         style={{ '--shell-focus-color': dotColor } as React.CSSProperties}
-        onMouseDown={() => { focusTerminal(); }}
+        onClick={() => { inputReference.current?.focus(); }}
+        onDoubleClick={() => { focusTerminal(); }}
         onKeyDownCapture={(event) => {
           if (event.key !== 'Tab' || !event.shiftKey) return;
           event.preventDefault();
