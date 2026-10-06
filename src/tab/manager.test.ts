@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { mkdtempSync, writeFileSync, existsSync } from 'node:fs';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { mkdtempSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { TabManager } from './manager.js';
@@ -9,6 +9,30 @@ import { TabPluginRejection, type TabPluginResources } from '../plugins/api.js';
 import { seedRootAgentTab } from './root-agent-test-fixture.js';
 import { messageBus } from '../bus.js';
 import { UNREAD_DWELL_MS } from './dwell.js';
+import { loadConfig } from '../config.js';
+
+// `recordTerminal` reads the config, and the config is module-level state the real `loadConfig`
+// sets — so a case that turns shell recording off has to put it back, or every later case in this
+// file would inherit the setting. One temp project per project-config, cleared after each case.
+const configDirs: string[] = [];
+
+function projectConfig(overrides: Record<string, unknown> = {}): void {
+  const dir = mkdtempSync(path.join(tmpdir(), 'tab-config-'));
+  configDirs.push(dir);
+  mkdirSync(path.join(dir, '.janissary'), { recursive: true });
+  writeFileSync(path.join(dir, '.janissary', 'config.json'), JSON.stringify(overrides));
+  loadConfig(dir);
+}
+
+// The default every case starts from, so a case that never touches the config still has one loaded
+// and `recordTerminal` never reads whatever the previous test file left behind.
+projectConfig();
+
+afterEach(() => {
+  for (const dir of configDirs) rmSync(dir, { recursive: true, force: true });
+  configDirs.length = 0;
+  projectConfig();
+});
 
 function makeManagers(): Managers {
   let spawned = 0;
@@ -234,6 +258,34 @@ describe('TabManager queue', () => {
 
     // The claim is read from the declaration rather than from a list of plugin names here, so a
     // third-party plugin cannot quietly have its terminal's output written to disk.
+    expect(managers.harness.registerShellObservers).not.toHaveBeenCalled();
+  });
+
+  // A shell echoes what is typed back into the terminal, so its recording is the one recorded kind
+  // that can capture a password. A project that declines that gets no recorder, and therefore no
+  // recording flag on the tab either — the state an agent tab is already in.
+  it('records a plugin\'s terminal by default, including for a project that set no config', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+
+    expect(managers.harness.registerShellObservers).toHaveBeenCalledTimes(1);
+  });
+
+  it('records nothing when the project turned shell recording off in its config', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
+    projectConfig({ recordShellTabs: false });
+
+    tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', (resources) => {
+      resources.spawnTerminal({ cwd: '/repo', shell: '/bin/zsh', args: [] });
+      return { title: 'shell', payload: {} };
+    });
+
     expect(managers.harness.registerShellObservers).not.toHaveBeenCalled();
   });
 

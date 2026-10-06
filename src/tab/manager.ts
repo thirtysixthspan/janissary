@@ -3,6 +3,7 @@ import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
 import { abbreviatePath } from '../paths.js';
+import { getConfig } from '../config.js';
 import { messageBus } from '../bus.js';
 import { TabTranscriptState } from './transcript/state.js';
 import { FileRegistry } from './file-registry.js';
@@ -198,11 +199,13 @@ export class TabManager extends TabTranscriptState {
   // all is the owning plugin's declared business, asked of its declaration rather than of its id —
   // the same question `buildTabViews` asks, through the same list — so a plugin that asked cannot be
   // left believing it is recorded when it is not, and one that did not cannot have its terminal
-  // written to disk because of a name appearing here.
+  // written to disk because of a name appearing here. A project that turned shell recording off in
+  // its config gets no recorder either, which is what leaves such a tab with no recording flag: a
+  // plugin tab that never records needs no separate rule for "configured not to".
   recordTerminal(ptyId: string, label: string, pluginId: string): void {
     const declares = this.managers.plugins.declarations
       .find((declaration) => declaration.id === pluginId)?.recordsTerminal === true;
-    if (declares) this.managers.harness.registerShellObservers(ptyId, label);
+    if (declares && getConfig().recordShellTabs) this.managers.harness.registerShellObservers(ptyId, label);
   }
 
   killTerminal(ptyId: string): void {

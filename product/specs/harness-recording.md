@@ -68,6 +68,12 @@ the host starts the terminal on the plugin's behalf and attaches a recorder once
 but everything else is identical: the same file format, the same directory, the same naming, the same
 lazy creation, and the same notification on failure.
 
+Shell recording can be declined. A project whose `.janissary/config.json` sets `"recordShellTabs":
+false` records no shell tab: no file is written and the tab draws no recording flag, which is the
+state an agent tab is already in. The setting applies to shell tabs alone — a named-harness or ssh tab
+has no echo of its own and is recorded whatever it says — and it defaults to on, so a project that has
+not expressed a preference records shell tabs the same way it records the other two.
+
 What is **not** recorded is a PTY opened by the `shell` command: `shell vim`, `shell htop`, and the
 other interactive programs it runs full-tab on an agent tab are not recorded and get no server-side
 screen reader either. The distinction is not the tab's body but how the PTY was started — a tab whose

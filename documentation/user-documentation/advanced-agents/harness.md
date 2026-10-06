@@ -252,6 +252,8 @@ Recording covers named harness tabs, dedicated SSH tabs, and [shell tabs](/user-
 
 A shell recording is the one case where something you typed can reach the file. No keystrokes are recorded as input events, but zsh echoes what you type back into the terminal, and that echo is part of the recorded output — so a password entered at a `sudo` or `psql` prompt is in the recording, where it would not be for a harness or SSH tab. The files never leave your machine and the directory is cleared at the next normal launch.
 
+To decline that for shell tabs, set `"recordShellTabs": false` in `.janissary/config.json` and restart. Shell tabs then write no recording and show no recording flag; harness and SSH tabs are unaffected and keep recording, since neither echoes what you type.
+
 Closing the harness tab or quitting the app closes the recording cleanly before the process ends.
 
 A recording covers one stretch of time the tab is attached, so a session you detach and later reattach is spread over two files. [Detach](/user-documentation/tab-types/sessions) closes the current one, and the [Attach](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) that brings the tab back starts a new `<label>-<timestamp>.cast` rather than picking up the old one. The time a session spends detached is not recorded while it is away; the new file picks up from whatever the host replays when it accepts the attach, and then carries on live. A local harness tab has no detach, so it always produces exactly one file.

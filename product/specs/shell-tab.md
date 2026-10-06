@@ -323,7 +323,10 @@ closes if it is not.
 
 Every shell tab's session is recorded automatically, with no command, flag, or setting to turn it on
 or off, from the moment zsh starts to the moment it exits. The launch shell — `janus`, the tab every
-launch opens first — records on the same terms as any other shell tab.
+launch opens first — records on the same terms as any other shell tab. A project that sets
+`"recordShellTabs": false` in `.janissary/config.json` records no shell tab at all: no file is written
+and the tab draws no recording flag. Nothing else changes — the shell, its terminal and every other
+tab are unaffected, and a named-harness or ssh tab is still recorded (see [[harness-recording]]).
 
 The recording is a playable asciicast file under `.janissary/recordings/`, named after the tab's label
 and the time it started, and governed by the same rules as a harness or ssh recording: it is created
