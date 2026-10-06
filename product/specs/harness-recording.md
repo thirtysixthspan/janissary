@@ -70,9 +70,16 @@ lazy creation, and the same notification on failure.
 
 Shell recording can be declined. A project whose `.janissary/config.json` sets `"recordShellTabs":
 false` records no shell tab: no file is written and the tab draws no recording flag, which is the
-state an agent tab is already in. The setting applies to shell tabs alone — a named-harness or ssh tab
-has no echo of its own and is recorded whatever it says — and it defaults to on, so a project that has
-not expressed a preference records shell tabs the same way it records the other two.
+state an agent tab is already in. It defaults to on, so a project that has not expressed a preference
+records shell tabs the same way it records the other two.
+
+The setting gates **every plugin terminal that asked to be recorded** — any plugin whose declaration
+carries `recordsTerminal` — because that is the one place the decision is made, and the shell plugin is
+the only one that asks, so today it reads as shell tabs alone. A named-harness or ssh tab does not reach
+that path at all and is recorded whatever it says; neither echoes its input, so neither has the exposure
+this setting answers. Were another bundled or third-party plugin to ask for its terminals to be
+recorded, `"recordShellTabs": false` would decline that one too — the name says what is off today
+rather than promising the gate can never widen.
 
 What is **not** recorded is a PTY opened by the `shell` command: `shell vim`, `shell htop`, and the
 other interactive programs it runs full-tab on an agent tab are not recorded and get no server-side
