@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  StatusPanels, StatusWindowButton, connectionsWindowIcon, newTabIcon, openFilesIcon, scheduleWindowIcon,
+  RecordingFlag, StatusPanels, StatusWindowButton, connectionsWindowIcon, newTabIcon, openFilesIcon, scheduleWindowIcon,
   statusButton, useStatusWindows, workspacedIcon,
   type TabPluginClientCapabilities,
 } from '../api';
@@ -33,6 +33,7 @@ export function ShellTabMeta({ payload, capabilities }: {
       <div className="tab-meta">
         <span className="tab-cwd">{formatShellCwd(payload.cwd, payload.root, payload.workspaceDir)}</span>
         <span className="tab-flags">
+          <RecordingFlag onOpen={capabilities.openRecording} />
           {payload.workspace && (
             <span className="tab-flag tab-flag--active" role="img" aria-label="Workspaced" title="Workspaced">
               <FontAwesomeIcon icon={workspacedIcon} />

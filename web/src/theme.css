@@ -3,6 +3,35 @@
    carries the dark palette so the app renders dark before any `data-theme` attribute is set;
    scoping each block to `[data-theme]` too lets the theme picker render per-theme swatches by
    putting the attribute on a small wrapper element. */
+/* The 16 ANSI colours a terminal surface renders with, in the order the ANSI standard numbers them.
+   Declared once here, at the root, rather than repeated in each `[data-theme]` block beside
+   `--terminal-fg`/`--terminal-bg`, because every theme wants the same values today and a theme that
+   wants its own overrides them in its own block — a later, equally-specific `[data-theme]` rule wins.
+   `terminalColors()` reads all sixteen and puts them in a recording's asciicast header, where the
+   format wants `fg`, `bg` and `palette` together; see specs/harness-recording.md.
+   These are xterm.js's own defaults (`DEFAULT_ANSI_COLORS`), which is what the emulator renders
+   when a theme names no colour of its own — recorded so a replay reproduces the session rather than
+   whatever the replaying viewer happens to default to. `#c00` is `#cc0000`, written short for the
+   same reason stylelint asks for. */
+:root {
+  --terminal-black: #2e3436;
+  --terminal-red: #c00;
+  --terminal-green: #4e9a06;
+  --terminal-yellow: #c4a000;
+  --terminal-blue: #3465a4;
+  --terminal-magenta: #75507b;
+  --terminal-cyan: #06989a;
+  --terminal-white: #d3d7cf;
+  --terminal-bright-black: #555753;
+  --terminal-bright-red: #ef2929;
+  --terminal-bright-green: #8ae234;
+  --terminal-bright-yellow: #fce94f;
+  --terminal-bright-blue: #729fcf;
+  --terminal-bright-magenta: #ad7fa8;
+  --terminal-bright-cyan: #34e2e2;
+  --terminal-bright-white: #eeeeec;
+}
+
 :root,
 [data-theme="dark"] {
   --bg: #17181b;
@@ -232,6 +261,25 @@ html, body, #root {
 .tab-flag--active { color: var(--success); }
 .tab-flag--provisioning { color: var(--muted); }
 .tab-flag--provisioning svg { animation: icon-spin 1s linear infinite; }
+/* The recording flag is the one flag in the row that is also a control, so it is a `<button>` — and
+   unlike every other button in this row it does not declare its own reset. Without this rule it
+   renders with the browser's default chrome, raised and bordered, beside flat controls. Copied from
+   `.tab-open-files` rather than invented, so the row reads as one set of controls again.
+   No `color` here, deliberately: `.tab-flag--active` above is what turns the lit flag green, and a
+   `color` in this later single-class rule would win it on cascade and leave the recording flag grey in
+   both of its states. The chrome is reset for both elements because it is inert on the `span`; the
+   pointer is scoped to the button because the inert `span` is the one state in which it is untrue, and
+   a hand cursor over something that cannot be pressed is a lie about it.
+   No `:hover` rule, and that is also deliberate: the row's hover treatments exist because those
+   buttons are muted chrome whose colour is a choice, while this flag's colour is a state — lit green
+   means there is a recording. Brightening it on hover would replace the one thing the flag is telling
+   you, and it would do so on exactly the elements that need it: the flag is a `<button>` only when it
+   is pressable, so there is no inert button for a hover rule to be harmless on. `cursor: pointer` is
+   the pointer feedback, which is what the other flags in this row have. */
+.tab-recording {
+  background: transparent; border: none; font-size: 13px; padding: 0 4px; line-height: 1;
+}
+button.tab-recording { cursor: pointer; }
 .tab-meta-chip {
   display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; vertical-align: bottom; cursor: default;

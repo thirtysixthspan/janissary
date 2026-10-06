@@ -56,6 +56,9 @@ export type BufferLine = {
 export type HarnessView = {
   name: string; program: string; ptyId: string; status: 'running' | 'exited' | 'provisioning'; exitCode?: number;
   destination?: string; model?: string; effort?: string;
+  // This tab's asciicast recording, mirrored from `Tab.recording` so the harness-view payload is the
+  // whole of what its row renders. Absent until the session has produced output.
+  recording?: string;
   // Set only on an ssh tab: the non-destination tokens of the original `ssh …` invocation, kept so
   // `profile save` can write an entry that reconnects with the same flags.
   sshOptions?: string[];
@@ -277,6 +280,12 @@ export type Tab = {
   plugin?: PluginTabRecord;
   // The harness-view payload, present only when `view === 'harness'`.
   harness?: HarnessView;
+  // The absolute path of this tab's asciicast recording, once its recorder has opened a file — which
+  // happens on the tab's first PTY output and never before, so a tab that has produced nothing has no
+  // recording to name. Remembered on the tab rather than read from the recorder because the recorder
+  // is released when the PTY exits, and the file outlives it: the tab stays open after its process
+  // ends, and its recording is still worth replaying. Written once, by the observer that opened it.
+  recording?: string;
   // The editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
   // Transient, unsaved buffer content synced from the client shortly after typing pauses

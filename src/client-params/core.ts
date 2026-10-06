@@ -44,12 +44,15 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   reportLayout: (p) => isFiniteNumber(p.sidebarLeft) && isFiniteNumber(p.sidebarRight) && isFiniteNumber(p.tabAreaPct),
   // Checked as plain strings here and as hex colors at the point of use: this decoder's job is
   // shape, and refusing to admit a color would answer a formatting mistake the same way it answers a
-  // malformed frame.
-  reportTerminalColors: (p) => isString(p.id) && isString(p.fg) && isString(p.bg),
+  // malformed frame. `palette` is shape-checked as an optional array of 16 strings here and refused
+  // for its hex values by `isTerminalColors`, the one place that decides what a valid color is.
+  reportTerminalColors: (p) => isString(p.id) && isString(p.fg) && isString(p.bg)
+    && (p.palette === undefined || (Array.isArray(p.palette) && p.palette.length === 16 && p.palette.every((color) => isString(color)))),
   setDock: (p) => isInteger(p.index) && isOneOf(p.dock, DOCKS),
   launchAgentFor: (p) => isString(p.label),
   openTranscriptFor: (p) => isString(p.label),
   openHarnessTranscriptFor: (p) => isString(p.label),
+  openRecordingFor: (p) => isString(p.label),
   openAcpTranscript: (p) => isAcpRef(p.acpRef),
   projectFiles: noParams,
   revealNotifications: noParams,

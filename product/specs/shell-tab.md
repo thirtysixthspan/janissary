@@ -230,6 +230,12 @@ It shows a workspace mark when that directory is a workspace clone, and the acti
 act on: **open file navigator here**, **new shell here**, the split control, and the connections and
 schedule windows.
 
+It also carries the **recording** flag — a film icon, drawn before the workspace mark — which reports
+that this shell's session is being recorded and opens the recording when pressed. It is drawn plain
+and inert until the shell has printed something, green and pressable from that moment on, and stays
+green and pressable once the recording has stopped, so a partial recording is still reachable. See
+[[harness-recording]] § The recording flag.
+
 The connections window includes the tab's own `zsh` terminal as soon as the shell tab opens. The
 connections and schedule windows auto-show for five seconds whenever the tab becomes visible, then
 fade over 300 ms unless pinned or hovered. If an empty window gains its first row after that interval,
@@ -331,6 +337,33 @@ honest representation of a shell that is no longer running. Closing the tab clos
 way. A shell that exits while no browser is attached does not leave a tab behind waiting for input
 that can never arrive: the tab asks on its next appearance whether the process is still there, and
 closes if it is not.
+
+## Session recording
+
+Every shell tab's session is recorded automatically, with no command, flag, or setting to turn it on
+or off, from the moment zsh starts to the moment it exits. The launch shell — `janus`, the tab every
+launch opens first — records on the same terms as any other shell tab. A project that sets
+`"recordShellTabs": false` in `.janissary/config.json` records no shell tab at all: no file is written
+and the tab draws no recording flag. Nothing else changes — the shell, its terminal and every other
+tab are unaffected, and a named-harness or ssh tab is still recorded (see [[harness-recording]]).
+
+The recording is a playable asciicast file under `.janissary/recordings/`, named after the tab's label
+and the time it started, and governed by the same rules as a harness or ssh recording: it is created
+lazily on the first output, captures output and resizes only, is cleared at a fresh launch and
+preserved across `--relaunch`, and can be played back with `play <label>` or opened by pressing the
+tab's recording flag. See [[harness-recording]].
+
+**What is written is what the terminal printed, and — because zsh echoes it — what was typed.** No
+input is recorded deliberately: no keystroke event is written, and nothing is read from what you type.
+But a shell echoes each character back to the terminal as it is entered, and that echo is part of the
+same output stream, so a password typed at a `sudo` or `psql` prompt reaches the recording. This is a
+real difference from a harness or ssh tab, where nothing you type is echoed. The mitigations are the
+ones every recording here has: the file is written under the project's own `.janissary/recordings/`,
+never served over the network or handed to a browser client, and cleared at the next fresh launch.
+
+If the recording cannot be written — an unwritable directory, say — the shell is unaffected, recording
+simply stops, and a single `shell recording failed` line appears in the notifications feed for that
+tab. The flag stays and still opens whatever was written.
 
 ## Everything else
 

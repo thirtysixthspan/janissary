@@ -14,9 +14,14 @@ export const MAX_PENDING_RECORDING_BYTES = 4 * 1024 * 1024;
 // stream (not per-event `appendFileSync`) so a burst of PTY output never blocks `bus.emit`.
 //
 // `command` is what the asciicast header reports the session ran: a bare program name (`claude`) for a
-// named harness, the whole verbatim `ssh …` invocation for an ssh tab. `onFailure` fires at most once
-// if recording is abandoned, and is required rather than optional so that a new spawn path cannot
-// leave an abandoned recording unreported by simply not passing it.
+// named harness, the whole verbatim `ssh …` invocation for an ssh tab, the shell's own path for a
+// shell tab. `onFailure` fires at most once if recording is abandoned, and is required rather than
+// optional so that a new spawn path cannot leave an abandoned recording unreported by simply not
+// passing it.
+//
+// `onOpened` fires once, when the file is actually opened, carrying its path — which is the first
+// moment there is a recording to name. The tab remembers it from here because the recorder is
+// released when the PTY exits while the tab, and the file, both outlive the process.
 export class HarnessRecorder {
   private subscription: Subscription;
   private stream: WriteStream | undefined;
@@ -34,6 +39,7 @@ export class HarnessRecorder {
     private cols: number,
     private rows: number,
     private onFailure: () => void,
+    private onOpened?: (path: string) => void,
   ) {
     this.subscription = messageBus.on('pty', ['data', 'exit', 'resize'], (event) => {
       if (event.id !== this.id) return;
@@ -102,7 +108,10 @@ export class HarnessRecorder {
       // crash the process if unhandled — disable the recorder instead.
       stream.on('error', () => { this.abandon(); });
       this.stream = stream;
+      // After the header is written, so a listener that opens the file to read it finds a complete
+      // one rather than an empty file with a header still to come.
       this.writeLine(JSON.stringify(this.header()) + '\n');
+      this.onOpened?.(this.path);
     } catch {
       this.path = undefined;
       this.abandon();

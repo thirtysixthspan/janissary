@@ -99,6 +99,33 @@ describe('loadConfig', () => {
     expect(config.tabNameMaxLength).toBe(8);
   });
 
+  // A config written before shell recording existed must keep recording: the key is an opt-out, not
+  // a new default, so a missing key resolving to anything else would silently stop writing every
+  // shell session on every project that already had a config file.
+  it('records shell tabs by default, including for a config that predates the key', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ tabNameMaxLength: 8 }));
+
+    const config = loadConfig(tmpDir);
+
+    expect(config.recordShellTabs).toBe(true);
+  });
+
+  it('stops recording shell tabs when the key is turned off, and nothing else', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ recordShellTabs: false }));
+
+    const config = loadConfig(tmpDir);
+
+    expect(config.recordShellTabs).toBe(false);
+    // Nothing else follows from it: harness and ssh tabs have no echo of their own and keep
+    // recording, so this key must not be readable as a recording switch in general.
+    expect(config.sandboxWorkspaces).toBe(true);
+    expect(config.interactiveShellDetection).toBe(true);
+  });
+
   it('defaults the clipboard-history cap to 15, including for a config that predates it', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });

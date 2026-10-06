@@ -120,7 +120,7 @@ export function PluginBody({
   client,
   active,
   dock = null,
-  dotColor,
+dotColor,
   onClose,
   onSplit,
   onDirtyHandle,
@@ -163,6 +163,10 @@ export function PluginBody({
     chordsRef.current = claimedChords;
   }
   const chords = chordsRef.current;
+  // This tab's recording, read off the envelope the tab was handed rather than passed beside it. The
+  // envelope is where the server puts it for every plugin tab, so a surface that renders one — the
+  // centre strip or a sidebar — reaches the same answer without a prop each has to remember to pass.
+  const recording = plugin.recording;
   const registerDirty = useCallback((handle: TabDirtyHandle | null) => {
     onDirtyHandleRef.current?.(handle);
   }, []);
@@ -176,8 +180,10 @@ export function PluginBody({
   const capabilities = useMemo(
     () => createPluginClientCapabilities(
       host, pluginId, label, client, active, dock, close, splitAction, registerDirty, chords, dotColor,
+      recording,
     ),
-    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor],
+    [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor,
+      recording],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

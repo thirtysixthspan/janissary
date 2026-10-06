@@ -8,7 +8,9 @@ import type { HarnessLaunchView } from '../protocol.js';
 import type { ScreenCapture } from './screen.js';
 import { autoApproveHarnessNames, supportsHarnessAutoApprove } from './auto-approve.js';
 import { autoResumeHarnessNames, supportsHarnessAutoResume } from './auto-resume.js';
-import { sshRuntime } from './observers.js';
+import { shellRuntime, sshRuntime } from './observers.js';
+import { SHELL_PROGRAM } from '../plugins/shell/shared.js';
+import { liveRecordingOf, recordingOf, screenTextOf, tailerOf } from './runtime-access.js';
 import { HarnessTabSpawn } from './tab-spawn.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import { captureSubcommand, transcriptSubcommand } from './subcommands.js';
@@ -44,38 +46,38 @@ export class HarnessManager extends HarnessTabSpawn {
     cancelHarnessIdleEscalation(this.managers, label);
   }
 
-  // The named harness tab's most recent rendered-screen capture, or undefined when the tab is
+// The named harness tab's most recent rendered-screen capture, or undefined when the tab is
   // missing, is not a harness tab, or has no capture yet. Exposes the screen reader's rendered
   // text (the coherent, de-ANSI'd form) to monitors without exposing the reader map.
   latestScreenText(label: string): ScreenCapture | undefined {
-    const tab = this.managers.tab.harnessTab(label);
-    if (!tab) return undefined;
-    return this.runtimes.get(tab.harness.ptyId)?.reader?.latestCapture();
+    return screenTextOf(this.managers, this.runtimes, label);
   }
 
   // The named tab's transcript tailer, or undefined when the tab is missing, is not a harness tab,
-  // or never got one. Only `finishSpawn` creates a tailer, so this is also what tells a real harness
-  // tab apart from an ssh tab — which carries the same harness-view shape and a `ptyId`, but runs no
-  // harness binary and has no dot directory. Callers ask the tailer itself for entries or its file.
+  // or never got one. See `tailerOf` for why this is also what distinguishes a real harness tab
+  // from an ssh tab.
   transcriptTailer(label: string): HarnessTranscriptTailer | undefined {
-    const tab = this.managers.tab.harnessTab(label);
-    if (!tab) return undefined;
-    return this.runtimes.get(tab.harness.ptyId)?.tailer;
+    return tailerOf(this.managers, this.runtimes, label);
   }
 
-  // The recording file the named tab is writing, or nothing when the tab is missing, is not a harness
-  // tab, or has produced no output yet — a recorder has a path only once its file is actually open,
-  // which is why "no recording yet" and "no such tab" are different answers rather than one.
+  // The recording the named tab wrote, remembered on the tab itself so it outlives the recorder that
+  // wrote it. See `recordingOf` for when it is absent, and `liveRecordingPathOf` for the question this
+  // is not the answer to.
   recordingPathOf(label: string): string | undefined {
-    const tab = this.managers.tab.harnessTab(label);
-    if (!tab) return undefined;
-    return this.runtimes.get(tab.harness.ptyId)?.recorder?.recordingPath();
+    return recordingOf(this.managers, label);
   }
 
-// Hand the PTY's recorder the colors its terminal surface resolved, so the session's recording
+  // The recording that tab's PTY is writing right now, which is what tells a live recording from a
+  // finished one — a distinction no file can make about itself, since a recording ended by closing
+  // its tab carries no exit event.
+  liveRecordingPathOf(label: string): string | undefined {
+    return liveRecordingOf(this.managers, this.runtimes, label);
+  }
+
+  // Hand the PTY's recorder the colors its terminal surface resolved, so the session's recording
   // carries the foreground and background it was actually recorded under. Reported by the client
   // because those values live only in the web stylesheet, one per app theme, and this side of the app
-  // holds nothing but the theme's name. A PTY with no recorder — an ordinary shell — is not an error.
+  // holds nothing but the theme's name. A PTY with no recorder is not an error.
   reportTerminalColors(id: string, colors: TerminalColors): void {
     this.runtimes.get(id)?.recorder?.setColors(colors);
   }
@@ -87,6 +89,15 @@ export class HarnessManager extends HarnessTabSpawn {
   // recording's header carries.
   registerSshObservers(id: string, label: string, command: string): void {
     this.runtimes.install(id, label, sshRuntime(this.managers, id, label, command));
+  }
+
+  // The recorder for a shell tab's PTY, which the host starts on the shell plugin's behalf rather
+  // than this manager: a shell tab is contributed by the bundled `shell` plugin and spawns its
+  // terminal from a payload factory, before its label exists. The host calls this once the terminal
+  // has been adopted onto the label it minted, which is why the label arrives as a parameter here.
+  // A recorder alone, deliberately: see `shellRuntime`.
+  registerShellObservers(id: string, label: string): void {
+    this.runtimes.install(id, label, shellRuntime(this.managers, id, label, SHELL_PROGRAM));
   }
 
   // Handle a `harness <name> [as <label>] [-w] [--offline] [--model <name>] [--effort <level>]`

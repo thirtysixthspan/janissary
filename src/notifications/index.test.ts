@@ -203,6 +203,23 @@ describe('shouldNotify — harness-recording-failed event', () => {
   });
 });
 
+describe('shouldNotify — shell-recording-failed event', () => {
+  it('fires regardless of the per-event toggles, like the other explicit events', () => {
+    expect(shouldNotify(allOff, 'shell-recording-failed', 'devbox', 'janus')).toBe(true);
+    expect(shouldNotify(undefined, 'shell-recording-failed', 'devbox', 'janus')).toBe(true);
+  });
+
+  it('fires even when the shell tab is the active one', () => {
+    // A shell tab is usually the tab being watched while it fails, which is exactly the case the
+    // ambient rule would otherwise discard — and a silent gap is what a recording cannot afford.
+    expect(shouldNotify(allOn, 'shell-recording-failed', 'devbox', 'devbox')).toBe(true);
+  });
+
+  it('renders the fixed body, with the label supplied by the line header', () => {
+    expect(notificationText('shell-recording-failed', 'devbox')).toBe('shell recording failed');
+  });
+});
+
 describe('shouldNotify — e2e-browser-gone event', () => {
   it('fires regardless of the per-event toggles, like the other explicit events', () => {
     expect(shouldNotify(allOff, 'e2e-browser-gone', 'claude', 'janus')).toBe(true);

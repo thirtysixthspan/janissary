@@ -4,6 +4,7 @@ import { tabFlagDisplay } from './tab/flag-display';
 import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from './icons';
 import { StatusWindowButton } from './status-windows/StatusWindowButton';
 import { SplitTabButton } from './SplitTabButton';
+import { RecordingFlag } from './RecordingFlag';
 import type { StatusWindowButtonProps } from './status-windows/status-button';
 import type { RemoteTargetView } from '@shared/protocol';
 import { RemoteChip } from './RemoteChip';
@@ -13,6 +14,12 @@ import { RemoteSessionButton, type RemoteSessionState } from './RemoteSessionBut
 type Properties = {
   cwd?: string; cwdDisplay?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTargetView;
   onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void;
+  // Set for the tab kinds that record at all — a harness or an ssh tab — even before the session has
+  // produced a file. An agent tab leaves it unset and shows no recording flag at all.
+  hasRecorder?: boolean;
+  // Set only once this tab has a recording, and then it opens it — the same arrangement the
+  // transcript button uses, so one absent handler means "there is nothing here to open yet".
+  onOpenRecording?: () => void;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   onSplit?: () => void;
   // Set only for a remote tab: what its channel is doing, and where to send the detach or attach
@@ -34,7 +41,7 @@ function MetaChip({ label, value }: { label: string; value: string }) {
 
 export function AgentTabMeta({
   cwd, cwdDisplay, flags, model, effort, remote, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
-  connectionsButton, scheduleButton, onSplit, remoteSession,
+  hasRecorder, onOpenRecording, connectionsButton, scheduleButton, onSplit, remoteSession,
 }: Properties) {
   const workspaced = flags?.some((flag) => flag === 'workspaced' || flag === 'provisioning') ?? false;
   return (
@@ -47,6 +54,10 @@ export function AgentTabMeta({
       {model !== undefined && <MetaChip label="Model" value={model} />}
       {effort !== undefined && <MetaChip label="Effort" value={effort} />}
       <span className="tab-flags">
+        {/* The recording flag is not one of `flags`: it is the host's own fact about this tab's PTY,
+            and it is drawn for the tab kinds that record at all — a harness or ssh tab even before it
+            has a file, an agent tab never. */}
+        {hasRecorder && <RecordingFlag onOpen={onOpenRecording} />}
         {(flags ?? []).map((flag) => {
           const display = tabFlagDisplay[flag];
           if (!display) return null;

@@ -4,6 +4,45 @@ import { describe, it, expect, vi } from 'vitest';
 import { AgentTabMeta } from './AgentTabMeta';
 
 describe('AgentTabMeta', () => {
+  it('renders the recording flag as a pressable button once the tab has a recording', () => {
+    const onOpenRecording = vi.fn();
+    const { container } = render(<AgentTabMeta cwd="~/project" hasRecorder onOpenRecording={onOpenRecording} />);
+
+    const flag = screen.getByRole('button', { name: 'recording' });
+    fireEvent.click(flag);
+
+    expect(flag).toHaveClass('tab-flag--active');
+    expect(onOpenRecording).toHaveBeenCalled();
+    // The class the stylesheet resets the button's chrome with. Nothing reads it, so a rename would
+    // silently drop the styling and render the flag raised and bordered among flat controls.
+    expect(container.querySelector('.tab-recording')).toBe(flag);
+  });
+
+  // The two facts are separate on purpose: a `-w` harness tab still provisioning has a recorder but
+  // no file, and the row has to say "recording" about a tab that will record rather than show nothing.
+  it('renders the flag plain and unpressable before the tab has produced a recording', () => {
+    render(<AgentTabMeta cwd="~/project" hasRecorder />);
+
+    const flag = screen.getByTitle('recording');
+    expect(screen.queryByRole('button', { name: 'recording' })).toBeNull();
+    expect(flag).not.toHaveClass('tab-flag--active');
+    // A disabled button is still focusable, so an inert flag is a span and the row is not one
+    // anybody tabs through.
+    expect(flag.tagName).toBe('SPAN');
+  });
+
+  it('labels the flag the same in both states, because it is a recording either way', () => {
+    const { rerender } = render(<AgentTabMeta cwd="~/project" hasRecorder />);
+    expect(screen.getByTitle('recording')).toHaveAttribute('aria-label', 'recording');
+    rerender(<AgentTabMeta cwd="~/project" hasRecorder onOpenRecording={() => {}} />);
+    expect(screen.getByTitle('recording')).toHaveAttribute('aria-label', 'recording');
+  });
+
+  it('renders no recording flag at all for a tab kind that never records', () => {
+    render(<AgentTabMeta cwd="~/project" />);
+    expect(screen.queryByTitle('recording')).toBeNull();
+  });
+
   it('renders the display form of the cwd when cwdDisplay is given', () => {
     const { container } = render(
       <AgentTabMeta cwd="$root/workspace/bekir" cwdDisplay="$workspace" />,

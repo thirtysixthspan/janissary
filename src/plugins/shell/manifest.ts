@@ -28,6 +28,10 @@ export const shellManifest = {
   // Asked for explicitly: starting a process is the most powerful thing this plugin can do, and it
   // belongs in the declaration rather than arriving with every plugin.
   spawnTerminal: true,
+  // Asked for in its own right, not as a consequence of the above: this is what puts what the shell
+  // printed on disk as a playable recording, beside the ones harness and ssh tabs already leave. The
+  // two travel together because the second is meaningless without the first.
+  recordsTerminal: true,
   // The tab's own command bar takes the application's shared pickers and queue popup, which the host
   // decides from this flag rather than from the plugin's id.
   hostsCommandBar: true,

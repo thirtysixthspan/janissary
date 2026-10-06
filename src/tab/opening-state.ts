@@ -16,6 +16,7 @@ export abstract class TabOpeningState extends TabQueueState {
   abstract get openFiles(): Map<string, string>;
   abstract spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
   abstract adoptTerminal(ptyId: string, label: string): void;
+abstract recordTerminal(ptyId: string, label: string, pluginId: string): void;
   abstract killTerminal(ptyId: string): void;
 
   protected constructor(protected managers: Managers) {

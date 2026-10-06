@@ -89,6 +89,7 @@ function winClaim(nonce: string): Promise<ShellHookClaim> {
 
 function harness(overrides: {
   attachTerminal?: undefined; hookNonce?: string; claimHooks?: (nonce: string) => Promise<ShellHookClaim>;
+  reportColors?: (id: string, colors: { fg: string; bg: string; palette?: readonly string[] }) => void;
 } = {}) {
   const written: string[] = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -108,15 +109,17 @@ function harness(overrides: {
   const onCommandRunning = vi.fn();
   const onCwd = vi.fn();
   const copyText = vi.fn();
+  const reportColors = overrides.reportColors ?? vi.fn();
   const container = document.createElement('div');
   const containerRef = { current: container };
   const claimHooks = vi.fn(overrides.claimHooks ?? winClaim);
   const view = renderHook(() => useShellTerminal({
     ptyId: 'pty7', containerRef, attachTerminal, onExit, onCommandRunning, onCwd,
-    copyText, hookNonce: overrides.hookNonce, claimHooks,
+    copyText, reportColors, hookNonce: overrides.hookNonce, claimHooks,
   }));
   return {
-    byteCallbacks, claimHooks, container, copyText, exitHandlers, handle, onExit, onCommandRunning, onCwd, resized,
+    byteCallbacks, claimHooks, container, copyText, exitHandlers, handle, onExit, onCommandRunning, onCwd,
+    reportColors, resized,
     detached, written, ...view,
   };
 }
@@ -498,5 +501,33 @@ describe('useShellTerminal', () => {
 
     unmount();
     expect(terminals[0].disposed).toBe(true);
+  });
+
+  // The host cannot work these colors out for itself — they live only in the web stylesheet — and the
+  // recording header is written on the tab's first output, so a report that arrives after it would be
+  // reporting into a file that already exists.
+  it('reports the resolved colors once for its PTY after mount, so the recording carries them', () => {
+    const { reportColors } = harness();
+
+    expect(reportColors).toHaveBeenCalledTimes(1);
+    const [id, colors] = vi.mocked(reportColors).mock.calls[0]!;
+    expect(id).toBe('pty7');
+    expect(colors.fg).toMatch(/^#[0-9a-f]{6}$/iu);
+    expect(colors.bg).toMatch(/^#[0-9a-f]{6}$/iu);
+    // All sixteen, in ANSI order — a palette of a different length is refused by the server, which
+    // would leave every recording this tab makes without one.
+    expect(colors.palette).toHaveLength(16);
+    expect(colors.palette?.[0]).toMatch(/^#[0-9a-f]{6}$/iu);
+    expect(new Set(colors.palette).size).toBe(16);
+  });
+
+  it('does not report again when the terminal re-renders', () => {
+    const { reportColors, rerender } = harness();
+
+    rerender();
+
+    // Read at mount and not watched: a theme change afterwards must not rewrite the colors a session
+    // that has already started was recorded under.
+    expect(reportColors).toHaveBeenCalledTimes(1);
   });
 });

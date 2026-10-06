@@ -29,6 +29,16 @@ export type Config = {
   // Isolate workspaced tabs (`agent --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
+  // Record shell tabs' sessions to asciicast files under `.janissary/recordings/`, as harness and ssh
+  // tabs are recorded (see `harness-recording.md`). Default true. The escape hatch is not only that
+  // it writes what the shell printed to disk: a shell echoes every character typed back into the
+  // terminal, and that echo is part of the recorded output, so a password entered at a `sudo` or
+  // `psql` prompt lands in the file where the same secret in a harness or ssh tab would not.
+  //
+  // It gates every plugin terminal whose declaration asked to be recorded, which is the shell plugin's
+  // alone today — the name says what is off now, not what the gate may never widen to. Named-harness
+  // and ssh tabs never reach that path and are recorded whatever this says.
+  recordShellTabs: boolean;
   // Run each tab's persistent shell inside a PTY and watch its output for programs that take over
   // the screen, promoting them to a full-tab terminal mid-command (see `interactive/signals.ts`).
   // Default true; with it off, shells are piped and only the name list (`interactive/index.ts`)
@@ -74,6 +84,7 @@ const DEFAULT_CONFIG: Config = {
   activeTabNameMaxLength: DEFAULT_ACTIVE_TAB_NAME_MAX_LENGTH,
   clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
   sandboxWorkspaces: true,
+  recordShellTabs: true,
   interactiveShellDetection: true,
   syntaxTheme: DEFAULT_SYNTAX_THEME,
   theme: DEFAULT_APP_THEME,

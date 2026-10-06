@@ -145,20 +145,27 @@ selection is preserved so the selected text can be copied.
 The tab strip's own labels are not selectable with the mouse — clicking and dragging across a
 tab's name behaves like clicking any other UI control rather than highlighting text.
 
-Today there are four possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
+Today there are five possible flags: **workspaced** (a box icon), shown when the tab has its own isolated
 git clone (including a remote tab, whose clone lives on the other host), **auto-permitting** (a bolt icon), shown when harness auto-approval is enabled (harness tabs
 only — see Auto-approve permissions in `harness.md`), **auto-resuming** (a stopwatch icon of its own), shown when
-auto-resume is enabled on a harness tab (see Auto-resume after a usage limit in `harness.md`), and
-**E2E browser** (a globe icon), shown for a tab
+auto-resume is enabled on a harness tab (see Auto-resume after a usage limit in `harness.md`), **E2E browser** (a globe icon), shown for a tab
 launched with the e2e browser, which is every harness tab not launched with `--no-browser` (harness
-tabs only — see End-to-end browser in `harness.md`).
-They appear in that order, so the browser icon sits to the right of the other three. Hovering a flag's
+tabs only — see End-to-end browser in `harness.md`), and **recording** (a film icon), shown on every
+tab kind whose session is recorded — harness, ssh, and shell tabs, and no others (see
+`harness-recording.md` § The recording flag).
+They appear in that order, with the recording icon **first**, so the browser icon sits to the right of the others. Hovering a flag's
 icon shows a tooltip naming it ("Workspaced", "Auto-permitting", "Auto-resume" or "Auto-resuming",
-"E2E browser"). More flags of the
+"E2E browser", "recording"). More flags of the
 same kind are expected in the future. The workspaced flag is drawn in the same green as the
 browser-in-use flag. While a tab's workspace is still being provisioned, a transient provisioning
 indicator takes the workspaced flag's place, and the workspaced flag replaces it once provisioning
 ends (see Provisioning indicator below).
+
+The recording flag is the only flag in the row that is also a control, and the only one drawn before
+the others. It is plain and inert until the tab's session has produced output — which for a `-w` tab
+means while its workspace is still cloning — and green and pressable from that moment on, opening the
+tab's recording in an asciicast player tab. It stays green and pressable after the session has ended,
+because the file is on disk and only the recorder stopped. An agent tab never shows it.
 
 The auto-permitting flag has two looks too. Until auto-approval has cleared a permission prompt in
 the tab, it is the plain bolt with the "Auto-permitting" tooltip. Once it approves its first prompt,

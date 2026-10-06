@@ -96,6 +96,47 @@ describe('HarnessRecorder', () => {
     expect(JSON.parse(second.trim().split('\n', 1)[0]).term.theme).toBeUndefined();
   });
 
+  it('writes a reported palette into the header theme as a colon-joined list', async () => {
+    const palette = Array.from({ length: 16 }, (_, index) => `#0000${String(index).padStart(2, '0')}`);
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
+    recorder.setColors({ fg: '#e4e5e7', bg: '#17181b', palette });
+    emit({ type: 'data', id: 'pty-1', data: 'a' });
+    recorder.dispose();
+    const [withPalette] = await waitForCastLines(2);
+    // Joined in ANSI order, which is the order a player's palette table indexes — a list read back
+    // has to be the same sequence the session rendered.
+    expect(JSON.parse(withPalette).term.theme)
+      .toEqual({ fg: '#e4e5e7', bg: '#17181b', palette: palette.join(':') });
+  });
+
+  it('names the shell it recorded in the header command, so the three kinds are told apart', async () => {
+    recorder = new HarnessRecorder('pty-1', 'devbox', '/bin/zsh', 80, 24, vi.fn());
+    emit({ type: 'data', id: 'pty-1', data: 'a' });
+    recorder.dispose();
+    const [shellHeader] = await waitForCastLines(2);
+    const header = JSON.parse(shellHeader);
+    // Harness and ssh recordings share this directory and are named `<label>-<timestamp>.cast`, so
+    // the header is the only thing that says which kind of session a stray file is.
+    expect(header.command).toBe('/bin/zsh');
+    expect(header.title).toBe('devbox');
+  });
+
+  it('reports the path it opened, once, after the header is written', async () => {
+    const opened: string[] = [];
+    recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn(), (p) => { opened.push(p); });
+    expect(opened).toEqual([]);
+
+    emit({ type: 'data', id: 'pty-1', data: 'a' });
+    recorder.dispose();
+    await waitForCastLines(2);
+
+    // Once, and carrying the same path the recorder now names — a listener that opens the file to
+    // read it has to find a complete one rather than an empty file with a header still to come.
+    expect(opened).toHaveLength(1);
+    expect(opened[0]).toBe(recorder.recordingPath());
+    expect(existsSync(opened[0])).toBe(true);
+  });
+
   it('names the recording once the file is open, and nothing before it', async () => {
     recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, vi.fn());
     expect(recorder.recordingPath()).toBeUndefined();

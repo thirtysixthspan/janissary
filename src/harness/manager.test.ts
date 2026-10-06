@@ -42,7 +42,7 @@ vi.mock('../launch-name/leftover.js', () => ({
 const recorderMock = vi.hoisted(() => ({ instances: [] as { dispose: ReturnType<typeof vi.fn> }[] }));
 vi.mock('./recorder.js', () => ({
   HarnessRecorder: vi.fn(function () {
-    const instance = { dispose: vi.fn() };
+    const instance = { dispose: vi.fn(), recordingPath: vi.fn() };
     recorderMock.instances.push(instance);
     return instance;
   }),
@@ -93,6 +93,9 @@ function makeManagers(): { managers: Managers; tabs: Tab[]; edit: ReturnType<typ
       spawn: vi.fn(() => 'pty-1'),
       spawnDimensions: () => ({ cols: 80, rows: 24 }),
       input: vi.fn(),
+      // Stands in for the rule `ownsTerminal` already applies: a plugin tab's own PTY is found by
+      // label, which is the only way a shell tab's recorder can be reached.
+      terminalIdFor: vi.fn(() => 'pty-1'),
     },
     workspace: { create: () => ({ dir: '/workspace/claude' }), preflight: vi.fn() },
     openFile: { edit },
@@ -522,6 +525,78 @@ describe('HarnessManager.registerSshObservers', () => {
     manager.registerSshObservers('pty-1', 'devbox', 'ssh devbox');
 
     expect(manager.transcriptTailer('devbox')).toBeUndefined();
+  });
+});
+
+describe('HarnessManager.registerShellObservers', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  // A shell tab, which is the whole reason this registration exists: a plugin tab carrying the
+  // payload rather than a harness view, so the harness-view lookups cannot see it at all.
+  function shellTab(label: string): Tab {
+    return { label, view: 'plugin', plugin: { id: 'shell', instanceKey: label, schemaVersion: 2, payload: {}, fileRefs: [] } } as unknown as Tab;
+  }
+
+  it('records the session under the tab label and the shell program as the header command', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push(shellTab('devbox'));
+
+    manager.registerShellObservers('pty-1', 'devbox');
+
+    expect(recorderMock.instances).toHaveLength(1);
+    // The header's `command` is what tells a shell recording apart from a harness or ssh one in the
+    // shared recordings directory, so it names the shell rather than the tab.
+    expect(vi.mocked(HarnessRecorder).mock.calls[0].slice(0, 5))
+      .toEqual(['pty-1', 'devbox', '/bin/zsh', 80, 24]);
+  });
+
+  it('creates no transcript tailer, so a shell tab stays out of the monitor transcript feed', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    tabs.push(shellTab('devbox'));
+
+    manager.registerShellObservers('pty-1', 'devbox');
+
+    expect(manager.transcriptTailer('devbox')).toBeUndefined();
+  });
+
+  it('names the tab\'s own recording once the recorder opens a file, and keeps it after the PTY exits', async () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    const tab = shellTab('devbox');
+    tabs.push(tab);
+    // The recorder reports the path it opened, as the real one does through its `onOpened` callback.
+    let report: ((path: string) => void) | undefined;
+    vi.mocked(HarnessRecorder).mockImplementationOnce(function (
+      _id: string, _label: string, _command: string, _cols: number, _rows: number,
+      _onFailure: () => void, onOpened?: (path: string) => void,
+    ) {
+      report = onOpened;
+      return { dispose: vi.fn(), recordingPath: vi.fn(() => '/project/.janissary/recordings/devbox-a.cast') };
+    } as never);
+    manager.registerShellObservers('pty-1', 'devbox');
+
+    expect(manager.recordingPathOf('devbox')).toBeUndefined();
+    report?.('/project/.janissary/recordings/devbox-a.cast');
+    expect(manager.recordingPathOf('devbox')).toBe('/project/.janissary/recordings/devbox-a.cast');
+    expect(manager.liveRecordingPathOf('devbox')).toBe('/project/.janissary/recordings/devbox-a.cast');
+
+    // The file outlives the process, so the tab's own record is what still names it — which is what
+    // keeps a harness or shell tab's flag pressable after its session has ended.
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(manager.liveRecordingPathOf('devbox')).toBeUndefined();
+    expect(manager.recordingPathOf('devbox')).toBe('/project/.janissary/recordings/devbox-a.cast');
   });
 });
 

@@ -59,6 +59,34 @@ describe('metadata theme', () => {
     expect(actionRule).toContain('margin-left: auto');
   });
 
+  // The recording flag is the one flag in this row that is also a control, so it is a `<button>` and
+  // carries a class the plain flags do not. That class sits *after* `.tab-flag--active` in this file,
+  // which is the whole hazard: two single-class rules, and whichever comes last wins. So the rule that
+  // resets the button's chrome must not declare a colour, or it silently takes the lit green away from
+  // the flag in both of its states — a bug that renders, that no component test can see, and that a
+  // test asserting the class name sails straight past.
+  it('leaves the recording flag\'s green to the active-flag rule', () => {
+    const recordingRule = theme.match(/^\.tab-recording \{[^}]+\}/m)?.[0];
+    const activeRule = theme.match(/^\.tab-flag--active \{[^}]+\}/m)?.[0];
+
+    expect(recordingRule).toBeDefined();
+    expect(activeRule).toContain('color: var(--success)');
+    expect(recordingRule).not.toContain('color:');
+    expect(theme.indexOf('.tab-recording {')).toBeGreaterThan(theme.indexOf('.tab-flag--active {'));
+  });
+
+// The recording flag's green is a *state*, not a chrome choice: it means a recording exists. The row's
+// other controls hover to a brighter colour because their muted colour is a choice, and copying that
+// treatment here would trade away the one thing the flag says. It is also unfixable by scoping — the
+// flag is a `<button>` only when pressable, so every element a `:hover` rule can match is a lit flag
+// and there is no inert one to leave the green alone on. `cursor: pointer` is the whole of the pointer
+// feedback here, which is what the row's other flags have.
+it('keeps the recording flag\'s green through a hover', () => {
+  expect(theme).not.toMatch(/^[^{]*\.tab-recording[^{]*:hover[^{]*\{/m);
+  expect(theme).toMatch(/^button\.tab-recording \{[^}]*cursor: pointer/m);
+  expect(theme).not.toMatch(/^\.tab-recording \{[^}]*cursor/m);
+});
+
   // The plugin half of the two rules above. Splitting them is what keeps a plugin's styling inside
   // its own lazy chunk, so the host stylesheet must not carry a plugin selector back in.
   it('leaves plugin metadata containers to the plugin stylesheets', () => {

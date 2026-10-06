@@ -1,4 +1,5 @@
 import type { Managers } from '../managers.js';
+import type { TerminalColors } from '../harness/terminal-colors.js';
 import { escalateToFeed } from '../notifications/deliver.js';
 
 export type TabControllerAdapter = {
@@ -19,7 +20,7 @@ export type TabControllerAdapter = {
   ptyResize(id: string, cols: number, rows: number, tab?: string): void;
   pluginTerminalAttach(id: string, tab: string): boolean;
   ptyKill(id: string): void;
-  reportTerminalColors(id: string, colors: { fg: string; bg: string }): void;
+  reportTerminalColors(id: string, colors: TerminalColors): void;
   resize(cols: number, rows: number): void;
 };
 

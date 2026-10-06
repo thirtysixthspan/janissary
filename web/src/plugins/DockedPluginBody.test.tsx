@@ -33,10 +33,16 @@ function pluginTab(label: string, id: string): TabView {
 }
 
 // Counts mounts per plugin id, so a test can tell a re-render from a remount — the property that
-// keeps a docked video playing while another sidebar entry is showing.
+// keeps a docked video playing while another sidebar entry is showing. Also surfaces what the plugin
+// was handed for the capabilities the metadata row acts on, so a case can read them as the plugin
+// does rather than reaching past it into the host.
 function registerCountingPlugin(id: string, mounts: () => void) {
   const Plugin = ({ payload, capabilities }: {
-    payload: unknown; capabilities: { active: boolean; dock: 'left' | 'right' | null };
+    payload: unknown;
+    capabilities: {
+      active: boolean; dock: 'left' | 'right' | null;
+      recording?: string; openRecording?: () => void;
+    };
   }) => {
     React.useEffect(() => { mounts(); }, []);
     return (
@@ -44,6 +50,8 @@ function registerCountingPlugin(id: string, mounts: () => void) {
         data-testid={`${id}-body`}
         data-active={String(capabilities.active)}
         data-dock={String(capabilities.dock)}
+        data-recording={capabilities.recording ?? ''}
+        data-can-open-recording={String(capabilities.openRecording !== undefined)}
       >
         {(payload as { text: string }).text}
       </div>
@@ -177,5 +185,34 @@ describe('a plugin tab docked into a sidebar', () => {
     );
 
     expect(container.innerHTML).toBe('');
+  });
+
+  // The sidebar path reaches the same envelope the centre strip does, so a docked shell tab's
+  // recording flag has to open the recording too. Reading the field off the envelope rather than
+  // having each surface pass it is what stops the two from drifting apart.
+  it('hands a docked plugin the recording its envelope carries', async () => {
+    registerCountingPlugin('fixture', () => {});
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tab = pluginTab('devbox', 'fixture');
+    tab.plugin!.recording = '/tmp/.janissary/recordings/devbox-2026.cast';
+
+    render(<Sidebar side="left" tabs={[tab]} client={client} />);
+
+    await waitFor(() => { expect(screen.getByTestId('fixture-body')).toBeInTheDocument(); });
+    const body = screen.getByTestId('fixture-body');
+    expect(body).toHaveAttribute('data-recording', '/tmp/.janissary/recordings/devbox-2026.cast');
+    expect(body).toHaveAttribute('data-can-open-recording', 'true');
+  });
+
+  it('hands a docked plugin neither when its envelope carries no recording', async () => {
+    registerCountingPlugin('fixture', () => {});
+    const client = { send: vi.fn() } as unknown as JanusClient;
+
+    render(<Sidebar side="left" tabs={[pluginTab('fixture', 'fixture')]} client={client} />);
+
+    await waitFor(() => { expect(screen.getByTestId('fixture-body')).toBeInTheDocument(); });
+    const body = screen.getByTestId('fixture-body');
+    expect(body).toHaveAttribute('data-recording', '');
+    expect(body).toHaveAttribute('data-can-open-recording', 'false');
   });
 });

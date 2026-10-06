@@ -54,7 +54,9 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
   const ptyId = harness.ptyId;
   useHarnessPtyDrop(ptyId, client, focusTerm);
 
-  const intents = agentTabIntents(client, label, 'openHarnessTranscriptFor');
+  // Every harness and ssh tab records, so the flag is drawn from the moment the tab opens — a `-w`
+  // tab still provisioning included, which is when it is drawn but not yet pressable.
+  const intents = agentTabIntents(client, label, 'openHarnessTranscriptFor', harness.recording);
   const isExited = harness.status === 'exited';
   return (
     <div className="harness-tab" data-doc-shot="harness-view">
@@ -68,6 +70,8 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         onOpenFileNavigator={intents.onOpenFileNavigator}
         onLaunchAgentHere={cwd === undefined ? undefined : intents.onLaunchAgentHere}
         onOpenTranscript={intents.onOpenTranscript}
+        hasRecorder
+        onOpenRecording={intents.onOpenRecording}
         connectionsButton={connectionsButton}
         scheduleButton={scheduleButton}
         onSplit={onSplit}

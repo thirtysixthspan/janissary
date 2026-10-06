@@ -12,8 +12,20 @@ import type { Managers } from '../managers.js';
 
 // Which observers hang off one PTY, and how they are wired together. Split out of `HarnessManager`
 // for the same reason `capture/wire.ts` was: the manager decides *that* a PTY gets observers, not
-// what they are. The two factories are the two spawn paths — a named harness, and an ssh session
-// whose PTY `SshManager` spawns itself.
+// what they are. The three factories are the three spawn paths — a named harness, an ssh session
+// whose PTY `SshManager` spawns itself, and a shell tab whose PTY the `shell` plugin starts from a
+// payload factory and the host then adopts onto the label it minted.
+
+// The one thing every recorder here does the same: hand the tab the path of the file it just opened,
+// so the tab can name its own recording after the recorder is released at the PTY's exit. A no-op
+// for a tab that has gone by the time its first output arrives, which is the ordinary race when a
+// session is closed the moment it starts.
+function rememberRecording(managers: Managers, label: string): (path: string) => void {
+  return (path) => {
+    const tab = managers.tab.tabs.find((candidate) => candidate.label === label);
+    if (tab) tab.recording = path;
+  };
+}
 
 export type HarnessObserverOptions = {
   managers: Managers;
@@ -46,7 +58,7 @@ export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime 
   const reader = channel ? undefined : new HarnessScreenReader(id, dims.cols, dims.rows, capture?.handler);
   const recorder = new HarnessRecorder(id, label, HARNESS_COMMANDS[name], dims.cols, dims.rows, () => {
     notify(managers, 'harness-recording-failed', label);
-  });
+  }, rememberRecording(managers, label));
   const source = channel ? managers.remote.transcriptSource(label) : createTranscriptSource(name, cwd, Date.now());
   const tailer = source
     ? new HarnessTranscriptTailer(label, source, () => { notify(managers, 'transcript-unavailable', label); })
@@ -65,6 +77,24 @@ export function sshRuntime(managers: Managers, id: string, label: string, comman
   const reader = new HarnessScreenReader(id, dims.cols, dims.rows);
   const recorder = new HarnessRecorder(id, label, command, dims.cols, dims.rows, () => {
     notify(managers, 'ssh-recording-failed', label);
-  });
+  }, rememberRecording(managers, label));
   return new HarnessRuntime(reader, recorder);
+}
+
+// The observer set for a shell tab: a recorder and nothing else. A shell tab has no screen reader
+// to feed and no session record to tail — monitors skip any tab that is not harness-view, and the
+// terminal itself is the whole of what the tab shows — so the recorder alone is the whole of its
+// observer set, which is also what makes this the smallest of the three factories.
+//
+// `command` is the shell's own path, which is what tells a shell recording apart from a harness or
+// ssh one in the shared recordings directory: all three name a file `<label>-<timestamp>.cast`, and
+// the header is what says which kind of session it was. A recording failure is reported once in the
+// notifications feed, for the same reason the other two report theirs — a silent gap would defeat
+// the point of a recording kept for after the fact.
+export function shellRuntime(managers: Managers, id: string, label: string, command: string): HarnessRuntime {
+  const dims = managers.pty.spawnDimensions();
+  const recorder = new HarnessRecorder(id, label, command, dims.cols, dims.rows, () => {
+    notify(managers, 'shell-recording-failed', label);
+  }, rememberRecording(managers, label));
+  return new HarnessRuntime(undefined, recorder);
 }

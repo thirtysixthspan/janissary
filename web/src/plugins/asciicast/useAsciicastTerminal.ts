@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Terminal } from '@xterm/xterm';
+import { Terminal, type ITheme } from '@xterm/xterm';
 import { isMacPlatform, terminalColors, type TabPluginClientCapabilities } from '../api';
 import type { CastEvent, CastHeader } from './cast-stream';
 
@@ -18,6 +18,24 @@ export type AsciicastTerminal = {
 };
 
 const FALLBACK_FONT_SIZE = 13.5;
+// The same fallback `useXterm` and `useShellTerminal` use, so a stylesheet that declares no
+// `--terminal-line-height` still renders every terminal in the app at one line height.
+const FALLBACK_LINE_HEIGHT = 1.2;
+
+// The 16 ANSI slots in the order xterm's theme option names them, so a recorded palette lands in the
+// slot it was recorded for. Returns nothing when the recording carries no palette, which is every
+// recording written before this app recorded one — those play with xterm's own defaults, exactly as
+// they always have.
+const ANSI_SLOTS = [
+  'black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
+  'brightBlack', 'brightRed', 'brightGreen', 'brightYellow',
+  'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite',
+] as const;
+
+function recordedTheme(palette: readonly string[] | undefined): Partial<ITheme> {
+  if (!palette) return {};
+  return Object.fromEntries(ANSI_SLOTS.map((slot, index) => [slot, palette[index]]));
+}
 
 export function useAsciicastTerminal(
   header: CastHeader | undefined,
@@ -38,19 +56,29 @@ export function useAsciicastTerminal(
     // and rebuilt — losing the bytes already written, since the cursor below is this hook's only
     // record of how far it got.
     if (!container || !header) return;
-    const palette = header.colors ?? terminalColors();
+    // The recording's own colors where it has them, the viewer's where it does not. Named `recorded`
+    // rather than `palette` because the sixteen are the palette inside it, and `palette.palette` is
+    // the kind of line that survives review because it compiles.
+    const recorded = header.colors ?? terminalColors();
     const styles = getComputedStyle(document.documentElement);
-    // The app's own terminal font size, read the way `useXterm` reads it, so a recording in this tab is
-    // the same text at the same size as the terminal beside it rather than a second scale of its own.
+    // The app's own terminal metrics, read the way `useXterm` and `useShellTerminal` read them, so a
+    // recording in this tab is the same grid as the terminal beside it rather than a second scale of
+    // its own. `lineHeight` is not optional to that: the emulator's own default is 1, and every
+    // surface this app renders uses 1.2, so leaving it off draws the recorded rows tighter than the
+    // session that produced them — the replay does not match the recording's own geometry, and the
+    // stage's own background shows through the gap below the last row.
     const fontSize = Number(styles.getPropertyValue('--terminal-font-size').replace('px', ''))
       || FALLBACK_FONT_SIZE;
+    const lineHeight = Number(styles.getPropertyValue('--terminal-line-height').replace('px', ''))
+      || FALLBACK_LINE_HEIGHT;
     const term = new Terminal({
       cols: header.cols,
       rows: header.rows,
       cursorBlink: false,
-      theme: { background: palette.bg, foreground: palette.fg },
+      theme: { ...recordedTheme(recorded.palette), background: recorded.bg, foreground: recorded.fg },
       fontFamily: styles.getPropertyValue('--mono').trim() || 'monospace',
       fontSize,
+      lineHeight,
     });
     termRef.current = term;
     // A new terminal has been fed nothing, whatever a previous one had been fed.

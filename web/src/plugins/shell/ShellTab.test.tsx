@@ -120,6 +120,7 @@ function makeCapabilities(overrides: {
   claimedChords?: readonly string[];
   label?: string;
   dotColor?: string;
+  recording?: string;
 } = {}) {
   const written: Written = [];
   const resized: { cols: number; rows: number }[] = [];
@@ -165,6 +166,11 @@ function makeCapabilities(overrides: {
     claimedChords: overrides.claimedChords ?? ['ctrl+r', 'meta+t'],
     dotColor: overrides.dotColor,
     label: overrides.label ?? 'shell1',
+    // Present only once the recorder has opened a file, and the flag's pressability is read from it.
+    ...(overrides.recording !== undefined && {
+      recording: overrides.recording,
+      openRecording: vi.fn(),
+    }),
   } as unknown as TabPluginClientCapabilities;
   return {
     capabilities, closed, handle, resized, written,
@@ -644,6 +650,29 @@ describe('ShellTab', () => {
     // and says so, which is the same pair of states an agent tab's row is in.
     expect(screen.getByTitle('connections')).toBeInTheDocument();
     expect(screen.getByTitle('no active schedules')).toBeInTheDocument();
+  });
+
+  // The row draws the host's own recording flag rather than one of its own, so the only thing this
+  // plugin decides is which capability it hands over. Both states are here because the flag being
+  // pressable or not is the whole of what this plugin's side contributes.
+  it('draws the recording flag pressable once the shell has produced a recording', () => {
+    mountShell(
+      { ...PAYLOAD },
+      makeCapabilities({ recording: '/tmp/.janissary/recordings/shell1-2026.cast' }).capabilities,
+    );
+
+    const flag = document.querySelector('.shell-tab-header .tab-recording');
+    expect(flag?.tagName).toBe('BUTTON');
+    expect(flag).toHaveClass('tab-flag--active');
+    expect(flag).toHaveAttribute('title', 'recording');
+  });
+
+  it('draws the recording flag inert before the shell has produced one', () => {
+    mountShell({ ...PAYLOAD }, makeCapabilities().capabilities);
+
+    const flag = document.querySelector('.shell-tab-header .tab-recording');
+    expect(flag?.tagName).toBe('SPAN');
+    expect(flag).not.toHaveClass('tab-flag--active');
   });
 
   it('says the connections window is empty when the tab has no connections yet', () => {

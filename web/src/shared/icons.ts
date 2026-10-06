@@ -35,5 +35,6 @@ export {
   faUpload as commitIcon,
   faTableColumns as splitTabIcon,
   faTableList as fileDetailIcon,
+  faFilm as recordingIcon,
 } from '@fortawesome/free-solid-svg-icons';
 export { faFlag as unreadIcon, faClipboard as viewCaptureIcon } from '@fortawesome/free-regular-svg-icons';

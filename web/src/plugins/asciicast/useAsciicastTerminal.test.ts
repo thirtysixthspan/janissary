@@ -48,6 +48,14 @@ function render(headerValue: CastHeader | undefined) {
   return { view, terminal: view.result.current as AsciicastTerminal & { options: { fontSize?: number } } };
 }
 
+// The theme's 16 ANSI slots, without the two whole-terminal colors, so a case can count them.
+function ansiSlots(theme: unknown): string[] {
+  const rest = { ...(theme as Record<string, string>) };
+  delete rest.background;
+  delete rest.foreground;
+  return Object.values(rest);
+}
+
 describe('useAsciicastTerminal', () => {
   let term: ReturnType<typeof fakeTerminal>;
 
@@ -66,7 +74,7 @@ describe('useAsciicastTerminal', () => {
     vi.unstubAllGlobals();
     // The styles are read off the real document element, so each case's custom properties are
     // cleared rather than left for the next one.
-    for (const name of ['--terminal-font-size', '--terminal-fg', '--terminal-bg']) {
+    for (const name of ['--terminal-font-size', '--terminal-line-height', '--terminal-fg', '--terminal-bg']) {
       document.documentElement.style.removeProperty(name);
     }
   });
@@ -89,6 +97,21 @@ describe('useAsciicastTerminal', () => {
     expect(built[0].fontSize).toBe(13.5);
   });
 
+  // The font size alone does not make a recording the same grid as the session that made it. Every
+  // surface this app renders passes `--terminal-line-height` to the emulator, and this one silently
+  // did not, so it fell to xterm's own 1: the recorded rows drew a fifth tighter than the live
+  // terminal beside them, and the stage's background showed through the gap under the last row.
+  it('renders at the app\'s own line height, which the emulator\'s default would get wrong', () => {
+    document.documentElement.style.setProperty('--terminal-line-height', '1.4');
+    render(header());
+    expect(built[0].lineHeight).toBe(1.4);
+  });
+
+  it('falls back to the app default line height when none is published', () => {
+    render(header());
+    expect(built[0].lineHeight).toBe(1.2);
+  });
+
   it('never resizes the terminal once it is built, so nothing shrinks it to fit', () => {
     render(header());
     // A scaled font was driven by observing the container and rewriting the option on every pane
@@ -100,13 +123,32 @@ describe('useAsciicastTerminal', () => {
 
   it('themes the terminal from the recording, and from the app when it recorded none', () => {
     render(header({ colors: { fg: '#123456', bg: '#654321' } }));
+    // Exactly the two-key theme it has always had. A recording written before this app recorded a
+    // palette carries none, and it must keep playing with xterm's own defaults for the other
+    // fourteen rather than being handed a half-palette that would shift every slot after the gap.
     expect(built[0].theme).toEqual({ background: '#654321', foreground: '#123456' });
 
     built.length = 0;
     document.documentElement.style.setProperty('--terminal-fg', '#eeeeee');
     document.documentElement.style.setProperty('--terminal-bg', '#111111');
     render(header());
-    expect(built[0].theme).toEqual({ background: '#111111', foreground: '#eeeeee' });
+    expect(built[0].theme).toMatchObject({ background: '#111111', foreground: '#eeeeee' });
+    // With nothing recorded to go on, the app's own palette stands in — sixteen slots, so a
+    // recording made here and replayed under a different viewer theme still looks the same.
+    expect(ansiSlots(built[0].theme)).toHaveLength(16);
+  });
+
+  it("applies the recording's own 16-colour palette when it recorded one", () => {
+    const palette = Array.from({ length: 16 }, (_, index) => `#0000${String(index).padStart(2, '0')}`);
+    render(header({ colors: { fg: '#123456', bg: '#654321', palette } }));
+    expect(built[0].theme).toMatchObject({ background: '#654321', foreground: '#123456' });
+    const theme = built[0].theme as Record<string, string>;
+    // The ends of the run, because order is the whole point: a palette landing in shifted slots
+    // would render every 16-colour stretch of the session wrong and nothing else would say so.
+    expect(theme.black).toBe(palette[0]);
+    expect(theme.white).toBe(palette[7]);
+    expect(theme.brightBlack).toBe(palette[8]);
+    expect(theme.brightWhite).toBe(palette[15]);
   });
 
   // A recording has no program behind it to interrupt, so Ctrl+C is free to mean copy — the same

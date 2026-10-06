@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import {
-  copySelectionChord, isMacPlatform, registerTerminalSelection, unregisterTerminalSelection,
-  type PluginTerminal,
+  copySelectionChord, isMacPlatform, registerTerminalSelection, terminalColors, unregisterTerminalSelection,
+  type PluginTerminal, type TerminalColors,
 } from '../api';
 import { shellTerminalTheme } from './shell-terminal-theme';
 import { createShellMarkerNonce } from './shell-status-hooks';
@@ -25,6 +25,11 @@ type Options = {
   containerRef: React.RefObject<HTMLDivElement | null>;
   attachTerminal: AttachTerminal | undefined;
   copyText: (text: string) => void;
+  // Reports this terminal's resolved colors for its session's recording, once, after it mounts. The
+  // same report the host's own terminal surfaces make, and for the same reason: the values live only
+  // in the web stylesheet, so a replay would otherwise be rendered under whatever theme is active
+  // when it is watched rather than the one the session ran under.
+  reportColors?: (id: string, colors: TerminalColors) => void;
   // Opens a link clicked in a rendered reply. Absent, a click on one still never navigates the window.
   openLink?: (href: string) => void;
   onCommandRunning: (running: boolean) => void;
@@ -53,7 +58,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, containerRef, attachTerminal, copyText, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce, claimHooks,
+  ptyId, containerRef, attachTerminal, copyText, reportColors, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce, claimHooks,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -80,6 +85,16 @@ export function useShellTerminal({
   hookNonceRef.current = hookNonce;
   const claimRef = useRef(claimHooks);
   claimRef.current = claimHooks;
+
+  // Once per PTY, after mount, and read rather than watched: a theme change afterwards must not
+  // rewrite the colors a session already started under. Reading at mount also beats the recorder's
+  // own first output, which is what writes the header these colors go into.
+  const reportColorsRef = useRef(reportColors);
+  reportColorsRef.current = reportColors;
+  useEffect(() => {
+    if (!ptyId) return;
+    reportColorsRef.current?.(ptyId, terminalColors());
+  }, [ptyId]);
 
   useEffect(() => {
     const container = containerRef.current;

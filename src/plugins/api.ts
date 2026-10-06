@@ -52,6 +52,14 @@ export type TabPluginDeclaration = {
   // A workspace passed alongside it confines the process through Seatbelt exactly as that tab's own
   // shell is confined; without one it runs wherever the plugin said, like any other unconfined shell.
   spawnTerminal?: boolean;
+  // Asks for the terminals this plugin starts to be recorded to asciicast files, the way a named
+  // harness tab's and an ssh tab's are — the same v3 format, the same `.janissary/recordings/`
+  // directory, the same naming, and the same automatic scope with no flag and no setting. The two
+  // claims are separate because they are separate powers: this one writes what the process printed
+  // to disk for the rest of the application to find, where `spawnTerminal` only starts it. Requires
+  // `spawnTerminal`, and is refused without it — a claim with no terminal behind it would be a
+  // promise the host cannot keep.
+  recordsTerminal?: boolean;
   // This plugin's tabs host the application command bar: the host's shared pickers open over such a
   // tab and insert into its bar, and its queue popup lists and edits that tab's own command queue.
   // Read by the host from the declaration and carried on the tab's view, so the client never decides

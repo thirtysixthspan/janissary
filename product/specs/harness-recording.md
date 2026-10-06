@@ -58,11 +58,50 @@ shape but run no harness.
 
 ### Scope
 
-Named-harness tabs opened through `harness <name>` and **ssh tabs** (`ssh <destination>`, see
-[[ssh-tab]]) are recorded — the same scope that gets a server-side screen reader, keeping the two
-observers symmetric. Recording is automatic for an ssh session too: there is no flag, command, or
-setting, and every session records from spawn to exit. Inline / full-tab interactive PTYs (e.g.
-`shell vim`) get neither observer and are **not** recorded.
+Named-harness tabs opened through `harness <name>`, **ssh tabs** (`ssh <destination>`, see
+[[ssh-tab]]) and **shell tabs** (`zsh` and the launch shell, see [[shell-tab]]) are recorded. Recording
+is automatic for all three: there is no flag, command, or setting, and every session records from
+spawn to exit.
+
+A shell tab is a plugin tab rather than a harness tab and reaches its recorder by a different path —
+the host starts the terminal on the plugin's behalf and attaches a recorder once the tab has a label —
+but everything else is identical: the same file format, the same directory, the same naming, the same
+lazy creation, and the same notification on failure.
+
+Shell recording can be declined. A project whose `.janissary/config.json` sets `"recordShellTabs":
+false` records no shell tab: no file is written and the tab draws no recording flag, which is the
+state an agent tab is already in. It defaults to on, so a project that has not expressed a preference
+records shell tabs the same way it records the other two.
+
+The setting gates **every plugin terminal that asked to be recorded** — any plugin whose declaration
+carries `recordsTerminal` — because that is the one place the decision is made, and the shell plugin is
+the only one that asks, so today it reads as shell tabs alone. A named-harness or ssh tab does not reach
+that path at all and is recorded whatever it says; neither echoes its input, so neither has the exposure
+this setting answers. Were another bundled or third-party plugin to ask for its terminals to be
+recorded, `"recordShellTabs": false` would decline that one too — the name says what is off today
+rather than promising the gate can never widen.
+
+What is **not** recorded is a PTY opened by the `shell` command: `shell vim`, `shell htop`, and the
+other interactive programs it runs full-tab on an agent tab are not recorded and get no server-side
+screen reader either. The distinction is not the tab's body but how the PTY was started — a tab whose
+body is a terminal records; a program the `shell` command took an agent tab over to does not.
+
+### The recording flag
+
+Every recorded tab shows a **recording** flag in its metadata row — a film icon, on the same row as
+the workspace, auto-approve and browser flags, and before them. It is the one flag in that row that is
+also a control: pressing it opens the tab's recording in an asciicast player tab, following the
+session while it is still running and playing it through when it is not.
+
+The flag is drawn **plain and inert until the tab has produced output**, which is when its recording
+first exists, and **green and pressable from that moment on**. A harness tab launched with `--workspace`
+therefore shows the flag plain while its clone is still being made, and the same flag green once the
+session starts. An agent tab shows no recording flag at all — it has no recorder.
+
+The flag **outlives the session**. A harness tab stays open after its process ends, and its flag stays
+green and still opens the recording, because the file is on disk and only the recorder stopped. For a
+shell tab this is the failure case rather than the ordinary one: a shell tab closes when its shell
+exits, so the flag remaining is what keeps a partial recording reachable after a write failure.
 
 ### File format
 
@@ -71,21 +110,28 @@ The file is asciicast v3 — the format `asciinema rec` writes by default, and t
 - `version`: `3`
 - `term`: the terminal the session ran in — `cols` / `rows` are the dimensions the PTY was spawned at
   (updated by a resize that arrives before any output), and `type` is the PTY's terminal name
-- `term.theme`: the foreground and background the session was recorded under, or absent when the
-  tab's terminal had not reported them by the first output
+- `term.theme`: the foreground, background and sixteen ANSI colours the session was recorded under,
+  or absent when the tab's terminal had not reported them by the first output
 - `timestamp`: the session start time as an integer Unix epoch (seconds)
 - `command`: what the session ran — a named harness writes the bare program name (e.g. `claude`), an
   ssh tab writes its whole verbatim invocation (e.g. `ssh -p 2222 admin@host`), so a stray recording
-  names the host it came from. An invocation carrying a secret in a flag value therefore puts that
-  secret in the header.
+  names the host it came from, and a **shell tab** writes the shell's own path (`/bin/zsh`). An
+  invocation carrying a secret in a flag value therefore puts that secret in the header.
 - `title`: the tab label
 
+`term.theme.palette` is the sixteen ANSI colours as one colon-separated list, in ANSI order, which
+is the order a player's palette table is indexed by. The values are resolved from the application's
+own stylesheet — the same custom properties the live terminal renders from — rather than queried from
+the terminal, so what a recording carries is what the session actually looked like on screen. The
+application declares all sixteen at the root of its stylesheet, defaulting to the terminal
+emulator's own values; a theme that names colours of its own overrides them. The key is **omitted**
+rather than written empty when a terminal reported only a foreground and background, so a recording
+made before this existed keeps exactly the header it had.
+
 There is no `env`: the terminal type moved under `term`, and it was the only variable ever captured.
-There is no `palette` either — the sixteen ANSI colours are the terminal emulator's own and are the
-same on every recording this app makes, so a recorded theme carries exactly the two colours an app
-theme can change here. There is no `idle_time_limit` either: a recording plays at the timing it
-happened at, and a header saying otherwise would only tell a player to rewrite it. A recording made
-by another tool may state one, and it is played at its own timing regardless.
+There is no `idle_time_limit`: a recording plays at the timing it happened at, and a header saying
+otherwise would only tell a player to rewrite it. A recording made by another tool may state one, and
+it is played at its own timing regardless.
 
 Every subsequent line is a JSON event array `[<interval-seconds>, "<code>", "<data>"]`, where
 `interval-seconds` is the gap **since the previous event** rather than the time since the start — the
@@ -127,17 +173,18 @@ The recordings directory is **cleared at a fresh launch** and **preserved across
 matching `.janissary/captures/` — a run's recordings are bounded to that run, and a relaunch handoff
 keeps them.
 
-Harness and ssh recordings share one directory, so telling them apart means reading a file's header
-`command` field or recognizing the tab label in its name. Two concurrent sessions to the same ssh
-destination are labeled `devbox` and `devbox-2`, so their recordings never collide.
+Harness, ssh and shell recordings share one directory, so telling them apart means reading a file's
+header `command` field or recognizing the tab label in its name. Two concurrent sessions to the same
+ssh destination are labeled `devbox` and `devbox-2`, so their recordings never collide; two shell
+tabs are named from the same pool, so the same holds for them.
 
 If a recording cannot be written at all — an unwritable recordings directory, say — the session
-itself is never affected; it simply stops being recorded. Either kind of session reports the gap
-once in the notifications feed for its own tab (see [[notifications]]): an **ssh tab** records a
-single `ssh recording failed` line, and a **harness tab** a single `harness recording failed` line.
-Neither is ever repeated, and both appear even while that tab is the active one. This is distinct
-from `no harness transcript found`, which is about a missing session record and never fires for an
-ssh tab.
+itself is never affected; it simply stops being recorded. Each kind of session reports the gap once in
+the notifications feed for its own tab (see [[notifications]]): an **ssh tab** records a single
+`ssh recording failed` line, a **harness tab** a single `harness recording failed` line, and a
+**shell tab** a single `shell recording failed` line. None is ever repeated, and all three appear even
+while that tab is the active one. This is distinct from `no harness transcript found`, which is about
+a missing session record and never fires for an ssh or shell tab.
 
 ### Recording storage pressure
 
@@ -162,14 +209,19 @@ reattached is played from its newest recording — while `play
 .janissary/recordings/devbox-2026-07-10T18-30-05-123Z.cast` names that file outright and is played as
 written. A session's name is its tab label, which is how the `harness replay <label>` form reached one
 before `play` replaced it, so the recording of a session whose tab has closed and whose scrollback went
-with it is still one command away. See [[open]] § `play` command for the rule.
+with it is still one command away. This is equally how a shell tab's recording is found, by the name
+its tab was given. See [[open]] § `play` command for the rule.
+
+A recording is also reached **from the tab that made it**, by pressing its **recording** flag in that
+tab's metadata row, which is how a session's own output is reached while its tab is still open.
 
 The asciicast tab:
 
 - **plays the recording from the beginning**, at the size it was recorded at, into a terminal of its
   own — the recorded columns and rows, with each recorded resize applied as it happened, rendered at
-  the app's own terminal font size. Nothing is scaled to fit the tab: a recording larger than the tab
-  is clipped rather than scrolled or shrunk, and the window is resized to see all of it;
+  the app's own terminal metrics, meaning its font size *and* its line height. Nothing is scaled to fit
+  the tab: a recording larger than the tab is clipped rather than scrolled or shrunk, and the window is
+  resized to see all of it;
 - **transports**: play and pause, speed from 0.5× to 4×, one recorded event at a time forward and back,
   and a seek bar. Every one is a button as well as a chord — Space or `p`, `,` and `.`, `[` and `]` —
   and there are no markers;
@@ -181,6 +233,9 @@ The asciicast tab:
 - **plays at the timing it was recorded at**, silences at their real length. A recording is the only
   record of what a session did, and shortening the gaps would make a run that waited ten minutes
   indistinguishable from one that answered in ten seconds;
+- **reproduces the session's colours**: the foreground, background and sixteen ANSI colours its header
+  carries, when it carries them, and the application's own palette for any it does not — so a
+  recording written before a palette was recorded still plays rather than refusing to;
 - **shows what the recording is**: the command it ran, the label, when it started, how long it is, the
   session's exit status when the recording carries one, and any reason the file could not be read;
 - **lets you select text and copy it** with `Cmd+C` / `Ctrl+C`;
