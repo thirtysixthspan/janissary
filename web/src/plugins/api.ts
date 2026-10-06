@@ -51,11 +51,12 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 // wrong breaks Cmd+C on exactly one platform and nowhere else to notice it.
 export { terminalColors, type TerminalColors } from '../shared/terminal/colors';
 export { copySelectionChord, isMacPlatform } from '../shared/terminal/terminal/keys';
-// The metadata row's flag table, published for the same reason and on the same terms: the shell
-// plugin's row deliberately does not import the host's `AgentTabMeta` markup, so it would otherwise
-// hand-write a second copy of the recording flag — and a flag whose icon or tooltip drifted between
-// the two rows is exactly the kind of difference nothing would report.
+// The metadata row's recording flag, published for the same reason and on the same terms. The shell
+// plugin's row deliberately does not import the host's `AgentTabMeta` markup, but this flag is a
+// component of its own rather than part of that markup — so the plugin renders the one the host
+// renders instead of keeping a second copy that could drift on its icon, its label, or when it lights.
 export { tabFlagDisplay } from '../shared/tab/flag-display';
+export { RecordingFlag } from '../shared/RecordingFlag';
 export { PluginActionsHeader } from './PluginActionsHeader';
 
 // The application's answer to "is this a place typed text can go", published for the same reason and

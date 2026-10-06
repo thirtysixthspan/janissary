@@ -16,9 +16,11 @@ import { tabFlagDisplay } from './tab/flag-display';
 // disabled button is still focusable, so this way a row nobody can use with is also a row nobody
 // tabs through. The tooltip and accessible name are the same either way — what the flag is, not what
 // it is doing — because the player follows a live recording exactly as it plays a finished one.
+//
+// Every row that draws it renders this one component, so the shell plugin's row and the host's own
+// cannot come to differ over when the flag is lit or what it is called.
 export function RecordingFlag({ onOpen }: { onOpen?: () => void }) {
   const display = tabFlagDisplay.recording;
-  if (!display) return null;
   if (!onOpen) {
     return (
       <span className="tab-flag tab-recording" role="img" aria-label={display.label} title={display.label}>

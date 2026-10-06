@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Collapse the recording flag's two hand-written implementations into the one shared component, which the plugin's independence from the host's metadata row does not actually call for.
-
-Existing Issue: `web/src/shared/RecordingFlag.tsx` and `web/src/plugins/shell/ShellRecordingFlag.tsx` each implement the same rule — a button carrying `tab-flag tab-flag--active tab-recording` when pressable, a `span` carrying `tab-flag tab-recording` otherwise — and the plan's stated reason for the split, that the shell plugin keeps its independence from the host's `AgentTabMeta` markup, does not cover a component this pull request introduced, since the plugin api barrel at `web/src/plugins/api.ts` already re-exports shared components the way it re-exports `PluginActionsHeader`. Severity: 4/10
-
-Existing Risk: 3/10 - Nothing misbehaves today, but any future change to the flag has to be made twice and nothing enforces that it is, and the inert branch's `tabFlagDisplay.recording` lookup guard is unreachable in both copies because the key is a literal in the same file the guard guards.
-
-Proposal Risk: 2/10 - One component means one edit, and the dead guard disappears with the second copy.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1549: collapse the shell plugin's recording flag onto the shared component". Re-export `RecordingFlag` from `web/src/plugins/api.ts` beside the existing `tabFlagDisplay` export, delete `web/src/plugins/shell/ShellRecordingFlag.tsx`, and render `<RecordingFlag onOpen={capabilities.openRecording} />` directly in `web/src/plugins/shell/ShellTabMeta.tsx`, which already imports from the plugin api barrel. Move the cases in `web/src/plugins/shell/ShellRecordingFlag.test.tsx` that assert pressability and inertness onto a new `web/src/shared/RecordingFlag.test.tsx`, and keep in `ShellTabMeta.test.tsx` only what is genuinely about the shell row — that it passes `capabilities.openRecording` through — so the plugin suite still covers its own wiring. The component takes an optional `onOpen` and already derives both states from it, so its contract does not change. While in the shared component, drop the `if (!display) return null` guard in both variants: `tabFlagDisplay.recording` is a literal entry in the same module's type, so the guard can never fire and only suggests the key is optional. Keep the definition of the flag in `web/src/shared/tab/flag-display.ts` shared as it is; only the rendering is being unified.
-
-
 * Give shell-tab recording an explicit opt-out, so a user who does not want a shell's echoed output on disk has a way to decline it rather than only a documentation note explaining that it happens.
 
 Existing Issue: This pull request makes shell-tab output the third kind written in plaintext to `.janissary/recordings/`, and because zsh echoes what is typed back into the terminal and that echo is part of the recorded output stream, a password entered at a `sudo` or `psql` prompt now reaches the file — a tab kind where credentials are routinely typed, and the one recorded kind where this is true — while no setting, no warning at the point of exposure, and no recorded decision exists beyond a note in the spec and the user documentation. Severity: 6/10
