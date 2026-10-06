@@ -34,7 +34,11 @@ default focus traversal, and keystrokes go to whichever surface has focus. A thi
 terminal's left edge, just inside the tab's own frame, to show which surface that is: it is lit in the
 tab's colour while the keyboard is in the terminal, and dim while it is in the command bar or anywhere
 else. The line takes no columns from the terminal, and the terminal's text is set in from it so the two
-never touch. Inside a shell tab,
+never touch. The terminal's own prompt and cursor follow the same rule. While the keyboard is in the
+terminal, zsh's waiting prompt and the blinking cursor show as usual. While it is anywhere else, the
+terminal shows neither, so the command bar's prompt is the only one on screen. Only the prompt zsh is
+waiting at is hidden: the prompts on earlier command lines stay in the scrollback, and a program
+running in the terminal is drawn as it is. Inside a shell tab,
 `Shift+Tab` belongs to the tab: the application's section cycling, which takes the chord everywhere
 else, does not move focus out of it.
 

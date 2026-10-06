@@ -34,6 +34,9 @@
 
 .shell-body .xterm { padding-left: 12px; }
 
+/* Covers the prompt zsh is waiting at while the keyboard is outside the terminal. */
+.shell-prompt-mask { background: var(--bg); pointer-events: none; }
+
 /* An application command's markdown reply, rendered in a decoration over rows reserved for it in the
    terminal's scrollback. It takes the transcript's markdown styles from `.line.markdown`; a resize
    that makes the content taller than its reserved rows scrolls inside the block. */
