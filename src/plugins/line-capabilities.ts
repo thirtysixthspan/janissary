@@ -2,6 +2,8 @@ import type { Managers } from '../managers.js';
 import type { PluginFailureOrigin } from './failure.js';
 import type { HandlerDeadline } from './guard.js';
 import { complete } from '../controller/completion.js';
+import { recordGlobalHistory } from '../global-history.js';
+import { messageBus } from '../bus.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
 
 // The capabilities that make a plugin tab a place a line can be typed and a process can be checked
@@ -21,6 +23,7 @@ export function lineCapabilities(input: {
 }): Pick<
   TabPluginServerCapabilities,
   'originTab' | 'dispatchLineWithOutput' | 'completeLine' | 'terminalRunning' | 'queueLine' | 'nextQueuedLine' | 'recordCwd'
+  | 'recordGlobalHistory'
 > {
   const { managers, declaration, origin, answeringLabel, isEnabled, deadline } = input;
   // The tab whose queue and recorded directory a line capability may change: the answering tab, or
@@ -40,6 +43,10 @@ export function lineCapabilities(input: {
     originTab: () => {
       if (!isEnabled()) return null;
       const tab = managers.tab.byLabel(answeringLabel ?? origin.label);
+      // The launch shell has no tab to come from, so it starts where a new tab does: the project root.
+      if (!tab && origin.launch) {
+        return { label: origin.label, cwd: managers.tab.launchDir, root: managers.tab.launchDir };
+      }
       if (!tab) return null;
       return {
         label: tab.label,
@@ -87,6 +94,15 @@ export function lineCapabilities(input: {
     recordCwd: (cwd) => {
       const label = isEnabled() ? ownLineLabel() : undefined;
       if (label) managers.tab.setCwd(label, cwd);
+    },
+    // Attributed to this plugin's own answering tab, as an agent tab's line is to that tab. The state
+    // broadcast carries the global history, so it goes out again for ghost text to see the line.
+    recordGlobalHistory: (line) => {
+      const label = isEnabled() ? ownLineLabel() : undefined;
+      const trimmed = line.trim();
+      if (!label || !trimmed) return;
+      recordGlobalHistory(trimmed, label);
+      messageBus.emit('state', { type: 'dirty' });
     },
   };
 }

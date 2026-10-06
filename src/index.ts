@@ -11,6 +11,7 @@ import { staticFileServer } from './serve-static.js';
 import { errorText } from './error-text.js';
 import { messageBus } from './bus.js';
 import { ResumeWatch } from './resume-watch.js';
+import { openLaunchShell } from './launch-shell.js';
 
 const CLIENT_RECONNECT_GRACE_MS = 1000;
 
@@ -55,7 +56,15 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     sendToastClear: () => broadcast({ t: 'toast-clear' }),
     sendNotificationsReveal: (dock) => broadcast({ t: 'notifications-reveal', dock }),
   }, options.projectDir);
-  if (options.relaunch) controller.rehydrate();
+  try {
+    await openLaunchShell(controller.managers);
+  } catch (error) {
+    controller.shutdown();
+    resumeWatch.stop();
+    resumeSubscription.unsubscribe();
+    throw error;
+  }
+  if (options.relaunch) controller.reattachSessions();
 
   const serveStatic = staticFileServer({
     webDir: options.webDir, token, openFilePath: (id) => controller.openFilePath(id),

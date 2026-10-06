@@ -8,8 +8,7 @@ import { isSshTab } from './view-guards.js';
 import { beginDwell } from './dwell.js';
 
 // Resolves TabManager.closeTab: closing the last non-docked tab exits the app exactly as `quit` does,
-// releasing nothing first — shutdown releases everything, and the tab's saved state is kept for the
-// next `--relaunch`. Any other close releases the tab's external resources, removes it from `tabs`,
+// releasing nothing first, since shutdown releases everything. Any other close releases the tab's external resources, removes it from `tabs`,
 // and restores focus.
 // `applyResult` is called with the new `tabs`/`activeTab` *before* the `state:dirty` emit below —
 // mirroring `reorderTabOp`'s documented invariant — so the resulting broadcast (some listeners

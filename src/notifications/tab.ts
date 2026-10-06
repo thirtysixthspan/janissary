@@ -27,10 +27,9 @@ export function notificationsFeedVisible(managers: Managers): boolean {
   return managers.tab.cur().label === NOTIFICATIONS_LABEL;
 }
 
-// Fill a freshly created feed with what the queue already holds. A direct assignment, the way
-// `rehydrateTabViews` seeds a rehydrated tab's log, rather than one `append` per entry: an append
-// re-emits `entry:appended`, which would re-run agent-state persistence and the transcript logger
-// for lines that were recorded when they happened.
+// Fill a freshly created feed with what the queue already holds. A direct assignment rather than
+// one `append` per entry: an append re-emits `entry:appended`, which would re-run the transcript
+// logger for lines that were recorded when they happened.
 function seedFromQueue(managers: Managers, tab: Tab): void {
   tab.log = managers.notifications.logEntries;
   messageBus.emit('state', { type: 'dirty' });

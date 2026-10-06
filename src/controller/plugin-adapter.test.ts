@@ -5,6 +5,7 @@ import { TAB_PLUGIN_API_VERSION, type TabPluginDeclaration } from '../plugins/ap
 import { TabPluginHost } from '../plugins/host.js';
 import { createPluginControllerAdapter } from './plugin-adapter.js';
 import { NotificationQueue } from '../notifications/queue.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 const hosts: TabPluginHost[] = [];
 afterEach(() => {
@@ -21,6 +22,7 @@ function fixture(multiple = false) {
   const managers = {} as Managers;
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   const handler = vi.fn();
   const loader = vi.fn(async () => ({ activate: () => ({
     isPayload: () => true, intent: () => null,

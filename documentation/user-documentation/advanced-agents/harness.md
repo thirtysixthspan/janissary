@@ -17,8 +17,6 @@ It's looked up through your own shell, started interactively, so your startup fi
 
 It's started interactively but not as a login shell, and that second part matters if you have the same harness installed twice — say a fresh install in `~/.local/bin` and an older packaged one in `/opt/homebrew/bin`. A login shell rebuilds `PATH` from the system's own list of directories and tacks yours on the end, which can flip which copy wins. Skipping that keeps your `PATH` exactly as your terminal has it, so the copy you get in a harness tab is the copy you get when you type the name yourself.
 
-![A harness tab: the harness's own terminal interface filling the tab body.](/screenshots/harness-tab.png)
-
 ## Typing into a harness
 
 Everything you type goes to the harness — including `Ctrl+C`, `Ctrl+D`, and `Ctrl+R`. A few things are held back for the app: `Shift+←`/`Shift+→` still switch tabs, clicks on the tab strip still work, and the copy chords below are taken while text is selected. Switching to a harness tab focuses its terminal automatically, so you can type immediately. `Shift+Enter` is delivered as a line continuation rather than a submit, which is how you compose multi-line prompts in harnesses like claude.

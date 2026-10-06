@@ -2,7 +2,7 @@
 
 Every tab is an independent workspace: its own transcript, its own command history, its own shell and working directory. Switching tabs never loses anything — a command running in one tab keeps running while you work in another, and each tab's scroll position and history stay where you left them. A command you typed but haven't run yet waits in that tab's command bar too, so you can leave a half-written line, look at another tab, and come back to finish it.
 
-A session starts with a single `janus` tab. New tabs are created on demand — agent tabs with the `agent` command (below), and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
+A session starts with a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) named `janus`. New tabs are created on demand — agent tabs with the `agent` command (below), and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
 
 A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, [conversation list](/user-documentation/tab-types/conversations), and [sessions](/user-documentation/tab-types/sessions) list each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`, `sessions left`) that opens or moves them straight into a sidebar. Bare `conversations` and bare `sessions` return their list to the center. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side. For a tab contributed by a bundled plugin, the kind is the plugin rather than the tab, so two image tabs displace each other while an image tab and a PDF tab sit side by side.
 
@@ -25,7 +25,7 @@ Which tab is docked where belongs to the app, so it stays the same in every wind
 
 ![A sidebar holding a file navigator and the notifications feed together, with its own small tab strip above the visible one.](/screenshots/sidebar-shared.png)
 
-![The tab strip with several agent tabs: each has a colored dot, one dot is blinking to show a busy agent, and an inactive tab carries a flag badge for unread output.](/screenshots/tabs-overview.png)
+![The tab strip with three shell tabs: each has a colored dot, one dot is blinking while its shell runs a command, and an inactive tab carries a flag badge for unread output.](/screenshots/tabs-overview.png)
 
 ## Creating agent tabs
 
@@ -101,7 +101,7 @@ An alias changes what you see, not what you can type: commands that target a tab
 
 An alias does not have to be unique, and two tabs can show the same one. They stay separate tabs with separate labels, and anything that takes a name closes or reaches whichever of them comes first in the strip. Setting an alias to nothing, or to the tab's own label, takes the alias back off rather than storing a name that says nothing new.
 
-One place still shows you the original: pressing `Tab` to complete a target offers labels, never aliases. Aliases survive `--relaunch`.
+One place still shows you the original: pressing `Tab` to complete a target offers labels, never aliases.
 
 ## Closing tabs
 

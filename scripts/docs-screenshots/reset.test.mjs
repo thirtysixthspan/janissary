@@ -3,8 +3,10 @@ import { resetApp } from './reset.mjs';
 
 // A stand-in for the running app: enough tab-strip behaviour to drive the whole reset choreography
 // without a browser. Tabs live in the centre strip unless marked `sidebar`; `agent <name>`, with or
-// without flags, opens a tab and focuses it; a tab marked `dirty` raises the save dialog on close
-// and only goes once the dialog's discard button is clicked.
+// without flags, opens a tab and focuses it; `zsh` opens a shell under a pool name (`kemal`) and
+// focuses it; double-clicking the active tab's label and committing the rename field sets its
+// alias; a tab marked `dirty` raises the save dialog on close and only goes once the dialog's discard
+// button is clicked.
 const CLOSABLE = [
   '.center-strip-left .tab:not(.active)',
   '.center-strip-right .tab',
@@ -37,7 +39,10 @@ function submit(app) {
   app.log.push(`run:${text}`);
   const agent = /^agent (\S+)/.exec(text);
   if (agent) openTab(app, agent[1]);
+  if (text === 'zsh') openTab(app, 'kemal');
 }
+
+const shown = (node) => node.alias ?? node.label;
 
 function closeTab(app, target) {
   if (!target) return;
@@ -50,10 +55,12 @@ function closeTab(app, target) {
 
 function select(app, selector) {
   switch (selector) {
-  case '.command textarea': { return activeCenterTab(app)?.commandBar ? [{ label: 'command' }] : []; }
+  case '.command textarea:visible': { return activeCenterTab(app)?.commandBar ? [{ label: 'command' }] : []; }
   case '.center-strip-left .tab': { return centerTabs(app); }
   case '.center-strip-left .tab.active': { const tab = activeCenterTab(app); return tab ? [tab] : []; }
   case '.center-strip-left .tab.active .dot.busy': { return activeCenterTab(app)?.busy ? [{ label: 'busy' }] : []; }
+  case '.center-strip-left .tab.active .dot + span': { const tab = activeCenterTab(app); return tab ? [tab] : []; }
+  case '.tab-rename-input': { return app.renaming ? [app.renaming] : []; }
   case CLOSABLE: { return closableTabs(app); }
   case '.modal-button': { return app.dialog ? [{ label: "Don't Save (n)" }] : []; }
   case '.tab': { return app.tabs; }
@@ -63,7 +70,22 @@ function select(app, selector) {
 
 function nodes(app, selector, options) {
   const all = select(app, selector);
-  return options?.hasText ? all.filter((node) => node.label.includes(options.hasText)) : all;
+  if (options?.hasText) return all.filter((node) => shown(node).includes(options.hasText));
+  if (options?.hasNotText) return all.filter((node) => !shown(node).includes(options.hasNotText));
+  return all;
+}
+
+// The rename field's two moves: `fill` drafts the alias and `press('Enter')` commits it.
+function renameField(app) {
+  return {
+    fill: async (value) => { app.draft = value; },
+    press: async (key) => {
+      if (key !== 'Enter' || !app.renaming) return;
+      app.renaming.alias = app.draft;
+      app.log.push(`alias:${app.renaming.label}=${app.draft}`);
+      app.renaming = undefined;
+    },
+  };
 }
 
 function clickNode(app, selector, node) {
@@ -85,7 +107,9 @@ function childLocator(app, child, node) {
 }
 
 function makeLocator(app, selector, options, index) {
+  if (selector === '.tab-rename-input') return renameField(app);
   return {
+    dblclick: async () => { app.renaming = nodes(app, selector, options)[index]; },
     count: async () => nodes(app, selector, options).length,
     first: () => makeLocator(app, selector, options, 0),
     nth: (at) => makeLocator(app, selector, options, at),
@@ -137,11 +161,12 @@ function run(app) {
 }
 
 describe('resetApp', () => {
-  it('leaves exactly one tab, labelled janus, with a command bar of its own', async () => {
+  it('leaves exactly one tab, a shell shown as janus, with a command bar of its own', async () => {
     const app = fakeApp(MESSY);
     await run(app).done;
     expect(app.tabs).toHaveLength(1);
-    expect(app.tabs[0].label).toBe('janus');
+    expect(app.tabs[0].label).toBe('kemal');
+    expect(app.tabs[0].alias).toBe('janus');
     expect(app.tabs[0].active).toBe(true);
   });
 
@@ -149,7 +174,7 @@ describe('resetApp', () => {
     const app = fakeApp(MESSY);
     await run(app).done;
     expect(app.log.slice(0, 2)).toEqual(['press:Escape', 'press:Escape']);
-    expect(app.log.indexOf('clear-command-bar')).toBeLessThan(app.log.indexOf('run:agent resetting'));
+    expect(app.log.indexOf('clear-command-bar')).toBeLessThan(app.log.indexOf('run:agent resetting --no-workspace'));
   });
 
   // A busy tab queues what is typed into it instead of running it, so everything the shot opened has
@@ -158,7 +183,7 @@ describe('resetApp', () => {
     const app = fakeApp(MESSY);
     await run(app).done;
     const lastClose = app.log.lastIndexOf('close:harbor');
-    expect(lastClose).toBeLessThan(app.log.indexOf('run:agent resetting'));
+    expect(lastClose).toBeLessThan(app.log.indexOf('run:agent resetting --no-workspace'));
   });
 
   it('types from an idle tab, passing over a busy one that has a command bar', async () => {
@@ -167,7 +192,7 @@ describe('resetApp', () => {
       { label: 'janus', commandBar: true, active: false },
     ]);
     await run(app).done;
-    expect(app.log.indexOf('close:bilal')).toBeLessThan(app.log.indexOf('run:agent resetting'));
+    expect(app.log.indexOf('close:bilal')).toBeLessThan(app.log.indexOf('run:agent resetting --no-workspace'));
   });
 
   it('closes every tab the shot left, the docked one included, and the staging tab after it', async () => {
@@ -185,10 +210,14 @@ describe('resetApp', () => {
     expect(app.tabs.some((tab) => tab.dirty)).toBe(false);
   });
 
-  it('types an unworkspaced janus from the staging tab and restores the work directory after', async () => {
+  // The alias goes through the strip, never as a typed `rename`: the shell's command history has to
+  // hold nothing the reset did.
+  it('types zsh from the staging tab, aliases the new shell janus, and restores the work directory after', async () => {
     const app = fakeApp(MESSY);
     await run(app).done;
-    expect(app.log.indexOf('run:agent resetting')).toBeLessThan(app.log.indexOf('run:agent janus --no-workspace'));
+    expect(app.log.indexOf('run:agent resetting --no-workspace')).toBeLessThan(app.log.indexOf('run:zsh'));
+    expect(app.log.indexOf('run:zsh')).toBeLessThan(app.log.indexOf('alias:kemal=janus'));
+    expect(app.log.some((entry) => entry.startsWith('run:rename'))).toBe(false);
     expect(app.log.at(-1)).toBe('restore');
   });
 

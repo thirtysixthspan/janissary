@@ -10,6 +10,12 @@ addressed by name. A shell therefore never takes the name of a detached remote a
 back under it. Once every name in the pool is held, a new shell tab is named `shell`, then `shell-2`,
 and so on.
 
+Every launch opens one shell tab of its own, before any other tab exists: the **launch shell**,
+labelled `janus` rather than given a pool name, started in the project directory with no workspace,
+in the first palette colour and group 1 (see [[tabs]]). It is an ordinary shell tab in every other
+respect — `exit` closes it, and as the last tab that quits the app — and the application opens it
+through the same plugin as `zsh`, from no tab at all.
+
 The tab is contributed by a **bundled tab plugin** rather than by the application core (see
 [[tab-plugins]]). Nothing about it changes because of that: `zsh` is in every build, and what
 follows describes the behavior.
@@ -48,10 +54,6 @@ First refusal means what it says. A line the application answers itself — a ba
 picker, `quit` or `/quit`, or `close` or `/close` that would take the last tab with it — is answered
 here rather than sent onward. A quit typed in a shell tab asks the same confirmation it asks anywhere
 else (see [[quit-confirmation]]), and a bare word opens the same picker.
-
-`state` in a shell tab shows the shell tab's own fields — its name, working directory, command queue,
-and the rest an agent tab's state holds — built from the open tab, since a shell tab is never saved.
-The reply is rendered as markdown in the terminal like any other command reply.
 
 `nav`, or `nav <query>`, submitted from the shell command bar opens the fuzzy tab navigator over the
 shell tab, pre-filled with the query, exactly as it does from an agent tab's bar; submitting `nav`
@@ -177,7 +179,10 @@ The status hooks the tab installs in its shell are setup, not user commands, and
 history.
 Ghost suggestions instead draw from the
 global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
-a suggestion.
+a suggestion. Every line the command bar records in this history — whether the application answered
+it or it went to zsh, a `!` line included — enters that global history too, attributed to this tab,
+as a line submitted in an agent tab's bar does. Commands typed directly into the terminal, and lines
+another tab delivers with `send` or `queue`, do not.
 
 Every other chord belongs to the application, unchanged: `Ctrl+A` opens the task picker, `Ctrl+G` the
 tab navigator, `Cmd+P` quick open and `Cmd+Shift+F` the project search, all with the cursor in the

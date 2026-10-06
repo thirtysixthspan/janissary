@@ -121,9 +121,10 @@ export function createPluginContext(
         ...(options?.openFile && { openFile: options.openFile }),
       });
     },
+    // A launch origin is the one origin with no tab behind it, and the tab it opens takes its label.
     openOrFocusTab: (instanceKey, factory) => {
       if (!isEnabled()) return;
-      if (managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
+      if (!origin.launch && managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
       managers.tab.openPluginTab(
         declaration.id,
         declaration.tabLabelPrefix,
@@ -135,7 +136,7 @@ export function createPluginContext(
           validateTabValue(activation, created);
           return created;
         },
-        declaration.agentNamedTabs === true,
+        origin.launch ? { label: origin.label } : declaration.agentNamedTabs === true,
       );
     },
     // Unlike `openOrFocusTab`, this does not require the originating tab to still exist: the target

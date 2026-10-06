@@ -272,6 +272,11 @@ export type TabPluginServerCapabilities = {
   // host's own actions on that tab start from — for a plugin whose process can change directory on
   // its own. Does nothing when that tab is not one of this plugin's own.
   recordCwd(cwd: string): void;
+  // Add a line submitted in this plugin's own answering tab's command line to the application's
+  // global command history — the one ghost text completes from — as a line submitted in an agent
+  // tab's command bar is. Does nothing when that tab is not one of this plugin's own, or the line is
+  // blank.
+  recordGlobalHistory(line: string): void;
   rejectRequest(reason: string): never;
   reportFailure(reason: unknown): never;
 };

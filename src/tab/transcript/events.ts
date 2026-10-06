@@ -1,11 +1,10 @@
 import type { Tab, LogEntry } from '../types.js';
-import type { AgentState } from '../../agent/types.js';
 import { messageBus } from '../../bus.js';
 import { appendEntry, clearLog } from './log.js';
 import { runtimeFor } from '../runtime.js';
 
 // Transcript/busy-tracking coordination extracted from TabManager: wraps the pure log
-// mutations in transcript-log.ts with the messageBus emits, persistence, and unread-marking
+// mutations in transcript-log.ts with the messageBus emits and unread-marking
 // that make them visible to the rest of the app.
 
 // How a producer identifies which running log entry is its own: by the command text it started
@@ -14,7 +13,7 @@ import { runtimeFor } from '../runtime.js';
 export type RunningEntryMatch = { command?: string; markdown?: boolean };
 
 // The hooks each producer supplies to `updateRunningEntry`: the steps that run when a running
-// entry stops running (per-tab busy clearing, persistence, unread marking) and whether the
+// entry stops running (per-tab busy clearing, unread marking) and whether the
 // shared choreography owns the trailing appended-entry emit.
 export type UpdateRunningHooks = {
   trailing?: boolean;
@@ -108,16 +107,13 @@ export function startRunningTab(
 export function finishRunningTab(
   tabs: Tab[], label: string, output: string,
   deleteBusy: (label: string) => void,
-  persist: (state: AgentState) => void,
-  buildAgentState: (tab: Tab) => AgentState,
   markUnread: (label: string) => void,
   match?: RunningEntryMatch,
 ): void {
   updateRunningEntry(tabs, label, match, output, false, {
     trailing: true,
-    finalize: (tab) => {
+    finalize: () => {
       deleteBusy(label);
-      persist(buildAgentState(tab));
     },
     markUnread,
   });
@@ -137,15 +133,10 @@ export function appendTab(
   messageBus.emit('state', { type: 'dirty' });
 }
 
-export function clearTranscriptTab(
-  tabs: Tab[], label: string,
-  persist: (state: AgentState) => void,
-  buildAgentState: (tab: Tab) => AgentState,
-): void {
+export function clearTranscriptTab(tabs: Tab[], label: string): void {
   const tab = tabs.find((t) => t.label === label);
   if (!tab) return;
   clearLog(tab);
-  persist(buildAgentState(tab));
   messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
   messageBus.emit('state', { type: 'dirty' });
 }

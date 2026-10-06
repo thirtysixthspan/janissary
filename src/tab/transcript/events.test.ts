@@ -6,10 +6,6 @@ import {
 import { capLog } from './log.js';
 import { makeTab } from '../index.js';
 import { messageBus } from '../../bus.js';
-import type { AgentState } from '../../agent/types.js';
-import type { Tab } from '../types.js';
-
-const buildAgentState = (tab: Tab) => ({ name: tab.label }) as AgentState;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -270,9 +266,7 @@ describe('updateRunningEntry', () => {
       { input: 'git status', output: '', running: true, cwd: '/repo' },
       { input: 'monitor ask aslan status', output: '', running: true },
     ]);
-    const persist = vi.fn();
-
-    finishRunningTab([tab], 'bob', 'report built', vi.fn(), persist, buildAgentState, vi.fn(), { command: 'monitor ask aslan status' });
+    finishRunningTab([tab], 'bob', 'report built', vi.fn(), vi.fn(), { command: 'monitor ask aslan status' });
 
     expect(tab.log[0]).toEqual({ input: 'git status', output: '', running: true, cwd: '/repo' });
     expect(tab.log[1]).toEqual({ input: 'monitor ask aslan status', output: 'report built', running: false });
@@ -280,18 +274,16 @@ describe('updateRunningEntry', () => {
 });
 
 describe('finishRunningTab', () => {
-  it('finishes the entry, clears busy, persists, and emits', () => {
+  it('finishes the entry, clears busy, and emits', () => {
     const tab = makeTab('bob', 'red', 1, [], [{ input: 'sleep', output: '', running: true }]);
     const emit = vi.spyOn(messageBus, 'emit');
     const deleteBusy = vi.fn();
-    const persist = vi.fn();
     const markUnread = vi.fn();
 
-    finishRunningTab([tab], 'bob', 'woke up', deleteBusy, persist, buildAgentState, markUnread);
+    finishRunningTab([tab], 'bob', 'woke up', deleteBusy, markUnread);
 
     expect(tab.log).toEqual([{ input: 'sleep', output: 'woke up', running: false }]);
     expect(deleteBusy).toHaveBeenCalledWith('bob');
-    expect(persist).toHaveBeenCalledWith({ name: 'bob' });
     expect(markUnread).toHaveBeenCalledWith('bob');
     expect(emit).toHaveBeenCalledWith('transcript', {
       type: 'entry:appended', tabLabel: 'bob', entry: { input: '', output: 'woke up' }, tab,
@@ -303,7 +295,7 @@ describe('finishRunningTab', () => {
     const tab = makeTab('bob', 'red', 1, [], [{ input: 'sleep', output: '', running: true }]);
     const emit = vi.spyOn(messageBus, 'emit');
 
-    finishRunningTab([tab], 'bob', '', vi.fn(), vi.fn(), buildAgentState, vi.fn());
+    finishRunningTab([tab], 'bob', '', vi.fn(), vi.fn());
 
     expect(emit).not.toHaveBeenCalledWith('transcript', expect.objectContaining({ type: 'entry:appended' }));
     expect(emit).toHaveBeenCalledWith('transcript', { type: 'entry:updated', tabLabel: 'bob', tab });
@@ -312,24 +304,14 @@ describe('finishRunningTab', () => {
 });
 
 describe('clearTranscriptTab', () => {
-  it('empties the log, persists, and emits tab:cleared', () => {
+  it('empties the log and emits tab:cleared', () => {
     const tab = makeTab('bob', 'red', 1, [], [{ input: 'ls', output: 'x' }]);
     const emit = vi.spyOn(messageBus, 'emit');
-    const persist = vi.fn();
 
-    clearTranscriptTab([tab], 'bob', persist, buildAgentState);
+    clearTranscriptTab([tab], 'bob');
 
     expect(tab.log).toEqual([]);
-    expect(persist).toHaveBeenCalledWith({ name: 'bob' });
     expect(emit).toHaveBeenCalledWith('transcript', { type: 'tab:cleared', tabLabel: 'bob' });
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
-  });
-
-  it('does nothing for a label with no matching tab', () => {
-    const persist = vi.fn();
-
-    clearTranscriptTab([makeTab('bob', 'red')], 'ghost', persist, buildAgentState);
-
-    expect(persist).not.toHaveBeenCalled();
   });
 });

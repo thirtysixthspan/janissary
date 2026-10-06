@@ -2,26 +2,30 @@
 // run means a shot inherits whatever the last one left behind — tabs, transcripts, per-tab command
 // history, schedules, database connections, workspace clones, and files written into the working
 // directory. Clearing a transcript is a command; clearing a tab's history and its connections is
-// not, so the reset closes every tab, including the root one, and makes a new `janus`.
+// not, so the reset closes every tab, including the launch shell, and opens a new shell in its place.
 import { clearCommandBar, typeCommand } from './command-bar.mjs';
 import { restoreWorkDirectory } from './scratch.mjs';
-import { closeInactiveTabs, countTabs, focusIdleCommandTab, waitForActiveTab } from './tabs.mjs';
+import {
+  aliasActiveTab, closeInactiveTabs, countTabs, focusIdleCommandTab, waitForActiveTab, waitForActiveTabOtherThan,
+} from './tabs.mjs';
 
-// What `makeRootTab()` gives a freshly launched janissary. Five shots photograph the tab strip, so
-// the recreated tab carries the same label and, joining the staging tab's group, the same
-// group-coloured top border as the one it replaces. Its dot is whatever `distinctColor` picks
-// against the staging tab's, not the launch blue: no typed command sets a new tab's dot colour.
+// What a freshly launched janissary shows: one zsh shell tab named `janus`. A typed `zsh` takes a
+// random agent-pool name instead, so the reset gives the new shell the display alias `janus` and the
+// tab-strip shots read the same on every run. Joining the staging tab's group, it keeps the same
+// group-coloured top border as the one it replaces; its dot is whatever `distinctColor` picks against
+// the staging tab's, not the launch blue, since no typed command sets a new tab's dot colour.
 const ROOT_LABEL = 'janus';
+const SHELL_COMMAND = 'zsh';
 
-// The throwaway tab the reset types from. `agent janus` cannot be typed while the old `janus` is
-// open — the label is taken — and cannot be typed at all once it is closed, so one tab stands in
-// between the two. Every command the reset types lands here, and this tab is closed before the shot
-// runs, which is why the tab a shot stages in has never had a command typed into it.
+// The throwaway tab the reset types from. The old shell is closed before the new one opens, so one
+// tab stands in between the two. An agent tab, so nothing the reset types reaches a zsh. Every
+// command the reset types lands here, and this tab is closed before the shot runs, which is why the
+// tab a shot stages in has never had a command typed into it.
 const STAGING_LABEL = 'resetting';
 
-// Unworkspaced, so the root tab starts at the launch directory as the original one does: an
-// unconfined agent typed from a workspaced tab starts at the checkout root rather than in its clone.
-const ROOT_COMMAND = `agent ${ROOT_LABEL} --no-workspace`;
+// Unworkspaced, because the shell opened from it inherits its workspace: the starting shell has to
+// start unconfined at the launch directory, as the launch shell does.
+const STAGING_COMMAND = `agent ${STAGING_LABEL} --no-workspace`;
 
 // A shot can end with a picker, a dialog, or a half-typed command still on screen; all of it has to
 // go before the reset can read the tab strip or type into the command bar.
@@ -42,10 +46,14 @@ export async function resetApp(page, scratch, options = {}) {
     // it. The tab focused above is the one survivor, and it was chosen for being idle.
     await closeInactiveTabs(page);
     await clearCommandBar(page);
-    await typeCommand(page, `agent ${STAGING_LABEL}`);
+    await typeCommand(page, STAGING_COMMAND);
     await waitForActiveTab(page, STAGING_LABEL);
     await closeInactiveTabs(page);
-    await typeCommand(page, ROOT_COMMAND);
+    await typeCommand(page, SHELL_COMMAND);
+    await waitForActiveTabOtherThan(page, STAGING_LABEL);
+    // Through the strip's own rename field rather than a typed `rename`, which would enter the new
+    // shell's command history — the history-picker shot photographs exactly that history.
+    await aliasActiveTab(page, ROOT_LABEL);
     await waitForActiveTab(page, ROOT_LABEL);
     await closeInactiveTabs(page);
     const remaining = await countTabs(page);

@@ -3,10 +3,12 @@ import { TabManager } from '../tab/manager.js';
 import { Questions } from '../questions.js';
 import type { Managers } from '../managers.js';
 import { command } from './question.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   managers.questions = new Questions();
   managers.schedule = { get: () => [] } as unknown as Managers['schedule'];
   return managers;

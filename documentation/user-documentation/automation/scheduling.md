@@ -47,7 +47,7 @@ schedule clear             remove them all
 An `in <tab>` clause right after the name attaches the timer to a different tab:
 
 ```
-schedule standup in bilal every day at 9:00 state
+schedule standup in bilal every day at 9:00 help
 schedule list in claude
 schedule cancel standup in claude
 ```
@@ -60,7 +60,7 @@ The timer then belongs to the target tab — it shows in *that* tab's schedule w
 
 In an agent tab, the command is dispatched as if typed. If the agent is busy when the timer fires, the command joins its [command queue](/user-documentation/command-bar/queue) instead of running right away — it runs once the agent is free, same as anything else queued there. In a [harness tab](/user-documentation/advanced-agents/harness), the command is typed into the harness as a line of input — and if the harness isn't accepting input yet, the timer stays due and retries until it lands. After firing, a one-shot timer is removed; a recurring one advances to its next run.
 
-An agent's timers persist with its state, surviving `janus --relaunch` — a timer whose agent isn't currently open simply waits until that agent is open again. Harness tabs' timers are the exception: they live in memory only and end when the harness tab closes.
+A tab's timers live as long as the tab: closing it drops them, and no launch, `janus --relaunch` included, brings them back.
 
 A command delivered more than five seconds late posts `<command> ran <duration> late` to [notifications](/user-documentation/tab-types/notifications), with `(system was asleep)` appended when it missed its time because your machine was asleep. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for the rest of what happens to a timer while you're away.
 

@@ -9,7 +9,6 @@ import { command as database } from './db.js';
 import { command as browser } from './browser.js';
 import { command as connection } from './connection.js';
 import { command as clear } from './clear.js';
-import { command as state } from './state.js';
 import { command as hist } from './hist.js';
 import { command as clip } from './clip.js';
 import { command as close } from './close.js';
@@ -50,7 +49,6 @@ const coreCommands: Command[] = [
   browser,
   connection,
   clear,
-  state,
   hist,
   clip,
   close,

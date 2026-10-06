@@ -47,7 +47,7 @@ for agent-prompt routing.
 
 <img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
-Each tab has its own shell process that lives as long as the tab does. State accumulates the way it would in a terminal: `cd` somewhere and later commands in that tab run there; exported variables stick around. The working directory is also remembered per agent, so after `janus --relaunch` a restored tab's shell starts where it left off. If the shell process dies unexpectedly, a fresh one is spawned on your next command.
+Each tab has its own shell process that lives as long as the tab does. State accumulates the way it would in a terminal: `cd` somewhere and later commands in that tab run there; exported variables stick around. The working directory is also remembered per tab, so a shell respawned after one dies starts where the last one left off. If the shell process dies unexpectedly, a fresh one is spawned on your next command.
 
 A remembered directory that has since been deleted or renamed is not worth starting a shell in. Such a tab's shell starts in the project directory instead, which is where a new tab starts anyway, and the next command you run there records that directory in place of the stale one.
 
@@ -108,6 +108,8 @@ If you'd rather have none of this, set `interactiveShellDetection` to `false` in
 ## Open a zsh shell tab
 
 Type `zsh` to open a separate tab with a live zsh terminal. This is different from running a command with `shell` or taking over the current tab with `shell --pty`.
+
+Every launch opens one of these for you: the `janus` tab you start in is a zsh shell tab in the project directory. Type `agent` in its command bar when you want an agent tab. Typing `exit` in it closes it like any shell tab, and as the last tab that quits the app.
 
 The command bar starts focused. Click the terminal or press `Shift+Tab` to type directly into zsh; press `Shift+Tab` again to return to the command bar. When you use the bar, each line goes to Janissary first. A recognized application command runs there and never reaches zsh; text replies such as `help` appear below the command as rendered markdown, with bold headings, colored code, bulleted lists, and lined-up tables. Long replies take the space they need in the terminal scrollback, without an internal scrollbar. As you scroll through a reply, the visible portion stays rendered even after its first row moves above the viewport. If a full-screen program is using the terminal or the reply cannot be measured or placed, it appears as styled terminal text instead. An unclaimed line goes to zsh. Prefix a line with `!` to send it straight to zsh, even when it matches an application command. While zsh is running a command, the command line reads `queue >` and anything you submit waits in the tab's command queue; the queued lines run one at a time as zsh returns to its prompt, and `Ctrl+E` shows them.
 

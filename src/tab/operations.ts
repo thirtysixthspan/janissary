@@ -1,5 +1,4 @@
 import type { CenterPane, Tab } from './types.js';
-import type { AgentState } from '../agent/types.js';
 import type { Managers } from '../managers.js';
 import { TAB_RENAME_MAX_LENGTH } from '../config.js';
 import { messageBus } from '../bus.js';
@@ -24,8 +23,6 @@ export type TabOperationsPort = {
   recordLeavingActiveTab(newIndex: number): void;
   popFocusHistory(eligible?: (tab: Tab) => boolean): number | undefined;
   repairSelections(): void;
-  persist(state: AgentState): void;
-  buildAgentState(tab: Tab): AgentState;
   registerFile(path: string): string;
   replaceFile(reference: string, path: string): string;
 };
@@ -86,11 +83,11 @@ export function placeProfileTabs(port: TabOperationsPort, candidates: { label: s
 }
 
 export function reorderTab(port: TabOperationsPort, dir: -1 | 1): void {
-  reorderTabOp(port.tabs, port.activeTab, dir, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, (state) => port.persist(state), (tab) => port.buildAgentState(tab), () => port.tabs);
+  reorderTabOp(port.tabs, port.activeTab, dir, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, () => port.tabs);
 }
 
 export function reorderTabTo(port: TabOperationsPort, from: number, to: number): void {
-  reorderTabToOp(port.tabs, port.activeTab, from, to, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, (state) => port.persist(state), (tab) => port.buildAgentState(tab), () => port.tabs);
+  reorderTabToOp(port.tabs, port.activeTab, from, to, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, () => port.tabs);
 }
 
 export function closeTab(port: TabOperationsPort, index: number): void {
@@ -114,7 +111,7 @@ export function closeTab(port: TabOperationsPort, index: number): void {
 }
 
 export function renameTab(port: TabOperationsPort, index: number, title: string): void {
-  const refusal = renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (reference, path) => port.replaceFile(reference, path), (label, path) => port.managerServices.editorWatch.watch(label, path), (state) => port.persist(state), (tab) => port.buildAgentState(tab));
+  const refusal = renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (reference, path) => port.replaceFile(reference, path), (label, path) => port.managerServices.editorWatch.watch(label, path));
   const label = port.tabs[index]?.label;
   if (refusal && label) notify(port.managerServices, 'file-operation', label, refusal);
 }

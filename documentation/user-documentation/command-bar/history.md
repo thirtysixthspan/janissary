@@ -26,15 +26,17 @@ Press `→` or `End` at the end of your typed text to accept the whole suggestio
 
 `↑`/`↓` move the selection, `Return` runs the selected command, `Escape` closes without running anything. A row can also be clicked. With no history yet, the window shows `(no history)`.
 
+In a [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab), `Ctrl+R` lists that shell's own history instead — the lines its command bar sent and the commands typed into its terminal — and `Return` puts the chosen line back in the bar rather than running it. The picker above is a shell tab's own list.
+
 ## What's kept, and where
 
 <img class="agent-float left" src="/agents/aslan-south-east.png" alt="" />
 
-History is per-tab: each tab records its own commands (up to 100; older entries fall off), and that's what arrow-key recall and the picker show. Running the same command twice in a row stores it once. Per-tab history persists with the agent's state, so it survives `janus --relaunch`.
+History is per-tab: each tab records its own commands (up to 100; older entries fall off), and that's what arrow-key recall and the picker show. Running the same command twice in a row stores it once. Per-tab history lasts as long as the tab does.
 
 What gets stored is the command with its `##` comment removed, so `ls ## check the log` is remembered as `ls` and the comment never reaches history. The same stripped text is what runs, so the comment is dropped either way.
 
-There's also a global history spanning all tabs and all runs, capped at 1000 entries and stored in your home directory — that's what ghost text draws from. The split is deliberate: recall and the picker answer "what was I doing *in this tab*," while ghost text answers "how did I last type this command *anywhere*."
+There's also a global history spanning all tabs and all runs, capped at 1000 entries and stored in your home directory — that's what ghost text draws from. A line you submit in a shell tab's command bar lands there too, whether the app ran it or zsh did, so ghost text in an agent tab can complete a command you last ran in a shell; commands typed straight into a shell's terminal don't. The split is deliberate: recall and the picker answer "what was I doing *in this tab*," while ghost text answers "how did I last type this command *anywhere*."
 
 Global-history updates replace the stored file atomically, so an interrupted or failed write leaves the previous valid history available. If the file is malformed or cannot be read or written, the server log reports `warning: global command history unavailable: <reason>` once. Repeated failures stay quiet until a read or write succeeds; a later failure can then report a fresh warning. A history file that exists but can't be read is never overwritten: commands you type are still remembered for ghost text during that run, but the file is left as it is so you can repair it.
 

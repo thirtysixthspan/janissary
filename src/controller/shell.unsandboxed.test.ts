@@ -1,9 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { mkdtempSync, realpathSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import { createController, type Controller } from '../controller.js';
-import { initAgentStateDirectory, saveAgentState } from '../agent/state.js';
+import { createController } from '../controller.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 // These tests spawn a real persistent shell (ShellManager.getShell → child_process.spawn) and
 // then tear it down via Controller.shutdown → ShellManager.closeAll, which calls the real
@@ -16,25 +13,9 @@ vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
 const makeController = () => {
   let states = 0;
   const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
+  seedRootAgentTab(c.managers.tab);
   return { c, get states() { return states; } };
 };
-
-const allText = (c: Controller) => c.view().flatMap((t) => t.bufferLines).map((l) => l.text).join('\n');
-
-describe('Controller — real shell lifecycle', () => {
-  it('starts an agent shell in its saved/workspace cwd', async () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-st-')));
-    const workCwd = realpathSync(mkdtempSync(path.join(tmpdir(), 'janus-work-')));
-    saveAgentState({ name: 'bob', dotColor: '#6bcb77', active: false, number: 1, cwd: workCwd });
-    const { c } = makeController();
-    c.rehydrate(); // restores the bob tab with cwd = workCwd
-    c.dispatch('shell pwd'); // runs in bob's shell, which should have cd'd into workCwd
-    const deadline = Date.now() + 4000;
-    while (!allText(c).includes(workCwd) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 20));
-    expect(allText(c)).toContain(workCwd);
-    c.shutdown();
-  });
-});
 
 describe('Controller root-path display', () => {
   it('abbreviates the working directory on a command prompt to $root', () => {

@@ -1,26 +1,20 @@
-import type { Tab, LogEntry, CenterPane } from './types.js';
-import type { AgentState } from '../agent/types.js';
+import type { Tab, CenterPane } from './types.js';
 import type { ConnectionView, ScheduleView, TabView } from '../protocol.js';
 import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import type { Managers } from '../managers.js';
 import { abbreviatePath } from '../paths.js';
 import { messageBus } from '../bus.js';
 import { TabTranscriptState } from './transcript/state.js';
-import { buildAgentStateFromTab } from './agent-state.js';
 import { FileRegistry } from './file-registry.js';
 import { placeProfileTabSelection } from './split-selection.js';
 import { spawnPluginTerminal } from './plugin-terminals.js';
 import { disposeDwell } from './dwell.js';
 import * as tabOperations from './operations.js';
-import { tabRuntime } from './runtime.js';
 import * as lookup from './lookup.js';
 import * as runtimeOperations from './runtime-operations.js';
 import * as selectionOperations from './selection-operations.js';
 import * as viewOperations from './view-operations.js';
-import { makeRootTab } from './root.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
-import { AgentStatePersistence } from './persistence.js';
-import { persistAgentState } from './manager-persistence.js';
 
 export class TabManager extends TabTranscriptState {
   tabs: Tab[] = [];
@@ -28,7 +22,6 @@ export class TabManager extends TabTranscriptState {
   secondaryTabLabel?: string;
   private onIdle: ((label: string) => void) | null = null;
   private fileRegistry = new FileRegistry();
-  private persistence = new AgentStatePersistence();
   // Labels of tabs that were previously active, most-recent-last. Closing the active tab pops
   // this to restore focus to whatever was focused right before it, rather than just clamping to
   // the nearest surviving index.
@@ -43,11 +36,11 @@ export class TabManager extends TabTranscriptState {
 
   get openFiles(): Map<string, string> { return this.fileRegistry.map; }
   get managerServices(): Managers { return this.managers; }
+  // Starts with no tabs: the first is the launch shell, which `openLaunchShell` opens once every
+  // manager exists, since it comes from the shell plugin.
   constructor(managers: Managers, projectDir?: string) {
     super(managers);
     this.rootDir = projectDir ?? process.cwd();
-    this.tabs = [makeRootTab()];
-    tabRuntime(this.tabs[0]).cwd = this.rootDir;
   }
 
   cur(): Tab {
@@ -78,9 +71,7 @@ export class TabManager extends TabTranscriptState {
     this.onIdle = hook;
   }
 
-  protected persistQueue(label: string): void {
-    const tab = this.tabs.find((t) => t.label === label);
-    if (tab) this.persist(this.buildAgentState(tab));
+  protected queueChanged(): void {
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -132,20 +123,6 @@ export class TabManager extends TabTranscriptState {
     return lookup.filesTabByRoot(this.tabs, root);
   }
 
-  // The single write path into the state directory: a remote agent tab is live and in-memory, and a
-  // closed one no longer exists, so both are refused here rather than filtered at each call site.
-  // See `persistAgentState`.
-  persist(state: AgentState): void { persistAgentState(this.persistence, this.tabs, state); }
-
-  // Stop persisting a tab that has been closed, before its state file is removed (see
-  // `closeTabResources`).
-  forgetPersisted(label: string): void { this.persistence.forget(label); }
-  buildAgentState(tab: Tab, extra?: Partial<AgentState>): AgentState {
-    return buildAgentStateFromTab(
-      tab, { schedule: this.managers.schedule.get(tab.label), ...extra },
-    );
-  }
-
   // Selection and focus history (see `./selection-operations.ts`).
   markUnread(label: string): boolean { return selectionOperations.markUnread(this, label); }
   clearUnread(label: string): void { selectionOperations.clearUnread(this, label); }
@@ -193,7 +170,6 @@ export class TabManager extends TabTranscriptState {
     retargetEditorTabOp(
       this.tabs, oldAbsPath, newAbsPath,
       (reference, filePath) => this.replaceFile(reference, filePath),
-      (state) => this.persist(state), (tab) => this.buildAgentState(tab),
       (label, filePath) => this.managers.editorWatch.watch(label, filePath),
     );
   }
@@ -232,13 +208,5 @@ export class TabManager extends TabTranscriptState {
 
   view(connectionsFor: (label: string) => ConnectionView[], acpLabel: (label: string) => string | undefined, scheduleView: (label: string) => ScheduleView[]): TabView[] {
     return viewOperations.managerView({ tabs: this.tabs, managers: this.managers, shorten: (p: string) => this.shorten(p) }, connectionsFor, acpLabel, scheduleView);
-  }
-
-  rehydrate(loadTranscript: (name: string) => LogEntry[] | undefined, onState: (state: AgentState) => void): void {
-    this.tabs = viewOperations.rehydrateTabViews(this.tabs, {
-      loadTranscript, onState, cap: (log) => this.capToConfiguredMax(log),
-    });
-    this.activeTab = 0;
-    this.secondaryTabLabel = undefined;
   }
 }

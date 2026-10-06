@@ -2,8 +2,6 @@ import { messageBus } from '../bus.js';
 import type { Tab } from './types.js';
 import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 import { releaseFileReference } from './file-registry.js';
-import { deleteAgentState } from '../agent/state.js';
-import { TranscriptStore } from '../transcript/store.js';
 
 // The walk covers exactly the managers named in `MANAGER_TAB_RELEASE` — the declared list beside
 // `MANAGER_DISPOSE_ORDER`. `workspace` is released only through the deferred block below and `tab`
@@ -34,13 +32,6 @@ export function closeTabResources(
     managers[name].closeTab(label);
   }
   managers.tab.deleteBusy(label);
-  // A closed tab is not restored on the next `--relaunch`. The label is refused first and the files
-  // removed after, so a write arriving from an async callback in between — a shell command finishing
-  // after its tab closed, the schedule tick — cannot recreate what is about to be deleted. Quitting
-  // takes a different path and keeps persisting everything still open.
-  managers.tab.forgetPersisted(label);
-  deleteAgentState(label);
-  TranscriptStore.remove(label);
   messageBus.emit('transcript', { type: 'tab:removed', tabLabel: label });
   if (tab.plugin) {
     for (const id of tab.plugin.fileRefs) openFiles.delete(id);

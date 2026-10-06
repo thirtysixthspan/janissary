@@ -1,4 +1,3 @@
-import { initAgentStateDirectory, clearStateDirectory } from './agent/state.js';
 import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness/capture/file.js';
 import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness/recording-file.js';
 import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from './harness/transcript-file.js';
@@ -12,7 +11,6 @@ import { initRemoteFileCache, clearRemoteFileCache } from './file-navigator/remo
 import { initRemoteSessionStore } from './sessions/store.js';
 import { initNotificationRecord } from './notifications/record.js';
 import { TranscriptLogger } from './transcript/logger.js';
-import { TranscriptStore } from './transcript/store.js';
 
 // The per-subsystem init/clear pairs of the state directory, in the order `boot()` established.
 // Everything that owns state under `.janissary/` has exactly one entry here, so wiring a new
@@ -26,12 +24,6 @@ export type StateDirectoryEntry = {
 };
 
 export const STATE_DIRECTORY_ENTRIES = [
-  {
-    name: 'agentState',
-    init: (projectDir: string): void => { initAgentStateDirectory(projectDir); },
-    clear: (): void => { clearStateDirectory(); },
-    always: false,
-  },
   {
     name: 'harnessCapture',
     init: (projectDir: string): void => { initHarnessCaptureDirectory(projectDir); },
@@ -110,21 +102,15 @@ export const STATE_DIRECTORY_ENTRIES = [
     init: (projectDir: string): void => { new TranscriptLogger(projectDir); },
     always: false,
   },
-  {
-    name: 'transcriptStore',
-    init: (projectDir: string): void => { new TranscriptStore(projectDir); },
-    clear: (): void => { TranscriptStore.clear(); },
-    always: false,
-  },
 ] as const satisfies readonly StateDirectoryEntry[];
 
 // The subsystem keys the registry must cover: a new entry without a key here fails the
 // completeness assignment below, and a key whose entry has been dropped fails symmetrically —
 // the compiler names both.
 export const KNOWN_STATE_DIRECTORY_KEYS = [
-  'agentState', 'harnessCapture', 'harnessRecording', 'harnessTranscript',
+  'harnessCapture', 'harnessRecording', 'harnessTranscript',
   'browserLog', 'gitFailureOutput', 'globalHistory', 'connections', 'profiles', 'workspace',
-  'remoteFileCache', 'remoteSessions', 'notificationRecord', 'transcriptLog', 'transcriptStore',
+  'remoteFileCache', 'remoteSessions', 'notificationRecord', 'transcriptLog',
 ] as const;
 
 type RegisteredKey = (typeof STATE_DIRECTORY_ENTRIES)[number]['name'];

@@ -16,10 +16,10 @@ import { shellCommandInput } from '../shell/command-input.js';
 import { spawnShell } from '../shell/index.js';
 import { ShellManager } from '../shell/manager.js';
 import { TabManager } from '../tab/manager.js';
-import { TranscriptStore } from '../transcript/store.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { SessionsManager } from './manager.js';
 import type { RemoteSessionRecord } from './store.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 const saved = vi.hoisted(() => ({ records: [] as RemoteSessionRecord[] }));
 vi.mock(import('./store.js'), async (original) => ({
@@ -31,7 +31,6 @@ vi.mock('../pty.js', () => ({ spawnPty: vi.fn() }));
 vi.mock(import('../shell/index.js'), async (original) => ({ ...await original(), spawnShell: vi.fn() }));
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 vi.mock('../file-navigator/remote/file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
-vi.mock(import('../agent/state.js'), async (original) => ({ ...await original(), deleteAgentState: vi.fn() }));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
 const WORKSPACE = '/remote-only/project/.janissary/workspace/harun';
@@ -102,7 +101,7 @@ function harness() {
   managers.database.closeAll = vi.fn();
   managers.schedule.get = vi.fn(() => []);
   managers.tab = new TabManager(managers, process.cwd());
-  vi.spyOn(managers.tab, 'persist').mockImplementation(() => {});
+  seedRootAgentTab(managers.tab);
   managers.pty = new PseudoterminalManager(managers);
   managers.remote = new RemoteManager(managers);
   managers.shell = new ShellManager(managers);
@@ -115,7 +114,6 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   saved.records = [];
-  vi.spyOn(TranscriptStore, 'remove').mockImplementation(() => {});
 });
 
 afterEach(() => {

@@ -19,7 +19,7 @@ and the database yourself: `db sqlite query notes SELECT * FROM items`. The word
 read as the engine name, so `db SELECT * FROM items` is rejected with
 `Unsupported engine "select". Only "sqlite" is supported.`
 
-![A db sqlite create command followed by a db sqlite query command in the transcript, with the query's result table printed below it.](/screenshots/db-output.png)
+![A db sqlite create command followed by a db sqlite query command in a shell tab, with the query's result table rendered below it.](/screenshots/db-output.png)
 
 ## Subcommands
 

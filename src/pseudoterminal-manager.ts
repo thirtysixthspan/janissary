@@ -253,7 +253,6 @@ export class PseudoterminalManager {
           const log = [...tab.log];
           log[index] = { ...log[index], terminal: { ...log[index].terminal!, status: 'exited', exitCode } };
           tab.log = log;
-          this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
           messageBus.emit('transcript', { type: 'entry:updated', tabLabel: tab.label, tab });
         }
       }

@@ -118,6 +118,16 @@ function closeMatching(managers: Managers, target: ViewTarget, notes: string[]):
   notes.push(`Relaunched "${label}".`);
 }
 
+// The tab an entry's command produced. A label-less plugin entry matches every tab of its plugin, and
+// one may already be open — the launch shell is one — so a tab that was not there before the command
+// ran wins. A command that refocused a tab already open (a file plugin's same-file reopen) opened
+// nothing new, and then the existing match is the tab.
+// Compared by label rather than by object: an open rebuilds the tab records it moves.
+function openedTab(managers: Managers, target: ViewTarget, before: ReadonlySet<string>): Tab | undefined {
+  return managers.tab.tabs.find((t) => target.matches(t) && !before.has(t.label))
+    ?? managers.tab.tabs.find((t) => target.matches(t));
+}
+
 export async function openProfileViewTabs(
   views: ProfileViewEntry[], managers: Managers, issuingLabel: string,
   defaultGroup: number, colorForGroup: (group: number, fallbackDotColor: string) => string,
@@ -127,8 +137,9 @@ export async function openProfileViewTabs(
   for (const entry of views) {
     const target = buildTarget(entry, managers, issuingLabel);
     if (target.preClose) closeMatching(managers, target, notes);
+    const before = new Set(managers.tab.tabs.map((t) => t.label));
     const error = await target.run();
-    const tab = managers.tab.tabs.find((t) => target.matches(t));
+    const tab = openedTab(managers, target, before);
     if (!tab) {
       notes.push(typeof error === 'string' ? error : `Could not open ${target.kind} tab "${target.subject}".`);
       continue;

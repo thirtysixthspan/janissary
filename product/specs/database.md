@@ -8,7 +8,7 @@ Each database is a single file at `.janissary/db/sqlite/<name>.sqlite`. The dire
 
 ### Persistence
 
-Unlike `.janissary/state/` and `.janissary/workspace/`, the database directory is **never cleared** — not on normal launch, not on `--relaunch`, not on quit. Databases persist across sessions by design.
+Unlike `.janissary/workspace/`, the database directory is **never cleared** — not on normal launch, not on `--relaunch`, not on quit. Databases persist across sessions by design.
 
 ### Connection model
 

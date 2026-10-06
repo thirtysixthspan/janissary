@@ -9,18 +9,15 @@ import type { Tab } from './tab/types.js';
 // Mock spawnPty so tests never spawn a real process (mirrors controller.test.ts).
 vi.mock('./pty.js');
 
-function makeManagers(tabs: Tab[]): { managers: Managers; persist: ReturnType<typeof vi.fn> } {
-  const persist = vi.fn();
+function makeManagers(tabs: Tab[]): { managers: Managers } {
   const managers = {
     tab: {
       tabs,
       byLabel: (label: string) => tabs.find((t: Tab) => t.label === label),
       cwdOf: vi.fn(() => '/repo'),
-      persist,
-      buildAgentState: vi.fn((tab: Tab) => ({ name: tab.label, dotColor: tab.dotColor, active: true })),
     },
   } as unknown as Managers;
-  return { managers, persist };
+  return { managers };
 }
 
 describe('PseudoterminalManager', () => {
@@ -344,9 +341,9 @@ describe('PseudoterminalManager', () => {
     expect(manager.terminalsFor('main')).toEqual([]);
   });
 
-  it('handleExit updates an inline terminal card log entry and persists it', () => {
+  it('handleExit updates an inline terminal card log entry', () => {
     const tab = makeTab('main', 'red');
-    const { managers, persist } = makeManagers([tab]);
+    const { managers } = makeManagers([tab]);
     const manager = new PseudoterminalManager(managers);
     const id = manager.spawn('main', 'vim', 'vim file.txt', '/repo');
     tab.log = [{ input: 'vim file.txt', output: '', terminal: { ptyId: id, program: 'vim', status: 'running' } }];
@@ -354,7 +351,6 @@ describe('PseudoterminalManager', () => {
     capturedHandlers!.onExit(id, 1);
 
     expect(tab.log[0].terminal).toEqual({ ptyId: id, program: 'vim', status: 'exited', exitCode: 1 });
-    expect(persist).toHaveBeenCalled();
   });
 
   it('handleExit reports the terminal card rewrite as entry:updated, not as a new entry', () => {
@@ -374,17 +370,15 @@ describe('PseudoterminalManager', () => {
 
   it('handleExit on an already-removed PTY does not touch tab logs', () => {
     const tab = makeTab('main', 'red');
-    const { managers, persist } = makeManagers([tab]);
+    const { managers } = makeManagers([tab]);
     const manager = new PseudoterminalManager(managers);
     const id = manager.spawn('main', 'vim', 'vim file.txt', '/repo');
     manager.kill(id);
     manager.closeTab('main');
     tab.log = [{ input: 'vim file.txt', output: '', terminal: { ptyId: id, program: 'vim', status: 'running' } }];
-    persist.mockClear();
 
     capturedHandlers!.onExit(id, 0);
 
     expect(tab.log[0].terminal?.status).toBe('running');
-    expect(persist).not.toHaveBeenCalled();
   });
 });

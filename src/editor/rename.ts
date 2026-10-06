@@ -7,8 +7,8 @@ import { renameEditorTab } from '../tab/rename-editor.js';
 // Rename an editor tab's file, addressed by the tab's `/open/<id>` ref the way saveFile is.
 // The strip's renameTab RPC is keyed by tab-array index, which the persistent editor body does
 // not know, while the metadata row's rename input only ever knows `editor.url`. Delegates to the
-// same tab-rename logic the strip path uses, then persists and rebroadcasts. A refused rename
-// posts a file-operation notification instead of persisting.
+// same tab-rename logic the strip path uses, then rebroadcasts. A refused rename also posts a
+// file-operation notification.
 export function renameEditorFile(managers: Managers, url: string, name: string): void {
   const tab = managers.tab.editorTabByUrl(url);
   if (!tab?.editor) return;
@@ -18,6 +18,5 @@ export function renameEditorFile(managers: Managers, url: string, name: string):
     (label, filePath) => managers.editorWatch.watch(label, filePath),
   );
   if (refusal) notify(managers, 'file-operation', tab.label, refusal);
-  else managers.tab.persist(managers.tab.buildAgentState(tab));
   messageBus.emit('state', { type: 'dirty' });
 }

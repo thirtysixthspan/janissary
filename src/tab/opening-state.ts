@@ -29,11 +29,15 @@ export abstract class TabOpeningState extends TabQueueState {
   openPluginTab(
     pluginId: string, labelPrefix: string, instanceKey: string, schemaVersion: number,
     sourceLabel: string, factory: (resources: TabPluginResources) => TabPluginPayload,
-    agentNamed = false,
+    // `true` names the tab from the agent pool, `false` from the plugin's label prefix, and a fixed
+    // label names it outright (the launch shell).
+    naming: boolean | { label: string } = false,
   ): void {
+    const agentNamed = naming === true;
+    const fixedLabel = typeof naming === 'object' ? naming.label : undefined;
     tabOpeners.openPluginTab(
       this, pluginId, labelPrefix, instanceKey, schemaVersion, sourceLabel, factory, agentNamed,
-      agentNamed ? this.managers.sessions.view() : [],
+      agentNamed ? this.managers.sessions.view() : [], fixedLabel,
     );
   }
 

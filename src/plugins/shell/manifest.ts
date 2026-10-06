@@ -43,6 +43,7 @@ export const shellManifest = {
     'queueLine',
     'nextQueuedLine',
     'recordCwd',
+    'recordGlobalHistory',
     'openOrFocusTab',
     'updateTab',
     'setUnread',

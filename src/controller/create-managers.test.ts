@@ -2,13 +2,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { createController, type Controller } from '../controller.js';
 import { openNotificationsTab } from '../notifications/tab.js';
 import { TabPluginHost } from '../plugins/host.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
 vi.mock('../openers/os-open.js', () => ({ didOsOpen: () => true }));
 // Mock spawnPty so harness/agent tab creation never spawns real processes.
 vi.mock('../pty.js');
 
-const makeController = () => createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+const makeController = () => {
+  const c = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+  seedRootAgentTab(c.managers.tab);
+  return c;
+};
 
 const feedText = (c: Controller) =>
   c.view().find((t) => t.view === 'notifications')?.bufferLines.map((l) => l.text).join('\n') ?? '';

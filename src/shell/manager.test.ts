@@ -11,6 +11,7 @@ import { makeTab } from '../tab/index.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import type { RestoredSink } from '../remote/shell-session.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 const executeShellCmdMock = vi.fn();
 const queryShellPwdMock = vi.fn();
@@ -31,6 +32,7 @@ vi.mock('./index.js', () => ({
 function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   managers.pty = {
     spawnTransport: spawnTransportMock,
   } as unknown as Managers['pty'];
@@ -144,6 +146,7 @@ describe('ShellManager — which shell a tab gets', () => {
   it('starts a local pty shell in the project directory when the tab\'s cwd is not a directory', async () => {
     const managers = makeManagers();
     managers.tab = new TabManager(managers, tmpDir);
+    seedRootAgentTab(managers.tab);
     managers.tab.setCwd('janus', `${tmpDir}\r\n__JS_END_0_1__\r\n%\r \rpwd\r\necho "`);
     new ShellManager(managers).run('janus', 'ls');
 
@@ -154,6 +157,7 @@ describe('ShellManager — which shell a tab gets', () => {
   it('starts a local pty shell in the tab\'s cwd when it is a directory', async () => {
     const managers = makeManagers();
     managers.tab = new TabManager(managers, tmpDir);
+    seedRootAgentTab(managers.tab);
     managers.tab.setCwd('janus', path.join(tmpDir, '.janissary'));
     new ShellManager(managers).run('janus', 'ls');
 
@@ -166,6 +170,7 @@ describe('ShellManager — which shell a tab gets', () => {
     loadConfig(tmpDir);
     const managers = makeManagers();
     managers.tab = new TabManager(managers, tmpDir);
+    seedRootAgentTab(managers.tab);
     managers.tab.setCwd('janus', path.join(tmpDir, 'missing'));
     new ShellManager(managers).run('janus', 'ls');
 

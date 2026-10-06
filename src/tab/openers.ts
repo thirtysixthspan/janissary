@@ -95,6 +95,7 @@ export function openPluginTab(
   factory: (resources: TabPluginResources) => TabPluginPayload,
   agentNamed = false,
   rows: readonly LaunchNameRow[] = [],
+  fixedLabel?: string,
 ): void {
   const existing = target.tabs.find(
     (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
@@ -119,7 +120,7 @@ export function openPluginTab(
     payload: created.payload,
     fileRefs,
     sourceLabel,
-  }, agentNamed, rows), () => {
+  }, agentNamed, rows, fixedLabel), () => {
     // The terminals were spawned before this tab had a label, so they are adopted onto the one just
     // minted. Adopt before publishing state so the first host-state delivery sees every terminal row.
     // Every terminal the factory started is adopted, not just the first — one left on the label it was

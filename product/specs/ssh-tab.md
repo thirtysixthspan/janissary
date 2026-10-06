@@ -112,7 +112,7 @@ reachable.
 
 ## Persistence
 
-Like harness tabs, ssh tabs are **live and in-memory**: not saved to agent state, not restored on
+Like harness tabs, ssh tabs are **live and in-memory**: not saved, not restored on
 `--relaunch`. Each `ssh` invocation starts a fresh session.
 
 A **profile** is the one thing that does bring an ssh session back. `profile save` captures each

@@ -17,6 +17,7 @@ import type { ConversationStore } from '../conversations/store.js';
 import { CONVERSATION_SCHEMA_VERSION } from '../conversations/store.js';
 import type { AcpSession, PromptHandlers } from '../acp/types.js';
 import { NotificationQueue } from '../notifications/queue.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 const ROWS: AggregatedScheduleView[] = [
   { tab: 'janus', id: 's1', spec: 'every 5m', next: 'in 5m', recurring: true, command: 'ls' },
@@ -40,6 +41,7 @@ function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   Object.assign(managers, {
     workspace: { remove: vi.fn(), cancel: vi.fn() },
     shell: { close: vi.fn(), closeTab: vi.fn() },

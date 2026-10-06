@@ -62,6 +62,7 @@ export function activate(): TabPluginActivation {
         'command-state': TabPluginIntentEntry<ShellPayload, ShellCommandState>;
         cwd: TabPluginIntentEntry<ShellPayload, string>;
         dispatch: TabPluginIntentEntry<ShellPayload, string>;
+        remember: TabPluginIntentEntry<ShellPayload, string>;
         complete: TabPluginIntentEntry<ShellPayload, ShellCompleteRequest>;
         queue: TabPluginIntentEntry<ShellPayload, string>;
         dequeue: TabPluginIntentEntry<ShellPayload, undefined>;
@@ -115,6 +116,15 @@ export function activate(): TabPluginActivation {
       dispatch: {
         payload: isShellDispatch,
         run: (_tabPayload, line, capabilities) => capabilities.dispatchLineWithOutput(line),
+      },
+      // A line the bar recorded in its own history — whichever route it took — enters the global
+      // history too, as a line submitted in an agent tab's bar does.
+      remember: {
+        payload: isShellDispatch,
+        run: (_tabPayload, line, capabilities) => {
+          capabilities.recordGlobalHistory(line);
+          return { recorded: true };
+        },
       },
       complete: {
         payload: isShellCompleteRequest,
