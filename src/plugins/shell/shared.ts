@@ -1,4 +1,4 @@
-export const SHELL_PAYLOAD_SCHEMA_VERSION = 2;
+export const SHELL_PAYLOAD_SCHEMA_VERSION = 3;
 
 // The zsh binary this plugin spawns, named outright rather than taken from `$SHELL`: the tab is a
 // zsh tab whatever the user's login shell happens to be, which is what makes `zsh` an honest command
@@ -53,10 +53,10 @@ export type ShellPayload = {
   connections: ShellConnectionRow[];
   schedule: ShellScheduleRow[];
   commandRunning?: boolean;
-  // The nonce the shell's status hooks were installed with. Absent until the first client to attach
-  // claims the install, then fixed for the life of the terminal: a later attach re-uses it rather
-  // than typing the setup line into whatever program holds the foreground.
-  hookNonce?: string;
+  // The nonce the shell's status hooks sign their markers with. Minted by the server with the shell,
+  // whose own startup files install the hooks, and fixed for the life of the terminal: every attach
+  // reads it here and trusts only markers that carry it.
+  hookNonce: string;
 };
 
 // The front of this tab's command queue, or `null` once it is empty.
@@ -71,10 +71,6 @@ export type ShellDispatchResult = { dispatched: boolean; output: string };
 // second one, so a plugin holding a ptyId and a command line needs exactly one wire route.
 export type ShellCompleteRequest = { line: string; cursor: number };
 export type ShellCommandState = { running: boolean };
-
-// The answer to an `install-hooks` claim: `install` is true for exactly one claimant, and `nonce` is
-// the one the installed hooks sign their markers with, whichever client minted it.
-export type ShellHookClaim = { install: boolean; nonce: string };
 
 // An absolute path already in normal form: no empty, `.` or `..` segment and no trailing slash beyond
 // the root itself. zsh's `$PWD` is always written that way, so a real report never trips this, while
@@ -145,7 +141,7 @@ export function isShellPayload(value: unknown): value is ShellPayload {
     && Array.isArray(value.schedule)
     && value.schedule.every(isScheduleRow)
     && (value.commandRunning === undefined || typeof value.commandRunning === 'boolean')
-    && (value.hookNonce === undefined || isShellMarkerNonce(value.hookNonce));
+    && isShellMarkerNonce(value.hookNonce);
 }
 
 // The one intent that carries no payload at all, so absent and null are the only two shapes that can

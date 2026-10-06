@@ -6,10 +6,7 @@ import {
   type PluginTerminal, type TerminalColors,
 } from '../api';
 import { shellTerminalTheme } from './shell-terminal-theme';
-import { createShellMarkerNonce } from './shell-status-hooks';
-import {
-  SHELL_INITIALIZING, installShellHooks, registerShellMarkerHandlers, type ClaimShellHooks,
-} from './shell-marker-handlers';
+import { registerShellMarkerHandlers } from './shell-marker-handlers';
 import { insertMarkdownBlock } from './markdown-block';
 import { attachPromptMask } from './prompt-mask';
 import { formatDispatchedCommand } from './format-dispatched-command';
@@ -38,10 +35,9 @@ type Options = {
   // Called when the shell behind this terminal exits. A plugin tab has nowhere else to hear it: the
   // event is broadcast once, to whoever happened to be connected at the time.
   onExit: () => void;
-  // The nonce the terminal's hooks were installed with, when an earlier attach installed them. Read
-  // once, at mount: with one, the mount only re-attaches and types nothing into the shell.
-  hookNonce: string | undefined;
-  claimHooks: ClaimShellHooks;
+  // The nonce zsh's startup files installed the hooks with, minted by the server with the shell. Read
+  // once, at mount: every mount only attaches, and nothing is ever typed into the shell for it.
+  hookNonce: string;
 };
 
 // What the tab writes to the shell through. One attachment, created once here: resizing and typing
@@ -58,7 +54,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, containerRef, attachTerminal, copyText, reportColors, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce, claimHooks,
+  ptyId, containerRef, attachTerminal, copyText, reportColors, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -83,8 +79,6 @@ export function useShellTerminal({
   openLinkRef.current = openLink;
   const hookNonceRef = useRef(hookNonce);
   hookNonceRef.current = hookNonce;
-  const claimRef = useRef(claimHooks);
-  claimRef.current = claimHooks;
 
   // Once per PTY, after mount, and read rather than watched: a theme change afterwards must not
   // rewrite the colors a session already started under. Reading at mount also beats the recorder's
@@ -125,18 +119,12 @@ export function useShellTerminal({
       copyTextRef.current(terminal.getSelection());
       return false;
     });
-    // An installed nonce means a shell whose hooks are already running, possibly with a full-screen
-    // program in the foreground: nothing is hidden and nothing is typed. Only a terminal with no
-    // hooks yet stays hidden until its setup line has run.
-    const installed = hookNonceRef.current;
-    if (installed === undefined) container.classList.add(SHELL_INITIALIZING);
     const themeObserver = new MutationObserver(() => {
       terminal.options.theme = shellTerminalTheme();
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    const nonce = { current: installed ?? createShellMarkerNonce() };
     const promptMask = attachPromptMask(terminal);
-    registerShellMarkerHandlers(terminal, container, nonce, {
+    registerShellMarkerHandlers(terminal, hookNonceRef.current, {
       running: (running) => {
         promptMask.setIdle(!running);
         runningRef.current(running);
@@ -174,7 +162,6 @@ export function useShellTerminal({
       terminal.onData((data) => { handleRef.current?.write(data); });
       handle.onExit(() => { exitRef.current(); });
       resize();
-      if (installed === undefined) installShellHooks(handle, container, nonce, claimRef.current);
     };
     const attachment = attach(ptyId, (data) => { terminal.write(data); });
     if (attachment instanceof Promise) {

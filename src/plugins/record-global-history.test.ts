@@ -11,7 +11,7 @@ import type { ShellPayload } from './shell/shared.js';
 
 const PAYLOAD: ShellPayload = {
   instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
-  connections: [], schedule: [],
+  connections: [], schedule: [], hookNonce: 'c'.repeat(32),
 };
 
 let home: string;

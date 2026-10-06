@@ -11,8 +11,6 @@
   background: var(--bg);
 }
 
-.shell-body.shell-initializing { visibility: hidden; }
-
 /* The terminal's own focus line, down its left edge just inside the tab's frame: dim while the
    keyboard is anywhere else, lit in the tab's colour while it is in the terminal. It is drawn over
    the terminal rather than as a border because the fit sizes the grid from the container's width
@@ -23,7 +21,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 0px;
+  left: 0;
   width: 3px;
   background: var(--border);
   z-index: 3;

@@ -132,6 +132,10 @@ export type TabPluginTerminalOptions = {
   // Confinement for a terminal started in a workspace clone, mirroring the sandbox the tab's own
   // shell runs under. The plugin names where the terminal lives; the host owns how it is confined.
   workspace?: { dir: string; offline?: boolean };
+  // Variables added over the environment the host already gives the terminal, sandbox included. It
+  // grants nothing `shell` and `args` do not: a plugin able to choose the program can already choose
+  // what it is told.
+  env?: Record<string, string>;
 };
 
 export type TabPluginResources = {

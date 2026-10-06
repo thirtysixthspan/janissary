@@ -1,6 +1,8 @@
 import type { TabPluginResources, TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
 import { SHELL_PROGRAM, type ShellPayload } from './shared.js';
+import type { ZshStartupDirectory } from './zsh-startup-directory.js';
+import { createShellMarkerNonce, shellStartupEnvironment } from './zsh-startup-script.js';
 
 // Opens one shell tab. Split out of `activate.ts` so that module holds the contract and nothing else:
 // the instance-key counter, the declaration-shaped wiring, and the two handlers, with the tab-opening
@@ -13,6 +15,7 @@ import { SHELL_PROGRAM, type ShellPayload } from './shared.js';
 export function openShellTab(
   capabilities: TabPluginServerCapabilities,
   instanceKey: string,
+  startup: ZshStartupDirectory,
 ): void {
   const origin = capabilities.originTab();
   if (!origin) return;
@@ -27,12 +30,18 @@ export function openShellTab(
   const cwd = allowed ? origin.cwd : workspace?.dir ?? origin.root;
 
   capabilities.openOrFocusTab(instanceKey, (resources: TabPluginResources) => {
+    // Minted with the shell, so its hooks are running before any browser attaches and every attach
+    // reads the same nonce from the payload.
+    const hookNonce = createShellMarkerNonce();
     const terminal = resources.spawnTerminal({
       cwd,
       // The shell itself, with no argv at all — the one invocation in the application that does not
       // go through `shellCommandArgs`, which would otherwise run a single command through the shell.
       shell: SHELL_PROGRAM,
       args: [],
+      // zsh's own startup installs the status hooks (see `zsh-startup-script.ts`), so nothing is ever
+      // typed at its prompt and nothing reaches its history.
+      env: shellStartupEnvironment(startup.path(), hookNonce, process.env.ZDOTDIR),
       ...(workspace && { workspace }),
     });
     const payload: ShellPayload = {
@@ -48,6 +57,7 @@ export function openShellTab(
       // host state of its own, and the windows only ever draw when they have rows.
       connections: [],
       schedule: [],
+      hookNonce,
     };
     return { title: 'shell', payload };
   });

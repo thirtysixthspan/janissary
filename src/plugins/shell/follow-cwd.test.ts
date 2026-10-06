@@ -32,11 +32,11 @@ function shellTab(start: string): { managers: Managers; payload: ShellPayload } 
   managers.tab = new TabManager(managers, start);
   const payload: ShellPayload = {
     instanceKey: 'shell-1', ptyId: 'pty1', cwd: start, root: start, workspace: false, cols: 80, rows: 24,
-    connections: [], schedule: [],
+    connections: [], schedule: [], hookNonce: 'b'.repeat(32),
   };
   managers.tab.tabs.push({
     label: 'shell1', dotColor: '#fff', log: [], view: 'plugin',
-    plugin: { id: 'shell', instanceKey: 'shell-1', schemaVersion: 2, payload, fileRefs: [], sourceLabel: 'janus' },
+    plugin: { id: 'shell', instanceKey: 'shell-1', schemaVersion: 3, payload, fileRefs: [], sourceLabel: 'janus' },
   } as unknown as Tab);
   managers.tab.setCwd('shell1', start);
   return { managers, payload };

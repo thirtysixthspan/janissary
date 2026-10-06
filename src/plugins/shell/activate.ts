@@ -8,11 +8,11 @@ import {
 } from '../api.js';
 import {
   isEmptyShellIntent, isShellCommandState, isShellCompleteRequest, isShellCwd, isShellDispatch,
-  isShellMarkerNonce, isShellPayload,
-  type ShellCommandState, type ShellCompleteRequest, type ShellHookClaim, type ShellPayload,
-  type ShellQueuedLine,
+  isShellPayload,
+  type ShellCommandState, type ShellCompleteRequest, type ShellPayload, type ShellQueuedLine,
 } from './shared.js';
 import { openShellTab } from './open-tab.js';
+import { ZshStartupDirectory } from './zsh-startup-directory.js';
 
 let invocationCounter = 0;
 
@@ -25,12 +25,16 @@ function nextInstanceKey(): string {
 }
 
 export function activate(): TabPluginActivation {
+  // The startup files every shell's zsh reads, acquired with the first shell and released with the
+  // plugin, after the host has already ended the shells that read them.
+  const startup = new ZshStartupDirectory();
   return {
     isPayload: isShellPayload,
     opener: noFileOpener('shell'),
     command: (_argument, capabilities) => {
-      openShellTab(capabilities, nextInstanceKey());
+      openShellTab(capabilities, nextInstanceKey(), startup);
     },
+    dispose: () => { startup.dispose(); },
     // The rows the metadata row's status windows render, merged into the payload with `updateTab` —
     // which leaves the tab's label, position, group and instance key alone, so a push never disturbs
     // the tab it is describing. Slices the declaration did not name arrive empty and are written back
@@ -58,7 +62,6 @@ export function activate(): TabPluginActivation {
       ShellPayload,
       {
         'terminal-status': TabPluginIntentEntry<ShellPayload, undefined>;
-        'install-hooks': TabPluginIntentEntry<ShellPayload, string>;
         'command-state': TabPluginIntentEntry<ShellPayload, ShellCommandState>;
         cwd: TabPluginIntentEntry<ShellPayload, string>;
         dispatch: TabPluginIntentEntry<ShellPayload, string>;
@@ -76,20 +79,6 @@ export function activate(): TabPluginActivation {
         run: (tabPayload, _payload, capabilities) => ({
           running: capabilities.terminalRunning(tabPayload.ptyId),
         }),
-      },
-      // A compare-and-set, so the setup line is typed into the terminal once for its whole life. The
-      // first claimant's nonce is stored and that client alone installs; every later attach — a dock,
-      // a reload, a second window — is handed the stored nonce and only re-attaches. The run is
-      // synchronous, so two claims racing each other cannot both be told to install.
-      'install-hooks': {
-        payload: isShellMarkerNonce,
-        run: (tabPayload, nonce, capabilities): ShellHookClaim => {
-          if (tabPayload.hookNonce !== undefined) return { install: false, nonce: tabPayload.hookNonce };
-          capabilities.updateTab(tabPayload.instanceKey, () => ({
-            payload: { ...tabPayload, hookNonce: nonce },
-          }));
-          return { install: true, nonce };
-        },
       },
       'command-state': {
         payload: isShellCommandState,

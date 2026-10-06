@@ -6,13 +6,28 @@ import {
 } from '../api.js';
 import { activate } from './activate.js';
 import { SHELL_PROGRAM, isShellPayload, type ShellPayload } from './shared.js';
+import { shellSetupScript } from './zsh-startup-script.js';
+
+const startupDispose = vi.hoisted(() => vi.fn());
+
+// A real startup directory per `activate()` would leave one in the temp directory per test; what these
+// tests need is the path it hands the spawn and whether the plugin releases it.
+vi.mock('./zsh-startup-directory.js', () => ({
+  ZshStartupDirectory: class {
+    path(): string { return '/tmp/janus-zsh-test'; }
+    dispose(): void { startupDispose(); }
+  },
+}));
 
 const PAYLOAD: ShellPayload = {
   instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
-  connections: [], schedule: [],
+  connections: [], schedule: [], hookNonce: 'a'.repeat(32),
 };
 
-type Spawn = { cwd: string; shell?: string; args?: string[]; workspace?: { dir: string; offline?: boolean } };
+type Spawn = {
+  cwd: string; shell?: string; args?: string[]; workspace?: { dir: string; offline?: boolean };
+  env?: Record<string, string>;
+};
 
 function fakeCapabilities(overrides: {
   origin?: { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean }; remote?: true } | null;
@@ -89,7 +104,39 @@ describe('shell plugin activation', () => {
 
     activate().command?.('', capabilities);
 
-    expect(spawns).toEqual([{ cwd: '/repo', shell: SHELL_PROGRAM, args: [] }]);
+    expect(spawns).toEqual([{ cwd: '/repo', shell: SHELL_PROGRAM, args: [], env: expect.any(Object) }]);
+  });
+
+  it('spawns zsh with startup files that install hooks signed with the payload\'s nonce', () => {
+    const { capabilities, opened, spawns } = fakeCapabilities();
+
+    activate().command?.('', capabilities);
+
+    const { hookNonce } = opened[0].value.payload as ShellPayload;
+    expect(hookNonce).toMatch(/^[0-9a-f]{32}$/);
+    expect(spawns[0].env).toMatchObject({
+      ZDOTDIR: '/tmp/janus-zsh-test',
+      JANUS_SHELL_SETUP: shellSetupScript(hookNonce),
+    });
+  });
+
+  it('mints a fresh nonce for every shell', () => {
+    const { capabilities, opened } = fakeCapabilities();
+    const activation = activate();
+
+    activation.command?.('', capabilities);
+    activation.command?.('', capabilities);
+
+    const [first, second] = opened.map((entry) => (entry.value.payload as ShellPayload).hookNonce);
+    expect(first).not.toBe(second);
+  });
+
+  it('releases the startup directory when the plugin is disposed', async () => {
+    startupDispose.mockClear();
+
+    await activate().dispose?.();
+
+    expect(startupDispose).toHaveBeenCalledOnce();
   });
 
   it('gives each invocation its own tab, because a shell is stateful', () => {
@@ -111,6 +158,7 @@ describe('shell plugin activation', () => {
 
     expect(spawns[0]).toEqual({
       cwd: '/clone/subdir', shell: SHELL_PROGRAM, args: [], workspace: { dir: '/clone', offline: true },
+      env: expect.any(Object),
     });
     expect(opened[0].value.payload).toMatchObject({
       cwd: '/clone/subdir', root: '/repo', workspaceDir: '/clone', workspace: true,
@@ -157,29 +205,10 @@ describe('shell plugin activation', () => {
     expect(ask(capabilities, 'terminal-status', undefined)).toEqual({ running: false });
   });
 
-  it('stores the first install-hooks claim and tells that claimant to install', () => {
-    const { capabilities, updated } = fakeCapabilities();
-    const nonce = 'c'.repeat(32);
-
-    expect(ask(capabilities, 'install-hooks', nonce)).toEqual({ install: true, nonce });
-    expect(updated).toEqual([{ key: 'shell-1', payload: { ...PAYLOAD, hookNonce: nonce } }]);
-  });
-
-  it('hands a later claimant the installed nonce and stores nothing', () => {
-    const { capabilities, updated } = fakeCapabilities();
-    const installed = 'd'.repeat(32);
-
-    expect(ask(capabilities, 'install-hooks', 'e'.repeat(32), { ...PAYLOAD, hookNonce: installed }))
-      .toEqual({ install: false, nonce: installed });
-    expect(updated).toEqual([]);
-  });
-
-  it('rejects an install-hooks claim whose nonce is not one the client mints', () => {
+  it('has no install-hooks route, since no client installs hooks any more', () => {
     const { capabilities, updated } = fakeCapabilities();
 
-    for (const nonce of ["'; rm -rf ~; '", 'C'.repeat(32), 'c'.repeat(31), 42]) {
-      expect(() => ask(capabilities, 'install-hooks', nonce)).toThrow(TabPluginRejection);
-    }
+    expect(() => ask(capabilities, 'install-hooks', 'c'.repeat(32))).toThrow(TabPluginRejection);
     expect(updated).toEqual([]);
   });
 

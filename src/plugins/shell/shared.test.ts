@@ -8,7 +8,7 @@ import {
 
 const PAYLOAD = {
   instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
-  connections: [], schedule: [],
+  connections: [], schedule: [], hookNonce: 'f'.repeat(32),
 };
 
 // The plugin's shared contract declares nothing it can import, so the two row types it re-declares
@@ -16,7 +16,7 @@ const PAYLOAD = {
 // host produced would fail the plugin's guard — disabling the plugin on a shape the host itself made.
 describe('shell shared contract', () => {
   it('declares a payload schema version the host can compare', () => {
-    expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(2);
+    expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(3);
   });
 
   it('keeps its completion result assignable to and from the application result', () => {
@@ -96,8 +96,9 @@ describe('shell shared contract', () => {
     expect(isShellPayload({ ...PAYLOAD, commandRunning: 'yes' })).toBe(false);
   });
 
-  it('accepts an absent or well-formed hook nonce and rejects any other', () => {
+  it('requires a well-formed hook nonce, since the server mints one with every shell', () => {
     expect(isShellPayload({ ...PAYLOAD, hookNonce: '0123456789abcdef'.repeat(2) })).toBe(true);
+    expect(isShellPayload({ ...PAYLOAD, hookNonce: undefined })).toBe(false);
     expect(isShellPayload({ ...PAYLOAD, hookNonce: 'n0nce' })).toBe(false);
     expect(isShellPayload({ ...PAYLOAD, hookNonce: 7 })).toBe(false);
   });
