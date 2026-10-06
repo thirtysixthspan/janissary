@@ -16,6 +16,11 @@ in the first palette colour and group 1 (see [[tabs]]). It is an ordinary shell 
 respect — `exit` closes it, and as the last tab that quits the app — and the application opens it
 through the same plugin as `zsh`, from no tab at all.
 
+The launch shell is the visible tab when the window first appears, and its command bar holds the
+keyboard focus, not its terminal. The first thing typed after launch goes to the `janus` command bar
+without a click. A window that opens without operating-system focus keeps the command bar as its
+focused element, so the keyboard lands there as soon as the window is activated.
+
 The tab is contributed by a **bundled tab plugin** rather than by the application core (see
 [[tab-plugins]]). Nothing about it changes because of that: `zsh` is in every build, and what
 follows describes the behavior.
