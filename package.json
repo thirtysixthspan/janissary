@@ -23,9 +23,9 @@
     "test:unsandboxed": "vitest run --project unsandboxed",
     "lint": "eslint . --cache --concurrency=auto",
     "lint:fix": "eslint . --fix",
-    "lint:all": "npm run lint && npm run lint:css && npm run typecheck",
+    "lint:all": "npm run lint && npm run typecheck",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "check:full": "npm run typecheck && npm run lint && npm run test && npm run lint:css && npm run quality && npm run duplication && npm run knip",
+    "check:full": "npm run typecheck && npm run lint && npm run test && npm run quality && npm run duplication && npm run knip",
     "lint:files": "node scripts/lint-files.mjs",
     "format": "prettier --write .",
     "postinstall": "node scripts/postinstall.mjs",
@@ -41,8 +41,6 @@
     "duplication:gate": "jscpd src web/src --exit-code",
     "knip": "knip",
     "knip:fix": "knip --fix",
-    "lint:css": "stylelint \"web/src/**/*.css\"",
-    "lint:css:fix": "stylelint \"web/src/**/*.css\" --fix",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p web/tsconfig.json",
     "typecheck:diff": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/server.tsbuildinfo -p tsconfig.json && tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/web.tsbuildinfo -p web/tsconfig.json",
     "test:diff:server": "vitest run --project server --changed",
@@ -81,21 +79,7 @@
     "flat-cache": "4.0.1",
     "file-entry-cache": "8.0.0",
     "@keyv/serialize": "1.1.1",
-    "@keyv/bigmap": "1.3.1",
-    "hashery": "1.5.1",
-    "hookified": "1.15.1",
-    "qified": {
-      ".": "0.10.1",
-      "hookified": "2.2.0"
-    },
-    "stylelint": {
-      "file-entry-cache": "11.1.5",
-      "flat-cache": "6.1.23",
-      "cacheable": "2.5.0",
-      "@cacheable/memory": "2.2.0",
-      "@cacheable/utils": "2.5.0",
-      "keyv": "5.6.0"
-    }
+    "@keyv/bigmap": "1.3.1"
   },
   "files": [
     "ai",
@@ -160,8 +144,6 @@
     "prettier": "^3.8.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "stylelint": "^17.14.0",
-    "stylelint-config-standard": "^40.0.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1",

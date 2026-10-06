@@ -54,7 +54,7 @@ describe.skipIf(!sandboxAvailable())('sandboxSpawn — live sandbox-exec integra
   it('allows reading any package.json under $HOME at any depth, but nothing else', () => {
     // A fake ancestor chain laid out the way production nests workspaces, two levels deep —
     // <grandparent>/<parent-repo>/.janissary/workspace/<name> — since cosmiconfig-based tools
-    // (stylelint, eslint, prettier, postcss) and Node's own module resolution walk arbitrarily
+    // (eslint, prettier, postcss) and Node's own module resolution walk arbitrarily
     // far up looking for package.json, not just one level. Must live under $HOME — that's the
     // only region denied by default, so a tmpdir-based tree would prove nothing.
     const grandparent = mkdtempSync(path.join(homedir(), '.janissary-sandbox-test-'));

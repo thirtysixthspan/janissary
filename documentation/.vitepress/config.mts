@@ -158,7 +158,6 @@ export default defineConfig({
             { text: "Code coverage", link: "/developer-documentation/code-coverage" },
             { text: "Code quality", link: "/developer-documentation/code-quality" },
             { text: "Code duplication", link: "/developer-documentation/code-duplication" },
-            { text: "CSS linting", link: "/developer-documentation/css-linting" },
             { text: "Dead code", link: "/developer-documentation/dead-code" },
             { text: "Security checks", link: "/developer-documentation/security-checks" },
             { text: "Linting", link: "/developer-documentation/linting" },

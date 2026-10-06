@@ -13,7 +13,6 @@ The improvement work itself follows one of these existing single-purpose task pl
 | jscpd reports a duplicated block | [`remove-duplication.md`](remove-duplication.md) |
 | Coverage is below threshold on a testable file | [`improve-test-coverage.md`](improve-test-coverage.md) |
 | `npm audit` / security tooling reports a patchable advisory | [`improve-security.md`](improve-security.md) |
-| stylelint reports a CSS issue | [`improve-style.md`](improve-style.md) |
 | `npm outdated` lists a safe-looking package update | [`update-package.md`](update-package.md) |
 | `npm outdated` lists several patch-level updates | [`update-packages-with-patches.md`](update-packages-with-patches.md) |
 
@@ -55,11 +54,10 @@ npm run lint 2>&1
 npm run quality 2>&1
 npm run duplication 2>&1
 npm run knip 2>&1
-npm run lint:css 2>&1
 npm outdated 2>&1
 ```
 
-- Read the signals into the selection table at the top of this file: FTA scores and `max-lines` from `quality`/`lint`, `cognitive-complexity` warnings from `lint`, clones from `duplication`, unused code from `knip`, coverage gaps (run `npm run coverage 2>&1` when test-coverage is a candidate), CSS issues from `lint:css`, prefix clusters from the file layout under `src/`, and outdated packages from `npm outdated` (`npm outdated` exits non-zero when it lists anything — that's expected, not a broken tree).
+- Read the signals into the selection table at the top of this file: FTA scores and `max-lines` from `quality`/`lint`, `cognitive-complexity` warnings from `lint`, clones from `duplication`, unused code from `knip`, coverage gaps (run `npm run coverage 2>&1` when test-coverage is a candidate), prefix clusters from the file layout under `src/`, and outdated packages from `npm outdated` (`npm outdated` exits non-zero when it lists anything — that's expected, not a broken tree).
 
 Record the specific number for whatever you're about to target (the FTA score, the complexity value, the clone count, etc.) — this is the **before** value you will compare against in Step 4.
 
