@@ -250,6 +250,20 @@ shape.
    skip; iterating every tab and asking the host per label is the same thing without a special case,
    and it is what makes a plugin tab's recording report live.
 
+7. **Recording is opt-out, `recordShellTabs`.** Added during pull-request review, because "every
+   shell tab records" is a change no user could undo. The plan chose unconditional recording; a config
+   flag defaulting to `true` keeps the behaviour the plan specifies and lets a user turn it off.
+   Harness and ssh recording is untouched by it, since that predates this change.
+
+8. **The palette's last hop is the message handler, and the file inventory above omitted it.** The
+   inventory lists `core-rpc.ts`, `client-params/core.ts`, and `controller/tab-adapter.ts` as the
+   places the palette is threaded through, and `src/message/handler.ts` is none of them — it is the
+   ingress every one of those params passes, and it rebuilds the object it forwards. Because
+   `isTerminalColors` already treated an absent palette as valid and `castHeader` already knew how
+   to serialise one, the omission failed silently at every layer: nothing errored, and no shell
+   recording carried a palette. It was found by reading a written header back in a browser, not by
+   any test — see `product/plans/complete/shell-recording-palette.md`.
+
 ## Tests
 
 **Server**, colocated as `src/**/*.test.ts` in vitest project `server`:

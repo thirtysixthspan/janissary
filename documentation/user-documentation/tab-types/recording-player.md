@@ -79,3 +79,17 @@ run rather than silence. See
 The tab is an ordinary tab: it docks into either sidebar, takes a **Split** control, and can be closed
 like any other. Playback pauses while it is not the visible tab and resumes where it stopped. Playback
 state is not kept after the tab closes — reopen the recording and it starts from the beginning.
+
+## Turning shell recording off
+
+Shell tabs are recorded like the other recorded tabs: a file under `.janissary/recordings/`, and a film
+flag in the tab's metadata row that opens the recording. To record no shell tab in a project, set this
+in its `.janissary/config.json`:
+
+```json
+{ "recordShellTabs": false }
+```
+
+No shell file is written and no shell tab draws the flag. Named `harness` and `ssh` tabs are unaffected —
+they have no echo of their own, so they are recorded whatever this says. The setting is on unless a
+project turns it off.
