@@ -28,8 +28,9 @@ follows describes the behavior.
 ## Choose where keys go
 
 The shell tab has two keyboard surfaces: the command bar and the terminal. The command bar is focused
-when the tab opens. Click the terminal or press `Shift+Tab` from the command bar to type directly into
-zsh; press `Shift+Tab` again to return to the command bar. Both transitions prevent the browser's
+when the tab opens. Double-click the terminal or press `Shift+Tab` from the command bar to type directly into
+zsh; a single click on the terminal returns focus to the command bar. Press `Shift+Tab` again to return
+to the command bar. Both `Shift+Tab` transitions prevent the browser's
 default focus traversal, and keystrokes go to whichever surface has focus. A thin line runs down the
 terminal's left edge, just inside the tab's own frame, to show which surface that is: it is lit in the
 tab's colour while the keyboard is in the terminal, and dim while it is in the command bar or anywhere
