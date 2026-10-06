@@ -13,10 +13,11 @@ import { filterLabel } from './grid-view';
 // rather than a disabled one, because a disabled button takes no pointer events at all — there would
 // be nothing to hover for the tooltip and nothing to press to undo it.
 export function FilterChips({
-  payload, onSend,
+  payload, onSetFilterEnabled, onClearFilters,
 }: {
   payload: SqlPayload;
-  onSend(name: string, body: unknown): void;
+  onSetFilterEnabled(column: string, enabled: boolean): void;
+  onClearFilters(): void;
 }) {
   if (payload.filters.length === 0 && payload.global === '') return null;
   return (
@@ -31,13 +32,13 @@ export function FilterChips({
             className={`sql-filter-chip sql-filter-toggle${on ? '' : ' off'}`}
             aria-pressed={on}
             title={on ? 'Disable' : 'Enable'}
-            onDoubleClick={() => onSend('set-filter-enabled', { column: filter.column, enabled: !on })}
+            onDoubleClick={() => onSetFilterEnabled(filter.column, !on)}
           >
             {filterLabel(filter)}
           </button>
         );
       })}
-      <button type="button" className="sql-clear-filters" onClick={() => onSend('clear-filters', {})}>
+      <button type="button" className="sql-clear-filters" onClick={onClearFilters}>
         <FontAwesomeIcon icon={faFilter} /> Clear filters
       </button>
     </div>
@@ -53,10 +54,10 @@ export function FilterChips({
  * the server's `clear-filters` takes it away with the rest.
  */
 export function GlobalFilter({
-  value, onSend,
+  value, onSetGlobalFilter,
 }: {
   value: string;
-  onSend(name: string, body: unknown): void;
+  onSetGlobalFilter(value: string): void;
 }) {
   const [term, setTerm] = useState(value);
   // The payload is the term in force, and a fresh answer replaces what was typed; keeping the
@@ -64,7 +65,7 @@ export function GlobalFilter({
   useEffect(() => setTerm(value), [value]);
   const apply = () => {
     if (term === value) return;
-    onSend('set-global-filter', { value: term });
+    onSetGlobalFilter(term);
   };
   return (
     <div className="sql-global-filter">
@@ -81,7 +82,7 @@ export function GlobalFilter({
         aria-label="Search every column"
       />
       {term !== '' && (
-        <button type="button" onClick={() => { setTerm(''); onSend('set-global-filter', { value: '' }); }}>
+        <button type="button" onClick={() => { setTerm(''); onSetGlobalFilter(''); }}>
           Clear
         </button>
       )}
@@ -93,18 +94,18 @@ const OPERATORS: SqlFilterOperator[] = ['contains', 'eq', 'ne', 'gt', 'gte', 'lt
 
 /** One column's filter editor. `isNull` and `notNull` bind nothing, so they hide the value field. */
 export function FilterRow({
-  column, payload, onClose, onSend,
+  column, payload, onClose, onSetFilter,
 }: {
   column: string;
   payload: SqlPayload;
   onClose(): void;
-  onSend(name: string, body: unknown): void;
+  onSetFilter(column: string, op: SqlFilterOperator, value?: string): void;
 }) {
   const [op, setOp] = useState<SqlFilterOperator>('contains');
   const [value, setValue] = useState('');
   const binds = op !== 'isNull' && op !== 'notNull';
   const apply = () => {
-    onSend('set-filter', binds ? { column, op, value } : { column, op });
+    onSetFilter(column, op, binds ? value : undefined);
     onClose();
   };
   return (

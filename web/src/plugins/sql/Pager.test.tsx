@@ -1,9 +1,8 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
-import { DataGrid } from './DataGrid';
 import { Pager } from './Pager';
-import { grid, makeCapabilities, payload } from './fixture';
+import { grid, makeCapabilities, payload, TestDataGrid } from './fixture';
 import { toggleColumn, visibleColumns } from './grid-view';
 
 // The hidden-column case renders the whole grid, and the grid scrolls the highlighted row into view,
@@ -14,26 +13,31 @@ describe('Pager', () => {
   const big = grid({ total: 51_882, unfilteredTotal: 51_882, limit: 100, offset: 0 });
 
   it('leaves the range label saying where the user is', () => {
-    render(<Pager payload={payload({ grid: big })} onSend={vi.fn()} />);
+    render(<Pager payload={payload({ grid: big })} onSetPage={vi.fn()} onSetPageSize={vi.fn()} onRefresh={vi.fn()} />);
     expect(screen.getByText(/^Rows /).textContent).toContain('51,882');
   });
 
   it('steps a page at a time, forwards and back', () => {
-    const onSend = vi.fn();
-    render(<Pager payload={payload({ grid: big })} onSend={onSend} />);
+    const onSetPage = vi.fn();
+    render(<Pager payload={payload({ grid: big })} onSetPage={onSetPage} onSetPageSize={vi.fn()} onRefresh={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(onSend).toHaveBeenCalledWith('set-page', { offset: 100 });
+    expect(onSetPage).toHaveBeenCalledWith(100);
   });
 
   it('steps back a page from anywhere but the first', () => {
-    const onSend = vi.fn();
-    render(<Pager payload={payload({ grid: grid({ ...big, offset: 300 }) })} onSend={onSend} />);
+    const onSetPage = vi.fn();
+    render(<Pager
+      payload={payload({ grid: grid({ ...big, offset: 300 }) })}
+      onSetPage={onSetPage}
+      onSetPageSize={vi.fn()}
+      onRefresh={vi.fn()}
+    />);
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
-    expect(onSend).toHaveBeenCalledWith('set-page', { offset: 200 });
+    expect(onSetPage).toHaveBeenCalledWith(200);
   });
 
   it('offers no way to name a row, so there is no field to leave half-typed', () => {
-    render(<Pager payload={payload({ grid: big })} onSend={vi.fn()} />);
+    render(<Pager payload={payload({ grid: big })} onSetPage={vi.fn()} onSetPageSize={vi.fn()} onRefresh={vi.fn()} />);
     expect(screen.queryByLabelText('Go to row')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Go' })).toBeNull();
   });
@@ -65,7 +69,7 @@ describe('hidden columns', () => {
 
   it('renders a row with the hidden column out of the way and the rest in place', () => {
     const { capabilities, intent } = makeCapabilities();
-    render(<DataGrid payload={payload({ hidden: ['status'], grid: grid() })} capabilities={capabilities} />);
+    render(<TestDataGrid payload={payload({ hidden: ['status'], grid: grid() })} capabilities={capabilities} />);
     const headers = screen.getAllByRole('columnheader').map((cell) => cell.textContent ?? '');
     expect(headers.some((text) => text.includes('status'))).toBe(false);
     // The `id` column still shows its own values, and the hidden one is not shown at all.

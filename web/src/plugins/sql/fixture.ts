@@ -1,6 +1,13 @@
+import React from 'react';
 import type { SqlObject, SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import { vi } from 'vitest';
 import type { TabPluginClientCapabilities } from '../api';
+import { DataGrid } from './DataGrid';
+import { createSqlActions } from './useSqlActions';
+
+export function TestDataGrid(props: Omit<React.ComponentProps<typeof DataGrid>, 'actions'>) {
+  return React.createElement(DataGrid, { ...props, actions: createSqlActions(props.capabilities.intent) });
+}
 
 export const ORDERS: SqlObject = {
   name: 'orders', kind: 'table', writable: true,

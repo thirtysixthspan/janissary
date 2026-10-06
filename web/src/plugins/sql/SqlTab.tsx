@@ -10,6 +10,7 @@ import { ExportButtons } from './ExportButtons';
 import { SqlConsole } from './SqlConsole';
 import { statementResult } from './grid-view';
 import { TableSwitcher } from './TableSwitcher';
+import { useSqlActions } from './useSqlActions';
 
 // A database tab: one metadata row across the full width and one body below it. The row is the shape
 // a harness tab draws — the facts on the left, the actions pushed right, a border under the lot —
@@ -40,7 +41,7 @@ export function SqlTab({
   const consoleRef = useRef<HTMLTextAreaElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const docked = capabilities.dock !== null;
-  const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
+  const actions = useSqlActions(capabilities);
   // Whichever pane does not have the focus takes it, so `Tab` is a toggle between the two rather
   // than a walk out of the tab. Focus follows the same path a user pressing it twice would take.
   const toGrid = () => { gridRef.current?.focus(); };
@@ -60,8 +61,8 @@ export function SqlTab({
     >
       <div className="sql-meta">
         <FontAwesomeIcon icon={faDatabase} className="sql-meta-icon" />
-        <DatabaseSwitcher payload={payload} onOpen={(name) => send('open', { name })} />
-        <TableSwitcher payload={payload} onOpen={(name) => send('select-object', { object: name })} />
+        <DatabaseSwitcher payload={payload} onOpen={actions.open} />
+        <TableSwitcher payload={payload} onOpen={actions.selectObject} />
         <span className="sql-meta-actions">
           {writable && (
             <button
@@ -77,7 +78,7 @@ export function SqlTab({
           <ColumnChooserButton hiddenCount={payload.hidden.length} onClick={() => setChoosingColumns(!choosingColumns)} />
           <ExportButtons
             enabled={payload.pending === null && object !== undefined}
-            onExport={(format) => send('export', { format })}
+            onExport={actions.export}
           />
           {/* The finished exports, beside the controls that start one. They are links rather than
               buttons because they are already written: a download with a name and a size. */}
@@ -101,6 +102,7 @@ export function SqlTab({
       <DataGrid
         payload={payload}
         capabilities={capabilities}
+        actions={actions}
         inserting={inserting}
         onInserting={setInserting}
         choosingColumns={choosingColumns}
@@ -116,7 +118,7 @@ export function SqlTab({
           inputRef={consoleRef}
           value={consoleText}
           onValue={setConsoleText}
-          onSend={(sql) => send('run', { sql })}
+          onSend={actions.run}
           onLeave={toGrid}
         />
       </div>

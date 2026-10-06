@@ -5,15 +5,6 @@
 ## development
 
 
-* Give the SQLite tab a typed action layer so its components render controls and pass named operations.
-
-Existing Debt: `SqlTab.tsx` and `DataGrid.tsx` build SQL intent names and `unknown` payloads in component handlers, then pass an untyped `(name, body)` callback through `Filters.tsx` and `Pager.tsx`, leaving protocol decisions in UI modules contrary to §5 (components render) and §8 (the four layers). Severity: 5/10
-
-Existing Risk: 5/10 - Changing an SQL action requires coordinating string names and payload shapes across several components, and a typo or mismatched shape can escape TypeScript and break a database interaction at runtime.
-
-Proposal Risk: 3/10 - Named action methods make client call sites type-checked and keep RPC wiring out of components, but their signatures can still drift from server validation unless the contract stays aligned.
-
-Proposal: Create `web/src/plugins/sql/useSqlActions.ts` as the SQL feature's hook adapter around `TabPluginClientCapabilities.intent`, with named typed operations for `open`, `select-object`, `export`, `run`, `set-columns`, `insert-row`, `set-order`, `update-cell`, `delete-row`, `set-page`, `set-page-size`, `refresh`, `set-filter`, `set-filter-enabled`, `set-global-filter`, and `clear-filters`. Instantiate it in `web/src/plugins/sql/SqlTab.tsx` and pass named callbacks into `DataGrid`, `Filters`, `Pager`, and `SqlConsole` rather than forwarding `(name: string, body: unknown)`. Keep `DataGrid.tsx` responsible for edit and dialog state and rendering, while it invokes the injected actions for writes; remove protocol names from the callbacks in `Filters.tsx` and `Pager.tsx`. The change reaches four existing production components and adds one hook; `DataGrid` and `SqlTab` are the direct intent call sites today, while filters and the pager forward the untyped callback. Preserve the interaction assertions in `web/src/plugins/sql/SqlTab.test.tsx`, `web/src/plugins/sql/DataGrid.test.tsx`, `web/src/plugins/sql/Pager.test.tsx`, and `web/src/plugins/sql/SqlConsole.test.tsx`, and add a focused test for the named action payloads.
 
 ## deferred
 
