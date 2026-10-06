@@ -80,3 +80,34 @@ describe('getOutput("help")', () => {
     expect(helpText()).toContain('Ctrl+G');
   });
 });
+
+describe('getOutput("help <section>")', () => {
+  function sectionText(command: string): string {
+    const result = getOutput(command);
+    if (result.kind !== 'output') throw new Error(`${command} did not classify as output`);
+    return result.text;
+  }
+
+  it('prints only the shell tab key table for help shell', () => {
+    const text = sectionText('help shell');
+    expect(text.startsWith('**Shell tab controls**')).toBe(true);
+    expect(text).toContain('`!` prefix');
+    expect(text).not.toContain('### Commands');
+    expect(text).not.toContain('**Image tab controls**');
+  });
+
+  it('prints only the command table for help commands', () => {
+    const text = sectionText('help commands');
+    expect(text.startsWith('### Commands')).toBe(true);
+    expect(text).toContain('`zsh`');
+    expect(text).not.toContain('### Key Bindings');
+  });
+
+  it('answers an unmatched section as help output rather than an unknown command', () => {
+    expect(sectionText('help nosuchsection')).toContain('No help section matches "nosuchsection". Sections: Commands, Key Bindings');
+  });
+
+  it('leaves a word that only starts with help unknown', () => {
+    expect(getOutput('helper').kind).toBe('unknown');
+  });
+});

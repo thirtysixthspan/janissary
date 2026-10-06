@@ -6,7 +6,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 | Command | What it does |
 |---|---|
-| `help` | List the available commands and key bindings |
+| `help [<section>]` | List the available commands and key bindings, or just one section of them |
 | `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `open [external] [page] <target>` | Open a file, a web page, or an external application; see [Opening files and pages](/user-documentation/tab-types/opening-files) |
@@ -25,7 +25,11 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 ## `help`
 
-`help` prints the in-app quick reference: every command with a one-line description, then the key bindings. It's the same text this tab shows you when you type `help`, so it is a reminder rather than a guide. If that file can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `shell ` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
+`help` prints the in-app quick reference: every command with a one-line description, then the key bindings. It's the same text this tab shows you when you type `help`, so it is a reminder rather than a guide.
+
+`help <section>` prints one part of it. `help commands` shows the command table, `help key bindings` every key table, and `help shell` just the shell tab's keys. You can name any key table by the start of its label, like `help editor` or `help file`. Case doesn't matter. A name that matches nothing gets `No help section matches "<name>".` followed by the list of section names.
+
+If the help file can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `shell ` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
 
 ## `theme`
 
