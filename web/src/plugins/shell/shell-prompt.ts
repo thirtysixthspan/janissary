@@ -14,6 +14,9 @@ export const ZSH_PROMPT_SETUP = "export PROMPT='%B>%b '; zle_highlight=(region:s
 
 export const SHELL_PROMPT = `${BOLD}>${NORMAL_INTENSITY} `;
 
+// The cells `> ` takes at the start of the prompt's row.
+export const SHELL_PROMPT_WIDTH = 2;
+
 export function shellCommandLine(line: string): string {
   return `${BOLD}> ${line}${NORMAL_INTENSITY}`;
 }

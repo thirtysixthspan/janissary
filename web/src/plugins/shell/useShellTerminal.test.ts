@@ -33,6 +33,11 @@ vi.mock('@xterm/xterm', () => ({
     clearSelection() {}
     attachCustomKeyEventHandler(handler: (event: KeyboardEvent) => boolean) { terminalKeyHandlers.push(handler); }
     clear() { this.clearCalls += 1; }
+    textarea = undefined;
+    buffer = { active: { baseY: 0, cursorY: 0, type: 'normal' } };
+    onCursorMove() { return { dispose: () => {} }; }
+    registerMarker() { return { line: 0, dispose: () => {} }; }
+    registerDecoration() {}
     onData(handler: (data: string) => void) { terminalDataHandlers.push(handler); }
     focus() { terminalFocusCalls.push(1); }
     parser = { registerOscHandler: (id: number, handler: (data: string) => boolean) => { oscHandlers.push({ id, handle: handler }); return { dispose() {} }; } };
@@ -427,6 +432,12 @@ describe('useShellTerminal', () => {
 
     expect(terminals[0].options.disableStdin).toBe(false);
     expect(terminals[0].options.cursorBlink).toBe(true);
+  });
+
+  it('draws no cursor while the terminal does not hold the keyboard', () => {
+    harness();
+
+    expect(terminals[0].options.cursorInactiveStyle).toBe('none');
   });
 
   it('refreshes xterm colors when the application theme changes', async () => {

@@ -24,6 +24,11 @@ vi.mock('@xterm/xterm', () => ({
     getSelection() { return ''; }
     clearSelection() {}
     attachCustomKeyEventHandler() {}
+    textarea = undefined;
+    buffer = { active: { baseY: 0, cursorY: 0, type: 'normal' } };
+    onCursorMove() { return { dispose: () => {} }; }
+    registerMarker() { return { line: 0, dispose: () => {} }; }
+    registerDecoration() {}
     onData() { return { dispose: () => {} }; }
     focus() { terminalFocusCalls.push(1); }
     scrollLines() {}

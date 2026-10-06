@@ -11,6 +11,7 @@ import {
   SHELL_INITIALIZING, installShellHooks, registerShellMarkerHandlers, type ClaimShellHooks,
 } from './shell-marker-handlers';
 import { insertMarkdownBlock } from './markdown-block';
+import { attachPromptMask } from './prompt-mask';
 import { formatDispatchedCommand } from './format-dispatched-command';
 import { markdownToAnsi } from './markdown-to-ansi';
 import { stripTerminalControls } from './strip-terminal-controls';
@@ -94,6 +95,9 @@ export function useShellTerminal({
       fontSize: Number(styles.getPropertyValue('--terminal-font-size').replace('px', '')) || 13.5,
       lineHeight: Number(styles.getPropertyValue('--terminal-line-height').replace('px', '')) || 1.2,
       cursorBlink: true,
+      // The cursor shows only while the terminal holds the keyboard; the prompt mask below hides the
+      // prompt on the same rule.
+      cursorInactiveStyle: 'none',
       disableStdin: false,
       theme: shellTerminalTheme(),
     });
@@ -116,8 +120,12 @@ export function useShellTerminal({
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     const nonce = { current: installed ?? createShellMarkerNonce() };
+    const promptMask = attachPromptMask(terminal);
     registerShellMarkerHandlers(terminal, container, nonce, {
-      running: (running) => { runningRef.current(running); },
+      running: (running) => {
+        promptMask.setIdle(!running);
+        runningRef.current(running);
+      },
       command: (command) => { commandRef.current?.(command); },
       cwd: (cwd) => { cwdRef.current(cwd); },
     });
@@ -168,6 +176,7 @@ export function useShellTerminal({
       handleRef.current = null;
       terminalRef.current = null;
       unregisterTerminalSelection(container);
+      promptMask.dispose();
       terminal.dispose();
     };
   }, [ptyId, containerRef]);
