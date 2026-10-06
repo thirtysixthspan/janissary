@@ -268,13 +268,18 @@ html, body, #root {
    No `color` here, deliberately: `.tab-flag--active` above is what turns the lit flag green, and a
    `color` in this later single-class rule would win it on cascade and leave the recording flag grey in
    both of its states. The chrome is reset for both elements because it is inert on the `span`; the
-   pointer and the hover are scoped to the button because the inert `span` is the one state in which
-   neither is true, and a hand cursor over something that cannot be pressed is a lie about it. */
+   pointer is scoped to the button because the inert `span` is the one state in which it is untrue, and
+   a hand cursor over something that cannot be pressed is a lie about it.
+   No `:hover` rule, and that is also deliberate: the row's hover treatments exist because those
+   buttons are muted chrome whose colour is a choice, while this flag's colour is a state — lit green
+   means there is a recording. Brightening it on hover would replace the one thing the flag is telling
+   you, and it would do so on exactly the elements that need it: the flag is a `<button>` only when it
+   is pressable, so there is no inert button for a hover rule to be harmless on. `cursor: pointer` is
+   the pointer feedback, which is what the other flags in this row have. */
 .tab-recording {
   background: transparent; border: none; font-size: 13px; padding: 0 4px; line-height: 1;
 }
 button.tab-recording { cursor: pointer; }
-button.tab-recording:hover { color: var(--fg); }
 .tab-meta-chip {
   display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; vertical-align: bottom; cursor: default;

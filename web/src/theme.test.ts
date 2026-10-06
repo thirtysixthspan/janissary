@@ -75,14 +75,17 @@ describe('metadata theme', () => {
     expect(theme.indexOf('.tab-recording {')).toBeGreaterThan(theme.indexOf('.tab-flag--active {'));
   });
 
-  // The same class is on the inert `<span>`, and there the pointer and the hover are both untrue. A
-  // hand cursor over a flag that cannot be pressed misreports the one thing the flag exists to say.
-  it('gives the recording flag its pointer only when it is a button', () => {
-    expect(theme).toMatch(/^button\.tab-recording \{[^}]*cursor: pointer/m);
-    expect(theme).toMatch(/^button\.tab-recording:hover \{/m);
-    expect(theme).not.toMatch(/^\.tab-recording \{[^}]*cursor/m);
-    expect(theme).not.toMatch(/^\.tab-recording:hover/m);
-  });
+// The recording flag's green is a *state*, not a chrome choice: it means a recording exists. The row's
+// other controls hover to a brighter colour because their muted colour is a choice, and copying that
+// treatment here would trade away the one thing the flag says. It is also unfixable by scoping — the
+// flag is a `<button>` only when pressable, so every element a `:hover` rule can match is a lit flag
+// and there is no inert one to leave the green alone on. `cursor: pointer` is the whole of the pointer
+// feedback here, which is what the row's other flags have.
+it('keeps the recording flag\'s green through a hover', () => {
+  expect(theme).not.toMatch(/^[^{]*\.tab-recording[^{]*:hover[^{]*\{/m);
+  expect(theme).toMatch(/^button\.tab-recording \{[^}]*cursor: pointer/m);
+  expect(theme).not.toMatch(/^\.tab-recording \{[^}]*cursor/m);
+});
 
   // The plugin half of the two rules above. Splitting them is what keeps a plugin's styling inside
   // its own lazy chunk, so the host stylesheet must not carry a plugin selector back in.
