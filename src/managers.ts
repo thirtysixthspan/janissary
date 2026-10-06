@@ -162,3 +162,8 @@ type UntypedReleaser = Exclude<(typeof MANAGER_TAB_RELEASE)[number], DeclaredTab
 export const MANAGER_TAB_RELEASE_IS_TYPED: [UntypedReleaser] extends [never]
   ? true
   : UntypedReleaser = true;
+
+type UnlistedTabReleaser = Exclude<DeclaredTabRelease, (typeof MANAGER_TAB_RELEASE)[number]>;
+export const MANAGER_TAB_RELEASE_IS_COMPLETE: [UnlistedTabReleaser] extends [never]
+  ? true
+  : UnlistedTabReleaser = true;

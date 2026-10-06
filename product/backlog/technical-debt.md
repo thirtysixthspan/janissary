@@ -4,16 +4,6 @@
 
 ## development
 
-* Make the tab-close release list fail compilation when a per-tab manager is omitted.
-
-Existing Debt: `MANAGER_TAB_RELEASE` proves each listed manager has a `closeTab` method, but it does not prove that every manager with that method appears in the release list. Severity: 5/10
-
-Existing Risk: 5/10 - A newly added manager can acquire a per-tab resource and silently miss the close walk, leaving PTYs, watchers, channels, or queued work alive after the tab disappears.
-
-Proposal Risk: 2/10 - A compile-time completeness check would catch omitted releasers, though incorrect cleanup behavior or ordering inside an included manager would still need runtime coverage.
-
-Proposal: In `src/managers.ts`, `DeclaredTabRelease` already derives the names of managers whose registry types expose `closeTab(label: string): void`, while `MANAGER_TAB_RELEASE_IS_TYPED` only proves the listed names belong to that set. Add the reverse check by deriving the names in `DeclaredTabRelease` that are absent from `MANAGER_TAB_RELEASE` and assigning the result to a `never`-guarded exported constant, matching the existing completeness check for `MANAGER_DISPOSE_ORDER`. Update `src/managers.test.ts` to assert that constant and retain its duplicate-name assertion. `src/tab/cleanup.test.ts` already verifies the declared list is the walk used at runtime, including the remote-tab exception and per-tab release calls; keep that behavior unchanged.
-
 
 * Give the SQLite tab a typed action layer so its components render controls and pass named operations.
 

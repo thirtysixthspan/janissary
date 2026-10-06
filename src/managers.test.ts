@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createController } from './controller.js';
-import { MANAGER_DISPOSE_ORDER, MANAGER_DISPOSE_ORDER_IS_COMPLETE, MANAGER_TAB_RELEASE, MANAGER_TAB_RELEASE_IS_TYPED } from './managers.js';
+import {
+  MANAGER_DISPOSE_ORDER,
+  MANAGER_DISPOSE_ORDER_IS_COMPLETE,
+  MANAGER_TAB_RELEASE,
+  MANAGER_TAB_RELEASE_IS_COMPLETE,
+  MANAGER_TAB_RELEASE_IS_TYPED,
+} from './managers.js';
 
 const positionOf = (name: string) => MANAGER_DISPOSE_ORDER.indexOf(name as never);
 
@@ -36,6 +42,10 @@ describe('MANAGER_DISPOSE_ORDER', () => {
 describe('MANAGER_TAB_RELEASE', () => {
   it('is declared typed, which the compiler checks by naming any manager without closeTab(label)', () => {
     expect(MANAGER_TAB_RELEASE_IS_TYPED).toBe(true);
+  });
+
+  it('is declared complete, which the compiler checks by naming any omitted closeTab manager', () => {
+    expect(MANAGER_TAB_RELEASE_IS_COMPLETE).toBe(true);
   });
 
   // The `satisfies` clause rejects a name that is not a manager and the type assertion beside it
