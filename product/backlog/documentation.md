@@ -4,14 +4,13 @@
 
 ## development
 
-* sql-database (1/10) — 0 of 13 user-facing database failure facts are missing or wrong for the recent database-read change: grid failures are reported once until a successful operation, and command-query failures are described separately. No documentation edit is needed. Ground truth is `product/specs/sql-database.md` and `src/database/browser.ts`; coverage is in `documentation/user-documentation/tab-types/sql-browser.md` and `documentation/user-documentation/command-bar/database.md`.
-
 ## deferred
 
 ## declined
 
 ## resolved
 
+* sql-database — already documented in documentation/user-documentation/tab-types/sql-browser.md and documentation/user-documentation/command-bar/database.md; the browser page covers grid failures being reported once until success, and the command page covers query failures (removed 2026-10-06)
 * conversations — already documented in documentation/user-documentation/tab-types/conversations.md; the page covers tab closure ending the live session and the next query replaying recent turns (removed 2026-10-06)
 * editor-tab — documented in documentation/user-documentation/tab-types/opening-files.md (removed 2026-10-06)
 * remote-server — documented in documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-10-06)
