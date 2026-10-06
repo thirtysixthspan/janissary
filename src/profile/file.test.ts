@@ -27,7 +27,7 @@ describe('loadProfile', () => {
   });
 
   it('returns a LoadedProfile for a valid file', () => {
-    writeJson('ok', { tabs: [{ type: 'agent', name: 'bob', active: false }, { type: 'harness', name: 'c', tool: 'claude' }] });
+    writeJson('ok', { tabs: [{ type: 'harness', name: 'bob', tool: 'claude' }, { type: 'harness', name: 'c', tool: 'claude' }] });
     const loaded = loadProfile('ok');
     expect('error' in loaded).toBe(false);
     expect((loaded as LoadedProfile).entries.map((e) => e.name)).toEqual(['bob', 'c']);
@@ -43,38 +43,17 @@ describe('loadProfile', () => {
     expect(loadProfile('arr')).toHaveProperty('error');
   });
 
-  it('errors when an agent entry lacks a string name', () => {
-    writeJson('a', { tabs: [{ type: 'agent', active: false }] });
-    expect(loadProfile('a')).toHaveProperty('error');
-  });
-
-  // Every field the agent opener reads is checked before anything opens: a mistyped one used to pass
-  // validation and throw part-way through the launch, after the tab was already inserted.
-  it.each([
-    ['cwd', 5, 'must be a string'],
-    ['workspaceDir', true, 'must be a string'],
-    ['title', [], 'must be a string'],
-    ['active', 'yes', 'must be a boolean'],
-    ['offline', 1, 'must be a boolean'],
-    ['cmdHistory', ['ls', 2], 'must be an array of strings'],
-    ['context', 'note', 'must be an array of strings'],
-    ['commandQueue', [null], 'must be an array of strings'],
-    ['log', ['echo hi'], 'must be an array of objects'],
-    ['schedule', ['every 5m clear'], 'must be an array of objects'],
-  ])('errors when an agent entry carries a mistyped %s', (field, value, message) => {
-    writeJson('bad-agent', { tabs: [{ type: 'agent', name: 'bob', [field]: value }] });
-    const loaded = loadProfile('bad-agent');
-    expect(loaded).toHaveProperty('error');
-    expect((loaded as { error: string }).error).toContain(`${field} ${message}`);
-  });
-
-  it('loads an agent entry whose every field is well typed', () => {
-    writeJson('full-agent', { tabs: [{
-      type: 'agent', name: 'bob', active: false, offline: false, cwd: '~/proj', workspaceDir: '/ws/bob', title: 'Bob',
-      cmdHistory: ['ls'], context: ['note'], commandQueue: ['pwd'], log: [{ input: 'ls', output: 'a' }],
-      schedule: [{ id: 's1', command: 'clear', spec: 'every 5m', nextRun: 1, recurring: true }],
-    }] });
-    expect('error' in loadProfile('full-agent')).toBe(false);
+  // Profiles no longer open agent tabs, but files saved before still carry agent elements: each is
+  // dropped whatever its fields hold, and the rest of the file loads.
+  it('drops an agent element, even a mistyped one, and loads the rest', () => {
+    writeJson('old-agent', { tabs: [
+      { type: 'agent', name: 5, cwd: 5, log: ['echo hi'], color: 7 },
+      { type: 'harness', name: 'c', tool: 'claude' },
+    ] });
+    const loaded = loadProfile('old-agent') as LoadedProfile;
+    expect('error' in loaded).toBe(false);
+    expect(loaded.entries.map((e) => e.name)).toEqual(['c']);
+    expect(loaded.views).toEqual([]);
   });
 
   it('errors when a harness entry lacks a string tool', () => {
@@ -98,7 +77,7 @@ describe('loadProfile', () => {
   });
 
   it('ignores an unrecognized top-level key', () => {
-    writeJson('x', { tabs: [{ type: 'agent', name: 'bob', active: false }], future: { anything: true } });
+    writeJson('x', { tabs: [{ type: 'harness', name: 'bob', tool: 'claude' }], future: { anything: true } });
     expect('error' in loadProfile('x')).toBe(false);
   });
 
@@ -115,10 +94,10 @@ describe('loadProfile', () => {
     expect(loaded.layout).toEqual({ sidebarLeft: 200, sidebarRight: 210 });
   });
 
-  it('loads editors and maps tab focus for agents and harnesses', () => {
+  it('loads editors and maps tab focus for harnesses', () => {
     writeJson('editor', {
       tabs: [
-        { type: 'agent', name: 'agent', active: false, number: 2, focus: true },
+        { type: 'harness', name: 'focused', tool: 'claude', number: 2, focus: true },
         { type: 'harness', name: 'harness', tool: 'claude', number: 1 },
         { type: 'editor', path: '$root/notes.md', line: 4 },
       ],
@@ -127,21 +106,21 @@ describe('loadProfile', () => {
     expect(loaded.editors).toEqual([expect.objectContaining({ path: '$root/notes.md', line: 4 })]);
     expect(loaded.entries).toEqual([
       expect.objectContaining({ name: 'harness', number: 1, focus: undefined }),
-      expect.objectContaining({ name: 'agent', number: 2, focus: true }),
+      expect.objectContaining({ name: 'focused', number: 2, focus: true }),
     ]);
   });
 
   it('maps pane placement and leaves missing pane values for the launch default', () => {
     writeJson('panes', {
       tabs: [
-        { type: 'agent', name: 'agent', pane: 'left' },
+        { type: 'harness', name: 'left', tool: 'claude', pane: 'left' },
         { type: 'harness', name: 'harness', tool: 'claude', pane: 'right' },
         { type: 'editor', path: 'notes.md', pane: 'right' },
       ],
     });
     const loaded = loadProfile('panes') as LoadedProfile;
     expect(loaded.entries).toEqual([
-      expect.objectContaining({ name: 'agent', pane: 'left' }),
+      expect.objectContaining({ name: 'left', pane: 'left' }),
       expect.objectContaining({ name: 'harness', pane: 'right' }),
     ]);
     expect(loaded.editors[0]?.pane).toBe('right');
@@ -150,7 +129,6 @@ describe('loadProfile', () => {
   it('partitions one tabs array into every per-kind list', () => {
     writeJson('all', {
       tabs: [
-        { type: 'agent', name: 'agent', active: false },
         { type: 'harness', name: 'harness', tool: 'claude' },
         { type: 'editor', path: 'notes.md' },
         { type: 'files', dock: 'left', path: '$root' },
@@ -163,7 +141,7 @@ describe('loadProfile', () => {
       ],
     });
     const loaded = loadProfile('all') as LoadedProfile;
-    expect(loaded.entries.map((e) => e.name)).toEqual(['agent', 'harness']);
+    expect(loaded.entries.map((e) => e.name)).toEqual(['harness']);
     expect(loaded.editors).toEqual([expect.objectContaining({ path: 'notes.md' })]);
     expect(loaded.files).toEqual([{ dock: 'left', path: '$root' }]);
     expect(loaded.notifications).toEqual([{ dock: 'right', focus: true }]);
@@ -196,7 +174,7 @@ describe('loadProfile', () => {
 
   it('maps color to dotColor and leaves the other presentation fields flat', () => {
     writeJson('flat', {
-      tabs: [{ type: 'agent', name: 'bob', color: '#aaa', number: 2, group: 3, groupColor: '#bbb', pane: 'right' }],
+      tabs: [{ type: 'harness', name: 'bob', tool: 'claude', color: '#aaa', number: 2, group: 3, groupColor: '#bbb', pane: 'right' }],
     });
     const loaded = loadProfile('flat') as LoadedProfile;
     expect(loaded.entries[0]).toEqual(expect.objectContaining({
@@ -213,9 +191,9 @@ describe('loadProfile', () => {
   it('sorts entries by number, unnumbered last and in array order among themselves', () => {
     writeJson('order', {
       tabs: [
-        { type: 'agent', name: 'unnumbered-first' },
-        { type: 'agent', name: 'numbered', number: 1 },
-        { type: 'agent', name: 'unnumbered-second' },
+        { type: 'harness', name: 'unnumbered-first', tool: 'claude' },
+        { type: 'harness', name: 'numbered', tool: 'claude', number: 1 },
+        { type: 'harness', name: 'unnumbered-second', tool: 'claude' },
       ],
     });
     const loaded = loadProfile('order') as LoadedProfile;

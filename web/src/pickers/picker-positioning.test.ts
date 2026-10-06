@@ -14,7 +14,7 @@ describe('picker positioning', () => {
     const popup = declarations('.tab-body > .picker');
 
     expect(popup).toContain('left: 0');
-    expect(popup).toContain('bottom: var(--command-bar-height, 0px)');
+    expect(popup).toContain('bottom: var(--command-bar-height, 0)');
     expect(popup).toContain('right: 0');
   });
 

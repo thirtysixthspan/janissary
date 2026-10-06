@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/demir-south.png" alt="" />
 
-A profile is a saved, named set of agents and harnesses you can relaunch as one unit — a working setup for a recurring job, recreated with a single command:
+A profile is a saved, named set of harnesses and other tabs you can relaunch as one unit — a working setup for a recurring job, recreated with a single command:
 
 ```
 profile launch writing-code
@@ -10,7 +10,7 @@ profile list
 profile validate writing-code
 ```
 
-`profile launch <name>` opens a tab for every entry in the profile. Each one starts fresh, from the entry's saved name, working directory, and tab presentation: an agent tab does not come back with the transcript, command history, or schedule it had when it was saved, and a harness launches with whatever model, directory, workspace flag, and startup commands the profile specifies. Each entry joins the [group](/user-documentation/getting-started/groups) its own `group` key names; any entry that names none instead lands in one shared new group, so a profile with no authored groups reads as its own colored band in the strip. `profile list` names the profiles you have; a name that doesn't exist gets `No profile named "<name>".`
+`profile launch <name>` opens a tab for every entry in the profile. Each one starts fresh, from the entry's saved name, working directory, and tab presentation: a harness launches with whatever model, directory, workspace flag, and startup commands the profile specifies. Each entry joins the [group](/user-documentation/getting-started/groups) its own `group` key names; any entry that names none instead lands in one shared new group, so a profile with no authored groups reads as its own colored band in the strip. `profile list` names the profiles you have; a name that doesn't exist gets `No profile named "<name>".`
 
 ![The tab strip after a profile launch: the profile's tabs grouped under one new band color, distinct from the root group.](/screenshots/profile-group.png)
 
@@ -26,12 +26,11 @@ The bundled ones are `debugging`, `features`, `multitasking`, `planning`, and `p
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
-Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary also includes built-in profiles. If both sources use the same profile name, your project copy wins. Saving always writes to your project, so you can customize a built-in profile by saving a same-named replacement. You don't need to create the directory yourself: the first `profile save` makes it, and a project that never saves a profile never gets one. Each profile is a single JSON file (dasherized, like `writing-code.json`) with one `tabs` array. Every element names its kind with a `type`, and an agent or harness entry also carries its own `name`, which becomes the tab's label:
+Your profiles live in the `profiles/` directory in your project: plain files meant to be committed and shared. Janissary also includes built-in profiles. If both sources use the same profile name, your project copy wins. Saving always writes to your project, so you can customize a built-in profile by saving a same-named replacement. You don't need to create the directory yourself: the first `profile save` makes it, and a project that never saves a profile never gets one. Each profile is a single JSON file (dasherized, like `writing-code.json`) with one `tabs` array. Every element names its kind with a `type`, and a harness entry also carries its own `name`, which becomes the tab's label:
 
 ```json
 {
   "tabs": [
-    { "type": "agent", "name": "planner", "number": 1 },
     {
       "type": "harness",
       "name": "builder",
@@ -47,7 +46,7 @@ Your profiles live in the `profiles/` directory in your project: plain files mea
 }
 ```
 
-The eleven types are `agent`, `harness`, `editor`, `files`, `notifications`, `schedules`, `plugin`, `image`, `markdown`, `page`, and `ssh`. An agent entry uses the same format as saved agent state — just a `name` is a valid start. A harness entry names which binary to launch with a `tool` field (`claude`, `opencode`, or `codex`) — `type` already means the kind of tab — and supports a few more fields:
+The ten types are `harness`, `editor`, `files`, `notifications`, `schedules`, `plugin`, `image`, `markdown`, `page`, and `ssh`. A harness entry names which binary to launch with a `tool` field (`claude`, `opencode`, or `codex`) — `type` already means the kind of tab — and supports a few more fields:
 
 - **`model`** — passed to the harness verbatim; an unknown model for that harness is reported and the entry skipped.
 - **`effort`** — an effort/thinking level, forwarded verbatim like `--effort` on the interactive `harness` command (translated to each harness's own flag: claude `--effort`, codex `-c model_reasoning_effort`, opencode has none). Not validated against any fixed set of levels.
@@ -59,8 +58,6 @@ The eleven types are `agent`, `harness`, `editor`, `files`, `notifications`, `sc
 - **`cwd`** — starting directory. `$root` resolves to the project's launch directory and `~` to home, so you can write a portable path instead of an absolute one — a `profile save`d entry captures its `cwd` this way automatically when it's under the project root.
 - **`run`** — commands typed into the harness once, shortly after launch.
 - **`schedule`** — timers in the [`schedule` grammar](/user-documentation/automation/scheduling), minus the leading `schedule` keyword and any `in <tab>` clause (each line belongs to this tab). A line that doesn't parse is reported at launch and skipped.
-
-An agent entry may use the same `remote` field. It reconnects that agent on the named host but restores no transcript, history, or context. A remote agent or harness always gets a fresh workspace on its host.
 
 Every entry that takes a place in the tab strip carries its presentation as plain keys alongside `type`: `color` (the dot color), `number` (tab order), `group`, `groupColor`, `pane`, and `focus`. Set `pane` to `left` or `right` to reopen that entry in a two-pane center layout; omitting it means left. Any main-area entry with `focus: true` can claim keyboard focus after launch; the lowest-numbered focused entry wins, while the other pane keeps one of its own tabs visible. Without one, the first newly opened profile tab stays active.
 
@@ -138,9 +135,9 @@ An entry's `name` is a typed name, never one that walks to a `-2` suffix. Once t
 ## Saving the running session as a profile
 
 
-`profile save <name>` captures your current session into `profiles/<name>.json`, the inverse of launching one. It writes `<name>` verbatim as the filename, with no dasherization, and captures every open tab, including the one you typed the command in. The one tab it always leaves out is the automatic root `janus` tab, since a relaunch always has its own fresh one to land in.
+`profile save <name>` captures your current session into `profiles/<name>.json`, the inverse of launching one. It writes `<name>` verbatim as the filename, with no dasherization, and captures every open tab a profile can reopen, including the one you typed the command in. Agent tabs can't be reopened by a profile, so each one is left out and named under `Skipped:` in the report. The automatic root `janus` tab is left out without a mention, since a relaunch always has its own fresh one to land in.
 
-Each agent is captured as a clean template: its name, working directory, and tab presentation only. Command history, transcript, and any queued commands are deliberately left out, so launching the saved profile always starts that agent from scratch, not from where you left off. Each harness is captured the same way, plus its `tool`, model, effort, and workspace/offline/auto-approve flags; its scheduled and one-shot commands are never captured, since they only ever lived in memory. Whichever tab is currently active is saved with `focus: true` so a relaunch lands you back in the same place. Every captured main-area entry also saves `pane` as `left` or `right`, preserving which side of a split it occupied; the exact divider position is screen-local and resets to the middle.
+Each harness is captured as a clean template: its name, `tool`, model, effort, workspace/offline/auto-approve flags, working directory, and tab presentation. Its scheduled and one-shot commands are never captured, since they only ever lived in memory. Whichever tab is currently active is saved with `focus: true` so a relaunch lands you back in the same place. Every captured main-area entry also saves `pane` as `left` or `right`, preserving which side of a split it occupied; the exact divider position is screen-local and resets to the middle.
 
 Open images, markdown previews, videos, web pages, and SSH sessions are captured too — an SSH entry keeps the flags you connected with, so a relaunch reconnects the same way. Every file navigator is captured, docked or not, along with its tree view: which directories you had expanded, which row the cursor was on, and every row you had selected. Launching the profile puts the tree back the way you left it, quietly skipping anything that no longer exists. A navigator left in the center strip also remembers its group, order, and pane.
 
@@ -163,7 +160,6 @@ One profile that ties the pieces together — a morning code-review setup, all i
 ```json
 {
   "tabs": [
-    { "type": "agent", "name": "triage", "number": 1 },
     {
       "type": "harness",
       "name": "reviewer",
@@ -177,4 +173,4 @@ One profile that ties the pieces together — a morning code-review setup, all i
 }
 ```
 
-`profile launch morning-review` then: opens `triage` and `reviewer` as one new tab group; clones the repo into a workspace for `reviewer` ([isolated](/user-documentation/advanced-agents/workspacing) from the rest of your machine); types the `run` prompt into the harness once it's up; and keeps nudging it every two hours via its schedule — visible in the [schedule window](/user-documentation/automation/scheduling) floating over the harness. Close the tabs when you're done; tomorrow, one command rebuilds it all.
+`profile launch morning-review` then: opens `reviewer` in a new tab group; clones the repo into a workspace for `reviewer` ([isolated](/user-documentation/advanced-agents/workspacing) from the rest of your machine); types the `run` prompt into the harness once it's up; and keeps nudging it every two hours via its schedule — visible in the [schedule window](/user-documentation/automation/scheduling) floating over the harness. Close the tabs when you're done; tomorrow, one command rebuilds it all.

@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { resetApp, resetProfile } from './reset.mjs';
+import { resetApp } from './reset.mjs';
 
 // A stand-in for the running app: enough tab-strip behaviour to drive the whole reset choreography
-// without a browser. Tabs live in the centre strip unless marked `sidebar`; `agent <name>` and
-// `profile launch <name>` each open a tab and focus it; a tab marked `dirty` raises the save dialog
-// on close and only goes once the dialog's discard button is clicked.
+// without a browser. Tabs live in the centre strip unless marked `sidebar`; `agent <name>`, with or
+// without flags, opens a tab and focuses it; a tab marked `dirty` raises the save dialog on close
+// and only goes once the dialog's discard button is clicked.
 const CLOSABLE = [
   '.center-strip-left .tab:not(.active)',
   '.center-strip-right .tab',
@@ -35,9 +35,8 @@ function submit(app) {
   const text = app.typed;
   app.typed = '';
   app.log.push(`run:${text}`);
-  const agent = /^agent (\S+)$/.exec(text);
+  const agent = /^agent (\S+)/.exec(text);
   if (agent) openTab(app, agent[1]);
-  else if (text.startsWith('profile launch ')) openTab(app, 'janus');
 }
 
 function closeTab(app, target) {
@@ -132,21 +131,10 @@ const MESSY = [
 
 function run(app) {
   const hooks = {
-    writeProfile: vi.fn(() => { app.log.push('write-profile'); }),
     restore: vi.fn(() => { app.log.push('restore'); }),
   };
   return { hooks, done: resetApp(app.page, { work: '/scratch/harbor' }, hooks) };
 }
-
-describe('resetProfile', () => {
-  it('declares one focused agent entry carrying the root tab\'s label, colour and group', () => {
-    const profile = resetProfile();
-    expect(profile.tabs).toHaveLength(1);
-    expect(profile.tabs[0]).toMatchObject({
-      type: 'agent', name: 'janus', color: '#5b9cff', group: 1, cwd: '$root', focus: true,
-    });
-  });
-});
 
 describe('resetApp', () => {
   it('leaves exactly one tab, labelled janus, with a command bar of its own', async () => {
@@ -197,16 +185,14 @@ describe('resetApp', () => {
     expect(app.tabs.some((tab) => tab.dirty)).toBe(false);
   });
 
-  it('writes the reset profile before launching it and restores the work directory after', async () => {
+  it('types an unworkspaced janus from the staging tab and restores the work directory after', async () => {
     const app = fakeApp(MESSY);
-    const { hooks, done } = run(app);
-    await done;
-    expect(app.log.indexOf('write-profile')).toBeLessThan(app.log.indexOf('run:profile launch docs-screenshot-reset'));
+    await run(app).done;
+    expect(app.log.indexOf('run:agent resetting')).toBeLessThan(app.log.indexOf('run:agent janus --no-workspace'));
     expect(app.log.at(-1)).toBe('restore');
-    expect(hooks.writeProfile).toHaveBeenCalledWith({ work: '/scratch/harbor' });
   });
 
-  it('restores the work directory even when the reset cannot finish, so the profile never survives', async () => {
+  it('restores the work directory even when the reset cannot finish', async () => {
     const app = fakeApp([{ label: 'sample.ts', commandBar: false, active: true }]);
     const { hooks, done } = run(app);
     await expect(done).rejects.toThrow('no tab with a command bar to reset from');

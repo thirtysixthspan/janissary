@@ -1,6 +1,5 @@
 import {
-  writeAgentEntry, writeEditorEntry, writeFilesEntry, writeHarnessEntry,
-  writePluginEntry, writeSshEntry,
+  writeEditorEntry, writeFilesEntry, writeHarnessEntry, writePluginEntry, writeSshEntry,
 } from './entries.js';
 import type { Managers } from '../../managers.js';
 import type { ProfileTabFile } from '../types.js';
@@ -11,9 +10,9 @@ import type { TreeSelection } from '../../file-navigator/selection-request.js';
 // Each tab produces one element of the profile's single `tabs` array, appended in tab-strip order,
 // plus a bump of the per-type counter the save report reads. Monitor reporting tabs are
 // deliberately a no-op here (captured via the monitor manager's snapshot instead), so they never
-// land in `skipped`.
+// land in `skipped`. An agent tab has no profile entry, so it lands in `skipped` — except the root
+// `janus` tab, which every relaunch has its own fresh one of and is left out silently.
 export type CaptureState = {
-  agents: number;
   harnesses: number;
   editors: number;
   plugins: number;
@@ -28,13 +27,13 @@ export type CaptureState = {
 
 export function newCaptureState(): CaptureState {
   return {
-    agents: 0, harnesses: 0, editors: 0, plugins: 0, ssh: 0,
+    harnesses: 0, editors: 0, plugins: 0, ssh: 0,
     fileNavigators: 0, dockedViews: 0, skipped: [], tabEntries: [],
   };
 }
 
 type CaptureCount =
-  'agents' | 'harnesses' | 'editors' | 'plugins' | 'ssh' | 'fileNavigators';
+  'harnesses' | 'editors' | 'plugins' | 'ssh' | 'fileNavigators';
 
 // Append an entry and bump its counter, when the writer produced one at all.
 function push(state: CaptureState, entry: ProfileTabFile | undefined, count: CaptureCount): void {
@@ -50,8 +49,7 @@ export function captureTab(
     case undefined:
     case 'agent': {
       if (tab === managers.tab.tabs[0] && tab.label === 'janus') return;
-      state.tabEntries.push(writeAgentEntry(tab, managers));
-      state.agents += 1;
+      state.skipped.push(tab.label);
       return;
     }
     case 'harness': {

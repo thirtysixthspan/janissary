@@ -2,9 +2,9 @@ import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import type { ProfileRow } from './profile/types.js';
 
-// A profile is a named, reusable set of agents and harnesses for a particular use case (writing
-// code, surfing the web, authoring a book, …). Each profile is a single JSON file `profiles/<name>.json`
-// holding an `agents` array, a `harnesses` array, and plain profile-level config keys. Profiles live
+// A profile is a named, reusable set of AI harnesses and the tabs that support them for a particular
+// use case (writing code, surfing the web, authoring a book, …). Each profile is a single JSON file
+// `profiles/<name>.json` holding one `tabs` array plus the profile-level `monitors` and `layout` keys. Profiles live
 // in a top-level, committable `profiles/` dir (not `.janissary/`, which is gitignored and whose
 // `state/` is cleared each launch).
 

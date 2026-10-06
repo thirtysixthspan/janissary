@@ -32,7 +32,7 @@ A name is taken when any of these holds (names compare case-insensitively):
 - for a remote launch, something with that name is running on the target host (see `remote-server.md`);
 - for a local `-w` launch, a live janissary owner still holds the workspace folder of that name: an open tab using it, or a janus instance running inside it. A plain shell sitting in the folder does not count.
 
-A typed name (`agent <name>`) or a profile entry's name is refused when it is taken. The refusal goes to the notifications feed, attributed to the tab the command was typed in, and nothing is written to that tab's transcript. No tab opens for a refused local launch. The lines read:
+A typed name (`agent <name>`) is refused when it is taken. The refusal goes to the notifications feed, attributed to the tab the command was typed in, and nothing is written to that tab's transcript. No tab opens for a refused local launch. The lines read:
 
 - `Cannot launch "<name>": a tab named "<name>" is already open.`
 - `Cannot launch "<name>": "<name>" is already in the sessions tab (<state> on <host>).`

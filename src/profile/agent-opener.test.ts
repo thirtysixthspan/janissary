@@ -1,15 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-
-const notify = vi.hoisted(() => vi.fn());
-vi.mock('../notifications/index.js', () => ({ notify }));
-
 import { openProfileEntries } from './agent-opener.js';
 import { makeTab } from '../tab/index.js';
+import { LAUNCH_REFUSED } from '../launch-name/local.js';
 import type { Managers } from '../managers.js';
-import type { AgentState } from '../agent/types.js';
-import type { LoadedProfile, ProfileEntry, ProfileHarnessEntry } from './types.js';
+import type { LoadedProfile, ProfileHarnessEntry } from './types.js';
 import type { Tab } from '../tab/types.js';
-import type { RemoteSessionView } from '../protocol.js';
 
 function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnType<typeof vi.fn>; fileNavigatorOpen: ReturnType<typeof vi.fn>; edit: ReturnType<typeof vi.fn> } {
   const harnessOpen = vi.fn((_entry: ProfileHarnessEntry, label: string, group: number, groupColor: string): string | undefined => {
@@ -78,7 +73,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; harnessOpen: ReturnTyp
   return { managers, harnessOpen, fileNavigatorOpen, edit };
 }
 
-function loaded(entries: ProfileEntry[], extra: Partial<LoadedProfile> = {}): LoadedProfile {
+function loaded(entries: ProfileHarnessEntry[], extra: Partial<LoadedProfile> = {}): LoadedProfile {
   return {
     entries, monitors: [], files: [], editors: [], notifications: [], schedules: [], views: [],
     layout: null, ...extra,
@@ -132,14 +127,14 @@ describe('openProfileEntries — editor tabs and focus', () => {
 });
 
 describe('openProfileEntries — tab strip ordering', () => {
-  it('interleaves editor tabs among harness/agent entries by tab number', async () => {
+  it('interleaves editor tabs among harness entries by tab number', async () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers } = makeManagers([janus]);
     const harnessEntry: ProfileHarnessEntry = { name: 'first', tool: 'claude', number: 1 };
-    const agentEntry: AgentState = { name: 'third', dotColor: 'blue', active: false, number: 3 };
+    const laterEntry: ProfileHarnessEntry = { name: 'third', tool: 'claude', number: 3 };
 
     await openProfileEntries(
-      loaded([harnessEntry, agentEntry], { editors: [{ path: '$root/notes.md', number: 2 }] }),
+      loaded([harnessEntry, laterEntry], { editors: [{ path: '$root/notes.md', number: 2 }] }),
       managers, 'demo', 'janus', () => {},
     );
 
@@ -223,26 +218,6 @@ describe('openProfileEntries — group authoring', () => {
     expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'b' }), 'b', 5, 'yellow', 'janus');
     expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'c' }), 'c', 6, expect.any(String), 'janus');
   });
-
-  it('inserts an agent entry contiguously into an existing group instead of appending past it', async () => {
-    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
-    const other = makeTab('other', 'yellow', 2, [], [], undefined, 5, 'yellow');
-    const { managers } = makeManagers([janus, other]);
-    const joinsJanus: AgentState = { name: 'a', dotColor: 'blue', active: false, group: 1 };
-    const newGroup: AgentState = { name: 'b', dotColor: 'green', active: false };
-
-    await openProfileEntries(loaded([joinsJanus, newGroup]), managers, 'demo', 'janus', () => {});
-
-    expect(managers.tab.tabs.map((t) => ({ label: t.label, group: t.group }))).toEqual([
-      { label: 'janus', group: 1 },
-      { label: 'a', group: 1 },
-      { label: 'other', group: 5 },
-      { label: 'b', group: 6 },
-    ]);
-    expect(managers.tab.tabs.find((t) => t.label === 'a')?.groupColor).toBe('red');
-    const bTab = managers.tab.tabs.find((t) => t.label === 'b');
-    expect(bTab?.groupColor).toBe(bTab?.dotColor);
-  });
 });
 
 describe('openProfileEntries — profile-level file navigator', () => {
@@ -261,7 +236,7 @@ describe('openProfileEntries — profile-level file navigator', () => {
   it('roots navigators and editors at the issuing tab when the launch opened no tab of its own', async () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, fileNavigatorOpen, edit } = makeManagers([janus]);
-    const entry: AgentState = { name: 'janus', dotColor: 'blue', active: false };
+    const entry: ProfileHarnessEntry = { name: 'janus', tool: 'claude' };
     const messages: string[] = [];
 
     await openProfileEntries(
@@ -306,15 +281,6 @@ describe('openProfileEntries — cwd expansion', () => {
     expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/elsewhere/src' }), 'claude', expect.any(Number), expect.any(String), 'janus');
   });
 
-  it('expands a $root-relative agent entry cwd to an absolute path before setting it', async () => {
-    const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
-    const { managers } = makeManagers([janus]);
-    const entry: AgentState = { name: 'bob', dotColor: 'blue', active: false, cwd: '$root/src' };
-
-    await openProfileEntries(loaded([entry]), managers, 'demo', 'janus', () => {});
-
-    expect(managers.tab.setCwd).toHaveBeenCalledWith('bob', '/proj/src');
-  });
 });
 
 describe('openProfileEntries — semantic launch-time checks (Decision 7)', () => {
@@ -371,21 +337,18 @@ describe('openProfileEntries — effort field', () => {
 });
 
 describe('openProfileEntries — launch-name clashes', () => {
-  it('skips a clashing agent entry with a notification and still opens the entries after it', async () => {
-    notify.mockClear();
+  it('skips a clashing entry and still opens the entries after it', async () => {
     const janus = makeTab('janus', 'red', 1, [], [], undefined, 1, 'red');
     const { managers, harnessOpen } = makeManagers([janus]);
-    vi.mocked(managers.sessions.view).mockReturnValue([
-      { label: 'bob', kind: 'agent', state: 'detached', host: 'devbox' } as RemoteSessionView,
-    ]);
-    const clashing: AgentState = { name: 'bob', dotColor: 'blue', active: false };
+    const open = harnessOpen.getMockImplementation()!;
+    harnessOpen.mockImplementation((entry: ProfileHarnessEntry, label: string, group: number, groupColor: string) =>
+      (label === 'bob' ? LAUNCH_REFUSED : open(entry, label, group, groupColor)));
+    const clashing: ProfileHarnessEntry = { name: 'bob', tool: 'claude' };
     const later: ProfileHarnessEntry = { name: 'claude', tool: 'claude' };
     const messages: string[] = [];
 
     await openProfileEntries(loaded([clashing, later]), managers, 'demo', 'janus', (text) => { messages.push(text); });
 
-    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
-      'Cannot launch "bob": "bob" is already in the sessions tab (detached on devbox).');
     expect(managers.tab.tabs.map((t) => t.label)).not.toContain('bob');
     expect(harnessOpen).toHaveBeenCalledWith(expect.objectContaining({ name: 'claude' }), 'claude', expect.any(Number), expect.any(String), 'janus');
     expect(messages.join(' ')).toContain('Skipped: bob (launch refused — see notifications).');

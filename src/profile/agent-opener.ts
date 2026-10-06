@@ -7,10 +7,10 @@ import { openProfileViewTabs } from './view-tabs.js';
 import { focusedMainAreaLabel, type MainAreaCandidate } from './focus.js';
 import { openProfileNotifications } from './notifications.js';
 import { applyProfileLayout } from './layout.js';
-import { openAgentEntry, openHarnessEntry } from './entry-openers.js';
+import { openHarnessEntry } from './entry-openers.js';
 import type { Managers } from '../managers.js';
 import type { LoadedProfile } from './types.js';
-import { isHarnessEntry, labelOf, closeMatchingTabs } from './entry-resolve.js';
+import { labelOf, closeMatchingTabs } from './entry-resolve.js';
 
 // Reorders only the tabs belonging to `group` so they read in ascending `numbers`-map order —
 // a tab with no authored number (or no entry in the map at all) sorts last, keeping its current
@@ -64,9 +64,7 @@ export async function openProfileEntries(
     used.add(dotColor);
     const group = typeof entry.group === 'number' ? entry.group : defaultGroup;
     const groupColor = colorForGroup(group, dotColor);
-    const error = isHarnessEntry(entry)
-      ? openHarnessEntry(entry, managers, group, groupColor, { label: issuingLabel, cwd: issuingCwd }, notes)
-      : openAgentEntry(entry, managers, group, groupColor, dotColor, issuingLabel);
+    const error = openHarnessEntry(entry, managers, group, groupColor, { label: issuingLabel, cwd: issuingCwd }, notes);
     if (error) { skipped.push(`${label} (${error})`); continue; }
     opened.push(label);
     candidates.push({ label, number: entry.number, focus: entry.focus, pane: entry.pane });
@@ -88,7 +86,7 @@ export async function openProfileEntries(
     // be awaited before the placement, reorder, and focus passes below can see its tabs.
     ...await openProfileViewTabs(loaded.views, managers, issuingLabel, defaultGroup, colorForGroup, notes),
   );
-  // Reorder each group touched by this launch so harness/agent entries and editor tabs sharing a
+  // Reorder each group touched by this launch so harness entries and editor tabs sharing a
   // group read in ascending `number` order, instead of editors always trailing every entry (see
   // profiles.md). Entries/editors may land in different groups (their own authored `group`), so
   // the pass runs once per distinct group actually used, not once for a single shared group.

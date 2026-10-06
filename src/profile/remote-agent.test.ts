@@ -4,7 +4,6 @@ const notify = vi.hoisted(() => vi.fn());
 vi.mock('../notifications/index.js', () => ({ notify }));
 
 import { startRemoteAgent } from './remote-agent.js';
-import { openAgentEntry } from './entry-openers.js';
 import { newAgentOp } from './new-agent.js';
 import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 import type { Managers } from '../managers.js';
@@ -173,7 +172,7 @@ describe('startRemoteAgent', () => {
   });
 });
 
-describe('agent on <address> — command and profile entry points', () => {
+describe('agent on <address> — command entry point', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
@@ -197,28 +196,6 @@ describe('agent on <address> — command and profile entry points', () => {
     }));
   });
 
-  it('reopens a profile entry\'s remote agent against the same destination', () => {
-    const h = makeManagers();
-    const error = openAgentEntry(
-      { name: 'bekir', dotColor: '#aaa', active: false, remote: 'admin@devbox:/srv/proj' },
-      h.managers, 4, '#bbb', '#aaa', 'janus',
-    );
-
-    expect(error).toBeUndefined();
-    expect(h.openChannel).toHaveBeenCalledWith('bekir', expect.objectContaining({ destination: 'admin@devbox' }), '/proj', expect.anything(), undefined);
-    expect(h.tabs.at(-1)).toMatchObject({ group: 4, groupColor: '#bbb', dotColor: '#aaa' });
-  });
-
-  it('reports and skips a profile entry whose remote address is unusable', () => {
-    const h = makeManagers();
-    const error = openAgentEntry(
-      { name: 'bekir', dotColor: '#aaa', active: false, remote: 'devbox;id' },
-      h.managers, 4, '#bbb', '#aaa', 'janus',
-    );
-
-    expect(error).toContain('devbox;id');
-    expect(h.openChannel).not.toHaveBeenCalled();
-  });
 });
 
 describe('agent on <address> — the host refusing the name', () => {

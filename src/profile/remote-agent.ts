@@ -2,23 +2,20 @@ import { messageBus } from '../bus.js';
 import { startRemoteLaunch } from '../harness/remote-launch.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
 import { failRemoteLaunch, reportRemoteCleanup, reportRemoteClone, type RemoteNameRetry } from '../launch-name/fail-remote.js';
-import { placeAgent, type PlaceAgentOptions } from './place-agent.js';
+import { placeAgent } from './place-agent.js';
 import type { RemoteAddress } from '../remote/address.js';
 import type { RemoteResume } from '../remote/resume.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 
 // What a remote agent launch is created from. `out` receives the ready confirmation, the remote's
-// isolation notice, and any failure — a transcript line for a typed `agent … on <host>`, the
-// notifications feed for a profile launch, whose summary has already been printed by the time a
-// channel finishes authenticating.
+// isolation notice, and any failure — a transcript line for a typed `agent … on <host>`.
 export type RemoteAgentLaunch = {
   resolved: string;
   creator?: Tab;
   address: RemoteAddress;
   offline: boolean;
   cwd: string;
-  presentation?: PlaceAgentOptions['presentation'];
   out: (text: string) => void;
   // Set when this launch is really an attach: the channel asks to attach rather than to
   // provision, and the workspace it comes back to is the one the record remembers.
@@ -37,9 +34,9 @@ export type RemoteAgentLaunch = {
  * transcript comes back.
  */
 export function startRemoteAgent(managers: Managers, launch: RemoteAgentLaunch): void {
-  const { resolved, creator, address, offline, cwd, presentation, out } = launch;
+  const { resolved, creator, address, offline, cwd, out } = launch;
   placeAgent(managers, {
-    resolved, creator, cwd, offline, busy: true, presentation,
+    resolved, creator, cwd, offline, busy: true,
     remote: { address: address.address, host: address.host },
   });
   const remote = startRemoteLaunch(managers, resolved, address, cwd, launch.resume);

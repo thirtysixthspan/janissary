@@ -1,14 +1,10 @@
 import type { Managers } from '../managers.js';
-import type { ProfileEntry, ProfileHarnessEntry } from './types.js';
+import type { ProfileHarnessEntry } from './types.js';
 
 // Entry-label resolution and the relaunch close-pass, split out of agent-opener.ts: a distinct
 // concern from the tab-opening orchestration that remains there.
 
-export function isHarnessEntry(e: ProfileEntry): e is ProfileHarnessEntry {
-  return 'tool' in e;
-}
-
-export function labelOf(e: ProfileEntry): string {
+export function labelOf(e: ProfileHarnessEntry): string {
   return e.name;
 }
 
@@ -16,9 +12,9 @@ export function labelOf(e: ProfileEntry): string {
 // all entries fresh, so label collisions between a closing tab and an opening one cannot arise.
 // The issuing tab is never closed; if it's named by an entry, that entry is skipped instead.
 export function closeMatchingTabs(
-  entries: ProfileEntry[], managers: Managers, issuingLabel: string, skipped: string[], notes: string[],
-): ProfileEntry[] {
-  const toOpen: ProfileEntry[] = [];
+  entries: ProfileHarnessEntry[], managers: Managers, issuingLabel: string, skipped: string[], notes: string[],
+): ProfileHarnessEntry[] {
+  const toOpen: ProfileHarnessEntry[] = [];
   for (const entry of entries) {
     const label = labelOf(entry);
     if (label.toLowerCase() === issuingLabel.toLowerCase()) {

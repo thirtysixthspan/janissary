@@ -186,7 +186,7 @@ describe('ProfileManager.run', () => {
   });
 
   it('routes the validate action to the validator', () => {
-    writeProfile('good', JSON.stringify({ tabs: [{ type: 'agent', name: 'bob', active: false }] }));
+    writeProfile('good', JSON.stringify({ tabs: [{ type: 'harness', name: 'bob', tool: 'claude' }] }));
     writeProfile('bad', JSON.stringify({ tabs: [{ type: 'harness', name: 'c' }] }));
 
     const janus = makeTab('janus', 'red');

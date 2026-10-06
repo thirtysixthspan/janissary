@@ -9,7 +9,6 @@ import type { Managers } from '../../managers.js';
 import type { ProfileFile } from '../types.js';
 
 export type SaveSummary = {
-  agents: number;
   harnesses: number;
   editors: number;
   plugins: number;
@@ -47,7 +46,6 @@ export async function saveProfile(name: string, managers: Managers): Promise<Sav
   rmSync(file.replace(/\.json$/, ''), { recursive: true, force: true });
 
   return {
-    agents: state.agents,
     harnesses: state.harnesses,
     editors: state.editors,
     plugins: state.plugins,
@@ -85,7 +83,6 @@ export function formatSaveSummary(name: string, summary: SaveSummary): string {
     ? [`${summary.harnesses} harness${summary.harnesses === 1 ? '' : 'es'}`]
     : [];
   const parts = [
-    ...countPart(summary.agents, 'agent'),
     ...harnesses,
     ...countPart(summary.editors, 'editor tab'),
     ...countPart(summary.plugins, 'plugin tab'),

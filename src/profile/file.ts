@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { collectProfileProblems } from './schema.js';
+import { collectProfileProblems, isIgnoredTab } from './schema.js';
 import { profileReadPath } from '../profiles.js';
 import type { LoadedProfile, ProfileFile, ProfileLayout, ProfileLayoutFile, ProfileMonitor, ProfileMonitorFile, ProfileTabFile, ProfileTabPresentation, ProfileTabRuntime } from './types.js';
 
@@ -28,18 +28,14 @@ function stripFileKeys<T extends { type: string }>(tab: T): Omit<T, 'type' | 'co
   return rest as Omit<T, 'type' | 'color'>;
 }
 
-// Route each `tabs` element into the runtime list its opener reads, by its `type`. Agent and
-// harness elements share the ordered `entries` list, which is sorted by `number` (an entry without
-// one sorting last, and two unnumbered entries keeping their array order — the comparator returns
-// NaN for that pair, which a stable sort leaves in place).
+// Route each `tabs` element into the runtime list its opener reads, by its `type`. Harness elements
+// form the ordered `entries` list, which is sorted by `number` (an entry without one sorting last,
+// and two unnumbered entries keeping their array order — the comparator returns NaN for that pair,
+// which a stable sort leaves in place).
 function partitionTabs(tabs: ProfileTabFile[]): PartitionedTabs {
   const out: PartitionedTabs = { entries: [], files: [], editors: [], notifications: [], views: [] };
   for (const tab of tabs) {
     switch (tab.type) {
-    case 'agent': {
-      out.entries.push({ ...stripFileKeys(tab), ...presentation(tab), dotColor: tab.color ?? '' });
-      break;
-    }
     case 'harness': { out.entries.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
     case 'editor': { out.editors.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
     case 'files': { out.files.push({ ...stripFileKeys(tab), ...presentation(tab) }); break; }
@@ -97,7 +93,7 @@ export function loadProfile(name: string): LoadedProfile | { error: string } {
   if (problems.length > 0) return { error: problems[0] };
   const file = parsed as ProfileFile;
   return {
-    ...partitionTabs(file.tabs ?? []),
+    ...partitionTabs((file.tabs ?? []).filter((tab) => !isIgnoredTab(tab))),
     monitors: (file.monitors ?? []).map((monitor) => mapMonitor(monitor)),
     layout: file.layout ? mapLayout(file.layout) : null,
   };

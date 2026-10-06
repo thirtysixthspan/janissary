@@ -56,7 +56,7 @@ describe('single-file profiles', () => {
     writeProfile('coding', {});
     writeProfile('shared', {});
     writeProfile('planning', {}, janissary);
-    writeProfile('shared', { tabs: [{ type: 'agent', name: 'built-in', active: false }] }, janissary);
+    writeProfile('shared', { tabs: [{ type: 'harness', name: 'built-in', tool: 'claude' }] }, janissary);
     expect(listProfiles()).toEqual(['coding', 'shared', 'planning']);
     expect(listProfileRows()).toEqual([
       { name: 'coding', source: 'project' },
@@ -80,7 +80,7 @@ describe('single-file profiles', () => {
   });
 
   it('reads a built-in profile when no project profile has the same name', () => {
-    writeProfile('planning', { tabs: [{ type: 'agent', name: 'planner', active: false }] }, janissary);
+    writeProfile('planning', { tabs: [{ type: 'harness', name: 'planner', tool: 'claude' }] }, janissary);
     expect(profileReadPath('planning')).toBe(path.join(janissary, 'profiles', 'planning.json'));
     expect(profileExists('planning')).toBe(true);
     expect((loadProfile('planning') as LoadedProfile).entries[0].name).toBe('planner');
@@ -88,15 +88,15 @@ describe('single-file profiles', () => {
   });
 
   it('reads the project profile when both sources use the same name', () => {
-    writeProfile('shared', { tabs: [{ type: 'agent', name: 'project-agent', active: false }] });
-    writeProfile('shared', { tabs: [{ type: 'agent', name: 'built-in-agent', active: false }] }, janissary);
-    expect((loadProfile('shared') as LoadedProfile).entries[0].name).toBe('project-agent');
+    writeProfile('shared', { tabs: [{ type: 'harness', name: 'project-harness', tool: 'claude' }] });
+    writeProfile('shared', { tabs: [{ type: 'harness', name: 'built-in-harness', tool: 'claude' }] }, janissary);
+    expect((loadProfile('shared') as LoadedProfile).entries[0].name).toBe('project-harness');
   });
 
-  it('loads agent and harness tabs ordered by number, each entry name as its label', () => {
+  it('loads harness tabs ordered by number, each entry name as its label', () => {
     writeProfile('coding', {
       tabs: [
-        { type: 'agent', name: 'reviewer', active: false, number: 2, color: '#aaa', group: 3, groupColor: '#bbb' },
+        { type: 'harness', name: 'reviewer', tool: 'claude', number: 2, color: '#aaa', group: 3, groupColor: '#bbb' },
         { type: 'harness', name: 'builder', tool: 'opencode', model: 'opencode-go/deepseek-v4-pro', run: ['do it'], number: 1 },
       ],
     });

@@ -3,17 +3,15 @@
 // history, schedules, database connections, workspace clones, and files written into the working
 // directory. Clearing a transcript is a command; clearing a tab's history and its connections is
 // not, so the reset closes every tab, including the root one, and makes a new `janus`.
-import { mkdirSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
 import { clearCommandBar, typeCommand } from './command-bar.mjs';
 import { restoreWorkDirectory } from './scratch.mjs';
 import { closeInactiveTabs, countTabs, focusIdleCommandTab, waitForActiveTab } from './tabs.mjs';
 
 // What `makeRootTab()` gives a freshly launched janissary. Five shots photograph the tab strip, so
-// the recreated tab has to carry the same label, the same dot colour, and the same group-coloured
-// top border as the one it replaces.
+// the recreated tab carries the same label and, joining the staging tab's group, the same
+// group-coloured top border as the one it replaces. Its dot is whatever `distinctColor` picks
+// against the staging tab's, not the launch blue: no typed command sets a new tab's dot colour.
 const ROOT_LABEL = 'janus';
-const ROOT_COLOR = '#5b9cff';
 
 // The throwaway tab the reset types from. `agent janus` cannot be typed while the old `janus` is
 // open — the label is taken — and cannot be typed at all once it is closed, so one tab stands in
@@ -21,37 +19,9 @@ const ROOT_COLOR = '#5b9cff';
 // runs, which is why the tab a shot stages in has never had a command typed into it.
 const STAGING_LABEL = 'resetting';
 
-// Written into the scratch's own `profiles/` directory and removed again by the work-directory
-// restore, so it exists only between shots and is never in a screenshot. `profile launch` is the
-// only creation path that sets a new tab's colours: `placeAgent` otherwise picks one with
-// `distinctColor(<colours in use>)`, which cannot return the root tab's blue while the staging tab
-// is open.
-const RESET_PROFILE = 'docs-screenshot-reset';
-
-export function resetProfile() {
-  return {
-    tabs: [
-      {
-        type: 'agent',
-        name: ROOT_LABEL,
-        active: false,
-        // `$root` expands to the launch directory, which is the cwd the root tab starts with.
-        cwd: '$root',
-        color: ROOT_COLOR,
-        number: 1,
-        group: 1,
-        focus: true,
-      },
-    ],
-  };
-}
-
-function writeResetProfile(scratch) {
-  const directory = path.join(scratch.work, 'profiles');
-  mkdirSync(directory, { recursive: true });
-  const file = path.join(directory, `${RESET_PROFILE}.json`);
-  writeFileSync(file, JSON.stringify(resetProfile(), null, 2) + '\n');
-}
+// Unworkspaced, so the root tab starts at the launch directory as the original one does: an
+// unconfined agent typed from a workspaced tab starts at the checkout root rather than in its clone.
+const ROOT_COMMAND = `agent ${ROOT_LABEL} --no-workspace`;
 
 // A shot can end with a picker, a dialog, or a half-typed command still on screen; all of it has to
 // go before the reset can read the tab strip or type into the command bar.
@@ -60,10 +30,9 @@ async function dismissOverlays(page) {
   await page.keyboard.press('Escape');
 }
 
-// `writeProfile` and `restore` are injectable for the same reason `connectAttached`'s sleep is: a
-// test can drive the whole choreography against a fake page without a scratch git repository on disk.
+// `restore` is injectable for the same reason `connectAttached`'s sleep is: a test can drive the
+// whole choreography against a fake page without a scratch git repository on disk.
 export async function resetApp(page, scratch, options = {}) {
-  const writeProfile = options.writeProfile ?? writeResetProfile;
   const restore = options.restore ?? restoreWorkDirectory;
   try {
     await dismissOverlays(page);
@@ -76,16 +45,14 @@ export async function resetApp(page, scratch, options = {}) {
     await typeCommand(page, `agent ${STAGING_LABEL}`);
     await waitForActiveTab(page, STAGING_LABEL);
     await closeInactiveTabs(page);
-    writeProfile(scratch);
-    await typeCommand(page, `profile launch ${RESET_PROFILE}`);
+    await typeCommand(page, ROOT_COMMAND);
     await waitForActiveTab(page, ROOT_LABEL);
     await closeInactiveTabs(page);
     const remaining = await countTabs(page);
     if (remaining !== 1) throw new Error(`reset left ${remaining} tabs open, not 1`);
   } finally {
-    // Also what removes the reset profile: it is untracked in the fixture repository, like
-    // everything else a shot wrote. Runs even when the reset failed, so a half-done reset cannot
-    // leave the profile file in the next shot's file tree.
+    // Runs even when the reset failed, so a half-done reset cannot leave a file the shot wrote in
+    // the next shot's file tree.
     restore(scratch);
   }
 }
