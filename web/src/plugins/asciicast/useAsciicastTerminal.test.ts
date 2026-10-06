@@ -74,7 +74,7 @@ describe('useAsciicastTerminal', () => {
     vi.unstubAllGlobals();
     // The styles are read off the real document element, so each case's custom properties are
     // cleared rather than left for the next one.
-    for (const name of ['--terminal-font-size', '--terminal-fg', '--terminal-bg']) {
+    for (const name of ['--terminal-font-size', '--terminal-line-height', '--terminal-fg', '--terminal-bg']) {
       document.documentElement.style.removeProperty(name);
     }
   });
@@ -95,6 +95,21 @@ describe('useAsciicastTerminal', () => {
   it('falls back to the app default when the font size is not published', () => {
     render(header());
     expect(built[0].fontSize).toBe(13.5);
+  });
+
+  // The font size alone does not make a recording the same grid as the session that made it. Every
+  // surface this app renders passes `--terminal-line-height` to the emulator, and this one silently
+  // did not, so it fell to xterm's own 1: the recorded rows drew a fifth tighter than the live
+  // terminal beside them, and the stage's background showed through the gap under the last row.
+  it('renders at the app\'s own line height, which the emulator\'s default would get wrong', () => {
+    document.documentElement.style.setProperty('--terminal-line-height', '1.4');
+    render(header());
+    expect(built[0].lineHeight).toBe(1.4);
+  });
+
+  it('falls back to the app default line height when none is published', () => {
+    render(header());
+    expect(built[0].lineHeight).toBe(1.2);
   });
 
   it('never resizes the terminal once it is built, so nothing shrinks it to fit', () => {

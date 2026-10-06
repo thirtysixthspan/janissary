@@ -36,9 +36,10 @@ opens the recording directly, following it if the session is still running.
 
 The tab is a terminal of its own showing the session's output as it was on screen, at the size it was
 recorded at — the columns and rows it ran in, following any window resize it did — at the same text
-size as any other terminal. Nothing is scaled to fit: a recording wider or taller than the tab is cut
-off at the tab's edge rather than shrunk or given a scrollbar, so make the window big enough to see the
-whole of it. Docking the tab into a narrow sidebar shows less of the recording, not a smaller one.
+size and line spacing as any other terminal. Nothing is scaled to fit: a recording wider or taller than
+the tab is cut off at the tab's edge rather than shrunk or given a scrollbar, so make the window big
+enough to see the whole of it. Docking the tab into a narrow sidebar shows less of the recording, not a
+smaller one.
 Above it is a line saying what is playing: the command the session ran, the label, when it started, how
 long it is, and the session's exit status when the recording carries one. Below it is the transport.
 

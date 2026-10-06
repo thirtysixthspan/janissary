@@ -219,8 +219,9 @@ The asciicast tab:
 
 - **plays the recording from the beginning**, at the size it was recorded at, into a terminal of its
   own — the recorded columns and rows, with each recorded resize applied as it happened, rendered at
-  the app's own terminal font size. Nothing is scaled to fit the tab: a recording larger than the tab
-  is clipped rather than scrolled or shrunk, and the window is resized to see all of it;
+  the app's own terminal metrics, meaning its font size *and* its line height. Nothing is scaled to fit
+  the tab: a recording larger than the tab is clipped rather than scrolled or shrunk, and the window is
+  resized to see all of it;
 - **transports**: play and pause, speed from 0.5× to 4×, one recorded event at a time forward and back,
   and a seek bar. Every one is a button as well as a chord — Space or `p`, `,` and `.`, `[` and `]` —
   and there are no markers;
