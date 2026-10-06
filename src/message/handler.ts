@@ -71,11 +71,12 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'ptyKill': { controller.ptyKill(message.params.id); break;
     }
     case 'reportTerminalColors': {
-      // Validated at ingress rather than forwarded: these two strings end up in a recording's header
-      // and are handed to a terminal emulator, and neither has any business being anything but a
-      // plain color.
-      const { id, fg, bg } = message.params;
-      if (isTerminalColors({ fg, bg })) controller.reportTerminalColors(id, { fg, bg });
+      // Validated at ingress rather than forwarded: these strings end up in a recording's header and
+      // are handed to a terminal emulator, and none of them has any business being anything but a
+      // plain color. The palette is optional, and `isTerminalColors` treats an absent one as valid,
+      // so a client that has none simply sends none.
+      const { id, fg, bg, palette } = message.params;
+      if (isTerminalColors({ fg, bg, palette })) controller.reportTerminalColors(id, { fg, bg, palette });
       break;
     }
     case 'runSuggestion': { controller.runSuggestion(message.params.id); break;

@@ -50,6 +50,8 @@ describe('launch teardown methods', () => {
 });
 
 describe('reportTerminalColors', () => {
+  const PALETTE = Array.from({ length: 16 }, (_, index) => `#${index.toString(16).padStart(2, '0')}8080`);
+
   // These two strings end up in a recording's header and are handed to a terminal emulator, so the
   // check is at ingress: a value that is not a plain colour never reaches the controller at all.
   it('forwards a valid pair with the pty id it came from', () => {
@@ -99,5 +101,29 @@ describe('reportTerminalColors', () => {
     dispatchCall(controller, 8, 'reportTerminalColors', { id: 'pty-1', fg: '#abc', bg: '#aabbccdd' });
 
     expect(controller.reportTerminalColors).toHaveBeenCalledWith('pty-1', { fg: '#abc', bg: '#aabbccdd' });
+  });
+
+  // A recording whose header carries no palette is replayed against the default 16 colors, whatever
+  // theme the session actually ran under, so the palette has to survive the hop through the handler
+  // rather than being dropped on the way to the recorder.
+  it('forwards the palette so the recording header keeps the theme it ran under', () => {
+    const controller = makeController();
+    const palette = PALETTE;
+
+    dispatchCall(controller, 9, 'reportTerminalColors', { id: 'pty-1', fg: '#e4e5e7', bg: '#17181b', palette });
+
+    expect(controller.reportTerminalColors).toHaveBeenCalledWith('pty-1', { fg: '#e4e5e7', bg: '#17181b', palette });
+  });
+
+  it.each([
+    ['a palette of the wrong length', PALETTE.slice(0, 15)],
+    ['a palette holding something other than colours', [...PALETTE.slice(0, 15), 'linear-gradient(red, blue)']],
+    ['a palette that is not a list', '#fff'],
+  ])('drops the pair rather than write %s into the header', (_label, palette) => {
+    const controller = makeController();
+
+    dispatchCall(controller, 10, 'reportTerminalColors', { id: 'pty-1', fg: '#fff', bg: '#000', palette });
+
+    expect(controller.reportTerminalColors).not.toHaveBeenCalled();
   });
 });
