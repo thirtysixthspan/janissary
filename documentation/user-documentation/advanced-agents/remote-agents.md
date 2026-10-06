@@ -90,6 +90,8 @@ Click the 📁 button in a remote agent or harness tab to open a [file navigator
 
 Open and edit remote files normally from that tree. Janissary keeps the working copy it needs locally and writes editor saves back to the remote host. Changing the tree's root keeps each open editor pointed at its original remote file, even when another directory contains a file with the same name. If a save fails, the editor stays marked as changed and the notifications feed explains the failure. A remote file saves back only while the file navigator you opened it from is still open; after you close that navigator, saving is refused with a notification, so reopen the file from a remote tree to save it. **Open externally** is unavailable for remote files because an outside application could not send its changes back.
 
+Remote file requests fail if the host doesn't answer within a minute. Pulls, commits, searches, batch moves, deletes or pastes, undo or redo replay, and whole-file reads or writes can take up to ten minutes. The failure reason is `The remote machine did not answer in time.` A request keeps waiting while the connection reconnects; a reply that arrives after the request has failed is ignored.
+
 File moves and clipboard pastes stay on one machine. Dropping between hosts is not offered; pasting onto a different host is refused without clearing your clipboard. Dragging a remote row into a command bar or editor inserts a path such as `devbox:/srv/project/src/index.ts`, so the host is never ambiguous.
 
 ## When a launch fails
