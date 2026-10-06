@@ -9,7 +9,7 @@
 
 ## Step 2 — Install dependencies
 
-**Nothing is installed before the supply-chain gate has cleared it.** Run the gate this project's own instructions require before installing, and treat its verdict as the answer: `0` is clean and permits the install, `2` (a known-malicious version) and `3` (a package or scope belonging to a compromised maintainer account) stop the run and report what was refused, and `1` means the check could not read its input and is a failed check, never permission to proceed. [`AGENTS.md`](../../AGENTS.md) carries the full policy.
+**Audit the lockfile before installing.** Exit `0` permits installation of the locked dependency tree, including versions reported as quarantined; the audit reports those versions but only fails for an exact known-malicious release (`2`). Exit `1` means the check failed and is never permission to proceed. Exit `3` applies when checking a proposed package update, not when auditing an existing lockfile: do not update a quarantined package, and report the refused update. [`AGENTS.md`](../../AGENTS.md) carries the full policy.
 
 In a Janissary checkout — recognized by `bin/janus.mjs` at its root, and carrying the gate, the blocklist, and the lockfile itself — run it from the project directory:
 

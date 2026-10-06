@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Gate that stands between a package-update playbook and `npm install`/`npm update`.
 //
-//   ./scripts/run.mjs check-malicious-package <pkg>[@version] ...   check install targets
+//   ./scripts/run.mjs check-malicious-package <pkg>[@version] ...   check package update targets
 //   ./scripts/run.mjs check-malicious-package --audit [lockfile]    scan a lockfile
 //
 // `--audit` with no path scans the installation's own package-lock.json, which is the right
@@ -10,12 +10,11 @@
 // the file relative to its own location rather than to the working directory.
 //
 // Exit codes:
-//   0  clean      — safe to install
+//   0  clean      — safe to install/update; quarantined lockfile entries may remain installed
 //   1  usage or data error
 //   2  BLOCKED    — an exact known-malicious version; never install
-//   3  QUARANTINED — package/scope belongs to a compromised account, but this
-//                    specific version is not a known-bad one. Still refuse:
-//                    these campaigns propagate by publishing fresh versions.
+//   3  QUARANTINED — update target belongs to a compromised account; do not update
+//                    to it. Existing locked versions may still be installed.
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -116,9 +115,11 @@ function checkSpecs(specs, campaigns) {
   }
 
   if (worst === EXIT.CLEAN) {
-    console.log('\nNo known-malicious packages among the install targets. Safe to proceed.');
+    console.log('\nNo known-malicious packages among the update targets. Safe to proceed.');
+  } else if (worst === EXIT.QUARANTINED) {
+    console.error('\nDO NOT UPDATE TO THIS TARGET. Existing locked versions may still be installed.');
   } else {
-    console.error('\nDO NOT INSTALL. Skip this package and pick the next candidate.');
+    console.error('\nDO NOT INSTALL OR UPDATE TO THIS TARGET.');
   }
   return worst;
 }
@@ -153,7 +154,7 @@ function auditLockfile(campaigns, lockfile) {
   }
 
   if (blocked.length === 0) {
-    console.log('AUDIT CLEAN — no known-malicious version is installed.');
+    console.log('AUDIT PASSED — no known-malicious version is installed. Quarantined locked versions may be installed, but must not be updated.');
     return EXIT.CLEAN;
   }
 

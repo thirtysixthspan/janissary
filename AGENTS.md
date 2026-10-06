@@ -107,17 +107,17 @@ npm run coverage 2>&1
 
 ## Package updates
 
-**Never run `npm install` or `npm update` on a package without checking it against the supply-chain blocklist first.** The list lives in [`security/known-malicious-packages.json`](security/known-malicious-packages.json) and is enforced by:
+**Check package updates against the supply-chain blocklist before changing their versions.** The list lives in [`security/known-malicious-packages.json`](security/known-malicious-packages.json) and is enforced by:
 
 ```bash
-./scripts/run.mjs check-malicious-package <pkg>@<version> ...          # gate install targets
+./scripts/run.mjs check-malicious-package <pkg>@<version> ...          # gate package update targets
 ./scripts/run.mjs check-malicious-package --audit                      # scan package-lock.json
 ./scripts/run.mjs check-malicious-package --audit ./some.lock.json     # scan a named lockfile
 ```
 
 The bare `--audit` scans the lockfile beside the script, which is this repository's own. A task prompt installing into some *other* project names that project's lockfile instead: the gate reads the file it is given, resolved against the working directory, and prints the file it audited.
 
-Exit codes: `0` clean, `2` BLOCKED (an exact known-malicious release), `3` QUARANTINED (a package or scope from a compromised maintainer account, at a version not yet known to be bad), `1` the check itself failed. **Only `0` permits an install** — a failed check is never permission to proceed. Treat `3` as seriously as `2`: these campaigns spread by publishing fresh version bumps, so "not yet on the list" is not the same as safe.
+For a package update target, exit codes are `0` clean, `2` BLOCKED (an exact known-malicious release), `3` QUARANTINED (a package or scope from a compromised maintainer account, at a version not yet known to be bad), and `1` when the check itself failed. Do not install or update a BLOCKED version, and do not update to a QUARANTINED version; choose a different update target. A quarantined version already pinned in the lockfile may be installed as part of the existing dependency tree. In `--audit` mode, quarantined entries are reported but do not fail the audit; exact known-malicious versions still fail it. A failed check is never permission to proceed.
 
 Every package-update playbook in `ai/tasks/` runs this gate before touching `node_modules/`. When a new incident is disclosed, add a campaign object to the JSON rather than editing the script.
 

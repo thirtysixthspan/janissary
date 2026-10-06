@@ -53,13 +53,21 @@ describe('the package-safety gate', () => {
     const file = lockfileHolding({ hookified: '1.15.1' });
     const { status, out } = audit(['--audit', file]);
     expect(out).toContain('hookified@1.15.1');
+    expect(out).toContain('Quarantined locked versions may be installed, but must not be updated.');
     expect(status).toBe(0);
+  });
+
+  it('refuses to update to an unlisted version from a compromised account', () => {
+    const { status, out, err } = audit(['hookified@1.15.1']);
+    expect(out).toContain('QUARANTINED');
+    expect(err).toContain('DO NOT UPDATE TO THIS TARGET');
+    expect(status).toBe(3);
   });
 
   it('passes a lockfile holding nothing it knows about', () => {
     const file = lockfileHolding({ 'left-pad': '1.3.0' });
     const { status, out } = audit(['--audit', file]);
-    expect(out).toContain('AUDIT CLEAN');
+    expect(out).toContain('AUDIT PASSED');
     expect(status).toBe(0);
   });
 
