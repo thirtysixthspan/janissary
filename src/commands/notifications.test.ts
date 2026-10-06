@@ -12,11 +12,13 @@ import {
   appendNotificationRecord, initNotificationRecord, notificationRecordPath,
 } from '../notifications/record.js';
 import { command } from './notifications.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   return managers;
 }
 

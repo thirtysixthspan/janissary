@@ -364,6 +364,18 @@ describe('saveProfile', () => {
     expect(summary.skipped).toEqual(['bob']);
   });
 
+  it('does not capture the launch shell, the janus shell tab every launch opens', async () => {
+    const launchShell = makePluginTab('janus', '#5b9cff', 1, 1, '#5b9cff', 'janus', {
+      id: 'shell', instanceKey: 'shell-1', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'janus',
+    });
+    const managers = makeManagers([launchShell, makeTab('bob', '#aaa')]);
+
+    const summary = await saveProfile('demo', managers);
+
+    expect(summary.plugins).toBe(0);
+    expect(summary.skipped).toEqual(['bob']);
+  });
+
   it('reports a tab labeled janus as skipped if it is not the first tab', async () => {
     const managers = makeManagers([makeTab('bob', '#aaa'), makeTab('janus', '#000')]);
 

@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createController, type Controller } from './controller.js';
-import { initAgentStateDirectory, saveAgentState, loadAgentState } from './agent/state.js';
+import { seedRootAgentTab } from './tab/root-agent-test-fixture.js';
 import { initGlobalHistory, globalCommands } from './global-history.js';
 import { initProfileDir } from './profiles.js';
 import { messageBus } from './bus.js';
@@ -35,6 +35,7 @@ const liveControllers: Controller[] = [];
 const makeController = () => {
   let states = 0;
   const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
+  seedRootAgentTab(c.managers.tab);
   liveControllers.push(c);
   return { c, get states() { return states; } };
 };
@@ -84,12 +85,6 @@ describe('Controller adapter composition', () => {
 });
 
 describe('Controller', () => {
-  it('starts with a single janus tab', () => {
-    const { c } = makeController();
-    expect(c.view()).toHaveLength(1);
-    expect(c.view()[0].label).toBe('janus');
-  });
-
   it('routes a built-in with output into the transcript', () => {
     const { c } = makeController();
     c.dispatch('help');
@@ -246,6 +241,7 @@ describe('Controller', () => {
     initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-db2-')));
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    seedRootAgentTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch('db sqlite create lastdb');
     expect(isConnectionOpen('lastdb')).toBe(true);
@@ -289,46 +285,6 @@ describe('Controller', () => {
     expect(disposed).toEqual(['monitor', 'connection', 'pty', 'fileNavigator', 'acp', 'remote', 'tab']);
   });
 
-  it('records an info message in the recipient context[] and persists it', () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ctx-')));
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.setActiveTab(0);
-    c.dispatch('msg bob info hello there');
-    expect(loadAgentState('bob')?.context).toContain('janus: hello there');
-  });
-
-  it('persists agent state for an agent named after an IP address without warning', () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ip-name-')));
-    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const { c } = makeController();
-    c.dispatch('agent 10.27.1.94 --no-workspace');
-    c.setActiveTab(0);
-    expect(loadAgentState('10.27.1.94')).toBeDefined();
-    expect(stderrSpy).not.toHaveBeenCalled();
-  });
-
-  it('persists the alias set through the tab label on a dotted agent name', () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-ip-rename-')));
-    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const { c } = makeController();
-    c.dispatch('agent 10.27.1.94 --no-workspace');
-    c.renameTab(c.view().findIndex((t) => t.label === '10.27.1.94'), 'build host');
-    expect(loadAgentState('10.27.1.94')?.title).toBe('build host');
-    expect(stderrSpy).not.toHaveBeenCalled();
-  });
-
-  it('preserves saved (non-contiguous) tab numbers on relaunch', () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-relaunch-')));
-    saveAgentState({ name: 'ahmed', dotColor: '#5b9cff', active: false, number: 1 });
-    saveAgentState({ name: 'bekir', dotColor: '#6bcb77', active: false, number: 3 });
-    saveAgentState({ name: 'cafer', dotColor: '#ff6b6b', active: false, number: 5 });
-    const { c } = makeController();
-    c.rehydrate();
-    const byLabel = Object.fromEntries(c.view().map((t) => [t.label, t.number]));
-    expect(byLabel).toEqual({ ahmed: 1, bekir: 3, cafer: 5 });
-  });
-
   it('rename sets a display alias without changing the label', () => {
     const { c } = makeController();
     c.dispatch('rename reviewer');
@@ -349,19 +305,9 @@ describe('Controller', () => {
     expect(c.view()[0].title).toBe('a'.repeat(50));
   });
 
-  it('persists and restores the alias across rehydrate', () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-alias-')));
-    const { c } = makeController();
-    c.dispatch('rename reviewer');
-    const c2 = makeController().c;
-    c2.rehydrate();
-    expect(c2.view().find((t) => t.label === 'janus')?.title).toBe('reviewer');
-  });
-
   it('records a fired scheduled command in the tab history (as if typed there)', () => {
     vi.useFakeTimers();
     try {
-      initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-')));
       const { c } = makeController(); // starts the 1s scheduler interval (fake)
       c.dispatch('schedule t1 every 1m clear'); // recurring; first run ~60s out, no shell spawn
       vi.advanceTimersByTime(61_000); // let the scheduler tick fire it
@@ -374,6 +320,7 @@ describe('Controller', () => {
   it('quit asks the host to exit', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    seedRootAgentTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch('quit');
     expect(isExited).toBe(true);
@@ -382,6 +329,7 @@ describe('Controller', () => {
   it('exit is an alias of close — with other tabs open it closes the tab, not the host', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    seedRootAgentTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch('agent bob --no-workspace');
     c.setActiveTab(1);
@@ -422,6 +370,7 @@ describe('Controller', () => {
   it('closing the last tab quits the app', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    seedRootAgentTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch('close'); // only tab open -> behaves like quit
     expect(isExited).toBe(true);
@@ -431,6 +380,7 @@ describe('Controller', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-last-tab-'));
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
+    seedRootAgentTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch(`files left ${root}`);
     c.dispatch('close'); // close the active (janus) tab — only non-docked tab
@@ -532,20 +482,15 @@ describe('Controller', () => {
     expect(c.view().map((tab) => tab.number)).toEqual([1, 2, 3, 4]);
   });
 
-  it('reorders reporting tabs without changing action focus or persisting view tabs', () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'janus-reporting-reorder-'));
-    initAgentStateDirectory(root);
-    mkdirSync(path.join(root, '.janissary', 'state'), { recursive: true });
+  it('reorders reporting tabs without changing action focus', () => {
     const { c } = makeController();
     c.dispatch('agent bob --no-workspace');
     const activeLabel = c.view()[c.managers.tab.activeTab].label;
     openMonitorTab(c.managers, 'reviewer', '#fff');
     openMonitorTab(c.managers, 'security', '#fff');
-    const stateFiles = readdirSync(path.join(root, '.janissary', 'state'));
     c.reorderTabTo(3, 2);
     expect(c.view().map((tab) => tab.label)).toEqual(['janus', 'bob', 'security', 'reviewer']);
     expect(c.view()[c.managers.tab.activeTab].label).toBe(activeLabel);
-    expect(readdirSync(path.join(root, '.janissary', 'state'))).toEqual(stateFiles);
   });
 
   it('adds, lists, and clears scheduled commands', () => {
@@ -641,14 +586,6 @@ describe('Controller', () => {
     c.dispatch('acp reset');
     expect(allText(c)).toContain('No active ACP session to reset');
   });
-
-  it('shows persisted state with the state command', () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-state-')));
-    const { c } = makeController();
-    c.dispatch('help'); // triggers a persist of the janus tab
-    c.dispatch('state');
-    expect(allText(c)).toContain('**name**: `janus`');
-  });
 });
 
 describe('Controller open command', () => {
@@ -686,14 +623,6 @@ describe('Controller open command', () => {
     expect(new Set(imgs.map((t) => t.label)).size).toBe(2); // distinct labels
     expect(imgs.map((t) => t.title).toSorted((a, b) => (a ?? '').localeCompare(b ?? '')))
       .toEqual(['a.png', 'b.png']); // filenames as display names
-  });
-
-  it('does not persist an image tab to agent state', async () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-open-state-')));
-    const { c } = makeController();
-    c.dispatch(`open ${temporaryImage()}`);
-    await vi.waitFor(() => expect(imageTabs(c)).toHaveLength(1));
-    expect(loadAgentState('image')).toBeFalsy();
   });
 
   it('open external <image> confirms without creating a tab', async () => {
@@ -1166,7 +1095,6 @@ describe('Controller send command', () => {
   it('composes with schedule: a fired scheduled send reaches the target without the comment marker', () => {
     vi.useFakeTimers();
     try {
-      initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-send-')));
       const { c } = makeController();
       c.dispatch('harness claude --no-workspace --no-auto-approve');
       c.managers.tab.setActiveTab(0); // schedule owned by janus, not the harness tab it targets
@@ -1190,7 +1118,6 @@ describe('Controller schedule in another tab', () => {
   });
 
   it('an `in <tab>` entry shows in the target tab view, not the issuing tab', () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-in-')));
     const { c } = makeController();
     c.dispatch('agent worker --no-workspace');
     c.setActiveTab(0);
@@ -1203,7 +1130,6 @@ describe('Controller schedule in another tab', () => {
   it('a schedule attached to a harness tab types the due command into its PTY', () => {
     vi.useFakeTimers();
     try {
-      initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-sched-harness-')));
       const { c } = makeController();
       c.dispatch('harness claude --no-workspace --no-auto-approve');
       c.managers.tab.setActiveTab(0);
@@ -1815,19 +1741,6 @@ describe('Controller notifications command', () => {
     const index = c.view().findIndex((t) => t.view === 'notifications');
     expect(c.view()[index].dock).toBeUndefined();
     expect(c.managers.tab.activeTab).toBe(index);
-  });
-});
-
-describe('Controller rehydrate restores a persisted schedule', () => {
-  it('rehydrate re-arms a schedule persisted on the agent state', () => {
-    initAgentStateDirectory(mkdtempSync(path.join(tmpdir(), 'janus-rehydrate-schedule-')));
-    saveAgentState({
-      name: 'janus', dotColor: '#5b9cff', active: true,
-      schedule: [{ id: 's1', command: 'clear', spec: 'every 1h', nextRun: Date.now() + 3_600_000, recurring: true, intervalMs: 3_600_000 }],
-    });
-    const { c } = makeController();
-    c.rehydrate();
-    expect(c.view().find((t) => t.label === 'janus')?.schedule.map((s) => s.id)).toContain('s1');
   });
 });
 

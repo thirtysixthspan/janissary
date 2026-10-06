@@ -22,7 +22,13 @@ export function useShellSubmit(input: {
   const { appBar, capabilities, displayReply, expectCommand, openHistory, setMatches, setSent, write } = input;
   return useCallback(async (text: string, record = true): Promise<boolean> => {
     setMatches([]);
-    const remember = (line: string) => { if (record) setSent((previous) => appendShellHistory(previous, line)); };
+    // A line the bar records in its own history enters the application's global history too, which
+    // is what ghost text completes from in every tab.
+    const remember = (line: string) => {
+      if (!record) return;
+      setSent((previous) => appendShellHistory(previous, line));
+      void capabilities.intent('remember', line).catch(() => {});
+    };
     const runInShell = (line: string) => {
       const command = stripTerminalControls(line);
       expectCommand(command);

@@ -150,6 +150,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
       {/* Clicking the terminal gives it focus so xterm sends keystrokes to the attached shell. */}
       <div
         className="harness-body shell-body"
+        data-doc-shot="shell-view"
         ref={terminalReference}
         onMouseDown={() => { focusTerminal(); }}
         onKeyDownCapture={(event) => {

@@ -4,12 +4,6 @@
 
 Returns the contents of `help.md` at the repo root (read and cached on first use). If that file cannot be read, it falls back to a generated summary listing the built-in commands and the `shell` / `/` prefixes and `Ctrl+R` history shortcut.
 
-### `state`
-
-Reads the agent state file for the current tab from `.janissary/state/<name>.json` and displays each field. A tab that is never saved — a shell tab or any other plugin tab — has no file, so it shows the same fields built from the open tab instead. Array and object values are JSON-formatted and truncated to the last 10 lines. If an agent tab has no state file, a message is shown.
-
-The reply is markdown, rendered wherever it appears: each field is a bold name, a single-line value follows it in inline code, and a list, nested, or multi-line value follows in a code block that keeps its layout and truncation marker.
-
 ### `clear`
 
 Empties the current tab's transcript log. Other tabs are unaffected.

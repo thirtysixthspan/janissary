@@ -20,7 +20,7 @@ export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' |
  * the live channel holds.
  *
  * `reconnecting` deliberately does not live on `RemoteTarget` itself. That type is what a tab stores
- * and what `profile save` and `--relaunch` persist, and a recovery state written there would outlive
+ * and what `profile save` persists, and a recovery state written there would outlive
  * the recovery. It is resolved from `RemoteManager`'s own `reconnect.active` when the view is built,
  * so there is no copy of it to go stale, and it is present only when true — a healthy tab's target
  * is exactly what it was before this field existed.

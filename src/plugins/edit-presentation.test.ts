@@ -8,6 +8,7 @@ import {
 } from './api.js';
 import { TabPluginHost } from './host.js';
 import { NotificationQueue } from '../notifications/queue.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 function manifest(claimsEdit = true): TabPluginDeclaration {
   return {
@@ -26,6 +27,7 @@ function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   return managers;
 }
 

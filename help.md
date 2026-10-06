@@ -3,7 +3,6 @@
 | Command | Description |
 | ------- | ----------- |
 | `help` | List available commands |
-| `state` | Show agent state fields (truncated) |
 | `clear` | Clear the output log in an agent tab; in a shell tab, clear the terminal (use `/clear` to clear its output log) |
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |

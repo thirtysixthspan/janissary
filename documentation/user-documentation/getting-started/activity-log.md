@@ -38,4 +38,4 @@ A line holds those three fields and nothing more. A message one agent sends anot
 
 The log is never cleared or compacted. Daily files accumulate under `.janissary/log/` until you remove them yourself. One file beside them behaves the opposite way: `server.log` is the app's own output, cleared at the start of every ordinary launch and appended to across a `janus --relaunch`. If you are grepping `.janissary/log/` for why a launch failed, that is the one you want, and it is the one that empties itself; see [Troubleshooting](/user-documentation/getting-started/startup#troubleshooting).
 
-This is separate from each tab's own transcript, the one [`--relaunch`](/user-documentation/getting-started/startup#resuming-a-session-with-relaunch) restores. The log on this page is a flat, all-tabs record that outlives any single tab, kept even after that tab closes.
+This is separate from each tab's own transcript, which lasts only as long as the tab. The log on this page is a flat, all-tabs record that outlives any single tab, kept even after that tab closes.

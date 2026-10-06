@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync, mkdtempSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { loadAgentNames, agentNames } from './names.js';
+import { loadAgentNames, agentNames, isValidAgentName } from './names.js';
 import defaultNames from '../../agent-names.json' with { type: 'json' };
 
 describe('loadAgentNames', () => {
@@ -80,5 +80,13 @@ describe('loadAgentNames', () => {
       '.janissary/agent-names.json is not a non-empty list of valid agent names — using the bundled name list',
     );
     expect(agentNames).toEqual(defaultNames);
+  });
+});
+
+describe('isValidAgentName', () => {
+  it('accepts a dotted label and rejects a separator-bearing one', () => {
+    expect(isValidAgentName('10.27.1.94')).toBe(true);
+    expect(isValidAgentName('agent/sub')).toBe(false);
+    expect(isValidAgentName('')).toBe(false);
   });
 });

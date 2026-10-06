@@ -4,11 +4,13 @@ import type { Managers } from '../managers.js';
 import { openNotificationsTab, notificationsTab } from '../notifications/tab.js';
 import { command } from './notify.js';
 import { NotificationQueue } from '../notifications/queue.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   return managers;
 }
 

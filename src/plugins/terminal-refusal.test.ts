@@ -3,6 +3,7 @@ import type { Managers } from '../managers.js';
 import { TabManager } from '../tab/manager.js';
 import { TAB_PLUGIN_API_VERSION, type TabPluginDeclaration } from './api.js';
 import { TabPluginHost } from './host.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 // A terminal-owning plugin whose command opens one tab per call, starting its terminal wherever the
 // command's argument says. The directory is the plugin's to choose; whether a process may start
@@ -18,6 +19,7 @@ const manifest: TabPluginDeclaration = {
 function makeManagers(spawn: (cwd: string) => string): Managers {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers, '/repo');
+  seedRootAgentTab(managers.tab);
   Object.assign(managers, {
     pty: {
       spawn: vi.fn((_label: string, _program: string, _command: string, cwd: string) => spawn(cwd)),

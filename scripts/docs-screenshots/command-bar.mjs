@@ -1,6 +1,8 @@
-// The command bar, as the capture and the between-shot reset both drive it. Only the active tab
-// renders one, so a caller that has just switched tabs waits for it here rather than assuming it.
-const COMMAND_BAR = '.command textarea';
+// The command bar, as the capture and the between-shot reset both drive it. Only the visible one
+// counts: a shell tab stays mounted while hidden, command bar and all, so every shell open behind
+// the active tab carries a bar of its own. A caller that has just switched tabs waits for it here
+// rather than assuming it.
+const COMMAND_BAR = '.command textarea:visible';
 
 export function commandBar(page) {
   return page.locator(COMMAND_BAR);

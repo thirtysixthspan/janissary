@@ -18,14 +18,16 @@ function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAn
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
 
+// `fixedLabel` names the tab outright, ahead of both the agent pool and the label prefix. Only the
+// launch shell uses it: the tab the application opens at launch is always `janus`.
 export function addPluginTab(
   tabs: Tab[], activeTab: number, labelPrefix: string, title: string, plugin: PluginTabRecord,
-  agentNamed = false, rows: readonly LaunchNameRow[] = [],
+  agentNamed = false, rows: readonly LaunchNameRow[] = [], fixedLabel?: string,
 ): TabAndActive {
   const creator = tabs[activeTab];
-  const agentName = agentNamed ? unusedAgentName(tabs, rows) : undefined;
-  const label = agentName ?? uniquePluginLabel(tabs, labelPrefix);
-  const shownTitle = agentName ?? title;
+  const name = fixedLabel ?? (agentNamed ? unusedAgentName(tabs, rows) : undefined);
+  const label = name ?? uniquePluginLabel(tabs, labelPrefix);
+  const shownTitle = name ?? title;
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;

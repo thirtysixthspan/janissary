@@ -2,7 +2,9 @@ import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { errorFirstLine } from '../error-text.js';
 
-export type PluginFailureOrigin = { label: string; command: string };
+// `launch` marks the one origin that is not an open tab: the application opening its launch shell
+// before any tab exists. `label` is then the label the opened tab takes, not a tab to look up.
+export type PluginFailureOrigin = { label: string; command: string; launch?: true };
 
 export function pluginFailureMessage(id: string, error: unknown): string {
   return `Tab plugin "${id}" disabled: ${errorFirstLine(error)}.`;

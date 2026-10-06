@@ -33,6 +33,7 @@ export type TabPluginCapabilityName =
   | 'queueLine'
   | 'nextQueuedLine'
   | 'recordCwd'
+  | 'recordGlobalHistory'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -66,6 +67,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   queueLine: true,
   nextQueuedLine: true,
   recordCwd: true,
+  recordGlobalHistory: true,
   rejectRequest: true,
   reportFailure: true,
 };

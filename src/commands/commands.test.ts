@@ -8,7 +8,6 @@ import { resolveCommand } from '../resolve.js';
 // `getOutput` no longer special-cases the name — is what keeps the deletion honest.
 const FORMERLY_SILENT = [
   ['clear', 'clear'],
-  ['state', 'state'],
   ['hist', 'hist'],
   ['quit', 'quit'],
   ['exit', 'close'],

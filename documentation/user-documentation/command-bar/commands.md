@@ -7,7 +7,6 @@ These commands manage the app itself — the current tab's transcript and name, 
 | Command | What it does |
 |---|---|
 | `help` | List the available commands and key bindings |
-| `state` | Show the current agent's saved state fields (long values truncated) |
 | `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `open [external] [page] <target>` | Open a file, a web page, or an external application; see [Opening files and pages](/user-documentation/tab-types/opening-files) |
@@ -27,22 +26,6 @@ These commands manage the app itself — the current tab's transcript and name, 
 ## `help`
 
 `help` prints the in-app quick reference: every command with a one-line description, then the key bindings. It's the same text this tab shows you when you type `help`, so it is a reminder rather than a guide. If that file can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `shell ` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
-
-## `state`
-
-`state` prints what the current tab has saved, one field per block with its name in bold and its value in code, so you can see exactly what `janus --relaunch` would bring back:
-
-```
-> state
-```
-
-Each tab's state is one JSON file under `.janissary/state/`, named after the tab. `state` reads that file and prints the fields it holds. For an agent tab those are `name`, `active`, `dotColor`, `number`, `group`, `groupColor`, `title`, `cwd`, `offline`, `cmdHistory`, `context`, `commandQueue`, and `schedule` — plus `remote` when the tab's shell lives on another machine. The commands you have run are in `cmdHistory`, the shell's working directory in `cwd`, and any [schedules](/user-documentation/automation/scheduling) attached to the tab in `schedule`. A long list or nested value is cut to its last ten lines behind a `... (N lines omitted)` marker, so the end of a list is what survives.
-
-The transcript is not in that file. It is kept separately, one file per tab under `.janissary/transcripts/`, and `--relaunch` reads it from there.
-
-An agent tab with no state file reports `No state file found for "<label>".` That is the answer for the `janus` tab on a fresh launch and for a [remote agent](/user-documentation/advanced-agents/remote-agents), since a tab whose shell lives on another machine keeps nothing here. A tab that is never saved, such as a [zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab), shows the same fields read from the open tab instead, which is how `state` works from a shell tab's command bar.
-
-Work that lands after you close a tab does not put that tab back. A scheduled command that fires, or a shell command that finishes, minutes after the tab is gone writes nothing, so the tab stays closed on the next `--relaunch`. The state directory is wiped on an ordinary launch and kept on `--relaunch`; see [Resuming a session](/user-documentation/getting-started/startup#resuming-a-session-with-relaunch).
 
 ## `theme`
 

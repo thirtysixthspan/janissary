@@ -8,6 +8,9 @@ import { commandBar } from './command-bar.mjs';
 // left-pane tab, and the right strip renders only while the centre area is split.
 const CENTER_TAB = '.center-strip-left .tab';
 const ACTIVE_CENTER_TAB = '.center-strip-left .tab.active';
+// The label beside the status dot, which a double-click turns into the rename field.
+const ACTIVE_TAB_NAME = `${ACTIVE_CENTER_TAB} .dot + span`;
+const RENAME_INPUT = '.tab-rename-input';
 // Every tab a reset may close: the left strip's inactive tabs, the right strip's tabs outright (a
 // split pane has an active tab of its own, which `:not(.active)` would spare), and the docked tabs
 // in either sidebar and in the reporting section, which likewise keep selections of their own.
@@ -93,6 +96,22 @@ export async function focusIdleCommandTab(page) {
 export async function waitForActiveTab(page, label) {
   const tab = page.locator(ACTIVE_CENTER_TAB, { hasText: label });
   await tab.waitFor({ state: 'visible', timeout: ACTIVE_TAB_TIMEOUT_MS });
+}
+
+// The tab a command just opened, when its name is not known in advance: a shell takes a random
+// agent-pool name.
+export async function waitForActiveTabOtherThan(page, label) {
+  const tab = page.locator(ACTIVE_CENTER_TAB, { hasNotText: label });
+  await tab.waitFor({ state: 'visible', timeout: ACTIVE_TAB_TIMEOUT_MS });
+}
+
+// Sets the active tab's display alias the way a user does by double-clicking its label, which
+// leaves no line in any command history.
+export async function aliasActiveTab(page, alias) {
+  await page.locator(ACTIVE_TAB_NAME).dblclick();
+  const input = page.locator(RENAME_INPUT);
+  await input.fill(alias);
+  await input.press('Enter');
 }
 
 export async function countTabs(page) {

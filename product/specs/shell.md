@@ -92,14 +92,14 @@ All agent tabs with a running interactive PTY stay mounted simultaneously (only 
 a hangup, and its whole process group is then sent SIGTERM and, after a two-second grace, SIGKILL,
 so nothing it started outlives the tab (see Lifecycle in `harness.md`). The PTY exit fires `onPtyExit`, which clears `activePty` — but since the tab is already gone this is a no-op.
 
-## Shell Working Directory Persistence
+## Shell Working Directory
 
 ### Per-agent cwd tracking
 
-After each shell command completes, `queryShellPwd` sends `pwd` to the shell and captures the response. The working directory is saved to the agent state file's `cwd` field and kept in a `cwdRef` map keyed by agent label. Only the absolute path the shell printed is kept, never any surrounding terminal output; when no path comes back, the previously recorded working directory stays in place.
+After each shell command completes, `queryShellPwd` sends `pwd` to the shell and captures the response. The working directory is kept in a `cwdRef` map keyed by agent label. Only the absolute path the shell printed is kept, never any surrounding terminal output; when no path comes back, the previously recorded working directory stays in place.
 
-### Restoration on relaunch
+### Restoring a respawned shell
 
-On `--relaunch`, saved cwd values are loaded from agent state files into `cwdRef`. When `getShell` creates a new shell for a tab, it checks `cwdRef` for the tab's label and sends `cd "<cwd>"` to the shell before any user commands.
+When `getShell` creates a new shell for a tab — the first command, or the next one after its shell exited — it checks `cwdRef` for the tab's label and sends `cd "<cwd>"` to the shell before any user commands.
 
-A local tab whose recorded working directory is no longer a directory — deleted since it was saved, or never a real path — still gets a working shell: the shell starts in the project directory, where a new tab starts, and the working directory recorded after the tab's next command replaces the stale value.
+A local tab whose recorded working directory is no longer a directory — deleted since it was recorded, or never a real path — still gets a working shell: the shell starts in the project directory, where a new tab starts, and the working directory recorded after the tab's next command replaces the stale value.

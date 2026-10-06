@@ -20,7 +20,7 @@ export type PlaceAgentOptions = {
   remote?: RemoteTarget;
 };
 
-// Build the agent tab, insert it into its creator's group, set its cwd, focus it, and persist.
+// Build the agent tab, insert it into its creator's group, set its cwd, and focus it.
 export function placeAgent(managers: Managers, options: PlaceAgentOptions): void {
   const { resolved, creator, cwd, workspaceDir, offline, busy, remote } = options;
   const dotColor = distinctColor(managers.tab.tabs.map((t) => t.dotColor));
@@ -34,5 +34,4 @@ export function placeAgent(managers: Managers, options: PlaceAgentOptions): void
   managers.tab.setCwd(resolved, cwd);
   if (busy) managers.tab.addBusy(resolved);
   managers.tab.setActiveTab(managers.tab.findIndex(resolved));
-  managers.tab.persist(managers.tab.buildAgentState(tab));
 }

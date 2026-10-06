@@ -3,7 +3,7 @@ import { mkdirSync, rmSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 // SQLite databases live under .janissary/db/sqlite/<name>.sqlite and, unlike
-// agent state and workspaces, persist across launches — that is the whole point.
+// workspaces, persist across launches — that is the whole point.
 let dbDir = '';
 let exportDir = '';
 

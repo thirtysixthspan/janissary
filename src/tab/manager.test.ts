@@ -5,10 +5,8 @@ import path from 'node:path';
 import { TabManager } from './manager.js';
 import { makeTab } from './index.js';
 import type { Managers } from '../managers.js';
-import type { AgentState } from '../agent/types.js';
-import type { ScheduleEntry } from '../schedule/types.js';
 import { TabPluginRejection, type TabPluginResources } from '../plugins/api.js';
-import * as agentState from '../agent/state.js';
+import { seedRootAgentTab } from './root-agent-test-fixture.js';
 import { messageBus } from '../bus.js';
 import { UNREAD_DWELL_MS } from './dwell.js';
 
@@ -52,6 +50,7 @@ function makeTabManager(): TabManager {
 function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers, '/repo');
+  seedRootAgentTab(managers.tab);
   Object.assign(managers, makeManagers());
   return { tm: managers.tab, managers };
 }
@@ -144,128 +143,6 @@ describe('TabManager queue', () => {
 
     tm.deleteQueued('janus', 5);
     expect(tm.queueFor('janus')).toEqual(['second']);
-  });
-
-  it('buildAgentState includes commandQueue', () => {
-    const tm = makeTabManager();
-    tm.enqueue('janus', 'echo hi');
-    const state = tm.buildAgentState(tm.cur());
-    expect(state.commandQueue).toEqual(['echo hi']);
-  });
-
-  it('rehydrate restores commandQueue and the restored tab starts idle without auto-running', () => {
-    const state: AgentState = {
-      name: 'restored', dotColor: '#fff', active: true, number: 1, commandQueue: ['echo queued'],
-    };
-    const listSpy = vi.spyOn(agentState, 'listAgentStates').mockReturnValue([state]);
-
-    const managers = {} as Managers;
-    managers.tab = new TabManager(managers);
-    const tm = managers.tab;
-    tm.rehydrate(() => [], () => {});
-
-    expect(tm.queueFor('restored')).toEqual(['echo queued']);
-    expect(tm.isBusy('restored')).toBe(false);
-
-    listSpy.mockRestore();
-  });
-
-  // A remote agent tab is live and in-memory. Restoring one would resurrect a tab whose workspace
-  // was deleted when its channel died and whose cwd does not exist on this machine, so it never
-  // reaches the state directory in the first place.
-  it('persist writes nothing for a state carrying a remote destination', () => {
-    const tm = makeTabManager();
-    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
-
-    tm.persist({ name: 'bekir', dotColor: '#fff', active: false, remote: 'devbox:/srv/proj' });
-    expect(saveSpy).not.toHaveBeenCalled();
-
-    tm.persist({ name: 'local', dotColor: '#fff', active: false });
-    expect(saveSpy).toHaveBeenCalledTimes(1);
-
-    saveSpy.mockRestore();
-  });
-
-  // `product/specs/application-state.md`: only agent tabs reach the state directory. A reorder,
-  // rename, retarget, scheduled tick or appended entry can persist any tab, so the rule lives here.
-  it.each(['editor', 'plugin', 'harness', 'files'] as const)('persist writes nothing for a live %s tab', (view) => {
-    const tm = makeTabManager();
-    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
-    const tab = { ...makeTab('viewtab', '#aaa'), view };
-    tm.tabs.push(tab);
-
-    tm.persist(tm.buildAgentState(tab));
-    expect(saveSpy).not.toHaveBeenCalled();
-
-    saveSpy.mockRestore();
-  });
-
-  it.each([undefined, 'agent'] as const)('persist still writes a live agent tab with view %s', (view) => {
-    const tm = makeTabManager();
-    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
-    const tab = { ...makeTab('worker', '#aaa'), view };
-    tm.tabs.push(tab);
-
-    tm.persist(tm.buildAgentState(tab));
-    expect(saveSpy).toHaveBeenCalledTimes(1);
-    expect(saveSpy.mock.calls[0][0].name).toBe('worker');
-
-    saveSpy.mockRestore();
-  });
-
-  it('bounds persistence warnings per agent until a save recovers', () => {
-    let failing = true;
-    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {
-      if (failing) throw new Error('disk full');
-    });
-    const warningSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
-    const tm = makeTabManager();
-    const alpha = { name: 'alpha', dotColor: '#fff', active: false };
-    const beta = { name: 'beta', dotColor: '#fff', active: false };
-
-    tm.persist(alpha);
-    tm.persist(alpha);
-    tm.persist(beta);
-    expect(warningSpy).toHaveBeenCalledTimes(2);
-    expect(warningSpy.mock.calls[0][0]).toContain('failed to persist agent state for alpha: disk full');
-    expect(warningSpy.mock.calls[1][0]).toContain('failed to persist agent state for beta: disk full');
-
-    failing = false;
-    tm.persist(alpha);
-    failing = true;
-    tm.persist(alpha);
-    expect(warningSpy).toHaveBeenCalledTimes(3);
-
-    warningSpy.mockRestore();
-    saveSpy.mockRestore();
-  });
-
-  it('buildAgentState carries a remote tab\'s address, which is what persist guards on', () => {
-    const tm = makeTabManager();
-    const tab = tm.cur();
-    tab.remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
-    expect(tm.buildAgentState(tab).remote).toBe('admin@devbox:/srv/proj');
-  });
-
-  it('rehydrate sees no remote tab, because none was ever written', () => {
-    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
-    const written: AgentState[] = [];
-    saveSpy.mockImplementation((state: AgentState) => { written.push(state); });
-
-    const tm = makeTabManager();
-    const tab = tm.cur();
-    tab.remote = { address: 'devbox', host: 'devbox' };
-    tm.persist(tm.buildAgentState(tab));
-
-    const listSpy = vi.spyOn(agentState, 'listAgentStates').mockReturnValue(written);
-    const managers = {} as Managers;
-    managers.tab = new TabManager(managers);
-    managers.tab.rehydrate(() => [], () => {});
-
-    expect(managers.tab.tabs.some((t) => t.remote !== undefined)).toBe(false);
-
-    listSpy.mockRestore();
-    saveSpy.mockRestore();
   });
 
   it('openEditorTab deduplicates by path and focuses the existing tab', () => {
@@ -983,47 +860,5 @@ describe('TabManager retargetEditorTab', () => {
     const tab = tm.tabs[index];
     expect(tab.editor?.path).toBe('/tree/notes.txt');
     expect(managers.editorWatch.watch).not.toHaveBeenCalled();
-  });
-});
-
-// A tab's schedule lives on the schedule manager, and the state file is replaced whole on every
-// write, so a snapshot that left it out erased the persisted schedule. `buildAgentState` now reads
-// it itself, so every save path keeps it without the caller having to remember.
-describe('TabManager buildAgentState schedule', () => {
-  const entry: ScheduleEntry = { id: 'fetch', command: 'echo hi', spec: 'every 5m', nextRun: 1, recurring: true, intervalMs: 300_000 };
-
-  function makeScheduledTabManager(schedules: Record<string, ScheduleEntry[]>): TabManager {
-    const managers = {} as Managers;
-    managers.tab = new TabManager(managers);
-    Object.assign(managers, makeManagers());
-    managers.schedule = { get: (label: string) => schedules[label] } as unknown as Managers['schedule'];
-    return managers.tab;
-  }
-
-  it('includes the schedule registered with the schedule manager when no extra is passed', () => {
-    const tm = makeScheduledTabManager({ janus: [entry] });
-    expect(tm.buildAgentState(tm.cur()).schedule).toEqual([entry]);
-  });
-
-  it('lets an explicit extra schedule override the registered one', () => {
-    const tm = makeScheduledTabManager({ janus: [entry] });
-    expect(tm.buildAgentState(tm.cur(), { schedule: [] }).schedule).toEqual([]);
-  });
-
-  it('leaves the schedule undefined for a tab with none', () => {
-    const tm = makeScheduledTabManager({});
-    expect(tm.buildAgentState(tm.cur()).schedule).toBeUndefined();
-  });
-
-  it('keeps the schedule on a write that has nothing to do with scheduling', () => {
-    const written: AgentState[] = [];
-    const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation((state: AgentState) => { written.push(state); });
-    const tm = makeScheduledTabManager({ janus: [entry] });
-
-    tm.enqueue('janus', 'echo queued');
-
-    expect(written.at(-1)?.commandQueue).toEqual(['echo queued']);
-    expect(written.at(-1)?.schedule).toEqual([entry]);
-    saveSpy.mockRestore();
   });
 });

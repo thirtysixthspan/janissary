@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ notify: vi.fn() }));
 vi.mock('../notifications/index.js', () => ({ notify: mocks.notify }));
@@ -10,7 +10,7 @@ import type { ScheduleEntry } from './types.js';
 import { messageBus } from '../bus.js';
 import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
-import * as agentState from '../agent/state.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: Tab } {
   const tab: Tab = {
@@ -34,8 +34,6 @@ function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: 
       tabs: [tab],
       byLabel: (label: string) => (label === tab.label ? tab : undefined),
       append: () => {},
-      persist: () => {},
-      buildAgentState: () => ({}),
     },
     command: { dispatchTo: () => {} },
     pty: { input: () => {} },
@@ -43,17 +41,14 @@ function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: 
   return { managers, tab };
 }
 
-// A real `TabManager` holding one extra tab, so a schedule change runs through the actual
-// `TabManager.persist` path and its agent-only rule rather than a mocked `persist`.
-function withRealTabManager(overrides: Partial<Tab>): {
-  managers: Managers; saveSpy: MockInstance<typeof agentState.saveAgentState>;
-} {
-  const saveSpy = vi.spyOn(agentState, 'saveAgentState').mockImplementation(() => {});
+// A real `TabManager` holding one extra tab, so a schedule change runs against the actual tab list.
+function withRealTabManager(overrides: Partial<Tab>): { managers: Managers } {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   managers.schedule = new ScheduleManager(managers);
   managers.tab.tabs.push({ ...makeTab(overrides.label ?? 'claude', '#aaa'), ...overrides });
-  return { managers, saveSpy };
+  return { managers };
 }
 
 describe('ScheduleManager tick', () => {
@@ -610,42 +605,6 @@ describe('ScheduleManager add', () => {
   });
 });
 
-// An app-added entry on an agent tab has to reach the state file, or it is lost on relaunch until
-// some unrelated schedule change happens to make a tick write the list.
-describe('ScheduleManager add persistence', () => {
-  // Each case restores its own spy: `vi.spyOn` hands back the same mock for an already-spied method,
-  // so a case that leaves it installed hands its call history to the next one that asserts on it.
-  afterEach(() => { vi.restoreAllMocks(); });
-
-  it('writes an agent tab state file carrying the new entry', () => {
-    const { managers, saveSpy } = withRealTabManager({ label: 'bekir' });
-    const mgr = managers.schedule;
-    mgr.add('bekir', { id: 'standup', command: 'report', spec: 'every 1d', nextRun: Date.now() + 60_000, recurring: true, timeOfDay: { hour: 9, minute: 0 } });
-
-    expect(saveSpy).toHaveBeenCalledTimes(1);
-    expect(saveSpy.mock.calls.at(-1)?.[0]).toMatchObject({
-      schedule: [expect.objectContaining({ id: 'standup' })],
-    });
-  });
-
-  it('writes no state file for a harness tab, whose schedule is memory-only by design', () => {
-    const { managers, saveSpy } = withRealTabManager({
-      label: 'codex', view: 'harness', harness: { name: 'codex', program: 'codex', ptyId: 'p1', status: 'running' },
-    });
-    managers.schedule.add('codex', { id: 'auto-resume', command: 'resume', spec: 'once', nextRun: Date.now() + 60_000, recurring: false });
-
-    expect(saveSpy).not.toHaveBeenCalled();
-  });
-
-  it('writes nothing for a tab that has since closed', () => {
-    const { managers, saveSpy } = withRealTabManager({ label: 'bekir' });
-    managers.tab.tabs.length = 0;
-    managers.schedule.add('bekir', { id: 'x', command: 'y', spec: 'once', nextRun: 1, recurring: false });
-
-    expect(saveSpy).not.toHaveBeenCalled();
-  });
-});
-
 describe('ScheduleManager schedule launch dialog', () => {
   function makeMgr(tabs: Partial<Tab>[], activeLabel: string): ScheduleManager {
     const managers = {
@@ -698,33 +657,28 @@ describe('ScheduleManager cancel', () => {
     return { id, command: 'clear', spec: 'every 5m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 };
   }
 
-  it('removes an agent tab entry, persists the reduced list, emits state.dirty, and returns true', () => {
+  it('removes an agent tab entry, emits state.dirty, and returns true', () => {
     const { managers } = makeManagers();
-    const persist = vi.fn();
-    (managers.tab as unknown as { persist: typeof persist }).persist = persist;
     const mgr = new ScheduleManager(managers);
     mgr.set('janus', [entry('a'), entry('b')]);
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
     expect(mgr.cancel('janus', 'a')).toBe(true);
     expect(mgr.get('janus')!.map((e) => e.id)).toEqual(['b']);
-    expect(persist).toHaveBeenCalledTimes(1);
     expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
     emitSpy.mockRestore();
   });
 
-  it('removes a harness tab entry and emits without writing agent state', () => {
-    const { managers, saveSpy } = withRealTabManager({ label: 'claude', view: 'harness' });
+  it('removes a harness tab entry and emits', () => {
+    const { managers } = withRealTabManager({ label: 'claude', view: 'harness' });
     const mgr = managers.schedule;
     mgr.set('claude', [entry('a')]);
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
     expect(mgr.cancel('claude', 'a')).toBe(true);
     expect(mgr.get('claude')).toEqual([]);
-    expect(saveSpy).not.toHaveBeenCalled();
     expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
     emitSpy.mockRestore();
-    saveSpy.mockRestore();
   });
 
   it('leaves the schedule unchanged, does not emit, and returns false for an unknown id', () => {
@@ -747,52 +701,45 @@ describe('ScheduleManager cancel', () => {
 });
 
 describe('ScheduleManager clearAll', () => {
-  function makeMgr(tabs: Partial<Tab>[]): { mgr: ScheduleManager; persist: ReturnType<typeof vi.fn> } {
-    const persist = vi.fn();
+  function makeMgr(tabs: Partial<Tab>[]): { mgr: ScheduleManager } {
     const managers = {
       tab: {
         tabs,
         byLabel: (l: string) => tabs.find((t) => t.label === l),
-        persist,
-        buildAgentState: () => ({}),
       },
     } as unknown as Managers;
-    return { mgr: new ScheduleManager(managers), persist };
+    return { mgr: new ScheduleManager(managers) };
   }
 
   function entry(id: string): ScheduleEntry {
     return { id, command: 'clear', spec: 'every 5m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 };
   }
 
-  it('clears an agent tab schedule, persists it, and emits state.dirty', () => {
-    const { mgr, persist } = makeMgr([{ label: 'janus' }]);
+  it('clears an agent tab schedule and emits state.dirty', () => {
+    const { mgr } = makeMgr([{ label: 'janus' }]);
     mgr.set('janus', [entry('a')]);
     const emitSpy = vi.spyOn(messageBus, 'emit');
 
     expect(mgr.clearAll()).toBe(true);
     expect(mgr.get('janus')).toEqual([]);
-    expect(persist).toHaveBeenCalledTimes(1);
     expect(emitSpy).toHaveBeenCalledWith('state', { type: 'dirty' });
     emitSpy.mockRestore();
   });
 
-  it('clears a harness tab schedule without writing agent state', () => {
-    const { managers, saveSpy } = withRealTabManager({ label: 'claude', view: 'harness' });
+  it('clears a harness tab schedule', () => {
+    const { managers } = withRealTabManager({ label: 'claude', view: 'harness' });
     const mgr = managers.schedule;
     mgr.set('claude', [entry('a')]);
 
     expect(mgr.clearAll()).toBe(true);
     expect(mgr.get('claude')).toEqual([]);
-    expect(saveSpy).not.toHaveBeenCalled();
-    saveSpy.mockRestore();
   });
 
-  it('leaves an already-empty schedule untouched and does not persist it', () => {
-    const { mgr, persist } = makeMgr([{ label: 'janus' }]);
+  it('leaves an already-empty schedule untouched', () => {
+    const { mgr } = makeMgr([{ label: 'janus' }]);
     mgr.set('janus', []);
 
     expect(mgr.clearAll()).toBe(false);
-    expect(persist).not.toHaveBeenCalled();
   });
 
   it('returns false and does not emit when there are no schedules at all', () => {

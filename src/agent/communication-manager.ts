@@ -39,8 +39,6 @@ export class AgentCommunicationManager {
     const agentColor = (label: string) => this.managers.tab.byLabel(label)?.dotColor ?? '#e4e5e7';
     const appendContext = (label: string, text: string) => {
       this.managers.tab.appendContext(label, text);
-      const tab = this.managers.tab.byLabel(label);
-      if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab));
     };
 
     if (message.kind === 'info') {

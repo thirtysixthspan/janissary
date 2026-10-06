@@ -5,13 +5,14 @@ import type { Managers } from '../../managers.js';
 import type { ProfileTabFile } from '../types.js';
 import type { Tab } from '../../tab/types.js';
 import type { TreeSelection } from '../../file-navigator/selection-request.js';
+import { LAUNCH_LABEL } from '../../launch-shell.js';
 
 // Per-tab routing for `profile save`, split out of save.ts to keep its cognitive complexity down.
 // Each tab produces one element of the profile's single `tabs` array, appended in tab-strip order,
 // plus a bump of the per-type counter the save report reads. Monitor reporting tabs are
 // deliberately a no-op here (captured via the monitor manager's snapshot instead), so they never
-// land in `skipped`. An agent tab has no profile entry, so it lands in `skipped` — except the root
-// `janus` tab, which every relaunch has its own fresh one of and is left out silently.
+// land in `skipped`. An agent tab has no profile entry, so it lands in `skipped`. The launch shell —
+// the first tab, labelled `janus` — is left out silently, since every launch opens its own.
 export type CaptureState = {
   harnesses: number;
   editors: number;
@@ -45,10 +46,10 @@ function push(state: CaptureState, entry: ProfileTabFile | undefined, count: Cap
 export function captureTab(
   tab: Tab, managers: Managers, state: CaptureState, selections: Map<number, TreeSelection> = new Map(),
 ): void {
+  if (tab === managers.tab.tabs[0] && tab.label === LAUNCH_LABEL) return;
   switch (tab.view) {
     case undefined:
     case 'agent': {
-      if (tab === managers.tab.tabs[0] && tab.label === 'janus') return;
       state.skipped.push(tab.label);
       return;
     }

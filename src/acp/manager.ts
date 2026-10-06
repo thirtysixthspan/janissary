@@ -172,7 +172,6 @@ export class AcpManager {
     const updateRunning = (output: string, running: boolean) => {
       this.managers.tab.updateRunning(label, { markdown: true }, output, running, {
         trailing: true,
-        finalize: (t) => this.managers.tab.persist(this.managers.tab.buildAgentState(t)),
       });
     };
 

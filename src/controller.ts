@@ -1,6 +1,5 @@
 import type { CompletionResult } from './completion/types.js';
 import type { Sinks } from './controller/types.js';
-import { TranscriptStore } from './transcript/store.js';
 import { complete as completeCommand } from './controller/completion.js';
 import { wireControllerEvents } from './controller/events.js';
 import { createManagers } from './controller/create-managers.js';
@@ -25,16 +24,11 @@ export class ControllerCore {
     wireControllerEvents(this.managers, this.sinks);
   }
 
-  // Restore tabs from persisted agent state (for `--relaunch`). Called before any client connects.
-  //
-  // Every parked remote session is attached as part of the same restore, each on its own: a
-  // refusing peer is marked ended, an unreachable host stays detached with its failure on its row,
-  // and neither holds the rest of the restore up — which is why nothing here is awaited.
-  rehydrate(): void {
-    this.managers.tab.rehydrate(
-      (name) => TranscriptStore.load(name),
-      (s) => { if (s.schedule) this.managers.schedule.set(s.name, s.schedule); },
-    );
+  // What `--relaunch` does once the launch shell is open, before any client connects: attach every
+  // parked remote session, each on its own. A refusing peer is marked ended, an unreachable host stays
+  // detached with its failure on its row, and neither holds the rest up — which is why nothing here
+  // is awaited.
+  reattachSessions(): void {
     this.managers.sessions.restoreAll();
   }
 

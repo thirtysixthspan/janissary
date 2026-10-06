@@ -13,10 +13,10 @@ import { decodeFrame, encodeFrame, encodeHandshake } from '../remote/protocol.js
 import type { ClientFrame, ServerFrame } from '../remote/protocol-frames.js';
 import { RemoteProcesses } from '../remote/serve-processes.js';
 import { TabManager } from '../tab/manager.js';
-import { TranscriptStore } from '../transcript/store.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { SessionsManager } from './manager.js';
 import type { RemoteSessionRecord } from './store.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 const saved = vi.hoisted(() => ({ records: [] as RemoteSessionRecord[] }));
 vi.mock(import('./store.js'), async (importOriginal) => ({
@@ -36,9 +36,6 @@ vi.mock('../harness/observers.js', () => ({
 }));
 vi.mock('../harness/scratch-dir.js', () => ({ harnessSpawnEnv: () => ({}) }));
 vi.mock('../file-navigator/remote/file-cache.js', () => ({ clearRemoteFileCacheForWorkspace: vi.fn() }));
-vi.mock(import('../agent/state.js'), async (importOriginal) => ({
-  ...await importOriginal(), deleteAgentState: vi.fn(),
-}));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
 const WORKSPACE = '/remote-only/project/.janissary/workspace/claude';
@@ -96,7 +93,7 @@ function harness() {
   managers.schedule.get = vi.fn(() => []);
   managers.shell.releaseAdoptedShell = vi.fn();
   managers.tab = new TabManager(managers, process.cwd());
-  vi.spyOn(managers.tab, 'persist').mockImplementation(() => {});
+  seedRootAgentTab(managers.tab);
   managers.pty = new PseudoterminalManager(managers);
   managers.remote = new RemoteManager(managers);
   managers.harness = new HarnessManager(managers);
@@ -110,7 +107,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   saved.records = [];
   built.runtimes = [];
-  vi.spyOn(TranscriptStore, 'remove').mockImplementation(() => {});
 });
 
 afterEach(() => {

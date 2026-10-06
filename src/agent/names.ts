@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import defaultNames from '../../agent-names.json' with { type: 'json' };
 import { workspaceLabelError } from '../workspace/label.js';
-import { isValidAgentName } from './state.js';
 
 export let agentNames: string[] = defaultNames;
 
@@ -10,9 +9,17 @@ function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string');
 }
 
-// A drawn name becomes a tab label, a workspace folder, and a state-file stem, so an override is
-// held to the same bar as the bundled list: lowercase, unique, and safe as one folder and one stem.
-// Any entry that cannot be made so rejects the whole file, the same way invalid JSON does.
+// Filename-safety guard, not a label dictionary: no `/`, no `\`. Dots are fine — real labels hold
+// them (an IP address, e.g. `10.27.1.94`).
+const VALID_NAME = /^[\w.-]+$/;
+
+export function isValidAgentName(name: string): boolean {
+  return VALID_NAME.test(name);
+}
+
+// A drawn name becomes a tab label and a workspace folder, so an override is held to the same bar as
+// the bundled list: lowercase, unique, and safe as one folder and one file stem. Any entry that
+// cannot be made so rejects the whole file, the same way invalid JSON does.
 export function decodeAgentNames(value: unknown): string[] | undefined {
   if (!isStringList(value) || value.length === 0) return undefined;
   const names = [...new Set(value.map((entry) => entry.toLowerCase()))];

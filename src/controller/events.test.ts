@@ -29,8 +29,6 @@ describe('the bus subscriptions the controller projects onto clients', () => {
     const managers = {
       tab: {
         tabs: [tab],
-        persist: vi.fn(),
-        buildAgentState: vi.fn(() => ({ label: 'work' })),
         harnessTabByPtyId: vi.fn(() => tab),
         closeTab: vi.fn(),
       },
@@ -80,26 +78,15 @@ describe('the bus subscriptions the controller projects onto clients', () => {
     expect(sinks.sendCollectTreeState).toHaveBeenCalledWith({ id: 7 });
   });
 
-  it('persists a tab the moment its transcript grows', () => {
-    const { managers } = wire();
-
-    messageBus.emit('transcript', {
-      type: 'entry:appended', tab: 'work', tabLabel: 'work', entry: { text: 'hello' },
-    } as never);
-
-    expect(managers.tab.persist).toHaveBeenCalledWith({ label: 'work' });
-  });
-
   // The bus keys subscriptions by channel and type, so a handler registered for one type never sees
   // another. Pinned here because it is what makes the type guards inside the handlers unreachable,
   // and because a sink reached by an event it did not ask for is the failure this rules out.
   it('reaches no sink when a channel carries a type nothing subscribed to', () => {
-    const { managers, sinks } = wire();
+    const { sinks } = wire();
 
     messageBus.emit('transcript', { type: 'entry:removed', tab: 'work' } as never);
     messageBus.emit('pty', { type: 'resize', id: 'pty1' } as never);
 
-    expect(managers.tab.persist).not.toHaveBeenCalled();
     expect(sinks.sendPty).not.toHaveBeenCalled();
     expect(sinks.sendPtyExit).not.toHaveBeenCalled();
   });

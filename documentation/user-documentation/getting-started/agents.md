@@ -14,7 +14,7 @@ The new tab is focused as soon as it's created. See [Tabs](/user-documentation/g
 
 <img class="agent-float" src="/agents/bilal-south-west.png" alt="" />
 
-Agent names are always lowercased, and `bilal` and `BILAL` are the same name. Otherwise a name you type is taken as given, so `agent 10.27.1.94` is a perfectly good name and keeps its history and transcript across a relaunch. The name still has to be free before the tab opens: when it isn't, no tab opens, nothing is written to the tab you typed the command in, and one line lands in the [notifications](/user-documentation/tab-types/notifications) feed instead.
+Agent names are always lowercased, and `bilal` and `BILAL` are the same name. Otherwise a name you type is taken as given, so `agent 10.27.1.94` is a perfectly good name. The name still has to be free before the tab opens: when it isn't, no tab opens, nothing is written to the tab you typed the command in, and one line lands in the [notifications](/user-documentation/tab-types/notifications) feed instead.
 
 A name is taken when:
 

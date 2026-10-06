@@ -1,4 +1,3 @@
-import type { AgentState } from '../../agent/types.js';
 import { getConfig } from '../../config.js';
 import { TabOpeningState } from '../opening-state.js';
 import { recordHistory } from '../history.js';
@@ -7,18 +6,14 @@ import {
   appendTab, clearTranscriptTab, finishRunningTab, markUnreadTab, startRunningTab, updateRunningEntry,
   type RunningEntryFields, type RunningEntryMatch, type UpdateRunningHooks,
 } from './events.js';
-import type { LogEntry, Tab } from '../types.js';
+import type { LogEntry } from '../types.js';
 
 // A tab's transcript: the log it has written and the still-running entry at the tail of it. Every
 // method here is `TabManager`'s own wiring of the transcript events to tab state — the cap the
-// configured maximum applies, and the persistence and unread-marking each operation has to reach
+// configured maximum applies, and the busy-clearing and unread-marking each operation has to reach
 // — so it lives here rather than in the manager, which is then only tab state and tab selection.
 export abstract class TabTranscriptState extends TabOpeningState {
   abstract secondaryTabLabel?: string;
-
-  abstract persist(state: AgentState): void;
-
-  abstract buildAgentState(tab: Tab, extra?: Partial<AgentState>): AgentState;
 
   abstract deleteBusy(label: string): void;
 
@@ -29,7 +24,7 @@ export abstract class TabTranscriptState extends TabOpeningState {
   }
 
   finishRunning(label: string, output: string, match?: RunningEntryMatch): void {
-    finishRunningTab(this.tabs, label, output, (l) => this.deleteBusy(l), (s) => this.persist(s), (t) => this.buildAgentState(t), (l) => this.markUnread(l), match);
+    finishRunningTab(this.tabs, label, output, (l) => this.deleteBusy(l), (l) => this.markUnread(l), match);
   }
 
   updateRunning(label: string, match: RunningEntryMatch | undefined, output: string, running: boolean, hooks: UpdateRunningHooks = {}): void {
@@ -47,7 +42,7 @@ export abstract class TabTranscriptState extends TabOpeningState {
   }
 
   clearTranscript(label: string): void {
-    clearTranscriptTab(this.tabs, label, (s) => this.persist(s), (t) => this.buildAgentState(t));
+    clearTranscriptTab(this.tabs, label);
   }
 
   recordHistory(index: number, text: string): string {

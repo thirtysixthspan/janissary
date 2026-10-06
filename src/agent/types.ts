@@ -1,28 +1,4 @@
-import type { ScheduleEntry } from '../schedule/types.js';
 import type { RemoteAddress } from '../remote/address.js';
-
-export type AgentState = {
-  name: string;
-  dotColor: string;
-  active: boolean;
-  number?: number;
-  focus?: boolean;
-  group?: number;
-  groupColor?: string;
-  cmdHistory?: string[];
-  log?: { input: string; output: string; running?: boolean }[];
-  cwd?: string;
-  context?: string[];
-  commandQueue?: string[];
-  workspaceDir?: string;
-  // The `on <address>` token of a tab running on another host. Present only in the profile-entry
-  // form of this shape — a remote agent tab is never written to the state directory, since its
-  // workspace is deleted when its channel dies and its cwd does not exist on this machine.
-  remote?: string;
-  offline?: boolean;
-  schedule?: ScheduleEntry[];
-  title?: string;
-};
 
 export type AgentCommand = {
   name: string;

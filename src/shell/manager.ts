@@ -102,8 +102,8 @@ export class ShellManager {
 
   // The tab's persistent shell, spawned on first use and respawned if the previous one died (its
   // stdin no longer writable). A freshly spawned shell is `cd`'d into `cwd` so it starts in the tab's
-  // working directory — the workspace clone for a workspaced agent, or the saved cwd for a
-  // `--relaunch`'d tab. A nullish `cwd` leaves the shell in its default directory.
+  // working directory — the workspace clone for a workspaced agent. A nullish `cwd` leaves the shell
+  // in its default directory.
   private getShell(label: string, cwd: string | undefined): ShellProcess {
     const existing = this.shells.get(label);
     if (existing?.stdin?.writable) return existing;
@@ -209,9 +209,8 @@ export class ShellManager {
     const update = (output: string, running: boolean, trailing = false) => {
       this.managers.tab.updateRunning(label, { command }, output, running, {
         trailing,
-        finalize: (t) => {
+        finalize: () => {
           this.managers.tab.deleteBusy(label);
-          this.managers.tab.persist(this.managers.tab.buildAgentState(t));
         },
         markUnread: (l) => this.managers.tab.markUnread(l),
       });

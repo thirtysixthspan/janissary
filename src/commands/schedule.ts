@@ -21,13 +21,6 @@ function resolveTargetTab(target: string | undefined, own: string, managers: Com
   return tab;
 }
 
-// Persist a tab's schedule alongside its agent state. Harness tabs have no persisted agent
-// state (they cannot be rehydrated), so their schedules live in memory only.
-function persistSchedule(tab: Tab, managers: CommandManagers): void {
-  if (tab.view === 'harness') return;
-  managers.tab.persist(managers.tab.buildAgentState(tab));
-}
-
 function scheduleChange(parsed: Exclude<ScheduleParseResult, { error: string }>, current: ScheduleEntry[], suffix: string) {
   if (parsed.action === 'list') return { message: formatSchedule(current) };
   if (parsed.action === 'add') {
@@ -59,7 +52,7 @@ export const command: Command = {
     const current = managers.schedule.get(target.label) ?? [];
     const { next, message } = scheduleChange(parsed, current, suffix);
     if (!next) { append(message); return; }
-    managers.schedule.set(target.label, next); persistSchedule(target, managers);
+    managers.schedule.set(target.label, next);
     append(message);
   },
 };

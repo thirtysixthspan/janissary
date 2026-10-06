@@ -9,28 +9,28 @@ export function queueFor(queue: string[]): string[] {
 }
 
 export function enqueue(
-  queue: string[], text: string, persistQueue: () => void,
+  queue: string[], text: string, onChange: () => void,
 ): void {
   pushQueue(queue, text);
-  persistQueue();
+  onChange();
 }
 
 export function dequeue(
-  queue: string[], persistQueue: () => void,
+  queue: string[], onChange: () => void,
 ): string | undefined {
   const front = shiftQueue(queue);
-  if (front !== undefined) persistQueue();
+  if (front !== undefined) onChange();
   return front;
 }
 
 export function editQueued(
-  queue: string[], index: number, text: string, persistQueue: () => void,
+  queue: string[], index: number, text: string, onChange: () => void,
 ): void {
-  if (updateQueueEntry(queue, index, text)) persistQueue();
+  if (updateQueueEntry(queue, index, text)) onChange();
 }
 
 export function deleteQueued(
-  queue: string[], index: number, persistQueue: () => void,
+  queue: string[], index: number, onChange: () => void,
 ): void {
-  if (removeQueueEntry(queue, index)) persistQueue();
+  if (removeQueueEntry(queue, index)) onChange();
 }

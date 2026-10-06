@@ -13,7 +13,9 @@ from the project directory.
 
 `janus` starts the server in the background and hands your shell prompt straight back once it's ready. The terminal you launched from doesn't need to stay open, and closing it — or pressing `Ctrl+C` in it — no longer stops the app. Use [`janus stop`](#stopping-the-app) to shut it down.
 
-By default each launch starts fresh: a single `janus` tab, with any state from the previous session cleared. To pick up where you left off instead, use `--relaunch` (below).
+Every launch opens a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) named `janus`, in the project directory. Type `agent` in its command bar to open an agent tab. By default each launch also starts fresh, with the previous session's logs, recordings, and workspace clones cleared; `--relaunch` (below) keeps them.
+
+If zsh can't be started, the app doesn't start either: the launch fails with `could not open the launch shell` and the reason.
 
 ## Arguments
 
@@ -35,7 +37,7 @@ By default each launch starts fresh: a single `janus` tab, with any state from t
 |---|---|
 | `--port=<n>` | Listen on port `n` (1–65535). Without it, a free port is picked automatically. |
 | `--no-open` | Start the server without opening the app window; prints the server URL to the terminal instead. |
-| `--relaunch` | Restore the previous session instead of starting fresh. |
+| `--relaunch` | Keep the previous session's logs, recordings, and workspace clones instead of clearing them, and reattach parked remote sessions. |
 | `--help` | Print usage and exit. |
 | `--version` | Print the name and version and exit. |
 
@@ -61,28 +63,22 @@ It shuts down the instance running against the current directory. Pass a directo
 
 Closing the app window stops it too. When the last window or browser tab showing the app goes away, the server waits one second and then shuts down, the same as `janus stop`. The pause is there so a page reload or a browser back-and-forward can reconnect without losing your session; if a window comes back within that second, the shutdown is cancelled. If you have the app open in two windows, closing one changes nothing.
 
-## Resuming a session with `--relaunch`
+## Keeping state with `--relaunch`
 
 ```
 janus --relaunch
 ```
 
 
-`--relaunch` rebuilds your tabs as you left them: every agent tab comes back in its saved order with its dot color, group, transcript, command history, and working directory. Tab aliases and scheduled commands are restored too. What doesn't come back: view tabs (images, Markdown, editors, web pages), harness tabs you launched on this machine, and workspace clones — those are live views and processes, not saved state — and any tab you closed, which stays closed. Quitting closes nothing, so everything still open at the time is restored.
+`--relaunch` keeps what the previous session left on disk instead of clearing it: harness recordings and transcripts, browser logs, and workspace clones are all still there. It doesn't bring any tab back. A relaunch opens the same single `janus` shell tab every launch does, and agent tabs, their transcripts and command history, scheduled commands, and every other tab you had open are gone.
 
-A harness or agent you parked on another machine is the exception to that. `--relaunch` reconnects every remote session you had detached, opening its tabs as each host answers, and one unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for what a host that is gone or down leaves behind.
-
-What comes back is read from one JSON file per tab under `.janissary/state/`, named after the tab, with the transcript kept beside it in its own file under `.janissary/transcripts/`. Run `state` in a tab to see the fields the state file holds and what `--relaunch` would restore; see [`state`](/user-documentation/command-bar/commands#state).
-
-A relaunch comes back in one pane. A split you left open collapses to a single tab strip, and the first tab in the saved order takes focus.
+A harness or agent you parked on another machine is the exception. `--relaunch` reconnects every remote session you had detached, opening its tabs as each host answers, and one unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for what a host that is gone or down leaves behind.
 
 <img class="agent-float" src="/agents/mahir-south-west.png" alt="" />
 
 ## Troubleshooting
 
 Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of each normal launch and kept (with new output appended) across `--relaunch`. A launch that fails outright is the exception: the tail of what that launch wrote to the same log, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it. Under `--relaunch` that is only the new launch's output, never an earlier run's.
-
-If saving an agent's relaunch state fails, Janissary keeps the last valid state file and writes one warning for that agent to the server log. It suppresses repeated warnings while the same failure continues, then reports again if persistence recovers and later fails anew.
 
 If startup fails, the error names the app and version, says what went wrong, and suggests what to do next. The ones you're most likely to see:
 

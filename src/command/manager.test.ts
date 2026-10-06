@@ -4,11 +4,13 @@ import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
 
 function makeManagers(): { managers: Managers; recorder: string[] } {
   const recorder: string[] = [];
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
+  seedRootAgentTab(managers.tab);
   managers.shell = {
     run: vi.fn((label: string, cmd: string) => {
       recorder.push(`shell:${cmd}`);
@@ -384,6 +386,7 @@ describe('CommandManager drain and route chooser', () => {
     const recorder: string[] = [];
     const managers = {} as Managers;
     managers.tab = new MockedTabManager(managers);
+    seedRootAgentTab(managers.tab);
     managers.shell = {
       run: vi.fn((label: string, cmd: string) => { recorder.push(`shell:${cmd}`); managers.tab.addBusy(label); }),
     } as unknown as Managers['shell'];

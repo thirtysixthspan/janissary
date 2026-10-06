@@ -1,14 +1,14 @@
 # Tabs
 
-Multiple workspace tabs, each with independent state. The `janus` tab is open at startup; additional agent tabs are created on demand.
+Multiple workspace tabs, each with independent state. A zsh shell tab named `janus` is open at startup; agent tabs are created on demand.
 
 ### Default tab
 
-A single `janus` tab is open on launch with dot color `#5b9cff`. No other tabs exist until explicitly created. When `--relaunch` is used, the saved state may include additional tabs that are all restored.
+Every launch, `--relaunch` included, opens a single zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory. No other tabs exist until explicitly created, and no launch opens an agent tab. The shell is opened before any window can connect, so the strip is never empty. When it cannot be opened — no zsh to run, or a shell plugin that fails or is disabled — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]).
 
 ### Agent tab creation
 
-Running `agent` creates a new tab with a random unused name chosen from a 52-name pool. The name is always lowercased. The new tab is focused immediately, showing its transcript. The new tab joins the group of the tab it was created from (see Tab grouping). On `--relaunch`, agent tabs are restored from saved state rather than created manually.
+Running `agent` creates a new tab with a random unused name chosen from a 52-name pool. The name is always lowercased. The new tab is focused immediately, showing its transcript. The new tab joins the group of the tab it was created from (see Tab grouping).
 
 ### Named agent tab
 
@@ -25,18 +25,17 @@ When every pool name is in use, bare `agent` posts `All agent names are in use.`
 
 ### Tab dot colors
 
-Each tab has a colored dot drawn from a 15-color palette, cycling as tabs are added. The default `janus` tab uses the first palette color. A new tab's dot color is chosen to be perceptually distinct from the colors already on screen (`distinctColor` in `src/tab.ts`), rather than strictly cycling, so adjacent tabs stay easy to tell apart.
+Each tab has a colored dot drawn from a 15-color palette, cycling as tabs are added. The launch shell uses the first palette color. A new tab's dot color is chosen to be perceptually distinct from the colors already on screen (`distinctColor` in `src/tab.ts`), rather than strictly cycling, so adjacent tabs stay easy to tell apart.
 
 ### Tab grouping
 
 Every tab belongs to a **group**, identified by a `group` number and a fixed `groupColor` (the group's bar color). A group renders as a colored top border spanning each member tab's full width, drawn at full strength on every tab in the group — active or inactive, never faded — so related tabs read as a connected band in the strip.
 
-- **Root group.** The startup `janus` tab is group 1, and its group color is its own dot color.
+- **Root group.** The launch shell is group 1, and its group color is its own dot color.
 - **Inheritance.** An agent created with `agent` / `agent <name>` joins the group of the tab it was created from (the active tab), inheriting that group's number and bar color. Because creation is transitive, a chain of agents spawned from one another all share a single group.
 - **Profiles form a group.** Launching a profile creates one new group (the next free group number) shared by all of that profile's tabs; the group's bar color is fixed to the first launched tab's color. See Profiles.
 - **Fixed color.** A group's bar color is set when the group is first created (the color of its first member) and stored per tab, so it never shifts when tabs are reordered or a member is closed.
 - **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab.ts`) so each group stays a single connected run in the strip. Reordering with `Ctrl+←` / `Ctrl+→` or by dragging a label may only move a tab **within the same group** (`canMoveTab`), so groups always stay contiguous and a tab can never be dragged out of its group. A tab can be temporarily absent from the strip while docked into a sidebar; see `sidebars.md`.
-- **Persistence.** `group` and `groupColor` are saved in each agent's state file and restored on `--relaunch`, so groupings reappear exactly as they were left.
 
 ### Window focus dimming
 
@@ -89,7 +88,7 @@ Two clears are **not** dwelled, because neither is the user visiting the tab. A 
 
 **The active tab never shows the badge.** This is a rule about what is drawn, not about what is stored: a tab that is active and still badged renders no flag, so selecting a tab does not make a flag appear on it for the three seconds before the dwell finishes. The badge on the active tab is real state, and the strip simply does not show it.
 
-**Persistence.** `hasUnread` is in-memory only — not persisted to agent state — so tabs rehydrate with no badge on `--relaunch` (same policy as `scrollOffset` and `toolStepsExpanded`).
+**Persistence.** `hasUnread` is in-memory only (same policy as `scrollOffset` and `toolStepsExpanded`).
 
 ### Tab switching with arrow keys
 
@@ -239,7 +238,7 @@ provision or attach to never show it.
 
 Each tab carries its own transcript log, command history (including navigation index), and scroll offset. Switching tabs preserves each tab's state.
 
-A command typed into a tab's command bar but not yet executed belongs to that tab in the same way. Focusing another tab — an agent tab, a view tab, or a tab in the other split pane — and later returning shows that text again, ready to edit or execute; the tab focused in between shows its own unexecuted text, or an empty bar when it has none. Executing the command clears it, so the tab is left with an empty bar. Unexecuted text is held in the browser only: it is not persisted to agent state, does not survive a page reload, and is discarded when its tab closes.
+A command typed into a tab's command bar but not yet executed belongs to that tab in the same way. Focusing another tab — an agent tab, a view tab, or a tab in the other split pane — and later returning shows that text again, ready to edit or execute; the tab focused in between shows its own unexecuted text, or an empty bar when it has none. Executing the command clears it, so the tab is left with an empty bar. Unexecuted text is held in the browser only: it does not survive a page reload, and is discarded when its tab closes.
 
 ### Tab label length
 
@@ -260,7 +259,6 @@ Setting the alias to an empty value, or to the same text as the label, clears it
 
 While editing via double-click, the field accepts up to 50 characters — independent of the strip's display truncation length — so a full file name can always be typed in, including for an editor tab whose rename renames the file on disk. The field starts sized to its pre-filled content and widens only as further characters are typed, rather than reserving space for the maximum length up front.
 
-An alias persists across `--relaunch`, restored alongside the rest of the tab's saved state.
 
 ### `close` command
 
@@ -268,7 +266,7 @@ Closes the current tab and all of its associated connections — its shell, ACP 
 
 ### View tabs
 
-Besides agent tabs, several **view tabs** render a non-transcript body in place of the command line: embedded web page (`open <url>`), the plain-text editor, bundled plugin views such as rendered markdown (`open <file>.md`), the image viewer (`open <image>`), and video, the file navigator (see `file-navigator-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are persisted to agent state or restored on `--relaunch`.
+Besides agent tabs, several **view tabs** render a non-transcript body in place of the command line: embedded web page (`open <url>`), the plain-text editor, bundled plugin views such as rendered markdown (`open <file>.md`), the image viewer (`open <image>`), and video, the file navigator (see `file-navigator-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are saved or restored on `--relaunch`.
 
 One bundled plugin view keeps the command line and replaces the transcript instead: the **shell tab** (`zsh`) is a live zsh terminal under the agent tab's metadata row and command bar, laid out like an agent tab with a terminal where the transcript would be. It is a plugin tab in every other respect — live, in-memory, dockable, splittable — and is described in [[shell-tab]].
 

@@ -195,7 +195,6 @@ Workspace directories are ephemeral:
   only when the last referencing tab closes, so deleting a large workspace never freezes the UI. If
   the app exits before a background deletion finishes, that clone is still cleaned up as part of
   shutdown.
-- **`--relaunch`**: Workspace directories are not recreated; restore falls back to the tab's last known working directory.
 - **Leftover folders**: Before a `-w` launch clones, it checks the workspace folder its name would
   use. If a live janissary owner still holds it — an open tab using it, or a janus instance running
   inside it — the launch is refused for a typed name, or moves on to the next free name for a

@@ -900,8 +900,7 @@ after its last burst of output.
 Running the command writes that latest capture to `.janissary/captures/<label>-<timestamp>.txt`
 in the project directory and opens it as a regular editor tab — each invocation writes a file and
 opens a new tab; the capture is a snapshot, not a live view. Capture files accumulate only within
-a run: the directory is cleared at the next normal launch (a `--relaunch` handoff preserves it,
-matching agent state).
+a run: the directory is cleared at the next normal launch (a `--relaunch` handoff preserves it).
 
 For a remote harness tab, the capture comes from the far side's own detection rather than locally
 streamed bytes (see [[remote-server]]), and how it is reached depends on the tab's connection state.
@@ -979,7 +978,7 @@ A harness tab opened by `profile launch` instead joins the profile's own group (
 
 ## Persistence
 
-Harness tabs are **live and in-memory** — they are not saved to agent state and are not restored on
+Harness tabs are **live and in-memory** — like every tab, they are not saved and are not restored on
 `--relaunch`. Each launch starts fresh. A schedule attached to a harness tab (directly, or via a
 profile's authored `schedule`/`run` entries — see Profiles) is memory-only for the same reason: it
 ends when the harness's PTY exits and its tab closes (see Lifecycle above and Scheduling § Firing).

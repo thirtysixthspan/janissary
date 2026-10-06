@@ -42,7 +42,7 @@ import { NotificationQueue } from '../notifications/queue.js';
 // `MANAGER_DISPOSE_ORDER` in `../managers.ts`; change that when a teardown dependency changes.
 export function createManagers(managers: Managers, projectDir?: string): void {
   // First: it takes no other manager, and `TabManager` below can already reach it when a feed is
-  // opened during rehydration.
+  // opened.
   managers.notifications = new NotificationQueue();
   managers.database = new DatabaseManager();
   managers.tab = new TabManager(managers, projectDir);

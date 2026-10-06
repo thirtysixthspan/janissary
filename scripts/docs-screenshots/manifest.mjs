@@ -18,12 +18,18 @@
 //                  catch it dark.
 //   requiresBinary skip this shot (with a warning) unless the binary is on PATH; those shots
 //                  are captured manually on a machine that has it.
+//
+// Every shot starts in the reset's starting tab, a zsh shell tab shown as `janus` (see reset.mjs). A
+// setup line the application does not claim goes to that zsh, as a line typed in a shell tab does.
 export default [
   // Getting started: the window on first launch, and the tab strip's signals.
   { name: 'app-overview', setup: [], target: 'page' },
   {
+    // Three shells: the hidden `bilal` is badged by a command finishing in it, and `janus` blinks
+    // while it runs one. Each is aliased so the strip reads the same on every run.
     name: 'tabs-overview',
-    setup: ['agent bilal', 'agent cavus', 'msg janus info morning report ready', 'shell sleep 30'],
+    setup: ['zsh', 'rename bilal', 'zsh', 'rename cavus', 'send bilal sleep 1', 'send janus sleep 30'],
+    settle: 1200,
     stabilize: 'busy-dot',
     target: 'tab-strip',
     cropToChildren: '.tab',
@@ -40,7 +46,7 @@ export default [
     name: 'db-output',
     setup: ['db sqlite create demo', 'db sqlite query demo CREATE TABLE items (id INTEGER PRIMARY KEY, text TEXT)', 'db sqlite query demo SELECT * FROM items'],
     settle: 1200,
-    target: 'transcript',
+    target: 'shell-view',
     clipHeight: 400,
   },
   {
@@ -58,14 +64,15 @@ export default [
   },
   {
     name: 'messaging-output',
-    setup: ['agent bilal', 'msg bilal info the deploy is done', 'msg bilal request state'],
+    setup: ['agent bilal --no-workspace', 'msg bilal info the deploy is done', 'msg bilal request shell ls src'],
     settle: 1500,
     target: 'transcript',
     clipHeight: 400,
   },
   {
+    // A shell tab's own Ctrl+R list: the lines its bar sent to zsh and the one the app answered.
     name: 'history-picker',
-    setup: ['shell ls -la', 'shell git status', 'state'],
+    setup: ['ls -la', 'git status', 'help'],
     actions: [{ press: 'Control+r' }],
     target: 'history-overlay',
   },
@@ -78,16 +85,19 @@ export default [
     // it (Down) so the shot shows both a nested and a top-level task, as the doc page describes.
     name: 'task-picker',
     setup: [
-      'shell mkdir -p ai/tasks/hygiene ai/tasks/workspace',
-      'shell touch ai/tasks/build-a-feature.md ai/tasks/work-an-issue.md ai/tasks/hygiene/improve-test-coverage.md ai/tasks/workspace/merge-change-to-master.md ai/tasks/workspace/open-feature-pull-request.md ai/tasks/hygiene/reduce-complexity.md',
+      'mkdir -p ai/tasks/hygiene ai/tasks/workspace',
+      'touch ai/tasks/build-a-feature.md ai/tasks/work-an-issue.md ai/tasks/hygiene/improve-test-coverage.md ai/tasks/workspace/merge-change-to-master.md ai/tasks/workspace/open-feature-pull-request.md ai/tasks/hygiene/reduce-complexity.md',
     ],
+    // Longer than the default settle: the lines go to zsh, which the first of them may reach before
+    // the shell has finished starting.
+    settle: 1500,
     actions: [
       { press: 'Control+a' }, { press: 'ArrowDown' }, { press: 'ArrowDown' },
       { press: 'ArrowRight' }, { press: 'ArrowDown' },
     ],
     target: 'task-overlay',
   },
-  { name: 'ghost-text', setup: ['shell git status'], actions: [{ type: 'shell git' }], target: 'command-bar' },
+  { name: 'ghost-text', setup: ['git status'], actions: [{ type: 'git' }], target: 'command-bar' },
   {
     // `tides` appears in both the fixture's Markdown sample and its source tree, so the result window
     // shows matches from more than one file stacked above the search bar.
@@ -137,12 +147,12 @@ export default [
   },
   {
     name: 'schedule-window',
-    setup: ['schedule standup every day at 9:00 state', 'schedule tests every 2h shell ls'],
+    setup: ['schedule standup every day at 9:00 git pull', 'schedule tests every 2h ls'],
     target: 'status-panels',
   },
   {
     name: 'schedules-tab',
-    setup: ['schedule standup every day at 9:00 state', 'schedule tests every 2h shell ls', 'schedules'],
+    setup: ['schedule standup every day at 9:00 git pull', 'schedule tests every 2h ls', 'schedules'],
     settle: 1200,
     target: 'schedules-tab',
     clipHeight: 150,
@@ -153,14 +163,6 @@ export default [
     settle: 1500,
     target: 'tab-strip',
     cropToChildren: '.tab',
-  },
-  {
-    name: 'harness-tab',
-    setup: ['harness claude'],
-    settle: 5000,
-    target: 'harness-view',
-    clipHeight: 540,
-    requiresBinary: 'claude',
   },
   {
     name: 'harness-launch-dialog',

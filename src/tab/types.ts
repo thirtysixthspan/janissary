@@ -281,12 +281,11 @@ export type Tab = {
   editor?: EditorView;
   // Transient, unsaved buffer content synced from the client shortly after typing pauses
   // (see editor-live-buffer-sync plan). In-memory only; never sent to any client (not part
-  // of TabView) and never read when building persisted AgentState. Cleared on save.
+  // of TabView). Cleared on save.
   editorDraft?: { content: string; updatedAt: number };
   // Transient cache of the text visible in a plugin tab's view, written by the `snapshotTab`
   // capability — the embedded page plugin relays its viewport here so a monitor watching that tab
-  // has something to feed on. In-memory only; never sent to any client (not part of TabView) and
-  // never read when building persisted AgentState.
+  // has something to feed on. In-memory only; never sent to any client (not part of TabView).
   pageSnapshot?: { text: string; capturedAt: number };
   // The monitor-window payload, present only when `view === 'monitor'`: the suggestion feed, the
   // monitor's runtime name (which is also this tab's label and what `unmonitor` and `monitor ask`
@@ -337,11 +336,11 @@ export type Tab = {
   browser?: boolean;
   // When false/undefined, contiguous runs of auto-run agent tool steps (acp entries) are
   // collapsed into a single summary line in the transcript. Toggled with Ctrl+T. In-memory
-  // only (like scrollOffset) — not persisted to agent state.
+  // only (like scrollOffset).
   toolStepsExpanded?: boolean;
   // Set when new transcript content arrives on this tab while it is NOT the active tab; cleared
   // when the tab is activated. Drives the unread badge in the tab strip. In-memory only (like
-  // scrollOffset) — not persisted to agent state.
+  // scrollOffset).
   hasUnread?: boolean;
   // Set when this tab is docked into a sidebar instead of living in the central tab strip.
   // Absent means center (today's only behavior) — the zero value, no migration needed. A docked

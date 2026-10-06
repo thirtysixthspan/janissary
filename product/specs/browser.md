@@ -38,7 +38,7 @@ Each `browser` command shows a `Running…` entry while the async action complet
 
 ### Lifecycle and persistence
 
-Closing a tab's last window ends that tab's browser process; `connection close browser:<id>` and `browser close`/`browser window close` share the same `closeBrowserWindow` path. Closing a tab, quitting, and component unmount close every tab's browser. Browser windows are **live and per-tab**, so — like shell/acp and unlike SQLite — they are **not** restored on `--relaunch`; nothing browser-related is written to agent state.
+Closing a tab's last window ends that tab's browser process; `connection close browser:<id>` and `browser close`/`browser window close` share the same `closeBrowserWindow` path. Closing a tab, quitting, and component unmount close every tab's browser. Browser windows are **live and per-tab**, so — like shell/acp and unlike SQLite — they are **not** restored on `--relaunch`; nothing browser-related is saved.
 
 ### `browser` command
 

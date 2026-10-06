@@ -7,7 +7,7 @@ import { runtimeFor } from './runtime.js';
 export abstract class TabQueueState {
   protected abstract tabs: Tab[];
 
-  protected abstract persistQueue(label: string): void;
+  protected abstract queueChanged(): void;
 
   queueFor(label: string): string[] {
     const queue = runtimeFor(this.tabs, label)?.queue;
@@ -16,21 +16,21 @@ export abstract class TabQueueState {
 
   enqueue(label: string, text: string): void {
     const queue = runtimeFor(this.tabs, label);
-    if (queue) enqueueOp(queue.queue, text, () => this.persistQueue(label));
+    if (queue) enqueueOp(queue.queue, text, () => this.queueChanged());
   }
 
   dequeue(label: string): string | undefined {
     const queue = runtimeFor(this.tabs, label);
-    return queue ? dequeueOp(queue.queue, () => this.persistQueue(label)) : undefined;
+    return queue ? dequeueOp(queue.queue, () => this.queueChanged()) : undefined;
   }
 
   editQueued(label: string, index: number, text: string): void {
     const queue = runtimeFor(this.tabs, label);
-    if (queue) editQueuedOp(queue.queue, index, text, () => this.persistQueue(label));
+    if (queue) editQueuedOp(queue.queue, index, text, () => this.queueChanged());
   }
 
   deleteQueued(label: string, index: number): void {
     const queue = runtimeFor(this.tabs, label);
-    if (queue) deleteQueuedOp(queue.queue, index, () => this.persistQueue(label));
+    if (queue) deleteQueuedOp(queue.queue, index, () => this.queueChanged());
   }
 }

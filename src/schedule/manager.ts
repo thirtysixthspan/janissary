@@ -61,7 +61,7 @@ export class ScheduleManager {
   // maps rather than one joined key, so no label can be mistaken for part of an id — a profile
   // harness entry's name may contain a space, and `codex team 2` must not read as an entry called
   // `2 …` on `codex team`. Held apart from the entries themselves because a caller-supplied
-  // callback has no business on a type agent tabs persist.
+  // callback has no business on the plain entry data every schedule surface reads.
   private hooks = new Map<string, Map<string, EntryHooks>>();
 
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
@@ -80,14 +80,13 @@ export class ScheduleManager {
     this.stop();
   }
 
-  // A tab's scheduled commands, or undefined when it has none (raw — for persistence and the command
-  // context, both of which distinguish "no schedule" from "empty schedule").
+  // A tab's scheduled commands, or undefined when it has none (raw — for the command context, which
+  // distinguishes "no schedule" from "empty schedule").
   get(label: string): ScheduleEntry[] | undefined {
     return this.schedules.get(label);
   }
 
-  // Replace a tab's scheduled commands. Persisting is the caller's concern (rehydrate/profile load
-  // restore without re-persisting; the `schedule` command persists separately).
+  // Replace a tab's scheduled commands.
   set(label: string, entries: ScheduleEntry[]): void {
     this.schedules.set(label, entries);
     this.announceChange();
@@ -98,27 +97,16 @@ export class ScheduleManager {
   // `onFired` runs once the entry has actually been delivered, and never on a tick where delivery had
   // to wait — a retry is not a firing — while `onRemoved` runs when the entry leaves the schedule any
   // other way, the user cancelling it or the tab closing. Hooks are held beside the entry rather than
-  // on `ScheduleEntry`, which agent tabs persist. For a harness tab: an entry the app appends itself
-  // lands in a schedule the user also owns, and this appends to it rather than replacing it. An
-  // agent tab's schedule is written to its state file here, as `tick` and the `schedule` command do.
+  // on `ScheduleEntry`. For a harness tab: an entry the app appends itself lands in a schedule the
+  // user also owns, and this appends to it rather than replacing it.
   add(label: string, entry: ScheduleEntry, hooks?: EntryHooks): void {
     const current = this.schedules.get(label) ?? [];
     const next = [...current.filter((e) => e.id !== entry.id), entry];
     this.schedules.set(label, next);
     this.forgetHook(label, entry.id);
     if (hooks) this.entryHooks(label, entry.id, hooks);
-    this.persist(label, next);
     this.announceChange();
     messageBus.emit('state', { type: 'dirty' });
-  }
-
-  // Write a tab's schedule into its state file, for the tabs whose schedules outlive the process.
-  // `TabManager.persist` writes agent tabs only, so a harness tab's — memory-only by design — is
-  // simply not written, and a closed tab's label resolves to nothing and is skipped.
-  private persist(label: string, entries: ScheduleEntry[]): void {
-    const tab = this.managers.tab.byLabel(label);
-    if (!tab) return;
-    this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: entries }));
   }
 
   // Forget a tab's schedule (on tab close).
@@ -131,16 +119,14 @@ export class ScheduleManager {
   closeTab(label: string): void { this.delete(label); }
 
   // Remove one entry from a tab's schedule by id, after the client has confirmed the deletion.
-  // Persists the reduced list for non-harness tabs and re-emits state so every schedule surface
-  // refreshes. Returns false (no persist, no emit) when the tab has no matching entry.
+  // Re-emits state so every schedule surface refreshes. Returns false (no emit) when the tab has no
+  // matching entry.
   cancel(label: string, id: string): boolean {
     const current = this.schedules.get(label) ?? [];
     const next = current.filter((e) => e.id !== id);
     if (next.length === current.length) return false;
     this.schedules.set(label, next);
     this.removedHook(label, id);
-    const tab = this.managers.tab.byLabel(label);
-    if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: next }));
     messageBus.emit('state', { type: 'dirty' });
     this.announceChange();
     return true;
@@ -152,8 +138,6 @@ export class ScheduleManager {
       if (entries.length === 0) continue;
       this.schedules.set(label, []);
       this.removeHooks(label);
-      const tab = this.managers.tab.byLabel(label);
-      if (tab) this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: [] }));
       changed = true;
     }
     if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
@@ -172,8 +156,7 @@ export class ScheduleManager {
   }
 
   // Fire any commands whose next-run time has passed, in every still-open tab. A recurring entry is
-  // rescheduled to its next run; a one-shot drops off. Tabs whose schedule changed are persisted
-  // (`TabManager.persist` writes agent tabs only).
+  // rescheduled to its next run; a one-shot drops off.
   private tick(): void {
     const now = Date.now();
     let changed = false;
@@ -185,7 +168,6 @@ export class ScheduleManager {
       if (!remaining) continue;
       this.schedules.set(label, remaining);
       changed = true;
-      this.managers.tab.persist(this.managers.tab.buildAgentState(tab, { schedule: this.get(label) }));
     }
     if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
   }

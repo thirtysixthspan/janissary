@@ -135,7 +135,7 @@ An entry's `name` is a typed name, never one that walks to a `-2` suffix. Once t
 ## Saving the running session as a profile
 
 
-`profile save <name>` captures your current session into `profiles/<name>.json`, the inverse of launching one. It writes `<name>` verbatim as the filename, with no dasherization, and captures every open tab a profile can reopen, including the one you typed the command in. Agent tabs can't be reopened by a profile, so each one is left out and named under `Skipped:` in the report. The automatic root `janus` tab is left out without a mention, since a relaunch always has its own fresh one to land in.
+`profile save <name>` captures your current session into `profiles/<name>.json`, the inverse of launching one. It writes `<name>` verbatim as the filename, with no dasherization, and captures every open tab a profile can reopen, including the one you typed the command in. Agent tabs can't be reopened by a profile, so each one is left out and named under `Skipped:` in the report. The `janus` shell tab every launch opens is left out without a mention, since every launch has its own fresh one; saving it would open a second shell beside it. Other shell tabs are captured.
 
 Each harness is captured as a clean template: its name, `tool`, model, effort, workspace/offline/auto-approve flags, working directory, and tab presentation. Its scheduled and one-shot commands are never captured, since they only ever lived in memory. Whichever tab is currently active is saved with `focus: true` so a relaunch lands you back in the same place. Every captured main-area entry also saves `pane` as `left` or `right`, preserving which side of a split it occupied; the exact divider position is screen-local and resets to the middle.
 

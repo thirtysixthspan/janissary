@@ -57,4 +57,4 @@ An unknown target prints `No tab named "<label>".`. A target without an agent or
 
 These commands are handled immediately, even when the current agent or shell is busy: `hist`, `nav`, `syntax theme`, bare `theme`, bare `profile launch`, `quit`, `close`, `exit`, bare `queue`, and bare `tasks`. The argument form `queue <tab> <command>` still reaches the target queue. `msg` and `broadcast` use their own per-recipient delivery order.
 
-An agent's queue is saved with its state and restored by `janus --relaunch`. The relaunched agent starts idle, so restored commands wait until the first command is dispatched to that tab.
+An agent's queue lasts as long as the tab: it is not saved, and no launch brings it back.

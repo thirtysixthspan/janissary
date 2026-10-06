@@ -90,7 +90,5 @@ messaging (`msg` / `broadcast`) keeps its own separate per-recipient delivery or
 
 ### Persistence
 
-An agent tab's queue is persisted alongside its other state (see [[history]] "Persistence") and
-restored on `--relaunch`. A relaunched tab always starts idle (see [[relaunch]]), so a restored
-non-empty queue does not run anything on startup — it waits and starts draining on the first
-command dispatched into that tab afterward.
+An agent tab's queue is held in memory for the life of the tab and is not saved: it ends when the
+tab closes, and no launch brings it back.
