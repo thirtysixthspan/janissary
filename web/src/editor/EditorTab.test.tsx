@@ -1501,6 +1501,21 @@ describe('EditorTab', () => {
       expect(body.scrollTop).toBe(310);
     });
 
+    it('jumps to the first match and scrolls it into view on Enter', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      const scrollIntoView = vi.mocked(Element.prototype.scrollIntoView);
+      openFind();
+      await searchForOneRow(container, 'two');
+      scrollIntoView.mockClear();
+
+      fireEvent.keyDown(findInput(), { key: 'Enter' });
+
+      await waitFor(() => expect(currentLine(container)).toBe('line two'));
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+      expect(findInput()).toBeInTheDocument();
+    });
+
     it('closes on Escape and leaves the cursor on the previewed line', async () => {
       const { client } = makeClient();
       const { container } = await renderLoaded(client);
