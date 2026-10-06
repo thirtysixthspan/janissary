@@ -14,8 +14,8 @@ export { renderMarkdown } from '../shared/transcript/markdown';
 // the shell is markup plus its autosize, the hook is the baseline keymap, and a plugin with keys of
 // its own composes around them exactly as the agent tab does. Additive, so `TAB_PLUGIN_API_VERSION`
 // does not move — that constant versions what a manifest must declare, which this does not change.
-export { CommandBarShell, type CommandBarShellProperties } from '../shared/command-bar/CommandBarShell';
-export { useCommandBarKeys, type CommandBarKeys } from '../shared/command-bar/useCommandBarKeys';
+export { CommandBarShell,  } from '../shared/command-bar/CommandBarShell';
+export { useCommandBarKeys,  } from '../shared/command-bar/useCommandBarKeys';
 // The bar's caret insertion, published with it so a plugin splicing a picked line into its own bar
 // keeps the same undo entry and caret placement the agent tab's bar does. The shell tab shipped a
 // line-for-line copy of it before this. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
@@ -55,7 +55,7 @@ export { copySelectionChord, isMacPlatform } from '../shared/terminal/terminal/k
 // plugin's row deliberately does not import the host's `AgentTabMeta` markup, but this flag is a
 // component of its own rather than part of that markup — so the plugin renders the one the host
 // renders instead of keeping a second copy that could drift on its icon, its label, or when it lights.
-export { tabFlagDisplay } from '../shared/tab/flag-display';
+;
 export { RecordingFlag } from '../shared/RecordingFlag';
 export { PluginActionsHeader } from './PluginActionsHeader';
 
@@ -76,8 +76,8 @@ export { isTextEntryElement } from '../shared/text-entry';
 // library the plugin cannot add to, and an unregistered name renders nothing at all — a control with
 // no glyph and no size, which is invisible rather than obviously broken. `openFilesIcon` and
 // `newTabIcon` are here for that reason: a metadata row of a plugin's own cannot draw its buttons.
-export { ConnectionPlug, type ConnectionPlugState } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon } from '../shared/icons';
+export { ConnectionPlug,  } from '../shared/ConnectionPlug';
+export { detachSessionIcon, attachSessionIcon,  workspacedIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon } from '../shared/icons';
 
 // The host's own floating status panels and the visibility hook that drives them, published for the
 // same reason and on the same terms: a plugin whose tab offers the connections and schedule buttons
@@ -88,15 +88,15 @@ export { detachSessionIcon, attachSessionIcon, terminateSessionIcon, workspacedI
 export { StatusPanels } from '../shared/status-windows/StatusPanels';
 export {
   useStatusWindows,
-  type StatusWindowHandlers,
-  type StatusWindowOptions,
+  
+  
 } from '../shared/status-windows/useStatusWindows';
 // The two controls that open those windows, published with them for the same reason: a row offering
 // the windows without the buttons to open them would compute rows it can never show. `statusButton`
 // builds a button's props from a window's handlers and whether it has rows, which is the only pairing
 // the host's own rows use.
 export { StatusWindowButton } from '../shared/status-windows/StatusWindowButton';
-export { statusButton, type StatusWindowButtonProps } from '../shared/status-windows/status-button';
+export { statusButton,  } from '../shared/status-windows/status-button';
 
 // The bridge a terminal registers its selection with, which is the only way the application's own
 // context menu learns what a right-click landed on: a terminal's selection is emulator state, so
@@ -113,7 +113,7 @@ export {
 // applies exactly while the tab the user is looking at is on screen and reverts the moment focus moves.
 // Published because the alternative is a plugin binding its own window listener, which cannot pre-empt
 // the application's and would therefore never fire for a chord the application owns.
-export { usePluginChordClaims, type PluginChordHandler } from './PluginChords';
+export { usePluginChordClaims,  } from './PluginChords';
 
 // The arrow/Home/End selection rule for a list of records, published so every plugin list moves its
 // current row the same way. The conversations, sessions, and schedules lists each carried their own

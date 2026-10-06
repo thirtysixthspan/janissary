@@ -57,7 +57,7 @@ export type ConversationsView = {
 export type {
   DatabaseCellView,
   DatabaseColumnView,
-  DatabaseFilterOperator,
+  
   ForeignKey,
   DatabaseFilterView,
   DatabaseGridQuery,
@@ -71,13 +71,13 @@ export type {
   DatabaseStatementReport,
   DatabasesView,
 } from './protocol/database.js';
-export type { PluginTabView, PluginIntentRequest, PluginFailedRequest, PluginRpcCall, DefaultMenuEntry } from './protocol/plugin.js';
+export type {    PluginRpcCall, DefaultMenuEntry } from './protocol/plugin.js';
 export type { ScheduleView, AggregatedScheduleView, ScheduleLaunchView, ScheduleRpcCall } from './protocol/schedule.js';
 export type {
   RemoteSessionAction,
   RemoteSessionKind,
   RemoteSessionRpcCall,
-  RemoteSessionState,
+  
   RemoteSessionView,
 } from './protocol/sessions.js';
 export type { SuggestionView, MonitorRpcCall } from './protocol/monitor.js';
@@ -108,13 +108,13 @@ export type {
 } from './protocol/tab.js';
 export type {
   StateEvent,
-  PtyDataEvent,
-  PtyExitEvent,
-  RpcReply,
-  ByeEvent,
+  
+  
+  
+  
   LayoutEvent,
   LayoutUpdate,
-  CollectTreeStateEvent,
+  
   ServerEvent,
 } from './protocol/events.js';
 

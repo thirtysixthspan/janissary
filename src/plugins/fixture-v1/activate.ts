@@ -41,4 +41,4 @@ export function activate(): TabPluginActivation {
   };
 }
 
-export { FIXTURE_PAYLOAD_SCHEMA_VERSION } from './shared.js';
+;

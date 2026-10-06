@@ -12,7 +12,7 @@ export {
 export type { TabPluginCapabilityName } from './api-capabilities.js';
 
 export {
-  TAB_PLUGIN_NOTIFICATION_TOPICS, isTabPluginNotificationTopic,
+   isTabPluginNotificationTopic,
 } from './api-topics.js';
 export type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
@@ -354,7 +354,7 @@ export { defineIntents, type TabPluginIntentEntry } from './define-intents.js';
 
 // The dockable-list command and notify pair, for the same reason and on the same terms as the intent
 // table beside it: a plugin whose whole tab is one dockable list of records wrote both by hand.
-export { defineDockableList, type DockableListOptions } from './define-list-tab.js';
+export { defineDockableList,  } from './define-list-tab.js';
 
 // The `<command> [left|right]` grammar every dockable list plugin reads its argument with, and the
 // opener pair a plugin that claims no files answers a stray file with — each published once so the
@@ -370,7 +370,7 @@ export { READ_QUERY } from '../database/query.js';
 export type TabPluginLoader = () => Promise<TabPluginActivationModule>;
 export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;
 
-export type { PluginFailedRequest, PluginIntentRequest, PluginTabView } from '../protocol.js';
+;
 // The two guards a plugin payload decoder opens with, re-exported for the same reason the protocol
 // types above are: a plugin cannot import `../value-guards.js` across the plugin import boundary, and
 // every bundled plugin's `shared.ts` had its own copy of both.
@@ -379,32 +379,32 @@ export { isModelPair, isRecord } from '../value-guards.js';
 // `../protocol.js`, which the plugin import boundary forbids.
 export type {
   AggregatedScheduleView,
-  ConversationModelPair,
-  ConversationSummaryView,
-  ConversationTurnView,
-  ConversationWindowView,
+  
+  
+  
+  
   ConversationsView,
-  RemoteSessionAction,
-  RemoteSessionKind,
-  RemoteSessionState,
+  
+  
+  
   RemoteSessionView,
 } from '../protocol.js';
 // The database-browser slice, re-exported for the same reason: a plugin reaches the SQLite registry
 // only through the `databases` topic, and typing that topic's data and actions needs these.
 export type {
-  DatabaseCellView,
-  DatabaseColumnView,
-  DatabaseFilterOperator,
-  ForeignKey,
-  DatabaseFilterView,
-  DatabaseGridQuery,
-  DatabaseGridView,
-  DatabaseObjectKind,
-  DatabaseObjectView,
-  DatabaseOrderView,
-  DatabaseRefView,
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   DatabaseResultView,
-  DatabaseRowView,
+  
   DatabasesView,
 } from '../protocol.js';
 

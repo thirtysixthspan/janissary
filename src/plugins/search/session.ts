@@ -162,4 +162,4 @@ export class SearchSession {
   }
 }
 
-export { INSTANCE_KEY as SEARCH_INSTANCE_KEY };
+;

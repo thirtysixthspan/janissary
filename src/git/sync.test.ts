@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { WorkspaceManager } from '.../workspace/manager.js';
+import type { WorkspaceManager } from '../workspace/manager.js';
 
 type Call = { args: string[]; options: { cwd?: string; env?: NodeJS.ProcessEnv } };
 

@@ -168,10 +168,6 @@ export function cellText(cell: SqlCell): string {
   return cell.isNull ? NULL_TEXT : cell.text;
 }
 
-export function isNullCell(cell: SqlCell): boolean {
-  return cell.isNull;
-}
-
 /** The navigator's groups, in the order it draws them, with a trigger group nothing browses. */
 export function groupedObjects(objects: readonly SqlObject[]): { kind: SqlObject['kind']; label: string; entries: SqlObject[] }[] {
   const labels: { kind: SqlObject['kind']; label: string }[] = [
@@ -188,10 +184,6 @@ export function groupedObjects(objects: readonly SqlObject[]): { kind: SqlObject
 /** A trigger is listed but not browsable, so the navigator marks it rather than hiding it. */
 export function browsable(object: SqlObject): boolean {
   return object.kind === 'table' || object.kind === 'view';
-}
-
-export function currentObject(payload: SqlPayload): SqlObject | undefined {
-  return payload.objects.find((object) => object.name === payload.object);
 }
 
 /**
@@ -218,5 +210,4 @@ export function readOnlyReason(object: SqlObject | undefined, statement = false)
 export function columnCount(object: SqlObject): string {
   return `${object.columns.length} col${object.columns.length === 1 ? '' : 's'}`;
 }
-
 

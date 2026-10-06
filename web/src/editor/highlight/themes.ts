@@ -1,4 +1,4 @@
-export { SYNTAX_THEMES } from '@shared/syntax-themes';
+;
 import githubDark from 'highlight.js/styles/github-dark.css?raw';
 import github from 'highlight.js/styles/github.css?raw';
 import atomOneDark from 'highlight.js/styles/atom-one-dark.css?raw';

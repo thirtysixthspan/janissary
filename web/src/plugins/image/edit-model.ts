@@ -52,10 +52,6 @@ export function sameOperations(a: readonly ImageOperation[], b: readonly ImageOp
   return a.length === b.length && a.every((operation, index) => sameOperation(operation, b[index]));
 }
 
-export function isEdited(model: EditModel): boolean {
-  return model.cursor > 0;
-}
-
 export function canRedo(model: EditModel): boolean {
   return model.cursor < model.operations.length;
 }

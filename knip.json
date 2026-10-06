@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "project": ["src/**/*.{ts,tsx}", "web/src/**/*.{ts,tsx}"],
   "ignoreExportsUsedInFile": true,
-  "ignoreBinaries": ["open", "which"],
-  "ignore": ["web/src/env.d.ts"],
+  "ignoreBinaries": ["gitleaks", "opengrep", "mkfifo", "sandbox-exec"],
+  "ignore": ["src/plugins/search/matcher-worker-entry.ts"],
   "ignoreDependencies": ["@emnapi/core", "@emnapi/runtime"]
 }

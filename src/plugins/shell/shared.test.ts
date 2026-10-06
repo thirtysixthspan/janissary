@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AcpRef, ConnectionView, ScheduleView } from '../protocol.js';
+import type { AcpRef, ConnectionView, ScheduleView } from '../../protocol.js';
 import type { CompletionResult } from '../../completion/types.js';
 import {
   isEmptyShellIntent, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellMarkerNonce, isShellPayload,

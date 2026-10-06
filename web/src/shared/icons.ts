@@ -15,7 +15,7 @@ export {
   faCheck as selectedIcon,
   faChevronRight as promptIcon,
   faCircle as statusDotIcon,
-  faCircle as dirtyMarkerIcon,
+  
   faCaretDown as expandedIcon,
   faCaretRight as collapsedIcon,
   faFileCirclePlus as newFileIcon,
@@ -25,9 +25,9 @@ export {
   faPlug as connectionStatusIcon,
   faPlugCircleMinus as detachSessionIcon,
   faPlugCirclePlus as attachSessionIcon,
-  faPlugCircleXmark as terminateSessionIcon,
+  
   faClock as scheduleWindowIcon,
-  faTrash as clearSchedulesIcon,
+  
   faFloppyDisk as saveIcon,
   faArrowsUpDown as resizeIcon,
   faArrowsRotate as syncIcon,

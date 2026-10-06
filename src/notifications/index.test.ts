@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { NotificationConfig } from './config.js';
-import type { Managers } from './managers.js';
+import type { NotificationConfig } from '../config.js';
+import type { Managers } from '../managers.js';
 import {
   AMBIENT_EVENTS, EXPLICIT_EVENTS, shouldNotify, notify,
   type AmbientNotificationEvent, type ExplicitNotificationEvent,

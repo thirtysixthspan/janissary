@@ -22,11 +22,9 @@ export type SetGlobalFilterIntent = { value: string };
 // The whole hidden set rather than a toggle, so a client cannot grow it one call at a time into
 // something the grid then has to reconcile.
 export type SetColumnsIntent = { hidden: string[] };
-export type ClearFiltersIntent = Record<string, never>;
 export type SetOrderIntent = { column: string };
 export type SetPageIntent = { offset: number };
 export type SetPageSizeIntent = { limit: number };
-export type RefreshIntent = Record<string, never>;
 export type RunIntent = { sql: string };
 export type UpdateCellIntent = { row: string; column: string; value: string | null };
 export type InsertRowIntent = { object: string; cells: { column: string; value: string | null }[] };
@@ -159,4 +157,3 @@ export function isDeleteRowIntent(value: unknown): value is DeleteRowIntent {
 export function isExportIntent(value: unknown): value is ExportIntent {
   return isRecord(value) && (value.format === 'csv' || value.format === 'json');
 }
-

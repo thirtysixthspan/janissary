@@ -62,15 +62,6 @@ export type OverlayPluginItem = {
   text: string;
 };
 
-export type OverlayPluginItems = {
-  items: readonly OverlayPluginItem[];
-  // Which row the Return key and a click act on. The host owns nothing here: the plugin keeps its own
-  // selection, because the selection is part of the overlay's own state rather than the host's.
-  selected: number;
-  // The number of entries the host's configuration allows this overlay to keep.
-  maxEntries: number;
-};
-
 // What the host hands a plugin. Deliberately three things: the capability that can act on the world,
 // the one number the host owns that a plugin cannot derive, and the one way back out — nothing else.
 // No client, no tabs, no host internals, no importable module.

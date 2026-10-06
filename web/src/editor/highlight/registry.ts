@@ -5,7 +5,7 @@ import { javascriptLanguage } from './languages/javascript';
 import { typescriptLanguage } from './languages/typescript';
 import { jsonLanguage } from './languages/json';
 
-export type { LanguageModule } from './language-module';
+;
 
 // Adding a language later means one new file here plus one entry in this list.
 const MODULES: LanguageModule[] = [markdownLanguage, javascriptLanguage, typescriptLanguage, jsonLanguage];
