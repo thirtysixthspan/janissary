@@ -74,6 +74,8 @@ newdir draft notes
 
 `newfile <file>` opens an empty, unsaved plain-text editor for the requested name. It always creates a text buffer, even for an image extension such as `.png`. The file is written only when you use **Save**.
 
+The editor has focus as soon as it opens, so you can start typing right away. The name you supplied stays plain text in the metadata row; double-click it if you want to rename it. This differs from **New file** in the file navigator, which focuses the proposed name so you can replace it first.
+
 `newdir <directory>` creates the directory immediately. Its parent directory must already exist; the command doesn't create missing ancestors.
 
 Relative paths use the issuing tab's working directory. The remaining text is one path, including spaces, so type `newfile meeting notes.md` without quotes. Leading and trailing spaces are trimmed. These commands don't expand wildcards; `*` is a literal part of the requested name.

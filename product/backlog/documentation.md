@@ -4,7 +4,6 @@
 
 ## development
 
-* editor-tab (3/10) — 1 of 24 user-facing file-creation facts is missing and none are wrong: `newfile <file>` focuses the empty text buffer immediately, while the file navigator’s New file action selects the proposed name for renaming. Clarify this distinction in the existing “Create a file or directory” section. The ground truth is `product/specs/editor-tab.md`, `src/open/file-manager.ts`, and `web/src/editor/EditorTab.tsx`; update `documentation/user-documentation/tab-types/opening-files.md` and keep `help.md` terse.
 * conversations (1/10) — 0 of 34 user-facing facts are missing or wrong for the tab-close behavior flagged by the recent change: the conversations page already says closing a tab ends its live session and the next query starts another session with recent turns replayed. No documentation edit is needed. Ground truth is `product/specs/conversations.md` and `src/conversations/manager.ts`; the existing coverage is in `documentation/user-documentation/tab-types/conversations.md`.
 * sql-database (1/10) — 0 of 13 user-facing database failure facts are missing or wrong for the recent database-read change: grid failures are reported once until a successful operation, and command-query failures are described separately. No documentation edit is needed. Ground truth is `product/specs/sql-database.md` and `src/database/browser.ts`; coverage is in `documentation/user-documentation/tab-types/sql-browser.md` and `documentation/user-documentation/command-bar/database.md`.
 
@@ -14,6 +13,7 @@
 
 ## resolved
 
+* editor-tab — documented in documentation/user-documentation/tab-types/opening-files.md (removed 2026-10-06)
 * remote-server — documented in documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-10-06)
 * search-tab — documented in documentation/user-documentation/command-bar/project-search.md (removed 2026-10-06)
 * acp — not a gap: 2 of 25 facts missing and none wrong; the two candidates are an empty first reply being retried internally, which changes nothing the user sees, and `acp` in a remote harness tab, which product/specs/acp.md calls unsupported but for which no code path refuses it, so neither is documentable (removed 2026-09-26)
