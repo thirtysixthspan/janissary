@@ -295,6 +295,21 @@ describe('ShellTab', () => {
     expect(styles).toContain('.shell-tab .picker.shell-history { bottom: var(--command-bar-height, 0); max-height: 50%; }');
   });
 
+  it('lights the terminal focus line in the tab colour, falling back to the shell default', () => {
+    renderTab({ dotColor: '#ff8800' });
+    expect(document.querySelector<HTMLElement>('.shell-body')!.style.getPropertyValue('--shell-focus-color')).toBe('#ff8800');
+    cleanup();
+    renderTab();
+    expect(document.querySelector<HTMLElement>('.shell-body')!.style.getPropertyValue('--shell-focus-color')).toBe('#7ee787');
+  });
+
+  it('dims the terminal focus line until the terminal holds the keyboard, and pads the text clear of it', () => {
+    const styles = readFileSync('web/src/plugins/shell/shell.css', 'utf8');
+    expect(styles).toMatch(/\.shell-body::before \{[^}]*background: var\(--border\);/);
+    expect(styles).toContain('.shell-body:focus-within::before { background: var(--shell-focus-color, var(--accent)); }');
+    expect(styles).toContain('.shell-body .xterm { padding-left: 12px; }');
+  });
+
   it('disables shell input while Quick Open is visible', () => {
     renderTab({ blockingOverlayOpen: true });
     expect(bar()).toBeDisabled();
