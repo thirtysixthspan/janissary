@@ -1480,6 +1480,27 @@ describe('EditorTab', () => {
       await waitFor(() => expect(currentLine(container)).toBe('line two'));
     });
 
+    it('positions a selected match one quarter down the editor viewport', async () => {
+      const { client } = makeClient();
+      const { container } = await renderLoaded(client);
+      const body = container.querySelector('.editor-body') as HTMLElement;
+      Object.defineProperty(body, 'clientHeight', { value: 400 });
+      vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({
+        top: 100, bottom: 500, left: 0, right: 100, width: 100, height: 400, x: 0, y: 100, toJSON: () => ({}),
+      });
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(() => {
+        const top = 500 - body.scrollTop;
+        return { top, bottom: top + 20, left: 0, right: 0, width: 0, height: 20, x: 0, y: top, toJSON: () => ({}) };
+      });
+
+      openFind();
+      await searchForOneRow(container, 'two');
+      fireEvent.keyDown(findInput(), { key: 'ArrowDown' });
+
+      await waitFor(() => expect(currentLine(container)).toBe('line two'));
+      expect(body.scrollTop).toBe(310);
+    });
+
     it('closes on Escape and leaves the cursor on the previewed line', async () => {
       const { client } = makeClient();
       const { container } = await renderLoaded(client);

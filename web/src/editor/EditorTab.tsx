@@ -14,7 +14,7 @@ import { useEditorPlugins } from './plugins/useEditorPlugins';
 import { useEditorInteractions } from './useEditorInteractions';
 import { useEditorScrollRetention } from './useEditorScrollRetention';
 import { selectionsText } from './model';
-import { keepCaretRowVisible } from './scroll';
+import { keepCaretRowVisible, positionCaretAtQuarter } from './scroll';
 import { EditorConnectionsPanel } from './EditorConnectionsPanel';
 import { EditorFind } from './EditorFind';
 import { handleSuggestPillClick } from './handleSuggestPillClick';
@@ -68,6 +68,11 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   saveRef.current = file.save;
   useEditorLineJump(editor, api, caretRef);
   const find = useEditorFind(state?.lines ?? null, active);
+  useEffect(() => {
+    const result = find.results[find.selected];
+    if (!find.findOpen || !result || state?.cursor.line !== result.index || !bodyRef.current || !caretRef.current) return;
+    positionCaretAtQuarter(bodyRef.current, caretRef.current);
+  }, [find.findOpen, find.results, find.selected, state?.cursor.line]);
   const pluginKey = useEditorPlugins(client, editor.url, api, editor.name);
   const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, overlayOpen });
 

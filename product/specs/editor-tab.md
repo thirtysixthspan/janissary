@@ -461,7 +461,8 @@ whole-word options. Two identical lines appear as two rows with their own line n
 first-in-file order.
 
 ↑/↓ move the highlighted row and immediately move the editor cursor to that line, scrolling the
-buffer behind the overlay so the match is read in context. Clicking a row does the same, and keeps
+buffer behind the overlay so the match sits about one quarter of the editor body's height below its
+top edge. Clicking a row does the same, and keeps
 focus in the overlay's input. There is no
 separate commit step — Return does nothing, because the jump has already happened. The cursor move
 is not an edit: it never dirties the buffer and never becomes an undo step, so an undo right after a

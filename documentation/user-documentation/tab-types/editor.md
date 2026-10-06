@@ -116,7 +116,7 @@ Search buffer
 
 Type any fragment of the line you're after — the characters have to appear in order, but not next to each other, and case doesn't matter, so `synhi` finds `### Syntax highlighting`. That's the whole of it: there is no regex, no case-sensitivity switch, and no whole-word option. The ten best-matching lines are listed with their line numbers, matched characters picked out. A line too long for the overlay is cut short with an ellipsis rather than wrapped — its number and the jump still identify it — and two identical lines show up as two rows with their own numbers, in the order they appear in the file.
 
-`↑`/`↓` move down the list and the buffer jumps to each line as you go, so you read the match in its surroundings rather than committing blind. There's nothing to confirm: `Return` does nothing because the jump already happened, and `Escape` closes the overlay leaving the cursor on the last line you looked at, ready to type. Clicking a row does the same jump. `Escape` still closes the overlay if you've clicked back into the file while it's open.
+`↑`/`↓` move down the list and the buffer jumps to each line as you go, placing the match about one quarter of the editor's height from the top so you can read below it. There's nothing to confirm: `Return` does nothing because the jump already happened, and `Escape` closes the overlay leaving the cursor on the last line you looked at, ready to type. Clicking a row does the same jump. `Escape` still closes the overlay if you've clicked back into the file while it's open.
 
 A query that matches nothing shows `No matching lines`. Clearing it brings back the `type to search` hint.
 
