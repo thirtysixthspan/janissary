@@ -2,53 +2,53 @@
 
 | Command | Description |
 | ------- | ----------- |
-| `help` | List available commands; `help <section>` shows one section, such as `help commands` or `help shell` |
-| `clear` | Clear the output log in an agent tab; in a shell tab, clear the terminal (use `/clear` to clear its output log) |
-| `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
-| `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
-| `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |
-| `next` | Switch to the next tab |
-| `hist` | Open command history picker |
-| `clip` | Open the clipboard-history popup: everything copied in this session, newest at the bottom (Ctrl+Shift+V or Cmd+Shift+V); choosing an entry pastes it at the cursor rather than running it |
-| `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
-| `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
-| `msg` | Send a message to another agent |
-| `broadcast` | Send a message to several or all agents |
-| `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
 | `acp` | Send a prompt to the OpenCode ACP agent (`acp reset` starts a fresh session) |
-| `db` | Create, delete, query, or list SQLite databases |
-| `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the database reached most recently, by `sql` or any `db` command (`sql [<name>] left`/`right` to dock it) |
-| `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
-| `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
-| `play` | `play <name>` plays a file in the tab that plays its kind — `play devbox` plays the newest `.cast` recording of the session named `devbox`, `play clip.mp4` opens a video, `play song.mp3` queues a track; what plays a file is decided by its extension |
-| `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
+| `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
-| `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |
-| `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
-| `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
-| `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image, the PDF viewer for a PDF |
-| `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
-| `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
-| `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
+| `broadcast` | Send a message to several or all agents |
+| `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
+| `clear` | Clear the output log in an agent tab; in a shell tab, clear the terminal (use `/clear` to clear its output log) |
+| `clip` | Open the clipboard-history popup: everything copied in this session, newest at the bottom (Ctrl+Shift+V or Cmd+Shift+V); choosing an entry pastes it at the cursor rather than running it |
+| `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh/terminal) |
-| `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
-| `schedule` | Run a command later — once or on a recurring schedule |
-| `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
-| `profile` | `profile launch <name>` launches a project or built-in Janissary profile (bare `profile launch` opens a source-labeled picker); `profile save <name>` captures the running session in the project; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
-| `harness` | Open an AI coding harness in a disposable workspace with an E2E browser attached; claude, opencode, and codex auto-approve prompts by default and opencode and codex also schedule their own resume after a usage limit (`--no-workspace`, `--no-browser`, `--no-auto-approve`, and `--no-auto-resume` opt out); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
-| `ssh` | Open an SSH session to a remote host in a full-tab terminal |
-| `zsh` | Open a shell tab through the bundled shell tab plugin, named from the agent-name pool like an agent tab: a live zsh terminal with the agent tab's metadata row and command line. The command line has focus when the tab opens; click the terminal or press `Shift+Tab` to type directly into zsh, then press `Shift+Tab` to return to the command line. A command-bar line runs as an application command when it names one, and otherwise goes to zsh; prefix it with `!` to force the shell. While zsh is running a command the line reads `queue >`, and a submitted line waits in the tab's command queue until zsh returns to its prompt. It starts in the issuing tab's working directory and shares its workspace and offline mode when present; the workspace stays alive until its last tab closes. A remote agent tab refuses it, since its directory is on the other machine |
-| `search` | `search` opens or focuses the project-wide search tab (Cmd+Shift+F); `search <phrase>` opens it and searches for the phrase; `search transcript <pattern>` searches the current tab's transcript with a case-insensitive regex (Cmd+F opens it empty); `↑`/`↓` step older/newer, Escape closes |
+| `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
+| `db` | Create, delete, query, or list SQLite databases |
+| `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image, the PDF viewer for a PDF |
 | `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
+| `harness` | Open an AI coding harness in a disposable workspace with an E2E browser attached; claude, opencode, and codex auto-approve prompts by default and opencode and codex also schedule their own resume after a usage limit (`--no-workspace`, `--no-browser`, `--no-auto-approve`, and `--no-auto-resume` opt out); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
+| `help` | List available commands; `help <section>` shows one section, such as `help commands` or `help shell` |
+| `hist` | Open command history picker |
+| `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
+| `monitors` | List active monitors with their targets and suggestion counts |
+| `msg` | Send a message to another agent |
+| `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
+| `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
+| `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
+| `next` | Switch to the next tab |
 | `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab — a feed of background-tab events (see `.janissary/config.json` to enable events) |
 | `notify` | `notify <message>` pushes a custom line into the notifications feed |
-| `send` | Deliver a line to a harness, submit through a shell tab's command bar, or run a command in an agent tab |
+| `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
+| `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |
+| `play` | `play <name>` plays a file in the tab that plays its kind — `play devbox` plays the newest `.cast` recording of the session named `devbox`, `play clip.mp4` opens a video, `play song.mp3` queues a track; what plays a file is decided by its extension |
+| `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
+| `profile` | `profile launch <name>` launches a project or built-in Janissary profile (bare `profile launch` opens a source-labeled picker); `profile save <name>` captures the running session in the project; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
+| `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
 | `queue` | Queue a command for another agent or shell tab (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
-| `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
-| `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |
-| `monitors` | List active monitors with their targets and suggestion counts |
-| `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
+| `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
+| `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
+| `schedule` | Run a command later — once or on a recurring schedule |
+| `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
+| `search` | `search` opens or focuses the project-wide search tab (Cmd+Shift+F); `search <phrase>` opens it and searches for the phrase; `search transcript <pattern>` searches the current tab's transcript with a case-insensitive regex (Cmd+F opens it empty); `↑`/`↓` step older/newer, Escape closes |
+| `send` | Deliver a line to a harness, submit through a shell tab's command bar, or run a command in an agent tab |
+| `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
+| `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the database reached most recently, by `sql` or any `db` command (`sql [<name>] left`/`right` to dock it) |
+| `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `syntax` | `syntax theme <name>` sets the editor tab's syntax-highlighting theme (applies to every open editor tab); `syntax theme` alone opens a theme-picker modal |
+| `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
+| `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
+| `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |
+| `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
+| `zsh` | Open a shell tab through the bundled shell tab plugin, named from the agent-name pool like an agent tab: a live zsh terminal with the agent tab's metadata row and command line. The command line has focus when the tab opens; click the terminal or press `Shift+Tab` to type directly into zsh, then press `Shift+Tab` to return to the command line. A command-bar line runs as an application command when it names one, and otherwise goes to zsh; prefix it with `!` to force the shell. While zsh is running a command the line reads `queue >`, and a submitted line waits in the tab's command queue until zsh returns to its prompt. It starts in the issuing tab's working directory and shares its workspace and offline mode when present; the workspace stays alive until its last tab closes. A remote agent tab refuses it, since its directory is on the other machine |
 
 ### Key Bindings
 

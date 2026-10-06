@@ -79,3 +79,7 @@ Don't use the same character on consecutive pages in the sidebar order when you 
 The `copyAgentImages()` function in `config.mts` runs at VitePress config load time. For each character directory under `agent-images/`, it finds the first subdirectory (the character state), then copies each facing listed in `FACINGS` through `trimAndScaleSprite()` (which crops transparent padding and upscales 2x) before writing the result to `public/agents/<name>-<facing>.png`.
 
 Run `npm run docs:dev` to preview changes locally, or `npm run docs:build` to verify the production build.
+
+# Help Command Table
+
+The **Commands** table in `help.md` is kept in alphabetical order by command name. A row's name is the first word inside its first backticks, so `newfile <file>` sorts as `newfile`, and names compare without regard to case. When you add a command, put its row in its alphabetical place rather than at the end, and when you rename one, move its row. `src/commands.test.ts` reads the table through `help commands` and fails when a row is out of order.
