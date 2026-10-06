@@ -2,7 +2,7 @@
 
 ### `help`
 
-Returns the contents of `help.md` at the repo root (read and cached on first use). If that file cannot be read, it falls back to a generated summary listing the built-in commands and the `shell` / `/` prefixes and `Ctrl+R` history shortcut.
+Returns the contents of `help.md` at the repo root (read and cached on first use). Its command table lists the commands in alphabetical order by name. If that file cannot be read, it falls back to a generated summary listing the built-in commands and the `shell` / `/` prefixes and `Ctrl+R` history shortcut.
 
 `help <section>` returns one section of that text instead of all of it. The sections are the help text's own headings, **Commands** and **Key Bindings**, and the labelled key tables inside Key Bindings, such as **Global key bindings** or **Shell tab controls**. A heading's section runs to the next heading; a key table's section is its label line and the table under it. The name is matched without regard to case or extra spaces: a title equal to it wins, then a title that starts with it, then a title containing it as whole words, and among several candidates the earliest in the help text is chosen. So `help commands` prints the command table, `help shell` the shell tab's keys, and `help agent` the command bar and agent tab controls. A name that matches nothing answers `No help section matches "<name>". Sections: <every section title>.` A section reply is rendered as markdown like the full text, and from a shell tab's command bar it is answered by the application rather than sent to zsh. When `help.md` cannot be read, `help <section>` returns the same generated summary as bare `help`.
 

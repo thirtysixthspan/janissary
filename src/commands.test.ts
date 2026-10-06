@@ -107,6 +107,17 @@ describe('getOutput("help <section>")', () => {
     expect(sectionText('help nosuchsection')).toContain('No help section matches "nosuchsection". Sections: Commands, Key Bindings');
   });
 
+  it('lists the commands in alphabetical order by name', () => {
+    const names = sectionText('help commands')
+      .split('\n')
+      .flatMap((line) => {
+        const cell = line.startsWith('| `') ? line.slice(3, line.indexOf('`', 3)) : undefined;
+        return cell ? [cell.split(' ', 1)[0].toLowerCase()] : [];
+      });
+    expect(names.length).toBeGreaterThan(1);
+    expect(names).toEqual(names.toSorted((left, right) => left.localeCompare(right)));
+  });
+
   it('leaves a word that only starts with help unknown', () => {
     expect(getOutput('helper').kind).toBe('unknown');
   });
