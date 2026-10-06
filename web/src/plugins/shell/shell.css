@@ -13,6 +13,27 @@
 
 .shell-body.shell-initializing { visibility: hidden; }
 
+/* The terminal's own focus line, down its left edge just inside the tab's frame: dim while the
+   keyboard is anywhere else, lit in the tab's colour while it is in the terminal. It is drawn over
+   the terminal rather than as a border because the fit sizes the grid from the container's width
+   and would not leave room for one; the padding on `.xterm` is what the fit does subtract, so the
+   text clears the line without losing its last column. */
+.shell-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
+  background: var(--border);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.shell-body:focus-within::before { background: var(--shell-focus-color, var(--accent)); }
+
+.shell-body .xterm { padding-left: 12px; }
+
 /* An application command's markdown reply, rendered in a decoration over rows reserved for it in the
    terminal's scrollback. It takes the transcript's markdown styles from `.line.markdown`; a resize
    that makes the content taller than its reserved rows scrolls inside the block. */

@@ -142,16 +142,20 @@ export function ShellTab({ payload, capabilities }: Properties) {
     });
   }, [capabilities]));
 
+  const dotColor = capabilities.dotColor ?? SHELL_DOT_COLOR;
+
   // `data-claims-shift-tab` stands the application's section cycling down for keys inside this tab,
   // which it otherwise takes in the capture phase before either surface's own Shift+Tab can run.
   return (
     <div className="tab-body shell-tab" data-claims-shift-tab>
       <ShellTabMeta payload={payload} capabilities={capabilities} />
-      {/* Clicking the terminal gives it focus so xterm sends keystrokes to the attached shell. */}
+      {/* Clicking the terminal gives it focus so xterm sends keystrokes to the attached shell. The
+          stylesheet lights its left-hand line in the tab's colour while it holds the keyboard. */}
       <div
         className="harness-body shell-body"
         data-doc-shot="shell-view"
         ref={terminalReference}
+        style={{ '--shell-focus-color': dotColor } as React.CSSProperties}
         onMouseDown={() => { focusTerminal(); }}
         onKeyDownCapture={(event) => {
           if (event.key !== 'Tab' || !event.shiftKey) return;
@@ -173,7 +177,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         onFocus={() => { appBar.onFocusChange(true); }}
         onBlur={() => { appBar.onFocusChange(false); }}
         ghost={bar.ghost}
-        dotColor={capabilities.dotColor ?? SHELL_DOT_COLOR}
+        dotColor={dotColor}
         busy={commandRunning}
         label={commandRunning ? 'queue' : undefined}
         autoFocus

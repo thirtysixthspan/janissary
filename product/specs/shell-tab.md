@@ -30,7 +30,11 @@ follows describes the behavior.
 The shell tab has two keyboard surfaces: the command bar and the terminal. The command bar is focused
 when the tab opens. Click the terminal or press `Shift+Tab` from the command bar to type directly into
 zsh; press `Shift+Tab` again to return to the command bar. Both transitions prevent the browser's
-default focus traversal, and keystrokes go to whichever surface has focus. Inside a shell tab,
+default focus traversal, and keystrokes go to whichever surface has focus. A thin line runs down the
+terminal's left edge, just inside the tab's own frame, to show which surface that is: it is lit in the
+tab's colour while the keyboard is in the terminal, and dim while it is in the command bar or anywhere
+else. The line takes no columns from the terminal, and the terminal's text is set in from it so the two
+never touch. Inside a shell tab,
 `Shift+Tab` belongs to the tab: the application's section cycling, which takes the chord everywhere
 else, does not move focus out of it.
 
