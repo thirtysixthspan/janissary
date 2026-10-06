@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitepress";
-import { trimAndScaleSprite } from "./sprite-trim";
+import { trimAndScaleSprite } from "./sprite-trim.ts";
 
 // Decorative agent sprites floated in the doc pages (see .vitepress/theme/custom.css). They
 // live directly in each repo's agent-images/<character>/ directory as <facing>.png; copy the

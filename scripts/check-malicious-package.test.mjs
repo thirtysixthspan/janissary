@@ -58,8 +58,8 @@ describe('the package-safety gate', () => {
   });
 
   it('refuses to update to an unlisted version from a compromised account', () => {
-    const { status, out, err } = audit(['hookified@1.15.1']);
-    expect(out).toContain('QUARANTINED');
+    const { status, err } = audit(['hookified@1.15.1']);
+    expect(err).toContain('QUARANTINED');
     expect(err).toContain('DO NOT UPDATE TO THIS TARGET');
     expect(status).toBe(3);
   });
