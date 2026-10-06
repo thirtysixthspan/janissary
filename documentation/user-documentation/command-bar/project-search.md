@@ -56,6 +56,8 @@ Results stack upward. The first match sits at the bottom of the window, just abo
 
 A search stops after 250 matches. There's no count of matches or files anywhere in the tab. The body shows `Searching…` while a search runs, and `No matches found for "<query>".` when one finishes with nothing.
 
+If one matching step takes longer than one second, the search ends with an error reason. Any rows already found stay visible, and you can run another query normally.
+
 ## Open a match
 
 <img class="agent-float" src="/agents/selim-south.png" alt="" />
