@@ -82,10 +82,16 @@ describe('EditorFind', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('does not close on Enter — the jump already happened live', () => {
+  it('selects the first result on Enter without closing the overlay', () => {
     const { onClose, onChangeSelected } = renderFind();
     fireEvent.keyDown(input(), { key: 'Enter' });
     expect(onClose).not.toHaveBeenCalled();
+    expect(onChangeSelected).toHaveBeenCalledWith(0);
+  });
+
+  it('does nothing on Enter when the query has no results', () => {
+    const { onChangeSelected } = renderFind({ query: 'zzz', results: [] });
+    fireEvent.keyDown(input(), { key: 'Enter' });
     expect(onChangeSelected).not.toHaveBeenCalled();
   });
 

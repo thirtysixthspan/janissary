@@ -462,11 +462,10 @@ first-in-file order.
 
 ↑/↓ move the highlighted row and immediately move the editor cursor to that line, scrolling the
 buffer behind the overlay so the match sits about one quarter of the editor body's height below its
-top edge. Clicking a row does the same, and keeps
-focus in the overlay's input. There is no
-separate commit step — Return does nothing, because the jump has already happened. The cursor move
-is not an edit: it never dirties the buffer and never becomes an undo step, so an undo right after a
-jump undoes the last real edit.
+top edge. Clicking a row does the same and keeps focus in the overlay's input. Return moves the
+cursor to the first ranked match and scrolls it into view, even when another row is highlighted;
+the overlay stays open. The cursor move is not an edit: it never dirties the buffer and never becomes
+an undo step, so an undo right after a jump undoes the last real edit.
 
 Escape closes the overlay and leaves the cursor on the last previewed line, with focus back in the
 buffer ready to type. Escape closes the overlay the same way when focus has moved back into the

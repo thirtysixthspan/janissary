@@ -52,9 +52,9 @@ function editorFindBody(query: string, results: FuzzyMatchResult[], selected: nu
 // belongs to `EditorTab`, which owns the buffer. Owns its own key handling so Up/Down/Enter/Escape
 // never reach the buffer behind it.
 export function EditorFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose }: Properties) {
-  // Enter commits nothing: the jump to the highlighted line already happened live, so there is
-  // nothing left to commit and Enter is swallowed with the rest.
-  const onKeyDown = useRankedOverlayKeys(selected, results.length, onChangeSelected, () => {}, onClose);
+  const onKeyDown = useRankedOverlayKeys(selected, results.length, onChangeSelected, () => {
+    if (results.length > 0) onChangeSelected(0);
+  }, onClose);
 
   return (
     <div className="picker editor-find">
