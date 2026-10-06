@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { keepCaretRowVisible, revealVerticalProbe } from './scroll';
+import { keepCaretRowVisible, positionCaretAtQuarter, revealVerticalProbe } from './scroll';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -172,6 +172,30 @@ describe('revealVerticalProbe', () => {
     const { body, caret, scrollIntoView } = makeBodyAndCaret();
     keepCaretRowVisible(body, caret);
     expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' });
+    expect(body.scrollTop).toBe(0);
+    body.remove();
+  });
+});
+
+describe('positionCaretAtQuarter', () => {
+  it('moves a selected caret to one quarter of the visible height', () => {
+    const { body, caret } = makeBodyAndCaret();
+    Object.defineProperty(body, 'clientHeight', { value: 400 });
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 500, height: 20 }));
+
+    positionCaretAtQuarter(body, caret);
+
+    expect(body.scrollTop).toBe(390);
+    body.remove();
+  });
+
+  it('does nothing when the caret or scroll body has no layout', () => {
+    const { body, caret } = makeBodyAndCaret();
+    Object.defineProperty(body, 'clientHeight', { value: 0 });
+    vi.spyOn(caret, 'getBoundingClientRect').mockReturnValue(makeRect({ top: 500, height: 20 }));
+
+    positionCaretAtQuarter(body, caret);
+
     expect(body.scrollTop).toBe(0);
     body.remove();
   });

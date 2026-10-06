@@ -11,6 +11,14 @@
 
 import { caretRowBox, probePoint, screenRowHeight, scrollport } from './screen-rows';
 
+// Keep a selected find result near the top of the viewport so the lines below it remain readable.
+export function positionCaretAtQuarter(body: HTMLElement, caret: HTMLElement): void {
+  const rect = caret.getBoundingClientRect();
+  if (rect.height === 0 || body.clientHeight === 0) return;
+  const target = body.getBoundingClientRect().top + body.clientHeight * 0.25;
+  body.scrollTop += rect.top + rect.height / 2 - target;
+}
+
 // Scroll the body so the whole screen row the caret is on is inside the scrollport — not merely the
 // caret's own box, which is what `scrollIntoView({ block: 'nearest' })` bounds and which leaves the
 // row it sits on clipped by the line box's leading at whichever edge it came from. Called after
