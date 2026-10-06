@@ -6,10 +6,12 @@ import { hasNext, hasPrevious, nextOffset, pageLabel, previousOffset } from './g
 // sentence and a user should not have to look in two places to learn how much of the table they are
 // looking at — and because the header's line is the one that disappears when the grid scrolls away.
 export function Pager({
-  payload, onSend,
+  payload, onSetPage, onSetPageSize, onRefresh,
 }: {
   payload: SqlPayload;
-  onSend(name: string, body: unknown): void;
+  onSetPage(offset: number): void;
+  onSetPageSize(limit: number): void;
+  onRefresh(): void;
 }) {
   const grid = payload.grid;
   return (
@@ -17,7 +19,7 @@ export function Pager({
       <button
         type="button"
         disabled={!hasPrevious(grid)}
-        onClick={() => onSend('set-page', { offset: previousOffset(grid) })}
+        onClick={() => onSetPage(previousOffset(grid))}
       >
         Previous
       </button>
@@ -25,7 +27,7 @@ export function Pager({
       <button
         type="button"
         disabled={!hasNext(grid)}
-        onClick={() => onSend('set-page', { offset: nextOffset(grid) })}
+        onClick={() => onSetPage(nextOffset(grid))}
       >
         Next
       </button>
@@ -33,13 +35,13 @@ export function Pager({
         Rows
         <select
           value={payload.limit}
-          onChange={(event) => onSend('set-page-size', { limit: Number(event.target.value) })}
+          onChange={(event) => onSetPageSize(Number(event.target.value))}
           aria-label="Rows per page"
         >
           {payload.pageSizes.map((size) => <option key={size} value={size}>{size}</option>)}
         </select>
       </label>
-      <button type="button" onClick={() => onSend('refresh', {})}>Refresh</button>
+      <button type="button" onClick={onRefresh}>Refresh</button>
     </div>
   );
 }

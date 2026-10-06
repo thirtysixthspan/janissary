@@ -1,8 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DataGrid } from './DataGrid';
-import { makeCapabilities, payload } from './fixture';
+import { makeCapabilities, payload, TestDataGrid } from './fixture';
 import { selectionTo, selectionToTsv } from './grid-view';
 import { subscribeClipboardCopies } from '../../shared/clipboard-captures';
 
@@ -66,7 +65,7 @@ function copyKeyOutside() {
 
 function shown(over: Parameters<typeof payload>[0] = {}) {
   const { capabilities } = makeCapabilities();
-  const view = render(<DataGrid payload={payload(over)} capabilities={capabilities} />);
+  const view = render(<TestDataGrid payload={payload(over)} capabilities={capabilities} />);
   return { capabilities, ...view };
 }
 
@@ -128,7 +127,7 @@ describe('the highlighted row', () => {
     const { capabilities, rerender } = shown();
     press('ArrowDown');
     expect(highlighted()).toEqual([['2', 'NULL']]);
-    rerender(<DataGrid payload={payload({ offset: 100 })} capabilities={capabilities} />);
+    rerender(<TestDataGrid payload={payload({ offset: 100 })} capabilities={capabilities} />);
     expect(highlighted()).toEqual([['1', 'paid']]);
   });
 
@@ -322,7 +321,7 @@ describe('copying a run of rows', () => {
     const write = vi.fn().mockResolvedValue(undefined);
     clipboardThat(write);
     const { capabilities } = makeCapabilities();
-    render(<DataGrid payload={payload()} capabilities={{ ...capabilities, active: false }} />);
+    render(<TestDataGrid payload={payload()} capabilities={{ ...capabilities, active: false }} />);
     fireEvent.mouseDown(headers()[0] as HTMLElement);
     copyKey();
     expect(write).not.toHaveBeenCalled();

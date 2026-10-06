@@ -12,6 +12,7 @@ import { useColumnFit } from './useColumnFit';
 import { FilterChips, FilterRow, GlobalFilter } from './Filters';
 import { Pager } from './Pager';
 import { DeleteRowDialog } from './DeleteRowDialog';
+import type { SqlActions } from './useSqlActions';
 
 // The data grid: the object on screen and one page of its rows. A read-only object keeps the whole
 // grid and loses only the write affordances, so a view is still useful when it cannot be edited.
@@ -21,13 +22,14 @@ import { DeleteRowDialog } from './DeleteRowDialog';
 // about the grid: the insert form is a reviewable statement about the object on screen, and the
 // column chooser can only list the columns the statement that ran carries.
 export function DataGrid({
-  payload, capabilities,
+  payload, capabilities, actions,
   inserting = false, onInserting = () => {},
   choosingColumns = false, onChoosingColumns = () => {},
   frameRef, onEnter = () => {},
 }: {
   payload: SqlPayload;
   capabilities: TabPluginClientCapabilities;
+  actions: SqlActions;
   /**
    * Whether the metadata row's **Insert row** has the form open, and whether the **Columns** control
    * has the chooser open. Both default closed, which is what a grid with no row above it looks like —
@@ -57,12 +59,11 @@ export function DataGrid({
   const statement = statementResult(grid);
   const readOnly = readOnlyReason(object, statement);
   const writable = object?.writable === true && !statement;
-  const send = (name: string, body: unknown) => { void capabilities.intent(name, body); };
   const ordered = payload.order[0];
   // The declared order, minus what the chooser has put away. A hidden column keeps its place in the
   // row, so what is rendered is a list of names and the position each one holds in the cells.
   const shown = visibleColumns(grid?.columns ?? [], payload.hidden);
-  const setHidden = (hidden: string[]) => send('set-columns', { hidden });
+  const setHidden = actions.setColumns;
   const ownRef = useRef<HTMLDivElement>(null);
   const scrollRef = frameRef ?? ownRef;
   const selection = useGridSelection({
@@ -94,15 +95,19 @@ export function DataGrid({
           columns={object.columns}
           onSave={(cells) => {
             onInserting(false);
-            send('insert-row', { object: payload.object, cells });
+            actions.insertRow(payload.object, cells);
           }}
           onCancel={() => onInserting(false)}
         />
       )}
 
-      <GlobalFilter value={payload.global} onSend={send} />
+      <GlobalFilter value={payload.global} onSetGlobalFilter={actions.setGlobalFilter} />
 
-      <FilterChips payload={payload} onSend={send} />
+      <FilterChips
+        payload={payload}
+        onSetFilterEnabled={actions.setFilterEnabled}
+        onClearFilters={actions.clearFilters}
+      />
 
       {copyError && (
         <div className="sql-error" role="alert">
@@ -136,7 +141,7 @@ export function DataGrid({
                       type="button"
                       className="sql-head-name"
                       title={`Order by ${column}`}
-                      onClick={() => send('set-order', { column })}
+                      onClick={() => actions.setOrder(column)}
                     >
                       {column}
                       <FontAwesomeIcon
@@ -162,7 +167,7 @@ export function DataGrid({
                 column={filtering}
                 payload={payload}
                 onClose={() => setFiltering(null)}
-                onSend={send}
+                onSetFilter={actions.setFilter}
               />
             )}
           </thead>
@@ -183,10 +188,10 @@ export function DataGrid({
                 }}
                 onCommit={(column, value) => {
                   setEditing(null);
-                  send('update-cell', { row: row.key, column, value });
+                  actions.updateCell(row.key, column, value);
                 }}
                 onCancel={() => setEditing(null)}
-                onFollow={(target) => send('select-object', target)}
+                onFollow={actions.selectObject}
                 onDelete={() => setDeleting(row)}
               />
             ))}
@@ -199,13 +204,18 @@ export function DataGrid({
         </table>
       </div>
 
-      <Pager payload={payload} onSend={send} />
+      <Pager
+        payload={payload}
+        onSetPage={actions.setPage}
+        onSetPageSize={actions.setPageSize}
+        onRefresh={actions.refresh}
+      />
 
       {deleting && (
         <DeleteRowDialog
           object={payload.object}
           onConfirm={() => {
-            send('delete-row', { row: deleting.key });
+            actions.deleteRow(deleting.key);
             setDeleting(null);
           }}
           onCancel={() => setDeleting(null)}
