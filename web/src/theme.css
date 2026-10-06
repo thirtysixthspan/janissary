@@ -264,12 +264,17 @@ html, body, #root {
 /* The recording flag is the one flag in the row that is also a control, so it is a `<button>` — and
    unlike every other button in this row it does not declare its own reset. Without this rule it
    renders with the browser's default chrome, raised and bordered, beside flat controls. Copied from
-   `.tab-open-files` rather than invented, so the row reads as one set of controls again. */
+   `.tab-open-files` rather than invented, so the row reads as one set of controls again.
+   No `color` here, deliberately: `.tab-flag--active` above is what turns the lit flag green, and a
+   `color` in this later single-class rule would win it on cascade and leave the recording flag grey in
+   both of its states. The chrome is reset for both elements because it is inert on the `span`; the
+   pointer and the hover are scoped to the button because the inert `span` is the one state in which
+   neither is true, and a hand cursor over something that cannot be pressed is a lie about it. */
 .tab-recording {
-  background: transparent; border: none; color: var(--muted); cursor: pointer;
-  font-size: 13px; padding: 0 4px; line-height: 1;
+  background: transparent; border: none; font-size: 13px; padding: 0 4px; line-height: 1;
 }
-.tab-recording:hover { color: var(--fg); }
+button.tab-recording { cursor: pointer; }
+button.tab-recording:hover { color: var(--fg); }
 .tab-meta-chip {
   display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; vertical-align: bottom; cursor: default;

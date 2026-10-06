@@ -59,6 +59,31 @@ describe('metadata theme', () => {
     expect(actionRule).toContain('margin-left: auto');
   });
 
+  // The recording flag is the one flag in this row that is also a control, so it is a `<button>` and
+  // carries a class the plain flags do not. That class sits *after* `.tab-flag--active` in this file,
+  // which is the whole hazard: two single-class rules, and whichever comes last wins. So the rule that
+  // resets the button's chrome must not declare a colour, or it silently takes the lit green away from
+  // the flag in both of its states — a bug that renders, that no component test can see, and that a
+  // test asserting the class name sails straight past.
+  it('leaves the recording flag\'s green to the active-flag rule', () => {
+    const recordingRule = theme.match(/^\.tab-recording \{[^}]+\}/m)?.[0];
+    const activeRule = theme.match(/^\.tab-flag--active \{[^}]+\}/m)?.[0];
+
+    expect(recordingRule).toBeDefined();
+    expect(activeRule).toContain('color: var(--success)');
+    expect(recordingRule).not.toContain('color:');
+    expect(theme.indexOf('.tab-recording {')).toBeGreaterThan(theme.indexOf('.tab-flag--active {'));
+  });
+
+  // The same class is on the inert `<span>`, and there the pointer and the hover are both untrue. A
+  // hand cursor over a flag that cannot be pressed misreports the one thing the flag exists to say.
+  it('gives the recording flag its pointer only when it is a button', () => {
+    expect(theme).toMatch(/^button\.tab-recording \{[^}]*cursor: pointer/m);
+    expect(theme).toMatch(/^button\.tab-recording:hover \{/m);
+    expect(theme).not.toMatch(/^\.tab-recording \{[^}]*cursor/m);
+    expect(theme).not.toMatch(/^\.tab-recording:hover/m);
+  });
+
   // The plugin half of the two rules above. Splitting them is what keeps a plugin's styling inside
   // its own lazy chunk, so the host stylesheet must not carry a plugin selector back in.
   it('leaves plugin metadata containers to the plugin stylesheets', () => {
