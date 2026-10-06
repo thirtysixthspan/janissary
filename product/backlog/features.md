@@ -2,6 +2,8 @@
 
 ## ready
 
+* add workspace support to shell tabs.
+
 * support shell tab to operate on remote machine. us 'on' syntax to launch on remote machine just like for agents. when clicking + button on remote harness, a remote shell tab should open in the harness workspace. the remote shell must be sandboxed by default. launching a remote shell can be run without a sandbox given a --no-sandbox option. Janus shell opens on the current machine without a sandbox. + button in a no sandbox shell creates another shell with no sandbox. 
 
 * support file navigator operation on remote machines
