@@ -30,4 +30,4 @@ Run once when all changes are complete:
 npm run check        # full gate (humans only) — lint all, typecheck all, test all, plus complexity/duplication/dead code
 ```
 
-This adds CSS linting, code complexity metrics, duplication detection, dead code scanning, the full test suite, and coverage thresholds. Use `check:diff` dozens of times while working, but run `check` only once, at the very end. AI developers should never run `check` — leave it for the human to verify before shipping.
+This adds code complexity metrics, duplication detection, dead code scanning, the full test suite, and coverage thresholds. Use `check:diff` dozens of times while working, but run `check` only once, at the very end. AI developers should never run `check` — leave it for the human to verify before shipping.

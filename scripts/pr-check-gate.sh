@@ -1,15 +1,15 @@
 #!/bin/bash
 # Run the check gate for the merge step.
 #
-# Hard checks fail the gate: type errors, lint errors, failing tests, CSS
-# errors. That's the whole gate — no advisory quality checks (complexity,
+# Hard checks fail the gate: type errors, lint errors, and failing tests.
+# That's the whole gate — no advisory quality checks (complexity,
 # duplication, dead code) run here; those are for the human end-of-work gate
 # (`npm run check:full`), not this automated merge step.
 
 set -o pipefail
 
 # Hard gates — any failure fails the gate.
-HARD=(typecheck lint test lint:css)
+HARD=(typecheck lint test)
 
 status=0
 

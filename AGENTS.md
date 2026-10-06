@@ -47,7 +47,7 @@ This completes in seconds and is the entire development loop. `check-diff` is sc
 
 - Slow: lints all files, typechecks both full projects, runs the entire test suite
 - Coverage thresholds enforced
-- Also adds CSS linting, code complexity checks, duplication detection, dead code scanning
+- Also adds code complexity checks, duplication detection, dead code scanning
 
 **Leave it for the human to run exactly once, after all work is complete.** If you run it while iterating, it wastes time and blocks the human's workflow.
 

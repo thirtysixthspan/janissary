@@ -11,8 +11,7 @@
    format wants `fg`, `bg` and `palette` together; see specs/harness-recording.md.
    These are xterm.js's own defaults (`DEFAULT_ANSI_COLORS`), which is what the emulator renders
    when a theme names no colour of its own — recorded so a replay reproduces the session rather than
-   whatever the replaying viewer happens to default to. `#c00` is `#cc0000`, written short for the
-   same reason stylelint asks for. */
+   whatever the replaying viewer happens to default to. */
 :root {
   --terminal-black: #2e3436;
   --terminal-red: #c00;

@@ -140,13 +140,13 @@ ${readCarveClauses}
 ${listingClauses})
 ; Any package.json or tsconfig.json anywhere under $HOME, at any depth, stays readable. The
 ; workspace nests inside the parent repo (or repos, however many levels up), and config/module-
-; resolution walks — Node's package-scope resolution, cosmiconfig (stylelint, eslint, prettier,
+; resolution walks — Node's package-scope resolution, cosmiconfig (eslint, prettier,
 ; postcss all use it), and TypeScript-adjacent tooling (jiti/get-tsconfig, tsc itself) — probe
 ; upward for these files indefinitely, not just one level. This is a plain file read (unlike the
 ; ancestor-directory-listing problem the $HOME-deny comment above describes), so there's no
 ; directory-existence lie to worry about — granting real read access is both simpler and more
 ; correct than an ENOENT trick would be, since tools that actually want the content (e.g.
-; cosmiconfig checking for a "stylelint" key, or jiti resolving compilerOptions) get real data
+; cosmiconfig checking for a tool's config, or jiti resolving compilerOptions) get real data
 ; instead of a fake absence. One manifest per level leaks no secrets; everything else under $HOME
 ; stays denied.
 (allow file-read-data file-read-xattr
