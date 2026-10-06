@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fuzzyMatch, hasSubsequence } from './fuzzy-match';
+import { contiguousMatch, fuzzyMatch, hasSubsequence } from './fuzzy-match';
 
 describe('hasSubsequence', () => {
   it('is case-insensitive', () => {
@@ -81,5 +81,21 @@ describe('fuzzyMatch', () => {
     const elapsed = performance.now() - start;
     expect(results.length).toBeGreaterThan(0);
     expect(elapsed).toBeLessThan(500);
+  });
+});
+
+describe('contiguousMatch', () => {
+  it('matches a contiguous span case-insensitively and highlights that span', () => {
+    const results = contiguousMatch(['prefix/Target line'], 'TARGET', 10);
+    expect(results.map(({ path, ranges }) => [path, ranges])).toEqual([['prefix/Target line', [[7, 13]]]]);
+  });
+
+  it('rejects a query whose characters only appear as a subsequence', () => {
+    expect(contiguousMatch(['line one'], 'lne', 10)).toEqual([]);
+  });
+
+  it('ranks a contiguous filename match above a directory match', () => {
+    const results = contiguousMatch(['app/other.ts', 'other/App.ts'], 'app', 10);
+    expect(results.map(({ path }) => path)).toEqual(['other/App.ts', 'app/other.ts']);
   });
 });

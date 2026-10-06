@@ -103,3 +103,33 @@ export function fuzzyMatch(paths: string[], query: string, limit: number): Fuzzy
     return { path, index, score, ranges };
   });
 }
+
+// Match only one uninterrupted occurrence, keeping the same result shape and scoring preferences
+// for callers whose search is a phrase rather than a fuzzy subsequence.
+export function contiguousMatch(paths: string[], query: string, limit: number): FuzzyMatchResult[] {
+  const lowerQuery = query.trim().toLowerCase();
+  if (!lowerQuery) return [];
+
+  const scored: FuzzyMatchResult[] = [];
+  for (const [index, path] of paths.entries()) {
+    const lowerPath = path.toLowerCase();
+    const basenameStart = path.length - basename(path).length;
+    let best: FuzzyMatchResult | null = null;
+    let start = lowerPath.indexOf(lowerQuery);
+    while (start !== -1) {
+      let score = 0;
+      for (let offset = 0; offset < lowerQuery.length; offset++) {
+        const position = start + offset;
+        score += charScoreAt(path, position, basenameStart, offset === 0 ? start - 2 : position - 1);
+      }
+      if (!best || score > best.score) {
+        best = { path, index, score, ranges: [[start, start + lowerQuery.length]] };
+      }
+      start = lowerPath.indexOf(lowerQuery, start + 1);
+    }
+    if (best) scored.push(best);
+  }
+
+  return scored.toSorted((a, b) => b.score - a.score || a.path.length - b.path.length || a.path.localeCompare(b.path) || a.index - b.index)
+    .slice(0, limit);
+}

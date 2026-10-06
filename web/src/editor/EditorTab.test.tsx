@@ -1468,6 +1468,16 @@ describe('EditorTab', () => {
       await waitFor(() => expect(screen.getByText('No matching lines')).toBeInTheDocument());
     });
 
+    it('does not match line characters when they are separated', async () => {
+      const { client } = makeClient();
+      await renderLoaded(client);
+
+      openFind();
+      search('lne');
+
+      await waitFor(() => expect(screen.getByText('No matching lines')).toBeInTheDocument());
+    });
+
     it('moves the cursor to the highlighted line as the selection changes', async () => {
       const { client } = makeClient();
       const { container } = await renderLoaded(client);

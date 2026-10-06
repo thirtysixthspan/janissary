@@ -453,8 +453,9 @@ including unsaved edits — and nothing else: not the transcript, not other tabs
 disk. Reaching another file is still Quick Open's job (see [[quick-open]]). The browser's own find
 bar never appears. Ctrl+F is unaffected and keeps moving the cursor one character to the right.
 
-Typing fuzzy-matches the buffer's lines and lists the ten best-scoring ones, best first. Each row is
-the line's 1-based number, dimmed, beside the line's text with the matched characters emphasized. A
+Typing matches lines that contain the query as a contiguous, case-insensitive sequence and lists up
+to ten results, best-scoring first. Each row is the line's 1-based number, dimmed, beside the line's
+text with the matched characters emphasized. A
 line too long for the overlay is clipped with an ellipsis rather than wrapped; its number and the
 jump still identify it. Matching is case-insensitive subsequence matching, with no regex, case, or
 whole-word options. Two identical lines appear as two rows with their own line numbers, in

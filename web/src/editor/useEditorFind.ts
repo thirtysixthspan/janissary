@@ -4,7 +4,7 @@
 // can be on text that has never been written to disk.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { fuzzyMatch, type FuzzyMatchResult } from '../shared/fuzzy-match';
+import { contiguousMatch, type FuzzyMatchResult } from '../shared/fuzzy-match';
 
 const RESULT_CAP = 10;
 
@@ -25,9 +25,9 @@ export function useEditorFind(lines: string[] | null, active: boolean): EditorFi
   const [selected, setSelected] = useState(0);
 
   // Not deferred, unlike `useQuickOpen`: one file's lines are orders of magnitude fewer than a
-  // project's file list, and the scan bails per candidate on the first unmatched query character.
+  // project's file list, and each candidate needs only a contiguous substring check.
   const results = useMemo<FuzzyMatchResult[]>(
-    () => (findOpen && lines ? fuzzyMatch(lines, query, RESULT_CAP) : []),
+    () => (findOpen && lines ? contiguousMatch(lines, query, RESULT_CAP) : []),
     [findOpen, lines, query],
   );
 

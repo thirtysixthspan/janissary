@@ -84,7 +84,7 @@
 | `Ctrl+E` | Open the queue picker for the current agent or shell tab (no-op on other tabs) |
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
 | `Ctrl+O` | Move the running command into a full-tab terminal to type to it (no-op when nothing is running) |
-| `Cmd+F` | Open the search bar in the transcript; in an editor tab, open the fuzzy line search over the buffer |
+| `Cmd+F` | Open the search bar in the transcript; in an editor tab, search for a line in the buffer |
 | `Cmd+N` / `Ctrl+N` (conversation list) | Create and open a new conversation |
 | `Ctrl+C` | Exit |
 

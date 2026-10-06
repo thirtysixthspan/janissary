@@ -114,7 +114,7 @@ Search buffer
  179  Highlighting composes with the caret and selection…
 ```
 
-Type any fragment of the line you're after — the characters have to appear in order, but not next to each other, and case doesn't matter, so `synhi` finds `### Syntax highlighting`. That's the whole of it: there is no regex, no case-sensitivity switch, and no whole-word option. The ten best-matching lines are listed with their line numbers, matched characters picked out. A line too long for the overlay is cut short with an ellipsis rather than wrapped — its number and the jump still identify it — and two identical lines show up as two rows with their own numbers, in the order they appear in the file.
+Type a fragment of the line you're after — the characters must appear together in the same order, and case doesn't matter, so `synt` finds `### Syntax highlighting`. There is no regex, case-sensitivity switch, or whole-word option. Up to ten matching lines are listed with their line numbers, and the matched text is highlighted. A line too long for the overlay is cut short with an ellipsis rather than wrapped — its number and the jump still identify it — and two identical lines show up as two rows with their own numbers, in the order they appear in the file.
 
 `↑`/`↓` move down the list and the buffer jumps to each line as you go, placing the match about one quarter of the editor's height from the top so you can read below it. Press `Return` to jump to the first match, even if another row is highlighted; the search stays open. `Escape` closes it and leaves the cursor on the last line you looked at, ready to type. Clicking a row does the same jump. `Escape` still closes the overlay if you've clicked back into the file while it's open.
 
