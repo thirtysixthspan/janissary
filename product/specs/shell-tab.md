@@ -80,7 +80,8 @@ If the shell tab is docked in a sidebar, the picker appears over that shell ther
 the picker and are not sent to zsh. The terminal content is painted in the application theme's own
 colors — its background, text, cursor, and selection match the rest of the tab, so a light theme
 gives a light terminal — and they change with the theme, including when the picker applies a
-different one. Harness terminals keep their shared dark terminal colors.
+different one. The padding between the focus line and the terminal text takes the same theme
+background, so no dark strip shows beside the text under a light theme. Harness terminals keep their shared dark terminal colors.
 
 While zsh is running a command, the command line reads `queue >`. A line submitted then goes into the
 shell tab's command queue instead of reaching zsh or the application, and it is recorded in the bar's

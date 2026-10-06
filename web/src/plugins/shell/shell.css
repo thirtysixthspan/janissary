@@ -34,6 +34,10 @@
 
 .shell-body .xterm { padding-left: 12px; }
 
+/* xterm's own stylesheet paints the viewport black, and the viewport covers the padding above; the
+   theme's background keeps that strip the same colour as the cells beside it. */
+.shell-body .xterm .xterm-viewport { background-color: var(--bg); }
+
 /* Covers the prompt zsh is waiting at while the keyboard is outside the terminal. */
 .shell-prompt-mask { background: var(--bg); pointer-events: none; }
 

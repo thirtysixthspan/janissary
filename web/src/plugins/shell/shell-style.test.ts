@@ -7,4 +7,10 @@ describe('shell stylesheet', () => {
 
     expect(body).toContain('overflow: hidden');
   });
+
+  it('paints the padding beside the terminal text in the theme background', () => {
+    const viewport = shell.match(/\.shell-body \.xterm \.xterm-viewport \{([^}]*)\}/u)?.[1] ?? '';
+
+    expect(viewport).toContain('background-color: var(--bg)');
+  });
 });
