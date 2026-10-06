@@ -1,8 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import module from './index';
-import { record } from './store';
+import { createClipboardHistoryPlugin } from './index';
+import { createClipboardHistoryStore } from './store';
 import { createPasteCapability } from '../../paste-into-surface';
 import { closeContributedOverlay, isContributedOverlayOpen, openContributedOverlay, registerContributedOverlay } from '../../shared/contributed-overlays';
 import { registerEditorDrop } from '../../shared/drop-registry';
@@ -47,20 +47,22 @@ function openFrom(
 ) {
   const client = { send: vi.fn() } as unknown as JanusClient;
   const paste = createPasteCapability({ client, dropRef: { current: null }, currentTab, focusHarness });
-  const overlay = module.start({ paste, maxEntries: 15, close: () => { closeContributedOverlay(PLUGIN); } });
-  teardown.push(() => { module.dispose(); }, registerContributedOverlay(overlay));
+  const store = createClipboardHistoryStore();
+  const plugin = createClipboardHistoryPlugin(store);
+  const overlay = plugin.start({ paste, maxEntries: 15, close: () => { closeContributedOverlay(PLUGIN); } });
+  teardown.push(plugin.dispose, registerContributedOverlay(overlay));
   origin.focus();
   act(() => { openContributedOverlay(PLUGIN, null); });
   const view = render(overlay.render(null));
   teardown.push(view.unmount);
-  return { overlay, client };
+  return { overlay, client, store };
 }
 
 describe('pasting into an editor buffer from a popup opened by its chord', () => {
   it('pastes the chosen entry on Return and gives the keyboard back to the buffer', () => {
     const { textarea, pasteAtCaret } = editorBuffer('notes');
-    const { overlay } = openFrom(textarea);
-    act(() => { record('chosen text'); });
+    const { overlay, store } = openFrom(textarea);
+    act(() => { store.record('chosen text'); });
     expect(document.activeElement).toBe(document.querySelector('.clipboard-history'));
 
     act(() => { overlay.onKey(new KeyboardEvent('keydown', { key: 'Enter' })); });
@@ -72,8 +74,8 @@ describe('pasting into an editor buffer from a popup opened by its chord', () =>
 
   it('pastes a clicked entry into the buffer too', () => {
     const { textarea, pasteAtCaret } = editorBuffer('notes');
-    openFrom(textarea);
-    act(() => { record('clicked text'); });
+    const { store } = openFrom(textarea);
+    act(() => { store.record('clicked text'); });
 
     fireEvent.click(screen.getByText('clicked text'));
 
@@ -91,8 +93,8 @@ describe('pasting into a plugin command bar', () => {
     commandBar.focus();
     const execCommand = vi.fn();
     Object.defineProperty(document, 'execCommand', { configurable: true, value: execCommand });
-    const { overlay } = openFrom(commandBar);
-    act(() => { record('shell command'); });
+    const { overlay, store } = openFrom(commandBar);
+    act(() => { store.record('shell command'); });
 
     act(() => { overlay.onKey(new KeyboardEvent('keydown', { key: 'Enter' })); });
 
@@ -120,8 +122,8 @@ describe('pasting into a harness terminal', () => {
 
   it('types the entry at the prompt and leaves the keyboard in the terminal it had', () => {
     const input = terminal();
-    const { overlay, client } = openFrom(input, harnessTab);
-    act(() => { record('ls -la'); });
+    const { overlay, client, store } = openFrom(input, harnessTab);
+    act(() => { store.record('ls -la'); });
 
     act(() => { overlay.onKey(new KeyboardEvent('keydown', { key: 'Enter' })); });
 
@@ -134,8 +136,8 @@ describe('pasting into a harness terminal', () => {
     const outside = document.createElement('button');
     document.body.append(outside);
     const focusHarness = vi.fn(() => { input.focus(); });
-    const { overlay } = openFrom(outside, harnessTab, focusHarness);
-    act(() => { record('ls -la'); });
+    const { overlay, store } = openFrom(outside, harnessTab, focusHarness);
+    act(() => { store.record('ls -la'); });
 
     act(() => { overlay.onKey(new KeyboardEvent('keydown', { key: 'Enter' })); });
 

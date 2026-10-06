@@ -8,15 +8,6 @@
 
 ## deferred
 
-* Give the clipboard-history plugin an owned store instance and feed its popup through an injected subscription hook. — deferred: complexity 8/10, requires an instance-owned plugin lifecycle plus an injected React subscription adapter across the store, plugin entry, popup, and three test files.
-
-Existing Debt: The clipboard-history store keeps entries, selection, configuration, subscribers, and capture teardown at module scope, and its popup imports the store's live functions directly, violating §7 (service classes are framework-free and injected) and §8 (the four layers), with store and popup tests resetting the same global history. Severity: 8/10
-
-Existing Risk: 4/10 - A second plugin instance or overlapping test shares the first instance's history and cap, and disposing either instance clears the other's data and capture subscription.
-
-Proposal Risk: 2/10 - Instance ownership removes shared history and reset interference, but incorrect subscription cleanup or unstable snapshot identities could still leave a stale popup or repeated renders within one instance.
-
-Proposal: Replace the global mutable state in `web/src/overlay-plugins/clipboard-history/store.ts` with a `createClipboardHistoryStore` factory exposing stable snapshot getters, selection actions, subscription, start, and idempotent disposal; accept the clipboard-capture subscription function as a dependency and retain the current cap, dedupe, ordering, and snapshot-caching rules. Add a factory in `web/src/overlay-plugins/clipboard-history/index.tsx` that creates or accepts one store per plugin instance and closes its keyboard, open, render, and dispose handlers over that store, preserving the existing default `OverlayPluginModule` export and activating capture only on start. Add `web/src/overlay-plugins/clipboard-history/useClipboardHistory.ts` to adapt the injected store with `useSyncExternalStore` and a small `web/src/overlay-plugins/clipboard-history/ClipboardHistoryView.tsx` container; make `web/src/overlay-plugins/clipboard-history/Popup.tsx` receive rows, selected index, and choose callback as props while retaining its focus effect. The store currently has two production importers and three test importers, so this stays within the clipboard-history plugin and requires no host contract change. Update `web/src/overlay-plugins/clipboard-history/store.test.ts`, `web/src/overlay-plugins/clipboard-history/Popup.test.tsx`, and `web/src/overlay-plugins/clipboard-history/paste-routing.test.tsx` to own fresh instances, preserving cap changes, capture teardown, focus restoration, and single-close assertions; add an isolation assertion showing that disposing one instance leaves another's history and subscription intact.
 
 
 * Run search matching in a terminable worker so one expensive expression cannot stall the server. — deferred: complexity 8/10, introduces the first worker execution boundary with source and compiled loading, cancellation, deadline recovery, and matching protocol changes.
