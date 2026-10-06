@@ -10,12 +10,6 @@ import { AppCommandBarProvider, AppCommandBarTabScope, useAppCommandLine } from 
 import { registerCommandLineInsertion, type CommandLineInsertion } from '../../shared/command-bar/app-command-bar-scope';
 import { ShellTab } from './ShellTab';
 import { useSectionNav } from '../../useSectionNav';
-import type { createShellMarkerNonce, shellStatusHooks } from './shell-status-hooks';
-
-type ShellStatusHooksModule = {
-  createShellMarkerNonce: typeof createShellMarkerNonce;
-  shellStatusHooks: typeof shellStatusHooks;
-};
 
 // The emulator and its fit addon are stubbed so the tab's own logic — routing, focus, the chord claim —
 // is what is under test rather than xterm.js's renderer, which jsdom cannot run. The stub records what
@@ -80,13 +74,9 @@ vi.mock('@xterm/addon-fit', () => ({
   FitAddon: class { fit() {} activate() {} dispose() {} },
 }));
 
-// A fixed nonce, so the markers these tests feed are signed exactly as the installed hooks would sign
-// them. `useShellTerminal.test.ts` covers the nonce itself and the markers that lack it.
-vi.mock('./shell-status-hooks', async (importOriginal) => ({
-  ...await importOriginal<ShellStatusHooksModule>(),
-  createShellMarkerNonce: () => 'n0nce',
-}));
-const NONCE = 'n0nce';
+// The payload's nonce, so the markers these tests feed are signed exactly as the installed hooks would
+// sign them. `useShellTerminal.test.ts` covers the markers that lack it.
+const NONCE = 'c'.repeat(32);
 
 // jsdom has no ResizeObserver, and the terminal registers one. Stubbed rather than installed globally
 // so nothing else in the suite can see it.
@@ -98,7 +88,7 @@ vi.stubGlobal('ResizeObserver', class {
 
 const PAYLOAD: ShellPayload = {
   instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
-  connections: [], schedule: [],
+  connections: [], schedule: [], hookNonce: NONCE,
 };
 
 type Written = string[];
@@ -140,8 +130,7 @@ function makeCapabilities(overrides: {
   const { promise: answered, resolve: answerDispatch } = withResolvers<void>();
   const capabilities = {
     resourceUrl: (reference: string) => reference,
-    intent: vi.fn(async (name: string, payload?: unknown) => {
-      if (name === 'install-hooks') return { install: true, nonce: payload };
+    intent: vi.fn(async (name: string, _payload?: unknown) => {
       if (name === 'terminal-status') return overrides.status ?? { running: true };
       if (name === 'dispatch') {
         await answered;
@@ -1039,27 +1028,15 @@ describe('ShellTab', () => {
     expect(closed).toEqual([]);
   });
 
-  it('claims the hook install for a shell with none yet and types the setup line it won', async () => {
+  it('types nothing into a new shell and asks for no hook install, since zsh\'s startup installed them', async () => {
     const made = makeCapabilities();
     const writes = vi.spyOn(made.handle, 'write');
 
     mountShell(PAYLOAD, made.capabilities);
 
-    await waitFor(() => {
-      expect(writes.mock.calls.some(([data]) => data.startsWith("export PROMPT='%B>%b '"))).toBe(true);
-    });
-    expect(made.capabilities.intent).toHaveBeenCalledWith('install-hooks', NONCE);
-  });
-
-  it('types no setup line into a shell whose hooks an earlier attach installed', async () => {
-    const made = makeCapabilities();
-    const writes = vi.spyOn(made.handle, 'write');
-
-    mountShell({ ...PAYLOAD, hookNonce: 'b'.repeat(32) }, made.capabilities);
-
     await waitFor(() => { expect(made.capabilities.intent).toHaveBeenCalledWith('terminal-status', null); });
     expect(made.capabilities.intent).not.toHaveBeenCalledWith('install-hooks', expect.anything());
-    expect(writes.mock.calls.some(([data]) => data.startsWith("export PROMPT='%B>%b '"))).toBe(false);
+    expect(writes).not.toHaveBeenCalled();
   });
 
   it('holds focus in the command bar rather than the terminal', async () => {

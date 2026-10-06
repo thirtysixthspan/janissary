@@ -190,7 +190,8 @@ was typed in the bar, even though zsh also reports running it; a command typed i
 recorded as zsh received it, including one spanning several lines. Every entry is stored without
 leading or trailing whitespace, and a command that is empty or only whitespace is never recorded.
 The status hooks the tab installs in its shell are setup, not user commands, and never appear in this
-history.
+history. They never appear in zsh's own history either: nothing is typed at the prompt to install
+them, so `history`, `Up` in the terminal, and `$HISTFILE` hold only what the user ran.
 Ghost suggestions instead draw from the
 global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
 a suggestion. Every line the command bar records in this history — whether the application answered
@@ -276,9 +277,11 @@ setup-complete marker (`133;E;<nonce>`) and the directory report (`OSC 7;<nonce>
 The nonce is written into the hook functions themselves, never into a shell variable a child process
 could read. A marker without the right nonce is ignored, so a program's output — a `cat` of a crafted
 file, or a remote host reached over `ssh` — cannot mark the shell busy or idle, add a command to this
-tab's history, change the recorded directory, or clear and reveal the terminal. The nonce is minted
-in the browser and kept in the tab's server-side payload (`hookNonce`) for the life of the shell, so a
-later attach reads it from there and trusts the markers of the hooks already running. A `hookNonce`
+tab's history, change the recorded directory, or clear the terminal. The server mints the nonce when
+it starts the shell and keeps it in the tab's payload (`hookNonce`) for the life of the shell, so
+every attach reads it from there and trusts the markers of the hooks already running. It reaches zsh
+in an environment variable that zsh's startup removes before any of the user's own startup files
+run, so no process the shell starts inherits it, and no file on disk ever holds it. A `hookNonce`
 must be 32 lowercase hex characters, because it is written into the hook functions zsh runs.
 
 ## Where the shell starts
@@ -301,23 +304,27 @@ terminal in <dir>: <reason>.`) and opens no tab. Every other shell tab and its z
 The shell is always zsh, named outright rather than taken from the environment, so the tab is a zsh
 tab whatever the user's login shell happens to be. It is a fully interactive zsh reading its own
 startup files, then sets its prompt to `> ` so user prompt formatting does not change the shell tab's
-terminal display. The terminal stays hidden until its pre-command and post-command hooks are
-installed, and the startup screen is cleared before the plain prompt appears.
+terminal display. The pre-command and post-command hooks are installed by zsh's own startup rather
+than typed at its prompt: the application starts zsh with a startup directory of its own whose files
+run the user's `.zshenv` and `.zshrc` from wherever they normally live, then set the prompt and
+install the hooks after them. The user's own `ZDOTDIR`, when they have one, is restored before their
+files run and stays in place afterwards, so programs the shell starts see it unchanged, and a
+history file the system's startup would have pointed into the application's directory is pointed
+back at the user's. If the user's `.zshenv` turns off the remaining startup files, the hooks are
+installed there instead. The startup directory is private to the user, is created with the first
+shell tab, and is removed when the application exits. Whatever the startup files print, including a
+warning from zsh about its history file, is cleared just before the first prompt appears.
 
 The prompt and the command line typed at it are bold, and command output is not, so each command
 stands apart from what it printed. That holds for a line typed in the terminal, a line the command bar
 sends to zsh, and the echoed line above an application command's reply, along with the prompt shown
 after that reply. A command keeps its bold in the scrollback after it runs.
 
-The hooks are installed once per shell, not once per attach. Docking, undocking, or reloading the browser mounts the tab again, and a mount whose shell already has hooks only
-re-attaches: it types nothing into the terminal, does not hide it, and does not clear it, so a `vim`,
-`python`, `ssh` or `sudo` prompt in the foreground is left alone. A re-attached terminal starts with
-an empty screen and shows the shell's output from that point on. Only a mount whose shell has no
-hooks yet claims the install, through the shell plugin's `install-hooks` intent: the first claim on a
-shell stores the claimant's nonce and tells it to type the setup line; any later claim, such as a
-second window attaching in the same moment, stores nothing and is handed the stored nonce, and that
-mount reveals its terminal without typing anything. A claim that wins is typed even if its tab
-unmounted while the answer was in flight, because the shell is already recorded as having hooks.
+The hooks are installed once per shell, by the shell itself, before any browser attaches. Opening,
+docking, undocking, or reloading the browser mounts the tab, and every mount only attaches: it types
+nothing into the terminal, does not hide it, and clears it only on the shell's one setup-complete
+marker, so a `vim`, `python`, `ssh` or `sudo` prompt in the foreground is left alone. A re-attached
+terminal starts with an empty screen and shows the shell's output from that point on.
 
 ## Lifetime
 

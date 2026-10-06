@@ -48,7 +48,7 @@ export function spawnPluginTerminal(
       options.cwd,
       workspace?.dir,
       workspace?.offline,
-      undefined,
+      options.env,
       // An absent `args` means the shell itself here, not a command run through it. This resource has
       // no command to run — the caller's business is the shell — and forwarding `undefined` would let
       // `spawnPty` fall back to `shellCommandArgs` with the empty command it was given, producing an

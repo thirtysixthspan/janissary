@@ -66,14 +66,14 @@ describe('App launched with the janus shell tab', () => {
 
   const payload: ShellPayload = {
     instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/tmp', root: '/tmp', workspace: false, cols: 80, rows: 24,
-    connections: [], schedule: [],
+    connections: [], schedule: [], hookNonce: 'a'.repeat(32),
   };
   const tab: TabView = {
     label: 'janus', number: 1, dotColor: '#fff', group: 0, groupColor: '#000',
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
     bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
     view: 'plugin',
-    plugin: { id: 'shell', schemaVersion: 2, payload, chords: ['ctrl+r', 'meta+t'], hostsCommandBar: true },
+    plugin: { id: 'shell', schemaVersion: 3, payload, chords: ['ctrl+r', 'meta+t'], hostsCommandBar: true },
   };
   const snapshot: StateEvent = {
     t: 'state', tabs: [tab], activeTab: 0, route: null, tabNameMaxLength: 16, activeTabNameMaxLength: 50,

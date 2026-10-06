@@ -1,7 +1,6 @@
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { useShellTerminal, type ShellTerminalHandle } from './useShellTerminal';
-import { claimShellHooks } from './claim-shell-hooks';
 import { reportShellCwd } from './report-shell-cwd';
 
 type Options = {
@@ -12,8 +11,8 @@ type Options = {
   onCommandRunning: (running: boolean) => void;
 };
 
-// The tab's terminal, wired to the server through this plugin's intents: the hook install claim, the
-// running state, and the directory zsh reports. `useShellTerminal` reads every callback through a
+// The tab's terminal, wired to the server through this plugin's intents: the running state and the
+// directory zsh reports. `useShellTerminal` reads every callback through a
 // ref, so none of these needs a stable identity.
 export function useShellTabTerminal({
   payload, capabilities, containerRef, onCommand, onCommandRunning,
@@ -26,7 +25,6 @@ export function useShellTabTerminal({
     reportColors: capabilities.reportTerminalColors,
     openLink: (href) => { capabilities.openLink?.(href); },
     hookNonce: payload.hookNonce,
-    claimHooks: (nonce) => claimShellHooks(capabilities, nonce),
     onCommand,
     onCommandRunning: (running) => {
       onCommandRunning(running);
