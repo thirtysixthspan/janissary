@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useSyncExternalStore } from 'react';
-import { rows, selection, subscribeToHistory, type ClipboardHistoryRow } from './store';
+import React, { useEffect, useRef } from 'react';
+import type { ClipboardHistoryRow } from './store';
 
 // The clipboard-history popup: the history picker with the history's contents behind it.
 //
@@ -10,13 +10,13 @@ import { rows, selection, subscribeToHistory, type ClipboardHistoryRow } from '.
 // for the overlay is clipped by CSS on the label, before the postfix, the way the editor's find rows clip
 // theirs.
 //
-// Rows and the selection are read from the store rather than passed in: they are the plugin's own
-// state, and it is the one thing the host has no business holding.
-type Properties = { choose: (text: string) => void };
+type Properties = {
+  rows: readonly ClipboardHistoryRow[];
+  selected: number;
+  choose: (text: string) => void;
+};
 
-export function ClipboardHistoryPopup({ choose }: Properties) {
-  const items = useSyncExternalStore(subscribeToHistory, rows, rows);
-  const selected = useSyncExternalStore(subscribeToHistory, selection, selection);
+export function ClipboardHistoryPopup({ rows, selected, choose }: Properties) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   // The popup takes the keyboard as it appears, so the arrows move its selection on every tab rather
@@ -30,10 +30,10 @@ export function ClipboardHistoryPopup({ choose }: Properties) {
   return (
     <div className="picker clipboard-history" ref={rootRef} tabIndex={-1}>
       <div className="picker-title">clipboard</div>
-      {items.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="picker-row picker-empty">(no clipboard history)</div>
       ) : (
-        items.map((row, index) => (
+        rows.map((row, index) => (
           <div
             key={row.id}
             className={`picker-row clipboard-history-row${index === selected ? ' selected' : ''}`}
