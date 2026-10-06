@@ -6,13 +6,16 @@ import { AgentTabMeta } from './AgentTabMeta';
 describe('AgentTabMeta', () => {
   it('renders the recording flag as a pressable button once the tab has a recording', () => {
     const onOpenRecording = vi.fn();
-    render(<AgentTabMeta cwd="~/project" hasRecorder onOpenRecording={onOpenRecording} />);
+    const { container } = render(<AgentTabMeta cwd="~/project" hasRecorder onOpenRecording={onOpenRecording} />);
 
     const flag = screen.getByRole('button', { name: 'recording' });
     fireEvent.click(flag);
 
     expect(flag).toHaveClass('tab-flag--active');
     expect(onOpenRecording).toHaveBeenCalled();
+    // The class the stylesheet resets the button's chrome with. Nothing reads it, so a rename would
+    // silently drop the styling and render the flag raised and bordered among flat controls.
+    expect(container.querySelector('.tab-recording')).toBe(flag);
   });
 
   // The two facts are separate on purpose: a `-w` harness tab still provisioning has a recorder but

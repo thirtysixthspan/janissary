@@ -261,6 +261,15 @@ html, body, #root {
 .tab-flag--active { color: var(--success); }
 .tab-flag--provisioning { color: var(--muted); }
 .tab-flag--provisioning svg { animation: icon-spin 1s linear infinite; }
+/* The recording flag is the one flag in the row that is also a control, so it is a `<button>` — and
+   unlike every other button in this row it does not declare its own reset. Without this rule it
+   renders with the browser's default chrome, raised and bordered, beside flat controls. Copied from
+   `.tab-open-files` rather than invented, so the row reads as one set of controls again. */
+.tab-recording {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.tab-recording:hover { color: var(--fg); }
 .tab-meta-chip {
   display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; vertical-align: bottom; cursor: default;

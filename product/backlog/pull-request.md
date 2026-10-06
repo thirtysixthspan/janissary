@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Style the recording flag's button so it renders like every other control in the metadata row instead of with the browser's default button chrome.
-
-Existing Issue: The recording flag is the only control this pull request adds to a metadata row's flag cluster, and its button carries no rule anywhere in the stylesheet, while `.tab-flag` in `web/src/theme.css` sets only a font size and `cursor: default` and every other button in that row resets its own background, border, padding and cursor, so the new flag renders raised and grey with a non-interactive cursor beside flat controls. Severity: 5/10
-
-Existing Risk: 6/10 - Every harness, ssh and shell tab in the application shows a raised grey button where the row otherwise reads as one set of flat controls, so the feature's headline affordance looks like a rendering bug and is the first thing a user or a reviewer sees.
-
-Proposal Risk: 2/10 - Adding the missing reset rule fixes it, and the residual risk is only that a future theme change adjusts the row's other controls and not this one.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1549: style the recording flag's button to match the metadata row". Add a `.tab-recording` rule in `web/src/theme.css` beside the `.tab-flag` rules it belongs next to, copying the reset the row's existing controls each declare (`background: transparent; border: none; color: var(--muted); cursor: pointer;` plus the `padding: 0 4px; line-height: 1` sizing the neighbouring `.tab-open-files` and `.tab-launch-agent` rules use), so the flag inherits the row's hover treatment rather than sitting outside it. The class is already applied by both `web/src/shared/RecordingFlag.tsx` and `web/src/plugins/shell/ShellRecordingFlag.tsx`, so this is a stylesheet-only change with no component edit. `stylelint` runs over `web/src/**/*.css` with `color-hex-length` enforced, so keep any color literal in the short form. Add a case to `web/src/shared/AgentTabMeta.test.tsx` asserting the pressable flag carries the `tab-recording` class, which no case currently pins, so a later rename of the class is caught rather than silently losing its styling. No existing test covers stylesheet rules, so nothing else can regress.
-
 * Pass a docked plugin tab's recording through, so a shell tab docked into a sidebar gets a pressable recording flag rather than a permanently inert one.
 
 Existing Issue: `web/src/plugins/DockedPluginBody.tsx` renders `PluginBody` without a `recording` prop, so a docked plugin tab's capabilities carry neither `recording` nor `openRecording` and `ShellRecordingFlag` always takes its inert branch, which the new `product/specs/shell-tab.md` § The metadata row contradicts when it states the flag is pressable from the shell's first output. Severity: 6/10
@@ -22,6 +12,7 @@ Proposal Risk: 2/10 - Threading the field through fixes it, leaving only the ris
 
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1549: pass a docked plugin tab's recording through to its metadata row". Add a `recording?: string` prop to `DockedPluginBody` in `web/src/plugins/DockedPluginBody.tsx`, pass `tab.plugin.recording` into it at the single call site in `web/src/Sidebar.tsx`, and forward it to the `PluginBody` it already renders, which `web/src/plugins/PluginBody.tsx` accepts and already threads into `createPluginClientCapabilities`. This mirrors what `web/src/plugins/PluginTabLayer.tsx` does for the centre strip, so the two surfaces stay in step. Add a case to the `DockedPluginBody` test file asserting that a plugin tab carrying a recording reaches its body with the capability present and its flag pressable, and one asserting it is absent when the tab has none; check the existing docked-body test file for the shape to mirror, since no case covers the recording field on either surface today. `web/src/shared/RecordingFlag.test.tsx` does not exist and is not needed here — the capability, not the component, is what is missing. Nothing else reads `DockedPluginBody`'s props, so the widening is contained.
 
+
 * Collapse the recording flag's two hand-written implementations into the one shared component, which the plugin's independence from the host's metadata row does not actually call for.
 
 Existing Issue: `web/src/shared/RecordingFlag.tsx` and `web/src/plugins/shell/ShellRecordingFlag.tsx` each implement the same rule — a button carrying `tab-flag tab-flag--active tab-recording` when pressable, a `span` carrying `tab-flag tab-recording` otherwise — and the plan's stated reason for the split, that the shell plugin keeps its independence from the host's `AgentTabMeta` markup, does not cover a component this pull request introduced, since the plugin api barrel at `web/src/plugins/api.ts` already re-exports shared components the way it re-exports `PluginActionsHeader`. Severity: 4/10
@@ -31,6 +22,7 @@ Existing Risk: 3/10 - Nothing misbehaves today, but any future change to the fla
 Proposal Risk: 2/10 - One component means one edit, and the dead guard disappears with the second copy.
 
 Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1549: collapse the shell plugin's recording flag onto the shared component". Re-export `RecordingFlag` from `web/src/plugins/api.ts` beside the existing `tabFlagDisplay` export, delete `web/src/plugins/shell/ShellRecordingFlag.tsx`, and render `<RecordingFlag onOpen={capabilities.openRecording} />` directly in `web/src/plugins/shell/ShellTabMeta.tsx`, which already imports from the plugin api barrel. Move the cases in `web/src/plugins/shell/ShellRecordingFlag.test.tsx` that assert pressability and inertness onto a new `web/src/shared/RecordingFlag.test.tsx`, and keep in `ShellTabMeta.test.tsx` only what is genuinely about the shell row — that it passes `capabilities.openRecording` through — so the plugin suite still covers its own wiring. The component takes an optional `onOpen` and already derives both states from it, so its contract does not change. While in the shared component, drop the `if (!display) return null` guard in both variants: `tabFlagDisplay.recording` is a literal entry in the same module's type, so the guard can never fire and only suggests the key is optional. Keep the definition of the flag in `web/src/shared/tab/flag-display.ts` shared as it is; only the rendering is being unified.
+
 
 * Give shell-tab recording an explicit opt-out, so a user who does not want a shell's echoed output on disk has a way to decline it rather than only a documentation note explaining that it happens.
 
