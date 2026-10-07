@@ -59,6 +59,37 @@ describe('loadConfig', () => {
     expect(config.transcriptMaxLines).toBe(100);
   });
 
+  it('defaults native alerts and validates per-category bell settings', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
+      osNotifications: false,
+      terminalBell: false,
+      terminalBellVolumeSuccess: 0.2,
+      terminalBellVolumeWarning: -1,
+      terminalBellVolumeError: 4,
+      terminalBellMuteError: true,
+    }));
+    const config = loadConfig(tmpDir);
+    expect(config.osNotifications).toBe(false);
+    expect(config.terminalBell).toBe(false);
+    expect(config.terminalBellVolumeSuccess).toBe(0.2);
+    expect(config.terminalBellVolumeWarning).toBe(0.8);
+    expect(config.terminalBellVolumeError).toBe(0.8);
+    expect(config.terminalBellMuteError).toBe(true);
+    expect(config.terminalBellMuteSuccess).toBe(false);
+    expect(config.terminalBellMuteWarning).toBe(false);
+  });
+
+  it('enables desktop and bell by default for existing projects', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), '{}');
+    const config = loadConfig(tmpDir);
+    expect(config.osNotifications).toBe(true);
+    expect(config.terminalBell).toBe(true);
+  });
+
   it('falls back to defaults for missing fields in existing config', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });

@@ -1,10 +1,12 @@
 import type { Managers } from '../managers.js';
 import type { RecordedNotification } from './queue.js';
 import { messageBus } from '../bus.js';
+import { getConfig } from '../config.js';
 import {
   appendNotification, clearNotificationsFeed, notificationsFeedVisible, replaceLatestNotification, showNotificationsFeed,
 } from './tab.js';
 import { appendNotificationRecord, clearNotificationRecord } from './record.js';
+import { soundCategory } from './sound-category.js';
 
 // Where a notification that has already passed `shouldNotify` goes. Holding it and rendering it are
 // separate steps here: it always reaches the queue and the record, and only then is a surface
@@ -41,6 +43,7 @@ export function deliverNotification(
   appendNotificationRecord(notification);
   if (repeated) replaceLatestNotification(managers, held.entry);
   else appendNotification(managers, held.entry);
+  if (!replayed) emitNativeNotification(notification);
   if (notificationsFeedVisible(managers)) return;
   if (managers.notifications.isBurst(notification.recordedAt)) { escalateToFeed(managers); return; }
   if (replayed) return;
@@ -49,5 +52,27 @@ export function deliverNotification(
     from: notification.tabName ?? notification.tabLabel,
     message: notification.message,
     ...(notification.color && { color: notification.color }),
+  });
+}
+
+function emitNativeNotification(notification: RecordedNotification): void {
+  const category = soundCategory(notification.event);
+  if (!category) return;
+  const config = getConfig();
+  const volume = {
+    success: config.terminalBellMuteSuccess ? 0 : config.terminalBellVolumeSuccess,
+    warning: config.terminalBellMuteWarning ? 0 : config.terminalBellVolumeWarning,
+    error: config.terminalBellMuteError ? 0 : config.terminalBellVolumeError,
+  }[category];
+  const effectiveVolume = config.terminalBell ? volume : 0;
+  if (!config.osNotifications && effectiveVolume === 0) return;
+  messageBus.emit('notifications', {
+    type: 'native-notification',
+    tab: notification.tabLabel,
+    from: notification.tabName ?? notification.tabLabel,
+    message: notification.message,
+    category,
+    desktop: config.osNotifications,
+    volume: effectiveVolume,
   });
 }

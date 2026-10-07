@@ -48,6 +48,22 @@ describe('JanusClient', () => {
     expect(client).toBeInstanceOf(JanusClient);
   });
 
+  it('delivers and unsubscribes one-shot native notification events', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    const unsubscribe = client.onNativeNotification(listener);
+    const event = {
+      t: 'native-notification', tab: 'build', from: 'Build agent', message: 'Question',
+      category: 'warning', desktop: true, volume: 0.8,
+    };
+    messageHandler!({ data: JSON.stringify(event) });
+    expect(listener).toHaveBeenCalledWith(event);
+    unsubscribe();
+    messageHandler!({ data: JSON.stringify(event) });
+    expect(listener).toHaveBeenCalledOnce();
+    client.dispose();
+  });
+
   it('send writes JSON to the socket when open', () => {
     const client = new JanusClient();
     client.send({ method: 'toggleCollapse', params: {} });

@@ -114,7 +114,7 @@ export type {
   
   LayoutEvent,
   LayoutUpdate,
-  
+  NativeNotificationEvent,
   ServerEvent,
 } from './protocol/events.js';
 

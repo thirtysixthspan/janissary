@@ -49,6 +49,7 @@ const client = {
   onLayout(listener: LayoutListener) { layoutListener = listener; return () => {}; },
   onToast: () => () => {},
   onToastClear: () => () => {},
+  onNativeNotification: () => () => {},
   attachPty: () => () => {},
 } as unknown as JanusClient;
 

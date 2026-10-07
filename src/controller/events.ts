@@ -18,9 +18,20 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
   messageBus.on('app', 'exit', () => sinks.exit?.());
   messageBus.on('layout', 'update', ({ type: _type, ...update }) => sinks.sendLayout?.(update));
   messageBus.on('fileNavigator', 'collect', (event) => sinks.sendCollectTreeState?.({ id: event.id }));
-  messageBus.on('notifications', ['toast', 'clear', 'reveal'], (event) => {
+  messageBus.on('notifications', ['toast', 'clear', 'reveal', 'native-notification'], (event) => {
     if (event.type === 'clear') { sinks.sendToastClear?.(); return; }
     if (event.type === 'reveal') { sinks.sendNotificationsReveal?.(event.dock); return; }
+    if (event.type === 'native-notification') {
+      sinks.sendNativeNotification?.({
+        tab: event.tab,
+        from: event.from,
+        message: event.message,
+        category: event.category,
+        desktop: event.desktop,
+        volume: event.volume,
+      });
+      return;
+    }
     sinks.sendToast?.({ from: event.from, message: event.message, color: event.color });
   });
   messageBus.on('pty', ['data', 'exit'], (event) => {

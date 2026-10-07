@@ -1,4 +1,4 @@
-import type { LayoutUpdate } from '../protocol/events.js';
+import type { LayoutUpdate, NativeNotificationEvent } from '../protocol/events.js';
 
 export type Sinks = {
   emitState: () => void;
@@ -12,4 +12,5 @@ export type Sinks = {
   sendToast?: (event: { from: string; message: string; color?: string }) => void;
   sendToastClear?: () => void;
   sendNotificationsReveal?: (dock: 'left' | 'right') => void;
+  sendNativeNotification?: (event: Omit<NativeNotificationEvent, 't'>) => void;
 };

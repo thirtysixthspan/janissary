@@ -312,7 +312,43 @@ those appends.
 A toast has no tab to ride, so it travels on its own server→client push: one event carrying the
 originating tab, the message, and the dot color, and a second event that clears the corner. Both
 are one-shot rather than state — nothing about a toast survives a reconnect, and a client that
-reloads simply has an empty corner. There is still no sound and no OS-level notification.
+reloads simply has an empty corner. Native alerts and sounds are also one-shot and are not replayed
+on reconnect.
+
+### Desktop alerts and bell sounds
+
+A live, explicit notification also asks each connected browser window to show a desktop alert and
+play a short sound. This includes `question`, `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
+`editor-suggest`, `transcript-unavailable`, the three recording-failed events,
+`e2e-browser-gone`, `file-operation`, `open-unsupported`, `plugin-note`, `plugin-failure`,
+`schedule-late`, the two remote-session events, the three launch events, and `remote-refused`.
+The five optional ambient events (`state-change`, `incoming-message`, `schedule-fire`,
+`agent-start`, `rate-limited`) do not raise a desktop alert or bell, even if their feed toggle is on.
+A report detected earlier and replayed later does not raise either: its detection time belongs in
+the feed, not in an alert implying it happened just now. A visible notifications feed does not
+suppress a desktop alert.
+
+Each client suppresses both channels only when its window has focus **and** the originating tab is
+the active centre tab. A tab selected when Janissary is behind another app still alerts, as does a
+background tab while Janissary is in front. Feed and toast rules do not change. The desktop alert
+reads `Janissary` with body `<tab name>: <message>`. Clicking it focuses the window and sends the
+existing focus request for that tab; if the tab closed in the meantime there is nothing to focus.
+
+The browser never requests notification permission. It shows a desktop alert only when the browser
+has already been granted permission for the Janissary origin; if permission is denied or not yet
+granted, it leaves the feed and bell unaffected. Browser autoplay rules can also block a sound until
+the page has received user interaction. A browser or OS can prevent window activation on click.
+These failures do not interrupt the notification queue or feed.
+
+The bell uses bundled MP3 files: `success.mp3` for `manual` and `plugin-note`; `warning.mp3` for
+`question`, `harness-idle`, `auto-approve`, `auto-resume`, `schedule-late`, the two remote-session
+events, the three launch events, and `remote-refused`; and `error.mp3` for the remaining explicit
+events. Each client plays at most one bell per second, while every eligible desktop banner may still
+show. The `osNotifications` and `terminalBell` config switches are independent and default on.
+The three volume settings range from 0 to 1 (default 0.8); each category also has its own mute
+setting (default false). The settings are loaded from `.janissary/config.json` and a change takes
+effect on the next run. The default MP3 assets live in the web bundle's `sounds/` folder; changing
+them requires rebuilding and replacing the installed bundle.
 
 Every notification line carries a colored dot, matching the sending tab's own tab-strip dot
 color — the same colored-dot treatment already used for cross-agent `msg`/`broadcast` deliveries.

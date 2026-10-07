@@ -4,7 +4,7 @@
 
 import { errorText } from './error-text.js';
 import type { LogEntry, Tab } from './tab/types.js';
-import type { LayoutUpdate } from './protocol/events.js';
+import type { LayoutUpdate, NativeNotificationEvent } from './protocol/events.js';
 
 export type Subscription = { unsubscribe: () => void };
 export type Listener<E> = (event: E) => void;
@@ -161,7 +161,8 @@ type TabsEvent = { type: 'unread-cleared'; label: string };
 type NotificationsEvent =
   | { type: 'toast'; from: string; message: string; color?: string }
   | { type: 'clear' }
-  | { type: 'reveal'; dock: 'left' | 'right' };
+  | { type: 'reveal'; dock: 'left' | 'right' }
+  | ({ type: 'native-notification' } & Omit<NativeNotificationEvent, 't'>);
 export type BusChannels = {
   system: { type: 'resumed'; sleptMs: number };
   transcript: BusEvent; state: StateEvent; app: AppEvent; pty: PtyEvent; layout: LayoutEvent;
