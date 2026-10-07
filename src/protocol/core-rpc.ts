@@ -54,6 +54,7 @@ export type CoreRpcCall =
   // button in a harness/agent tab's metadata row. The new agent is auto-named from the pool, joins
   // the source tab's group, and is focused. `label` is the requesting tab's own label.
   | { method: 'launchAgentFor'; params: { label: string } }
+  | { method: 'launchShellFor'; params: { label: string } }
   // Write the named agent tab's full transcript to a plain-text file and open it in an editor
   // tab, triggered by the clipboard button in an agent tab's metadata row. No-ops when the tab
   // is missing or its log is empty. `label` is the requesting tab's own label.

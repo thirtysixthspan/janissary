@@ -41,6 +41,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'setDock':
     case 'openFileNavigatorFor':
     case 'launchAgentFor':
+    case 'launchShellFor':
     case 'openTranscriptFor':
     case 'openHarnessTranscriptFor':
     case 'openRecordingFor':

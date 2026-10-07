@@ -11,7 +11,7 @@ export type TabPluginLaunchRequest = {
   // the result says why.
   workspace?: { offline: boolean };
   // Start over an SSH channel and provision the workspace on that host.
-  remote?: { address: string };
+  remote?: { address: string } | { join: true };
 };
 
 // Where the launched tab starts, decided by the host before the factory runs.

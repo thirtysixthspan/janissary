@@ -6,6 +6,7 @@ All notable changes to this project are documented here.
 
 ### Features
 
+- open sibling shells from remote shells, agents, and harnesses in their existing remote workspace
 - show remote host and attach/detach controls in standalone shell metadata
 - add a sessions tab for detaching and reattaching remote sessions (#1143)
 - preserve sessions across laptop sleep and resume (#1131)

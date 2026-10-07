@@ -20,6 +20,8 @@ type Properties = {
   // Set only once this tab has a recording, and then it opens it — the same arrangement the
   // transcript button uses, so one absent handler means "there is nothing here to open yet".
   onOpenRecording?: () => void;
+  launchTitle?: string;
+  launchDisabled?: boolean;
   connectionsButton?: StatusWindowButtonProps; scheduleButton?: StatusWindowButtonProps;
   onSplit?: () => void;
   // Set only for a remote tab: what its channel is doing, and where to send the detach or attach
@@ -42,6 +44,7 @@ function MetaChip({ label, value }: { label: string; value: string }) {
 export function AgentTabMeta({
   cwd, cwdDisplay, flags, model, effort, remote, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
   hasRecorder, onOpenRecording, connectionsButton, scheduleButton, onSplit, remoteSession,
+  launchTitle, launchDisabled,
 }: Properties) {
   const workspaced = flags?.some((flag) => flag === 'workspaced' || flag === 'provisioning') ?? false;
   return (
@@ -83,7 +86,8 @@ export function AgentTabMeta({
           <button
             type="button"
             className="tab-launch-agent"
-            title={workspaced ? 'New agent in this workspace' : 'New agent here'}
+            title={launchTitle ?? (workspaced ? 'New agent in this workspace' : 'New agent here')}
+            disabled={launchDisabled}
             onClick={onLaunchAgentHere}
           >
             <FontAwesomeIcon icon={newTabIcon} />

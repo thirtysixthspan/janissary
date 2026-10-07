@@ -22,6 +22,7 @@ const makeController = () =>
     dispatch: vi.fn(),
     answerQuestion: vi.fn(),
     launchAgentFor: vi.fn(),
+    launchShellFor: vi.fn(),
     setActiveTab: vi.fn(),
     focusTab: vi.fn(),
     moveTabToOtherPane: vi.fn(),
@@ -588,6 +589,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 42, { method: 'launchAgentFor', params: { label: 'janus' } });
     expect(controller.launchAgentFor).toHaveBeenCalledWith('janus');
+  });
+
+  it('routes launchShellFor', () => {
+    const controller = makeController();
+    dispatchCall(controller, 48, { method: 'launchShellFor', params: { label: 'janus' } });
+    expect(controller.launchShellFor).toHaveBeenCalledWith('janus');
   });
 
   it('routes editorPersonas to a reply carrying the editor persona names', () => {

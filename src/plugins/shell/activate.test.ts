@@ -72,14 +72,17 @@ function fakeCapabilities(overrides: {
       ready: TabPluginLaunchReadyHandler,
     ) => {
       launches.push({ key, request, ready });
+      const joining = request.remote !== undefined && 'join' in request.remote;
       const cloning = request.remote === undefined && request.workspace !== undefined && overrides.fallbackReason === undefined;
-      const start = request.remote
+      const start = joining
+        ? { label: 'kemal', cwd: '/remote/work/src', workspaceDir: '/remote/work', host: 'devbox' }
+        : request.remote
         ? { label: 'kemal', cwd: '/repo/src', connectPtyId: 'ssh-pty', host: 'devbox' }
         : cloning ? { label: 'kemal', cwd: CLONE, workspaceDir: CLONE } : { label: 'kemal', cwd: '/repo/src' };
       opened.push({ key, value: factory(resources, start) });
       return {
         label: 'kemal',
-        ...(request.remote === undefined && request.workspace && overrides.fallbackReason && { fallbackReason: overrides.fallbackReason }),
+      ...(request.remote === undefined && request.workspace && overrides.fallbackReason && { fallbackReason: overrides.fallbackReason }),
       };
     }),
     updateTab: (key: string, factory: (given: typeof resources) => { payload: unknown }) => {
@@ -210,15 +213,22 @@ describe('the zsh command', () => {
     expect(opened).toHaveLength(0);
   });
 
-  it('refuses a remote tab, whose directory is on another host, and opens nothing', () => {
-    const { capabilities, opened, spawns } = fakeCapabilities({
-      origin: { label: 'remote1', cwd: '/repo', root: '/repo', remote: true },
-    });
+  it.each([
+    ['remote shell', { label: 'shell1', cwd: '/remote/work/src', root: '/repo', workspace: { dir: '/remote/work', offline: true }, remote: true }],
+    ['remote agent', { label: 'agent1', cwd: '/remote/work/src', root: '/repo', workspace: { dir: '/remote/work', offline: true }, remote: true }],
+    ['remote harness', { label: 'harness1', cwd: '/remote/work/src', root: '/repo', workspace: { dir: '/remote/work', offline: true }, remote: true }],
+  ] as const)('joins the source workspace when zsh is typed in a %s', (_kind, origin) => {
+    const { capabilities, launches, spawns, opened } = fakeCapabilities({ origin });
 
-    expect(() => activate().command?.('', capabilities))
-      .toThrow(new TabPluginRejection('A shell tab cannot be opened from a remote tab.'));
-    expect(opened).toHaveLength(0);
-    expect(spawns).toHaveLength(0);
+    activate().command?.('Docs -w --workspace --no-workspace --offline', capabilities);
+
+    expect(launches[0]?.request).toEqual({ name: 'docs', remote: { join: true } });
+    expect(spawns[0]).toMatchObject({
+      cwd: '/remote/work/src', workspace: { dir: '/remote/work', offline: true },
+    });
+    expect(opened[0]?.value.payload).toMatchObject({
+      host: 'devbox', prompted: false, workspaceDir: '/remote/work', workspace: true,
+    });
   });
 
   it('refuses a nested remote launch with its specific message', () => {
@@ -292,6 +302,22 @@ describe('the sibling intent', () => {
     expect(ask(capabilities, 'sibling', null)).toEqual({ opened: true });
     expect(spawns[0]).toEqual({ cwd: '/repo/src/deep', shell: SHELL_PROGRAM, args: [], zshHooks: { nonce: expect.any(String) } });
     expect(opened[0].value.payload).toMatchObject({ workspace: false });
+  });
+
+  it('launches a remote shell sibling in the source workspace and offline mode', () => {
+    const { capabilities, launches, spawns } = fakeCapabilities({
+      origin: {
+        label: 'remote1', cwd: '/remote/work/src', root: '/repo',
+        workspace: { dir: '/remote/work', offline: true }, remote: true,
+      },
+    });
+
+    expect(ask(capabilities, 'sibling', null)).toEqual({ opened: true });
+
+    expect(launches[0]?.request).toEqual({ remote: { join: true } });
+    expect(spawns[0]).toMatchObject({
+      cwd: '/remote/work/src', workspace: { dir: '/remote/work', offline: true },
+    });
   });
 
   it('confines a sibling of a workspaced shell to the same clone and offline mode', () => {

@@ -9,6 +9,7 @@ export type TranscriptMethod = 'openTranscriptFor' | 'openHarnessTranscriptFor';
 export type AgentTabIntents = {
   onOpenFileNavigator: () => void;
   onLaunchAgentHere: () => void;
+  onLaunchShellHere: () => void;
   onOpenTranscript: () => void;
   onToggleCollapse: () => void;
   onOpenAcpTranscript: (acpRef: AcpRef) => void;
@@ -27,6 +28,7 @@ export function agentTabIntents(
   return {
     onOpenFileNavigator: () => client.send({ method: 'openFileNavigatorFor', params: { label } }),
     onLaunchAgentHere: () => client.send({ method: 'launchAgentFor', params: { label } }),
+    onLaunchShellHere: () => client.send({ method: 'launchShellFor', params: { label } }),
     onOpenTranscript: () => client.send({ method: transcriptMethod, params: { label } }),
     onToggleCollapse: () => client.send({ method: 'toggleCollapse', params: {} }),
     onOpenAcpTranscript: (acpRef) => client.send({ method: 'openAcpTranscript', params: { acpRef } }),

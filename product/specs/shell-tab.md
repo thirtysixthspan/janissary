@@ -171,7 +171,7 @@ The command bar's status dot uses the same color as the shell tab's dot.
 
 ## Keys
 
-`Cmd+T` opens another zsh tab beside this shell, exactly as the metadata row's **new shell here** button does. The new shell starts in the same working directory. Beside an unsandboxed shell it is unsandboxed; beside a sandboxed one it runs inside the same workspace clone with the same offline setting. It never creates a workspace, which is what sets it apart from a typed `zsh`. While this shell's own clone is still provisioning, `Cmd+T` does nothing. In other tabs, `Cmd+T` keeps opening a new agent tab.
+`Cmd+T` opens another zsh tab beside this shell, exactly as the metadata row's **new shell here** button does. The new shell starts in the same working directory. Beside an unsandboxed shell it is unsandboxed; beside a sandboxed one it runs inside the same workspace clone with the same offline setting. A remote shell's sibling joins its existing remote channel and workspace, starts at its current directory when that directory is inside the workspace (otherwise at the workspace root), and inherits its offline setting. It never creates a workspace, which is what sets it apart from a typed `zsh`. While the source workspace is provisioning, `Cmd+T` does nothing. In other tabs, `Cmd+T` keeps opening a new agent tab.
 
 `Cmd+T` works the same with the terminal focused as with the command bar focused, and when the keyboard rests on the page with the shell as the current tab. It is a chord the shell plugin's declaration claims beside `Ctrl+R`, so like `Ctrl+R` it belongs to the shell only while the shell is the visible tab, or the selected entry in the sidebar it is docked to. `Cmd+T` pressed in an agent tab's command bar beside a docked shell still opens a new agent tab.
 
@@ -252,6 +252,11 @@ status plug and attach/detach control as a remote harness. The plug shows provis
 workspace is ready, connected while the SSH session is live, and reconnecting while it is recovering.
 The control offers **Detach** for a live session and **Attach** while reconnecting; detaching asks for
 confirmation because it closes every tab sharing that remote session. Local shell metadata is unchanged.
+
+The **new shell here** action on a remote shell, and the ➕ action on a remote harness, open a
+sibling shell on that tab's existing remote workspace and channel. Its working directory follows
+the source tab when it is inside the workspace, and otherwise falls back to the workspace root. The
+action is disabled while the workspace provisions. A remote agent keeps its **new agent here** action.
 
 The connections window includes the tab's own `zsh` terminal as soon as the shell tab opens. The
 connections and schedule windows auto-show for five seconds whenever the tab becomes visible, then
@@ -339,11 +344,14 @@ local, has no workspace, and is inside the project checkout, and at the checkout
 **new shell here** button and `Cmd+T` are the way to open another shell inside an existing clone.
 
 A local shell's starting directory must be inside the project root, and a local shell cannot be
-started anywhere else: a terminal only ever runs in a directory inside that root. A remote agent tab
-cannot start a local shell because its working directory belongs to the other host. `zsh` typed there
-without `on` answers `A shell tab cannot be opened from a remote tab.`; `zsh … on <address>` answers
-`Cannot launch a remote shell from a remote tab.`. Both refusals open no tab and leave the plugin
-enabled.
+started anywhere else: a terminal only ever runs in a directory inside that root. A remote tab's
+typed `zsh` without `on` opens a sibling in that tab's remote workspace and channel. It inherits the
+workspace offline setting; `-w`, `--workspace`, `--no-workspace`, and `--offline` do not change the
+remote workspace. A name is still honored and checked against the normal tab and session clashes.
+While the workspace provisions, it reports `The remote workspace is not ready yet.`; if the remote
+session is reconnecting or gone, it reports `The remote workspace is no longer available.`. A remote
+tab cannot start another standalone remote shell: `zsh … on <address>` answers
+`Cannot launch a remote shell from a remote tab.` and opens no tab.
 
 `zsh <name> on <address>` opens its tab immediately with the live SSH terminal attached. Password,
 passphrase, host-key, and other SSH prompts appear in that terminal and are answered by typing there.

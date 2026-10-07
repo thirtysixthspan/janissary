@@ -34,6 +34,7 @@ export type FileNavigatorControllerAdapter = {
   setDock(index: number, dock: 'left' | 'right' | null): void;
   openFileNavigatorFor(label: string): void;
   launchAgentFor(label: string): void;
+  launchShellFor(label: string): void;
 };
 
 export function createFileNavigatorControllerAdapter(managers: Managers): FileNavigatorControllerAdapter {
@@ -66,5 +67,8 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     setDock: (index, dock) => managers.tab.setDock(index, dock),
     openFileNavigatorFor: (label) => fileNavigatorRpc.openFileNavigatorFor(managers, label),
     launchAgentFor: (label) => managers.profile.newAgentAt(label),
+    launchShellFor: (label) => {
+      void managers.plugins.runCommand('shell', 'zsh', { label, command: 'zsh' });
+    },
   };
 }
