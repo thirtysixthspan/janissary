@@ -431,7 +431,7 @@ describe('buildTabView', () => {
     });
   });
 
-  it('shows a remote file navigator workspace root as $root without changing its absolute root', () => {
+  it('shows a remote file navigator workspace root as $workspace/<name> without changing its absolute root', () => {
     const tab = makeTab('files', '#fff');
     tab.files = {
       root: '/srv/.janissary/workspace/bekir', absoluteRoot: '/srv/.janissary/workspace/bekir', rows: [],
@@ -442,7 +442,7 @@ describe('buildTabView', () => {
       (label) => label === 'files' ? '/srv/.janissary/workspace/bekir' : undefined,
     );
 
-    expect(view.files?.root).toBe('$root/');
+    expect(view.files?.root).toBe('$workspace/bekir');
     expect(view.files?.absoluteRoot).toBe('/srv/.janissary/workspace/bekir');
   });
 
