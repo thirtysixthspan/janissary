@@ -17,8 +17,9 @@ export class NativeNotifications {
       this.showDesktop(event, placement);
     }
 
-    if (event.volume <= 0 || Date.now() - this.lastBell < 1000) return;
-    this.lastBell = Date.now();
+    const now = performance.now();
+    if (event.volume <= 0 || now - this.lastBell < 1000) return;
+    this.lastBell = now;
     try {
       const sound = new Audio(this.client.resourceUrl(`/sounds/${event.category}.mp3`));
       sound.volume = event.volume;

@@ -31,6 +31,7 @@ beforeEach(() => {
   send.mockClear();
   vi.spyOn(document, 'hasFocus').mockReturnValue(false);
   vi.spyOn(Date, 'now').mockReturnValue(2000);
+  vi.spyOn(performance, 'now').mockReturnValue(2000);
   vi.stubGlobal('Notification', class {
     static permission = 'granted';
     close = vi.fn();
@@ -124,11 +125,31 @@ describe('NativeNotifications', () => {
     service.show(event, centre('janus'));
     expect(notifications).toHaveLength(1);
     expect(audio).toHaveLength(1);
-    vi.spyOn(Date, 'now').mockReturnValue(3000);
+    vi.spyOn(performance, 'now').mockReturnValue(3000);
     service.show({ ...event, volume: 0 }, centre('janus'));
     expect(audio).toHaveLength(1);
     service.show(event, centre('janus'));
     expect(audio).toHaveLength(2);
+  });
+
+  it('plays the next bell one monotonic second later after wall time steps backward', () => {
+    const service = new NativeNotifications(client);
+    service.show(event, centre('janus'));
+    vi.spyOn(Date, 'now').mockReturnValue(-3_600_000);
+    vi.spyOn(performance, 'now').mockReturnValue(3000);
+    service.show(event, centre('janus'));
+    expect(audio).toHaveLength(2);
+    expect(notifications).toHaveLength(2);
+  });
+
+  it('keeps throttling under one monotonic second even when wall time jumps forward', () => {
+    const service = new NativeNotifications(client);
+    service.show(event, centre('janus'));
+    vi.spyOn(Date, 'now').mockReturnValue(3_600_000);
+    vi.spyOn(performance, 'now').mockReturnValue(2999);
+    service.show(event, centre('janus'));
+    expect(audio).toHaveLength(1);
+    expect(notifications).toHaveLength(2);
   });
 
   it('ignores a late click on a banner retained after the client is disposed', () => {
