@@ -163,7 +163,9 @@
 //    and the schedule the entry belongs to.
 //  - `resume-ack` answers one, telling the far side the entry has been delivered so its detector
 //    re-arms. Delivery can fail indefinitely, so it cannot infer that from its own screen.
-export const REMOTE_PROTOCOL_VERSION = 25;
+// Version 26 adds the remote user's home directory to `workspace-ready`, persisted in the session
+// record so a reattach can expand `~` against the same host.
+export const REMOTE_PROTOCOL_VERSION = 26;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

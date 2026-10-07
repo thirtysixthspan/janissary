@@ -10,6 +10,7 @@ import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
 import { buildCachedRows } from './filesystem-cache.js';
 import { RemoteFileSystemPort } from './remote/port.js';
 import { clearFilesystemCache } from './filesystem-cache.js';
+import { remoteCwd } from './remote-cwd.js';
 
 type CwdTarget = { cwd: string; sourceLabel?: string; remote?: RemoteTarget };
 
@@ -19,11 +20,23 @@ type CwdTarget = { cwd: string; sourceLabel?: string; remote?: RemoteTarget };
 function resolveCwd(
   managers: Managers, label: string, inLabel: string | undefined, out: (text: string) => void,
 ): CwdTarget | undefined {
-  if (inLabel === undefined) return { cwd: managers.tab.cwdOf(label) ?? process.cwd() };
+  if (inLabel === undefined) {
+    const tab = managers.tab.byLabel(label);
+    if (tab?.remote) {
+      const resolved = remoteCwd(managers, label, '', out);
+      return resolved && { cwd: resolved.cwd, sourceLabel: label, remote: tab.remote };
+    }
+    return { cwd: managers.tab.cwdOf(label) ?? process.cwd() };
+  }
   const sourceTab = resolveTarget(inLabel, managers, out);
   if (!sourceTab) return undefined;
+  if (sourceTab.remote) {
+    const resolved = remoteCwd(managers, sourceTab.label, '', out);
+    if (!resolved) return undefined;
+    return { cwd: resolved.cwd, sourceLabel: sourceTab.label, remote: sourceTab.remote };
+  }
   return {
-    cwd: managers.remote?.workspaceOf(sourceTab.label) ?? managers.tab.cwdOf(sourceTab.label) ?? process.cwd(),
+    cwd: managers.tab.cwdOf(sourceTab.label) ?? process.cwd(),
     sourceLabel: sourceTab.label,
     remote: sourceTab.remote,
   };
@@ -160,10 +173,12 @@ export function openFilesCommand(
 
   const resolved = resolveCwd(managers, label, inLabel, out);
   if (resolved === undefined) return undefined;
-  const { cwd } = resolved;
-
-  const expandedPath = target ? expandUserPath(target, { root: managers.tab.launchDir }) : '';
-  const root = target ? (path.isAbsolute(expandedPath) ? expandedPath : path.resolve(cwd, expandedPath)) : cwd;
+  const targetResolution = resolved.remote && resolved.sourceLabel
+    ? remoteCwd(managers, resolved.sourceLabel, target, out)
+    : undefined;
+  if (resolved.remote && !targetResolution) return undefined;
+  const localTarget = target ? expandUserPath(target, { root: managers.tab.launchDir }) : '';
+  const root = targetResolution?.cwd ?? (target ? path.resolve(resolved.cwd, localTarget) : resolved.cwd);
 
   if (resolved.remote && resolved.sourceLabel) {
     const existing = managers.tab.tabs.find(
@@ -174,7 +189,7 @@ export function openFilesCommand(
       managers, tabs, resolved.sourceLabel, resolved.remote, root, details ?? 'name', dock, watchDir,
       refreshGit, rebuild,
       (workspace) => target
-        ? (path.isAbsolute(expandedPath) ? expandedPath : path.resolve(workspace, expandedPath))
+        ? remoteCwd(managers, resolved.sourceLabel!, target, out, workspace)?.cwd ?? workspace
         : workspace,
     );
   }

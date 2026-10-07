@@ -19,6 +19,7 @@ export type RemoteEntry = {
   resolveReady: (dir: string) => void;
   rejectReady: (error: Error) => void;
   workspaceDir?: string;
+  home?: string;
   settled: boolean;
   closed: boolean;
   workspaceLabel: string;

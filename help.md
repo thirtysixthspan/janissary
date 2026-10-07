@@ -14,7 +14,7 @@
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
 | `db` | Create, delete, query, or list SQLite databases |
 | `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image, the PDF viewer for a PDF |
-| `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
+| `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; from a remote tab paths resolve on the remote host inside its workspace; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
 | `harness` | Open an AI coding harness in a disposable workspace with an E2E browser attached; claude, opencode, and codex auto-approve prompts by default and opencode and codex also schedule their own resume after a usage limit (`--no-workspace`, `--no-browser`, `--no-auto-approve`, and `--no-auto-resume` opt out); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
 | `help` | List available commands; `help <section>` shows one section, such as `help commands` or `help shell` |
 | `hist` | Open command history picker |

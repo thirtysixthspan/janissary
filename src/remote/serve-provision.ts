@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import { getProjectTokens, type ProjectTokens } from '../project/tokens.js';
 import { setGitIdentity, type GitIdentity } from '../git/identity.js';
 import { sandboxNotice } from '../sandbox/index.js';
@@ -96,6 +97,7 @@ export async function provisionRemoteWorkspace(
   emit({
     type: 'workspace-ready',
     dir: result.dir,
+    home: homedir(),
     notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwarded.github, own.github)),
     ...(leftover !== undefined && { cleaned: leftover }),
     ...(cloned !== undefined && { cloned }),

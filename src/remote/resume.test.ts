@@ -121,6 +121,24 @@ describe('detachRemoteEntry', () => {
   });
 });
 
+describe('handleAttachResult — restoring remote home', () => {
+  it('restores home from the session record before notifying the tab', () => {
+    const target = entry();
+    target.resolveReady = vi.fn();
+    const onReady = vi.fn();
+    target.handlers.set('claude', { onReady } as never);
+    const resume = {
+      session: 'session-1', workspaceDir: '/remote/ws', home: '/home/remote', onResult: vi.fn(),
+    };
+
+    handleAttachResult(managers, target, { type: 'attach-result', accepted: true }, 'claude', resume,
+      { resuming: true }, vi.fn());
+
+    expect(target.home).toBe('/home/remote');
+    expect(onReady).toHaveBeenCalledWith('/remote/ws', undefined, undefined, undefined, '/home/remote');
+  });
+});
+
 // The remote-session-ended announcement is how the feed reports a session that ended on its own.
 // An attach pressed from the sessions tab has its own narrator, so announcing here as well would
 // land two differently worded endings for one event.

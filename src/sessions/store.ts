@@ -45,6 +45,7 @@ export type RemoteSessionRecord = {
   host: string;
   workspaceLabel: string;
   workspaceDir: string;
+  home?: string;
   // The tab that launched the channel, which an attach recreates first so ssh's own prompts render
   // in it (decision 22).
   launchLabel: string;
@@ -97,6 +98,7 @@ export function isRemoteSessionRecord(value: unknown): value is RemoteSessionRec
     && typeof value.host === 'string'
     && typeof value.workspaceLabel === 'string'
     && typeof value.workspaceDir === 'string'
+    && (value.home === undefined || typeof value.home === 'string')
     && typeof value.launchLabel === 'string' && value.launchLabel.length > 0
     && (value.launchKind === 'harness' || value.launchKind === 'agent')
     && Array.isArray(value.processes) && value.processes.every((entry) => isProcess(entry))

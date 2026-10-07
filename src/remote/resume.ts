@@ -9,6 +9,7 @@ import type { RemoteProcessState, ServerFrame } from './protocol-frames.js';
 export type RemoteResume = {
   session: string;
   workspaceDir: string;
+  home?: string;
   // Told which way the peer answered. Accepted means "now ask what is still running there"; refused
   // establishes that the session is over and the record describes nothing.
   onResult: (accepted: boolean) => void;
@@ -28,10 +29,13 @@ export type RemoteResume = {
 function settleResume(entry: RemoteEntry, resume: RemoteResume, label: string): void {
   if (!entry.closed) {
     entry.workspaceDir = resume.workspaceDir;
+    entry.home = resume.home;
     entry.settled = true;
     entry.resolveReady(resume.workspaceDir);
   }
-  entry.handlers.get(label)?.onReady(resume.workspaceDir);
+  const onReady = entry.handlers.get(label)?.onReady;
+  if (resume.home === undefined) onReady?.(resume.workspaceDir);
+  else onReady?.(resume.workspaceDir, undefined, undefined, undefined, resume.home);
   resume.onResult(true);
 }
 

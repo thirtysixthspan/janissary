@@ -17,7 +17,7 @@ export type RemoteLaunchHandlers = {
   // active where the remote is macOS and inactive otherwise, which is the remote's fact to report.
   // `cleaned` is the path of a leftover workspace the remote removed before cloning this one, and
   // `cloned` the project root it cloned first, after the user accepted its offer.
-  onReady: (dir: string, notice?: string, cleaned?: string, cloned?: { url: string; path: string }) => void;
+  onReady: (dir: string, notice?: string, cleaned?: string, cloned?: { url: string; path: string }, home?: string) => void;
   onFailed: (message: string) => void;
   onClosed: () => void;
   // The remote refused the launch's label (`name-in-use`). Optional because only a provisioning
@@ -91,6 +91,8 @@ export class RemoteManager {
   readyOf(label: string): Promise<string> | undefined { return this.entries.get(label)?.ready; }
 
   workspaceOf(label: string): string | undefined { return this.entries.get(label)?.workspaceDir; }
+
+  homeOf(label: string): string | undefined { return this.entries.get(label)?.home; }
 
   workspaceLabelOf(label: string): string | undefined { return this.entries.get(label)?.workspaceLabel; }
 

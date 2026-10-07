@@ -16,6 +16,7 @@ describe('frame codec', () => {
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: false },
     { type: 'attach-result', accepted: true },
     { type: 'attach-result', accepted: false },
+    { type: 'workspace-ready', dir: '/remote/ws', home: '/home/remote' },
   ] as const)('round-trips $type', (frame) => { expect(roundTrip(frame)).toEqual(frame); });
 
   it.each([
@@ -168,6 +169,11 @@ describe('frame codec', () => {
     expect(decodeFrame(JSON.stringify({ id: 'r1' }))).toEqual({
       error: expect.stringContaining('Unknown remote frame type'),
     });
+  });
+
+  it('rejects workspace-ready with a non-string remote home', () => {
+    expect(decodeFrame(JSON.stringify({ type: 'workspace-ready', dir: '/remote/ws', home: 7 })))
+      .toEqual({ error: expect.stringContaining('Malformed') });
   });
 
   it('rejects a line that is not JSON, marking it as the far side\'s own output', () => {
@@ -579,8 +585,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 25', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(25);
+  it('is 26', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(26);
   });
 });
 

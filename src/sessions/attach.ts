@@ -82,6 +82,7 @@ export function startSessionAttach(
     const resume = {
       session: record.session,
       workspaceDir: record.workspaceDir,
+      home: record.home,
       onResult: (accepted: boolean) => {
         if (!accepted) {
           finish({ kind: 'terminated', reason: `${record.launchLabel} on ${record.host} is no longer running.` });

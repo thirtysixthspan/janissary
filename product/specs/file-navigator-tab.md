@@ -34,6 +34,14 @@ If a file navigator tab is already open on the same root, `files` **focuses that
 opening a duplicate — there is one tree per root, the same way there is one Explorer per
 workspace in a conventional editor.
 
+From a remote agent or harness tab, bare `files` uses that tab's remote cwd when it is inside the
+provisioned workspace, and the workspace root otherwise. While the remote workspace is still
+provisioning, it reports `The remote workspace is not ready yet.` and opens no tree. A remote path
+argument resolves relative to that remote cwd; `~` uses the remote user's home and `$root` uses the
+remote workspace root. A resolved path outside the workspace is refused with
+`"<path>" is outside the remote workspace <workspace>.` This containment rule also applies to
+`files in <label> <path>` when `<label>` is remote.
+
 ### `files left`/`files right [path]`
 
 A leading `left` or `right` keyword docks the tree into that sidebar instead of the central tab
