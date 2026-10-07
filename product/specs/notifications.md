@@ -335,7 +335,10 @@ background tab or an unselected docked entry while Janissary is in front. Feed a
 not change. The desktop alert reads `Janissary` with body `<tab name>: <message>`. Clicking it
 focuses the window and goes to the tab where it lives at the moment of the click: a centre tab gets
 the existing focus request, and a docked tab becomes the selected entry of its sidebar without being
-undocked. If the tab closed in the meantime there is nothing to focus.
+undocked. If the tab closed in the meantime there is nothing to focus. When a window's connection is
+torn down, such as when the page is hidden or replaced, the desktop alerts that window still has
+open are closed and clicking one afterwards does nothing; alerts the window already dismissed, or
+that the OS dismissed, are simply forgotten.
 
 The browser never requests notification permission. It shows a desktop alert only when the browser
 has already been granted permission for the Janissary origin; if permission is denied or not yet

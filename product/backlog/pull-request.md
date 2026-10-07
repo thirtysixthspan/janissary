@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Release desktop banners and their click handlers when the notification client is disposed.
-
-Existing Issue: `NativeNotifications.dispose` pauses sounds but leaves browser notifications and their click listeners alive with a reference to a client that the page lifecycle can dispose and replace. Severity: 4/10
-
-Existing Risk: 4/10 - Clicking a retained banner after a back-forward cache restore sends `focusTab` through a closed WebSocket and does not focus the requested tab.
-
-Proposal Risk: 1/10 - Closing only notifications owned by the disposed service leaves current client banners intact but an OS may have already dismissed one independently.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1575: release native notifications on client disposal". Track the notifications created by `web/src/notifications/native-notifications.ts` together with their click lifetimes, close and release them in `dispose`, and ignore late clicks after disposal; keep the audio cleanup already there. Verify with a client test that creates a banner, disposes the service, simulates a late click, and asserts the old client sends no RPC, alongside a normal click test. Check the `web/src/client-page-lifecycle.ts` persisted-page replacement path without modifying it unless testing proves necessary; run `./scripts/run.mjs check-diff` before committing and pushing the repair.
-
-
 * Use a monotonic clock to throttle bell sounds across system time changes.
 
 Existing Issue: `NativeNotifications` measures the one-second bell interval with `Date.now()`, so a backward clock adjustment makes every elapsed value negative until wall time catches up. Severity: 3/10

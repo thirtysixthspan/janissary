@@ -12,7 +12,15 @@ const event: NativeNotificationEvent = {
 };
 
 let clicked: () => void;
-let notifications: Array<{ title: string; body: string; close: ReturnType<typeof vi.fn> }>;
+type Handler = () => void;
+interface FakeNotification {
+  title: string;
+  body: string;
+  close: ReturnType<typeof vi.fn>;
+  handlers: Map<string, Set<Handler>>;
+  emit(type: string): void;
+}
+let notifications: FakeNotification[];
 let audio: Array<{ url: string; volume: number; play: ReturnType<typeof vi.fn>; pause: ReturnType<typeof vi.fn> }>;
 const send = vi.fn();
 const client = { send, resourceUrl: (url: string) => `${url}?token=test` } as unknown as JanusClient;
@@ -26,10 +34,23 @@ beforeEach(() => {
   vi.stubGlobal('Notification', class {
     static permission = 'granted';
     close = vi.fn();
+    handlers = new Map<string, Set<Handler>>();
+    title: string;
+    body: string;
     constructor(title: string, options: NotificationOptions) {
-      notifications.push({ title, body: options.body ?? '', close: this.close });
+      this.title = title;
+      this.body = options.body ?? '';
+      notifications.push(this as unknown as FakeNotification);
     }
-    addEventListener(_type: string, handler: () => void) { clicked = handler; }
+    addEventListener(type: string, handler: Handler) {
+      this.handlers.set(type, (this.handlers.get(type) ?? new Set()).add(handler));
+      if (type === 'click') clicked = handler;
+    }
+    removeEventListener(type: string, handler: Handler) { this.handlers.get(type)?.delete(handler); }
+    emit(type: string) {
+      const registered = this.handlers.get(type) ?? new Set<Handler>();
+      for (const handler of registered) handler();
+    }
   });
   vi.stubGlobal('Audio', class {
     volume = 1;
@@ -108,6 +129,62 @@ describe('NativeNotifications', () => {
     expect(audio).toHaveLength(1);
     service.show(event, centre('janus'));
     expect(audio).toHaveLength(2);
+  });
+
+  it('ignores a late click on a banner retained after the client is disposed', () => {
+    const focus = vi.spyOn(globalThis, 'focus').mockImplementation(() => {});
+    const reveal = vi.fn(() => false);
+    const service = new NativeNotifications(client);
+    service.show({ ...event, volume: 0 }, { isVisible: () => false, reveal });
+    const retained = clicked;
+    service.dispose();
+    retained();
+    expect(focus).not.toHaveBeenCalled();
+    expect(reveal).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('closes and releases only the banners the disposed service owns', () => {
+    const old = new NativeNotifications(client);
+    const current = new NativeNotifications(client);
+    old.show({ ...event, volume: 0 }, centre('janus'));
+    old.show({ ...event, volume: 0 }, centre('janus'));
+    current.show({ ...event, volume: 0 }, centre('janus'));
+    old.dispose();
+    expect(notifications.map((n) => n.close.mock.calls.length)).toEqual([1, 1, 0]);
+    expect(notifications.map((n) => [...n.handlers.values()].reduce((sum, set) => sum + set.size, 0))).toEqual([0, 0, 2]);
+    old.dispose();
+    expect(notifications[0]?.close).toHaveBeenCalledOnce();
+  });
+
+  it('releases a banner the OS closed independently', () => {
+    const service = new NativeNotifications(client);
+    service.show({ ...event, volume: 0 }, centre('janus'));
+    service.show({ ...event, volume: 0 }, centre('janus'));
+    notifications[0]?.emit('close');
+    expect(notifications[0]?.handlers.get('click')?.size).toBe(0);
+    service.dispose();
+    expect(notifications[0]?.close).not.toHaveBeenCalled();
+    expect(notifications[1]?.close).toHaveBeenCalledOnce();
+  });
+
+  it('releases a clicked banner and tolerates close failing during disposal', () => {
+    vi.spyOn(globalThis, 'focus').mockImplementation(() => {});
+    const service = new NativeNotifications(client);
+    service.show({ ...event, volume: 0 }, centre('janus'));
+    service.show({ ...event, volume: 0 }, centre('janus'));
+    notifications[0]?.emit('click');
+    notifications[1]?.close.mockImplementation(() => { throw new Error('gone'); });
+    expect(() => service.dispose()).not.toThrow();
+    expect(notifications[0]?.close).toHaveBeenCalledOnce();
+  });
+
+  it('shows nothing once disposed', () => {
+    const service = new NativeNotifications(client);
+    service.dispose();
+    service.show(event, centre('janus'));
+    expect(notifications).toHaveLength(0);
+    expect(audio).toHaveLength(0);
   });
 
   it('does not request permission or break when desktop or audio APIs refuse', () => {
