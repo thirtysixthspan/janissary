@@ -111,7 +111,7 @@ export class TabPluginHost {
     if (!record) throw new Error(`Unknown tab plugin "${id}"`);
     return reattachPlugin(data, { managers: this.managers, record, origin,
       ensureActive: this.ensureActive.bind(this),
-      invoke: (item, activation, at, call) => this.invoke(item, activation, at, call, undefined, true),
+      invoke: (item, activation, at, call, adoptPtyId) => this.invoke(item, activation, at, call, undefined, adoptPtyId),
       disable: (item, error, at) => { this.disable(item, error, at); } });
   }
 
@@ -159,13 +159,13 @@ export class TabPluginHost {
     origin: PluginFailureOrigin,
     call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
     answeringLabel?: string,
-    reattaching = false,
+    adoptPtyId?: string,
   ): Promise<PluginCallOutcome<Result>> {
     return invokePlugin(
       this.managers, record.declaration, activation, origin,
       () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call, answeringLabel,
       (error, failureOrigin) => { this.disable(record, error, failureOrigin); },
-      reattaching,
+      adoptPtyId,
     );
   }
 

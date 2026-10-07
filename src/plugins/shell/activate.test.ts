@@ -67,7 +67,7 @@ function fakeCapabilities(overrides: {
     launchTab: vi.fn((
       key: string, request: TabPluginLaunchRequest,
       factory: (given: typeof resources, start: {
-        label: string; cwd: string; workspaceDir?: string; connectPtyId?: string; host?: string; recordedPtyId?: string;
+        label: string; cwd: string; workspaceDir?: string; connectPtyId?: string; host?: string;
       }) => TabPluginPayload,
       ready: TabPluginLaunchReadyHandler,
     ) => {
@@ -78,7 +78,7 @@ function fakeCapabilities(overrides: {
         ? { label: 'kemal', cwd: '/remote/work/src', workspaceDir: '/remote/work', host: 'devbox' }
         : request.remote
         ? ('adopt' in request.remote
-          ? { label: 'kemal', cwd: '/remote/src', workspaceDir: '/remote', host: 'devbox', recordedPtyId: request.remote.adopt.ptyId }
+          ? { label: 'kemal', cwd: '/remote/src', workspaceDir: '/remote', host: 'devbox' }
           : { label: 'kemal', cwd: '/repo/src', connectPtyId: 'ssh-pty', host: 'devbox' })
         : cloning ? { label: 'kemal', cwd: CLONE, workspaceDir: CLONE } : { label: 'kemal', cwd: '/repo/src' };
       opened.push({ key, value: factory(resources, start) });
@@ -394,7 +394,7 @@ describe('shell plugin activation', () => {
       } },
     });
     expect(h.spawns[0]).toMatchObject({
-      cwd: '/remote/src', workspace: { dir: '/remote', offline: true }, recordedId: 'rpty9',
+      cwd: '/remote/src', workspace: { dir: '/remote', offline: true },
       zshHooks: { nonce: 'b'.repeat(32) },
     });
   });

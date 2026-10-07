@@ -30,12 +30,30 @@ describe('spawnRemotePluginTerminal', () => {
 
   it('rejects an invalid hooks nonce before registering a remote process', () => {
     const registerRemotePty = vi.fn();
-    const pty = { registerRemotePty } as unknown as PseudoterminalManager;
+    const pty = {
+      registerRemotePty, spawnDimensions: () => ({ cols: 80, rows: 24 }), isRunning: () => true,
+    } as unknown as PseudoterminalManager;
 
     expect(() => spawnRemotePluginTerminal(
       pty, 'remote-shell', {} as RemoteChannel,
       { cwd: '/far-side/workspace', zshHooks: { nonce: 'bad' } },
     )).toThrow(TabPluginRejection);
     expect(registerRemotePty).not.toHaveBeenCalled();
+  });
+
+  it('uses a host-supplied recorded id only for an authorized adoption', () => {
+    const registerRemotePty = vi.fn(() => 'remote-pty-1');
+    const pty = {
+      registerRemotePty, spawnDimensions: () => ({ cols: 80, rows: 24 }), isRunning: () => true,
+    } as unknown as PseudoterminalManager;
+    const channel = {} as RemoteChannel;
+    const options = { cwd: '/remote/workspace' };
+
+    spawnRemotePluginTerminal(pty, 'remote-shell', channel, options, 'rpty9');
+    expect(registerRemotePty).toHaveBeenCalledWith('remote-shell', channel, expect.anything(), 'rpty9');
+
+    registerRemotePty.mockClear();
+    spawnRemotePluginTerminal(pty, 'remote-shell', channel, { ...options, recordedId: 'rpty7' } as never);
+    expect(registerRemotePty).toHaveBeenCalledWith('remote-shell', channel, expect.anything());
   });
 });

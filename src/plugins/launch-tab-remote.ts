@@ -118,10 +118,11 @@ function adoptRemotePluginTab(
   input: LaunchInput, instanceKey: string, request: TabPluginLaunchRequest, factory: TabPluginLaunchFactory,
 ): TabPluginLaunchResult | undefined {
   const { managers, origin, declaration } = input;
-  if (!input.reattaching) throw new TabPluginRejection('Remote process adoption is only available during reattach.');
+  if (!input.adoptPtyId) throw new TabPluginRejection('Remote process adoption is only available during reattach.');
   const adopt = request.remote && 'adopt' in request.remote ? request.remote.adopt : undefined;
   const source = managers.tab.byLabel(origin.label);
   if (!adopt || !source?.remote) throw new TabPluginRejection('A remote process can only be adopted from its resumed channel.');
+  if (adopt.ptyId !== input.adoptPtyId) throw new TabPluginRejection('Remote process adoption must match the reattach record.');
   const label = request.name?.trim() ?? '';
   if (!label) throw new TabPluginRejection('An adopted remote process needs its recorded tab label.');
   if (!managers.remote.attach(label, origin.label)) return undefined;
@@ -130,12 +131,13 @@ function adoptRemotePluginTab(
       declaration.id, declaration.tabLabelPrefix, instanceKey, declaration.payloadSchemaVersion, origin.label,
       (resources) => {
         const payload = factory(resources, {
-          label, cwd: adopt.cwd, workspaceDir: adopt.workspaceDir, host: adopt.host, recordedPtyId: adopt.ptyId,
+          label, cwd: adopt.cwd, workspaceDir: adopt.workspaceDir, host: adopt.host,
         });
         input.validate(payload);
         return payload;
       },
-      { label, cwd: adopt.cwd, remote: source.remote, workspace: { dir: adopt.workspaceDir, offline: adopt.offline } },
+      { label, cwd: adopt.cwd, remote: source.remote,
+        workspace: { dir: adopt.workspaceDir, offline: adopt.offline }, recordedPtyId: adopt.ptyId },
     );
   } catch (error) {
     managers.remote.release(label);

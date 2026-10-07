@@ -26,7 +26,6 @@ export type TabPluginLaunchStart = {
   // The SSH PTY rendered while a remote workspace provisions.
   connectPtyId?: string;
   host?: string;
-  recordedPtyId?: string;
 };
 
 export type TabPluginLaunchReady = {

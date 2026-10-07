@@ -43,7 +43,7 @@ export function activate(): TabPluginActivation {
         payload: spawnShell(resources, {
           instanceKey, cwd: start.cwd, root: record.workspace,
           workspace: { dir: record.workspace, offline: record.offline },
-          hookNonce: record.nonce, host: record.host, prompted: true, recordedId: start.recordedPtyId,
+          hookNonce: record.nonce, host: record.host, prompted: true,
         }),
       }), () => {});
     },

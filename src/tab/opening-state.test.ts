@@ -67,13 +67,14 @@ describe('TabOpeningState.openPluginTab', () => {
       return { title: 'shell', payload: {} };
     }, {
       label: 'remote-shell', remote: { address: 'dev@example.test', host: 'example.test' },
+      recordedPtyId: 'rpty-adopted',
     });
 
     expect(tm.tabs[tm.activeTab].remote).toEqual({ address: 'dev@example.test', host: 'example.test' });
     expect(tm.tabs[tm.activeTab].workspaceDir).toBeUndefined();
     expect(registerRemotePty).toHaveBeenCalledWith('remote-shell', channel, expect.objectContaining({
       cwd: '/remote/workspace/src', offline: false, shell: { nonce: 'a'.repeat(32) },
-    }));
+    }), 'rpty-adopted');
     expect(tm.tabs[tm.activeTab].runtime?.cwd).toBe('/remote/workspace/src');
   });
 

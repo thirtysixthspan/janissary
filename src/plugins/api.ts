@@ -164,8 +164,6 @@ export type TabPluginTerminalOptions = {
   // startup files and builds the environment that points zsh at them, on whichever machine runs it;
   // it is merged over `env`. A nonce of any other shape is refused.
   zshHooks?: { nonce: string };
-  // Bind a terminal already held by the far host. Supplied by plugin reattach only.
-  recordedId?: string;
 };
 
 export type TabPluginResources = {

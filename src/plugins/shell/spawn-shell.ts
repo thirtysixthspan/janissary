@@ -19,11 +19,10 @@ export type ShellStart = {
   hookNonce: string;
   host?: string;
   prompted?: boolean;
-  recordedId?: string;
 };
 
 export function spawnShell(resources: TabPluginResources, start: ShellStart): ShellTerminalPayload {
-  const { instanceKey, cwd, root, workspace, hookNonce, host, prompted, recordedId } = start;
+  const { instanceKey, cwd, root, workspace, hookNonce, host, prompted } = start;
   const terminal = resources.spawnTerminal({
     cwd,
     // The shell itself, with no argv at all — the one invocation in the application that does not
@@ -34,7 +33,6 @@ export function spawnShell(resources: TabPluginResources, start: ShellStart): Sh
     // `src/shell/zsh-startup/script.ts`), so nothing is ever typed at its prompt and nothing reaches
     // its history.
     zshHooks: { nonce: hookNonce },
-    ...(recordedId && { recordedId }),
     ...(workspace && { workspace }),
   });
   return {

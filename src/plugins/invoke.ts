@@ -43,12 +43,12 @@ export async function invokePlugin<Result>(
   // How a failure in a later call is turned into this plugin being disabled. Absent, no capability
   // that runs a handler after this call returns is available.
   disable?: (error: unknown, origin: PluginFailureOrigin) => void,
-  reattaching = false,
+  adoptPtyId?: string,
 ): Promise<PluginCallOutcome<Result>> {
   const openRequests: string[] = [];
   const deferred: DeferredPluginCall | undefined = disable && {
     invoke: (later, laterAnswering) => invokePlugin(
-      managers, declaration, activation, origin, isEnabled, timeoutMs, later, laterAnswering, disable, reattaching,
+      managers, declaration, activation, origin, isEnabled, timeoutMs, later, laterAnswering, disable, adoptPtyId,
     ),
     disable: (error) => { disable(error, origin); },
   };
@@ -58,7 +58,7 @@ export async function invokePlugin<Result>(
     // The capabilities are built inside the guarded call because the ones that do host work on the
     // plugin's behalf exempt that work from this deadline, and so need the deadline itself.
     value = await guardPluginCall((deadline) => call(createPluginContext(
-      managers, declaration, activation, origin, isEnabled, openRequests, answeringLabel, deadline, deferred, reattaching,
+      managers, declaration, activation, origin, isEnabled, openRequests, answeringLabel, deadline, deferred, adoptPtyId,
     )), timeoutMs);
   } catch (error) {
     if (error instanceof TabPluginRejection) return { status: 'rejected', reason: error.message };

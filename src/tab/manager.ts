@@ -204,8 +204,8 @@ export class TabManager extends TabTranscriptState {
     return { dir, offline: tab?.offline ?? false };
   }
 
-  spawnRemoteTerminal(label: string, options: TabPluginTerminalOptions): TabPluginTerminal {
-    return spawnRemotePluginTerminal(this.managers.pty, label, this.managers.remote.get(label), options);
+  spawnRemoteTerminal(label: string, options: TabPluginTerminalOptions, recordedPtyId?: string): TabPluginTerminal {
+    return spawnRemotePluginTerminal(this.managers.pty, label, this.managers.remote.get(label), options, recordedPtyId);
   }
 
   adoptTerminal(ptyId: string, label: string): void {

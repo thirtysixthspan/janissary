@@ -13,6 +13,7 @@ type ReattachPort = {
   invoke(
     record: PluginRecord, activation: TabPluginActivation, origin: PluginFailureOrigin,
     call: (capabilities: TabPluginServerCapabilities) => void | Promise<void>,
+    adoptPtyId: string,
   ): Promise<PluginCallOutcome<void>>;
   disable(record: PluginRecord, error: unknown, origin: PluginFailureOrigin): void;
 };
@@ -22,7 +23,7 @@ export async function reattachPlugin(data: TabPluginReattachRecord, port: Reatta
   const activation = await port.ensureActive(record, origin);
   if (!activation?.reattach) return;
   const outcome = await port.invoke(record, activation, origin,
-    (capabilities) => activation.reattach?.(data, capabilities));
+    (capabilities) => activation.reattach?.(data, capabilities), data.ptyId);
   if (outcome.status === 'failed') port.disable(record, outcome.error, origin);
   else if (outcome.status === 'rejected') noteInOriginTab(port.managers, origin, outcome.reason);
 }

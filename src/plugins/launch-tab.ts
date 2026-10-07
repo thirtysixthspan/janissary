@@ -35,7 +35,7 @@ export type LaunchInput = {
   isEnabled: () => boolean;
   validate: (value: TabPluginPayload) => void;
   deferred?: DeferredPluginCall;
-  reattaching?: boolean;
+  adoptPtyId?: string;
 };
 
 const NO_REPO_REASON = 'no git repository found';
@@ -154,8 +154,8 @@ export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapa
       if (!isEnabled()) return;
       if (!input.deferred) throw new Error('"launchTab" is not available from a notification or host-state handler');
       if (!origin.launch && !managers.tab.byLabel(origin.label)) return;
-      if (request.remote && 'adopt' in request.remote && !input.reattaching) {
-        throw new Error('remote process adoption is available only during reattach');
+      if (request.remote && 'adopt' in request.remote && request.remote.adopt.ptyId !== input.adoptPtyId) {
+        throw new Error('remote process adoption must match the reattach record');
       }
       if (request.remote !== undefined) return launchRemotePluginTab(input, instanceKey, request, factory, ready);
       const label = resolveLaunchLabel(managers, declaration, origin, request);
