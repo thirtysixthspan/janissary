@@ -25,7 +25,7 @@
 | `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
 | `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
 | `next` | Switch to the next tab |
-| `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab — a feed of background-tab events (see `.janissary/config.json` to enable events) |
+| `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab; live alerts can also show desktop banners (if browser permission is already granted) and play category sounds for background tabs needing attention. Edit `.janissary/config.json` for event and sound settings |
 | `notify` | `notify <message>` pushes a custom line into the notifications feed |
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
 | `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |

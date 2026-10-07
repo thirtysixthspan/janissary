@@ -26,6 +26,8 @@ import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useS
 import { useLayoutState } from './useLayoutState';
 import { applySyntaxTheme } from './editor/highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
+import { useNativeNotifications } from './notifications/useNativeNotifications';
+import { sidebarSelectionFor } from './sidebar-selection-coordinator';
 import { useCmdWRefs } from './useCmdWRefs';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { useOverlayPlugins } from './useOverlayPlugins';
@@ -64,6 +66,7 @@ export function App({ client }: { client: JanusClient }) {
   const currentRef = useRef<TabView | undefined>(undefined);
   const { handleScrollKey, handleScrollKeyUp } = useTranscriptScroll(transcriptReference);
   const windowFocused = useWindowFocus();
+  useNativeNotifications(client, sidebarSelectionFor(client));
 
   const { actionEntries, reportingEntries } = useTabEntries(tabs);
   // The command bar a tab switch tears down or hands to another tab; its unexecuted text is kept

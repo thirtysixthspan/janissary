@@ -54,6 +54,10 @@ export type ToastClearEvent = { t: 'toast-clear' };
 // Select the notifications view in the requested sidebar on every connected client after
 // server-side burst escalation or a toast click.
 export type NotificationsRevealEvent = { t: 'notifications-reveal'; dock: 'left' | 'right' };
+export type NativeNotificationEvent = {
+  t: 'native-notification'; tab: string; from: string; message: string;
+  category: 'success' | 'warning' | 'error'; desktop: boolean; volume: number;
+};
 export type ServerEvent =
   StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent
-  | ToastEvent | ToastClearEvent | NotificationsRevealEvent;
+  | ToastEvent | ToastClearEvent | NotificationsRevealEvent | NativeNotificationEvent;

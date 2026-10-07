@@ -14,6 +14,10 @@ function numberValue(value: unknown, fallback: number): number {
   return typeof value === 'number' ? value : fallback;
 }
 
+function volumeValue(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : fallback;
+}
+
 // For a setting that is a count rather than a threshold: `numberValue` would happily pass `0`, a
 // negative, and a fraction through, and each of those is nonsense for "how many entries to keep".
 // A well-typed but meaningless number is this decoder's job, not the consumer's.
@@ -73,6 +77,14 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     syntaxTheme: stringValue(record.syntaxTheme, defaults.syntaxTheme),
     theme: stringValue(record.theme, defaults.theme),
     notifications: defaultNotifications && notifications(record.notifications, defaultNotifications),
+    osNotifications: booleanValue(record.osNotifications, defaults.osNotifications),
+    terminalBell: booleanValue(record.terminalBell, defaults.terminalBell),
+    terminalBellVolumeSuccess: volumeValue(record.terminalBellVolumeSuccess, defaults.terminalBellVolumeSuccess),
+    terminalBellVolumeWarning: volumeValue(record.terminalBellVolumeWarning, defaults.terminalBellVolumeWarning),
+    terminalBellVolumeError: volumeValue(record.terminalBellVolumeError, defaults.terminalBellVolumeError),
+    terminalBellMuteSuccess: booleanValue(record.terminalBellMuteSuccess, defaults.terminalBellMuteSuccess),
+    terminalBellMuteWarning: booleanValue(record.terminalBellMuteWarning, defaults.terminalBellMuteWarning),
+    terminalBellMuteError: booleanValue(record.terminalBellMuteError, defaults.terminalBellMuteError),
     syncPaths: strings(record.syncPaths, defaults.syncPaths),
     externalViewers: stringMap(record.externalViewers, defaults.externalViewers),
     pluginSettings: settingsMap(record.pluginSettings),

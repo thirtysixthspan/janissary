@@ -20,6 +20,7 @@ const MIME: Record<string, string> = {
   // assets — so core precedence has to hold uniformly rather than by where a line happens to sit.
   ...pluginContentTypes(tabPluginCatalog, pluginOpeners),
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css',
+  '.mp3': 'audio/mpeg',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.ico': 'image/x-icon',
   '.woff2': 'font/woff2', '.map': 'application/json',
   // Text types with their own registered MIME, served via the `/open/<id>` route (editor opener).

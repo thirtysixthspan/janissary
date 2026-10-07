@@ -52,6 +52,14 @@ export type Config = {
   theme: string;
   // Which background events feed the notifications tab (all opt-in; see `notifications/index.ts`).
   notifications?: NotificationConfig;
+  osNotifications: boolean;
+  terminalBell: boolean;
+  terminalBellVolumeSuccess: number;
+  terminalBellVolumeWarning: number;
+  terminalBellVolumeError: number;
+  terminalBellMuteSuccess: boolean;
+  terminalBellMuteWarning: boolean;
+  terminalBellMuteError: boolean;
   // Project-relative file paths kept automatically synced with `origin/master` via a shared,
   // lazily-created workspace clone (see `git/sync.ts`). Defaults to `DEFAULT_SYNC_PATHS` (the
   // project's backlog and plans folders) — syncing is entirely config-driven, with no UI toggle.
@@ -97,6 +105,14 @@ const DEFAULT_CONFIG: Config = {
       rateLimited: false,
     },
   },
+  osNotifications: true,
+  terminalBell: true,
+  terminalBellVolumeSuccess: 0.8,
+  terminalBellVolumeWarning: 0.8,
+  terminalBellVolumeError: 0.8,
+  terminalBellMuteSuccess: false,
+  terminalBellMuteWarning: false,
+  terminalBellMuteError: false,
   syncPaths: DEFAULT_SYNC_PATHS,
   externalViewers: DEFAULT_EXTERNAL_VIEWERS,
   pluginSettings: {},

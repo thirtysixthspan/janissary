@@ -1,4 +1,4 @@
-import type { ServerEvent, RpcCall, StateEvent, LayoutEvent, LayoutUpdate } from '@shared/protocol';
+import type { ServerEvent, RpcCall, StateEvent, LayoutEvent, LayoutUpdate, NativeNotificationEvent } from '@shared/protocol';
 import type { ClientStateCollectors } from './client-state-collectors';
 import { PtyOutputBuffer, type PtyOutputBufferOptions } from './pty-output-buffer';
 import { resourceUrl } from './session-url';
@@ -33,6 +33,7 @@ export class JanusClient {
   private exitListeners = new Set<ExitListener>();
   private layoutListeners = new Set<LayoutListener>();
   private notificationEvents = new NotificationEventListeners();
+  private nativeNotificationListeners = new Set<(event: NativeNotificationEvent) => void>();
   private ptyHandlers = new Map<string, (data: string) => void>();
   private ptyOutput: PtyOutputBuffer;
   private stateCollectors: Partial<ClientStateCollectors> = {};
@@ -135,6 +136,11 @@ export class JanusClient {
 
     break;
     }
+    case 'native-notification': {
+      for (const listener of this.nativeNotificationListeners) listener(event);
+
+    break;
+    }
     case 'bye': {
       // The server is shutting down (quit/exit); close this window.
       window.close();
@@ -225,6 +231,10 @@ export class JanusClient {
   onToast(l: ToastListener): () => void { return this.notificationEvents.onToast(l); }
   onToastClear(l: ToastClearListener): () => void { return this.notificationEvents.onClear(l); }
   onNotificationsReveal(l: NotificationsRevealListener): () => void { return this.notificationEvents.onReveal(l); }
+  onNativeNotification(listener: (event: NativeNotificationEvent) => void): () => void {
+    this.nativeNotificationListeners.add(listener);
+    return () => this.nativeNotificationListeners.delete(listener);
+  }
 
   // Register a terminal card's writer for a pty id, flushing any buffered early output first.
   attachPty(id: string, onData: (data: string) => void): () => void {
@@ -245,6 +255,7 @@ export class JanusClient {
     this.exitListeners.clear();
     this.layoutListeners.clear();
     this.notificationEvents.dispose();
+    this.nativeNotificationListeners.clear();
     this.ptyHandlers.clear();
     this.ptyOutput.dispose();
     this.rpc.drain();

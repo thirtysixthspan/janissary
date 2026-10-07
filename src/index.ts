@@ -55,6 +55,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     sendToast: (event) => broadcast({ t: 'toast', ...event }),
     sendToastClear: () => broadcast({ t: 'toast-clear' }),
     sendNotificationsReveal: (dock) => broadcast({ t: 'notifications-reveal', dock }),
+    sendNativeNotification: (event) => broadcast({ t: 'native-notification', ...event }),
   }, options.projectDir);
   try {
     await openLaunchShell(controller.managers);
