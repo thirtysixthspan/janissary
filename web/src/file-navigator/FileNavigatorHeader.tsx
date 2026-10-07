@@ -1,10 +1,11 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type {
-  FileNavigatorCommitStatus, FileNavigatorDetail, FileNavigatorPullStatus, RemoteTarget,
+  FileNavigatorCommitStatus, FileNavigatorDetail, FileNavigatorPullStatus, RemoteTargetView,
 } from '@shared/protocol';
 import { nextDock, dockTooltip } from '../shared/dock-cycle';
 import { nextDetail, detailTooltip } from './file/navigator-detail';
+import { ConnectionPlug } from '../shared/ConnectionPlug';
 import { dockSwapIcon, fileDetailIcon, newDirectoryIcon, newFileIcon, searchFilesIcon } from '../shared/icons';
 import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 import { FileNavigatorPullButton } from './FileNavigatorPullButton';
@@ -13,7 +14,7 @@ import { SplitTabButton } from '../shared/SplitTabButton';
 
 type Properties = {
   root: string;
-  remote?: RemoteTarget;
+  remote?: RemoteTargetView;
   branch?: string;
   githubUrl?: string;
   dock?: 'left' | 'right';
@@ -52,6 +53,11 @@ export function FileNavigatorHeader({
         )}
         <span className="files-loc">{root}</span>
         {branch && <span className="files-branch">{branch}</span>}
+        {remote && (
+          <span className="tab-flags files-flags">
+            <ConnectionPlug state={remote.provisioning ? 'provisioning' : remote.reconnecting ? 'reconnecting' : 'active'} />
+          </span>
+        )}
       </div>
       <div className="files-actions">
         {githubUrl && <FileNavigatorGithubButton onClick={() => onOpenGithub(githubUrl)} />}
