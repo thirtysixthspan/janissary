@@ -247,10 +247,12 @@ and inert until the shell has printed something, green and pressable from that m
 green and pressable once the recording has stopped, so a partial recording is still reachable. See
 [[harness-recording]] § The recording flag.
 
-A remote shell also shows the remote host chip before its working directory, with the same connection
-status plug and attach/detach control as a remote harness. The plug shows provisioning until the remote
-workspace is ready, connected while the SSH session is live, and reconnecting while it is recovering.
-The control offers **Detach** for a live session and **Attach** while reconnecting; detaching asks for
+A remote shell also shows the remote host as ordinary text matching the working-directory text, with
+the full destination in its tooltip. Its connection status plug sits in the flag group beside the
+recording and workspace marks. It shows provisioning until the remote workspace is ready, connected
+while the SSH session is live, and reconnecting while it is recovering. The shell has the same
+attach/detach control as a remote harness. It offers **Detach** for a live session and **Attach**
+while reconnecting; detaching asks for
 confirmation because it closes every tab sharing that remote session. Local shell metadata is unchanged.
 
 The **new shell here** action on a remote shell, and the ➕ action on a remote harness, open a

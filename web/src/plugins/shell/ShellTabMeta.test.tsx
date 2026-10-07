@@ -19,18 +19,28 @@ function capabilities(overrides: Partial<TabPluginClientCapabilities> = {}) {
 }
 
 describe('ShellTabMeta remote controls', () => {
-  it('shows the host chip and detach control for a healthy remote shell, but not a local shell', () => {
+  it('shows the host as ordinary text and the detach control for a healthy remote shell', () => {
     const remoteCapabilities = capabilities({
       remote,
       remoteSession: { state: 'active', onAction: vi.fn(async () => true) },
     });
     const { rerender } = render(<ShellTabMeta payload={payload} capabilities={remoteCapabilities} />);
 
-    expect(screen.getByLabelText('Remote')).toHaveTextContent('build.example');
+    const host = screen.getByLabelText('Remote');
+    expect(host).toHaveTextContent('build.example');
+    expect(host).toHaveClass('tab-cwd');
+    expect(host).not.toHaveClass('tab-remote-chip');
+    expect(host).toHaveAttribute('title', 'Remote: ssh://build');
+    expect(host.parentElement).toHaveClass('tab-meta');
     expect(screen.getByRole('button', { name: 'Detach session on build.example' })).toBeInTheDocument();
+    const flags = document.querySelector('.tab-flags');
+    expect(flags?.querySelector('.connection-plug')).not.toBeNull();
+    expect(flags?.querySelector('.tab-recording')).not.toBeNull();
+    expect(document.querySelector('.tab-meta > .connection-plug')).toBeNull();
 
     rerender(<ShellTabMeta payload={payload} capabilities={capabilities()} />);
     expect(screen.queryByLabelText('Remote')).not.toBeInTheDocument();
+    expect(document.querySelector('.connection-plug')).toBeNull();
     expect(screen.queryByRole('button', { name: /session on/ })).not.toBeInTheDocument();
   });
 
