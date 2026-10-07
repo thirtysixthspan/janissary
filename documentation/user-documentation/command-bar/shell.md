@@ -118,17 +118,18 @@ A multi-line command stays editable in the bar until you submit it. If it goes t
 By default, `zsh` gives the new shell a sandbox of its own: a fresh workspace clone of the project, the same kind `agent` creates, with zsh confined to it. The full form is:
 
 ```
-zsh [name] [-w|--workspace|--no-workspace] [--offline]
+zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]
 ```
 
 - `zsh docs` names the tab, and its clone folder, `docs`. A name already in use is refused in the notifications feed, as for `agent`.
 - `--no-workspace` opens an unsandboxed shell instead. It starts in the current tab's directory when that tab is unsandboxed and inside the project, and at the project root otherwise.
 - `--offline` creates the clone with network access denied.
-- `zsh … on <address>` and unknown options such as `--sandbox` are refused, and nothing opens.
+- `zsh … on <address>` opens the shell on that host in its own remote workspace. It implies a workspace even with `--no-workspace`.
+- Unknown options such as `--sandbox` are refused, and nothing opens.
 
 A sandboxed shell's tab opens right away with a spinning **Provisioning workspace** flag while the clone is made. Anything you type in its command bar meanwhile waits in the queue (`queue >`) and runs once zsh starts at the clone's root. The notifications feed then shows `Shell "<name>" ready. (workspace: …)`. If the clone fails, the feed says so and the tab closes itself. Closing the tab first cancels the clone. In a project with no git repository, or no `origin` remote, `zsh` opens an unsandboxed shell and tells you why.
 
-A remote agent tab's directory is on the other machine, so `zsh` typed there opens nothing and answers `A shell tab cannot be opened from a remote tab.` Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt. A shell keeps its workspace alive even if you close the tab it was opened from; the clone is removed when its last tab closes.
+A remote agent tab's directory is on the other machine, so `zsh` typed there without `on` opens nothing and answers `A shell tab cannot be opened from a remote tab.` A remote shell cannot launch another remote shell; `zsh … on <address>` from a remote tab answers `Cannot launch a remote shell from a remote tab.` and opens nothing. A local remote-shell tab appears while SSH connects, so you can answer prompts in its terminal. When the remote workspace is ready, it switches to zsh at the workspace root and reports `Shell "<name>" ready on <host>. (workspace: <dir>)`. Lines submitted while the tab provisions wait and run at zsh's first prompt. A remote launch failure is reported as `Failed to start "<name>" on <host>: <reason>` and the tab closes; there is no local fallback. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt. A shell keeps its workspace alive even if you close the tab it was opened from; the clone is removed when its last tab closes.
 
 The terminal is painted in the application theme's own colors — background, text, cursor, and selection — so a light theme gives a light terminal. Choosing a theme in the `theme` picker updates the shell terminal too.
 

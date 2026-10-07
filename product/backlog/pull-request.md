@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Deliver the remote-shell documentation promised by the plan.
-
-Existing Issue: The plan names four required documentation updates, but the pull request changes none of them, and the current help and command-bar shell guide still say remote `zsh` is refused. Severity: 6/10
-
-Existing Risk: 5/10 - Users who follow the shipped help or shell guide will be told the new command is unsupported, and plugin authors will not learn the new launch fields or their compatibility contract.
-
-Proposal Risk: 1/10 - Once the help, user guides, and plugin API reference describe the shipped behavior, users can discover the feature and plugin authors can see the new fields and their lifecycle.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1579: add the remote-shell documentation promised by the plan". Update `help.md` to describe `zsh … on <address>` and its workspace behavior; update `documentation/user-documentation/command-bar/shell.md` to replace the stale refusal text and describe provisioning and failure behavior; add standalone remote shell guidance to `documentation/user-documentation/advanced-agents/remote-agents.md`; and document `remote.address`, `connectPtyId`, and `host`, including an API changelog entry, in `documentation/developer-documentation/tab-plugins.md`. Keep the behavior and limitations aligned with `product/specs/shell-tab.md` and the feature plan. Check that the docs no longer claim remote shell launch is refused and that the developer reference explains the optional launch fields without changing the API version.
-
 * Deliver the planned test for SSH PTY exit during provisioning.
 
 Existing Issue: The plan requires a client test proving that the SSH PTY's exit does not close the shell tab, but the added test only checks attachment switching and never invokes either attached handle's exit callback. Severity: 5/10

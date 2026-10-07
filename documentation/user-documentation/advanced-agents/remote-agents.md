@@ -154,6 +154,12 @@ Screen captures, recordings, and busy detection are worked out on your machine f
 
 A remote tab still can't launch its own remote tab. There is no `files on <address>` form without an existing tab on that host, and files cannot be copied between machines or handed to `open external` from a remote tree.
 
+## Open a standalone remote shell
+
+From a local tab, type `zsh docs on devbox` to open a shell with its own remote workspace. The shell tab appears while SSH connects, so you can answer password, passphrase, and host-key prompts there. Once the workspace is ready, the same tab switches to zsh at the remote workspace root. Lines you submit while it provisions wait for the first prompt.
+
+The command implies a remote workspace even if you include `--no-workspace`. It has no local fallback if the remote launch fails. A remote tab cannot start a standalone remote shell; `zsh … on <address>` there answers `Cannot launch a remote shell from a remote tab.` See [Open a zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) for the full command options and lifecycle.
+
 ## Asking the remote agent
 
 `acp <prompt>` works in a remote agent tab, and the agent runs on the remote host against that host's workspace — see [ACP agents](/user-documentation/advanced-agents/acp-agent). The `db` and `browser` commands it runs on its own still act on your machine, not the remote.
