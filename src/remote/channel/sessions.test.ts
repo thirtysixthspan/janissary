@@ -119,7 +119,7 @@ describe('SessionRouter — busy-transition', () => {
 });
 
 describe('SessionRouter — shell process exit', () => {
-  it('reports the shell exit as an owned remote shell termination', () => {
+  it('reports the shell exit without classifying it as a harness', () => {
     const onSessionExit = vi.fn();
     const router = new SessionRouter({ onSessionExit });
     router.record({
@@ -129,6 +129,19 @@ describe('SessionRouter — shell process exit', () => {
 
     router.exit({ type: 'exit', id: 'shell1', exitCode: 0 });
 
-    expect(onSessionExit).toHaveBeenCalledWith('shell1', undefined, true);
+    expect(onSessionExit).toHaveBeenCalledWith('shell1', undefined, false);
+  });
+
+  it('keeps a harness exit classified as a harness', () => {
+    const onSessionExit = vi.fn();
+    const router = new SessionRouter({ onSessionExit });
+    router.record({
+      type: 'spawn', id: 'harness1', program: 'claude', command: 'claude', mode: 'pty', cols: 80, rows: 24,
+      harness: 'claude',
+    });
+
+    router.exit({ type: 'exit', id: 'harness1', exitCode: 0 });
+
+    expect(onSessionExit).toHaveBeenCalledWith('harness1', undefined, true);
   });
 });
