@@ -147,6 +147,25 @@ describe('RemoteProcesses interactive zsh', () => {
     expect(existsSync(String(spawn?.[7]?.ZDOTDIR))).toBe(false);
   });
 
+  it('forwards plugin shell arguments and env while keeping host zsh hooks authoritative', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'shell');
+    processes.spawn({
+      type: 'spawn', id: 'shell2', program: 'zsh', command: '', mode: 'pty', cols: 80, rows: 24,
+      cwd: '/remote/workspace/src', shell: { nonce: 'b'.repeat(32) },
+      launch: { shell: '/bin/zsh', args: ['-f'] },
+      env: { PLUGIN_SETTING: 'enabled', ZDOTDIR: '/plugin/zsh', JANUS_SHELL_SETUP: 'plugin-value' },
+    });
+
+    const spawn = vi.mocked(spawnPty).mock.calls[0];
+    expect(spawn?.[7]).toMatchObject({
+      PLUGIN_SETTING: 'enabled', JANUS_USER_ZDOTDIR: '/plugin/zsh',
+      JANUS_SHELL_SETUP: expect.stringContaining('b'.repeat(32)),
+    });
+    expect(spawn?.[7]?.ZDOTDIR).not.toBe('/plugin/zsh');
+    expect(spawn?.[8]).toEqual({ shell: '/bin/zsh', args: ['-f'] });
+    processes.killAll();
+  });
+
   it('falls back to the workspace when a shell cwd escapes it', () => {
     const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'shell');
     processes.spawn({

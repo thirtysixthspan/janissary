@@ -18,6 +18,7 @@ export type PluginTabPreset = {
   label: string;
   cwd?: string;
   workspace?: { dir: string; offline: boolean };
+  remote?: { address: string; host: string };
 };
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
@@ -30,6 +31,8 @@ interface OpenTarget {
   registerFile(path: string): string;
   openFiles: Map<string, string>;
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
+  spawnRemoteTerminal(label: string, options: TabPluginTerminalOptions): TabPluginTerminal;
+  remoteWorkspaceOf(label: string): { dir: string; offline: boolean } | undefined;
   adoptTerminal(ptyId: string, label: string): void;
   killTerminal(ptyId: string): void;
   recordTerminal(ptyId: string, label: string, pluginId: string): void;
@@ -57,6 +60,7 @@ function withResources<Result>(
   target: OpenTarget,
   factory: (resources: TabPluginResources) => Result,
   clones: { source?: TabClone; own?: TabClone },
+  remoteLabel?: string,
 ): { result: Result; fileRefs: string[]; terminalIds: string[]; terminalCwd?: string; confinedToSource: boolean } {
   const fileRefs: string[] = [];
   const terminals: string[] = [];
@@ -73,8 +77,11 @@ function withResources<Result>(
       },
       spawnTerminal: (options) => {
         if (!acceptingResources) throw new Error('plugin tab resources are no longer available');
-        const confinement = terminalConfinement(options.workspace, clones.source, clones.own);
-        const terminal = target.spawnTerminal({ ...options, workspace: confinement.workspace });
+        const remoteWorkspace = remoteLabel === undefined ? undefined : target.remoteWorkspaceOf(remoteLabel);
+        const confinement = terminalConfinement(options.workspace, clones.source, clones.own, remoteWorkspace);
+        const terminal = confinement.remote && remoteLabel !== undefined
+          ? target.spawnRemoteTerminal(remoteLabel, { ...options, workspace: confinement.workspace })
+          : target.spawnTerminal({ ...options, workspace: confinement.workspace });
         terminals.push(terminal.ptyId);
         terminalCwd ??= options.cwd;
         confinedToSource ||= confinement.fromSource;
@@ -123,7 +130,7 @@ export function openPluginTab(
   const own = preset?.workspace && { workspaceDir: preset.workspace.dir, offline: preset.workspace.offline };
   const {
     result: created, fileRefs, terminalIds, terminalCwd, confinedToSource,
-  } = withResources(target, factory, { source, own });
+  } = withResources(target, factory, { source, own }, preset?.label);
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
@@ -141,6 +148,7 @@ export function openPluginTab(
       (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
     );
     if (minted !== undefined) {
+      if (preset?.remote !== undefined) minted.remote = preset.remote;
       // The directory the terminal really started in, not the source's: a plugin may start it
       // elsewhere, as a shell does when its source has left the project, and the source's directory
       // would otherwise stand until zsh's first report, which never comes for an unmounted shell.
@@ -186,7 +194,7 @@ export function updatePluginTab(
     (candidate) => candidate.plugin?.id === pluginId && candidate.plugin.instanceKey === instanceKey,
   );
   if (!tab?.plugin) return;
-  const { result: update, fileRefs, terminalIds } = withResources(target, factory, { source: tab, own: tab });
+  const { result: update, fileRefs, terminalIds } = withResources(target, factory, { source: tab, own: tab }, tab.label);
   const rekeyed = update.instanceKey !== undefined && update.instanceKey !== instanceKey
     && target.tabs.every((candidate) => candidate.plugin?.id !== pluginId
       || candidate.plugin.instanceKey !== update.instanceKey);

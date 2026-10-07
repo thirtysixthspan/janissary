@@ -337,10 +337,31 @@ describe('frame codec', () => {
     expect(roundTrip(frame)).toEqual(frame);
   });
 
+  it('round-trips plugin shell launch options and environment overrides', () => {
+    const frame: RemoteFrame = {
+      type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
+      launch: { shell: '/bin/zsh', args: ['-f'] }, env: { PLUGIN_SETTING: 'enabled' },
+    };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
   it('rejects a shell spawn with an invalid nonce', () => {
     expect(decodeFrame(JSON.stringify({
       type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
       shell: { nonce: 'bad' },
+    }))).toEqual({ error: expect.stringContaining('Malformed remote frame "spawn"') });
+  });
+
+  it.each([
+    { launch: { args: ['-f', 3] } },
+    { launch: null },
+    { env: ['INVALID'] },
+    { env: { PLUGIN_SETTING: false } },
+    { launch: { args: [] }, mode: 'pipe' },
+  ])('rejects malformed plugin launch options: %o', (extra) => {
+    expect(decodeFrame(JSON.stringify({
+      type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
+      ...extra,
     }))).toEqual({ error: expect.stringContaining('Malformed remote frame "spawn"') });
   });
 
@@ -610,8 +631,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 27', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(27);
+  it('is 28', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(28);
   });
 });
 

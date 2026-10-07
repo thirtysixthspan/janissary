@@ -48,13 +48,12 @@ export function lineCapabilities(input: {
         return { label: origin.label, cwd: managers.tab.launchDir, root: managers.tab.launchDir };
       }
       if (!tab) return null;
+      const workspaceDir = tab.workspaceDir ?? (tab.remote ? managers.remote?.workspaceOf?.(tab.label) : undefined);
       return {
         label: tab.label,
         cwd: managers.tab.cwdOf(tab.label) ?? managers.tab.launchDir,
         root: managers.tab.launchDir,
-        ...(tab.workspaceDir && {
-          workspace: { dir: tab.workspaceDir, offline: tab.offline ?? false },
-        }),
+        ...(workspaceDir && { workspace: { dir: workspaceDir, offline: tab.offline ?? false } }),
         ...(tab.remote && { remote: true as const }),
       };
     },

@@ -56,6 +56,23 @@ describe('a launch origin', () => {
 
     expect(capabilities.originTab()).toBeNull();
   });
+
+  it('reports a remote tab workspace without exposing it as a local workspace clone', () => {
+    const managers = emptyManagers();
+    managers.tab.byLabel = vi.fn(() => ({
+      label: 'remote-shell', remote: { address: 'dev@example.test', host: 'example.test' },
+      offline: true,
+    }));
+    managers.tab.cwdOf = vi.fn(() => '/remote/workspace/src');
+    managers.remote = { workspaceOf: vi.fn(() => '/remote/workspace') } as never;
+    const capabilities = createPluginContext(
+      managers, declaration, activation, { label: 'remote-shell', command: 'zsh' }, () => true,
+    );
+
+    expect(capabilities.originTab()).toMatchObject({
+      cwd: '/remote/workspace/src', workspace: { dir: '/remote/workspace', offline: true }, remote: true,
+    });
+  });
 });
 
 describe('TabManager.openPluginTab with a fixed label', () => {

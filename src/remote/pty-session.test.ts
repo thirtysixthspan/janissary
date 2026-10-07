@@ -104,6 +104,19 @@ describe('createRemotePtySession', () => {
     }]);
   });
 
+  it('sends plugin shell launch options and environment in the spawn frame', () => {
+    const { channel, sent } = attachedChannel();
+    createRemotePtySession(channel, makeManagers([]), {
+      id: 'shell1', program: 'zsh', command: 'zsh', cols: 80, rows: 24,
+      launch: { shell: '/bin/zsh', args: ['-f'] }, env: { PLUGIN_SETTING: 'enabled' },
+    }, vi.fn());
+
+    expect(sent).toEqual([{
+      type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
+      launch: { shell: '/bin/zsh', args: ['-f'] }, env: { PLUGIN_SETTING: 'enabled' },
+    }]);
+  });
+
   it('sends input, resize, and kill frames for the session id', () => {
     const { channel, sent } = attachedChannel();
     const session = createRemotePtySession(channel, makeManagers([]), {
