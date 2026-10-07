@@ -32,6 +32,7 @@ export type LaunchInput = {
   managers: Managers;
   declaration: TabPluginDeclaration;
   origin: PluginFailureOrigin;
+  answeringLabel?: string;
   isEnabled: () => boolean;
   validate: (value: TabPluginPayload) => void;
   deferred?: DeferredPluginCall;
@@ -148,16 +149,20 @@ function awaitClone(
 }
 
 export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapabilities, 'launchTab'> {
-  const { managers, declaration, origin, isEnabled } = input;
+  const { managers, declaration, isEnabled } = input;
   return {
     launchTab: (instanceKey, request, factory, ready) => {
       if (!isEnabled()) return;
       if (!input.deferred) throw new Error('"launchTab" is not available from a notification or host-state handler');
+      const joining = request.remote !== undefined && 'join' in request.remote;
+      const sourceLabel = joining ? input.answeringLabel ?? input.origin.label : input.origin.label;
+      const origin = sourceLabel === input.origin.label ? input.origin : { ...input.origin, label: sourceLabel };
+      const launchInput = origin === input.origin ? input : { ...input, origin };
       if (!origin.launch && !managers.tab.byLabel(origin.label)) return;
       if (request.remote && 'adopt' in request.remote && request.remote.adopt.ptyId !== input.adoptPtyId) {
         throw new Error('remote process adoption must match the reattach record');
       }
-      if (request.remote !== undefined) return launchRemotePluginTab(input, instanceKey, request, factory, ready);
+      if (request.remote !== undefined) return launchRemotePluginTab(launchInput, instanceKey, request, factory, ready);
       const label = resolveLaunchLabel(managers, declaration, origin, request);
       if (label === undefined) return;
       const { clone, fallbackReason } = startClone(managers, label, request);
