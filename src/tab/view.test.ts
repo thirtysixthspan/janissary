@@ -397,6 +397,36 @@ describe('buildTabView', () => {
     expect(view.files?.absoluteRoot).toBe('/Users/derrick/project');
   });
 
+  it('shows a remote file navigator workspace root as $root without changing its absolute root', () => {
+    const tab = makeTab('files', '#fff');
+    tab.files = {
+      root: '/srv/.janissary/workspace/bekir', absoluteRoot: '/srv/.janissary/workspace/bekir', rows: [],
+      remote: { host: 'devbox', address: 'alice@devbox' },
+    };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (p) => p, undefined,
+      (label) => label === 'files' ? '/srv/.janissary/workspace/bekir' : undefined,
+    );
+
+    expect(view.files?.root).toBe('$root/');
+    expect(view.files?.absoluteRoot).toBe('/srv/.janissary/workspace/bekir');
+  });
+
+  it('shows a nested remote file navigator root under its workspace shortcut', () => {
+    const tab = makeTab('files', '#fff');
+    tab.files = {
+      root: '/srv/.janissary/workspace/bekir/src', absoluteRoot: '/srv/.janissary/workspace/bekir/src', rows: [],
+      remote: { host: 'devbox', address: 'alice@devbox' },
+    };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (p) => p, undefined,
+      (label) => label === 'files' ? '/srv/.janissary/workspace/bekir' : undefined,
+    );
+
+    expect(view.files?.root).toBe('$workspace/bekir/src');
+    expect(view.files?.absoluteRoot).toBe('/srv/.janissary/workspace/bekir/src');
+  });
+
   it('abbreviates the editor path using the given shorten callback', () => {
     const tab = makeTab('agent-1', '#fff');
     tab.editor = { name: 'notes.txt', path: '/Users/derrick/project/notes.txt', size: '8 B', url: '/open/1' };

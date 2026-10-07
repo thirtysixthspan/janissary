@@ -4,6 +4,7 @@ import type { Managers } from '../managers.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
 import path from 'node:path';
 import { flattenBuffer } from './formatting.js';
+import { remoteFileNavigatorRoot } from './remote-file-navigator-root.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -141,7 +142,13 @@ export function buildTabView(
     // no client reader. The copy the client does get is `harness.sessionTerminated`, passed through above.
 
     monitor: tab.monitor,
-    files: tab.files ? { ...tab.files, root: shorten(tab.files.root), absoluteRoot: tab.files.root } : undefined,
+    files: tab.files ? {
+      ...tab.files,
+      root: tab.files.remote
+        ? remoteFileNavigatorRoot(tab.files.root, workspaceOf?.(tab.label) ?? '') ?? shorten(tab.files.root)
+        : shorten(tab.files.root),
+      absoluteRoot: tab.files.root,
+    } : undefined,
     activePty: tab.activePty,
     dock: tab.dock,
     pane: tab.pane,
