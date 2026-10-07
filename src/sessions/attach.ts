@@ -41,7 +41,12 @@ async function settleAccepted(
     managers.remote.close(label);
     return { kind: 'terminated', reason: `${record.launchLabel} on ${record.host} had nothing still running.` };
   }
-  await restoreSessionTabs(managers, record, label, processes);
+  const restored = await restoreSessionTabs(managers, record, label, processes);
+  if (record.launchKind === 'shell' && restored.length > 0) {
+    const bridge = managers.tab.findIndex(label);
+    if (bridge !== -1) managers.tab.closeTab(bridge);
+    return { kind: 'attached', label: restored[0] };
+  }
   return { kind: 'attached', label };
 }
 
@@ -66,7 +71,10 @@ export function startSessionAttach(
   const address = parseRemoteAddress(record.address);
   if ('error' in address) return Promise.resolve({ kind: 'failed', reason: address.error });
   const harness = harnessNameOf(record);
-  const label = uniqueLabel(managers.tab.tabs, record.launchLabel);
+  const label = uniqueLabel(
+    managers.tab.tabs,
+    record.launchKind === 'shell' ? `${record.launchLabel}-attach` : record.launchLabel,
+  );
 
   return new Promise<AttachOutcome>((resolve) => {
     let settled = false;

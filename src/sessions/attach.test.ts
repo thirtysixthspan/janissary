@@ -12,7 +12,7 @@ import type { RemoteSessionRecord } from './store.js';
 // The connection itself is faked: `attachRemote` hands back whichever answer the case is about,
 // and the agent launch hands its resume straight back too.
 vi.mock('../remote/resume.js', () => ({ askSessionState: vi.fn() }));
-vi.mock('./restore-tabs.js', () => ({ restoreSessionTabs: vi.fn(() => []) }));
+vi.mock('./restore-tabs.js', () => ({ restoreSessionTabs: vi.fn(async () => []) }));
 vi.mock('../profile/remote-agent.js', () => ({ startRemoteAgent: vi.fn() }));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
@@ -36,6 +36,7 @@ function record(): RemoteSessionRecord {
 // exists, and what is left is the query about what survived.
 function harness() {
   const entry = { labels: new Set(['claude']), channel: { discardUnclaimed: vi.fn() } };
+  const tabs: { label: string }[] = [];
   const managers = {
     harness: {
       attachRemote: vi.fn((options: { resume: { onResult: (accepted: boolean) => void } }) => {
@@ -48,7 +49,11 @@ function harness() {
       entryForSession: (session: string) => (entry.channel.sessionId === session ? entry : undefined),
     },
     shell: { adoptRemoteShell: vi.fn(), releaseAdoptedShell: vi.fn() },
-    tab: { tabs: [], cur: () => ({ label: 'janus', group: 1, groupColor: '#111' }) },
+    tab: {
+      tabs, cur: () => ({ label: 'janus', group: 1, groupColor: '#111' }),
+      findIndex: (label: string) => tabs.findIndex((tab) => tab.label === label),
+      closeTab: (index: number) => { tabs.splice(index, 1); },
+    },
   } as unknown as Managers;
   return { managers };
 }
@@ -100,19 +105,31 @@ describe('startSessionAttach', () => {
   it('attaches a shell session without adopting its PTY as the placeholder agent shell', async () => {
     const h = harness();
     vi.mocked(startRemoteAgent).mockImplementation(
-      (_managers, launch: { resume: RemoteResume }) => { launch.resume.onResult(true); },
+      (_managers, launch: { resolved: string; resume: RemoteResume }) => {
+        h.managers.remote.entryOf('claude')?.labels.add(launch.resolved);
+        h.managers.tab.tabs.push({ label: launch.resolved } as never);
+        launch.resume.onResult(true);
+      },
     );
+    vi.mocked(restoreSessionTabs).mockResolvedValue(['claude', 'scratch']);
     vi.mocked(askSessionState).mockResolvedValue([
       { id: 'rpty1', program: 'zsh', mode: 'pty', agentName: 'claude', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/remote/src' },
+      { id: 'rpty2', program: 'zsh', mode: 'pty', agentName: 'scratch', shell: { nonce: 'b'.repeat(32) }, offline: false, cwd: '/remote/docs' },
     ]);
     const shellRecord: RemoteSessionRecord = {
       ...record(), launchKind: 'shell',
       processes: [{ id: 'rpty1', label: 'claude', kind: 'shell', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/remote/src' }],
     };
 
-    await expect(startSessionAttach(h.managers, shellRecord)).resolves.toMatchObject({ kind: 'attached' });
+    await expect(startSessionAttach(h.managers, shellRecord)).resolves.toMatchObject({ kind: 'attached', label: 'claude' });
     expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
     expect(restoreSessionTabs).toHaveBeenCalledOnce();
+    expect(startRemoteAgent).toHaveBeenCalledWith(h.managers, expect.objectContaining({ resolved: 'claude-attach' }));
+    expect(restoreSessionTabs).toHaveBeenCalledWith(h.managers, shellRecord, 'claude-attach', expect.arrayContaining([
+      expect.objectContaining({ id: 'rpty1', agentName: 'claude', shell: { nonce: 'a'.repeat(32) } }),
+      expect.objectContaining({ id: 'rpty2', agentName: 'scratch', shell: { nonce: 'b'.repeat(32) } }),
+    ]));
+    expect(h.managers.tab.tabs).toEqual([]);
   });
 
   it('does not restore any tab for an unanswered query', async () => {
