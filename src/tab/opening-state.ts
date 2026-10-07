@@ -15,6 +15,8 @@ export abstract class TabOpeningState extends TabQueueState {
   abstract registerFile(path: string): string;
   abstract get openFiles(): Map<string, string>;
   abstract spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
+  abstract spawnRemoteTerminal(label: string, options: TabPluginTerminalOptions): TabPluginTerminal;
+  abstract remoteWorkspaceOf(label: string): { dir: string; offline: boolean } | undefined;
   abstract adoptTerminal(ptyId: string, label: string): void;
 abstract recordTerminal(ptyId: string, label: string, pluginId: string): void;
   abstract killTerminal(ptyId: string): void;

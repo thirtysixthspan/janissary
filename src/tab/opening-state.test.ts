@@ -48,6 +48,45 @@ describe('TabOpeningState.openPluginTab', () => {
     expect(tm.openFiles).toHaveLength(1);
   });
 
+  it('sets a preset remote target on the minted plugin tab', () => {
+    const channel = {};
+    const registerRemotePty = vi.fn(() => 'remote-pty-1');
+    const tm = makeTabManager({
+      remote: { workspaceOf: vi.fn(() => '/remote/workspace'), get: vi.fn(() => channel) },
+      pty: {
+        registerRemotePty, spawnDimensions: () => ({ cols: 80, rows: 24 }), isRunning: () => true,
+        adopt: vi.fn(),
+      },
+      plugins: { declarations: [] },
+    });
+    tm.openPluginTab('fixture', 'fixture', 'remote-shell', 1, 'janus', (resources) => {
+      resources.spawnTerminal({
+        cwd: '/remote/workspace/src', workspace: { dir: '/remote/workspace', offline: false },
+        zshHooks: { nonce: 'a'.repeat(32) },
+      });
+      return { title: 'shell', payload: {} };
+    }, {
+      label: 'remote-shell', remote: { address: 'dev@example.test', host: 'example.test' },
+    });
+
+    expect(tm.tabs[tm.activeTab].remote).toEqual({ address: 'dev@example.test', host: 'example.test' });
+    expect(tm.tabs[tm.activeTab].workspaceDir).toBeUndefined();
+    expect(registerRemotePty).toHaveBeenCalledWith('remote-shell', channel, expect.objectContaining({
+      cwd: '/remote/workspace/src', offline: false, shell: { nonce: 'a'.repeat(32) },
+    }));
+    expect(tm.tabs[tm.activeTab].runtime?.cwd).toBe('/remote/workspace/src');
+  });
+
+  it('refuses a remote workspace when opening without a preset label', () => {
+    const tm = makeTabManager({ remote: { workspaceOf: vi.fn(() => '/remote/workspace') } });
+    tm.tabs.push({ label: 'remote-shell', remote: { address: 'dev@example.test', host: 'example.test' } } as never);
+
+    expect(() => tm.openPluginTab('fixture', 'fixture', 'one', 1, 'remote-shell', (resources) => {
+      resources.spawnTerminal({ cwd: '/remote/workspace', workspace: { dir: '/remote/workspace' } });
+      return { title: 'shell', payload: {} };
+    })).toThrow('Cannot confine a terminal to /remote/workspace');
+  });
+
   it('deduplicates before running the payload factory or registering another file', () => {
     const tm = makeTabManager();
     openClip(tm);

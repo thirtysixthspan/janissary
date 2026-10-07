@@ -24,6 +24,18 @@ describe('terminalConfinement', () => {
     });
   });
 
+  it('routes to a labelled remote workspace only when the requested directory matches', () => {
+    expect(terminalConfinement(
+      { dir: '/remote/workspace', offline: false }, {}, undefined,
+      { dir: '/remote/workspace', offline: true },
+    )).toEqual({
+      workspace: { dir: '/remote/workspace', offline: true }, fromSource: true, remote: true,
+    });
+    expect(() => terminalConfinement(
+      { dir: '/remote/other' }, {}, undefined, { dir: '/remote/workspace', offline: false },
+    )).toThrow(TabPluginRejection);
+  });
+
   it('lets a plugin ask for offline on a clone that is online', () => {
     expect(terminalConfinement({ dir: own.workspaceDir, offline: true }, undefined, own).workspace)
       .toEqual({ dir: own.workspaceDir, offline: true });

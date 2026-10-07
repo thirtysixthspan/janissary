@@ -18,6 +18,8 @@ export type RemotePtyOptions = {
   program: string;
   command: string;
   harness?: string;
+  cwd?: string;
+  shell?: { nonce: string };
   offline?: boolean;
   // `-b`: the remote starts its own e2e browser for this process. A fact the remote acts on, not a
   // value computed here — the endpoint it produces names ports on that host.
@@ -47,7 +49,7 @@ export function createRemotePtySession(
   options: RemotePtyOptions,
   onExit: (exitCode: number) => void,
 ): PtySession {
-  const { id, program, command, harness, offline, browser, cols, rows, agentName, autoApprove, autoResume } = options;
+  const { id, program, command, harness, cwd, shell, offline, browser, cols, rows, agentName, autoApprove, autoResume } = options;
   let attaching = true;
   const pending: Array<() => void> = [];
   const deliver = (callback: () => void) => {
@@ -105,7 +107,7 @@ export function createRemotePtySession(
     pending.length = 0;
   });
   channel.send({
-    type: 'spawn', id, program, command, mode: 'pty', harness, cols, rows, offline, browser, autoApprove, autoResume,
+    type: 'spawn', id, program, command, mode: 'pty', harness, cwd, shell, cols, rows, offline, browser, autoApprove, autoResume,
     ...(agentName && { agentName }),
   });
   return {

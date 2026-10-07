@@ -10,6 +10,7 @@ export type TabClone = Pick<Tab, 'workspaceDir' | 'offline'>;
 export type TerminalConfinement = {
   workspace?: { dir: string; offline: boolean };
   fromSource: boolean;
+  remote?: boolean;
 };
 
 function confineTo(
@@ -24,11 +25,19 @@ export function terminalConfinement(
   requested: TabPluginTerminalOptions['workspace'],
   source: TabClone | undefined,
   own: TabClone | undefined,
+  remoteWorkspace?: { dir: string; offline: boolean },
 ): TerminalConfinement {
   if (requested === undefined) return { fromSource: false };
   const fromOwn = confineTo(own, requested);
   if (fromOwn) return { workspace: fromOwn, fromSource: false };
   const fromSource = confineTo(source, requested);
   if (fromSource) return { workspace: fromSource, fromSource: true };
+  if (remoteWorkspace?.dir === requested.dir) {
+    return {
+      workspace: { dir: requested.dir, offline: remoteWorkspace.offline || (requested.offline ?? false) },
+      fromSource: true,
+      remote: true,
+    };
+  }
   throw new TabPluginRejection(`Cannot confine a terminal to ${requested.dir}: it is not this tab's workspace.`);
 }

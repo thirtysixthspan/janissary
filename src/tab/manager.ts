@@ -9,6 +9,7 @@ import { TabTranscriptState } from './transcript/state.js';
 import { FileRegistry } from './file-registry.js';
 import { placeProfileTabSelection } from './split-selection.js';
 import { spawnPluginTerminal } from './plugin-terminals.js';
+import { spawnRemotePluginTerminal } from './remote-plugin-terminal.js';
 import { ZshStartupDirectory } from '../shell/zsh-startup/directory.js';
 import { disposeDwell } from './dwell.js';
 import * as tabOperations from './operations.js';
@@ -194,6 +195,17 @@ export class TabManager extends TabTranscriptState {
   // learns how. The body lives in `plugin-terminals.ts`, which also holds the bound on `cwd`.
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal {
     return spawnPluginTerminal(this.managers.pty, this.launchDir, options, this.zshStartup);
+  }
+
+  remoteWorkspaceOf(label: string): { dir: string; offline: boolean } | undefined {
+    const dir = this.managers.remote?.workspaceOf?.(label);
+    if (dir === undefined) return undefined;
+    const tab = this.byLabel(label);
+    return { dir, offline: tab?.offline ?? false };
+  }
+
+  spawnRemoteTerminal(label: string, options: TabPluginTerminalOptions): TabPluginTerminal {
+    return spawnRemotePluginTerminal(this.managers.pty, label, this.managers.remote.get(label), options);
   }
 
   adoptTerminal(ptyId: string, label: string): void {
