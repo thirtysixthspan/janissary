@@ -10,7 +10,6 @@ import { FileNavigatorGithubButton } from './FileNavigatorGithubButton';
 import { FileNavigatorPullButton } from './FileNavigatorPullButton';
 import { FileNavigatorCommitButton } from './FileNavigatorCommitButton';
 import { SplitTabButton } from '../shared/SplitTabButton';
-import { RemoteChip } from '../shared/RemoteChip';
 
 type Properties = {
   root: string;
@@ -46,7 +45,11 @@ export function FileNavigatorHeader({
   return (
     <div className={`files-header${dock ? ' files-header--docked' : ''}`}>
       <div className="files-meta">
-        {remote && <RemoteChip remote={remote} />}
+        {remote && (
+          <span className="files-loc" aria-label="Remote host" title={`Remote: ${remote.address}`}>
+            {remote.host}
+          </span>
+        )}
         <span className="files-loc">{root}</span>
         {branch && <span className="files-branch">{branch}</span>}
       </div>

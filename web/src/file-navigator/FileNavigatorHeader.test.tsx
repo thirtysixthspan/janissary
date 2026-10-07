@@ -9,7 +9,7 @@ const callbacks = {
 };
 
 describe('FileNavigatorHeader', () => {
-  it('renders the remote host ahead of the root with the full address tooltip', () => {
+  it('renders the remote host as ordinary location text ahead of the root', () => {
     const { container } = render(
       <FileNavigatorHeader
         root="/remote/ws"
@@ -19,8 +19,10 @@ describe('FileNavigatorHeader', () => {
     );
     expect(screen.getByTitle('Remote: alice@devbox:/srv/project')).toHaveTextContent('devbox');
     const children = container.querySelector('.files-meta')?.children;
-    expect(children?.[0]).toHaveClass('tab-remote-chip');
+    expect(children?.[0]).toHaveClass('files-loc');
+    expect(children?.[0]).not.toHaveClass('tab-remote-chip');
     expect(children?.[1]).toHaveTextContent('/remote/ws');
+    expect(children?.[1]).toHaveClass('files-loc');
   });
 
   it('renders no remote chip for a local tree', () => {

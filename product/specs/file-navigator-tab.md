@@ -111,9 +111,11 @@ tab keeps its independent lifetime.
 A tree rooted in a remote workspace has the same rows, detail modes, branch and git-status metadata,
 git pull, commit to origin, search, watches, open/edit actions, creation, rename, delete, move,
 clipboard actions, and undo/redo as a local tree. Every filesystem operation runs on the remote host and is contained
-within the workspace provisioned for the channel. The header shows the same host chip as the owning
-tab, ahead of the root path and branch; its text is the bare host and its tooltip is the full remote
-destination.
+within the workspace provisioned for the channel. The header shows the host as ordinary text in the
+same style as the root path and branch, ahead of them; hovering the host shows the full remote
+destination. The workspace root reads as `$root/`, and a path beneath it reads as
+`$workspace/<name>/<rest>`, using the remote host's paths. The underlying root stays absolute for
+filesystem operations.
 
 A remote row's size, modified time, and permissions come only from the remote host. Until they
 arrive the row shows no detail, rather than whatever the local machine happens to hold at the same
