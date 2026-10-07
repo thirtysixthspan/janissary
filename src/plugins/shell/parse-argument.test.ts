@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { REMOTE_SHELL_REFUSAL, SHELL_USAGE, parseShellArgument } from './parse-argument.js';
+import { SHELL_USAGE, parseShellArgument } from './parse-argument.js';
 
 describe('parseShellArgument', () => {
   it('asks for a workspace by default, with no name and no offline mode', () => {
@@ -27,15 +27,21 @@ describe('parseShellArgument', () => {
     expect(parseShellArgument('Docs  Review --offline Two')).toEqual({ name: 'docs review two', workspace: true, offline: true });
   });
 
-  it('refuses `on <address>` and a bare `on`', () => {
-    expect(parseShellArgument('docs on devbox')).toEqual({ error: REMOTE_SHELL_REFUSAL });
-    expect(parseShellArgument('on')).toEqual({ error: REMOTE_SHELL_REFUSAL });
-    expect(REMOTE_SHELL_REFUSAL).toBe('Remote shell tabs are not supported yet.');
+  it('lifts the address out wherever `on` appears and preserves its case', () => {
+    expect(parseShellArgument('docs on DevBox:~/Work --offline')).toEqual({
+      name: 'docs', workspace: true, offline: true, remote: 'DevBox:~/Work',
+    });
+    expect(parseShellArgument('on devbox --no-workspace')).toEqual({
+      name: '', workspace: true, offline: false, remote: 'devbox',
+    });
+    expect(parseShellArgument('--no-workspace on')).toEqual({
+      name: '', workspace: true, offline: false, remote: '',
+    });
   });
 
   it('refuses an unknown option with the usage line', () => {
     expect(parseShellArgument('docs --sandbox')).toEqual({ error: `Unknown option "--sandbox". ${SHELL_USAGE}` });
     expect(parseShellArgument('-x')).toEqual({ error: `Unknown option "-x". ${SHELL_USAGE}` });
-    expect(SHELL_USAGE).toBe('Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline]');
+    expect(SHELL_USAGE).toBe('Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]');
   });
 });

@@ -20,6 +20,15 @@ root, so a remote launch without one has no meaning; rather than reject `harness
 with an error the user can only fix one way, the clause turns the workspace on. `harness claude -w
 on devbox` and `harness claude on devbox` are the same command.
 
+### Standalone remote shell
+
+`zsh [name] [--offline] on <address>` uses the same address grammar and remote workspace provisioning.
+The shell opens its own SSH channel and workspace, even when the source tab already runs remotely;
+launching a remote shell from a remote tab is refused. The tab appears while SSH connects so its
+prompts can be answered in place, then switches to zsh at the remote workspace root. A remote failure
+has no local fallback, and an early zsh exit is reported if a browser is attached before the shell's
+first prompt.
+
 ### Address grammar
 
 The address is a single token, `[user@]host[:path]`, split at the first colon.

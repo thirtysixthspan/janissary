@@ -66,14 +66,21 @@ function fakeCapabilities(overrides: {
     // says the project cannot clone, in which case it falls back and says why.
     launchTab: vi.fn((
       key: string, request: TabPluginLaunchRequest,
-      factory: (given: typeof resources, start: { label: string; cwd: string; workspaceDir?: string }) => TabPluginPayload,
+      factory: (given: typeof resources, start: {
+        label: string; cwd: string; workspaceDir?: string; connectPtyId?: string; host?: string;
+      }) => TabPluginPayload,
       ready: TabPluginLaunchReadyHandler,
     ) => {
       launches.push({ key, request, ready });
-      const cloning = request.workspace !== undefined && overrides.fallbackReason === undefined;
-      const start = cloning ? { label: 'kemal', cwd: CLONE, workspaceDir: CLONE } : { label: 'kemal', cwd: '/repo/src' };
+      const cloning = request.remote === undefined && request.workspace !== undefined && overrides.fallbackReason === undefined;
+      const start = request.remote
+        ? { label: 'kemal', cwd: '/repo/src', connectPtyId: 'ssh-pty', host: 'devbox' }
+        : cloning ? { label: 'kemal', cwd: CLONE, workspaceDir: CLONE } : { label: 'kemal', cwd: '/repo/src' };
       opened.push({ key, value: factory(resources, start) });
-      return { label: 'kemal', ...(request.workspace && overrides.fallbackReason && { fallbackReason: overrides.fallbackReason }) };
+      return {
+        label: 'kemal',
+        ...(request.remote === undefined && request.workspace && overrides.fallbackReason && { fallbackReason: overrides.fallbackReason }),
+      };
     }),
     updateTab: (key: string, factory: (given: typeof resources) => { payload: unknown }) => {
       updated.push({ key, payload: factory(resources).payload });
@@ -182,12 +189,17 @@ describe('the zsh command', () => {
     expect(launches).toHaveLength(0);
   });
 
-  it('refuses a remote launch, launching nothing', () => {
-    const { capabilities, launches } = fakeCapabilities();
+  it('routes a remote launch with its SSH PTY rendered during provisioning', () => {
+    const { capabilities, launches, opened } = fakeCapabilities();
 
-    expect(() => activate().command?.('docs on devbox', capabilities))
-      .toThrow(new TabPluginRejection('Remote shell tabs are not supported yet.'));
-    expect(launches).toHaveLength(0);
+    activate().command?.('Docs on DevBox --offline', capabilities);
+
+    expect(launches[0]?.request).toEqual({
+      name: 'docs', workspace: { offline: true }, remote: { address: 'DevBox' },
+    });
+    expect(opened[0]?.value.payload).toMatchObject({
+      provisioning: true, workspace: true, connectPtyId: 'ssh-pty', host: 'devbox',
+    });
   });
 
   it('opens nothing when the tab the command came from has gone', () => {
@@ -207,6 +219,16 @@ describe('the zsh command', () => {
       .toThrow(new TabPluginRejection('A shell tab cannot be opened from a remote tab.'));
     expect(opened).toHaveLength(0);
     expect(spawns).toHaveLength(0);
+  });
+
+  it('refuses a nested remote launch with its specific message', () => {
+    const { capabilities, launches } = fakeCapabilities({
+      origin: { label: 'remote1', cwd: '/repo', root: '/repo', remote: true },
+    });
+
+    expect(() => activate().command?.('docs on devbox', capabilities))
+      .toThrow(new TabPluginRejection('Cannot launch a remote shell from a remote tab.'));
+    expect(launches).toHaveLength(0);
   });
 
   it('starts zsh confined to the clone at its root once the clone lands, and announces it', async () => {
@@ -234,6 +256,24 @@ describe('the zsh command', () => {
     );
     expect(capabilities.notifyUser).toHaveBeenCalledWith(
       'workspace isolation off: sandbox-exec unavailable', { tab: 'shell-1' },
+    );
+  });
+
+  it('starts a remote zsh at the remote workspace and announces the host', async () => {
+    const { capabilities, launches, spawns, updated } = fakeCapabilities();
+    activate().command?.('docs on devbox', capabilities);
+
+    await launches[0].ready({
+      instanceKey: 'shell-1', workspaceDir: '/remote/project', displayDir: '/remote/project', host: 'devbox',
+    }, capabilities);
+
+    expect(spawns).toEqual([{
+      cwd: '/remote/project', shell: SHELL_PROGRAM, args: [],
+      workspace: { dir: '/remote/project', offline: false }, zshHooks: { nonce: expect.any(String) },
+    }]);
+    expect(updated[0]?.payload).toMatchObject({ host: 'devbox', prompted: false, workspaceDir: '/remote/project' });
+    expect(capabilities.notifyUser).toHaveBeenCalledWith(
+      'Shell "kemal" ready on devbox. (workspace: /remote/project)', { tab: 'shell-1' },
     );
   });
 });
@@ -334,6 +374,18 @@ describe('shell plugin activation', () => {
     expect(capabilities.terminalRunning).not.toHaveBeenCalled();
   });
 
+  it('reports a remote shell that exits before its first prompt, but not after cwd was reported', () => {
+    const { capabilities } = fakeCapabilities({ origin: { label: 'shell-tab', cwd: '/repo', root: '/repo' } });
+    const remote = { ...PAYLOAD, host: 'devbox', prompted: false };
+
+    expect(ask(capabilities, 'exited-early', null, remote)).toEqual({ reported: true });
+    expect(capabilities.notifyUser).toHaveBeenCalledWith(
+      'Failed to start "shell-tab" on devbox: zsh exited before its first prompt.', { tab: 'shell-1' },
+    );
+    expect(ask(capabilities, 'exited-early', null, { ...remote, prompted: true })).toEqual({ reported: false });
+    expect(capabilities.notifyUser).toHaveBeenCalledTimes(1);
+  });
+
   it('has no install-hooks route, since no client installs hooks any more', () => {
     const { capabilities, updated } = fakeCapabilities();
 
@@ -385,6 +437,14 @@ describe('shell plugin activation', () => {
     expect(updated).toEqual([{
       key: 'shell-1', payload: { ...PAYLOAD, cwd: '/repo/subdir' },
     }]);
+  });
+
+  it('marks the remote shell prompted on its first cwd report', () => {
+    const { capabilities, updated } = fakeCapabilities();
+
+    ask(capabilities, 'cwd', '/remote/project', { ...PAYLOAD, host: 'devbox', prompted: false });
+
+    expect(updated[0]?.payload).toMatchObject({ cwd: '/remote/project', host: 'devbox', prompted: true });
   });
 
   it('records the reported cwd as its tab\'s working directory, where a sibling shell starts', () => {

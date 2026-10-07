@@ -48,6 +48,10 @@ type ShellPayloadCommon = {
   connections: ShellConnectionRow[];
   schedule: ShellScheduleRow[];
   commandRunning?: boolean;
+  // A shell running on another host. Set only after the remote launch is ready.
+  host?: string;
+  // Set by the first cwd marker, which proves the remote zsh reached its first prompt.
+  prompted?: boolean;
   // The nonce the shell's status hooks sign their markers with. Minted by the server with the shell,
   // whose own startup files install the hooks, and fixed for the life of the terminal: every attach
   // reads it here and trusts only markers that carry it.
@@ -70,6 +74,7 @@ export type ShellProvisioningPayload = ShellPayloadCommon & {
   ptyId?: undefined;
   cols?: undefined;
   rows?: undefined;
+  connectPtyId?: string;
 };
 
 export type ShellPayload = ShellTerminalPayload | ShellProvisioningPayload;
@@ -145,9 +150,11 @@ export function isShellMarkerNonce(value: unknown): value is string {
 // neither. A payload mixing them is refused rather than read as either.
 function hasTerminalShape(value: Record<string, unknown>): boolean {
   if (value.provisioning === true) {
-    return value.ptyId === undefined && value.cols === undefined && value.rows === undefined;
+    return value.ptyId === undefined && value.cols === undefined && value.rows === undefined
+      && (value.connectPtyId === undefined || typeof value.connectPtyId === 'string');
   }
   return value.provisioning === undefined
+    && value.connectPtyId === undefined
     && typeof value.ptyId === 'string'
     && typeof value.cols === 'number'
     && typeof value.rows === 'number';
@@ -166,6 +173,8 @@ export function isShellPayload(value: unknown): value is ShellPayload {
     && Array.isArray(value.schedule)
     && value.schedule.every(isScheduleRow)
     && (value.commandRunning === undefined || typeof value.commandRunning === 'boolean')
+    && (value.host === undefined || typeof value.host === 'string')
+    && (value.prompted === undefined || typeof value.prompted === 'boolean')
     && isShellMarkerNonce(value.hookNonce);
 }
 

@@ -10,6 +10,8 @@ export type TabPluginLaunchRequest = {
   // Ask for a fresh workspace clone. Without a repository the launch still opens, unconfined, and
   // the result says why.
   workspace?: { offline: boolean };
+  // Start over an SSH channel and provision the workspace on that host.
+  remote?: { address: string };
 };
 
 // Where the launched tab starts, decided by the host before the factory runs.
@@ -19,6 +21,9 @@ export type TabPluginLaunchStart = {
   // Present while a clone is provisioning: the factory then starts nothing and the ready handler
   // finishes the tab.
   workspaceDir?: string;
+  // The SSH PTY rendered while a remote workspace provisions.
+  connectPtyId?: string;
+  host?: string;
 };
 
 export type TabPluginLaunchReady = {
@@ -28,6 +33,8 @@ export type TabPluginLaunchReady = {
   displayDir: string;
   // Present when the clone's Seatbelt confinement is not actually active.
   sandboxNotice?: string;
+  // Present when the workspace and shell were started on a remote host.
+  host?: string;
 };
 
 export type TabPluginLaunchResult = {

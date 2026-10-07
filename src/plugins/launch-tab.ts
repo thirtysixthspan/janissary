@@ -12,6 +12,7 @@ import type {
 import { declaredResources } from './declared-resources.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { resolveLaunchLabel } from './launch-tab-label.js';
+import { launchRemotePluginTab } from './launch-tab-remote.js';
 
 // The `launchTab` capability: the host names a plugin tab, starts its workspace clone when one was
 // asked for, places it at once, and runs the plugin's ready handler once the clone lands. Workspace
@@ -27,7 +28,7 @@ export type DeferredPluginCall = {
   disable(error: unknown): void;
 };
 
-type LaunchInput = {
+export type LaunchInput = {
   managers: Managers;
   declaration: TabPluginDeclaration;
   origin: PluginFailureOrigin;
@@ -152,6 +153,7 @@ export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapa
       if (!isEnabled()) return;
       if (!input.deferred) throw new Error('"launchTab" is not available from a notification or host-state handler');
       if (!origin.launch && !managers.tab.byLabel(origin.label)) return;
+      if (request.remote !== undefined) return launchRemotePluginTab(input, instanceKey, request, factory, ready);
       const label = resolveLaunchLabel(managers, declaration, origin, request);
       if (label === undefined) return;
       const { clone, fallbackReason } = startClone(managers, label, request);

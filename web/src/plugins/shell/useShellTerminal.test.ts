@@ -127,6 +127,37 @@ function osc(id: number): (data: string) => boolean {
 }
 
 describe('useShellTerminal', () => {
+  it('attaches to the SSH PTY while provisioning, then switches to the remote shell PTY', () => {
+    const attached: string[] = [];
+    const exitHandlers: (() => void)[] = [];
+    const detached: number[] = [];
+    const attachTerminal = vi.fn((id: string) => {
+      attached.push(id);
+      return makeHandle({ exitHandlers, detached });
+    });
+    const reportColors = vi.fn();
+    const containerRef = { current: document.createElement('div') };
+    const props = {
+      ptyId: undefined as string | undefined, connectPtyId: 'ssh-pty' as string | undefined,
+    };
+    const view = renderHook((current) => useShellTerminal({
+      ...current, containerRef, attachTerminal, reportColors, onExit: vi.fn(),
+      onCommandRunning: vi.fn(), onCwd: vi.fn(), copyText: vi.fn(), hookNonce: NONCE,
+    }), { initialProps: props });
+
+    expect(attached).toEqual(['ssh-pty']);
+    expect(reportColors).not.toHaveBeenCalled();
+    expect(oscHandlers).toHaveLength(0);
+    expect(terminals[0]?.options.disableStdin).toBe(false);
+
+    view.rerender({ ptyId: 'remote-pty', connectPtyId: undefined });
+
+    expect(attached).toEqual(['ssh-pty', 'remote-pty']);
+    expect(reportColors).toHaveBeenCalledWith('remote-pty', expect.any(Object));
+    expect(oscHandlers.length).toBeGreaterThan(0);
+    expect(detached).toEqual([1]);
+  });
+
   it('renders the bytes the attachment hands it', () => {
     const { byteCallbacks } = harness();
 
