@@ -5,6 +5,7 @@ import type { Managers } from '../managers.js';
 import type { Tab } from './types.js';
 
 describe('buildTabView', () => {
+  const missingWorkspace = (): string | undefined => {};
   it('projects right-pane membership and keeps left as the absent wire value', () => {
     const tab = makeTab('agent-1', '#fff');
     expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (path) => path).pane).toBeUndefined();
@@ -395,6 +396,39 @@ describe('buildTabView', () => {
     const view = buildTabView(tab, false, '/tmp', undefined, [], [], [], () => '~/project');
     expect(view.files?.root).toBe('~/project');
     expect(view.files?.absoluteRoot).toBe('/Users/derrick/project');
+    expect(view.files?.remote).toBeUndefined();
+  });
+
+  it('carries reconnecting status onto a remote file navigator target', () => {
+    const tab = makeTab('files', '#fff');
+    tab.files = {
+      root: '/srv/workspace/bekir', absoluteRoot: '/srv/workspace/bekir', rows: [],
+      remote: { host: 'devbox', address: 'devbox' },
+    };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (p) => p, undefined,
+      () => '/srv/workspace/bekir', () => true,
+    );
+
+    expect(view.files?.remote).toEqual({
+      host: 'devbox', address: 'devbox', reconnecting: true,
+    });
+  });
+
+  it('marks a remote file navigator target as provisioning until its workspace is ready', () => {
+    const tab = makeTab('files', '#fff');
+    tab.files = {
+      root: '/srv/workspace/bekir', absoluteRoot: '/srv/workspace/bekir', rows: [],
+      remote: { host: 'devbox', address: 'devbox' },
+    };
+    const view = buildTabView(
+      tab, false, '/tmp', undefined, [], [], [], (p) => p, undefined,
+      missingWorkspace,
+    );
+
+    expect(view.files?.remote).toEqual({
+      host: 'devbox', address: 'devbox', provisioning: true,
+    });
   });
 
   it('shows a remote file navigator workspace root as $root without changing its absolute root', () => {

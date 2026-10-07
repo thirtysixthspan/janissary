@@ -5,6 +5,7 @@ import type { TabPluginDeclaration } from '../plugins/api.js';
 import path from 'node:path';
 import { flattenBuffer } from './formatting.js';
 import { remoteFileNavigatorRoot } from './remote-file-navigator-root.js';
+import { remoteFileNavigatorTarget } from './remote-file-navigator-view.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -148,6 +149,7 @@ export function buildTabView(
         ? remoteFileNavigatorRoot(tab.files.root, workspaceOf?.(tab.label) ?? '') ?? shorten(tab.files.root)
         : shorten(tab.files.root),
       absoluteRoot: tab.files.root,
+      remote: remoteFileNavigatorTarget(tab.files.remote, tab.label, workspaceOf, reconnectingOf),
     } : undefined,
     activePty: tab.activePty,
     dock: tab.dock,

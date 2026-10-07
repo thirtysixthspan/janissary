@@ -115,7 +115,9 @@ within the workspace provisioned for the channel. The header shows the host as o
 same style as the root path and branch, ahead of them; hovering the host shows the full remote
 destination. The workspace root reads as `$root/`, and a path beneath it reads as
 `$workspace/<name>/<rest>`, using the remote host's paths. The underlying root stays absolute for
-filesystem operations.
+filesystem operations. After the branch, a flags group shows the remote connection plug: connected
+while the channel is live, reconnecting while it recovers, and provisioning until its workspace is
+ready. A local tree has no connection plug.
 
 A remote row's size, modified time, and permissions come only from the remote host. Until they
 arrive the row shows no detail, rather than whatever the local machine happens to hold at the same

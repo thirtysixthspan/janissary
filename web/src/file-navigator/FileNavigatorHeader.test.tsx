@@ -13,6 +13,7 @@ describe('FileNavigatorHeader', () => {
     const { container } = render(
       <FileNavigatorHeader
         root="/remote/ws"
+        branch="main"
         remote={{ host: 'devbox', address: 'alice@devbox:/srv/project' }}
         {...callbacks}
       />,
@@ -23,11 +24,28 @@ describe('FileNavigatorHeader', () => {
     expect(children?.[0]).not.toHaveClass('tab-remote-chip');
     expect(children?.[1]).toHaveTextContent('/remote/ws');
     expect(children?.[1]).toHaveClass('files-loc');
+    expect(children?.[2]).toHaveTextContent('main');
+    expect(children?.[3]).toHaveClass('files-flags');
+    expect(children?.[3].querySelector('.connection-plug')).toHaveAttribute('aria-label', 'Connected');
   });
 
   it('renders no remote chip for a local tree', () => {
     render(<FileNavigatorHeader root="/local/ws" {...callbacks} />);
     expect(screen.queryByLabelText('Remote')).toBeNull();
+    expect(screen.queryByLabelText('Connected')).toBeNull();
+  });
+
+  it.each([
+    ['reconnecting', 'Reconnecting'],
+    ['provisioning', 'Provisioning'],
+  ] as const)('shows %s connection status for a remote tree', (status, label) => {
+    render(
+      <FileNavigatorHeader
+        root="$workspace/bekir" remote={{ host: 'devbox', address: 'devbox', [status]: true }}
+        {...callbacks}
+      />,
+    );
+    expect(screen.getByLabelText(label)).toBeInTheDocument();
   });
 
   it('keeps the centre-strip header on one line', () => {
