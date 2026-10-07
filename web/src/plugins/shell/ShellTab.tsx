@@ -47,7 +47,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   useApplicationBarEdits(appBar, inputReference, draft, setDraft);
 
   const terminalHistory = useTerminalCommandHistory(setSent);
-  const { write, displayReply, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTabTerminal({
+  const { write, displayReply, focus: focusTerminal, clearSelection, scrollLines, scrollToBottom, rows: terminalRows } = useShellTabTerminal({
     payload,
     capabilities,
     containerRef: terminalReference,
@@ -152,15 +152,16 @@ export function ShellTab({ payload, capabilities }: Properties) {
   return (
     <div className="tab-body shell-tab" data-claims-shift-tab>
       <ShellTabMeta payload={payload} capabilities={capabilities} />
-      {/* Clicking the terminal gives it focus so xterm sends keystrokes to the attached shell. The
-          stylesheet lights its left-hand line in the tab's colour while it holds the keyboard. */}
+      {/* A single click on the terminal keeps the keyboard on the command bar; a double-click gives it
+          to the terminal so xterm sends keystrokes to the attached shell. The stylesheet lights its
+          left-hand line in the tab's colour while it holds the keyboard. */}
       <div
         className="harness-body shell-body"
         data-doc-shot="shell-view"
         ref={terminalReference}
         style={{ '--shell-focus-color': dotColor } as React.CSSProperties}
         onClick={() => { inputReference.current?.focus(); }}
-        onDoubleClick={() => { focusTerminal(); }}
+        onDoubleClick={() => { clearSelection(); focusTerminal(); }}
         onKeyDownCapture={(event) => {
           if (event.key !== 'Tab' || !event.shiftKey) return;
           event.preventDefault();

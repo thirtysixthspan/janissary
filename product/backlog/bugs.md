@@ -2,8 +2,6 @@
 
 ## ready
 
-* when clicking once on the terminal of a shell tab, the focus should go to the command bar without ever focusing the terminal. it requires a double click to focus the terminal. no style changes of the terminal should be observed as a flicker from a single click.
-
 ## development
 
 
