@@ -83,6 +83,10 @@ export type ClientFrame =
     // Whether the far side should recognize a subscription-limit screen on this harness and report
     // it as a `resume-event`. Same shape and same scoping as `autoApprove` above.
     autoResume?: boolean;
+    // An interactive zsh for a shell tab. The nonce authenticates its status markers.
+    shell?: { nonce: string };
+    // Requested working directory for a shell spawn, confined by the remote workspace.
+    cwd?: string;
   }
   | { type: 'input'; id: string; data: string }
   | { type: 'resize'; id: string; cols: number; rows: number }
@@ -226,6 +230,9 @@ export type RemoteProcessState = {
   autoApprove?: boolean;
   autoResume?: boolean;
   agentName?: string;
+  shell?: { nonce: string };
+  offline?: boolean;
+  cwd?: string;
 };
 
 export type RemoteFrame = ClientFrame | ServerFrame;

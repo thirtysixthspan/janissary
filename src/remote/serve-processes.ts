@@ -1,5 +1,8 @@
+import path from 'node:path';
 import { spawnPty } from '../pty.js';
 import { killShellGroup, spawnShell } from '../shell/index.js';
+import { shellStartupEnvironment } from '../shell/zsh-startup/script.js';
+import { ZshStartupDirectory } from '../shell/zsh-startup/directory.js';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import { messageBus } from '../bus.js';
 import type { ScreenCapture } from '../harness/screen.js';
@@ -30,6 +33,7 @@ type BrowserHandle = { close: () => void } | undefined;
 
 export class RemoteProcesses {
   private entries = new Map<string, Entry>();
+  private zshStartup = new ZshStartupDirectory();
 
   constructor(
     private send: (frame: ServerFrame) => void,
@@ -79,6 +83,7 @@ export class RemoteProcesses {
   killAll(): void {
     for (const [, entry] of this.entries) entry.kill();
     this.entries.clear();
+    this.zshStartup.dispose();
   }
 
   private writers = new Map<string, (data: string) => void>();
@@ -86,6 +91,8 @@ export class RemoteProcesses {
   private detections = new Map<string, HarnessDetection>();
 
   private spawnPty(frame: Extract<ClientFrame, { type: 'spawn' }>): Omit<Entry, 'frame'> {
+    const shell = frame.shell;
+    const cwd = shell === undefined ? this.workspaceDir : this.shellCwd(frame.cwd);
     // The remote builds its own copy of the harness environment, browser included: the endpoint
     // names ports on this host, so it could not have been computed on the other side and shipped
     // over. Because it needs no await, the caller's synchronous insert into `entries` is untouched
@@ -104,10 +111,14 @@ export class RemoteProcesses {
     // reach the browser recorded a line above. Give it back here or nothing will.
     let session;
     try {
+      const extraEnv = shell === undefined ? spawnEnv.env : {
+        ...spawnEnv.env,
+        ...shellStartupEnvironment(this.zshStartup.path(), shell.nonce, process.env.ZDOTDIR),
+      };
       session = spawnPty(
         frame.program,
         frame.command,
-        this.workspaceDir,
+        cwd,
         {
           onData: (_id, data) => {
             this.send({ type: 'output', id: frame.id, data });
@@ -121,7 +132,8 @@ export class RemoteProcesses {
         frame.cols,
         frame.rows,
         { workspaceDir: this.workspaceDir, offline: frame.offline, tokens: this.tokens },
-        spawnEnv.env,
+        extraEnv,
+        shell === undefined ? undefined : { shell: 'zsh', args: [] },
       );
     } catch (error) {
       this.closeBrowser(frame.id);
@@ -136,6 +148,13 @@ export class RemoteProcesses {
       ));
     }
     return { kill: () => { this.closeBrowser(frame.id); session.kill(); } };
+  }
+
+  private shellCwd(requested: string | undefined): string {
+    const cwd = path.resolve(this.workspaceDir, requested ?? '.');
+    const relative = path.relative(this.workspaceDir, cwd);
+    return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
+      ? cwd : this.workspaceDir;
   }
 
   private browsers = new Map<string, BrowserHandle>();

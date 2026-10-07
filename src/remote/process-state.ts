@@ -15,5 +15,8 @@ export function spawnFrameState(frame: SpawnFrame): RemoteProcessState {
     ...(frame.autoApprove !== undefined && { autoApprove: frame.autoApprove }),
     ...(frame.autoResume !== undefined && { autoResume: frame.autoResume }),
     ...(frame.agentName !== undefined && { agentName: frame.agentName }),
+    ...(frame.shell !== undefined && { shell: frame.shell }),
+    ...(frame.offline !== undefined && { offline: frame.offline }),
+    ...(frame.cwd !== undefined && { cwd: frame.cwd }),
   };
 }

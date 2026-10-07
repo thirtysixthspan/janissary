@@ -117,3 +117,18 @@ describe('SessionRouter — busy-transition', () => {
     expect(l.onBusyTransition).not.toHaveBeenCalled();
   });
 });
+
+describe('SessionRouter — shell process exit', () => {
+  it('reports the shell exit as an owned remote shell termination', () => {
+    const onSessionExit = vi.fn();
+    const router = new SessionRouter({ onSessionExit });
+    router.record({
+      type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
+      shell: { nonce: 'a'.repeat(32) },
+    });
+
+    router.exit({ type: 'exit', id: 'shell1', exitCode: 0 });
+
+    expect(onSessionExit).toHaveBeenCalledWith('shell1', undefined, true);
+  });
+});

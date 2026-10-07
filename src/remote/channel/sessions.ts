@@ -144,8 +144,8 @@ export class SessionRouter {
     }
     this.sessions.delete(frame.id);
     this.spawned.delete(frame.id);
-    if (spawned && (spawned.harness || spawned.mode === 'pipe')) {
-      this.handlers.onSessionExit?.(frame.id, spawned.agentName, spawned.harness !== undefined);
+    if (spawned && (spawned.harness || spawned.mode === 'pipe' || spawned.shell !== undefined)) {
+      this.handlers.onSessionExit?.(frame.id, spawned.agentName, spawned.harness !== undefined || spawned.shell !== undefined);
     }
     listener?.onExit(frame.exitCode);
   }

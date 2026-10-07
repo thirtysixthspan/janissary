@@ -252,7 +252,10 @@ A browser-exit frame's message is optional but, when present, must be a nonempty
 newlines, which JSON escaping keeps from being read as the end of a frame. A session-state reply
 must carry an array of process entries, each with a nonempty spawn id and program and a declared
 mode, and an auto-approve setting that is either absent or a boolean — a valid setting is kept, not
-dropped on the way in; one malformed entry makes the whole reply malformed rather than shortening the list, because a
+dropped on the way in. `autoResume` follows the same rule. A shell process carries a `shell` object
+with a 32-character lowercase hexadecimal nonce, an optional offline flag, and an optional working
+directory; the decoder preserves these fields and refuses malformed shell metadata. One malformed
+entry makes the whole reply malformed rather than shortening the list, because a
 short list is indistinguishable from a process that exited and an empty one ends the session. A
 gate-event or capture-reply frame's `capturedAt` must be an integer within the range a timestamp can
 represent; an out-of-range or fractional value is refused rather than accepted and later failing when
@@ -280,6 +283,13 @@ as that one process exiting with code 1 (`RemoteServer.spawn` in `src/remote/ser
 process sharing the channel is untouched, and later requests, including a session-state query, are
 still answered. A failed start sends exactly one exit for that process, and the error text itself is
 not forwarded to the tab.
+
+A remote shell spawn uses an interactive zsh with the host's zsh startup hooks, its own marker nonce,
+the same workspace sandbox and credential environment as a remote harness, and offline mode when
+requested. Its requested working directory is resolved on the remote host; a path outside the
+workspace starts at the workspace root. The startup files are kept for the peer's lifetime and
+removed when that peer shuts down. A shell process is reported as a shell termination when it exits,
+so the owning local tab and remote session are cleaned up through the ordinary process-exit path.
 
 #### Missing clone
 

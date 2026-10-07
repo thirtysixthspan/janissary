@@ -329,6 +329,21 @@ describe('frame codec', () => {
     expect(decodeFrame(encoded)).toEqual({ type: 'browser-exited', id: 'r1', message });
   });
 
+  it('round-trips a shell spawn with a nonce and working directory', () => {
+    const frame: RemoteFrame = {
+      type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
+      shell: { nonce: 'a'.repeat(32) }, cwd: '/remote/workspace/src', offline: true,
+    };
+    expect(roundTrip(frame)).toEqual(frame);
+  });
+
+  it('rejects a shell spawn with an invalid nonce', () => {
+    expect(decodeFrame(JSON.stringify({
+      type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
+      shell: { nonce: 'bad' },
+    }))).toEqual({ error: expect.stringContaining('Malformed remote frame "spawn"') });
+  });
+
   it('drops undeclared filesystem arguments after validating the operation', () => {
     expect(decodeFrame(JSON.stringify({
       type: 'filesystem-request', session: 'files1', request: 'q1',
@@ -370,6 +385,7 @@ describe('session-state frames', () => {
       processes: [
         { id: 'spawn-1', program: 'claude', mode: 'pty', harness: 'claude' },
         { id: 'spawn-2', program: 'bash', mode: 'pipe', agentName: 'bekir' },
+        { id: 'spawn-3', program: 'zsh', mode: 'pty', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/ws/src', autoResume: true },
       ],
     } as const;
     expect(roundTrip(frame)).toEqual(frame);
@@ -504,6 +520,15 @@ describe('optional frame fields', () => {
       error: expect.stringContaining('Malformed remote frame "session-state-result"'),
     });
   });
+
+  it('keeps autoResume when decoding process state', () => {
+    const record = {
+      type: 'session-state-result', processes: [{
+        id: 'spawn-1', program: 'codex', mode: 'pty', autoResume: true,
+      }],
+    };
+    expect(decodeFrame(JSON.stringify(record))).toEqual(record);
+  });
 });
 
 describe('root settling frames', () => {
@@ -585,8 +610,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 26', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(26);
+  it('is 27', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(27);
   });
 });
 

@@ -9,16 +9,26 @@ import {
 
 function decodeProcessState(value: unknown): RemoteProcessState | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return;
-  const { id, program, mode, harness, autoApprove, agentName } = value as Record<string, unknown>;
+  const { id, program, mode, harness, autoApprove, autoResume, agentName, shell, offline, cwd } = value as Record<string, unknown>;
+  const shellRecord = typeof shell === 'object' && shell !== null && !Array.isArray(shell)
+    ? shell as Record<string, unknown> : undefined;
+  const shellNonce = shellRecord?.nonce;
   if (!nonEmptyString(id) || !nonEmptyString(program) || !(mode === 'pty' || mode === 'pipe')
     || !optionalNonEmptyString(harness)
     || !(autoApprove === undefined || typeof autoApprove === 'boolean')
+    || !(autoResume === undefined || typeof autoResume === 'boolean')
+    || !(shell === undefined || (typeof shellNonce === 'string' && /^[0-9a-f]{32}$/.test(shellNonce)))
+    || !(offline === undefined || typeof offline === 'boolean') || !(cwd === undefined || nonEmptyString(cwd))
     || !optionalNonEmptyString(agentName)) return;
   return {
     id, program, mode,
     ...(harness !== undefined && { harness }),
     ...(autoApprove !== undefined && { autoApprove }),
+    ...(autoResume !== undefined && { autoResume }),
     ...(agentName !== undefined && { agentName }),
+    ...(shell !== undefined && { shell: { nonce: shellNonce as string } }),
+    ...(offline !== undefined && { offline }),
+    ...(cwd !== undefined && { cwd }),
   };
 }
 
