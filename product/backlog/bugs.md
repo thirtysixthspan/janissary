@@ -2,7 +2,7 @@
 
 ## ready
 
-* when a shell tab and an harness tab are open, and the the harness tab is closed, the shell tab remains but the tab content is not rendered until a mouse click into the tab is made.
+* when clicking once on the terminal of a shell tab, the focus should go to the command bar without ever focusing the terminal. it requires a double click to focus the terminal. no style changes of the terminal should be observed as a flicker from a single click.
 
 ## development
 
