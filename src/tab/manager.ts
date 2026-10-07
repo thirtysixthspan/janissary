@@ -9,6 +9,7 @@ import { TabTranscriptState } from './transcript/state.js';
 import { FileRegistry } from './file-registry.js';
 import { placeProfileTabSelection } from './split-selection.js';
 import { spawnPluginTerminal } from './plugin-terminals.js';
+import { ZshStartupDirectory } from '../shell/zsh-startup/directory.js';
 import { disposeDwell } from './dwell.js';
 import * as tabOperations from './operations.js';
 import * as lookup from './lookup.js';
@@ -23,6 +24,9 @@ export class TabManager extends TabTranscriptState {
   secondaryTabLabel?: string;
   private onIdle: ((label: string) => void) | null = null;
   private fileRegistry = new FileRegistry();
+  // The startup files a `zshHooks` terminal's zsh reads, created with the first such terminal and
+  // removed on dispose, which runs after `pty` has already ended the shells that read them.
+  private readonly zshStartup = new ZshStartupDirectory();
   // Labels of tabs that were previously active, most-recent-last. Closing the active tab pops
   // this to restore focus to whatever was focused right before it, rather than just clamping to
   // the nearest surviving index.
@@ -33,6 +37,7 @@ export class TabManager extends TabTranscriptState {
 
   dispose(): void {
     disposeDwell();
+    this.zshStartup.dispose();
   }
 
   get openFiles(): Map<string, string> { return this.fileRegistry.map; }
@@ -188,7 +193,7 @@ export class TabManager extends TabTranscriptState {
   // workspace in the options is confined exactly as that tab's own shell is, and the plugin never
   // learns how. The body lives in `plugin-terminals.ts`, which also holds the bound on `cwd`.
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal {
-    return spawnPluginTerminal(this.managers.pty, this.launchDir, options);
+    return spawnPluginTerminal(this.managers.pty, this.launchDir, options, this.zshStartup);
   }
 
   adoptTerminal(ptyId: string, label: string): void {

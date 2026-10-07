@@ -4,7 +4,7 @@ export type ShellMarker =
   | { kind: 'E' };
 
 // A marker counts only when its second field is this shell's nonce: anything else was printed by a
-// program rather than by the shell tab's own hooks (see `src/plugins/shell/zsh-startup-script.ts`).
+// program rather than by the shell tab's own hooks (see `src/shell/zsh-startup/script.ts`).
 export function readShellMarker(data: string, nonce: string): ShellMarker | undefined {
   const [kind, signature, ...payload] = data.split(';');
   if (signature !== nonce) return undefined;

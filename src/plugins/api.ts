@@ -149,6 +149,11 @@ export type TabPluginTerminalOptions = {
   // grants nothing `shell` and `args` do not: a plugin able to choose the program can already choose
   // what it is told.
   env?: Record<string, string>;
+  // Asks the host to start zsh with the shell tab's status hooks installed by zsh's own startup, every
+  // marker they emit signed with `nonce` (minted by `createShellMarkerNonce`). The host owns the
+  // startup files and builds the environment that points zsh at them, on whichever machine runs it;
+  // it is merged over `env`. A nonce of any other shape is refused.
+  zshHooks?: { nonce: string };
 };
 
 export type TabPluginResources = {
@@ -392,6 +397,11 @@ export { noFileOpener } from './no-file-opener.js';
 // the database browser's console), and the import boundary would otherwise force one of them to
 // re-derive it. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { READ_QUERY } from '../database/query.js';
+// The nonce a `zshHooks` terminal's markers are signed with, published so a plugin can mint one before
+// the terminal starts — it belongs in the tab's payload, where the client reads it — without crossing
+// the import boundary into the host module that owns the startup files. Additive, so
+// `TAB_PLUGIN_API_VERSION` does not move.
+export { createShellMarkerNonce } from '../shell/zsh-startup/script.js';
 
 export type TabPluginLoader = () => Promise<TabPluginActivationModule>;
 export type TabPluginLoaders = Readonly<Record<string, TabPluginLoader>>;

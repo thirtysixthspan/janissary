@@ -1,7 +1,5 @@
 import type { TabPluginResources } from '../api.js';
 import { SHELL_PROGRAM, type ShellProvisioningPayload, type ShellTerminalPayload } from './shared.js';
-import type { ZshStartupDirectory } from './zsh-startup-directory.js';
-import { shellStartupEnvironment } from './zsh-startup-script.js';
 
 // The one place a shell tab's zsh is started and its payload built, shared by a typed `zsh`, the
 // ready handler that finishes a workspaced one, and a ➕ sibling.
@@ -21,9 +19,7 @@ export type ShellStart = {
   hookNonce: string;
 };
 
-export function spawnShell(
-  resources: TabPluginResources, start: ShellStart, startup: ZshStartupDirectory,
-): ShellTerminalPayload {
+export function spawnShell(resources: TabPluginResources, start: ShellStart): ShellTerminalPayload {
   const { instanceKey, cwd, root, workspace, hookNonce } = start;
   const terminal = resources.spawnTerminal({
     cwd,
@@ -31,9 +27,10 @@ export function spawnShell(
     // go through `shellCommandArgs`, which would otherwise run a single command through the shell.
     shell: SHELL_PROGRAM,
     args: [],
-    // zsh's own startup installs the status hooks (see `zsh-startup-script.ts`), so nothing is ever
-    // typed at its prompt and nothing reaches its history.
-    env: shellStartupEnvironment(startup.path(), hookNonce, process.env.ZDOTDIR),
+    // zsh's own startup installs the status hooks, from startup files the host owns (see
+    // `src/shell/zsh-startup/script.ts`), so nothing is ever typed at its prompt and nothing reaches
+    // its history.
+    zshHooks: { nonce: hookNonce },
     ...(workspace && { workspace }),
   });
   return {

@@ -9,18 +9,6 @@ import {
 import { activate } from './activate.js';
 import { SHELL_USAGE } from './parse-argument.js';
 import { SHELL_PROGRAM, isShellPayload, type ShellPayload } from './shared.js';
-import { shellSetupScript } from './zsh-startup-script.js';
-
-const startupDispose = vi.hoisted(() => vi.fn());
-
-// A real startup directory per `activate()` would leave one in the temp directory per test; what these
-// tests need is the path it hands the spawn and whether the plugin releases it.
-vi.mock('./zsh-startup-directory.js', () => ({
-  ZshStartupDirectory: class {
-    path(): string { return '/tmp/janus-zsh-test'; }
-    dispose(): void { startupDispose(); }
-  },
-}));
 
 const PAYLOAD: ShellPayload = {
   instanceKey: 'shell-1', ptyId: 'pty7', cwd: '/repo', root: '/repo', workspace: false, cols: 80, rows: 24,
@@ -36,7 +24,7 @@ const PROVISIONING: ShellPayload = {
 
 type Spawn = {
   cwd: string; shell?: string; args?: string[]; workspace?: { dir: string; offline?: boolean };
-  env?: Record<string, string>;
+  env?: Record<string, string>; zshHooks?: { nonce: string };
 };
 
 type Launch = { key: string; request: TabPluginLaunchRequest; ready: TabPluginLaunchReadyHandler };
@@ -140,23 +128,21 @@ describe('the zsh command', () => {
     activate().command?.('--no-workspace -w', capabilities);
 
     expect(launches[0].request).toEqual({});
-    expect(spawns).toEqual([{ cwd: '/repo/src', shell: SHELL_PROGRAM, args: [], env: expect.any(Object) }]);
+    expect(spawns).toEqual([{ cwd: '/repo/src', shell: SHELL_PROGRAM, args: [], zshHooks: { nonce: expect.any(String) } }]);
     expect(opened[0].value.payload).toMatchObject({
       instanceKey: opened[0].key, ptyId: 'pty7', cwd: '/repo/src', root: '/repo', workspace: false, cols: 80, rows: 24,
     });
   });
 
-  it('spawns zsh with startup files that install hooks signed with the payload\'s nonce', () => {
+  it('asks the host for zsh hooks signed with the payload\'s nonce rather than building ZDOTDIR itself', () => {
     const { capabilities, opened, spawns } = fakeCapabilities();
 
     activate().command?.('--no-workspace', capabilities);
 
     const { hookNonce } = opened[0].value.payload as ShellPayload;
     expect(hookNonce).toMatch(/^[0-9a-f]{32}$/);
-    expect(spawns[0].env).toMatchObject({
-      ZDOTDIR: '/tmp/janus-zsh-test',
-      JANUS_SHELL_SETUP: shellSetupScript(hookNonce),
-    });
+    expect(spawns[0].zshHooks).toEqual({ nonce: hookNonce });
+    expect(spawns[0].env).toBeUndefined();
   });
 
   it('mints a fresh nonce and instance key for every shell, because a shell is stateful', () => {
@@ -233,7 +219,7 @@ describe('the zsh command', () => {
     }, capabilities);
 
     expect(spawns).toEqual([{
-      cwd: CLONE, shell: SHELL_PROGRAM, args: [], workspace: { dir: CLONE, offline: true }, env: expect.any(Object),
+      cwd: CLONE, shell: SHELL_PROGRAM, args: [], workspace: { dir: CLONE, offline: true }, zshHooks: { nonce: expect.any(String) },
     }]);
     expect(updated[0]).toMatchObject({
       key: 'shell-1',
@@ -264,7 +250,7 @@ describe('the sibling intent', () => {
     const { capabilities, opened, spawns } = fakeCapabilities({ origin: { label: 'shell1', cwd: '/repo/src/deep', root: '/repo' } });
 
     expect(ask(capabilities, 'sibling', null)).toEqual({ opened: true });
-    expect(spawns[0]).toEqual({ cwd: '/repo/src/deep', shell: SHELL_PROGRAM, args: [], env: expect.any(Object) });
+    expect(spawns[0]).toEqual({ cwd: '/repo/src/deep', shell: SHELL_PROGRAM, args: [], zshHooks: { nonce: expect.any(String) } });
     expect(opened[0].value.payload).toMatchObject({ workspace: false });
   });
 
@@ -277,7 +263,7 @@ describe('the sibling intent', () => {
 
     expect(spawns[0]).toEqual({
       cwd: '/clone/subdir', shell: SHELL_PROGRAM, args: [], workspace: { dir: '/clone', offline: true },
-      env: expect.any(Object),
+      zshHooks: { nonce: expect.any(String) },
     });
     expect(opened[0].value.payload).toMatchObject({
       cwd: '/clone/subdir', root: '/repo', workspaceDir: '/clone', workspace: true,
@@ -325,12 +311,8 @@ describe('the sibling intent', () => {
 });
 
 describe('shell plugin activation', () => {
-  it('releases the startup directory when the plugin is disposed', async () => {
-    startupDispose.mockClear();
-
-    await activate().dispose?.();
-
-    expect(startupDispose).toHaveBeenCalledOnce();
+  it('owns no startup directory, so it has nothing to release on dispose', () => {
+    expect(activate().dispose).toBeUndefined();
   });
 
   it('answers whether the terminal behind a tab is still running', () => {
