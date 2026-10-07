@@ -1,6 +1,6 @@
 # Remote shell 3 — far-side interactive zsh spawn
 
-**Complexity: 4/10** — new optional fields on three remote frames, their decoders and process-state reporting, a far-side interactive spawn that reuses the harness sandbox, and an exit-routing fix; all on the remote protocol surface, with no tab yet.
+**Complexity: 4/10** — new optional fields on remote spawn and process-state frames, their decoders, a far-side interactive spawn that reuses the harness sandbox, and shell-specific exit routing; all on the remote protocol surface, with no tab yet.
 
 Run order: 3 of 8 in the remote shell series. Depends on plan 1, which provides the host-owned zsh startup module. Plan 4 uses it.
 
@@ -27,18 +27,18 @@ Run order: 3 of 8 in the remote shell series. Depends on plan 1, which provides 
 
 ## Proposed changes
 
-The `spawn` client frame gains an optional `cwd` and an optional `shell: { nonce }`, and `decodeSpawn` accepts both and validates the nonce format. When a spawn carries `shell`, `RemoteProcesses.spawnPty` treats it as an interactive zsh:
+The `spawn` client frame gains an optional `cwd` and an optional `shell: { nonce }`, and `decodeSpawn` accepts both, validates the nonce format, and permits shell metadata only for PTY spawns. The decoder returns only the validated nonce from the shell object. When a spawn carries `shell`, `RemoteProcesses.spawnPty` treats it as an interactive zsh:
 
 - it calls `spawnPty` with `launch = { shell: 'zsh', args: [] }`;
 - it passes the peer's startup environment for the nonce as `extraEnv`;
 - it applies the same sandbox argument a harness PTY gets, with the frame's `offline`;
 - its cwd is the frame's `cwd` when that is inside `workspaceDir`, and `workspaceDir` otherwise.
 
-The peer acquires its `ZshStartupDirectory` on the first shell spawn and releases it in `serve.ts`'s `shutdown`. A spawn without `shell` keeps today's path exactly. If zsh is missing, `spawnPty` throws and the existing reply answers `exit 1`. Plan 5 turns that into a user-facing line.
+The peer acquires its `ZshStartupDirectory` on the first shell spawn and releases it when `serve.ts` shuts the remote process table down. A spawn without `shell` keeps today's launch path. If zsh is missing, `spawnPty` throws and the existing reply answers `exit 1`. Plan 5 turns that into a user-facing line.
 
 `process-state` entries for a shell gain `shell: { nonce }`, `offline`, and the spawn `cwd`. Update `spawnFrameState` and `decodeProcessState`. Do not carry over the decoder's existing silent drop of `autoResume`; fix it while editing.
 
-`SessionRouter.exit` reports a shell process's exit to its owner as it does for a harness, so `terminateRemoteProcess` runs.
+`SessionRouter.exit` reports a shell process's exit through the existing owner termination callback, while passing the harness discriminator only for actual harness processes. A standalone shell falls back to its launch tab label and receives the existing `Remote shell` termination wording.
 
 Bump `REMOTE_PROTOCOL_VERSION` (`src/remote/protocol.ts:166`) by one, with an entry in the version-history comment above it. Note `shell` as a remote process kind in `product/specs/remote-server.md`.
 
@@ -51,7 +51,7 @@ Bump `REMOTE_PROTOCOL_VERSION` (`src/remote/protocol.ts:166`) by one, with an en
   - the startup directory is removed on shutdown.
 - `src/remote/protocol.test.ts`, where the frame decoders are tested: the new fields, an invalid nonce rejected, and `autoResume` preserved.
 - A new `src/remote/process-state.test.ts`: shell state is reported.
-- `src/remote/channel/sessions.test.ts`: a shell exit reaches its owner.
+- `src/remote/channel/sessions.test.ts`: a shell exit reaches termination cleanup with the harness discriminator false, while a harness exit keeps it true.
 - `src/remote/protocol.test.ts`: the version check.
 
 ## Out of scope
@@ -60,4 +60,4 @@ Anything local that sends a shell spawn (plans 4 and 5). Session-record persiste
 
 ## Verification
 
-Run `$janissary/scripts/run.mjs check-diff`. No manual path reaches this yet. Confirm that an existing remote harness launch and attach still work against a peer built from this change.
+Run `$janissary/scripts/run.mjs check-diff` and the feature PR hard-check gate. No local manual path reaches this yet. Confirm the existing remote harness launch and attach tests still pass against the new peer protocol.

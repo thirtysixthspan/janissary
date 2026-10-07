@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import { spawnPty } from '../pty.js';
@@ -116,6 +117,53 @@ describe('RemoteProcesses forwarded credentials', () => {
     expect(vi.mocked(spawnPty).mock.calls[0]?.[6]).toEqual({
       workspaceDir: '/remote/workspace', offline: undefined, tokens: { opencode: OPENCODE_TOKEN },
     });
+  });
+});
+
+describe('RemoteProcesses interactive zsh', () => {
+  beforeEach(() => {
+    vi.mocked(spawnPty).mockReset().mockReturnValue({
+      id: 'pty1', program: 'zsh', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
+    });
+    vi.mocked(harnessSpawnEnv).mockReset().mockReturnValue({ env: undefined });
+  });
+
+  it('starts zsh with hooks, sandbox settings, and an in-workspace cwd', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'shell');
+    processes.spawn({
+      type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
+      shell: { nonce: 'a'.repeat(32) }, cwd: '/remote/workspace/src', offline: true,
+    });
+
+    const spawn = vi.mocked(spawnPty).mock.calls[0];
+    expect(spawn?.[2]).toBe('/remote/workspace/src');
+    expect(spawn?.[6]).toMatchObject({ workspaceDir: '/remote/workspace', offline: true });
+    expect(spawn?.[7]).toMatchObject({ ZDOTDIR: expect.any(String), JANUS_SHELL_SETUP: expect.stringContaining('a'.repeat(32)) });
+    expect(existsSync(`${String(spawn?.[7]?.ZDOTDIR)}/.zshenv`)).toBe(true);
+    expect(spawn?.[8]).toEqual({ shell: 'zsh', args: [] });
+
+    processes.killAll();
+
+    expect(existsSync(String(spawn?.[7]?.ZDOTDIR))).toBe(false);
+  });
+
+  it('falls back to the workspace when a shell cwd escapes it', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'shell');
+    processes.spawn({
+      type: 'spawn', id: 'shell1', program: 'zsh', command: 'zsh', mode: 'pty', cols: 80, rows: 24,
+      shell: { nonce: 'b'.repeat(32) }, cwd: '/remote/outside',
+    });
+
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[2]).toBe('/remote/workspace');
+    processes.killAll();
+  });
+
+  it('leaves a spawn without shell identity on the existing launch path', () => {
+    const processes = new RemoteProcesses(vi.fn(), '/remote/workspace', 'shell');
+    processes.spawn({ type: 'spawn', id: 'pty1', program: 'vim', command: 'vim', mode: 'pty', cols: 80, rows: 24 });
+
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[2]).toBe('/remote/workspace');
+    expect(vi.mocked(spawnPty).mock.calls[0]?.[8]).toBeUndefined();
   });
 });
 

@@ -165,7 +165,9 @@
 //    re-arms. Delivery can fail indefinitely, so it cannot infer that from its own screen.
 // Version 26 adds the remote user's home directory to `workspace-ready`, persisted in the session
 // record so a reattach can expand `~` against the same host.
-export const REMOTE_PROTOCOL_VERSION = 26;
+// Version 27 adds remote interactive zsh spawns and reports their marker nonce, offline mode, and
+// working directory in process state so later attaches can reconstruct the same shell.
+export const REMOTE_PROTOCOL_VERSION = 27;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

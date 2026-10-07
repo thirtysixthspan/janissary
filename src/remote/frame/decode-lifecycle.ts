@@ -2,6 +2,7 @@ import { decodeCloned, decodeOrigin } from './decode-root.js';
 import {
   malformed, nonEmptyString, optionalNonEmptyString, type DecodeResult,
 } from './decode-shared.js';
+import { isZshHookNonce } from '../../shell/zsh-startup/script.js';
 
 // The decoders for the frames that run and end one remote session's process — attach, spawn, the
 // addressed data and resize in between, the two ways it stops, and the workspace outcome it reports.
@@ -25,7 +26,10 @@ export function decodeAttach(record: Record<string, unknown>): DecodeResult {
 }
 
 export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
-  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove, autoResume } = record;
+  const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove, autoResume, shell, cwd } = record;
+  const shellRecord = typeof shell === 'object' && shell !== null && !Array.isArray(shell)
+    ? shell as Record<string, unknown> : undefined;
+  const shellNonce = shellRecord?.nonce;
   if (!nonEmptyString(id) || !nonEmptyString(program) || !nonEmptyString(command)
     || !(mode === 'pty' || mode === 'pipe') || !optionalNonEmptyString(harness)
     || !positiveInteger(cols) || !positiveInteger(rows)
@@ -33,6 +37,8 @@ export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
     || !(browser === undefined || typeof browser === 'boolean')
     || !(autoApprove === undefined || typeof autoApprove === 'boolean')
     || !(autoResume === undefined || typeof autoResume === 'boolean')
+    || !(shell === undefined || isZshHookNonce(shellNonce))
+    || !(cwd === undefined || nonEmptyString(cwd)) || (shell !== undefined && mode !== 'pty')
     || !optionalNonEmptyString(agentName)) return malformed('spawn');
   return {
     type: 'spawn', id, program, command, mode, cols, rows,
@@ -41,6 +47,8 @@ export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
     ...(browser !== undefined && { browser }),
     ...(autoApprove !== undefined && { autoApprove }),
     ...(autoResume !== undefined && { autoResume }),
+    ...(shell !== undefined && { shell: { nonce: shellNonce as string } }),
+    ...(cwd !== undefined && { cwd }),
     ...(agentName !== undefined && { agentName }),
   };
 }
