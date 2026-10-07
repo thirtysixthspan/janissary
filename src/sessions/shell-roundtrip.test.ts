@@ -21,9 +21,15 @@ describe('remote shell session restoration', () => {
   it('reattaches every recorded shell with its PTY, cwd, workspace, nonce, and offline mode', async () => {
     const restored: string[] = [];
     const calls: unknown[] = [];
+    const tabs = [{ label: 'scratch' }];
     const managers = {
-      tab: { tabs: [], byLabel: (label: string) => restored.includes(label) ? { label } : undefined },
-      plugins: { reattach: vi.fn(async (_id: string, data: unknown) => { calls.push(data); restored.push((data as { label: string }).label); }) },
+      tab: { tabs, byLabel: (label: string) => restored.includes(label) || tabs.some((tab) => tab.label === label) ? { label } : undefined },
+      plugins: { reattach: vi.fn(async (_id: string, data: unknown) => {
+        calls.push(data);
+        const label = (data as { label: string }).label;
+        restored.push(label);
+        tabs.push({ label });
+      }) },
       remote: { get: () => ({ discardUnclaimed: vi.fn() }) },
     } as unknown as Managers;
     const session = record();
@@ -32,10 +38,11 @@ describe('remote shell session restoration', () => {
       shell: entry.shell, offline: entry.offline, cwd: entry.cwd,
     }));
 
-    await expect(restoreSessionTabs(managers, session, 'main-2', processes)).resolves.toEqual(['main', 'scratch']);
+    await expect(restoreSessionTabs(managers, session, 'main-2', processes)).resolves.toEqual(['main', 'scratch-2']);
     expect(calls).toEqual([
       { label: 'main', nonce, cwd: '/remote/work/src', workspace: '/remote/work', offline: true, host: 'devbox', ptyId: 'rpty1' },
-      { label: 'scratch', nonce, cwd: '/remote/work/docs', workspace: '/remote/work', offline: true, host: 'devbox', ptyId: 'rpty2' },
+      { label: 'scratch-2', nonce, cwd: '/remote/work/docs', workspace: '/remote/work', offline: true, host: 'devbox', ptyId: 'rpty2' },
     ]);
+    expect(new Set(tabs.map((tab) => tab.label)).size).toBe(tabs.length);
   });
 });

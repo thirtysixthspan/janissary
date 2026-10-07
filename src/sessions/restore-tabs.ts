@@ -53,7 +53,7 @@ export async function restoreSessionTabs(
     if (process.shell) {
       const recorded = record.processes.find((entry) => entry.id === process.id && entry.kind === 'shell');
       if (!recorded?.shell || recorded.cwd === undefined || recorded.offline === undefined) continue;
-      const label = recorded.label === record.launchLabel ? claimLabel(managers, recorded.label) : recorded.label;
+      const label = claimLabel(managers, recorded.label);
       await managers.plugins.reattach('shell', {
         label, nonce: recorded.shell.nonce, cwd: recorded.cwd, workspace: record.workspaceDir,
         offline: recorded.offline, host: record.host, ptyId: recorded.id,
