@@ -1,3 +1,33 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
+
+* Deliver the remote-shell documentation promised by the plan.
+
+Existing Issue: The plan names four required documentation updates, but the pull request changes none of them, and the current help and command-bar shell guide still say remote `zsh` is refused. Severity: 6/10
+
+Existing Risk: 5/10 - Users who follow the shipped help or shell guide will be told the new command is unsupported, and plugin authors will not learn the new launch fields or their compatibility contract.
+
+Proposal Risk: 1/10 - Once the help, user guides, and plugin API reference describe the shipped behavior, users can discover the feature and plugin authors can see the new fields and their lifecycle.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1579: add the remote-shell documentation promised by the plan". Update `help.md` to describe `zsh … on <address>` and its workspace behavior; update `documentation/user-documentation/command-bar/shell.md` to replace the stale refusal text and describe provisioning and failure behavior; add standalone remote shell guidance to `documentation/user-documentation/advanced-agents/remote-agents.md`; and document `remote.address`, `connectPtyId`, and `host`, including an API changelog entry, in `documentation/developer-documentation/tab-plugins.md`. Keep the behavior and limitations aligned with `product/specs/shell-tab.md` and the feature plan. Check that the docs no longer claim remote shell launch is refused and that the developer reference explains the optional launch fields without changing the API version.
+
+* Deliver the planned test for SSH PTY exit during provisioning.
+
+Existing Issue: The plan requires a client test proving that the SSH PTY's exit does not close the shell tab, but the added test only checks attachment switching and never invokes either attached handle's exit callback. Severity: 5/10
+
+Existing Risk: 4/10 - A future change could make the provisioning SSH channel's exit close the tab before its failure output can be read, and the stated test suite would not catch it.
+
+Proposal Risk: 1/10 - A lifecycle test that exercises the exit callback while provisioning and after the remote shell starts will pin the distinction and catch regressions.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1579: test SSH PTY exit during shell provisioning". Extend the client lifecycle coverage around `web/src/plugins/shell/useShellTerminal.test.ts` and `web/src/plugins/shell/useShellTabTerminal.ts` so it triggers the SSH attachment's `onExit` while the payload is provisioning and proves the tab remains open, then triggers the remote shell PTY's `onExit` after readiness and proves the tab closes. Preserve the existing assertions that provisioning does not report shell colors or register shell marker handlers and that readiness switches the attachment to the remote PTY. The current attachment test does not exercise either exit callback, so add coverage at the tab lifecycle boundary where provisioning state controls closing.
+
+* Correct the contradictory remote-launch statement in the remote-server spec.
+
+Existing Issue: The new standalone remote shell section says a shell opens even when its source tab is remote, then immediately says launching from a remote tab is refused; the implementation rejects that nested launch. Severity: 4/10
+
+Existing Risk: 3/10 - Readers of the spec can form incompatible expectations about whether remote-to-remote launches are supported, making later changes and reviews harder to judge.
+
+Proposal Risk: 1/10 - A single unambiguous statement will align the remote-server spec with the command behavior and shell spec.
+
+Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1579: clarify remote shell behavior from remote tabs". Correct the standalone remote shell paragraph in `product/specs/remote-server.md` so it says that a launch creates its own SSH channel and workspace when issued from a local tab, and that issuing `zsh … on <address>` from a remote tab is refused. Keep the restriction consistent with `product/specs/shell-tab.md` and the nested-launch rejection in `src/plugins/shell/activate.ts`; do not broaden implementation behavior as part of this documentation correction.
