@@ -2,6 +2,9 @@
 
 ## ready
 
+* error when opening a new remote shell from a remote shell:
+Tab plugin "shell" disabled: shell sibling intent failed.
+
 ## development
 
 
