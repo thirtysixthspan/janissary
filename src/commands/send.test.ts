@@ -92,6 +92,22 @@ describe('send delivery', () => {
     expect(append).toHaveBeenCalledWith('janus', { input: 'send shell ls -al', output: '→ shell: ls -al' });
   });
 
+  it('queues a line for a plugin tab whose workspace clone is still provisioning', () => {
+    const target = { label: 'docs', view: 'plugin', workspaceDir: '/repo/.janissary/workspace/docs', log: [], cmdHistory: [] };
+    const append = vi.fn();
+    const managers = {
+      tab: { tabs: [target], append, enqueue: vi.fn() },
+      pty: { terminalIdFor: vi.fn(), input: vi.fn() },
+      workspace: { provisioning: vi.fn(() => true) },
+    };
+
+    command.run('send docs pwd', { label: 'janus', index: 0 }, managers as never);
+
+    expect(managers.workspace.provisioning).toHaveBeenCalledWith('/repo/.janissary/workspace/docs');
+    expect(managers.tab.enqueue).toHaveBeenCalledWith('docs', 'pwd');
+    expect(append).toHaveBeenCalledWith('janus', { input: 'send docs pwd', output: '→ docs: pwd' });
+  });
+
   it('keeps rejecting plugin tabs without an owned terminal', () => {
     const target = { label: 'viewer', view: 'plugin', log: [], cmdHistory: [] };
     const append = vi.fn();

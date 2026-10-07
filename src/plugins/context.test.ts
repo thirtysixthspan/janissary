@@ -366,6 +366,24 @@ describe('capability revocation', () => {
     expect(openPluginTab.mock.calls.map((call) => call.at(-1))).toEqual([true, false]);
   });
 
+  // The tab `originTab` reports: a ➕ sibling opened from a plugin tab's intent lands beside that tab
+  // and starts from it, even after the tab that created it has closed.
+  it('opens from the answering tab when one asked, whatever became of the origin', () => {
+    const { managers } = makeManagers();
+    managers.tab.tabs.length = 0;
+    managers.tab.tabs.push({ label: 'shell1', dotColor: '#fff', log: [] } as unknown as typeof managers.tab.tabs[number]);
+    Object.assign(managers.tab, { byLabel: (label: string) => managers.tab.tabs.find((tab) => tab.label === label) });
+    const openPluginTab = managers.tab.openPluginTab as unknown as ReturnType<typeof vi.fn>;
+    const capabilities = createPluginContext(
+      managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true, [], 'shell1',
+    );
+
+    capabilities.openOrFocusTab('key', () => ({ title: 'shell', payload: {} }));
+
+    expect(openPluginTab).toHaveBeenCalledOnce();
+    expect(openPluginTab.mock.calls[0]?.[4]).toBe('shell1');
+  });
+
   it('queues a claimed open for the host rather than running it inside the guarded call', () => {
     const openRequests: string[] = [];
     const capabilities = contextFor(TAB_PLUGIN_CAPABILITY_NAMES, () => true, openRequests);

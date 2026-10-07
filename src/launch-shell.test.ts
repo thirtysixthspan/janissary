@@ -13,12 +13,14 @@ function fakeManagers(opens: boolean, reason?: string): { managers: Managers; ru
 }
 
 describe('openLaunchShell', () => {
-  it('runs the shell plugin\'s zsh command from a launch origin labelled janus', async () => {
+  it('runs the shell plugin\'s zsh command without a workspace from a launch origin labelled janus', async () => {
     const { managers, runCommand } = fakeManagers(true);
 
     await openLaunchShell(managers);
 
-    expect(runCommand).toHaveBeenCalledWith('shell', 'zsh', { label: 'janus', command: 'zsh', launch: true });
+    expect(runCommand).toHaveBeenCalledWith(
+      'shell', 'zsh --no-workspace', { label: 'janus', command: 'zsh --no-workspace', launch: true },
+    );
     expect(managers.tab.tabs).toHaveLength(1);
   });
 

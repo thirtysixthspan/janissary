@@ -40,6 +40,10 @@ and the harness PTY starts there. `-w`/`--workspace` explicitly confirms the def
 `--no-workspace` opts out, and wins if both forms are present. Otherwise identical to an agent
 workspace: `git clone` of `origin`, stored at `.janissary/workspace/<label>/`, removed when the tab is closed.
 
+### Workspace shell tab
+
+`zsh` creates a shell tab with a cloned workspace by default using the same mechanism, with `agent`'s flags: `-w`/`--workspace` confirms the default, `--no-workspace` opts out and wins if both are present, and `--offline` selects the offline sandbox profile. `zsh <name>` names the tab and its clone under `agent <name>`'s name checks and leftover cleanup. The tab opens at once with the provisioning flag, and zsh starts confined to the clone, at its root, when the clone lands; the notifications feed then shows `Shell "<name>" ready. (workspace: <clone dir>)`. A failed clone posts `Failed to create workspace for "<name>": <reason>` and closes the tab, as for an agent. Unlike `agent`, a project with no git repository or no readable `origin` does not refuse `zsh`: the shell opens unsandboxed and answers `Shell "<name>" has no workspace: <reason>.`. The shell tab's ➕ and `Cmd+T` open a sibling shell in the same clone rather than a fresh one, and do nothing while the clone is still provisioning. The launch shell `janus` and a profile's shell entries stay unsandboxed. See [[shell-tab]].
+
 ### Remote workspaces
 
 `agent <name> on <address>` and `harness <name> on <address>` create a workspaced tab the same way,

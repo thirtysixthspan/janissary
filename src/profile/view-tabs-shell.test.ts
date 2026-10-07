@@ -35,7 +35,10 @@ function makeManagers(initial: Tab[]): Managers {
       cwdOf: () => '/proj',
       launchDir: '/proj',
     },
-    plugins: { declarations: [{ id: 'shell', fileExtensions: {}, command: 'zsh' }], runCommand },
+    plugins: {
+      declarations: [{ id: 'shell', fileExtensions: {}, command: 'zsh', profileCommand: 'zsh --no-workspace' }],
+      runCommand,
+    },
   } as unknown as Managers;
 }
 
@@ -53,5 +56,17 @@ describe('openProfileViewTabs with the launch shell open', () => {
       { label: 'janus', group: 1, groupColor: '#5b9cff' },
       { label: 'shell-1', group: 2, groupColor: '#ee5a24' },
     ]);
+  });
+
+  it('reissues the declared profile command, so a saved shell opens without a workspace', async () => {
+    const managers = makeManagers([shellTab('janus', 1, 'shell-1')]);
+
+    await openProfileViewTabs(
+      [{ type: 'plugin', id: 'shell' }], managers, 'janus', 1, (_group, fallbackDotColor) => fallbackDotColor, [],
+    );
+
+    expect(managers.plugins.runCommand).toHaveBeenCalledWith(
+      'shell', 'zsh --no-workspace', { label: 'janus', command: 'zsh --no-workspace' },
+    );
   });
 });

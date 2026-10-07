@@ -15,6 +15,7 @@ import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { useTerminalCommandHistory } from './useTerminalCommandHistory';
 import { appendShellHistory } from './shell-history';
 import { NEW_SHELL_CHORD, NO_CHORDS, SHELL_DOT_COLOR } from './shell-tab-constants';
+import { openSiblingShell } from './open-sibling';
 import './shell.css';
 
 type Properties = {
@@ -37,7 +38,10 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const [sent, setSent] = useState<string[]>([]);
   const [matches, setMatches] = useState<string[]>([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [commandRunning, setCommandRunning] = useState(payload.commandRunning ?? false);
+  // A shell still waiting for its workspace has no zsh yet, so its bar queues exactly as it does behind
+  // a busy zsh, and the queue drains from zsh's first prompt.
+  const startsBusy = payload.provisioning === true || (payload.commandRunning ?? false);
+  const [commandRunning, setCommandRunning] = useState(startsBusy);
   const queueReference = useRef<ShellCommandQueue | null>(null);
   const queueOpen = appBar.queueOpen;
   useApplicationBarEdits(appBar, inputReference, draft, setDraft);
@@ -74,7 +78,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const run = useShellSubmit({
     appBar, capabilities, displayReply, expectCommand: terminalHistory.expect, openHistory, setMatches, setSent, write,
   });
-  const { queue, submit } = useShellCommandQueue(capabilities, run, payload.commandRunning ?? false, (line) => {
+  const { queue, submit } = useShellCommandQueue(capabilities, run, startsBusy, (line) => {
     setMatches([]);
     setSent((previous) => appendShellHistory(previous, line));
   }, appBar.queuedLines);
@@ -132,15 +136,14 @@ export function ShellTab({ payload, capabilities }: Properties) {
   // the visible one and belong to the application everywhere else. The window handler consults the
   // claim before its own table, which is the whole of the rule and needs nothing here. Being a window
   // chord rather than a bar key is what lets `Cmd+T` open a sibling shell with the terminal focused.
+  const provisioning = payload.provisioning === true;
   usePluginChordClaims('shell', capabilities.label ?? 'shell', capabilities.claimedChords ?? NO_CHORDS, capabilities.active, useCallback((chordId: string) => {
     if (chordId !== NEW_SHELL_CHORD) {
       setHistoryOpen((open) => !open);
       return;
     }
-    void capabilities.intent<{ dispatched: boolean }>('dispatch', 'zsh').catch(() => {
-      capabilities.reportFailure('shell dispatch intent failed');
-    });
-  }, [capabilities]));
+    if (!provisioning) openSiblingShell(capabilities);
+  }, [capabilities, provisioning]));
 
   const dotColor = capabilities.dotColor ?? SHELL_DOT_COLOR;
 

@@ -10,6 +10,15 @@ import {
 import { releaseFileReference } from './file-registry.js';
 import { tabRuntime } from './runtime.js';
 import type { LaunchNameRow } from '../launch-name/check.js';
+import { terminalConfinement, type TabClone } from './terminal-workspace.js';
+
+// What a host-owned launch fixes about a plugin tab before its factory runs: the label, the
+// directory it starts in, and the workspace clone it owns from the first moment.
+export type PluginTabPreset = {
+  label: string;
+  cwd?: string;
+  workspace?: { dir: string; offline: boolean };
+};
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
 // the TabManager type) so this module has no import cycle back to tab-manager.ts.
@@ -47,11 +56,12 @@ function activate(
 function withResources<Result>(
   target: OpenTarget,
   factory: (resources: TabPluginResources) => Result,
-  source?: Tab,
-): { result: Result; fileRefs: string[]; terminalIds: string[]; terminalCwd?: string } {
+  clones: { source?: TabClone; own?: TabClone },
+): { result: Result; fileRefs: string[]; terminalIds: string[]; terminalCwd?: string; confinedToSource: boolean } {
   const fileRefs: string[] = [];
   const terminals: string[] = [];
   let terminalCwd: string | undefined;
+  let confinedToSource = false;
   let acceptingResources = true;
   try {
     const result = factory({
@@ -63,18 +73,15 @@ function withResources<Result>(
       },
       spawnTerminal: (options) => {
         if (!acceptingResources) throw new Error('plugin tab resources are no longer available');
-        const terminal = target.spawnTerminal(source ? {
-          ...options,
-          workspace: source.workspaceDir
-            ? { dir: source.workspaceDir, offline: source.offline ?? false }
-            : undefined,
-        } : options);
+        const confinement = terminalConfinement(options.workspace, clones.source, clones.own);
+        const terminal = target.spawnTerminal({ ...options, workspace: confinement.workspace });
         terminals.push(terminal.ptyId);
         terminalCwd ??= options.cwd;
+        confinedToSource ||= confinement.fromSource;
         return terminal;
       },
     });
-    return { result, fileRefs, terminalIds: terminals, terminalCwd };
+    return { result, fileRefs, terminalIds: terminals, terminalCwd, confinedToSource };
   } catch (error) {
     for (const reference of fileRefs) target.openFiles.delete(reference);
     // A factory that failed after starting a terminal must not leave the process running: no tab was
@@ -96,7 +103,7 @@ export function openPluginTab(
   factory: (resources: TabPluginResources) => TabPluginPayload,
   agentNamed = false,
   rows: readonly LaunchNameRow[] = [],
-  fixedLabel?: string,
+  preset?: PluginTabPreset,
 ): void {
   const existing = target.tabs.find(
     (tab) => tab.plugin?.id === pluginId && tab.plugin.instanceKey === instanceKey,
@@ -113,7 +120,10 @@ export function openPluginTab(
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
   const source = target.tabs[sourceIndex];
-  const { result: created, fileRefs, terminalIds, terminalCwd } = withResources(target, factory, source);
+  const own = preset?.workspace && { workspaceDir: preset.workspace.dir, offline: preset.workspace.offline };
+  const {
+    result: created, fileRefs, terminalIds, terminalCwd, confinedToSource,
+  } = withResources(target, factory, { source, own });
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,
@@ -121,7 +131,7 @@ export function openPluginTab(
     payload: created.payload,
     fileRefs,
     sourceLabel,
-  }, agentNamed, rows, fixedLabel), () => {
+  }, agentNamed, rows, preset?.label), () => {
     // The terminals were spawned before this tab had a label, so they are adopted onto the one just
     // minted. Adopt before publishing state so the first host-state delivery sees every terminal row.
     // Every terminal the factory started is adopted, not just the first — one left on the label it was
@@ -134,11 +144,16 @@ export function openPluginTab(
       // The directory the terminal really started in, not the source's: a plugin may start it
       // elsewhere, as a shell does when its source has left the project, and the source's directory
       // would otherwise stand until zsh's first report, which never comes for an unmounted shell.
-      if (terminalCwd !== undefined) tabRuntime(minted).cwd = terminalCwd;
-      if (terminalIds.length > 0 && source) {
+      const startCwd = terminalCwd ?? preset?.cwd;
+      if (startCwd !== undefined) tabRuntime(minted).cwd = startCwd;
+      // A preset clone was already counted by the `create` that started it; only a borrowed one is retained.
+      if (own) {
+        minted.workspaceDir = own.workspaceDir;
+        minted.offline = own.offline;
+      } else if (confinedToSource && source?.workspaceDir) {
         minted.workspaceDir = source.workspaceDir;
         minted.offline = source.offline;
-        if (minted.workspaceDir) target.retainWorkspace(minted.workspaceDir);
+        target.retainWorkspace(source.workspaceDir);
       }
       for (const ptyId of terminalIds) target.adoptTerminal(ptyId, minted.label);
       // Recording starts here rather than at the spawn above, and that placement is the whole reason
@@ -171,7 +186,7 @@ export function updatePluginTab(
     (candidate) => candidate.plugin?.id === pluginId && candidate.plugin.instanceKey === instanceKey,
   );
   if (!tab?.plugin) return;
-  const { result: update, fileRefs, terminalIds } = withResources(target, factory, tab);
+  const { result: update, fileRefs, terminalIds } = withResources(target, factory, { source: tab, own: tab });
   const rekeyed = update.instanceKey !== undefined && update.instanceKey !== instanceKey
     && target.tabs.every((candidate) => candidate.plugin?.id !== pluginId
       || candidate.plugin.instanceKey !== update.instanceKey);

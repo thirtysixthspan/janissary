@@ -11,6 +11,7 @@ export type TabPluginCapabilityName =
   | 'note'
   | 'notifyUser'
   | 'openOrFocusTab'
+  | 'launchTab'
   | 'updateTab'
   | 'setUnread'
   | 'setBusy'
@@ -45,6 +46,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   note: true,
   notifyUser: true,
   openOrFocusTab: true,
+  launchTab: true,
   updateTab: true,
   setUnread: true,
   setBusy: true,

@@ -73,7 +73,7 @@ describe('App launched with the janus shell tab', () => {
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
     bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
     view: 'plugin',
-    plugin: { id: 'shell', schemaVersion: 3, payload, chords: ['ctrl+r', 'meta+t'], hostsCommandBar: true },
+    plugin: { id: 'shell', schemaVersion: 4, payload, chords: ['ctrl+r', 'meta+t'], hostsCommandBar: true },
   };
   const snapshot: StateEvent = {
     t: 'state', tabs: [tab], activeTab: 0, route: null, tabNameMaxLength: 16, activeTabNameMaxLength: 50,

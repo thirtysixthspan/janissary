@@ -115,7 +115,20 @@ The command bar starts focused. Double-click the terminal or press `Shift+Tab` t
 
 A multi-line command stays editable in the bar until you submit it. If it goes to zsh, its lines are pasted together and submitted as one command.
 
-The shell starts in the working directory of the tab that opened it. A remote agent tab's directory is on the other machine, so `zsh` typed there opens nothing and answers `A shell tab cannot be opened from a remote tab.` It shares that tab's workspace and offline mode when present, and keeps the workspace alive even if you close the original tab. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt.
+By default, `zsh` gives the new shell a sandbox of its own: a fresh workspace clone of the project, the same kind `agent` creates, with zsh confined to it. The full form is:
+
+```
+zsh [name] [-w|--workspace|--no-workspace] [--offline]
+```
+
+- `zsh docs` names the tab, and its clone folder, `docs`. A name already in use is refused in the notifications feed, as for `agent`.
+- `--no-workspace` opens an unsandboxed shell instead. It starts in the current tab's directory when that tab is unsandboxed and inside the project, and at the project root otherwise.
+- `--offline` creates the clone with network access denied.
+- `zsh … on <address>` and unknown options such as `--sandbox` are refused, and nothing opens.
+
+A sandboxed shell's tab opens right away with a spinning **Provisioning workspace** flag while the clone is made. Anything you type in its command bar meanwhile waits in the queue (`queue >`) and runs once zsh starts at the clone's root. The notifications feed then shows `Shell "<name>" ready. (workspace: …)`. If the clone fails, the feed says so and the tab closes itself. Closing the tab first cancels the clone. In a project with no git repository, or no `origin` remote, `zsh` opens an unsandboxed shell and tells you why.
+
+A remote agent tab's directory is on the other machine, so `zsh` typed there opens nothing and answers `A shell tab cannot be opened from a remote tab.` Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt. A shell keeps its workspace alive even if you close the tab it was opened from; the clone is removed when its last tab closes.
 
 The terminal is painted in the application theme's own colors — background, text, cursor, and selection — so a light theme gives a light terminal. Choosing a theme in the `theme` picker updates the shell terminal too.
 
@@ -130,7 +143,7 @@ Janissary never types anything at zsh's prompt to set the tab up. zsh's own star
 
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.
 
-Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh tab in the directory this shell is currently in, with the same workspace. In other tabs, `Cmd+T` opens a new agent tab.
+Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh tab in the directory this shell is currently in. Beside an unsandboxed shell the new one is unsandboxed too; beside a sandboxed one it shares the same workspace clone rather than making a new one. While the shell's own clone is still being made, the button is dimmed and `Cmd+T` does nothing. In other tabs, `Cmd+T` opens a new agent tab.
 
 With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.
 

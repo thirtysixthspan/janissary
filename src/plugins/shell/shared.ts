@@ -1,4 +1,4 @@
-export const SHELL_PAYLOAD_SCHEMA_VERSION = 3;
+export const SHELL_PAYLOAD_SCHEMA_VERSION = 4;
 
 // The zsh binary this plugin spawns, named outright rather than taken from `$SHELL`: the tab is a
 // zsh tab whatever the user's login shell happens to be, which is what makes `zsh` an honest command
@@ -33,11 +33,8 @@ export type ShellScheduleRow = {
   recurring: boolean;
 };
 
-export type ShellPayload = {
+type ShellPayloadCommon = {
   instanceKey: string;
-  // The pseudo-terminal this tab owns. The host keeps the process; this is the handle its client
-  // attaches to, and the id never reaches any other plugin.
-  ptyId: string;
   // The shell's current working directory, updated by zsh's cwd markers and displayed in the
   // metadata row. The root and workspace context below stay fixed for the life of this shell.
   cwd: string;
@@ -46,8 +43,6 @@ export type ShellPayload = {
   root: string;
   workspaceDir?: string;
   workspace: boolean;
-  cols: number;
-  rows: number;
   // Pushed by the host when they change, and empty until it does. A tab's first payload is empty
   // here by design: a plugin cannot read host state, so the windows it renders fill in afterwards.
   connections: ShellConnectionRow[];
@@ -58,6 +53,26 @@ export type ShellPayload = {
   // reads it here and trusts only markers that carry it.
   hookNonce: string;
 };
+
+// A shell whose zsh is running: the pseudo-terminal this tab owns, which the host keeps and its client
+// attaches to. The id never reaches any other plugin.
+export type ShellTerminalPayload = ShellPayloadCommon & {
+  ptyId: string;
+  cols: number;
+  rows: number;
+  provisioning?: undefined;
+};
+
+// A shell whose workspace clone is still landing: no terminal yet. The host's ready handler replaces
+// it with a terminal payload once zsh starts in the clone.
+export type ShellProvisioningPayload = ShellPayloadCommon & {
+  provisioning: true;
+  ptyId?: undefined;
+  cols?: undefined;
+  rows?: undefined;
+};
+
+export type ShellPayload = ShellTerminalPayload | ShellProvisioningPayload;
 
 // The front of this tab's command queue, or `null` once it is empty.
 export type ShellQueuedLine = { line: string | null };
@@ -126,16 +141,26 @@ export function isShellMarkerNonce(value: unknown): value is string {
   return typeof value === 'string' && /^[0-9a-f]{32}$/.test(value);
 }
 
+// Exactly one of the two shapes: a terminal with its id and size, or a provisioning placeholder with
+// neither. A payload mixing them is refused rather than read as either.
+function hasTerminalShape(value: Record<string, unknown>): boolean {
+  if (value.provisioning === true) {
+    return value.ptyId === undefined && value.cols === undefined && value.rows === undefined;
+  }
+  return value.provisioning === undefined
+    && typeof value.ptyId === 'string'
+    && typeof value.cols === 'number'
+    && typeof value.rows === 'number';
+}
+
 export function isShellPayload(value: unknown): value is ShellPayload {
   return isRecord(value)
     && typeof value.instanceKey === 'string'
-    && typeof value.ptyId === 'string'
+    && hasTerminalShape(value)
     && typeof value.cwd === 'string'
     && typeof value.root === 'string'
     && (value.workspaceDir === undefined || typeof value.workspaceDir === 'string')
     && typeof value.workspace === 'boolean'
-    && typeof value.cols === 'number'
-    && typeof value.rows === 'number'
     && Array.isArray(value.connections)
     && value.connections.every(isConnectionRow)
     && Array.isArray(value.schedule)

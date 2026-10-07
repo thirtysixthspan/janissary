@@ -51,6 +51,8 @@
 
 .shell-tab-header { position: relative; flex: 0 0 auto; }
 .shell-tab-header .status-panels { top: 100%; right: 10px; }
+/* ➕ waits for a provisioning shell's clone, dimmed the way an unavailable session control is. */
+.shell-tab-header .tab-launch-agent:disabled { color: var(--muted); cursor: default; opacity: 0.45; }
 
 .shell-tab .tab-meta {
   flex: 0 0 auto;

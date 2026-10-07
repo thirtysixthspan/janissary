@@ -1,5 +1,6 @@
 import type { PseudoterminalManager } from '../pseudoterminal-manager.js';
 import type { Tab } from './types.js';
+import type { WorkspaceManager } from '../workspace/manager.js';
 import { SHELL_NAME, shellName } from '../shell/manager.js';
 import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api.js';
 import { TabPluginRejection } from '../plugins/api-capabilities.js';
@@ -19,6 +20,16 @@ export function ownsTerminal(
   pty: Pick<PseudoterminalManager, 'terminalIdFor'>,
 ): boolean {
   return tab.view === 'plugin' && pty.terminalIdFor(tab.label) !== undefined;
+}
+
+// A plugin tab that will own a terminal once its workspace clone lands — the same signal the
+// metadata row's provisioning flag reads. `send` and `queue` accept it; `schedule` does not, because
+// a schedule types into a terminal that does not exist yet.
+export function awaitsTerminal(
+  tab: Pick<Tab, 'view' | 'workspaceDir'>,
+  workspace: Pick<WorkspaceManager, 'provisioning'>,
+): boolean {
+  return tab.view === 'plugin' && tab.workspaceDir !== undefined && workspace.provisioning(tab.workspaceDir);
 }
 
 export function spawnPluginTerminal(

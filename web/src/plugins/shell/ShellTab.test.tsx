@@ -91,6 +91,12 @@ const PAYLOAD: ShellPayload = {
   connections: [], schedule: [], hookNonce: NONCE,
 };
 
+// A shell whose workspace clone is still landing: no terminal yet.
+const PROVISIONING: ShellPayload = {
+  instanceKey: 'shell-1', provisioning: true, cwd: '/repo/.janissary/workspace/kemal', root: '/repo',
+  workspaceDir: '/repo/.janissary/workspace/kemal', workspace: true, connections: [], schedule: [], hookNonce: NONCE,
+};
+
 type Written = string[];
 
 // `Promise.withResolvers` (ES2024) predates this project's `lib` target; a small typed shim keeps
@@ -533,7 +539,8 @@ describe('ShellTab', () => {
 
     expect(chords.run('meta+t', 'shell1')).toBe(true);
 
-    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'zsh');
+    expect(capabilities.intent).toHaveBeenCalledWith('sibling', null);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'zsh');
     expect(document.querySelector('.shell-history')).toBeNull();
     expect(written).toEqual([]);
   });
@@ -546,7 +553,7 @@ describe('ShellTab', () => {
     const handled = !fireEvent.keyDown(bar(), { key: 't', metaKey: true });
 
     expect(handled).toBe(false);
-    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'zsh');
+    expect(capabilities.intent).not.toHaveBeenCalledWith('sibling', null);
   });
 
   it('renders the working directory in the metadata row', () => {
@@ -598,15 +605,71 @@ describe('ShellTab', () => {
   });
 
   it('opens a file navigator and sibling shell from its own row buttons', async () => {
-    const { capabilities, releaseDispatch } = renderTab({ dispatched: true });
+    const { capabilities } = renderTab();
 
     fireEvent.click(screen.getByTitle('Open file navigator here'));
     fireEvent.click(screen.getByTitle('New shell here'));
 
     expect(capabilities.openFileNavigator).toHaveBeenCalledTimes(1);
-    expect(capabilities.intent).toHaveBeenCalledWith('dispatch', 'zsh');
-    await act(async () => { releaseDispatch(); });
+    expect(capabilities.intent).toHaveBeenCalledWith('sibling', null);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'zsh');
+    await act(async () => { await Promise.resolve(); });
     expect(capabilities.reportFailure).not.toHaveBeenCalled();
+  });
+
+  it('shows the provisioning flag and a dimmed sibling button while its workspace is still landing', () => {
+    const { capabilities } = makeCapabilities();
+    mountShell(PROVISIONING, capabilities);
+
+    expect(screen.getByLabelText('Provisioning workspace')).toHaveClass('tab-flag', 'tab-flag--provisioning');
+    expect(screen.queryByLabelText('Workspaced')).not.toBeInTheDocument();
+    const sibling = screen.getByTitle('Waiting for the workspace');
+    expect(sibling).toBeDisabled();
+    fireEvent.click(sibling);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('sibling', null);
+    expect(readFileSync('web/src/plugins/shell/shell.css', 'utf8'))
+      .toContain('.shell-tab-header .tab-launch-agent:disabled { color: var(--muted); cursor: default; opacity: 0.45; }');
+  });
+
+  it('ignores Cmd+T while its workspace is still landing', () => {
+    const { capabilities } = makeCapabilities();
+    const { chords } = mountShell(PROVISIONING, capabilities);
+
+    chords.run('meta+t', 'shell1');
+
+    expect(capabilities.intent).not.toHaveBeenCalledWith('sibling', null);
+    expect(document.querySelector('.shell-history')).toBeNull();
+  });
+
+  it('queues bar lines while provisioning and runs them from zsh\'s first prompt once it starts', async () => {
+    const queued: string[] = [];
+    const made = makeCapabilities();
+    const intent = made.capabilities.intent as unknown as {
+      getMockImplementation: () => (name: string, payload: unknown) => unknown;
+      mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
+    };
+    const answer = intent.getMockImplementation();
+    intent.mockImplementation(async (name, payload) => {
+      if (name === 'queue') { queued.push(payload as string); return { queued: true }; }
+      if (name === 'dequeue') return { line: queued.shift() ?? null };
+      return answer(name, payload);
+    });
+    const { rerenderShell } = mountShell(PROVISIONING, made.capabilities);
+
+    expect(made.capabilities.attachTerminal).not.toHaveBeenCalled();
+    expect(document.querySelector('.command-area .command')).toHaveTextContent('queue');
+    fireEvent.change(bar(), { target: { value: '!pwd' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await waitFor(() => { expect(queued).toEqual(['!pwd']); });
+    expect(made.written).toEqual([]);
+
+    rerenderShell({ ...PAYLOAD, workspace: true, workspaceDir: PROVISIONING.workspaceDir, cwd: PROVISIONING.cwd });
+    expect(made.capabilities.attachTerminal).toHaveBeenCalledWith('pty7', expect.any(Function));
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`D;${NONCE}`); });
+    made.releaseDispatch();
+
+    await waitFor(() => { expect(made.written).toEqual(['pwd\n']); });
+    expect(queued).toEqual([]);
   });
 
   it('gives each of its own row buttons a glyph, so the control has a size and can be pressed', () => {

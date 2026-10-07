@@ -2,8 +2,9 @@
 
 A **shell tab** is a tab whose body is a live pseudo terminal running zsh, laid out exactly like an
 agent tab: the metadata row on top, the terminal where the transcript would be, and the command line
-beneath it. Type `zsh` in any tab's command bar to open one. Each shell tab is named from the agent-name
-pool exactly as an unnamed agent tab is — a name no open tab already holds, and no harness or agent
+beneath it. Type `zsh` in any tab's command bar to open one; by default it gets a sandboxed workspace clone
+of its own, as `agent` does (see "Where the shell starts"). `zsh <name>` names the tab. Without a name, each
+shell tab is named from the agent-name pool exactly as an unnamed agent tab is — a name no open tab already holds, and no harness or agent
 session that is provisioning, active, reconnecting, or detached still holds (see "Name clashes" in [[agents]])
 — and the tab strip shows that name, so two shells read as two distinct tabs and either can be
 addressed by name. A shell therefore never takes the name of a detached remote agent that could come
@@ -168,7 +169,7 @@ The command bar's status dot uses the same color as the shell tab's dot.
 
 ## Keys
 
-`Cmd+T` opens another zsh tab from this shell. The new shell starts in the same working directory and shares its workspace confinement and offline setting. It does not create an agent workspace. In other tabs, `Cmd+T` keeps opening a new agent tab.
+`Cmd+T` opens another zsh tab beside this shell, exactly as the metadata row's **new shell here** button does. The new shell starts in the same working directory. Beside an unsandboxed shell it is unsandboxed; beside a sandboxed one it runs inside the same workspace clone with the same offline setting. It never creates a workspace, which is what sets it apart from a typed `zsh`. While this shell's own clone is still provisioning, `Cmd+T` does nothing. In other tabs, `Cmd+T` keeps opening a new agent tab.
 
 `Cmd+T` works the same with the terminal focused as with the command bar focused, and when the keyboard rests on the page with the shell as the current tab. It is a chord the shell plugin's declaration claims beside `Ctrl+R`, so like `Ctrl+R` it belongs to the shell only while the shell is the visible tab, or the selected entry in the sidebar it is docked to. `Cmd+T` pressed in an agent tab's command bar beside a docked shell still opens a new agent tab.
 
@@ -232,6 +233,12 @@ It shows a workspace mark when that directory is a workspace clone, and the acti
 act on: **open file navigator here**, **new shell here**, the split control, and the connections and
 schedule windows.
 
+While a shell's workspace clone is still provisioning, the row shows the spinning sync icon titled
+`Provisioning workspace` in the workspace mark's place, as an agent tab does, and the terminal area
+stays empty. The **new shell here** button is disabled and dimmed, with the tooltip `Waiting for the
+workspace`. **Open file navigator here** stays available and opens on the clone. Once zsh starts, the
+flag gives way to the workspace mark and the button comes back.
+
 It also carries the **recording** flag — a film icon, drawn before the workspace mark — which reports
 that this shell's session is being recorded and opens the recording when pressed. It is drawn plain
 and inert until the shell has printed something, green and pressable from that moment on, and stays
@@ -251,7 +258,11 @@ typed into zsh as a line, exactly as if entered at the terminal. The schedule li
 
 `send`, `queue`, and `schedule` accept a plugin tab as a target by one rule: the tab owns a live
 terminal (`ownsTerminal` in `src/tab/plugin-terminals.ts`). They share that check so they cannot
-disagree about which shell tabs take input. A plugin tab without a terminal answers `send` with
+disagree about which shell tabs take input. `send` and `queue` also accept a shell whose workspace
+clone is still provisioning: the line joins that shell's command queue with the usual confirmation
+(`→ <shell>: <text>` or `→ <shell> (queued): <command>`) and runs once zsh starts. `schedule … in
+<shell>` is still refused until zsh has started, because a schedule types into a terminal that does
+not exist yet. A plugin tab without a terminal answers `send` with
 `Tab "<label>" does not accept input.`, answers `queue` with `Tab "<label>" has no command queue.`,
 refuses `schedule … in <label>` with `Tab "<label>" cannot run scheduled commands.`, and is not
 offered as a target in the "New schedule" dialog.
@@ -287,7 +298,37 @@ must be 32 lowercase hex characters, because it is written into the hook functio
 
 ## Where the shell starts
 
-`zsh` starts in the issuing tab's working directory. When that tab has a workspace clone, the shell inherits its workspace confinement and offline mode, including when opened from another shell tab. Otherwise it starts without workspace confinement. The starting directory must be inside the project root, and a shell cannot be started anywhere
+The command is `zsh [name] [-w|--workspace|--no-workspace] [--offline]`, read the way `agent` reads
+its own. A typed `zsh` creates a new sandbox by default, wherever it is typed, a sandboxed tab included:
+a fresh `git clone` of the project's `origin` under `.janissary/workspace/<name>/`, with zsh confined to
+it by the same Seatbelt profile and credential injection an `agent -w` gets (see [[workspaced-agent]]).
+`-w` and `--workspace` confirm the default. `--no-workspace` opts out and wins when both are given.
+`--offline` provisions the clone with the offline sandbox profile, which denies network access, and
+changes nothing without a workspace. Flags match case-insensitively.
+
+The words after `zsh` that are not flags form the name, lowercased, as `agent <name>`'s do. The name is
+the tab's label and, for a workspaced shell, the clone's folder. A typed name is held to `agent`'s rules:
+one that clashes with an open tab or a live session is refused, a workspaced name must be a single
+folder name, and a leftover folder under it is removed before cloning, with `agent`'s notifications-feed
+messages for each. Without a name the shell is named as described above.
+
+`zsh … on <address>` is refused with `Remote shell tabs are not supported yet.` and nothing opens. A
+word starting with `-` that is not one of the four flags is refused with `Unknown option "<word>".
+Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline]` and nothing opens; unlike `agent`, such a
+word never becomes part of the name.
+
+A workspaced shell's tab opens at once, while the clone runs, and zsh starts confined to the clone, at
+its root, when the clone finishes. With no git repository, or no readable `origin` remote, a typed `zsh`
+still opens a shell, unsandboxed exactly as `--no-workspace` would, and answers `Shell "<name>" has no
+workspace: <reason>.`, where the reason is `no git repository found` or `the repository has no "origin"
+remote`.
+
+An unsandboxed shell — `zsh --no-workspace`, or that fallback — never starts inside another tab's clone.
+It starts where `agent --no-workspace` does: in the issuing tab's working directory when that tab is
+local, has no workspace, and is inside the project checkout, and at the checkout root otherwise. The
+**new shell here** button and `Cmd+T` are the way to open another shell inside an existing clone.
+
+A shell's starting directory must be inside the project root, and a shell cannot be started anywhere
 else: a terminal only ever runs in a directory inside that root. A remote agent tab is therefore not a
 place a shell tab can be opened from — its working directory belongs to the other host, and there is
 nothing here to start a shell in. `zsh` typed in a remote agent tab answers that tab with `A shell tab
@@ -331,7 +372,9 @@ terminal starts with an empty screen and shows the shell's output from that poin
 
 Each shell keeps its workspace alive until it closes. Closing the source tab does not remove a clone still used by a shell. The clone is removed after its final owning tab closes.
 
-Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. That recorded directory follows zsh's current directory, so after a `cd` the **new shell here** button and `Cmd+T` start the new shell where this one now is, and **open file navigator here** opens the navigator on that same directory. When zsh has moved outside the project root, and outside its workspace clone when it has one, the new shell starts in the workspace clone or the project root instead, because a terminal may only start inside the project. A new shell's recorded directory is the one its terminal actually started in, fallback included, from the moment the tab opens (`openPluginTab` in `src/tab/openers.ts` takes it from the spawned terminal, not from the source tab), so completion, the metadata row and anything opened from it agree with the shell even before zsh first reports its directory, which a shell no browser has mounted never does. A new shell inherits the shell's workspace and offline mode. A new agent shares the shell's workspace and offline mode too.
+A line submitted in a provisioning shell's command bar joins the shell's command queue, with the bar reading `queue >`, and the queue drains once zsh reaches its first prompt, as a line queues behind a busy zsh. When the clone lands and zsh starts, the notifications feed shows `Shell "<name>" ready. (workspace: <clone dir>)`, followed by the sandbox notice when Seatbelt confinement is not actually active. If the clone fails, the feed shows `Failed to create workspace for "<name>": <reason>`, attributed to the tab `zsh` was typed in, and the shell tab closes itself a few seconds later, taking any queued lines with it. Closing a provisioning shell cancels its clone, and no ready line follows. These lines arrive after `zsh` has returned, so they always go to the notifications feed, whichever tab issued `zsh`, and are dropped while no feed is open, like every feed line. A shell opened without a workspace reports nothing.
+
+Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. That recorded directory follows zsh's current directory, so after a `cd` the **new shell here** button and `Cmd+T` start the new shell where this one now is, and **open file navigator here** opens the navigator on that same directory. When zsh has moved outside the project root, and outside its workspace clone when it has one, the new shell starts in the workspace clone or the project root instead, because a terminal may only start inside the project. A new shell's recorded directory is the one its terminal actually started in, fallback included, from the moment the tab opens (`openPluginTab` in `src/tab/openers.ts` takes it from the spawned terminal, not from the source tab), so completion, the metadata row and anything opened from it agree with the shell even before zsh first reports its directory, which a shell no browser has mounted never does. A new shell from **new shell here** or `Cmd+T` inherits the shell's workspace and offline mode. A new agent shares the shell's workspace and offline mode too.
 
 When docked, bare `close` and `Cmd+W` act on the shell tab whose command bar has focus. An `agent` command uses that shell tab as its source for the new agent's working directory and group.
 

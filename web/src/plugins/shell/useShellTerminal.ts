@@ -18,7 +18,9 @@ export type AttachTerminal = (
 ) => PluginTerminal | Promise<PluginTerminal>;
 
 type Options = {
-  ptyId: string;
+  // Absent while the shell's workspace clone is still landing: there is no terminal to attach yet,
+  // and the attachment is made when the ready payload supplies one.
+  ptyId: string | undefined;
   containerRef: React.RefObject<HTMLDivElement | null>;
   attachTerminal: AttachTerminal | undefined;
   copyText: (text: string) => void;
@@ -93,9 +95,10 @@ export function useShellTerminal({
   useEffect(() => {
     const container = containerRef.current;
     const attach = attachRef.current;
-    // No container means the body has not been laid out yet, and no `attachTerminal` means this plugin
-    // was given no way to reach a terminal. Either way there is nothing to open and nothing to clean up.
-    if (!container || !attach) return;
+    // No container means the body has not been laid out yet, no `attachTerminal` means this plugin
+    // was given no way to reach a terminal, and no `ptyId` means there is no terminal yet. In each case
+    // there is nothing to open and nothing to clean up.
+    if (!container || !attach || !ptyId) return;
 
     const styles = getComputedStyle(document.documentElement);
     const terminal = new Terminal({

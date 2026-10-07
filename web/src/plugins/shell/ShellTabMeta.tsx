@@ -2,11 +2,17 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   RecordingFlag, StatusPanels, StatusWindowButton, connectionsWindowIcon, newTabIcon, openFilesIcon, scheduleWindowIcon,
-  statusButton, useStatusWindows, workspacedIcon,
+  statusButton, syncIcon, useStatusWindows, workspacedIcon,
   type TabPluginClientCapabilities,
 } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import { formatShellCwd } from './format-shell-cwd';
+import { openSiblingShell } from './open-sibling';
+
+function siblingTitle(payload: ShellPayload): string {
+  if (payload.provisioning) return 'Waiting for the workspace';
+  return payload.workspace ? 'New shell in this workspace' : 'New shell here';
+}
 
 // The shell tab's own metadata row.
 //
@@ -34,7 +40,11 @@ export function ShellTabMeta({ payload, capabilities }: {
         <span className="tab-cwd">{formatShellCwd(payload.cwd, payload.root, payload.workspaceDir)}</span>
         <span className="tab-flags">
           <RecordingFlag onOpen={capabilities.openRecording} />
-          {payload.workspace && (
+          {payload.provisioning ? (
+            <span className="tab-flag tab-flag--provisioning" role="img" aria-label="Provisioning workspace" title="Provisioning workspace">
+              <FontAwesomeIcon icon={syncIcon} />
+            </span>
+          ) : payload.workspace && (
             <span className="tab-flag tab-flag--active" role="img" aria-label="Workspaced" title="Workspaced">
               <FontAwesomeIcon icon={workspacedIcon} />
             </span>
@@ -52,14 +62,9 @@ export function ShellTabMeta({ payload, capabilities }: {
           <button
             type="button"
             className="tab-launch-agent"
-            title={payload.workspace ? 'New shell in this workspace' : 'New shell here'}
-            onClick={() => {
-              void capabilities.intent<{ dispatched: boolean }>('dispatch', 'zsh')
-                .then((result) => {
-                  if (!result.dispatched) capabilities.reportFailure('shell sibling command was not handled');
-                })
-                .catch(() => { capabilities.reportFailure('shell sibling command failed'); });
-            }}
+            title={siblingTitle(payload)}
+            disabled={payload.provisioning}
+            onClick={() => { openSiblingShell(capabilities); }}
           >
             <FontAwesomeIcon icon={newTabIcon} />
           </button>

@@ -8,6 +8,7 @@ import {
 import { createPluginContext } from './context.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { guardPluginCall } from './guard.js';
+import type { DeferredPluginCall } from './launch-tab.js';
 
 // What one guarded host-to-plugin call produced. `rejected` is the plugin answering a bad request
 // and staying enabled; `failed` is the plugin itself breaking and crossing the failure boundary.
@@ -39,15 +40,24 @@ export async function invokePlugin<Result>(
   timeoutMs: number,
   call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
   answeringLabel?: string,
+  // How a failure in a later call is turned into this plugin being disabled. Absent, no capability
+  // that runs a handler after this call returns is available.
+  disable?: (error: unknown, origin: PluginFailureOrigin) => void,
 ): Promise<PluginCallOutcome<Result>> {
   const openRequests: string[] = [];
+  const deferred: DeferredPluginCall | undefined = disable && {
+    invoke: (later, laterAnswering) => invokePlugin(
+      managers, declaration, activation, origin, isEnabled, timeoutMs, later, laterAnswering, disable,
+    ),
+    disable: (error) => { disable(error, origin); },
+  };
 
   let value: Result;
   try {
     // The capabilities are built inside the guarded call because the ones that do host work on the
     // plugin's behalf exempt that work from this deadline, and so need the deadline itself.
     value = await guardPluginCall((deadline) => call(createPluginContext(
-      managers, declaration, activation, origin, isEnabled, openRequests, answeringLabel, deadline,
+      managers, declaration, activation, origin, isEnabled, openRequests, answeringLabel, deadline, deferred,
     )), timeoutMs);
   } catch (error) {
     if (error instanceof TabPluginRejection) return { status: 'rejected', reason: error.message };

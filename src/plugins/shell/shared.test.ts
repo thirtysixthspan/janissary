@@ -16,7 +16,22 @@ const PAYLOAD = {
 // host produced would fail the plugin's guard — disabling the plugin on a shape the host itself made.
 describe('shell shared contract', () => {
   it('declares a payload schema version the host can compare', () => {
-    expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(3);
+    expect(SHELL_PAYLOAD_SCHEMA_VERSION).toBe(4);
+  });
+
+  it('accepts a terminal payload and a provisioning payload, and nothing mixing the two', () => {
+    const common = {
+      instanceKey: 'shell-1', cwd: '/repo', root: '/repo', workspace: true, workspaceDir: '/repo/.janissary/workspace/a',
+      connections: [], schedule: [], hookNonce: 'f'.repeat(32),
+    };
+    const provisioning = { ...common, provisioning: true };
+
+    expect(isShellPayload(PAYLOAD)).toBe(true);
+    expect(isShellPayload(provisioning)).toBe(true);
+    expect(isShellPayload({ ...PAYLOAD, provisioning: true })).toBe(false);
+    expect(isShellPayload({ ...provisioning, ptyId: 'pty1' })).toBe(false);
+    expect(isShellPayload({ ...PAYLOAD, provisioning: false })).toBe(false);
+    expect(isShellPayload(common)).toBe(false);
   });
 
   it('keeps its completion result assignable to and from the application result', () => {

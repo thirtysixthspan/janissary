@@ -93,9 +93,10 @@ function webTarget(
 }
 
 // A plugin that opens on no file is reached by its declared command, so a relaunch reissues that
-// command and matches on the plugin id alone — such a plugin's tab is its only one.
+// command — or the `profileCommand` it declares in its place — and matches on the plugin id alone.
 function commandTarget(id: string, managers: Managers, issuingLabel: string): ViewTarget {
-  const command = managers.plugins.declarations.find((entry) => entry.id === id)?.command;
+  const declaration = managers.plugins.declarations.find((entry) => entry.id === id);
+  const command = declaration?.profileCommand ?? declaration?.command;
   return {
     matches: (tab) => tab.plugin?.id === id,
     preClose: false, subject: id, kind: id,

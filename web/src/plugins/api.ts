@@ -77,7 +77,7 @@ export { isTextEntryElement } from '../shared/text-entry';
 // no glyph and no size, which is invisible rather than obviously broken. `openFilesIcon` and
 // `newTabIcon` are here for that reason: a metadata row of a plugin's own cannot draw its buttons.
 export { ConnectionPlug,  } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon,  workspacedIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon } from '../shared/icons';
+export { detachSessionIcon, attachSessionIcon,  workspacedIcon, syncIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon } from '../shared/icons';
 
 // The host's own floating status panels and the visibility hook that drives them, published for the
 // same reason and on the same terms: a plugin whose tab offers the connections and schedule buttons

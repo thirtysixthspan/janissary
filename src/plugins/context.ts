@@ -21,6 +21,7 @@ import { liveRecordingPaths } from './live-recordings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 import { declaredResources } from './declared-resources.js';
 import { lineCapabilities } from './line-capabilities.js';
+import { launchCapabilities, type DeferredPluginCall } from './launch-tab.js';
 import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
 
 export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
@@ -99,6 +100,8 @@ export function createPluginContext(
   answeringLabel?: string,
   // The guarded call's clock, so a capability that runs host work the plugin waits on can stop it.
   deadline?: HandlerDeadline,
+  // A later guarded call into this plugin, for a handler that outlives this one — `launchTab`'s ready.
+  deferred?: DeferredPluginCall,
 ): TabPluginServerCapabilities {
   return restrictToDeclared({
     note: (text) => {
@@ -122,15 +125,17 @@ export function createPluginContext(
       });
     },
     // A launch origin is the one origin with no tab behind it, and the tab it opens takes its label.
+    // The source is the tab `originTab` reports: the answering tab when one asked, the origin otherwise.
     openOrFocusTab: (instanceKey, factory) => {
       if (!isEnabled()) return;
-      if (!origin.launch && managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
+      const answering = answeringLabel !== undefined && managers.tab.byLabel(answeringLabel) ? answeringLabel : undefined;
+      if (!answering && !origin.launch && managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
       managers.tab.openPluginTab(
         declaration.id,
         declaration.tabLabelPrefix,
         instanceKey,
         declaration.payloadSchemaVersion,
-        origin.label,
+        answering ?? origin.label,
         (resources) => {
           const created = factory(declaredResources(declaration, resources));
           validateTabValue(activation, created);
@@ -139,6 +144,10 @@ export function createPluginContext(
         origin.launch ? { label: origin.label } : declaration.agentNamedTabs === true,
       );
     },
+    ...launchCapabilities({
+      managers, declaration, origin, isEnabled, deferred,
+      validate: (value) => { validateTabValue(activation, value); },
+    }),
     // Unlike `openOrFocusTab`, this does not require the originating tab to still exist: the target
     // is the plugin's own tab, not the transcript that asked for the change.
     updateTab: (instanceKey, factory) => {

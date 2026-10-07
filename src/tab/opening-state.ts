@@ -30,15 +30,15 @@ abstract recordTerminal(ptyId: string, label: string, pluginId: string): void;
   openPluginTab(
     pluginId: string, labelPrefix: string, instanceKey: string, schemaVersion: number,
     sourceLabel: string, factory: (resources: TabPluginResources) => TabPluginPayload,
-    // `true` names the tab from the agent pool, `false` from the plugin's label prefix, and a fixed
-    // label names it outright (the launch shell).
-    naming: boolean | { label: string } = false,
+    // `true` names the tab from the agent pool, `false` from the plugin's label prefix, and a preset
+    // names it outright (the launch shell, or a host-owned launch that resolved its name already).
+    naming: boolean | tabOpeners.PluginTabPreset = false,
   ): void {
     const agentNamed = naming === true;
-    const fixedLabel = typeof naming === 'object' ? naming.label : undefined;
+    const preset = typeof naming === 'object' ? naming : undefined;
     tabOpeners.openPluginTab(
       this, pluginId, labelPrefix, instanceKey, schemaVersion, sourceLabel, factory, agentNamed,
-      agentNamed ? this.managers.sessions.view() : [], fixedLabel,
+      agentNamed ? this.managers.sessions.view() : [], preset,
     );
   }
 
