@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
+import { sidebarSelectionFor } from './sidebar-selection-coordinator';
 
 type SidebarEntry = { tab: TabView; index: number };
 
@@ -47,6 +48,19 @@ export function useSidebarSelection(
 
   const current = entries.find((entry) => entry.tab.label === selectedLabel) ?? entries[0];
   const activeIndex = current ? entries.indexOf(current) : -1;
+  const currentLabel = current?.tab.label;
+
+  useEffect(() => {
+    const coordinator = sidebarSelectionFor(client);
+    coordinator.publish(side, currentLabel);
+    return () => coordinator.publish(side, undefined);
+  }, [client, currentLabel, side]);
+
+  useEffect(() => sidebarSelectionFor(client).register(side, (label) => {
+    if (entriesRef.current.every((entry) => entry.tab.label !== label)) return false;
+    setSelectedLabel(label);
+    return true;
+  }), [client, side]);
   const plugins = entries.filter((entry) => entry.tab.view === 'plugin' && entry.tab.plugin);
 
   return { entries, selectedLabel, setSelectedLabel, current, activeIndex, plugins };

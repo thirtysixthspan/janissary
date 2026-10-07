@@ -329,10 +329,13 @@ the feed, not in an alert implying it happened just now. A visible notifications
 suppress a desktop alert.
 
 Each client suppresses both channels only when its window has focus **and** the originating tab is
-the active centre tab. A tab selected when Janissary is behind another app still alerts, as does a
-background tab while Janissary is in front. Feed and toast rules do not change. The desktop alert
-reads `Janissary` with body `<tab name>: <message>`. Clicking it focuses the window and sends the
-existing focus request for that tab; if the tab closed in the meantime there is nothing to focus.
+visible in that window: the active centre tab, or — for a tab docked in a sidebar — the selected
+entry of its sidebar. A tab selected when Janissary is behind another app still alerts, as does a
+background tab or an unselected docked entry while Janissary is in front. Feed and toast rules do
+not change. The desktop alert reads `Janissary` with body `<tab name>: <message>`. Clicking it
+focuses the window and goes to the tab where it lives at the moment of the click: a centre tab gets
+the existing focus request, and a docked tab becomes the selected entry of its sidebar without being
+undocked. If the tab closed in the meantime there is nothing to focus.
 
 The browser never requests notification permission. It shows a desktop alert only when the browser
 has already been granted permission for the Janissary origin; if permission is denied or not yet

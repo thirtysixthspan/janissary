@@ -1,5 +1,6 @@
 import type { NativeNotificationEvent } from '@shared/protocol';
 import type { JanusClient } from '../ws';
+import type { AlertPlacement } from './alert-placement';
 
 export class NativeNotifications {
   private lastBell = -Infinity;
@@ -7,11 +8,11 @@ export class NativeNotifications {
 
   constructor(private client: JanusClient) {}
 
-  show(event: NativeNotificationEvent, focusedTab: string | undefined): void {
-    if (document.hasFocus() && event.tab === focusedTab) return;
+  show(event: NativeNotificationEvent, placement: AlertPlacement): void {
+    if (document.hasFocus() && placement.isVisible(event.tab)) return;
 
     if (event.desktop && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      this.showDesktop(event);
+      this.showDesktop(event, placement);
     }
 
     if (event.volume <= 0 || Date.now() - this.lastBell < 1000) return;
@@ -27,12 +28,12 @@ export class NativeNotifications {
     }
   }
 
-  private showDesktop(event: NativeNotificationEvent): void {
+  private showDesktop(event: NativeNotificationEvent, placement: AlertPlacement): void {
     try {
       const notification = new Notification('Janissary', { body: `${event.from}: ${event.message}` });
       notification.addEventListener('click', () => {
         window.focus();
-        this.client.send({ method: 'focusTab', params: { label: event.tab } });
+        if (!placement.reveal(event.tab)) this.client.send({ method: 'focusTab', params: { label: event.tab } });
         notification.close();
       }, { once: true });
     } catch {

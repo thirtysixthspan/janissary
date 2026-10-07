@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make desktop alerts for docked tabs focus the right sidebar entry and stay silent while that entry is focused.
-
-Existing Issue: A banner from a docked file navigator sends `focusTab` on click, which the server ignores for docked tabs, and the alert service treats the centre tab as focused even when the originating docked tab is the selected sidebar entry. Severity: 6/10
-
-Existing Risk: 5/10 - An alert can interrupt someone already looking at its docked tab, then fail to bring them back to that tab when clicked after they switch sidebar entries.
-
-Proposal Risk: 2/10 - Sidebar selection and centre focus can change between delivery and click, but querying current placement at click time avoids a stale-target switch.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1575: support focus-aware desktop alerts for docked tabs". `web/src/notifications/native-notifications.ts` sends `focusTab` for every banner and compares only the centre active label; `src/tab/navigation-commands.ts` refuses to activate a docked tab, while `web/src/useSidebarSelection.ts` holds sidebar selection locally. Coordinate per-client visible sidebar selection through the app layer, not a cross-feature import, so an alert from a focused, selected docked tab is suppressed and a click selects and focuses its owning sidebar entry without undocking it. Keep ordinary centre-tab click behavior, add tests for both docked and centre cases in `web/src/notifications/` and the sidebar selection tests, and run `./scripts/run.mjs check-diff` before committing and pushing the repair.
-
-
 * Release desktop banners and their click handlers when the notification client is disposed.
 
 Existing Issue: `NativeNotifications.dispose` pauses sounds but leaves browser notifications and their click listeners alive with a reference to a client that the page lifecycle can dispose and replace. Severity: 4/10
