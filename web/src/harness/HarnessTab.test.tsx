@@ -361,6 +361,27 @@ describe('HarnessTab', () => {
     expect(getByText('$workspace')).toBeInTheDocument();
   });
 
+  it('places a remote connection plug in the flags group after the working directory', () => {
+    const { container } = render(
+      <HarnessTab
+        harness={makeHarness()}
+        client={mockClient}
+        label="claude"
+        cwd="/srv/project"
+        flags={['workspaced']}
+        remote={{ address: 'admin@devbox:/srv/project', host: 'devbox' }}
+      />,
+    );
+
+    const cwd = container.querySelector('.tab-cwd')!;
+    const flags = container.querySelector('.tab-flags')!;
+    const plug = container.querySelector('.connection-plug')!;
+    expect(plug.parentElement).toBe(flags);
+    expect(cwd.compareDocumentPosition(plug) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(plug.compareDocumentPosition(flags.querySelector('.tab-recording')!) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .toBeTruthy();
+  });
+
   it('renders the workspaced emoji with a tooltip when flags includes workspaced', () => {
     const { getByRole } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" flags={['workspaced']} />,

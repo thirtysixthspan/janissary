@@ -13,6 +13,7 @@ import { RemoteSessionButton, type RemoteSessionState } from './RemoteSessionBut
 
 type Properties = {
   cwd?: string; cwdDisplay?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTargetView;
+  connectionInFlags?: boolean;
   onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void;
   // Set for the tab kinds that record at all — a harness or an ssh tab — even before the session has
   // produced a file. An agent tab leaves it unset and shows no recording flag at all.
@@ -42,14 +43,14 @@ function MetaChip({ label, value }: { label: string; value: string }) {
 }
 
 export function AgentTabMeta({
-  cwd, cwdDisplay, flags, model, effort, remote, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
+  cwd, cwdDisplay, flags, model, effort, remote, connectionInFlags, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
   hasRecorder, onOpenRecording, connectionsButton, scheduleButton, onSplit, remoteSession,
   launchTitle, launchDisabled,
 }: Properties) {
   const workspaced = flags?.some((flag) => flag === 'workspaced' || flag === 'provisioning') ?? false;
   return (
     <div className="tab-meta">
-      {remote !== undefined && remoteSession !== undefined && (
+      {remote !== undefined && remoteSession !== undefined && !connectionInFlags && (
         <ConnectionPlug state={remoteSession.state} />
       )}
       {remote !== undefined && <RemoteChip remote={remote} />}
@@ -57,6 +58,9 @@ export function AgentTabMeta({
       {model !== undefined && <MetaChip label="Model" value={model} />}
       {effort !== undefined && <MetaChip label="Effort" value={effort} />}
       <span className="tab-flags">
+        {remote !== undefined && remoteSession !== undefined && connectionInFlags && (
+          <ConnectionPlug state={remoteSession.state} />
+        )}
         {/* The recording flag is not one of `flags`: it is the host's own fact about this tab's PTY,
             and it is drawn for the tab kinds that record at all — a harness or ssh tab even before it
             has a file, an agent tab never. */}
