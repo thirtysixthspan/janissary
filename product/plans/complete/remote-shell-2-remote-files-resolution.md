@@ -1,10 +1,10 @@
 # Remote shell 2 — `files` resolves on the remote host from remote tabs
 
-**Complexity: 4/10** — one remote protocol field persisted through attach, plus a contained change to `files` path resolution with new refusals; it spans the far side, the channel entry, session records, and the command.
+**Complexity: 4/10** — remote home persisted through attach, remote `files` path resolution and confinement, and command parsing for selecting a path before a tab label.
 
 Run order: 2 of 8 in the remote shell series. Depends on nothing; it can land before or after plan 1. Plans 5 and 7 rely on it for remote shells.
 
-A bare `files` typed in a remote agent or harness tab uses that tab's cwd as a *local* path (`resolveCwd` in `src/file-navigator/open-command.ts:19-30`), and `files <path> in <remote tab>` opens a root outside the remote workspace unchecked. This plan makes `files` resolve on the remote host from any remote tab, bounded to the provisioned workspace. Remote shell tabs get this for free once they exist.
+A bare `files` typed in a remote agent or harness tab used that tab's cwd as a local path, and remote path roots could escape the provisioned workspace through lexical paths or symlinks. `files` now resolves on the remote host from any remote tab and confines remote navigator paths to the workspace. Both `files in <label> <path>` and `files <path> in <label>` select the named tab; remote shell tabs get this for free once they exist.
 
 ## Design decisions
 
@@ -21,6 +21,8 @@ User decisions:
 - From a remote tab whose workspace is still provisioning, `files` answers `The remote workspace is not ready yet.` and opens nothing.
 - In `files <path>`, relative paths resolve against that remote cwd, `~` expands against the remote user's home, and `$root` expands to the remote workspace root.
 - A result outside the workspace is refused with `"<path>" is outside the remote workspace <workspace>.` The same check now applies to `files <path> in <remote tab>`.
+- A remote navigator refuses paths whose existing components resolve through a symlink outside the canonical workspace, including a missing child beneath such a symlink. Ordinary in-workspace symlinks remain usable.
+- `files <path> in <label>` is accepted alongside `files in <label> <path>`. A trailing `in` without a label is reported and opens no tree.
 - The folder button is unchanged.
 
 ## What already exists (reuse, don't rebuild)
@@ -46,12 +48,14 @@ User decisions:
 
 Bump `REMOTE_PROTOCOL_VERSION` (`src/remote/protocol.ts:166`) by one, with an entry in the version-history comment above it.
 
-**Resolution.** `open-command.ts` is at about 164 code lines, so put the remote logic in a new `src/file-navigator/remote-cwd.ts` and call it from `resolveCwd`. It applies to any source tab with a `remote` target, whether that is the issuing tab or one named by `in`:
+**Resolution.** Remote path selection lives in `src/file-navigator/remote-cwd.ts` and applies to any source tab with a `remote` target, whether that is the issuing tab or one named by `in`. `open-command.ts` delegates remote open/focus handling to a helper to stay within the configured cognitive-complexity limit:
 
 - If `RemoteManager.workspaceOf` is undefined, it answers `The remote workspace is not ready yet.` and opens nothing.
 - Otherwise the base directory is the tab's `cwdOf` when that is inside the workspace, and the workspace root otherwise.
 - For a path argument, `expandUserPath` gets `{ root: workspace, home: RemoteManager.homeOf(label) }`, and a relative result joins the base with `path.posix`. If `home` is unknown, `~` stays unexpanded and the containment check refuses it.
 - The containment check uses `path.posix` normalization, and a result outside the workspace answers `"<path>" is outside the remote workspace <workspace>.`
+- Far-side filesystem requests also check real paths against the canonical workspace. For missing targets, the nearest existing ancestor is checked, so an outside-pointing symlink cannot expose a directory or permit a missing child to pass containment.
+- `parseFileNavigatorArgs` accepts `in <label>` at the start or after the path. A trailing `in` without a label is rejected before path resolution.
 
 The result keeps `remote` set, so `openRemoteTree` is used as it is for `in`.
 
@@ -65,13 +69,15 @@ Update `product/specs/file-navigator-tab.md`, `product/specs/remote-server.md` (
   - a cwd outside the workspace falling back to the root;
   - relative paths, remote `~`, and `$root`;
   - the outside-workspace refusal through both the issuing tab and `in`.
+- `src/file-navigator/args.test.ts` and `open-command.test.ts`: both `in` clause orders, a missing trailing label, and local and remote relative roots.
+- `src/remote/serve-file-navigator.test.ts`: an outside-pointing symlink and a missing child beneath it are refused before directory entries are returned.
 - `src/remote/protocol.test.ts`: `home` decodes on `workspace-ready`, and the version check. `src/remote/manager.test.ts`: `homeOf`.
 - `src/remote/serve-provision.test.ts`: `home` is sent.
 - `src/remote/resume.test.ts`, `src/sessions/store.test.ts`, and `src/sessions/agent-roundtrip.test.ts`: `home` persists and survives a reattach.
 
 ## Out of scope
 
-Remote shell tabs, which are plans 3 to 8. `files on <address>` without an existing remote tab. Arbitrary remote paths outside the workspace. The folder button's behavior. Restoring remote navigators.
+Remote shell tabs, which are plans 3 to 8. `files on <address>` without an existing remote tab. Arbitrary remote paths outside the workspace. Eliminating races between path validation and later filesystem operations. The folder button's behavior. Restoring remote navigators.
 
 ## Verification
 

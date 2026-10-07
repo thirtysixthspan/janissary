@@ -34,6 +34,15 @@ If a file navigator tab is already open on the same root, `files` **focuses that
 opening a duplicate — there is one tree per root, the same way there is one Explorer per
 workspace in a conventional editor.
 
+From a remote agent or harness tab, bare `files` uses that tab's remote cwd when it is inside the
+provisioned workspace, and the workspace root otherwise. While the remote workspace is still
+provisioning, it reports `The remote workspace is not ready yet.` and opens no tree. A remote path
+argument resolves relative to that remote cwd; `~` uses the remote user's home and `$root` uses the
+remote workspace root. A resolved path outside the workspace is refused with
+`"<path>" is outside the remote workspace <workspace>.` This containment rule also applies to
+`files in <label> <path>` when `<label>` is remote. A path that follows a symlink outside the
+workspace is refused as well.
+
 ### `files left`/`files right [path]`
 
 A leading `left` or `right` keyword docks the tree into that sidebar instead of the central tab
@@ -55,6 +64,8 @@ form (`files ./left`).
 `files in <label>` opens (or focuses/redocks) a tree rooted at the cwd of the tab named `<label>`
 instead of the issuing tab's own cwd. If no tab has that label, an error (`No tab named
 "<label>".`) is appended to the issuing tab's transcript and no tree is opened or moved.
+The label may also follow a path: `files <path> in <label>` opens the path under that tab's cwd.
+If `in` has no label after a path, the command reports `files: expected a tab label after "in"`.
 When `<label>` names a remote agent or harness, the tree is rooted in that tab's workspace on the
 remote host and uses that tab's existing ssh channel. There is no `files on <address>` form: a
 remote tree can only be opened through a tab that already owns a workspace and connection there.

@@ -503,8 +503,18 @@ a later change back to the pre-attach state is not mistaken for a repeat and dro
 The file navigator's tree state, expanded rows, selection, undo/redo history, and rendering remain
 local. Directory listings, row stats, watches, search candidates, git metadata, file reads and
 writes, and every mutation execute on the remote against the provisioned workspace. Every accepted
-path is resolved within that workspace; an escaping path is refused. Remote file content travels to
-the local cache for ordinary openers, and editor saves travel back over the same channel.
+path is resolved within that workspace; an escaping path is refused, including a path that follows
+a symlink outside the workspace. Remote file content travels to the local cache for ordinary
+openers, and editor saves travel back over the same channel.
+
+Bare `files` from a remote agent or harness uses its remote cwd when that directory is inside the
+workspace, and the workspace root otherwise. During provisioning it reports
+`The remote workspace is not ready yet.` and opens nothing. Relative paths resolve against that
+remote cwd, `~` expands using the remote user's home, and `$root` expands to the remote workspace
+root. A result outside the workspace is refused with
+`"<path>" is outside the remote workspace <workspace>.` The remote home is supplied with the
+workspace-ready response and retained in the local session record, so `~` continues to resolve
+after an attach.
 
 Changing a remote navigator's root does not change which file an open editor saves. Files with the same name in different remote directories stay distinct, and opening the same remote file from another navigator root reuses that file's editor. A read or create already in progress retains its original destination when the navigator moves to another directory.
 

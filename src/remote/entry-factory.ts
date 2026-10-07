@@ -102,8 +102,10 @@ export function createRemoteEntry({
           break;
         }
         case 'workspace-ready': {
-          if (!entry.closed) { entry.workspaceDir = frame.dir; entry.settled = true; entry.resolveReady(frame.dir); }
-          entry.handlers.get(label)?.onReady(frame.dir, frame.notice, frame.cleaned, frame.cloned);
+          if (!entry.closed) { entry.workspaceDir = frame.dir; entry.home = frame.home; entry.settled = true; entry.resolveReady(frame.dir); }
+          const onReady = entry.handlers.get(label)?.onReady;
+          if (frame.home === undefined) onReady?.(frame.dir, frame.notice, frame.cleaned, frame.cloned);
+          else onReady?.(frame.dir, frame.notice, frame.cleaned, frame.cloned, frame.home);
           sessionsChanged();
           break;
         }

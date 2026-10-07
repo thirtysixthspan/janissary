@@ -38,6 +38,7 @@ function record(overrides: Partial<RemoteSessionRecord> = {}): RemoteSessionReco
     host: 'devbox',
     workspaceLabel: 'claude',
     workspaceDir: '/home/me/project/.janissary/workspace/claude',
+    home: '/home/me',
     launchLabel: 'claude',
     launchKind: 'harness',
     processes: [{ id: 'spawn-1', label: 'claude', kind: 'harness' }],
@@ -111,6 +112,10 @@ describe('remote session store parsing', () => {
   it('refuses a record whose launch kind is not one of the two', () => {
     const text = JSON.stringify([record({ launchKind: 'navigator' as never })]);
     expect(parseRemoteSessions(text)).toEqual([]);
+  });
+
+  it('refuses a record with a non-string remote home', () => {
+    expect(parseRemoteSessions(JSON.stringify([record({ home: 7 as never })]))).toEqual([]);
   });
 
   it('survives a file written by a janissary that crashed mid-write', () => {

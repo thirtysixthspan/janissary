@@ -73,12 +73,13 @@ export function decodeBrowserStarted(record: Record<string, unknown>): DecodeRes
 }
 
 export function decodeWorkspaceReady(record: Record<string, unknown>): DecodeResult {
-  const { dir, notice, cleaned } = record;
+  const { dir, home, notice, cleaned } = record;
   const cloned = decodeCloned(record.cloned);
-  if (!nonEmptyString(dir) || !optionalNonEmptyString(notice) || !optionalNonEmptyString(cleaned)
+  if (!nonEmptyString(dir) || !optionalNonEmptyString(home) || !optionalNonEmptyString(notice) || !optionalNonEmptyString(cleaned)
     || cloned === false) return malformed('workspace-ready');
   return {
     type: 'workspace-ready', dir,
+    ...(home !== undefined && { home }),
     ...(notice !== undefined && { notice }),
     ...(cleaned !== undefined && { cleaned }),
     ...(cloned !== undefined && { cloned }),

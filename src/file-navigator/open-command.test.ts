@@ -23,6 +23,7 @@ type Harness = {
     get: ReturnType<typeof vi.fn>;
     readyOf: ReturnType<typeof vi.fn>;
     workspaceOf: ReturnType<typeof vi.fn>;
+    homeOf: ReturnType<typeof vi.fn>;
     attach: ReturnType<typeof vi.fn>;
   };
 };
@@ -35,26 +36,28 @@ function channel() {
   return { attachNavigator: vi.fn(), detachNavigator: vi.fn(), send: vi.fn() };
 }
 
-function harness(options: { channel?: unknown; attach?: boolean; existing?: Tab } = {}): Harness {
+function harness(options: { channel?: unknown; attach?: boolean; existing?: Tab; cwd?: string; view?: string; workspace?: string } = {}): Harness {
   const opened: Tab[] = [];
   const docks: { index: number; dock: 'left' | 'right' | null }[] = [];
   const cwds: { label: string; cwd: string }[] = [];
   const tabs = new Map<string, FilesTabState>();
   ready = Promise.withResolvers<string>();
-  sourceTab = { label: 'other', remote: REMOTE } as unknown as Tab;
+  sourceTab = { label: 'other', remote: REMOTE, view: options.view ?? 'agent' } as unknown as Tab;
   const allTabs: Tab[] = options.existing ? [sourceTab, options.existing] : [sourceTab];
 
   const remote = {
     get: vi.fn(() => ('channel' in options ? options.channel : channel())),
     readyOf: vi.fn(() => ready.promise),
-    workspaceOf: vi.fn(() => '/remote/ws'),
+    workspaceOf: vi.fn(() => options.workspace ?? '/remote/ws'),
+    homeOf: vi.fn(() => '/home/remote'),
     attach: vi.fn(() => options.attach ?? true),
   };
   const managers = {
     tab: {
       tabs: allTabs,
       launchDir: root,
-      cwdOf: (label: string) => (label === 'other' ? '/remote/ws' : root),
+      cwdOf: (label: string) => (label === 'other' ? options.cwd ?? '/remote/ws' : root),
+      byLabel: (label: string) => allTabs.find((tab) => tab.label === label),
       cur: () => opened.at(-1)!,
       append: vi.fn(),
       setCwd: (label: string, cwd: string) => { cwds.push({ label, cwd }); },
@@ -98,12 +101,59 @@ afterEach(() => {
 });
 
 describe('openFilesCommand over a remote label', () => {
+  it.each(['agent', 'harness'])('uses the remote cwd for bare files from a remote %s tab', (view) => {
+    const h = harness({ view, cwd: '/remote/ws/src' });
+
+    expect(run(h, 'files', 'other')).toBe('navigator1');
+    expect(h.opened[0].files?.root).toBe('/remote/ws/src');
+    expect(h.opened[0].files?.remote).toEqual(REMOTE);
+  });
+
+  it('refuses to open while the remote workspace is provisioning', () => {
+    const h = harness({ workspace: undefined });
+    h.remote.workspaceOf.mockReturnValue(undefined);
+
+    expect(run(h, 'files', 'other')).toBeUndefined();
+    expect(h.opened).toEqual([]);
+    expect(h.managers.tab.append).toHaveBeenCalledWith('other', expect.objectContaining({
+      output: 'The remote workspace is not ready yet.',
+    }));
+  });
+
+  it.each(['files ../../outside', 'files in other ../../outside'])('refuses an outside path from %s', (command) => {
+    const h = harness();
+
+    expect(run(h, command, command.includes(' in ') ? 'janus' : 'other')).toBeUndefined();
+    expect(h.opened).toEqual([]);
+    expect(h.managers.tab.append).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      output: '"/outside" is outside the remote workspace /remote/ws.',
+    }));
+  });
+
   it('opens nothing when the label has no channel to ask', () => {
     const h = harness({ channel: undefined });
 
     expect(run(h, 'files in other')).toBeUndefined();
     expect(h.opened).toEqual([]);
     expect(h.tabs.size).toBe(0);
+  });
+
+  it('resolves a relative path before the in clause on the remote workspace', () => {
+    const h = harness();
+
+    expect(run(h, 'files sub in other')).toBe('navigator1');
+    expect(h.opened[0].files?.root).toBe('/remote/ws/sub');
+    expect(h.opened[0].files?.remote).toEqual(REMOTE);
+  });
+
+  it('reports a missing label after a trailing in clause', () => {
+    const h = harness();
+
+    expect(run(h, 'files sub in')).toBeUndefined();
+    expect(h.opened).toEqual([]);
+    expect(h.managers.tab.append).toHaveBeenCalledWith('janus', expect.objectContaining({
+      output: 'files: expected a tab label after "in"',
+    }));
   });
 
   it('registers no tree when the navigator cannot attach to the source channel', () => {
@@ -190,5 +240,15 @@ describe('openFilesCommand docking a tree that is waiting to be created', () => 
     expect(label).toBe('navigator1');
     expect(h.docks).toEqual([{ index: 1, dock: 'right' }]);
     expect(h.pollForCreation).toHaveBeenCalledWith('navigator1', path.join(root, 'not-yet-there'));
+  });
+});
+
+describe('openFilesCommand on the issuing local tab', () => {
+  it('resolves a relative path against the local working directory', () => {
+    const h = harness();
+
+    expect(run(h, 'files sub')).toBe('navigator1');
+    expect(h.opened[0].files?.root).toBe(path.join(root, 'sub'));
+    expect(h.opened[0].files?.remote).toBeUndefined();
   });
 });

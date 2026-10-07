@@ -80,7 +80,7 @@ function harness() {
         if (!('type' in frame)) throw new Error(frame.error);
         frames.push(frame as ClientFrame);
         switch (frame.type) {
-          case 'provision': { setTimeout(() => { emit({ type: 'workspace-ready', dir: WORKSPACE }); }, 0); break; }
+          case 'provision': { setTimeout(() => { emit({ type: 'workspace-ready', dir: WORKSPACE, home: '/remote/home' }); }, 0); break; }
           case 'attach': {
             const restore = frame.restore === true;
             setTimeout(() => {
@@ -134,6 +134,7 @@ it('restores the same agent shell through repeated detach and late transport exi
     cwd: process.cwd(), offline: false, out: vi.fn(),
   });
   await vi.advanceTimersByTimeAsync(10);
+  expect(managers.remote.homeOf('harun')).toBe('/remote/home');
   const original = h.processes.states();
   expect(original).toHaveLength(1);
   h.recordOutput(original[0].id, 'before detach');
@@ -156,6 +157,8 @@ it('restores the same agent shell through repeated detach and late transport exi
     expect(managers.tab.byLabel('harun')?.log).toContainEqual({ input: '', output: 'before detach while detached' });
     expect(managers.sessions.view()).toMatchObject([{ state: 'active', kind: 'agent', session: SESSION }]);
     expect(saved.records).toHaveLength(1);
+    expect(saved.records[0].home).toBe('/remote/home');
+    expect(managers.remote.homeOf('harun')).toBe('/remote/home');
     expect(h.processes.states()).toEqual(original);
   }
   expect(spawnShell).toHaveBeenCalledOnce();

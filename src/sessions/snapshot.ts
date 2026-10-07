@@ -116,6 +116,7 @@ export function recordOf(entry: RemoteEntry, now: number): RemoteSessionRecord |
     host: entry.address.host,
     workspaceLabel: launchLabel,
     workspaceDir: entry.workspaceDir,
+    ...(entry.home !== undefined && { home: entry.home }),
     launchLabel,
     launchKind: processes.find((process) => process.label === launchLabel)?.kind ?? 'harness',
     processes,

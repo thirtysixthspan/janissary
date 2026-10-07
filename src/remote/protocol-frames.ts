@@ -135,7 +135,7 @@ export type ServerFrame =
   // `cleaned` is the absolute path of a leftover workspace under the same label that was removed
   // before this one was cloned, so the local side can say so. `cloned` is the project root this
   // provision cloned first, after an accepted `clone-offer`.
-  | { type: 'workspace-ready'; dir: string; notice?: string; cleaned?: string; cloned?: { url: string; path: string } }
+  | { type: 'workspace-ready'; dir: string; home?: string; notice?: string; cleaned?: string; cloned?: { url: string; path: string } }
   // The answer to a `provision` whose project root is missing: may `url` be cloned into `path`?
   // `home` is present when `path` is `<home>/<repo-name>`, so the prompt can say where it looked.
   | { type: 'clone-offer'; path: string; url: string; home?: string }

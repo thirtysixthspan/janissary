@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { provisionRemoteWorkspace, type ProvisionContext, type ProvisionedWorkspace } from './serve-provision.js';
 import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
@@ -53,6 +53,14 @@ afterEach(() => {
 });
 
 describe('provisionRemoteWorkspace', () => {
+  it('sends the remote home with workspace-ready', async () => {
+    const { context, frames } = harness();
+
+    await provisionRemoteWorkspace(context, 'alpha', {}, {});
+
+    expect(frames).toContainEqual(expect.objectContaining({ type: 'workspace-ready', home: homedir() }));
+  });
+
   it('starts nothing when the server is no longer idle', async () => {
     const { context, frames, workspaces, provisioned } = harness({ idle: () => false });
 

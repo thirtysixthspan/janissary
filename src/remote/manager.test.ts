@@ -92,6 +92,13 @@ describe('RemoteManager shared channels', () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.useRealTimers());
 
+  it('exposes the remote home reported by workspace-ready', () => {
+    const h = managerHarness();
+    h.transport()?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws', home: '/home/remote' })}\n`);
+    expect(h.remote.homeOf('creator')).toBe('/home/remote');
+    h.remote.dispose();
+  });
+
   it('retains joined tabs and cached files when an established peer transport drops', () => {
     vi.useFakeTimers();
     const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');
