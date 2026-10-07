@@ -27,9 +27,9 @@ A **workspaced tab's** metadata row abbreviates further: the tab's own clone rea
 `$workspace/<name>` (the clone's own directory name), and a working directory inside it as
 `$workspace/<name>/<rest>` — no re-derivation from the
 tab header's other elements, and no dependence on the local root. A remote tab's clone is on the
-other host. Its file navigator header shows the remote workspace root as `$root/` and paths below
-it as `$workspace/<name>/<rest>`. When the clone's directory is gone (a remote channel no longer
-knows its workspace), the metadata row falls back to the ordinary abbreviation above.
+other host. Its file navigator header shows the remote workspace root as `$workspace/<name>` and
+paths below it as `$workspace/<name>/<rest>`. When the clone's directory is gone (a remote channel
+no longer knows its workspace), the metadata row falls back to the ordinary abbreviation above.
 
 ### Where it applies
 

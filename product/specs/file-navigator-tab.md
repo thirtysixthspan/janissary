@@ -116,7 +116,7 @@ git pull, commit to origin, search, watches, open/edit actions, creation, rename
 clipboard actions, and undo/redo as a local tree. Every filesystem operation runs on the remote host and is contained
 within the workspace provisioned for the channel. The header shows the host as ordinary text in the
 same style as the root path and branch, ahead of them; hovering the host shows the full remote
-destination. The workspace root reads as `$root/`, and a path beneath it reads as
+destination. The workspace root reads as `$workspace/<name>`, and a path beneath it reads as
 `$workspace/<name>/<rest>`, using the remote host's paths. The underlying root stays absolute for
 filesystem operations. After the branch, a flags group shows the remote connection plug: connected
 while the channel is live, reconnecting while it recovers, and provisioning until its workspace is

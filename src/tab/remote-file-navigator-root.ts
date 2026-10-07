@@ -6,6 +6,6 @@ export function remoteFileNavigatorRoot(root: string, workspace: string): string
   const normalizedWorkspace = path.posix.normalize(workspace);
   const relative = path.posix.relative(normalizedWorkspace, normalizedRoot);
   if (relative === '..' || relative.startsWith('../') || path.posix.isAbsolute(relative)) return undefined;
-  if (relative === '') return '$root/';
+  if (relative === '') return `$workspace/${path.posix.basename(normalizedWorkspace)}`;
   return `$workspace/${path.posix.basename(normalizedWorkspace)}/${relative}`;
 }
