@@ -59,9 +59,12 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
       ? state.root
       : containedPath(state.root, relPath);
   if (!target) return;
-  if (state.remoteRoot && !containedPath(state.remoteRoot, path.relative(state.remoteRoot, target))) {
-    port.reportFailure(label, target, new Error(`outside the remote workspace ${state.remoteRoot}`));
-    return;
+  if (state.remoteRoot) {
+    const relative = path.relative(path.resolve(state.remoteRoot), target);
+    if (relative && !containedPath(state.remoteRoot, relative)) {
+      port.reportFailure(label, target, new Error(`outside the remote workspace ${state.remoteRoot}`));
+      return;
+    }
   }
   if (target === state.root) return;
   const apply = (entries: Awaited<ReturnType<typeof state.filesystem.readDirectory>>) => {

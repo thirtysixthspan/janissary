@@ -43,6 +43,9 @@ remote workspace root. A resolved path outside the workspace is refused with
 `files in <label> <path>` when `<label>` is remote. A path that follows a symlink outside the
 workspace is refused as well.
 
+The parent-directory row navigates a remote tree back toward the workspace root. Returning to the
+workspace root is allowed; the parent row is hidden there so the tree cannot navigate above it.
+
 ### `files left`/`files right [path]`
 
 A leading `left` or `right` keyword docks the tree into that sidebar instead of the central tab
