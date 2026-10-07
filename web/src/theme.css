@@ -316,7 +316,7 @@ button.tab-recording { cursor: pointer; }
 .connection-plug[data-state='terminated'] { color: var(--error); }
 /* The plug leads the metadata row, ahead of the host chip, so a remote tab reads "how, where, what
    path there". */
-.tab-meta .connection-plug { order: -2; }
+.tab-meta > .connection-plug { order: -2; }
 .tab-remote-session {
   background: transparent; border: none; color: var(--muted); cursor: pointer;
   font-size: 13px; padding: 0 4px; line-height: 1;

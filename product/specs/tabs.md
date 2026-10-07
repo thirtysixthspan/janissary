@@ -134,11 +134,12 @@ A remote agent or harness (see `remote-server.md`) shows one extra element: a ho
 **left** of the row, ahead of the working directory, so the row reads "where, then what path there".
 The chip shows the bare host and carries the full destination in its tooltip
 ("Remote: admin@devbox:/srv/proj"); the working directory beside it is the remote workspace path. It
-uses the same chip styling as the model and effort chips. A standalone remote shell shows its host
-as ordinary text styled like the working directory, with the connection plug in the flag group. A
-tab with no remote host renders the row exactly as before. When an interactive command takes over a
-remote agent tab, its shell metadata row keeps the same host chip and remote working directory for
-the lifetime of the PTY.
+uses the same chip styling as the model and effort chips. On a remote harness tab, the connection
+plug appears in the flag group after the working directory; on a remote agent tab, it leads the row
+ahead of the host chip. A standalone remote shell shows its host as ordinary text styled like the
+working directory, with the connection plug in the flag group. A tab with no remote host renders the
+row exactly as before. When an interactive command takes over a remote agent tab, its shell metadata
+row keeps the same host chip and remote working directory for the lifetime of the PTY.
 
 Text content in metadata rows and headers throughout the application is selectable with the mouse,
 including paths, names, sizes, branches, addresses, monitor details, and agent settings. Native

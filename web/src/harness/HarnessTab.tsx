@@ -65,6 +65,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         cwdDisplay={cwdDisplay}
         flags={flags}
         remote={remote}
+        connectionInFlags
         model={harness.model}
         effort={harness.effort}
         onOpenFileNavigator={intents.onOpenFileNavigator}
