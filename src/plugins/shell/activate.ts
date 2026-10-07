@@ -14,7 +14,6 @@ import {
 import { openShellTab } from './open-tab.js';
 import { launchShellTab } from './launch-tab.js';
 import { parseShellArgument } from './parse-argument.js';
-import { ZshStartupDirectory } from './zsh-startup-directory.js';
 
 let invocationCounter = 0;
 
@@ -27,9 +26,6 @@ function nextInstanceKey(): string {
 }
 
 export function activate(): TabPluginActivation {
-  // The startup files every shell's zsh reads, acquired with the first shell and released with the
-  // plugin, after the host has already ended the shells that read them.
-  const startup = new ZshStartupDirectory();
   return {
     isPayload: isShellPayload,
     opener: noFileOpener('shell'),
@@ -39,12 +35,11 @@ export function activate(): TabPluginActivation {
       if (origin.remote) capabilities.rejectRequest('A shell tab cannot be opened from a remote tab.');
       const parsed = parseShellArgument(argument);
       if ('error' in parsed) return capabilities.rejectRequest(parsed.error);
-      const launched = launchShellTab(capabilities, nextInstanceKey(), parsed, origin.root, startup);
+      const launched = launchShellTab(capabilities, nextInstanceKey(), parsed, origin.root);
       if (launched?.fallbackReason) {
         capabilities.note(`Shell "${launched.label}" has no workspace: ${launched.fallbackReason}.`);
       }
     },
-    dispose: () => { startup.dispose(); },
     // The rows the metadata row's status windows render, merged into the payload with `updateTab` —
     // which leaves the tab's label, position, group and instance key alone, so a push never disturbs
     // the tab it is describing. Slices the declaration did not name arrive empty and are written back
@@ -98,7 +93,7 @@ export function activate(): TabPluginActivation {
         payload: isEmptyShellIntent,
         run: (tabPayload, _payload, capabilities) => {
           if (tabPayload.provisioning) return { opened: false };
-          openShellTab(capabilities, nextInstanceKey(), startup);
+          openShellTab(capabilities, nextInstanceKey());
           return { opened: true };
         },
       },

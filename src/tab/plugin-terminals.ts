@@ -6,6 +6,8 @@ import type { TabPluginTerminal, TabPluginTerminalOptions } from '../plugins/api
 import { TabPluginRejection } from '../plugins/api-capabilities.js';
 import { isInsideRoot } from '../plugins/files.js';
 import { errorFirstLine } from '../error-text.js';
+import type { ZshStartupDirectory } from '../shell/zsh-startup/directory.js';
+import { isZshHookNonce, shellStartupEnvironment } from '../shell/zsh-startup/script.js';
 
 // The terminal a plugin tab owns, and the bound that terminal may not cross. Split out of `TabManager`
 // so the three terminal methods are one module rather than three interruptions in a file that is
@@ -32,10 +34,25 @@ export function awaitsTerminal(
   return tab.view === 'plugin' && tab.workspaceDir !== undefined && workspace.provisioning(tab.workspaceDir);
 }
 
+// The plugin's environment, with zsh's startup environment over it when the plugin asked for the
+// status hooks. The startup directory is created on the first such terminal, not before, so a session
+// that never opens a shell tab never writes one.
+function terminalEnvironment(
+  options: TabPluginTerminalOptions,
+  startup: ZshStartupDirectory,
+): Record<string, string> | undefined {
+  if (options.zshHooks === undefined) return options.env;
+  return {
+    ...options.env,
+    ...shellStartupEnvironment(startup.path(), options.zshHooks.nonce, options.env?.ZDOTDIR ?? process.env.ZDOTDIR),
+  };
+}
+
 export function spawnPluginTerminal(
   pty: PseudoterminalManager,
   launchDir: string,
   options: TabPluginTerminalOptions,
+  startup: ZshStartupDirectory,
 ): TabPluginTerminal {
   // The bound `openInEditor` already places on a plugin's path, measured against the same field, so
   // the two file-shaped resources and this one refuse a directory outside the project root by one rule
@@ -49,9 +66,15 @@ export function spawnPluginTerminal(
   if (!isInsideRoot(launchDir, options.cwd)) {
     throw new TabPluginRejection(`Cannot start a terminal in ${options.cwd}: it is outside the project root ${launchDir}.`);
   }
+  // The nonce is written literally into the hook functions zsh runs, so a value of any other shape is
+  // refused here rather than reaching them.
+  if (options.zshHooks !== undefined && !isZshHookNonce(options.zshHooks.nonce)) {
+    throw new TabPluginRejection('Cannot start a terminal with zsh hooks: the nonce is not 32 lowercase hex characters.');
+  }
   const workspace = options.workspace;
   let ptyId: string;
   try {
+    const env = terminalEnvironment(options, startup);
     ptyId = pty.spawn(
       '',
       options.shell ? shellName(options.shell) : SHELL_NAME,
@@ -59,7 +82,7 @@ export function spawnPluginTerminal(
       options.cwd,
       workspace?.dir,
       workspace?.offline,
-      options.env,
+      env,
       // An absent `args` means the shell itself here, not a command run through it. This resource has
       // no command to run — the caller's business is the shell — and forwarding `undefined` would let
       // `spawnPty` fall back to `shellCommandArgs` with the empty command it was given, producing an

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   ZSHENV, ZSHRC, createShellMarkerNonce, shellSetupScript, shellStartupEnvironment,
-} from './zsh-startup-script.js';
+} from './script.js';
 
 const NONCE = 'ab'.repeat(16);
 

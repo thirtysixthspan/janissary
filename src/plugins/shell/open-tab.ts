@@ -1,18 +1,12 @@
-import type { TabPluginServerCapabilities } from '../api.js';
+import { createShellMarkerNonce, type TabPluginServerCapabilities } from '../api.js';
 import { isInsideRoot } from '../files.js';
-import type { ZshStartupDirectory } from './zsh-startup-directory.js';
-import { createShellMarkerNonce } from './zsh-startup-script.js';
 import { spawnShell } from './spawn-shell.js';
 
 // Opens a sibling shell beside the one ➕ or `Cmd+T` came from: unsandboxed beside an unsandboxed
 // shell, and confined to the same clone, in the same offline mode, beside a sandboxed one. A typed
 // `zsh` goes through `launch-tab.ts` instead, which provisions a clone of its own.
 
-export function openShellTab(
-  capabilities: TabPluginServerCapabilities,
-  instanceKey: string,
-  startup: ZshStartupDirectory,
-): void {
+export function openShellTab(capabilities: TabPluginServerCapabilities, instanceKey: string): void {
   const origin = capabilities.originTab();
   if (!origin) return;
   if (origin.remote) capabilities.rejectRequest('A shell tab cannot be opened from a remote tab.');
@@ -29,6 +23,6 @@ export function openShellTab(
     title: 'shell',
     payload: spawnShell(resources, {
       instanceKey, cwd, root: origin.root, hookNonce: createShellMarkerNonce(), ...(workspace && { workspace }),
-    }, startup),
+    }),
   }));
 }

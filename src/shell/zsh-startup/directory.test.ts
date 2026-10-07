@@ -2,8 +2,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ZshStartupDirectory } from './zsh-startup-directory.js';
-import { ZSHENV, ZSHRC } from './zsh-startup-script.js';
+import { ZshStartupDirectory } from './directory.js';
+import { ZSHENV, ZSHRC } from './script.js';
 
 describe('ZshStartupDirectory', () => {
   let parent: string;

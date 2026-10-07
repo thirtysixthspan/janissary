@@ -1,12 +1,12 @@
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { ZSHENV, ZSHRC } from './zsh-startup-script.js';
+import { ZSHENV, ZSHRC } from './script.js';
 
 const FILES: ReadonlyArray<readonly [string, string]> = [['.zshenv', ZSHENV], ['.zshrc', ZSHRC]];
 
-// The `ZDOTDIR` every shell tab's zsh is spawned with, owned by the shell plugin's activation and
-// removed by its `dispose`. A fresh `mkdtemp` directory rather than a fixed path: zsh runs whatever it
+// The `ZDOTDIR` every plugin terminal that asks for `zshHooks` is spawned with, owned by the host's
+// `TabManager` and removed by its `dispose`. A fresh `mkdtemp` directory rather than a fixed path: zsh runs whatever it
 // finds there, so a predictable name in a shared temp directory would let anyone who planted files
 // there run code in the user's shell. It sits outside `$HOME`, which a workspace's sandbox can read.
 // The files hold no secret — the nonce reaches zsh through its environment — so one directory serves

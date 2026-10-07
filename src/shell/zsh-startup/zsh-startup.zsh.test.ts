@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import * as pty from 'node-pty';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ZshStartupDirectory } from './zsh-startup-directory.js';
-import { shellStartupEnvironment } from './zsh-startup-script.js';
+import { ZshStartupDirectory } from './directory.js';
+import { shellStartupEnvironment } from './script.js';
 
 // The startup files against the real zsh, in a real pseudo-terminal: the only way to see what zsh's
 // history holds, since that is decided inside zsh's own line reader.

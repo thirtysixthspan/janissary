@@ -1,5 +1,4 @@
 import { randomBytes } from 'node:crypto';
-import { isShellMarkerNonce } from './shared.js';
 
 // How the shell tab's status hooks reach zsh without a line typed at its prompt. zsh decides whether a
 // line enters its history before the line runs, so nothing inside a typed setup line can keep that same
@@ -13,6 +12,13 @@ import { isShellMarkerNonce } from './shared.js';
 // variable, so no child process can read it from its environment.
 export function createShellMarkerNonce(): string {
   return randomBytes(16).toString('hex');
+}
+
+// The shape `createShellMarkerNonce` mints. Its own copy of the shell plugin's `isShellMarkerNonce`
+// rather than an import of it: that check lives in a module the client imports, which must stay free
+// of host imports, and this one is the check that guards what is written into the hook functions.
+export function isZshHookNonce(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{32}$/.test(value);
 }
 
 // `%B…%b` bolds the prompt character, and `default:bold` bolds the text in zsh's line editor, which
@@ -29,7 +35,7 @@ export const ZSH_PROMPT_SETUP = "export PROMPT='%B>%b '; typeset -g zle_highligh
 // file has run, and a warning from that read (a sandbox denies locking `~/.zsh_history`) belongs to
 // the startup screen the tab clears on that marker.
 export function shellSetupScript(nonce: string): string {
-  if (!isShellMarkerNonce(nonce)) throw new Error('a shell marker nonce is 32 lowercase hex characters');
+  if (!isZshHookNonce(nonce)) throw new Error('a shell marker nonce is 32 lowercase hex characters');
   return String.raw`_janus_install() {
   ${ZSH_PROMPT_SETUP}
   autoload -Uz add-zsh-hook
