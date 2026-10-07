@@ -64,6 +64,8 @@ form (`files ./left`).
 `files in <label>` opens (or focuses/redocks) a tree rooted at the cwd of the tab named `<label>`
 instead of the issuing tab's own cwd. If no tab has that label, an error (`No tab named
 "<label>".`) is appended to the issuing tab's transcript and no tree is opened or moved.
+The label may also follow a path: `files <path> in <label>` opens the path under that tab's cwd.
+If `in` has no label after a path, the command reports `files: expected a tab label after "in"`.
 When `<label>` names a remote agent or harness, the tree is rooted in that tab's workspace on the
 remote host and uses that tab's existing ssh channel. There is no `files on <address>` form: a
 remote tree can only be opened through a tab that already owns a workspace and connection there.

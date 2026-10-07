@@ -156,6 +156,23 @@ function openTree(
   return newLabel;
 }
 
+function openOrFocusRemoteTree(
+  managers: Managers, tabs: Map<string, FilesTabState>, sourceLabel: string, remote: RemoteTarget,
+  root: string, details: FileNavigatorDetail | undefined, dock: 'left' | 'right' | null,
+  watchDir: (label: string, absDir: string, relPath: string) => void,
+  refreshGit: (label: string) => void, rebuild: (label: string) => void,
+  rootAfterReady: (workspace: string) => string,
+): string | undefined {
+  const existing = managers.tab.tabs.find(
+    (tab) => tab.files?.root === root && tab.files.remote?.address === remote.address,
+  );
+  if (existing) return focusExisting(managers, tabs, existing.label, dock, details, rebuild);
+  return openRemoteTree(
+    managers, tabs, sourceLabel, remote, root, details ?? 'name', dock, watchDir, refreshGit, rebuild,
+    rootAfterReady,
+  );
+}
+
 // FileNavigatorManager.open, extracted whole: resolves a `files [left|right] [path]` command into a
 // root directory, then either redocks an already-open tab on that root or opens a fresh one.
 // Returns the label of the tab it opened, redocked, or focused — what `profile launch` needs to
@@ -168,9 +185,13 @@ export function openFilesCommand(
   rebuild: (label: string) => void,
 ): string | undefined {
   const rest = command.replace(/^files\b\s*/i, '');
-  const { inLabel, dock, details, target } = parseFileNavigatorArgs(rest);
+  const { inLabel, missingInLabel, dock, details, target } = parseFileNavigatorArgs(rest);
   const out = (text: string) => managers.tab.append(label, { input: command, output: text });
 
+  if (missingInLabel) {
+    out('files: expected a tab label after "in"');
+    return undefined;
+  }
   const resolved = resolveCwd(managers, label, inLabel, out);
   if (resolved === undefined) return undefined;
   const targetResolution = resolved.remote && resolved.sourceLabel
@@ -181,13 +202,9 @@ export function openFilesCommand(
   const root = targetResolution?.cwd ?? (target ? path.resolve(resolved.cwd, localTarget) : resolved.cwd);
 
   if (resolved.remote && resolved.sourceLabel) {
-    const existing = managers.tab.tabs.find(
-      (tab) => tab.files?.root === root && tab.files.remote?.address === resolved.remote?.address,
-    );
-    if (existing) return focusExisting(managers, tabs, existing.label, dock, details, rebuild);
-    return openRemoteTree(
-      managers, tabs, resolved.sourceLabel, resolved.remote, root, details ?? 'name', dock, watchDir,
-      refreshGit, rebuild,
+    return openOrFocusRemoteTree(
+      managers, tabs, resolved.sourceLabel, resolved.remote, root, details, dock, watchDir, refreshGit,
+      rebuild,
       (workspace) => target
         ? remoteCwd(managers, resolved.sourceLabel!, target, out, workspace)?.cwd ?? workspace
         : workspace,

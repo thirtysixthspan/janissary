@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Plan fidelity: support the planned `files <path> in <remote tab>` command form.
-
-Existing Issue: The plan specifies that a remote path can be written before the `in <label>` clause, but `parseFileNavigatorArgs` only consumes `in <label>` at the start of the argument tail, so the specified form is treated as a path containing the words `in` and the label. Severity: 4/10
-
-Existing Risk: 4/10 - A user following the plan's command form gets no intended remote path, although the existing `files in <label> <path>` ordering works.
-
-Proposal Risk: 1/10 - Accepting and testing the planned clause order makes the stated remote-target workflow work without changing the existing ordering.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1576: support a path before the remote in clause". Extend `src/file-navigator/args.ts` to recognize a trailing `in <label>` after the path while preserving the current leading-clause grammar, and make `openFilesCommand` pass the extracted path and target label to the same remote path resolver. Add parser and command tests for a relative path, the existing leading `in` form, and a missing target label. Update `product/specs/file-navigator-tab.md` and the PR's own plan with the accepted syntax, run the scoped checks, and record the fix in a completed plan.
-
-
 * Technical debt: bring `openFilesCommand` back within the configured cognitive-complexity limit.
 
 Existing Issue: The new remote/local routing branches raise `openFilesCommand` to cognitive complexity 16 against the configured limit of 15, producing a lint warning in the PR gate. Severity: 3/10

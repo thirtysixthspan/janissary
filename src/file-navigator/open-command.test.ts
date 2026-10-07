@@ -138,6 +138,24 @@ describe('openFilesCommand over a remote label', () => {
     expect(h.tabs.size).toBe(0);
   });
 
+  it('resolves a relative path before the in clause on the remote workspace', () => {
+    const h = harness();
+
+    expect(run(h, 'files sub in other')).toBe('navigator1');
+    expect(h.opened[0].files?.root).toBe('/remote/ws/sub');
+    expect(h.opened[0].files?.remote).toEqual(REMOTE);
+  });
+
+  it('reports a missing label after a trailing in clause', () => {
+    const h = harness();
+
+    expect(run(h, 'files sub in')).toBeUndefined();
+    expect(h.opened).toEqual([]);
+    expect(h.managers.tab.append).toHaveBeenCalledWith('janus', expect.objectContaining({
+      output: 'files: expected a tab label after "in"',
+    }));
+  });
+
   it('registers no tree when the navigator cannot attach to the source channel', () => {
     const h = harness({ attach: false });
 

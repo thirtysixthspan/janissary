@@ -1,7 +1,8 @@
 import type { FileNavigatorDetail } from '../tab/types.js';
 
 type ParsedArgs = {
-  inLabel?: string; dock: 'left' | 'right' | null; details?: FileNavigatorDetail; target: string;
+  inLabel?: string; missingInLabel?: boolean; dock: 'left' | 'right' | null;
+  details?: FileNavigatorDetail; target: string;
 };
 
 // One leading keyword clause: the pattern that recognizes it, and where its captured value lands.
@@ -26,6 +27,13 @@ function unfilled(parsed: ParsedArgs, index: number): boolean {
   if (index === 0) return parsed.inLabel === undefined;
   if (index === 1) return parsed.dock === null;
   return parsed.details === undefined;
+}
+
+function trailingInClause(cursor: string): { cursor: string; inLabel?: string; missingInLabel?: boolean } {
+  const clause = /\s+in\s+(\S+)\s*$/i.exec(cursor);
+  if (clause) return { cursor: cursor.slice(0, clause.index), inLabel: clause[1] };
+  if (!/\s+in\s*$/i.test(cursor)) return { cursor };
+  return { cursor: cursor.replace(/\s+in\s*$/i, ''), missingInLabel: true };
 }
 
 // Parses the argument tail of a `files [left|right] [path]` / `files in <label> [on <side>]` /
@@ -54,6 +62,12 @@ export function parseFileNavigatorArgs(rest: string): ParsedArgs {
   if (parsed.inLabel === undefined && parsed.dock === null) {
     const keyword = /^(left|right)\b\s*/i.exec(cursor);
     if (keyword) { parsed.dock = keyword[1].toLowerCase() as 'left' | 'right'; cursor = cursor.slice(keyword[0].length); }
+  }
+  if (parsed.inLabel === undefined) {
+    const trailing = trailingInClause(cursor);
+    parsed.inLabel = trailing.inLabel;
+    parsed.missingInLabel = trailing.missingInLabel;
+    cursor = trailing.cursor;
   }
   parsed.target = cursor.trim();
   return parsed;

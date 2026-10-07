@@ -46,4 +46,16 @@ describe('parseFileNavigatorArgs', () => {
     expect(parseFileNavigatorArgs('in claude')).toEqual({ inLabel: 'claude', dock: null, details: undefined, target: '' });
     expect(parseFileNavigatorArgs('./left')).toEqual({ inLabel: undefined, dock: null, details: undefined, target: './left' });
   });
+
+  it('parses a path before the in clause', () => {
+    expect(parseFileNavigatorArgs('src/sub in claude')).toEqual({
+      inLabel: 'claude', dock: null, details: undefined, target: 'src/sub',
+    });
+  });
+
+  it('reports a trailing in clause without a label', () => {
+    expect(parseFileNavigatorArgs('src/sub in')).toEqual({
+      inLabel: undefined, missingInLabel: true, dock: null, details: undefined, target: 'src/sub',
+    });
+  });
 });

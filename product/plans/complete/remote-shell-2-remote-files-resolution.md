@@ -4,7 +4,7 @@
 
 Run order: 2 of 8 in the remote shell series. Depends on nothing; it can land before or after plan 1. Plans 5 and 7 rely on it for remote shells.
 
-A bare `files` typed in a remote agent or harness tab uses that tab's cwd as a *local* path (`resolveCwd` in `src/file-navigator/open-command.ts:19-30`), and `files <path> in <remote tab>` opens a root outside the remote workspace unchecked. This plan makes `files` resolve on the remote host from any remote tab, bounded to the provisioned workspace. Remote shell tabs get this for free once they exist.
+A bare `files` typed in a remote agent or harness tab uses that tab's cwd as a *local* path (`resolveCwd` in `src/file-navigator/open-command.ts:19-30`), and `files <path> in <remote tab>` opens a root outside the remote workspace unchecked. This plan makes `files` resolve on the remote host from any remote tab, bounded to the provisioned workspace. Both `files in <label> <path>` and `files <path> in <label>` select the named tab; remote shell tabs get this for free once they exist.
 
 ## Design decisions
 
