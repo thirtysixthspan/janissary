@@ -60,7 +60,7 @@ When the source is detached, reconnecting, or gone, the request posts `The remot
 
 It runs `managers.plugins.runCommand('shell', 'zsh', { label, command })` with the harness as source, as `view-tabs.ts:107` does, so the line stays out of history and the join routing handles it.
 
-**Client.** `agentTabIntents` gains `onLaunchShellHere`. When `remote` is set, `HarnessTab` passes it with the title `New shell in this workspace`. While `remote.provisioning` is true, it passes a disabled flag and the title `Waiting for the workspace`. `AgentTabMeta` gains title and disabled props for its ➕. Remote agent tabs and every local tab keep `onLaunchAgentHere` and their current titles.
+**Client.** `agentTabIntents` gains `onLaunchShellHere`. When `remote` is set, `HarnessTab` passes it with the title `New shell in this workspace`. While `remote.provisioning` is true, it passes a disabled flag and the exact UI title `Waiting for the workspace`. `AgentTabMeta` gains title and disabled props for its ➕. Remote agent tabs and every local tab keep `onLaunchAgentHere` and their current titles.
 
 **Docs.**
 - `product/specs/shell-tab.md`, replacing the remote-tab refusal paragraph
@@ -79,7 +79,7 @@ It runs `managers.plugins.runCommand('shell', 'zsh', { label, command })` with t
   - the attachment released on a failed open.
 - `src/plugins/shell/activate.test.ts`: a typed `zsh` and `zsh <name>` from remote shell, agent, and harness origins launch `join`, with flags ignored; the `sibling` intent from a remote tab launches `join`; local siblings are unchanged.
 - `src/message/handler.test.ts` and `src/client-params/core.test.ts`: `launchShellFor` routing and its guard.
-- Client tests in `HarnessTab.test.tsx`, `AgentTabMeta.test.tsx` (`:113,121`), `agent-tab-intents.test.ts`, `InactiveAgentTabBody.test.tsx`, and `App.test.tsx`: a remote harness sends `launchShellFor` with the new title and is disabled while provisioning; remote agents and local tabs keep `launchAgentFor`.
+- Client tests in `HarnessTab.test.tsx`, `AgentTabMeta.test.tsx` (`:113,121`), `agent-tab-intents.test.ts`, `InactiveAgentTabBody.test.tsx`, and `App.test.tsx`: a remote harness sends `launchShellFor` with the new title and is disabled while provisioning; the test asserts the exact `Waiting for the workspace` tooltip. Remote agents and local tabs keep `launchAgentFor`.
 
 ## Out of scope
 
