@@ -5,7 +5,7 @@ import type { RemoteLaunchHandlers } from '../remote/manager.js';
 import type { TabPluginDeclaration, TabPluginLaunchRequest, TabPluginLaunchStart } from './api.js';
 import { TabPluginRejection } from './api-capabilities.js';
 import { launchRemotePluginTab } from './launch-tab-remote.js';
-import type { LaunchInput } from './launch-tab.js';
+import { launchCapabilities, type LaunchInput } from './launch-tab.js';
 import { notify } from '../notifications/index.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
@@ -171,6 +171,23 @@ describe('launchRemotePluginTab', () => {
     expect(joinedFactory).toHaveBeenCalledWith(expect.anything(), {
       label: expect.any(String), cwd: '/remote/work/src', workspaceDir: '/remote/work', host: 'devbox',
     });
+  });
+
+  it('joins from the answering remote shell instead of the command origin', () => {
+    const h = harness();
+    h.tabs.push({ label: 'remote-shell', remote: { address: 'devbox', host: 'devbox' } });
+    vi.mocked(h.managers.remote.workspaceOf).mockImplementation((label) => (
+      label === 'remote-shell' ? '/remote/work' : undefined
+    ));
+    vi.mocked(h.managers.remote.attach).mockImplementation((label, sourceLabel) => {
+      return sourceLabel === 'remote-shell' && label !== 'remote-shell';
+    });
+    Reflect.set(h.input, 'answeringLabel', 'remote-shell');
+
+    const capabilities = launchCapabilities(h.input);
+    expect(capabilities.launchTab('shell-1', { remote: { join: true } }, factory, ready))
+      .toEqual({ label: expect.any(String) });
+    expect(h.managers.remote.attach).toHaveBeenCalledWith(expect.any(String), 'remote-shell');
   });
 
   it('starts a joined shell at the remote workspace root when the source cwd is outside it', () => {

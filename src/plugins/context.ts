@@ -146,7 +146,7 @@ export function createPluginContext(
       );
     },
     ...launchCapabilities({
-      managers, declaration, origin, isEnabled, deferred,
+      managers, declaration, origin, answeringLabel, isEnabled, deferred,
       validate: (value) => { validateTabValue(activation, value); },
       adoptPtyId,
     }),
