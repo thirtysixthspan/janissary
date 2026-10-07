@@ -59,16 +59,21 @@ function ownTabExists(managers: Managers, pluginId: string, label: string): bool
   return managers.tab.byLabel(label)?.plugin?.id === pluginId;
 }
 
+function launchedTab(managers: Managers, pluginId: string, instanceKey: string) {
+  return managers.tab.pluginTabByInstanceKey(pluginId, instanceKey);
+}
+
 function releaseClone(managers: Managers, label: string, clone: ProvisioningWorkspace): void {
   managers.workspace.cancel(label);
   managers.workspace.release(clone.dir);
 }
 
-function failLaunch(managers: Managers, input: LaunchInput, label: string, reason: string): void {
+function failLaunch(managers: Managers, input: LaunchInput, label: string, instanceKey: string, reason: string): void {
   notify(managers, 'manual', input.origin.label, `Failed to create workspace for "${label}": ${reason}`);
   setTimeout(() => {
-    if (!ownTabExists(managers, input.declaration.id, label)) return;
-    managers.tab.closeTab(managers.tab.findIndex(label));
+    const tab = launchedTab(managers, input.declaration.id, instanceKey);
+    if (!tab) return;
+    managers.tab.closeTab(managers.tab.findIndex(tab.label));
   }, PROVISION_FAILURE_CLOSE_DELAY_MS);
 }
 
@@ -77,8 +82,8 @@ async function runReady(
   ready: TabPluginLaunchReadyHandler,
 ): Promise<void> {
   const { managers, declaration, deferred } = input;
-  const tab = managers.tab.byLabel(label);
-  if (tab?.plugin) tab.plugin.busy = false;
+  const tab = launchedTab(managers, declaration.id, instanceKey);
+  if (tab) tab.plugin.busy = false;
   messageBus.emit('state', { type: 'dirty' });
   if (!deferred || !input.isEnabled()) return;
   const notice = sandboxNotice();
@@ -88,8 +93,8 @@ async function runReady(
     displayDir: managers.tab.shorten(clone.dir),
     ...(notice && { sandboxNotice: notice }),
   }, capabilities), label);
-  if (outcome.status === 'rejected' && ownTabExists(managers, declaration.id, label)) {
-    failLaunch(managers, input, label, outcome.reason);
+  if (outcome.status === 'rejected' && launchedTab(managers, declaration.id, instanceKey)) {
+    failLaunch(managers, input, label, instanceKey, outcome.reason);
   } else if (outcome.status === 'failed') {
     deferred.disable(outcome.error);
   }
@@ -130,13 +135,13 @@ function awaitClone(
   ready: TabPluginLaunchReadyHandler,
 ): void {
   const { managers, declaration } = input;
-  const tab = managers.tab.byLabel(label);
-  if (tab?.plugin) tab.plugin.busy = true;
+  const tab = launchedTab(managers, declaration.id, instanceKey);
+  if (tab) tab.plugin.busy = true;
   messageBus.emit('state', { type: 'dirty' });
   wireProvisioning(
-    label, clone.ready, (candidate) => ownTabExists(managers, declaration.id, candidate),
+    label, clone.ready, () => launchedTab(managers, declaration.id, instanceKey) !== undefined,
     () => { void runReady(input, label, instanceKey, clone, ready); },
-    (message) => { failLaunch(managers, input, label, message); },
+    (message) => { failLaunch(managers, input, label, instanceKey, message); },
   );
 }
 

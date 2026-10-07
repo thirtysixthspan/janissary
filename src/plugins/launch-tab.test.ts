@@ -236,6 +236,40 @@ describe('launchTab with a workspace', () => {
     host.dispose();
   });
 
+  it('leaves a same-named relaunch open when the failed first launch\'s close delay passes', async () => {
+    const managers = makeManagers();
+    const { host } = hostFor(managers, { name: 'docs', workspace: { offline: false } });
+
+    await launch(host, managers, 'docs');
+    clones.get('docs')?.reject(new Error('clone exploded'));
+    await settle();
+    managers.tab.closeTab(managers.tab.findIndex('docs'));
+    await launch(host, managers, 'docs');
+    vi.mocked(managers.workspace.cancel).mockClear();
+    await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS);
+
+    expect(pluginTabs(managers).map((tab) => [tab.label, tab.plugin?.instanceKey])).toEqual([['docs', 'lt-2']]);
+    expect(managers.workspace.cancel).not.toHaveBeenCalled();
+    host.dispose();
+  });
+
+  it('posts nothing for a same-named relaunch when the closed first launch\'s clone rejects late', async () => {
+    const managers = makeManagers();
+    const { host } = hostFor(managers, { name: 'docs', workspace: { offline: false } });
+
+    await launch(host, managers, 'docs');
+    const first = clones.get('docs');
+    managers.tab.closeTab(managers.tab.findIndex('docs'));
+    await launch(host, managers, 'docs');
+    first?.reject(new Error('clone cancelled'));
+    await settle();
+    await vi.advanceTimersByTimeAsync(PROVISION_FAILURE_CLOSE_DELAY_MS);
+
+    expect(notify).not.toHaveBeenCalledWith(managers, 'manual', 'janus', expect.stringContaining('Failed to create workspace'));
+    expect(pluginTabs(managers).map((tab) => [tab.label, tab.plugin?.instanceKey])).toEqual([['docs', 'lt-2']]);
+    host.dispose();
+  });
+
   it('disables the plugin when the ready handler throws', async () => {
     const managers = makeManagers();
     const { host } = hostFor(managers, { name: 'docs', workspace: { offline: false } }, () => {
