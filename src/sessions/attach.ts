@@ -21,6 +21,17 @@ export type AttachOutcome =
   // and the row keeps its attach button.
   | { kind: 'failed'; reason: string };
 
+// Older records from a shell reattach could name the temporary prompt tab as an agent launch. A
+// session whose every recorded process is a shell is still the shell-launched session it was before.
+function isShellSession(record: RemoteSessionRecord): boolean {
+  return record.launchKind === 'shell'
+    || (record.processes.length > 0 && record.processes.every((process) => process.kind === 'shell'));
+}
+
+function shellLaunchLabel(record: RemoteSessionRecord): string {
+  return record.processes.find((process) => process.kind === 'shell')?.label ?? record.launchLabel;
+}
+
 // Everything an accepted attach still has to do: ask what survived, rebuild the rest of the group,
 // and terminate a peer that came back empty. A peer holding a workspace with nothing running in it would
 // otherwise sit on its host for a week for no reason (decision 20).
@@ -42,7 +53,9 @@ async function settleAccepted(
     return { kind: 'terminated', reason: `${record.launchLabel} on ${record.host} had nothing still running.` };
   }
   const restored = await restoreSessionTabs(managers, record, label, processes);
-  if (record.launchKind === 'shell' && restored.length > 0) {
+  if (isShellSession(record) && restored.length > 0) {
+    const shellLabel = restored.find((restoredLabel) => restoredLabel === record.launchLabel) ?? restored[0];
+    managers.remote.promoteLaunchLabel(label, shellLabel);
     const bridge = managers.tab.findIndex(label);
     if (bridge !== -1) managers.tab.closeTab(bridge);
     return { kind: 'attached', label: restored[0] };
@@ -70,10 +83,11 @@ export function startSessionAttach(
 ): Promise<AttachOutcome> {
   const address = parseRemoteAddress(record.address);
   if ('error' in address) return Promise.resolve({ kind: 'failed', reason: address.error });
+  const shellSession = isShellSession(record);
   const harness = harnessNameOf(record);
   const label = uniqueLabel(
     managers.tab.tabs,
-    record.launchKind === 'shell' ? `${record.launchLabel}-attach` : record.launchLabel,
+    shellSession ? `${shellLaunchLabel(record)}-attach` : record.launchLabel,
   );
 
   return new Promise<AttachOutcome>((resolve) => {
@@ -89,6 +103,7 @@ export function startSessionAttach(
     };
     const resume = {
       session: record.session,
+      workspaceLabel: record.workspaceLabel,
       workspaceDir: record.workspaceDir,
       home: record.home,
       onResult: (accepted: boolean) => {
@@ -125,7 +140,7 @@ export function startSessionAttach(
     // An agent-launched session: the tab is an ordinary agent tab whose shell runs on the far side,
     // and its shell binds to the recorded spawn id the moment something asks for one.
     const spawnId = spawnIdOf(record);
-    if (spawnId !== undefined && record.launchKind !== 'shell') {
+    if (spawnId !== undefined && !shellSession) {
       managers.shell.adoptRemoteShell(label, spawnId, record.session);
     }
     startRemoteAgent(managers, {

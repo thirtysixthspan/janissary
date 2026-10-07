@@ -99,6 +99,17 @@ describe('RemoteManager shared channels', () => {
     h.remote.dispose();
   });
 
+  it('promotes the live launch label only to a tab on the same workspace', () => {
+    const h = managerHarness();
+    h.remote.attach('shell', 'creator');
+
+    expect(h.remote.promoteLaunchLabel('creator', 'shell')).toBe(true);
+    expect(h.remote.entryOf('shell')?.launchLabel).toBe('shell');
+    expect(h.remote.workspaceLabelOf('shell')).toBe('creator');
+    expect(h.remote.promoteLaunchLabel('creator', 'missing')).toBe(false);
+    h.remote.dispose();
+  });
+
   it('retains joined tabs and cached files when an established peer transport drops', () => {
     vi.useFakeTimers();
     const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');

@@ -8,6 +8,8 @@ import type { RemoteProcessState, ServerFrame } from './protocol-frames.js';
 
 export type RemoteResume = {
   session: string;
+  // The stable workspace identity is separate from the temporary tab used to answer SSH prompts.
+  workspaceLabel?: string;
   workspaceDir: string;
   home?: string;
   // Told which way the peer answered. Accepted means "now ask what is still running there"; refused

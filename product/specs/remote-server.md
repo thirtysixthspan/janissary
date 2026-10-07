@@ -428,7 +428,8 @@ attach that is not coming.
 
 When a remote shell launched the session, its SSH prompt tab is temporary. After the peer accepts,
 the shell tabs return under their recorded labels when those labels are free, and the prompt tab
-closes once they hold the connection.
+closes once they hold the connection. The restored shell becomes the session's launching tab, so a
+later detach and attach repeats this behavior without leaving a second prompt tab open.
 
 Attached harnesses redraw their retained terminal history immediately, including output from before detachment and while disconnected, without starting a replacement harness. Repeated reconnects replace the displayed terminal history rather than appending duplicate copies. The restored display is also available to captures and monitoring. Terminal and transcript histories have separate bounded retention; older text may be trimmed, and a trimmed terminal replay includes an earlier-history notice. A quiet terminal's retained display is not evicted by transcript activity. A rebuilt harness transcript receives its retained blocks once, while an automatic reconnect adds only missed blocks to the transcript already open.
 

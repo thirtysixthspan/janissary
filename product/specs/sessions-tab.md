@@ -78,6 +78,8 @@ backoff wait.
 
 Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host, and its saved cwd is never checked against a directory on the local machine. Remote shell rows reopen the same running PTY with its saved cwd, offline mode, and zsh marker nonce; no navigator opens beside it. The same shell tabs return after `--relaunch`.
 
+After attaching a detached remote shell, detaching and attaching it again restores the same shell tab. The temporary SSH prompt tab closes after the shell takes over the connection, and each later session record continues to identify that shell as the session owner.
+
 **Detach** applies to a live session and gives it up locally while deliberately leaving it running.
 Closing the local tabs during that action never stops their remote processes.
 A detached harness remains listed after its local tab closes. Attaching restores the same running process and keeps its tab open; repeated detach and attach cycles do not start replacement harnesses. A late exit from an earlier connection does not close the restored tab or remove its session row.

@@ -41,7 +41,7 @@ function memberOf(managers: Managers, label: string, activity: number): SessionM
 export function channelOf(
   managers: Managers, entry: RemoteEntry, activity: (label: string) => number,
 ): SessionChannel {
-  const launchLabel = entry.workspaceLabel;
+  const launchLabel = entry.launchLabel ?? entry.workspaceLabel;
   const ordered = [launchLabel, ...[...entry.labels].filter((label) => label !== launchLabel)];
   const members = ordered
     .map((label) => memberOf(managers, label, activity(label)))
@@ -120,7 +120,7 @@ function processOf(
 export function recordOf(managers: Managers, entry: RemoteEntry, now: number): RemoteSessionRecord | undefined {
   if (!isEstablished(entry)) return;
   const session = entry.channel.sessionId;
-  const launchLabel = entry.workspaceLabel;
+  const launchLabel = entry.launchLabel ?? entry.workspaceLabel;
   const processes = entry.channel.spawnedProcesses()
     .map((state) => processOf(managers, state, launchLabel))
     .filter((process): process is RemoteSessionProcess => process !== undefined);
@@ -130,7 +130,7 @@ export function recordOf(managers: Managers, entry: RemoteEntry, now: number): R
     address: entry.address.address,
     destination: entry.address.destination,
     host: entry.address.host,
-    workspaceLabel: launchLabel,
+    workspaceLabel: entry.workspaceLabel,
     workspaceDir: entry.workspaceDir,
     ...(entry.home !== undefined && { home: entry.home }),
     launchLabel,

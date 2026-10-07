@@ -168,6 +168,20 @@ describe('recordOf process rows', () => {
     expect(record?.launchKind).toBe('shell');
   });
 
+  it('keeps the restored shell as launch owner while retaining the workspace identity', () => {
+    const shell = tab('claude', { plugin: { id: 'shell' } as never });
+    const entryAfterAttach = withProcesses([{
+      id: 'p5', mode: 'pty', agentName: 'claude', shell: { nonce: 'b'.repeat(32) }, offline: false,
+      cwd: '/remote/work',
+    }]);
+    entryAfterAttach.workspaceLabel = 'claude-attach';
+    entryAfterAttach.launchLabel = 'claude';
+
+    const record = recordOf(managers([shell]), entryAfterAttach, 7);
+
+    expect(record).toMatchObject({ workspaceLabel: 'claude-attach', launchLabel: 'claude', launchKind: 'shell' });
+  });
+
   // A PTY takeover or an inline terminal card belongs to a tab already listed in the channel, so a
   // row of its own would double-count it.
   it('contributes no row for a process that is neither a harness nor an agent shell', () => {
