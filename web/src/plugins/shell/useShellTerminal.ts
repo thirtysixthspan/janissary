@@ -51,6 +51,7 @@ export type ShellTerminalHandle = {
   display(data: string): void;
   displayReply(line: string, markdown: string): void;
   focus(): void;
+  clearSelection(): void;
   scrollLines(amount: number): void;
   scrollToBottom(): void;
   rows(): number;
@@ -200,8 +201,9 @@ export function useShellTerminal({
     terminal.write(formatDispatchedCommand(line, markdownToAnsi(markdown)));
   }, []);
   const focus = useCallback(() => { terminalRef.current?.focus(); }, []);
+  const clearSelection = useCallback(() => { terminalRef.current?.clearSelection(); }, []);
   const scrollLines = useCallback((amount: number) => { terminalRef.current?.scrollLines(amount); }, []);
   const scrollToBottom = useCallback(() => { terminalRef.current?.scrollToBottom(); }, []);
   const rows = useCallback(() => terminalRef.current?.rows ?? 0, []);
-  return { write, display, displayReply, focus, scrollLines, scrollToBottom, rows };
+  return { write, display, displayReply, focus, clearSelection, scrollLines, scrollToBottom, rows };
 }

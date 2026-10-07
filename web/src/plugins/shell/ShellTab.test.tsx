@@ -23,6 +23,7 @@ interface FakeTerminal {
   options: Record<string, unknown>;
   resizes: { cols: number; rows: number }[];
   focusCalls: number;
+  selectionClearCalls: number;
   scrollCalls: number[];
   bottomCalls: number;
 }
@@ -33,6 +34,7 @@ vi.mock('@xterm/xterm', () => ({
     disposed = false;
     resizes: { cols: number; rows: number }[] = [];
     focusCalls = 0;
+    selectionClearCalls = 0;
     scrollCalls: number[] = [];
     bottomCalls = 0;
     options: Record<string, unknown>;
@@ -48,7 +50,7 @@ vi.mock('@xterm/xterm', () => ({
     write(data: string) { this.written.push(data); }
     hasSelection() { return false; }
     getSelection() { return ''; }
-    clearSelection() {}
+    clearSelection() { this.selectionClearCalls += 1; }
     attachCustomKeyEventHandler() {}
     textarea = undefined;
     buffer = { active: { baseY: 0, cursorY: 0, type: 'normal' } };
@@ -1119,13 +1121,14 @@ describe('ShellTab', () => {
     expect(terminals.at(-1)?.focusCalls).toBe(0);
   });
 
-  it('focuses the terminal when it is double-clicked', () => {
+  it('clears terminal selection and focuses the terminal when it is double-clicked', () => {
     renderTab();
     const body = document.querySelector('.shell-body')!;
 
     fireEvent.doubleClick(body);
 
     expect(terminals.at(-1)?.focusCalls).toBe(1);
+    expect(terminals.at(-1)?.selectionClearCalls).toBe(1);
   });
 
   it('claims Ctrl+R while its tab is visible, and the host spends the claim on it', async () => {

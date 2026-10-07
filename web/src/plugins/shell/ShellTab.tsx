@@ -47,7 +47,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   useApplicationBarEdits(appBar, inputReference, draft, setDraft);
 
   const terminalHistory = useTerminalCommandHistory(setSent);
-  const { write, displayReply, focus: focusTerminal, scrollLines, scrollToBottom, rows: terminalRows } = useShellTabTerminal({
+  const { write, displayReply, focus: focusTerminal, clearSelection, scrollLines, scrollToBottom, rows: terminalRows } = useShellTabTerminal({
     payload,
     capabilities,
     containerRef: terminalReference,
@@ -161,7 +161,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         ref={terminalReference}
         style={{ '--shell-focus-color': dotColor } as React.CSSProperties}
         onClick={() => { inputReference.current?.focus(); }}
-        onDoubleClick={() => { focusTerminal(); }}
+        onDoubleClick={() => { clearSelection(); focusTerminal(); }}
         onKeyDownCapture={(event) => {
           if (event.key !== 'Tab' || !event.shiftKey) return;
           event.preventDefault();
