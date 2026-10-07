@@ -242,3 +242,13 @@ describe('openFilesCommand docking a tree that is waiting to be created', () => 
     expect(h.pollForCreation).toHaveBeenCalledWith('navigator1', path.join(root, 'not-yet-there'));
   });
 });
+
+describe('openFilesCommand on the issuing local tab', () => {
+  it('resolves a relative path against the local working directory', () => {
+    const h = harness();
+
+    expect(run(h, 'files sub')).toBe('navigator1');
+    expect(h.opened[0].files?.root).toBe(path.join(root, 'sub'));
+    expect(h.opened[0].files?.remote).toBeUndefined();
+  });
+});
