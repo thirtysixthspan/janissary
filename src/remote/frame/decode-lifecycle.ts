@@ -13,6 +13,38 @@ function positiveInteger(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
 
+function decodeLaunch(value: unknown): undefined | false | { shell?: string; args?: string[] } {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  const launch: { shell?: string; args?: string[] } = {};
+  if (record.shell !== undefined) {
+    if (typeof record.shell !== 'string') return false;
+    launch.shell = record.shell;
+  }
+  if (record.args !== undefined) {
+    if (!Array.isArray(record.args)) return false;
+    const args: string[] = [];
+    for (const argument of record.args) {
+      if (typeof argument !== 'string') return false;
+      args.push(argument);
+    }
+    launch.args = args;
+  }
+  return launch;
+}
+
+function decodeEnv(value: unknown): Record<string, string> | undefined | false {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const env = Object.create(null) as Record<string, string>;
+  for (const [key, item] of Object.entries(value)) {
+    if (typeof item !== 'string') return false;
+    env[key] = item;
+  }
+  return env;
+}
+
 export function decodeAttach(record: Record<string, unknown>): DecodeResult {
   const { session, restore } = record;
   const origin = decodeOrigin(record.origin);
@@ -27,6 +59,8 @@ export function decodeAttach(record: Record<string, unknown>): DecodeResult {
 
 export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
   const { id, program, command, mode, harness, cols, rows, offline, agentName, browser, autoApprove, autoResume, shell, cwd } = record;
+  const launch = decodeLaunch(record.launch);
+  const env = decodeEnv(record.env);
   const shellRecord = typeof shell === 'object' && shell !== null && !Array.isArray(shell)
     ? shell as Record<string, unknown> : undefined;
   const shellNonce = shellRecord?.nonce;
@@ -39,6 +73,7 @@ export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
     || !(autoResume === undefined || typeof autoResume === 'boolean')
     || !(shell === undefined || isZshHookNonce(shellNonce))
     || !(cwd === undefined || nonEmptyString(cwd)) || (shell !== undefined && mode !== 'pty')
+    || launch === false || env === false || ((launch !== undefined || env !== undefined) && mode !== 'pty')
     || !optionalNonEmptyString(agentName)) return malformed('spawn');
   return {
     type: 'spawn', id, program, command, mode, cols, rows,
@@ -49,6 +84,8 @@ export function decodeSpawn(record: Record<string, unknown>): DecodeResult {
     ...(autoResume !== undefined && { autoResume }),
     ...(shell !== undefined && { shell: { nonce: shellNonce as string } }),
     ...(cwd !== undefined && { cwd }),
+    ...(launch !== undefined && { launch }),
+    ...(env !== undefined && { env }),
     ...(agentName !== undefined && { agentName }),
   };
 }

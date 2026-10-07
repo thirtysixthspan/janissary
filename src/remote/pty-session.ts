@@ -6,7 +6,7 @@ import { reportAutoApproved } from '../harness/auto-approved.js';
 import { reportAutoResumeScheduled } from '../harness/auto-resume-state.js';
 import { resumeEntry, resumeInstant } from '../harness/auto-resume.js';
 import { fmtNextRun } from '../schedule/display.js';
-import type { PtySession } from '../pty.js';
+import type { PtyLaunch, PtySession } from '../pty.js';
 import type { Managers } from '../managers.js';
 import type { RemoteChannel } from './channel/index.js';
 
@@ -20,6 +20,8 @@ export type RemotePtyOptions = {
   harness?: string;
   cwd?: string;
   shell?: { nonce: string };
+  launch?: PtyLaunch;
+  env?: Record<string, string>;
   offline?: boolean;
   // `-b`: the remote starts its own e2e browser for this process. A fact the remote acts on, not a
   // value computed here — the endpoint it produces names ports on that host.
@@ -49,7 +51,7 @@ export function createRemotePtySession(
   options: RemotePtyOptions,
   onExit: (exitCode: number) => void,
 ): PtySession {
-  const { id, program, command, harness, cwd, shell, offline, browser, cols, rows, agentName, autoApprove, autoResume } = options;
+  const { id, program, command, harness, cwd, shell, launch, env, offline, browser, cols, rows, agentName, autoApprove, autoResume } = options;
   let attaching = true;
   const pending: Array<() => void> = [];
   const deliver = (callback: () => void) => {
@@ -107,7 +109,7 @@ export function createRemotePtySession(
     pending.length = 0;
   });
   channel.send({
-    type: 'spawn', id, program, command, mode: 'pty', harness, cwd, shell, cols, rows, offline, browser, autoApprove, autoResume,
+    type: 'spawn', id, program, command, mode: 'pty', harness, cwd, shell, launch, env, cols, rows, offline, browser, autoApprove, autoResume,
     ...(agentName && { agentName }),
   });
   return {

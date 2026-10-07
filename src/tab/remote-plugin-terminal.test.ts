@@ -15,11 +15,15 @@ describe('spawnRemotePluginTerminal', () => {
 
     const terminal = spawnRemotePluginTerminal(
       pty, 'remote-shell', {} as RemoteChannel,
-      { cwd: '/far-side/workspace/src', shell: '/bin/zsh', workspace: { dir: '/far-side/workspace', offline: true }, zshHooks: { nonce: 'a'.repeat(32) } },
+      {
+        cwd: '/far-side/workspace/src', shell: '/bin/zsh', args: ['-f'], env: { PLUGIN_SETTING: 'on' },
+        workspace: { dir: '/far-side/workspace', offline: true }, zshHooks: { nonce: 'a'.repeat(32) },
+      },
     );
 
     expect(registerRemotePty).toHaveBeenCalledWith('remote-shell', expect.anything(), {
-      program: 'zsh', command: '', cwd: '/far-side/workspace/src', offline: true, shell: { nonce: 'a'.repeat(32) },
+      program: 'zsh', command: 'zsh', cwd: '/far-side/workspace/src', offline: true, shell: { nonce: 'a'.repeat(32) },
+      launch: { shell: '/bin/zsh', args: ['-f'] }, env: { PLUGIN_SETTING: 'on' },
     });
     expect(terminal).toEqual({ ptyId: 'remote-pty-1', cols: 100, rows: 40, running: true });
   });

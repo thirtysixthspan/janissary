@@ -167,7 +167,9 @@
 // record so a reattach can expand `~` against the same host.
 // Version 27 adds remote interactive zsh spawns and reports their marker nonce, offline mode, and
 // working directory in process state so later attaches can reconstruct the same shell.
-export const REMOTE_PROTOCOL_VERSION = 27;
+// Version 28 adds plugin PTY launch arguments and environment overrides to `spawn`; a version-27
+// peer would accept the frame but silently launch with a different argv and environment.
+export const REMOTE_PROTOCOL_VERSION = 28;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

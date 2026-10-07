@@ -87,6 +87,10 @@ export type ClientFrame =
     shell?: { nonce: string };
     // Requested working directory for a shell spawn, confined by the remote workspace.
     cwd?: string;
+    // The shell and argv supplied by a plugin terminal, when it names a launch explicitly.
+    launch?: { shell?: string; args?: string[] };
+    // Environment overrides supplied by a plugin terminal.
+    env?: Record<string, string>;
   }
   | { type: 'input'; id: string; data: string }
   | { type: 'resize'; id: string; cols: number; rows: number }

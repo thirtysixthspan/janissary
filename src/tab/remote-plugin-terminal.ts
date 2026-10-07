@@ -17,11 +17,17 @@ export function spawnRemotePluginTerminal(
   }
   let ptyId: string;
   try {
+    const program = options.shell ? shellName(options.shell) : SHELL_NAME;
     ptyId = pty.registerRemotePty(label, channel, {
-      program: options.shell ? shellName(options.shell) : SHELL_NAME,
-      command: '',
+      program,
+      command: program,
       cwd: options.cwd,
       offline: options.workspace?.offline,
+      launch: {
+        shell: options.zshHooks === undefined ? options.shell : options.shell ?? 'zsh',
+        args: options.args ?? [],
+      },
+      env: options.env,
       ...(options.zshHooks && { shell: { nonce: options.zshHooks.nonce } }),
     });
   } catch (error) {

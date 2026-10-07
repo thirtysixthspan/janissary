@@ -111,10 +111,13 @@ export class RemoteProcesses {
     // reach the browser recorded a line above. Give it back here or nothing will.
     let session;
     try {
-      const extraEnv = shell === undefined ? spawnEnv.env : {
-        ...spawnEnv.env,
-        ...shellStartupEnvironment(this.zshStartup.path(), shell.nonce, process.env.ZDOTDIR),
-      };
+      const extraEnv = shell === undefined
+        ? (frame.env === undefined ? spawnEnv.env : { ...spawnEnv.env, ...frame.env })
+        : {
+          ...spawnEnv.env,
+          ...frame.env,
+          ...shellStartupEnvironment(this.zshStartup.path(), shell.nonce, frame.env?.ZDOTDIR ?? process.env.ZDOTDIR),
+        };
       session = spawnPty(
         frame.program,
         frame.command,
@@ -133,7 +136,7 @@ export class RemoteProcesses {
         frame.rows,
         { workspaceDir: this.workspaceDir, offline: frame.offline, tokens: this.tokens },
         extraEnv,
-        shell === undefined ? undefined : { shell: 'zsh', args: [] },
+        frame.launch ?? (shell === undefined ? undefined : { shell: 'zsh', args: [] }),
       );
     } catch (error) {
       this.closeBrowser(frame.id);
