@@ -256,13 +256,12 @@ A shell tab can hold scheduled commands (see [[scheduling]]): `schedule` from it
 offers it as a target. Its entries appear in the schedule window. When one falls due, the command is
 typed into zsh as a line, exactly as if entered at the terminal. The schedule lives as long as the tab.
 
-`send`, `queue`, and `schedule` accept a plugin tab as a target by one rule: the tab owns a live
-terminal (`ownsTerminal` in `src/tab/plugin-terminals.ts`). They share that check so they cannot
-disagree about which shell tabs take input. `send` and `queue` also accept a shell whose workspace
-clone is still provisioning: the line joins that shell's command queue with the usual confirmation
-(`→ <shell>: <text>` or `→ <shell> (queued): <command>`) and runs once zsh starts. `schedule … in
-<shell>` is still refused until zsh has started, because a schedule types into a terminal that does
-not exist yet. A plugin tab without a terminal answers `send` with
+`send`, `queue`, and `schedule` all accept a plugin tab that owns a live terminal (`ownsTerminal`
+in `src/tab/plugin-terminals.ts`). `send` and `queue` additionally accept one whose workspace clone
+is still provisioning (`awaitsTerminal` beside it): the line joins that shell's command queue with
+the usual confirmation (`→ <shell>: <text>` or `→ <shell> (queued): <command>`) and runs once zsh
+starts. `schedule` deliberately does not, so `schedule … in <shell>` is refused until zsh has
+started, because a schedule types into a terminal that must already exist. A plugin tab without a terminal answers `send` with
 `Tab "<label>" does not accept input.`, answers `queue` with `Tab "<label>" has no command queue.`,
 refuses `schedule … in <label>` with `Tab "<label>" cannot run scheduled commands.`, and is not
 offered as a target in the "New schedule" dialog.
