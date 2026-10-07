@@ -247,6 +247,12 @@ and inert until the shell has printed something, green and pressable from that m
 green and pressable once the recording has stopped, so a partial recording is still reachable. See
 [[harness-recording]] § The recording flag.
 
+A remote shell also shows the remote host chip before its working directory, with the same connection
+status plug and attach/detach control as a remote harness. The plug shows provisioning until the remote
+workspace is ready, connected while the SSH session is live, and reconnecting while it is recovering.
+The control offers **Detach** for a live session and **Attach** while reconnecting; detaching asks for
+confirmation because it closes every tab sharing that remote session. Local shell metadata is unchanged.
+
 The connections window includes the tab's own `zsh` terminal as soon as the shell tab opens. The
 connections and schedule windows auto-show for five seconds whenever the tab becomes visible, then
 fade over 300 ms unless pinned or hovered. If an empty window gains its first row after that interval,

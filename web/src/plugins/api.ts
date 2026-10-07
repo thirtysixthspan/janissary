@@ -6,6 +6,8 @@ import { openTranscriptLink } from '../shared/transcript/open-link';
 import { transcriptIntents } from '../shared/transcript/transcript-intents';
 import type { TerminalColors } from '../shared/terminal/colors';
 import type { PluginHost } from './host';
+import type { RemoteTargetView } from '@shared/protocol';
+import type { RemoteSessionState } from '../shared/RemoteSessionButton';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
 
@@ -57,6 +59,8 @@ export { copySelectionChord, isMacPlatform } from '../shared/terminal/terminal/k
 // renders instead of keeping a second copy that could drift on its icon, its label, or when it lights.
 ;
 export { RecordingFlag } from '../shared/RecordingFlag';
+export { RemoteChip } from '../shared/RemoteChip';
+export { RemoteSessionButton } from '../shared/RemoteSessionButton';
 export { PluginActionsHeader } from './PluginActionsHeader';
 
 // The application's answer to "is this a place typed text can go", published for the same reason and
@@ -187,6 +191,13 @@ export type TabPluginClientCapabilities = {
   // anything by it. Absent means "no per-tab identity is available to you".
   label?: string;
   dotColor?: string;
+  // The remote target and its session control, present together only for a remote tab. The host
+  // resolves the target from this tab's view and scopes each action to this tab's label.
+  remote?: RemoteTargetView;
+  remoteSession?: {
+    state: RemoteSessionState;
+    onAction(action: 'detach' | 'attach'): Promise<boolean>;
+  };
   // Which sidebar this tab is docked into, or `null` when it sits in the centre strip. Placement is
   // host-owned, and a plugin that lays itself out differently in a narrow sidebar reads it here
   // rather than measuring the host's frame or sniffing its DOM.
@@ -260,6 +271,10 @@ export function createPluginClientCapabilities(
   claimedChords: readonly string[] = [],
   dotColor?: string,
   recording?: string,
+  remoteCapabilities?: {
+    remote?: RemoteTargetView;
+    remoteSession?: TabPluginClientCapabilities['remoteSession'];
+  },
 ): TabPluginClientCapabilities {
   return {
     active,
@@ -267,6 +282,7 @@ export function createPluginClientCapabilities(
     label,
     claimedChords,
     dotColor,
+    ...remoteCapabilities,
     close: onClose,
     registerDirtyHandle: onDirtyHandle,
     resourceUrl,
