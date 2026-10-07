@@ -2,14 +2,15 @@ import path from 'node:path';
 import { containedPath } from './batch-paths.js';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './state.js';
-import type { BasePort } from './port.js';
+import type { BasePort, NavigationPort } from './port.js';
 import { clearFilesystemCache } from './filesystem-cache.js';
 
 // The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `navPort()` there).
-export interface NavPort extends BasePort {
-  setCwd(label: string, dir: string): void;
-  hasTab(label: string): boolean;
+export type NavPort = NavigationPort;
+
+function isPromise<T>(value: T | Promise<T>): value is Promise<T> {
+  return typeof (value as Promise<T>).then === 'function';
 }
 
 // Expand/collapse one directory row.
@@ -51,25 +52,41 @@ export function collapseAllDirs(port: NavPort, label: string): void {
 export function rerootTree(port: NavPort, label: string, relPath?: string): void {
   const state = port.states.get(label);
   if (!state) return;
+  const previousRoot = state.root;
   const target = relPath === undefined
     ? path.resolve(state.root, '..')
     : relPath === '' || relPath === '.'
       ? state.root
       : containedPath(state.root, relPath);
   if (!target) return;
-  if (state.remoteRoot && !containedPath(state.remoteRoot, path.relative(state.remoteRoot, target))) return;
+  if (state.remoteRoot && !containedPath(state.remoteRoot, path.relative(state.remoteRoot, target))) {
+    port.reportFailure(label, target, new Error(`outside the remote workspace ${state.remoteRoot}`));
+    return;
+  }
   if (target === state.root) return;
-  dropExpandedWatchers(port, state);
-  port.unwatchDir(state, '');
-  state.root = target;
-  state.gitStatuses = new Map();
-  state.branch = undefined;
-  state.gitMetadataLoaded = false;
-  clearFilesystemCache(state);
-  port.watchDir(label, target, '');
-  if (port.hasTab(label)) port.setCwd(label, target);
-  port.rebuild(label);
-  port.refreshGit(label);
+  const apply = (entries: Awaited<ReturnType<typeof state.filesystem.readDirectory>>) => {
+    if (state.root !== previousRoot) return;
+    dropExpandedWatchers(port, state);
+    port.unwatchDir(state, '');
+    state.root = target;
+    state.gitStatuses = new Map();
+    state.branch = undefined;
+    state.gitMetadataLoaded = false;
+    clearFilesystemCache(state);
+    state.listings.set('', entries);
+    port.watchDir(label, target, '');
+    if (port.hasTab(label)) port.setCwd(label, target);
+    port.rebuild(label);
+    port.refreshGit(label);
+  };
+  const failed = (error: unknown) => port.reportFailure(label, target, error);
+  try {
+    const entries = state.filesystem.readDirectory(target, '');
+    if (isPromise(entries)) void entries.then(apply, failed);
+    else apply(entries);
+  } catch (error) {
+    failed(error);
+  }
 }
 
 // Mark one directory expanded and start watching it, unless it already is. Shared with

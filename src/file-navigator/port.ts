@@ -8,6 +8,12 @@ export interface BasePort {
   refreshGit(label: string): void;
 }
 
+export interface NavigationPort extends BasePort {
+  reportFailure(label: string, target: string, error: unknown): void;
+  setCwd(label: string, dir: string): void;
+  hasTab(label: string): boolean;
+}
+
 // The members both ports take from `FileNavigatorManager` as bound closures. Derived from
 // `BasePort` so a signature change reaches the manager rather than drifting from it, and passed as
 // one record so `rebuild` and `refreshGit` — identically typed — cannot be transposed.

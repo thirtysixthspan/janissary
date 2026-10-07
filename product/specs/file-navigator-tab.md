@@ -253,6 +253,8 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Right-click a row | Open that row's context menu at the pointer, leaving the selection exactly as it was |
 | Click-drag a row and release it over a directory row, or any file inside that directory | Moves the dragged file or directory into that directory on disk |
 
+If moving the tree to its parent fails because that directory cannot be read, the tree stays at its current root and the notifications feed explains the failure.
+
 Opening or editing a file from the tree resolves against the tree's own root — never the currently
 focused tab's working directory, which may point elsewhere. The opened file's tab lands in the same
 group as the tree tab. The activation is the navigator's own request, not a typed command: it

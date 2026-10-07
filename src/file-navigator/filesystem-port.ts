@@ -7,7 +7,7 @@ import { pullRoot } from '../git/pull.js';
 import { commitRoot, type CommitResult } from '../git/commit.js';
 import { githubCommitsUrl } from '../github-url.js';
 import { nextFreeName } from '../editor/next-free-name.js';
-import { readDirSorted, type FileNavigatorEntry } from './index.js';
+import { readDirSortedStrict, type FileNavigatorEntry } from './index.js';
 import { containedPath, realDirectory } from './batch-paths.js';
 import { deleteBatch, moveBatch, type DeleteManyResult, type MoveManyResult } from './batch.js';
 import { deleteItem, moveItem, renameItem, type MoveOneResult, type RenameItemResult } from './filesystem.js';
@@ -101,7 +101,7 @@ export class LocalFileSystemPort implements FileSystemPort {
   dispose(): void {}
   readDirectory(root: string, relPath: string): FileNavigatorEntry[] {
     const directory = absoluteDirectory(root, relPath);
-    return directory ? readDirSorted(directory) : [];
+    return directory ? readDirSortedStrict(directory) : [];
   }
 
   statRows(root: string, relPaths: string[]): Record<string, RowStat | null> {

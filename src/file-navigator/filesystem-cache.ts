@@ -17,7 +17,13 @@ export function listingFor(
 ) {
   if (state.listings.has(relPath)) return state.listings.get(relPath);
   if (state.listingLoads.has(relPath)) return;
-  const result = state.filesystem.readDirectory(state.root, relPath);
+  let result;
+  try {
+    result = state.filesystem.readDirectory(state.root, relPath);
+  } catch {
+    state.listings.set(relPath, []);
+    return [];
+  }
   if (!isPromise(result)) {
     state.listings.set(relPath, result);
     return result;

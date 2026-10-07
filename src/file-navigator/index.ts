@@ -8,17 +8,7 @@ const EXCLUDES = new Set(['.svn', '.hg', '.DS_Store', 'Thumbs.db']);
 
 export type FileNavigatorEntry = { name: string; dir: boolean };
 
-// One directory's sorted, filtered entries: directories first, then files, `localeCompare`
-// case-insensitive within each group. A symlink (file or directory) reports as a file — never
-// expandable — which is the cheap way to stay cycle-proof. An unreadable directory (permission
-// denied, deleted mid-read) yields [].
-export function readDirSorted(absDir: string): FileNavigatorEntry[] {
-  let dirents;
-  try {
-    dirents = readdirSync(absDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
+function sortedEntries(dirents: { name: string; isDirectory: () => boolean }[]): FileNavigatorEntry[] {
   const entries = dirents
     .filter((d) => !EXCLUDES.has(d.name))
     .map((d) => ({ name: d.name, dir: d.isDirectory() }));
@@ -26,6 +16,23 @@ export function readDirSorted(absDir: string): FileNavigatorEntry[] {
     if (a.dir !== b.dir) return a.dir ? -1 : 1;
     return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
   });
+}
+
+// One directory's sorted, filtered entries: directories first, then files, `localeCompare`
+// case-insensitive within each group. A symlink (file or directory) reports as a file — never
+// expandable — which is the cheap way to stay cycle-proof.
+export function readDirSortedStrict(absDir: string): FileNavigatorEntry[] {
+  return sortedEntries(readdirSync(absDir, { withFileTypes: true }));
+}
+
+// Ordinary tree rendering tolerates an unreadable directory as an empty listing. Navigation uses
+// `readDirSortedStrict` first so a denied destination can be reported without moving the root.
+export function readDirSorted(absDir: string): FileNavigatorEntry[] {
+  try {
+    return readDirSortedStrict(absDir);
+  } catch {
+    return [];
+  }
 }
 
 // A depth-first, pre-flattened list of the currently *visible* rows: the root's direct children,
