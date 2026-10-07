@@ -42,7 +42,10 @@ function terminalEnvironment(
   startup: ZshStartupDirectory,
 ): Record<string, string> | undefined {
   if (options.zshHooks === undefined) return options.env;
-  return { ...options.env, ...shellStartupEnvironment(startup.path(), options.zshHooks.nonce, process.env.ZDOTDIR) };
+  return {
+    ...options.env,
+    ...shellStartupEnvironment(startup.path(), options.zshHooks.nonce, options.env?.ZDOTDIR ?? process.env.ZDOTDIR),
+  };
 }
 
 export function spawnPluginTerminal(

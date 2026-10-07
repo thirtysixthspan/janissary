@@ -39,6 +39,7 @@ describe('spawnPluginTerminal', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     startup.dispose();
     rmSync(parent, { recursive: true, force: true });
   });
@@ -80,6 +81,28 @@ describe('spawnPluginTerminal', () => {
     expect(env).toMatchObject({ EXTRA: '1', JANUS_SHELL_SETUP: shellSetupScript(NONCE) });
     expect(env?.ZDOTDIR).toBe(startup.path());
     expect(existsSync(path.join(env?.ZDOTDIR ?? '', '.zshrc'))).toBe(true);
+  });
+
+  it('restores a plugin-supplied ZDOTDIR for the user startup files', () => {
+    vi.stubEnv('ZDOTDIR', '/host/zsh');
+    const { fake, spawn } = manager();
+    spawnPluginTerminal(fake, '/repo', {
+      cwd: '/repo', shell: '/bin/zsh', args: [], env: { ZDOTDIR: '/plugin/zsh' }, zshHooks: { nonce: NONCE },
+    }, startup);
+    const env = spawnedEnv(spawn);
+    expect(env?.ZDOTDIR).toBe(startup.path());
+    expect(env?.JANUS_USER_ZDOTDIR).toBe('/plugin/zsh');
+  });
+
+  it('uses the host ZDOTDIR when the plugin does not supply one', () => {
+    vi.stubEnv('ZDOTDIR', '/host/zsh');
+    const { fake, spawn } = manager();
+    spawnPluginTerminal(fake, '/repo', {
+      cwd: '/repo', shell: '/bin/zsh', args: [], env: { EXTRA: '1' }, zshHooks: { nonce: NONCE },
+    }, startup);
+    const env = spawnedEnv(spawn);
+    expect(env?.ZDOTDIR).toBe(startup.path());
+    expect(env?.JANUS_USER_ZDOTDIR).toBe('/host/zsh');
   });
 
   it('creates the startup directory once across spawns and removes it on dispose', () => {
