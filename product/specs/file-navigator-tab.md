@@ -43,6 +43,9 @@ remote workspace root. A resolved path outside the workspace is refused with
 `files in <label> <path>` when `<label>` is remote. A path that follows a symlink outside the
 workspace is refused as well.
 
+The parent-directory row navigates a remote tree back toward the workspace root. Returning to the
+workspace root is allowed; the parent row is hidden there so the tree cannot navigate above it.
+
 ### `files left`/`files right [path]`
 
 A leading `left` or `right` keyword docks the tree into that sidebar instead of the central tab
@@ -252,6 +255,8 @@ stops refreshing automatically and can be refreshed manually by collapsing and r
 | Scroll wheel / trackpad | Scrolls the row list |
 | Right-click a row | Open that row's context menu at the pointer, leaving the selection exactly as it was |
 | Click-drag a row and release it over a directory row, or any file inside that directory | Moves the dragged file or directory into that directory on disk |
+
+If moving the tree to its parent fails because that directory cannot be read, the tree stays at its current root and the notifications feed explains the failure.
 
 Opening or editing a file from the tree resolves against the tree's own root — never the currently
 focused tab's working directory, which may point elsewhere. The opened file's tab lands in the same

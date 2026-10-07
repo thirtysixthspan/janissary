@@ -22,6 +22,9 @@ export type RemoteEntry = {
   home?: string;
   settled: boolean;
   closed: boolean;
+  // The live tab that owns the session. A shell reattach temporarily replaces it with an SSH prompt
+  // tab, then promotes the restored shell back into this role.
+  launchLabel?: string;
   workspaceLabel: string;
   attach: Attach;
   // The resolver of a `session-state` query waiting for its answer. One at a time: the only thing

@@ -96,6 +96,17 @@ export class RemoteManager {
 
   workspaceLabelOf(label: string): string | undefined { return this.entries.get(label)?.workspaceLabel; }
 
+  // The remote workspace keeps its original identity for cached files, while the tab that owns its
+  // session can change when a temporary attach prompt is replaced by the restored shell.
+  promoteLaunchLabel(sourceLabel: string, launchLabel: string): boolean {
+    const entry = this.entries.get(sourceLabel);
+    if (!entry?.labels.has(launchLabel)) return false;
+    if (entry.launchLabel === launchLabel) return true;
+    entry.launchLabel = launchLabel;
+    this.sessionsChanged();
+    return true;
+  }
+
   // `connection close ssh:<id>` — the user ending the shared session on purpose. The far side is
   // genuinely finished (`terminateRemoteEntry` sends the shutdown frames), recovery stops, and every
   // tab and navigator holding the channel closes, which is the only reason a remote tab's `ssh:` row

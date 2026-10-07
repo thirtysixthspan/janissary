@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
+import { chmodSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -395,6 +395,24 @@ describe('FileNavigatorManager', () => {
     expect(watchMock).toHaveBeenCalledTimes(2);
     expect(closeFns[0]).toHaveBeenCalled();
     expect(setCwdCalls).toContainEqual([label, root]);
+  });
+
+  it('keeps the current root and notifies when the parent directory cannot be read', () => {
+    const subdirectory = path.join(root, 'sub');
+    mkdirSync(subdirectory);
+    const manager = run();
+    manager.open(`files ${subdirectory}`, 'janus');
+    const label = tabs.find((tab) => tab.label.startsWith('navigator'))!.label;
+    chmodSync(root, 0);
+
+    try {
+      manager.reroot(label);
+
+      expect((managers as { notifications: NotificationQueue }).notifications.all).not.toHaveLength(0);
+      expect(tabs.find((tab) => tab.label === label)!.files!.root).toBe(subdirectory);
+    } finally {
+      chmodSync(root, 0o700);
+    }
   });
 
   it('reroot clears expanded directories and closes their watchers too', () => {

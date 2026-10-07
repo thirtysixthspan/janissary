@@ -129,7 +129,9 @@ export function openPluginTab(
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
   const source = target.tabs[sourceIndex];
-  const own = preset?.workspace && { workspaceDir: preset.workspace.dir, offline: preset.workspace.offline };
+  const own = preset?.workspace && preset.remote === undefined
+    ? { workspaceDir: preset.workspace.dir, offline: preset.workspace.offline }
+    : undefined;
   const {
     result: created, fileRefs, terminalIds, terminalCwd, confinedToSource,
   } = withResources(target, factory, { source, own }, preset?.label, preset?.recordedPtyId);

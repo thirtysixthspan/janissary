@@ -47,6 +47,7 @@ function harness() {
       liveEntries: () => [entry], close: vi.fn(),
       entryOf: (label: string) => (entry.labels.has(label) ? entry : undefined),
       entryForSession: (session: string) => (entry.channel.sessionId === session ? entry : undefined),
+      promoteLaunchLabel: vi.fn(),
     },
     shell: { adoptRemoteShell: vi.fn(), releaseAdoptedShell: vi.fn() },
     tab: {
@@ -129,6 +130,32 @@ describe('startSessionAttach', () => {
       expect.objectContaining({ id: 'rpty1', agentName: 'claude', shell: { nonce: 'a'.repeat(32) } }),
       expect.objectContaining({ id: 'rpty2', agentName: 'scratch', shell: { nonce: 'b'.repeat(32) } }),
     ]));
+    expect(h.managers.remote.promoteLaunchLabel).toHaveBeenCalledWith('claude-attach', 'claude');
+    expect(h.managers.tab.tabs).toEqual([]);
+  });
+
+  it('recovers a shell whose previous attach record named the prompt tab as an agent', async () => {
+    const h = harness();
+    vi.mocked(startRemoteAgent).mockImplementation(
+      (_managers, launch: { resolved: string; resume: RemoteResume }) => {
+        h.managers.remote.entryOf('claude')?.labels.add(launch.resolved);
+        h.managers.tab.tabs.push({ label: launch.resolved } as never);
+        launch.resume.onResult(true);
+      },
+    );
+    vi.mocked(restoreSessionTabs).mockResolvedValue(['claude']);
+    vi.mocked(askSessionState).mockResolvedValue([
+      { id: 'rpty1', program: 'zsh', mode: 'pty', agentName: 'claude', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/remote/src' },
+    ]);
+    const staleRecord: RemoteSessionRecord = {
+      ...record(), workspaceLabel: 'claude-attach', launchLabel: 'claude-attach', launchKind: 'agent',
+      processes: [{ id: 'rpty1', label: 'claude', kind: 'shell', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/remote/src' }],
+    };
+
+    await expect(startSessionAttach(h.managers, staleRecord)).resolves.toMatchObject({ kind: 'attached', label: 'claude' });
+
+    expect(startRemoteAgent).toHaveBeenCalledWith(h.managers, expect.objectContaining({ resolved: 'claude-attach' }));
+    expect(h.managers.remote.promoteLaunchLabel).toHaveBeenCalledWith('claude-attach', 'claude');
     expect(h.managers.tab.tabs).toEqual([]);
   });
 

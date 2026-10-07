@@ -61,7 +61,7 @@ export class SessionsManager {
   // back". The row's state already told the user which; the request is the same either way.
   attach(session: string): boolean {
     const live = this.managers.remote.entryForSession(session);
-    if (live) return this.attachTab(live.workspaceLabel);
+    if (live) return this.attachTab(live.launchLabel ?? live.workspaceLabel);
     return this.act({ kind: 'attach', session });
   }
 

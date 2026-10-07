@@ -72,7 +72,7 @@ function park(
 ): { held: string[]; host: string; what: string } | undefined {
   const held = [...entry.labels];
   const host = entry.address.host;
-  const what = entry.workspaceLabel;
+  const what = entry.launchLabel ?? entry.workspaceLabel;
   return managers.remote.detach(label) ? { held, host, what } : undefined;
 }
 
@@ -93,7 +93,7 @@ function detach(managers: Managers, record: RemoteSessionRecord | undefined, lab
   // workspace on the far side for the whole seven-day expiry with no row, no attach path, and
   // nothing to terminate it by — the invisible infrastructure this feature exists to remove.
   if (!record) {
-    report(managers, line(entry.workspaceLabel, entry.address.host, detachRefusal(entry)));
+    report(managers, line(entry.launchLabel ?? entry.workspaceLabel, entry.address.host, detachRefusal(entry)));
     return REFUSED;
   }
   const parked = park(managers, entry, label);
@@ -181,8 +181,9 @@ function terminate(
 function terminateLive(managers: Managers, record: RemoteSessionRecord): SessionActionResult | undefined {
   const entry = managers.remote.entryForSession(record.session);
   if (!entry) return;
-  report(managers, line(entry.workspaceLabel, entry.address.host, 'terminated.'));
-  if (!managers.remote.close(entry.workspaceLabel)) return REFUSED;
+  const launchLabel = entry.launchLabel ?? entry.workspaceLabel;
+  report(managers, line(launchLabel, entry.address.host, 'terminated.'));
+  if (!managers.remote.close(launchLabel)) return REFUSED;
   return { ran: true, drop: record.session, clearFailure: record.session };
 }
 
