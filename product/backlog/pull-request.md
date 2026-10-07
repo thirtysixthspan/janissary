@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Document the two plugin-contract behaviors this pull request adds without listing them: `openOrFocusTab` now uses the answering tab as its source, and `launchTab` is unusable from notification and host-state handlers.
-
-Existing Issue: The developer reference still describes `openOrFocusTab` only as "focuses or creates a plugin tab", although every plugin's intent-opened tab now uses the answering tab as its source, so the tab is placed in that tab's group and opens even after the creator has closed. Separately, `launchTab` throws `used "launchTab" outside a guarded call` (which disables the plugin) when it is called from a `notify` or `hostState` handler, because those invocations get no deferred-call port, and neither the reference nor the `launchTab` doc comment says so. Severity: 3/10
-
-Existing Risk: 3/10 - A plugin author who calls `launchTab` from a notification handler gets their plugin disabled with a reason claiming it was not in a guarded call when it was, and a reviewer of the conversations, sql or search plugins meets a placement change for intent-opened tabs that no changelog entry explains.
-
-Proposal Risk: 1/10 - Documentation and a comment only, so the remaining exposure is a reader who skips the reference, which a test pinning each behavior would surface if it ever changed.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1569: document openOrFocusTab's answering-tab source and launchTab's handler restriction". Make these edits in `documentation/developer-documentation/tab-plugins.md`. Extend the `openOrFocusTab(instanceKey, factory)` capability bullet to say that, called from an intent or from a selection action on one of the plugin's own tabs, the new tab is sourced from that answering tab (the tab `originTab()` reports), takes its group, and opens even when the tab that created the answering tab has closed. Add a matching v1 changelog bullet beside the `launchTab` and confinement bullets that explains why this stays v1. Extend the `launchTab` bullet to say that it is available from commands, openers, intents and selection or menu actions, and that calling it from a `notify` or `hostState` handler is a failure that disables the plugin. In `src/plugins/api.ts`, add the same restriction to the `launchTab` doc comment on `TabPluginServerCapabilities`. In `src/plugins/launch-tab.ts`, reword the thrown message so it names the actual condition, for example `"launchTab" is not available from a notification or host-state handler`. No existing test asserts the old wording. Add one case to `src/plugins/launch-tab.test.ts` that builds the capabilities without a deferred port and expects that throw. Reconcile `product/specs/tab-plugins.md` too, which already describes the answering-tab placement in shell terms only: say it holds for every plugin. Behavior does not change. The only code edit is the error text.
-
-
 * Bring two spec passages in line with this pull request: the send/queue/schedule target rule in the shell-tab spec, and the docs-screenshot reset's typed command.
 
 Existing Issue: `product/specs/shell-tab.md` still says `send`, `queue` and `schedule` accept a plugin tab "by one rule" and "share that check so they cannot disagree", then says straight after that `send` and `queue` accept a provisioning shell that `schedule` refuses. Separately, `product/specs/docs-screenshots.md` still says the reset recreates the root shell "by typing `zsh`", while the script now types `zsh --no-workspace` precisely because a bare `zsh` would clone. Severity: 2/10

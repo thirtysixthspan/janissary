@@ -208,6 +208,8 @@ export type TabPluginServerCapabilities = {
   // provisioning it starts nothing, and the host runs `ready` once the clone lands. A rejection from
   // `ready` closes that one tab; any other failure disables the plugin. Answers the opened tab's
   // label, or nothing when the name was refused (the refusal is already in the notifications feed).
+  // Available from commands, openers, intents, and selection or menu actions; calling it from a
+  // `notify` or `hostState` handler is a failure that disables the plugin.
   launchTab(
     instanceKey: string,
     request: TabPluginLaunchRequest,

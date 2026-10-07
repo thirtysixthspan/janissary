@@ -19,6 +19,7 @@ import {
   type TabPluginLaunchRequest, type TabPluginLaunchResult, type TabPluginServerCapabilities,
 } from './api.js';
 import { TabPluginHost } from './host.js';
+import { launchCapabilities } from './launch-tab.js';
 
 vi.mock('../notifications/index.js', async (importOriginal) => ({
   ...await importOriginal<typeof Notifications>(),
@@ -283,6 +284,21 @@ describe('launchTab with a workspace', () => {
     expect(host.statusFor('lt')).toMatchObject({ state: 'disabled' });
     expect(pluginTabs(managers)).toHaveLength(0);
     host.dispose();
+  });
+});
+
+describe('launchTab without a deferred-call port', () => {
+  it('throws naming the notification and host-state handlers it is unavailable from', () => {
+    const managers = makeManagers();
+    const { launchTab } = launchCapabilities({
+      managers, declaration: manifest, origin: { label: 'janus', command: '' },
+      isEnabled: () => true, validate: () => {},
+    });
+
+    expect(() => launchTab('lt-1', {}, () => ({ title: 'shell', payload: {} }), () => {})).toThrow(
+      '"launchTab" is not available from a notification or host-state handler',
+    );
+    expect(pluginTabs(managers)).toHaveLength(0);
   });
 });
 

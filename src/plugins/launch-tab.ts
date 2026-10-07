@@ -150,7 +150,7 @@ export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapa
   return {
     launchTab: (instanceKey, request, factory, ready) => {
       if (!isEnabled()) return;
-      if (!input.deferred) throw new Error('used "launchTab" outside a guarded call');
+      if (!input.deferred) throw new Error('"launchTab" is not available from a notification or host-state handler');
       if (!origin.launch && !managers.tab.byLabel(origin.label)) return;
       const label = resolveLaunchLabel(managers, declaration, origin, request);
       if (label === undefined) return;
