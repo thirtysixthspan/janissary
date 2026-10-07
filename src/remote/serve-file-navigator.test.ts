@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
@@ -47,6 +47,35 @@ describe('RemoteFileNavigators', () => {
     await request('move', { from: 'src/b.txt', to: '' });
     await request('delete', { path: 'b.txt' });
     expect(statSync(path.join(root, 'src', 'untitled')).isDirectory()).toBe(true);
+  });
+
+  it('refuses a directory symlink that resolves outside the workspace', async () => {
+    const outside = mkdtempSync(path.join(tmpdir(), 'janus-remote-outside-'));
+    try {
+      writeFileSync(path.join(outside, 'secret.txt'), 'outside data');
+      symlinkSync(outside, path.join(root, 'linked'), 'dir');
+
+      const reply = await request('read-directory', { path: 'linked' });
+
+      expect(reply).toMatchObject({ error: expect.stringContaining('outside this file navigator') });
+      expect(reply).not.toHaveProperty('result');
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a missing child below a symlink that resolves outside the workspace', async () => {
+    const outside = mkdtempSync(path.join(tmpdir(), 'janus-remote-outside-'));
+    try {
+      symlinkSync(outside, path.join(root, 'linked'), 'dir');
+
+      const reply = await request('read-directory', { path: 'linked/not-created' });
+
+      expect(reply).toMatchObject({ error: expect.stringContaining('outside this file navigator') });
+      expect(reply).not.toHaveProperty('result');
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+    }
   });
 
   it('round-trips binary remote file writes and leaves a directory intact when replacement fails', async () => {

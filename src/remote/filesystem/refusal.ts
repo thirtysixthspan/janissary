@@ -3,6 +3,7 @@ import { containedPath } from '../../file-navigator/batch-paths.js';
 import { OUTSIDE_ROOT_REASON } from '../../file-navigator/file-operation-result.js';
 import { operationDescriptor } from './operations.js';
 import type { ClientFrame } from '../protocol-frames.js';
+import { physicallyContainedPath } from './path-containment.js';
 
 type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -18,7 +19,7 @@ export function refusedPaths(frame: RequestFrame, root: string): string[] {
   return descriptor.paths(frame.args as never).filter((candidate) => {
     if (candidate === '' && descriptor.rootDestination) return false;
     const relative = path.isAbsolute(candidate) ? path.relative(root, candidate) : candidate;
-    return !containedPath(root, relative);
+    return !containedPath(root, relative) || !physicallyContainedPath(root, relative);
   });
 }
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Security: prevent a remote `files` path from listing a symlink target outside the provisioned workspace.
-
-Existing Issue: `remoteCwd` checks normalized path strings, and the far-side refusal uses the same lexical containment check, so a target like `<workspace>/link` passes even when `link` points to a directory outside the workspace; `readDirectory` then follows it. Severity: 7/10
-
-Existing Risk: 7/10 - A remote workspace can contain a symlink to sensitive host data, and `files link` can expose that directory through the remote navigator despite the stated workspace boundary.
-
-Proposal Risk: 2/10 - Far-side real-path containment would refuse reads that cross the workspace boundary while preserving ordinary in-workspace navigation.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1576: prevent remote file navigator paths from following symlinks outside the workspace". In `src/remote/serve-file-navigator.ts` and its path-refusal helpers, check existing path components against the canonical workspace root before dispatching filesystem operations, so an in-workspace symlink cannot redirect a remote tree read outside the workspace. Keep missing in-workspace destinations usable for creation. Add server tests using a symlink inside the workspace that points to an outside directory and assert that listing it is refused without returning its entries; also retain a positive test for an ordinary directory. Update the remote file navigator spec to state that symlink targets outside the workspace remain inaccessible, run the scoped checks, and record the fix in a completed plan.
-
-
 * Plan fidelity: support the planned `files <path> in <remote tab>` command form.
 
 Existing Issue: The plan specifies that a remote path can be written before the `in <label>` clause, but `parseFileNavigatorArgs` only consumes `in <label>` at the start of the argument tail, so the specified form is treated as a path containing the words `in` and the label. Severity: 4/10

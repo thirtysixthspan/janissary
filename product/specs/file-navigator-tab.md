@@ -40,7 +40,8 @@ provisioning, it reports `The remote workspace is not ready yet.` and opens no t
 argument resolves relative to that remote cwd; `~` uses the remote user's home and `$root` uses the
 remote workspace root. A resolved path outside the workspace is refused with
 `"<path>" is outside the remote workspace <workspace>.` This containment rule also applies to
-`files in <label> <path>` when `<label>` is remote.
+`files in <label> <path>` when `<label>` is remote. A path that follows a symlink outside the
+workspace is refused as well.
 
 ### `files left`/`files right [path]`
 
