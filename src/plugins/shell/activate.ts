@@ -13,6 +13,7 @@ import {
 } from './shared.js';
 import { openShellTab } from './open-tab.js';
 import { launchShellTab } from './launch-tab.js';
+import { spawnShell } from './spawn-shell.js';
 import { parseShellArgument } from './parse-argument.js';
 
 let invocationCounter = 0;
@@ -29,6 +30,23 @@ export function activate(): TabPluginActivation {
   return {
     isPayload: isShellPayload,
     opener: noFileOpener('shell'),
+    reattach: (record, capabilities) => {
+      const instanceKey = nextInstanceKey();
+      capabilities.launchTab(instanceKey, {
+        name: record.label,
+        remote: { adopt: {
+          ptyId: record.ptyId, cwd: record.cwd, workspaceDir: record.workspace,
+          offline: record.offline, host: record.host,
+        } },
+      }, (resources, start) => ({
+        title: 'shell',
+        payload: spawnShell(resources, {
+          instanceKey, cwd: start.cwd, root: record.workspace,
+          workspace: { dir: record.workspace, offline: record.offline },
+          hookNonce: record.nonce, host: record.host, prompted: true, recordedId: start.recordedPtyId,
+        }),
+      }), () => {});
+    },
     command: (argument, capabilities) => {
       const origin = capabilities.originTab();
       if (!origin) return;

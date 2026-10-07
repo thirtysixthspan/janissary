@@ -30,6 +30,10 @@ describe('sessions shared contract', () => {
     expect(isSessionsPayload({ entries: [ROW] })).toBe(true);
   });
 
+  it('accepts a remote shell row', () => {
+    expect(isSessionsPayload({ entries: [{ ...ROW, kind: 'shell' }] })).toBe(true);
+  });
+
   it('accepts the optional session id and failure text', () => {
     expect(isSessionsPayload({
       entries: [{ ...ROW, session: 'abc', failure: 'devbox: timed out' }],

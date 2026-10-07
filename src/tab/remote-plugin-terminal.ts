@@ -29,7 +29,7 @@ export function spawnRemotePluginTerminal(
       },
       env: options.env,
       ...(options.zshHooks && { shell: { nonce: options.zshHooks.nonce } }),
-    });
+    }, ...(options.recordedId === undefined ? [] : [options.recordedId]));
   } catch (error) {
     const message = error instanceof Error ? error.message.split('\n', 1)[0] : String(error);
     throw new TabPluginRejection(`Cannot start a remote terminal in ${options.cwd}: ${message}.`);

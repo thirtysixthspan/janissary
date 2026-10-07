@@ -5,7 +5,7 @@
 // longer attached to. There is deliberately no row standing for a channel: a shared channel shows
 // itself by grouping, which is what `joined` carries.
 
-export type RemoteSessionKind = 'harness' | 'agent' | 'ssh' | 'navigator';
+export type RemoteSessionKind = 'harness' | 'agent' | 'shell' | 'ssh' | 'navigator';
 
 // `provisioning` is a remote tab whose workspace clone has not landed yet, `reconnecting` a live
 // entry whose transport is gone and whose backoff is already running, `detached` a peer parked on

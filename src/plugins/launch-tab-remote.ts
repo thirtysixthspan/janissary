@@ -35,6 +35,9 @@ export function launchRemotePluginTab(
   input: LaunchInput, instanceKey: string, request: TabPluginLaunchRequest,
   factory: TabPluginLaunchFactory, ready: TabPluginLaunchReadyHandler, tried: readonly string[] = [],
 ): TabPluginLaunchResult | undefined {
+  if (request.remote && 'adopt' in request.remote) {
+    return adoptRemotePluginTab(input, instanceKey, request, factory);
+  }
   if (request.remote && 'join' in request.remote) {
     return launchJoinedRemotePluginTab(input, instanceKey, request, factory);
   }
@@ -109,6 +112,36 @@ export function launchRemotePluginTab(
     void onReady();
   }, onFailed);
   return { label };
+}
+
+function adoptRemotePluginTab(
+  input: LaunchInput, instanceKey: string, request: TabPluginLaunchRequest, factory: TabPluginLaunchFactory,
+): TabPluginLaunchResult | undefined {
+  const { managers, origin, declaration } = input;
+  if (!input.reattaching) throw new TabPluginRejection('Remote process adoption is only available during reattach.');
+  const adopt = request.remote && 'adopt' in request.remote ? request.remote.adopt : undefined;
+  const source = managers.tab.byLabel(origin.label);
+  if (!adopt || !source?.remote) throw new TabPluginRejection('A remote process can only be adopted from its resumed channel.');
+  const label = request.name?.trim() ?? '';
+  if (!label) throw new TabPluginRejection('An adopted remote process needs its recorded tab label.');
+  if (!managers.remote.attach(label, origin.label)) return undefined;
+  try {
+    managers.tab.openPluginTab(
+      declaration.id, declaration.tabLabelPrefix, instanceKey, declaration.payloadSchemaVersion, origin.label,
+      (resources) => {
+        const payload = factory(resources, {
+          label, cwd: adopt.cwd, workspaceDir: adopt.workspaceDir, host: adopt.host, recordedPtyId: adopt.ptyId,
+        });
+        input.validate(payload);
+        return payload;
+      },
+      { label, cwd: adopt.cwd, remote: source.remote, workspace: { dir: adopt.workspaceDir, offline: adopt.offline } },
+    );
+  } catch (error) {
+    managers.remote.release(label);
+    throw error;
+  }
+  return managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey)?.label === label ? { label } : undefined;
 }
 
 function launchJoinedRemotePluginTab(

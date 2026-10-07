@@ -201,6 +201,22 @@ describe('composeSessionRows detached records', () => {
     expect(rows.map((row) => row.name)).toEqual(['claude-2', 'bekir-2']);
   });
 
+  it('lists a detached shell with kind shell', () => {
+    const rows = composeSessionRows(snapshot({
+      detached: [{
+        record: record({
+          launchKind: 'shell',
+          processes: [{
+            id: 'spawn-shell', label: 'shell-2', kind: 'shell', shell: { nonce: 'a'.repeat(32) },
+            offline: true, cwd: '/srv/ws/src',
+          }],
+        }),
+      }],
+    }));
+
+    expect(rows[0]).toMatchObject({ kind: 'shell', name: 'shell-2', label: 'shell-2' });
+  });
+
   it('keys each row on the session and the spawn id, so two peers never collide', () => {
     const rows = composeSessionRows(snapshot({ detached: [{ record: record() }] }));
     expect(rows[0].id).toBe('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee:spawn-1');

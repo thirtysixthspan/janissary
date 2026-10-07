@@ -129,6 +129,7 @@ function instanceKeyKind(
 // navigator — it keeps `dock` and gets no presentation.
 export function writePluginEntry(tab: Tab, managers: Managers): ProfilePluginTabFile | undefined {
   if (!tab.plugin) return undefined;
+  if (tab.plugin.id === 'shell' && tab.remote) return undefined;
   const id = tab.plugin.id;
   const key = tab.plugin.instanceKey;
   const kind = instanceKeyKind(managers.plugins.declarations.find((entry) => entry.id === id));

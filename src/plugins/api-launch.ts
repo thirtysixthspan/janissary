@@ -11,7 +11,9 @@ export type TabPluginLaunchRequest = {
   // the result says why.
   workspace?: { offline: boolean };
   // Start over an SSH channel and provision the workspace on that host.
-  remote?: { address: string } | { join: true };
+  remote?: { address: string } | { join: true } | {
+    adopt: { ptyId: string; cwd: string; workspaceDir: string; offline: boolean; host: string };
+  };
 };
 
 // Where the launched tab starts, decided by the host before the factory runs.
@@ -24,6 +26,7 @@ export type TabPluginLaunchStart = {
   // The SSH PTY rendered while a remote workspace provisions.
   connectPtyId?: string;
   host?: string;
+  recordedPtyId?: string;
 };
 
 export type TabPluginLaunchReady = {

@@ -31,6 +31,8 @@ function managers(tabs: Tab[]): Managers {
   } as unknown as Managers;
 }
 
+const emptyManagers = managers([]);
+
 function entry(overrides: Partial<RemoteEntry> = {}): RemoteEntry {
   return {
     channel: { sessionId: '11111111-2222-3333-4444-555555555555', spawnedProcesses: () => [] } as never,
@@ -62,6 +64,13 @@ describe('channelOf member rows', () => {
     const channel = channelOf(managers(tabs), entry(), activity);
 
     expect(channel.members).toEqual([{ label: 'claude', name: 'reviewer', kind: 'harness', activity: 42 }]);
+  });
+
+  it('reads a remote shell plugin tab as a shell row', () => {
+    const shell = tab('scratch', { plugin: { id: 'shell' } as never });
+
+    expect(channelOf(managers([shell]), entry({ labels: new Set(['scratch']) }), activity).members[0])
+      .toMatchObject({ label: 'scratch', kind: 'shell' });
   });
 
   it('falls back to a tab\'s label when it has no title', () => {
@@ -104,14 +113,14 @@ describe('recordOf process rows', () => {
   }
 
   it('describes a harness process as the tab that launched the channel', () => {
-    const record = recordOf(withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude' }]), 7);
+    const record = recordOf(managers([harnessTab('claude')]), withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude' }]), 7);
 
     expect(record?.processes).toEqual([{ id: 'p1', label: 'claude', kind: 'harness', harness: 'claude' }]);
     expect(record?.activity).toBe(7);
   });
 
   it('carries the auto-approve flag when the spawn frame carried one', () => {
-    const record = recordOf(withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude', autoApprove: true, autoResume: true }]), 7);
+    const record = recordOf(managers([harnessTab('claude')]), withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude', autoApprove: true, autoResume: true }]), 7);
 
     expect(record?.processes[0]).toMatchObject({ autoApprove: true, autoResume: true });
   });
@@ -119,21 +128,22 @@ describe('recordOf process rows', () => {
   // A joined agent tab's shell already carries that tab's label as its agent name, so it is listed
   // against the tab it belongs to rather than against the channel that spawned it.
   it('describes a pipe process as the agent tab that owns it', () => {
-    const record = recordOf(withProcesses([{ id: 'p2', mode: 'pipe', agentName: 'claude-2' }]), 7);
+    const record = recordOf(emptyManagers, withProcesses([{ id: 'p2', mode: 'pipe', agentName: 'claude-2' }]), 7);
 
     expect(record?.processes).toEqual([{ id: 'p2', label: 'claude-2', kind: 'agent' }]);
   });
 
   // Nothing in that list carries the launching tab's own label, so the record falls back to saying a
   // harness opened the channel — which is what a channel that only ever ran a remote harness is.
-  it('claims a harness launched the channel when no process carries the launch label', () => {
-    const record = recordOf(withProcesses([{ id: 'p2', mode: 'pipe', agentName: 'claude-2' }]), 7);
+  it('uses the launching plugin kind when no process carries the launch label', () => {
+    const shell = tab('claude', { plugin: { id: 'shell' } as never });
+    const record = recordOf(managers([shell]), withProcesses([{ id: 'p2', mode: 'pipe', agentName: 'claude-2' }]), 7);
 
-    expect(record?.launchKind).toBe('harness');
+    expect(record?.launchKind).toBe('shell');
   });
 
   it('reads the launch kind off the process that carries the launch label', () => {
-    const record = recordOf(withProcesses([
+    const record = recordOf(managers([harnessTab('claude')]), withProcesses([
       { id: 'p1', mode: 'pty', harness: 'claude' },
       { id: 'p2', mode: 'pipe', agentName: 'claude-2' },
     ]), 7);
@@ -141,10 +151,27 @@ describe('recordOf process rows', () => {
     expect(record?.launchKind).toBe('harness');
   });
 
+  it('records a shell nonce and offline mode with its live cwd from tab runtime', () => {
+    const shell = tab('claude', {
+      plugin: { id: 'shell' } as never,
+      runtime: { busy: false, context: [], queue: [], cwd: '/remote/work/subdir' },
+    });
+    const record = recordOf(managers([shell]), withProcesses([{
+      id: 'p4', mode: 'pty', agentName: 'claude', shell: { nonce: 'a'.repeat(32) },
+      offline: true, cwd: '/remote/work',
+    }]), 7);
+
+    expect(record?.processes).toEqual([{
+      id: 'p4', label: 'claude', kind: 'shell', shell: { nonce: 'a'.repeat(32) },
+      offline: true, cwd: '/remote/work/subdir',
+    }]);
+    expect(record?.launchKind).toBe('shell');
+  });
+
   // A PTY takeover or an inline terminal card belongs to a tab already listed in the channel, so a
   // row of its own would double-count it.
   it('contributes no row for a process that is neither a harness nor an agent shell', () => {
-    const record = recordOf(withProcesses([
+    const record = recordOf(managers([harnessTab('claude')]), withProcesses([
       { id: 'p1', mode: 'pty', harness: 'claude' },
       { id: 'p3', mode: 'pty' },
     ]), 7);
@@ -153,10 +180,10 @@ describe('recordOf process rows', () => {
   });
 
   it('records nothing when the channel spawned nothing worth a row', () => {
-    expect(recordOf(withProcesses([{ id: 'p3', mode: 'pty' }]), 7)).toBeUndefined();
+    expect(recordOf(emptyManagers, withProcesses([{ id: 'p3', mode: 'pty' }]), 7)).toBeUndefined();
   });
 
   it('records nothing for a channel that has not settled a workspace yet', () => {
-    expect(recordOf(entry({ workspaceDir: undefined } as Partial<RemoteEntry>), 7)).toBeUndefined();
+    expect(recordOf(emptyManagers, entry({ workspaceDir: undefined } as Partial<RemoteEntry>), 7)).toBeUndefined();
   });
 });

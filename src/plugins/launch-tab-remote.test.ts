@@ -114,6 +114,31 @@ describe('launchRemotePluginTab', () => {
     expect(h.opened).toHaveLength(0);
   });
 
+  it('refuses to adopt a recorded process outside the reattach hook', () => {
+    const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' } });
+    const request: TabPluginLaunchRequest = {
+      name: 'shell-1', remote: { adopt: { ptyId: 'rpty4', cwd: '/remote/src', workspaceDir: '/remote', offline: true, host: 'devbox' } },
+    };
+
+    expect(() => launchRemotePluginTab(h.input, 'shell-1', request, factory, ready)).toThrow('only available during reattach');
+    expect(h.managers.remote.attach).not.toHaveBeenCalled();
+  });
+
+  it('opens an adopted remote tab with the recorded label, workspace, cwd, and PTY id', () => {
+    const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' } });
+    h.input.reattaching = true;
+    const adoptedFactory = vi.fn((_resources: object, start: TabPluginLaunchStart) => ({ title: 'shell', payload: start }));
+    const request: TabPluginLaunchRequest = {
+      name: 'shell-1', remote: { adopt: { ptyId: 'rpty4', cwd: '/remote/src', workspaceDir: '/remote', offline: true, host: 'devbox' } },
+    };
+
+    expect(launchRemotePluginTab(h.input, 'shell-1', request, adoptedFactory, ready)).toEqual({ label: 'shell-1' });
+    expect(h.managers.remote.attach).toHaveBeenCalledWith('shell-1', 'janus');
+    expect(adoptedFactory).toHaveBeenCalledWith(expect.anything(), {
+      label: 'shell-1', cwd: '/remote/src', workspaceDir: '/remote', host: 'devbox', recordedPtyId: 'rpty4',
+    });
+  });
+
   it('refuses an explicitly named shell that clashes with an open tab', () => {
     const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work' });
     h.tabs.push({ label: 'taken' });

@@ -3,6 +3,7 @@ import {
   TabPluginRejection,
   type TabPluginActivation, type TabPluginDeclaration, type TabPluginLoaders,
   type TabPluginPresentation, type TabPluginServerCapabilities,
+  type TabPluginReattachRecord,
 } from './api.js';
 import { disposePluginActivation } from './activate.js';
 import { tabPluginCatalog } from './catalog.js';
@@ -23,6 +24,7 @@ import { startPluginActivation } from './start-activation.js';
 import { buildPluginRecords } from './host-records.js';
 import { closePluginTabs } from './teardown.js';
 import { noteInOriginTab } from './transcript-note.js';
+import { reattachPlugin } from './reattach.js';
 
 export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
@@ -66,10 +68,7 @@ export class TabPluginHost {
     return [...this.records.values()].map((record) => record.declaration);
   }
 
-  statusFor(id: string): TabPluginStatus | undefined {
-    const record = this.records.get(id);
-    return record && recordStatus(record);
-  }
+  statusFor(id: string): TabPluginStatus | undefined { const record = this.records.get(id); return record && recordStatus(record); }
 
   async runOpener(
     id: string, presentation: TabPluginPresentation, file: string, origin: PluginFailureOrigin,
@@ -105,6 +104,15 @@ export class TabPluginHost {
 
   clientFailed(tabLabel: string, reason: string): void {
     reportClientFailure(this.requestPort(), tabLabel, reason);
+  }
+
+  async reattach(id: string, data: TabPluginReattachRecord, origin: PluginFailureOrigin): Promise<void> {
+    const record = this.records.get(id);
+    if (!record) throw new Error(`Unknown tab plugin "${id}"`);
+    return reattachPlugin(data, { managers: this.managers, record, origin,
+      ensureActive: this.ensureActive.bind(this),
+      invoke: (item, activation, at, call) => this.invoke(item, activation, at, call, undefined, true),
+      disable: (item, error, at) => { this.disable(item, error, at); } });
   }
 
   private requestPort(): PluginRequestPort {
@@ -151,11 +159,13 @@ export class TabPluginHost {
     origin: PluginFailureOrigin,
     call: (capabilities: TabPluginServerCapabilities) => Result | Promise<Result>,
     answeringLabel?: string,
+    reattaching = false,
   ): Promise<PluginCallOutcome<Result>> {
     return invokePlugin(
       this.managers, record.declaration, activation, origin,
       () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call, answeringLabel,
       (error, failureOrigin) => { this.disable(record, error, failureOrigin); },
+      reattaching,
     );
   }
 

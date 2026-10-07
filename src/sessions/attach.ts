@@ -41,7 +41,7 @@ async function settleAccepted(
     managers.remote.close(label);
     return { kind: 'terminated', reason: `${record.launchLabel} on ${record.host} had nothing still running.` };
   }
-  restoreSessionTabs(managers, record, label, processes);
+  await restoreSessionTabs(managers, record, label, processes);
   return { kind: 'attached', label };
 }
 
@@ -117,7 +117,9 @@ export function startSessionAttach(
     // An agent-launched session: the tab is an ordinary agent tab whose shell runs on the far side,
     // and its shell binds to the recorded spawn id the moment something asks for one.
     const spawnId = spawnIdOf(record);
-    if (spawnId !== undefined) managers.shell.adoptRemoteShell(label, spawnId, record.session);
+    if (spawnId !== undefined && record.launchKind !== 'shell') {
+      managers.shell.adoptRemoteShell(label, spawnId, record.session);
+    }
     startRemoteAgent(managers, {
       resolved: label, creator: managers.tab.cur(), address, offline: false,
       cwd: record.workspaceDir, resume: resumed,

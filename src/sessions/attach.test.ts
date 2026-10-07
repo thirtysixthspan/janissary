@@ -97,6 +97,24 @@ describe('startSessionAttach', () => {
     expect(h.managers.harness.attachRemote).toHaveBeenCalledWith(expect.objectContaining({ autoApprove: true, autoResume: true }));
   });
 
+  it('attaches a shell session without adopting its PTY as the placeholder agent shell', async () => {
+    const h = harness();
+    vi.mocked(startRemoteAgent).mockImplementation(
+      (_managers, launch: { resume: RemoteResume }) => { launch.resume.onResult(true); },
+    );
+    vi.mocked(askSessionState).mockResolvedValue([
+      { id: 'rpty1', program: 'zsh', mode: 'pty', agentName: 'claude', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/remote/src' },
+    ]);
+    const shellRecord: RemoteSessionRecord = {
+      ...record(), launchKind: 'shell',
+      processes: [{ id: 'rpty1', label: 'claude', kind: 'shell', shell: { nonce: 'a'.repeat(32) }, offline: true, cwd: '/remote/src' }],
+    };
+
+    await expect(startSessionAttach(h.managers, shellRecord)).resolves.toMatchObject({ kind: 'attached' });
+    expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
+    expect(restoreSessionTabs).toHaveBeenCalledOnce();
+  });
+
   it('does not restore any tab for an unanswered query', async () => {
     const h = harness();
     vi.mocked(askSessionState).mockResolvedValue(undefined);

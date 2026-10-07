@@ -6,7 +6,7 @@ import type { RemoteProcessKind, RemoteSessionRecord } from './store.js';
 // this; what arrives here is data, so the ordering, the grouping, and which actions each row offers
 // are testable without a server (principle 4).
 
-// One tab riding a live channel: a remote harness, a remote agent, or a remote file navigator.
+// One tab riding a live channel: a remote harness, agent, shell, or file navigator.
 export type SessionMember = {
   label: string;
   name: string;

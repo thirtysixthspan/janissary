@@ -67,7 +67,7 @@ function fakeCapabilities(overrides: {
     launchTab: vi.fn((
       key: string, request: TabPluginLaunchRequest,
       factory: (given: typeof resources, start: {
-        label: string; cwd: string; workspaceDir?: string; connectPtyId?: string; host?: string;
+        label: string; cwd: string; workspaceDir?: string; connectPtyId?: string; host?: string; recordedPtyId?: string;
       }) => TabPluginPayload,
       ready: TabPluginLaunchReadyHandler,
     ) => {
@@ -77,7 +77,9 @@ function fakeCapabilities(overrides: {
       const start = joining
         ? { label: 'kemal', cwd: '/remote/work/src', workspaceDir: '/remote/work', host: 'devbox' }
         : request.remote
-        ? { label: 'kemal', cwd: '/repo/src', connectPtyId: 'ssh-pty', host: 'devbox' }
+        ? ('adopt' in request.remote
+          ? { label: 'kemal', cwd: '/remote/src', workspaceDir: '/remote', host: 'devbox', recordedPtyId: request.remote.adopt.ptyId }
+          : { label: 'kemal', cwd: '/repo/src', connectPtyId: 'ssh-pty', host: 'devbox' })
         : cloning ? { label: 'kemal', cwd: CLONE, workspaceDir: CLONE } : { label: 'kemal', cwd: '/repo/src' };
       opened.push({ key, value: factory(resources, start) });
       return {
@@ -377,6 +379,25 @@ describe('the sibling intent', () => {
 });
 
 describe('shell plugin activation', () => {
+  it('reattaches a shell by adopting its recorded PTY and nonce', () => {
+    const h = fakeCapabilities();
+    const activation = activate();
+
+    activation.reattach?.({
+      label: 'scratch', nonce: 'b'.repeat(32), cwd: '/remote/src', workspace: '/remote',
+      offline: true, host: 'devbox', ptyId: 'rpty9',
+    }, h.capabilities);
+
+    expect(h.launches[0]?.request).toEqual({
+      name: 'scratch', remote: { adopt: {
+        ptyId: 'rpty9', cwd: '/remote/src', workspaceDir: '/remote', offline: true, host: 'devbox',
+      } },
+    });
+    expect(h.spawns[0]).toMatchObject({
+      cwd: '/remote/src', workspace: { dir: '/remote', offline: true }, recordedId: 'rpty9',
+      zshHooks: { nonce: 'b'.repeat(32) },
+    });
+  });
   it('owns no startup directory, so it has nothing to release on dispose', () => {
     expect(activate().dispose).toBeUndefined();
   });

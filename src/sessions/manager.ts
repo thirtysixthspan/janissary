@@ -201,7 +201,7 @@ export class SessionsManager {
     let changed = false;
     for (const entry of this.managers.remote.liveEntries()) {
       if (entry.closed) continue;
-      const record = recordOf(entry, now);
+      const record = recordOf(this.managers, entry, now);
       if (!record) continue;
       const existing = this.all().find((candidate) => candidate.session === record.session);
       // The stamp moves only when the description does, so a row's age reports when the session last

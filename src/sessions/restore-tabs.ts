@@ -44,12 +44,23 @@ function restoreAgentTab(
  * describing something this side chose not to restore does not leave its replay in memory for the
  * life of the channel.
  */
-export function restoreSessionTabs(
+export async function restoreSessionTabs(
   managers: Managers, record: RemoteSessionRecord, launchLabel: string,
   processes: readonly RemoteProcessState[],
-): string[] {
+): Promise<string[]> {
   const restored: string[] = [];
   for (const process of processes) {
+    if (process.shell) {
+      const recorded = record.processes.find((entry) => entry.id === process.id && entry.kind === 'shell');
+      if (!recorded?.shell || recorded.cwd === undefined || recorded.offline === undefined) continue;
+      const label = recorded.label === record.launchLabel ? claimLabel(managers, recorded.label) : recorded.label;
+      await managers.plugins.reattach('shell', {
+        label, nonce: recorded.shell.nonce, cwd: recorded.cwd, workspace: record.workspaceDir,
+        offline: recorded.offline, host: record.host, ptyId: recorded.id,
+      }, { label: launchLabel, command: '' });
+      if (managers.tab.byLabel(label)) restored.push(label);
+      continue;
+    }
     // The harness the launching tab is already running, and any PTY takeover or inline terminal card
     // riding a tab that is itself being restored: neither is a row, and neither is a tab of its own.
     if (process.harness !== undefined || process.mode !== 'pipe') continue;

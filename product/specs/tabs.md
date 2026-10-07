@@ -4,7 +4,7 @@ Multiple workspace tabs, each with independent state. A zsh shell tab named `jan
 
 ### Default tab
 
-Every launch, `--relaunch` included, opens a single zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory. No other tabs exist until explicitly created, and no launch opens an agent tab. The shell is opened before any window can connect, so the strip is never empty. When it cannot be opened — no zsh to run, or a shell plugin that fails or is disabled — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]).
+Every launch, `--relaunch` included, opens a single zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory. No other tabs exist until explicitly created, and no launch opens an agent tab. The shell is opened before any window can connect, so the strip is never empty. When it cannot be opened — no zsh to run, or a shell plugin that fails or is disabled — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]). A remote shell tab is restored by `--relaunch` around its existing remote PTY, with its last reported cwd and without reopening a navigator.
 
 ### Agent tab creation
 

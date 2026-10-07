@@ -102,6 +102,7 @@ export function createPluginContext(
   deadline?: HandlerDeadline,
   // A later guarded call into this plugin, for a handler that outlives this one — `launchTab`'s ready.
   deferred?: DeferredPluginCall,
+  reattaching = false,
 ): TabPluginServerCapabilities {
   return restrictToDeclared({
     note: (text) => {
@@ -147,6 +148,7 @@ export function createPluginContext(
     ...launchCapabilities({
       managers, declaration, origin, isEnabled, deferred,
       validate: (value) => { validateTabValue(activation, value); },
+      reattaching,
     }),
     // Unlike `openOrFocusTab`, this does not require the originating tab to still exist: the target
     // is the plugin's own tab, not the transcript that asked for the change.
