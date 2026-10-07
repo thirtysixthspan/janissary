@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Deliver the planned test for SSH PTY exit during provisioning.
-
-Existing Issue: The plan requires a client test proving that the SSH PTY's exit does not close the shell tab, but the added test only checks attachment switching and never invokes either attached handle's exit callback. Severity: 5/10
-
-Existing Risk: 4/10 - A future change could make the provisioning SSH channel's exit close the tab before its failure output can be read, and the stated test suite would not catch it.
-
-Proposal Risk: 1/10 - A lifecycle test that exercises the exit callback while provisioning and after the remote shell starts will pin the distinction and catch regressions.
-
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR 1579: test SSH PTY exit during shell provisioning". Extend the client lifecycle coverage around `web/src/plugins/shell/useShellTerminal.test.ts` and `web/src/plugins/shell/useShellTabTerminal.ts` so it triggers the SSH attachment's `onExit` while the payload is provisioning and proves the tab remains open, then triggers the remote shell PTY's `onExit` after readiness and proves the tab closes. Preserve the existing assertions that provisioning does not report shell colors or register shell marker handlers and that readiness switches the attachment to the remote PTY. The current attachment test does not exercise either exit callback, so add coverage at the tab lifecycle boundary where provisioning state controls closing.
-
 * Correct the contradictory remote-launch statement in the remote-server spec.
 
 Existing Issue: The new standalone remote shell section says a shell opens even when its source tab is remote, then immediately says launching from a remote tab is refused; the implementation rejects that nested launch. Severity: 4/10

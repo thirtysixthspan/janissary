@@ -1,6 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { PluginTerminal } from '../api';
+import type { ShellPayload } from '@shared/plugins/shell/shared';
+import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
+import { useShellTabTerminal } from './useShellTabTerminal';
 import { useShellTerminal } from './useShellTerminal';
 
 const terminals: { written: string[]; disposed: boolean; options: Record<string, unknown>; clearCalls: number }[] = [];
@@ -156,6 +158,48 @@ describe('useShellTerminal', () => {
     expect(reportColors).toHaveBeenCalledWith('remote-pty', expect.any(Object));
     expect(oscHandlers.length).toBeGreaterThan(0);
     expect(detached).toEqual([1]);
+  });
+
+  it('keeps the tab open when the SSH PTY exits during provisioning, then closes on remote zsh exit', async () => {
+    const exitHandlers: (() => void)[][] = [];
+    const attachTerminal = vi.fn((_id: string) => {
+      const handlers: (() => void)[] = [];
+      exitHandlers.push(handlers);
+      return Promise.resolve(makeHandle({ exitHandlers: handlers }));
+    });
+    const capabilities = {
+      attachTerminal,
+      copyText: vi.fn(),
+      reportTerminalColors: vi.fn(),
+      intent: vi.fn(async () => ({ reported: true })),
+      close: vi.fn(),
+      reportFailure: vi.fn(),
+    } as unknown as TabPluginClientCapabilities;
+    const provisioning: ShellPayload = {
+      instanceKey: 'shell-1', provisioning: true, connectPtyId: 'ssh-pty',
+      cwd: '/repo', root: '/repo', workspace: true, connections: [], schedule: [],
+      hookNonce: NONCE, host: 'devbox',
+    };
+    const ready: ShellPayload = {
+      instanceKey: 'shell-1', ptyId: 'remote-pty', cols: 120, rows: 40,
+      cwd: '/remote/project', root: '/repo', workspace: true, connections: [], schedule: [],
+      hookNonce: NONCE, host: 'devbox', prompted: false,
+    };
+    const containerRef = { current: document.createElement('div') };
+    const initialProps: { payload: ShellPayload } = { payload: provisioning };
+    const view = renderHook(({ payload }: { payload: ShellPayload }) => useShellTabTerminal({
+      payload, capabilities, containerRef, onCommand: vi.fn(), onCommandRunning: vi.fn(),
+    }), { initialProps });
+
+    await waitFor(() => expect(exitHandlers[0]).toHaveLength(1));
+    act(() => { exitHandlers[0]?.[0]?.(); });
+    expect(capabilities.close).not.toHaveBeenCalled();
+
+    view.rerender({ payload: ready });
+    await waitFor(() => expect(exitHandlers[1]).toHaveLength(1));
+    act(() => { exitHandlers[1]?.[0]?.(); });
+    await waitFor(() => expect(capabilities.close).toHaveBeenCalledTimes(1));
+    expect(capabilities.intent).toHaveBeenCalledWith('exited-early', null);
   });
 
   it('renders the bytes the attachment hands it', () => {
