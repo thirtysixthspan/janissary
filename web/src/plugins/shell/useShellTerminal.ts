@@ -9,6 +9,7 @@ import { shellTerminalTheme } from './shell-terminal-theme';
 import { registerShellMarkerHandlers } from './shell-marker-handlers';
 import { insertMarkdownBlock } from './markdown-block';
 import { attachPromptMask } from './prompt-mask';
+import { holdFocusOffSinglePress } from './press-focus';
 import { formatDispatchedCommand } from './format-dispatched-command';
 import { markdownToAnsi } from './markdown-to-ansi';
 import { stripTerminalControls } from './strip-terminal-controls';
@@ -116,6 +117,7 @@ export function useShellTerminal({
     const fit = new FitAddon();
     terminal.loadAddon(fit);
     terminal.open(container);
+    const releasePressFocus = holdFocusOffSinglePress(container, terminal);
     const isMac = isMacPlatform();
     terminal.attachCustomKeyEventHandler((event) => {
       if (event.type !== 'keydown' || !copySelectionChord(event, isMac) || !terminal.hasSelection()) return true;
@@ -175,6 +177,7 @@ export function useShellTerminal({
 
     return () => {
       disposed = true;
+      releasePressFocus();
       observer.disconnect();
       themeObserver.disconnect();
       handleRef.current?.detach();

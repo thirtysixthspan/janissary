@@ -152,8 +152,9 @@ export function ShellTab({ payload, capabilities }: Properties) {
   return (
     <div className="tab-body shell-tab" data-claims-shift-tab>
       <ShellTabMeta payload={payload} capabilities={capabilities} />
-      {/* Clicking the terminal gives it focus so xterm sends keystrokes to the attached shell. The
-          stylesheet lights its left-hand line in the tab's colour while it holds the keyboard. */}
+      {/* A single click on the terminal keeps the keyboard on the command bar; a double-click gives it
+          to the terminal so xterm sends keystrokes to the attached shell. The stylesheet lights its
+          left-hand line in the tab's colour while it holds the keyboard. */}
       <div
         className="harness-body shell-body"
         data-doc-shot="shell-view"
