@@ -77,6 +77,17 @@ describe('reportPluginFailure', () => {
       .toContain('Tab plugin "video" disabled: failed.');
   });
 
+  it('records a disabled plugin as a plugin-failure notification', () => {
+    const fixture = makeManagers();
+    const message = reportPluginFailure(fixture.managers, 'video', 'failed', origin);
+
+    expect(fixture.managers.notifications.all).toContainEqual(expect.objectContaining({
+      event: 'plugin-failure',
+      tabLabel: origin.label,
+      message,
+    }));
+  });
+
   it('does not recreate a closed originating tab', () => {
     const fixture = makeManagers({ origin: false, notifications: true });
     reportPluginFailure(fixture.managers, 'video', 'failed', origin);

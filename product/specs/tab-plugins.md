@@ -194,7 +194,7 @@ The visible message is exactly:
 
 `Tab plugin "<id>" disabled: <reason>.`
 
-The reason is one line, contains no stack, trims trailing punctuation, and ends with one period through the wrapper. The originating transcript always receives the message if that tab is still open. An already-open notifications feed receives the same message; failure never creates the feed or recreates a closed origin.
+The reason is one line, contains no stack, trims trailing punctuation, and ends with one period through the wrapper. The originating transcript receives the message if that tab is still open. Every fatal failure also creates a `plugin-failure` notification with the same message. It is queued and follows the ordinary notifications feed, toast, and burst-escalation rules (see [[notifications]]). A closed origin is never recreated.
 
 A disabled plugin owns no tabs. Failure before mount leaves no tab or served-file reference. Failure after mount closes every tab belonging to that plugin, releases their references, and disposes the activated plugin once. Later attempts do not import or call it again and report the recorded reason. Other plugins, tabs, and commands continue working. Restarting Janissary is the only way to retry a disabled plugin.
 

@@ -190,6 +190,9 @@ These event types can produce a notification line:
   the only one of the dispatcher's errors that moves: a missing file, a malformed invocation, an
   unviewable web address, and a plugin command's refusal are all still reported where the command
   was typed.
+- **`plugin-failure`** — a tab plugin is disabled after a fatal failure (see [[tab-plugins]]). The
+  line is `Tab plugin "<id>" disabled: <reason>.`, attributed to the tab that invoked it when one
+  exists. It is queued and delivered through the ordinary feed, toast, and burst-escalation rules.
 - **`plugin-note`** — a tab plugin reports one line of its own, through the narrow capability the
   host grants for it (see [[tab-plugins]]). The line is the plugin's own text; the plugin chooses
   neither the event type, nor any tab to jump to, and it may attribute the line to no tab but one of
@@ -222,7 +225,7 @@ The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `a
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
-`open-unsupported`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
+`open-unsupported`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
 events they are shown even when the tab they are attributed to is the active one. A `question` event fires only for a
 background tab.
@@ -234,7 +237,7 @@ tabs feed the notifications tab. The notifications tab itself is a view tab that
 events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
 `editor-suggest`,
 `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, and
-`plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
+`plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
 capability degrading, or a plugin's own deliberate report, rather than ambient background activity.
 For `plugin-note` this is the case that matters most: a plugin reporting on the very tab the user is
