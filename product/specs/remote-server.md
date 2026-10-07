@@ -642,7 +642,7 @@ and the tab carries the workspaced flag icon like any other workspaced tab.
 The remote harness metadata row's ➕ action is **New shell in this workspace**. It opens a shell in
 the harness's existing remote workspace and channel, inheriting its offline setting and current
 working directory when that directory is still inside the workspace. During provisioning the action
-is disabled and titled **Waiting for workspace**. A remote agent retains its **New agent in this
+is disabled and titled **Waiting for the workspace**. A remote agent retains its **New agent in this
 workspace** action.
 
 ### Connections
