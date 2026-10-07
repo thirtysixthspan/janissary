@@ -37,7 +37,6 @@ export function activate(): TabPluginActivation {
       if (origin.remote && parsed.remote !== undefined) {
         capabilities.rejectRequest('Cannot launch a remote shell from a remote tab.');
       }
-      if (origin.remote) capabilities.rejectRequest('A shell tab cannot be opened from a remote tab.');
       const launched = launchShellTab(capabilities, nextInstanceKey(), parsed, origin.root);
       if (launched?.fallbackReason) {
         capabilities.note(`Shell "${launched.label}" has no workspace: ${launched.fallbackReason}.`);
@@ -109,6 +108,13 @@ export function activate(): TabPluginActivation {
         payload: isEmptyShellIntent,
         run: (tabPayload, _payload, capabilities) => {
           if (tabPayload.provisioning) return { opened: false };
+          const origin = capabilities.originTab();
+          if (origin?.remote) {
+            const launched = launchShellTab(
+              capabilities, nextInstanceKey(), { name: '', workspace: false, offline: false }, origin.root,
+            );
+            return { opened: launched !== undefined };
+          }
           openShellTab(capabilities, nextInstanceKey());
           return { opened: true };
         },

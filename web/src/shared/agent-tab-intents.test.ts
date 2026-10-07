@@ -14,11 +14,13 @@ describe('agentTabIntents', () => {
 
     intents.onOpenFileNavigator();
     intents.onLaunchAgentHere();
+    intents.onLaunchShellHere();
     intents.onOpenTranscript();
 
     expect(send).toHaveBeenNthCalledWith(1, { method: 'openFileNavigatorFor', params: { label: 'agent2' } });
     expect(send).toHaveBeenNthCalledWith(2, { method: 'launchAgentFor', params: { label: 'agent2' } });
-    expect(send).toHaveBeenNthCalledWith(3, { method: 'openTranscriptFor', params: { label: 'agent2' } });
+    expect(send).toHaveBeenNthCalledWith(3, { method: 'launchShellFor', params: { label: 'agent2' } });
+    expect(send).toHaveBeenNthCalledWith(4, { method: 'openTranscriptFor', params: { label: 'agent2' } });
   });
 
   it('sends transcript and ACP connection intents', () => {

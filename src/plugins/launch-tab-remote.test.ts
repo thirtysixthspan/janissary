@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import type { RemoteLaunchHandlers } from '../remote/manager.js';
-import type { TabPluginDeclaration, TabPluginLaunchRequest } from './api.js';
+import type { TabPluginDeclaration, TabPluginLaunchRequest, TabPluginLaunchStart } from './api.js';
 import { TabPluginRejection } from './api-capabilities.js';
 import { launchRemotePluginTab } from './launch-tab-remote.js';
 import type { LaunchInput } from './launch-tab.js';
@@ -17,11 +17,17 @@ const declaration: TabPluginDeclaration = {
   id: 'shell', version: '1', apiVersion: 1, payloadSchemaVersion: 4, tabLabelPrefix: 'shell', fileExtensions: {},
 };
 
-function harness() {
+function harness(options: {
+  workspaceDir?: string;
+  reconnecting?: boolean;
+  attach?: boolean;
+  cwd?: string;
+  sourceRemote?: { address: string; host: string };
+} = {}) {
   const channels: { label: string; handlers: RemoteLaunchHandlers }[] = [];
   const opened: { label: string; start: unknown; payload: unknown }[] = [];
   const tabs: { label: string; plugin?: { id: string; instanceKey: string; payload: unknown; busy?: boolean } }[] = [
-    { label: 'janus' },
+    { label: 'janus', ...(options.sourceRemote && { remote: options.sourceRemote }) },
   ];
   const closeRemote = vi.fn((label: string) => {
     const index = tabs.findIndex((tab) => tab.label === label);
@@ -30,7 +36,7 @@ function harness() {
   const managers = {
     tab: {
       launchDir: '/repo', tabs, allLabels: () => tabs.map((tab) => tab.label),
-      cwdOf: () => '/repo/src', byLabel: (label: string) => tabs.find((tab) => tab.label === label),
+      cwdOf: () => options.cwd ?? '/repo/src', byLabel: (label: string) => tabs.find((tab) => tab.label === label),
       pluginTabByInstanceKey: (id: string, key: string) => tabs.find((tab) => tab.plugin?.id === id && tab.plugin.instanceKey === key),
       openPluginTab: (
         id: string, _prefix: string, instanceKey: string, _version: number, _source: string,
@@ -50,6 +56,10 @@ function harness() {
     },
     sessions: { view: () => [] },
     remote: {
+      workspaceOf: vi.fn(() => options.workspaceDir),
+      reconnectingOf: vi.fn(() => options.reconnecting ?? false),
+      attach: vi.fn(() => options.attach ?? true),
+      release: vi.fn(),
       create: vi.fn((label: string, _address: unknown, _cwd: string, handlers: RemoteLaunchHandlers) => {
         channels.push({ label, handlers });
         return { ptyId: `connect-${channels.length - 1}` };
@@ -78,6 +88,74 @@ const factory = (_resources: object, start: { label: string; cwd: string; connec
 const ready = vi.fn();
 
 describe('launchRemotePluginTab', () => {
+  it('refuses a join while its remote workspace is provisioning', () => {
+    const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' } });
+
+    expect(() => launchRemotePluginTab(h.input, 'shell-1', { remote: { join: true } }, factory, ready))
+      .toThrow('The remote workspace is not ready yet.');
+    expect(h.managers.remote.attach).not.toHaveBeenCalled();
+  });
+
+  it('reports that a reconnecting source workspace is unavailable', () => {
+    const h = harness({
+      sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work', reconnecting: true,
+    });
+
+    expect(launchRemotePluginTab(h.input, 'shell-1', { remote: { join: true } }, factory, ready)).toBeUndefined();
+    expect(notify).toHaveBeenCalledWith(h.managers, 'manual', 'janus', 'The remote workspace is no longer available.');
+    expect(h.managers.remote.attach).not.toHaveBeenCalled();
+  });
+
+  it('reports that a gone source channel cannot be joined', () => {
+    const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work', attach: false });
+
+    expect(launchRemotePluginTab(h.input, 'shell-1', { remote: { join: true } }, factory, ready)).toBeUndefined();
+    expect(notify).toHaveBeenCalledWith(h.managers, 'manual', 'janus', 'The remote workspace is no longer available.');
+    expect(h.opened).toHaveLength(0);
+  });
+
+  it('refuses an explicitly named shell that clashes with an open tab', () => {
+    const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work' });
+    h.tabs.push({ label: 'taken' });
+
+    expect(launchRemotePluginTab(h.input, 'shell-1', { remote: { join: true }, name: 'taken' }, factory, ready))
+      .toBeUndefined();
+    expect(h.managers.remote.attach).not.toHaveBeenCalled();
+  });
+
+  it('starts a joined shell in the source cwd when it is inside the remote workspace', () => {
+    const h = harness({
+      sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work', cwd: '/remote/work/src',
+    });
+    const joinedFactory = vi.fn((_resources: object, start: TabPluginLaunchStart) => ({ title: 'shell', payload: start }));
+
+    expect(launchRemotePluginTab(h.input, 'shell-1', { remote: { join: true } }, joinedFactory, ready))
+      .toEqual({ label: expect.any(String) });
+    expect(joinedFactory).toHaveBeenCalledWith(expect.anything(), {
+      label: expect.any(String), cwd: '/remote/work/src', workspaceDir: '/remote/work', host: 'devbox',
+    });
+  });
+
+  it('starts a joined shell at the remote workspace root when the source cwd is outside it', () => {
+    const h = harness({
+      sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work', cwd: '/remote/other',
+    });
+    const joinedFactory = vi.fn((_resources: object, start: TabPluginLaunchStart) => ({ title: 'shell', payload: start }));
+
+    launchRemotePluginTab(h.input, 'shell-1', { remote: { join: true } }, joinedFactory, ready);
+
+    expect(joinedFactory).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ cwd: '/remote/work' }));
+  });
+
+  it('releases the joined channel reference when the shell factory fails', () => {
+    const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work' });
+
+    expect(() => launchRemotePluginTab(h.input, 'shell-1', { remote: { join: true } }, () => {
+      throw new Error('factory failed');
+    }, ready)).toThrow('factory failed');
+    expect(h.managers.remote.release).toHaveBeenCalledWith(expect.any(String));
+  });
+
   it('validates the address before opening a channel', () => {
     const h = harness();
 

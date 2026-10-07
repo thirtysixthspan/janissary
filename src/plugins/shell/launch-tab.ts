@@ -11,17 +11,34 @@ export function launchShellTab(
   argument: ShellLaunchArgument,
   root: string,
 ): TabPluginLaunchResult | undefined {
+  const origin = capabilities.originTab();
+  const joining = origin?.remote === true;
+  const offline = joining ? origin.workspace?.offline ?? false : argument.offline;
   const hookNonce = createShellMarkerNonce();
   let label = '';
   return capabilities.launchTab(
     instanceKey,
     {
       ...(argument.name && { name: argument.name }),
-      ...(argument.workspace && { workspace: { offline: argument.offline } }),
-      ...(argument.remote !== undefined && { remote: { address: argument.remote } }),
+      ...(joining
+        ? { remote: { join: true } }
+        : {
+          ...(argument.workspace && { workspace: { offline } }),
+          ...(argument.remote !== undefined && { remote: { address: argument.remote } }),
+        }),
     },
     (resources, start) => {
       label = start.label;
+      if (joining) {
+        if (start.workspaceDir === undefined) throw new Error('joined remote launch has no workspace');
+        return {
+          title: 'shell',
+          payload: spawnShell(resources, {
+            instanceKey, cwd: start.cwd, root, workspace: { dir: start.workspaceDir, offline }, hookNonce,
+            ...(start.host && { host: start.host, prompted: false }),
+          }),
+        };
+      }
       if (start.connectPtyId !== undefined) {
         return {
           title: 'shell',
@@ -32,13 +49,13 @@ export function launchShellTab(
         };
       }
       if (start.workspaceDir !== undefined) {
-        const workspace = { dir: start.workspaceDir, offline: argument.offline };
+        const workspace = { dir: start.workspaceDir, offline };
         return { title: 'shell', payload: provisioningShell({ instanceKey, cwd: start.cwd, root, workspace, hookNonce }) };
       }
       return { title: 'shell', payload: spawnShell(resources, { instanceKey, cwd: start.cwd, root, hookNonce }) };
     },
     (event, ready) => {
-      const workspace = { dir: event.workspaceDir, offline: argument.offline };
+      const workspace = { dir: event.workspaceDir, offline };
       const host = event.host;
       ready.updateTab(event.instanceKey, (resources) => ({
         payload: spawnShell(resources, {

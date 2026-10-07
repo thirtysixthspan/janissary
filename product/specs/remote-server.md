@@ -639,6 +639,12 @@ the workspace symbol so the clone reads as `$workspace/<name>` (with anything in
 `$workspace/<name>/<rest>`), since the far host's own path has no meaning to local `$root` abbreviation —
 and the tab carries the workspaced flag icon like any other workspaced tab.
 
+The remote harness metadata row's ➕ action is **New shell in this workspace**. It opens a shell in
+the harness's existing remote workspace and channel, inheriting its offline setting and current
+working directory when that directory is still inside the workspace. During provisioning the action
+is disabled and titled **Waiting for workspace**. A remote agent retains its **New agent in this
+workspace** action.
+
 ### Connections
 
 A remote tab lists two rows: `ssh:<address>` for the transport it runs over, and

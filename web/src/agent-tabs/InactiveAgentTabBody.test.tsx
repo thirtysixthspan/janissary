@@ -44,7 +44,7 @@ describe('InactiveAgentTabBody', () => {
   });
 
   it('shows the same agent metadata actions and targets the visible tab', () => {
-    const { send, onSplit } = setup();
+    const { send, onSplit } = setup(makeTab({ remote: { address: 'devbox', host: 'devbox' } }));
     fireEvent.click(screen.getByTitle('Open file navigator in this workspace'));
     fireEvent.click(screen.getByTitle('New agent in this workspace'));
     fireEvent.click(screen.getByRole('button', { name: 'Open transcript' }));

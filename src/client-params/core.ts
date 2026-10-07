@@ -50,6 +50,7 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
     && (p.palette === undefined || (Array.isArray(p.palette) && p.palette.length === 16 && p.palette.every((color) => isString(color)))),
   setDock: (p) => isInteger(p.index) && isOneOf(p.dock, DOCKS),
   launchAgentFor: (p) => isString(p.label),
+  launchShellFor: (p) => isString(p.label),
   openTranscriptFor: (p) => isString(p.label),
   openHarnessTranscriptFor: (p) => isString(p.label),
   openRecordingFor: (p) => isString(p.label),

@@ -32,7 +32,7 @@ function makeManagers(tree?: string) {
   const managers = {
     tab: { tabs, cur: () => active, byLabel: () => active, append },
     fileNavigator: tree === undefined ? fileNavigator : { ...fileNavigator, rootOf: () => tree },
-    plugins: { declarations: tabPluginCatalog, runSelectionAction },
+    plugins: { declarations: tabPluginCatalog, runSelectionAction, runCommand: vi.fn() },
     notifications: new NotificationQueue(),
   } as unknown as Managers;
   return { managers, fileNavigator, append, runSelectionAction };
@@ -123,6 +123,16 @@ describe('createFileNavigatorControllerAdapter', () => {
     expect(runSelectionAction).toHaveBeenCalledWith(
       'audio', 'queue', [path.join(root, 'a.mp3')], { label: 'agent', command: 'Add to playlist' },
     );
+  });
+
+  it('runs the shell plugin command as the harness tab without dispatching it into history', () => {
+    const { managers } = makeManagers();
+
+    createFileNavigatorControllerAdapter(managers).launchShellFor('harness1');
+
+    expect(managers.plugins.runCommand).toHaveBeenCalledWith('shell', 'zsh', {
+      label: 'harness1', command: 'zsh',
+    });
   });
 
   // The save-time round trip: the client answers the id the request went out with, and the adapter

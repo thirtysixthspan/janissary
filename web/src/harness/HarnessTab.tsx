@@ -68,7 +68,13 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         model={harness.model}
         effort={harness.effort}
         onOpenFileNavigator={intents.onOpenFileNavigator}
-        onLaunchAgentHere={cwd === undefined ? undefined : intents.onLaunchAgentHere}
+        onLaunchAgentHere={remote === undefined
+          ? cwd === undefined ? undefined : intents.onLaunchAgentHere
+          : intents.onLaunchShellHere}
+        launchTitle={remote === undefined
+          ? undefined
+          : remote.provisioning ? 'Waiting for the workspace' : 'New shell in this workspace'}
+        launchDisabled={remote?.provisioning}
         onOpenTranscript={intents.onOpenTranscript}
         hasRecorder
         onOpenRecording={intents.onOpenRecording}

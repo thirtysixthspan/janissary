@@ -2,7 +2,7 @@ import React from 'react';
 import { act, createEvent, fireEvent, render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
-import type { HarnessView } from '@shared/protocol';
+import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { HarnessTab } from './HarnessTab';
 import { harnessDropHandle } from '../shared/drop-registry';
@@ -457,6 +457,28 @@ describe('HarnessTab', () => {
       method: 'launchAgentFor',
       params: { label: 'claude' },
     });
+  });
+
+  it('launches a shell from a remote harness with the remote workspace title', () => {
+    const remote: RemoteTargetView = { address: 'devbox', host: 'devbox' };
+    const { getByTitle } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" remote={remote} />,
+    );
+    vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
+
+    getByTitle('New shell in this workspace').click();
+
+    expect(mockClient.send).toHaveBeenCalledWith({ method: 'launchShellFor', params: { label: 'claude' } });
+  });
+
+  it('disables the remote harness shell action while its workspace provisions', () => {
+    const remote: RemoteTargetView = { address: 'devbox', host: 'devbox', provisioning: true };
+    const { getByTitle } = render(
+      <HarnessTab harness={makeHarness()} client={mockClient} label="claude" remote={remote} />,
+    );
+
+    expect(getByTitle('Waiting for the workspace')).toBeDisabled();
+    expect(mockClient.send).not.toHaveBeenCalledWith({ method: 'launchShellFor', params: { label: 'claude' } });
   });
 
   it('dispatches openHarnessTranscriptFor with the tab label when the transcript button is clicked', () => {

@@ -29,6 +29,7 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
   ]],
   ['setDock', { index: 0, dock: null }, [{ index: 0 }, { index: 0, dock: 'centre' }]],
   ['launchAgentFor', { label: 'one' }, [{ label: [] }]],
+  ['launchShellFor', { label: 'one' }, [{ label: [] }]],
   ['openTranscriptFor', { label: 'one' }, [{}]],
   ['openHarnessTranscriptFor', { label: 'one' }, [{ label: 0 }]],
   ['openAcpTranscript', { acpRef: { scope: 'tab', label: 'one' } }, [

@@ -129,6 +129,18 @@ describe('AgentTabMeta', () => {
     expect(getByTitle('New agent here')).toBeInTheDocument();
   });
 
+  it('uses a caller-supplied launch title and disabled state', () => {
+    const { getByTitle } = render(
+      <AgentTabMeta
+        cwd="~/project"
+        onLaunchAgentHere={() => {}}
+        launchTitle="Waiting for the workspace"
+        launchDisabled
+      />,
+    );
+    expect(getByTitle('Waiting for the workspace')).toBeDisabled();
+  });
+
   it('renders the transcript button only when onOpenTranscript is provided', () => {
     const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenTranscript={() => {}} />);
     expect(getByTitle('Open transcript')).toBeInTheDocument();

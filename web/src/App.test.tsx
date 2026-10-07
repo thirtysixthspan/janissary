@@ -126,7 +126,7 @@ describe('App agent tab metadata row', () => {
   it('sends launchAgentFor with the active tab\'s label when the launch-agent button is clicked', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ label: 'janus' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ label: 'janus', remote: { address: 'devbox', host: 'devbox' } })], 0, null, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByTitle('New agent here'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'launchAgentFor', params: { label: 'janus' } });
   });
