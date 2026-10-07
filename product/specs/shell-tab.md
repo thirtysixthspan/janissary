@@ -307,7 +307,8 @@ it by the same Seatbelt profile and credential injection an `agent -w` gets (see
 `--offline` provisions the clone with the offline sandbox profile, which denies network access, and
 changes nothing without a workspace. `on <address>` opens the shell on that remote host and implies
 a workspace even when `--no-workspace` is present. Flags and `on` match case-insensitively; the
-address keeps its case and follows [[remote-server]]'s address grammar.
+`on <address>` clause may appear anywhere among the name and flags, and the address keeps its case
+and follows [[remote-server]]'s address grammar.
 
 The words after `zsh` that are not flags form the name, lowercased, as `agent <name>`'s do. The name is
 the tab's label and, for a workspaced shell, the clone's folder. A typed name is held to `agent`'s rules:

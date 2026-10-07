@@ -22,7 +22,9 @@ on devbox` and `harness claude on devbox` are the same command.
 
 ### Standalone remote shell
 
-`zsh [name] [--offline] on <address>` uses the same address grammar and remote workspace provisioning.
+`zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]` uses the same address
+grammar and remote workspace provisioning.
+The `on <address>` clause can appear anywhere among the name and flags.
 When launched from a local tab, the shell opens its own SSH channel and workspace. A remote tab cannot
 launch a standalone remote shell. The tab appears while SSH connects so its prompts can be answered
 in place, then switches to zsh at the remote workspace root. A remote failure has no local fallback,

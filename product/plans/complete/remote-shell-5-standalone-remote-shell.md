@@ -4,7 +4,7 @@
 
 Run order: 5 of 8 in the remote shell series. Depends on plans 1, 3, and 4. Plan 6 adds its metadata row; plans 7 and 8 extend it.
 
-`zsh … on <address>` is refused today with `Remote shell tabs are not supported yet.` (`REMOTE_SHELL_REFUSAL`, `src/plugins/shell/parse-argument.ts:6`). This plan makes it open a remote shell in its own sandboxed remote workspace, the way `agent <name> on <address>` opens a remote agent.
+`zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]` opens a standalone remote shell in its own remote workspace, using the same address grammar and workspace provisioning as `agent <name> on <address>`. The `on` clause implies a workspace even with `--no-workspace`. It can appear among the other arguments, and is refused from a remote tab with `Cannot launch a remote shell from a remote tab.`
 
 ## Design decisions
 
@@ -20,6 +20,7 @@ User decisions:
 - `on` wins over `--no-workspace`, and `--offline` applies the remote's offline sandbox profile.
 - The name is the tab label and the remote clone folder, checked under `agent <name> on <address>`'s rules.
 - A standalone remote shell gets its own channel and workspace.
+- A remote shell can be launched from a local tab; a remote tab cannot launch another remote shell and reports `Cannot launch a remote shell from a remote tab.`
 - The tab opens at once in a provisioning state, with SSH prompts rendered and answerable in its terminal. zsh then starts at the remote workspace root.
 - The feed shows `Shell "<name>" ready on <host>. (workspace: <dir>)`, followed by the remote's isolation notice when it sends one. A remote with an inactive sandbox, which is every non-macOS remote, still launches the shell.
 - Failures post `Failed to start "<name>" on <host>: <reason>`, with no local fallback.
@@ -71,8 +72,8 @@ Implementation decision: extend `launchTab` with a remote request rather than ad
 
 **Docs.**
 - `product/specs/shell-tab.md`
-- `help.md`, including line 51
-- `documentation/user-documentation/command-bar/shell.md:131`
+- `help.md`, including the `zsh` row
+- `documentation/user-documentation/command-bar/shell.md`
 - `documentation/user-documentation/advanced-agents/remote-agents.md`
 - `product/specs/remote-server.md`
 - `documentation/developer-documentation/tab-plugins.md`, for `remote.address`, `connectPtyId`, and `host`, with a changelog entry
@@ -88,7 +89,7 @@ Implementation decision: extend `launchTab` with a remote request rather than ad
 - `src/plugins/shell/activate.test.ts`, replacing the refusals at `:195,203,221`: local `on` routing, the nested refusal, the remote ready line, and `exited-early` posting only before `prompted`.
 - `src/plugins/shell/shared.test.ts`: `connectPtyId` is accepted only while provisioning, and a provisioning payload may omit `workspaceDir`.
 - `src/tab/plugin-terminals.test.ts`: `awaitsTerminal` accepts a provisioning remote shell.
-- `web/src/plugins/shell/useShellTerminal.test.ts`: attach to `connectPtyId` then `ptyId`, with no close on the SSH PTY's exit.
+- `web/src/plugins/shell/useShellTerminal.test.ts`: attach to `connectPtyId` then `ptyId`; do not close when the SSH PTY exits during provisioning; close after the remote shell PTY exits and the early-exit intent completes.
 
 ## Out of scope
 
@@ -99,7 +100,8 @@ The host chip and attach/detach control in the shell tab (plan 6). Remote siblin
 Run `$janissary/scripts/run.mjs check-diff`. Then manually:
 
 - Type `zsh docs on <address>` and answer any SSH prompt in the tab. Confirm `Shell "docs" ready on <host>. (workspace: …)` and that `pwd` prints the remote workspace.
-- While a second one is provisioning, run `queue <name> pwd` from `janus` and confirm the line runs at the first prompt.
+- Repeat with `zsh docs --no-workspace --offline on <address>` and confirm `on` still provisions the remote workspace.
+- While another one is provisioning, run `queue <name> pwd` from `janus` and confirm the line runs at the first prompt.
 - Type `zsh --bogus on <address>` and confirm the usage line.
-- On a host without zsh, confirm the early-exit failure line.
+- On a host without zsh, confirm the early-exit failure line when a browser is attached before its first prompt; without an attached browser the tab closes without that line.
 - Type `zsh x on <address>` inside the remote shell and confirm the nested refusal.
