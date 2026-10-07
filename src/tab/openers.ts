@@ -19,6 +19,7 @@ export type PluginTabPreset = {
   cwd?: string;
   workspace?: { dir: string; offline: boolean };
   remote?: { address: string; host: string };
+  recordedPtyId?: string;
 };
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
@@ -31,7 +32,7 @@ interface OpenTarget {
   registerFile(path: string): string;
   openFiles: Map<string, string>;
   spawnTerminal(options: TabPluginTerminalOptions): TabPluginTerminal;
-  spawnRemoteTerminal(label: string, options: TabPluginTerminalOptions): TabPluginTerminal;
+  spawnRemoteTerminal(label: string, options: TabPluginTerminalOptions, recordedPtyId?: string): TabPluginTerminal;
   remoteWorkspaceOf(label: string): { dir: string; offline: boolean } | undefined;
   adoptTerminal(ptyId: string, label: string): void;
   killTerminal(ptyId: string): void;
@@ -61,6 +62,7 @@ function withResources<Result>(
   factory: (resources: TabPluginResources) => Result,
   clones: { source?: TabClone; own?: TabClone },
   remoteLabel?: string,
+  recordedPtyId?: string,
 ): { result: Result; fileRefs: string[]; terminalIds: string[]; terminalCwd?: string; confinedToSource: boolean } {
   const fileRefs: string[] = [];
   const terminals: string[] = [];
@@ -80,7 +82,7 @@ function withResources<Result>(
         const remoteWorkspace = remoteLabel === undefined ? undefined : target.remoteWorkspaceOf(remoteLabel);
         const confinement = terminalConfinement(options.workspace, clones.source, clones.own, remoteWorkspace);
         const terminal = confinement.remote && remoteLabel !== undefined
-          ? target.spawnRemoteTerminal(remoteLabel, { ...options, workspace: confinement.workspace })
+          ? target.spawnRemoteTerminal(remoteLabel, { ...options, workspace: confinement.workspace }, recordedPtyId)
           : target.spawnTerminal({ ...options, workspace: confinement.workspace });
         terminals.push(terminal.ptyId);
         terminalCwd ??= options.cwd;
@@ -130,7 +132,7 @@ export function openPluginTab(
   const own = preset?.workspace && { workspaceDir: preset.workspace.dir, offline: preset.workspace.offline };
   const {
     result: created, fileRefs, terminalIds, terminalCwd, confinedToSource,
-  } = withResources(target, factory, { source, own }, preset?.label);
+  } = withResources(target, factory, { source, own }, preset?.label, preset?.recordedPtyId);
   activate(target, addPluginTab(target.tabs, creatorIndex, labelPrefix, created.title, {
     id: pluginId,
     instanceKey,

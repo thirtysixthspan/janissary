@@ -4,6 +4,7 @@ import { userInfo } from 'node:os';
 import path from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import { REMOTE_DETACH_TIMEOUT_MS } from '../remote/serve-detach.js';
+import { isZshHookNonce } from '../shell/zsh-startup/script.js';
 
 // Janissary's own record of the remote sessions it has launched, so a peer that outlived the process
 // that started it can still be found. Everything else about a remote session is in-memory state on
@@ -19,7 +20,7 @@ import { REMOTE_DETACH_TIMEOUT_MS } from '../remote/serve-detach.js';
 // still describe one project's sessions. The pre-keying `remote-sessions.json` is read the same way,
 // so a parked session survives an upgrade without any migration step.
 
-export type RemoteProcessKind = 'harness' | 'agent';
+export type RemoteProcessKind = 'harness' | 'agent' | 'shell';
 
 // One process still running inside the far side's workspace, as this side last knew it. The spawn id
 // is what the attached channel routes output for; the label is the tab it came from and the tab a
@@ -34,6 +35,9 @@ export type RemoteSessionProcess = {
   harness?: string;
   autoApprove?: boolean;
   autoResume?: boolean;
+  shell?: { nonce: string };
+  offline?: boolean;
+  cwd?: string;
 };
 
 export type RemoteSessionRecord = {
@@ -81,10 +85,16 @@ function isProcess(value: unknown): value is RemoteSessionProcess {
   return isRecord(value)
     && typeof value.id === 'string' && value.id.length > 0
     && typeof value.label === 'string' && value.label.length > 0
-    && (value.kind === 'harness' || value.kind === 'agent')
+    && ['harness', 'agent', 'shell'].includes(value.kind as string)
     && (value.harness === undefined || (typeof value.harness === 'string' && value.harness.length > 0))
     && (value.autoApprove === undefined || typeof value.autoApprove === 'boolean')
-    && (value.autoResume === undefined || typeof value.autoResume === 'boolean');
+    && (value.autoResume === undefined || typeof value.autoResume === 'boolean')
+    && (value.shell === undefined || (isRecord(value.shell) && isZshHookNonce(value.shell.nonce)))
+    && (value.offline === undefined || typeof value.offline === 'boolean')
+    && (value.cwd === undefined || (typeof value.cwd === 'string' && value.cwd.length > 0))
+    && (value.kind !== 'shell' || (
+      value.shell !== undefined && value.offline !== undefined && value.cwd !== undefined
+    ));
 }
 
 // Hand-written rather than schema-driven, for the reason every other guard in the tree is: this file
@@ -100,7 +110,7 @@ export function isRemoteSessionRecord(value: unknown): value is RemoteSessionRec
     && typeof value.workspaceDir === 'string'
     && (value.home === undefined || typeof value.home === 'string')
     && typeof value.launchLabel === 'string' && value.launchLabel.length > 0
-    && (value.launchKind === 'harness' || value.launchKind === 'agent')
+    && ['harness', 'agent', 'shell'].includes(value.launchKind as string)
     && Array.isArray(value.processes) && value.processes.every((entry) => isProcess(entry))
     && typeof value.activity === 'number' && Number.isFinite(value.activity);
 }

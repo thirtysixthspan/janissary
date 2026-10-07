@@ -6,6 +6,8 @@ All notable changes to this project are documented here.
 
 ### Features
 
+- Restore remote shell tabs across `--relaunch` and sessions-tab attach by adopting their existing PTYs.
+
 - open sibling shells from remote shells, agents, and harnesses in their existing remote workspace
 - show remote host and attach/detach controls in standalone shell metadata
 - add a sessions tab for detaching and reattaching remote sessions (#1143)

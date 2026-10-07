@@ -5,7 +5,7 @@ export const SESSIONS_PAYLOAD_SCHEMA_VERSION = 1;
 // browser graph. The shapes are deliberately re-declared rather than imported from the host's
 // `RemoteSessionView`; `shared.test.ts` pins the two against each other.
 
-export type SessionRowKind = 'harness' | 'agent' | 'ssh' | 'navigator';
+export type SessionRowKind = 'harness' | 'agent' | 'shell' | 'ssh' | 'navigator';
 
 export type SessionRowState =
   | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'terminated';
@@ -37,7 +37,7 @@ export type SessionsPayload = { entries: SessionRow[] };
 // six, because every one of them says the same thing: this verb, on this row.
 export type SessionIntent = { id: string };
 
-const KINDS = new Set<string>(['harness', 'agent', 'ssh', 'navigator']);
+const KINDS = new Set<string>(['harness', 'agent', 'shell', 'ssh', 'navigator']);
 const STATES = new Set<string>(['provisioning', 'active', 'reconnecting', 'detached', 'terminated']);
 const ACTIONS = new Set<string>(['attach', 'detach', 'terminate', 'forget', 'focus', 'close']);
 

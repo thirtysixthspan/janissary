@@ -18,7 +18,7 @@ titled **sessions**.
 ### What is listed
 
 Every remote client this janissary holds, and every parked session it could come back to. That
-means remote harness tabs, remote agent tabs, plain `ssh <destination>` tabs, remote file
+means remote harness tabs, remote agent tabs, remote shell tabs, plain `ssh <destination>` tabs, remote file
 navigators, and — for a session no longer attached — one row per process still alive on its host.
 
 There is deliberately no row standing for a connection. A connection shared by several tabs shows
@@ -34,8 +34,8 @@ When there are no remote sessions, the tab shows only its `No remote sessions` e
 
 Five named columns — Host, Type, Tab, State, Last activity, and an unlabeled actions column — list
 the bare host, what the row is running, its kind, its state, and how long ago it last changed. The
-third column shows the tab's own name — a harness or agent label, `ssh`, or a navigator's abbreviated
-root. The type is what the row *is*: `harness`, `agent`, `ssh`, or `navigator`, matching the tab it
+third column shows the tab's own name — a harness, agent, or shell label, `ssh`, or a navigator's abbreviated
+root. The type is what the row *is*: `harness`, `agent`, `shell`, `ssh`, or `navigator`, matching the tab it
 opens or would open. The row's tooltip carries the full destination
 and the remote workspace path, and the reason the last attempt on it failed when there was one.
 Headings and entries are left-aligned and share those columns, including joined rows. The final column reserves the same width in every row, so different numbers of action buttons do not shift the headings or values.
@@ -76,7 +76,7 @@ process still running on it; pressing it on any row of that session brings back 
 one connection serves them all. On a reconnecting session it means "try now" and collapses the
 backoff wait.
 
-Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host.
+Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host. Remote shell rows reopen the same running PTY with its saved cwd, offline mode, and zsh marker nonce; no navigator opens beside it. The same shell tabs return after `--relaunch`.
 
 **Detach** applies to a live session and gives it up locally while deliberately leaving it running.
 Closing the local tabs during that action never stops their remote processes.

@@ -116,6 +116,16 @@ export type TabPluginHostState = {
   schedule: unknown[];
 };
 
+export type TabPluginReattachRecord = {
+  label: string;
+  nonce: string;
+  cwd: string;
+  workspace: string;
+  offline: boolean;
+  host: string;
+  ptyId: string;
+};
+
 // A terminal this plugin's tab owns, spawned while its payload factory runs. The window is the same
 // one `registerFile` is scoped to, which is what guarantees the caller has a tab to attach it to: a
 // tab's label is allocated only after its factory returns.
@@ -371,6 +381,7 @@ export type TabPluginActivation = {
   // return value is ignored for the same reason a notification's is: a status window cannot influence
   // any host outcome, and a plugin acts on it by calling `updateTab`.
   hostState?(state: TabPluginHostState, capabilities: TabPluginServerCapabilities): void | Promise<void>;
+  reattach?(record: TabPluginReattachRecord, capabilities: TabPluginServerCapabilities): void | Promise<void>;
   isPayload(value: unknown): boolean;
   dispose?(): void | Promise<void>;
 };

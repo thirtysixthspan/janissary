@@ -2,6 +2,7 @@ import type { Managers } from '../managers.js';
 import type { RemoteSessionKind } from '../protocol.js';
 import { isEstablished, type RemoteEntry } from '../remote/attach.js';
 import type { Tab } from '../tab/types.js';
+import { tabRuntime } from '../tab/runtime.js';
 import { isFilesTab, isSshTab } from '../tab/view-guards.js';
 import type { SessionChannel, SessionMember, SessionSsh } from './rows.js';
 import type { RemoteProcessKind, RemoteSessionProcess, RemoteSessionRecord } from './store.js';
@@ -12,6 +13,7 @@ import type { RemoteProcessKind, RemoteSessionProcess, RemoteSessionRecord } fro
 
 // What a tab is, for the row's third column: what it *is*, matching the tab it opens or would open.
 function tabKind(tab: Tab): RemoteSessionKind {
+  if (tab.plugin?.id === 'shell') return 'shell';
   if (tab.view === 'files') return 'navigator';
   if (tab.view === 'harness') return 'harness';
   return 'agent';
@@ -70,7 +72,11 @@ export function sshTabs(managers: Managers, activity: (label: string) => number)
 // takeover, an inline terminal card — belongs to a tab that is already listed and contributes no row
 // of its own.
 function processOf(
-  state: { id: string; mode: 'pty' | 'pipe'; harness?: string; agentName?: string; autoApprove?: boolean; autoResume?: boolean },
+  managers: Managers,
+  state: {
+    id: string; mode: 'pty' | 'pipe'; harness?: string; agentName?: string; autoApprove?: boolean;
+    autoResume?: boolean; shell?: { nonce: string }; offline?: boolean; cwd?: string;
+  },
   launchLabel: string,
 ): RemoteSessionProcess | undefined {
   if (state.harness !== undefined) {
@@ -79,6 +85,16 @@ function processOf(
       ...(state.autoApprove !== undefined && { autoApprove: state.autoApprove }),
       ...(state.autoResume !== undefined && { autoResume: state.autoResume }),
     };
+  }
+  if (state.shell && state.agentName && state.offline !== undefined) {
+    const tab = managers.tab.byLabel(state.agentName);
+    const cwd = tab ? tabRuntime(tab).cwd ?? state.cwd : state.cwd;
+    if (cwd) {
+      return {
+        id: state.id, label: state.agentName, kind: 'shell', shell: state.shell,
+        offline: state.offline, cwd,
+      };
+    }
   }
   if (state.mode === 'pipe' && state.agentName !== undefined) {
     return { id: state.id, label: state.agentName, kind: 'agent' as RemoteProcessKind };
@@ -101,12 +117,12 @@ function processOf(
  * Written from what the channel actually spawned rather than from the tabs on screen, so the record
  * describes the far side in the same terms the far side answers a `session-state` query with.
  */
-export function recordOf(entry: RemoteEntry, now: number): RemoteSessionRecord | undefined {
+export function recordOf(managers: Managers, entry: RemoteEntry, now: number): RemoteSessionRecord | undefined {
   if (!isEstablished(entry)) return;
   const session = entry.channel.sessionId;
   const launchLabel = entry.workspaceLabel;
   const processes = entry.channel.spawnedProcesses()
-    .map((state) => processOf(state, launchLabel))
+    .map((state) => processOf(managers, state, launchLabel))
     .filter((process): process is RemoteSessionProcess => process !== undefined);
   if (processes.length === 0) return;
   return {
@@ -118,8 +134,14 @@ export function recordOf(entry: RemoteEntry, now: number): RemoteSessionRecord |
     workspaceDir: entry.workspaceDir,
     ...(entry.home !== undefined && { home: entry.home }),
     launchLabel,
-    launchKind: processes.find((process) => process.label === launchLabel)?.kind ?? 'harness',
+    launchKind: processes.find((process) => process.label === launchLabel)?.kind ?? launchKindOf(managers, launchLabel),
     processes,
     activity: now,
   };
+}
+
+function launchKindOf(managers: Managers, label: string): RemoteProcessKind {
+  const tab = managers.tab.byLabel(label);
+  if (tab?.plugin?.id === 'shell') return 'shell';
+  return tab?.view === 'harness' ? 'harness' : 'agent';
 }

@@ -10,6 +10,7 @@ export function spawnRemotePluginTerminal(
   label: string,
   channel: RemoteChannel | undefined,
   options: TabPluginTerminalOptions,
+  recordedPtyId?: string,
 ): TabPluginTerminal {
   if (!channel) throw new TabPluginRejection(`Cannot start a remote terminal for ${label}: its remote channel is unavailable.`);
   if (options.zshHooks !== undefined && !isZshHookNonce(options.zshHooks.nonce)) {
@@ -29,7 +30,7 @@ export function spawnRemotePluginTerminal(
       },
       env: options.env,
       ...(options.zshHooks && { shell: { nonce: options.zshHooks.nonce } }),
-    });
+    }, ...(recordedPtyId === undefined ? [] : [recordedPtyId]));
   } catch (error) {
     const message = error instanceof Error ? error.message.split('\n', 1)[0] : String(error);
     throw new TabPluginRejection(`Cannot start a remote terminal in ${options.cwd}: ${message}.`);

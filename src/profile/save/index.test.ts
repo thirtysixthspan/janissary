@@ -210,6 +210,20 @@ describe('saveProfile', () => {
     expect(load('demo').entries).toHaveLength(1);
   });
 
+  it('omits remote shell tabs from the saved profile', async () => {
+    const shell = makePluginTab('scratch', '#ccc', 1, 1, '#ccc', 'shell', {
+      id: 'shell', instanceKey: 'shell-1', schemaVersion: 4,
+      payload: { instanceKey: 'shell-1', ptyId: 'rpty1', cwd: '/remote/src', root: '/remote',
+        workspace: true, workspaceDir: '/remote', cols: 80, rows: 24, connections: [], schedule: [], hookNonce: 'a'.repeat(32) },
+      fileRefs: [], sourceLabel: 'janus',
+    });
+    shell.remote = { address: 'devbox', host: 'devbox' };
+
+    await saveProfile('demo', makeManagers([shell]));
+
+    expect(load('demo').entries).toEqual([]);
+  });
+
   it('skips nothing now that plugin, ssh, and undocked navigator tabs are all captured', async () => {
     const image = imagePluginTab('pic', '#111', 1, '/a.png');
     const ssh = makeHarnessTab('server', '#333', 1, 1, '#333', { name: 'ssh', program: 'ssh', ptyId: 'pty2', status: 'running', destination: 'host' });

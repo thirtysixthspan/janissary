@@ -61,6 +61,21 @@ describe('remote session store round trip', () => {
     expect(loadRemoteSessions()).toEqual([entry]);
   });
 
+  it('persists a remote shell process', () => {
+    project();
+    const shell = record({
+      launchKind: 'shell', activity: Date.now(),
+      processes: [{
+        id: 'spawn-shell', label: 'scratch', kind: 'shell', shell: { nonce: 'a'.repeat(32) },
+        offline: true, cwd: '/srv/project/src',
+      }],
+    });
+
+    saveRemoteSessions([shell]);
+
+    expect(loadRemoteSessions()).toEqual([shell]);
+  });
+
   it('writes the record under the project\'s own .janissary directory', () => {
     const dir = project();
     saveRemoteSessions([record({ activity: Date.now() })]);
@@ -109,8 +124,15 @@ describe('remote session store parsing', () => {
     expect(parseRemoteSessions(text)).toEqual([]);
   });
 
-  it('refuses a record whose launch kind is not one of the two', () => {
+  it('refuses a record whose launch kind is unknown', () => {
     const text = JSON.stringify([record({ launchKind: 'navigator' as never })]);
+    expect(parseRemoteSessions(text)).toEqual([]);
+  });
+
+  it('refuses a shell process without its nonce and cwd', () => {
+    const text = JSON.stringify([record({
+      processes: [{ id: 'spawn-1', label: 'scratch', kind: 'shell', offline: false } as never],
+    })]);
     expect(parseRemoteSessions(text)).toEqual([]);
   });
 
