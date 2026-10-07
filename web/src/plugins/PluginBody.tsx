@@ -15,6 +15,7 @@ import { AppCommandBarTabScope } from '../shared/command-bar/AppCommandBar';
 import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
 import { usePluginHost } from './host';
 import { type ClientPluginRegistration } from './registry';
+import { usePluginRemote } from './usePluginRemote';
 
 const CLIENT_ACTIVATION_MS = 5000;
 
@@ -120,6 +121,7 @@ export function PluginBody({
   client,
   active,
   dock = null,
+  remote,
 dotColor,
   onClose,
   onSplit,
@@ -130,12 +132,14 @@ dotColor,
   client: JanusClient;
   active: boolean;
   dock?: 'left' | 'right' | null;
+  remote?: TabView['remote'];
   dotColor?: string;
   onClose: () => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
 }) {
   const host = usePluginHost();
+  const remoteCapabilities = usePluginRemote(remote, client, label);
   const [failed, setFailed] = useState(false);
   const pluginId = plugin.id;
   // The caller rebuilds `onSplit` on every render, so calling through a ref is what actually keeps
@@ -180,10 +184,10 @@ dotColor,
   const capabilities = useMemo(
     () => createPluginClientCapabilities(
       host, pluginId, label, client, active, dock, close, splitAction, registerDirty, chords, dotColor,
-      recording,
+      recording, remoteCapabilities,
     ),
     [active, client, close, dock, host, label, pluginId, registerDirty, splitAction, chords, dotColor,
-      recording],
+      recording, remoteCapabilities],
   );
   const capabilitiesRef = useRef(capabilities);
   capabilitiesRef.current = capabilities;

@@ -35,7 +35,7 @@ export function DockedPluginBody({
       <DockedActionsContext.Provider value={actionsTarget}>
         <PluginBody
           plugin={tab.plugin} label={tab.label} client={client} active={visible} dock={tab.dock ?? null}
-          onClose={onClose}
+          onClose={onClose} remote={tab.remote}
         />
       </DockedActionsContext.Provider>
       {overlay}

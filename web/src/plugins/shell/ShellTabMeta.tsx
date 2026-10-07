@@ -1,8 +1,8 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  RecordingFlag, StatusPanels, StatusWindowButton, connectionsWindowIcon, newTabIcon, openFilesIcon, scheduleWindowIcon,
-  statusButton, syncIcon, useStatusWindows, workspacedIcon,
+  ConnectionPlug, RecordingFlag, RemoteChip, RemoteSessionButton, StatusPanels, StatusWindowButton,
+  connectionsWindowIcon, newTabIcon, openFilesIcon, scheduleWindowIcon, statusButton, syncIcon, useStatusWindows, workspacedIcon,
   type TabPluginClientCapabilities,
 } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -37,6 +37,10 @@ export function ShellTabMeta({ payload, capabilities }: {
   return (
     <div className="shell-tab-header">
       <div className="tab-meta">
+        {capabilities.remote !== undefined && capabilities.remoteSession !== undefined && (
+          <ConnectionPlug state={capabilities.remoteSession.state} />
+        )}
+        {capabilities.remote !== undefined && <RemoteChip remote={capabilities.remote} />}
         <span className="tab-cwd">{formatShellCwd(payload.cwd, payload.root, payload.workspaceDir)}</span>
         <span className="tab-flags">
           <RecordingFlag onOpen={capabilities.openRecording} />
@@ -86,6 +90,13 @@ export function ShellTabMeta({ payload, capabilities }: {
             {...statusButton(payload.schedule.length > 0, windows.schedule)}
           />
           {capabilities.splitAction}
+          {capabilities.remote !== undefined && capabilities.remoteSession !== undefined && (
+            <RemoteSessionButton
+              state={capabilities.remoteSession.state}
+              host={capabilities.remote.host}
+              onAction={capabilities.remoteSession.onAction}
+            />
+          )}
         </span>
       </div>
       <StatusPanels
