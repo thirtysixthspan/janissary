@@ -86,7 +86,7 @@ export const clientPluginRegistry = createClientPluginRegistry({
   schedules: clientPlugin(1, clientPluginLoaders.schedules),
   search: clientPlugin(1, clientPluginLoaders.search),
   sessions: clientPlugin(1, clientPluginLoaders.sessions),
-  shell: clientPlugin(3, clientPluginLoaders.shell),
+  shell: clientPlugin(4, clientPluginLoaders.shell),
   sql: clientPlugin(1, clientPluginLoaders.sql),
   video: clientPlugin(1, clientPluginLoaders.video),
 } satisfies Record<ProductionTabPluginId, ClientPluginRegistration>);

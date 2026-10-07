@@ -314,7 +314,7 @@ describe('TabManager queue', () => {
       vi.mocked(managers.workspace.retain).mockImplementation(() => { references += 1; });
       vi.mocked(managers.workspace.release).mockImplementation(() => { references -= 1; });
       const factory = (resources: TabPluginResources) => {
-        resources.spawnTerminal({ cwd: '/repo/clone/subdir' });
+        resources.spawnTerminal({ cwd: '/repo/clone/subdir', workspace: { dir: '/repo/clone' } });
         return { title: 'shell', payload: { cwd: '/wrong', workspace: false } };
       };
       tm.openPluginTab('shell', 'shell', 'first', 1, source.label, factory);
@@ -350,7 +350,7 @@ describe('TabManager queue', () => {
     tm.tabs.push(source);
     tm.setCwd(source.label, '/tmp');
     tm.openPluginTab('shell', 'shell', 'fallback', 1, source.label, (resources) => {
-      resources.spawnTerminal({ cwd: '/repo/clone' });
+      resources.spawnTerminal({ cwd: '/repo/clone', workspace: { dir: '/repo/clone' } });
       return { title: 'shell', payload: {} };
     });
     const shell = tm.cur();

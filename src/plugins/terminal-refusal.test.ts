@@ -46,11 +46,16 @@ function hostFor(managers: Managers): TabPluginHost {
         isPayload: () => true,
         intent: () => null,
         opener: { inline: () => {}, external: () => {} },
-        command: (cwd, capabilities) => {
+        command: (argument, capabilities) => {
           opened += 1;
+          const [cwd, dir] = argument.split(' ');
           capabilities.openOrFocusTab(`term-${opened}`, (resources) => ({
             title: 'term',
-            payload: { ptyId: resources.spawnTerminal({ cwd, shell: '/bin/zsh', args: [] }).ptyId },
+            payload: {
+              ptyId: resources.spawnTerminal({
+                cwd, shell: '/bin/zsh', args: [], ...(dir && { workspace: { dir } }),
+              }).ptyId,
+            },
           }));
         },
       }),
@@ -101,6 +106,57 @@ describe('a refused plugin terminal', () => {
     expect(host.statusFor('term')?.state).toBe('active');
     expect(pluginTabs(managers)).toHaveLength(1);
     expect(managers.tab.byLabel(origin)?.log.at(-1)?.output).toBe('Cannot start a terminal in /repo/gone: chdir failed.');
+    host.dispose();
+  });
+});
+
+describe('plugin terminal confinement', () => {
+  function workspacedSource(managers: Managers): void {
+    managers.tab.tabs[0].workspaceDir = '/repo/clone';
+    managers.tab.tabs[0].offline = true;
+  }
+
+  it('runs a terminal that names no workspace unconfined from a workspaced source and retains nothing', async () => {
+    const managers = makeManagers(() => 'pty1');
+    workspacedSource(managers);
+    const host = hostFor(managers);
+
+    await openIn(host, managers, '/repo/src');
+
+    expect(vi.mocked(managers.pty.spawn).mock.calls[0]?.[4]).toBeUndefined();
+    expect(managers.workspace.retain).not.toHaveBeenCalled();
+    expect(pluginTabs(managers)[0]?.workspaceDir).toBeUndefined();
+    host.dispose();
+  });
+
+  it("confines a terminal naming the source's clone to it and retains the clone", async () => {
+    const managers = makeManagers(() => 'pty1');
+    workspacedSource(managers);
+    const host = hostFor(managers);
+
+    await openIn(host, managers, '/repo/clone /repo/clone');
+
+    const call = vi.mocked(managers.pty.spawn).mock.calls[0];
+    expect(call?.[4]).toBe('/repo/clone');
+    expect(call?.[5]).toBe(true);
+    expect(managers.workspace.retain).toHaveBeenCalledWith('/repo/clone');
+    expect(pluginTabs(managers)[0]).toMatchObject({ workspaceDir: '/repo/clone', offline: true });
+    host.dispose();
+  });
+
+  it('refuses a workspace that is no tab of its own without disabling the plugin', async () => {
+    const managers = makeManagers(() => 'pty1');
+    workspacedSource(managers);
+    const host = hostFor(managers);
+    const origin = managers.tab.tabs[0].label;
+
+    await openIn(host, managers, '/repo/other /repo/other');
+
+    expect(host.statusFor('term')?.state).toBe('active');
+    expect(pluginTabs(managers)).toHaveLength(0);
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+    expect(managers.tab.byLabel(origin)?.log.at(-1)?.output)
+      .toBe("Cannot confine a terminal to /repo/other: it is not this tab's workspace.");
     host.dispose();
   });
 });

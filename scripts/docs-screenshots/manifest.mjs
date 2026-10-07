@@ -28,7 +28,7 @@ export default [
     // Three shells: the hidden `bilal` is badged by a command finishing in it, and `janus` blinks
     // while it runs one. Each is aliased so the strip reads the same on every run.
     name: 'tabs-overview',
-    setup: ['zsh', 'rename bilal', 'zsh', 'rename cavus', 'send bilal sleep 1', 'send janus sleep 30'],
+    setup: ['zsh --no-workspace', 'rename bilal', 'zsh --no-workspace', 'rename cavus', 'send bilal sleep 1', 'send janus sleep 30'],
     settle: 1200,
     stabilize: 'busy-dot',
     target: 'tab-strip',

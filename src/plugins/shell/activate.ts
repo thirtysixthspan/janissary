@@ -12,6 +12,8 @@ import {
   type ShellCommandState, type ShellCompleteRequest, type ShellPayload, type ShellQueuedLine,
 } from './shared.js';
 import { openShellTab } from './open-tab.js';
+import { launchShellTab } from './launch-tab.js';
+import { parseShellArgument } from './parse-argument.js';
 import { ZshStartupDirectory } from './zsh-startup-directory.js';
 
 let invocationCounter = 0;
@@ -31,8 +33,16 @@ export function activate(): TabPluginActivation {
   return {
     isPayload: isShellPayload,
     opener: noFileOpener('shell'),
-    command: (_argument, capabilities) => {
-      openShellTab(capabilities, nextInstanceKey(), startup);
+    command: (argument, capabilities) => {
+      const origin = capabilities.originTab();
+      if (!origin) return;
+      if (origin.remote) capabilities.rejectRequest('A shell tab cannot be opened from a remote tab.');
+      const parsed = parseShellArgument(argument);
+      if ('error' in parsed) return capabilities.rejectRequest(parsed.error);
+      const launched = launchShellTab(capabilities, nextInstanceKey(), parsed, origin.root, startup);
+      if (launched?.fallbackReason) {
+        capabilities.note(`Shell "${launched.label}" has no workspace: ${launched.fallbackReason}.`);
+      }
     },
     dispose: () => { startup.dispose(); },
     // The rows the metadata row's status windows render, merged into the payload with `updateTab` —
@@ -62,6 +72,7 @@ export function activate(): TabPluginActivation {
       ShellPayload,
       {
         'terminal-status': TabPluginIntentEntry<ShellPayload, undefined>;
+        sibling: TabPluginIntentEntry<ShellPayload, undefined>;
         'command-state': TabPluginIntentEntry<ShellPayload, ShellCommandState>;
         cwd: TabPluginIntentEntry<ShellPayload, string>;
         dispatch: TabPluginIntentEntry<ShellPayload, string>;
@@ -77,8 +88,19 @@ export function activate(): TabPluginActivation {
       'terminal-status': {
         payload: isEmptyShellIntent,
         run: (tabPayload, _payload, capabilities) => ({
-          running: capabilities.terminalRunning(tabPayload.ptyId),
+          // A provisioning shell has no process yet, and must not close itself for want of one.
+          running: tabPayload.ptyId === undefined || capabilities.terminalRunning(tabPayload.ptyId),
         }),
+      },
+      // ➕ and `Cmd+T`: another shell beside this one, in the same place. A shell still waiting for its
+      // clone has no place yet, so it opens nothing.
+      sibling: {
+        payload: isEmptyShellIntent,
+        run: (tabPayload, _payload, capabilities) => {
+          if (tabPayload.provisioning) return { opened: false };
+          openShellTab(capabilities, nextInstanceKey(), startup);
+          return { opened: true };
+        },
       },
       'command-state': {
         payload: isShellCommandState,

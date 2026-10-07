@@ -32,15 +32,17 @@ describe('schedule command run', () => {
     schedules = new Map();
     outputs = [];
     tab = { label: 'janus', index: 0 };
-    const tabs: { label: string; title?: string; view?: string; harness?: unknown }[] = [
+    const tabs: { label: string; title?: string; view?: string; harness?: unknown; workspaceDir?: string }[] = [
       { label: 'janus' },
       { label: 'claude', title: 'Reviewer', view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: 'p1', status: 'running' } },
       { label: 'notes', view: 'markdown' },
       { label: 'bekir', view: 'plugin' },
       { label: 'video', view: 'plugin' },
+      { label: 'docs', view: 'plugin', workspaceDir: '/repo/.janissary/workspace/docs' },
     ];
     managers = {
       pty: { terminalIdFor: (label: string) => (label === 'bekir' ? 'pty4' : undefined) },
+      workspace: { provisioning: () => true },
       schedule: {
         get: (label: string) => schedules.get(label),
         set: (label: string, next: ScheduleEntry[]) => { schedules.set(label, next); },
@@ -198,6 +200,12 @@ describe('schedule command run', () => {
     tab = { label: 'bekir', index: 3 };
     run('schedule fetch every 5m git fetch');
     expect(schedules.get('bekir')).toHaveLength(1);
+  });
+
+  it('refuses a plugin tab whose workspace clone is still provisioning', () => {
+    run('schedule x in docs every 5m echo hi');
+    expect(outputs.at(-1)).toBe('Tab "docs" cannot run scheduled commands.');
+    expect(schedules.size).toBe(0);
   });
 
   it('still refuses a plugin tab with no terminal to type into', () => {

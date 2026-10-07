@@ -2,6 +2,9 @@ import type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
 } from './api-topics.js';
 import type { TabPluginCapabilityName } from './api-capabilities.js';
+import type {
+  TabPluginLaunchFactory, TabPluginLaunchReadyHandler, TabPluginLaunchRequest, TabPluginLaunchResult,
+} from './api-launch.js';
 import type { CompletionResult } from '../completion/types.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
@@ -17,6 +20,10 @@ export {
 export type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
 } from './api-topics.js';
+export type {
+  TabPluginLaunchFactory, TabPluginLaunchReady, TabPluginLaunchReadyHandler, TabPluginLaunchRequest,
+  TabPluginLaunchResult, TabPluginLaunchStart,
+} from './api-launch.js';
 
 export type TabPluginDeclaration = {
   id: string;
@@ -35,6 +42,9 @@ export type TabPluginDeclaration = {
   editsOwnFiles?: boolean;
   editGesture?: 'open external';
   command?: string;
+  // The line a profile entry for this plugin reissues, when it is not `command` itself — a plugin
+  // whose bare command does more than a saved tab should, such as cloning a workspace.
+  profileCommand?: string;
   // Every extension in `fileExtensions` is something to play rather than merely to open, which is
   // what the `play` command asks before dispatching a file to this plugin's inline opener. A flag
   // rather than a list of its own, so the playable types cannot drift from the claimed ones: a
@@ -131,6 +141,9 @@ export type TabPluginTerminalOptions = {
   args?: string[];
   // Confinement for a terminal started in a workspace clone, mirroring the sandbox the tab's own
   // shell runs under. The plugin names where the terminal lives; the host owns how it is confined.
+  // It must name the source tab's own clone or the clone of the tab being opened or updated; any
+  // other directory is refused. Omitted, the terminal runs unconfined wherever `cwd` says, whatever
+  // clone its source tab works in.
   workspace?: { dir: string; offline?: boolean };
   // Variables added over the environment the host already gives the terminal, sandbox included. It
   // grants nothing `shell` and `args` do not: a plugin able to choose the program can already choose
@@ -190,6 +203,19 @@ export type TabPluginServerCapabilities = {
   // plugin can never attribute a line to a tab it does not own.
   notifyUser(text: string, options?: { openFile?: string; tab?: string }): void;
   openOrFocusTab(instanceKey: string, factory: (resources: TabPluginResources) => TabPluginPayload): void;
+  // Open a new tab the host names and places, optionally with a fresh workspace clone of its own.
+  // Never focuses an existing tab. The factory receives where the tab starts; while a clone is
+  // provisioning it starts nothing, and the host runs `ready` once the clone lands. A rejection from
+  // `ready` closes that one tab; any other failure disables the plugin. Answers the opened tab's
+  // label, or nothing when the name was refused (the refusal is already in the notifications feed).
+  // Available from commands, openers, intents, and selection or menu actions; calling it from a
+  // `notify` or `hostState` handler is a failure that disables the plugin.
+  launchTab(
+    instanceKey: string,
+    request: TabPluginLaunchRequest,
+    factory: TabPluginLaunchFactory,
+    ready: TabPluginLaunchReadyHandler,
+  ): TabPluginLaunchResult | undefined;
   // Replace what one of this plugin's own tabs shows, addressed by the instance key it was opened
   // with. The tab keeps its label, position, group, focus, instance key, schema version, and the
   // files it is already serving; only the payload, and the title when the factory returns one,

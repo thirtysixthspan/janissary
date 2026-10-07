@@ -2,7 +2,7 @@ import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace } from 
 import { errorText } from '../error-text.js';
 import { messageBus } from '../bus.js';
 
-const NO_REPO = 'No git repository found. Cannot create workspace.';
+export const NO_REPO ='No git repository found. Cannot create workspace.';
 
 // A workspace clone still being provisioned: its directory is known up front, but `ready` only
 // resolves once the clone (and its follow-up git setup) finishes.

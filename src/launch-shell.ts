@@ -5,7 +5,8 @@ import type { Managers } from './managers.js';
 // through a launch origin rather than a tab — there is no tab yet to open it from.
 export const LAUNCH_LABEL = 'janus';
 const SHELL_PLUGIN = 'shell';
-const SHELL_COMMAND = 'zsh';
+// Unsandboxed, in the project directory: a bare `zsh` would provision a workspace clone.
+const SHELL_COMMAND = 'zsh --no-workspace';
 
 // Throws when no tab came of it — no zsh to run, or a shell plugin that failed or is disabled — so
 // the launch stops with the reason instead of serving an application with no tab to type into.

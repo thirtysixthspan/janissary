@@ -155,6 +155,7 @@ export class TabPluginHost {
     return invokePlugin(
       this.managers, record.declaration, activation, origin,
       () => record.state === 'active' && !this.disposed, this.handlerTimeoutMs, call, answeringLabel,
+      (error, failureOrigin) => { this.disable(record, error, failureOrigin); },
     );
   }
 

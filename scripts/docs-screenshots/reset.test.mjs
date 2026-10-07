@@ -3,7 +3,7 @@ import { resetApp } from './reset.mjs';
 
 // A stand-in for the running app: enough tab-strip behaviour to drive the whole reset choreography
 // without a browser. Tabs live in the centre strip unless marked `sidebar`; `agent <name>`, with or
-// without flags, opens a tab and focuses it; `zsh` opens a shell under a pool name (`kemal`) and
+// without flags, opens a tab and focuses it; `zsh --no-workspace` opens a shell under a pool name (`kemal`) and
 // focuses it; double-clicking the active tab's label and committing the rename field sets its
 // alias; a tab marked `dirty` raises the save dialog on close and only goes once the dialog's discard
 // button is clicked.
@@ -39,7 +39,7 @@ function submit(app) {
   app.log.push(`run:${text}`);
   const agent = /^agent (\S+)/.exec(text);
   if (agent) openTab(app, agent[1]);
-  if (text === 'zsh') openTab(app, 'kemal');
+  if (text === 'zsh --no-workspace') openTab(app, 'kemal');
 }
 
 const shown = (node) => node.alias ?? node.label;
@@ -212,11 +212,11 @@ describe('resetApp', () => {
 
   // The alias goes through the strip, never as a typed `rename`: the shell's command history has to
   // hold nothing the reset did.
-  it('types zsh from the staging tab, aliases the new shell janus, and restores the work directory after', async () => {
+  it('types zsh --no-workspace from the staging tab, aliases the new shell janus, and restores the work directory after', async () => {
     const app = fakeApp(MESSY);
     await run(app).done;
-    expect(app.log.indexOf('run:agent resetting --no-workspace')).toBeLessThan(app.log.indexOf('run:zsh'));
-    expect(app.log.indexOf('run:zsh')).toBeLessThan(app.log.indexOf('alias:kemal=janus'));
+    expect(app.log.indexOf('run:agent resetting --no-workspace')).toBeLessThan(app.log.indexOf('run:zsh --no-workspace'));
+    expect(app.log.indexOf('run:zsh --no-workspace')).toBeLessThan(app.log.indexOf('alias:kemal=janus'));
     expect(app.log.some((entry) => entry.startsWith('run:rename'))).toBe(false);
     expect(app.log.at(-1)).toBe('restore');
   });
