@@ -22,6 +22,8 @@ type Options = {
   // Absent while the shell's workspace clone is still landing: there is no terminal to attach yet,
   // and the attachment is made when the ready payload supplies one.
   ptyId: string | undefined;
+  // The SSH PTY rendered while the remote workspace is provisioning; replaced by `ptyId` on ready.
+  connectPtyId?: string;
   containerRef: React.RefObject<HTMLDivElement | null>;
   attachTerminal: AttachTerminal | undefined;
   copyText: (text: string) => void;
@@ -58,7 +60,7 @@ export type ShellTerminalHandle = {
 };
 
 export function useShellTerminal({
-  ptyId, containerRef, attachTerminal, copyText, reportColors, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce,
+  ptyId, connectPtyId, containerRef, attachTerminal, copyText, reportColors, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce,
 }: Options): ShellTerminalHandle {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -100,7 +102,10 @@ export function useShellTerminal({
     // No container means the body has not been laid out yet, no `attachTerminal` means this plugin
     // was given no way to reach a terminal, and no `ptyId` means there is no terminal yet. In each case
     // there is nothing to open and nothing to clean up.
-    if (!container || !attach || !ptyId) return;
+    if (!container || !attach) return;
+    const attachId = ptyId ?? connectPtyId;
+    if (!attachId) return;
+    const shellStarted = ptyId !== undefined;
 
     const styles = getComputedStyle(document.documentElement);
     const terminal = new Terminal({
@@ -129,15 +134,17 @@ export function useShellTerminal({
       terminal.options.theme = shellTerminalTheme();
     });
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    const promptMask = attachPromptMask(terminal);
-    registerShellMarkerHandlers(terminal, hookNonceRef.current, {
-      running: (running) => {
-        promptMask.setIdle(!running);
-        runningRef.current(running);
-      },
-      command: (command) => { commandRef.current?.(command); },
-      cwd: (cwd) => { cwdRef.current(cwd); },
-    });
+    const promptMask = shellStarted ? attachPromptMask(terminal) : undefined;
+    if (shellStarted) {
+      registerShellMarkerHandlers(terminal, hookNonceRef.current, {
+        running: (running) => {
+          promptMask?.setIdle(!running);
+          runningRef.current(running);
+        },
+        command: (command) => { commandRef.current?.(command); },
+        cwd: (cwd) => { cwdRef.current(cwd); },
+      });
+    }
     // One fit, once the attachment exists: fitting before it can do nothing useful, because the size
     // has nowhere to go until there is a process on the other end.
     const resize = () => {
@@ -169,7 +176,7 @@ export function useShellTerminal({
       handle.onExit(() => { exitRef.current(); });
       resize();
     };
-    const attachment = attach(ptyId, (data) => { terminal.write(data); });
+    const attachment = attach(attachId, (data) => { terminal.write(data); });
     if (attachment instanceof Promise) {
       void attachment.then(onAttached).catch(() => { /* The server refused a terminal not owned by this tab. */ });
     } else {
@@ -185,10 +192,10 @@ export function useShellTerminal({
       handleRef.current = null;
       terminalRef.current = null;
       unregisterTerminalSelection(container);
-      promptMask.dispose();
+      promptMask?.dispose();
       terminal.dispose();
     };
-  }, [ptyId, containerRef]);
+  }, [ptyId, connectPtyId, containerRef]);
 
   const write = useCallback((data: string) => { handleRef.current?.write(data); }, []);
   const display = useCallback((data: string) => { terminalRef.current?.write(data); }, []);

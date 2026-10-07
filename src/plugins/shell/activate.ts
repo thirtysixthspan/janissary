@@ -32,9 +32,12 @@ export function activate(): TabPluginActivation {
     command: (argument, capabilities) => {
       const origin = capabilities.originTab();
       if (!origin) return;
-      if (origin.remote) capabilities.rejectRequest('A shell tab cannot be opened from a remote tab.');
       const parsed = parseShellArgument(argument);
       if ('error' in parsed) return capabilities.rejectRequest(parsed.error);
+      if (origin.remote && parsed.remote !== undefined) {
+        capabilities.rejectRequest('Cannot launch a remote shell from a remote tab.');
+      }
+      if (origin.remote) capabilities.rejectRequest('A shell tab cannot be opened from a remote tab.');
       const launched = launchShellTab(capabilities, nextInstanceKey(), parsed, origin.root);
       if (launched?.fallbackReason) {
         capabilities.note(`Shell "${launched.label}" has no workspace: ${launched.fallbackReason}.`);
@@ -67,6 +70,7 @@ export function activate(): TabPluginActivation {
       ShellPayload,
       {
         'terminal-status': TabPluginIntentEntry<ShellPayload, undefined>;
+        'exited-early': TabPluginIntentEntry<ShellPayload, undefined>;
         sibling: TabPluginIntentEntry<ShellPayload, undefined>;
         'command-state': TabPluginIntentEntry<ShellPayload, ShellCommandState>;
         cwd: TabPluginIntentEntry<ShellPayload, string>;
@@ -86,6 +90,18 @@ export function activate(): TabPluginActivation {
           // A provisioning shell has no process yet, and must not close itself for want of one.
           running: tabPayload.ptyId === undefined || capabilities.terminalRunning(tabPayload.ptyId),
         }),
+      },
+      'exited-early': {
+        payload: isEmptyShellIntent,
+        run: (tabPayload, _payload, capabilities) => {
+          if (!tabPayload.host || tabPayload.prompted) return { reported: false };
+          const label = capabilities.originTab()?.label ?? tabPayload.instanceKey;
+          capabilities.notifyUser(
+            `Failed to start "${label}" on ${tabPayload.host}: zsh exited before its first prompt.`,
+            { tab: tabPayload.instanceKey },
+          );
+          return { reported: true };
+        },
       },
       // ➕ and `Cmd+T`: another shell beside this one, in the same place. A shell still waiting for its
       // clone has no place yet, so it opens nothing.
@@ -114,7 +130,7 @@ export function activate(): TabPluginActivation {
         run: (tabPayload, cwd, capabilities) => {
           capabilities.recordCwd(cwd);
           capabilities.updateTab(tabPayload.instanceKey, () => ({
-            payload: { ...tabPayload, cwd },
+            payload: { ...tabPayload, cwd, ...(tabPayload.host && { prompted: true }) },
           }));
           return { updated: true };
         },

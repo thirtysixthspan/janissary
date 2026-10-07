@@ -299,13 +299,16 @@ must be 32 lowercase hex characters, because it is written into the hook functio
 
 ## Where the shell starts
 
-The command is `zsh [name] [-w|--workspace|--no-workspace] [--offline]`, read the way `agent` reads
+The command is `zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]`, read the way `agent` reads
 its own. A typed `zsh` creates a new sandbox by default, wherever it is typed, a sandboxed tab included:
 a fresh `git clone` of the project's `origin` under `.janissary/workspace/<name>/`, with zsh confined to
 it by the same Seatbelt profile and credential injection an `agent -w` gets (see [[workspaced-agent]]).
 `-w` and `--workspace` confirm the default. `--no-workspace` opts out and wins when both are given.
 `--offline` provisions the clone with the offline sandbox profile, which denies network access, and
-changes nothing without a workspace. Flags match case-insensitively.
+changes nothing without a workspace. `on <address>` opens the shell on that remote host and implies
+a workspace even when `--no-workspace` is present. Flags and `on` match case-insensitively; the
+`on <address>` clause may appear anywhere among the name and flags, and the address keeps its case
+and follows [[remote-server]]'s address grammar.
 
 The words after `zsh` that are not flags form the name, lowercased, as `agent <name>`'s do. The name is
 the tab's label and, for a workspaced shell, the clone's folder. A typed name is held to `agent`'s rules:
@@ -313,10 +316,10 @@ one that clashes with an open tab or a live session is refused, a workspaced nam
 folder name, and a leftover folder under it is removed before cloning, with `agent`'s notifications-feed
 messages for each. Without a name the shell is named as described above.
 
-`zsh … on <address>` is refused with `Remote shell tabs are not supported yet.` and nothing opens. A
-word starting with `-` that is not one of the four flags is refused with `Unknown option "<word>".
-Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline]` and nothing opens; unlike `agent`, such a
-word never becomes part of the name.
+An address after `on` is checked before any connection opens. A missing or invalid address reports
+the address usage or validation error. A word starting with `-` that is not one of the four flags is
+refused with `Unknown option "<word>". Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline]
+[on <address>]` and nothing opens; unlike `agent`, such a word never becomes part of the name.
 
 A workspaced shell's tab opens at once, while the clone runs, and zsh starts confined to the clone, at
 its root, when the clone finishes. With no git repository, or no readable `origin` remote, a typed `zsh`
@@ -329,13 +332,18 @@ It starts where `agent --no-workspace` does: in the issuing tab's working direct
 local, has no workspace, and is inside the project checkout, and at the checkout root otherwise. The
 **new shell here** button and `Cmd+T` are the way to open another shell inside an existing clone.
 
-A shell's starting directory must be inside the project root, and a shell cannot be started anywhere
-else: a terminal only ever runs in a directory inside that root. A remote agent tab is therefore not a
-place a shell tab can be opened from — its working directory belongs to the other host, and there is
-nothing here to start a shell in. `zsh` typed in a remote agent tab answers that tab with `A shell tab
-cannot be opened from a remote tab.` and opens no tab, rather than starting a local shell the user
-could mistake for one on the remote host. The shell plugin learns the tab is remote from the
-`remote` flag on `originTab()`, and the refusal is a rejection, so the plugin stays enabled.
+A local shell's starting directory must be inside the project root, and a local shell cannot be
+started anywhere else: a terminal only ever runs in a directory inside that root. A remote agent tab
+cannot start a local shell because its working directory belongs to the other host. `zsh` typed there
+without `on` answers `A shell tab cannot be opened from a remote tab.`; `zsh … on <address>` answers
+`Cannot launch a remote shell from a remote tab.`. Both refusals open no tab and leave the plugin
+enabled.
+
+`zsh <name> on <address>` opens its tab immediately with the live SSH terminal attached. Password,
+passphrase, host-key, and other SSH prompts appear in that terminal and are answered by typing there.
+When the remote workspace is ready, the same tab switches to zsh at the workspace root. The shell
+has its own SSH channel and workspace; the remote host's isolation notice follows its ready line.
+There is no local fallback if the remote launch fails.
 
 Whether a directory is inside the project root, or inside the workspace clone, is judged on the path
 it resolves to, not the path as written, so `/repo/a/../../etc` is outside `/repo`. A terminal the
@@ -373,7 +381,7 @@ terminal starts with an empty screen and shows the shell's output from that poin
 
 Each shell keeps its workspace alive until it closes. Closing the source tab does not remove a clone still used by a shell. The clone is removed after its final owning tab closes.
 
-A line submitted in a provisioning shell's command bar joins the shell's command queue, with the bar reading `queue >`, and the queue drains once zsh reaches its first prompt, as a line queues behind a busy zsh. When the clone lands and zsh starts, the notifications feed shows `Shell "<name>" ready. (workspace: <clone dir>)`, followed by the sandbox notice when Seatbelt confinement is not actually active. If the clone fails, the feed shows `Failed to create workspace for "<name>": <reason>`, attributed to the tab `zsh` was typed in, and the shell tab closes itself a few seconds later, taking any queued lines with it. Closing a provisioning shell cancels its clone, and no ready line follows. The delayed close, the failure line and the ready line belong to the shell that launch opened: a shell closed and then retyped under the same name is never closed, reported as failed or announced as ready by the earlier launch. These lines arrive after `zsh` has returned, so they always go to the notifications feed, whichever tab issued `zsh`, and are dropped while no feed is open, like every feed line. A shell opened without a workspace reports nothing.
+A line submitted in a provisioning shell's command bar joins the shell's command queue, with the bar reading `queue >`, and the queue drains once zsh reaches its first prompt, as a line queues behind a busy zsh. This also holds for a remote shell: `send` and `queue` are accepted while SSH prompts render, and queued lines drain after remote zsh reaches its prompt. When a local clone lands and zsh starts, the notifications feed shows `Shell "<name>" ready. (workspace: <clone dir>)`; a remote shell reports `Shell "<name>" ready on <host>. (workspace: <remote dir>)`. The remote isolation notice follows the remote ready line when present. If a local clone fails, the feed shows `Failed to create workspace for "<name>": <reason>`; a remote failure shows `Failed to start "<name>" on <host>: <reason>`. In either case the shell tab closes itself a few seconds later, taking any queued lines with it. If remote zsh exits before its first prompt while a browser is attached, the feed shows `Failed to start "<name>" on <host>: zsh exited before its first prompt.` before the tab closes. If no browser is attached at that moment, the next attachment discovers the exited terminal and closes the tab without that line. Closing a provisioning shell closes its remote channel, and no ready line follows. The delayed close, failure line and ready line belong to the shell that launch opened: a shell closed and then retyped under the same name is never closed, reported as failed or announced as ready by the earlier launch. These lines arrive after `zsh` has returned, so they always go to the notifications feed, whichever tab issued `zsh`, and are dropped while no feed is open, like every feed line. A shell opened without a workspace reports nothing.
 
 Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. That recorded directory follows zsh's current directory, so after a `cd` the **new shell here** button and `Cmd+T` start the new shell where this one now is, and **open file navigator here** opens the navigator on that same directory. When zsh has moved outside the project root, and outside its workspace clone when it has one, the new shell starts in the workspace clone or the project root instead, because a terminal may only start inside the project. A new shell's recorded directory is the one its terminal actually started in, fallback included, from the moment the tab opens (`openPluginTab` in `src/tab/openers.ts` takes it from the spawned terminal, not from the source tab), so completion, the metadata row and anything opened from it agree with the shell even before zsh first reports its directory, which a shell no browser has mounted never does. A new shell from **new shell here** or `Cmd+T` inherits the shell's workspace and offline mode. A new agent shares the shell's workspace and offline mode too.
 

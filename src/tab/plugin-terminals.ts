@@ -28,10 +28,14 @@ export function ownsTerminal(
 // metadata row's provisioning flag reads. `send` and `queue` accept it; `schedule` does not, because
 // a schedule types into a terminal that does not exist yet.
 export function awaitsTerminal(
-  tab: Pick<Tab, 'view' | 'workspaceDir'>,
+  tab: Pick<Tab, 'view' | 'workspaceDir' | 'remote' | 'plugin'>,
   workspace: Pick<WorkspaceManager, 'provisioning'>,
 ): boolean {
-  return tab.view === 'plugin' && tab.workspaceDir !== undefined && workspace.provisioning(tab.workspaceDir);
+  if (tab.view !== 'plugin') return false;
+  if (tab.workspaceDir !== undefined && workspace.provisioning(tab.workspaceDir)) return true;
+  const payload = tab.plugin?.payload;
+  return tab.remote !== undefined && typeof payload === 'object' && payload !== null
+    && 'provisioning' in payload && payload.provisioning === true;
 }
 
 // The plugin's environment, with zsh's startup environment over it when the plugin asked for the

@@ -34,6 +34,18 @@ describe('shell shared contract', () => {
     expect(isShellPayload(common)).toBe(false);
   });
 
+  it('accepts a remote provisioning payload without a workspace path and only there carries connectPtyId', () => {
+    const remoteProvisioning = {
+      instanceKey: 'shell-1', cwd: '/repo', root: '/repo', workspace: true,
+      connections: [], schedule: [], hookNonce: 'f'.repeat(32), provisioning: true,
+      connectPtyId: 'ssh-pty', host: 'devbox',
+    };
+
+    expect(isShellPayload(remoteProvisioning)).toBe(true);
+    expect(isShellPayload({ ...PAYLOAD, connectPtyId: 'ssh-pty' })).toBe(false);
+    expect(isShellPayload({ ...remoteProvisioning, connectPtyId: 4 })).toBe(false);
+  });
+
   it('keeps its completion result assignable to and from the application result', () => {
     const completion: CompletionResult = { matches: ['ls', 'lsof'], newInput: 'ls', newCursor: 2 };
     const shellCompletion: ShellCompletion = completion;

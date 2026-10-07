@@ -6,7 +6,7 @@ import type { PseudoterminalManager } from '../pseudoterminal-manager.js';
 import { TabPluginRejection } from '../plugins/api-capabilities.js';
 import { ZshStartupDirectory } from '../shell/zsh-startup/directory.js';
 import { shellSetupScript } from '../shell/zsh-startup/script.js';
-import { ownsTerminal, spawnPluginTerminal } from './plugin-terminals.js';
+import { awaitsTerminal, ownsTerminal, spawnPluginTerminal } from './plugin-terminals.js';
 
 const NONCE = 'ab'.repeat(16);
 
@@ -26,6 +26,22 @@ describe('ownsTerminal', () => {
   it('refuses a tab that is not a plugin tab even when a terminal is registered under its label', () => {
     expect(ownsTerminal({ label: 'janus', view: 'agent' }, pty({ janus: 'pty-2' }))).toBe(false);
     expect(ownsTerminal({ label: 'codex', view: 'harness' }, pty({ codex: 'pty-3' }))).toBe(false);
+  });
+});
+
+describe('awaitsTerminal', () => {
+  it('accepts a remote plugin shell while its payload is provisioning', () => {
+    expect(awaitsTerminal({
+      view: 'plugin', remote: { address: 'devbox', host: 'devbox' },
+      plugin: { id: 'shell', instanceKey: 'shell-1', schemaVersion: 1, payload: { provisioning: true }, fileRefs: [], sourceLabel: 'janus' },
+    }, { provisioning: () => false })).toBe(true);
+  });
+
+  it('does not treat a ready remote plugin payload as awaiting a terminal', () => {
+    expect(awaitsTerminal({
+      view: 'plugin', remote: { address: 'devbox', host: 'devbox' },
+      plugin: { id: 'shell', instanceKey: 'shell-1', schemaVersion: 1, payload: { provisioning: false }, fileRefs: [], sourceLabel: 'janus' },
+    }, { provisioning: () => false })).toBe(false);
   });
 });
 

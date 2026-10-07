@@ -18,9 +18,19 @@ export function launchShellTab(
     {
       ...(argument.name && { name: argument.name }),
       ...(argument.workspace && { workspace: { offline: argument.offline } }),
+      ...(argument.remote !== undefined && { remote: { address: argument.remote } }),
     },
     (resources, start) => {
       label = start.label;
+      if (start.connectPtyId !== undefined) {
+        return {
+          title: 'shell',
+          payload: provisioningShell({
+            instanceKey, cwd: start.cwd, root, hookNonce, connectPtyId: start.connectPtyId,
+            ...(start.host && { host: start.host }),
+          }),
+        };
+      }
       if (start.workspaceDir !== undefined) {
         const workspace = { dir: start.workspaceDir, offline: argument.offline };
         return { title: 'shell', payload: provisioningShell({ instanceKey, cwd: start.cwd, root, workspace, hookNonce }) };
@@ -29,10 +39,19 @@ export function launchShellTab(
     },
     (event, ready) => {
       const workspace = { dir: event.workspaceDir, offline: argument.offline };
+      const host = event.host;
       ready.updateTab(event.instanceKey, (resources) => ({
-        payload: spawnShell(resources, { instanceKey, cwd: event.workspaceDir, root, workspace, hookNonce }),
+        payload: spawnShell(resources, {
+          instanceKey, cwd: event.workspaceDir, root, workspace, hookNonce,
+          ...(host && { host, prompted: false }),
+        }),
       }));
-      ready.notifyUser(`Shell "${label}" ready. (workspace: ${event.displayDir})`, { tab: event.instanceKey });
+      ready.notifyUser(
+        host
+          ? `Shell "${label}" ready on ${host}. (workspace: ${event.displayDir})`
+          : `Shell "${label}" ready. (workspace: ${event.displayDir})`,
+        { tab: event.instanceKey },
+      );
       if (event.sandboxNotice) ready.notifyUser(event.sandboxNotice, { tab: event.instanceKey });
     },
   );

@@ -17,10 +17,12 @@ export type ShellStart = {
   // Minted with the shell, so its hooks are running before any browser attaches and every attach
   // reads the same nonce from the payload.
   hookNonce: string;
+  host?: string;
+  prompted?: boolean;
 };
 
 export function spawnShell(resources: TabPluginResources, start: ShellStart): ShellTerminalPayload {
-  const { instanceKey, cwd, root, workspace, hookNonce } = start;
+  const { instanceKey, cwd, root, workspace, hookNonce, host, prompted } = start;
   const terminal = resources.spawnTerminal({
     cwd,
     // The shell itself, with no argv at all — the one invocation in the application that does not
@@ -47,20 +49,24 @@ export function spawnShell(resources: TabPluginResources, start: ShellStart): Sh
     connections: [],
     schedule: [],
     hookNonce,
+    ...(host && { host }),
+    ...(prompted !== undefined && { prompted }),
   };
 }
 
 // What a workspaced shell shows while its clone lands: where it will start, and no terminal yet.
-export function provisioningShell(start: ShellStart & { workspace: { dir: string } }): ShellProvisioningPayload {
+export function provisioningShell(start: ShellStart & { workspace?: { dir: string }; connectPtyId?: string }): ShellProvisioningPayload {
   return {
     instanceKey: start.instanceKey,
     provisioning: true,
     cwd: start.cwd,
     root: start.root,
-    workspaceDir: start.workspace.dir,
+    ...(start.workspace && { workspaceDir: start.workspace.dir }),
     workspace: true,
     connections: [],
     schedule: [],
     hookNonce: start.hookNonce,
+    ...(start.connectPtyId && { connectPtyId: start.connectPtyId }),
+    ...(start.host && { host: start.host }),
   };
 }
