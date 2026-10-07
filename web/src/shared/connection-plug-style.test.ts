@@ -21,7 +21,7 @@ describe('the connection plug', () => {
   });
 
   it('leads the metadata row, ahead of the host chip', () => {
-    expect(theme).toContain('.tab-meta .connection-plug { order: -2; }');
+    expect(theme).toContain('.tab-meta > .connection-plug { order: -2; }');
     expect(theme).toContain('.tab-remote-chip { order: -1;');
   });
 });

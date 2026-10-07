@@ -76,7 +76,7 @@ process still running on it; pressing it on any row of that session brings back 
 one connection serves them all. On a reconnecting session it means "try now" and collapses the
 backoff wait.
 
-Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host. Remote shell rows reopen the same running PTY with its saved cwd, offline mode, and zsh marker nonce; no navigator opens beside it. The same shell tabs return after `--relaunch`.
+Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host, and its saved cwd is never checked against a directory on the local machine. Remote shell rows reopen the same running PTY with its saved cwd, offline mode, and zsh marker nonce; no navigator opens beside it. The same shell tabs return after `--relaunch`.
 
 **Detach** applies to a live session and gives it up locally while deliberately leaving it running.
 Closing the local tabs during that action never stops their remote processes.

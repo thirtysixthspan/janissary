@@ -2,9 +2,6 @@
 
 ## ready
 
-* when trying to reattach a detached remote shell the following error occurs:
-Cannot start a terminal in /Users/anonymouscoward/janissary/.janissary/workspace/cafer: it is outside the project root /Users/ashmorgan/dev/janissary.
-
 * in the file navigator, double clicking on the .. should navigate the explored up one directory. failures should be reported as notifications. for example, a sandboxed environment would not permit navigation up out of the sandbox. right arrow on an open directory should cause the navigator to focus on that one directory (both on local and remote instances).  
 
 * after application launch open a remote shell, for example: zsh on anonymouscoward@10.27.1.94, close the shell after it is ready, and the janus shell comes into focus but no longer renders.

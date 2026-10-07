@@ -48,7 +48,7 @@ describe('TabOpeningState.openPluginTab', () => {
     expect(tm.openFiles).toHaveLength(1);
   });
 
-  it('sets a preset remote target on the minted plugin tab', () => {
+  it('adopts a remote terminal without treating its workspace as a local clone', () => {
     const channel = {};
     const registerRemotePty = vi.fn(() => 'remote-pty-1');
     const tm = makeTabManager({
@@ -67,6 +67,7 @@ describe('TabOpeningState.openPluginTab', () => {
       return { title: 'shell', payload: {} };
     }, {
       label: 'remote-shell', remote: { address: 'dev@example.test', host: 'example.test' },
+      workspace: { dir: '/remote/workspace', offline: true },
       recordedPtyId: 'rpty-adopted',
     });
 
