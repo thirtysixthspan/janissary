@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  ConnectionPlug, RecordingFlag, RemoteChip, RemoteSessionButton, StatusPanels, StatusWindowButton,
+  ConnectionPlug, RecordingFlag, RemoteSessionButton, StatusPanels, StatusWindowButton,
   connectionsWindowIcon, newTabIcon, openFilesIcon, scheduleWindowIcon, statusButton, syncIcon, useStatusWindows, workspacedIcon,
   type TabPluginClientCapabilities,
 } from '../api';
@@ -37,13 +37,17 @@ export function ShellTabMeta({ payload, capabilities }: {
   return (
     <div className="shell-tab-header">
       <div className="tab-meta">
-        {capabilities.remote !== undefined && capabilities.remoteSession !== undefined && (
-          <ConnectionPlug state={capabilities.remoteSession.state} />
+        {capabilities.remote !== undefined && (
+          <span className="tab-cwd" aria-label="Remote" title={`Remote: ${capabilities.remote.address}`}>
+            {capabilities.remote.host}
+          </span>
         )}
-        {capabilities.remote !== undefined && <RemoteChip remote={capabilities.remote} />}
         <span className="tab-cwd">{formatShellCwd(payload.cwd, payload.root, payload.workspaceDir)}</span>
         <span className="tab-flags">
           <RecordingFlag onOpen={capabilities.openRecording} />
+          {capabilities.remote !== undefined && capabilities.remoteSession !== undefined && (
+            <ConnectionPlug state={capabilities.remoteSession.state} />
+          )}
           {payload.provisioning ? (
             <span className="tab-flag tab-flag--provisioning" role="img" aria-label="Provisioning workspace" title="Provisioning workspace">
               <FontAwesomeIcon icon={syncIcon} />
