@@ -85,7 +85,7 @@ describe('client feature boundaries', () => {
 
   it('allows a feature to import shared UI', async () => {
     const messages = await boundaryMessages(
-      "import { AgentTabMeta } from '../shared/AgentTabMeta'; void AgentTabMeta;",
+      "import { HarnessTabMeta } from '../shared/HarnessTabMeta'; void HarnessTabMeta;",
       'web/src/harness/HarnessTab.tsx',
     );
     expect(messages).toEqual([]);
@@ -94,7 +94,7 @@ describe('client feature boundaries', () => {
   it('rejects a shared module importing a feature', async () => {
     const messages = await boundaryMessages(
       "import { HarnessTab } from '../harness/HarnessTab'; void HarnessTab;",
-      'web/src/shared/AgentTabMeta.tsx',
+      'web/src/shared/HarnessTabMeta.tsx',
     );
     expect(messages).toHaveLength(1);
     expect(messages[0]?.message).toContain('Shared modules must not import a feature');
