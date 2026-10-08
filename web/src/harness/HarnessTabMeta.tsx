@@ -1,15 +1,15 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { tabFlagDisplay } from './tab/flag-display';
-import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from './icons';
-import { StatusWindowButton } from './status-windows/StatusWindowButton';
-import { SplitTabButton } from './SplitTabButton';
-import { RecordingFlag } from './RecordingFlag';
-import type { StatusWindowButtonProps } from './status-windows/status-button';
+import { tabFlagDisplay } from '../shared/tab/flag-display';
+import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from '../shared/icons';
+import { StatusWindowButton } from '../shared/status-windows/StatusWindowButton';
+import { SplitTabButton } from '../shared/SplitTabButton';
+import { RecordingFlag } from '../shared/RecordingFlag';
+import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import type { RemoteTargetView } from '@shared/protocol';
-import { RemoteChip } from './RemoteChip';
-import { ConnectionPlug } from './ConnectionPlug';
-import { RemoteSessionButton, type RemoteSessionState } from './RemoteSessionButton';
+import { RemoteChip } from '../shared/RemoteChip';
+import { ConnectionPlug } from '../shared/ConnectionPlug';
+import { RemoteSessionButton, type RemoteSessionState } from '../shared/RemoteSessionButton';
 
 type Properties = {
   cwd?: string; cwdDisplay?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTargetView;

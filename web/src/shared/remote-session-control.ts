@@ -2,7 +2,7 @@ import type { RemoteTargetView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import type { RemoteSessionState } from './RemoteSessionButton';
 
-// The metadata row's detach/attach control, built once for every tab that renders `HarnessTabMeta`.
+// The metadata row's detach/attach control, built once for every remote tab that renders one.
 // One RPC carries both verbs, so there is nothing per-call-site to get wrong beyond which tab is
 // being addressed.
 

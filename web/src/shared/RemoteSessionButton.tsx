@@ -5,8 +5,9 @@ import { detachSessionIcon, attachSessionIcon } from './icons';
 import { ConfirmDialog } from './ConfirmDialog';
 
 // The detach/attach control beside a remote tab's host chip — the second front door onto the same
-// manager methods the sessions tab's rows use. It sits on `HarnessTabMeta` because that is the one
-// metadata row agent, shell, and harness tabs all render, so one placement covers every remote tab.
+// manager methods the sessions tab's rows use. Every remote tab's metadata row renders it —
+// `HarnessTabMeta` in `web/src/harness/` for harness tabs, and the shell plugin's own row — so one
+// placement covers every remote tab.
 //
 // Pressing detach parks the whole shared channel, closing every tab and navigator riding it, which
 // is why the confirmation names what will go: a per-tab detach has no meaning, since the ssh
