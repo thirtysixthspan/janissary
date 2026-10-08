@@ -1,4 +1,4 @@
-import { parseDockArgument } from '../api.js';
+import { isRecord, parseDockArgument } from '../api.js';
 import type { SqlFilterOperator } from './shared.js';
 import type { Dock } from './open-tab.js';
 
@@ -44,10 +44,6 @@ const OPERATORS = new Set<SqlFilterOperator>([
 // The one name rule the registry enforces, re-checked here so a hand-sent intent cannot ask the host
 // for a database whose name it would refuse at the file layer.
 const VALID_NAME = /^[A-Za-z0-9_-]+$/;
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';

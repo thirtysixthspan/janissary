@@ -1,3 +1,5 @@
+import { isRecord } from '../api.js';
+
 export const SQL_PAYLOAD_SCHEMA_VERSION = 1;
 
 // What a database tab shows. Everything the view needs is here, including the grid page and the
@@ -130,10 +132,6 @@ export type SqlPayload = {
   error: string | null;
   pending: SqlPending | null;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isString(value: unknown): value is string {
   return typeof value === 'string';

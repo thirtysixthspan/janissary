@@ -2,17 +2,6 @@
 
 ## ready
 
-* Point the plugin guard copies at the contract guard that was published for them, so `isRecord` has one definition on each side of the plugin boundary.
-
-Existing Debt: `src/plugins/api.ts:423-426` re-exports `isRecord` and `isModelPair` with a comment saying they were published because every bundled plugin's `shared.ts` had its own copy of both, but fourteen server plugin modules and one client module still declare the identical predicate privately, so the publishing half of that migration landed and the consuming half never ran, leaving both mechanisms in the codebase at once. Severity: 5/10
-
-Existing Risk: 3/10 - The copies are byte-identical, so nothing is broken today; what would make it visible is a change to the published rule, say rejecting a `null`-prototype object, that reaches the one plugin importing from the api while the other fourteen keep the old answer, so the same payload validates in conversations and fails in search with nothing naming the difference.
-
-Proposal Risk: 2/10 - Every guard then comes from one definition per side, but the boundary now has to keep both definitions agreeing, `src/plugins/api.ts` on the server and `web/src/plugins/api.ts` on the client, and a divergence between those two would drift past every test.
-
-Proposal: The definition is `isRecord` in `src/value-guards.ts`, the server plugin surface re-exports it at `src/plugins/api.ts:426`, and `src/plugins/conversations/shared.ts:1` is the proof a plugin can import it there under the boundary `eslint.plugin-boundaries.mjs` enforces. Delete the private declarations in `src/plugins/asciicast/shared.ts:16`, `src/plugins/audio/shared.ts:26`, `src/plugins/image/shared.ts:21`, `src/plugins/markdown/shared.ts:10`, `src/plugins/page/shared.ts:28`, `src/plugins/pdf/shared.ts:20`, `src/plugins/schedules/shared.ts:21`, `src/plugins/search/shared.ts:43`, `src/plugins/sessions/shared.ts:44`, `src/plugins/shell/shared.ts:114`, `src/plugins/video/shared.ts:14`, `src/plugins/sql/shared.ts:134` and `src/plugins/sql/shared-intents.ts:46`, and import the guard from `../api.js` in each; `src/plugins/sql/shared-intents.ts:5-8` already says it shares the tab contract's guards rather than carrying a second copy, so that file's own comment becomes true. Leave `src/plugins/fixture-v1/shared.ts:7` alone, since `ai/guidelines/plugins-tabs.md` freezes that fixture. The client copy at `web/src/plugins/asciicast/cast-stream.ts:36` needs the guard published beside `nextListSelection` at `web/src/plugins/api.ts:126-130` first, which is additive so `TAB_PLUGIN_API_VERSION` does not move; until it is, that one copy should say it is the client side's own. The colocated guard tests in `src/plugins/conversations/shared.test.ts`, `src/plugins/search/shared.test.ts` and `src/plugins/sql/shared.test.ts` pin the accept and reject answers and must not move.
-
-
 * Route the conversations plugin's intents through the shared intent dispatcher, so every plugin answers a malformed intent the same way.
 
 Existing Debt: `src/plugins/define-intents.ts` exists to give every plugin one intent dispatcher, covering the tab-payload failure, the unknown-name rejection and the per-intent payload check, and twelve bundled plugins use it, but `src/plugins/conversations/activate.ts` re-implements all three steps in a private three-function chain and spells the rejection sentence out seven times where the helper produces it once. Severity: 4/10

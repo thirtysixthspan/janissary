@@ -1,3 +1,5 @@
+import { isRecord } from '../api.js';
+
 // Additive changes leave this at 1: an older reader ignores a field it does not know, and both
 // halves of a bundled plugin ship inside the same build, so they can never disagree about one. The
 // first change that removes a field, retypes one, or changes what an existing field means does have
@@ -17,10 +19,6 @@ export type ImagePayload = {
 
 export type SaveEditPayload = { dataUrl: string };
 export type SaveEditResult = { name: string };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function isImagePayload(value: unknown): value is ImagePayload {
   return isRecord(value)

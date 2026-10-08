@@ -1,3 +1,5 @@
+import { isRecord } from '../api.js';
+
 export const ASCIICAST_PAYLOAD_SCHEMA_VERSION = 1;
 
 // The ordinary file-backed tab payload — the served reference, the display name, the path, and the
@@ -12,10 +14,6 @@ export type AsciicastPayload = {
   url: string;
   finished: boolean;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function isAsciicastPayload(value: unknown): value is AsciicastPayload {
   return isRecord(value)
