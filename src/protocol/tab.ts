@@ -57,6 +57,7 @@ export type PendingQuestionView = {
 // lines (the server owns `flattenBuffer`, so the client never needs it).
 export type TabView = {
   label: string;
+  backgroundReplies?: { id: string; output: string }[];
   number: number;
   dotColor: string;
   group: number;
@@ -88,7 +89,7 @@ export type TabView = {
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
   // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.
-  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
+  view?: 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name when it differs from `label` (a plugin tab is titled by its plugin).
   title?: string;
   // Bundled-plugin envelope, present only when `view === 'plugin'`.
@@ -105,9 +106,6 @@ export type TabView = {
   monitor?: { suggestions: SuggestionView[]; name: string; persona: string; targets: string; contextBytes: number };
   // File-navigator payload, present only when `view === 'files'`.
   files?: FileNavigatorView;
-  // Set while a full-tab interactive PTY (htop, vim, etc.) is running on this agent tab.
-  // Cleared on exit; the client hides the transcript while this is set.
-  activePty?: string;
   // Set when this tab is docked into a sidebar instead of living in the central tab strip.
   // Absent means center. A docked tab is never the active tab. See product/specs/sidebars.md.
   dock?: 'left' | 'right';

@@ -17,19 +17,12 @@ import type { PickerKeySnapshot, PickerKeyCallbacks } from './pickers/picker/key
 // picker state builds it, rather than being restated here and again at the call site. What is left
 // is the two fields no overlay owns:
 export type StateSnapshot = PickerKeySnapshot & {
-  // Whether the active tab shows the transcript body (Cmd+F is only meaningful there) and
-  // whether search mode is currently open (gates scroll-key handling so Arrow keys reach the
-  // search bar instead of scrolling the transcript underneath it).
-  canSearch: boolean;
-  searchOpen: boolean;
   // The current tab's label when it is a plugin tab. A chord pressed with focus on nothing at all is
   // that tab's to claim, so a click on its metadata row does not hand its `Ctrl+R` to the application.
   currentPluginTab?: string;
 };
 
-export type Callbacks = PickerKeyCallbacks & {
-  openSearch: () => void;
-};
+export type Callbacks = PickerKeyCallbacks;
 
 // Priority chain of pickers/choosers that claim every keystroke while open. Returns true once one
 // of them has claimed the key, so the caller stops there. Which one wins comes from the same ordered
@@ -83,7 +76,7 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
   }
 }
 
-// Ctrl/Shift+Arrow tab reorder/move shortcuts, Ctrl+T tool-step collapse, and Ctrl+O open-in-terminal
+// Ctrl/Shift+Arrow tab reorder/move shortcuts, Ctrl+T tool-step collapse
 // — the tail of the key handler once no picker/chooser/search state intercepts the key.
 function handleTabShortcuts(e: KeyboardEvent, client: JanusClient): void {
   if (e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') { e.preventDefault(); client.send({ method: 'reorderTab', params: { dir: -1 } }); }
@@ -98,14 +91,13 @@ function tabSwitchDirection(key: string): -1 | 1 {
   return ['ArrowLeft', '[', '{'].includes(key) ? -1 : 1;
 }
 
-// The plain Ctrl+letter sends (Ctrl+T tool-step collapse, Ctrl+O open-in-terminal), split out of
+// The plain Ctrl+letter sends (Ctrl+T tool-step collapse), split out of
 // `handleTabShortcuts` to keep its cognitive complexity under the file's lint threshold. Both go
 // out unconditionally: the server already no-ops when the action does not apply, so gating them
 // here would duplicate a decision the server owns.
 function ctrlLetterShortcut(e: KeyboardEvent, client: JanusClient): void {
   const key = e.key.toLowerCase();
   if (key === 't') { e.preventDefault(); client.send({ method: 'toggleCollapse', params: {} }); }
-  else if (key === 'o') { e.preventDefault(); client.send({ method: 'promoteToTerminal', params: {} }); }
 }
 
 // The chords this handler dispatches, resolved through `shared/app-chords.ts` — the same table the
@@ -115,7 +107,7 @@ function ctrlLetterShortcut(e: KeyboardEvent, client: JanusClient): void {
 // silently stops working.
 function ctrlChordOpener(action: AppChordAction | undefined, cb: Callbacks): (() => void) | undefined {
   switch (action) {
-  // Most Ctrl chords are not application chords — Ctrl+T, Ctrl+O and the tab moves are dispatched further
+  // Most Ctrl chords are not application chords — Ctrl+T and the tab moves are dispatched further
   // down by `handleTabShortcuts` — so "none of these" is an ordinary answer, not a missing case.
   case undefined: { return undefined; }
   case 'history': { return cb.openPicker; }
@@ -126,14 +118,11 @@ function ctrlChordOpener(action: AppChordAction | undefined, cb: Callbacks): (()
   }
 }
 
-// The Cmd-key chords (Cmd+Shift+F project search, Cmd+F transcript search, Cmd+P quick open, Cmd+T new
-// agent tab) — split out of `handleChordKeys` to keep its own cognitive complexity under the file's lint
+// The Cmd-key chords (Cmd+Shift+F project search, Cmd+F editor search, Cmd+P quick open, Cmd+T new
+// tab) — split out of `handleChordKeys` to keep its own cognitive complexity under the file's lint
 // threshold.
 //
-// The two `f` chords are separate table entries rather than one branch testing `shiftKey`, which is what
-// makes the project search reachable at all: the transcript search below matches on the key alone, so an
-// ordering inside a single branch was the only thing keeping Cmd+Shift+F from opening it instead. Both run
-// the same plugin command the user could type, so there is one route into that tab rather than two.
+// Cmd+F belongs to the editor; project search remains a global plugin command.
 function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
   const action = appChordAction(eventChordId(e));
   switch (action) {
@@ -145,20 +134,15 @@ function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): 
     cb.runCommand('search');
     return true;
   }
-  case 'transcriptSearch': {
-    if (!snap.canSearch) return true;
-    e.preventDefault();
-    if (!snap.searchOpen) cb.openSearch();
-    return true;
-  }
+  case 'editorSearch': { return false; }
   case 'quickOpen': {
     e.preventDefault();
     if (!snap.quickOpenOpen) cb.openQuickOpen();
     return true;
   }
-  case 'newAgentTab': {
+  case 'newShellTab': {
     e.preventDefault();
-    cb.runCommand('agent');
+    cb.runCommand('zsh');
     return true;
   }
   // Shift+Tab belongs to `useSectionNav`, which claims it inside a dialog and not here. Saying so is the
@@ -175,14 +159,14 @@ function exhaust(action: AppChordAction | undefined): never {
 }
 
 // The chord openers (Cmd+Shift+F search, Cmd+F search, Cmd+P quick open, the Ctrl picker chords,
-// Cmd+T new agent tab) — split out of `onKey` to keep its own cognitive complexity under the file's
+// Cmd+T new tab) — split out of `onKey` to keep its own cognitive complexity under the file's
 // lint threshold. A visible plugin tab's claim is consulted before the application's own table, which
 // inverts what the overlay-plugin path below does and is deliberate: an overlay chord cannot fire
 // without the core chord, but a plugin tab the user is looking at would otherwise have the key do
 // nothing at all there.
 // The plugin tab a chord was pressed in: the labelled tab around the focused element, or the current
 // plugin tab when focus rests on the page itself. Focus inside an element no plugin tab encloses —
-// an agent tab's command bar — names no tab, so the application keeps the chord.
+// an tab's command bar — names no tab, so the application keeps the chord.
 function chordTabLabel(target: EventTarget | null, snap: StateSnapshot): string | undefined {
   const focusOnPage = !(target instanceof Element) || target === document.body || target === document.documentElement;
   if (focusOnPage) return snap.currentPluginTab;
@@ -208,8 +192,6 @@ export function useWindowKeys(
   client: JanusClient,
   stateRef: React.RefObject<StateSnapshot>,
   callbacksRef: React.RefObject<Callbacks>,
-  handleScrollKey: (e: KeyboardEvent) => boolean,
-  handleScrollKeyUp: (e: KeyboardEvent) => void,
   chords: PluginChordRegistry,
 ) {
   useEffect(() => {
@@ -219,16 +201,11 @@ export function useWindowKeys(
       if (!snap || !cb) return;
       if (dispatchModalKey(e, snap, cb)) return;
       if (handleChordKeys(e, snap, cb, chords)) return;
-      // Quick open no longer needs naming here: `dispatchModalKey` claims its keys above, which is
-      // what this guard was patching around while it was missing from that chain.
-      if (!snap.searchOpen && handleScrollKey(e)) return;
       handleTabShortcuts(e, client);
     };
     globalThis.addEventListener('keydown', onKey);
-    globalThis.addEventListener('keyup', handleScrollKeyUp);
     return () => {
       globalThis.removeEventListener('keydown', onKey);
-      globalThis.removeEventListener('keyup', handleScrollKeyUp);
     };
-  }, [client, stateRef, callbacksRef, handleScrollKey, handleScrollKeyUp, chords]);
+  }, [client, stateRef, callbacksRef, chords]);
 }

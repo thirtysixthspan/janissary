@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { resetApp } from './reset.mjs';
 
 // A stand-in for the running app: enough tab-strip behaviour to drive the whole reset choreography
-// without a browser. Tabs live in the centre strip unless marked `sidebar`; `agent <name>`, with or
+// without a browser. Tabs live in the centre strip unless marked `sidebar`; `zsh <name>`, with or
 // without flags, opens a tab and focuses it; `zsh --no-workspace` opens a shell under a pool name (`kemal`) and
 // focuses it; double-clicking the active tab's label and committing the rename field sets its
 // alias; a tab marked `dirty` raises the save dialog on close and only goes once the dialog's discard
@@ -37,8 +37,8 @@ function submit(app) {
   const text = app.typed;
   app.typed = '';
   app.log.push(`run:${text}`);
-  const agent = /^agent (\S+)/.exec(text);
-  if (agent) openTab(app, agent[1]);
+  const agent = /^zsh (\S+)/.exec(text);
+  if (agent && !agent[1].startsWith('-')) openTab(app, agent[1]);
   if (text === 'zsh --no-workspace') openTab(app, 'kemal');
 }
 
@@ -174,7 +174,7 @@ describe('resetApp', () => {
     const app = fakeApp(MESSY);
     await run(app).done;
     expect(app.log.slice(0, 2)).toEqual(['press:Escape', 'press:Escape']);
-    expect(app.log.indexOf('clear-command-bar')).toBeLessThan(app.log.indexOf('run:agent resetting --no-workspace'));
+    expect(app.log.indexOf('clear-command-bar')).toBeLessThan(app.log.indexOf('run:zsh resetting --no-workspace'));
   });
 
   // A busy tab queues what is typed into it instead of running it, so everything the shot opened has
@@ -183,7 +183,7 @@ describe('resetApp', () => {
     const app = fakeApp(MESSY);
     await run(app).done;
     const lastClose = app.log.lastIndexOf('close:harbor');
-    expect(lastClose).toBeLessThan(app.log.indexOf('run:agent resetting --no-workspace'));
+    expect(lastClose).toBeLessThan(app.log.indexOf('run:zsh resetting --no-workspace'));
   });
 
   it('types from an idle tab, passing over a busy one that has a command bar', async () => {
@@ -192,7 +192,7 @@ describe('resetApp', () => {
       { label: 'janus', commandBar: true, active: false },
     ]);
     await run(app).done;
-    expect(app.log.indexOf('close:bilal')).toBeLessThan(app.log.indexOf('run:agent resetting --no-workspace'));
+    expect(app.log.indexOf('close:bilal')).toBeLessThan(app.log.indexOf('run:zsh resetting --no-workspace'));
   });
 
   it('closes every tab the shot left, the docked one included, and the staging tab after it', async () => {
@@ -215,7 +215,7 @@ describe('resetApp', () => {
   it('types zsh --no-workspace from the staging tab, aliases the new shell janus, and restores the work directory after', async () => {
     const app = fakeApp(MESSY);
     await run(app).done;
-    expect(app.log.indexOf('run:agent resetting --no-workspace')).toBeLessThan(app.log.indexOf('run:zsh --no-workspace'));
+    expect(app.log.indexOf('run:zsh resetting --no-workspace')).toBeLessThan(app.log.indexOf('run:zsh --no-workspace'));
     expect(app.log.indexOf('run:zsh --no-workspace')).toBeLessThan(app.log.indexOf('alias:kemal=janus'));
     expect(app.log.some((entry) => entry.startsWith('run:rename'))).toBe(false);
     expect(app.log.at(-1)).toBe('restore');

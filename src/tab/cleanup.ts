@@ -1,3 +1,4 @@
+import { tabRuntime } from './runtime.js';
 import { messageBus } from '../bus.js';
 import type { Tab } from './types.js';
 import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
@@ -15,6 +16,7 @@ export function closeTabResources(
   openFiles: Map<string, string>,
 ): void {
   const label = tab.label;
+  tabRuntime(tab).closing = true;
   // Release the workspace clone in the background: its final release recursively removes a full git clone,
   // slow enough to freeze the UI if run inline (the tab can't visibly close until it finishes).
   // Deferring it lets the tab close and the state broadcast reach the client first. The clone stays

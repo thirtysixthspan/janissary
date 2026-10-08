@@ -1,6 +1,6 @@
 # Activity log
 
-Janissary saves what your agent tabs say to a plain JSON log under `.janissary/log/`, so you can search or replay a session after it's over without reopening the app. "What your agent tabs say" is the whole of it: the log records the commands you run and the output they produce, plus the messages agents send each other. Two kinds of tab are not in it at all. A [harness](/user-documentation/advanced-agents/harness) tab's session lives in its own terminal, not in a transcript, so nothing of a harness run reaches the log. And a view tab, meaning an [editor](/user-documentation/tab-types/editor), a [page](/user-documentation/tab-types/web-pages), an [image](/user-documentation/tab-types/image-viewer), the [file navigator](/user-documentation/tab-types/file-navigator), or the [schedules](/user-documentation/automation/scheduling) list, has no transcript to record, so opening, editing, or browsing in one leaves no trace here.
+Janissary records application commands and their captured replies in a JSON activity log under `.janissary/log/`. Core ACP replies and notification entries can also appear there. Native shell commands and harness terminal output use their terminal recordings rather than this log. See [Harness recordings](/user-documentation/advanced-agents/harness#the-recording-flag).
 
 ## Where the log lives
 
@@ -21,16 +21,16 @@ Every line in the file is one JSON object:
 | Field | What it holds |
 |---|---|
 | `timestamp` | Local time the line was logged, as `HH:MM:SS.mmm` |
-| `agent` | The tab's label |
+| `zsh` | The tab's label |
 | `text` | The command, message, or output text |
 
 A new file starts at local midnight, not UTC. The split follows your machine's clock and calendar, not a fixed time zone.
 
 ## What gets logged
 
-Command input and its resulting output are logged as separate lines, so you can follow the request and the response in order. Messages sent between agents, ACP prompts and responses, and shell command output are all included.
+Command input and its resulting output are logged as separate lines, so you can follow the request and the response in order. Core ACP prompts and responses are included.
 
-A line holds those three fields and nothing more. A message one agent sends another is labelled with the tab that received it, so the line does not name the sender, and no line records the directory a command ran in.
+Each line holds those three fields. The field named `agent` identifies the tab label; it does not name an agent-tab type.
 
 ## Retention
 

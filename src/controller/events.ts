@@ -1,5 +1,4 @@
 import { messageBus } from '../bus.js';
-import { notify } from '../notifications/index.js';
 import type { Sinks } from './types.js';
 import type { Managers } from '../managers.js';
 
@@ -9,12 +8,6 @@ import type { Managers } from '../managers.js';
 // controller.ts under the file-size guideline; this has no state of its own.
 export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
   messageBus.on('state', 'dirty', () => sinks.emitState());
-  messageBus.on('transcript', 'entry:appended', (event) => {
-    if (event.type !== 'entry:appended') return;
-    // A cross-agent `msg`/`broadcast` delivery sets `entry.from`; feed the notifications tab
-    // (focus suppression and the per-event toggle are enforced inside `notify`).
-    if (event.entry.from) notify(managers, 'incoming-message', event.tabLabel, event.entry.from);
-  });
   messageBus.on('app', 'exit', () => sinks.exit?.());
   messageBus.on('layout', 'update', ({ type: _type, ...update }) => sinks.sendLayout?.(update));
   messageBus.on('fileNavigator', 'collect', (event) => sinks.sendCollectTreeState?.({ id: event.id }));
@@ -39,6 +32,7 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
     if (event.type !== 'exit') return;
     const harnessTab = managers.tab.harnessTabByPtyId(event.id);
     if (harnessTab) {
+      if (harnessTab.runtime?.closing) return;
       sinks.sendPtyExit(event.id, event.exitCode);
       if (harnessTab.remote && harnessTab.harness?.sessionTerminated) return;
       managers.tab.closeTab(managers.tab.tabs.indexOf(harnessTab));

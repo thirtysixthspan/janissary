@@ -25,7 +25,7 @@ function TestComponent({ tab, onHook }: {
 
 describe('useQueuePicker', () => {
 
-  it('openQueue no-ops for a non-agent tab', () => {
+  it('openQueue no-ops for a non-tab', () => {
     let hook: ReturnType<typeof useQueuePicker> | undefined;
     const tab = makeTab({ view: 'harness' });
     render(<TestComponent tab={tab} onHook={(h) => { hook = h; }} />);

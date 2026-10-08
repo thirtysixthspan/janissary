@@ -303,7 +303,7 @@ fills the grid, and anything else — `INSERT … RETURNING` included — is a w
 reported as a notification, as described below. Nothing is written under the prompt.
 Arrow keys walk back through the last fifty statements typed in this tab.
 
-The console's keys are the agent command bar's, and they are the console's own while it has the focus:
+The console's keys are the shared command bar's, and they are the console's own while it has the focus:
 the left and right arrows move the caret along the line, the up and down arrows walk the fifty
 statements back and forward again, `Enter` sends, and `Shift+Enter` starts a new line. While typing,
 the newest earlier statement that begins with what is typed is shown ghosted after the caret, and
@@ -313,7 +313,7 @@ row.
 
 `Tab` moves focus from the command bar to the rows, and `Tab` again brings it back to the command bar.
 The tab is two panes and this is how a user crosses between them; `Shift+Tab` is left to the
-application, which walks out of a plugin tab. Unlike the agent command bar, `Tab` here does not
+application, which walks out of a plugin tab. Unlike the shared command bar, `Tab` here does not
 complete a word: there is nothing in this tab for a word to be completed against.
 
 A statement's result is a **notification**, and the tab says nothing about it. The line under the

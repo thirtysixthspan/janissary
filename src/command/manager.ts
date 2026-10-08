@@ -1,6 +1,5 @@
 import type { Resolution } from '../resolve.js';
 import { resolveInTab } from './resolve-in-tab.js';
-import { isInteractive } from '../interactive/index.js';
 import { findCommand } from '../commands/index.js';
 import { recordGlobalHistory } from '../global-history.js';
 import type { Managers } from '../managers.js';
@@ -18,22 +17,20 @@ export class CommandManager {
     this.run(trimmed, this.managers.tab.cur().label, this.managers.tab.activeTab);
   }
 
-  // `detect: false` marks a command nobody is watching interactively — a scheduled firing — so a
-  // program that takes over the screen never steals the tab.
-  dispatchTo(label: string, text: string, options?: { detect?: boolean }): void {
+  dispatchTo(label: string, text: string): void {
     const index = this.managers.tab.findIndex(label);
     if (index === -1) return;
     const trimmed = this.managers.tab.recordHistory(index, text);
     if (trimmed) recordGlobalHistory(trimmed, label);
-    this.run(trimmed, label, index, options?.detect);
+    this.run(trimmed, label, index);
   }
 
-  private run(input: string, label: string, index: number, detect?: boolean): void {
+  private run(input: string, label: string, index: number): void {
     const res = resolveInTab(input, label, this.managers);
     switch (res.kind) {
       case 'empty': { return;
       }
-      case 'shell': { this.runShell(res, label, detect); return;
+      case 'shell': { this.runShell(res, label); return;
       }
       case 'output':
       case 'unknown': { this.managers.tab.append(label, { input, output: res.output, markdown: res.kind === 'output' }); return;
@@ -43,16 +40,8 @@ export class CommandManager {
     }
   }
 
-  // Routes a `shell` resolution to either the piped shell or a PTY: auto-detected interactive
-  // commands and any `--pty`-flagged command (including a bare `shell --pty`, which falls back
-  // to the user's login shell) go to the PTY; everything else runs in the tab's piped shell.
-  private runShell(res: Extract<Resolution, { kind: 'shell' }>, label: string, detect?: boolean): void {
-    if (!res.pty && !(res.cmd && isInteractive(res.cmd))) { this.managers.shell.run(label, res.cmd, { detect }); return;
-    }
-    const fallbackShell = process.env.SHELL || 'bash';
-    const command = res.cmd || fallbackShell;
-    const program = res.cmd ? res.cmd.split(/\s+/, 1)[0] : fallbackShell.split('/').pop()!;
-    this.managers.pty.openInlinePty(label, command, program);
+  private runShell(res: Extract<Resolution, { kind: 'shell' }>, label: string): void {
+    this.managers.shell.run(label, res.cmd);
   }
 
   // Offers one line to the ordinary dispatcher and answers whether the application claimed it, with

@@ -15,8 +15,6 @@ import { OpenFileManager } from '../open/file-manager.js';
 import { FileNavigatorManager } from '../file-navigator/manager.js';
 import { EditorWatchManager } from '../editor/watch-manager.js';
 import { EditorAcpManager } from '../editor/acp-manager.js';
-import { CaptureManager } from '../capture/manager.js';
-import { AgentCommunicationManager } from '../agent/communication-manager.js';
 import { BrowserManager } from '../browser/tab.js';
 import { CommandManager } from '../command/manager.js';
 import { MonitorManager } from '../monitor/manager.js';
@@ -72,8 +70,6 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.remote = new RemoteManager(managers);
   managers.profile = new ProfileManager(managers);
   managers.connection = new ConnectionManager(managers);
-  managers.communication = new AgentCommunicationManager(managers);
   managers.command = new CommandManager(managers);
-  managers.capture = new CaptureManager(managers);
   managers.monitor = new MonitorManager(managers);
 }

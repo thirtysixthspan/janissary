@@ -10,11 +10,11 @@ When the `files` command runs, a transcript entry for the command appears in the
 before the file navigator tab opens and takes focus. The command text is recorded as the entry's input;
 the output is empty since the file navigator tab is the side-effect.
 
-A file navigator tab is created like an agent tab (see Tabs) — placed contiguously within the active
+A file navigator tab is created like a shell tab (see Tabs) — placed contiguously within the active
 tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus
 moves to the new file navigator tab.
 
-Unlike an agent tab, a file navigator tab has no shell, agent session, browser, transcript, or command
+Unlike a shell tab, a file navigator tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like markdown and image
 tabs, it is not saved and is not restored on `--relaunch`.
 
@@ -34,7 +34,7 @@ If a file navigator tab is already open on the same root, `files` **focuses that
 opening a duplicate — there is one tree per root, the same way there is one Explorer per
 workspace in a conventional editor.
 
-From a remote agent or harness tab, bare `files` uses that tab's remote cwd when it is inside the
+From a remote shell or harness tab, bare `files` uses that tab's remote cwd when it is inside the
 provisioned workspace, and the workspace root otherwise. While the remote workspace is still
 provisioning, it reports `The remote workspace is not ready yet.` and opens no tree. A remote path
 argument resolves relative to that remote cwd; `~` uses the remote user's home and `$root` uses the
@@ -69,7 +69,7 @@ instead of the issuing tab's own cwd. If no tab has that label, an error (`No ta
 "<label>".`) is appended to the issuing tab's transcript and no tree is opened or moved.
 The label may also follow a path: `files <path> in <label>` opens the path under that tab's cwd.
 If `in` has no label after a path, the command reports `files: expected a tab label after "in"`.
-When `<label>` names a remote agent or harness, the tree is rooted in that tab's workspace on the
+When `<label>` names a remote shell or harness, the tree is rooted in that tab's workspace on the
 remote host and uses that tab's existing ssh channel. There is no `files on <address>` form: a
 remote tree can only be opened through a tab that already owns a workspace and connection there.
 
@@ -90,7 +90,7 @@ through a path form (`files ./in`).
 
 ### Opening from a tab's metadata row
 
-Agent tabs and harness tabs carry a folder-icon file-navigator button in their metadata row (see "Metadata
+Shell and harness tabs and harness tabs carry a folder-icon file-navigator button in their metadata row (see "Metadata
 row" in `tabs.md`). Clicking it opens a file navigator rooted at that tab's own working directory.
 Unlike the bare `files` command — which opens into the center tab strip — a navigator opened this
 way, when none is open yet, opens **docked in the left sidebar** by default.
@@ -877,7 +877,7 @@ existing one.
 
 The target is resolved against the navigator's own tree root, not against the working directory of
 whichever tab happens to be active. A navigator rooted at one project therefore creates the file in
-that project even while a workspaced agent, whose shell runs inside a separate clone, holds focus.
+that project even while a workspaced tab, whose shell runs inside a separate clone, holds focus.
 
 The user names the file by editing the new editor tab's label — the typed text becomes the
 filename literally, with no extension appended (see Editor Tab → "New files"). The new tab opens

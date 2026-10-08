@@ -19,23 +19,23 @@ export type AppChordAction =
   | 'tabNav'
   | 'queue'
   | 'tasks'
-  | 'transcriptSearch'
+  | 'editorSearch'
   | 'projectSearch'
   | 'quickOpen'
-  | 'newAgentTab'
+  | 'newShellTab'
   | 'sectionNav';
 
-export type AppChordOwner = 'window' | 'sectionNav';
+export type AppChordOwner = 'window' | 'sectionNav' | 'editor';
 
 export const APP_CHORDS: Readonly<Record<string, { action: AppChordAction; owner: AppChordOwner }>> = {
   'ctrl+r': { action: 'history', owner: 'window' },
   'ctrl+g': { action: 'tabNav', owner: 'window' },
   'ctrl+e': { action: 'queue', owner: 'window' },
   'ctrl+a': { action: 'tasks', owner: 'window' },
-  'meta+f': { action: 'transcriptSearch', owner: 'window' },
+  'meta+f': { action: 'editorSearch', owner: 'editor' },
   'meta+shift+f': { action: 'projectSearch', owner: 'window' },
   'meta+p': { action: 'quickOpen', owner: 'window' },
-  'meta+t': { action: 'newAgentTab', owner: 'window' },
+  'meta+t': { action: 'newShellTab', owner: 'window' },
   // Claimed only when the key lands inside an element marked `data-claims-shift-tab`, which is how
   // `useSectionNav` wraps focus in a dialog. Reserving it is still right: a plugin binding it would work
   // sometimes and do nothing the rest of the time.

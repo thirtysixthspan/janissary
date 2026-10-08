@@ -3,9 +3,9 @@ import type { JanusClient } from '../ws';
 import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
 import { SelectionOverlay } from '../shared/terminal/SelectionOverlay';
-import { isClipboardChord, isPickerChord, isTabSwitchChord } from '../shared/terminal/window-chords';
-import { AgentTabMeta } from '../shared/AgentTabMeta';
-import { agentTabIntents } from '../shared/agent-tab-intents';
+import { isClipboardChord, isPickerChord, isTabSwitchChord, isNewShellChord } from '../shared/terminal/window-chords';
+import { HarnessTabMeta } from '../shared/HarnessTabMeta';
+import { harnessTabIntents } from '../shared/harness-tab-intents';
 import { remoteSessionControl } from '../shared/remote-session-control';
 import type { StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import type { HarnessTabHandle } from '../shared/tab/handles';
@@ -24,7 +24,7 @@ type Properties = {
 function harnessKeyFilter(e: KeyboardEvent, taskPickerOpen: boolean, navOpen: boolean): boolean {
   if (e.type !== 'keydown') return true;
   if (taskPickerOpen || navOpen) return false;
-  return !(isTabSwitchChord(e) || isPickerChord(e) || isClipboardChord(e));
+  return !(isTabSwitchChord(e) || isPickerChord(e) || isClipboardChord(e) || isNewShellChord(e));
 }
 
 // Full-tab harness terminal: no card chrome, no command bar — the body is the PTY. All keys reach
@@ -56,11 +56,12 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
 
   // Every harness and ssh tab records, so the flag is drawn from the moment the tab opens — a `-w`
   // tab still provisioning included, which is when it is drawn but not yet pressable.
-  const intents = agentTabIntents(client, label, 'openHarnessTranscriptFor', harness.recording);
+  const intents = harnessTabIntents(client, label, 'openHarnessTranscriptFor', harness.recording);
+  const provisioning = remote?.provisioning === true || flags?.includes('provisioning') === true;
   const isExited = harness.status === 'exited';
   return (
     <div className="harness-tab" data-doc-shot="harness-view">
-      <AgentTabMeta
+      <HarnessTabMeta
         cwd={cwd}
         cwdDisplay={cwdDisplay}
         flags={flags}
@@ -69,13 +70,9 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         model={harness.model}
         effort={harness.effort}
         onOpenFileNavigator={intents.onOpenFileNavigator}
-        onLaunchAgentHere={remote === undefined
-          ? cwd === undefined ? undefined : intents.onLaunchAgentHere
-          : intents.onLaunchShellHere}
-        launchTitle={remote === undefined
-          ? undefined
-          : remote.provisioning ? 'Waiting for the workspace' : 'New shell in this workspace'}
-        launchDisabled={remote?.provisioning}
+        onLaunchShellHere={remote !== undefined || cwd !== undefined ? intents.onLaunchShellHere : undefined}
+        launchTitle={provisioning ? 'Waiting for the workspace' : remote ? 'New shell in this workspace' : undefined}
+        launchDisabled={provisioning}
         onOpenTranscript={intents.onOpenTranscript}
         hasRecorder
         onOpenRecording={intents.onOpenRecording}

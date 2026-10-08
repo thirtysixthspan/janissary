@@ -24,7 +24,7 @@ export type AppCommandBarState = {
 
 // The one question a plugin tab's command bar asks the application before it offers a line onward:
 // would the application's own bar have handled this instead of sending it? Answered with the same
-// classification the agent tab's chain uses, so a bare word opens the same picker, and `quit` — or a
+// classification the tab's chain uses, so a bare word opens the same picker, and `quit` — or a
 // `close` that would take the last tab with it — opens the same confirmation, from either bar.
 //
 // Everything here is already bound to the tab the body renders in. The queue popup's fields describe

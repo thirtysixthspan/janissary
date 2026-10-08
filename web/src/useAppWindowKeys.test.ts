@@ -29,7 +29,7 @@ describe('useAppWindowKeys', () => {
   it('passes one and the same ref for both the state and the callbacks side', () => {
     mockedUseWindowKeys.mockClear();
     const deps = fakeDeps(0);
-    renderHook(() => useAppWindowKeys(fakeClient(), () => false, () => {}, deps, fakeChords()));
+    renderHook(() => useAppWindowKeys(fakeClient(), deps, fakeChords()));
 
     const [, stateRef, callbacksRef] = mockedUseWindowKeys.mock.calls[0];
     expect(stateRef).toBe(callbacksRef);
@@ -41,7 +41,7 @@ describe('useAppWindowKeys', () => {
     const first = fakeDeps(0);
     const second = fakeDeps(3);
     const { rerender } = renderHook(
-      ({ deps }) => useAppWindowKeys(fakeClient(), () => false, () => {}, deps, fakeChords()),
+      ({ deps }) => useAppWindowKeys(fakeClient(), deps, fakeChords()),
       { initialProps: { deps: first } },
     );
 
@@ -52,16 +52,14 @@ describe('useAppWindowKeys', () => {
     expect(stateRef.current).toBe(second);
   });
 
-  it('forwards the client and both scroll-key handlers unchanged', () => {
+  it('forwards the client and plugin chord registry unchanged', () => {
     mockedUseWindowKeys.mockClear();
     const client = fakeClient();
-    const handleScrollKey = () => false;
-    const handleScrollKeyUp = () => {};
-    renderHook(() => useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, fakeDeps(0), fakeChords()));
+    const chords = fakeChords();
+    renderHook(() => useAppWindowKeys(client, fakeDeps(0), chords));
 
     const call = mockedUseWindowKeys.mock.calls[0];
     expect(call[0]).toBe(client);
-    expect(call[3]).toBe(handleScrollKey);
-    expect(call[4]).toBe(handleScrollKeyUp);
+    expect(call[3]).toBe(chords);
   });
 });

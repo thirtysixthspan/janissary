@@ -43,7 +43,7 @@ vi.mock('@xterm/addon-fit', () => ({
 }));
 
 // The window a launch opens: its first state snapshot carries one tab, the `janus` launch shell, as
-// the shell plugin's envelope rather than an agent tab.
+// the shell plugin's envelope rather than an tab.
 describe('App launched with the janus shell tab', () => {
   afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 

@@ -104,7 +104,9 @@ export class SessionsManager {
   // its own: a refusing peer is marked terminated and an unreachable host stays detached, and neither
   // holds the restore up, which is why nothing here is awaited.
   restoreAll(): void {
-    for (const record of this.all()) this.attach(record.session);
+    for (const record of this.all()) {
+      if (record.processes.some((process) => process.kind !== 'agent')) this.attach(record.session);
+    }
   }
 
   /**

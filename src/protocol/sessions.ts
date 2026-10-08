@@ -1,11 +1,11 @@
 // Remote-sessions-domain wire types and RPCs, composed into the shared contract by ../protocol.ts.
 //
-// One row of the sessions tab. A row is one tab — a remote harness tab, a remote agent tab, a plain
+// One row of the sessions tab. A row is one tab — a remote harness tab, a remote tab, a plain
 // ssh tab, a remote file navigator — or one process still alive on a peer this janissary is no
 // longer attached to. There is deliberately no row standing for a channel: a shared channel shows
 // itself by grouping, which is what `joined` carries.
 
-export type RemoteSessionKind = 'harness' | 'agent' | 'shell' | 'ssh' | 'navigator';
+export type RemoteSessionKind = 'harness' | 'shell' | 'ssh' | 'navigator';
 
 // `provisioning` is a remote tab whose workspace clone has not landed yet, `reconnecting` a live
 // entry whose transport is gone and whose backoff is already running, `detached` a peer parked on

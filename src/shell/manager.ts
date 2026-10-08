@@ -1,15 +1,8 @@
 import { statSync } from 'node:fs';
 import { spawnShell, executeShellCmd as executeShellCommand, queryShellPwd, type ShellProcess } from './index.js';
-import { stripShellSentinels } from './sentinel-strip.js';
-import { restoredTranscript } from './restored-transcript.js';
 import { createRemoteShell } from '../remote/shell-session.js';
-import type { ShellHistoryRun } from '../remote/protocol-frames.js';
-import { createPtyShell, ptyShellArgs } from './pty-session.js';
-import { createShellPromotion, TERMINAL_ENTRY_NOTE, type ShellPromotion } from './promotion.js';
-import { getConfig } from '../config.js';
 import { getProjectTokens } from '../project/tokens.js';
 import { messageBus } from '../bus.js';
-import type { SandboxOptions } from '../sandbox/index.js';
 import type { Managers } from '../managers.js';
 
 // The base name of the user's login shell (`bash`, `zsh`, …), used both to launch tab shells and to
@@ -22,7 +15,6 @@ export const SHELL_NAME = (process.env.SHELL || 'bash').split('/').pop() || 'bas
 export function shellName(shellPath: string): string {
   return shellPath.split('/').pop() || SHELL_NAME;
 }
-const TERMINAL_RESET = String.fromCodePoint(27) + 'c';
 
 // A local shell started in a recorded cwd that is not a directory — deleted since, or never a path —
 // exits at once, and so would every respawn after it; it starts in the project directory instead.
@@ -56,7 +48,6 @@ export class ShellManager {
   // over a different channel: the label a tab holds is freed the moment it closes, and a later tab
   // granted the same label must start its own shell rather than bind to a process on a session that
   // has nothing to do with it.
-  private adopted = new Map<string, { id: string; session: string | undefined }>();
   // Serializes each tab's shell interactions (a command's execution, then its trailing pwd query)
   // so at most one stdin write / stdout listener pair is ever live on a given shell at a time.
   // Without this, a rapid-fire queued command (dispatched the instant the previous one goes idle)
@@ -64,12 +55,6 @@ export class ShellManager {
   // waiting on the same stdout stream — Node delivers that chunk to both listeners, leaking the
   // pwd query's cwd line and its `__PWD_...__` marker into the next command's output.
   private shellQueues = new Map<string, Promise<void>>();
-  // The pty id backing each tab's shell, for the promotion path to point `activePty` at. Absent for
-  // a piped or remote shell, which is what makes those tabs unpromotable.
-  private shellPtyIds = new Map<string, string>();
-  // The promotion state of each tab's currently-running command, so the manual `open in terminal`
-  // intent has something to act on.
-  private promotions = new Map<string, ShellPromotion>();
   // Shells this manager killed itself, and what becomes of the command each was running. Killing ends
   // a shell's streams, which completes that command. A tab close or shutdown kills `silent`ly: the
   // completion is dropped, because the tab it would report to may already be gone. `connection close
@@ -79,25 +64,9 @@ export class ShellManager {
 
   constructor(private managers: Managers) {}
 
-  // Tell this tab's next remote shell to bind to a spawn id the far side already holds, rather than
-  // starting a second shell beside the one still running there. `session` is the session id the
-  // record of the attach carried, checked against the tab's channel when the shell is finally
-  // asked for.
-  adoptRemoteShell(label: string, id: string, session?: string): void {
-    this.adopted.set(label, { id, session });
-  }
-
-  // Forget a label's adoption before anything bound to it — an attach that failed, or whose
-  // session turned out to be over, has no shell out there worth binding to.
-  releaseAdoptedShell(label: string): void { this.adopted.delete(label); }
-
   // Whether a tab currently has a live shell. Drives the connections panel and completion.
   has(label: string): boolean {
     return this.shells.has(label);
-  }
-
-  ensure(label: string): void {
-    this.getShell(label, this.managers.tab.cwdOf(label));
   }
 
   // The tab's persistent shell, spawned on first use and respawned if the previous one died (its
@@ -118,27 +87,12 @@ export class ShellManager {
   // is written for it — the remote server has already started it in the workspace — and no local
   // sandbox options apply, since the confinement decision belongs to the machine it runs on.
   //
-  // A local tab's shell runs inside a pty when `interactiveShellDetection` is on, so a program that
-  // takes over the screen can be spotted and promoted mid-command; with it off, the shell is piped
-  // exactly as before. Remote tabs stay piped either way.
+  // Shared captured execution uses pipes; interactive shells own their separate plugin terminals.
   private spawnFor(label: string, cwd: string | undefined): ShellProcess {
     const tab = this.managers.tab.byLabel(label);
     const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
     if (channel) {
-      // An attached tab adopts the spawn id the far side already knows it by, so the adapter binds
-      // to the shell still running there rather than starting a second one beside it — but only
-      // while its channel is still the session the adoption was recorded against, and never past a
-      // tab close that freed its label.
-      const adoption = this.adopted.get(label);
-      const adopted = adoption !== undefined && this.managers.remote.get(label)?.sessionId === adoption.session;
-      const id = adopted
-        ? adoption.id
-        : `rsh${++this.remoteShellCounter}`;
-      this.adopted.delete(label);
-      return createRemoteShell(channel, id, SHELL_NAME, SHELL_NAME, label, adopted, adopted ? {
-        output: (data) => this.appendRestoredOutput(label, data),
-        history: (runs) => this.appendRestoredHistory(label, runs),
-      } : undefined);
+      return createRemoteShell(channel, `rsh${++this.remoteShellCounter}`, SHELL_NAME, SHELL_NAME, label);
     }
     const sandbox = {
       workspaceDir: tab?.workspaceDir,
@@ -146,52 +100,8 @@ export class ShellManager {
       tokens: tab?.workspaceDir ? getProjectTokens() : undefined,
     };
     const localCwd = cwd ? existingDirectory(cwd) ?? existingDirectory(this.managers.tab.launchDir) : undefined;
-    if (getConfig().interactiveShellDetection) return this.spawnPtyShellFor(label, localCwd, sandbox);
     const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, sandbox);
     if (localCwd) shell.stdin?.write(`cd "${localCwd}"\n`);
-    return shell;
-  }
-
-  // Restored bytes are the detached peer's replay of the shell's raw stream, which still carries the
-  // sentinel lines live execution strips (`executeShellCmd`/`queryShellPwd`); they are removed here,
-  // at the one place restored output enters the transcript, so a reattached tab's history reads the
-  // way the live tab's always did.
-  private appendRestoredOutput(label: string, data: string): void {
-    const output = stripShellSentinels(data.startsWith(TERMINAL_RESET) ? data.slice(TERMINAL_RESET.length) : data);
-    if (!output) return;
-    this.managers.tab.append(label, { input: '', output });
-  }
-
-  // The peer retained what was written to the shell as well as what came out of it, so the tab's
-  // transcript is rebuilt as the entries the live tab held — each command beside its output — rather
-  // than as one entry of output with nothing to say what produced it.
-  private appendRestoredHistory(label: string, runs: readonly ShellHistoryRun[]): void {
-    for (const entry of restoredTranscript(runs)) this.managers.tab.append(label, entry);
-  }
-
-  // The pty-backed variant: registered as a transport so the pty manager never lists it among the
-  // tab's `terminal:` connections, while its bytes come back here to be scraped rather than being
-  // published straight to the client. The pty manager's tab close skips transports, so `close` here
-  // is what kills it. An exit the shell made on its own ends its streams, which completes the running
-  // command and lets `getShell` respawn it; the pty id is cleared only while it is still this
-  // shell's, so a late exit from a replaced shell cannot disable promotion for its successor.
-  private spawnPtyShellFor(label: string, cwd: string | undefined, sandbox: SandboxOptions): ShellProcess {
-    let onData: (data: string) => void = () => {};
-    let onExit: () => void = () => {};
-    const { shell, ptyId, exited } = createPtyShell((handler) => {
-      onData = handler;
-      const session = this.managers.pty.spawnTransport(
-        label, SHELL_NAME, SHELL_NAME, cwd ?? process.cwd(),
-        { onData: (data) => onData(data), onExit: () => onExit() },
-        { sandbox, shellArgs: ptyShellArgs() },
-      );
-      return { write: (data) => session.write(data), kill: () => session.kill(), id: session.id };
-    });
-    onExit = () => {
-      if (this.shellPtyIds.get(label) === ptyId) this.shellPtyIds.delete(label);
-      exited();
-    };
-    this.shellPtyIds.set(label, ptyId);
     return shell;
   }
 
@@ -199,7 +109,7 @@ export class ShellManager {
   // entry point for shell execution: it creates a running transcript entry, streams output as it
   // arrives, finalizes the entry on completion, and persists the tab. Accepts an optional callback
   // for when the full output is captured.
-  run(label: string, command: string, options?: { onComplete?: (out: string) => void; detect?: boolean }): void {
+  run(label: string, command: string, options?: { onComplete?: (out: string) => void }): void {
     const index = Math.max(0, this.managers.tab.findIndex(label));
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     if (!this.managers.tab.byLabel(label)) { options?.onComplete?.(''); return; }
@@ -216,27 +126,12 @@ export class ShellManager {
       });
     };
 
-    const promotion = createShellPromotion(
-      this.managers, label, command, () => this.shellPtyIds.get(label),
-      options?.detect !== false && getConfig().interactiveShellDetection,
-    );
-    this.promotions.set(label, promotion);
 
     this.execute(label, command, index, this.managers.tab.cwdOf(label), {
-      onChunk: (buffer) => {
-        promotion.observe(buffer);
-        // Once the terminal has the screen, the entry stops collecting bytes: what would land in it
-        // is half a repaint, and the finished entry reads as a note instead.
-        if (!promotion.isPromoted()) update(buffer, true);
-      },
+      onChunk: (buffer) => { update(buffer, true); },
       onDone: (result) => {
-        const promoted = promotion.isPromoted();
-        promotion.finish();
-        this.promotions.delete(label);
-        // A promoted command's output went to the terminal; its entry reads as a note, and no
-        // trailing output event reports bytes the transcript never showed.
-        update(promoted ? TERMINAL_ENTRY_NOTE : result, false, !promoted);
-        options?.onComplete?.(promoted ? '' : result);
+        update(result, false, true);
+        options?.onComplete?.(result);
       },
       onPwd: (pwd) => { this.managers.tab.setCwd(label, pwd); messageBus.emit('state', { type: 'dirty' }); },
     });
@@ -268,13 +163,6 @@ export class ShellManager {
     this.shellQueues.set(label, next);
   }
 
-  // Promote the tab's running command into a full-tab terminal, as the `open in terminal` action and
-  // its chord ask for. A no-op when nothing is running, when the tab's shell is not pty-backed, or
-  // when the command has already been promoted.
-  promoteRunning(label: string): void {
-    this.promotions.get(label)?.promote();
-  }
-
   // Kill and forget a tab's shell on `connection close shell`. The tab stays open, so the command the
   // shell was running still finishes. Returns whether a shell was actually open (drives the result
   // message).
@@ -284,14 +172,11 @@ export class ShellManager {
 
   private retire(label: string, mode: 'silent' | 'report'): boolean {
     const shell = this.shells.get(label);
-    this.adopted.delete(label);
     if (!shell) return false;
     this.retired.set(shell, mode);
     shell.kill();
     this.shells.delete(label);
     this.shellQueues.delete(label);
-    this.shellPtyIds.delete(label);
-    this.promotions.delete(label);
     return true;
   }
 
@@ -300,9 +185,6 @@ export class ShellManager {
     for (const [, shell] of this.shells) { this.retired.set(shell, 'silent'); shell.kill(); }
     this.shells.clear();
     this.shellQueues.clear();
-    this.shellPtyIds.clear();
-    this.promotions.clear();
-    this.adopted.clear();
   }
 
   dispose(): void {

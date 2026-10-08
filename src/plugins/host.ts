@@ -1,6 +1,5 @@
 import type { Managers } from '../managers.js';
 import {
-  TabPluginRejection,
   type TabPluginActivation, type TabPluginDeclaration, type TabPluginLoaders,
   type TabPluginPresentation, type TabPluginServerCapabilities,
   type TabPluginReattachRecord,
@@ -24,6 +23,7 @@ import { startPluginActivation } from './start-activation.js';
 import { buildPluginRecords } from './host-records.js';
 import { closePluginTabs } from './teardown.js';
 import { noteInOriginTab } from './transcript-note.js';
+import { openPluginSibling, runPluginCommand } from './sibling.js';
 import { reattachPlugin } from './reattach.js';
 
 export type TabPluginHostOptions = {
@@ -78,16 +78,14 @@ export class TabPluginHost {
   }
 
   async runCommand(id: string, command: string, origin: PluginFailureOrigin): Promise<void> {
-    const argument = command.trim().replace(/^\S+\s*/u, '');
-    await this.runGuarded(id, origin, (activation, capabilities) => {
-      // The host's own rejection, thrown directly rather than through the plugin's `rejectRequest`.
-      // Routing it through the capability would attribute it to a plugin that may not have declared
-      // that capability, turning a plain "no handler" answer into a capability violation.
-      if (!activation.command) {
-        throw new TabPluginRejection(`Tab plugin "${id}" claims a command but provides no handler`);
-      }
-      return activation.command(argument, capabilities);
-    });
+    await this.runGuarded(id, origin, (activation, capabilities) =>
+      runPluginCommand(id, command, activation, capabilities));
+  }
+
+  async openSibling(id: string, origin: PluginFailureOrigin): Promise<void> {
+    const workspace = this.managers.tab.byLabel(origin.label)?.workspaceDir;
+    if (workspace && this.managers.workspace.provisioning(workspace)) return;
+    return this.runGuarded(id, origin, openPluginSibling);
   }
 
   runSelectionAction(id: string, action: string, paths: readonly string[], origin: PluginFailureOrigin): Promise<void> {

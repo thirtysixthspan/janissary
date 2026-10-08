@@ -15,7 +15,6 @@ export type TabControllerAdapter = {
   deleteQueuedCommand(index: number, tab?: string): void;
   toggleCollapse(tab?: string): void;
   revealNotifications(): void;
-  promoteToTerminal(): void;
   ptyInput(id: string, data: string, tab?: string): void;
   ptyResize(id: string, cols: number, rows: number, tab?: string): void;
   pluginTerminalAttach(id: string, tab: string): boolean;
@@ -41,7 +40,6 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     deleteQueuedCommand: (index, tab) => managers.tab.deleteQueued(tab ?? managers.tab.cur().label, index),
     toggleCollapse: (tab) => tab === undefined ? managers.tab.toggleCollapse() : managers.tab.toggleCollapse(tab),
     revealNotifications: () => escalateToFeed(managers),
-    promoteToTerminal: () => managers.shell.promoteRunning(managers.tab.cur().label),
     ptyInput: (id, data, tab) => { if (!tab || managers.pty.isRunningFor(id, [tab])) managers.pty.input(id, data); },
     ptyResize: (id, cols, rows, tab) => { if (!tab || managers.pty.isRunningFor(id, [tab])) managers.pty.resizeOne(id, cols, rows); },
     pluginTerminalAttach: (id, tab) => managers.pty.isRunningFor(id, [tab]),

@@ -83,7 +83,7 @@ export function withWorkspaceCredentials(env: NodeJS.ProcessEnv, options: Worksp
 // the process actually runs on, not the one the browser is talking to.
 //
 // Added for every spawn, workspaced or not, unlike the credentials above: the picker inserts the same
-// command shape on any tab and cannot know which kind it is populating, so a plain agent tab that got
+// command shape on any tab and cannot know which kind it is populating, so a plain tab that got
 // `$janissary` with nothing to expand would be worse off than one given the old absolute path. The
 // value is a filesystem path to janissary's own code, not a credential, so there is nothing for the
 // unconfined path to be careful about.

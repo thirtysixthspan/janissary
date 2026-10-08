@@ -126,7 +126,7 @@ export class MonitorManager extends LiveMonitors {
     return stopMonitor(this.monitors, this.managers, owner, name, target);
   }
 
-  // The owning agent tab closed: stop its monitors, and close any reporting tab that no
+  // The owning tab closed: stop its monitors, and close any reporting tab that no
   // longer has a live monitor feeding it (another tab may still run the same persona).
   private handleOwnerClosed(owner: string): void {
     const names = [...this.monitors.values()]

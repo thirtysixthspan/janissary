@@ -7,7 +7,7 @@ export type AppCommand = string;
 
 export type Resolution =
   | { kind: 'empty' }
-  | { kind: 'shell'; cmd: string; pty?: boolean }
+  | { kind: 'shell'; cmd: string }
   | { kind: 'app'; name: AppCommand; cmd: string }
   | { kind: 'output'; cmd: string; output: string }
   // An unprefixed command that matches no built-in, with the existing unknown-command reply.
@@ -32,9 +32,6 @@ export function resolveCommand(raw: string, available: (name: string) => boolean
   // `!!<cmd>` and `!<cmd>` are shorthand for `shell --pty <cmd>` and `shell <cmd>`. Checked
   // before the `shell` keyword below, and `!!` before `!`, since a leading `!` alone would
   // also match the two-character prefix.
-  if (trimmed.startsWith('!!')) {
-    return { kind: 'shell', cmd: trimmed.slice(2).replace(/^\s+/, ''), pty: true };
-  }
   if (trimmed.startsWith('!')) {
     return { kind: 'shell', cmd: trimmed.slice(1).replace(/^\s+/, '') };
   }
@@ -45,8 +42,6 @@ export function resolveCommand(raw: string, available: (name: string) => boolean
   // command after it, it opens a bare interactive shell.
   if (/^shell\b/i.test(trimmed)) {
     const rest = trimmed.replace(/^shell\b\s*/i, '');
-    const ptyMatch = /^--pty\b\s*/.exec(rest);
-    if (ptyMatch) return { kind: 'shell', cmd: rest.slice(ptyMatch[0].length), pty: true };
     return { kind: 'shell', cmd: rest };
   }
 

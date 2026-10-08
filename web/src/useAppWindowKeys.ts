@@ -8,11 +8,9 @@ import type { PluginChordRegistry } from './plugins/PluginChords';
 // Split out of App.tsx to keep it under the file-size limit.
 export function useAppWindowKeys(
   client: JanusClient,
-  handleScrollKey: (e: KeyboardEvent) => boolean,
-  handleScrollKeyUp: (e: KeyboardEvent) => void,
   deps: StateSnapshot & Callbacks,
   chords: PluginChordRegistry,
 ): void {
   const reference = useLatestRef(deps);
-  useWindowKeys(client, reference, reference, handleScrollKey, handleScrollKeyUp, chords);
+  useWindowKeys(client, reference, reference, chords);
 }

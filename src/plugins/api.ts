@@ -8,7 +8,7 @@ import type {
 import type { CompletionResult } from '../completion/types.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
-// are re-exported here, so a plugin still reads the whole v1 contract from one module.
+// are re-exported here, so a plugin still reads the whole v2 contract from one module.
 export {
   TAB_PLUGIN_API_VERSION, TAB_PLUGIN_CAPABILITY_NAMES, isTabPluginCapability, TabPluginRejection,
 } from './api-capabilities.js';
@@ -50,7 +50,7 @@ export type TabPluginDeclaration = {
   // rather than a list of its own, so the playable types cannot drift from the claimed ones: a
   // plugin claims what it owns once and says of that set whether any of it plays.
   playable?: boolean;
-  // Names this plugin's tabs from the agent-name pool, as an unnamed agent tab is named, instead of
+  // Names this plugin's tabs from the agent-name pool, as an unnamed tab is named, instead of
   // from `tabLabelPrefix`. The drawn name is the tab's title as well as its label. The prefix and the
   // plugin's own title remain the fallback once every name in the pool is held by an open tab.
   agentNamedTabs?: boolean;
@@ -382,6 +382,7 @@ export type TabPluginActivation = {
   // return value is ignored for the same reason a notification's is: a status window cannot influence
   // any host outcome, and a plugin acts on it by calling `updateTab`.
   hostState?(state: TabPluginHostState, capabilities: TabPluginServerCapabilities): void | Promise<void>;
+  openSibling?(capabilities: TabPluginServerCapabilities): void | Promise<void>;
   reattach?(record: TabPluginReattachRecord, capabilities: TabPluginServerCapabilities): void | Promise<void>;
   isPayload(value: unknown): boolean;
   dispose?(): void | Promise<void>;

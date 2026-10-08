@@ -26,3 +26,7 @@ export function isClipboardChord(e: KeyboardEvent): boolean {
   if (e.ctrlKey === e.metaKey || !e.shiftKey || e.altKey) return false;
   return e.key.toLowerCase() === 'v';
 }
+
+export function isNewShellChord(e: KeyboardEvent): boolean {
+  return e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 't';
+}

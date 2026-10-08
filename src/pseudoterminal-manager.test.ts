@@ -161,21 +161,6 @@ describe('PseudoterminalManager', () => {
     expect(kill).not.toHaveBeenCalled();
   });
 
-  it('openInlinePty spawns a PTY, sets activePty on the tab, and falls back to process.cwd()', () => {
-    const tab = makeTab('main', 'red');
-    const { managers } = makeManagers([tab]);
-    vi.mocked(managers.tab.cwdOf).mockReturnValue(undefined);
-    const manager = new PseudoterminalManager(managers);
-
-    manager.openInlinePty('main', 'less file.txt', 'less');
-
-    expect(vi.mocked(spawnPty)).toHaveBeenCalledWith(
-      'less', 'less file.txt', process.cwd(), expect.anything(), 80, 24, expect.anything(), undefined,
-      undefined,
-    );
-    expect(tab.activePty).toBe('pty1');
-  });
-
   // A plugin tab's label does not exist while its payload factory runs, so the terminal is spawned
   // against a stand-in and adopted afterwards. Adopting is what puts it under the ordinary per-tab
   // release walk, so a closed shell tab takes its zsh with it rather than needing its own teardown.
@@ -326,19 +311,6 @@ describe('PseudoterminalManager', () => {
 
     expect(harnessKill).toHaveBeenCalledOnce();
     expect(kill).not.toHaveBeenCalled();
-  });
-
-  it('handleExit (via onExit) clears activePty on full-tab takeovers', () => {
-    const tab = makeTab('main', 'red');
-    const { managers } = makeManagers([tab]);
-    const manager = new PseudoterminalManager(managers);
-    const id = manager.spawn('main', 'vim', 'vim file.txt', '/repo');
-    tab.activePty = id;
-
-    capturedHandlers!.onExit(id, 0);
-
-    expect(tab.activePty).toBeUndefined();
-    expect(manager.terminalsFor('main')).toEqual([]);
   });
 
   it('handleExit updates an inline terminal card log entry', () => {

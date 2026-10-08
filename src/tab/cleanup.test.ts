@@ -63,16 +63,6 @@ describe('closeTabResources', () => {
     expect(visited).toEqual([...MANAGER_TAB_RELEASE].filter((name) => name !== 'remote'));
   });
 
-  // A message in flight at close never completes, and its label's in-progress flag would otherwise
-  // block every later tab that reuses the name from receiving `msg` or `broadcast`.
-  it('releases the closed tab\'s agent-messaging queue', () => {
-    const managers = makeManagers();
-
-    closeTabResources(makeTab('main', 'red'), managers, new Map());
-
-    expect(managers.communication.closeTab).toHaveBeenCalledWith('main');
-  });
-
   it('releases the remote channel only when the closed tab carries the remote payload', () => {
     const managers = makeManagers();
     closeTabResources(makeTab('main', 'red'), managers, new Map());
@@ -182,7 +172,7 @@ describe('closeTabResources', () => {
     expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
   });
 
-  it('leaves unrelated open-file entries untouched for a plain agent tab', () => {
+  it('leaves unrelated open-file entries untouched for a plain tab', () => {
     const managers = makeManagers();
     const openFiles = new Map([['keep', '/tmp/keep.png']]);
 

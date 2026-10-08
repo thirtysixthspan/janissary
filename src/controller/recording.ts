@@ -3,7 +3,7 @@ import path from 'node:path';
 import { playablePluginForExtension } from '../openers/index.js';
 
 // Open the named tab's session recording in the tab that plays it — the recording flag in a
-// metadata row (see web/src/shared/AgentTabMeta.tsx and the shell plugin's own row).
+// metadata row (see web/src/shared/HarnessTabMeta.tsx and the shell plugin's own row).
 //
 // Routed through the same guarded path `open` uses, rather than by naming the asciicast plugin here,
 // so activation, the plugin deadline, and the failure boundary are not restated in a second place:

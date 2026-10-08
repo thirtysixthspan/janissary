@@ -62,7 +62,7 @@ A failed query stays in the history with its error in place of the reply. Rate-l
 
 <img class="agent-float" src="/agents/yusuf-south-east.png" alt="" />
 
-Each conversation has a private workspace. The header's **Open file navigator in this workspace** folder button opens a left-docked navigator there, or retargets the most recently focused navigator, while keeping focus on the conversation. **New agent in this workspace** opens an agent in the same group, with that workspace as its working directory and sandbox boundary.
+Each conversation has a private workspace. The header's **Open file navigator in this workspace** folder button opens a left-docked navigator there, or retargets the most recently focused navigator, while keeping focus on the conversation. **New shell in this workspace** opens a shell in the same group, with that workspace as its working directory and sandbox boundary.
 
 The conversation's own ACP agent has no tools at all. It cannot read, write, or run anything — not inside the workspace and not outside it — so the reply is text and nothing else. The workspace belongs to the conversation rather than to the tab: closing the tab or quitting the app leaves it in place, and it goes only when you delete the conversation.
 

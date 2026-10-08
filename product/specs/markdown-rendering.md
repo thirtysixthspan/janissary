@@ -2,7 +2,7 @@
 
 ACP agent replies are written in Markdown and rendered as formatted Markdown in the core response panel
 (headings, lists, tables, fenced code, blockquotes, links). Every other transcript line — shell
-output, command echoes, inter-agent messages — stays plain text; only entries explicitly flagged as
+output, command echoes, background monitor replies — stays plain text; only entries explicitly flagged as
 Markdown are interpreted. Tab ACP orchestration lives in `src/acp/manager.ts`, the buffer model in
 `src/tab/types.ts` and `src/tab/formatting.ts`, and the shared rendering in `web/src/shared/transcript/Transcript.tsx`. The core panel projects ACP entries from the same log without copying their text. See [[acp]].
 

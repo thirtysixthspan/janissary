@@ -6,7 +6,7 @@ import type { Managers } from '../managers.js';
 import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
 import { tabRuntime } from '../tab/runtime.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import { agentNames } from '../agent/names.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { NO_REPO } from '../workspace/manager.js';
@@ -62,7 +62,7 @@ function workspaceStub() {
 function makeManagers(seed = true): Managers {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers, root);
-  if (seed) seedRootAgentTab(managers.tab);
+  if (seed) seedRootTab(managers.tab);
   let spawned = 0;
   Object.assign(managers, {
     workspace: workspaceStub(),

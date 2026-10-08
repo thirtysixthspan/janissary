@@ -35,11 +35,11 @@ describe.each([
   });
 
   it('rejects a tab carrying the payload under another view', () => {
-    expect(guard(makeTab({ view: 'agent', ...payload }))).toBe(false);
+    expect(guard(makeTab({ view: undefined, ...payload }))).toBe(false);
   });
 
-  it('rejects a plain agent tab', () => {
-    expect(guard(makeTab({ view: 'agent' }))).toBe(false);
+  it('rejects a plain tab', () => {
+    expect(guard(makeTab({ view: undefined }))).toBe(false);
     expect(guard(makeTab())).toBe(false);
   });
 });

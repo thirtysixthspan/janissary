@@ -59,7 +59,7 @@ A set of emacs-style keys answers as well, for a keyboard without those chords:
 
 Note that `Ctrl+A` and `Ctrl+D` mean something different here than they do in a [file navigator](/user-documentation/tab-types/file-navigator): in the editor they move to the start of the line and delete forward.
 
-The app's other shortcuts keep working while you type. `Cmd+Shift+[` and `Cmd+Shift+]` switch tabs, `Ctrl+←` and `Ctrl+→` move this tab along the strip, `Ctrl+G` opens the tab navigator, `Ctrl+R` the command history picker, `Cmd+P` [Quick Open](/user-documentation/command-bar/quick-open), and `Cmd+T` a new agent tab. Where a chord means something in both places, the buffer keeps its own: `Ctrl+A` and `Ctrl+E` stay the start and end of the line, so no task picker or queue popup opens from here, `Ctrl+P` and `Ctrl+N` move the cursor, `Escape` collapses the selections, and `Cmd+F` opens the line search below.
+The app's other shortcuts keep working while you type. `Cmd+Shift+[` and `Cmd+Shift+]` switch tabs, `Ctrl+←` and `Ctrl+→` move this tab along the strip, `Ctrl+G` opens the tab navigator, `Ctrl+R` the command history picker, `Cmd+P` [Quick Open](/user-documentation/command-bar/quick-open), and `Cmd+T` a new shell tab. Where a chord means something in both places, the buffer keeps its own: `Ctrl+A` and `Ctrl+E` stay the start and end of the line, so no task picker or queue popup opens from here, `Ctrl+P` and `Ctrl+N` move the cursor, `Escape` collapses the selections, and `Cmd+F` opens the line search below.
 
 A picker opened that way appears over the editor and takes every keystroke while it is up. Nothing you type reaches the file, pasting does nothing, and the caret is hidden until you close it, at which point the caret is back and you can type again.
 
@@ -124,7 +124,7 @@ The search runs over the buffer as it stands, so it finds edits you haven't save
 
 While a persona suggestion is waiting for your review, every keystroke goes to that review, `Cmd+F` included, so the find overlay can't open on top of it.
 
-`Ctrl+F` is not the same key here: it stays the Emacs-style "move the cursor right". In an agent tab, `Cmd+F` still opens that tab's own transcript search instead.
+`Ctrl+F` is not the same key here: it stays the Emacs-style "move the cursor right". In a shell tab, `Cmd+F` still opens that tab's own transcript search instead.
 
 ## Saving
 

@@ -9,7 +9,7 @@ import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js
 // The capabilities that make a plugin tab a place a line can be typed and a process can be checked
 // on: where it is, which tab a line runs in, what output that line produces, what the application
 // would complete it to, and whether the terminal behind it is still alive. They are one group because they are one pull request's
-// worth of additions, because each exists for the same reason — a plugin tab is not an agent tab, so it
+// worth of additions, because each exists for the same reason — a plugin tab is not an tab, so it
 // has no route to any of this — and because they depend on nothing here beyond the managers, the
 // declaration, the origin tab, the answering tab and the enabled check. `createPluginContext` composes
 // them back with one spread.
@@ -28,8 +28,8 @@ export function lineCapabilities(input: {
   const { managers, declaration, origin, answeringLabel, isEnabled, deadline } = input;
   // The tab whose queue and recorded directory a line capability may change: the answering tab, or
   // the origin when there is none, and only when it is one of this plugin's own tabs. A command,
-  // selection action or menu handler invoked from an agent tab has no answering tab, and without
-  // this check it would reach the invoking agent tab's runtime.
+  // selection action or menu handler invoked from an tab has no answering tab, and without
+  // this check it would reach the invoking tab's runtime.
   const ownLineLabel = () => {
     const label = answeringLabel ?? origin.label;
     return managers.tab.byLabel(label)?.plugin?.id === declaration.id ? label : undefined;
@@ -94,7 +94,7 @@ export function lineCapabilities(input: {
       const label = isEnabled() ? ownLineLabel() : undefined;
       if (label) managers.tab.setCwd(label, cwd);
     },
-    // Attributed to this plugin's own answering tab, as an agent tab's line is to that tab. The state
+    // Attributed to this plugin's own answering tab, as an tab's line is to that tab. The state
     // broadcast carries the global history, so it goes out again for ghost text to see the line.
     recordGlobalHistory: (line) => {
       const label = isEnabled() ? ownLineLabel() : undefined;

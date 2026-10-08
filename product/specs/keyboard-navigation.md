@@ -23,16 +23,15 @@
 | Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
 | Ctrl+E | Open the command queue popup for a tab with a queue and an application command bar (see [[command-queue]]; otherwise no-op) |
 | Cmd+P | Open the Quick Open file finder from any focused tab |
-| Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches the current tab's transcript |
-| Cmd+T | Open a new workspaced agent tab (same as typing `agent`) |
-| Ctrl+T | Expand / collapse the current tab's agent tool-step runs |
-| Ctrl+O | Move the running shell command into a full-tab terminal (no-op when nothing is running) |
+| Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches an editor buffer |
+| Cmd+T | Open a new workspaced shell tab (same as typing `zsh`) |
+| Ctrl+T | Expand / collapse ACP tool steps in the current tab's response panel |
 | PageUp | Scroll transcript up by half terminal height |
 | PageDown | Scroll transcript down by half terminal height |
 | Escape | Reset scroll to bottom |
 | Backspace / Delete | Delete character before cursor |
 | (printable) | Insert character at cursor |
-| Tab | Complete the token at the cursor: a file path, a `msg`/`broadcast` agent name, a `connection close` connection string, or a `browser` subcommand / window id |
+| Tab | Complete the token at the cursor: a file path, a `connection close` connection string, or a `browser` subcommand / window id |
 | Shift+Tab | Move keyboard focus to the next application section (left sidebar → center → right sidebar → reporting, wrapping back to left, skipping any section that is not currently present). The section's currently-visible tab receives focus. Does nothing while a modal dialog is open, so focus stays inside the dialog. Left to an editor tab's text buffer, where it outdents (see [[editor-tab]]), to a pending question panel's controls, where it moves backward between the panel's buttons (see [[agent-questions]]), and to a shell tab, where it moves between the terminal and the command bar (see [[shell-tab]]). |
 
 The UI is composed of up to four **application sections**: the left sidebar, the center action
@@ -61,7 +60,7 @@ its Emacs-style Ctrl subset (including Ctrl+A, Ctrl+E, Ctrl+P, and Ctrl+N), and 
 chords — see [[editor-tab]]. Every other binding above reaches the window from the buffer as it
 would from any tab, and an overlay opened there appears over the editor tab.
 
-A focused terminal surface (harness tab, ssh tab, interactive PTY takeover, terminal card) gives every
+A focused terminal surface (harness tab, ssh tab, terminal card) gives every
 key to its PTY, with two conditional exceptions: while a Shift+drag selection is held, **Escape**
 pressed in that terminal is consumed by the selection layer — it clears the selection and does not
 additionally reach the harness — and the terminal's copy
@@ -86,11 +85,11 @@ which one keystrokes go to:
 7. task picker
 8. profile picker
 
-A plugin-contributed overlay ranks below all eight, so a chord pressed while one of them is open never reaches it. Inside the plugin band the order plugins declared in decides, so two of them claiming the same moment resolve the same way every time. Only one overlay is ever on screen, and which surfaces render one is its own question: the clipboard-history popup ([[clipboard-history]]) renders on an agent tab, an editor tab, and a harness or ssh tab, and a markdown, image, pdf, page, video, sql, or conversations tab renders none at all — its chord is still answered there, and the overlay it opens claims the keyboard without anything to show.
+A plugin-contributed overlay ranks below all eight, so a chord pressed while one of them is open never reaches it. Inside the plugin band the order plugins declared in decides, so two of them claiming the same moment resolve the same way every time. Only one overlay is ever on screen, and which surfaces render one is its own question: the clipboard-history popup ([[clipboard-history]]) renders on a shell tab, an editor tab, and a harness or ssh tab, and a markdown, image, pdf, page, video, sql, or conversations tab renders none at all — its chord is still answered there, and the overlay it opens claims the keyboard without anything to show.
 
 A contributed overlay takes the command bar's keys while it is open, exactly as a built-in one does, and none of them disables the bar outright.
 
-The history, clipboard-history, queue, tab-navigation, Quick Open, application-theme, and syntax-theme popups render above the command bar and stay inside the tab's colored left edge. On plugin tabs, the host positions these overlays against the tab body: each popup starts immediately beside the colored edge without covering it, spans to the tab's right side, and sits directly on top of the command bar at whatever height the bar currently has, so a multi-line draft or a completion strip never leaves a gap or an overlap. This holds whether the popup belongs to the plugin or to the application, so the clipboard-history, queue, tab-navigation, Quick Open, and theme popups opened over a shell tab rest on the shell's command bar exactly as its own history popup does. A plugin tab with no command bar has its popups sit at the bottom of the tab. On an agent tab, they stay within the transcript area.
+The history, clipboard-history, queue, tab-navigation, Quick Open, application-theme, and syntax-theme popups render above the command bar and stay inside the tab's colored left edge. On plugin tabs, the host positions these overlays against the tab body: each popup starts immediately beside the colored edge without covering it, spans to the tab's right side, and sits directly on top of the command bar at whatever height the bar currently has, so a multi-line draft or a completion strip never leaves a gap or an overlap. This holds whether the popup belongs to the plugin or to the application, so the clipboard-history, queue, tab-navigation, Quick Open, and theme popups opened over a shell tab rest on the shell's command bar exactly as its own history popup does. A plugin tab with no command bar has its popups sit at the bottom of the tab.
 
 While an overlay is open it claims every keystroke: nothing underneath it scrolls the transcript,
 switches tabs, or reorders them, and the shortcuts that open the other overlays do nothing until it

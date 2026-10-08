@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messageBus } from '../bus.js';
 import { wireControllerEvents } from '../controller/events.js';
 import { HarnessManager } from '../harness/manager.js';
-import { placeAgent } from '../profile/place-agent.js';
 import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { PseudoterminalManager } from '../pseudoterminal-manager.js';
@@ -16,7 +15,7 @@ import { TabManager } from '../tab/manager.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { SessionsManager } from './manager.js';
 import type { RemoteSessionRecord } from './store.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab, seedTestTab } from '../tab/root-tab-test-fixture.js';
 
 const saved = vi.hoisted(() => ({ records: [] as RemoteSessionRecord[] }));
 vi.mock(import('./store.js'), async (importOriginal) => ({
@@ -91,9 +90,8 @@ function harness() {
   managers = Object.fromEntries(MANAGER_TAB_RELEASE.map((key) => [key, { closeTab: vi.fn() }])) as unknown as Managers;
   managers.database.closeAll = vi.fn();
   managers.schedule.get = vi.fn(() => []);
-  managers.shell.releaseAdoptedShell = vi.fn();
   managers.tab = new TabManager(managers, process.cwd());
-  seedRootAgentTab(managers.tab);
+  seedRootTab(managers.tab);
   managers.pty = new PseudoterminalManager(managers);
   managers.remote = new RemoteManager(managers);
   managers.harness = new HarnessManager(managers);
@@ -134,7 +132,9 @@ describe('harness sessions round trip', () => {
     const h = await launch();
     const creator = managers.tab.byLabel('claude')!;
     expect(managers.remote.attach('joined', 'claude')).toBe(true);
-    placeAgent(managers, { resolved: 'joined', creator, cwd: WORKSPACE, offline: false, remote: creator.remote });
+    const joined = seedTestTab(managers.tab, 'joined');
+    joined.remote = creator.remote;
+    managers.tab.setCwd(joined.label, WORKSPACE);
     h.frames.length = 0;
     managers.tab.closeTab(managers.tab.findIndex('claude'));
     await vi.advanceTimersByTimeAsync(10);

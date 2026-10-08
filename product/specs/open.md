@@ -152,7 +152,7 @@ Hands the image to the operating system's default image viewer (on macOS, Previe
 
 ### `open <image>` — image tab
 
-Opens the image in an **image tab**: a non-agent view tab that displays the image with its metadata and no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the image is already open in an image tab, that existing tab is focused instead of opening a duplicate. The image tab — its layout, sizing and zoom, the tab-strip name and close button, how it is closed, and how its bytes are served — is described in [[image-tab]].
+Opens the image in an **image tab**: a non-agent view tab that displays the image with its metadata and no command bar. The new tab is created and focused like a shell tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the image is already open in an image tab, that existing tab is focused instead of opening a duplicate. The image tab — its layout, sizing and zoom, the tab-strip name and close button, how it is closed, and how its bytes are served — is described in [[image-tab]].
 
 ### `edit <image>` — image editor
 
@@ -177,7 +177,7 @@ Hands the video to the configured player, launched detached so it never blocks t
 
 ### `open <video>` — video tab
 
-For a **playable** container, opens the video in a **video tab**: a non-agent view tab that plays the file with its metadata and no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the video is already open in a video tab, that existing tab is focused instead of opening a duplicate. The video tab is described in [[video-tab]].
+For a **playable** container, opens the video in a **video tab**: a non-agent view tab that plays the file with its metadata and no command bar. The new tab is created and focused like a shell tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. If the video is already open in a video tab, that existing tab is focused instead of opening a duplicate. The video tab is described in [[video-tab]].
 
 For an **external-only** container, no tab opens: the file is handed to the configured player exactly as `open external` does. Opening a video therefore always does something useful, whatever the container.
 
@@ -210,7 +210,7 @@ Hands the file to the configured player, launched detached so it never blocks th
 
 ### `open <audio>` — audio tab
 
-For a **playable** file type, opens the file in the **audio tab**: a non-agent view tab holding a playlist, a player, and the playing track's metadata, with no command bar. Unlike every other view tab there is only ever one of them. If no audio tab is open, one is created and focused like an agent tab (placed within the active tab's group, distinct dot color). If one is already open, the file is appended to the end of its playlist and becomes the playing track — a second `open` never produces a second player. Opening a file the playlist already holds jumps to it rather than queueing it twice. The audio tab is a live, in-memory view and is not persisted or restored on `--relaunch`. It is described in [[audio-tab]].
+For a **playable** file type, opens the file in the **audio tab**: a non-agent view tab holding a playlist, a player, and the playing track's metadata, with no command bar. Unlike every other view tab there is only ever one of them. If no audio tab is open, one is created and focused like a shell tab (placed within the active tab's group, distinct dot color). If one is already open, the file is appended to the end of its playlist and becomes the playing track — a second `open` never produces a second player. Opening a file the playlist already holds jumps to it rather than queueing it twice. The audio tab is a live, in-memory view and is not persisted or restored on `--relaunch`. It is described in [[audio-tab]].
 
 For an **external-only** file type, no tab opens and nothing is queued: the file is handed to the configured player exactly as `open external` does. Opening an audio file therefore always does something useful, whatever the file type.
 
@@ -242,7 +242,7 @@ Hands the file to the configured viewer, launched detached so it never blocks th
 
 ### `open <file>.pdf` — PDF tab
 
-Opens the document in a **PDF tab**: a non-agent view tab that renders the pages in the app, with no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. Opening a file that already has a PDF tab focuses that tab rather than opening a second one. The PDF tab — its two layouts, the page strip, zoom, keys, text selection, and what happens when a document cannot be rendered — is described in [[pdf-tab]].
+Opens the document in a **PDF tab**: a non-agent view tab that renders the pages in the app, with no command bar. The new tab is created and focused like a shell tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. Opening a file that already has a PDF tab focuses that tab rather than opening a second one. The PDF tab — its two layouts, the page strip, zoom, keys, text selection, and what happens when a document cannot be rendered — is described in [[pdf-tab]].
 
 ### `edit <file>.pdf` — the same tab
 
@@ -270,7 +270,7 @@ Hands the file to the operating system's default viewer, launched detached so it
 
 ### `open <file>.md` — markdown tab
 
-Opens the file in a **markdown tab**: a non-agent view tab that renders the file's text as formatted Markdown (headings, lists, tables, fenced code, blockquotes, links) colored by the active application theme, with no command bar. The new tab is created and focused like an agent tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. Opening a file that already has a markdown tab focuses that tab rather than opening a second one. The markdown tab — its layout, scrolling controls, the tab-strip name and close button, how it is closed, and how its text is served — is described in [[markdown-tab]].
+Opens the file in a **markdown tab**: a non-agent view tab that renders the file's text as formatted Markdown (headings, lists, tables, fenced code, blockquotes, links) colored by the active application theme, with no command bar. The new tab is created and focused like a shell tab (placed within the active tab's group, distinct dot color); it is a live, in-memory view and is not persisted or restored on `--relaunch`. Opening a file that already has a markdown tab focuses that tab rather than opening a second one. The markdown tab — its layout, scrolling controls, the tab-strip name and close button, how it is closed, and how its text is served — is described in [[markdown-tab]].
 
 ---
 

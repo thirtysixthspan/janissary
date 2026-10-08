@@ -1,12 +1,12 @@
 import React from 'react';
 import { render, fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { AgentTabMeta } from './AgentTabMeta';
+import { HarnessTabMeta } from './HarnessTabMeta';
 
-describe('AgentTabMeta', () => {
+describe('HarnessTabMeta', () => {
   it('renders the recording flag as a pressable button once the tab has a recording', () => {
     const onOpenRecording = vi.fn();
-    const { container } = render(<AgentTabMeta cwd="~/project" hasRecorder onOpenRecording={onOpenRecording} />);
+    const { container } = render(<HarnessTabMeta cwd="~/project" hasRecorder onOpenRecording={onOpenRecording} />);
 
     const flag = screen.getByRole('button', { name: 'recording' });
     fireEvent.click(flag);
@@ -21,7 +21,7 @@ describe('AgentTabMeta', () => {
   // The two facts are separate on purpose: a `-w` harness tab still provisioning has a recorder but
   // no file, and the row has to say "recording" about a tab that will record rather than show nothing.
   it('renders the flag plain and unpressable before the tab has produced a recording', () => {
-    render(<AgentTabMeta cwd="~/project" hasRecorder />);
+    render(<HarnessTabMeta cwd="~/project" hasRecorder />);
 
     const flag = screen.getByTitle('recording');
     expect(screen.queryByRole('button', { name: 'recording' })).toBeNull();
@@ -32,108 +32,108 @@ describe('AgentTabMeta', () => {
   });
 
   it('labels the flag the same in both states, because it is a recording either way', () => {
-    const { rerender } = render(<AgentTabMeta cwd="~/project" hasRecorder />);
+    const { rerender } = render(<HarnessTabMeta cwd="~/project" hasRecorder />);
     expect(screen.getByTitle('recording')).toHaveAttribute('aria-label', 'recording');
-    rerender(<AgentTabMeta cwd="~/project" hasRecorder onOpenRecording={() => {}} />);
+    rerender(<HarnessTabMeta cwd="~/project" hasRecorder onOpenRecording={() => {}} />);
     expect(screen.getByTitle('recording')).toHaveAttribute('aria-label', 'recording');
   });
 
   it('renders no recording flag at all for a tab kind that never records', () => {
-    render(<AgentTabMeta cwd="~/project" />);
+    render(<HarnessTabMeta cwd="~/project" />);
     expect(screen.queryByTitle('recording')).toBeNull();
   });
 
   it('renders the display form of the cwd when cwdDisplay is given', () => {
     const { container } = render(
-      <AgentTabMeta cwd="$root/workspace/bekir" cwdDisplay="$workspace" />,
+      <HarnessTabMeta cwd="$root/workspace/bekir" cwdDisplay="$workspace" />,
     );
     expect(container.querySelector('.tab-cwd')).toHaveTextContent('$workspace');
   });
 
   it('falls back to the plain cwd when cwdDisplay is absent', () => {
-    const { container } = render(<AgentTabMeta cwd="~/project" />);
+    const { container } = render(<HarnessTabMeta cwd="~/project" />);
     expect(container.querySelector('.tab-cwd')).toHaveTextContent('~/project');
   });
 
   it('renders the exact Split control only when enabled', () => {
     const onSplit = vi.fn();
-    const { rerender } = render(<AgentTabMeta cwd="~/project" onSplit={onSplit} />);
+    const { rerender } = render(<HarnessTabMeta cwd="~/project" onSplit={onSplit} />);
     const button = screen.getByRole('button', { name: 'Split' });
     expect(button).toHaveAttribute('title', 'Split');
     fireEvent.click(button);
     expect(onSplit).toHaveBeenCalled();
-    rerender(<AgentTabMeta cwd="~/project" />);
+    rerender(<HarnessTabMeta cwd="~/project" />);
     expect(screen.queryByRole('button', { name: 'Split' })).toBeNull();
   });
 
   it('renders the file-navigator button only when onOpenFileNavigator is provided', () => {
-    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenFileNavigator={() => {}} />);
+    const { getByTitle } = render(<HarnessTabMeta cwd="~/project" onOpenFileNavigator={() => {}} />);
     expect(getByTitle('Open file navigator here')).toBeInTheDocument();
   });
 
   it('does not render the file-navigator button when onOpenFileNavigator is omitted', () => {
-    const { queryByTitle } = render(<AgentTabMeta cwd="~/project" />);
+    const { queryByTitle } = render(<HarnessTabMeta cwd="~/project" />);
     expect(queryByTitle('Open file navigator here')).not.toBeInTheDocument();
   });
 
   it('invokes the callback when the file-navigator button is clicked', () => {
     const onOpen = vi.fn();
-    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenFileNavigator={onOpen} />);
+    const { getByTitle } = render(<HarnessTabMeta cwd="~/project" onOpenFileNavigator={onOpen} />);
     getByTitle('Open file navigator here').click();
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the launch-agent button only when onLaunchAgentHere is provided', () => {
-    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onLaunchAgentHere={() => {}} />);
-    expect(getByTitle('New agent here')).toBeInTheDocument();
+  it('renders the launch-agent button only when onLaunchShellHere is provided', () => {
+    const { getByTitle } = render(<HarnessTabMeta cwd="~/project" onLaunchShellHere={() => {}} />);
+    expect(getByTitle('New shell here')).toBeInTheDocument();
   });
 
-  it('does not render the launch-agent button when onLaunchAgentHere is omitted', () => {
-    const { queryByTitle } = render(<AgentTabMeta cwd="~/project" />);
-    expect(queryByTitle('New agent here')).not.toBeInTheDocument();
+  it('does not render the launch-agent button when onLaunchShellHere is omitted', () => {
+    const { queryByTitle } = render(<HarnessTabMeta cwd="~/project" />);
+    expect(queryByTitle('New shell here')).not.toBeInTheDocument();
   });
 
   it('invokes the callback when the launch-agent button is clicked', () => {
     const onLaunch = vi.fn();
-    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onLaunchAgentHere={onLaunch} />);
-    getByTitle('New agent here').click();
+    const { getByTitle } = render(<HarnessTabMeta cwd="~/project" onLaunchShellHere={onLaunch} />);
+    getByTitle('New shell here').click();
     expect(onLaunch).toHaveBeenCalledTimes(1);
   });
 
   it('names the workspace in both action tooltips for a workspaced tab', () => {
     const { getByTitle } = render(
-      <AgentTabMeta
+      <HarnessTabMeta
         cwd="~/project"
         flags={['workspaced']}
         onOpenFileNavigator={() => {}}
-        onLaunchAgentHere={() => {}}
+        onLaunchShellHere={() => {}}
       />,
     );
     expect(getByTitle('Open file navigator in this workspace')).toBeInTheDocument();
-    expect(getByTitle('New agent in this workspace')).toBeInTheDocument();
+    expect(getByTitle('New shell in this workspace')).toBeInTheDocument();
   });
 
   it('names the workspace in both action tooltips while the workspace is provisioning', () => {
     const { getByTitle } = render(
-      <AgentTabMeta cwd="~/project" flags={['provisioning']} onOpenFileNavigator={() => {}} onLaunchAgentHere={() => {}} />,
+      <HarnessTabMeta cwd="~/project" flags={['provisioning']} onOpenFileNavigator={() => {}} onLaunchShellHere={() => {}} />,
     );
     expect(getByTitle('Open file navigator in this workspace')).toBeInTheDocument();
-    expect(getByTitle('New agent in this workspace')).toBeInTheDocument();
+    expect(getByTitle('New shell in this workspace')).toBeInTheDocument();
   });
 
   it('keeps both here tooltips for a plain tab', () => {
     const { getByTitle } = render(
-      <AgentTabMeta cwd="~/project" onOpenFileNavigator={() => {}} onLaunchAgentHere={() => {}} />,
+      <HarnessTabMeta cwd="~/project" onOpenFileNavigator={() => {}} onLaunchShellHere={() => {}} />,
     );
     expect(getByTitle('Open file navigator here')).toBeInTheDocument();
-    expect(getByTitle('New agent here')).toBeInTheDocument();
+    expect(getByTitle('New shell here')).toBeInTheDocument();
   });
 
   it('uses a caller-supplied launch title and disabled state', () => {
     const { getByTitle } = render(
-      <AgentTabMeta
+      <HarnessTabMeta
         cwd="~/project"
-        onLaunchAgentHere={() => {}}
+        onLaunchShellHere={() => {}}
         launchTitle="Waiting for the workspace"
         launchDisabled
       />,
@@ -142,18 +142,18 @@ describe('AgentTabMeta', () => {
   });
 
   it('renders the transcript button only when onOpenTranscript is provided', () => {
-    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenTranscript={() => {}} />);
+    const { getByTitle } = render(<HarnessTabMeta cwd="~/project" onOpenTranscript={() => {}} />);
     expect(getByTitle('Open transcript')).toBeInTheDocument();
   });
 
   it('does not render the transcript button when onOpenTranscript is omitted', () => {
-    const { queryByTitle } = render(<AgentTabMeta cwd="~/project" />);
+    const { queryByTitle } = render(<HarnessTabMeta cwd="~/project" />);
     expect(queryByTitle('Open transcript')).not.toBeInTheDocument();
   });
 
   it('invokes the callback when the transcript button is clicked', () => {
     const onOpen = vi.fn();
-    const { getByTitle } = render(<AgentTabMeta cwd="~/project" onOpenTranscript={onOpen} />);
+    const { getByTitle } = render(<HarnessTabMeta cwd="~/project" onOpenTranscript={onOpen} />);
     getByTitle('Open transcript').click();
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
@@ -161,10 +161,10 @@ describe('AgentTabMeta', () => {
   it('groups every optional metadata button in the right-side actions', () => {
     const status = { hasContent: true, onEnter: () => {}, onLeave: () => {}, onClick: () => {} };
     const { container } = render(
-      <AgentTabMeta
+      <HarnessTabMeta
         cwd="~/project"
         onOpenFileNavigator={() => {}}
-        onLaunchAgentHere={() => {}}
+        onLaunchShellHere={() => {}}
         onOpenTranscript={() => {}}
         connectionsButton={status}
         scheduleButton={status}
@@ -178,12 +178,12 @@ describe('AgentTabMeta', () => {
   });
 
   it('renders no model/effort chips when those props are omitted', () => {
-    const { container } = render(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
+    const { container } = render(<HarnessTabMeta cwd="~/project" flags={['workspaced']} />);
     expect(container.querySelectorAll('.tab-meta-chip').length).toBe(0);
   });
 
   it('renders the workspaced flag as a box icon with its accessible label', () => {
-    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['workspaced']} />);
     const flag = getByRole('img', { name: 'Workspaced' });
     expect(flag).toHaveAttribute('title', 'Workspaced');
     expect(flag.querySelector('svg[data-icon="box"]')).not.toBeNull();
@@ -191,7 +191,7 @@ describe('AgentTabMeta', () => {
   });
 
   it('renders the auto-permit flag as a bolt icon with its accessible label', () => {
-    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoApprove']} />);
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['autoApprove']} />);
     const flag = getByRole('img', { name: 'Auto-permitting' });
     expect(flag).toHaveAttribute('title', 'Auto-permitting');
     expect(flag.querySelector('svg[data-icon="bolt"]')).not.toBeNull();
@@ -199,7 +199,7 @@ describe('AgentTabMeta', () => {
   });
 
   it('renders the auto-approved flag as the same bolt, marked active for its green highlight', () => {
-    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoApproved']} />);
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['autoApproved']} />);
     const flag = getByRole('img', { name: 'Auto-approval' });
     expect(flag).toHaveAttribute('title', 'Auto-approval');
     expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
@@ -207,7 +207,7 @@ describe('AgentTabMeta', () => {
   });
 
   it('renders the armed auto-resume flag as its own glyph, unhighlighted', () => {
-    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoResume']} />);
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['autoResume']} />);
     const flag = getByRole('img', { name: 'Auto-resume' });
     expect(flag).toHaveAttribute('title', 'Auto-resume');
     expect(flag).not.toHaveClass('tab-flag--active');
@@ -215,20 +215,20 @@ describe('AgentTabMeta', () => {
   });
 
   it('renders the waiting auto-resume flag as that same glyph, marked active for its green highlight', () => {
-    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoResuming']} />);
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['autoResuming']} />);
     const flag = getByRole('img', { name: 'Auto-resuming' });
     expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
     expect(flag.querySelector('svg[data-icon="stopwatch"]')).not.toBeNull();
   });
 
   it('never draws the auto-approve bolt for an auto-resume flag, since both can show at once', () => {
-    const { getAllByRole } = render(<AgentTabMeta cwd="~/project" flags={['autoApprove', 'autoResume']} />);
+    const { getAllByRole } = render(<HarnessTabMeta cwd="~/project" flags={['autoApprove', 'autoResume']} />);
     const resume = getAllByRole('img', { name: 'Auto-resume' })[0];
     expect(resume.querySelector('svg[data-icon="bolt"]')).toBeNull();
   });
 
   it('renders the browser flag as a globe icon with its accessible label', () => {
-    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['browser']} />);
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['browser']} />);
     const flag = getByRole('img', { name: 'E2E browser' });
     expect(flag).toHaveAttribute('title', 'E2E browser');
     expect(flag.querySelector('svg[data-icon="globe"]')).not.toBeNull();
@@ -237,7 +237,7 @@ describe('AgentTabMeta', () => {
   });
 
   it('renders the browser-in-use flag as the same globe, marked active for its green highlight', () => {
-    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['browserInUse']} />);
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['browserInUse']} />);
     const flag = getByRole('img', { name: 'E2E browser in use' });
     expect(flag).toHaveAttribute('title', 'E2E browser in use');
     expect(flag).toHaveClass('tab-flag', 'tab-flag--active');
@@ -246,14 +246,14 @@ describe('AgentTabMeta', () => {
 
   it('renders all three flag icons together in the order the server sent them', () => {
     const { container } = render(
-      <AgentTabMeta cwd="~/project" flags={['workspaced', 'autoApprove', 'browser']} />,
+      <HarnessTabMeta cwd="~/project" flags={['workspaced', 'autoApprove', 'browser']} />,
     );
     const icons = [...container.querySelectorAll<SVGElement>(':scope .tab-flag svg')].map((svg) => svg.dataset.icon);
     expect(icons).toEqual(['box', 'bolt', 'globe']);
   });
 
   it('renders the provisioning flag as a spinning arrows icon with its accessible label', () => {
-    const { getByRole } = render(<AgentTabMeta cwd="~/project" flags={['provisioning']} />);
+    const { getByRole } = render(<HarnessTabMeta cwd="~/project" flags={['provisioning']} />);
     const flag = getByRole('img', { name: 'Provisioning workspace' });
     expect(flag).toHaveAttribute('title', 'Provisioning workspace');
     expect(flag).toHaveClass('tab-flag', 'tab-flag--provisioning');
@@ -261,9 +261,9 @@ describe('AgentTabMeta', () => {
   });
 
   it('swaps the provisioning flag for the workspaced flag once the server sends it', () => {
-    const { rerender, queryByRole } = render(<AgentTabMeta cwd="~/project" flags={['provisioning']} />);
+    const { rerender, queryByRole } = render(<HarnessTabMeta cwd="~/project" flags={['provisioning']} />);
     expect(queryByRole('img', { name: 'Workspaced' })).toBeNull();
-    rerender(<AgentTabMeta cwd="~/project" flags={['workspaced']} />);
+    rerender(<HarnessTabMeta cwd="~/project" flags={['workspaced']} />);
     expect(queryByRole('img', { name: 'Provisioning workspace' })).toBeNull();
     expect(queryByRole('img', { name: 'Workspaced' })).not.toBeNull();
   });
@@ -273,7 +273,7 @@ describe('AgentTabMeta', () => {
     const onLeave = vi.fn();
     const onClick = vi.fn();
     const { getByTitle } = render(
-      <AgentTabMeta cwd="~/project" connectionsButton={{ hasContent: true, onEnter, onLeave, onClick }} />,
+      <HarnessTabMeta cwd="~/project" connectionsButton={{ hasContent: true, onEnter, onLeave, onClick }} />,
     );
     const button = getByTitle('connections');
     expect(button).not.toBeDisabled();
@@ -287,7 +287,7 @@ describe('AgentTabMeta', () => {
 
   it('uses the link icon for the metadata connections button', () => {
     const { container } = render(
-      <AgentTabMeta cwd="~/project" connectionsButton={{ hasContent: true, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
+      <HarnessTabMeta cwd="~/project" connectionsButton={{ hasContent: true, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
     );
 
     expect(container.querySelector(':scope .tab-connections svg')).toHaveAttribute('data-icon', 'link');
@@ -297,7 +297,7 @@ describe('AgentTabMeta', () => {
     const onEnter = vi.fn();
     const onClick = vi.fn();
     const { getByTitle } = render(
-      <AgentTabMeta cwd="~/project" connectionsButton={{ hasContent: false, onEnter, onLeave: () => {}, onClick }} />,
+      <HarnessTabMeta cwd="~/project" connectionsButton={{ hasContent: false, onEnter, onLeave: () => {}, onClick }} />,
     );
     const button = getByTitle('no active connections');
     expect(button).toBeDisabled();
@@ -308,21 +308,21 @@ describe('AgentTabMeta', () => {
   });
 
   it('does not render the connections button when its props are omitted', () => {
-    const { queryByTitle } = render(<AgentTabMeta cwd="~/project" />);
+    const { queryByTitle } = render(<HarnessTabMeta cwd="~/project" />);
     expect(queryByTitle('connections')).not.toBeInTheDocument();
     expect(queryByTitle('no active connections')).not.toBeInTheDocument();
   });
 
   it('renders an active schedule button with its tooltip', () => {
     const { getByTitle } = render(
-      <AgentTabMeta cwd="~/project" scheduleButton={{ hasContent: true, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
+      <HarnessTabMeta cwd="~/project" scheduleButton={{ hasContent: true, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
     );
     expect(getByTitle('schedule')).not.toBeDisabled();
   });
 
   it('renders an empty schedule button as dark and inert with its tooltip', () => {
     const { getByTitle } = render(
-      <AgentTabMeta cwd="~/project" scheduleButton={{ hasContent: false, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
+      <HarnessTabMeta cwd="~/project" scheduleButton={{ hasContent: false, onEnter: () => {}, onLeave: () => {}, onClick: () => {} }} />,
     );
     expect(getByTitle('no active schedules')).toBeDisabled();
   });
@@ -331,34 +331,34 @@ describe('AgentTabMeta', () => {
     const remote = { address: 'admin@devbox:/srv/proj', host: 'devbox' };
 
     it('shows the bare host, with the full destination as its tooltip', () => {
-      const { getByLabelText } = render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      const { getByLabelText } = render(<HarnessTabMeta cwd="/srv/proj" remote={remote} />);
       const chip = getByLabelText('Remote');
       expect(chip).toHaveTextContent('devbox');
       expect(chip).toHaveAttribute('title', 'Remote: admin@devbox:/srv/proj');
     });
 
     it('reuses the metadata chip styling', () => {
-      const { getByLabelText } = render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      const { getByLabelText } = render(<HarnessTabMeta cwd="/srv/proj" remote={remote} />);
       expect(getByLabelText('Remote')).toHaveClass('tab-meta-chip');
     });
 
     // The row reads "where, then what path there".
     it('places the chip before the working directory', () => {
-      const { container, getByLabelText } = render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      const { container, getByLabelText } = render(<HarnessTabMeta cwd="/srv/proj" remote={remote} />);
       const cwd = container.querySelector('.tab-cwd')!;
       const position = getByLabelText('Remote').compareDocumentPosition(cwd);
       expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     });
 
     it('renders the row exactly as before for a tab with no remote', () => {
-      const { queryByLabelText, container } = render(<AgentTabMeta cwd="~/project" />);
+      const { queryByLabelText, container } = render(<HarnessTabMeta cwd="~/project" />);
       expect(queryByLabelText('Remote')).toBeNull();
       expect(container.querySelector('.tab-cwd')).toHaveTextContent('~/project');
     });
 
     it('sits alongside the model and effort chips', () => {
       const { getByLabelText } = render(
-        <AgentTabMeta cwd="/srv/proj" remote={remote} model="opus" effort="high" />,
+        <HarnessTabMeta cwd="/srv/proj" remote={remote} model="opus" effort="high" />,
       );
       expect(getByLabelText('Remote')).toHaveTextContent('devbox');
       expect(getByLabelText('Model')).toHaveTextContent('opus');
@@ -382,19 +382,19 @@ describe('AgentTabMeta', () => {
     ) {
       const onAction = vi.fn(answer);
       const view = render(
-        <AgentTabMeta cwd="/srv/proj" remote={remote} remoteSession={{ state, onAction }} />,
+        <HarnessTabMeta cwd="/srv/proj" remote={remote} remoteSession={{ state, onAction }} />,
       );
       return { onAction, ...view };
     }
 
     it('renders only for a remote tab', () => {
       const onAction = vi.fn();
-      render(<AgentTabMeta cwd="~/project" remoteSession={{ state: 'active', onAction }} />);
+      render(<HarnessTabMeta cwd="~/project" remoteSession={{ state: 'active', onAction }} />);
       expect(screen.queryByLabelText('Detach session on devbox')).toBeNull();
     });
 
     it('renders nothing for a remote tab that was given no control', () => {
-      render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      render(<HarnessTabMeta cwd="/srv/proj" remote={remote} />);
       expect(screen.queryByLabelText('Detach session on devbox')).toBeNull();
     });
 
@@ -422,13 +422,13 @@ describe('AgentTabMeta', () => {
     it('shows no plug on a tab that is not remote', () => {
       const onAction = vi.fn();
       const { container } = render(
-        <AgentTabMeta cwd="~/project" remoteSession={{ state: 'active', onAction }} />,
+        <HarnessTabMeta cwd="~/project" remoteSession={{ state: 'active', onAction }} />,
       );
       expect(container.querySelector('.connection-plug')).toBeNull();
     });
 
     it('shows no plug on a remote tab that was given no control', () => {
-      const { container } = render(<AgentTabMeta cwd="/srv/proj" remote={remote} />);
+      const { container } = render(<HarnessTabMeta cwd="/srv/proj" remote={remote} />);
       expect(container.querySelector('.connection-plug')).toBeNull();
     });
 
@@ -440,7 +440,7 @@ describe('AgentTabMeta', () => {
         .toHaveAttribute('data-icon', 'plug-circle-minus');
 
       rerender(
-        <AgentTabMeta
+        <HarnessTabMeta
           cwd="/srv/proj"
           remote={remote}
           remoteSession={{ state: 'reconnecting', onAction: vi.fn() }}

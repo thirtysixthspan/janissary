@@ -330,7 +330,7 @@ describe('terminalRunning', () => {
 });
 
 // `shell1` is one of the shell plugin's own tabs, `image1` belongs to another plugin, and `janus` is
-// an agent tab. The queue and directory capabilities may change only the first.
+// an tab. The queue and directory capabilities may change only the first.
 function withOwnedTabs(byLabel: ReturnType<typeof makeManagers>['byLabel']) {
   const tabs = [
     { label: 'shell1', plugin: { id: 'shell', instanceKey: 'shell1' } },
@@ -386,9 +386,9 @@ describe('queueLine and nextQueuedLine', () => {
     expect(dequeue).not.toHaveBeenCalled();
   });
 
-  // A command invoked from an agent tab has no answering tab, so the label falls back to the agent
+  // A command invoked from an tab has no answering tab, so the label falls back to the agent
   // tab; its queue holds lines the user meant to run there, and is not this plugin's to change.
-  it('touches no queue of the agent tab a command was invoked from', () => {
+  it('touches no queue of the tab a command was invoked from', () => {
     const { managers, enqueue, dequeue } = withQueue();
     const capabilities = answeringContext(managers, () => true, null);
 
@@ -440,9 +440,9 @@ describe('recordCwd', () => {
     expect(setCwd).not.toHaveBeenCalled();
   });
 
-  // The agent tab's directory decides where its completion, file navigator and new shells start, so
+  // The tab's directory decides where its completion, file navigator and new shells start, so
   // a plugin command invoked from it must not move that.
-  it('records nothing on the agent tab a command was invoked from', () => {
+  it('records nothing on the tab a command was invoked from', () => {
     const { capabilities, setCwd } = contextWith(() => true, null);
 
     capabilities.recordCwd('/tmp');

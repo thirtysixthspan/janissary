@@ -17,10 +17,10 @@ type Properties = {
   // matched line into view instead (see the effect below).
   highlight?: LineHighlight;
   // Whether to show the "Type help..." hint when there are no lines yet. Defaults to true
-  // for interactive agent tabs; read-only feeds (e.g. notifications) pass false.
+  // for interactive tabs; read-only feeds (e.g. notifications) pass false.
   showEmptyHint?: boolean;
   // Whether new content auto-scrolls the view to the bottom. Defaults to true for
-  // interactive agent tabs, where output is appended at the end; a newest-first feed
+  // interactive tabs, where output is appended at the end; a newest-first feed
   // (e.g. notifications) passes false so it never fights the caller's own ordering.
   pinToBottom?: boolean;
 };

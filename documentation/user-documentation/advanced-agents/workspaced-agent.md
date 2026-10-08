@@ -1,17 +1,16 @@
-# Workspaced agents
+# Workspaced tabs
 
-Agents and harnesses use disposable clones by default:
+Shells and harnesses use disposable clones by default:
 
 ```
-agent emrah                  agent "emrah" in a fresh clone
-agent                        random name, same thing
-harness claude               a harness in a clone (see Harness tabs)
-agent emrah --no-workspace   opt out and use the project checkout
+zsh emrah
+zsh emrah --no-workspace
+harness claude
 ```
 
-The clone is made from your repository's `origin` remote and lands at `$root/workspace/<name>`; the agent's shell starts inside it, so everything the agent does happens in the clone, not your checkout. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out. Why you'd want a workspace — and exactly what the isolation allows and blocks — is covered in [Workspacing](/user-documentation/advanced-agents/workspacing).
+The clone is made from your repository's `origin` remote and lands at `$root/workspace/<name>`; the shell starts inside it, so everything the agent does happens in the clone, not your checkout. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out. Why you'd want a workspace — and exactly what the isolation allows and blocks — is covered in [Workspacing](/user-documentation/advanced-agents/workspacing).
 
-Running the command from a directory that isn't in a git repository, or in a repo without an `origin` remote, shows an error and creates no tab.
+Without a repository or an origin remote, a shell opens unsandboxed and explains why; a harness launch is refused.
 
 Because the name becomes a folder, a workspaced launch has to be a name and nothing else. Empty, `.`, `..`, and anything containing a `/` or a `\` are refused before anything is cloned or removed, with the line spelled out in full:
 
@@ -21,9 +20,9 @@ Cannot launch "feature/x": a workspace name must be a single folder name — not
 
 This is the one name rule that only applies with `-w`; without a workspace the name is free to be an IP address or anything else you like. A harness workspace folder follows the tab's label, so a second `harness claude` gets the folder `claude-2`.
 
-The tab appears right away, marked busy, while the clone runs in the background — anything you submit dispatches immediately, including while the clone is running. Commands that need the workspace may fail until it is ready. Meanwhile a spinning arrows icon (tooltip "Provisioning workspace") sits in the tab's metadata row, right after the working directory, in place of the green workspace icon. Once the clone completes or fails, the workspace icon replaces it. A ready confirmation (and the isolation notice, if isolation isn't actually active) posts to the tab once the clone completes; if the clone fails instead, the tab reports the failure and closes on its own shortly after.
+The tab appears while its workspace is being provisioned. Shell command-bar input waits in the queue until zsh reaches its first prompt. The metadata row shows a provisioning spinner until the workspace is ready. A failed clone is reported and the tab closes shortly afterwards.
 
-Once a workspace exists, the ➕ button in that tab's metadata row creates another agent **inside the same clone**. It does not make a sibling clone. Both tabs see each other's files immediately, and closing the tab that created the workspace does not interrupt the joined agent. The command forms `agent` and `harness` still create fresh workspaces; sharing is the metadata button's job.
+The ➕ button on a shell or harness opens another shell in that same workspace and group. It retains the clone while either tab uses it. Typed `zsh` and `harness` launches create fresh workspaces instead.
 
 ## If every workspace suddenly fails to start
 
@@ -33,7 +32,6 @@ Setting up a clone also marks it as trusted in Claude's own configuration file, 
 
 If the file can't be read, isn't valid JSON, or holds something other than what Claude writes there, setting up the workspace stops and the file is left exactly as it was. Nothing repairs it for you, so every workspaced tab fails to start until you fix or delete `~/.claude.json` — which is the symptom to recognize, since the failure has nothing to do with your own repository. Working with `--no-workspace` is unaffected.
 
-![The connections panel of a workspaced agent, showing its shell running in the workspace clone's directory.](/screenshots/workspaced-agent.png)
 
 ## Pushing to GitHub needs a token
 

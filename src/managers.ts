@@ -2,7 +2,6 @@ import type { TabManager } from './tab/manager.js';
 import type { ShellManager } from './shell/manager.js';
 import type { AcpManager } from './acp/manager.js';
 import type { DatabaseManager } from './database/manager.js';
-import type { AgentCommunicationManager } from './agent/communication-manager.js';
 import type { HarnessManager } from './harness/manager.js';
 import type { SshManager } from './ssh-manager.js';
 import type { RemoteManager } from './remote/manager.js';
@@ -12,7 +11,6 @@ import type { BrowserManager } from './browser/tab.js';
 import type { ProfileManager } from './profile/manager.js';
 import type { ConnectionManager } from './connection/manager.js';
 import type { OpenFileManager } from './open/file-manager.js';
-import type { CaptureManager } from './capture/manager.js';
 import type { CommandManager } from './command/manager.js';
 import type { WorkspaceManager } from './workspace/manager.js';
 import type { GitSync } from './git/sync.js';
@@ -35,7 +33,6 @@ type ManagerRegistry = {
   shell: ShellManager;
   acp: AcpManager;
   database: DatabaseManager;
-  communication: AgentCommunicationManager;
   harness: HarnessManager;
   ssh: SshManager;
   remote: RemoteManager;
@@ -45,7 +42,6 @@ type ManagerRegistry = {
   profile: ProfileManager;
   connection: ConnectionManager;
   openFile: OpenFileManager;
-  capture: CaptureManager;
   command: CommandManager;
   workspace: WorkspaceManager;
   gitSync: GitSync;
@@ -82,9 +78,7 @@ export type Managers = {
 //    tearing down.
 export const MANAGER_DISPOSE_ORDER = [
   'monitor',
-  'capture',
   'command',
-  'communication',
   'connection',
   'profile',
   'ssh',
@@ -145,7 +139,6 @@ export const MANAGER_TAB_RELEASE = [
   'questions',
   'remote',
   'database',
-  'communication',
 ] as const satisfies readonly (keyof ManagerRegistry)[];
 
 // The same compile-time completeness check the dispose order has: a manager listed above whose

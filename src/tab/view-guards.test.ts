@@ -35,7 +35,7 @@ describe.each([
     expect(guard(tab({ view: 'agent', ...payload }))).toBe(false);
   });
 
-  it('rejects a plain agent tab', () => {
+  it('rejects a plain tab', () => {
     expect(guard(tab({ view: 'agent' }))).toBe(false);
     expect(guard(tab({}))).toBe(false);
   });

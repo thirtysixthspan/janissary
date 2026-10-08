@@ -5,7 +5,7 @@ import { detachSessionIcon, attachSessionIcon } from './icons';
 import { ConfirmDialog } from './ConfirmDialog';
 
 // The detach/attach control beside a remote tab's host chip — the second front door onto the same
-// manager methods the sessions tab's rows use. It sits on `AgentTabMeta` because that is the one
+// manager methods the sessions tab's rows use. It sits on `HarnessTabMeta` because that is the one
 // metadata row agent, shell, and harness tabs all render, so one placement covers every remote tab.
 //
 // Pressing detach parks the whole shared channel, closing every tab and navigator riding it, which

@@ -13,7 +13,7 @@ from the project directory.
 
 `janus` starts the server in the background and hands your shell prompt straight back once it's ready. The terminal you launched from doesn't need to stay open, and closing it — or pressing `Ctrl+C` in it — no longer stops the app. Use [`janus stop`](#stopping-the-app) to shut it down.
 
-Every launch opens a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) named `janus`, in the project directory. Type `agent` in its command bar to open an agent tab. By default each launch also starts fresh, with the previous session's logs, recordings, and workspace clones cleared; `--relaunch` (below) keeps them.
+Every launch opens a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) named `janus`, in the project directory. Type `zsh` in its command bar to open a shell tab. By default each launch also starts fresh, with the previous session's logs, recordings, and workspace clones cleared; `--relaunch` (below) keeps them.
 
 If zsh can't be started, the app doesn't start either: the launch fails with `could not open the launch shell` and the reason.
 
@@ -70,7 +70,7 @@ janus --relaunch
 ```
 
 
-`--relaunch` keeps what the previous session left on disk instead of clearing it: harness recordings and transcripts, browser logs, and workspace clones are all still there. It doesn't bring local tabs back. A relaunch opens the same single `janus` shell tab every launch does, and agent tabs, their transcripts and command history, scheduled commands, and every other local tab you had open are gone. Detached remote sessions are the exception: their sessions and remote shell tabs are reattached.
+`--relaunch` keeps what the previous session left on disk instead of clearing it: harness recordings and transcripts, browser logs, and workspace clones are all still there. It doesn't bring local tabs back. A relaunch opens the same single `janus` shell tab every launch does, and shell and harness tabs, their transcripts and command history, scheduled commands, and every other local tab you had open are gone. Detached remote sessions are the exception: their sessions and remote shell tabs are reattached.
 
 Every remote session you parked on another machine is reattached by `--relaunch`, opening its saved harness, agent, and shell tabs as each host answers; remote shells return on their existing PTYs with their last working directories. One unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for what a host that is gone or down leaves behind.
 
@@ -102,7 +102,7 @@ Settings live in `.janissary/config.json` inside the directory you launch from; 
 | Setting | Default | What it does |
 |---|---|---|
 | `transcriptMaxLines` | `25000` | How many transcript entries each tab keeps. Past the cap, the oldest entries are dropped. |
-| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. Neither an `agent <name>` nor a `harness claude as <label>` is capped; both are only shortened for display |
+| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. Neither an `zsh <name>` nor a `harness claude as <label>` is capped; both are only shortened for display |
 | `activeTabNameMaxLength` | `50` | The longest focused tab name shown in the strip. Focusing a tab expands its name up to this limit. |
 | `theme` | `"dark"` | The application color theme. Change it at runtime with [`theme <name>`](/user-documentation/command-bar/commands#theme). |
 | `syntaxTheme` | `"github-dark"` | The syntax-highlighting theme for [editor tabs](/user-documentation/tab-types/editor). Change it at runtime with `syntax theme <name>`. |
@@ -110,7 +110,6 @@ Settings live in `.janissary/config.json` inside the directory you launch from; 
 | `notifications` | all events off | Which background events feed the [notifications](/user-documentation/tab-types/notifications) tab. There's no runtime command for this; edit the file directly. |
 | `syncPaths` | `["product/backlog/", "product/plans/"]` | Project-relative paths kept synced with GitHub in the [editor](/user-documentation/tab-types/editor#keeping-a-file-synced-with-github). See [Git-synced files](/user-documentation/tab-types/editor-git-sync) for the entry syntax and how a sync happens. There's no runtime command for this; edit the file directly. |
 | `externalViewers` | `{ "video": "QuickTime Player" }` | Which application each viewer hands a file to on `open external`, keyed by the viewer's name — `video`, `audio`, and `pdf`. Give it a macOS application name; an empty or missing entry uses your operating system's own default. A map you set replaces the default outright rather than merging with it. There's no runtime command for this; edit the file directly. |
-| `interactiveShellDetection` | `true` | Whether Janissary notices a program taking over the terminal and treats it as interactive from then on. Programs it learns are listed in `.janissary/interactive-commands.json`; see [Shell](/user-documentation/command-bar/shell#interactive-programs-take-over-the-tab) |
 | `pluginSettings` | `{}` | Preferences a tab remembers for itself, keyed by the tab's name. The search tab stores its three toggles here, `{ "search": { "regex": false, "matchCase": false, "wholeWord": false } }`, so they come back as you left them after a restart. You don't need to edit it by hand. |
 
 Changing `theme` or `syntaxTheme` at runtime atomically rewrites this file, preserving every other key, and applies the running change only when that write succeeds. Flipping a search toggle rewrites it the same way. If the file isn't valid JSON, the app warns on startup and falls back to defaults for that session — your file is left untouched so you can fix it. Within valid JSON, a setting with the wrong type falls back independently to its default, as do missing notification event toggles.

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
 import type { RemoteResume } from '../remote/resume.js';
 import { askSessionState } from '../remote/resume.js';
-import { startRemoteAgent } from '../profile/remote-agent.js';
+import { startSshBridge } from './ssh-bridge.js';
 import { startSessionAttach } from './attach.js';
 import { restoreSessionTabs } from './restore-tabs.js';
 import type { RemoteSessionRecord } from './store.js';
@@ -13,7 +13,7 @@ import type { RemoteSessionRecord } from './store.js';
 // and the agent launch hands its resume straight back too.
 vi.mock('../remote/resume.js', () => ({ askSessionState: vi.fn() }));
 vi.mock('./restore-tabs.js', () => ({ restoreSessionTabs: vi.fn(async () => []) }));
-vi.mock('../profile/remote-agent.js', () => ({ startRemoteAgent: vi.fn() }));
+vi.mock('./ssh-bridge.js', () => ({ startSshBridge: vi.fn() }));
 
 const SESSION = '11111111-2222-3333-4444-555555555555';
 
@@ -49,7 +49,6 @@ function harness() {
       entryForSession: (session: string) => (entry.channel.sessionId === session ? entry : undefined),
       promoteLaunchLabel: vi.fn(),
     },
-    shell: { adoptRemoteShell: vi.fn(), releaseAdoptedShell: vi.fn() },
     tab: {
       tabs, cur: () => ({ label: 'janus', group: 1, groupColor: '#111' }),
       findIndex: (label: string) => tabs.findIndex((tab) => tab.label === label),
@@ -105,7 +104,7 @@ describe('startSessionAttach', () => {
 
   it('attaches a shell session without adopting its PTY as the placeholder agent shell', async () => {
     const h = harness();
-    vi.mocked(startRemoteAgent).mockImplementation(
+    vi.mocked(startSshBridge).mockImplementation(
       (_managers, launch: { resolved: string; resume: RemoteResume }) => {
         h.managers.remote.entryOf('claude')?.labels.add(launch.resolved);
         h.managers.tab.tabs.push({ label: launch.resolved } as never);
@@ -123,9 +122,8 @@ describe('startSessionAttach', () => {
     };
 
     await expect(startSessionAttach(h.managers, shellRecord)).resolves.toMatchObject({ kind: 'attached', label: 'claude' });
-    expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
     expect(restoreSessionTabs).toHaveBeenCalledOnce();
-    expect(startRemoteAgent).toHaveBeenCalledWith(h.managers, expect.objectContaining({ resolved: 'claude-attach' }));
+    expect(startSshBridge).toHaveBeenCalledWith(h.managers, expect.objectContaining({ resolved: 'claude-attach' }));
     expect(restoreSessionTabs).toHaveBeenCalledWith(h.managers, shellRecord, 'claude-attach', expect.arrayContaining([
       expect.objectContaining({ id: 'rpty1', agentName: 'claude', shell: { nonce: 'a'.repeat(32) } }),
       expect.objectContaining({ id: 'rpty2', agentName: 'scratch', shell: { nonce: 'b'.repeat(32) } }),
@@ -136,7 +134,7 @@ describe('startSessionAttach', () => {
 
   it('recovers a shell whose previous attach record named the prompt tab as an agent', async () => {
     const h = harness();
-    vi.mocked(startRemoteAgent).mockImplementation(
+    vi.mocked(startSshBridge).mockImplementation(
       (_managers, launch: { resolved: string; resume: RemoteResume }) => {
         h.managers.remote.entryOf('claude')?.labels.add(launch.resolved);
         h.managers.tab.tabs.push({ label: launch.resolved } as never);
@@ -154,7 +152,7 @@ describe('startSessionAttach', () => {
 
     await expect(startSessionAttach(h.managers, staleRecord)).resolves.toMatchObject({ kind: 'attached', label: 'claude' });
 
-    expect(startRemoteAgent).toHaveBeenCalledWith(h.managers, expect.objectContaining({ resolved: 'claude-attach' }));
+    expect(startSshBridge).toHaveBeenCalledWith(h.managers, expect.objectContaining({ resolved: 'claude-attach' }));
     expect(h.managers.remote.promoteLaunchLabel).toHaveBeenCalledWith('claude-attach', 'claude');
     expect(h.managers.tab.tabs).toEqual([]);
   });
@@ -165,28 +163,6 @@ describe('startSessionAttach', () => {
 
     const outcome = await startSessionAttach(h.managers, record());
     expect(outcome.kind).toBe('terminated');
-    expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
-  });
-
-  // The agent branch parks the recorded spawn id before the tab exists, so an attach that does not
-  // come back must release it: the label is about to be freed, and a later tab granted the same
-  // label must bind its own shell, not a process id from a session that ended.
-  it('releases the adopted shell when an agent attach ends instead of attaching', async () => {
-    const h = harness();
-    vi.mocked(askSessionState).mockResolvedValue(undefined);
-    vi.mocked(startRemoteAgent).mockImplementation(
-      (_managers, launch: { resume: RemoteResume }) => { launch.resume.onResult(true); },
-    );
-    vi.mocked(askSessionState).mockResolvedValue(undefined);
-
-    const agentRecord: RemoteSessionRecord = {
-      ...record(),
-      launchKind: 'agent',
-      processes: [{ id: 'rsh1', label: 'claude', kind: 'agent' }],
-    };
-    await startSessionAttach(h.managers, agentRecord);
-    expect(h.managers.shell.adoptRemoteShell).toHaveBeenCalledWith('claude', 'rsh1', SESSION);
-    expect(h.managers.shell.releaseAdoptedShell).toHaveBeenCalledWith('claude');
   });
 });
 
@@ -276,28 +252,5 @@ describe('startSessionAttach outcomes that are not an attach', () => {
     resume?.onResult(false);
 
     await expect(pending).resolves.toMatchObject({ kind: 'terminated' });
-    expect(h.managers.shell.releaseAdoptedShell).toHaveBeenCalledOnce();
-  });
-
-  // An agent session with no recorded spawn id adopts nothing, so there is no id to park and none to
-  // release — the tab is launched fresh and binds its own shell when one is asked for.
-  it('launches an agent session with no recorded spawn id without adopting one', async () => {
-    const h = harness();
-    vi.mocked(startRemoteAgent).mockImplementation(
-      (_managers, launch: { resume: RemoteResume }) => { launch.resume.onResult(true); },
-    );
-    vi.mocked(askSessionState).mockResolvedValue([
-      { id: 'other', program: 'sh', mode: 'pty' },
-    ]);
-    const agentRecord: RemoteSessionRecord = {
-      ...record(),
-      launchKind: 'agent',
-      processes: [{ id: 'rsh1', label: 'other', kind: 'agent' }],
-    };
-
-    await startSessionAttach(h.managers, agentRecord);
-
-    expect(h.managers.shell.adoptRemoteShell).not.toHaveBeenCalled();
-    expect(startRemoteAgent).toHaveBeenCalledOnce();
   });
 });

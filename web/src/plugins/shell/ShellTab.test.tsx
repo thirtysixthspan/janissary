@@ -701,7 +701,7 @@ describe('ShellTab', () => {
     expect(document.querySelector('.tab-meta .tab-connections')).not.toBeNull();
     expect(document.querySelector('.tab-meta .tab-schedule')).not.toBeNull();
     // The connections button has a row to show, so it offers its window; the schedule button has none
-    // and says so, which is the same pair of states an agent tab's row is in.
+    // and says so, which is the same pair of states an tab's row is in.
     expect(screen.getByTitle('connections')).toBeInTheDocument();
     expect(screen.getByTitle('no active schedules')).toBeInTheDocument();
   });

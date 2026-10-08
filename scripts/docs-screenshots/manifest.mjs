@@ -36,7 +36,7 @@ export default [
   },
   {
     name: 'tabs-groups',
-    setup: ['agent bilal', 'profile launch demo'],
+    setup: ['zsh bilal', 'profile launch demo'],
     settle: 1500,
     target: 'tab-strip',
     cropToChildren: '.tab',
@@ -61,13 +61,6 @@ export default [
     settle: 1500,
     target: 'sql-tab',
     clipHeight: 230,
-  },
-  {
-    name: 'messaging-output',
-    setup: ['agent bilal --no-workspace', 'msg bilal info the deploy is done', 'msg bilal request shell ls src'],
-    settle: 1500,
-    target: 'transcript',
-    clipHeight: 400,
   },
   {
     // A shell tab's own Ctrl+R list: the lines its bar sent to zsh and the one the app answered.
@@ -139,12 +132,6 @@ export default [
   },
 
   // Advanced agents and automation.
-  {
-    name: 'workspaced-agent',
-    setup: ['agent emrah --workspace', 'shell pwd'],
-    settle: 2500,
-    target: 'status-panels',
-  },
   {
     name: 'schedule-window',
     setup: ['schedule standup every day at 9:00 git pull', 'schedule tests every 2h ls'],

@@ -1,18 +1,9 @@
 import { PassThrough, Writable } from 'node:stream';
 import type { ShellProcess } from '../shell/index.js';
 import type { RemoteChannel } from './channel/index.js';
-import type { ShellHistoryRun } from './protocol-frames.js';
-
-// Where an attached shell's replayed history goes. `output` takes bytes that arrived with no live
-// command listening for them; `history` takes the peer's retained runs, which never reach the stream
-// at all — they carry the sentinel text a live command's output scan would match.
-export type RestoredSink = {
-  output: (data: string) => void;
-  history: (runs: readonly ShellHistoryRun[]) => void;
-};
 
 /**
- * A remote agent tab's persistent shell, wearing the shape `ShellManager` and `executeShellCmd`
+ * A remote tab's persistent shell, wearing the shape `ShellManager` and `executeShellCmd`
  * already consume. No second frame family is needed for it: spawning a program, writing to its
  * stdin, streaming its output, and reporting its exit is exactly what the process frames do.
  *
@@ -32,8 +23,6 @@ export function createRemoteShell(
   program: string,
   command: string,
   agentName?: string,
-  adopted = false,
-  restored?: RestoredSink,
 ): ShellProcess {
   const stdout = new PassThrough();
   const stderr = new PassThrough();
@@ -49,19 +38,13 @@ export function createRemoteShell(
   });
 
   channel.attach(id, {
-    onOutput: (data) => {
-      if (restored && stdout.listenerCount('data') === 0) restored.output(data);
-      else stdout.write(data);
-    },
-    onHistory: (runs) => { restored?.history(runs); },
+    onOutput: (data) => { stdout.write(data); },
     onExit: () => { live = false; stdin.end(); stdout.end(); },
   });
-  if (!adopted) {
-    channel.send({
+  channel.send({
       type: 'spawn', id, program, command, mode: 'pipe', cols: 80, rows: 24,
       ...(agentName && { agentName }),
-    });
-  }
+  });
 
   return {
     stdin,

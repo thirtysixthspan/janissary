@@ -18,7 +18,7 @@
 // Version 7 adds workspace filesystem sessions and a per-spawn agent name.
 //
 // Version 8 adds the ACP family (`acp-open`/`acp-prompt`/`acp-close` out, `acp-ready`/`acp-chunk`/
-// `acp-end`/`acp-error` back), which moves a remote agent tab's ACP client onto the far side. A
+// `acp-end`/`acp-error` back), which moves a remote tab's ACP client onto the far side. A
 // version-7 remote recognizes none of them: it would refuse each one as an unknown frame while the
 // local tab sat waiting, accepting prompts and answering nothing — precisely the "looks healthy
 // while doing the wrong thing" failure this check exists to prevent.

@@ -89,9 +89,9 @@ export function ConversationTab({
           </button>
           <button
             type="button"
-            title="New agent in this workspace"
+            title="New shell in this workspace"
             disabled={conversation.deleted}
-            onClick={() => { void capabilities.intent('launch-agent', {}); }}
+            onClick={() => { void capabilities.intent('launch-shell', {}); }}
           >
             <FontAwesomeIcon icon={faPlus} />
           </button>

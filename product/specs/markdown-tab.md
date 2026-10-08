@@ -11,11 +11,11 @@ The markdown view is contributed by a **bundled tab plugin** rather than by the 
 [[tab-plugins]]). Nothing about the view changes because of that: the same file types open the same
 way, and the plugin is present in every build.
 
-A markdown tab is created like an agent tab (see Tabs) — placed contiguously within the active
+A markdown tab is created like a shell tab (see Tabs) — placed contiguously within the active
 tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus
 moves to the new markdown tab.
 
-Unlike an agent tab, a markdown tab has no shell, agent session, browser, transcript, or command
+Unlike a shell tab, a markdown tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like image tabs and
 browser windows (see Browser), it is not saved and is not restored on `--relaunch`. A profile can
 still capture one and reopen it on launch (see [[profiles]]). The rendered
@@ -118,7 +118,7 @@ highlight, and ordering — with two differences:
   status marker is appended — the name only.
 - **Close button.** A close control is shown right-aligned within the tab, immediately after the
   name. Clicking it removes that tab without first selecting it; the click does not also trigger tab
-  selection. The close button is specific to view tabs (agent tabs continue to close via the
+  selection. The close button is specific to view tabs (shell and harness tabs continue to close via the
   `close` command).
 
 ### Closing

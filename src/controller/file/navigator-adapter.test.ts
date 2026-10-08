@@ -32,7 +32,7 @@ function makeManagers(tree?: string) {
   const managers = {
     tab: { tabs, cur: () => active, byLabel: () => active, append },
     fileNavigator: tree === undefined ? fileNavigator : { ...fileNavigator, rootOf: () => tree },
-    plugins: { declarations: tabPluginCatalog, runSelectionAction, runCommand: vi.fn() },
+    plugins: { declarations: tabPluginCatalog, runSelectionAction, openSibling: vi.fn() },
     notifications: new NotificationQueue(),
   } as unknown as Managers;
   return { managers, fileNavigator, append, runSelectionAction };
@@ -130,7 +130,7 @@ describe('createFileNavigatorControllerAdapter', () => {
 
     createFileNavigatorControllerAdapter(managers).launchShellFor('harness1');
 
-    expect(managers.plugins.runCommand).toHaveBeenCalledWith('shell', 'zsh', {
+    expect(managers.plugins.openSibling).toHaveBeenCalledWith('shell', {
       label: 'harness1', command: 'zsh',
     });
   });

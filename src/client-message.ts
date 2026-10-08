@@ -38,7 +38,6 @@ export const CLIENT_METHOD_CONTRACTS = {
   fileNavigatorToggle: 'ack',
   focusTab: 'ack',
   init: 'ack',
-  launchAgentFor: 'ack',
   launchShellFor: 'ack',
   monitorContextSnapshot: 'ack',
   // Answers `{ conflictPaths }` when the destination is occupied, which is what opens the dialog.
@@ -50,10 +49,8 @@ export const CLIENT_METHOD_CONTRACTS = {
   openFileNavigatorFor: 'ack',
   openHarnessTranscriptFor: 'ack',
   openRecordingFor: 'ack',
-  openTranscriptFor: 'ack',
   pasteFileNavigatorItems: 'result',
   projectFiles: 'deferred',
-  promoteToTerminal: 'ack',
   ptyInput: 'ack',
   pluginTerminalAttach: 'result',
   ptyKill: 'ack',

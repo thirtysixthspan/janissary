@@ -13,7 +13,7 @@ $root/src/cli.ts        = /Users/name/dev/janissary/src/cli.ts
 
 ### The state directory folds into the root
 
-The application keeps its own data in a hidden state directory (`.janissary`) inside the root. That state directory is part of the root for display purposes and is elided from the shortcut, so its contents read directly under `$root` rather than exposing the internal `.janissary` segment. The clearest case is a workspaced agent's clone, which physically lives under the state directory:
+The application keeps its own data in a hidden state directory (`.janissary`) inside the root. That state directory is part of the root for display purposes and is elided from the shortcut, so its contents read directly under `$root` rather than exposing the internal `.janissary` segment. The clearest case is a workspaced tab's clone, which physically lives under the state directory:
 
 ```
 $root/workspace/emrah   = /Users/name/dev/janissary/.janissary/workspace/emrah
@@ -53,7 +53,7 @@ The shortcut is applied wherever the application itself renders a path into a ta
 - the file's location in an editor tab's metadata header,
 - the notifications feed's launch lines — a workspace clone as `$workspace/<name>`, and a project
   root a remote launch just cloned as `$root`, and
-- the application's own status messages that name a path (for example, the location reported when a workspaced agent is created).
+- the application's own status messages that name a path (for example, the location reported when a workspaced tab is created).
 
 ### Composition with the home shortcut
 

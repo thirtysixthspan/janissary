@@ -31,7 +31,7 @@ export type CommandBarShellProperties = {
   ariaLabel?: string;
   onFocus?: () => void;
   onBlur?: () => void;
-  // Publishes this bar as a file-navigator drop target in its own right. The agent tab's bar leaves
+  // Publishes this bar as a file-navigator drop target in its own right. The tab's bar leaves
   // it off: it already answers drops through the application's `dropRef`.
   acceptsFileDrops?: boolean;
 };

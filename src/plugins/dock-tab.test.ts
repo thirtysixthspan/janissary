@@ -7,7 +7,7 @@ import {
   type TabPluginDeclaration,
 } from './api.js';
 import { TabPluginHost } from './host.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 function manifest(
   id: string,
@@ -22,7 +22,7 @@ function manifest(
 function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
-  seedRootAgentTab(managers.tab);
+  seedRootTab(managers.tab);
   Object.assign(managers, {
     workspace: { remove: vi.fn(), cancel: vi.fn() },
     shell: { close: vi.fn() },

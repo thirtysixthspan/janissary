@@ -3,7 +3,7 @@ import { guardRequest, type RequestHandler } from './request-boundary.js';
 import { fakeRequest, fakeResponse, type FakeResponse } from './http-test-fixture.js';
 
 // The boundary is what stands between a rejected handler and an unhandled rejection that would take
-// the process and every agent tab with it. It is driven here with a recorded request/response rather
+// the process and every tab with it. It is driven here with a recorded request/response rather
 // than a socket: the thing under test is which answer comes back, and a loopback connection would
 // only add a way for the answer to go missing without saying anything about the boundary.
 

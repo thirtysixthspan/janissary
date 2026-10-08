@@ -1,7 +1,7 @@
 # Remote Server
 
 Every tab janissary opens normally runs on the machine the server itself runs on. A **remote
-launch** puts an agent or a harness on another host instead: the `on <address>` clause names the
+launch** puts a shell or a harness on another host instead: the `on <address>` clause names the
 host, janissary opens one ssh session to it, and `janus remote-serve` on the far side provisions a
 workspace and runs the process there. The resulting tab is deliberately indistinguishable from a
 local one — same label, same tab strip, same busy dot, same capture, recording, transcript, and
@@ -9,7 +9,7 @@ monitoring behavior — except for a host chip at the left of its metadata row.
 
 ### The `on <address>` clause
 
-`harness claude on devbox`, `agent bekir on admin@devbox`, `harness claude as build on devbox with
+`harness claude on devbox`, `zsh bekir on admin@devbox`, `harness claude as build on devbox with
 fix the tests`. The clause reads like the existing `as <label>` and `with <prompt>` clauses rather
 than adding another flag, and it may appear anywhere among the other options. It is
 case-insensitive. An `on` appearing inside a `with <prompt>` clause is prompt text, never a clause,
@@ -76,8 +76,8 @@ The tab opens **immediately**, before anything is validated, showing the live ss
 body. ssh's own prompts — password, key passphrase, host-key verification, keyboard-interactive/2FA
 — render there and are answered by typing into the tab. This is the only prompt mechanism: there is
 no modal, no separate dialog, and nothing is asked in the creator tab. A remote harness tab shows the
-session in place of its harness terminal; a remote agent tab shows it full-screen over its
-transcript, which returns once the session is established.
+session in place of its harness terminal; a remote shell tab shows it in place of its zsh terminal,
+which takes over once the session is established.
 
 Once the far side announces itself the tab stops showing raw terminal output and starts running the
 remote process. A remote tab whose ssh session has not yet been established is still `provisioning`,
@@ -394,7 +394,7 @@ Reusing the launching tab's name for a new launch does not let the earlier sessi
 
 On the remote side a dropped connection leaves running work intact for up to seven days. Attachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources, and when that closes the channel's last reference, janissary tells the peer to shut down immediately rather than leaving it to the seven-day wait. This still completes when the SSH transport is already closing. The wait exists only for a connection that is lost rather than deliberately terminated.
 
-Detaching and attaching an agent preserves its persistent shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored agent, and input or cleanup arriving after a terminal has ended is ignored.
+Detaching and attaching a remote shell preserves its shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored shell, and input or cleanup arriving after a terminal has ended is ignored.
 
 Closing the final remote harness tab stops its harness and removes the remote workspace before the session is left behind. Terminal cleanup keeps the connection available for remote teardown, including when the application quits, and gives shutdown frames a short bounded drain before closing SSH. That drain is what delivers those frames, so nothing else takes the connection down while it runs: closing the tabs of a session that is already ending leaves the connection to the teardown that is ending it. If a joined tab still uses the workspace, closing the launching harness leaves that tab connected until its own final release.
 
@@ -405,10 +405,10 @@ Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and 
 A session can also be parked deliberately. Detaching one closes every tab and navigator holding its
 channel and drops the transport without telling the peer anything, so the far side runs the same
 path a lost connection produces and starts its seven-day wait with its processes still running.
-An agent tab's persistent shell is one of those processes: it outlives the transport it was reached
-through rather than ending with it, so a parked session still holds it when the attachment asks
-what survived. Ending such a shell stops whatever it was running too, so nothing is left behind on
-the host when the session is shut down.
+A remote shell's PTY is one of those processes: it is what the tab was holding the channel for, so it
+outlives the transport rather than ending with it, and a parked session still holds it when the
+attachment asks what survived. Ending such a shell stops whatever it was running too, so nothing is
+left behind on the host when the session is shut down.
 Detaching is refused while a session is still provisioning: there is nothing to come back to yet.
 Janissary records what it launched — the session id, the address, the workspace, and each live
 process with its own label — in the project's own state directory, so a peer stays findable after the
@@ -436,7 +436,7 @@ later detach and attach repeats this behavior without leaving a second prompt ta
 
 Attached harnesses redraw their retained terminal history immediately, including output from before detachment and while disconnected, without starting a replacement harness. Repeated reconnects replace the displayed terminal history rather than appending duplicate copies. The restored display is also available to captures and monitoring. Terminal and transcript histories have separate bounded retention; older text may be trimmed, and a trimmed terminal replay includes an earlier-history notice. A quiet terminal's retained display is not evicted by transcript activity. A rebuilt harness transcript receives its retained blocks once, while an automatic reconnect adds only missed blocks to the transcript already open.
 
-Every surviving agent, including one joined to another tab's remote workspace, opens in a new agent tab when its session is attached. Its retained shell history appears in the scrollable transcript immediately, including work done while detached, without requiring a command first, and reads the way the live tab read: each retained command appears as its own transcript entry with the output it produced, in the order they ran, and the shell's internal sentinel lines and its working-directory bookkeeping are left out exactly as live command execution leaves them out. Output whose command is no longer retained — the oldest history, trimmed to keep retention bounded — still appears, as an entry with no command above it, and a command whose output never arrived appears with none below it. If the original label is occupied, the restored history belongs to the newly named tab. Subsequent idle output appears as it arrives and follows the transcript retention limit. Restored history does not become part of the next command's output, and that command's output appears only once.
+Only surviving shell and harness processes are restored. Legacy agent-only records are retained untouched and skipped during relaunch; a mixed shell record restores its shell processes through the temporary SSH bridge and omits agent processes.
 
 Remote shell tabs are restored around their existing PTYs after `--relaunch` and when attaching a parked session. Their last reported cwd, offline mode, and marker nonce are retained, and no navigator is reopened. The sessions tab identifies these rows as `shell`. Remote shells are omitted when saving profiles, so a profile never starts a replacement local shell for them.
 
@@ -455,7 +455,7 @@ cleared at launch and when the channel's last reference is released.
 #### Name check before provisioning
 
 Before a new launch opens any ssh connection, its name is checked locally against open tabs and the
-sessions tab (see `agents.md` and `harness.md`). The host then checks it again before cloning, since
+sessions tab (see `harness.md` § "Name clashes"). The host then checks it again before cloning, since
 only the host knows what is running there.
 
 A workspace named `<name>` on the host counts as running when a remote server peer on that host —
@@ -537,7 +537,7 @@ path is resolved within that workspace; an escaping path is refused, including a
 a symlink outside the workspace. Remote file content travels to the local cache for ordinary
 openers, and editor saves travel back over the same channel.
 
-Bare `files` from a remote agent or harness uses its remote cwd when that directory is inside the
+Bare `files` from a remote shell or harness uses its remote cwd when that directory is inside the
 workspace, and the workspace root otherwise. During provisioning it reports
 `The remote workspace is not ready yet.` and opens nothing. Relative paths resolve against that
 remote cwd, `~` expands using the remote user's home, and `$root` expands to the remote workspace
@@ -699,7 +699,7 @@ a shared channel's server holds one agent per tab using it.
 - Shipping or installing janissary on the remote.
 - ssh options on the clause.
 - A saved directory of remotes or completion over previously used hosts.
-- `files on <address>` without an existing remote agent or harness tab.
+- `files on <address>` without an existing remote shell or harness tab.
 - Cross-host file transfer, remote `open external`, and plugin-contributed selection actions in a
   remote tree.
 - An alternative confinement mechanism where the remote platform has no sandbox.

@@ -359,7 +359,7 @@ describe('saveProfile', () => {
     expect(load('demo').editors).toEqual([expect.objectContaining({ path: '$root/product/backlog/issues.md' })]);
   });
 
-  it('leaves agent tabs out of the profile and lists each under skipped', async () => {
+  it('leaves tabs out of the profile and lists each under skipped', async () => {
     const managers = makeManagers([makeTab('bob', '#aaa'), claudeTab('claude', '#ccc')]);
 
     const summary = await saveProfile('demo', managers);

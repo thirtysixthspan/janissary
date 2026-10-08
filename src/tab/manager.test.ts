@@ -6,7 +6,7 @@ import { TabManager } from './manager.js';
 import { makeTab } from './index.js';
 import type { Managers } from '../managers.js';
 import { TabPluginRejection, type TabPluginResources } from '../plugins/api.js';
-import { seedRootAgentTab } from './root-agent-test-fixture.js';
+import { seedRootTab } from './root-tab-test-fixture.js';
 import { messageBus } from '../bus.js';
 import { UNREAD_DWELL_MS } from './dwell.js';
 import { loadConfig } from '../config.js';
@@ -78,7 +78,7 @@ function makeTabManager(): TabManager {
 function makeTabManagerWithManagers(): { tm: TabManager; managers: Managers } {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers, '/repo');
-  seedRootAgentTab(managers.tab);
+  seedRootTab(managers.tab);
   Object.assign(managers, makeManagers());
   return { tm: managers.tab, managers };
 }
@@ -233,7 +233,7 @@ describe('TabManager queue', () => {
 
   // A shell echoes what is typed back into the terminal, so its recording is the one recorded kind
   // that can capture a password. A project that declines that gets no recorder, and therefore no
-  // recording flag on the tab either — the state an agent tab is already in.
+  // recording flag on the tab either — the state an tab is already in.
   it('records a plugin\'s terminal by default, including for a project that set no config', () => {
     const { tm, managers } = makeTabManagerWithManagers();
     managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
@@ -870,13 +870,13 @@ describe('TabManager renameTab for editor tabs', () => {
     expect(tm.openFilePath(tab.editor!.url.slice('/open/'.length))).toBe(newPath);
   });
 
-  it('renaming an agent tab still sets an alias only', () => {
+  it('renaming an tab still sets an alias only', () => {
     const tm = makeTabManager();
     tm.renameTab(0, 'newlabel');
     expect(tm.tabs[0].title).toBe('newlabel');
   });
 
-  it('renaming an agent tab allows up to 50 characters, independent of tabNameMaxLength', () => {
+  it('renaming an tab allows up to 50 characters, independent of tabNameMaxLength', () => {
     const tm = makeTabManager();
     tm.renameTab(0, 'a'.repeat(60));
     expect(tm.tabs[0].title).toBe('a'.repeat(50));

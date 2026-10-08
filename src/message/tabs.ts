@@ -3,10 +3,10 @@ import type { ClientMessage } from '../protocol.js';
 import { unhandledClientMethod } from '../client-message.js';
 
 type TabMessage = Extract<ClientMessage, {
-  method: 'command' | 'setActiveTab' | 'focusTab' | 'closeTab' | 'renameTab' | 'promoteToTerminal'
+  method: 'command' | 'setActiveTab' | 'focusTab' | 'closeTab' | 'renameTab'
     | 'editQueuedCommand' | 'deleteQueuedCommand' | 'moveTab' | 'moveTabToOtherPane'
     | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'resetAcp' | 'revealNotifications'
-    | 'setDock' | 'openFileNavigatorFor' | 'launchAgentFor' | 'launchShellFor' | 'openTranscriptFor'
+    | 'setDock' | 'openFileNavigatorFor' | 'launchShellFor'
     | 'openHarnessTranscriptFor' | 'openAcpTranscript' | 'openRecordingFor';
 }>;
 
@@ -28,8 +28,6 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     case 'closeTab': { controller.closeTab(message.params.label); break;
     }
     case 'renameTab': { controller.renameTab(message.params.index, message.params.title); break;
-    }
-    case 'promoteToTerminal': { controller.promoteToTerminal(); break;
     }
     case 'editQueuedCommand': {
       controller.editQueuedCommand(message.params.index, message.params.text, message.params.tab); break;
@@ -59,12 +57,10 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     }
     case 'openFileNavigatorFor': { controller.openFileNavigatorFor(message.params.label); break;
     }
-    case 'launchAgentFor': { controller.launchAgentFor(message.params.label); break;
-    }
+
     case 'launchShellFor': { controller.launchShellFor(message.params.label); break;
     }
-    case 'openTranscriptFor': { controller.openTranscriptFor(message.params.label); break;
-    }
+
     case 'openHarnessTranscriptFor': { controller.openHarnessTranscriptFor(message.params.label); break;
     }
     case 'openAcpTranscript': { controller.openAcpTranscript(message.params.acpRef); break;

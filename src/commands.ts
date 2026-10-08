@@ -62,7 +62,7 @@ export function unknownCommandMessage(command: string): string {
 }
 
 // Only `help`, the empty string, and the unknown fallback are left. Every other name this used to
-// answer `null` for — `clear`, `state`, `hist`, `quit`/`exit`/`close`, `agent`, `msg`, `broadcast`,
+// answer `null` for — `clear`, `state`, `hist`, `quit`/`exit`/`close`,
 // `acp`, `db`, `connection`, `next` — is a `Command` now, and both callers loop the registry before
 // reaching here, so those branches were unreachable.
 export const getOutput = (command: string): CommandOutput => {

@@ -1,12 +1,12 @@
 # Command queue
 
-Command queues are an optional core tab capability. Any tab may opt in; having a command bar, being busy, or owning a terminal does not create a queue. Shell tabs currently opt in. Agent tabs have no queue: typed commands, `send`, scheduled commands, and accepted monitor suggestions dispatch immediately through their existing pipeline, including during workspace provisioning. Individual commands keep their own concurrency and readiness checks.
+Command queues are an optional core tab capability. Any tab may opt in; having a command bar, being busy, or owning a terminal does not create a queue. Shell tabs currently opt in. Harness tabs have no queue: their commands reach the PTY directly. Individual commands keep their own concurrency and readiness checks.
 
 ## Ownership and availability
 
 Core stores each queue on the tab's runtime record and exposes its rows through `TabView.commandQueue`. `TabView.hasCommandQueue` is present only for an opted-in tab; other tabs expose an empty list. Core tabs may set `Tab.hasCommandQueue`. A tab plugin opts in by requesting both `queueLine` and `nextQueuedLine` in its static declaration. The host resolves availability in `src/command-queue/support.ts`, without activating plugins. A terminal and `hostsCommandBar` are not required for this opt-in.
 
-`queueLine(line)` appends to the plugin's own answering tab. `nextQueuedLine()` removes and returns its front line, or `null` when empty. Both are host capabilities, bound to that plugin's own tab; neither reaches a different plugin's tab or an agent tab that invoked a plugin command. Disabled plugins touch no queue. A plugin that requests neither capability can host the application command bar without offering a queue. See [[tab-plugins]].
+`queueLine(line)` appends to the plugin's own answering tab. `nextQueuedLine()` removes and returns its front line, or `null` when empty. Both are host capabilities, bound to that plugin's own tab; neither reaches a different plugin's tab or a shell tab that invoked a plugin command. Disabled plugins touch no queue. A plugin that requests neither capability can host the application command bar without offering a queue. See [[tab-plugins]].
 
 The framework-free `CommandQueue` service in `web/src/shared/command-queue/command-queue.ts` and its `useCommandQueue` hook are published through `web/src/plugins/api.ts`. Consumers supply an enqueue/dequeue transport, a line runner, and busy/idle signals. The service and hook own FIFO handling, draining, wakeups, and disposal. The shell plugin supplies thin intent adapters, routing, history attribution, and zsh's status markers. There is no command-queue plugin.
 
@@ -20,15 +20,15 @@ Shell command-bar submissions queue while zsh runs a command or its workspace is
 
 `queue <shell-tab> <command...>` appends to a named tab's opted-in queue, including a provisioning shell or a plugin tab without a terminal. Labels and display aliases resolve through the ordinary target lookup. On success, the issuing transcript records `→ <label> (queued): <command>`. An idle consumer wakes on the updated queue; a busy consumer waits for its idle signal.
 
-Missing arguments return `Usage: queue <shell-tab> <command>`. An unknown target returns `No tab named "<label>".`. A target without queue support, including an agent tab, returns `Tab "<label>" has no command queue.`. The usage names the shipped shell consumer; queue eligibility is generic. Bare `queue` is the interactive popup command, and is a no-op when dispatched non-interactively on the server.
+Missing arguments return `Usage: queue <shell-tab> <command>`. An unknown target returns `No tab named "<label>".`. A target without queue support, including a harness tab, returns `Tab "<label>" has no command queue.`. The usage names the shipped shell consumer; queue eligibility is generic. Bare `queue` is the interactive popup command, and is a no-op when dispatched non-interactively on the server.
 
-`send <shell-tab> <text>` uses the same shell FIFO, with the ordinary send acknowledgement. `send` into agents dispatches immediately. Cross-agent `msg` and `broadcast` retain their independent recipient delivery order. See [[send]] and [[messaging]].
+`send <shell-tab> <text>` uses the same shell FIFO, with the ordinary send acknowledgement. See [[send]].
 
 ## Command-line indicators and popup
 
-While a shell consumer is busy, its prompt reads `queue >` and its status dot blinks. Agent bars keep their bare prompt and busy dot. `Ctrl+E` and bare `queue` open the core popup only when the source tab has a queue and hosts the application command bar. They do nothing on agent tabs, tabs without queues, or queue consumers without that edit surface.
+While a shell consumer is busy, its prompt reads `queue >` and its status dot blinks. `Ctrl+E` and bare `queue` open the core popup only when the source tab has a queue and hosts the application command bar. They do nothing on harness tabs, tabs without queues, or queue consumers without that edit surface.
 
-The popup lists the source tab's queued lines front first and shows `(no commands queued)` when empty. It remains bound to a docked shell's bar when an agent is current. Selection and edits never alter another tab's draft or focus.
+The popup lists the source tab's queued lines front first and shows `(no commands queued)` when empty. It remains bound to a docked shell's bar when another tab is current. Selection and edits never alter another tab's draft or focus.
 
 | Input | Effect |
 | --- | --- |

@@ -8,7 +8,7 @@ import {
 } from './contributed-overlays';
 
 // The seam every feature reaches a plugin's overlay through. It exists because the feature-directory
-// lint zones forbid `pickers`, `context-menu`, and `agent-tabs` from importing the plugin layer, and
+// lint zones forbid `pickers`, `context-menu`, and `shared command bars` from importing the plugin layer, and
 // because a static import of a plugin's chunk would pull it into the entry bundle.
 
 const blank = { claimsCommandBar: true, render: () => null, onKey: () => {}, onOpen: () => {} };

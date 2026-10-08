@@ -303,10 +303,10 @@ describe('AcpManager.close', () => {
   });
 });
 
-// A remote agent tab runs its agent on the far side, inside the workspace clone that host
+// A remote tab runs its agent on the far side, inside the workspace clone that host
 // provisioned. Only where the session comes from changes; the tool loop and everything built on it
 // never learn that it is remote.
-describe('AcpManager — remote agent tabs', () => {
+describe('AcpManager — remote tabs', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

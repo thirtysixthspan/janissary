@@ -10,7 +10,7 @@ import type { ScheduleEntry } from './types.js';
 import { messageBus } from '../bus.js';
 import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: Tab } {
   const tab: Tab = {
@@ -45,7 +45,7 @@ function makeManagers(overrides: Partial<Tab> = {}): { managers: Managers; tab: 
 function withRealTabManager(overrides: Partial<Tab>): { managers: Managers } {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
-  seedRootAgentTab(managers.tab);
+  seedRootTab(managers.tab);
   managers.schedule = new ScheduleManager(managers);
   managers.tab.tabs.push({ ...makeTab(overrides.label ?? 'claude', '#aaa'), ...overrides });
   return { managers };
@@ -418,7 +418,7 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
     mgr.stop();
   });
 
-  it('keeps the agent tab\'s existing multi-entry dispatch in one tick', () => {
+  it('keeps the tab\'s existing multi-entry dispatch in one tick', () => {
     const { managers } = makeManagers();
     const dispatchTo = vi.fn();
     (managers.command as unknown as { dispatchTo: typeof dispatchTo }).dispatchTo = dispatchTo;
@@ -429,8 +429,8 @@ describe('ScheduleManager one-shot prompt injection into a harness', () => {
 
     vi.advanceTimersByTime(1000);
     expect(dispatchTo).toHaveBeenCalledTimes(2);
-    expect(dispatchTo).toHaveBeenNthCalledWith(1, 'janus', 'first ## scheduled ##', { detect: false });
-    expect(dispatchTo).toHaveBeenNthCalledWith(2, 'janus', 'second ## scheduled ##', { detect: false });
+    expect(dispatchTo).toHaveBeenNthCalledWith(1, 'janus', 'first ## scheduled ##');
+    expect(dispatchTo).toHaveBeenNthCalledWith(2, 'janus', 'second ## scheduled ##');
     expect(mocks.notify).toHaveBeenCalledTimes(2);
     mgr.stop();
   });
@@ -657,7 +657,7 @@ describe('ScheduleManager cancel', () => {
     return { id, command: 'clear', spec: 'every 5m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 };
   }
 
-  it('removes an agent tab entry, emits state.dirty, and returns true', () => {
+  it('removes an tab entry, emits state.dirty, and returns true', () => {
     const { managers } = makeManagers();
     const mgr = new ScheduleManager(managers);
     mgr.set('janus', [entry('a'), entry('b')]);
@@ -715,7 +715,7 @@ describe('ScheduleManager clearAll', () => {
     return { id, command: 'clear', spec: 'every 5m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 };
   }
 
-  it('clears an agent tab schedule and emits state.dirty', () => {
+  it('clears an tab schedule and emits state.dirty', () => {
     const { mgr } = makeMgr([{ label: 'janus' }]);
     mgr.set('janus', [entry('a')]);
     const emitSpy = vi.spyOn(messageBus, 'emit');

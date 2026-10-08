@@ -70,7 +70,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
     conversations: {
       view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
       create: vi.fn(), load: vi.fn(), loadOlder: vi.fn(), send: vi.fn(), cancel: vi.fn(),
-      openFiles: vi.fn(), launchAgent: vi.fn(), selectModel: vi.fn(), rename: vi.fn(),
+      openFiles: vi.fn(), launchShell: vi.fn(), selectModel: vi.fn(), rename: vi.fn(),
       delete: vi.fn(),
     },
     sessions: {
@@ -154,9 +154,9 @@ describe('the conversations topic source', () => {
   it('routes workspace actions through the conversations manager', () => {
     const { managers } = makeManagers();
     runTopicAction(managers, { topic: 'conversations', action: 'openFiles', id: 'one' });
-    runTopicAction(managers, { topic: 'conversations', action: 'launchAgent', id: 'one' });
+    runTopicAction(managers, { topic: 'conversations', action: 'launchShell', id: 'one' });
     expect(managers.conversations.openFiles).toHaveBeenCalledWith('one');
-    expect(managers.conversations.launchAgent).toHaveBeenCalledWith('one');
+    expect(managers.conversations.launchShell).toHaveBeenCalledWith('one');
   });
 });
 

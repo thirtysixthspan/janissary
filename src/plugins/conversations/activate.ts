@@ -107,8 +107,8 @@ function runIntent(
 
 // The intents that carry no payload, and the one topic action each forwards once its payload is
 // confirmed empty.
-const EMPTY_INTENT_ACTIONS = new Map<string, 'loadOlder' | 'cancel' | 'openFiles' | 'launchAgent'>([
-  ['load-older', 'loadOlder'], ['cancel', 'cancel'], ['open-files', 'openFiles'], ['launch-agent', 'launchAgent'],
+const EMPTY_INTENT_ACTIONS = new Map<string, 'loadOlder' | 'cancel' | 'openFiles' | 'launchShell'>([
+  ['load-older', 'loadOlder'], ['cancel', 'cancel'], ['open-files', 'openFiles'], ['launch-shell', 'launchShell'],
 ]);
 
 function runConversationIntent(

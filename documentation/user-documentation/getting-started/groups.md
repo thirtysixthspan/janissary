@@ -9,7 +9,7 @@ Related tabs stay together as a group, drawn as a colored band along the top of 
 You don't manage groups directly — they follow from how tabs are created:
 
 - **The root group.** The `janus` shell tab every launch opens founds the first group, colored after its own dot.
-- **New tabs join their creator's group.** A tab made with `agent` (or by opening a file or page) joins the group of the tab you ran the command from. Creation is transitive: a chain of agents spawned from one another all share one group.
+- **New tabs join their creator's group.** A tab made with `zsh` (or by opening a file or page) joins the group of the tab you ran the command from. Creation is transitive: a chain of agents spawned from one another all share one group.
 - **Profiles get their own group.** `profile launch` places all of a profile's tabs into one new group, so a launched profile reads as its own band in the strip — see [Profiles](/user-documentation/automation/profiles).
 
 A group's band color is fixed when the group is created (the color of its first member) and never shifts afterward, even as tabs are reordered or closed.

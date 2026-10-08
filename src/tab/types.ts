@@ -1,6 +1,7 @@
 export type LogEntry = {
   input: string;
   output: string;
+  background?: string;
   running?: boolean;
   cwd?: string;
   // Set when this entry is a cross-agent message from another agent.
@@ -49,7 +50,7 @@ export type BufferLine = {
 
 // An in-app file view mounted in a tab instead of the agent transcript/command-line body. A tab
 // opened by a bundled plugin (`open <image>`, `open <video>`) uses `view: 'plugin'` and carries a
-// `plugin` record; ordinary agent tabs leave `view` undefined.
+// `plugin` record; tabs without a view payload leave `view` undefined.
 // Full-tab AI coding harness view (opened via `harness <name>`); the body is a live PTY terminal.
 // An ssh tab (opened via `ssh <destination>`) reuses this same shape, recognized by
 // `name === 'ssh'`: `destination` carries the connection identity for the connections panel.
@@ -239,7 +240,7 @@ export type MonitorTarget =
   | { kind: 'group'; group: number };
 
 // One AI-monitor suggestion: produced by a persona-primed monitoring ACP session, shown either
-// inline in an agent tab's transcript or in the monitor reporting tab's feed.
+// inline in an tab's transcript or in the monitor reporting tab's feed.
 export type MonitorSuggestion = {
   id: string;
   text: string;
@@ -253,6 +254,7 @@ export type MonitorSuggestion = {
 export type CenterPane = 'left' | 'right';
 
 export type TabRuntime = {
+  closing?: boolean;
   acpEntries?: WeakSet<LogEntry>;
   acpPrompt?: { finish: (output: string) => void; abort: AbortController };
   cwd?: string;
@@ -273,13 +275,10 @@ export type Tab = {
   number: number;
   // The tab's body kind. Undefined/`'agent'` renders the normal transcript + command line; `'plugin'`
   // renders a bundled plugin's view (no command bar). View tabs are live and in-memory — not persisted.
-  view?: 'agent' | 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
+  view?: 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   // Display name shown in the tab strip when it differs from the (unique) internal `label` — e.g.
   // every image tab is titled with its file name while keeping a distinct label (`image`, `image-2`, …).
   title?: string;
-  // Set while an interactive PTY (htop, vim, etc.) is running full-tab on this agent tab.
-  // Cleared when the process exits, restoring the transcript view.
-  activePty?: string;
   // The bundled-plugin payload and server-only ownership record, present only for plugin tabs.
   plugin?: PluginTabRecord;
   // The harness-view payload, present only when `view === 'harness'`.

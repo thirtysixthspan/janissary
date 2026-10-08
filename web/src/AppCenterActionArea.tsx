@@ -5,24 +5,17 @@ import type { TabEntry } from './tab-entries';
 import type { BaseCenterActionAreaProps } from './CenterActionAreaProps';
 import { CenterActionArea } from './CenterActionArea';
 import { ViewTabBody } from './ViewTabBody';
-import { InactiveAgentTabBody } from './agent-tabs/InactiveAgentTabBody';
-import { ShellTabLayer } from './ShellTabLayer';
 import { MountedViewLayers } from './MountedViewLayers';
-import type { CommandDrafts } from './agent-tabs/command-input/useCommandDrafts';
 
 type Properties = BaseCenterActionAreaProps & {
   current: TabView;
-  focusedAgentBody: React.ReactNode;
-  // Read by the split pane's own command bar; the focused pane's is inside `focusedAgentBody`.
-  commandDrafts: CommandDrafts;
-  shellProps: Omit<React.ComponentProps<typeof ShellTabLayer>, 'tabs' | 'activeLabel' | 'visibleLabels' | 'client' | 'onSplit'>;
   mountedProps: Omit<React.ComponentProps<typeof MountedViewLayers>, 'tabs' | 'current' | 'visibleLabels' | 'client' | 'closeTab' | 'onSplit'>;
 };
 
 export function AppCenterActionArea({
   entries, tabs, activeTab, secondaryTab, client, closeTab, tabNameMaxLength,
   activeTabNameMaxLength, onFocusCommandBar, onFocusEditor, windowFocused, dirtyTabs, current,
-  focusedAgentBody, commandDrafts, shellProps, mountedProps,
+  mountedProps,
 }: Properties) {
   const splitTab = (index: number) => {
     client.send({ method: 'moveTabToOtherPane', params: { index } });
@@ -31,7 +24,7 @@ export function AppCenterActionArea({
   const visibleLabels = [current.label, ...(secondary ? [secondary.label] : [])];
   const renderBody = (entry: TabEntry, focused: boolean) => {
     const tab = entry.tab;
-    if (tab.activePty || ['harness', 'editor', 'plugin'].includes(tab.view ?? '')) return null;
+    if (['harness', 'editor', 'plugin'].includes(tab.view ?? '')) return null;
     const onSplit = () => splitTab(entry.index);
     if (tab.view) {
       return (
@@ -41,9 +34,7 @@ export function AppCenterActionArea({
         />
       );
     }
-    return focused
-      ? focusedAgentBody
-      : <InactiveAgentTabBody tab={tab} client={client} onSplit={onSplit} commandDrafts={commandDrafts} />;
+    return null;
   };
 
   return (
@@ -54,10 +45,6 @@ export function AppCenterActionArea({
       onFocusCommandBar={onFocusCommandBar} onFocusEditor={onFocusEditor}
       windowFocused={windowFocused} dirtyTabs={dirtyTabs} renderBody={renderBody}
       persistentLayers={<>
-        <ShellTabLayer
-          tabs={tabs} activeLabel={current.label} visibleLabels={visibleLabels}
-          client={client} onSplit={splitTab} {...shellProps}
-        />
         <MountedViewLayers
           tabs={tabs} current={current} visibleLabels={visibleLabels} client={client}
           closeTab={closeTab} onSplit={splitTab} {...mountedProps}

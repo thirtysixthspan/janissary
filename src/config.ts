@@ -11,7 +11,6 @@ import { configRecord, decodeConfig } from './config-decode.js';
 export type NotificationConfig = {
   events: {
     stateChange: boolean;
-    incomingMessage: boolean;
     scheduleFire: boolean;
     agentStart: boolean;
     rateLimited: boolean;
@@ -26,7 +25,7 @@ export type Config = {
   // rather than a count of everything copied, so the popup stays a menu. Hand-edited, like
   // `transcriptMaxLines`, and read by the client — the browser has no storage of its own.
   clipboardHistoryMaxEntries: number;
-  // Isolate workspaced tabs (`agent --workspace`, `harness --workspace`) to their workspace clone
+  // Isolate workspaced tabs (`zsh --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
   // Record shell tabs' sessions to asciicast files under `.janissary/recordings/`, as harness and ssh
@@ -43,7 +42,6 @@ export type Config = {
   // the screen, promoting them to a full-tab terminal mid-command (see `interactive/signals.ts`).
   // Default true; with it off, shells are piped and only the name list (`interactive/index.ts`)
   // applies.
-  interactiveShellDetection: boolean;
   // The active syntax-highlighting theme name for editor tabs (see `syntax-themes.ts`), applied
   // globally across every open editor tab.
   syntaxTheme: string;
@@ -93,13 +91,11 @@ const DEFAULT_CONFIG: Config = {
   clipboardHistoryMaxEntries: DEFAULT_CLIPBOARD_HISTORY_MAX_ENTRIES,
   sandboxWorkspaces: true,
   recordShellTabs: true,
-  interactiveShellDetection: true,
   syntaxTheme: DEFAULT_SYNTAX_THEME,
   theme: DEFAULT_APP_THEME,
   notifications: {
     events: {
       stateChange: false,
-      incomingMessage: false,
       scheduleFire: false,
       agentStart: false,
       rateLimited: false,

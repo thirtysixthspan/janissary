@@ -6,9 +6,9 @@ The scrollable output area that displays command inputs and their results. The t
 
 Log entries are flattened into a `BufferLine[]` array. Each entry produces one prompt line (`>` + command text). If the entry is in `Running...` state, it produces one running-indicator line. Otherwise, its output text is split by newlines, producing one output line per segment.
 
-### Collapsed agent tool steps
+### Collapsed ACP tool steps
 
-Auto-run agent tool steps (entries flagged `acp`, produced by the ACP tool loop) are **collapsed by default**: `flattenBuffer(log, collapseToolSteps)` replaces each contiguous run of `acp` entries with a single summary line — a right-pointing caret icon followed by `N tool steps  (ctrl+t to expand)` — (a `collapsed` `BufferLine`). Empty continuation turns interspersed in a run are absorbed without breaking it or inflating the count; a visible (non-`acp`) prose turn or message breaks one run into two. The surrounding user prompt and the agent's final answer stay visible. The core ACP panel reuses this formatter for its response slice and scopes expansion to its owning plugin tab. See [[acp]].
+Auto-run ACP tool steps (entries flagged `acp`, produced by the ACP tool loop) are **collapsed by default**: `flattenBuffer(log, collapseToolSteps)` replaces each contiguous run of `acp` entries with a single summary line — a right-pointing caret icon followed by `N tool steps  (ctrl+t to expand)` — (a `collapsed` `BufferLine`). Empty continuation turns interspersed in a run are absorbed without breaking it or inflating the count; a visible (non-`acp`) prose turn or message breaks one run into two. The surrounding user prompt and the agent's final answer stay visible. The core ACP panel reuses this formatter for its response slice and scopes expansion to its owning plugin tab. See [[acp]].
 
 `Ctrl+T` toggles the per-tab `Tab.toolStepsExpanded` flag (in-memory, like `scrollOffset`, not persisted), resetting scroll to the bottom. When expanded, each step renders as its `+ <command>` line followed by the command's response on the indented output lines beneath it (the `ranCommand` handler stores the command in the entry's `input` and the result in its `output`). Both the render path and the scroll-length calculation pass the same `!toolStepsExpanded` flag to `flattenBuffer`, so scrolling math matches what is drawn.
 
@@ -20,10 +20,6 @@ finished on the entry its command text started, and a streamed agent reply is fi
 entry it opened. When two runs are in flight on the same tab, whichever finishes second cannot
 overwrite the first one's entry with its own output — the interleaved command's entry keeps its own
 output and finishes on its own terms.
-
-### Hidden during interactive PTY takeover
-
-When an interactive program (htop, vim, less, etc.) is running in full-tab PTY mode on the current agent tab, the transcript and command bar are hidden and replaced by the full-tab terminal. When the program exits, the transcript is restored to exactly the state it was in before the PTY launched — no new entries are added.
 
 ### Auto-scroll on output
 
@@ -73,8 +69,8 @@ working directory does not re-run the command when that leading directory text i
 only the command text after it does. A single click does
 nothing (letting a click-and-drag text selection happen without triggering a re-run); if the
 double click lands on text that is still selected from an earlier selection, it is likewise
-suppressed. A collapsed agent tool-steps summary line is a separate case: a single click (or
-`Ctrl+T`) expands it instead (see "Collapsed agent tool steps" above) and does not re-run
+suppressed. A collapsed ACP tool-steps summary line is a separate case: a single click (or
+`Ctrl+T`) expands it instead (see "Collapsed ACP tool steps" above) and does not re-run
 anything.
 
 ### A command that moved into a terminal

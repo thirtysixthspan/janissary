@@ -4,12 +4,12 @@ A **video tab** is the persistent view contributed by the bundled video plugin. 
 It is a non-agent **view tab**: it shows the video and its metadata in place of the usual transcript
 and command bar, and is controlled by the player's own transport controls rather than a command line.
 
-A video tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
+A video tab is created like a shell tab (see Tabs) — placed contiguously within the active tab's
 group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to
 the new video tab. Opening a video that is already showing in a video tab focuses that tab instead
 of opening a duplicate.
 
-Unlike an agent tab, a video tab has no shell, agent session, browser, transcript, or command
+Unlike a shell tab, a video tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — it is not saved, is not
 restored on `--relaunch`, and is not recorded in or reopened by a profile.
 

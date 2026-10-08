@@ -4,17 +4,11 @@ import React, { useRef } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { DirtyTabHandle } from './shared/tab/handles';
 import { CloseSaveGuard } from './CloseSaveGuard';
-import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
-import type { useTranscriptSearch } from './shared/search-bar/useTranscriptSearch';
+import { useAppCommandLine } from './shared/command-bar/AppCommandBar';
 
 // The command bar and the save guard are wired together here the way App wires them, so a typed
 // `close <name>` is checked end to end against the guard rather than each half on its own.
 
-const search: ReturnType<typeof useTranscriptSearch> = {
-  searchOpen: false, pattern: '', status: 'empty',
-  position: null, currentLineIndex: null,
-  open: () => {}, close: () => {}, setPattern: () => {}, stepOlder: () => {}, stepNewer: () => {},
-};
 
 function makeTab(label: string, overrides: Partial<TabView> = {}): TabView {
   return {
@@ -36,11 +30,12 @@ function Harness({ handles, client, runCommand, onSubmit }: {
   const tabHandles = useRef(handles);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
   const noop = () => {};
-  onSubmit(useCommandBarSubmit({
+  const intercept = useAppCommandLine({
     openPicker: noop, openThemePicker: noop, openAppThemePicker: noop, openQueue: noop, openTaskPicker: noop,
     openProfilePicker: noop, navOpen: false, setNavOpen: noop, openTabNavWithQuery: noop,
-    canSearch: false, lines: [], search, tabs, openQuitConfirm: noop, guardRef, activeTab: 0, runCommand,
-  }));
+    tabs, openQuitConfirm: noop, guardRef, activeTab: 0,
+  });
+  onSubmit((text) => { if (!intercept(text)) runCommand(text); });
   return <CloseSaveGuard tabs={tabs} tabHandles={tabHandles} client={client as never} guardRef={guardRef} />;
 }
 

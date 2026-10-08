@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { JanusClient } from './ws';
 import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { closeQuitsApp } from '@shared/tab/placement';
@@ -6,15 +6,11 @@ import { AppMain } from './AppMain';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { DirtyTabHandle } from './shared/tab/handles';
 import { useTabHandles } from './useTabHandles';
-import { useCommandBarSubmit } from './agent-tabs/command-input/useCommandBarSubmit';
-import { useCommandDrafts } from './agent-tabs/command-input/useCommandDrafts';
 import { useUnsavedQuitGuard } from './useUnsavedQuitGuard';
 import { useFocusOnTabSwitch, focusCenterVisibleTab } from './useFocusOnTabSwitch';
 import { useSectionNav } from './useSectionNav';
 import { useTabEntries } from './useTabEntries';
-import { useViewSearchState } from './useViewSearchState';
 import { useCmdW } from './useCmdW';
-import { useTranscriptScroll } from './shared/transcript/useTranscriptScroll';
 import { useQuitConfirm } from './QuitDialog/useQuitConfirm';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import { createPluginChordRegistry, PluginChordProvider } from './plugins/PluginChords';
@@ -31,6 +27,7 @@ import { sidebarSelectionFor } from './sidebar-selection-coordinator';
 import { useCmdWRefs } from './useCmdWRefs';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
 import { useOverlayPlugins } from './useOverlayPlugins';
+
 
 export function App({ client }: { client: JanusClient }) {
   // One registry for the chords plugin tabs claim while visible, owned here because both the window
@@ -61,17 +58,14 @@ export function App({ client }: { client: JanusClient }) {
   // file-navigator drag, threaded down the sidebar's own branch of the tree, can insert a dropped path
   // into whichever tab's command bar is currently rendered here.
   const dropReference = useRef<CommandInputDropHandle | null>(null);
-  const transcriptReference = useRef<HTMLDivElement>(null);
-  const { harnessHandles, shellHandles, questionPanelRef } = useTabHandles();
+  const { harnessHandles, questionPanelRef } = useTabHandles();
   const currentRef = useRef<TabView | undefined>(undefined);
-  const { handleScrollKey, handleScrollKeyUp } = useTranscriptScroll(transcriptReference);
   const windowFocused = useWindowFocus();
   useNativeNotifications(client, sidebarSelectionFor(client));
 
   const { actionEntries, reportingEntries } = useTabEntries(tabs);
   // The command bar a tab switch tears down or hands to another tab; its unexecuted text is kept
   // here, per tab, so returning to a tab shows what was left in its bar.
-  const commandDrafts = useCommandDrafts(tabs);
   const {
     sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth, reportingHeightPct, setReportingHeightPct,
     focusLeft, focusRight,
@@ -79,7 +73,6 @@ export function App({ client }: { client: JanusClient }) {
 
   const current = tabs[activeTab] ?? actionEntries[0]?.tab;
   currentRef.current = current;
-  const lines = useMemo(() => current?.bufferLines ?? [], [current]);
 
   // The overlay-plugin host. Nothing holds it: the seam resolves a chord or a command word to a plugin
   // and the host loads its chunk, so every route into an overlay — the chord, the `clip` command, and
@@ -95,7 +88,6 @@ export function App({ client }: { client: JanusClient }) {
     currentTab: currentTabForOverlay, focusHarness, tabLabel: current?.label,
   });
 
-  const { canSearch, search, highlight } = useViewSearchState(current, lines);
 
   const runCommand = useCallback((text: string) => client.send({ method: 'command', params: { text } }), [client]);
   // Every modal overlay's state, under one owner. It hands out a bag per consumer — the render tree,
@@ -164,23 +156,19 @@ export function App({ client }: { client: JanusClient }) {
     [client],
   );
 
-  useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, shellHandles, inputReference, questionPanelRef);
+  useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, questionPanelRef);
 
-  useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, shellHandles, inputReference));
+  useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, inputReference));
 
   useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, focusedPluginTabIndexRef);
 
   // Live snapshot + callbacks read by the window key handler, so it never has to re-register. Every
-  // overlay-owned field arrives in one bag; only search's two are the app shell's to add.
-  useAppWindowKeys(client, handleScrollKey, handleScrollKeyUp, {
-    ...pickers.keys, canSearch, searchOpen: search.searchOpen, openSearch: () => search.open(''),
+  // overlay-owned field arrives in one bag; the current plugin label scopes plugin chords.
+  useAppWindowKeys(client, {
+    ...pickers.keys,
     currentPluginTab: current?.plugin ? current.label : undefined,
   }, pluginChords);
 
-  const onCommandBarSubmit = useCommandBarSubmit({
-    ...pickers.commands,
-    canSearch, lines, search, tabs, openQuitConfirm: guardedOpenQuitConfirm, guardRef, activeTab, runCommand,
-  });
 
   // The same interception, published to every plugin tab below so a line typed into one of their bars
   // is answered here rather than sent to the server unchecked. The provider is the sibling of
@@ -204,13 +192,10 @@ export function App({ client }: { client: JanusClient }) {
     <PluginChordProvider registry={pluginChords}>
       <AppCommandBarProvider bar={appCommandBar}>
       <AppMain
-      current={current} client={client} lines={lines} runCommand={runCommand}
-      transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
+      current={current} client={client}
+      inputReference={inputReference}
       pickers={pickers.view} pickerSourceTab={pickerSourceTab} tabs={tabs}
-      search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
-      onCommandBarSubmit={onCommandBarSubmit}
       quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
-      recallReference={recallReference}
       dropRef={dropReference}
       activeTab={activeTab} secondaryTab={secondaryTab} windowFocused={windowFocused}
       actionEntries={actionEntries} reportingEntries={reportingEntries} closeTab={closeTab}
@@ -219,7 +204,7 @@ export function App({ client }: { client: JanusClient }) {
       sidebarRightWidth={sidebarRightWidth} setSidebarRightWidth={setSidebarRightWidth}
       reportingHeightPct={reportingHeightPct} setReportingHeightPct={setReportingHeightPct}
       focusLeft={focusLeft} focusRight={focusRight}
-      harnessHandles={harnessHandles} shellHandles={shellHandles} questionPanelRef={questionPanelRef}
+      harnessHandles={harnessHandles} questionPanelRef={questionPanelRef}
       tabHandles={tabHandles}
       dirtyPluginTabs={dirtyPluginTabs} onPluginDirty={onPluginDirty}
       harnessLaunch={harnessLaunch} scheduleLaunch={scheduleLaunch}

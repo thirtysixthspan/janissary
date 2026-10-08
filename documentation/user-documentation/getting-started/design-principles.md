@@ -28,11 +28,11 @@ Every core action — opening tabs, running commands, switching between them —
 
 ## Identical control of local and remote resources
 
-Where your compute lives shouldn't change how you work. An [ssh tab](/user-documentation/advanced-agents/harness) reaches a remote host through the same tab model as a local shell, and a [workspaced agent](/user-documentation/advanced-agents/workspaced-agent) gets an isolated clone of your repository whether that clone lives on your machine or elsewhere.
+Where your compute lives shouldn't change how you work. An [ssh tab](/user-documentation/advanced-agents/harness) reaches a remote host through the same tab model as a local shell, and a [workspaced tab](/user-documentation/advanced-agents/workspaced-agent) gets an isolated clone of your repository whether that clone lives on your machine or elsewhere.
 
 ## Revision control of assets
 
-Janissary doesn't invent its own versioning scheme. It leans on the tools that already do this well: local revision control through git, and distributed collaboration through GitHub — the same tooling a [workspaced agent](/user-documentation/advanced-agents/workspaced-agent) uses to isolate and later reconcile its changes.
+Janissary doesn't invent its own versioning scheme. It leans on the tools that already do this well: local revision control through git, and distributed collaboration through GitHub — the same tooling a [workspaced tab](/user-documentation/advanced-agents/workspaced-agent) uses to isolate and later reconcile its changes.
 
 ## Traceability of work
 

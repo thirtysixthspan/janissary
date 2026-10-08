@@ -120,17 +120,6 @@ describe('loadConfig', () => {
     expect(config.externalViewers).toEqual({ video: 'QuickTime Player' });
   });
 
-  it('enables interactive shell detection by default, including for a config that predates it', () => {
-    const configDir = path.join(tmpDir, '.janissary');
-    mkdirSync(configDir, { recursive: true });
-    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ tabNameMaxLength: 8 }));
-
-    const config = loadConfig(tmpDir);
-
-    expect(config.interactiveShellDetection).toBe(true);
-    expect(config.tabNameMaxLength).toBe(8);
-  });
-
   // A config written before shell recording existed must keep recording: the key is an opt-out, not
   // a new default, so a missing key resolving to anything else would silently stop writing every
   // shell session on every project that already had a config file.
@@ -155,7 +144,6 @@ describe('loadConfig', () => {
     // Nothing else follows from it: harness and ssh tabs have no echo of their own and keep
     // recording, so this key must not be readable as a recording switch in general.
     expect(config.sandboxWorkspaces).toBe(true);
-    expect(config.interactiveShellDetection).toBe(true);
   });
 
   it('defaults the clipboard-history cap to 15, including for a config that predates it', () => {
@@ -193,19 +181,6 @@ describe('loadConfig', () => {
       expect(config.tabNameMaxLength).toBe(8);
     },
   );
-
-  it('honors interactive shell detection turned off, and ignores a non-boolean value', () => {
-    const configDir = path.join(tmpDir, '.janissary');
-    mkdirSync(configDir, { recursive: true });
-
-    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ interactiveShellDetection: false }));
-    expect(loadConfig(tmpDir).interactiveShellDetection).toBe(false);
-
-    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({ interactiveShellDetection: 'off', tabNameMaxLength: 8 }));
-    const config = loadConfig(tmpDir);
-    expect(config.interactiveShellDetection).toBe(true);
-    expect(config.tabNameMaxLength).toBe(8);
-  });
 
   it('falls back to defaults on parse error', () => {
     const configDir = path.join(tmpDir, '.janissary');
@@ -245,12 +220,11 @@ describe('loadConfig', () => {
   it('writes a default notifications block with every event off', () => {
     const config = loadConfig(tmpDir);
     expect(config.notifications).toEqual({
-      events: { stateChange: false, incomingMessage: false, scheduleFire: false, agentStart: false, rateLimited: false },
+      events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false },
     });
 
     const configPath = path.join(tmpDir, '.janissary', 'config.json');
-    const parsed = JSON.parse(readFileSync(configPath, 'utf8'));
-    expect(parsed.notifications.events.incomingMessage).toBe(false);
+    expect(JSON.parse(readFileSync(configPath, 'utf8')).notifications.events.stateChange).toBe(false);
   });
 
   it('reads custom notification event toggles from an existing config.json', () => {
@@ -258,24 +232,22 @@ describe('loadConfig', () => {
     mkdirSync(configDir, { recursive: true });
     writeFileSync(
       path.join(configDir, 'config.json'),
-      JSON.stringify({ notifications: { events: { incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false } } }) + '\n',
+      JSON.stringify({ notifications: { events: { stateChange: false, scheduleFire: false, agentStart: false } } }) + '\n',
     );
 
-    const config = loadConfig(tmpDir);
-    expect(config.notifications?.events.incomingMessage).toBe(true);
+    expect(loadConfig(tmpDir).notifications?.events.stateChange).toBe(false);
   });
 
   it('fills omitted and invalid notification toggles from defaults', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
     writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
-      notifications: { events: { incomingMessage: true, stateChange: 'yes' } },
+      notifications: { events: { stateChange: 'yes' } },
     }));
 
     expect(loadConfig(tmpDir).notifications).toEqual({
       events: {
         stateChange: false,
-        incomingMessage: true,
         scheduleFire: false,
         agentStart: false,
         rateLimited: false,

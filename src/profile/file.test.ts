@@ -43,7 +43,7 @@ describe('loadProfile', () => {
     expect(loadProfile('arr')).toHaveProperty('error');
   });
 
-  // Profiles no longer open agent tabs, but files saved before still carry agent elements: each is
+  // Profiles no longer open tabs, but files saved before still carry agent elements: each is
   // dropped whatever its fields hold, and the rest of the file loads.
   it('drops an agent element, even a mistyped one, and loads the rest', () => {
     writeJson('old-agent', { tabs: [

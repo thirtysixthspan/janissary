@@ -15,12 +15,12 @@ One file per day, named `<YYYY-MM-DD>.json`. Each line is a single JSON object r
 | Field | Type | Description |
 |-------|------|-------------|
 | `timestamp` | string | Local time when the content was logged, formatted as `HH:MM:SS.mmm` |
-| `agent` | string | The label of the tab (agent) where the content appeared |
+| `agent` | string | The label of the tab where the content appeared (the field name is unchanged by the removal of agent tabs) |
 | `text` | string | The content text (command input, shell output, message text, etc.) |
 
 ### Coverage
 
-Both command inputs and their resulting outputs are logged as separate entries, so the log captures the full back-and-forth of each tab session. Messages sent between agents, ACP prompts and responses, and shell command output are all included.
+Both command inputs and their resulting outputs are logged as separate entries, so the log captures the full back-and-forth of each tab session. ACP prompts and responses, and shell command output, are all included.
 
 ### Log rotation
 

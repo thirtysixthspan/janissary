@@ -73,37 +73,6 @@ describe('completeCommandLine', () => {
   });
 });
 
-describe('completeCommandLine — agent names', () => {
-  const agents = ['janus', 'bilal', 'aslan'];
-  const noFiles = '/no/such/dir/xyz'; // file fallback is a no-op here
-
-  it('completes a unique agent recipient for msg and adds a space', () => {
-    expect(completeCommandLine('msg bi', 6, noFiles, agents).newInput).toBe('msg bilal ');
-  });
-
-  it('completes a recipient typed on the line after msg', () => {
-    expect(completeCommandLine('msg\nbi', 6, noFiles, agents).newInput).toBe('msg\nbilal ');
-  });
-
-  it('fills the common prefix when several agents match', () => {
-    expect(completeCommandLine('msg a', 5, noFiles, agents).newInput).toBe('msg aslan '); // only aslan starts with "a"
-    const r = completeCommandLine('msg ', 4, noFiles, ['ahmed', 'aslan']);
-    expect(r.newInput).toBe('msg a'); // ahmed/aslan -> common prefix "a"
-    expect(r.matches.toSorted((a, b) => a.localeCompare(b))).toEqual(['ahmed', 'aslan']);
-  });
-
-  it('offers "all" and supports comma lists for broadcast', () => {
-    expect(completeCommandLine('broadcast al', 12, noFiles, agents).newInput).toBe('broadcast all');
-    // complete the segment after the last comma, preserving what was typed
-    expect(completeCommandLine('broadcast bilal,as', 18, noFiles, agents).newInput).toBe('broadcast bilal,aslan');
-  });
-
-  it('does not complete agents past the recipient position', () => {
-    // the message text position is not an agent slot, so no agent name is filled in
-    expect(completeCommandLine('msg bilal jan', 13, noFiles, agents).newInput).toBe('msg bilal jan');
-  });
-});
-
 describe('completeCommandLine — schedule `in <tab>` target', () => {
   const labels = ['janus', 'claude', 'worker'];
   const noFiles = '/no/such/dir/xyz';

@@ -16,7 +16,7 @@ const HELP = [
   '| --- | ------ |',
   '| `Ctrl+G` | Open the tab navigator |',
   '',
-  '**Command bar and agent tab controls**:',
+  '**Command bar and tab controls**:',
   '',
   '| Key | Action |',
   '| --- | ------ |',
@@ -37,7 +37,7 @@ describe('parseHelpSections', () => {
       'Commands',
       'Key Bindings',
       'Global key bindings',
-      'Command bar and agent tab controls',
+      'Command bar and tab controls',
       'Shell tab controls',
     ]);
   });
@@ -73,7 +73,7 @@ describe('selectHelpSection', () => {
   });
 
   it('selects by whole words anywhere in the title', () => {
-    expect(selectHelpSection(HELP, 'agent').startsWith('**Command bar and agent tab controls**')).toBe(true);
+    expect(selectHelpSection(HELP, 'bar').startsWith('**Command bar and tab controls**')).toBe(true);
   });
 
   it('ignores case and extra whitespace', () => {
@@ -83,7 +83,7 @@ describe('selectHelpSection', () => {
   it('names every section when nothing matches', () => {
     expect(selectHelpSection(HELP, 'nothing here')).toBe(
       'No help section matches "nothing here". Sections: Commands, Key Bindings, Global key bindings, '
-      + 'Command bar and agent tab controls, Shell tab controls.',
+      + 'Command bar and tab controls, Shell tab controls.',
     );
   });
 });

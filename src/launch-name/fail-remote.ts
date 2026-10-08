@@ -7,7 +7,7 @@ import {
   removalFailedRefusal, rootRefusalMessage,
 } from './messages.js';
 
-// The one failure funnel a provisioning placeholder closes through, for harness and agent tabs
+// The one failure funnel a provisioning placeholder closes through, for harness and tabs
 // alike. A remote host's label refusal closes the placeholder at once — posting the refusal, or,
 // for a default name, silently relaunching under the next free one. Every other failure keeps
 // today's behavior: the error is shown on the tab, which closes after a short delay.

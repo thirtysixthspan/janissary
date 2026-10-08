@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './shared/tab/handles';
+import type { HarnessTabHandle, QuestionPanelHandle } from './shared/tab/handles';
 import { useFocusOnTabSwitch } from './useFocusOnTabSwitch';
 
 function refOf<T>(value: T): React.RefObject<T> {
@@ -16,23 +16,10 @@ describe('useFocusOnTabSwitch', () => {
   it('focuses the harness handle for the active tab when it has a harness PTY', () => {
     const focus = vi.fn();
     const harnessHandles = refOf(new Map([['pty-1', { focus } as unknown as HarnessTabHandle]]));
-    const shellHandles = refOf(new Map<string, ShellTabHandle>());
     const inputReference = refOf<HTMLTextAreaElement | null>(null);
     const currentRef = refOf<TabView | undefined>({ view: 'harness', harness: { ptyId: 'pty-1' } } as unknown as TabView);
 
-    renderHook(() => useFocusOnTabSwitch(0, currentRef, harnessHandles, shellHandles, inputReference, noQuestionPanel()));
-
-    expect(focus).toHaveBeenCalledTimes(1);
-  });
-
-  it('focuses the shell handle for the active tab when it has an activePty', () => {
-    const focus = vi.fn();
-    const harnessHandles = refOf(new Map<string, HarnessTabHandle>());
-    const shellHandles = refOf(new Map([['shell-1', { focus } as unknown as ShellTabHandle]]));
-    const inputReference = refOf<HTMLTextAreaElement | null>(null);
-    const currentRef = refOf<TabView | undefined>({ view: 'agent', activePty: 'shell-1' } as unknown as TabView);
-
-    renderHook(() => useFocusOnTabSwitch(0, currentRef, harnessHandles, shellHandles, inputReference, noQuestionPanel()));
+    renderHook(() => useFocusOnTabSwitch(0, currentRef, harnessHandles, inputReference, noQuestionPanel()));
 
     expect(focus).toHaveBeenCalledTimes(1);
   });
@@ -40,11 +27,10 @@ describe('useFocusOnTabSwitch', () => {
   it('focuses the command line for any other tab', () => {
     const focus = vi.fn();
     const harnessHandles = refOf(new Map<string, HarnessTabHandle>());
-    const shellHandles = refOf(new Map<string, ShellTabHandle>());
     const inputReference = refOf<HTMLTextAreaElement | null>({ focus } as unknown as HTMLTextAreaElement);
-    const currentRef = refOf<TabView | undefined>({ view: 'agent' } as unknown as TabView);
+    const currentRef = refOf<TabView | undefined>({ view: undefined } as unknown as TabView);
 
-    renderHook(() => useFocusOnTabSwitch(0, currentRef, harnessHandles, shellHandles, inputReference, noQuestionPanel()));
+    renderHook(() => useFocusOnTabSwitch(0, currentRef, harnessHandles, inputReference, noQuestionPanel()));
 
     expect(focus).toHaveBeenCalledTimes(1);
   });
@@ -52,12 +38,11 @@ describe('useFocusOnTabSwitch', () => {
   it('re-focuses only when activeTab changes', () => {
     const focus = vi.fn();
     const harnessHandles = refOf(new Map<string, HarnessTabHandle>());
-    const shellHandles = refOf(new Map<string, ShellTabHandle>());
     const inputReference = refOf<HTMLTextAreaElement | null>({ focus } as unknown as HTMLTextAreaElement);
-    const currentRef = refOf<TabView | undefined>({ view: 'agent' } as unknown as TabView);
+    const currentRef = refOf<TabView | undefined>({ view: undefined } as unknown as TabView);
 
     const { rerender } = renderHook(
-      ({ activeTab }) => useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, shellHandles, inputReference, noQuestionPanel()),
+      ({ activeTab }) => useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, noQuestionPanel()),
       { initialProps: { activeTab: 0 } },
     );
     expect(focus).toHaveBeenCalledTimes(1);
@@ -73,14 +58,13 @@ describe('useFocusOnTabSwitch', () => {
     const focus = vi.fn();
     const focusCancel = vi.fn();
     const harnessHandles = refOf(new Map([['pty-1', { focus } as unknown as HarnessTabHandle]]));
-    const shellHandles = refOf(new Map<string, ShellTabHandle>());
     const inputReference = refOf<HTMLTextAreaElement | null>({ focus } as unknown as HTMLTextAreaElement);
     const currentRef = refOf<TabView | undefined>({
       view: 'harness', harness: { ptyId: 'pty-1' }, pendingQuestion: { id: 'q1', tab: 't', kind: 'approve', question: 'Continue?' },
     } as unknown as TabView);
     const questionPanelRef = refOf<QuestionPanelHandle | null>({ focusCancel });
 
-    renderHook(() => useFocusOnTabSwitch(0, currentRef, harnessHandles, shellHandles, inputReference, questionPanelRef));
+    renderHook(() => useFocusOnTabSwitch(0, currentRef, harnessHandles, inputReference, questionPanelRef));
 
     expect(focusCancel).toHaveBeenCalledTimes(1);
     expect(focus).not.toHaveBeenCalled();

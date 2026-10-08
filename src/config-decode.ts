@@ -55,7 +55,6 @@ function notifications(value: unknown, fallback: NotificationConfig): Notificati
   return {
     events: {
       stateChange: booleanValue(events.stateChange, fallback.events.stateChange),
-      incomingMessage: booleanValue(events.incomingMessage, fallback.events.incomingMessage),
       scheduleFire: booleanValue(events.scheduleFire, fallback.events.scheduleFire),
       agentStart: booleanValue(events.agentStart, fallback.events.agentStart),
       rateLimited: booleanValue(events.rateLimited, fallback.events.rateLimited),
@@ -73,7 +72,6 @@ export function decodeConfig(value: unknown, defaults: Config): Config {
     clipboardHistoryMaxEntries: positiveIntegerValue(record.clipboardHistoryMaxEntries, defaults.clipboardHistoryMaxEntries),
     sandboxWorkspaces: booleanValue(record.sandboxWorkspaces, defaults.sandboxWorkspaces),
     recordShellTabs: booleanValue(record.recordShellTabs, defaults.recordShellTabs),
-    interactiveShellDetection: booleanValue(record.interactiveShellDetection, defaults.interactiveShellDetection),
     syntaxTheme: stringValue(record.syntaxTheme, defaults.syntaxTheme),
     theme: stringValue(record.theme, defaults.theme),
     notifications: defaultNotifications && notifications(record.notifications, defaultNotifications),

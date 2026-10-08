@@ -23,22 +23,13 @@ const ESC = String.fromCodePoint(27);
 // The renderers take these callbacks instead of a protocol client, so a fake is a handful of
 // spies — no `send` stub, and no wire payload to assert on.
 function fakeIntents() {
-  return { onOpenFile: vi.fn(), onEditFile: vi.fn(), onFocusTab: vi.fn(), onPromoteToTerminal: vi.fn() } satisfies TranscriptIntents;
+  return { onOpenFile: vi.fn(), onEditFile: vi.fn(), onFocusTab: vi.fn() } satisfies TranscriptIntents;
 }
 
 const intentsStub = fakeIntents();
 const noop = () => {};
 
 describe('renderLine — running line', () => {
-  it('offers an open-in-terminal action while a command is running', async () => {
-    const intents = fakeIntents();
-    const line: BufferLine = { type: 'output', text: 'building…', running: true };
-    render(<>{renderLine(line, 0, intents, noop, noop)}</>);
-
-    await userEvent.click(screen.getByRole('button', { name: 'open in terminal' }));
-
-    expect(intents.onPromoteToTerminal).toHaveBeenCalled();
-  });
 
   it('offers no such action once the command has finished', () => {
     const intents = fakeIntents();

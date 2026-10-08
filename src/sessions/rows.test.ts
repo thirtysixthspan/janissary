@@ -75,7 +75,7 @@ describe('composeSessionRows live channels', () => {
         reconnecting: true,
         members: [
           { label: 'claude', name: 'claude', kind: 'harness', activity: 100 },
-          { label: 'bekir', name: 'bekir', kind: 'agent', activity: 90 },
+          { label: 'bekir', name: 'bekir', kind: 'shell', activity: 90 },
         ],
       })],
     }));
@@ -109,7 +109,7 @@ describe('composeSessionRows live channels', () => {
       channels: [channel({
         members: [
           { label: 'claude', name: 'claude', kind: 'harness', activity: 100 },
-          { label: 'bekir', name: 'bekir', kind: 'agent', activity: 90 },
+          { label: 'bekir', name: 'bekir', kind: 'shell', activity: 90 },
         ],
       })],
     }));
@@ -136,7 +136,7 @@ describe('composeSessionRows live channels', () => {
 describe('composeSessionRows channels without their launching member', () => {
   function launchAbsent(overrides: Partial<SessionChannel> = {}): SessionChannel {
     return channel({
-      members: [{ label: 'bekir', name: 'bekir', kind: 'agent', activity: 90 }],
+      members: [{ label: 'bekir', name: 'bekir', kind: 'shell', activity: 90 }],
       ...overrides,
     });
   }
@@ -157,7 +157,7 @@ describe('composeSessionRows channels without their launching member', () => {
       channels: [channel({
         members: [
           { label: 'claude', name: 'claude', kind: 'harness', activity: 100 },
-          { label: 'bekir', name: 'bekir', kind: 'agent', activity: 90 },
+          { label: 'bekir', name: 'bekir', kind: 'shell', activity: 90 },
         ],
       })],
     }));
@@ -191,7 +191,7 @@ describe('composeSessionRows detached records', () => {
         record: record({
           processes: [
             { id: 'spawn-1', label: 'claude-2', kind: 'harness' },
-            { id: 'spawn-2', label: 'bekir-2', kind: 'agent' },
+            { id: 'spawn-2', label: 'bekir-2', kind: 'shell' },
           ],
         }),
       }],
@@ -236,7 +236,7 @@ describe('composeSessionRows detached records', () => {
         record: record({
           processes: [
             { id: 'spawn-1', label: 'claude-2', kind: 'harness' },
-            { id: 'spawn-2', label: 'bekir-2', kind: 'agent' },
+            { id: 'spawn-2', label: 'bekir-2', kind: 'shell' },
           ],
         }),
       }],
@@ -265,7 +265,7 @@ describe('composeSessionRows detached records', () => {
         record: record({
           processes: [
             { id: 'spawn-1', label: 'claude-2', kind: 'harness' },
-            { id: 'spawn-2', label: 'bekir-2', kind: 'agent' },
+            { id: 'spawn-2', label: 'bekir-2', kind: 'shell' },
           ],
         }),
         failure: 'devbox: Connection timed out',
@@ -310,7 +310,7 @@ describe('composeSessionRows ordering', () => {
       channels: [channel({
         members: [
           { label: 'claude', name: 'claude', kind: 'harness', activity: 100 },
-          { label: 'bekir', name: 'bekir', kind: 'agent', activity: 900 },
+          { label: 'bekir', name: 'bekir', kind: 'shell', activity: 900 },
         ],
       })],
       ssh: [{ label: 'build-01', host: 'build-01', destination: 'build-01', activity: 500 }],

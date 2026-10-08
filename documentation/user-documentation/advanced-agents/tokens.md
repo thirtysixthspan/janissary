@@ -93,7 +93,7 @@ A token reaches the tab whether or not isolation is actually active on that mach
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-All four tokens travel to a [remote agent or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine.
+All four tokens travel to a [remote shell or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine.
 
 Forwarding is what makes a remote work at all for a harness. A Linux host has no keychain for `claude`, and a host nobody has signed into has nothing for `opencode`, so without your tokens those tabs open logged out.
 

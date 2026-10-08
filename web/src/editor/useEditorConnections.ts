@@ -1,4 +1,4 @@
-// Wires an editor tab into the same button-driven connections window agent tabs use (see
+// Wires an editor tab into the same button-driven connections window tabs use (see
 // `useStatusWindows`), plus a close control on each persona connection row. Split out of
 // EditorTab.tsx to stay under the 200-line file cap, mirroring useEditorSuggest.ts's own extraction
 // for the same reason (see product/plans/complete/editor-tab-persona-connections.md).

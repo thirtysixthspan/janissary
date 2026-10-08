@@ -31,7 +31,7 @@ export const editorDropHandle = editor.lookup;
 
 // A command bar that opts in publishes under its own root element, which is the `[data-command-bar]`
 // element the navigator already finds under the pointer — so a plugin tab's bar receives its own
-// drop instead of the one handle the agent tab's command input publishes through `dropRef`.
+// drop instead of the one handle the tab's command input publishes through `dropRef`.
 const commandBars = new WeakMap<Element, CommandInputDropHandle>();
 
 export function registerCommandBarDrop(element: Element, handle: CommandInputDropHandle): () => void {

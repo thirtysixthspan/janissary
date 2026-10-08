@@ -253,7 +253,7 @@ describe('HarnessTab', () => {
     expect(container.querySelector('.harness-body')).toBeInTheDocument();
   });
 
-  // The wiring assertion. `AgentTabMeta.test.tsx` pins what the control does when it is *handed*
+  // The wiring assertion. `HarnessTabMeta.test.tsx` pins what the control does when it is *handed*
   // the reconnecting state, which is why a control no call site could ever reach that state read as
   // covered. This drives it from the tab view, the way the running application does.
   it('offers attach on a tab whose remote target reports reconnecting', () => {
@@ -423,7 +423,7 @@ describe('HarnessTab', () => {
     const order = [...meta.children].map((el) => el.className);
     expect(order).toEqual(['tab-cwd', 'tab-meta-chip', 'tab-meta-chip', 'tab-flags', 'tab-meta-actions']);
     expect([...meta.querySelector('.tab-meta-actions')!.children].map((el) => el.className))
-      .toEqual(['tab-open-files', 'tab-launch-agent', 'tab-open-transcript']);
+      .toEqual(['tab-open-files', 'tab-launch-shell', 'tab-open-transcript']);
     const chips = meta.querySelectorAll('.tab-meta-chip');
     expect(chips[0]).toHaveTextContent('opus');
     expect(chips[0]).toHaveAttribute('title', 'Model: opus');
@@ -468,14 +468,14 @@ describe('HarnessTab', () => {
     });
   });
 
-  it('dispatches launchAgentFor with the tab label when the launch-agent button is clicked', () => {
+  it('dispatches launchShellFor with the tab label when the launch-agent button is clicked', () => {
     const { getByTitle } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" cwd="~/project" />,
     );
     vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
-    getByTitle('New agent here').click();
+    getByTitle('New shell here').click();
     expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
-      method: 'launchAgentFor',
+      method: 'launchShellFor',
       params: { label: 'claude' },
     });
   });
@@ -518,7 +518,7 @@ describe('HarnessTab', () => {
     const { queryByTitle } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
     );
-    expect(queryByTitle('New agent here')).not.toBeInTheDocument();
+    expect(queryByTitle('New shell here')).not.toBeInTheDocument();
   });
 
   // A harness like claude turns on mouse reporting the moment it starts. The Shift+drag selection

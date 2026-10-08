@@ -2,7 +2,7 @@ import type { CommandInputDropHandle } from '../shared/drop-handles';
 import { commandBarDropHandle } from '../shared/drop-registry';
 
 // Which command bar a navigator drag is over, and the handle that bar receives a drop through: the
-// bar's own registered handle when it published one, and the agent tab's `dropRef` handle otherwise.
+// bar's own registered handle when it published one, and the tab's `dropRef` handle otherwise.
 // Moving from one bar to another moves the highlight with it.
 export function createCommandBarDropTarget(fallback: () => CommandInputDropHandle | null | undefined) {
   let element: Element | null = null;

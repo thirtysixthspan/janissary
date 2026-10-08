@@ -15,4 +15,4 @@ Start with `npm start` to run the app and `npm test` to run the test suite. From
 - [Security checks](/developer-documentation/security-checks) — lint rules, secrets scanning, dependency auditing, and the threat model
 - [Linting](/developer-documentation/linting) — ESLint over the full tree or just your changes
 - [Commit conventions](/developer-documentation/commit-conventions) — the Conventional Commits format this repo requires
-- [Workspace sandbox](/developer-documentation/workspace-sandbox) — how workspaced agent tabs are confined on macOS
+- [Workspace sandbox](/developer-documentation/workspace-sandbox) — how workspaced shell and harness tabs are confined on macOS

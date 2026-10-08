@@ -56,7 +56,7 @@ function actOnConversations(managers: Managers, action: TabPluginTopicAction): v
     }
     case 'cancel': { managers.conversations.cancel(action.id); return; }
     case 'openFiles': { managers.conversations.openFiles(action.id); return; }
-    case 'launchAgent': { managers.conversations.launchAgent(action.id); return; }
+    case 'launchShell': { managers.conversations.launchShell(action.id); return; }
     case 'selectModel': {
       managers.conversations.selectModel(action.id, {
         harness: action.harness, model: action.model,

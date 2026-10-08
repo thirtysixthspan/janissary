@@ -5,8 +5,6 @@ import { TabManager } from '../tab/manager.js';
 import { makeTab } from '../tab/index.js';
 import { messageBus } from '../bus.js';
 import { acpResponseFor } from './response.js';
-import { resolveInTab } from '../command/resolve-in-tab.js';
-import { CaptureManager } from '../capture/manager.js';
 import { acpCapabilities } from '../plugins/acp-capabilities.js';
 import { guardPluginCall } from '../plugins/guard.js';
 import { Questions, QUESTION_CANCELLED } from '../questions.js';
@@ -42,19 +40,6 @@ function setup() {
 afterEach(() => { vi.clearAllMocks(); messageBus.clear(); });
 
 describe('core ACP for plugin tabs', () => {
-  it('excludes agent ACP commands and prose while retaining executable requests', () => {
-    const { managers } = setup();
-    expect(resolveInTab('acp hello', 'agent', managers).kind).toBe('unknown');
-    expect(resolveInTab('acp reset', 'agent', managers).kind).toBe('unknown');
-    expect(resolveInTab('acp hello', 'consumer', managers).kind).toBe('app');
-    const reply = vi.fn();
-    const capture = new CaptureManager(managers);
-    capture.run('agent', 'Please explain this project', reply);
-    expect(reply).toHaveBeenCalledWith(expect.stringContaining('Unknown command:'));
-    capture.run('agent', 'shell echo hi', reply);
-    expect(reply).toHaveBeenLastCalledWith('ran');
-    expect(mock.connect).not.toHaveBeenCalled();
-  });
 
   it('starts without a terminal, reuses the session, and projects only ACP entries', async () => {
     const { managers, handlers } = setup();

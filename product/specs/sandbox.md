@@ -1,6 +1,6 @@
 ## Sandbox
 
-A workspaced tab (`agent -w` / `harness -w`) confines its processes to the workspace directory
+A workspaced tab (`zsh -w` / `harness -w`) confines its processes to the workspace directory
 using a kernel-enforced [Seatbelt](https://en.wikipedia.org/wiki/Sandbox_(computer_security))
 sandbox (`sandbox-exec`), on macOS only. `src/sandbox-profile.ts` holds the static profile text and
 its table-driven carve-out/carve-in/secret-deny lists; `src/sandbox.ts` resolves the dynamic paths
@@ -167,7 +167,7 @@ credential *itself* crosses intact; one carrying a
 the scrub like any other variable — so a Vertex setup looks configured from the environment's side —
 but the file it names is unreadable inside the sandbox whenever it sits under `$HOME` outside a
 carve-in, and its default location under `~/.config/gcloud` is an explicit secret deny. Widening that
-deny to fix it would hand a workspaced agent a Google credential file, which is what the list exists
+deny to fix it would hand a workspaced tab a Google credential file, which is what the list exists
 to prevent, so a Vertex-configured harness has no working route into a workspace. If a scoped GitHub token is configured for the project
 (`.janissary/github-token`, loaded by `src/project-tokens.ts`), `GH_TOKEN` is re-added after the scrub
 with that value — the one deliberate exception to "a scrubbed var never comes back": it's not the
@@ -212,7 +212,7 @@ who opened janissary: `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME
 commit made inside a workspace is attributed to. The identity is read once at startup, by asking git
 what it resolves for the project directory — the same answer a commit made there outside a workspace
 would get. Both the author and the committer pair are set: git distinguishes the two, a commit an
-agent makes has no distinction to draw, and setting only the author would leave the committer
+zsh makes has no distinction to draw, and setting only the author would leave the committer
 resolving from whatever config the machine happens to have. A half the identity does not have plants
 no variable at all, since git reads an empty `GIT_AUTHOR_NAME` as a name rather than as an absence.
 Like the credentials, this is added on the confined and pass-through paths alike, and for a stronger
@@ -234,7 +234,7 @@ on every spawn, not only a workspaced one — the picker inserts the same comman
 it is populating, so a tab that could not expand it would be worse off than one handed a fixed path,
 and the value is a path to janissary's own code rather than anything that needs protecting. The e2e
 browser child is the exception, taking an environment allowlist rather than the scrub; it runs no
-agent and no task. A tab launched with `-b`/`--browser` additionally gets
+zsh and no task. A tab launched with `-b`/`--browser` additionally gets
 `JANISSARY_PLAYWRIGHT`, the path to Janissary's own Playwright client, and
 `JANISSARY_BROWSER_WS_ENDPOINT`, the endpoint of the guard in front of that tab's browser (see
 [End-to-end browser](#end-to-end-browser)). Both name paths and ports on the machine the harness

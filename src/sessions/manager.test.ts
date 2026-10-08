@@ -645,6 +645,14 @@ describe('SessionsManager change signal', () => {
 });
 
 describe('SessionsManager restoreAll', () => {
+  it('leaves legacy agent-only records untouched without connecting or restoring a tab', () => {
+    const h = harness();
+    const legacy = record({ launchKind: 'agent', processes: [{ id: 'rsh1', label: 'old', kind: 'agent' }] });
+    saveRemoteSessions([legacy]);
+    h.sessions.restoreAll();
+    expect(startSessionAttach).not.toHaveBeenCalled();
+    expect(loadRemoteSessions()).toEqual([legacy]);
+  });
   // Each session is attached on its own: a refusing peer is marked terminated and an unreachable host
   // stays detached, and neither holds the restore up.
   it('attaches every recorded session independently', () => {

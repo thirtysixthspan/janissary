@@ -41,7 +41,7 @@ first. Janissary is started from the user's terminal and already inherits that `
 there is nothing for login startup to add.
 
 The same launch applies to every program janissary opens in a terminal: an ssh tab, an inline
-terminal card, and a forced PTY takeover. Anything a startup file prints appears in the terminal, as
+terminal card, and a shell tab. Anything a startup file prints appears in the terminal, as
 it does in the user's own.
 
 Only `bash` and `zsh` are started interactively. A shell that is neither is given the command alone,
@@ -116,7 +116,7 @@ harness opencode as quality -w
 
 ### Name clashes
 
-A label is in use when an open tab has it, when the sessions tab has a harness or agent row with it
+A label is in use when an open tab has it, when the sessions tab has a harness or shell row with it
 that is provisioning, active, reconnecting, or detached (on any host), when — for a remote launch —
 something with it is running on the target host, or when — for a local `-w` launch — a live janissary
 owner (an open tab or a running janus instance) still holds the workspace folder of that name. A
@@ -157,7 +157,7 @@ new one, so they keep disambiguating with `-2`, `-3`, ….
 ### Workspace default and opt-out
 
 Harnesses clone the root repository (detected from the current directory) into
-a disposable workspace named after the harness tab's unique label, identically to `agent --workspace`:
+a disposable workspace named after the harness tab's unique label, identically to `zsh --workspace`:
 
 ```
 harness claude -w    → tab "claude"   with workspace at .janissary/workspace/claude/
@@ -648,7 +648,7 @@ full behavior.
 (which would submit), the terminal sends `ESC` + `CR` — the same sequence Alt/Option+Enter
 produces in native terminals — which harnesses like claude read as a line continuation. This lets
 multi-line prompts be composed in the harness without any harness-side terminal setup. This
-applies to every xterm.js terminal in the app (harness tabs, interactive PTY takeover, terminal
+applies to every xterm.js terminal in the app (harness tabs, terminal
 cards).
 
 ### Selecting and copying terminal text
@@ -722,10 +722,10 @@ browser's native paste and are delivered to the harness as typed input, brackete
 has asked for bracketed paste.
 
 Selection and copy behave this way in every xterm.js terminal in the app — harness tabs (including
-ssh tabs), interactive PTY takeover, and terminal cards — so the gesture means one thing everywhere;
+ssh tabs), and terminal cards — so the gesture means one thing everywhere;
 a plain shell that never took the mouse behaves consistently with the surfaces that did. The
 clearing triggers above are wired to the signal each surface carries: a harness or ssh tab, and a
-shell's interactive PTY takeover, clear on a tab switch away from the surface and on the PTY
+shell's clear on a tab switch away from the surface and on the PTY
 exiting; a terminal card inside a transcript clears on the PTY's exiting and on a resize, but has no
 tab identity of its own, so scrolling the transcript past it never clears it.
 
@@ -1070,4 +1070,4 @@ working directory, then model, then effort, then flags). Each chip is shown only
 was set — a harness launched with neither flag shows no chips and its row is unchanged. The chip
 displays the value verbatim; long values are visually truncated, and hovering a chip shows a
 tooltip carrying its label and full value (`Model: <value>` or `Effort: <value>`). These chips
-appear on harness tabs only — agent and shell tabs' metadata rows are unaffected.
+appear on harness tabs only — shell tabs' metadata rows are unaffected.

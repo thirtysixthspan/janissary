@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { AcpInfo, AcpSession } from '../acp/types.js';
 import type { LogEntry, MonitorTarget } from '../tab/types.js';
 import type { Subscription } from '../bus.js';
@@ -131,7 +132,7 @@ export class LiveMonitors {
     reg.delivered += 1;
     const suggestion = buildSuggestion(parsed, reg.persona.name, about, `s-${++this.counter}`);
     if (reg.inline) {
-      this.managers.tab.append(reg.owner, { input: '', output: formatInlineSuggestion(reg.persona.name, suggestion) });
+      this.managers.tab.append(reg.owner, { input: '', background: randomUUID(), output: formatInlineSuggestion(reg.persona.name, suggestion) });
       return;
     }
     pushSuggestion(this.managers, reg.name, reg.persona.name, targetColor(this.managers.tab.tabs, reg.targets), suggestion);

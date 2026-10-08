@@ -248,7 +248,7 @@ describe('SearchTab', () => {
   it('puts the command bar last, at the bottom edge like every other command bar', () => {
     const { container } = renderTab();
     const tab = container.querySelector('.search-tab')!;
-    // The agent tab renders its metadata row, then its body, then the bar last, so the prompt is
+    // The tab renders its metadata row, then its body, then the bar last, so the prompt is
     // always at the bottom edge under whatever the tab is showing. The bar is the tab's last child
     // and the result window the one before it, for the same reason.
     expect(tab.lastElementChild?.querySelector('.command')).not.toBeNull();

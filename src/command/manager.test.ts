@@ -2,13 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { CommandManager } from './manager.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 function makeManagers(): { managers: Managers; recorder: string[] } {
   const recorder: string[] = [];
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
-  seedRootAgentTab(managers.tab);
+  seedRootTab(managers.tab);
   managers.shell = {
     run: vi.fn((label: string, cmd: string) => {
       recorder.push(`shell:${cmd}`);
@@ -121,57 +121,6 @@ describe('CommandManager dispatchLineWithOutput', () => {
     });
     late.resolve();
     await vi.waitFor(() => { expect(managers.tab.cur().log.at(-1)?.output).toBe('finished'); });
-  });
-});
-
-describe('CommandManager shell --pty flag', () => {
-  it('routes a `--pty`-flagged command to the PTY manager instead of the piped shell', () => {
-    const { managers } = makeManagers();
-    managers.command.dispatch('shell --pty echo hi');
-    expect(managers.pty.openInlinePty).toHaveBeenCalledWith('janus', 'echo hi', 'echo');
-    expect(managers.shell.run).not.toHaveBeenCalled();
-  });
-
-  it('opens the fallback login shell in a PTY for a bare `shell --pty`', () => {
-    const previousShell = process.env.SHELL;
-    process.env.SHELL = '/bin/zsh';
-    try {
-      const { managers } = makeManagers();
-      managers.command.dispatch('shell --pty');
-      expect(managers.pty.openInlinePty).toHaveBeenCalledWith('janus', '/bin/zsh', 'zsh');
-      expect(managers.shell.run).not.toHaveBeenCalled();
-    } finally {
-      if (previousShell === undefined) delete process.env.SHELL; else process.env.SHELL = previousShell;
-    }
-  });
-});
-
-describe('CommandManager interactive-program name list', () => {
-  it('sends a listed program straight to a terminal, never to the shell that would detect it', () => {
-    const { managers } = makeManagers();
-
-    managers.command.dispatch('shell htop');
-
-    expect(managers.pty.openInlinePty).toHaveBeenCalledWith('janus', 'htop', 'htop');
-    expect(managers.shell.run).not.toHaveBeenCalled();
-  });
-
-  it('still looks past a wrapper to find the listed program', () => {
-    const { managers } = makeManagers();
-
-    managers.command.dispatch('shell sudo htop');
-
-    expect(managers.pty.openInlinePty).toHaveBeenCalledWith('janus', 'sudo htop', 'sudo');
-    expect(managers.shell.run).not.toHaveBeenCalled();
-  });
-
-  it('sends an unlisted command to the shell, where detection can watch it', () => {
-    const { managers } = makeManagers();
-
-    managers.command.dispatch('shell mytui');
-
-    expect(managers.shell.run).toHaveBeenCalledWith('janus', 'mytui', { detect: undefined });
-    expect(managers.pty.openInlinePty).not.toHaveBeenCalled();
   });
 });
 

@@ -1,18 +1,14 @@
-# Workspaced Agent Specification
+# Workspaced tabs
 
-Janissary supports creating agents with disposable, isolated workspaces.
+Janissary supports creating shell and harness tabs with disposable, isolated workspaces.
 
 ## Definition
 
-A workspaced agent is an agent tab with its own cloned workspace. This workspace is an independent clone of the `origin` remote of the root repository detected from the directory where the command is executed.
+A workspaced tab is a shell or harness tab with its own cloned workspace. This workspace is an independent clone of the `origin` remote of the root repository detected from the directory where the command is executed.
 
-### Workspace agent tab
+### Workspace creation
 
-`agent <name>` creates a tab with a cloned workspace by default — a `git clone` of the root repository's `origin` remote, detected from the current directory. The workspace is created at `.janissary/workspace/<name>/` and the agent's shell spawns there. `-w`/`--workspace` explicitly confirms the default. `--no-workspace` opts out and starts the agent in the project checkout instead, or in the source tab's subdirectory of it when the source is local, unworkspaced, and inside the checkout (see [[agents]]). If both forms are present, `--no-workspace` wins.
-
-If no git repository is found from the current directory, or the repository has no `origin` remote, an error is shown and no tab is created.
-
-The tab appears immediately, marked busy, with its workspace directory already known — it does not wait for the clone to finish. Input dispatches immediately while the clone is running, as it does in every agent tab. Commands retain their own readiness checks; the busy mark does not defer input. The creator tab's "Agent ready" confirmation (and the sandbox notice, if any) is posted once the clone actually finishes, not before. If the clone fails after the tab was created, the creator tab reports the failure and the half-created tab closes on its own shortly after.
+Shell and harness launches create a fresh clone of the project origin by default under `.janissary/workspace/<name>/`. A shell without a usable repository opens unsandboxed and explains the fallback. Shell input queues until its first prompt; harness schedules wait for readiness. Failed provisioning is reported and closes the tab.
 
 Provisioning records the clone as trusted in Claude's user configuration. A missing configuration is
 created, and a valid configuration keeps all unrelated fields and per-project settings. If the file
@@ -30,23 +26,22 @@ rewrite the configuration is ignored, so it never stops the clone and its scratc
 deleted or stops later workspaces from being removed. Leftover cleanup reports that failure instead,
 as described below.
 
-The "New agent here" button (➕) in a tab's metadata row creates a new agent tab rooted at that tab's directory. When the source tab is workspaced, the new agent joins that exact workspace instead of cloning another one. Its workspace directory is the source tab's existing clone. Its `cwd` is the source tab's current directory when that directory is inside the clone, so a subdirectory carries over, and the root of the clone otherwise, because a confined agent may not start outside the one directory its sandbox profile allows (`workspaceAgentCwd` in `src/profile/inherited-cwd.ts`). It is immediately ready, and both tabs hold a reference to the clone. On a remote source it also joins the source's existing ssh channel and runs in the same remote workspace without another authentication prompt. The `agent` and `harness` command forms remain fresh-clone operations; the metadata button is the only route that joins an existing workspace.
+The ➕ button opens a shell in the source directory and existing workspace, retaining that clone while either tab uses it. Remote sources share the existing SSH channel. See [[shell-tab]].
 
 ### Workspace harness tab
 
 `harness <name>` creates a harness tab with a cloned workspace by default using the same
 mechanism. The workspace is named after the harness tab's unique label (e.g. `claude`, `claude-2`)
 and the harness PTY starts there. `-w`/`--workspace` explicitly confirms the default;
-`--no-workspace` opts out, and wins if both forms are present. Otherwise identical to an agent
-workspace: `git clone` of `origin`, stored at `.janissary/workspace/<label>/`, removed when the tab is closed.
+`--no-workspace` opts out, and wins if both forms are present. The workspace is a `git clone` of `origin`, stored at `.janissary/workspace/<label>/`, removed when the tab is closed.
 
 ### Workspace shell tab
 
-`zsh` creates a shell tab with a cloned workspace by default using the same mechanism, with `agent`'s flags: `-w`/`--workspace` confirms the default, `--no-workspace` opts out and wins if both are present, and `--offline` selects the offline sandbox profile. `zsh <name>` names the tab and its clone under `agent <name>`'s name checks and leftover cleanup. The tab opens at once with the provisioning flag, and zsh starts confined to the clone, at its root, when the clone lands; the notifications feed then shows `Shell "<name>" ready. ($workspace/<name>)`. A failed clone posts `Failed to create workspace for "<name>": <reason>` and closes the tab, as for an agent. Unlike `agent`, a project with no git repository or no readable `origin` does not refuse `zsh`: the shell opens unsandboxed and answers `Shell "<name>" has no workspace: <reason>.`. The shell tab's ➕ and `Cmd+T` open a sibling shell in the same clone rather than a fresh one, and do nothing while the clone is still provisioning. The launch shell `janus` and a profile's shell entries stay unsandboxed. See [[shell-tab]].
+`zsh` creates a shell tab with a cloned workspace by default using the same mechanism, with workspace flags: `-w`/`--workspace` confirms the default, `--no-workspace` opts out and wins if both are present, and `--offline` selects the offline sandbox profile. `zsh <name>` names the tab and its clone under `zsh <name>`'s name checks and leftover cleanup. The tab opens at once with the provisioning flag, and zsh starts confined to the clone, at its root, when the clone lands; the notifications feed then shows `Shell "<name>" ready. ($workspace/<name>)`. A failed clone posts `Failed to create workspace for "<name>": <reason>` and closes the tab, through the ordinary provisioning failure path. A project with no git repository or no readable `origin` does not refuse `zsh`: the shell opens unsandboxed and answers `Shell "<name>" has no workspace: <reason>.`. The shell tab's ➕ and `Cmd+T` open a sibling shell in the same clone rather than a fresh one, and do nothing while the clone is still provisioning. The launch shell `janus` and a profile's shell entries stay unsandboxed. See [[shell-tab]].
 
 ### Remote workspaces
 
-`agent <name> on <address>` and `harness <name> on <address>` create a workspaced tab the same way,
+`zsh <name> on <address>` and `harness <name> on <address>` create a workspaced tab the same way,
 except the workspace lives under the **remote** host's project root rather than this machine's, and
 is governed entirely by that host: its sandbox policy (so isolation is active where the remote is
 macOS and inactive otherwise, and the notice shown in the tab is the remote's) and its own
@@ -129,7 +124,7 @@ treated as absent when empty; janissary only ever reads it, never writes to it. 
 changes from before — a workspaced harness behaves exactly as it always has, which on macOS is
 generally fine and elsewhere is not.
 
-The token is injected for every workspaced spawn, not only a harness tab's: an agent tab's shell can
+The token is injected for every workspaced spawn, not only a harness tab's: a shell tab's shell can
 invoke `claude` just as directly. Injection does not depend on isolation being active, for the same
 reason the GitHub token's does not. Unlike `GH_TOKEN`, an ambient `CLAUDE_CODE_OAUTH_TOKEN` in the
 environment janissary itself was started with is not stripped — provider credentials are deliberately

@@ -13,7 +13,7 @@ export function answerRequestFailure(res: ServerResponse, error: unknown): void 
 }
 
 // The one error boundary for the HTTP server: a rejected handler is answered instead of becoming an
-// unhandled rejection, which would terminate the process and every agent tab with it.
+// unhandled rejection, which would terminate the process and every tab with it.
 export function guardRequest(handler: RequestHandler): (request: IncomingMessage, res: ServerResponse) => void {
   return (request, res) => {
     void handler(request, res).catch((error: unknown) => { answerRequestFailure(res, error); });

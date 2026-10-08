@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createController } from '../controller.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 // These tests spawn a real persistent shell (ShellManager.getShell → child_process.spawn) and
 // then tear it down via Controller.shutdown → ShellManager.closeAll, which calls the real
@@ -13,7 +13,7 @@ vi.mock('./openers/os-open.js', () => ({ didOsOpen: () => true }));
 const makeController = () => {
   let states = 0;
   const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
-  seedRootAgentTab(c.managers.tab);
+  seedRootTab(c.managers.tab);
   return { c, get states() { return states; } };
 };
 
