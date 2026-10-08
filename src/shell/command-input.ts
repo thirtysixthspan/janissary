@@ -1,13 +1,15 @@
 // What the persistent-shell protocol writes to a shell's stdin, in its own module because it is read
-// back as well as written. A detached remote peer retains what was sent to a piped shell and replays
-// it when a session is attached, and `restored-transcript.ts` recovers each command from exactly this
-// wrapper — so writer and reader share one definition rather than two that can drift.
+// back as well as written. `executeShellCmd` matches the delimiter against what comes back to find the
+// answer, so the wrapper and the matcher that reads it share one definition rather than two that can
+// drift. A detached remote peer retains these exact bytes beside that output and replays them when a
+// session is attached.
 
 export const COMMAND_INPUT_PREFIX = '{ :; ';
 export const COMMAND_INPUT_SUFFIX = '\n} 2>&1; echo "';
 
-// What a trailing pwd query writes. The reader recognizes it and leaves it out of a restored
-// transcript entirely: it is bookkeeping the user never typed.
+// What a trailing pwd query writes. `queryShellPwd` reads the answer off its own `__PWD_` marker
+// rather than the command wrapper's, so a stream carrying the previous command's tail can still be
+// told apart from the path in it.
 export const PWD_QUERY_PREFIX = 'pwd\necho "';
 
 /**

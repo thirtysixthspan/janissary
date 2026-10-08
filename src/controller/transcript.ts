@@ -4,7 +4,7 @@ import { writeCaptureFile } from '../harness/capture/file.js';
 import { transcriptText } from '../tab/transcript/text.js';
 
 // Open the named harness tab's session transcript file as it stands — the clipboard metadata-row
-// button on a harness tab (see AgentTabMeta.tsx), mirroring `harness transcript` (see
+// button on a harness tab (see HarnessTabMeta.tsx), mirroring `harness transcript` (see
 // harness/subcommands.ts) but silently no-opping instead of returning an error string, since a
 // harness tab has no transcript of its own to print one into.
 export function openHarnessTranscriptFor(managers: Managers, label: string): void {
