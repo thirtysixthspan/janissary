@@ -100,9 +100,9 @@ Proposal: Replace `an tab` with the tab kind each sentence actually means, which
 
 * Reduce the cognitive complexity of `contiguousMatch()` in `web/src/shared/fuzzy-match.ts` (line 109), reported at 16 against the allowed 15 in a file scoring 49.60 FTA across 95 lines. The function walks every uninterrupted occurrence of the query in each candidate path, scores it with the same `charScoreAt` bonuses `fuzzyMatch` uses, keeps the best occurrence per path and then ranks the survivors, and its complexity comes from the three-deep loop that does it — a `for` over the candidates, a `while` walking that path's occurrences, an inner `for` adding each character's score — with the `if (!best || score > best.score)` keep-best comparison and the trailing `if (best)` adding the rest, so a new emphasis rule deepens the stack instead of extending a helper. The per-occurrence scoring loop and the best-occurrence walk are each cohesive enough to lift into local helpers beside the existing `charScoreAt` and `matchPath` ones, leaving the candidate `for`, the rank-and-slice tail and the file's exports untouched. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `contiguousMatch()` in `web/src/shared/fuzzy-match.ts`. Severity: **low**.
 
-## development
-
 * Move the three flat `src/state-*.ts` files into `src/state/`: `state-dirs.ts`, `state-event.ts` and `state-listings.ts` sit in the flat `src/` root with two colocated tests and no bare `src/state.ts` entry, so the grouping lives in a filename prefix instead of a directory. They are one concern, the server's state layer: `state-dirs.ts` is the `.janissary/` init-and-clear boot registry every state-owning subsystem registers in, `state-listings.ts` is the cache behind the task and profile listings that ride every state broadcast, and `state-event.ts` builds the full state snapshot those listings feed. `src/state/` does not exist yet and no config file names any of the three paths literally, so the move is three source files and two tests relocated plus four import path rewrites, in `src/main.ts`, `src/index.ts`, `src/controller.ts` and `src/sessions/store.test.ts`. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `state` prefix. Severity: **low**.
+
+## development
 
 ## deferred
 
