@@ -507,6 +507,11 @@ Three reset forms are read, in the shapes codex prints them:
   year is read and ignored;
 - a duration — `try again in 4 hours 23 minutes`, whose tokens are added together.
 
+Codex may put upgrade and account-usage links between the limit wording and the reset clause, for
+example `You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit
+https://chatgpt.com/settings/usage to purchase more credits or try again at 12:33 PM.` The links do
+not affect recognition; the time after `try again` is the reset used for scheduling.
+
 opencode always states its reset as a duration — `Usage limit reached. It will reset in 1 hour 59
 minutes.`, with the window named ahead of it (`5 hour`, `weekly`, `monthly`) when the response names
 one — so it uses the duration arm alone. Its banner is cut to 80 characters on screen, and the
