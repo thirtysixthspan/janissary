@@ -16,6 +16,7 @@ import { useTerminalCommandHistory } from './useTerminalCommandHistory';
 import { appendShellHistory } from './shell-history';
 import { NEW_SHELL_CHORD, NO_CHORDS, SHELL_DOT_COLOR } from './shell-tab-constants';
 import { openSiblingShell } from './open-sibling';
+import { reportShellIntentFailure } from './report-shell-intent-failure';
 import './shell.css';
 
 type Properties = {
@@ -123,7 +124,9 @@ export function ShellTab({ payload, capabilities }: Properties) {
       }).then((result) => {
         setMatches(result.matches);
         if (result.matches.length === 1) setDraft(result.newInput);
-      }).catch(() => { capabilities.reportFailure('shell completion intent failed'); });
+      }).catch((error: unknown) => {
+        reportShellIntentFailure(capabilities, 'shell completion intent failed', error);
+      });
       return;
     }
     bar.onKeyDown(event);

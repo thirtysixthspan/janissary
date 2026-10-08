@@ -292,7 +292,7 @@ export function createPluginClientCapabilities(
         method: 'pluginIntent',
         params: { tab: label, intent: name, payload },
       });
-      if (!result.ok) throw new Error(`Plugin intent "${name}" failed`);
+      if (!result.ok) throw new Error(result.error ?? `Plugin intent "${name}" failed`);
       return result.value;
     },
     splitAction: splitAction ?? null,

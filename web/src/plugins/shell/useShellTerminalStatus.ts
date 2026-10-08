@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { TabPluginClientCapabilities } from '../api';
+import { reportShellIntentFailure } from './report-shell-intent-failure';
 
 export function useShellTerminalStatus(capabilities: TabPluginClientCapabilities) {
   useEffect(() => {
@@ -14,11 +15,10 @@ export function useShellTerminalStatus(capabilities: TabPluginClientCapabilities
     // "nothing" on the far side.
     void capabilities.intent<{ running: boolean }>('terminal-status', null).then((status) => {
       if (!cancelled && !status.running) capabilities.close();
-    }).catch(() => {
-      // A refusal here means this plugin's own request is malformed or its plugin is disabled, not
-      // anything the user did. Reporting it crosses the failure boundary instead of leaving an
-      // unhandled rejection in the console on every mount.
-      if (!cancelled) capabilities.reportFailure('shell terminal-status intent failed');
+    }).catch((error: unknown) => {
+      if (!cancelled) {
+        reportShellIntentFailure(capabilities, 'shell terminal-status intent failed', error);
+      }
     });
     return () => { cancelled = true; };
   }, [capabilities]);
