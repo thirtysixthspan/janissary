@@ -76,8 +76,8 @@ The tab opens **immediately**, before anything is validated, showing the live ss
 body. ssh's own prompts — password, key passphrase, host-key verification, keyboard-interactive/2FA
 — render there and are answered by typing into the tab. This is the only prompt mechanism: there is
 no modal, no separate dialog, and nothing is asked in the creator tab. A remote harness tab shows the
-session in place of its harness terminal; a remote shell tab shows it full-screen over its
-transcript, which returns once the session is established.
+session in place of its harness terminal; a remote shell tab shows it in place of its zsh terminal,
+which takes over once the session is established.
 
 Once the far side announces itself the tab stops showing raw terminal output and starts running the
 remote process. A remote tab whose ssh session has not yet been established is still `provisioning`,
@@ -139,7 +139,7 @@ Remote filesystem sessions and the per-spawn agent name extend the contract agai
 joined process with the provisioning tab's identity, so it is refused during the handshake before
 either behavior can fail silently.
 
-Hosting a remote shell tab's ACP agent moves it to 8, and this bump adds frame types rather than
+Hosting a remote agent tab's ACP agent moves it to 8, and this bump adds frame types rather than
 fields: prompts and reply chunks now cross the channel in both directions. An installation predating
 them recognizes none of them and would refuse each one while the local tab sat waiting — a tab that
 accepts prompts and answers nothing, which is exactly the failure this check exists to prevent. Both
@@ -181,7 +181,7 @@ the handshake, as with every other version bump.
 Asking a peer what is still running in its workspace moves it to 15. A query frame carries no
 payload — there is one workspace per peer, so the question has a single answer — and the reply names
 one entry per live process with its spawn id, the program, how it was started, and the harness or
-zsh name it belongs to. It is what turns an accepted attach into tabs: a janissary restarted
+agent name it belongs to. It is what turns an accepted attach into tabs: a janissary restarted
 since the launch remembers what it started, and only the far side knows what survived. A version-14
 peer recognizes neither frame and is refused at the handshake like any other mismatch. An
 empty reply is a real answer rather than a failure: it says the peer is holding a workspace with
@@ -189,7 +189,7 @@ nothing in it, which is the one case janissary ends rather than attaches.
 
 Restoring retained display and transcript history moves the protocol to 16. Reopening detached tabs requests their earlier transcript history; automatic connection recovery receives only transcript blocks missed during disconnection. Both redraw retained terminal output before new output arrives. Sessions started under an older remote version have no retained display history to restore, even if the installation is upgraded while they are detached.
 
-Retaining what was sent to a shell tab's shell moves the protocol to 17. An agent shell runs without a terminal attached, so nothing sent to it is echoed back and its retained output alone says nothing about what produced it. A peer now also retains the commands it was sent for such a shell and replays the two together, in the order it saw them, when an attach is rebuilding tabs — so a restored transcript reads as commands beside their output. Retained commands are replayed only to rebuilt tabs: an automatic reconnect delivers into tabs that are already open, possibly mid-command, where replaying the commands would be mistaken for their output ending. Nothing is retained separately for a harness, whose terminal echoes what is typed into the output it already keeps. A version-16 peer retains no commands and would answer an attach with output alone, so it is refused at the handshake like any other mismatch.
+Retaining what was sent to an agent tab's shell moves the protocol to 17. An agent shell runs without a terminal attached, so nothing sent to it is echoed back and its retained output alone says nothing about what produced it. A peer now also retains the commands it was sent for such a shell and replays the two together, in the order it saw them, when an attach is rebuilding tabs — so a restored transcript reads as commands beside their output. Retained commands are replayed only to rebuilt tabs: an automatic reconnect delivers into tabs that are already open, possibly mid-command, where replaying the commands would be mistaken for their output ending. Nothing is retained separately for a harness, whose terminal echoes what is typed into the output it already keeps. A version-16 peer retains no commands and would answer an attach with output alone, so it is refused at the handshake like any other mismatch.
 
 Checking the launch's name before cloning moves the protocol to 19. A provisioning request whose name
 is already running on the host, or whose leftover workspace could not be removed, is answered with a
@@ -394,7 +394,7 @@ Reusing the launching tab's name for a new launch does not let the earlier sessi
 
 On the remote side a dropped connection leaves running work intact for up to seven days. Attachment cancels that expiry. Expiry or an explicit termination of the peer stops its processes and removes the workspace. Closing local tabs releases their remote resources, and when that closes the channel's last reference, janissary tells the peer to shut down immediately rather than leaving it to the seven-day wait. This still completes when the SSH transport is already closing. The wait exists only for a connection that is lost rather than deliberately terminated.
 
-Detaching and attaching an agent preserves its persistent shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored agent, and input or cleanup arriving after a terminal has ended is ignored.
+Detaching and attaching a remote shell preserves its shell and workspace across repeated reconnects. An earlier connection's delayed exit does not close the restored shell, and input or cleanup arriving after a terminal has ended is ignored.
 
 Closing the final remote harness tab stops its harness and removes the remote workspace before the session is left behind. Terminal cleanup keeps the connection available for remote teardown, including when the application quits, and gives shutdown frames a short bounded drain before closing SSH. That drain is what delivers those frames, so nothing else takes the connection down while it runs: closing the tabs of a session that is already ending leaves the connection to the teardown that is ending it. If a joined tab still uses the workspace, closing the launching harness leaves that tab connected until its own final release.
 
@@ -405,10 +405,10 @@ Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and 
 A session can also be parked deliberately. Detaching one closes every tab and navigator holding its
 channel and drops the transport without telling the peer anything, so the far side runs the same
 path a lost connection produces and starts its seven-day wait with its processes still running.
-A shell tab's persistent shell is one of those processes: it outlives the transport it was reached
-through rather than ending with it, so a parked session still holds it when the attachment asks
-what survived. Ending such a shell stops whatever it was running too, so nothing is left behind on
-the host when the session is shut down.
+A remote shell's PTY is one of those processes: it is what the tab was holding the channel for, so it
+outlives the transport rather than ending with it, and a parked session still holds it when the
+attachment asks what survived. Ending such a shell stops whatever it was running too, so nothing is
+left behind on the host when the session is shut down.
 Detaching is refused while a session is still provisioning: there is nothing to come back to yet.
 Janissary records what it launched — the session id, the address, the workspace, and each live
 process with its own label — in the project's own state directory, so a peer stays findable after the

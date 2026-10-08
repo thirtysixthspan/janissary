@@ -19,7 +19,7 @@ If a tree is already open on the same root, `files` focuses it rather than openi
 
 ## Opening from a tab's metadata row
 
-Every shell tab and harness tab has a 📁 button on the right of its metadata row. Its tooltip is "Open file navigator in this workspace" on a workspaced tab and "Open file navigator here" otherwise. Clicking it opens a file navigator rooted at that tab's own working directory, which is the same root `files in <label>` would use, but the two routes differ in where focus ends up: the button leaves focus where it is. Shell tabs don't have this button.
+Every shell tab and harness tab has a 📁 button on the right of its metadata row. Its tooltip is "Open file navigator in this workspace" on a workspaced tab and "Open file navigator here" otherwise. Clicking it opens a file navigator rooted at that tab's own working directory, which is the same root `files in <label>` would use, but the two routes differ in where focus ends up: the button leaves focus where it is.
 
 Unlike the bare `files` command, which opens into the center tab strip, a navigator opened from the button — when none is open yet — opens **docked in the left sidebar** by default. If a navigator is already open, clicking the button doesn't open a second one: it **retargets the existing navigator** (the most recently focused one, if you have more than one) to the clicked tab's working directory, leaving it exactly where it sits — docked or not. Either way, focus stays on the tab whose button you clicked, so you keep typing to the agent that owns the workspace. `files in <label>` does the same retargeting but does hand you the tree, which is the one to reach for when you want to go straight in.
 
@@ -31,7 +31,7 @@ A remote tree has the same browsing and editing tools as a local one: directory 
 
 Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar, an editor, or a harness inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert relative paths.
 
-A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined agent keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it. Remote trees are not restored by a profile or `janus --relaunch`.
+A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined tab keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it. Remote trees are not restored by a profile or `janus --relaunch`.
 
 ## Docking to a sidebar
 
