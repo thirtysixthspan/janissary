@@ -1,10 +1,10 @@
 # Markdown Rendering
 
-ACP agent replies are written in Markdown and rendered as formatted Markdown in the tab transcript
+ACP agent replies are written in Markdown and rendered as formatted Markdown in the core response panel
 (headings, lists, tables, fenced code, blockquotes, links). Every other transcript line — shell
 output, command echoes, inter-agent messages — stays plain text; only entries explicitly flagged as
-Markdown are interpreted. The request lives in `src/controller.ts` (`runAcp`), the buffer model in
-`src/types.ts` / `src/tab.ts`, and the rendering in `web/src/transcript/Transcript.tsx`.
+Markdown are interpreted. Tab ACP orchestration lives in `src/acp/manager.ts`, the buffer model in
+`src/tab/types.ts` and `src/tab/formatting.ts`, and the shared rendering in `web/src/shared/transcript/Transcript.tsx`. The core panel projects ACP entries from the same log without copying their text. See [[acp]].
 
 ### Requesting Markdown
 
@@ -16,14 +16,14 @@ than the single unbroken line it would otherwise return.
 ### The `markdown` flag
 
 A transcript entry (`LogEntry`) carries an optional `markdown` boolean. The ACP reply entry sets it
-(`startTurn` in `runAcp`); the streamed text is stored **verbatim** — no terminal-style table
+(`startTurn` in the ACP manager); the streamed text is stored **verbatim** — no terminal-style table
 box-drawing or word-wrapping is applied (those would destroy Markdown structure). The flag is the
 only thing that distinguishes a Markdown entry from ordinary output.
 
 ### Flattening (one block, not lines)
 
 The transcript is normally a flat `BufferLine[]` where each entry's output is split on newlines into
-one `output` line apiece (`flattenBuffer`, `src/tab.ts`). A `markdown` entry is the exception: its
+one `output` line apiece (`flattenBuffer`, `src/tab/formatting.ts`). A `markdown` entry is the exception: its
 output is emitted as a **single** `markdown` buffer line carrying the whole raw Markdown string, so
 multi-line constructs (lists, tables, code fences) reach the client intact. The user's prompt line
 still renders above it as usual.

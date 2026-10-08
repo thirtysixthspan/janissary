@@ -201,6 +201,10 @@ export type TabPluginSelectionAction = {
 };
 
 export type TabPluginServerCapabilities = {
+  // Core ACP connection operations, scoped to this plugin's own answering tab.
+  startAcp(): { model?: string; error?: string };
+  promptAcp(prompt: string): Promise<string>;
+  resetAcp(): boolean;
   note(text: string): void;
   // Report one line to the notifications feed, attributed to the tab the plugin was invoked from.
   // Deliberately narrow: a plugin may say that something happened and may not choose the event type
@@ -302,7 +306,7 @@ export type TabPluginServerCapabilities = {
   // handle. Deliberately one call rather than a resolve-then-decide pair: the application's command
   // table is consulted once, in the one place that owns it, and is never copied into a plugin where a
   // newly added command would be invisible.
-  dispatchLineWithOutput(line: string): Promise<{ dispatched: boolean; output: string }>;
+  dispatchLineWithOutput(line: string): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean }>;
   // The completion the application's command bar shows for a line, for a plugin whose tab has one.
   completeLine(line: string, cursor: number): CompletionResult;
   // Whether a terminal this plugin spawned is still running. A client that reconnects learns nothing

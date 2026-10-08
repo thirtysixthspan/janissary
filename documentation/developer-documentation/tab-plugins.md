@@ -98,7 +98,7 @@ type TabPluginActivation = {
 };
 ```
 
-The host supplies twenty-nine capabilities:
+The host supplies thirty-two capabilities:
 
 - `note(text)` writes to the originating transcript.
 - `notifyUser(text, options?)` reports one line to the notifications feed. Text plus, at most, one file to link — you say that something happened; the host chooses the event type, the attribution, and whether it toasts or is shown directly in an already-visible feed. A link is how you offer something too long to read in place, the way the `sql` plugin links the whole result of a query from a line that only says how many rows came back; it is an absolute path opened with the host's ordinary `edit`, not a `registerFile` reference, because a notification outlives the tab that produced it. The line is never lost even when the feed isn't on screen — it's held in the notification queue either way. A line is attributed to the tab you were invoked from, which a `notify` handler doesn't have, so pass `tab` with one of your own instance keys — `notifyUser(text, { tab: key })` — to have the line carry that tab's name and colour instead. A key you have no open tab for falls back to the invoking tab, so you can't attribute a line to a tab you don't own.
@@ -131,6 +131,9 @@ An activation may provide `reattach(record, capabilities)` to rebuild a tab arou
 - `terminalRunning(ptyId)` answers whether a terminal you spawned is still running. A client that reconnects learns nothing about what happened while it was away — the exit event was broadcast to nobody — and a plugin tab is in-memory only, so the tab is still there holding the payload of a shell that finished minutes ago. This is how a tab learns that and closes rather than waiting for input that can never arrive.
 - `queueLine(line)` adds a line to the back of the answering tab's core command queue. Request it together with `nextQueuedLine` to opt in. A terminal and command bar are optional; queue storage and delivery work without either.
 - `nextQueuedLine()` removes and returns the front of the answering tab's command queue, or `null` when it is empty. The plugin decides when to drain, since only it knows when its process is ready for the next line.
+- `startAcp()` begins or reuses the answering tab's core ACP connection and returns `{ model }` or `{ error }`. No terminal is required.
+- `promptAcp(prompt)` runs a prompt through the core ACP tool loop and resolves with the final answer. Core owns streaming, tool execution, busy state, and the response panel. Provider latency does not count against the plugin handler deadline.
+- `resetAcp()` closes that tab's core ACP connection and returns whether a session existed. In-flight calls settle and obsolete callbacks are ignored.
 - `recordCwd(cwd)` records the answering tab's working directory — the directory `originTab` reports and the host's own actions on that tab start from. A plugin whose process changes directory on its own calls it, so a shell opened from that tab, its file navigator, and its completion all follow.
 - `recordGlobalHistory(line)` adds a line submitted in the answering tab's own command line to the application's global command history, the one ghost text completes from in every tab, attributed to that tab. It does nothing for a tab that is not the plugin's own, or for a blank line.
 - `rejectRequest(reason)` answers one bad request without disabling the plugin.
@@ -153,6 +156,14 @@ const { queue, submit } = useCommandQueue(
 The transport implements `enqueue(line): Promise<void>` and `dequeue(): Promise<string | null>` by forwarding to the host's queue capabilities through your intents. Feed your work status into `queue.setBusy(running)` and send new submissions through `submit`. Core owns ordering, draining, wakeups when broadcast rows change, and mount/disposal behavior. You own routing and completion signals. For a framework-free consumer, import `CommandQueue` from the same API and pair `attach()` with `dispose()` yourself.
 
 The core queue popup opens when the source has both a queue and `hostsCommandBar`. Its rows and editing callbacks arrive through `useAppCommandBar`, already scoped to that tab. A plugin with a queue but no command bar uses its own input and presentation without receiving the popup.
+
+## Using core ACP
+
+Request `startAcp`, `promptAcp`, and `resetAcp` in your manifest. They act only on your own answering tab; invoking a plugin command from an agent tab does not grant access to that agent. A terminal is not required. Start lazily through an intent on the opened tab, or call `promptAcp(prompt)` and let core start its connection.
+
+Core keeps one connection per tab, selects the existing OpenCode model, runs the database/browser/question tool loop, streams a server-owned response slice, and handles reset, failure, and disposal. `promptAcp` resolves with the answer, and provider/tool latency is exempt from your handler budget. Supply no raw managers, process handles, sockets, or ACP implementation in a plugin.
+
+Import `useAcpResponse` from `../api` in your client body and render the returned node. The host binds the core panel and its controls to your tab, including docked tabs. The shell uses exactly this API. Application commands marked as core responses return `coreResponse: true` from `dispatchLineWithOutput`; callers render the core surface instead of duplicating the reply locally.
 
 ## Updating a tab you already opened
 
@@ -332,6 +343,8 @@ Add server tests for declaration claims, playable/external routes, payload valid
 ## API changelog
 
 ### v1
+
+- Thirty-two server and fourteen client capabilities. `startAcp`, `promptAcp`, and `resetAcp` add scoped access to the core ACP service. The client API publishes `useAcpResponse` for the host-rendered streaming surface. These additions keep the v1 contract compatible.
 
 - Initial bundled-only tab-view contract.
 - Static opener, web-target, command, and notification contributions, with `command` and `notify` handlers on the activation.

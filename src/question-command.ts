@@ -45,10 +45,10 @@ export function extractQuestionCommand(text: string): string | null {
   return findLastCommandLine(text, isQuestionCommandLine);
 }
 
-export function runQuestionCommand(input: string, tab: string, questions: Questions): string | Promise<string> {
+export function runQuestionCommand(input: string, tab: string, questions: Questions, signal?: AbortSignal): string | Promise<string> {
   const parsed = parseQuestionCommand(input);
   if ('error' in parsed) return parsed.error;
-  return questions.register({ tab, ...parsed });
+  return signal ? questions.register({ tab, ...parsed }, signal) : questions.register({ tab, ...parsed });
 }
 
 export const QUESTION_PRIMER = [

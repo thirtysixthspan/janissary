@@ -56,7 +56,7 @@ export function useShellSubmit(input: {
       const result = await capabilities.intent<ShellDispatchResult>('dispatch', text);
       remember(text);
       if (result.dispatched) {
-        displayReply(text, result.output);
+        if (!result.coreResponse) displayReply(text, result.output);
         return false;
       }
       runInShell(text);

@@ -2,7 +2,7 @@
 
 | Command | Description |
 | ------- | ----------- |
-| `acp` | Send a prompt to the OpenCode ACP agent (`acp reset` starts a fresh session) |
+| `acp` | Query a core OpenCode ACP connection from a shell or another supported plugin tab; replies stream in the ACP panel (`acp reset` starts a fresh session) |
 | `agent` | Create a new agent tab in a disposable workspace by default (`--no-workspace` opts out; add `--offline` to also deny network access; `on <[user@]host[:path]>` runs it on another machine) |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `broadcast` | Send a message to several or all agents |

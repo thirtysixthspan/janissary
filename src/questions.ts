@@ -12,6 +12,7 @@ export type QuestionRequest = {
 type QueuedQuestion = QuestionRequest & {
   id: string;
   resolve: (value: string) => void;
+  cleanup?: () => void;
 };
 
 export class Questions {
@@ -21,9 +22,15 @@ export class Questions {
 
   constructor(private onChange: (tab: string, pending: PendingQuestionView | undefined) => void = () => {}) {}
 
-  register(request: QuestionRequest): Promise<string> {
+  register(request: QuestionRequest, signal?: AbortSignal): Promise<string> {
+    if (signal?.aborted) return Promise.resolve(QUESTION_CANCELLED);
     return new Promise((resolve) => {
       const entry: QueuedQuestion = { ...request, id: `question-${this.nextId++}`, resolve };
+      if (signal) {
+        const cancel = () => this.cancelEntry(entry);
+        signal.addEventListener('abort', cancel, { once: true });
+        entry.cleanup = () => signal.removeEventListener('abort', cancel);
+      }
       if (this.active.has(request.tab)) {
         const queue = this.queued.get(request.tab) ?? [];
         queue.push(entry);
@@ -57,7 +64,10 @@ export class Questions {
   cancelTab(tab: string): void {
     const queue = this.queued.get(tab) ?? [];
     this.queued.delete(tab);
-    for (const entry of queue) entry.resolve(QUESTION_CANCELLED);
+    for (const entry of queue) {
+      entry.cleanup?.();
+      entry.resolve(QUESTION_CANCELLED);
+    }
     const entry = this.active.get(tab);
     if (entry) this.finish(entry, QUESTION_CANCELLED);
   }
@@ -78,9 +88,24 @@ export class Questions {
     this.onChange(entry.tab, this.pendingFor(entry.tab));
   }
 
+  private cancelEntry(entry: QueuedQuestion): void {
+    if (this.active.get(entry.tab) === entry) {
+      this.finish(entry, QUESTION_CANCELLED);
+      return;
+    }
+    const queue = this.queued.get(entry.tab);
+    const index = queue?.indexOf(entry) ?? -1;
+    if (!queue || index < 0) return;
+    queue.splice(index, 1);
+    if (queue.length === 0) this.queued.delete(entry.tab);
+    entry.cleanup?.();
+    entry.resolve(QUESTION_CANCELLED);
+  }
+
   private finish(entry: QueuedQuestion, value: string): void {
     if (this.active.get(entry.tab) !== entry) return;
     this.active.delete(entry.tab);
+    entry.cleanup?.();
     entry.resolve(value);
     this.onChange(entry.tab, undefined);
     const next = this.queued.get(entry.tab)?.shift();

@@ -271,3 +271,7 @@ A plugin starting zsh may ask the host for the shell tab's status hooks rather t
 The tab's chrome is the application's, at one remove. Its metadata row is the same structure and the same class names as an agent tab's, written by the plugin rather than imported, with its actions supplied as declared capabilities; its command line is the published command bar with the shell's own keys composed underneath; its connections and schedule windows are the host's own panels. What it omits is the transcript control, because the terminal replaced the transcript.
 
 It claims `Ctrl+R` for its own history — the lines its command bar has sent — and the claim applies only while its tab is the visible one, so the application's history picker owns that chord everywhere else. It declares the two host-state slices its windows render, and it is the only plugin with a route from its client to the application's command table: a line typed into its command bar is offered to the application first, and falls through to the shell only when nothing claims it. See [[shell-tab]].
+
+## Core ACP access
+
+A tab plugin requests `startAcp`, `promptAcp`, and `resetAcp` to use the core [[acp]] service on its own answering tab. No terminal is required. Core owns sessions, tool execution, streamed transcript projection, and lifecycle; provider latency is exempt from handler deadlines. The client API publishes `useAcpResponse` for the core-rendered response surface. The shell opts in; agent tabs do not.

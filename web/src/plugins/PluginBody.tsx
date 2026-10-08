@@ -16,6 +16,7 @@ import { createPluginClientCapabilities, type TabDirtyHandle } from './api';
 import { usePluginHost } from './host';
 import { type ClientPluginRegistration } from './registry';
 import { usePluginRemote } from './usePluginRemote';
+import { AcpResponseScope } from '../shared/acp/AcpResponseScope';
 
 const CLIENT_ACTIVATION_MS = 5000;
 
@@ -122,7 +123,9 @@ export function PluginBody({
   active,
   dock = null,
   remote,
-dotColor,
+  acpResponse,
+  pendingQuestion,
+  dotColor,
   onClose,
   onSplit,
   onDirtyHandle,
@@ -133,6 +136,8 @@ dotColor,
   active: boolean;
   dock?: 'left' | 'right' | null;
   remote?: TabView['remote'];
+  acpResponse?: TabView['acpResponse'];
+  pendingQuestion?: TabView['pendingQuestion'];
   dotColor?: string;
   onClose: () => void;
   onSplit?: () => void;
@@ -202,7 +207,9 @@ dotColor,
   // the plugin passes: a plugin cannot then act on the bar, queue or focus of a tab it does not own.
   return (
     <AppCommandBarTabScope label={label} active={active}>
-      {contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail)}
+      <AcpResponseScope response={acpResponse} question={dock !== null && active ? pendingQuestion : undefined} label={label} client={client}>
+        {contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail)}
+      </AcpResponseScope>
     </AppCommandBarTabScope>
   );
 }

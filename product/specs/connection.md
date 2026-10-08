@@ -8,7 +8,7 @@ The `connection` command inspects and closes the six kinds of long-lived connect
 |---|---|---|---|
 | `sqlite` | database name | Global (shared across tabs) | connection registry in `connections.ts` |
 | `shell` | shell program basename (`bash`, `zsh`, …) | Current tab | `ShellManager` |
-| `acp` | the tab's agent session name (`provider/model`), a monitor's name, or a persona name (editor tab) | Current tab | `AcpManager`; a tab's monitors are kept by `MonitorManager`, and an editor tab's persona connections separately, one per persona |
+| `acp` | a supported plugin tab's core ACP connection name (`provider/model`), a monitor's name, or a persona name (editor tab) | Current tab | `AcpManager`; a tab's monitors are kept by `MonitorManager`, and an editor tab's persona connections separately, one per persona |
 | `browser` | window id (`w1`, `w2`, …) | Current tab | `BrowserManager` |
 | `ssh` | tab label, or the destination as typed | Global (the ssh tab is its own scope — it has no command bar to run `connection` from) | the ssh tab's own `HarnessView.destination`/`ptyId`, or a remote tab's channel |
 | `terminal` | the program a tab's terminal runs (`vim`, `claude`, …) | Current tab | `PseudoterminalManager` |
@@ -21,7 +21,7 @@ The connections panel, `connection list`, and `connection close` completion all 
 
 ### `connection list`
 
-Lists all open connections, one `<kind>:<id>` per line: first the current tab's own — its shell (`shell:<name>`), its agent session (`acp:<provider/model>`), its monitors (`acp:<monitor>`) and editor personas (`acp:<persona>`), its browser windows (`browser:<id>`), its own ssh connection, its terminals (`terminal:<program>`), and the databases it opened (`sqlite:<name>`) — then every other tab's ssh connection and every other open SQLite connection. An ssh connection is listed by its tab's label with the destination in parentheses (`ssh:bastion (admin@host)`), global like sqlite since an ssh tab has no command bar of its own to list from. When none are open it returns `No open connections.`
+Lists all open connections, one `<kind>:<id>` per line: first the current tab's own — its shell (`shell:<name>`), its core ACP connection, when supported (`acp:<provider/model>`), its monitors (`acp:<monitor>`) and editor personas (`acp:<persona>`), its browser windows (`browser:<id>`), its own ssh connection, its terminals (`terminal:<program>`), and the databases it opened (`sqlite:<name>`) — then every other tab's ssh connection and every other open SQLite connection. An ssh connection is listed by its tab's label with the destination in parentheses (`ssh:bastion (admin@host)`), global like sqlite since an ssh tab has no command bar of its own to list from. When none are open it returns `No open connections.`
 
 ### `connection close <kind>:<id>`
 

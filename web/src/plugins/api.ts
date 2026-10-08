@@ -35,6 +35,7 @@ export { spliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 export { useCommandQueue } from '../shared/command-queue/useCommandQueue';
 export { CommandQueue } from '../shared/command-queue/command-queue';
 export { useAppCommandBar } from '../shared/command-bar/AppCommandBar';
+export { useAcpResponse } from '../shared/acp/AcpResponseScope';
 export type { AppCommandBar } from '../shared/command-bar/app-command-bar-scope';
 
 // The host's "double-click to rename, Enter or blur to commit, Escape to cancel" field, published on

@@ -123,7 +123,7 @@ local launch and a remote one alike, and anything else under the project root as
 
 These event types can produce a notification line:
 
-- **`state-change`** — an agent tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
+- **`state-change`** — a core ACP consumer tab's busy flag clears (busy → idle), e.g. an ACP turn finishes or
   errors.
 - **`harness-idle`** — a hidden harness tab's working→idle transition was badged and has stayed
   badged for thirty seconds (see `harness.md` § The idle escalation). The line reads
@@ -139,7 +139,7 @@ These event types can produce a notification line:
 - **`agent-start`** — an ACP session begins its first turn (busy false → true).
 - **`rate-limited`** — an ACP query fails because the underlying provider is rate limiting
   requests, detected by a best-effort match against the failure's text. This covers every ACP query
-  path: an agent tab's interactive `acp <prompt>` command, a monitor persona's periodic background
+  path: a shell or supported plugin tab's core `acp <prompt>` operation, a monitor persona's periodic background
   query, and a direct `monitor ask <persona> <question>`. Detection matches both a thrown ACP error
   and — for the interactive `acp <prompt>` command — a rate limit the agent surfaces as its ordinary
   reply text rather than an error, so a query that is rate limited but resolves normally is not

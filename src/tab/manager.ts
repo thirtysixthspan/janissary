@@ -165,7 +165,7 @@ export class TabManager extends TabTranscriptState {
   renameTab(index: number, title: string): void { tabOperations.renameTab(this, index, title); }
 
 
-  toggleCollapse(): void { tabOperations.toggleCollapse(this); }
+  toggleCollapse(label?: string): void { tabOperations.toggleCollapse(this, label); }
 
   insertTabInGroup(tab: Tab): void { tabOperations.insertTab(this, tab); }
 

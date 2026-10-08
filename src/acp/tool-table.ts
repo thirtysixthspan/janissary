@@ -25,7 +25,7 @@ export type AcpTool = {
 // so order is the tie-break and the database entry stays last — its `match` accepts anything, making
 // it the fall-through for a command no other tool recognized. Extraction does not use table order:
 // the reply's last line that any tool recognizes is the command, whichever tool owns it.
-export function createAcpToolTable(managers: Managers): AcpTool[] {
+export function createAcpToolTable(managers: Managers, signal?: AbortSignal): AcpTool[] {
   return [
     {
       primer: BROWSER_PRIMER,
@@ -36,7 +36,7 @@ export function createAcpToolTable(managers: Managers): AcpTool[] {
     {
       primer: QUESTION_PRIMER,
       match: (command) => /^question\b/i.test(command),
-      run: (label, command) => runQuestionCommand(command, label, managers.questions),
+      run: (label, command) => runQuestionCommand(command, label, managers.questions, signal),
       isCommandLine: (line) => isQuestionCommandLine(line),
     },
     {

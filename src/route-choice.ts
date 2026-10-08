@@ -2,11 +2,12 @@ import { analyzeCommand } from './recognizers/analyze.js';
 import { toPrefixedCommand } from './recognizers/route-choices.js';
 import type { RouteChoice } from './recognizers/types.js';
 import type { Managers } from './managers.js';
+import { acpAvailable } from './acp/availability.js';
 
 // Whether `input` resolves to a route (and if so, which one). A bare 'db' target auto-resolves
 // when exactly one db is open — the caller only needs to prompt when there's a real ambiguity.
-export function resolveRouteChoice(input: string, openDbs: string[]): RouteChoice | undefined {
-  const decision = analyzeCommand(input, { openDbs });
+export function resolveRouteChoice(input: string, openDbs: string[], allowAcp = true): RouteChoice | undefined {
+  const decision = analyzeCommand(input, { openDbs, allowAcp });
   if (decision.kind !== 'route' || (decision.route === 'db' && openDbs.length !== 1)) return undefined;
   return decision.route === 'db'
     ? { label: '', route: 'db', dbName: openDbs[0] }
@@ -21,6 +22,6 @@ export type RecognizedRoute =
 // databases. Each caller keeps its own fallback when nothing fits.
 export function recognizeRoute(cmd: string, label: string, managers: Managers): RecognizedRoute {
   const openDbs = managers.database.openDbs(label);
-  const choice = resolveRouteChoice(cmd, openDbs);
+  const choice = resolveRouteChoice(cmd, openDbs, acpAvailable(label, managers));
   return choice ? { kind: 'routed', command: toPrefixedCommand(cmd, choice) } : { kind: 'unrouted', openDbs };
 }

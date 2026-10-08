@@ -10,6 +10,7 @@ export type CommandRoute = 'shell' | 'db' | 'acp';
 export type RecognizerContext = {
   // Names of sqlite databases with an open connection in the current tab.
   openDbs: string[];
+  allowAcp?: boolean;
 };
 
 // A recognizer's verdict: whether the command matches its route, and a 0–1 reliability estimate.

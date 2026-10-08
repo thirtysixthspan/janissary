@@ -1,68 +1,69 @@
-## acp
+# ACP
 
-A tab can drive an [Agent Client Protocol](https://agentclientprotocol.com) agent via the `acp <prompt>` command. This is an experimental, read-only MVP.
+ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar and a core streaming response panel. Any tab plugin can request the scoped core API without owning a terminal. Agent tabs have no ACP command or prose route. Monitors, conversations, and editor queries retain their separate sessions over the shared protocol transport.
 
-### Hardcoded agent
+## Availability and plugin API
 
-The agent command is hardcoded to OpenCode: `opencode acp`. There is no configuration or environment variable — `opencode` must be installed, authenticated (`opencode auth login`), and on `PATH`. The agent connection is shown as `acp:<agent>` in the tab's status popup.
+A plugin requests `startAcp`, `promptAcp`, and `resetAcp` in its declaration. Each capability is bound to that plugin's own answering tab, or its own invoking tab when there is no answering tab. It cannot start or query a different plugin's tab or an agent tab that invoked its command. An unavailable or disabled owner returns the ordinary request rejection `ACP tab is unavailable.`.
 
-### Which model runs
+- `startAcp()` begins or reuses the tab's connection and returns `{ model }` or `{ error }`. Startup is lazy and the handshake may still be pending.
+- `promptAcp(prompt)` runs the core database/browser/question loop and resolves with the final answer. Connection startup is automatic if needed. Provider and tool wait time belongs to core and is exempt from the plugin handler deadline.
+- `resetAcp()` closes the connection and returns whether one existed. It settles in-flight requests and prevents obsolete callbacks from updating a replacement prompt.
 
-The model comes from the harness catalog's OpenCode list — the same catalog the monitor and conversation sessions read, and the same one a project replaces with `.janissary/harness-models.json` (see [[harness]]). `google/gemini-3.1-flash-lite` is preferred while the catalog offers it; otherwise the first model the list does offer is used, so a project that overrides the catalog runs one of its own models rather than a built-in one. An OpenCode list with nothing in it refuses the prompt with a message instead of launching.
+A plugin requesting `promptAcp` supports the core `acp` and `acp reset` commands. The shell requests all three operations. A terminal, `spawnTerminal`, and `hostsCommandBar` are not prerequisites for the ACP API. The client publishes `useAcpResponse` through its plugin API; it returns only the owning tab's host-rendered response surface. Core owns protocol I/O, session lifecycle, tools, transcript state, Markdown rendering, reset controls, and tool-step controls. There is no ACP plugin.
 
-The connections panel and status popup show the model the session actually launched with.
+## Commands
 
-### Connection lifecycle
+`acp <prompt>` queries the current supported tab's connection. Bare `acp` prints `Usage: acp <prompt>.`. `acp reset` ends that connection and reports `ACP session reset — next acp prompt will start fresh.`, or `No active ACP session to reset.`.
 
-Janissary acts as the ACP client: on the first `acp` prompt in a tab it spawns the agent as a subprocess, speaks JSON-RPC over stdio, and reuses the per-tab connection across subsequent prompts. The subprocess inherits the tab's current working directory, and in a workspaced tab it is additionally confined by the same Seatbelt sandbox as the tab's shell/harness PTY — see [[sandbox]]. Both hold for a **local** tab. A remote agent tab's agent runs on the other host instead, in the workspace clone that host provisioned, and its confinement is whatever that machine provides — which on a non-macOS remote is none. See Remote agent tabs below.
+The shell's ordinary application-command dispatcher recognizes these commands and marks their replies as core-rendered. It waits for the ACP operation without duplicating the reply in zsh's terminal. Unclaimed shell-bar lines still go to zsh; use an explicit `acp` prefix to query the connection. See [[shell-tab]].
 
-If the agent process dies — a failed spawn, a missing binary, or a crash mid-session — the session no longer exists, so it is reported as an `ACP: <message>` line in the tab and forgotten. The tab stays open and the next `acp <prompt>` starts a fresh session rather than writing into a dead one. A prompt that merely *fails* is different: a rate-limited reply reports itself and leaves the session alone, so the accumulated conversation is not thrown away for a condition that clears on its own.
+Agent tabs exclude these commands from contextual resolution. Their unknown-command chooser offers shell and database routes, without ACP; recognized prose does not start an ACP session. Executable `msg … request` and `msg … command` deliveries remain supported, while unrecognized prose receives the ordinary unknown-command response. See [[command-routing]] and [[messaging]].
 
-The report carries whatever the agent said on its own standard error, on the line below the message. The agent's standard output is the protocol transport, so standard error is the only place it can explain itself — an authentication that expired, a version it will not speak, what to run to start a new session. When it said nothing, the line is the message alone: `ACP: ACP agent exited.` What it kept is bounded to the last 2000 characters and the last 10 lines of them, so an agent that spews before dying cannot flood the transcript. See [[transcript]].
+## Provider and model
 
-The `acp` command's per-tab session and a [[conversations]] session are separate uses of the same protocol channel. A conversation session is tool-less, runs in the conversation's own workspace, and sends a plain text query directly; it does not enter the `acp` command's database/browser tool loop.
+The provider remains OpenCode, launched with `opencode acp`. It must be installed, authenticated, and on PATH. Model selection uses the harness catalog's OpenCode list, including project overrides. `google/gemini-3.1-flash-lite` is preferred while listed; otherwise the first available model is used. An empty list refuses the operation with `ACP: no opencode model is available in the harness catalog.`.
 
-### Reply streaming
+The session's configured provider/model appears in its connection row after the handshake. The shared ACP transport still denies native permission requests except where a separate consumer explicitly supplies its own allowlist.
 
-The agent is instructed (via the prompt primer) to write its replies in **GitHub-flavored Markdown**, and the tab renders them as formatted Markdown. The reply streams into a running log entry keyed by the prompt text; that entry is flagged `markdown` so the raw Markdown is kept verbatim (not split into plain-text lines) and `flattenBuffer` (`src/tab.ts`) emits it as a single `markdown` buffer line. The web client renders that line by converting the Markdown to HTML (`marked`, GFM enabled) and sanitizing it (`DOMPurify`) before insertion — so headings, lists, tables, fenced code blocks, blockquotes, and links all render, with partial Markdown rendering progressively as it streams. While awaiting the agent, the tab's busy indicator flashes (the dot blinks). On completion the entry is finalized.
+## Connection lifecycle
 
-The reply text is shown as the model's own words alone, with no surrounding banner or delimiter lines — the streamed and finished reply carries exactly what the model wrote, keeping it visually distinct from tool-call output only by its markdown formatting and position in the transcript.
+`AcpSessionManager` in `src/acp/session-manager.ts` owns one connection per tab, starts it on demand, reuses it across prompts, and closes it on reset, tab closure, plugin failure, and shutdown. A local subprocess starts in the tab's working directory at connection creation; a workspaced tab passes its workspace and offline confinement to the existing sandbox. A changed directory does not replace an already-open conversation. See [[sandbox]].
 
-### Database and browser assistance (autonomous tool loop)
+`AcpManager` in `src/acp/manager.ts` owns prompt orchestration. An overlapping prompt is refused with `ACP: a prompt is already running.`, without cancelling the existing one. A reset or close settles a pending call with `ACP session closed.`. A fatal connection error is shown and the session is forgotten; the next prompt starts fresh. A prompt-level error leaves a viable session intact, including rate limits.
 
-The `db` grammar (`DB_PRIMER` in `src/db.ts`) and the `browser` grammar (`BROWSER_PRIMER` in `src/browser-command.ts`) are both prepended to every user `acp` prompt (but not to the tool-result follow-ups within a loop), so the agent stays aware of the syntax even when a session is reused, and is instructed to end a reply with exactly one command on its own final line when it needs data. `BROWSER_PRIMER` exposes a deliberately simplified surface — `browser goto`, `browser content`, `browser eval` only — and the host handles window/headless/mode management (auto-launching headless and auto-opening a window).
+New response identity and pending-request metadata are owned by the tab runtime. Core records ACP entries in the tab's existing transcript and tracks their identity without copying the text. Immutable running-entry replacements retain that identity. Responses are projected only for plugin tabs, through `TabView.acpResponse`, using the server's existing `flattenBuffer`. Other application-command entries do not appear in the ACP panel. Existing transcript limits and persistence behavior remain in force; no saved configuration, transcript, or profile is migrated or cleaned up.
 
-The `acp` handler then drives an autonomous loop (`runAcpToolLoop` in `src/acp-loop.ts`, wired with rendering/execution callbacks in `src/cli.tsx`):
+## Streaming response panel
 
-1. The agent's reply streams into a transcript entry (the first turn shows the user's prompt; continuation turns have no prompt line).
-2. On completion, the reply is scanned bottom-up (tolerating a code fence or a `$ `/`> ` prefix, cleaned by `cleanCommandLine` in `src/acp/command-line.ts`) for a command. The command is the reply's last line that any tool recognizes as its own — browser, question, or database — whichever tool owns it, so a reply that mentions `browser goto` early and ends with a `db sqlite query` runs the database command. When the command's text also appears earlier in the reply, only the last copy is removed from the displayed reply. The tool table's fixed order (browser, then question, then database) decides only which tool runs an emitted command, with the database tool last so it takes anything the others do not claim.
-3. If a command is found, it is executed immediately — `runBrowserInTab` for `browser` (async), `runDbInTab`/`runDbCommand` for `db` (sync) — shown in the transcript as its own command entry (input = the command, output = the result), and the output is sent back to the agent as a follow-up prompt asking it to continue or give a final answer. The loop is async-capable: `runCommand` may return a `Promise`, which the loop awaits (a sync command still completes in the same tick).
-4. The loop repeats until the agent replies with no command, or a cap of 8 tool steps is reached (a `(stopped after 8 tool steps)` notice is logged in that case).
+The core response panel sits above the shell command bar. It shows streamed, sanitized GitHub-flavored Markdown, tool steps, and a responding status while a prompt is active. It keeps previous ACP exchanges for the tab and follows new output while the user remains at the bottom. The shell's tab dot blinks during the operation.
 
-A freshly connected agent (e.g. OpenCode loading its model on the first prompt) sometimes returns an empty first reply; the loop retries the first turn once — reusing the same transcript entry — before treating an empty reply as a final answer, so the first `acp` request no longer comes back empty.
+The panel's **Reset ACP** control acts immediately on its owning tab, including while a shell-bar submission is still awaiting completion. Tool-step expansion uses the same server-owned collapse state, with an explicit tab label so a docked panel never changes another tab. File-link actions likewise run in the source tab. A plugin renders the core surface through the scoped client hook rather than implementing another response renderer.
 
-Only `db` and `browser` commands are auto-run — the agent cannot execute arbitrary shell. `db` is also dispatchable through `runCaptureInTab` (the shared command-capture path used by `msg …request`), which executes a resolved `db` command via `runDbCommand` rather than refusing it as an app command, so a `db` command also works as an inter-agent `request`. (`browser` is not yet offered through that inter-agent path.)
+Questions use the existing core question panel and answer protocol. A centre tab's question is shown when that tab is current. A selected docked shell also exposes its question through its scoped ACP surface; a hidden docked body does not raise one. The question's tab/id determine where the answer goes. See [[agent-questions]].
 
-The tool loop always runs on the machine janissary itself is running on, regardless of where the agent does. A remote agent asked to inspect a database is therefore inspecting *this* machine's database files, and a `browser` command drives *this* machine's browser — not the remote workspace's.
+Reset or close aborts the current ACP request's question, whether active or queued, and preserves unrelated questions. An aborted loop does not issue another provider prompt after a tool returns. Calls without an abort signal retain the existing question lifecycle.
 
-### `acp` command
+The connections panel retains the `acp:<provider/model>` row, close action, and transcript snapshot button. The snapshot uses the existing tab transcript; monitor and editor transcript scopes retain their own recorded exchanges. See [[connection]].
 
-`acp <prompt>` drives an external [Agent Client Protocol](https://agentclientprotocol.com) agent from the current tab. The agent is hardcoded to OpenCode (`opencode acp`) — no configuration or environment variable is required. With no prompt, `acp` prints `Usage: acp <prompt>.`. See the External ACP Agents section for details.
+## Autonomous tool loop
 
-### `acp reset` command
+Each user prompt receives the existing database, browser, and question primers plus the Markdown instruction. `runAcpToolLoop` in `src/acp/loop.ts` streams each turn, extracts the last recognized command line, runs it, and feeds the result back until there is a final answer or eight tool steps have run.
 
-`acp reset` kills the current tab's ACP subprocess and forgets the session. The next `acp <prompt>` will spawn a fresh subprocess and start a new conversation, clearing the accumulated context window. When no ACP session is active, `acp reset` reports that there is nothing to reset rather than failing. In a remote agent tab it disposes the session on the remote host, with the same wording and the same effect.
+The tools are declared once in `src/acp/tool-table.ts`: browser, question, then database. Their order controls command ownership; extraction selects the reply's last recognized tool line. Fences and common prompt prefixes are tolerated. Only the final occurrence of an emitted command is removed from the displayed reply. A cold, empty first reply is retried once in the same transcript entry.
 
-### Remote agent tabs
+Tool results are recorded as ACP steps and collapse through the existing transcript rendering. The cap reports `(stopped after 8 tool steps)`. Arbitrary shell commands are not ACP tools. Database/browser/question execution remains on the machine running Janissary, even when the provider runs remotely.
 
-`acp <prompt>` works in a tab launched with `agent <name> on <address>` (see [[remote-server]]), and the agent runs **on that host**, inside the workspace clone the host provisioned — so it sees the files the tab is actually working on rather than anything on the local machine. Nothing about the tab reads differently: replies stream in as formatted Markdown, the busy dot blinks while awaiting the agent, and the connections panel and status popup show the same `acp:<provider/model>` row and label a local session shows, with no host marker anywhere.
+## Remote connections
 
-The ACP client itself is hosted by the remote, so what crosses the ssh channel is prompt text and reply chunks rather than JSON-RPC. Which agent and which model run are still decided locally and sent across, so a remote session cannot silently disagree with a local one about the model. The autonomous tool loop and its `db`, `browser`, and `question` commands stay on the local machine — see Database and browser assistance above.
+A remote shell or other remote plugin tab uses its existing channel and workspace for the ACP agent. The local side chooses the model and sends the launch request; the remote hosts the ACP client, so prompts and chunks cross SSH instead of JSON-RPC. Tabs sharing one channel still have independent ACP session ids.
 
-A prompt issued before the remote session is established — while ssh is still authenticating, for instance — is refused rather than queued, with the single line `ACP: the remote session is still connecting.` and no busy state. Retyping it once the tab has finished connecting works. The same refusal is what an inter-agent `msg <tab> request …` addressed to a still-connecting remote tab receives as its answer.
+Before the channel is attached, the operation refuses with `ACP: the remote session is still connecting.`. A dropped channel tears down its tab and connection. Late chunks from a reset or closed session cannot update its replacement. The existing remote platform confinement rules remain unchanged. Remote agent tabs do not offer ACP commands. See [[remote-server]].
 
-Each tab gets its own agent, including tabs that share one ssh channel and one workspace clone — the launching tab and every agent joined from it through ➕. Their sessions are told apart by an id the local side mints per tab, so a reply always reaches the tab that asked for it, and closing one tab's session leaves the others running.
+## Errors and notifications
 
-A dead remote session is reported and forgotten exactly as a local one is, so the next prompt reconnects. A dropped ssh channel closes the whole tab (see [[remote-server]] § Lifecycle and cleanup), taking the session with it; a prompt in flight when that happens surfaces the ordinary `ACP:` error first, and nothing separate is reported for the session itself.
+Fatal errors are shown as `ACP: <message>` and forget the connection. Existing bounded stderr details remain available: the last 2000 characters, restricted to the last ten lines. Prompt errors appear as `ACP error: <message>` in the response entry. Existing start, state-change, and rate-limit notification events remain in use.
 
-`acp` in a **remote harness** tab is not supported — a harness tab is already driving its own agent binary in a terminal. That is a documented follow-up, not an oversight.
+## Shared consumers
+
+Monitors, conversations, and editor persona queries remain separate ACP consumers, with their existing model choices, workspaces, permission policies, and lifecycle. They do not acquire the shell's tab session or enter its tool loop. See [[monitoring]], [[conversations]], and [[editor-tab]].

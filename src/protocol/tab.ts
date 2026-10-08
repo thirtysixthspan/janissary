@@ -80,6 +80,7 @@ export type TabView = {
   remote?: RemoteTargetView;
   // provider/model of a connected ACP agent on this tab, if any.
   acp?: string;
+  acpResponse?: { lines: BufferLine[]; running: boolean };
   connections: ConnectionView[];
   schedule: ScheduleView[];
   bufferLines: BufferLine[];

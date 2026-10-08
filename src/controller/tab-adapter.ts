@@ -13,7 +13,7 @@ export type TabControllerAdapter = {
   renameTab(index: number, title: string): void;
   editQueuedCommand(index: number, text: string, tab?: string): void;
   deleteQueuedCommand(index: number, tab?: string): void;
-  toggleCollapse(): void;
+  toggleCollapse(tab?: string): void;
   revealNotifications(): void;
   promoteToTerminal(): void;
   ptyInput(id: string, data: string, tab?: string): void;
@@ -39,7 +39,7 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     renameTab: (index, title) => managers.tab.renameTab(index, title),
     editQueuedCommand: (index, text, tab) => managers.tab.editQueued(tab ?? managers.tab.cur().label, index, text),
     deleteQueuedCommand: (index, tab) => managers.tab.deleteQueued(tab ?? managers.tab.cur().label, index),
-    toggleCollapse: () => managers.tab.toggleCollapse(),
+    toggleCollapse: (tab) => tab === undefined ? managers.tab.toggleCollapse() : managers.tab.toggleCollapse(tab),
     revealNotifications: () => escalateToFeed(managers),
     promoteToTerminal: () => managers.shell.promoteRunning(managers.tab.cur().label),
     ptyInput: (id, data, tab) => { if (!tab || managers.pty.isRunningFor(id, [tab])) managers.pty.input(id, data); },

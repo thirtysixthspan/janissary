@@ -116,8 +116,8 @@ export function renameTab(port: TabOperationsPort, index: number, title: string)
   if (refusal && label) notify(port.managerServices, 'file-operation', label, refusal);
 }
 
-export function toggleCollapse(port: TabOperationsPort): void {
-  const tab = port.tabs[port.activeTab];
+export function toggleCollapse(port: TabOperationsPort, label?: string): void {
+  const tab = label === undefined ? port.tabs[port.activeTab] : port.tabs.find((entry) => entry.label === label);
   if (!tab) return;
   tab.toolStepsExpanded = !tab.toolStepsExpanded;
   messageBus.emit('state', { type: 'dirty' });

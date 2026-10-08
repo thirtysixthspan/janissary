@@ -211,7 +211,7 @@ describe('Controller', () => {
     const rv = c.routeView();
     expect(rv).not.toBeNull();
     expect(rv!.cmd).toBe('select 1 as n');
-    expect(rv!.choices).toEqual(['shell', 'acp (agent prompt)']);
+    expect(rv!.choices).toEqual(['shell']);
     c.chooseRoute(-1); // cancel
     expect(c.routeView()).toBeNull();
     expect(c.view()[0].bufferLines.length).toBe(before); // nothing was run or appended
@@ -571,20 +571,6 @@ describe('Controller', () => {
     const text = allText(c);
     expect(text).toContain('Usage: browser');
     expect(text).not.toContain('not yet available');
-  });
-
-  it('routes acp to its handler (usage on empty prompt, not the unported notice)', () => {
-    const { c } = makeController();
-    c.dispatch('acp');
-    const text = allText(c);
-    expect(text).toContain('Usage: acp');
-    expect(text).not.toContain('not yet available');
-  });
-
-  it('acp reset reports no session when none is active', () => {
-    const { c } = makeController();
-    c.dispatch('acp reset');
-    expect(allText(c)).toContain('No active ACP session to reset');
   });
 });
 

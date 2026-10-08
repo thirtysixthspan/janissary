@@ -5,6 +5,8 @@ export type CommandManagers = Managers;
 export interface Command {
   name: string;
   match: (command: string) => boolean;
+  available?: (label: string, managers: Managers) => boolean;
+  coreResponse?: boolean;
   // Canonical inputs this command owns, spelled as they reach the registry loop in `../resolve.ts`
   // (trimmed, with any leading `/` already stripped). `../commands.test.ts` walks the registry in
   // dispatch order and fails when an earlier entry claims one of these, so a command appended to

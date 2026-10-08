@@ -34,7 +34,11 @@ export function updateRunningEntry(
     const index = log.findLastIndex((e) => !!e.running
       && (match?.command === undefined || e.input === match.command)
       && (match?.markdown === undefined || !!e.markdown));
-    if (index !== -1) log[index] = { ...log[index], output, running };
+    if (index !== -1) {
+      const previous = log[index];
+      log[index] = { ...previous, output, running };
+      if (tab.runtime?.acpEntries?.has(previous)) tab.runtime.acpEntries.add(log[index]);
+    }
     tab.log = log;
     if (!running) {
       hooks.finalize?.(tab);

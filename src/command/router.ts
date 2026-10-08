@@ -3,6 +3,7 @@ import { routeChoices } from '../recognizers/route-choices.js';
 import type { RouteChoice } from '../recognizers/types.js';
 import { recognizeRoute } from '../route-choice.js';
 import type { Managers } from '../managers.js';
+import { acpAvailable } from '../acp/availability.js';
 
 export function resolveUnknownCommand(
   cmd: string,
@@ -15,7 +16,7 @@ export function resolveUnknownCommand(
   if (route.kind === 'routed') {
     run(route.command, label, managers.tab.findIndex(label));
   } else {
-    setPending({ label, cmd, choices: routeChoices(route.openDbs) });
+    setPending({ label, cmd, choices: routeChoices(route.openDbs, acpAvailable(label, managers)) });
     messageBus.emit('state', { type: 'dirty' });
   }
 }

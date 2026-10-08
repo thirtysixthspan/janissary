@@ -5,7 +5,7 @@ import { unhandledClientMethod } from '../client-message.js';
 type TabMessage = Extract<ClientMessage, {
   method: 'command' | 'setActiveTab' | 'focusTab' | 'closeTab' | 'renameTab' | 'promoteToTerminal'
     | 'editQueuedCommand' | 'deleteQueuedCommand' | 'moveTab' | 'moveTabToOtherPane'
-    | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'revealNotifications' | 'chooseRoute'
+    | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'resetAcp' | 'revealNotifications' | 'chooseRoute'
     | 'setDock' | 'openFileNavigatorFor' | 'launchAgentFor' | 'launchShellFor' | 'openTranscriptFor'
     | 'openHarnessTranscriptFor' | 'openAcpTranscript' | 'openRecordingFor';
 }>;
@@ -16,7 +16,10 @@ type TabMessage = Extract<ClientMessage, {
 // file-navigator cases the dispatcher's other arms handle.
 export function dispatchTabMessage(controller: Controller, message: TabMessage): unknown {
   switch (message.method) {
-    case 'command': { controller.dispatch(message.params.text); break;
+    case 'command': {
+      if (message.params.tab === undefined) controller.dispatch(message.params.text);
+      else controller.managers.command.dispatchTo(message.params.tab, message.params.text);
+      break;
     }
     case 'setActiveTab': { controller.setActiveTab(message.params.index); break;
     }
@@ -41,7 +44,14 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     }
     case 'reorderTabTo': { controller.reorderTabTo(message.params.from, message.params.to); break;
     }
-    case 'toggleCollapse': { controller.toggleCollapse(); break;
+    case 'toggleCollapse': {
+      if (message.params.tab === undefined) controller.toggleCollapse();
+      else controller.toggleCollapse(message.params.tab);
+      break;
+    }
+    case 'resetAcp': {
+      const label = message.params.tab;
+      return controller.managers.command.executeCommand('acp-reset', 'acp reset', label, controller.managers.tab.findIndex(label));
     }
     case 'revealNotifications': { controller.revealNotifications(); break;
     }
