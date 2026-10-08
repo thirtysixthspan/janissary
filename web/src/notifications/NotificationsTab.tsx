@@ -1,11 +1,11 @@
 import React, { useMemo, useRef } from 'react';
 import type { BufferLine } from '@shared/protocol';
-import type { JanusClient } from './ws';
-import { Transcript } from './shared/transcript/Transcript';
-import { DockCycleHeader } from './shared/DockCycleHeader';
-import { onNotificationsKey } from './notifications-handlers';
-import { transcriptIntents } from './shared/transcript/transcript-intents';
-import { ptyActions } from './shared/terminal/pty-actions';
+import type { JanusClient } from '../ws';
+import { Transcript } from '../shared/transcript/Transcript';
+import { DockCycleHeader } from '../shared/DockCycleHeader';
+import { onNotificationsKey } from './feed-keys';
+import { transcriptIntents } from '../shared/transcript/transcript-intents';
+import { ptyActions } from '../shared/terminal/pty-actions';
 
 // The keys the feed scrolls on; they are kept from reaching the window-level bindings.
 const SCROLL_KEYS = new Set(['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown']);

@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import type { BufferLine } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from '../ws';
 import { NotificationsTab } from './NotificationsTab';
 
 // jsdom doesn't include ResizeObserver — Transcript observes its content element.

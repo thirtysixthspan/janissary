@@ -2,7 +2,7 @@ import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
 import { FileNavigatorTab } from './file-navigator/FileNavigatorTab';
-import { NotificationsTab } from './NotificationsTab';
+import { NotificationsTab } from './notifications/NotificationsTab';
 import { tabBodyBorder } from './shared/tab/body-border';
 import { multiOpenablePaths } from './multi-open';
 import { isFilesTabView } from './shared/tab/view-guards';
