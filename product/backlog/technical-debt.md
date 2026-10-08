@@ -8,10 +8,6 @@
 
 * Keep expected test diagnostics from obscuring unexpected failures. Capture intentional invalid-config and history-write warnings in `src/config.test.ts` and `src/global-history.test.ts`, account for the missing-conversation warnings from incomplete manager fixtures, and explicitly stub jsdom's unsupported canvas and media APIs in affected web tests while retaining fallback assertions. Severity: **low**.
 
-* Replace the skipped wall-clock performance test in `web/src/shared/fuzzy-match.test.ts` with a reliable performance check. Its 50,000-path case has a fixed 500 ms limit and is marked `it.skip` as flaky, leaving fuzzy-match performance without an active guard. Severity: **low**.
-
-* Measure and reduce client test-environment startup cost if practical. Vitest reported 356 jsdom creations and 136.28 seconds of cumulative environment setup; evaluate worker-pool options only while preserving per-file test isolation. Severity: **low**.
-
 ## development
 
 
