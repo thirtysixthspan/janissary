@@ -2,8 +2,6 @@
 
 ## ready
 
-* Keep expected test diagnostics from obscuring unexpected failures. Capture intentional invalid-config and history-write warnings in `src/config.test.ts` and `src/global-history.test.ts`, account for the missing-conversation warnings from incomplete manager fixtures, and explicitly stub jsdom's unsupported canvas and media APIs in affected web tests while retaining fallback assertions. Severity: **low**.
-
 ## development
 
 

@@ -14,6 +14,10 @@ const mocks = vi.hoisted(() => ({ connectAcp: vi.fn() }));
 vi.mock('../acp/index.js', () => ({ connectAcp: mocks.connectAcp }));
 
 let home: string;
+let stderrWrites: string[];
+
+const missingConversationWarning =
+  'warning: conversation "first" unavailable: missing or malformed conversation.json\n';
 
 type FakeSession = AcpSession & { prompts: Array<{ text: string; handlers: PromptHandlers }> };
 
@@ -49,11 +53,19 @@ function fixture() {
 beforeEach(() => {
   home = mkdtempSync(path.join(tmpdir(), 'conversations-manager-'));
   mocks.connectAcp.mockReset();
+  stderrWrites = [];
+  vi.spyOn(process.stderr, 'write').mockImplementation((message) => {
+    stderrWrites.push(String(message));
+    return true;
+  });
 });
 
 afterEach(() => {
+  const unexpectedWrites = stderrWrites.filter((message) => message !== missingConversationWarning);
+  vi.restoreAllMocks();
   vi.useRealTimers();
   rmSync(home, { recursive: true, force: true });
+  expect(unexpectedWrites).toEqual([]);
 });
 
 // The manager's own bookkeeping: what it answers for a conversation it does not hold, what deleting
