@@ -17,6 +17,8 @@ It's looked up through your own shell, started interactively, so your startup fi
 
 It's started interactively but not as a login shell, and that second part matters if you have the same harness installed twice — say a fresh install in `~/.local/bin` and an older packaged one in `/opt/homebrew/bin`. A login shell rebuilds `PATH` from the system's own list of directories and tacks yours on the end, which can flip which copy wins. Skipping that keeps your `PATH` exactly as your terminal has it, so the copy you get in a harness tab is the copy you get when you type the name yourself.
 
+Claude Code does not update itself during a Janissary session. This applies whether you launch it with `harness claude` or from a [profile](/user-documentation/automation/profiles).
+
 ## Typing into a harness
 
 Everything you type goes to the harness — including `Ctrl+C`, `Ctrl+D`, and `Ctrl+R`. A few things are held back for the app: `Shift+←`/`Shift+→` still switch tabs, clicks on the tab strip still work, and the copy chords below are taken while text is selected. Switching to a harness tab focuses its terminal automatically, so you can type immediately. `Shift+Enter` is delivered as a line continuation rather than a submit, which is how you compose multi-line prompts in harnesses like claude.
@@ -87,7 +89,7 @@ harness opencode as quality   → tab "quality"
 harness opencode as quality   → refused: Cannot launch "quality": a tab named "quality" is already open.
 ```
 
-A default label walks past everything in use to the next free `-2`, `-3`, and so on. A label is in use when an open tab has it, when the [sessions](/user-documentation/tab-types/sessions) tab holds a harness or agent row with it that is provisioning, active, reconnecting, or detached, or when something with that name is already running on the host a remote launch targets. A terminated, ssh, or file-navigator row never takes a label, and labels compare without regard to case. [Agents](/user-documentation/getting-started/agents#names) lists the three refusal lines.
+A default label walks past everything in use to the next free `-2`, `-3`, and so on. A label is in use when an open tab has it, when the [sessions](/user-documentation/tab-types/sessions) tab holds a harness or shell row with it that is provisioning, active, reconnecting, or detached, or when something with that name is already running on the host a remote launch targets. A terminated, ssh, or file-navigator row never takes a label, and labels compare without regard to case. [Agents](/user-documentation/getting-started/agents#names) lists the three refusal lines.
 
 - `harness` with no name opens the **New harness** dialog in the app (see below). Only the classic terminal UI prints `Usage: harness <claude|opencode|codex> [as <label>] [-w].` instead.
 - An unknown name: `Unknown harness "foo". Choose from: claude, opencode, codex.`
@@ -150,13 +152,15 @@ A harness with auto-approval active shows the auto-permitting flag icon in its m
 
 ## Resuming after a usage limit
 
-An opencode or codex tab auto-resumes by default. When the harness runs out of its subscription or usage allowance it prints a banner naming the moment it will take work again and then waits; the app reads that moment off the screen, waits for it, and types "resume the task you were working on." into the harness a minute later, so the tab rejoins the run without you. `--auto-resume` confirms the default and `--no-auto-resume` opts out; claude is the only harness that does not accept the flag, because it resumes by itself.
+An opencode or codex tab auto-resumes by default. When the harness runs out of its subscription or usage allowance, it prints a banner naming when it will take work again. The app reads that time and submits `resume the task you were working on.` one minute after it, so the tab rejoins the run without you. If that reset time has already passed when the banner is read, the resume is scheduled one minute from now. `--auto-resume` confirms the default and `--no-auto-resume` opts out; claude is the only harness that does not accept the flag, because it resumes by itself.
 
 The two harnesses name their limit differently. codex states a time of day, a calendar date, or a length of time; opencode always states a length — "Usage limit reached. It will reset in 1 hour 59 minutes." — naming which usage window it ran out of. opencode also schedules its own retry of the request, so the resume the app types in is a backstop rather than the only path; whichever gets through first ends the wait. A wait longer than 24 hours is never scheduled, so opencode's weekly and monthly limits are recognized but left for you — only its five-hour window resumes by itself.
 
 The wait is an ordinary scheduled entry on that tab, named `auto-resume`, so it appears in the tab's schedule panel and in the `schedules` tab. A harness tab has no command bar of its own, so you cancel it from a shell tab with `schedule cancel auto-resume in codex` — the `in <tab>` clause is what reaches a harness tab's timers — and the wait stops if you'd rather the tab stayed parked, after which the flag goes back to plain because nothing is pending any more. Scheduling one records an "Hit a usage limit; resuming at 1:21pm" notification with a link to the screen it read, and the tab's metadata row shows its own stopwatch icon, reading "Auto-resuming" in green while the resume waits.
 
-A tab parked this way is deliberately quiet: its dot stops blinking and it is never flagged unread or escalated into a waiting notification, because nothing about it needs you. Normal flagging resumes once the resume has been typed in. One resume is tried per limit — if it lands a touch early and the limit is still there, the tab is left for you rather than being nudged repeatedly — and a limit banner with no usable reset time is flagged as it always was. Closing the tab drops the resume, as it drops any of its timers.
+A pending resume keeps its original time even if later screen updates show a different reset. If the blockage clears before the timer fires, the app cancels it. Once the resume is delivered, an unchanged limit screen does not trigger another attempt. A changed limit screen can schedule a new resume.
+
+A tab parked this way is deliberately quiet: its dot stops blinking and it is never flagged unread or escalated into a waiting notification, because nothing about it needs you. Normal flagging resumes once the resume has been typed in. A limit banner with no usable reset time is flagged as it always was. Closing the tab drops the resume, as it drops any of its timers.
 
 ## Giving a harness a browser
 
@@ -186,7 +190,7 @@ On a machine without macOS sandboxing, or with workspace isolation switched off,
 
 The browser alongside `--offline` is contradictory on purpose — `--offline` cuts the harness off from the network, including the route to its own browser. Both still apply; nothing errors, and connecting just times out. Since the browser is on by default, add `--no-browser` to an `--offline` launch if you don't want the unusable endpoint.
 
-If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The tab is where the harness will hit the failure, and the notifications tab is one you may have closed. The 🌐 flag drops off the metadata row at the same moment, and stays off: a later connect starts a fresh browser behind the same endpoint, and the row does not light up again for it. The band and the notifications line are where a browser's death is reported. The harness keeps running — only its browser is gone.
+If the browser dies, you get the news in two places: a line in your [notifications](/user-documentation/tab-types/notifications) tab naming the tab it belonged to, and the same text on the tab itself, in a band just above the terminal. The 🌐 flag returns to its plain appearance with the tooltip `E2E browser`. A later connect starts a fresh browser behind the same endpoint, and the flag turns green again with `E2E browser in use`. The band and notifications line keep the earlier death on record. The harness keeps running.
 
 The report carries whatever the browser said on its way out, underneath the message — the launch error, a port that wouldn't bind. That's usually the part you can act on; `e2e browser exited` on its own tells you nothing. A browser that said nothing gives you just the message.
 
