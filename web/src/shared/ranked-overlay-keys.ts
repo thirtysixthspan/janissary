@@ -10,7 +10,7 @@ import type React from 'react';
 // Up and Down step one row and stop at the ends rather than wrapping, so holding a key settles on
 // the last or first row instead of cycling past it. What Enter commits and what Escape does
 // afterwards are the caller's, because they are the only two that differ.
-export function useRankedOverlayKeys(
+export function rankedOverlayKeys(
   selected: number,
   count: number,
   onChangeSelected: (index: number) => void,

@@ -1,7 +1,7 @@
 import React from 'react';
 import type { FuzzyMatchResult } from '../shared/fuzzy-match';
 import { basename, dirname } from '../shared/rel-path';
-import { useRankedOverlayKeys } from '../shared/ranked-overlay-keys';
+import { rankedOverlayKeys } from '../shared/ranked-overlay-keys';
 
 type Properties = {
   query: string;
@@ -42,7 +42,7 @@ function quickOpenBody(query: string, loading: boolean, results: FuzzyMatchResul
 export function QuickOpen({ query, onChangeQuery, results, selected, onChangeSelected, loading, onPick, onClose, restoreFocus }: Properties) {
   // Escape hands the keystroke's focus back to the command bar the overlay was raised from, so
   // closing it leaves the user where they can type the next command.
-  const onKeyDown = useRankedOverlayKeys(
+  const onKeyDown = rankedOverlayKeys(
     selected, results.length, onChangeSelected,
     () => { const result = results[selected]; if (result) onPick(result.path); },
     () => { onClose(); restoreFocus(); },
