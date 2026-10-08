@@ -19,6 +19,7 @@ describe('loadConfig', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -211,8 +212,13 @@ describe('loadConfig', () => {
     mkdirSync(configDir, { recursive: true });
     writeFileSync(path.join(configDir, 'config.json'), 'not-json');
 
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     const config = loadConfig(tmpDir);
+
     expect(config.transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
+    expect(writeSpy).toHaveBeenCalledWith(
+      expect.stringContaining('.janissary/config.json is invalid JSON — using defaults (file left untouched)'),
+    );
   });
 
   it('warns on stderr and leaves the file untouched on parse error', () => {

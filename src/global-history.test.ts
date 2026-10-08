@@ -129,8 +129,13 @@ describe('global-history', () => {
     const filePath = path.join(home, '.janissary', 'history.json');
     rmSync(filePath);
     mkdirSync(filePath);
+    const warning = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     expect(() => recordGlobalHistory('test', 't')).not.toThrow();
     expect(globalCommands()).toEqual(['test']);
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining('global command history unavailable: could not read history.json'),
+    );
   });
 
   it('uses atomic replacement for creation and updates', () => {
@@ -151,13 +156,16 @@ describe('global-history', () => {
     mkdirSync(dir, { recursive: true });
     const filePath = path.join(dir, 'history.json');
     writeFileSync(filePath, '{not valid json');
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const warning = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     initGlobalHistory(home);
 
     recordGlobalHistory('kept in memory', 'tab-a');
 
     expect(readFileSync(filePath, 'utf8')).toBe('{not valid json');
     expect(globalCommands()).toEqual(['kept in memory']);
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining('global command history unavailable: could not read history.json'),
+    );
   });
 
   it('does not overwrite a file that becomes unreadable after a successful start', () => {

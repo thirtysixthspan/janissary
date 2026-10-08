@@ -1,9 +1,20 @@
 import React from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import type { ImagePayload } from '@shared/plugins/image/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { ImageTab } from './ImageTab';
+
+beforeEach(() => {
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ({
+    drawImage: vi.fn(),
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    setTransform: vi.fn(),
+  }) as unknown as CanvasRenderingContext2D);
+});
+
+afterEach(() => { vi.restoreAllMocks(); });
 
 function makeImage(overrides: Partial<ImagePayload> = {}): ImagePayload {
   return {
