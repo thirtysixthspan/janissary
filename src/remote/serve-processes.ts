@@ -5,6 +5,7 @@ import { shellStartupEnvironment } from '../shell/zsh-startup/script.js';
 import { ZshStartupDirectory } from '../shell/zsh-startup/directory.js';
 import { harnessSpawnEnv } from '../harness/scratch-dir.js';
 import { messageBus } from '../bus.js';
+import { containedAbsolute } from '../file-navigator/batch-paths.js';
 import type { ScreenCapture } from '../harness/screen.js';
 import { buildHarnessDetection, type HarnessDetection } from './serve-processes-detect.js';
 import { spawnFrameState } from './process-state.js';
@@ -155,9 +156,7 @@ export class RemoteProcesses {
 
   private shellCwd(requested: string | undefined): string {
     const cwd = path.resolve(this.workspaceDir, requested ?? '.');
-    const relative = path.relative(this.workspaceDir, cwd);
-    return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative))
-      ? cwd : this.workspaceDir;
+    return containedAbsolute(this.workspaceDir, cwd) ? cwd : this.workspaceDir;
   }
 
   private browsers = new Map<string, BrowserHandle>();

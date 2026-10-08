@@ -13,6 +13,9 @@ export function remoteCwd(
     return undefined;
   }
 
+  // The same containment test `containedAbsolute` makes for a local tree, spelled over `path.posix`
+  // on purpose rather than imported: a remote workspace's paths are always posix, and the shared
+  // predicate is tied to the local `path` API.
   const normalizedWorkspace = path.posix.normalize(workspace);
   const remoteCwd = managers.tab.cwdOf(sourceLabel) ?? normalizedWorkspace;
   const relativeCwd = path.posix.relative(normalizedWorkspace, path.posix.normalize(remoteCwd));

@@ -1,11 +1,6 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
-import { containedPath } from '../../file-navigator/batch-paths.js';
-
-function inside(root: string, candidate: string): boolean {
-  const relative = path.relative(root, candidate);
-  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
-}
+import { containedAbsolute, containedPath } from '../../file-navigator/batch-paths.js';
 
 export function physicallyContainedPath(root: string, relPath: string): boolean {
   const absolute = containedPath(root, relPath);
@@ -15,7 +10,7 @@ export function physicallyContainedPath(root: string, relPath: string): boolean 
 
   while (true) {
     try {
-      return inside(realRoot, realpathSync(candidate));
+      return containedAbsolute(realRoot, realpathSync(candidate));
     } catch {
       const parent = path.dirname(candidate);
       if (parent === candidate) return false;

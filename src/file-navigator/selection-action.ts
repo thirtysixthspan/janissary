@@ -2,6 +2,7 @@ import { statSync } from 'node:fs';
 import path from 'node:path';
 import { openerForExtension } from '../openers/index.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
+import { containedAbsolute } from './batch-paths.js';
 
 // A resolved match: the entry to draw, plus the plugin that owns it and the paths it would act on.
 // Only the label and the action name ever reach the client — the plugin identity stays server-side,
@@ -28,9 +29,7 @@ export type SelectionActionMatch = {
 // tree-relative rows, so anything that leaves the root was never a row it could have selected.
 function resolveSelected(root: string, relPath: string): string | undefined {
   const absolute = path.resolve(root, relPath);
-  const contained = absolute === root
-    || absolute.startsWith(root.endsWith(path.sep) ? root : root + path.sep);
-  if (!contained) return undefined;
+  if (!containedAbsolute(root, absolute)) return undefined;
   try {
     return statSync(absolute).isFile() ? absolute : undefined;
   } catch {
