@@ -1,3 +1,5 @@
+import { isRecord } from '../api.js';
+
 export const VIDEO_PAYLOAD_SCHEMA_VERSION = 1;
 
 export type VideoPayload = {
@@ -10,10 +12,6 @@ export type VideoPayload = {
 
 export type CaptureFramePayload = { dataUrl: string };
 export type CaptureFrameResult = { name: string };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function isVideoPayload(value: unknown): value is VideoPayload {
   return isRecord(value)

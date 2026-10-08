@@ -1,3 +1,5 @@
+import { isRecord } from '../api.js';
+
 export const AUDIO_PAYLOAD_SCHEMA_VERSION = 1;
 
 // The instance key every audio tab opens under. Constant because there is only ever one player: a
@@ -22,10 +24,6 @@ export type AudioPayload = {
 
 export type SelectTrackPayload = { path: string };
 export type RemoveTrackPayload = { path: string; unplayable?: boolean };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function isAudioTrack(value: unknown): value is AudioTrack {
   return isRecord(value)

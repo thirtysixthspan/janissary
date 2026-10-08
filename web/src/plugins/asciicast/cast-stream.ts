@@ -9,6 +9,8 @@
 // comment lines v3 permits are skipped, and an unrecognized version is refused rather than guessed at
 // — half a recording read as the wrong format is worse than no recording.
 
+import { isRecord } from '../api';
+
 export type CastResize = { cols: number; rows: number };
 
 export type CastEvent =
@@ -32,10 +34,6 @@ export type CastHeader = {
 };
 
 export type CastHeaderResult = { header: CastHeader } | { error: string };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function readString(source: Record<string, unknown>, key: string): string {
   const value = source[key];

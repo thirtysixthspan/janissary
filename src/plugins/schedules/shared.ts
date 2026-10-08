@@ -1,9 +1,12 @@
+import { isRecord } from '../api.js';
+
 export const SCHEDULES_PAYLOAD_SCHEMA_VERSION = 1;
 
 // One row of the aggregated list: a scheduled command, the tab that owns it, and when it next runs.
 // Deliberately re-declared rather than imported from the host's `AggregatedScheduleView`: this
-// contract has to stay import-free so the client can run its guards without pulling server
-// resolution into the browser graph. `shared.test.ts` pins the two shapes against each other.
+// contract's only import is the published `isRecord` guard through `../api.js`, so the client can
+// run its guards without pulling server resolution into the browser graph. `shared.test.ts` pins
+// the two shapes against each other.
 export type ScheduleRow = {
   id: string;
   spec: string;
@@ -17,10 +20,6 @@ export type SchedulesPayload = { entries: ScheduleRow[] };
 
 export type CancelIntent = { tab: string; id: string };
 export type FocusOwnerIntent = { tab: string };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isScheduleRow(value: unknown): value is ScheduleRow {
   return isRecord(value)

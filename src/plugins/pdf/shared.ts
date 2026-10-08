@@ -1,3 +1,5 @@
+import { isRecord } from '../api.js';
+
 export const PDF_PAYLOAD_SCHEMA_VERSION = 1;
 
 // What the tab holds. Deliberately no configured-viewer name: the video payload carries one so its
@@ -16,10 +18,6 @@ export const PDF_LOAD_FAILURES = ['password-protected', 'unreadable', 'other'] a
 export type PdfLoadFailure = (typeof PDF_LOAD_FAILURES)[number];
 
 export type LoadFailedPayload = { reason: PdfLoadFailure };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function isPdfPayload(value: unknown): value is PdfPayload {
   return isRecord(value)

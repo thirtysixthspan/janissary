@@ -1,3 +1,5 @@
+import { isRecord } from '../api.js';
+
 export const SEARCH_PAYLOAD_SCHEMA_VERSION = 1;
 
 // One match, self-describing: its own project-relative path and line number so the row's header
@@ -39,10 +41,6 @@ export type SearchPayload = {
 
 export type SearchIntent = { query: string; include: string; exclude: string; regex: boolean; matchCase: boolean; wholeWord: boolean };
 export type OpenIntent = { path: string; line: number };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === 'string');

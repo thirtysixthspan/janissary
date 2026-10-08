@@ -1,3 +1,5 @@
+import { isRecord } from '../api.js';
+
 export const SHELL_PAYLOAD_SCHEMA_VERSION = 4;
 
 // The zsh binary this plugin spawns, named outright rather than taken from `$SHELL`: the tab is a
@@ -7,9 +9,10 @@ export const SHELL_PAYLOAD_SCHEMA_VERSION = 4;
 export const SHELL_PROGRAM = '/bin/zsh';
 
 // One row of a connection or schedule window, re-declared rather than imported from `@shared/protocol`
-// because this module must import nothing: the client executes these guards through `@shared`, and an
-// import could pull NodeNext resolution into the browser graph. `shared.test.ts` pins these two
-// against the protocol's own shapes, the way the sessions plugin's does.
+// because this module's only import is the published `isRecord` guard through `../api.js`: the client
+// executes these guards through `@shared`, and any other import could pull NodeNext resolution into
+// the browser graph. `shared.test.ts` pins these two against the protocol's own shapes, the way the
+// sessions plugin's does.
 export type ShellConnectionKind =
   | 'shell' | 'acp' | 'ssh' | 'browser' | 'terminal' | 'sqlite';
 
@@ -102,7 +105,7 @@ export function isShellCwd(value: unknown): value is string {
   return value.slice(1).split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
 }
 
-// The completion the application's own command bar shows, re-declared for the same import-free reason
+// The completion the application's own command bar shows, re-declared for the same reason
 // as the rows above. `matches`, `newInput` and `newCursor` are the application's own shape: a single
 // match is the completed text, several are a strip to choose from, and none leaves the bar alone.
 export type ShellCompletion = {
@@ -110,10 +113,6 @@ export type ShellCompletion = {
   newInput: string;
   newCursor: number;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 const CONNECTION_KINDS: ReadonlySet<string> = new Set([
   'shell', 'acp', 'ssh', 'browser', 'terminal', 'sqlite',

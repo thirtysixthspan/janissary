@@ -131,6 +131,12 @@ export { nextListSelection } from '../shared/list-selection';
 export { HistoryPicker } from '../shared/command-bar/HistoryPicker';
 export { handlePickerKey } from '../keyboard-handlers';
 
+// The "this is a JSON object rather than a scalar or an array" guard, published so a client plugin
+// decodes a payload with the same rule the server side does rather than its own copy of it. It
+// re-exports the canonical definition the server plugin surface already publishes, so the two sides
+// agree by construction. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
+export { isRecord } from '@shared/value-guards';
+
 // The one clipboard writer, published so a plugin's copy reaches the same capture seam every other
 // copy in the application does rather than being invisible to the clipboard history. The optional
 // second argument is for the one plugin copy with something to say when the clipboard refuses;

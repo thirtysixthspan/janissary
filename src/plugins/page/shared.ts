@@ -1,6 +1,8 @@
-// The page plugin's payload and intent contract. Imports nothing — not even a type — because the
-// client runs these guards through `@shared`, where a relative NodeNext import or a server module
-// would follow them into the browser graph.
+import { isRecord } from '../api.js';
+
+// The page plugin's payload and intent contract. Its one import is the published `isRecord` guard
+// through `../api.js` — the plugin api module is a pure contract — because the client runs these
+// guards through `@shared`, where any other server module would follow them into the browser graph.
 
 export const PAGE_PAYLOAD_SCHEMA_VERSION = 1;
 
@@ -24,10 +26,6 @@ export type SyncIntent = {
   url: string;
   text: string;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 export function isPagePayload(value: unknown): value is PagePayload {
   if (!isRecord(value)) return false;

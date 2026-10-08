@@ -1,8 +1,11 @@
+import { isRecord } from '../api.js';
+
 export const SESSIONS_PAYLOAD_SCHEMA_VERSION = 1;
 
-// The sessions tab's payload contract. Import-free on purpose: the client executes these guards
-// through `@shared`, and an import would pull NodeNext `.js` resolution or server behavior into the
-// browser graph. The shapes are deliberately re-declared rather than imported from the host's
+// The sessions tab's payload contract. Its one import is the published `isRecord` guard through
+// `../api.js`, which the client can follow because the plugin api module is a pure contract; any
+// other server module would pull NodeNext `.js` resolution or server behavior into the browser
+// graph. The shapes are deliberately re-declared rather than imported from the host's
 // `RemoteSessionView`; `shared.test.ts` pins the two against each other.
 
 export type SessionRowKind = 'harness' | 'shell' | 'ssh' | 'navigator';
@@ -40,10 +43,6 @@ export type SessionIntent = { id: string };
 const KINDS = new Set<string>(['harness', 'shell', 'ssh', 'navigator']);
 const STATES = new Set<string>(['provisioning', 'active', 'reconnecting', 'detached', 'terminated']);
 const ACTIONS = new Set<string>(['attach', 'detach', 'terminate', 'forget', 'focus', 'close']);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 function isOptionalString(value: unknown): boolean {
   return value === undefined || typeof value === 'string';
