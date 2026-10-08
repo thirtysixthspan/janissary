@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { TabManager } from '../tab/manager.js';
@@ -500,6 +500,7 @@ describe('ShellManager — a pty shell that exits', () => {
     tmpDir = mkdtempSync(path.join(tmpdir(), 'shell-exit-'));
     mkdirSync(path.join(tmpDir, '.janissary'), { recursive: true });
     loadConfig(tmpDir);
+    loadLearnedCommands(tmpDir);
     managers = makeManagers();
     shellManager = new ShellManager(managers);
   });
@@ -546,6 +547,8 @@ describe('ShellManager — a pty shell that exits', () => {
     streamOutput([`${ESC}[?1049h`]);
 
     expect(tab().activePty).toBe('pty2');
+    expect(JSON.parse(readFileSync(path.join(tmpDir, '.janissary', 'interactive-commands.json'), 'utf8')))
+      .toEqual(['mytui']);
   });
 
   // Killing a shell ends its streams too, which completes its command — but the tab it would report
