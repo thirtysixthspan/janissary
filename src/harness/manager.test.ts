@@ -4,6 +4,7 @@ import { HarnessScreenReader } from './screen.js';
 import { HarnessRecorder } from './recorder.js';
 import { writeCaptureFile } from './capture/file.js';
 import { notify } from '../notifications/index.js';
+import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from '../launch-name/leftover.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
@@ -742,6 +743,59 @@ describe('HarnessManager auto-approve', () => {
       { name: 'claude', tool: 'claude', workspace: true }, 'claude', 2, '#fff', 'janus',
     );
     expect(setCwd).toHaveBeenCalledWith('claude', '/workspace/claude');
+  });
+});
+
+describe('HarnessManager no-workspace auto-approve warning', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    recorderMock.instances.length = 0;
+  });
+
+  afterEach(() => {
+    messageBus.emit('pty', { type: 'exit', id: 'pty-1', exitCode: 0 });
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  // A harness tab renders its PTY rather than its transcript, so the warning is reported as a
+  // notification — the feed, a toast, and the record file — instead of appended to a log the tab
+  // never shows.
+  it('reports the warning as a notification for a --no-workspace -y launch', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace -y')).toBeUndefined();
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'auto-approve-no-workspace', 'claude', autoApproveWithoutWorkspaceWarning(true),
+    );
+    expect(tabs.at(-1)?.log).toEqual([]);
+  });
+
+  it('reports the same warning for a profile entry that is auto-approving with no workspace', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    manager.openFromProfile(
+      { name: 'claude', tool: 'claude', workspace: false, autoApprove: true }, 'claude', 2, '#fff', 'janus',
+    );
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'auto-approve-no-workspace', 'claude', autoApproveWithoutWorkspaceWarning(true),
+    );
+  });
+
+  it('reports nothing when auto-approve is off', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude --no-workspace --no-auto-approve')).toBeUndefined();
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('reports nothing for a workspaced -y launch, where the clone confines the harness', () => {
+    const { managers } = makeManagers();
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude -w -y')).toBeUndefined();
+    expect(notify).not.toHaveBeenCalledWith(
+      managers, 'auto-approve-no-workspace', expect.anything(), expect.anything(),
+    );
   });
 });
 

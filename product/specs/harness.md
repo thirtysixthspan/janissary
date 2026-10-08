@@ -214,9 +214,12 @@ the app recognizes. A harness without a recognized permission prompt would refus
 
 Auto-approval does **not** require a workspace. Launching `harness claude --no-workspace` without also opting out of auto-approval
 succeeds, but since there is then no disposable clone (and, on macOS, no sandbox) confining the
-harness, a security warning line appears in the new tab's terminal: `auto-approve is on without a
+harness, the launch reports a security warning as a notification: `auto-approve is on without a
 workspace: prompts are approved unattended against your real files, with no sandbox confining the
-harness`.
+harness`. It is attributed to the new tab, reaches the notifications feed (with a toast and a bell
+when no feed is on screen), and is written to the notification record — a harness tab renders its
+own PTY rather than a transcript, so nothing is written into the tab's terminal or its recording
+(see [[notifications]]).
 
 `-y` combines with `as <label>` and `-w` in any order.
 

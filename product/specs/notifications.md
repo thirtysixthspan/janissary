@@ -146,6 +146,11 @@ These event types can produce a notification line:
 - **`manual`** — an explicit `notify <message>` (see below).
 - **`auto-approve`** — a harness launched with `-y` auto-approves one of its own
   permission prompts (see `harness.md`).
+- **`auto-approve-no-workspace`** — a harness tab launched with `-y` and no workspace: the warning
+  reads `auto-approve is on without a workspace: prompts are approved unattended against your real
+  files, with no sandbox confining the harness` (see `harness.md`). Attributed to the tab that just
+  launched, and explicit: that tab is very often the active one. Nothing is written into the tab's
+  terminal or its recording, since a harness tab renders its PTY rather than a transcript.
 - **`auto-resume`** — a harness hit a subscription limit and the app scheduled a resume for the
   moment the limit resets, named as `Hit a usage limit; resuming at <time>` (see `harness.md`).
 - **`editor-suggest`** — an in-editor persona-suggestion request fails or comes back empty (see
@@ -227,7 +232,7 @@ These event types can produce a notification line:
 
 The four ambient events (`state-change`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
-`.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
+`.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
 `open-unsupported`, `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`,
 `launch-refused`, `launch-workspace-cleaned`, `launch-root-cloned`, and `remote-refused` events have no toggle, and like the other explicit
@@ -238,8 +243,8 @@ background tab.
 
 An ambient event on the **currently active** tab never produces a notification — only background
 tabs feed the notifications tab. The notifications tab itself is a view tab that produces no such
-events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
-`editor-suggest`,
+events, so it never notifies about itself. The `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`,
+`auto-resume`, `editor-suggest`,
 `transcript-unavailable`, `e2e-browser-gone`, `file-operation`, `open-unsupported`, and
 `plugin-failure`, `plugin-note`, `schedule-late`, `remote-session-terminated`, `remote-session`, and `remote-refused` events **bypass focus suppression**: they still
 record a line even when their tab is active, because they report an explicit, user-armed action, a
@@ -325,7 +330,7 @@ on reconnect.
 ### Desktop alerts and bell sounds
 
 A live, explicit notification also asks each connected browser window to show a desktop alert and
-play a short sound. This includes `question`, `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
+play a short sound. This includes `question`, `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
 `editor-suggest`, `transcript-unavailable`, the three recording-failed events,
 `e2e-browser-gone`, `file-operation`, `open-unsupported`, `plugin-note`, `plugin-failure`,
 `schedule-late`, the two remote-session events, the three launch events, and `remote-refused`.
@@ -354,7 +359,7 @@ the page has received user interaction. A browser or OS can prevent window activ
 These failures do not interrupt the notification queue or feed.
 
 The bell uses bundled MP3 files: `success.mp3` for `manual` and `plugin-note`; `warning.mp3` for
-`question`, `harness-idle`, `auto-approve`, `auto-resume`, `schedule-late`, the two remote-session
+`question`, `harness-idle`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`, `schedule-late`, the two remote-session
 events, the three launch events, and `remote-refused`; and `error.mp3` for the remaining explicit
 events. Each client plays at most one bell per second, while every eligible desktop banner may still
 show. The `osNotifications` and `terminalBell` config switches are independent and default on.
