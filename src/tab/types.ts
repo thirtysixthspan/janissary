@@ -109,7 +109,7 @@ export type PluginTabRecord = {
   fileRefs: string[];
   sourceLabel: string;
   // Set by the plugin's `setBusy` capability and folded into the view's `busy` dot. Kept here rather
-  // than on `runtime.busy`, which is the host's own command-in-flight gate that `send` and `queue` read.
+  // than on `runtime.busy`, which tracks the host's own commands in flight.
   busy?: boolean;
 };
 
@@ -264,6 +264,8 @@ export type TabRuntime = {
 };
 
 export type Tab = {
+  // Core tabs may opt in directly; plugins opt in through the queue capability pair.
+  hasCommandQueue?: true;
   label: string;
   dotColor: string;
   number: number;

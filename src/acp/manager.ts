@@ -18,8 +18,8 @@ const PREFERRED_ACP_MODEL = 'google/gemini-3.1-flash-lite';
 
 // Refused rather than queued: `RemoteChannel.send` silently drops every frame until ssh has
 // authenticated and the handshake has landed, so a prompt typed into a provisioning tab would hang
-// forever with the busy dot lit. `send` and `schedule` queue because something else delivers them to
-// a tab; `acp` is typed by a person, who can retype it.
+// forever with the busy dot lit. Agent input dispatches immediately, so every ACP entry point needs
+// this readiness check.
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
 
 // An override can leave nothing to run. Refused with a message rather than launched with a model the

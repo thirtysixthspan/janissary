@@ -70,11 +70,8 @@ export type TabPluginDeclaration = {
   // `spawnTerminal`, and is refused without it — a claim with no terminal behind it would be a
   // promise the host cannot keep.
   recordsTerminal?: boolean;
-  // This plugin's tabs host the application command bar: the host's shared pickers open over such a
-  // tab and insert into its bar, and its queue popup lists and edits that tab's own command queue.
-  // Read by the host from the declaration and carried on the tab's view, so the client never decides
-  // it from a plugin id. A declaration carrying it must request `queueLine` and `nextQueuedLine`, the
-  // two capabilities that fill and drain the queue the popup shows.
+  // Hosts the shared command bar and its pickers, independently of queue support. Request both
+  // `queueLine` and `nextQueuedLine` to opt into the core queue; no terminal is required.
   hostsCommandBar?: boolean;
   // Host topics this plugin wants to hear about. A declaration naming one must supply `notify`.
   notifications?: readonly TabPluginNotificationTopic[];
@@ -313,8 +310,8 @@ export type TabPluginServerCapabilities = {
   // is in-memory only, so the tab is still there holding the payload of a shell that finished minutes
   // ago. This is how a tab learns that and closes rather than waiting for input that can never arrive.
   terminalRunning(ptyId: string): boolean;
-  // Add one line to the back of this plugin's own answering tab's command queue — the same queue an
-  // agent tab holds, which the state broadcast lists and the queue popup edits — so a plugin tab with
+  // Add one line to the back of this plugin's own answering tab's command queue — the core queue
+  // the state broadcast lists and the queue popup edits — so a plugin tab with
   // a command line can hold lines while its own process is busy rather than keeping a second queue of
   // its own. Does nothing when that tab is not one of this plugin's own.
   queueLine(line: string): void;

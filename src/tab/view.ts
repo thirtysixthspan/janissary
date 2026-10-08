@@ -1,3 +1,4 @@
+import { queueProjection } from '../command-queue/support.js';
 import type { Tab } from './types.js';
 import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
@@ -32,7 +33,7 @@ export function buildTabViews(
   ));
 }
 
-type DeclaredViewFields = Pick<TabPluginDeclaration, 'chords' | 'hostsCommandBar'>;
+type DeclaredViewFields = Partial<Pick<TabPluginDeclaration, 'chords' | 'hostsCommandBar' | 'capabilities'>>;
 
 // The declaration facts a plugin tab's view carries. Each is omitted rather than sent empty or false,
 // so a plugin that claims nothing costs no bytes on every state broadcast, and so the client can tell
@@ -80,6 +81,7 @@ export function buildTabView(
   // up from the recorder: that is released when the PTY exits, and the tab — and the file — outlive
   // it. Absent until the session has produced its first output.
   const recording = tab.recording;
+  const queue = queueProjection(tab, declarationOf?.(tab.plugin?.id ?? ''), commandQueue);
   return {
     label: tab.label,
     number: tab.number,
@@ -117,7 +119,7 @@ export function buildTabView(
     bufferLines: flattenBuffer(tab.log, !tab.toolStepsExpanded)
       .map((l) => (l.cwd ? { ...l, cwd: shorten(l.cwd) } : l)),
     cmdHistory: tab.cmdHistory,
-    commandQueue,
+    ...queue,
     toolStepsExpanded: !!tab.toolStepsExpanded,
     pendingQuestion,
     view: tab.view,

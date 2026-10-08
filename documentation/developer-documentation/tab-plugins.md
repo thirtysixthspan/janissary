@@ -73,7 +73,7 @@ Literal imports make the modules visible to TypeScript, Vite, Knip, and tests wh
 | `agentNamedTabs` | no | Name each tab from the agent-name pool, as an unnamed agent tab is, and show that name as its title; `tabLabelPrefix` and your title are the fallback once every name is held |
 | `playable` | no | Every extension in `fileExtensions` is something `play` may dispatch to your inline opener |
 | `spawnTerminal` | no | Asks for the `spawnTerminal` resource — the right to start a process from a payload factory, in a directory inside the project root. Without it, calling that resource throws rather than quietly doing nothing. Pass `zshHooks: { nonce }` (minted with `createShellMarkerNonce`) to have the host start zsh with the shell tab's status hooks installed |
-| `hostsCommandBar` | no | Your tabs host the application command bar: the shared pickers (`Ctrl+A` tasks, `Ctrl+E` queue, the theme and navigator pickers) open over your tab, a picked task is inserted into your bar, and the queue popup lists your tab's own command queue. Requires the `queueLine` and `nextQueuedLine` capabilities, which fill and drain that queue |
+| `hostsCommandBar` | no | Your tabs host the application command bar and its shared task, theme, and navigator pickers. Queue support is independent: requesting both `queueLine` and `nextQueuedLine` enables the core queue, whose popup additionally needs a command bar for editing |
 | `notifications` | no | Host topics to be told about; a declaration naming one must supply `notify` |
 | `hostState` | no | Host state pushed into your payloads: `connections`, `schedule`, or both. A declaration naming any must supply a `hostState` handler |
 | `chords` | no | Canonical chord ids claimed while one of your tabs is the visible one |
@@ -129,7 +129,7 @@ An activation may provide `reattach(record, capabilities)` to rebuild a tab arou
 - `dispatchLineWithOutput(line)` offers one line to the application's own command dispatcher and answers `{ dispatched, output }`: whether it ran, and the text it added to the tab's transcript, so a terminal-backed plugin can display the reply in its own terminal. It uses the tab the line was answered from — the plugin tab itself when a client dispatched it, and the tab the plugin was invoked from when a command or selection action did. A line that resolves to nothing answers `dispatched: false` and is yours to handle. Deliberately one call rather than a resolve-then-decide pair: the command table is consulted once, in the one place that owns it, and is never copied into a plugin where a newly added command would be invisible. A line resolving to the reserved `shell` route answers `dispatched: false` too — that route is not a command. The output is every entry the command appended to that tab while it ran, joined by newlines — the same capture a messaged command's reply comes from. The wait does not count against your handler's deadline, and it ends after 30 seconds with whatever was said by then.
 - `completeLine(line, cursor)` returns the completion the application's own command bar would show, in the same shape, so a plugin whose tab has a command line is not maintaining a second completion source.
 - `terminalRunning(ptyId)` answers whether a terminal you spawned is still running. A client that reconnects learns nothing about what happened while it was away — the exit event was broadcast to nobody — and a plugin tab is in-memory only, so the tab is still there holding the payload of a shell that finished minutes ago. This is how a tab learns that and closes rather than waiting for input that can never arrive.
-- `queueLine(line)` adds a line to the back of the answering tab's own command queue — the queue an agent tab holds, which the state broadcast lists and the queue popup edits — so a plugin tab with a command line can hold lines while its process is busy instead of keeping a second queue.
+- `queueLine(line)` adds a line to the back of the answering tab's core command queue. Request it together with `nextQueuedLine` to opt in. A terminal and command bar are optional; queue storage and delivery work without either.
 - `nextQueuedLine()` removes and returns the front of the answering tab's command queue, or `null` when it is empty. The plugin decides when to drain, since only it knows when its process is ready for the next line.
 - `recordCwd(cwd)` records the answering tab's working directory — the directory `originTab` reports and the host's own actions on that tab start from. A plugin whose process changes directory on its own calls it, so a shell opened from that tab, its file navigator, and its completion all follow.
 - `recordGlobalHistory(line)` adds a line submitted in the answering tab's own command line to the application's global command history, the one ghost text completes from in every tab, attributed to that tab. It does nothing for a tab that is not the plugin's own, or for a blank line.
@@ -137,6 +137,22 @@ An activation may provide `reattach(record, capabilities)` to rebuild a tab arou
 - `reportFailure(reason)` exits through the guarded failure boundary and disables the plugin.
 
 Your declaration decides which of them you actually get. A name it omits is still present on the capability object — the type is the whole contract — but calling it throws `used capability "<name>" without declaring it`, which crosses the failure boundary and disables the plugin. Declaring a capability you never call is harmless; calling one you never declared is a bug in your manifest, caught the first time that line runs. Keep the list to what you use.
+
+## Using the core command queue
+
+Request both `queueLine` and `nextQueuedLine` in your declaration to give your tabs a queue. This is independent of `spawnTerminal` and `hostsCommandBar`. The host publishes `hasCommandQueue` and the tab's queued rows; `queue <tab> <command>` accepts any opted-in tab. Agent tabs have no queue.
+
+Import `useCommandQueue` from `../api` in your client body. Supply transport adapters to your intents and a runner that returns `true` when it starts work requiring an idle signal, or `false` when the drain may continue immediately. For example:
+
+```tsx
+const { queue, submit } = useCommandQueue(
+  transport, runLine, initiallyBusy, recordQueuedLine, appBar.queuedLines,
+);
+```
+
+The transport implements `enqueue(line): Promise<void>` and `dequeue(): Promise<string | null>` by forwarding to the host's queue capabilities through your intents. Feed your work status into `queue.setBusy(running)` and send new submissions through `submit`. Core owns ordering, draining, wakeups when broadcast rows change, and mount/disposal behavior. You own routing and completion signals. For a framework-free consumer, import `CommandQueue` from the same API and pair `attach()` with `dispose()` yourself.
+
+The core queue popup opens when the source has both a queue and `hostsCommandBar`. Its rows and editing callbacks arrive through `useAppCommandBar`, already scoped to that tab. A plugin with a queue but no command bar uses its own input and presentation without receiving the popup.
 
 ## Updating a tab you already opened
 

@@ -9,7 +9,7 @@ import { ShellTabMeta } from './ShellTabMeta';
 import { useShellSubmit } from './useShellSubmit';
 import { useShellCommandQueue } from './useShellCommandQueue';
 import { useApplicationBarEdits } from './useApplicationBarEdits';
-import type { ShellCommandQueue } from './shell-command-queue';
+import type { CommandQueue } from '../api';
 import { useShellScrollKeys } from './useShellScrollKeys';
 import { useShellTerminalStatus } from './useShellTerminalStatus';
 import { useTerminalCommandHistory } from './useTerminalCommandHistory';
@@ -43,7 +43,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   // a busy zsh, and the queue drains from zsh's first prompt.
   const startsBusy = payload.provisioning === true || (payload.commandRunning ?? false);
   const [commandRunning, setCommandRunning] = useState(startsBusy);
-  const queueReference = useRef<ShellCommandQueue | null>(null);
+  const queueReference = useRef<CommandQueue | null>(null);
   const queueOpen = appBar.queueOpen;
   useApplicationBarEdits(appBar, inputReference, draft, setDraft);
 

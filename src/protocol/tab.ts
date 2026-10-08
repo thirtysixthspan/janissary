@@ -85,6 +85,7 @@ export type TabView = {
   bufferLines: BufferLine[];
   cmdHistory: string[];
   commandQueue: string[];
+  hasCommandQueue?: true;
   toolStepsExpanded: boolean;
   pendingQuestion?: PendingQuestionView;
   // Body kind: undefined/`'agent'` for a normal tab, or the named live view kind.

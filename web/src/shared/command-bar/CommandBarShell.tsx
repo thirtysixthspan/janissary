@@ -20,7 +20,7 @@ export type CommandBarShellProperties = {
   // line rather than supply its text. A slot rather than a prop of its own, for the same reason as
   // `above`: this component lays the line out and never learns what a control is.
   trailing?: ReactNode;
-  // Rendered just before the prompt glyph. The agent bar puts `queue` here while commands are
+  // Rendered just before the prompt glyph. The shell bar puts `queue` here while commands are
   // waiting; an input with nothing to announce passes nothing.
   label?: ReactNode;
   rootRef?: React.RefObject<HTMLDivElement | null>;

@@ -21,7 +21,7 @@
 | Ctrl+Shift+V / Cmd+Shift+V | Open the clipboard-history popup (see [[clipboard-history]]). `Ctrl+V` and `Cmd+V` are untouched — in an editor tab they are the browser's own paste |
 | Ctrl+A | Open the task picker |
 | Ctrl+G | Open the fuzzy tab navigator (also closes it if already open) |
-| Ctrl+E | Open the agent command queue popup (no-op if the exposed tab is not an agent tab) |
+| Ctrl+E | Open the command queue popup for a tab with a queue and an application command bar (see [[command-queue]]; otherwise no-op) |
 | Cmd+P | Open the Quick Open file finder from any focused tab |
 | Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches the current tab's transcript |
 | Cmd+T | Open a new workspaced agent tab (same as typing `agent`) |

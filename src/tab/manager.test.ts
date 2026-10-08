@@ -118,36 +118,6 @@ describe('TabManager by-label lookups', () => {
 });
 
 describe('TabManager queue', () => {
-  it('deleteBusy invokes the drain hook (microtask-deferred) only when the queue is non-empty', async () => {
-    const tm = makeTabManager();
-    const onIdle = vi.fn();
-    tm.setOnIdle(onIdle);
-
-    tm.addBusy('janus');
-    tm.deleteBusy('janus');
-    await Promise.resolve();
-    expect(onIdle).not.toHaveBeenCalled();
-
-    tm.enqueue('janus', 'echo hi');
-    tm.addBusy('janus');
-    tm.deleteBusy('janus');
-    expect(onIdle).not.toHaveBeenCalled(); // deferred, not synchronous
-    await Promise.resolve();
-    expect(onIdle).toHaveBeenCalledWith('janus');
-  });
-
-  it('finishRunning routes through deleteBusy so the drain fires after completion', async () => {
-    const tm = makeTabManager();
-    const onIdle = vi.fn();
-    tm.setOnIdle(onIdle);
-    tm.enqueue('janus', 'echo hi');
-    tm.startRunning('janus', 'echo hi');
-
-    tm.finishRunning('janus', 'hi');
-    expect(tm.isBusy('janus')).toBe(false);
-    await Promise.resolve();
-    expect(onIdle).toHaveBeenCalledWith('janus');
-  });
 
   it('editQueued replaces the right index and no-ops out of range', () => {
     const tm = makeTabManager();

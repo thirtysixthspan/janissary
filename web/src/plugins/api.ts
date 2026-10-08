@@ -32,6 +32,8 @@ export { spliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 // while the popup is open over that tab, and a picked line is inserted into that tab's bar alone. The
 // providers are the app shell's and are not published; `useAppCommandBar` throws without them rather
 // than answering "nothing is intercepted".
+export { useCommandQueue } from '../shared/command-queue/useCommandQueue';
+export { CommandQueue } from '../shared/command-queue/command-queue';
 export { useAppCommandBar } from '../shared/command-bar/AppCommandBar';
 export type { AppCommandBar } from '../shared/command-bar/app-command-bar-scope';
 

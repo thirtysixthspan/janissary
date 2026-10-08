@@ -36,7 +36,7 @@ is highlighted when the chooser opens.
 
 The chooser belongs to the tab that raised it. Answering it while you have clicked over to a different tab runs the command in the original one, not the one you are looking at. Keyboard tab-switching is blocked while a chooser is open, which hides this most of the time; the mouse is the way in.
 
-Only one chooser is open at a time, and that holds across the whole app, not just one tab. While one is open, nothing else can open one: a command in any other tab, or a scheduled or queued one, doesn't run, and its own tab shows `Another command is waiting for a route choice; run this again once it is answered.` Only the tab that raised the chooser has its command queue paused; every other tab keeps draining. Closing the tab that opened the chooser also closes the chooser.
+Only one chooser is open at a time, and that holds across the whole app, not just one tab. While one is open, nothing else can open one: a command in any other tab, or a scheduled or queued one, doesn't run, and its own tab shows `Another command is waiting for a route choice; run this again once it is answered.` Closing the tab that opened the chooser also closes the chooser.
 
 Typed in a tab, a line that no built-in command claims and that fits no confident route always gets the chooser, never a refusal — there is always `shell` and `acp (agent prompt)` to pick. The `Unknown command: "<what you typed>". Type "help" for available commands.` line exists, but a command sent to a tab by another one is the only path that produces it, and it arrives in the sender's transcript as that tab's answer.
 
@@ -51,7 +51,7 @@ Each tab has its own shell process that lives as long as the tab does. State acc
 
 A remembered directory that has since been deleted or renamed is not worth starting a shell in. Such a tab's shell starts in the project directory instead, which is where a new tab starts anyway, and the next command you run there records that directory in place of the stale one.
 
-A shell can also end on its own in the middle of a command: `exit`, `exec`, a `set -e` script hitting a failure, `kill -9 $$`, or a crash. The command it was running finishes with whatever it had printed, followed by `(shell exited)` on its own line, the tab stops showing as busy, and anything already queued behind it runs straight away instead of waiting. The next command in that tab starts a fresh shell in the tab's working directory.
+A shell can also end on its own in the middle of a command: `exit`, `exec`, a `set -e` script hitting a failure, `kill -9 $$`, or a crash. The command it was running finishes with whatever it had printed, followed by `(shell exited)` on its own line, the tab stops showing as busy, and later commands can run in a fresh shell. The next command in that tab starts a fresh shell in the tab's working directory.
 
 Closing a tab kills its shell; quitting the app kills them all. A shell Janissary killed that way doesn't report `(shell exited)` — its running command is simply abandoned along with it.
 

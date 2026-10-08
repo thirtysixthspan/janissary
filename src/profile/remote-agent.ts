@@ -27,7 +27,7 @@ export type RemoteAgentLaunch = {
 
 /**
  * `agent <name> on <address>`: an agent tab whose persistent shell runs on another host. The tab is
- * an ordinary agent tab — same transcript, same command bar, same busy queue — with one difference
+ * an ordinary agent tab — same transcript, same command bar, same immediate dispatch — with one difference
  * while it starts up: the ssh session takes the tab over full-screen through the existing
  * `activePty` mechanism, so ssh's own password, passphrase, and host-key prompts render there and
  * are answered by typing. Once the remote workspace is ready the takeover is released and the
