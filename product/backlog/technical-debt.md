@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * Move the pending-question dialog out of the app-shell root into a shared subdirectory beside the module that already depends on it, so the shared layer stops reaching up into the app shell.
 
 Existing Debt: `web/src/shared/acp/AcqResponseScope.tsx` imports `QuestionPanel` from `web/src/QuestionPanel.tsx` at the app root, importing upward out of the shared layer in violation of §3 (no feature imports another feature, and shared imports nothing from features or the app shell), and the file it reaches is a dialog rather than routing, layout, providers or composition. Severity: 7/10
@@ -58,22 +56,9 @@ Proposal Risk: 2/10 - Renaming to a plain function is a two-file import update a
 
 Proposal: In `web/src/shared/ranked-overlay-keys.ts`, rename `useRankedOverlayKeys` to `rankedOverlayKeys`, keeping the signature, the body and the returned handler type exactly as they are — the file already imports React as a type only, so no import changes. Update the two callers' import and call sites: `web/src/pickers/QuickOpen.tsx`, where the imported name and the call that assigns `onKeyDown` both change, and `web/src/editor/EditorFind.tsx`, where the same two sites change. Blast radius is three files — the module and its two consumers — and nothing else names `useRankedOverlayKeys`; there is no `ranked-overlay-keys` test to update. Both callers invoke it unconditionally at the top of a component body, which is why neither will notice the change, and both keep the same key behavior because only the name moves.
 
-
-* Delete the search-bar module that moved into shared for consumers that no longer exist, so the shared layer stops advertising an API nothing calls.
-
-Existing Debt: `web/src/shared/search-bar/` — `SearchBar.tsx`, `useTranscriptSearch.ts` and their two colocated tests — has no importer anywhere in the repository, which is the far end of §2 (promote to shared on the second real consumer) rather than a module the shared layer has earned: it was moved into `web/src/shared/search-bar/` by `product/plans/complete/move-search-bar-to-shared.md` for three consumers that no longer exist. Severity: 3/10
-
-Existing Risk: 3/10 - The four files still typecheck and lint, so `shared/` advertises a `SearchBar` and a `useTranscriptSearch` to the next surface that wants a filter line, and a contributor wiring one gets a module whose prop list was written for a command-bar swap that has since been deleted rather than for the overlay being built.
-
-Proposal Risk: 2/10 - Deleting unreferenced files cannot break a build, but the module composes `.command-area search-bar` styling and a host command-bar contract that no longer has a caller, so anything wanted from it later has to be re-derived rather than reused, and a re-derived copy could drift from the command bar as it now stands.
-
-Proposal: Delete `web/src/shared/search-bar/SearchBar.tsx`, `web/src/shared/search-bar/SearchBar.test.tsx`, `web/src/shared/search-bar/useTranscriptSearch.ts` and `web/src/shared/search-bar/useTranscriptSearch.test.ts`, and remove the resulting empty directory. Before deleting, confirm the claim of no consumers rather than trusting it: a repository-wide search for `search-bar`, `SearchBar` and `useTranscriptSearch` returns only `web/src/plugins/search/SearchBar.tsx`, a different component that owns its own markup, and prose in `product/plans/complete/` — nothing imports the directory. Blast radius is zero importers, so no path is retargeted and no other file is touched; the only things lost are the tests in this directory, which is intended, since they exercise a surface with no caller. If a filter line is wanted later, the piece worth rebuilding is the matching, not the markup: `compilePattern` and `findMatches` are still live at `src/search-matches.ts`, and a new overlay's own key handling is already the pattern `web/src/pickers/QuickOpen.tsx` and `web/src/editor/EditorFind.tsx` follow.
-
+## development
 
 ## deferred
-
-
-
 
 ## declined
 
