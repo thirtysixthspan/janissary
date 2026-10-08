@@ -21,13 +21,27 @@ If a tree is already open on the same root, `files` focuses it rather than openi
 
 Every shell tab and harness tab has a 📁 button on the right of its metadata row. Its tooltip is "Open file navigator in this workspace" on a workspaced tab and "Open file navigator here" otherwise. Clicking it opens a file navigator rooted at that tab's own working directory, which is the same root `files in <label>` would use, but the two routes differ in where focus ends up: the button leaves focus where it is.
 
-Unlike the bare `files` command, which opens into the center tab strip, a navigator opened from the button — when none is open yet — opens **docked in the left sidebar** by default. If a navigator is already open, clicking the button doesn't open a second one: it **retargets the existing navigator** (the most recently focused one, if you have more than one) to the clicked tab's working directory, leaving it exactly where it sits — docked or not. Either way, focus stays on the tab whose button you clicked, so you keep typing to the agent that owns the workspace. `files in <label>` does the same retargeting but does hand you the tree, which is the one to reach for when you want to go straight in.
+The bare `files` command opens into the center tab strip. A navigator opened from the button, when none is open yet, opens **docked in the left sidebar** by default. If a navigator is already open, clicking the button **retargets the existing navigator** to the clicked tab's working directory, keeping its dock placement. With several navigators open, it retargets the most recently focused one. Focus stays on the tab whose button you clicked, so you keep typing there. `files in <label>` opens or focuses a tree at that tab's directory and gives the tree keyboard focus.
+
+Retargeting clears the tree's expanded directories and move undo/redo history, since they belong to the old root.
 
 ## Remote workspaces
 
 The 📁 button on a remote shell or harness opens that tab's workspace **on the remote host**, using its existing SSH connection. `files in <label>` does the same when the label belongs to a remote tab. There is no `files on <address>` form: start a shell or harness on the host first, then navigate through that tab. The tree's header shows the host as plain text before its remote path and branch; hover over the host for the full destination. The workspace root reads as `$workspace/<name>`, and paths below it read as `$workspace/<name>/<rest>` using the remote paths.
 
+To browse a subdirectory of the remote tab named `build`, run:
+
+```
+files src in build
+```
+
+Bare `files` from a remote tab starts at its remote working directory when that directory is inside the workspace, or at the workspace root otherwise. Relative paths resolve there too. A leading `~` expands to the remote user's home, and `$root` expands to the remote workspace root. The resolved path must still stay inside that workspace; a path or symlink that escapes it is refused. An outside path reports `"<path>" is outside the remote workspace <workspace>.` While the workspace is still provisioning, the command reports `The remote workspace is not ready yet.` and opens no tree.
+
+After the branch, a connection plug shows whether the remote tree is connected, reconnecting, or provisioning. Hover it for `Connected`, `Reconnecting`, or `Provisioning`. Local trees have no connection plug. The header puts the path and branch beside the buttons in the center strip, stacks the buttons below them when docked, and wraps them when the available width is too narrow.
+
 A remote tree has the same browsing and editing tools as a local one: directory watches, file search, branch and git-status details, open and edit, new file and folder, rename, delete, drag-to-move, copy/cut/paste, and undo/redo. The work happens inside the remote workspace. Opened files use their ordinary viewer or editor, and an editor save writes back to the remote host. If the write fails, the editor stays marked as changed and the notifications feed explains why. Choosing **Open externally** is refused because it runs outside that save route; plugin-added file actions are unavailable for the same reason.
+
+Row sizes, modified times, and permissions come from the remote host. Until those details arrive, the row shows a blank value. A failed detail read is retried on the next refresh.
 
 Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar, an editor, or a harness inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert relative paths.
 
@@ -118,6 +132,8 @@ For a tree rooted on a remote host, the commit runs there, in that host's worksp
 
 Click the header's magnifying-glass button to open a search pop-up. Type part of a filename and the input shows a ghost completion of the best-matching file, with its full path (relative to the tree root) below, prefixed with `> ` — for example, `> src/tasks.md`. Matching is a case-insensitive substring on the filename, with a name that starts with what you typed ranked first; only the single top match is shown, there's no results list. The pop-up reads the whole tree when it opens, so it says `Searching…` for a moment on a large repository, and it searches every file under the root that git is not ignoring — a `node_modules` or a build directory your `.gitignore` covers is not in there.
 
+When matches have the same rank, the shorter path wins. Paths of the same length sort alphabetically.
+
 Press `Tab` to accept the ghost completion into the input without closing the pop-up. Press `Enter` to jump to the top match: it expands every ancestor directory, selects the file's row, and scrolls it into view. Press `Escape`, or click outside the pop-up, to close it without changing the tree. An empty query shows nothing below the input; a query with no matches shows `(no matching files)` instead of a path.
 
 <img class="agent-float left" src="/agents/dogan-south.png" alt="" />
@@ -127,6 +143,8 @@ Press `Tab` to accept the ghost completion into the input without closing the po
 Every visible directory is watched: files that appear, disappear, or get renamed show up in the tree within about a second, even during a burst of changes like a `git checkout`. If watching stops working for a directory (permissions, exotic filesystems), the tree keeps working — collapse and re-expand to refresh by hand. Delete an expanded directory out from under the tree and it collapses itself, its watcher stops, and you get it back the same way as any other closed directory.
 
 Two rows behave differently from what their name suggests. A **symlink** is shown as a plain file with no chevron and cannot be expanded, even when it points at a directory; open it like a file instead. The **`..`** row is the way back up, and it re-roots the tree one directory higher.
+
+If the parent directory cannot be read, the tree stays at its current root and the notifications feed reports `Could not navigate to <path>: <reason>.` A remote tree can return to its workspace root, where the `..` row is hidden so you cannot go above it.
 
 The header names the **branch** you have checked out, and on a detached HEAD it reads `HEAD` rather than a branch name. Outside a git repository there is no branch text at all, and the header just shows the path. Anywhere else on this page that a branch name appears — the git buttons, the pull and commit sections — it is this same readout.
 
@@ -261,7 +279,7 @@ Click the adjacent **New directory** button to create a folder using the same se
 
 Press `Cmd+R` (`Ctrl+R`) while a row other than `..` is selected to turn its name into an editable field, pre-filled with the current name. Edit it and press Enter to rename the file or directory on disk in place — an unchanged or empty name is a no-op that just closes the field. Escape, or clicking elsewhere, cancels without changing anything. If the new name collides with a sibling, including one the tree hasn't loaded, the same Overwrite/Cancel dialog used for drag-and-drop moves appears before anything is replaced. A rename doesn't join the undo/redo history described below.
 
-A rename only ever renames. Typing a path separator into the field does not move the item: `docs/notes.md` creates a file called `docs/notes.md`, with the slash part of the name, sitting next to the original. Moving something into another directory is a [drag-and-drop](#moving-files-by-drag-and-drop) or a cut-and-paste, never a rename.
+A rename stays in the same directory. A name containing a path separator, such as `docs/notes.md`, is refused with `The name contains a path separator; enter a name without folders`. Use [drag-and-drop](#moving-files-by-drag-and-drop) or cut-and-paste to move an item into another directory.
 
 If the filesystem refuses the rename, the item stays in place. The notifications feed names the item, explains the cause, and suggests what to try next.
 
@@ -312,8 +330,8 @@ A focused tree captures these keys for itself (tab-switching and other `Ctrl`/`C
 | Type letters | Jump to the next row starting with what you typed |
 | `Backspace` / `Delete` | Open a confirmation dialog to delete the selected file or directory |
 | `Escape` | Clear the selection and the cursor, and disarm a pending copy or cut |
-| `Cmd+Z` / `Ctrl+Z` | Undo the most recent move made in this tab |
-| `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move |
+| `Cmd+Z` / `Ctrl+Z` | Undo the most recent move or paste made in this tab |
+| `Cmd+Shift+Z` / `Ctrl+Shift+Z` | Redo the most recently undone move or paste |
 | `Cmd+N` / `Ctrl+N` | Create a new file (see "Creating a new file" above) |
 | `Cmd+R` / `Ctrl+R` | Rename the selected file or directory in place (see "Renaming a file or directory" above) |
 | `Cmd+A` / `Ctrl+A` | Select the current row's siblings (see "Selecting more than one row" above) |
@@ -338,7 +356,7 @@ Confirming a delete moves the selection to the nearest row that survived, and th
 becomes the active row, so your cursor is somewhere you can keep working from. Cancelling leaves the
 rows exactly as they were, with the one you right-clicked still selected.
 
-Undo and redo only apply to moves. Each tree keeps its own undo/redo history in memory for as long
+Undo and redo apply to moves and [copy-paste or cut-paste](#copying-cutting-and-pasting). Each tree keeps its own undo/redo history in memory for as long
 as it stays open; closing it clears that history. One bulk move is one history step. Undo reverses
 its successful moves in reverse order, and redo reapplies them in forward order. A new move clears
 the redo stack. Grouped undo and redo use **Overwrite all**, **Skip conflicts**, and **Cancel** if
