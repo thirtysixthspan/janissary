@@ -1,0 +1,37 @@
+{
+  "tabs": [
+    {
+      "type": "notifications",
+      "dock": "right"
+    },
+    {
+      "type": "files",
+      "dock": "left",
+      "path": "$root/",
+      "expanded": [
+        "profiles"
+      ],
+      "cursor": "profiles",
+      "anchor": "profiles",
+      "selected": [
+        "profiles"
+      ]
+    },
+    {
+      "type": "plugin",
+      "id": "sessions",
+      "dock": "right"
+    }
+  ],
+  "layout": {
+    "sidebar": {
+      "left": 264,
+      "right": 334
+    },
+    "tabAreaPct": 80,
+    "window": {
+      "width": 1570,
+      "height": 811
+    }
+  }
+}
