@@ -118,6 +118,33 @@ describe('file navigator refusal contract', () => {
     });
   });
 
+  it('reports an absolute path escaping the tree the same way on a local and a remote tree', async () => {
+    const absolute = path.join(root, '..', 'outside.txt');
+    const { local, remoteResult } = await bothTrees((state) => deleteOne(
+      state, absolute, () => {},
+    ));
+
+    expect(remoteResult).toEqual(local);
+    expect(remoteResult).toMatchObject({
+      total: 1,
+      failedPaths: [absolute],
+      failureReasons: { [absolute]: expect.stringContaining('outside this file navigator') },
+    });
+  });
+
+  it('reports a trailing-separator traversal the same way on a local and a remote tree', async () => {
+    const { local, remoteResult } = await bothTrees((state) => deleteOne(
+      state, '../outside.txt/', () => {},
+    ));
+
+    expect(remoteResult).toEqual(local);
+    expect(remoteResult).toMatchObject({
+      total: 1,
+      failedPaths: ['../outside.txt/'],
+      failureReasons: { '../outside.txt/': expect.stringContaining('outside this file navigator') },
+    });
+  });
+
   it('reports an out-of-tree batch delete as a per-path report on a remote tree', async () => {
     const state = tabState(root, remote.port, true);
 

@@ -41,6 +41,25 @@ describe('file navigator batches', () => {
       .toContain('no longer exists');
   });
 
+  it('reports an absolute source path as a failure even when it names a real file', () => {
+    const directory = root();
+    mkdirSync(path.join(directory, 'dest'));
+    writeFileSync(path.join(directory, 'a.txt'), 'a');
+    const absolute = path.join(directory, 'a.txt');
+    const result = moveBatch(directory, [absolute], 'dest');
+    expect(result).toMatchObject({ total: 1, failedPaths: [absolute], moved: [] });
+    expect('failureReasons' in result && result.failureReasons?.[absolute]).toContain('outside');
+  });
+
+  it('reports a traversal source with a trailing separator as a failure', () => {
+    const directory = root();
+    mkdirSync(path.join(directory, 'dest'));
+    writeFileSync(path.join(directory, 'a.txt'), 'a');
+    const result = moveBatch(directory, ['../a.txt/'], 'dest');
+    expect(result).toMatchObject({ total: 1, failedPaths: ['../a.txt/'], moved: [] });
+    expect('failureReasons' in result && result.failureReasons?.['../a.txt/']).toContain('outside');
+  });
+
   it('removes same-parent no-ops from the total', () => {
     const directory = root();
     writeFileSync(path.join(directory, 'a.txt'), 'a');

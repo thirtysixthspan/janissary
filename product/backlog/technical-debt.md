@@ -2,17 +2,6 @@
 
 ## ready
 
-* Give the "is this path inside that root" test one owner instead of four hand-rolled spellings of it.
-
-Existing Debt: `containedPath` in `src/file-navigator/batch-paths.ts` is the canonical containment test, but three further modules re-derive it: `inside` in `src/remote/filesystem/path-containment.ts` carries `containedPath`'s tail with the resolve step removed, `resolveSelected` in `src/file-navigator/selection-action.ts` spells a prefix comparison against the root, and `shellCwd` in `src/remote/serve-processes.ts` clamps a resolved cwd with a third spelling, so the predicate principle 9 calls an enforced, tested invariant is maintained four times and each copy treats absolute inputs, trailing separators and `..` differently. Severity: 6/10
-
-Existing Risk: 6/10 - The four spellings disagree at the edges, so a path one of them accepts is a path the others would refuse outside the navigator root, and the failure mode is a file read or write outside the tree, which is exactly the local-first boundary breach the confinement tests exist to prevent; nothing compares the four against each other.
-
-Proposal Risk: 2/10 - One predicate answers every caller, so a mistake in the shared rule becomes a mistake everywhere rather than in one module, though the refused-path answers that exist today keep returning what they return now.
-
-Proposal: Publish `containedPath`'s tail as a predicate that takes an already-resolved absolute path, `containedAbsolute(root, absolute)`, beside `containedPath` in `src/file-navigator/batch-paths.ts`, because `inside` at `src/remote/filesystem/path-containment.ts:5-24` needs the rule for an absolute candidate and cannot reuse one written for a relative path. Then have `inside` call it, replace `resolveSelected`'s `absolute === root || absolute.startsWith(root.endsWith(path.sep) ? root : root + path.sep)` at `src/file-navigator/selection-action.ts:30-33` with it, and return it from `shellCwd` at `src/remote/serve-processes.ts:156-161` instead of that method's inline prefix test. `src/file-navigator/remote-cwd.ts:18-21` is the same test over `path.posix` for a remote workspace and should say so in a comment rather than import it, since the two modules deliberately use different path APIs. `src/file-navigator/batch.test.ts` and `src/remote/file-navigator-refusal-contract.test.ts` are the only coverage of the refused-path answers and must keep passing; each should gain one case for an absolute input and one for a trailing separator, the two shapes the copies currently treat differently.
-
-
 * Read the sql plugin's dock side through the one published parser, so a typed `sql LEFT` cannot come back as a database named LEFT.
 
 Existing Debt: `src/plugins/dock-argument.ts` is the published dock-side parser, re-exported to plugins at `src/plugins/api.ts:406` and used by every other dockable list plugin, but `src/plugins/sql/shared-intents.ts` carries a second private parser, `parseOpenCommand`, that sql actually calls, and the two disagree about case, so sql's copy accepts a side only in the spelling it was typed in. Severity: 5/10

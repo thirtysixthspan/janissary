@@ -7,9 +7,15 @@ import path from 'node:path';
 export function containedPath(root: string, relPath: string): string | undefined {
   if (!relPath || relPath === '.' || relPath === '..' || path.isAbsolute(relPath)) return;
   const absolute = path.resolve(root, relPath);
+  return containedAbsolute(root, absolute) ? absolute : undefined;
+}
+
+// Whether an already-resolved absolute path sits inside `root` (the root itself counts). The tail
+// `containedPath` and its callers need, published so the navigator, the remote filesystem, and the
+// serve process clamp with one rule rather than four spellings of it.
+export function containedAbsolute(root: string, absolute: string): boolean {
   const relative = path.relative(root, absolute);
-  if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return;
-  return absolute;
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
 }
 
 export function realDirectory(root: string, relPath: string): string | undefined {
