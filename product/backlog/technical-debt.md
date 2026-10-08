@@ -2,8 +2,6 @@
 
 ## ready
 
-* Reset learned-command persistence state in every `ShellManager` test fixture that can trigger promotion, especially the “a pty shell that exits” cases in `src/shell/manager.test.ts`. A previous fixture removes its temp directory but leaves the module-level path set; later auto-promotion then fails to save a learned command while the test passes. Load a fixture-local path or reset this state between describe blocks. Severity: **medium**.
-
 * Keep expected test diagnostics from obscuring unexpected failures. Capture intentional invalid-config and history-write warnings in `src/config.test.ts` and `src/global-history.test.ts`, account for the missing-conversation warnings from incomplete manager fixtures, and explicitly stub jsdom's unsupported canvas and media APIs in affected web tests while retaining fallback assertions. Severity: **low**.
 
 ## development
