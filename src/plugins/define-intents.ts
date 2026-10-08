@@ -4,10 +4,17 @@ import type { TabPluginIntent, TabPluginServerCapabilities } from './api.js';
 // code to run once both payloads are trusted. `run` receives the tab payload already narrowed to
 // the plugin's own type; annotate the `payload` parameter at the definition site to keep the
 // entry's own payload type visible.
-export type TabPluginIntentEntry<Payload, IntentPayload> = {
+//
+// `tab` is for a plugin whose tab payload is a discriminated union — the conversations plugin's
+// list tab and conversation tab, say — where an intent name only means something once the payload's
+// variant is known. The entry declares which variant it belongs to with a type predicate, and the
+// dispatcher answers a request raised from the other variant with the same rejection the payload
+// check already produces, so the plugin spells neither branch out by hand.
+export type TabPluginIntentEntry<Payload, IntentPayload, TabPayload extends Payload = Payload> = {
   payload(value: unknown): value is IntentPayload;
+  tab?(tabPayload: Payload): tabPayload is TabPayload;
   run(
-    tabPayload: Payload,
+    tabPayload: TabPayload,
     payload: IntentPayload,
     capabilities: TabPluginServerCapabilities,
   ): unknown | Promise<unknown>;
@@ -36,6 +43,9 @@ export function defineIntents<Payload, Intents extends Record<string, TabPluginI
       return capabilities.rejectRequest(`unknown ${pluginId} intent "${request.intent}"`);
     }
     const entry = intents[request.intent];
+    if (entry.tab && !entry.tab(tabPayload)) {
+      return capabilities.rejectRequest(`invalid ${request.intent} payload`);
+    }
     if (!entry.payload(request.payload)) {
       return capabilities.rejectRequest(`invalid ${request.intent} payload`);
     }

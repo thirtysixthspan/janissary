@@ -4,6 +4,7 @@ import { defineIntents } from './define-intents.js';
 
 type FixturePayload = { path: string };
 type FixtureEditPayload = { dataUrl: string };
+type FixtureUnionPayload = { kind: 'plain'; path: string } | { kind: 'edit'; dataUrl: string };
 
 function isFixturePayload(value: unknown): value is FixturePayload {
   return typeof value === 'object' && value !== null && 'path' in value;
@@ -28,6 +29,20 @@ const intents = defineIntents('fixture', isFixturePayload, {
   'save-edit': {
     payload: isEditPayload,
     run: (tabPayload, payload: FixtureEditPayload) => ({ written: `${tabPayload.path}:${payload.dataUrl}` }),
+  },
+});
+
+function isFixtureUnionPayload(value: unknown): value is FixtureUnionPayload {
+  return typeof value === 'object' && value !== null && 'kind' in value;
+}
+
+const isEditTab = (tab: FixtureUnionPayload): tab is FixtureUnionPayload & { kind: 'edit' } => tab.kind === 'edit';
+
+const unionIntents = defineIntents('fixture', isFixtureUnionPayload, {
+  'save-edit': {
+    payload: isEditPayload,
+    tab: isEditTab,
+    run: (tabPayload, payload: FixtureEditPayload) => ({ written: `${tabPayload.dataUrl}:${payload.dataUrl}` }),
   },
 });
 
@@ -64,5 +79,18 @@ describe('defineIntents', () => {
     expect(() => intents(request('save-edit', { dataUrl: 7 }), capabilities))
       .toThrow('invalid save-edit payload');
     expect(reject).toHaveBeenCalledWith('invalid save-edit payload');
+  });
+
+  it('rejects an entry whose tab guard does not accept the tab payload it came from', () => {
+    const { capabilities, reject } = fakeCapabilities();
+    expect(() => unionIntents(request('save-edit', { dataUrl: 'abc' }, { kind: 'plain', path: '/tmp/x' }), capabilities))
+      .toThrow('invalid save-edit payload');
+    expect(reject).toHaveBeenCalledWith('invalid save-edit payload');
+  });
+
+  it('runs an entry whose tab guard accepts, with the narrowed tab payload', () => {
+    const { capabilities } = fakeCapabilities();
+    expect(unionIntents(request('save-edit', { dataUrl: 'abc' }, { kind: 'edit', dataUrl: 'tab' }), capabilities))
+      .toEqual({ written: 'tab:abc' });
   });
 });

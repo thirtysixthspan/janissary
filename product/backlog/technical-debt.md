@@ -2,17 +2,6 @@
 
 ## ready
 
-* Route the conversations plugin's intents through the shared intent dispatcher, so every plugin answers a malformed intent the same way.
-
-Existing Debt: `src/plugins/define-intents.ts` exists to give every plugin one intent dispatcher, covering the tab-payload failure, the unknown-name rejection and the per-intent payload check, and twelve bundled plugins use it, but `src/plugins/conversations/activate.ts` re-implements all three steps in a private three-function chain and spells the rejection sentence out seven times where the helper produces it once. Severity: 4/10
-
-Existing Risk: 4/10 - A user who sends a malformed conversations intent is told `invalid create payload`, `invalid send payload` or `invalid conversations payload` depending on which branch they hit, while the same mistake against any other plugin reads `invalid <intent> payload`; the wording is pinned only in the conversations test, so the next change to the shared rejection vocabulary reaches twelve plugins and misses the thirteenth with nothing failing.
-
-Proposal Risk: 3/10 - One dispatch path answers every intent again, but the widened helper now has to hold both a union-shaped tab payload and a flat one, so the shape a plugin's table takes is decided in `src/plugins/define-intents.ts` rather than per plugin and a mistake there affects all of them.
-
-Proposal: `defineIntents` at `src/plugins/define-intents.ts:25-43` takes a flat table keyed by intent name, while conversations' tab payload is a discriminated union whose `kind` has to be narrowed before an intent name means anything, and that is why the author hand-rolled the dispatcher at `src/plugins/conversations/activate.ts:59-149` instead of widening the helper once. Widen the helper by letting it accept a resolver that maps a tab payload to the table it belongs to, or an optional pre-check on the entry, so conversations declares two tables, the list tab's `create`/`open`/`delete` and the conversation tab's `send`/`rename`/`select-model` plus the `EMPTY_INTENT_ACTIONS` forwards, and the `LIST_INTENTS` set, `runListIntent`, `runConversationIntent` and the seven hand-written `invalid ... payload` strings collapse into the helper's one `invalid ${request.intent} payload`. Keep `isConversationsPayload` failing as `reportFailure` for the authoritative payload, which the helper already does. `src/plugins/conversations/activate.test.ts` covers the intent mapping, the malformed-payload rejections and the invalid-tab-payload failure, and is the coverage that must keep passing; `src/plugins/define-intents.test.ts` is where the widened shape's own cases go, and `src/plugins/sql/intents.ts` is the largest existing table to check the changed signature against.
-
-
 * Let the type checker see the server's test fixtures, so a hand-built `FilesTabState` that no longer satisfies its own type is caught instead of shipped.
 
 Existing Debt: `tsconfig.json` excludes `src/**/*.test.*` from the server typecheck while `web/tsconfig.json` includes the client's tests, so every hand-written server fixture is unchecked, and `src/remote/file-navigator-refusal-contract.test.ts` has already drifted past a field it no longer sets, `cacheGeneration`, which `FilesTabState` has required since the pull-refresh fix landed. Severity: 5/10
