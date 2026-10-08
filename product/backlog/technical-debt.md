@@ -111,6 +111,8 @@ Proposal: Replace `an tab` with the tab kind each sentence actually means, which
 
 ## development
 
+* Reduce the cognitive complexity of `contiguousMatch()` in `web/src/shared/fuzzy-match.ts` (line 109), reported at 16 against the allowed 15 in a file scoring 49.60 FTA across 95 lines. The function walks every uninterrupted occurrence of the query in each candidate path, scores it with the same `charScoreAt` bonuses `fuzzyMatch` uses, keeps the best occurrence per path and then ranks the survivors, and its complexity comes from the three-deep loop that does it — a `for` over the candidates, a `while` walking that path's occurrences, an inner `for` adding each character's score — with the `if (!best || score > best.score)` keep-best comparison and the trailing `if (best)` adding the rest, so a new emphasis rule deepens the stack instead of extending a helper. The per-occurrence scoring loop and the best-occurrence walk are each cohesive enough to lift into local helpers beside the existing `charScoreAt` and `matchPath` ones, leaving the candidate `for`, the rank-and-slice tail and the file's exports untouched. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `contiguousMatch()` in `web/src/shared/fuzzy-match.ts`. Severity: **low**.
+
 ## deferred
 
 ## declined
