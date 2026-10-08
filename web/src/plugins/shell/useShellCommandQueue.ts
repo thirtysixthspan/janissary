@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { TabPluginClientCapabilities } from '../api';
 import type { ShellQueuedLine } from '@shared/plugins/shell/shared';
 import { ShellCommandQueue } from './shell-command-queue';
+import { reportShellIntentFailure } from './report-shell-intent-failure';
 
 // Owns this tab's `ShellCommandQueue`. The capabilities and the runner are read through refs because
 // both are rebuilt on renders that change nothing about the queue, and a new instance would forget
@@ -24,8 +25,8 @@ export function useShellCommandQueue(
     enqueue: async (line) => {
       try {
         await capabilitiesReference.current.intent<{ queued: boolean }>('queue', line);
-      } catch {
-        capabilitiesReference.current.reportFailure('shell queue intent failed');
+      } catch (error: unknown) {
+        reportShellIntentFailure(capabilitiesReference.current, 'shell queue intent failed', error);
       }
     },
     // `null` rather than `undefined` for the same reason the status question sends it: a key whose
@@ -34,8 +35,8 @@ export function useShellCommandQueue(
       try {
         const result = await capabilitiesReference.current.intent<ShellQueuedLine>('dequeue', null);
         return typeof result.line === 'string' ? result.line : null;
-      } catch {
-        capabilitiesReference.current.reportFailure('shell dequeue intent failed');
+      } catch (error: unknown) {
+        reportShellIntentFailure(capabilitiesReference.current, 'shell dequeue intent failed', error);
         return null;
       }
     },

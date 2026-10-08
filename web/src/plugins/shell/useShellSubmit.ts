@@ -5,6 +5,7 @@ import { opensShellHistory, routeFor, shellLine } from './command-line-rules';
 import { appendShellHistory } from './shell-history';
 import { shellCommandInput } from './shell-command-input';
 import { stripTerminalControls } from './strip-terminal-controls';
+import { reportShellIntentFailure } from './report-shell-intent-failure';
 
 // Runs one command-bar line and answers whether it was written to zsh, which is what tells a
 // draining queue to wait for zsh's next prompt before running the line after it. `record` is false
@@ -60,8 +61,8 @@ export function useShellSubmit(input: {
       }
       runInShell(text);
       return true;
-    } catch {
-      capabilities.reportFailure('shell dispatch intent refused');
+    } catch (error: unknown) {
+      reportShellIntentFailure(capabilities, 'shell dispatch intent refused', error);
       return false;
     }
   }, [appBar, capabilities, displayReply, expectCommand, openHistory, setMatches, setSent, write]);

@@ -80,6 +80,12 @@ describe('createPluginClientCapabilities', () => {
       .rejects.toThrow('Plugin intent "capture-frame" failed');
   });
 
+  it('preserves the server error when an intent is refused', async () => {
+    const { client } = makeClient(async () => ({ ok: false, error: 'Plugin tab "bug-repro" not found' }));
+    await expect(createPluginClientCapabilities(host, 'shell', 'bug-repro', client, true, null, vi.fn()).intent('cwd', '/remote/work'))
+      .rejects.toThrow('Plugin tab "bug-repro" not found');
+  });
+
   it('reports a failure against its own tab label', () => {
     const { client, send } = makeClient();
     createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn()).reportFailure('chunk rejected');

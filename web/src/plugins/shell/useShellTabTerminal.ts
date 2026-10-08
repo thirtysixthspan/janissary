@@ -2,6 +2,7 @@ import type { ShellPayload } from '@shared/plugins/shell/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { useShellTerminal, type ShellTerminalHandle } from './useShellTerminal';
 import { reportShellCwd } from './report-shell-cwd';
+import { reportShellIntentFailure } from './report-shell-intent-failure';
 
 type Options = {
   payload: ShellPayload;
@@ -29,8 +30,8 @@ export function useShellTabTerminal({
     onCommand,
     onCommandRunning: (running) => {
       onCommandRunning(running);
-      void capabilities.intent<{ updated: boolean }>('command-state', { running }).catch(() => {
-        capabilities.reportFailure('shell command status intent failed');
+      void capabilities.intent<{ updated: boolean }>('command-state', { running }).catch((error: unknown) => {
+        reportShellIntentFailure(capabilities, 'shell command status intent failed', error);
       });
     },
     onCwd: (cwd) => { reportShellCwd(capabilities, cwd); },

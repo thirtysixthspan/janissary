@@ -412,7 +412,8 @@ There is no exited state and no way to start a fresh shell in the same tab, so a
 honest representation of a shell that is no longer running. Closing the tab closes the shell the same
 way. A shell that exits while no browser is attached does not leave a tab behind waiting for input
 that can never arrive: the tab asks on its next appearance whether the process is still there, and
-closes if it is not.
+closes if it is not. Closing one shell tab leaves every other shell tab, including the launch `janus`
+tab, visible and usable.
 
 ## Session recording
 
