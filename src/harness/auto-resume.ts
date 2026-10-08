@@ -8,11 +8,13 @@ import type { ScheduleEntry, TimeOfDay } from '../schedule/types.js';
 // moment it will take work again, so the resume waits for it rather than racing it.
 export const RESUME_MARGIN_MS = 60_000;
 
-// The trailing rows a limit screen is read from, for a harness whose banner ends the screen. Three
-// because codex's recognized message wraps across two, and because a message the harness later
-// quotes in its scrollback has anything the harness printed since below it and is history, not a
-// live blockage. A harness that paints its banner higher up declares its own count on its table row.
-const LIMIT_WINDOW_ROWS = 3;
+// The trailing rows a limit screen is read from, and the reason it stops where it does: a message
+// the harness later quotes in its scrollback has anything the harness printed since below it, and is
+// history rather than a live blockage. Eight covers a recognized banner and the composer block the
+// harness keeps painted beneath it — codex's banner wraps across three rows at the eighty columns a
+// harness PTY gets by default, above its input box and `⏎ send` hint, and opencode's sits in the
+// footer above the input, hint and model rows.
+const LIMIT_WINDOW_ROWS = 8;
 
 // How far ahead a stated duration is trusted. Matching what claude itself will wait for before it
 // hands the decision back to the user; a larger number is more likely a misparse than a real wait.
@@ -85,7 +87,7 @@ export function detectResumeLimit(text: string, harnessName: string): ResumeRese
   const entry = RESUME_TABLE[harnessName];
   if (!entry) return undefined;
   const lines = text.split('\n').filter((row) => row.trim() !== '');
-  const tail = lines.slice(-(entry.rows ?? LIMIT_WINDOW_ROWS)).join(' ').replaceAll(/\s+/g, ' ');
+  const tail = lines.slice(-LIMIT_WINDOW_ROWS).join(' ').replaceAll(/\s+/g, ' ');
   const match = entry.pattern.exec(tail);
   return match ? parseResetClause(match[1], match[2]) : undefined;
 }
@@ -109,14 +111,7 @@ function dateAt(reset: ResumeReset, now: Date): number {
   return date.getTime();
 }
 
-type ResumeEntry = {
-  pattern: RegExp;
-  // The trailing rows this harness's banner is read from, when it does not end the screen. opencode
-  // paints its limit in the editor footer, so up to seven rows of input and hint chrome sit below the
-  // banner's first row. That costs no staleness the default guards against: opencode's message is not
-  // in the message stream, so however wide the window gets it never reaches a conversation turn.
-  rows?: number;
-};
+type ResumeEntry = { pattern: RegExp };
 
 // Per-harness limit-screen detectors, one per bundled harness whose limit states a reset the app
 // can act on. Membership here is also the source of truth for which harnesses accept
@@ -124,7 +119,7 @@ type ResumeEntry = {
 // claude is absent because it resumes itself (`autoContinueAtUsageLimit`).
 const RESUME_TABLE: Record<string, ResumeEntry> = {
   codex: { pattern: LIMIT_PATTERN },
-  opencode: { pattern: OPENCODE_LIMIT_PATTERN, rows: 8 },
+  opencode: { pattern: OPENCODE_LIMIT_PATTERN },
 };
 
 // Whether `harnessName` has an installed limit-screen detector and therefore supports auto-resume.

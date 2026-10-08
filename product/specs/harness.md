@@ -498,9 +498,10 @@ claude is absent because it resumes itself — it waits for the limit and carrie
 **Recognition.** The app reads the same rendered-screen captures taken for
 [screen capture](#screen-capture), about a second after output settles, and needs two things in the
 trailing non-blank rows of that screen: the limit wording, and the reset it states. How many trailing
-rows is read is the harness's own: **three** for codex, whose banner ends the screen and wraps across
-two, and **eight** for opencode, which paints its banner in the footer above the input and hint rows.
-Three reset forms are read, in the shapes codex prints them:
+rows is read is **eight**, which covers a recognized banner and the composer block the harness keeps
+painted beneath it: codex's banner wraps across three rows at the eighty columns a harness tab gets by
+default, above its input box and send hint, and opencode's sits in the footer above the input, hint
+and model rows. Three reset forms are read, in the shapes codex prints them:
 
 - a clock time — `try again at 1:20 PM`, `1:20pm` or `13:20`, all the same time;
 - a date and a clock time — `try again at Jul 8th, 2026 10:59 AM`, the weekly-window form, whose
@@ -510,7 +511,9 @@ Three reset forms are read, in the shapes codex prints them:
 Codex may put upgrade and account-usage links between the limit wording and the reset clause, for
 example `You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit
 https://chatgpt.com/settings/usage to purchase more credits or try again at 12:33 PM.` The links do
-not affect recognition; the time after `try again` is the reset used for scheduling.
+not affect recognition; the time after `try again` is the reset used for scheduling. codex wraps that
+banner across three rows at the eighty columns a harness tab gets by default, so it is recognized
+however the tab is sized and with its composer painted beneath it.
 
 opencode always states its reset as a duration — `Usage limit reached. It will reset in 1 hour 59
 minutes.`, with the window named ahead of it (`5 hour`, `weekly`, `monthly`) when the response names
@@ -525,8 +528,10 @@ all (`Try again later.`, or opencode's `less than a minute`, which names no leng
 recognized and badged, and nothing is scheduled: inventing a
 delay would be indistinguishable from guessing wrong. Restricting recognition to the trailing rows is
 what keeps it to a *live* blockage — a limit banner the harness later quotes in its scrollback sits
-far from the bottom of the screen and must not schedule anything. The apostrophe in the banner is
-accepted in either form, since codex prints a typographic one.
+far from the bottom of the screen and must not schedule anything. Eight rows still leaves that
+guard: a banner codex is still sitting on is within them, and one it has since printed several rows
+of conversation beneath is not. The apostrophe in the banner is accepted in either form, since codex
+prints a typographic one.
 
 **What happens next.** The resume is scheduled as an ordinary one-shot entry on the tab's own
 schedule, named `auto-resume`, for one minute after the stated reset — the reset is the earliest
