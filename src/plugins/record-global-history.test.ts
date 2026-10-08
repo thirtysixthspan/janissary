@@ -45,8 +45,13 @@ describe('recordGlobalHistory', () => {
     expect(globalCommands()).toEqual(['git status']);
   });
 
-  it('records nothing for a tab that is not the plugin\'s own, or a blank line', () => {
-    capabilitiesFor('bilal').recordGlobalHistory('git status');
+  it('refuses a line from a tab that is not the plugin\'s own', () => {
+    expect(() => capabilitiesFor('bilal').recordGlobalHistory('git status'))
+      .toThrow('This plugin has no open tab to record a line in.');
+    expect(globalCommands()).toEqual([]);
+  });
+
+  it('records nothing for a blank line from the plugin\'s own tab', () => {
     capabilitiesFor('kemal').recordGlobalHistory(' '.repeat(3));
 
     expect(globalCommands()).toEqual([]);

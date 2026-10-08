@@ -2,39 +2,6 @@
 
 ## ready
 
-* Let the type checker see the server's test fixtures, so a hand-built `FilesTabState` that no longer satisfies its own type is caught instead of shipped.
-
-Existing Debt: `tsconfig.json` excludes `src/**/*.test.*` from the server typecheck while `web/tsconfig.json` includes the client's tests, so every hand-written server fixture is unchecked, and `src/remote/file-navigator-refusal-contract.test.ts` has already drifted past a field it no longer sets, `cacheGeneration`, which `FilesTabState` has required since the pull-refresh fix landed. Severity: 5/10
-
-Existing Risk: 5/10 - A test fixture can drift away from the state the application builds and still run, so the contract test compares the local and remote answers for a state neither side can produce, and a stale fixture makes a passing test assert behavior against a shape that no longer exists rather than failing to compile.
-
-Proposal Risk: 3/10 - Test files join the typecheck, so an intentional-but-wrong fixture, a cast or a deliberately partial one, becomes a compile error rather than a quiet skip, and the first run over the server tests is likely to surface a batch of unrelated fixtures needing the same treatment.
-
-Proposal: `tsconfig.json` carries `"exclude": ["src/**/*.test.*"]` and `web/tsconfig.json` has no equivalent exclusion, which is why the client's fixtures are checked and the server's are not. Start by adding `cacheGeneration: 0` to the `tabState` helper at `src/remote/file-navigator-refusal-contract.test.ts:47-55`, which sets every other field and omits that one; the sibling fixtures at `src/file-navigator/filesystem-cache.test.ts:32`, `src/file-navigator/navigation.test.ts:15`, `src/file-navigator/restore.test.ts:31` and `src/file-navigator/open.test.ts:133` all carry it. Then settle the config question deliberately rather than by default: either typecheck the server tests through a second project reference, or add `satisfies FilesTabState` at the definition site of each hand-built fixture so a missing field is an error in the file that builds it. The behavioral coverage in `src/remote/file-navigator-refusal-contract.test.ts`, the out-of-tree rename, move and delete cases run against a loopback remote and the local port, must not move; this changes only what the compiler can see.
-
-
-* Derive the remote filesystem port's reply types from the operation table's own decoders instead of asserting each wire result into whatever the caller expected.
-
-Existing Debt: `src/remote/filesystem/operations.ts` validates every frame's arguments at runtime but its result side is untyped from the moment the reply leaves the channel, so `RemoteFileSystemPort.request` resolves `value as T` with `T` supplied purely by the declared return type of the calling method, leaving the validated shape and the wire shape as two type universes that meet only in a cast. Severity: 6/10
-
-Existing Risk: 6/10 - Every one of the port's operations believes whatever the far side sent, so a mismatch between the reply the server builds and the reply the caller parsed is a silently mistyped object flowing into the file navigator, a `Record<string, RowStat | null>` read as something else or an `ok` flag that is not where the caller looks, with no runtime check and no compile-time link to catch it.
-
-Proposal Risk: 3/10 - The reply type is then derived per operation, so a far-side payload change is a compile error at both ends, but the table now carries an argument and a result decoder per operation and that mapping has to stay in step with `RemoteFilesystemOperation`.
-
-Proposal: `src/file-navigator/remote/port.ts:175` resolves each reply through `resolve(value as T)` inside `request`, and each caller, `readDirectory` among them, supplies `T` only through its own return type, while `src/file-navigator/remote/port-requests.ts:107` casts a value this codebase itself synthesized. `src/remote/filesystem/operations.ts` already holds each operation's argument `decode` and `valid`, so give each entry a result decoder beside them and expose a keyed mapping from `RemoteFilesystemOperation` to its decoded result type, which is the same unconnectedness the three `eslint-disable @typescript-eslint/no-explicit-any` suppressions at `src/remote/filesystem/operations.ts:94,213,223` are expressing on the argument side. Have `unavailableResult` at `src/file-navigator/remote/port-requests.ts:104-109` build its refusal through that decoder rather than `refusal.value as T`. `src/remote/file-navigator-refusal-contract.test.ts` runs every operation against a loopback remote and the local port and asserts the two answers match, and is the coverage that has to keep passing while the reply type stops being a cast.
-
-
-* Make the line capabilities refuse a tab that is not the plugin's own the way the ACP capabilities already do, instead of dropping the action silently.
-
-Existing Debt: `src/plugins/line-capabilities.ts` and `src/plugins/acp-capabilities.ts` are built from the same six-field input and answer the same question, whether this plugin may act on that tab, with the same id check, but one answers `undefined` and four capabilities then no-op while the other throws `TabPluginRejection('ACP tab is unavailable.')`, so the shared ownership predicate has opposite meanings in two modules that sit beside each other. Severity: 5/10
-
-Existing Risk: 5/10 - A `queueLine`, `nextQueuedLine`, `recordCwd` or `recordGlobalHistory` call aimed at a tab the plugin does not own is neither a rejection nor a failure and is silently discarded, so a plugin queues into the wrong tab and sees nothing happen with no transcript line and no RPC error, while the identical mistake against `startAcp` is answered; the documented rule that a request a caller could have gotten wrong gets a rejection is enforced by one capability group and not by its neighbour.
-
-Proposal Risk: 3/10 - The capability groups share one ownership predicate, so a plugin that was previously let off with a silent no-op now has a request refused and its transcript gains a line, which is a user-visible behavior change in the cases that used to be invisible.
-
-Proposal: `ownLineLabel` at `src/plugins/line-capabilities.ts:33-36` returns `undefined` for a tab that fails the id check, and `queueLine`, `nextQueuedLine`, `recordCwd` and `recordGlobalHistory` at `:83-105` each treat that as do nothing. `acpCapabilities.ownLabel` at `src/plugins/acp-capabilities.ts:16-23` throws for the same input. Extract the check into one shared predicate, beside `src/plugins/api-capabilities.ts`, which already owns `TabPluginRejection`, and have both modules call it, with the rejection reason naming the capability so the transcript line says which call was refused. `src/plugins/shell-capabilities.test.ts` covers the queue and directory capabilities being scoped to a plugin's own tab and falling back to the origin tab, and is the coverage that must keep passing while the silent branches become answered ones.
-
-
 * Share the guarded delivery skeleton between the plugin notification and host-state channels instead of writing it out twice.
 
 Existing Debt: `src/plugins/notifications.ts` and `src/plugins/host-state.ts` are two delivery modules carrying the same skeleton, an identical `BACKGROUND_ORIGIN` constant, near-identical five-field ports differing only in the extra view readers, and the same five-line `deliver` that invokes with the background origin and disables only on failure, so the rule that a background delivery never answers a rejection and only a failure matters is maintained in two places by comment. Severity: 4/10
@@ -94,6 +61,26 @@ Proposal: Replace `an tab` with the tab kind each sentence actually means, which
 ## development
 
 ## deferred
+
+* Derive the remote filesystem port's reply types from the operation table's own decoders instead of asserting each wire result into whatever the caller expected. — deferred: complexity 8/10, a keyed type mapping plus a result decoder for each of twenty operation entries, a module extraction to stay under the 200-line cap, and rewiring the remote-request surface across eight files.
+
+Existing Debt: `src/remote/filesystem/operations.ts` validates every frame's arguments at runtime but its result side is untyped from the moment the reply leaves the channel, so `RemoteFileSystemPort.request` resolves `value as T` with `T` supplied purely by the declared return type of the calling method, leaving the validated shape and the wire shape as two type universes that meet only in a cast. Severity: 6/10
+
+Existing Risk: 6/10 - Every one of the port's operations believes whatever the far side sent, so a mismatch between the reply the server builds and the reply the caller parsed is a silently mistyped object flowing into the file navigator, a `Record<string, RowStat | null>` read as something else or an `ok` flag that is not where the caller looks, with no runtime check and no compile-time link to catch it.
+
+Proposal Risk: 3/10 - The reply type is then derived per operation, so a far-side payload change is a compile error at both ends, but the table now carries an argument and a result decoder per operation and that mapping has to stay in step with `RemoteFilesystemOperation`.
+
+Proposal: `src/file-navigator/remote/port.ts:175` resolves each reply through `resolve(value as T)` inside `request`, and each caller, `readDirectory` among them, supplies `T` only through its own return type, while `src/file-navigator/remote/port-requests.ts:107` casts a value this codebase itself synthesized. `src/remote/filesystem/operations.ts` already holds each operation's argument `decode` and `valid`, so give each entry a result decoder beside them and expose a keyed mapping from `RemoteFilesystemOperation` to its decoded result type, which is the same unconnectedness the three `eslint-disable @typescript-eslint/no-explicit-any` suppressions at `src/remote/filesystem/operations.ts:94,213,223` are expressing on the argument side. Have `unavailableResult` at `src/file-navigator/remote/port-requests.ts:104-109` build its refusal through that decoder rather than `refusal.value as T`. `src/remote/file-navigator-refusal-contract.test.ts` runs every operation against a loopback remote and the local port and asserts the two answers match, and is the coverage that has to keep passing while the reply type stops being a cast.
+
+* Let the type checker see the server's test fixtures, so a hand-built `FilesTabState` that no longer satisfies its own type is caught instead of shipped. — deferred: complexity 9/10, typechecking the server test tree surfaces 418 type errors across 112 files — fixture drift, missing mock members, and implicit anys in callbacks — which is a suite-wide fixture migration rather than one change.
+
+Existing Debt: `tsconfig.json` excludes `src/**/*.test.*` from the server typecheck while `web/tsconfig.json` includes the client's tests, so every hand-written server fixture is unchecked, and `src/remote/file-navigator-refusal-contract.test.ts` has already drifted past a field it no longer sets, `cacheGeneration`, which `FilesTabState` has required since the pull-refresh fix landed. Severity: 5/10
+
+Existing Risk: 5/10 - A test fixture can drift away from the state the application builds and still run, so the contract test compares the local and remote answers for a state neither side can produce, and a stale fixture makes a passing test assert behavior against a shape that no longer exists rather than failing to compile.
+
+Proposal Risk: 3/10 - Test files join the typecheck, so an intentional-but-wrong fixture, a cast or a deliberately partial one, becomes a compile error rather than a quiet skip, and the first run over the server tests is likely to surface a batch of unrelated fixtures needing the same treatment.
+
+Proposal: `tsconfig.json` carries `"exclude": ["src/**/*.test.*"]` and `web/tsconfig.json` has no equivalent exclusion, which is why the client's fixtures are checked and the server's are not. Start by adding `cacheGeneration: 0` to the `tabState` helper at `src/remote/file-navigator-refusal-contract.test.ts:47-55`, which sets every other field and omits that one; the sibling fixtures at `src/file-navigator/filesystem-cache.test.ts:32`, `src/file-navigator/navigation.test.ts:15`, `src/file-navigator/restore.test.ts:31` and `src/file-navigator/open.test.ts:133` all carry it. Then settle the config question deliberately rather than by default: either typecheck the server tests through a second project reference, or add `satisfies FilesTabState` at the definition site of each hand-built fixture so a missing field is an error in the file that builds it. The behavioral coverage in `src/remote/file-navigator-refusal-contract.test.ts`, the out-of-tree rename, move and delete cases run against a loopback remote and the local port, must not move; this changes only what the compiler can see.
 
 ## declined
 
