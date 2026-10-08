@@ -2,17 +2,6 @@
 
 ## ready
 
-* Share the guarded delivery skeleton between the plugin notification and host-state channels instead of writing it out twice.
-
-Existing Debt: `src/plugins/notifications.ts` and `src/plugins/host-state.ts` are two delivery modules carrying the same skeleton, an identical `BACKGROUND_ORIGIN` constant, near-identical five-field ports differing only in the extra view readers, and the same five-line `deliver` that invokes with the background origin and disables only on failure, so the rule that a background delivery never answers a rejection and only a failure matters is maintained in two places by comment. Severity: 4/10
-
-Existing Risk: 4/10 - A third background channel, a new host topic say, gets written from scratch again, and any change to the common policy, the origin a background delivery reports under or the disable condition, has to be made twice with nothing failing when it is made once, so the two channels can end up answering the same failure differently.
-
-Proposal Risk: 3/10 - The shared skeleton is one module, so a bug in it reaches both delivery paths at once rather than one, while the two channels keep their own trigger conditions, which is where they genuinely differ.
-
-Proposal: `src/plugins/host-channels.ts` already exists to hold what both modules share and passes the guarded call in as a parameter, yet each module still re-implements the skeleton around it: `BACKGROUND_ORIGIN` at `src/plugins/notifications.ts:21` and `src/plugins/host-state.ts:14` is the same constant twice, the port types at `:26-38` and `:18-32` are the same five fields plus two readers, and `deliver` at `:55-71` and `:77-93` is the same guard, invoke and check sequence. Move the skeleton into `host-channels.ts` as a function taking the port plus the event-shaped arguments and returning the guarded call, so each module supplies only what actually differs, the subscribers a topic selects against the tab slices whose fingerprint changed, and the `connectionsFor`/`scheduleView` reader pair. `src/plugins/notifications.test.ts` and `src/plugins/host-state.test.ts` each pin the delivered payload and the disable-on-failure path and must keep passing, and the extracted module should gain a test that a rejection leaves the plugin running, which neither file asserts today.
-
-
 * Build the editor plugin host at the app edge the way the overlay plugin host is built, instead of constructing one when the module is imported.
 
 Existing Debt: `web/src/editor/plugins/useEditorPlugins.ts` creates its `pendingReports` array and the editor plugin host at module scope, so a host instance and a mutable queue come into existence the first time the module is imported and are shared by every editor tab for the life of the page, while the equivalent overlay host is built in a `useMemo` at the app shell and disposed in an effect cleanup. Severity: 4/10
