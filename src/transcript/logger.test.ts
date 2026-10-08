@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -40,27 +40,36 @@ describe('TranscriptLogger before a directory is configured', () => {
 
 describe('logger I/O', () => {
   let tmpDir: string;
+  let loggers: TranscriptLogger[];
 
   beforeEach(() => {
     tmpDir = mkdtempSync(path.join(tmpdir(), 'logger-test-'));
+    loggers = [];
   });
 
   afterEach(() => {
+    for (const logger of loggers) logger.unsubscribe();
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  const createLogger = (): TranscriptLogger => {
+    const logger = new TranscriptLogger(tmpDir);
+    loggers.push(logger);
+    return logger;
+  };
+
   it('creates the log directory on init', () => {
-    new TranscriptLogger(tmpDir);
+    createLogger();
     expect(existsSync(path.join(tmpDir, '.janissary', 'log'))).toBe(true);
   });
 
   it('logDir returns the log directory path', () => {
-    new TranscriptLogger(tmpDir);
+    createLogger();
     expect(TranscriptLogger.logDir).toBe(path.join(tmpDir, '.janissary', 'log'));
   });
 
   it('appends a JSON line to today\'s log file', () => {
-    new TranscriptLogger(tmpDir);
+    createLogger();
     TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'hello' });
     TranscriptLogger.append({ timestamp: '22:55:21.123', agent: 'bilal', text: 'world' });
 
@@ -73,7 +82,7 @@ describe('logger I/O', () => {
   });
 
   it('appends to an existing log file', () => {
-    new TranscriptLogger(tmpDir);
+    createLogger();
     TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'first' });
     TranscriptLogger.append({ timestamp: '22:55:21.000', agent: 'janus', text: 'second' });
 
@@ -83,7 +92,7 @@ describe('logger I/O', () => {
   });
 
   it('writes valid JSON on each line', () => {
-    new TranscriptLogger(tmpDir);
+    createLogger();
     TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: 'line1' });
     TranscriptLogger.append({ timestamp: '22:55:21.000', agent: 'bilal', text: 'line2' });
 
@@ -95,7 +104,7 @@ describe('logger I/O', () => {
   });
 
   it('handles empty text', () => {
-    new TranscriptLogger(tmpDir);
+    createLogger();
     TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text: '' });
 
     const logPath = path.join(tmpDir, '.janissary', 'log', `${getDateStr()}.json`);
@@ -105,7 +114,7 @@ describe('logger I/O', () => {
   });
 
   it('handles special characters in text', () => {
-    new TranscriptLogger(tmpDir);
+    createLogger();
     const text = 'line1\nline2\twith\ttabs\u{2603}';
     TranscriptLogger.append({ timestamp: '22:55:20.690', agent: 'janus', text });
 
@@ -121,26 +130,49 @@ describe('logger I/O', () => {
 });
 
 describe('TranscriptLogger', () => {
-  beforeEach(() => { messageBus.clear(); });
-  afterEach(() => { messageBus.clear(); });
+  let tmpDir: string;
+  let loggers: TranscriptLogger[];
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(tmpdir(), 'logger-bus-test-'));
+    loggers = [];
+    messageBus.clear();
+  });
+
+  afterEach(() => {
+    for (const logger of loggers) logger.unsubscribe();
+    messageBus.clear();
+    vi.restoreAllMocks();
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const createLogger = (): TranscriptLogger => {
+    const logger = new TranscriptLogger(tmpDir);
+    loggers.push(logger);
+    return logger;
+  };
 
   it('constructs without error', () => {
-    expect(() => new TranscriptLogger()).not.toThrow();
+    expect(createLogger).not.toThrow();
   });
 
   it('does not throw on entry:appended', () => {
-    new TranscriptLogger();
+    createLogger();
+    const stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     expect(() => messageBus.emit('transcript', appendedEvent())).not.toThrow();
+    expect(stderrWrite).not.toHaveBeenCalled();
   });
 
   it('does not throw for other event types', () => {
-    new TranscriptLogger();
+    createLogger();
+    const stderrWrite = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     expect(() => messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: 'janus' })).not.toThrow();
     expect(() => messageBus.emit('transcript', { type: 'tab:removed', tabLabel: 'janus' })).not.toThrow();
+    expect(stderrWrite).not.toHaveBeenCalled();
   });
 
   it('unsubscribe: no error after detach', () => {
-    const logger = new TranscriptLogger();
+    const logger = createLogger();
     logger.unsubscribe();
     expect(() => messageBus.emit('transcript', appendedEvent())).not.toThrow();
   });
