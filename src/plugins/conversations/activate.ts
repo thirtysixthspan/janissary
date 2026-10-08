@@ -1,4 +1,5 @@
 import {
+  defineIntents,
   noFileOpener,
   parseDockArgument,
   type ConversationsView,
@@ -14,6 +15,8 @@ import {
   isSelectModelIntent,
   isSendIntent,
   type ConversationListPayload,
+  type ConversationModelPair,
+  type ConversationTabPayload,
   type ConversationsPayload,
 } from './shared.js';
 import { ConversationTabs, dataFrom } from './tabs.js';
@@ -56,95 +59,92 @@ export function activate(): TabPluginActivation {
       }
       tabs.update(event.data, event.tabs, capabilities);
     },
-    intent: (request, capabilities) => {
-      if (!isConversationsPayload(request.tabPayload)) {
-        return capabilities.reportFailure('invalid conversations tab payload');
-      }
-      return runIntent(request.intent, request.payload, request.tabPayload, capabilities, tabs);
-    },
+    intent: defineIntents('conversations', isConversationsPayload, intentTable(tabs)),
     dispose: () => { tabs.dispose(); },
     opener: noFileOpener('conversations'),
   };
 }
 
-// The three intents the list tab raises. Kept apart from the conversation tab's own so neither
-// dispatcher carries the other's guard about which kind of tab it is looking at.
-function runListIntent(
-  intent: string,
-  value: unknown,
-  capabilities: TabPluginServerCapabilities,
-  tabs: ConversationTabs,
-): null | never {
-  if (intent === 'create') {
-    if (!isEmptyIntent(value)) return capabilities.rejectRequest('invalid create payload');
-    tabs.create(undefined, capabilities);
-    return null;
-  }
-  if (!isIdIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
-  if (intent === 'open') tabs.open(value.id, capabilities);
-  else capabilities.topicAction({ topic: 'conversations', action: 'delete', id: value.id });
-  return null;
+// Which kind of tab an intent belongs to. The list tab's intents never reach a conversation tab's
+// and the other way round, and an entry's guard is what says so — the shared dispatcher answers a
+// request raised from the wrong kind with the same `invalid <intent> payload` rejection a
+// malformed payload gets.
+const isListTab = (tab: ConversationsPayload): tab is ConversationListPayload => tab.kind === 'list';
+const isConversationTab = (tab: ConversationsPayload): tab is ConversationTabPayload => tab.kind === 'conversation';
+
+// The intents both tab kinds raise, in one table: the three the list tab raises, the three the
+// conversation tab raises with a payload, and the four payload-free forwards that name a topic
+// action for the conversation the tab already holds.
+function intentTable(tabs: ConversationTabs) {
+  return {
+    create: {
+      payload: isEmptyIntent,
+      tab: isListTab,
+      run: (_tab: ConversationListPayload, _value: Record<string, never>, capabilities: TabPluginServerCapabilities): null => {
+        tabs.create(undefined, capabilities);
+        return null;
+      },
+    },
+    open: {
+      payload: isIdIntent,
+      tab: isListTab,
+      run: (_tab: ConversationListPayload, value: { id: string }, capabilities: TabPluginServerCapabilities): null => {
+        tabs.open(value.id, capabilities);
+        return null;
+      },
+    },
+    delete: {
+      payload: isIdIntent,
+      tab: isListTab,
+      run: (_tab: ConversationListPayload, value: { id: string }, capabilities: TabPluginServerCapabilities): null => {
+        capabilities.topicAction({ topic: 'conversations', action: 'delete', id: value.id });
+        return null;
+      },
+    },
+    send: {
+      payload: isSendIntent,
+      tab: isConversationTab,
+      run: (tab: ConversationTabPayload, value: { query: string }, capabilities: TabPluginServerCapabilities): null => {
+        const context = tabs.contextFor(tab.conversation.id);
+        capabilities.topicAction({
+          topic: 'conversations', action: 'send', id: tab.conversation.id, query: value.query, ...(context && { context }),
+        });
+        return null;
+      },
+    },
+    rename: {
+      payload: isRenameIntent,
+      tab: isConversationTab,
+      run: (tab: ConversationTabPayload, value: { title: string }, capabilities: TabPluginServerCapabilities): null => {
+        capabilities.topicAction({ topic: 'conversations', action: 'rename', id: tab.conversation.id, title: value.title });
+        return null;
+      },
+    },
+    'select-model': {
+      payload: isSelectModelIntent,
+      tab: isConversationTab,
+      run: (tab: ConversationTabPayload, value: ConversationModelPair, capabilities: TabPluginServerCapabilities): null => {
+        capabilities.topicAction({ topic: 'conversations', action: 'selectModel', id: tab.conversation.id, ...value });
+        return null;
+      },
+    },
+    'load-older': forward('loadOlder'),
+    cancel: forward('cancel'),
+    'open-files': forward('openFiles'),
+    'launch-shell': forward('launchShell'),
+  };
 }
 
-const LIST_INTENTS = new Set(['create', 'open', 'delete']);
-
-function runIntent(
-  intent: string,
-  value: unknown,
-  tab: ConversationsPayload,
-  capabilities: TabPluginServerCapabilities,
-  tabs: ConversationTabs,
-): null | never {
-  if (LIST_INTENTS.has(intent)) {
-    if (tab.kind !== 'list') return capabilities.rejectRequest(`invalid ${intent} payload`);
-    return runListIntent(intent, value, capabilities, tabs);
-  }
-  if (tab.kind !== 'conversation') {
-    return capabilities.rejectRequest(`invalid ${intent} payload`);
-  }
-  return runConversationIntent(intent, value, tab.conversation.id, capabilities, tabs);
-}
-
-// The intents that carry no payload, and the one topic action each forwards once its payload is
-// confirmed empty.
-const EMPTY_INTENT_ACTIONS = new Map<string, 'loadOlder' | 'cancel' | 'openFiles' | 'launchShell'>([
-  ['load-older', 'loadOlder'], ['cancel', 'cancel'], ['open-files', 'openFiles'], ['launch-shell', 'launchShell'],
-]);
-
-function runConversationIntent(
-  intent: string,
-  value: unknown,
-  id: string,
-  capabilities: TabPluginServerCapabilities,
-  tabs: ConversationTabs,
-): null | never {
-  const emptyAction = EMPTY_INTENT_ACTIONS.get(intent);
-  if (emptyAction) {
-    if (!isEmptyIntent(value)) return capabilities.rejectRequest(`invalid ${intent} payload`);
-    capabilities.topicAction({ topic: 'conversations', action: emptyAction, id });
-    return null;
-  }
-  switch (intent) {
-    case 'send': {
-      if (!isSendIntent(value)) return capabilities.rejectRequest('invalid send payload');
-      const context = tabs.contextFor(id);
-      capabilities.topicAction({
-        topic: 'conversations', action: 'send', id, query: value.query, ...(context && { context }),
-      });
+// An intent that carries no payload and forwards one topic action, once its empty payload is
+// confirmed: the payload guard and the tab-kind guard are the same two checks every other entry
+// makes, so only the action it names is its own.
+function forward(action: 'loadOlder' | 'cancel' | 'openFiles' | 'launchShell') {
+  return {
+    payload: isEmptyIntent,
+    tab: isConversationTab,
+    run: (tab: ConversationTabPayload, _value: Record<string, never>, capabilities: TabPluginServerCapabilities): null => {
+      capabilities.topicAction({ topic: 'conversations', action, id: tab.conversation.id });
       return null;
-    }
-    case 'rename': {
-      if (!isRenameIntent(value)) return capabilities.rejectRequest('invalid rename payload');
-      capabilities.topicAction({ topic: 'conversations', action: 'rename', id, title: value.title });
-      return null;
-    }
-    case 'select-model': {
-      if (!isSelectModelIntent(value)) return capabilities.rejectRequest('invalid select-model payload');
-      capabilities.topicAction({ topic: 'conversations', action: 'selectModel', id, ...value });
-      return null;
-    }
-    default: {
-      return capabilities.rejectRequest(`unknown conversations intent "${intent}"`);
-    }
-  }
+    },
+  };
 }
