@@ -2,8 +2,6 @@
 
 ## ready
 
-
-
 ## development
 
 ## deferred

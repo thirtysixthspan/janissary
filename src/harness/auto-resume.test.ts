@@ -13,6 +13,7 @@ import {
 import type { ScreenCapture } from './screen.js';
 
 const BANNER = `■ You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to purchase more credits or try again at 1:20 PM.`;
+const ACCOUNT_BANNER = 'You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/settings/usage to purchase more credits or try again at 12:33 PM.';
 
 // The banner as codex actually paints it: it wraps mid-sentence across two rows.
 const WRAPPED = ['■ You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to', 'purchase more credits or try again at 1:20 PM.'].join('\n');
@@ -22,6 +23,10 @@ const screen = (text: string): ScreenCapture => ({ text, capturedAt: 1_700_000_0
 describe('detectResumeLimit', () => {
   it('reads a clock-time reset', () => {
     expect(detectResumeLimit(BANNER, 'codex')).toEqual({ kind: 'at', time: { hour: 13, minute: 20 } });
+  });
+
+  it('reads the reset after Codex upgrade and purchase links', () => {
+    expect(detectResumeLimit(ACCOUNT_BANNER, 'codex')).toEqual({ kind: 'at', time: { hour: 12, minute: 33 } });
   });
 
   it('reads the same banner wrapped across two rows', () => {

@@ -2,6 +2,8 @@
 
 ## ready
 
+* split out PR specific logic into a new task /ai/tasks/feature/work-pull-request-issue.md modeled off of work-an-issue.md. work an issue should be updated to work only on master and work-pull-request-issue should only work on a pr specified when executed. move *-pull-request.md, *-feature.md into the feature directory. mv auto-build.md in the feature directory as auto-build-a-feature.md 
+
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and receive the transcript as the agent works, and to recieve the response.
 
 ## development
