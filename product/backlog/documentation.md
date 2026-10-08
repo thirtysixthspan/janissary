@@ -4,13 +4,13 @@
 
 ## development
 
-* harness (8/10) — 4 of 135 user-visible facts are missing and 3 are wrong in `documentation/user-documentation/advanced-agents/harness.md`, checked against `product/specs/harness.md`, `documentation/user-documentation/getting-started/tabs.md`, `documentation/user-documentation/advanced-agents/remote-agents.md`, `documentation/user-documentation/tab-types/notifications.md`, `documentation/user-documentation/automation/scheduling.md`, and `help.md`. In Resuming after a usage limit, replace the unconditional one-attempt claim with the actual rule: an unchanged screen does not trigger another attempt, but a changed limit screen after delivery can schedule a new resume. Add that a pending `auto-resume` timer retains its original time even when later limit captures change, that clearing the blockage cancels it, and that a reset already in the past schedules `resume the task you were working on.` one minute from now, from `src/harness/auto-resume.ts`; keep `schedule cancel auto-resume in <label>` as the cancellation syntax. In Giving a harness a browser, correct the claim that the globe disappears permanently after a browser dies: it returns to plain `E2E browser`, and a replacement turns it green with `E2E browser in use`, while the earlier error band remains, as implemented in `src/harness/browser-gone.ts`, `src/harness/browser-started.ts`, and `src/tab/view.ts` and already correctly described by the tabs page. In Labels, replace the removed agent-session row with a shell-session row: provisioning, active, reconnecting, and detached shell or harness rows reserve names, as implemented in `src/launch-name/check.ts`. Add that Claude Code's automatic updater is disabled for direct and profile launches through `DISABLE_AUTOUPDATER=1`, from `src/harness/scratch-dir.ts`. The spec's claims that SSH cannot be monitored and that agent-tab focus is restored are stale; preserve the guide's current SSH monitoring and shell-tab wording rather than copying those claims. Command and flag spellings are confirmed by `src/commands/harness.ts` and `src/harness/command-parse.ts`; edit the existing harness guide rather than adding a duplicate page.
-
 ## deferred
 
 ## declined
 
 ## resolved
+
+* harness — documented in documentation/user-documentation/advanced-agents/harness.md (removed 2026-10-08)
 
 * file-navigator-tab — documented in documentation/user-documentation/tab-types/file-navigator.md (removed 2026-10-08)
 
