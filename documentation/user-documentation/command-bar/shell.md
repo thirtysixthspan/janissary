@@ -1,100 +1,22 @@
 # Shell commands
 
-In an agent tab, prefix a shell command with `shell ` or `!`:
-
-```
-shell ls -la
-!git status
-shell npm test
-```
-
-Output streams into the transcript line by line as it's produced, with ANSI colors and styling intact. `file.ts:42`-style paths in the output are clickable and open the file in an [editor tab](/user-documentation/tab-types/editor) at that line.
-
-Everything after `shell ` goes to the shell. `!find . -name "*.ts"` is identical to `shell find . -name "*.ts"`. `!!` is shorthand for `shell --pty`, forcing the command into a full-tab terminal: `!!htop` is identical to `shell --pty htop`.
-
-A line that names no application command and has no shell prefix receives `Unknown command: "<what you typed>". Type "help" for available commands.` in an agent tab. A command sent by `msg` or `broadcast` follows the same explicit-command rules; a request returns the unknown-command reply to its sender. To query a database, name its engine and destination: `db sqlite query <name> <sql>`. See [Databases](/user-documentation/command-bar/database).
-
-A shell tab opened with `zsh` accepts ordinary shell input directly. Its command bar runs application commands first and sends every unclaimed line to zsh. Use explicit `acp` in a supported tab to request a model reply; see [ACP agents](/user-documentation/advanced-agents/acp-agent).
-
-## One shell per tab, and it persists
-
-<img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
-
-Each tab has its own shell process that lives as long as the tab does. State accumulates the way it would in a terminal: `shell cd` somewhere and later commands in that tab run there; exported variables stick around. The working directory is also remembered per tab, so a shell respawned after one dies starts where the last one left off. If the shell process dies unexpectedly, a fresh one is spawned on your next command.
-
-A remembered directory that has since been deleted or renamed is not worth starting a shell in. Such a tab's shell starts in the project directory instead, which is where a new tab starts anyway, and the next command you run there records that directory in place of the stale one.
-
-A shell can also end on its own in the middle of a command: `exit`, `exec`, a `set -e` script hitting a failure, `kill -9 $$`, or a crash. The command it was running finishes with whatever it had printed, followed by `(shell exited)` on its own line, the tab stops showing as busy, and later commands can run in a fresh shell. The next command in that tab starts a fresh shell in the tab's working directory.
-
-Closing a tab kills its shell; quitting the app kills them all. A shell Janissary killed that way doesn't report `(shell exited)` — its running command is simply abandoned along with it.
-
-## Your startup files don't run
-
-<img class="agent-float left" src="/agents/hakim-south.png" alt="" />
-
-A tab's shell is your login shell, started with its startup files skipped. Your `.bashrc`, `.zshrc`, and `.profile` are not read, so the aliases, functions, prompt, and `PATH` edits you keep in them are not there. That's deliberate: an interactive startup file prints banners and sets traps, and all of it would land in the middle of the output the app captures.
-
-What you do get is the environment `janus` itself was launched with. Export something in the terminal before you start the app and every tab shell sees it.
-
-If you need one of your aliases, the ways to get it are to run it through your shell yourself, to source the file first, or to open an interactive shell in the tab:
-
-```
-shell zsh -ic "myalias"
-shell source ~/.zshrc && myalias
-shell --pty
-```
-
-Interactive programs are the exception to all of this. They run through an interactive shell, so anything on the tab's own terminal, including a bare `shell --pty`, reads your startup files as usual — `.zshrc` included, which a login shell alone skips. Your aliases, functions, and `PATH` edits are all there. It's deliberately not a login shell: login startup rebuilds `PATH` from the system's own list of directories rather than keeping yours as it is, which can change which copy of a command you get.
-
-Only `bash` and `zsh` are given the flags to skip startup files. Any other login shell reads its own, since refusing to launch on a flag it doesn't recognize would be worse.
-
-## Interactive programs take over the tab
-
-<img class="agent-float" src="/agents/bilal-south.png" alt="" />
-
-Full-screen and interactive programs — `htop`, `vim`, `less`, `man`, `python` and other REPLs — can't run through the ordinary transcript. When you run one, the tab switches into a full-tab terminal: the transcript and command bar disappear and the program gets the whole tab, with every keystroke — including `Ctrl+C`, `Ctrl+D`, and `Ctrl+Z` — forwarded to it. Only `Shift+←`/`Shift+→` still switch tabs, and you can keep several tabs' interactive programs running at once; each keeps its screen state while you're elsewhere.
-
-`Shift+Enter` inserts a line continuation rather than submitting, which matters for programs (AI harnesses in particular) that accept multi-line input.
-
-When the program exits, the transcript comes back exactly as it was — nothing about the takeover is logged.
-
-To force a command into a full-tab PTY that isn't auto-detected, add `--pty` right after `shell`:
-
-```
-shell --pty ./some-interactive-script.sh
-```
-
-A bare `shell --pty`, with no command after it, opens your login shell directly in the tab — a plain interactive shell prompt. `!!` is shorthand for `shell --pty`, so `!!./some-interactive-script.sh` and a bare `!!` do the same thing.
-
-## Programs that aren't on the list
-
-The names above are a fixed list, and it can't cover everything — your own TUI, or a program under a name Janissary doesn't know, isn't on it. Those still work, because commands run with a real terminal attached: when a program takes over the screen, the tab switches into a full-tab terminal mid-command and the screen it had already drawn is carried over intact. When the command finishes you're back in the transcript, and its entry reads `(ran in terminal)`.
-
-Janissary remembers what it caught. The next time you run that program it opens a terminal straight away, with no transcript entry and no pause — so a program costs you one detection, ever. What's remembered lives in `.janissary/interactive-commands.json`, a plain list you can edit: delete a line to forget a program, or delete the file to start fresh. `git log` is remembered as `git log`, not as `git`, so `git status` keeps behaving normally. The file sits beside your other project settings rather than in the state directory, so an ordinary restart keeps what it has learned. Break the JSON while editing it and the list simply loads as empty for that session, with your file left exactly as you wrote it — nothing warns you, so re-check the file if a program you forgot about starts opening a terminal again.
-
-Some programs need a terminal without ever saying so — a `sudo` password prompt, a `read`, a bare REPL. Those just sit there waiting. Click **open in terminal** on the running line, or press `Ctrl+O`, and the command moves into a terminal where you can type. It ends like any other: when the command finishes, the terminal closes, the transcript comes back with its entry reading `(ran in terminal)`, and the agent is free for your next command. Doing it by hand is a one-off and isn't remembered.
-
-A real terminal also means commands behave the way they do in one: output comes back in color, and `git log` or `git diff` open a pager instead of printing everything at once.
-
-If you'd rather have none of this, set `interactiveShellDetection` to `false` in `.janissary/config.json`. Commands then run through plain pipes and only the built-in list of interactive programs applies — though anything already remembered still opens a terminal.
-
 ## Open a zsh shell tab
 
-Type `zsh` to open a separate tab with a live zsh terminal. This is different from running a command with `shell` or taking over the current tab with `shell --pty`.
+Type `zsh` to open a separate tab with a live zsh terminal. Application commands run in the command bar; unclaimed input runs directly in zsh.
 
-Every launch opens one of these for you: the `janus` tab you start in is a zsh shell tab in the project directory. Type `agent` in its command bar when you want an agent tab. Typing `exit` in it closes it like any shell tab, and as the last tab that quits the app.
+Every launch opens one of these for you: the `janus` tab you start in is a zsh shell tab in the project directory. Type `zsh` in its command bar when you want another shell tab. Typing `exit` in it closes it like any shell tab, and as the last tab that quits the app.
 
 The command bar starts focused. Double-click the terminal or press `Shift+Tab` to type directly into zsh; double-clicking clears any terminal selection made by the gesture. A single click on the terminal returns focus to the command bar. Press `Shift+Tab` again to return to the command bar. When you use the bar, each line goes to Janissary first. A recognized application command runs there and never reaches zsh; text replies such as `help` appear below the command as rendered markdown, with bold headings, colored code, bulleted lists, and lined-up tables. Long replies take the space they need in the terminal scrollback, without an internal scrollbar. As you scroll through a reply, the visible portion stays rendered even after its first row moves above the viewport. If a full-screen program is using the terminal or the reply cannot be measured or placed, it appears as styled terminal text instead. An unclaimed line goes to zsh. Prefix a line with `!` to send it straight to zsh, even when it matches an application command. While zsh is running a command, the command line reads `queue >` and anything you submit waits in the tab's command queue; the queued lines run one at a time as zsh returns to its prompt, and `Ctrl+E` shows them.
 
 A multi-line command stays editable in the bar until you submit it. If it goes to zsh, its lines are pasted together and submitted as one command.
 
-By default, `zsh` gives the new shell a sandbox of its own: a fresh workspace clone of the project, the same kind `agent` creates, with zsh confined to it. The full form is:
+By default, `zsh` gives the new shell a sandbox of its own: a fresh workspace clone of the project, a separate checkout, with zsh confined to it. The full form is:
 
 ```
 zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]
 ```
 
-- `zsh docs` names the tab, and its clone folder, `docs`. A name already in use is refused in the notifications feed, as for `agent`.
+- `zsh docs` names the tab, and its clone folder, `docs`. A name already in use is refused in the notifications feed, as for `zsh`.
 - `--no-workspace` opens an unsandboxed shell instead. It starts in the current tab's directory when that tab is unsandboxed and inside the project, and at the project root otherwise.
 - `--offline` creates the clone with network access denied.
 - `zsh … on <address>` opens the shell on that host in its own remote workspace. It implies a workspace even with `--no-workspace`.
@@ -102,7 +24,7 @@ zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]
 
 A sandboxed shell's tab opens right away with a spinning **Provisioning workspace** flag while the clone is made. Anything you type in its command bar meanwhile waits in the queue (`queue >`) and runs once zsh starts at the clone's root. The notifications feed then shows `Shell "<name>" ready. ($workspace/<name>)`. If the clone fails, the feed says so and the tab closes itself. Closing the tab first cancels the clone. In a project with no git repository, or no `origin` remote, `zsh` opens an unsandboxed shell and tells you why.
 
-A remote agent, harness, or shell tab can open a sibling shell in its existing remote workspace and channel by typing `zsh` without `on`. The sibling keeps a supplied name, inherits offline mode, and starts in the source tab's working directory when that directory is inside the workspace, otherwise at the workspace root. While the workspace provisions, it answers `The remote workspace is not ready yet.`; while reconnecting or after the session is gone, it answers `The remote workspace is no longer available.` The plus button on a remote shell opens the same kind of sibling. `zsh … on <address>` from a remote tab remains unavailable and answers `Cannot launch a remote shell from a remote tab.` A local remote-shell tab appears while SSH connects, so you can answer prompts in its terminal. When the remote workspace is ready, it switches to zsh at the workspace root and reports `Shell "<name>" ready on <host>. ($workspace/<name>)` — the same form a local one uses, since the host's raw clone path would mean nothing here. Lines submitted while the tab provisions wait and run at zsh's first prompt. A remote launch failure is reported as `Failed to start "<name>" on <host>: <reason>` and the tab closes; there is no local fallback. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt. A shell keeps its workspace alive even if you close the tab it was opened from; the clone is removed when its last tab closes.
+A remote harness or shell tab can open a sibling shell in its existing remote workspace and channel by typing `zsh` without `on`. The sibling keeps a supplied name, inherits offline mode, and starts in the source tab's working directory when that directory is inside the workspace, otherwise at the workspace root. While the workspace provisions, it answers `The remote workspace is not ready yet.`; while reconnecting or after the session is gone, it answers `The remote workspace is no longer available.` The plus button on a remote shell opens the same kind of sibling. `zsh … on <address>` from a remote tab remains unavailable and answers `Cannot launch a remote shell from a remote tab.` A local remote-shell tab appears while SSH connects, so you can answer prompts in its terminal. When the remote workspace is ready, it switches to zsh at the workspace root and reports `Shell "<name>" ready on <host>. ($workspace/<name>)` — the same form a local one uses, since the host's raw clone path would mean nothing here. Lines submitted while the tab provisions wait and run at zsh's first prompt. A remote launch failure is reported as `Failed to start "<name>" on <host>: <reason>` and the tab closes; there is no local fallback. Each `zsh` command opens a new shell tab, and its interactive zsh reads its startup files. The terminal appears after startup with a plain `> ` prompt. A shell keeps its workspace alive even if you close the tab it was opened from; the clone is removed when its last tab closes.
 
 The terminal is painted in the application theme's own colors — background, text, cursor, and selection — so a light theme gives a light terminal. Choosing a theme in the `theme` picker updates the shell terminal too.
 
@@ -117,7 +39,7 @@ Janissary never types anything at zsh's prompt to set the tab up. zsh's own star
 
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.
 
-Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh tab in the directory this shell is currently in. Beside an unsandboxed shell the new one is unsandboxed too; beside a sandboxed one it shares the same workspace clone rather than making a new one. While the shell's own clone is still being made, the button is dimmed and `Cmd+T` does nothing. In other tabs, `Cmd+T` opens a new agent tab.
+Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh tab in the directory this shell is currently in. Beside an unsandboxed shell the new one is unsandboxed too; beside a sandboxed one it shares the same workspace clone rather than making a new one. While the shell's own clone is still being made, the button is dimmed and `Cmd+T` does nothing. In other tabs, `Cmd+T` opens a new shell tab.
 
 With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.
 
@@ -126,3 +48,7 @@ With the terminal focused, press `Ctrl+Shift+C` to copy its selection. On macOS,
 ## Query ACP from a shell
 
 Use `acp <prompt>` in the shell command bar to query OpenCode. Replies stream as Markdown in the ACP panel above the bar, with tool steps and a responding status. **Reset ACP** stops the current connection immediately, including while a reply is in progress. The panel and its controls belong to that shell when it is docked too. See [ACP agents](/user-documentation/advanced-agents/acp-agent) for setup, tools, and remote connections.
+
+## Inline monitors
+
+`monitor <persona>` watches this tab. Its suggestions and `monitor ask` replies appear in the shell’s visible output and remain in the shared activity log. Reporting monitors with explicit targets keep their own reporting tab.

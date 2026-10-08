@@ -6,8 +6,7 @@ import type { TabNavEntry } from '../tab-nav-match';
 
 // The picker half of the window key handler's live snapshot. The eight open/closed values come from
 // `OverlayOpenSources` rather than being restated, so a ninth overlay added to the registry stops
-// this from compiling until the new state is threaded through. `useWindowKeys` adds the two fields
-// that are not an overlay's (`canSearch`, `searchOpen`) and calls the result `StateSnapshot`.
+// this from compiling until the new state is threaded through. `useWindowKeys` adds the current plugin tab label and calls the result `StateSnapshot`.
 //
 // The `*Idx` names are the handlers' own vocabulary, kept as they are; `buildPickerKeyBindings` below
 // is the single place they are translated from the hooks' `*Index`.
@@ -27,8 +26,7 @@ export type PickerKeySnapshot = OverlayOpenSources & {
   profiles: VisibleProfileRow[];
 };
 
-// The picker half of the window key handler's callbacks. `useWindowKeys` adds `openSearch` — the one
-// callback no overlay owns — and calls the result `Callbacks`.
+// The window key handler uses these callbacks for shared pickers and commands.
 export type PickerKeyCallbacks = {
   runCommand: (text: string) => void;
   setPickerIndex: (setter: (prev: number) => number) => void;

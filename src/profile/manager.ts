@@ -1,17 +1,10 @@
 import { listProfiles, profileExists } from '../profiles.js';
 import { parseProfileCommand } from './command.js';
 import { loadProfile } from './file.js';
-import { resolveLocalLaunchName } from '../launch-name/local.js';
-import { poolCandidates } from '../launch-name/check.js';
 import { openProfileEntries } from './agent-opener.js';
 import { reportValidation } from './validate.js';
 import { saveProfile, formatSaveSummary } from './save/index.js';
-import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
-import { newAgentOp } from './new-agent.js';
-import { placeAgent } from './place-agent.js';
-import { workspaceAgentCwd } from './inherited-cwd.js';
-import { messageBus } from '../bus.js';
 import { errorText } from '../error-text.js';
 
 export class ProfileManager {
@@ -82,85 +75,6 @@ export class ProfileManager {
     }
 
     this.finish(openProfileEntries(loaded, this.managers, parsed.name, label, out), out);
-  }
-
-  newAgent(command: string, context?: { label: string; index: number }): void {
-    newAgentOp(this.managers, command, context);
-  }
-
-  // Launch a bare, auto-named agent tab rooted at the named source tab's cwd, joining its group —
-  // the ➕ metadata-row button. A no-op for an unknown label; every message (pool exhaustion, a
-  // workspace-clone error or its ready confirmation) reaches the notifications feed rather than a
-  // transcript, since the source tab may be a harness with no transcript to print into.
-  newAgentAt(label: string): void {
-    const creator = this.managers.tab.byLabel(label);
-    if (!creator) return;
-    const resolved = this.poolName(label);
-    if (resolved === undefined) return;
-    const cwd = this.managers.tab.cwdOf(label) ?? this.managers.tab.launchDir;
-
-    if (creator.remote) {
-      if (!this.managers.remote.attach(resolved, label)) {
-        notify(this.managers, 'manual', label, 'The remote workspace is no longer available.');
-        return;
-      }
-      const workspace = this.managers.remote.workspaceOf(label);
-      placeAgent(this.managers, {
-        resolved, creator,
-        cwd: workspace ?? cwd,
-        offline: false,
-        remote: creator.remote,
-        busy: workspace === undefined,
-      });
-      if (workspace === undefined) this.waitForRemoteWorkspace(resolved, label);
-      return;
-    }
-
-    if (creator.workspaceDir === undefined) {
-      placeAgent(this.managers, { resolved, creator, cwd, offline: false });
-      return;
-    }
-
-    this.managers.workspace.retain(creator.workspaceDir);
-    placeAgent(this.managers, {
-      resolved, creator,
-      cwd: workspaceAgentCwd(creator.workspaceDir, this.managers.tab.cwdOf(label)),
-      workspaceDir: creator.workspaceDir,
-      offline: creator.offline ?? false,
-    });
-  }
-
-  newAgentInWorkspace(label: string, workspaceDir: string): void {
-    const creator = this.managers.tab.byLabel(label);
-    if (!creator) return;
-    const resolved = this.poolName(label);
-    if (resolved === undefined) return;
-    placeAgent(this.managers, {
-      resolved, creator, cwd: workspaceDir, workspaceDir, offline: false,
-    });
-  }
-
-  // A pool name for an unnamed agent joining `label`'s workspace, past every open tab and live
-  // sessions row. Joining creates no workspace, so there is no leftover step; pool exhaustion is
-  // posted by the check itself.
-  private poolName(label: string): string | undefined {
-    return resolveLocalLaunchName(this.managers, {
-      creator: label, name: '', explicit: false, workspace: false, candidates: poolCandidates(),
-    });
-  }
-
-  private waitForRemoteWorkspace(joinedLabel: string, sourceLabel: string): void {
-    const ready = this.managers.remote.readyOf(sourceLabel);
-    if (!ready) return;
-    void ready.then((dir) => {
-      if (this.managers.tab.findIndex(joinedLabel) === -1) return;
-      this.managers.tab.setCwd(joinedLabel, dir);
-      this.managers.tab.deleteBusy(joinedLabel);
-      messageBus.emit('state', { type: 'dirty' });
-    }, () => {
-      const index = this.managers.tab.findIndex(joinedLabel);
-      if (index !== -1) this.managers.tab.closeTab(index);
-    });
   }
 
 }

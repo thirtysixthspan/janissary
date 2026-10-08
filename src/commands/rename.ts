@@ -8,7 +8,7 @@ export const command: Command = {
     const rest = command_.replace(/^rename\b\s*/i, '').trim();
     managers.tab.renameTab(tab.index, rest);
     const output = rest
-      ? `Tab "${tab.label}" now displays as "${rest}" (msg/routing still use "${tab.label}").`
+      ? `Tab "${tab.label}" now displays as "${rest}" (routing still uses "${tab.label}").`
       : `Tab "${tab.label}" alias cleared.`;
     managers.tab.append(tab.label, { input: command_, output });
   },

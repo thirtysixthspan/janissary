@@ -1,10 +1,10 @@
 # ACP
 
-ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar and a core streaming response panel. Any tab plugin can request the scoped core API without owning a terminal. Agent tabs have no ACP command or prose route. Monitors, conversations, and editor queries retain their separate sessions over the shared protocol transport.
+ACP is a core service for starting and querying Agent Client Protocol connections. Shell tabs use it through their command bar and a core streaming response panel. Any tab plugin can request the scoped core API without owning a terminal. Shell and harness tabs have no ACP command or prose route. Monitors, conversations, and editor queries retain their separate sessions over the shared protocol transport.
 
 ## Availability and plugin API
 
-A plugin requests `startAcp`, `promptAcp`, and `resetAcp` in its declaration. Each capability is bound to that plugin's own answering tab, or its own invoking tab when there is no answering tab. It cannot start or query a different plugin's tab or an agent tab that invoked its command. An unavailable or disabled owner returns the ordinary request rejection `ACP tab is unavailable.`.
+A plugin requests `startAcp`, `promptAcp`, and `resetAcp` in its declaration. Each capability is bound to that plugin's own answering tab, or its own invoking tab when there is no answering tab. It cannot start or query a different plugin's tab or a shell tab that invoked its command. An unavailable or disabled owner returns the ordinary request rejection `ACP tab is unavailable.`.
 
 - `startAcp()` begins or reuses the tab's connection and returns `{ model }` or `{ error }`. Startup is lazy and the handshake may still be pending.
 - `promptAcp(prompt)` runs the core database/browser/question loop and resolves with the final answer. Connection startup is automatic if needed. Provider and tool wait time belongs to core and is exempt from the plugin handler deadline.
@@ -18,7 +18,6 @@ A plugin requesting `promptAcp` supports the core `acp` and `acp reset` commands
 
 The shell's ordinary application-command dispatcher recognizes these commands and marks their replies as core-rendered. It waits for the ACP operation without duplicating the reply in zsh's terminal. Unclaimed shell-bar lines still go to zsh; use an explicit `acp` prefix to query the connection. See [[shell-tab]].
 
-Agent tabs exclude these commands from contextual resolution. Unclaimed input receives the ordinary unknown-command response. Executable `msg … request` and `msg … command` deliveries remain supported; shell and database input requires explicit commands. See [[messaging]].
 
 ## Provider and model
 
@@ -58,7 +57,7 @@ Tool results are recorded as ACP steps and collapse through the existing transcr
 
 A remote shell or other remote plugin tab uses its existing channel and workspace for the ACP agent. The local side chooses the model and sends the launch request; the remote hosts the ACP client, so prompts and chunks cross SSH instead of JSON-RPC. Tabs sharing one channel still have independent ACP session ids.
 
-Before the channel is attached, the operation refuses with `ACP: the remote session is still connecting.`. A dropped channel tears down its tab and connection. Late chunks from a reset or closed session cannot update its replacement. The existing remote platform confinement rules remain unchanged. Remote agent tabs do not offer ACP commands. See [[remote-server]].
+Before the channel is attached, the operation refuses with `ACP: the remote session is still connecting.`. A dropped channel tears down its tab and connection. Late chunks from a reset or closed session cannot update its replacement. The existing remote platform confinement rules remain unchanged. Remote shell tabs offer ACP through their command bar; harness tabs remain terminal surfaces. See [[remote-server]].
 
 ## Errors and notifications
 

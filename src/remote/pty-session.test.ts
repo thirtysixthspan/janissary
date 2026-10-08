@@ -498,7 +498,6 @@ describe('a remote PTY inside PseudoterminalManager', () => {
     const tab = makeTab('claude', 'red');
     const manager = new PseudoterminalManager(makeManagers([tab]));
     const id = manager.registerRemotePty('claude', channel, { program: 'claude', command: 'claude' });
-    tab.activePty = id;
     const exits: { id: string; exitCode?: number }[] = [];
     const subscription = messageBus.on('pty', 'exit', (event) => {
       if (event.type === 'exit') exits.push({ id: event.id, exitCode: event.exitCode });
@@ -509,7 +508,6 @@ describe('a remote PTY inside PseudoterminalManager', () => {
 
     expect(exits).toEqual([{ id, exitCode: 1 }]);
     expect(manager.terminalsFor('claude')).toEqual([]);
-    expect(tab.activePty).toBeUndefined();
   });
 
   it('forwards manager input and resize to the remote session', () => {

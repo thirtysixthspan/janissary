@@ -80,7 +80,7 @@ export type TabPluginTopicAction =
   | { topic: 'conversations'; action: 'send'; id: string; query: string; context?: string }
   | { topic: 'conversations'; action: 'cancel'; id: string }
   | { topic: 'conversations'; action: 'openFiles'; id: string }
-  | { topic: 'conversations'; action: 'launchAgent'; id: string }
+  | { topic: 'conversations'; action: 'launchShell'; id: string }
   | {
     topic: 'conversations';
     action: 'selectModel';

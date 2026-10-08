@@ -33,7 +33,6 @@ export type FileNavigatorControllerAdapter = {
   redoFileNavigatorItem(label: string, overwrite?: boolean, skipConflicts?: boolean): ReturnType<typeof fileNavigatorRpc.redoFileNavigatorItem>;
   setDock(index: number, dock: 'left' | 'right' | null): void;
   openFileNavigatorFor(label: string): void;
-  launchAgentFor(label: string): void;
   launchShellFor(label: string): void;
 };
 
@@ -66,9 +65,8 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     redoFileNavigatorItem: (label, overwrite, skipConflicts) => fileNavigatorRpc.redoFileNavigatorItem(managers, label, overwrite, skipConflicts),
     setDock: (index, dock) => managers.tab.setDock(index, dock),
     openFileNavigatorFor: (label) => fileNavigatorRpc.openFileNavigatorFor(managers, label),
-    launchAgentFor: (label) => managers.profile.newAgentAt(label),
     launchShellFor: (label) => {
-      void managers.plugins.runCommand('shell', 'zsh', { label, command: 'zsh' });
+      void managers.plugins.openSibling('shell', { label, command: 'zsh' });
     },
   };
 }

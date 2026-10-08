@@ -4,7 +4,7 @@ import {
   type MonitorCompletions,
 } from './handlers.js';
 import {
-  completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose,
+  completeSendTarget, completeScheduleTarget, completeConnectionClose,
 } from './target-handlers.js';
 import { completeBrowserCommand } from './browser.js';
 import { completeFilePath } from './fs.js';
@@ -14,8 +14,6 @@ import { SYNTAX_THEMES } from '../syntax-themes.js';
 /**
  * Tab-complete the token ending at the cursor.
  *
- * - For the recipient argument of `msg`/`broadcast`, completes against open tab labels
- *   (`broadcast` also offers `all` and supports a comma-separated list).
  * - For the target argument of `send`, `queue`, `close`/`exit`, and the `in <tab>` clause of
  *   `schedule`, completes against all open tab labels.
  * - For the target of `connection close`, completes against open connection strings
@@ -36,8 +34,7 @@ export function completeCommandLine(
   monitor?: MonitorCompletions,
 ): CompletionResult {
   const cursor = readCompletionCursor(input, cursorOffset);
-  const result = completeAgentName(cursor, labels) ??
-    completeSendTarget(cursor, labels) ??
+  const result = completeSendTarget(cursor, labels) ??
     completeScheduleTarget(cursor, labels) ??
     completeConnectionClose(cursor, connections) ??
     completeBrowserCommand(cursor, connections) ??

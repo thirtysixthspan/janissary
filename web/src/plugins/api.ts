@@ -1,3 +1,4 @@
+import { subscribeBackgroundReplies } from './background-replies';
 import type { ReactNode } from 'react';
 import type { JanusClient } from '../ws';
 import { resourceUrl } from '../session-url';
@@ -12,22 +13,22 @@ import type { RemoteSessionState } from '../shared/RemoteSessionButton';
 export { renderMarkdown } from '../shared/transcript/markdown';
 
 // The host's command bar, published so a plugin whose tab takes a line of text renders the one the
-// agent tab renders rather than a second textarea that drifts from it. Both are free of any feature:
+// tab renders rather than a second textarea that drifts from it. Both are free of any feature:
 // the shell is markup plus its autosize, the hook is the baseline keymap, and a plugin with keys of
-// its own composes around them exactly as the agent tab does. Additive, so `TAB_PLUGIN_API_VERSION`
+// its own composes around them exactly as the tab does. Additive, so `TAB_PLUGIN_API_VERSION`
 // does not move — that constant versions what a manifest must declare, which this does not change.
 export { CommandBarShell,  } from '../shared/command-bar/CommandBarShell';
 export { useCommandBarKeys,  } from '../shared/command-bar/useCommandBarKeys';
 // The bar's caret insertion, published with it so a plugin splicing a picked line into its own bar
-// keeps the same undo entry and caret placement the agent tab's bar does. The shell tab shipped a
+// keeps the same undo entry and caret placement the tab's bar does. The shell tab shipped a
 // line-for-line copy of it before this. Additive, so `TAB_PLUGIN_API_VERSION` does not move.
 export { spliceIntoTextarea } from '../shared/command-bar/textarea-splice';
 
 // The application's own interception of a typed line, published beside the bar above and for the same
 // reason: a plugin bar that offers every line to the server lets `quit` and a last-tab `close` tear the
-// window down with nothing asked, because the interception that catches them lives in the agent tab's
+// window down with nothing asked, because the interception that catches them lives in the tab's
 // submit chain and a plugin bar never runs it. A plugin body asks this one question before it sends
-// anything, and gets the same answer the agent tab's bar would give. What it reads is already bound to
+// anything, and gets the same answer the tab's bar would give. What it reads is already bound to
 // its own tab by the host: the line is intercepted as typed there, the queue popup's state arrives only
 // while the popup is open over that tab, and a picked line is inserted into that tab's bar alone. The
 // providers are the app shell's and are not published; `useAppCommandBar` throws without them rather
@@ -57,7 +58,7 @@ export { ConfirmDialog } from '../shared/ConfirmDialog';
 export { terminalColors, type TerminalColors } from '../shared/terminal/colors';
 export { copySelectionChord, isMacPlatform } from '../shared/terminal/terminal/keys';
 // The metadata row's recording flag, published for the same reason and on the same terms. The shell
-// plugin's row deliberately does not import the host's `AgentTabMeta` markup, but this flag is a
+// plugin's row deliberately does not import the host's `HarnessTabMeta` markup, but this flag is a
 // component of its own rather than part of that markup — so the plugin renders the one the host
 // renders instead of keeping a second copy that could drift on its icon, its label, or when it lights.
 ;
@@ -233,12 +234,13 @@ export type TabPluginClientCapabilities = {
   // terminal behaves exactly as it did before this existed.
   attachTerminal?(ptyId: string, onData: (data: string) => void): Promise<PluginTerminal>;
   // The two metadata-row actions that are tab-scoped RPCs rather than commands: open a file navigator
-  // rooted at this tab, and launch an agent in this tab's directory. Capabilities rather than a
-  // dispatched command line because the two are not the same thing — the agent action roots the new
+  // rooted at this tab, and launch a shell in this tab's directory. Capabilities rather than a
+  // dispatched command line because the two are not the same thing — the shell action roots the new
   // tab at *this* tab's cwd and joins its group, which a command run in this tab does not. Optional
   // for the same reason as `attachTerminal`.
   openFileNavigator?(): void;
-  launchAgentHere?(): void;
+  launchShellHere?(): void;
+  onBackgroundReply?(receive: (reply: { id: string; output: string }) => void): () => void;
   // This tab's asciicast recording, or absent before the tab's terminal has produced any output. Its
   // presence is also what makes the recording flag pressable, so a plugin drawing that flag reads
   // this field rather than keeping its own state — the host is the only thing that knows when the
@@ -253,7 +255,7 @@ export type TabPluginClientCapabilities = {
   // server cannot work the colors out itself, because they live only in the web stylesheet. Optional
   // because a plugin with no terminal of its own has nothing to report.
   reportTerminalColors?(id: string, colors: TerminalColors): void;
-  // Open a link the way a click on it in an agent tab's transcript does: a web address through `open`,
+  // Open a link the way a click on it in an tab's transcript does: a web address through `open`,
   // a `path:line` reference in an editor tab, and anything else not at all. A plugin rendering markdown
   // of its own needs it because the default for an anchor click is to navigate the whole application
   // window away. Optional for the same reason as `attachTerminal`.
@@ -319,8 +321,9 @@ export function createPluginClientCapabilities(
         detach: () => { detachBytes(); stopListening(); exitHandlers.clear(); },
       };
     },
+    onBackgroundReply: (receive) => subscribeBackgroundReplies(client, label, receive),
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
-    launchAgentHere: () => { client.send({ method: 'launchAgentFor', params: { label } }); },
+    launchShellHere: () => { client.send({ method: 'launchShellFor', params: { label } }); },
     // The two are supplied together or not at all: a plugin drawing the recording flag needs one
     // answer to "does this tab have a recording", and a handler with no path behind it would be a
     // button that opens nothing.

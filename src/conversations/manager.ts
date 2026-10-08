@@ -141,10 +141,13 @@ export class ConversationsManager {
     return true;
   }
 
-  launchAgent(id: string): boolean {
+  launchShell(id: string): boolean {
     const target = this.workspaceTarget(id);
     if (!target) return false;
-    this.managers.profile.newAgentInWorkspace(target.label, target.workspace);
+    const tab = this.managers.tab.byLabel(target.label);
+    if (!tab) return false;
+    tab.workspaceDir = target.workspace;
+    void this.managers.plugins.openSibling('shell', { label: target.label, command: 'zsh' });
     return true;
   }
 

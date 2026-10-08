@@ -6,7 +6,6 @@ import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
 import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
-import { parseAgentCommand } from '../agent/commands.js';
 import { resolveLocalLaunchName } from './local.js';
 import { localRunningRefusal } from './messages.js';
 
@@ -52,10 +51,10 @@ describe('resolveLocalLaunchName', () => {
   });
 
   it('keeps two typed names apart when they share their first 16 characters', () => {
-    const first = parseAgentCommand('agent alpha-bravo-charlie').name;
+    const first = 'alpha-bravo-charlie';
     const managers = managersWith([{ label: first, workspaceDir: workspacePath(first) }]);
 
-    const second = parseAgentCommand('agent alpha-bravo-charlot').name;
+    const second = 'alpha-bravo-charlot';
 
     expect(first).toBe('alpha-bravo-charlie');
     expect(resolveLocalLaunchName(managers, { creator: 'janus', name: second, explicit: true, workspace: true })).toBe('alpha-bravo-charlot');

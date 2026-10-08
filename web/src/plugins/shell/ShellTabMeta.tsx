@@ -16,7 +16,7 @@ function siblingTitle(payload: ShellPayload): string {
 
 // The shell tab's own metadata row.
 //
-// Written here rather than imported from the host's `AgentTabMeta`, which is the self-contained choice
+// Written here rather than imported from the host's `HarnessTabMeta`, which is the self-contained choice
 // this plugin was built for: the same structure and the same class names, so it looks identical, with
 // the actions supplied by declared capabilities rather than borrowed markup. The control it omits is
 // **Open transcript**, which would open nothing — the terminal replaced the transcript, so there is no
@@ -26,7 +26,7 @@ export function ShellTabMeta({ payload, capabilities }: {
   capabilities: TabPluginClientCapabilities;
 }) {
   // The tab's own label, which is what the hook re-arms on: two shell tabs each get their own
-  // auto-show, and returning to this one shows its connections panel again as an agent tab's would.
+  // auto-show, and returning to this one shows its connections panel again as an tab's would.
   // The fallback is what a host that reports no label would get — one identity for every shell tab, so
   // the auto-show fires on mount rather than on each activation.
   const windows = useStatusWindows(capabilities.label ?? 'shell', {

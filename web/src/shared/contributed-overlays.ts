@@ -6,7 +6,7 @@ import { focusedElement, returnFocus } from './overlay-focus';
 // plugin layer.
 //
 // This is `drop-registry.ts` in a second costume, and for the same reason. The feature-directory lint
-// zones forbid `agent-tabs`, `context-menu`, and `pickers` from importing each other *or* from
+// zones forbid `shared command bars`, `context-menu`, and `pickers` from importing each other *or* from
 // `overlay-plugins`, and a static import of a plugin's chunk here would pull it into the entry
 // bundle. So the seam carries the three questions a feature needs to ask — which overlay claims this
 // chord, which claims this command word, and open that one — and the plugin layer answers them from

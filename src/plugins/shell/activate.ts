@@ -29,6 +29,15 @@ function nextInstanceKey(): string {
 export function activate(): TabPluginActivation {
   return {
     isPayload: isShellPayload,
+    openSibling: (capabilities) => {
+      const origin = capabilities.originTab();
+      if (!origin) return;
+      if (origin.remote) {
+        launchShellTab(capabilities, nextInstanceKey(), { name: '', workspace: false, offline: false }, origin.root);
+      } else {
+        openShellTab(capabilities, nextInstanceKey());
+      }
+    },
     opener: noFileOpener('shell'),
     reattach: (record, capabilities) => {
       const instanceKey = nextInstanceKey();
@@ -164,7 +173,7 @@ export function activate(): TabPluginActivation {
         run: (_tabPayload, line, capabilities) => capabilities.dispatchLineWithOutput(line),
       },
       // A line the bar recorded in its own history — whichever route it took — enters the global
-      // history too, as a line submitted in an agent tab's bar does.
+      // history too, as a line submitted in an tab's bar does.
       remember: {
         payload: isShellDispatch,
         run: (_tabPayload, line, capabilities) => {

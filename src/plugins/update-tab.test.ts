@@ -11,7 +11,7 @@ import {
 } from './api.js';
 import { TabPluginHost } from './host.js';
 import { NotificationQueue } from '../notifications/queue.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 function manifest(
   id: string,
@@ -27,7 +27,7 @@ function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
-  seedRootAgentTab(managers.tab);
+  seedRootTab(managers.tab);
   Object.assign(managers, {
     workspace: { remove: vi.fn(), cancel: vi.fn() },
     shell: { close: vi.fn(), closeTab: vi.fn() },

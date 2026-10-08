@@ -23,8 +23,8 @@ describe('client feature boundaries', () => {
 
   it('rejects an import from a sibling feature', async () => {
     const messages = await boundaryMessages(
-      "import { AgentTabBody } from '../agent-tabs/AgentTabBody'; void AgentTabBody;",
-      'web/src/harness/HarnessTab.tsx',
+      "import { HarnessTab } from '../harness/HarnessTab'; void HarnessTab;",
+      'web/src/editor/EditorTab.tsx',
     );
     expect(messages).toHaveLength(1);
     expect(messages[0]?.message).toContain('not import a sibling feature');

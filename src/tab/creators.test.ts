@@ -60,7 +60,7 @@ describe('addPluginTab with agent names', () => {
   });
 
   const row = (label: string, state: LaunchNameRow['state']): LaunchNameRow => (
-    { label, kind: 'agent', state, host: 'box' }
+    { label, kind: 'shell', state, host: 'box' }
   );
   const allButFirstTwoHeld = () => [makeTab('janus', '#fff'), ...agentNames.slice(2).map((name) => makeTab(name, '#123'))];
 

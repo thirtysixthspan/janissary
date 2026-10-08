@@ -26,7 +26,7 @@ export function closeTabOp(
   resolveTabs?: () => Tab[],
 ): void {
   const tab = tabs[index];
-  if (!tab) return;
+  if (!tab || tab.runtime?.closing) return;
   if (closeQuitsApp(tabs, index)) {
     messageBus.emit('app', { type: 'exit' });
     return;

@@ -1,8 +1,8 @@
 # Tabs
 
-Every tab is an independent workspace: its own transcript, its own command history, its own shell and working directory. Switching tabs never loses anything — a command running in one tab keeps running while you work in another, and each tab's scroll position and history stay where you left them. A command you typed but haven't run yet waits in that tab's command bar too, so you can leave a half-written line, look at another tab, and come back to finish it.
+Shell tabs keep their own terminal, command history, working directory, and unfinished command line. Harness tabs keep their own live terminal. File and other view tabs retain their own content and view state while you switch tabs.
 
-A session starts with a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) named `janus`. New tabs are created on demand — agent tabs with the `agent` command (below), and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
+A session starts with a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) named `janus`. New tabs are created on demand — shell tabs with the `zsh` command (below), harness tabs with `harness`, and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
 
 A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, [conversation list](/user-documentation/tab-types/conversations), and [sessions](/user-documentation/tab-types/sessions) list each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`, `sessions left`) that opens or moves them straight into a sidebar. Bare `conversations` and bare `sessions` return their list to the center. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side. For a tab contributed by a bundled plugin, the kind is the plugin rather than the tab, so two image tabs displace each other while an image tab and a PDF tab sit side by side.
 
@@ -27,22 +27,22 @@ Which tab is docked where belongs to the app, so it stays the same in every wind
 
 ![The tab strip with three shell tabs: each has a colored dot, one dot is blinking while its shell runs a command, and an inactive tab carries a flag badge for unread output.](/screenshots/tabs-overview.png)
 
-## Creating agent tabs
+## Creating shell tabs
 
 ```
-agent           create a tab with a random unused name
-agent bilal     create a tab named "bilal"
+zsh             create a tab with a random unused name
+zsh bilal     create a tab named "bilal"
 ```
 
-The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab already has, or a live row in the [sessions](/user-documentation/tab-types/sessions) tab, is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. Random names come from a pool of 52 (see [Agents](/user-documentation/getting-started/agents)); if every pool name is taken, bare `agent` posts `All agent names are in use.` to that same feed.
+The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab already has, or a live row in the [sessions](/user-documentation/tab-types/sessions) tab, is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. Random names come from a pool of 52 (see [Agents](/user-documentation/getting-started/agents)); if the pool is exhausted, the shell plugin falls back to a numbered label.
 
 ## Reading the tab strip
 
 The strip tells you what every tab is doing without switching to it. Three signals matter:
 
 - **The colored dot.** Every tab gets a dot color picked to stand apart from the colors already on screen, so adjacent tabs are easy to tell apart. The colored band along the top of a tab is its [group](/user-documentation/getting-started/groups).
-- **A blinking dot means busy.** While a tab's agent is working — a shell command, an agent turn, anything in flight — its dot blinks on and off. It settles back to a steady fill when the work finishes.
-- **A flag icon means unread output.** When a tab that is not visible in either pane receives new content — a message from another agent, a shell command finishing, agent output — a flag badge appears on it. A backgrounded zsh shell tab also gets a flag when its command finishes. If that badge stays unread and hidden for 30 seconds, Janissary raises an `Agent '<tab>' is waiting` notification. Selecting the tab starts a short dwell rather than clearing the flag outright: stay on the tab for a moment and the flag goes, which is how a tab you actually stopped to read is told apart from one you flicked past on the way somewhere else. The flag is never drawn on the tab you are currently on, so a dwell never shows a flag appearing on the tab under your eyes. A tab you have docked into a sidebar never badges, however much it has to say, because it is on screen. The badge lives only in the app's memory: a fresh `janus` or a `janus --relaunch` brings no flags with it.
+- **A blinking dot means busy.** While a tab is working — a shell command, an agent turn, anything in flight — its dot blinks on and off. It settles back to a steady fill when the work finishes.
+- **A flag icon means unread output.** When a tab that is not visible in either pane receives new content — a shell command finishing, agent output — a flag badge appears on it. A backgrounded zsh shell tab also gets a flag when its command finishes. If that badge stays unread and hidden for 30 seconds, Janissary raises an `Agent '<tab>' is waiting` notification. Selecting the tab starts a short dwell rather than clearing the flag outright: stay on the tab for a moment and the flag goes, which is how a tab you actually stopped to read is told apart from one you flicked past on the way somewhere else. The flag is never drawn on the tab you are currently on, so a dwell never shows a flag appearing on the tab under your eyes. A tab you have docked into a sidebar never badges, however much it has to say, because it is on screen. The badge lives only in the app's memory: a fresh `janus` or a `janus --relaunch` brings no flags with it.
 
 The active tab is also highlighted: full-strength text on the content background, while inactive tabs are muted. The band along the top of a group dims uniformly while the app window itself is behind something else, and comes back when you return to it.
 
@@ -55,7 +55,7 @@ a pane to make it the focused one. The focused pane keeps its tab-colored left b
 
 The button is only there when it would do something: with a single eligible tab there is nothing to split it from, so it renders inert, and the notifications tab has no Split at all. A reporting tab cannot be moved into a pane either.
 
-When both panes show agent tabs, both keep their command lines and the same metadata buttons. The command line in the unfocused pane stays visible without stealing keyboard focus. Click it to focus that pane, then type normally. Pickers, transcript search, and dialogs stay with the focused pane.
+When both panes show shell tabs, both keep their command lines and metadata buttons. Harness tabs keep their terminal and metadata actions. The command line in the unfocused pane stays visible without stealing keyboard focus. Click it to focus that pane, then type normally. Pickers and dialogs stay with the focused pane.
 
 Drag the divider between the panes to resize them. The divider starts in the middle and stops at
 15% or 85% of the center area, so neither pane can disappear accidentally. The width is yours for
@@ -71,21 +71,20 @@ width.
 
 ## The tab metadata row
 
-Agent, harness, and shell tabs show a small metadata row above their body: the tab's working directory, followed by an emoji for each active flag (📦 workspaced, ⚡ auto-permitting, 🌐 E2E browser, 🎬 recording). Hover a flag and it names itself — "Workspaced", "Auto-permitting", "E2E browser", or "recording". The 🎬 flag leads the row, appears as soon as a harness, SSH or shell tab opens, is grey until the session produces its first output, and then turns green; clicking it opens that session's [recording](/user-documentation/advanced-agents/harness#the-recording-flag) in the player, following it while it is still running. Agent tabs never show it. The 📦 flag is green, and while a workspace is still being cloned a spinning icon sits in its place until the clone lands. The ⚡ flag turns green once auto-approval has approved a prompt in that tab. A shell tab is the one that takes a different program over the tab, such as `htop`; its metadata row stays, so the working directory and the Split control are still there. The 🌐 flag appears on a harness started with its browser, which is every harness not launched with `--no-browser`, and turns green once a browser is actually running behind it, with the tooltip "E2E browser in use". When that browser is reported gone, the flag goes back to its plain look and "E2E browser" tooltip. If a later connect starts a fresh browser, the flag turns green again, while the notifications line and the band above the terminal keep showing the earlier death. See [Harnesses](/user-documentation/advanced-agents/harness). A remote agent or harness shows its host in a chip before the working directory; hover over it to see the full remote destination. A standalone remote shell shows its host as plain text beside the path and its connection plug with the recording and workspace flags. A remote agent keeps its host chip when an interactive command such as `htop` takes over the tab. Every action button stays grouped at the right edge of that row. Agent and harness tabs carry a 📁 file-navigator button there. Its tooltip is "Open file navigator in this workspace" on a workspaced tab and "Open file navigator here" otherwise. Clicking it opens a [file navigator](/user-documentation/tab-types/file-navigator) rooted at that tab's own working directory, docked in the left sidebar by default, or retargets an already-open navigator to that directory. On a remote tab it browses the remote workspace over the connection that is already open. Shell tabs don't show the 📁 button.
+Harness and shell tabs show a small metadata row above their body: the tab's working directory, followed by an emoji for each active flag (📦 workspaced, ⚡ auto-permitting, 🌐 E2E browser, 🎬 recording). Hover a flag and it names itself — "Workspaced", "Auto-permitting", "E2E browser", or "recording". The 🎬 flag leads the row, appears as soon as a harness, SSH or shell tab opens, is grey until the session produces its first output, and then turns green; clicking it opens that session's [recording](/user-documentation/advanced-agents/harness#the-recording-flag) in the player, following it while it is still running. The 📦 flag is green, and while a workspace is still being cloned a spinning icon sits in its place until the clone lands. The ⚡ flag turns green once auto-approval has approved a prompt in that tab. A shell tab is the one that takes a different program over the tab, such as `htop`; its metadata row stays, so the working directory and the Split control are still there. The 🌐 flag appears on a harness started with its browser, which is every harness not launched with `--no-browser`, and turns green once a browser is actually running behind it, with the tooltip "E2E browser in use". When that browser is reported gone, the flag goes back to its plain look and "E2E browser" tooltip. If a later connect starts a fresh browser, the flag turns green again, while the notifications line and the band above the terminal keep showing the earlier death. See [Harnesses](/user-documentation/advanced-agents/harness). A remote harness shows its host in a chip before the working directory; hover over it to see the full remote destination. A standalone remote shell shows its host as plain text beside the path and its connection plug with the recording and workspace flags. A remote agent keeps its host chip when an interactive command such as `htop` takes over the tab. Every action button stays grouped at the right edge of that row. Harness tabs carry a 📁 file-navigator button there. Its tooltip is "Open file navigator in this workspace" on a workspaced tab and "Open file navigator here" otherwise. Clicking it opens a [file navigator](/user-documentation/tab-types/file-navigator) rooted at that tab's own working directory, docked in the left sidebar by default, or retargets an already-open navigator to that directory. On a remote tab it browses the remote workspace over the connection that is already open. Shell tabs don't show the 📁 button.
 
-Next to it, agent and harness tabs also carry a ➕ button. Local tabs use the tooltip "New agent in this workspace" on a workspaced tab and "New agent here" otherwise. Clicking creates an auto-named agent tab rooted at the same working directory, joins it to the same group, and focuses it right away. When the source tab is workspaced, the new agent joins that clone. On a remote agent tab the button still creates a remote agent in the same workspace and reuses the SSH connection. On a remote harness tab it instead creates a shell in that workspace, reusing the connection; the tooltip is "New shell in this workspace". The remote harness button is disabled while its workspace provisions, with the tooltip "Waiting for the workspace". Shell tabs don't show this button.
+Harness tabs also carry a ➕ button. It opens a shell in that tab's directory and workspace. On a remote harness it reuses the same SSH connection; while the workspace provisions it is disabled with "Waiting for the workspace". Shell tabs have their own sibling-shell button.
 
-Agent tabs also carry a 📋 button (tooltip "Open transcript"). Clicking it writes the tab's full transcript, every command and its output, to a plain-text file and opens that file in an [editor](/user-documentation/tab-types/editor) tab, the same way a screen capture or a monitor snapshot does elsewhere in the app. It's a no-op on a tab with nothing in its transcript yet.
 
 Harness tabs carry the same 📋 button, but clicking it opens the harness's session transcript instead — the same file `harness transcript` opens (see [Harness](/user-documentation/advanced-agents/harness)) — since a harness tab has no command transcript of its own. It's a no-op when the harness has no session transcript available yet.
 
-Text in metadata rows and headers can be selected with the mouse and copied, including paths and other details shown by agent, file, editor, image, Markdown, page, and monitor tabs.
+Text in metadata rows and headers can be selected with the mouse and copied, including paths and other details shown by shell, harness, file, editor, image, Markdown, page, and monitor tabs.
 
 <img class="agent-float" src="/agents/ahmed-south-west.png" alt="" />
 
 ## Switching and reordering
 
-`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right within its own group (see [Tab groups](/user-documentation/getting-started/groups)). Clicking a tab's label focuses it as soon as you press the mouse down, and a tab that has lost its command line, such as a harness or shell tab, takes the keyboard that way instead. Releasing the click in an agent tab's body rather than on the command line puts the cursor back in that tab's command bar. You can also drag a tab label to reorder it in the same strip, or drop it on the other center strip when you're working in two panes. A drag needs a few pixels of travel before it starts, and once it has, the neighbouring tabs shift out of the way to preview where the tab will land. `Escape` mid-drag puts everything back exactly as it was. If the strip changes under a drag in progress, because an agent opens a tab or a schedule fires, the drag is dropped rather than half-applied, so the order never ends up somewhere you did not choose. With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
+`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right within its own group (see [Tab groups](/user-documentation/getting-started/groups)). Clicking a tab's label focuses it as soon as you press the mouse down, and a tab that has lost its command line, such as a harness or shell tab, takes the keyboard that way instead. Releasing the click in a shell tab's body rather than on the command line puts the cursor back in that tab's command bar. You can also drag a tab label to reorder it in the same strip, or drop it on the other center strip when you're working in two panes. A drag needs a few pixels of travel before it starts, and once it has, the neighbouring tabs shift out of the way to preview where the tab will land. `Escape` mid-drag puts everything back exactly as it was. If the strip changes under a drag in progress, because an agent opens a tab or a schedule fires, the drag is dropped rather than half-applied, so the order never ends up somewhere you did not choose. With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
 
 A tab's label in the strip is not something you can select and copy. The metadata row and panel headers are; the strip deliberately is not, so dragging a label never picks up stray text.
 
@@ -97,7 +96,7 @@ A tab's label in the strip is not something you can select and copy. The metadat
 
 A tab kind that renames its own tab can take the alias back. A page tab is the one that does: follow a link inside a page and its label goes back to the new domain, discarding a name you gave it.
 
-An alias changes what you see, not what you can type: commands that target a tab by name take either one. `msg`, `broadcast`, [`send`](/user-documentation/command-bar/send), `queue`, `close`/`exit`, `schedule … in <tab>`, and monitor targets all match the alias or the original label, ignoring case. The rename confirmation says routing still uses the label, and internally it does — that's the name a message is delivered under, the one a transcript records, and the one `state` shows — but you don't have to remember it to address the tab.
+An alias changes what you see, not what you can type: commands that target a tab by name take either one. [`send`](/user-documentation/command-bar/send), `queue`, `close`/`exit`, `schedule … in <tab>`, and monitor targets all match the alias or the original label, ignoring case. The rename confirmation says routing still uses the label, and internally it does — that's the name a message is delivered under, the one a transcript records, and the one `state` shows — but you don't have to remember it to address the tab.
 
 An alias does not have to be unique, and two tabs can show the same one. They stay separate tabs with separate labels, and anything that takes a name closes or reaches whichever of them comes first in the strip. Setting an alias to nothing, or to the tab's own label, takes the alias back off rather than storing a name that says nothing new.
 
@@ -124,7 +123,7 @@ second window started somewhere else has its own root and its own `$root`:
 ```
 $root/                  = /Users/name/dev/project
 $root/src/cli.ts        = /Users/name/dev/project/src/cli.ts
-$root/workspace/emrah   = a workspaced agent's clone, inside the project
+$root/workspace/emrah   = a workspaced tab's clone, inside the project
 ```
 
 The hidden `.janissary` state directory folds into the root, so a workspaced clone appears as
@@ -164,25 +163,10 @@ files $root
 Only a path prefix is expanded. A `$root` or `~` in the middle of a path stays literal. The window
 titlebar is the one exception to display shortening. It reads `Janissary (<version>): <full absolute path>`.
 
-## Reading the transcript
+## Shell output and ACP replies
 
-<img class="agent-float" src="/agents/selim-south-east.png" alt="" />
-
-A path and line number in output, like `src/foo.ts:42`, is a clickable link. Click it to open that file in an editor tab with the cursor on that line. This works in your own shell output and in an agent's output alike.
-
-Double-click a previous command's prompt line — the chevron and the command text — to run it again. Clicking the leading working-directory text on that line does nothing; only the command text after it re-runs. A single click does nothing either, so click-and-drag text selection still works. If the double-click lands on text that is still selected from an earlier selection, it is suppressed and does not run the command.
-
-When an interactive program such as `vim` or `less` takes over the tab, the transcript and command
-bar disappear while the full-tab terminal is active. Anything you had typed but not run comes back
-exactly as it was when the program exits, and no new transcript entries appear. A **reload** is not
-so forgiving: the page is rebuilt from scratch, so half-typed command-bar text is discarded, and so
-is the tab that held it. New output normally returns the transcript to the bottom automatically.
-
-Shell output keeps its color, whether you ran the command yourself or an agent did: a test suite's colored pass/fail summary, for example, renders with the same colors it would in a real terminal.
-
-Besides the keys in [Keyboard shortcuts](/user-documentation/getting-started/keyboard), the mouse wheel scrolls the transcript one line per tick. Once you've scrolled up from the bottom, a scrollbar with a percentage appears in the command bar, showing how far back you are.
+Shell commands keep their output in the terminal’s scrollback. Application replies appear there as rendered Markdown; ACP replies stream in the panel above the command bar. Paths in supported rendered replies open an editor at the referenced line.
 
 ## Agent tool steps fold up
 
-
-When an agent runs a series of tool steps, the transcript collapses each run into a single summary line — a caret, `N tool steps`, and `(click to expand)` — so the conversation stays readable. Your prompt and the agent's final answer always stay visible. Click the summary line, or press `Ctrl+T`, to expand or collapse the steps for the current tab.
+The ACP response panel collapses consecutive tool steps into a summary. Click it or press `Ctrl+T` to expand the steps for that shell’s ACP response. Harness session transcripts remain available from the harness metadata button.

@@ -11,12 +11,12 @@ import { spawnFrameState } from './process-state.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol-frames.js';
 
-// The remote server's process table. Every remote harness tab, every remote agent tab's persistent
+// The remote server's process table. Every remote harness tab, every remote tab's persistent
 // shell, every PTY takeover, and every inline terminal card is one entry here — there is no second
 // frame family, so there is no second table either.
 //
 // `pty` mode runs the program in a pseudo-terminal, exactly as the local server does. `pipe` mode
-// runs an agent tab's persistent shell with plain pipes: that shell's protocol is sentinel-delimited
+// runs an tab's persistent shell with plain pipes: that shell's protocol is sentinel-delimited
 // text, and a tty's echo would feed each written command straight back into the reader's buffer and
 // match the sentinel before the command had run.
 //

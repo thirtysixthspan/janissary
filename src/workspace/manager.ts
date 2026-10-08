@@ -9,7 +9,7 @@ export const NO_REPO ='No git repository found. Cannot create workspace.';
 export type ProvisioningWorkspace = { dir: string; ready: Promise<void> };
 
 // Owns the set of workspace clones the app has created — an independent `git clone` of the repo's
-// `origin` remote, made for an agent (`agent --workspace`) or a harness tab (`harness <name>
+// `origin` remote, made for a shell (`zsh --workspace`) or a harness tab (`harness <name>
 // --workspace`) so it works in isolation. Tracks each clone so it can be removed when its tab
 // closes or at shutdown, and tracks in-flight clones (keyed by the same `name` used to create
 // them — the owning tab's label) so one can be cancelled if its tab closes before it finishes.

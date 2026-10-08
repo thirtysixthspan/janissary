@@ -32,7 +32,7 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 
 function TestComponent({
   themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, profilePickerOpen,
-  canSearch, searchOpen, quickOpenOpen, handleScrollKey, callbacks, client,
+  quickOpenOpen, callbacks, client,
   chords = createPluginChordRegistry(), currentPluginTab,
 }: {
   themePickerOpen?: boolean;
@@ -41,10 +41,7 @@ function TestComponent({
   queueOpen?: boolean;
   taskPickerOpen?: boolean;
   profilePickerOpen?: boolean;
-  canSearch?: boolean;
-  searchOpen?: boolean;
   quickOpenOpen?: boolean;
-  handleScrollKey?: (e: KeyboardEvent) => boolean;
   client?: { send: ReturnType<typeof vi.fn> };
   chords?: PluginChordRegistry;
   currentPluginTab?: string;
@@ -53,7 +50,6 @@ function TestComponent({
     setPickerIndex: (s: (p: number) => number) => void;
     setPickerOpen: (o: boolean) => void;
     openPicker: () => void;
-    openSearch: () => void;
     setThemePickerIndex: (s: (p: number) => number) => void;
     setThemePickerOpen: (o: boolean) => void;
     pickTheme: (n: string) => void;
@@ -80,8 +76,6 @@ function TestComponent({
     pickerOpen: pickerOpen ?? false,
     pickerIdx: 0,
     recent: ['cmd1', 'cmd2'],
-    canSearch: canSearch ?? true,
-    searchOpen: searchOpen ?? false,
     themePickerOpen: themePickerOpen ?? false,
     themePickerIdx: 0,
     navOpen: navOpen ?? false,
@@ -111,7 +105,6 @@ function TestComponent({
     setPickerIndex: vi.fn(),
     setPickerOpen: vi.fn(),
     openPicker: vi.fn(),
-    openSearch: vi.fn(),
     setThemePickerIndex: vi.fn(),
     setThemePickerOpen: vi.fn(),
     pickTheme: vi.fn(),
@@ -137,7 +130,7 @@ function TestComponent({
   const cbRef = useRef(cb);
   cbRef.current = cb;
   const sendClient = client ?? { send: vi.fn() };
-  useWindowKeys(sendClient as never, stateRef as never, cbRef as never, handleScrollKey ?? vi.fn(() => false), vi.fn(), chords);
+  useWindowKeys(sendClient as never, stateRef as never, cbRef as never, chords);
   return null;
 }
 
@@ -153,58 +146,18 @@ describe('useWindowKeys', () => {
     dispatchKey('ArrowDown');
   });
 
-  it('Cmd+F opens search when canSearch is true', () => {
-    const openSearch = vi.fn();
-    render(React.createElement(TestComponent, { callbacks: { openSearch } }));
-    dispatchKey('f', { metaKey: true });
-    expect(openSearch).toHaveBeenCalled();
-  });
-
   it('Cmd+Shift+F runs the project search command', () => {
     const runCommand = vi.fn();
-    const openSearch = vi.fn();
-    render(React.createElement(TestComponent, { callbacks: { runCommand, openSearch } }));
+    render(React.createElement(TestComponent, { callbacks: { runCommand } }));
     dispatchKey('f', { metaKey: true, shiftKey: true });
     expect(runCommand).toHaveBeenCalledWith('search');
-  });
-
-  // The two `f` chords share one branch, and the transcript search matches on the key alone without
-  // looking at `shiftKey`. This pins the order that keeps them apart.
-  it('Cmd+Shift+F does not open the transcript search bar', () => {
-    const openSearch = vi.fn();
-    render(React.createElement(TestComponent, { canSearch: true, callbacks: { openSearch } }));
-    dispatchKey('f', { metaKey: true, shiftKey: true });
-    expect(openSearch).not.toHaveBeenCalled();
   });
 
   it('Cmd+Shift+F runs the search command even where the transcript is not searchable', () => {
     const runCommand = vi.fn();
-    render(React.createElement(TestComponent, { canSearch: false, callbacks: { runCommand } }));
+    render(React.createElement(TestComponent, { callbacks: { runCommand } }));
     dispatchKey('f', { metaKey: true, shiftKey: true });
     expect(runCommand).toHaveBeenCalledWith('search');
-  });
-
-  it('Cmd+F still opens the transcript search bar', () => {
-    const openSearch = vi.fn();
-    const runCommand = vi.fn();
-    render(React.createElement(TestComponent, { canSearch: true, callbacks: { openSearch, runCommand } }));
-    dispatchKey('f', { metaKey: true });
-    expect(openSearch).toHaveBeenCalled();
-    expect(runCommand).not.toHaveBeenCalled();
-  });
-
-  it('Cmd+F does nothing when canSearch is false', () => {
-    const openSearch = vi.fn();
-    render(React.createElement(TestComponent, { canSearch: false, callbacks: { openSearch } }));
-    dispatchKey('f', { metaKey: true });
-    expect(openSearch).not.toHaveBeenCalled();
-  });
-
-  it('does not reopen search if already open', () => {
-    const openSearch = vi.fn();
-    render(React.createElement(TestComponent, { searchOpen: true, callbacks: { openSearch } }));
-    dispatchKey('f', { metaKey: true });
-    expect(openSearch).not.toHaveBeenCalled();
   });
 
   it('Cmd+P opens quick open and calls preventDefault', () => {
@@ -217,23 +170,16 @@ describe('useWindowKeys', () => {
     expect(preventDefaultSpy).toHaveBeenCalled();
   });
 
-  it('Cmd+P opens quick open when the focused tab cannot show transcript search', () => {
-    const openQuickOpen = vi.fn();
-    render(React.createElement(TestComponent, { canSearch: false, callbacks: { openQuickOpen } }));
-    dispatchKey('p', { metaKey: true });
-    expect(openQuickOpen).toHaveBeenCalled();
-  });
-
   // Cmd+T is a table entry now. It was dispatched by a trailing branch in `handleChordKeys` while the
   // overlay-plugin host's hand-written reserved list forgot it, so a plugin could declare it and be
   // shadowed — this pins the handler side of the chord the reserved list now carries.
-  it('Cmd+T opens a new agent tab and calls preventDefault', () => {
+  it('Cmd+T opens a new tab and calls preventDefault', () => {
     const runCommand = vi.fn();
     render(React.createElement(TestComponent, { callbacks: { runCommand } }));
     const event = new KeyboardEvent('keydown', { key: 't', metaKey: true, bubbles: true, cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
     globalThis.dispatchEvent(event);
-    expect(runCommand).toHaveBeenCalledWith('agent');
+    expect(runCommand).toHaveBeenCalledWith('zsh');
     expect(preventDefaultSpy).toHaveBeenCalled();
   });
 
@@ -383,7 +329,7 @@ describe('useWindowKeys', () => {
     const runCommand = vi.fn();
     render(React.createElement(TestComponent, { callbacks: { runCommand } }));
     dispatchKey('t', { metaKey: true });
-    expect(runCommand).toHaveBeenCalledWith('agent');
+    expect(runCommand).toHaveBeenCalledWith('zsh');
   });
 
   it('Ctrl+T does not run the Cmd+T new-tab action', () => {
@@ -392,50 +338,25 @@ describe('useWindowKeys', () => {
     const client = { send: sendMock } as never;
     function C() {
       const stateRef = useRef({
-        pickerOpen: false, pickerIdx: 0, recent: [], canSearch: true, searchOpen: false,
+        pickerOpen: false, pickerIdx: 0, recent: [],
         themePickerOpen: false, themePickerIdx: 0, navOpen: false, navQuery: '', navIdx: 0, navTabs: [],
         queueOpen: false, queueIdx: 0, queueItems: [],
       });
       const cb = {
         runCommand, setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
-        openPicker: vi.fn(), openSearch: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
+        openPicker: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
         setNavIndex: vi.fn(), setNavQuery: vi.fn(), selectNavTab: vi.fn(), setNavOpen: vi.fn(), openTabNav: vi.fn(),
         setQueueIndex: vi.fn(), setQueueOpen: vi.fn(), openQueue: vi.fn(),
       };
       const cbRef = useRef(cb);
       cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
+      useWindowKeys(client, stateRef as never, cbRef as never, createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
     dispatchKey('t', { ctrlKey: true });
     expect(runCommand).not.toHaveBeenCalled();
     expect(sendMock).toHaveBeenCalledWith({ method: 'toggleCollapse', params: {} });
-  });
-
-  it('Ctrl+O asks the server to open the running command in a terminal', () => {
-    const sendMock = vi.fn();
-    const client = { send: sendMock } as never;
-    function C() {
-      const stateRef = useRef({
-        pickerOpen: false, pickerIdx: 0, recent: [], canSearch: true, searchOpen: false,
-        themePickerOpen: false, themePickerIdx: 0, navOpen: false, navQuery: '', navIdx: 0, navTabs: [],
-        queueOpen: false, queueIdx: 0, queueItems: [],
-      });
-      const cb = {
-        runCommand: vi.fn(), setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
-        openPicker: vi.fn(), openSearch: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
-        setNavIndex: vi.fn(), setNavQuery: vi.fn(), selectNavTab: vi.fn(), setNavOpen: vi.fn(), openTabNav: vi.fn(),
-        setQueueIndex: vi.fn(), setQueueOpen: vi.fn(), openQueue: vi.fn(),
-      };
-      const cbRef = useRef(cb);
-      cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
-      return null;
-    }
-    render(React.createElement(C));
-    dispatchKey('o', { ctrlKey: true });
-    expect(sendMock).toHaveBeenCalledWith({ method: 'promoteToTerminal', params: {} });
   });
 
   it('routes keys to the queue popup when open', () => {
@@ -451,17 +372,17 @@ describe('useWindowKeys', () => {
     const client = { send: sendMock } as never;
     function C() {
       const stateRef = useRef({
-        pickerOpen: false, pickerIdx: 0, recent: [], canSearch: true, searchOpen: false,
+        pickerOpen: false, pickerIdx: 0, recent: [],
         themePickerOpen: false, themePickerIdx: 0, navOpen: true, navQuery: '', navIdx: 0, navTabs: [],
       });
       const cb = {
         runCommand: vi.fn(), setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
-        openPicker: vi.fn(), openSearch: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
+        openPicker: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
         setNavIndex, setNavQuery: vi.fn(), selectNavTab: vi.fn(), setNavOpen: vi.fn(), openTabNav: vi.fn(),
       };
       const cbRef = useRef(cb);
       cbRef.current = cb;
-      useWindowKeys(client, stateRef as never, cbRef as never, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
+      useWindowKeys(client, stateRef as never, cbRef as never, createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -475,38 +396,15 @@ describe('useWindowKeys', () => {
   // other overlay, so nothing fires underneath it. Keys typed into its own input never reach here —
   // it stops propagation — so this is about the ones that arrive when focus is elsewhere.
   it('claims a keystroke while quick open is up, so nothing fires underneath it', () => {
-    const scrollFn = vi.fn(() => true);
+
     const client = { send: vi.fn() };
-    render(React.createElement(TestComponent, { quickOpenOpen: true, handleScrollKey: scrollFn, client }));
+    render(React.createElement(TestComponent, { quickOpenOpen: true, client }));
 
     dispatchKey('PageDown');
     dispatchKey('ArrowLeft', { ctrlKey: true });
 
-    expect(scrollFn).not.toHaveBeenCalled();
+
     expect(client.send).not.toHaveBeenCalled();
-  });
-
-  it('lets a keystroke through once quick open is closed', () => {
-    const scrollFn = vi.fn(() => true);
-    render(React.createElement(TestComponent, { quickOpenOpen: false, handleScrollKey: scrollFn }));
-
-    dispatchKey('PageDown');
-
-    expect(scrollFn).toHaveBeenCalled();
-  });
-
-  it('delegates to scroll handler when search is closed', () => {
-    const scrollFn = vi.fn(() => true);
-    render(React.createElement(TestComponent, { handleScrollKey: scrollFn }));
-    dispatchKey('PageDown');
-    expect(scrollFn).toHaveBeenCalled();
-  });
-
-  it('skips scroll handler when search is open', () => {
-    const scrollFn = vi.fn(() => true);
-    render(React.createElement(TestComponent, { searchOpen: true, handleScrollKey: scrollFn }));
-    dispatchKey('PageDown');
-    expect(scrollFn).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -523,7 +421,7 @@ describe('useWindowKeys', () => {
     const stateRef = { current: null } as never;
     const cbRef = { current: null } as never;
     function C() {
-      useWindowKeys(client as never, stateRef, cbRef, vi.fn(() => false), vi.fn(), createPluginChordRegistry());
+      useWindowKeys(client as never, stateRef, cbRef, createPluginChordRegistry());
       return null;
     }
     render(React.createElement(C));
@@ -537,10 +435,8 @@ describe('useWindowKeys', () => {
     const removeSpy = vi.spyOn(globalThis, 'removeEventListener');
     const { unmount } = render(React.createElement(TestComponent, {}));
     expect(addSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
-    expect(addSpy).toHaveBeenCalledWith('keyup', expect.any(Function));
     unmount();
     expect(removeSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
-    expect(removeSpy).toHaveBeenCalledWith('keyup', expect.any(Function));
     addSpy.mockRestore();
     removeSpy.mockRestore();
   });
@@ -611,7 +507,7 @@ describe('useWindowKeys', () => {
       expect(openPicker).toHaveBeenCalledTimes(1);
     });
 
-    // A docked shell holds its claim while it shows in the sidebar, but an agent tab's command bar sits
+    // A docked shell holds its claim while it shows in the sidebar, but an tab's command bar sits
     // inside no labelled tab, so the key typed there is the application's.
     it('leaves a claimed chord with the application when focus is in a tab with no plugin label', () => {
       const { chords, handler } = claimed('ctrl+r');
@@ -645,8 +541,8 @@ describe('useWindowKeys', () => {
     });
 
     // The shell claims Cmd+T so the terminal, which has no key handler for it, opens a sibling shell
-    // rather than letting the keydown fall through to the application's new agent tab.
-    it('spends a Cmd+T claim from focus inside the claiming tab instead of opening an agent tab', () => {
+    // rather than letting the keydown fall through to the application's new tab.
+    it('spends a Cmd+T claim from focus inside the claiming tab instead of opening an tab', () => {
       const { chords, handler } = claimed('meta+t');
       const runCommand = vi.fn();
       render(React.createElement(TestComponent, { chords, callbacks: { runCommand } }));
@@ -665,7 +561,7 @@ describe('useWindowKeys', () => {
       tabBody.remove();
     });
 
-    it('opens an agent tab for Cmd+T pressed inside a tab that holds no claim on it', () => {
+    it('opens a shell tab for Cmd+T pressed inside a tab that holds no claim on it', () => {
       const { chords, handler } = claimed('ctrl+r');
       const runCommand = vi.fn();
       render(React.createElement(TestComponent, { chords, callbacks: { runCommand } }));
@@ -676,7 +572,7 @@ describe('useWindowKeys', () => {
       fireEvent.keyDown(tabBody, { key: 't', metaKey: true });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(runCommand).toHaveBeenCalledExactlyOnceWith('agent');
+      expect(runCommand).toHaveBeenCalledExactlyOnceWith('zsh');
       tabBody.remove();
     });
 

@@ -304,10 +304,10 @@ describe('conversations plugin intents', () => {
   it('maps workspace intents to their narrow conversation actions', () => {
     const value = fixture();
     expect(run('open-files', {}, conversation, value)).toBeNull();
-    expect(run('launch-agent', {}, conversation, value)).toBeNull();
+    expect(run('launch-shell', {}, conversation, value)).toBeNull();
     expect(value.actions).toEqual([
       { topic: 'conversations', action: 'openFiles', id: 'first' },
-      { topic: 'conversations', action: 'launchAgent', id: 'first' },
+      { topic: 'conversations', action: 'launchShell', id: 'first' },
     ]);
   });
 

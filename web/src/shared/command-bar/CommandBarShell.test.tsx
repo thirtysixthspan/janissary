@@ -70,7 +70,7 @@ describe('CommandBarShell', () => {
   });
 
   it('renders no trailing slot when there is nothing to trail', () => {
-    // The agent tab and the conversation composer pass nothing, so the shell has to leave the line
+    // The tab and the conversation composer pass nothing, so the shell has to leave the line
     // exactly as it was for them.
     const { rendered } = renderShell();
     expect(rendered.container.querySelector('.command-trailing')).toBeNull();

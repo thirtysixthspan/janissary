@@ -3,7 +3,7 @@ import {
   completeMonitorCommand, completeSearchCommand, completeSyntaxTheme, completeHarnessModel,
 } from './handlers.js';
 import {
-  completeAgentName, completeSendTarget, completeScheduleTarget, completeConnectionClose,
+  completeSendTarget, completeScheduleTarget, completeConnectionClose,
 } from './target-handlers.js';
 import { readCompletionCursor } from './cursor.js';
 import { modelsFor } from '../harness/models.js';
@@ -38,22 +38,6 @@ describe('completeSendTarget', () => {
   it('completes a tab label for the exit command at argument 1', () => {
     const r = completeSendTarget(at('exit jan'), ['janus', 'claude']);
     expect(r?.newInput).toBe('exit janus ');
-  });
-});
-
-describe('completeAgentName', () => {
-  it('returns null for a non-msg/broadcast command', () => {
-    expect(completeAgentName(at('send jan'), ['janus'])).toBeNull();
-  });
-
-  it('returns null past argument 1', () => {
-    expect(completeAgentName(at('msg janus hi'), ['janus'])).toBeNull();
-  });
-
-  it('completes only the segment after the last comma for broadcast, keeping the typed list', () => {
-    const r = completeAgentName(at('broadcast janus,cl'), ['janus', 'claude']);
-    expect(r?.newInput).toBe('broadcast janus,claude');
-    expect(r?.matches).toEqual(['claude']);
   });
 });
 

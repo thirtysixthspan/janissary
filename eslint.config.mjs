@@ -11,7 +11,6 @@ import security from 'eslint-plugin-security';
 import { pluginBoundaries } from './eslint.plugin-boundaries.mjs';
 
 const clientFeatureDirectories = [
-  'agent-tabs',
   'context-menu',
   'editor',
   'file-navigator',

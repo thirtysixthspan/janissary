@@ -1,7 +1,7 @@
 import { marked, type Token, type Tokens } from 'marked';
 import { ansi, decodeEntities, visibleWidth } from './ansi-text';
 
-// Application command replies are markdown, which the agent tab's transcript renders as HTML. A
+// Application command replies are markdown, which the tab's transcript renders as HTML. A
 // terminal shows text, so the shell tab renders the same markdown to text styled with ANSI escapes:
 // headings and emphasis keep their weight, code its color, lists their markers, and tables line up
 // in columns. Lexed with the options the transcript renderer uses, so a single newline is a line

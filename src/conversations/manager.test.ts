@@ -35,11 +35,11 @@ function fixture() {
   const tabs: Tab[] = [];
   const setCwd = vi.fn();
   const openOrRetarget = vi.fn();
-  const newAgentInWorkspace = vi.fn();
+  const openSibling = vi.fn();
   const managers = {
-    tab: { tabs, setCwd },
+    tab: { tabs, setCwd, byLabel: (label: string) => tabs.find((tab) => tab.label === label) },
     fileNavigator: { openOrRetarget },
-    profile: { newAgentInWorkspace },
+    plugins: { openSibling },
   } as unknown as Managers;
   let time = 100;
   const manager = new ConversationsManager(managers, {
@@ -47,7 +47,7 @@ function fixture() {
     sessions: new ConversationSessions(),
     now: () => ++time,
   });
-  return { manager, managers, newAgentInWorkspace, openOrRetarget, setCwd, store };
+  return { manager, managers, openSibling, openOrRetarget, setCwd, store };
 }
 
 beforeEach(() => {
@@ -100,7 +100,7 @@ describe('ConversationsManager records and refusals', () => {
     expect(manager.load('nope')).toBe(false);
     expect(manager.send('nope', 'hello')).toBe(false);
     expect(manager.openFiles('nope')).toBe(false);
-    expect(manager.launchAgent('nope')).toBe(false);
+    expect(manager.launchShell('nope')).toBe(false);
   });
 
   it('leaves a conversation it does not hold exactly as it found it', () => {
@@ -162,8 +162,8 @@ describe('ConversationsManager workspace hand-off', () => {
     f.manager.create('c1');
     withTab(f, 'c1');
 
-    expect(f.manager.launchAgent('c1')).toBe(true);
-    expect(f.newAgentInWorkspace).toHaveBeenCalledExactlyOnceWith('conversations-1', expect.any(String));
+    expect(f.manager.launchShell('c1')).toBe(true);
+    expect(f.openSibling).toHaveBeenCalledExactlyOnceWith('shell', { label: 'conversations-1', command: 'zsh' });
   });
 
   // An empty conversation is not on disk yet, and its directory has to exist before a file navigator
@@ -509,7 +509,7 @@ describe('ConversationsManager', () => {
   });
 
   it('opens workspace tools against an open conversation tab and persists a new conversation', () => {
-    const { manager, managers, newAgentInWorkspace, openOrRetarget, setCwd, store } = fixture();
+    const { manager, managers, openSibling, openOrRetarget, setCwd, store } = fixture();
     manager.create('first');
     managers.tab.tabs.push({
       label: 'First conversation', plugin: { id: 'conversations', instanceKey: 'first' },
@@ -522,21 +522,21 @@ describe('ConversationsManager', () => {
     expect(setCwd).toHaveBeenCalledWith('First conversation', workspace);
     expect(openOrRetarget).toHaveBeenCalledWith('First conversation');
 
-    expect(manager.launchAgent('first')).toBe(true);
-    expect(newAgentInWorkspace).toHaveBeenCalledWith('First conversation', workspace);
+    expect(manager.launchShell('first')).toBe(true);
+    expect(openSibling).toHaveBeenCalledWith('shell', { label: 'First conversation', command: 'zsh' });
     manager.dispose();
   });
 
   it('refuses workspace tools without an owning open conversation tab', () => {
-    const { manager, newAgentInWorkspace, openOrRetarget, store } = fixture();
+    const { manager, openSibling, openOrRetarget, store } = fixture();
     const ensure = vi.spyOn(store, 'ensure');
     manager.create('first');
 
     expect(manager.openFiles('first')).toBe(false);
-    expect(manager.launchAgent('first')).toBe(false);
+    expect(manager.launchShell('first')).toBe(false);
     expect(ensure).not.toHaveBeenCalled();
     expect(openOrRetarget).not.toHaveBeenCalled();
-    expect(newAgentInWorkspace).not.toHaveBeenCalled();
+    expect(openSibling).not.toHaveBeenCalled();
     manager.dispose();
   });
 

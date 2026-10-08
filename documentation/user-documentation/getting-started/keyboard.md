@@ -4,7 +4,7 @@ Use these shortcuts to run commands, move between tabs, scroll transcripts, and 
 
 <img class="agent-float" src="/agents/cavus-south-west.png" alt="" />
 
-The command bar accepts the shortcuts below while an agent tab is active. The ones that switch tabs, move a tab or open a picker belong to the window rather than to the command bar, so they work from the other view tabs as well: an [editor tab](/user-documentation/tab-types/editor)'s text buffer, for example, keeps only the keys it edits with and passes the rest through. `Ctrl+W` also closes the current tab from an embedded web page. It does nothing while any modal overlay is on screen, while the quit dialog is up, or while any other modal dialog is open, such as a save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation. The dialog keeps the chord, and no tab behind it closes.
+The command bar accepts the shortcuts below while a shell tab is active. The ones that switch tabs, move a tab or open a picker belong to the window rather than to the command bar, so they work from the other view tabs as well: an [editor tab](/user-documentation/tab-types/editor)'s text buffer, for example, keeps only the keys it edits with and passes the rest through. `Ctrl+W` also closes the current tab from an embedded web page. It does nothing while any modal overlay is on screen, while the quit dialog is up, or while any other modal dialog is open, such as a save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation. The dialog keeps the chord, and no tab behind it closes.
 
 | Key | Action |
 |---|---|
@@ -33,12 +33,11 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |
 | `Ctrl+E` | Open the queue picker for a shell tab; does nothing on tabs without a queue |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
-| `Ctrl+O` | Move the command currently running into a full-tab terminal, where you can type to it; does nothing when nothing is running |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |
 | `Cmd+F` | Search the current tab's transcript |
 | `Cmd+Shift+F` | Open the [project search tab](/user-documentation/command-bar/project-search), or focus it if it is open |
 | `Cmd+P` | Open the Quick Open file finder |
-| `Cmd+T` | Open a new [workspaced agent tab](/user-documentation/advanced-agents/workspaced-agent) |
+| `Cmd+T` | Open a new [workspaced shell tab](/user-documentation/advanced-agents/workspaced-agent) |
 | `Cmd+I` / `Ctrl+I` | Start a chat with the current text selection |
 | `Tab` | Complete a file path, agent name, connection, browser subcommand, or window ID |
 | `Backspace` / `Delete` | Delete the character before the cursor |

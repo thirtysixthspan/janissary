@@ -1,31 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { JanusClient } from '../ws';
-import { agentTabIntents } from './agent-tab-intents';
+import { harnessTabIntents } from './harness-tab-intents';
 
 function fakeClient() {
   const send = vi.fn();
   return { client: { send } as unknown as JanusClient, send };
 }
 
-describe('agentTabIntents', () => {
+describe('harnessTabIntents', () => {
   it('sends the metadata actions for its tab label', () => {
     const { client, send } = fakeClient();
-    const intents = agentTabIntents(client, 'agent2', 'openTranscriptFor');
+    const intents = harnessTabIntents(client, 'agent2', 'openHarnessTranscriptFor');
 
     intents.onOpenFileNavigator();
-    intents.onLaunchAgentHere();
     intents.onLaunchShellHere();
     intents.onOpenTranscript();
 
     expect(send).toHaveBeenNthCalledWith(1, { method: 'openFileNavigatorFor', params: { label: 'agent2' } });
-    expect(send).toHaveBeenNthCalledWith(2, { method: 'launchAgentFor', params: { label: 'agent2' } });
-    expect(send).toHaveBeenNthCalledWith(3, { method: 'launchShellFor', params: { label: 'agent2' } });
-    expect(send).toHaveBeenNthCalledWith(4, { method: 'openTranscriptFor', params: { label: 'agent2' } });
+    expect(send).toHaveBeenNthCalledWith(2, { method: 'launchShellFor', params: { label: 'agent2' } });
+    expect(send).toHaveBeenNthCalledWith(3, { method: 'openHarnessTranscriptFor', params: { label: 'agent2' } });
   });
 
   it('sends transcript and ACP connection intents', () => {
     const { client, send } = fakeClient();
-    const intents = agentTabIntents(client, 'agent2', 'openTranscriptFor');
+    const intents = harnessTabIntents(client, 'agent2', 'openHarnessTranscriptFor');
     const acpRef = { scope: 'tab' as const, label: 'agent2' };
 
     intents.onToggleCollapse();
@@ -37,7 +35,7 @@ describe('agentTabIntents', () => {
 
   it('sends the transcript method its caller supplied', () => {
     const { client, send } = fakeClient();
-    const intents = agentTabIntents(client, 'claude', 'openHarnessTranscriptFor');
+    const intents = harnessTabIntents(client, 'claude', 'openHarnessTranscriptFor');
 
     intents.onOpenTranscript();
 
@@ -46,7 +44,7 @@ describe('agentTabIntents', () => {
 
   it('does not send until an intent is invoked', () => {
     const { client, send } = fakeClient();
-    agentTabIntents(client, 'agent2', 'openTranscriptFor');
+    harnessTabIntents(client, 'agent2', 'openHarnessTranscriptFor');
     expect(send).not.toHaveBeenCalled();
   });
 });

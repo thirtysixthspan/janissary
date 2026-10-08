@@ -119,7 +119,7 @@ describe('TabOpeningState.openPluginTab', () => {
 
   it('names an agent-named tab past every pool name a sessions row still holds', () => {
     const [free, ...held] = agentNames;
-    const view = vi.fn(() => held.map((label) => ({ label, kind: 'agent', state: 'detached', host: 'box' })));
+    const view = vi.fn(() => held.map((label) => ({ label, kind: 'shell', state: 'detached', host: 'box' })));
     const tm = makeTabManager({ sessions: { view } });
 
     tm.openPluginTab('shell', 'shell', 'shell-1', 1, 'janus', () => ({ title: 'shell', payload: {} }), true);

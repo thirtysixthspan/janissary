@@ -11,7 +11,7 @@ notifications clear   empty the queue, the record file, and any toasts on screen
 
 There is only ever one notifications tab, and its label is always `notifications`, with no type or
 status marker added to it. The feed has no command line, and an empty one shows nothing at all: not
-the hint an agent tab shows when its transcript is empty, because there is nothing to type into.
+the hint a shell tab shows when its transcript is empty, because there is nothing to type into.
 Every notification of the current run is held in a queue (the most recent 200), independent of
 whether the feed is open — closing it and reopening it loses nothing, since the reopened feed is
 seeded from the queue.
@@ -77,7 +77,6 @@ The feed can report five kinds of background activity, and every one defaults to
   "notifications": {
     "events": {
       "stateChange": true,
-      "incomingMessage": true,
       "scheduleFire": true,
       "agentStart": true,
       "rateLimited": true
@@ -91,7 +90,6 @@ Each toggle controls one kind of event:
 | Toggle | Notifies when |
 |---|---|
 | `stateChange` | An agent finishes (its turn ends or errors out) |
-| `incomingMessage` | A `msg` or `broadcast` arrives at a tab |
 | `scheduleFire` | A scheduled command fires in a tab |
 | `agentStart` | An agent begins a turn |
 | `rateLimited` | A model query is identified as rate limited |

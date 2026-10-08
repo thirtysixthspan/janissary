@@ -4,7 +4,7 @@ An **audio tab** is the persistent view contributed by the bundled audio plugin.
 
 Unlike every other view tab, an audio tab is a **singleton**. There is one player, and it owns a queue rather than a file: opening a second audio file while the tab is open appends that file to the end of the queue and jumps to it instead of opening a second tab. A session therefore accumulates a playlist rather than a row of tabs. Opening several files in turn — which is what a wildcard such as `open *.mp3` does, dispatching each match in sorted order — builds the queue in that order and leaves the last one playing. Opening a file the queue already holds jumps to it rather than queueing it twice.
 
-The tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to it. It has no shell, agent session, browser, transcript, or command history, and no persisted agent state. It is a **live, in-memory view** — the playlist is not saved, is not restored on `--relaunch`, and is not recorded in or reopened by a profile.
+The tab is created like a shell tab (see Tabs) — placed contiguously within the active tab's group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to it. It has no shell, agent session, browser, transcript, or command history, and no persisted agent state. It is a **live, in-memory view** — the playlist is not saved, is not restored on `--relaunch`, and is not recorded in or reopened by a profile.
 
 ### Audio tab data
 

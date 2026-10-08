@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { resolveCommand } from '../resolve.js';
 
 describe('resolveCommand', () => {
+  it.each(['agent', 'agent worker', 'msg worker info hello', 'broadcast all info hello'])('does not register removed command %s', (line) => {
+    expect(resolveCommand(line).kind).toBe('unknown');
+  });
   it('treats empty/whitespace input as empty', () => {
     expect(resolveCommand('')).toEqual({ kind: 'empty' });
     expect(resolveCommand(' '.repeat(3))).toEqual({ kind: 'empty' });
@@ -16,22 +19,10 @@ describe('resolveCommand', () => {
     expect(resolveCommand('shell')).toEqual({ kind: 'shell', cmd: '' });
   });
 
-  it('recognizes a `--pty` flag, stripping it and marking the resolution', () => {
-    expect(resolveCommand('shell --pty vim file.ts')).toEqual({ kind: 'shell', cmd: 'vim file.ts', pty: true });
-    expect(resolveCommand('shell --pty')).toEqual({ kind: 'shell', cmd: '', pty: true });
-    expect(resolveCommand('shell --pty  echo hi')).toEqual({ kind: 'shell', cmd: 'echo hi', pty: true });
-  });
-
   it('treats a leading `!` as shorthand for the `shell` keyword', () => {
     expect(resolveCommand('!ps')).toEqual({ kind: 'shell', cmd: 'ps' });
     expect(resolveCommand('! git status')).toEqual({ kind: 'shell', cmd: 'git status' });
     expect(resolveCommand('!')).toEqual({ kind: 'shell', cmd: '' });
-  });
-
-  it('treats a leading `!!` as shorthand for `shell --pty`', () => {
-    expect(resolveCommand('!!htop')).toEqual({ kind: 'shell', cmd: 'htop', pty: true });
-    expect(resolveCommand('!!  vim file.ts')).toEqual({ kind: 'shell', cmd: 'vim file.ts', pty: true });
-    expect(resolveCommand('!!')).toEqual({ kind: 'shell', cmd: '', pty: true });
   });
 
   it('does not treat a word merely starting with "shell" as the keyword', () => {
@@ -65,10 +56,7 @@ describe('resolveCommand', () => {
   });
 
   it('classifies app/tab-management built-ins', () => {
-    expect(resolveCommand('agent bilal')).toEqual({ kind: 'app', name: 'agent', cmd: 'agent bilal' });
     expect(resolveCommand('next')).toEqual({ kind: 'app', name: 'next', cmd: 'next' });
-    expect(resolveCommand('msg bilal info hi')).toEqual({ kind: 'app', name: 'msg', cmd: 'msg bilal info hi' });
-    expect(resolveCommand('broadcast all info hi')).toEqual({ kind: 'app', name: 'broadcast', cmd: 'broadcast all info hi' });
     expect(resolveCommand('acp summarize this repo')).toEqual({ kind: 'app', name: 'acp', cmd: 'acp summarize this repo' });
     expect(resolveCommand('db sqlite query mydb SELECT 1')).toEqual({ kind: 'app', name: 'db', cmd: 'db sqlite query mydb SELECT 1' });
     expect(resolveCommand('browser goto https://example.com')).toEqual({ kind: 'app', name: 'browser', cmd: 'browser goto https://example.com' });

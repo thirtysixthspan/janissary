@@ -1,5 +1,4 @@
 import type { Managers } from '../managers.js';
-import { placeAgent } from '../profile/place-agent.js';
 import type { RemoteProcessState } from '../remote/protocol-frames.js';
 import { uniqueLabel } from '../tab/utils.js';
 import type { RemoteSessionRecord } from './store.js';
@@ -13,23 +12,6 @@ import type { RemoteSessionRecord } from './store.js';
 // the tab and its far-side clone agreeing about what they are.
 function claimLabel(managers: Managers, recorded: string): string {
   return uniqueLabel(managers.tab.tabs, recorded);
-}
-
-// Bind the recorded shell as soon as the tab exists so it claims retained output before the
-// restore pass discards unclaimed frames.
-function restoreAgentTab(
-  managers: Managers, launchLabel: string, recordedLabel: string, spawnId: string, workspace: string,
-): string | undefined {
-  const label = claimLabel(managers, recordedLabel);
-  const creator = managers.tab.byLabel(launchLabel);
-  if (!creator?.remote) return;
-  if (!managers.remote.attach(label, launchLabel)) return;
-  managers.shell.adoptRemoteShell(label, spawnId, managers.remote.get(label)?.sessionId);
-  placeAgent(managers, {
-    resolved: label, creator, cwd: workspace, offline: false, remote: creator.remote,
-  });
-  managers.shell.ensure(label);
-  return label;
 }
 
 /**
@@ -50,25 +32,15 @@ export async function restoreSessionTabs(
 ): Promise<string[]> {
   const restored: string[] = [];
   for (const process of processes) {
-    if (process.shell) {
-      const recorded = record.processes.find((entry) => entry.id === process.id && entry.kind === 'shell');
-      if (!recorded?.shell || recorded.cwd === undefined || recorded.offline === undefined) continue;
-      const label = claimLabel(managers, recorded.label);
-      await managers.plugins.reattach('shell', {
-        label, nonce: recorded.shell.nonce, cwd: recorded.cwd, workspace: record.workspaceDir,
-        offline: recorded.offline, host: record.host, ptyId: recorded.id,
-      }, { label: launchLabel, command: '' });
-      if (managers.tab.byLabel(label)) restored.push(label);
-      continue;
-    }
-    // The harness the launching tab is already running, and any PTY takeover or inline terminal card
-    // riding a tab that is itself being restored: neither is a row, and neither is a tab of its own.
-    if (process.harness !== undefined || process.mode !== 'pipe') continue;
-    const recorded = record.processes.find((entry) => entry.id === process.id);
-    const recordedLabel = recorded?.label ?? process.agentName;
-    if (recordedLabel === undefined || recordedLabel === record.launchLabel) continue;
-    const label = restoreAgentTab(managers, launchLabel, recordedLabel, process.id, record.workspaceDir);
-    if (label !== undefined) restored.push(label);
+    if (!process.shell) continue;
+    const recorded = record.processes.find((entry) => entry.id === process.id && entry.kind === 'shell');
+    if (!recorded?.shell || recorded.cwd === undefined || recorded.offline === undefined) continue;
+    const label = claimLabel(managers, recorded.label);
+    await managers.plugins.reattach('shell', {
+      label, nonce: recorded.shell.nonce, cwd: recorded.cwd, workspace: record.workspaceDir,
+      offline: recorded.offline, host: record.host, ptyId: recorded.id,
+    }, { label: launchLabel, command: '' });
+    if (managers.tab.byLabel(label)) restored.push(label);
   }
   managers.remote.get(launchLabel)?.discardUnclaimed();
   return restored;

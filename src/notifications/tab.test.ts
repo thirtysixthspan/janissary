@@ -7,13 +7,13 @@ import {
   notificationsFeedVisible, showNotificationsFeed, replaceLatestNotification, NOTIFICATIONS_LABEL,
 } from './tab.js';
 import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue, type RecordedNotification } from './queue.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.notifications = new NotificationQueue();
   managers.tab = new TabManager(managers);
-  seedRootAgentTab(managers.tab);
+  seedRootTab(managers.tab);
   return managers;
 }
 

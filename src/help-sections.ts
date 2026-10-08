@@ -48,7 +48,7 @@ function normalize(text: string): string {
 
 // Tried in order, and the first rule that matches any section decides; within a rule, the earliest
 // section in the document wins. So `commands` is the command table, `shell` the shell tab's keys,
-// and `agent` the command bar and agent tab controls.
+// and `command bar` the shared command controls.
 const MATCH_RULES: ((title: string, query: string) => boolean)[] = [
   (title, query) => title === query,
   (title, query) => title.startsWith(query),

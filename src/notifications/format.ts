@@ -49,7 +49,6 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'agent-start': { return `Agent '${tabLabel}' started`; }
     case 'rate-limited': { return `Agent '${tabLabel}' is being rate limited`; }
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
-    case 'incoming-message': { return `Message from ${detail} in ${tabLabel}`; }
     case 'manual':
     case 'auto-approve':
     case 'auto-resume':

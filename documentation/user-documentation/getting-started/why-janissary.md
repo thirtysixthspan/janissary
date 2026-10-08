@@ -69,7 +69,7 @@ You might:
 
 These workflows are impossible (or painful) in existing tools. Herdr can show you multiple agents, but can't schedule them or let them message each other. Claude Code can do autonomous work, but only one task at a time. CrewAI can orchestrate agents, but it's a backend framework, not a developer tool.
 
-Janissary is built from the ground up for this: **tab-based, developer-first, with scheduling, messaging, profiles, and workspaced agents baked in.**
+Janissary is built from the ground up for this: **tab-based, developer-first, with scheduling, messaging, profiles, and workspaced tabs baked in.**
 
 ---
 

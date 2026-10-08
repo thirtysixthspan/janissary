@@ -1,16 +1,16 @@
-# Remote agents and harnesses
+# Remote shells and harnesses
 
 <img class="agent-float" src="/agents/orhan-south-east.png" alt="" />
 
-Add `on <address>` to any `agent` or `harness` command and the tab runs on another machine instead of yours:
+Add `on <address>` to a `zsh` or `harness` command and the tab runs on another machine instead of yours:
 
 ```
 harness claude on devbox
-agent bekir on admin@devbox
+zsh bekir on admin@devbox
 harness claude as build on devbox with fix the tests
 ```
 
-Janissary opens one SSH session to that host, clones a workspace there from the host's own copy of the repository, and runs the agent or harness inside it. The tab behaves like a local one in every other way: same label, same busy dot, same `send`, capture, recording, and monitoring. The one visible difference is a chip with the host name at the left of the tab's metadata row, ahead of the working directory, which shows the clone as `$workspace/<name>` (with anything inside it as `$workspace/<name>/<rest>`) — the same symbol a local workspaced tab uses. Until the host reports the workspace ready, the row also shows the same spinning "Provisioning workspace" icon a local clone does.
+Janissary opens one SSH session to that host, clones a workspace there from the host's own copy of the repository, and runs the shell or harness inside it. The tab behaves like a local one in every other way: same label, same busy dot, same `send`, capture, recording, and monitoring. The one visible difference is a chip with the host name at the left of the tab's metadata row, ahead of the working directory, which shows the clone as `$workspace/<name>` (with anything inside it as `$workspace/<name>/<rest>`) — the same symbol a local workspaced tab uses. Until the host reports the workspace ready, the row also shows the same spinning "Provisioning workspace" icon a local clone does.
 
 The clause can appear anywhere among the other options, and it isn't case sensitive. An `on` that falls inside a `with <prompt>` clause is part of the prompt, not a clause, because the prompt is separated out before any option is read.
 
@@ -56,9 +56,9 @@ A path you name is used exactly as given, with no walk upward from it. `on devbo
 
 The tab opens right away, before anything is checked, and shows the live SSH session as its body. Whatever SSH asks for appears there: a password, a key passphrase, host key verification, a 2FA code. Answer by typing into the tab. There's no dialog and nothing is asked in the tab you launched from.
 
-Each independent remote launch opens its own session, so a [profile](/user-documentation/automation/profiles) that opens several remote tabs asks you several times. Agents created with a remote tab's ➕ button share that tab's existing workspace and session, so they do not ask you to sign in again.
+Each independent remote launch opens its own session, so a [profile](/user-documentation/automation/profiles) that opens several remote tabs asks you several times. Shells created with a remote tab's ➕ button share that tab's existing workspace and session, so they do not ask you to sign in again.
 
-Once the far side answers, the tab stops showing raw terminal output and starts running the agent or harness. An agent tab dispatches input immediately, including while provisioning; commands that require a connected remote session enforce their own readiness checks. A harness schedule stays due until the harness is running. Use the terminal to answer SSH password and host-key prompts.
+Once the far side answers, the tab stops showing raw terminal output and starts running the shell or harness. A shell tab queues input while provisioning and starts delivery at zsh’s first prompt. A harness schedule stays due until the harness is running. Use the terminal to answer SSH password and host-key prompts.
 
 ## Workspaces are always on
 
@@ -82,11 +82,11 @@ Your Claude, OpenCode, and Gemini tokens are forwarded the same way, which is wh
 
 ## Find the connections
 
-A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own. `connection close ssh:<id>` matches the tab's label first, then the address it was launched with. Closing a shared SSH connection closes every agent and file navigator using it. See [Connections](/user-documentation/command-bar/connections).
+A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own. `connection close ssh:<id>` matches the tab's label first, then the address it was launched with. Closing a shared SSH connection closes every shell, harness, and file navigator using it. See [Connections](/user-documentation/command-bar/connections).
 
 ## Browse and edit remote files
 
-Click the 📁 button in a remote agent or harness tab to open a [file navigator](/user-documentation/tab-types/file-navigator) rooted in that tab's remote workspace. It uses the SSH connection that is already open, shows the host as plain text before its path, and has the same search, git status, create, rename, delete, move, copy, paste, undo, and redo tools as a local tree. The workspace root reads as `$workspace/<name>`, with paths below it shown as `$workspace/<name>/<rest>`. Hover over the host for the full destination. `files in <label>` does the same when `<label>` names a remote tab.
+Click the 📁 button in a remote shell or harness tab to open a [file navigator](/user-documentation/tab-types/file-navigator) rooted in that tab's remote workspace. It uses the SSH connection that is already open, shows the host as plain text before its path, and has the same search, git status, create, rename, delete, move, copy, paste, undo, and redo tools as a local tree. The workspace root reads as `$workspace/<name>`, with paths below it shown as `$workspace/<name>/<rest>`. Hover over the host for the full destination. `files in <label>` does the same when `<label>` names a remote tab.
 
 Open and edit remote files normally from that tree. Janissary keeps the working copy it needs locally and writes editor saves back to the remote host. Changing the tree's root keeps each open editor pointed at its original remote file, even when another directory contains a file with the same name. If a save fails, the editor stays marked as changed and the notifications feed explains the failure. A remote file saves back only while the file navigator you opened it from is still open; after you close that navigator, saving is refused with a notification, so reopen the file from a remote tree to save it. **Open externally** is unavailable for remote files because an outside application could not send its changes back.
 
@@ -123,7 +123,7 @@ The clone uses this project's `.janissary/github-token` when the `origin` is on 
 
 The host checks the name before it clones anything, since only the host knows what is running there. A workspace of that name counts as running when a Janissary connection on that host, attached or parked, is holding it and its process is alive, or when a janissary instance running inside it holds its lock. A plain shell sitting in the folder does not count, and a name differing only by case is the same name.
 
-- **Running:** nothing is provisioned, and the placeholder tab closes at once without showing an error. A name you typed gets one line in the notifications feed: `Cannot launch "build": "build" is already running on devbox.` A default name, a bare `harness claude` or an unnamed `agent on devbox`, is tried again over a fresh SSH connection under the next free name, silently, up to five attempts in all. Only after the fifth does anything appear, as `Cannot launch "claude": "claude" through "claude-5" are already running on devbox.` for a harness or `Cannot launch agent on devbox: 5 names tried (ada, bekir, cem) are already running on devbox.` for an agent.
+- **Running:** nothing is provisioned, and the placeholder tab closes at once without showing an error. A name you typed gets one line in the notifications feed: `Cannot launch "build": "build" is already running on devbox.` A default name, a bare `harness claude` or an unnamed `zsh on devbox`, is tried again over a fresh SSH connection under the next free name, silently, up to five attempts in all. Only after the fifth does anything appear, as `Cannot launch "claude": "claude" through "claude-5" are already running on devbox.` for a harness; an unnamed shell reports the pool names it tried.
 - **Leftover:** a workspace folder of that name with nothing running in it is removed, uncommitted or unpushed work included, and the launch goes ahead. Once the workspace is ready, `Removed leftover workspace "build" on devbox ($workspace/build) before launching.` appears in the notifications feed.
 - **Leftover that can't be removed:** the placeholder closes at once and `Cannot launch "build": could not remove leftover workspace "build" on devbox ($workspace/build) — <reason>.` is posted. The folder is left in place for the next attempt.
 - **A host that can't answer:** when the connection ends before the host replies, the placeholder shows that connection's error as it always would, and `Cannot launch "claude": could not check devbox for an existing "claude" — <reason>.` is posted alongside it.
@@ -132,13 +132,13 @@ Every one of those lines goes to the notifications feed, attributed to the tab y
 
 ## Lifecycle
 
-A remote workspace and its SSH session can be shared by the launching tab, agents joined with ➕, and its file navigator. Closing the launching tab leaves joined agents running; a navigator opened from that tab's 📁 button closes with it. Closing the final tab or explicitly closing `ssh:<address>` stops the remaining remote processes, removes the remote workspace, and then closes SSH. A lost connection retries automatically. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#remote-sessions) for what that reconnect covers and what it doesn't.
+A remote workspace and its SSH session can be shared by the launching tab, shells joined with ➕, and its file navigator. Closing the launching tab leaves joined shells running; a navigator opened from that tab's 📁 button closes with it. Closing the final tab or explicitly closing `ssh:<address>` stops the remaining remote processes, removes the remote workspace, and then closes SSH. A lost connection retries automatically. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#remote-sessions) for what that reconnect covers and what it doesn't.
 
 See [Sessions](/user-documentation/tab-types/sessions) for the full list of remote sessions this project holds, and how to detach, attach, terminate, or forget one.
 
-Attaching a harness redraws its retained terminal output and restores its recent transcript history without waiting for new output. Each surviving agent, including an agent joined to another tab's remote workspace, opens in a new tab with its retained shell history already in its transcript: each command you ran appears with the output it produced, in the order they ran, the same way the live tab showed them. You can scroll back to review the whole exchange from before and during detachment without running a command first. If another tab has taken the original name, the restored tab gets a unique name. Older history may be trimmed; a notice appears when terminal history was trimmed, and the oldest surviving output may appear without the command that produced it. Sessions started before display-history retention was available cannot recover output they did not retain.
+Attaching a harness redraws its retained terminal output and restores its recent transcript history without waiting for new output. Surviving shell tabs reattach to their existing terminals and replay retained output. If another tab has taken the original name, the restored tab gets a unique name. Older history may be trimmed; a notice appears when terminal history was trimmed, and the oldest surviving output may appear without the command that produced it. Sessions started before display-history retention was available cannot recover output they did not retain.
 
-The remote deletes its workspace clone when the session is terminated. A detached session can wait up to seven days for an attach before expiring. Attaching an agent returns to its existing shell and workspace, including after repeated detaches. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session is terminated. Profiles do not restore remote navigators.
+The remote deletes its workspace clone when the session is terminated. A detached session can wait up to seven days for an attach before expiring. Attaching a shell returns to its existing terminal and workspace, including after repeated detaches. Remote files opened for viewing or editing are cached locally and cleared at startup, on detach, or when the session is terminated. Profiles do not restore remote navigators.
 
 ## Coming back after a restart
 
@@ -158,9 +158,9 @@ A remote tab still can't launch its own remote tab. There is no `files on <addre
 
 From a local tab, type `zsh docs on devbox` to open a shell with its own remote workspace. The shell tab appears while SSH connects, so you can answer password, passphrase, and host-key prompts there. Once the workspace is ready, the same tab switches to zsh at the remote workspace root. Lines you submit while it provisions wait for the first prompt.
 
-The command implies a remote workspace even if you include `--no-workspace`. It has no local fallback if the remote launch fails. In a remote shell, agent, or harness, typing `zsh` without `on` opens a sibling shell in the tab's existing remote workspace and channel. It keeps a supplied name, inherits offline mode, and ignores workspace flags. It starts at the source tab's working directory when that directory is inside the workspace, otherwise at the workspace root. While the workspace provisions it reports `The remote workspace is not ready yet.`; while reconnecting or after the session is gone it reports `The remote workspace is no longer available.` The plus button on a remote harness also opens this sibling shell; on a remote agent it continues to open a remote agent. `zsh … on <address>` remains unavailable from a remote tab and answers `Cannot launch a remote shell from a remote tab.` See [Open a zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) for the full command options and lifecycle.
+The command implies a remote workspace even if you include `--no-workspace`. It has no local fallback if the remote launch fails. In a remote shell or harness, typing `zsh` without `on` opens a sibling shell in the tab's existing remote workspace and channel. It keeps a supplied name, inherits offline mode, and ignores workspace flags. It starts at the source tab's working directory when that directory is inside the workspace, otherwise at the workspace root. While the workspace provisions it reports `The remote workspace is not ready yet.`; while reconnecting or after the session is gone it reports `The remote workspace is no longer available.` The plus button on a remote harness also opens this sibling shell; on a local harness it opens a shell in the same local workspace. `zsh … on <address>` remains unavailable from a remote tab and answers `Cannot launch a remote shell from a remote tab.` See [Open a zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) for the full command options and lifecycle.
 
-## Asking the remote agent
+## Querying remote ACP
 
 Use `acp <prompt>` in a remote shell tab to query a core ACP connection running against that host's workspace — see [ACP agents](/user-documentation/advanced-agents/acp-agent). The `db` and `browser` commands it runs on its own still act on your machine, not the remote.
 

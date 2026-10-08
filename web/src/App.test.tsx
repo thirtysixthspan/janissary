@@ -9,6 +9,11 @@ import { AppShell } from './AppShell';
 import { StatusPanels } from './shared/status-windows/StatusPanels';
 import type { StatusWindowHandlers } from './shared/status-windows/useStatusWindows';
 
+vi.mock('./plugins/PluginBody', async () => {
+  const { AppPluginFixture } = await import('./test/AppPluginFixture');
+  return { PluginBody: AppPluginFixture };
+});
+
 const sendMock = vi.fn();
 const renameTabMock = vi.fn();
 const unregisterStateCollectorMock = vi.fn();
@@ -69,68 +74,10 @@ function makeTab(overrides: Partial<TabView> = {}): TabView {
     label: 'janus', number: 1, dotColor: '#fff', group: 0, groupColor: '#000',
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
     bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+    view: 'plugin', plugin: { id: 'shell', schemaVersion: 4, hostsCommandBar: true, payload: {} },
     ...overrides,
   };
 }
-
-describe('App transcript-search interception', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  it('does not send a command RPC when the pattern matches, opening search instead', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'an error occurred' }] })], 0, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'search transcript error' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
-    expect(screen.getByText(/error/, { selector: '.search-result' })).toBeInTheDocument();
-  }, 15_000);
-
-  it('sends a command RPC when the pattern has no matches', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'all good' }] })], 0, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'search transcript zzznotfound' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'search transcript zzznotfound' } });
-  }, 15_000);
-});
-
-describe('App agent tab metadata row', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  it('renders the active tab\'s cwd and flags in the metadata row', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ cwd: '~/project', flags: ['workspaced'] })], 0, 16, [], 'github-dark', 'dark', []); });
-    expect(screen.getByText('~/project')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Workspaced' })).toBeInTheDocument();
-  });
-
-  it('sends openFileNavigatorFor with the active tab\'s label when the open-files button is clicked', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ label: 'janus' })], 0, 16, [], 'github-dark', 'dark', []); });
-    await userEvent.click(screen.getByTitle('Open file navigator here'));
-    expect(sendMock).toHaveBeenCalledWith({ method: 'openFileNavigatorFor', params: { label: 'janus' } });
-  });
-
-  it('sends launchAgentFor with the active tab\'s label when the launch-agent button is clicked', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ label: 'janus', remote: { address: 'devbox', host: 'devbox' } })], 0, 16, [], 'github-dark', 'dark', []); });
-    await userEvent.click(screen.getByTitle('New agent here'));
-    expect(sendMock).toHaveBeenCalledWith({ method: 'launchAgentFor', params: { label: 'janus' } });
-  });
-});
 
 describe('App app theme picker', () => {
   beforeEach(() => {
@@ -338,57 +285,6 @@ describe('App close-tab chord under an overlay', () => {
   }, 15_000);
 });
 
-describe('App agent tab body click focuses command input', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  it('mouseup on the agent tab body focuses the command input textarea when nothing is selected', async () => {
-    const { App } = await import('./App');
-    const { container } = render(<App client={client} />);
-    act(() => {
-      stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []);
-    });
-    const tabBody = container.querySelector('.tab-body') as HTMLElement;
-    expect(tabBody).not.toBeNull();
-    fireEvent.mouseUp(tabBody);
-    expect(document.activeElement).toBe(screen.getByRole('textbox'));
-  }, 15_000);
-
-  it('does not steal focus on mouseup when the transcript has a text selection', async () => {
-    const { App } = await import('./App');
-    const { container } = render(<App client={client} />);
-    act(() => {
-      stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []);
-    });
-    const writeText = vi.fn();
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    const spy = vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => 'some selected text' } as Selection);
-    const input = screen.getByRole('textbox');
-    (input as HTMLElement).blur();
-    const tabBody = container.querySelector('.tab-body') as HTMLElement;
-    fireEvent.mouseUp(tabBody);
-    expect(document.activeElement).not.toBe(input);
-    spy.mockRestore();
-  }, 15_000);
-
-  it('copies selected text to the clipboard on mouseup instead of focusing the input', async () => {
-    const { App } = await import('./App');
-    const { container } = render(<App client={client} />);
-    act(() => {
-      stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []);
-    });
-    const writeText = vi.fn();
-    vi.stubGlobal('navigator', { clipboard: { writeText } });
-    const spy = vi.spyOn(globalThis, 'getSelection').mockReturnValue({ toString: () => 'some selected text' } as Selection);
-    const tabBody = container.querySelector('.tab-body') as HTMLElement;
-    fireEvent.mouseUp(tabBody);
-    expect(writeText).toHaveBeenCalledWith('some selected text');
-    spy.mockRestore();
-  }, 15_000);
-});
-
 describe('App per-tab command drafts', () => {
   beforeEach(() => {
     sendMock.mockClear();
@@ -397,7 +293,7 @@ describe('App per-tab command drafts', () => {
 
   const twoAgents = () => [makeTab(), makeTab({ label: 'willow', number: 2 })];
 
-  it('keeps an unexecuted command with its own tab across a switch to another agent tab', async () => {
+  it('keeps an unexecuted command with its own tab across a switch to another tab', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
     act(() => { stateListener!(twoAgents(), 0, 16, [], 'github-dark', 'dark', []); });
@@ -415,7 +311,7 @@ describe('App per-tab command drafts', () => {
 
   it('keeps an unexecuted command across a switch to a tab with no command bar', async () => {
     const { App } = await import('./App');
-    const tabs = () => [makeTab(), makeTab({ label: 'willow', number: 2, activePty: 'pty-1' })];
+    const tabs = () => [makeTab(), makeTab({ label: 'willow', number: 2, view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: 'pty-1', status: 'running' } })];
     render(<App client={client} />);
     act(() => { stateListener!(tabs(), 0, 16, [], 'github-dark', 'dark', []); });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'git status' } });
@@ -541,113 +437,6 @@ describe('App tab rename', () => {
     await act(async () => { fireEvent.change(input, { target: { value: 'my project' } }); });
     await act(async () => { fireEvent.keyDown(input, { key: 'Enter' }); });
     expect(renameTabMock).toHaveBeenCalledWith(0, 'my project');
-  }, 15_000);
-});
-
-describe('App ACP prompt toggles collapse', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  it('clicking an ACP prompt line sends toggleCollapse', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => {
-      stateListener!([makeTab({ bufferLines: [{ type: 'prompt', acp: true, text: 'some command' }] })], 0, 16, [], 'github-dark', 'dark', []);
-    });
-    fireEvent.click(screen.getByText('+ some command'));
-    expect(sendMock).toHaveBeenCalledWith({ method: 'toggleCollapse', params: {} });
-  }, 15_000);
-});
-
-describe('App non-ACP prompt double-click runs command', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  it('double-clicking a non-ACP prompt line sends the command', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => {
-      stateListener!([makeTab({ bufferLines: [{ type: 'prompt', text: 'git status' }] })], 0, 16, [], 'github-dark', 'dark', []);
-    });
-    fireEvent.dblClick(screen.getByText('git status'));
-    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'git status' } });
-  }, 15_000);
-});
-
-describe('App search on Cmd+F', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  it('opens the search bar on Cmd+F when the tab is searchable', async () => {
-    const { App } = await import('./App');
-    const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'hello' }] })], 0, 16, [], 'github-dark', 'dark', []); });
-    expect(container.querySelector('.search-bar')).toBeNull();
-    fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
-    expect(container.querySelector('.search-bar')).not.toBeNull();
-  }, 15_000);
-
-  it('does not open search on Cmd+F when the tab has an active PTY', async () => {
-    const { App } = await import('./App');
-    const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, 16, [], 'github-dark', 'dark', []); });
-    fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
-    expect(container.querySelector('.search-bar')).toBeNull();
-  }, 15_000);
-
-  it('does not open search on Cmd+F when the tab is a view tab', async () => {
-    const { App } = await import('./App');
-    const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ view: 'files' })], 0, 16, [], 'github-dark', 'dark', []); });
-    fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
-    expect(container.querySelector('.search-bar')).toBeNull();
-  }, 15_000);
-});
-
-describe('App shell tab', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  it('renders a ShellTab body when a tab has an active PTY', async () => {
-    const { App } = await import('./App');
-    const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, 16, [], 'github-dark', 'dark', []); });
-    expect(container.querySelector('.harness-body')).not.toBeNull();
-  }, 15_000);
-
-  it('removes the ShellTab body when the active PTY is gone', async () => {
-    const { App } = await import('./App');
-    const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, 16, [], 'github-dark', 'dark', []); });
-    expect(container.querySelector('.harness-body')).not.toBeNull();
-    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
-    expect(container.querySelector('.harness-body')).toBeNull();
-  }, 15_000);
-});
-
-describe('App autocomplete', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    requestMock.mockClear();
-    stateListener = null;
-  });
-
-  it('triggers completion on Tab', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
-    fireEvent.change(input, { target: { value: 'some text' } });
-    await act(async () => { fireEvent.keyDown(input, { key: 'Tab' }); await Promise.resolve(); });
-    expect(requestMock).toHaveBeenCalledWith({ method: 'complete', params: { text: 'some text', cursor: 9 } });
   }, 15_000);
 });
 

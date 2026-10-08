@@ -46,7 +46,6 @@ export type NotificationEventType =
   | 'remote-session-terminated'
   | 'remote-session'
   | 'state-change'
-  | 'incoming-message'
   | 'schedule-fire'
   | 'agent-start'
   | 'rate-limited'
@@ -74,7 +73,6 @@ export type NotificationEventType =
 // active tab never notifies about its own activity) apply to these five.
 export type AmbientNotificationEvent =
   | 'state-change'
-  | 'incoming-message'
   | 'schedule-fire'
   | 'agent-start'
   | 'rate-limited';
@@ -88,7 +86,6 @@ export type ExplicitNotificationEvent = Exclude<NotificationEventType, AmbientNo
 // same reason `CLIENT_FRAME_TYPES` and `CAPABILITIES` are keyed by their unions.
 export const AMBIENT_EVENTS: Record<AmbientNotificationEvent, keyof NotificationConfig['events']> = {
   'state-change': 'stateChange',
-  'incoming-message': 'incomingMessage',
   'schedule-fire': 'scheduleFire',
   'agent-start': 'agentStart',
   'rate-limited': 'rateLimited',

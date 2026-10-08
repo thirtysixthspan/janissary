@@ -1,5 +1,5 @@
 import type { RemoteSessionView } from '../protocol.js';
-import { resolveAgentName } from '../agent/commands.js';
+import { agentNames } from '../agent/names.js';
 import { POOL_EXHAUSTED, openTabRefusal, sessionsRowRefusal } from './messages.js';
 
 // Whether a harness or agent launch may take the name it asked for, as a pure function of the open
@@ -34,7 +34,7 @@ export type LaunchNameResult =
 
 // Only a harness or agent row can hold a name a new launch would take, and only while it is still
 // something that could come back.
-const CLASHING_KINDS = new Set<LaunchNameRow['kind']>(['harness', 'agent']);
+const CLASHING_KINDS = new Set<LaunchNameRow['kind']>(['harness', 'shell']);
 const CLASHING_STATES = new Set<LaunchNameRow['state']>(['provisioning', 'active', 'reconnecting', 'detached']);
 
 // Two names clash when they differ only by case. The workspace-running check uses the same rule,
@@ -61,10 +61,10 @@ export function* suffixCandidates(base: string): Generator<string> {
 // drawn. Taking the first free name from it is the same uniform pick among the free names an unnamed
 // agent has always been given.
 export function* poolCandidates(): Generator<string> {
-  const drawn: string[] = [];
-  for (let next = resolveAgentName('agent', drawn); next !== null; next = resolveAgentName('agent', drawn)) {
-    drawn.push(next);
-    yield next;
+  const remaining = [...agentNames];
+  while (remaining.length > 0) {
+    const index = Math.floor(Math.random() * remaining.length);
+    yield remaining.splice(index, 1)[0];
   }
 }
 

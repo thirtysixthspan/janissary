@@ -5,7 +5,7 @@
 `schedule` runs a command later — once, or on a repeating schedule:
 
 ```
-schedule standup every day at 9:00 msg janus info daily check-in
+schedule standup every day at 9:00 notify daily check-in
 schedule tests every 2h npm test
 schedule reminder at 3:35pm clear
 ```
@@ -58,7 +58,7 @@ The timer then belongs to the target tab — it shows in *that* tab's schedule w
 
 <img class="agent-float" src="/agents/ahmed-south-west.png" alt="" />
 
-In an agent tab, the command is dispatched as if typed. The command dispatches immediately even when the agent is busy. In a [harness tab](/user-documentation/advanced-agents/harness), the command is typed into the harness as a line of input — and if the harness isn't accepting input yet, the timer stays due and retries until it lands. After firing, a one-shot timer is removed; a recurring one advances to its next run.
+In a shell tab, the command is dispatched as if typed. The command dispatches immediately even when the agent is busy. In a [harness tab](/user-documentation/advanced-agents/harness), the command is typed into the harness as a line of input — and if the harness isn't accepting input yet, the timer stays due and retries until it lands. After firing, a one-shot timer is removed; a recurring one advances to its next run.
 
 A tab's timers live as long as the tab: closing it drops them, and no launch, `janus --relaunch` included, brings them back.
 

@@ -5,22 +5,6 @@ import { completeWord } from './helpers.js';
 // list of tab labels, agent names, or connection ids, as opposed to the value-list completions
 // (monitor personas, syntax themes, harness models) that remain there.
 
-export function completeAgentName(cursor: CompletionCursor, labels: string[]): CompletionResult | null {
-  const { command, argumentIndex, token } = cursor;
-  if (argumentIndex !== 1 || (command !== 'msg' && command !== 'broadcast')) {
-    return null;
-  }
-  if (command === 'broadcast') {
-    const segStart = token.lastIndexOf(',') + 1;
-    return completeWord(cursor, [...labels, 'all'], {
-      partial: token.slice(segStart),
-      keepPrefix: token.slice(0, segStart),
-      suffix: '',
-    });
-  }
-  return completeWord(cursor, labels);
-}
-
 export function completeSendTarget(cursor: CompletionCursor, labels: string[]): CompletionResult | null {
   if (cursor.argumentIndex !== 1 || !['send', 'queue', 'close', 'exit'].includes(cursor.command)) return null;
   return completeWord(cursor, labels);

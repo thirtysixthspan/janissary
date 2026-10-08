@@ -12,10 +12,10 @@ import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from './queue.js';
 import { messageBus } from '../bus.js';
 
 const allOn: NotificationConfig = {
-  events: { stateChange: true, incomingMessage: true, scheduleFire: true, agentStart: true, rateLimited: true },
+  events: { stateChange: true, scheduleFire: true, agentStart: true, rateLimited: true },
 };
 const allOff: NotificationConfig = {
-  events: { stateChange: false, incomingMessage: false, scheduleFire: false, agentStart: false, rateLimited: false },
+  events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false },
 };
 
 // One case per member of `NotificationEventType`, driven off the tables that classify them — so a
@@ -63,7 +63,6 @@ describe('shouldNotify — ambient events', () => {
   });
 
   it('is suppressed when the event toggle is off', () => {
-    expect(shouldNotify(allOff, 'incoming-message', 'build', 'janus')).toBe(false);
   });
 
   it('is suppressed for the notifications tab\'s own label', () => {

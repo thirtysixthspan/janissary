@@ -67,7 +67,7 @@ export function buildTabView(
   // `RemoteManager`, and a copy of it on the tab is a copy that can outlive the recovery.
   reconnectingOf?: (label: string) => boolean,
   // Whether a local clone into the given directory is still in flight — the only provisioning
-  // signal a local `agent --workspace` tab has, since it carries no harness status.
+  // signal a local `zsh --workspace` tab has, since it carries no harness status.
   workspaceProvisioning?: (dir: string) => boolean,
   // The plugin's declaration, for the chord ids it claimed and whether it hosts the command bar.
   // Carried with the tab rather than looked up on the client, so a client holding its own copy is
@@ -85,6 +85,7 @@ export function buildTabView(
   const queue = queueProjection(tab, declarationOf?.(tab.plugin?.id ?? ''), commandQueue);
   return {
     label: tab.label,
+    backgroundReplies: tab.log.flatMap((entry) => entry.background && !entry.running ? [{ id: entry.background, output: entry.output }] : []),
     number: tab.number,
     dotColor: tab.dotColor,
     group: tab.group,
@@ -160,7 +161,6 @@ export function buildTabView(
       absoluteRoot: tab.files.root,
       remote: remoteFileNavigatorTarget(tab.files.remote, tab.label, workspaceOf, reconnectingOf),
     } : undefined,
-    activePty: tab.activePty,
     dock: tab.dock,
     pane: tab.pane,
   };

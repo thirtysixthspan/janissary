@@ -6,7 +6,7 @@ import { overlayClaimedByCommand } from '../contributed-overlays';
 import { isBareOpener } from './bare-openers';
 
 // What a line typed into any command bar does, decided before anything is sent. Both bars ask this —
-// the agent tab's own chain and a plugin tab's bar — so a word the application claims means the same
+// the tab's own chain and a plugin tab's bar — so a word the application claims means the same
 // thing wherever it was typed, and `quit` cannot reach the server from one of them and not the other.
 export type CommandBarVerdict =
   // Opens an overlay rather than running anything: a bare word in the table below, or one a plugin

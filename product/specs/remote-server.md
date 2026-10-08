@@ -9,7 +9,7 @@ monitoring behavior — except for a host chip at the left of its metadata row.
 
 ### The `on <address>` clause
 
-`harness claude on devbox`, `agent bekir on admin@devbox`, `harness claude as build on devbox with
+`harness claude on devbox`, `zsh bekir on admin@devbox`, `harness claude as build on devbox with
 fix the tests`. The clause reads like the existing `as <label>` and `with <prompt>` clauses rather
 than adding another flag, and it may appear anywhere among the other options. It is
 case-insensitive. An `on` appearing inside a `with <prompt>` clause is prompt text, never a clause,
@@ -76,7 +76,7 @@ The tab opens **immediately**, before anything is validated, showing the live ss
 body. ssh's own prompts — password, key passphrase, host-key verification, keyboard-interactive/2FA
 — render there and are answered by typing into the tab. This is the only prompt mechanism: there is
 no modal, no separate dialog, and nothing is asked in the creator tab. A remote harness tab shows the
-session in place of its harness terminal; a remote agent tab shows it full-screen over its
+session in place of its harness terminal; a remote shell tab shows it full-screen over its
 transcript, which returns once the session is established.
 
 Once the far side announces itself the tab stops showing raw terminal output and starts running the
@@ -139,7 +139,7 @@ Remote filesystem sessions and the per-spawn agent name extend the contract agai
 joined process with the provisioning tab's identity, so it is refused during the handshake before
 either behavior can fail silently.
 
-Hosting a remote agent tab's ACP agent moves it to 8, and this bump adds frame types rather than
+Hosting a remote shell tab's ACP agent moves it to 8, and this bump adds frame types rather than
 fields: prompts and reply chunks now cross the channel in both directions. An installation predating
 them recognizes none of them and would refuse each one while the local tab sat waiting — a tab that
 accepts prompts and answers nothing, which is exactly the failure this check exists to prevent. Both
@@ -181,7 +181,7 @@ the handshake, as with every other version bump.
 Asking a peer what is still running in its workspace moves it to 15. A query frame carries no
 payload — there is one workspace per peer, so the question has a single answer — and the reply names
 one entry per live process with its spawn id, the program, how it was started, and the harness or
-agent name it belongs to. It is what turns an accepted attach into tabs: a janissary restarted
+zsh name it belongs to. It is what turns an accepted attach into tabs: a janissary restarted
 since the launch remembers what it started, and only the far side knows what survived. A version-14
 peer recognizes neither frame and is refused at the handshake like any other mismatch. An
 empty reply is a real answer rather than a failure: it says the peer is holding a workspace with
@@ -189,7 +189,7 @@ nothing in it, which is the one case janissary ends rather than attaches.
 
 Restoring retained display and transcript history moves the protocol to 16. Reopening detached tabs requests their earlier transcript history; automatic connection recovery receives only transcript blocks missed during disconnection. Both redraw retained terminal output before new output arrives. Sessions started under an older remote version have no retained display history to restore, even if the installation is upgraded while they are detached.
 
-Retaining what was sent to an agent tab's shell moves the protocol to 17. An agent shell runs without a terminal attached, so nothing sent to it is echoed back and its retained output alone says nothing about what produced it. A peer now also retains the commands it was sent for such a shell and replays the two together, in the order it saw them, when an attach is rebuilding tabs — so a restored transcript reads as commands beside their output. Retained commands are replayed only to rebuilt tabs: an automatic reconnect delivers into tabs that are already open, possibly mid-command, where replaying the commands would be mistaken for their output ending. Nothing is retained separately for a harness, whose terminal echoes what is typed into the output it already keeps. A version-16 peer retains no commands and would answer an attach with output alone, so it is refused at the handshake like any other mismatch.
+Retaining what was sent to a shell tab's shell moves the protocol to 17. An agent shell runs without a terminal attached, so nothing sent to it is echoed back and its retained output alone says nothing about what produced it. A peer now also retains the commands it was sent for such a shell and replays the two together, in the order it saw them, when an attach is rebuilding tabs — so a restored transcript reads as commands beside their output. Retained commands are replayed only to rebuilt tabs: an automatic reconnect delivers into tabs that are already open, possibly mid-command, where replaying the commands would be mistaken for their output ending. Nothing is retained separately for a harness, whose terminal echoes what is typed into the output it already keeps. A version-16 peer retains no commands and would answer an attach with output alone, so it is refused at the handshake like any other mismatch.
 
 Checking the launch's name before cloning moves the protocol to 19. A provisioning request whose name
 is already running on the host, or whose leftover workspace could not be removed, is answered with a
@@ -405,7 +405,7 @@ Plain `ssh <destination>` tabs retain their existing close-on-exit behavior and 
 A session can also be parked deliberately. Detaching one closes every tab and navigator holding its
 channel and drops the transport without telling the peer anything, so the far side runs the same
 path a lost connection produces and starts its seven-day wait with its processes still running.
-An agent tab's persistent shell is one of those processes: it outlives the transport it was reached
+A shell tab's persistent shell is one of those processes: it outlives the transport it was reached
 through rather than ending with it, so a parked session still holds it when the attachment asks
 what survived. Ending such a shell stops whatever it was running too, so nothing is left behind on
 the host when the session is shut down.
@@ -436,7 +436,7 @@ later detach and attach repeats this behavior without leaving a second prompt ta
 
 Attached harnesses redraw their retained terminal history immediately, including output from before detachment and while disconnected, without starting a replacement harness. Repeated reconnects replace the displayed terminal history rather than appending duplicate copies. The restored display is also available to captures and monitoring. Terminal and transcript histories have separate bounded retention; older text may be trimmed, and a trimmed terminal replay includes an earlier-history notice. A quiet terminal's retained display is not evicted by transcript activity. A rebuilt harness transcript receives its retained blocks once, while an automatic reconnect adds only missed blocks to the transcript already open.
 
-Every surviving agent, including one joined to another tab's remote workspace, opens in a new agent tab when its session is attached. Its retained shell history appears in the scrollable transcript immediately, including work done while detached, without requiring a command first, and reads the way the live tab read: each retained command appears as its own transcript entry with the output it produced, in the order they ran, and the shell's internal sentinel lines and its working-directory bookkeeping are left out exactly as live command execution leaves them out. Output whose command is no longer retained — the oldest history, trimmed to keep retention bounded — still appears, as an entry with no command above it, and a command whose output never arrived appears with none below it. If the original label is occupied, the restored history belongs to the newly named tab. Subsequent idle output appears as it arrives and follows the transcript retention limit. Restored history does not become part of the next command's output, and that command's output appears only once.
+Only surviving shell and harness processes are restored. Legacy agent-only records are retained untouched and skipped during relaunch; a mixed shell record restores its shell processes through the temporary SSH bridge and omits agent processes.
 
 Remote shell tabs are restored around their existing PTYs after `--relaunch` and when attaching a parked session. Their last reported cwd, offline mode, and marker nonce are retained, and no navigator is reopened. The sessions tab identifies these rows as `shell`. Remote shells are omitted when saving profiles, so a profile never starts a replacement local shell for them.
 
@@ -537,7 +537,7 @@ path is resolved within that workspace; an escaping path is refused, including a
 a symlink outside the workspace. Remote file content travels to the local cache for ordinary
 openers, and editor saves travel back over the same channel.
 
-Bare `files` from a remote agent or harness uses its remote cwd when that directory is inside the
+Bare `files` from a remote shell or harness uses its remote cwd when that directory is inside the
 workspace, and the workspace root otherwise. During provisioning it reports
 `The remote workspace is not ready yet.` and opens nothing. Relative paths resolve against that
 remote cwd, `~` expands using the remote user's home, and `$root` expands to the remote workspace
@@ -699,7 +699,7 @@ a shared channel's server holds one agent per tab using it.
 - Shipping or installing janissary on the remote.
 - ssh options on the clause.
 - A saved directory of remotes or completion over previously used hosts.
-- `files on <address>` without an existing remote agent or harness tab.
+- `files on <address>` without an existing remote shell or harness tab.
 - Cross-host file transfer, remote `open external`, and plugin-contributed selection actions in a
   remote tree.
 - An alternative confinement mechanism where the remote platform has no sandbox.

@@ -70,7 +70,7 @@ lazy creation, and the same notification on failure.
 
 Shell recording can be declined. A project whose `.janissary/config.json` sets `"recordShellTabs":
 false` records no shell tab: no file is written and the tab draws no recording flag, which is the
-state an agent tab is already in. It defaults to on, so a project that has not expressed a preference
+state a shell tab is already in. It defaults to on, so a project that has not expressed a preference
 records shell tabs the same way it records the other two.
 
 The setting gates **every plugin terminal that asked to be recorded** — any plugin whose declaration
@@ -82,9 +82,9 @@ recorded, `"recordShellTabs": false` would decline that one too — the name say
 rather than promising the gate can never widen.
 
 What is **not** recorded is a PTY opened by the `shell` command: `shell vim`, `shell htop`, and the
-other interactive programs it runs full-tab on an agent tab are not recorded and get no server-side
+other interactive programs it runs full-tab on a shell tab are not recorded and get no server-side
 screen reader either. The distinction is not the tab's body but how the PTY was started — a tab whose
-body is a terminal records; a program the `shell` command took an agent tab over to does not.
+body is a terminal records; a program the `shell` command took a shell tab over to does not.
 
 ### The recording flag
 
@@ -96,7 +96,7 @@ session while it is still running and playing it through when it is not.
 The flag is drawn **plain and inert until the tab has produced output**, which is when its recording
 first exists, and **green and pressable from that moment on**. A harness tab launched with `--workspace`
 therefore shows the flag plain while its clone is still being made, and the same flag green once the
-session starts. An agent tab shows no recording flag at all — it has no recorder.
+session starts. Shell tabs have the same recording flag for their owned terminal.
 
 The flag **outlives the session**. A harness tab stays open after its process ends, and its flag stays
 green and still opens the recording, because the file is on disk and only the recorder stopped. For a

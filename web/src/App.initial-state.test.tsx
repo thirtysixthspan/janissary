@@ -35,6 +35,7 @@ describe('App mounted after the first state snapshot arrived', () => {
     label: 'janus', number: 1, dotColor: '#fff', group: 0, groupColor: '#000',
     busy: false, hasUnread: false, cwd: '/tmp', connections: [], schedule: [],
     bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
+    view: 'harness', harness: { name: 'zsh', program: 'zsh', ptyId: 'pty1', status: 'running' },
   };
   const snapshot: StateEvent = {
     t: 'state', tabs: [tab], activeTab: 0, tabNameMaxLength: 16, activeTabNameMaxLength: 50,
@@ -51,7 +52,7 @@ describe('App mounted after the first state snapshot arrived', () => {
 
     expect(screen.queryByText('Connecting…')).toBeNull();
     expect(container.querySelector('.tabstrip')).not.toBeNull();
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(container.querySelector('.harness-body')).not.toBeNull();
     client.dispose();
   }, 15_000);
 });

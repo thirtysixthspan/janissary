@@ -64,7 +64,7 @@ function ConnectionRow({ row, index, onCloseRow, onOpenAcpTranscript }: {
 // the post-activation auto-show); the schedule panel stacks below the connections panel.
 // `scheduleOnly` drops the connections panel — used over harness tabs, where the whole tab *is*
 // the terminal connection and only the timers are worth overlaying. `interactive` accepts pointer
-// events on the panels themselves (agent tabs, Decision 8); on harness tabs the panels stay
+// events on the panels themselves (tabs, Decision 8); on harness tabs the panels stay
 // non-interactive so they never intercept terminal input.
 export function StatusPanels({ connections: connectionRows, schedule: scheduleRows, scheduleOnly = false, connectionsWindow, scheduleWindow, interactive = false, onCloseRow, onOpenAcpTranscript }: Properties) {
   const connectionList = scheduleOnly ? [] : connectionRows;

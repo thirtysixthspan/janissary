@@ -5,6 +5,11 @@ import type { Managers } from '../managers.js';
 import type { Tab } from './types.js';
 
 describe('buildTabView', () => {
+  it('projects completed background replies with stable IDs and excludes ordinary or unfinished entries', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.log = [{ input: '', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: '', output: 'suggestion', background: 'finished' }];
+    expect(buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p).backgroundReplies).toEqual([{ id: 'finished', output: 'suggestion' }]);
+  });
   const missingWorkspace = (): string | undefined => {};
   it('projects right-pane membership and keeps left as the absent wire value', () => {
     const tab = makeTab('agent-1', '#fff');
@@ -560,7 +565,7 @@ describe('buildTabViews', () => {
 
   // The recording flag is driven entirely by whether this field is present, so its absence has to
   // mean "not yet" rather than "not applicable" — a tab waiting on its workspace still shows a plain
-  // flag, and only an agent tab, which never records at all, is told apart by its view discriminant.
+  // flag, and only an tab, which never records at all, is told apart by its view discriminant.
   it('sends no recording for a tab that has produced no output yet', () => {
     const views = build([remoteTab('a'), makeTab('notes', '#fff')], remoteManagers());
 

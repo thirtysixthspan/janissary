@@ -47,12 +47,12 @@ describe('SessionList rendering', () => {
   it('renders the rows host, type, tab name, state, time, actions', () => {
     const { container } = list([
       row({ id: 'a', name: 'claude' }),
-      row({ id: 'b', name: 'bekir', kind: 'agent' }),
+      row({ id: 'b', name: 'bekir', kind: 'shell' }),
     ]);
     expect([...container.querySelectorAll('.session-row-name')].map((node) => node.textContent))
       .toEqual(['claude', 'bekir']);
     expect([...container.querySelectorAll('.session-row-kind')].map((node) => node.textContent))
-      .toEqual(['harness', 'agent']);
+      .toEqual(['harness', 'shell']);
     expect(container.querySelectorAll('.session-row-host')).toHaveLength(2);
     expect(container.querySelectorAll('.session-row-state')).toHaveLength(2);
     expect(container.querySelectorAll('time')).toHaveLength(2);

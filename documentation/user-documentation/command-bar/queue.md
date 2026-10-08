@@ -18,13 +18,13 @@ Queued lines run one at a time when zsh returns to its prompt. A command answere
 
 [`send`](/user-documentation/command-bar/send) to a shell joins the same queue. This works when the shell is current, docked in a sidebar, or hidden behind another tab. Keys typed directly into the terminal bypass the queue.
 
-Agent tabs have no command queue. Their commands dispatch immediately even while busy, and `Ctrl+E` or bare `queue` does nothing there. Other tab types offer a queue only when they support it.
+Shell and harness tabs have no command queue. Their commands dispatch immediately even while busy, and `Ctrl+E` or bare `queue` does nothing there. Other tab types offer a queue only when they support it.
 
 ## Edit queued commands
 
 <img class="agent-float left" src="/agents/cavus-south.png" alt="" />
 
-Press `Ctrl+E`, or enter bare `queue`, in a shell tab to open its queue popup. The next command to run appears at the top. An empty queue shows `(no commands queued)`. A popup opened from a docked shell belongs to that shell even while an agent tab is current.
+Press `Ctrl+E`, or enter bare `queue`, in a shell tab to open its queue popup. The next command to run appears at the top. An empty queue shows `(no commands queued)`. A popup opened from a docked shell belongs to that shell even while a shell tab is current.
 
 Opening the popup copies the first row into its owner's command bar, which is the only editing surface.
 
@@ -45,6 +45,6 @@ Missing arguments print `Usage: queue <shell-tab> <command>`. An unknown target 
 
 ## Commands handled immediately
 
-The shell bar handles `hist`, `nav`, `syntax theme`, bare `theme`, bare `profile launch`, `quit`, `close`, `exit`, bare `queue`, and bare `tasks` immediately. These interactive commands do not join the queue. `queue <tab> <command>` adds a line to the named queue. `msg` and `broadcast` keep their separate delivery order.
+The shell bar handles `hist`, `nav`, `syntax theme`, bare `theme`, bare `profile launch`, `quit`, `close`, `exit`, bare `queue`, and bare `tasks` immediately. These interactive commands do not join the queue. `queue <tab> <command>` adds a line to the named queue.
 
 A queue lasts only while its tab is open. It is not saved or restored by a launch.

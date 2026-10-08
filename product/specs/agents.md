@@ -1,4 +1,4 @@
-# Agent 
+# Tab names
 
 ## agent names
 
@@ -6,42 +6,7 @@ The 52 agent names (from `agent-names.json`) are a preset list of lowercase Turk
 
 A project can supply its own `.janissary/agent-names.json` (a JSON array of names) to replace this preset list entirely for that project. Names in the file are lowercased and duplicates dropped. If the file is missing, the preset list is used. If it exists but isn't valid JSON, the warning `.janissary/agent-names.json is invalid JSON — using the bundled name list` is printed and the preset list is used. The same happens, with the warning `.janissary/agent-names.json is not a non-empty list of valid agent names — using the bundled name list`, when the file isn't a non-empty array of strings or any name couldn't serve as a single workspace folder and a state-file name (empty, `.` or `..`, or holding a `/`, a `\`, a space, or any character other than letters, digits, `_`, `.`, and `-`). Loading lives in `src/agent/names.ts` (`decodeAgentNames`).
 
-### `agent` command
 
-Creates a new workspaced agent tab with a random unused name from the pool. See the Tabs section.
+## Shell and harness launch names
 
-### `agent <name>` command
-
-Creates a new workspaced agent tab with the specified name. See the Tabs section. `--workspace` (or `-w`) explicitly confirms the default; `--no-workspace` starts the agent in the project checkout instead. When the tab the command came from is a local, unworkspaced tab whose working directory is inside the project checkout, the new agent starts in that directory, so a subdirectory carries over. From a workspaced tab, a remote tab, or a tab whose directory is outside the checkout, it starts at the checkout root, so an unconfined agent never starts inside another tab's clone, which is deleted when that tab closes (`unconfinedAgentCwd` in `src/profile/inherited-cwd.ts`).
-
-### `on <address>` clause
-
-`agent <name> on <address>` runs the agent's shell on another host over one ssh session, in a
-workspace the remote provisions from its own project root. The clause implies `--workspace`, so
-`agent bekir on devbox` and `agent bekir -w on devbox` are the same command. The address never
-becomes part of the tab name — `agent bekir on devbox` opens a tab called `bekir` — and a bare
-`agent on devbox` still picks a random unused name from the pool. See `remote-server.md` for the
-address grammar, the authentication flow, and the failure set.
-
-### Name clashes
-
-A name is taken when any of these holds (names compare case-insensitively):
-
-- an open tab, on any host, has that label;
-- the sessions tab has a harness or agent row with that name that is provisioning, active, reconnecting, or detached, on any host. Terminated rows, ssh rows, and file-navigator rows never take a name;
-- for a remote launch, something with that name is running on the target host (see `remote-server.md`);
-- for a local `-w` launch, a live janissary owner still holds the workspace folder of that name: an open tab using it, or a janus instance running inside it. A plain shell sitting in the folder does not count.
-
-A typed name (`agent <name>`) is refused when it is taken. The refusal goes to the notifications feed, attributed to the tab the command was typed in, and nothing is written to that tab's transcript. No tab opens for a refused local launch. The lines read:
-
-- `Cannot launch "<name>": a tab named "<name>" is already open.`
-- `Cannot launch "<name>": "<name>" is already in the sessions tab (<state> on <host>).`
-- `Cannot launch "<name>": "<name>" is already running ($workspace/<name>).` for a local workspace still in use.
-
-A pool name (bare `agent`, `agent on <address>`, or the ➕ button) skips every taken name. When every pool name is taken, `All agent names are in use.` is posted to the notifications feed and no tab opens.
-
-For a remote launch the target host answers after the placeholder tab is already open. If the host reports a typed name running, the placeholder closes at once and `Cannot launch "<name>": "<name>" is already running on <host>.` is posted. If it reports a pool name running, the placeholder closes and the launch is repeated over a fresh ssh connection under another free pool name, silently, up to 5 attempts in all. After the fifth, `Cannot launch agent on <host>: 5 names tried (<n1>, <n2>, …) are already running on <host>.` is posted.
-
-### Leftover workspaces
-
-A workspace folder under the chosen name with nothing running in it is a leftover. For a local `-w` launch it is removed, even with uncommitted or unpushed work in it, before the clone starts, and `Removed leftover workspace "<name>" ($workspace/<name>) before launching.` is posted. If it cannot be removed, the launch is refused with `Cannot launch "<name>": could not remove leftover workspace "<name>" ($workspace/<name>) — <reason>.`. The folder is named by its workspace rather than by its absolute path (see [[root-path]]). Remote leftovers are handled the same way on the remote host (see `remote-server.md`).
+The bundled shell plugin draws unused names from this pool for unnamed tabs. Harnesses use their own tool name with a numeric suffix by default. Explicit names are case-insensitive and are refused on clashes with open tabs, live Sessions rows, or a running workspace. `src/launch-name/check.ts` owns the shared checks; `src/launch-name/local.ts` owns local workspace preflight. See [[shell-tab]], [[harness]], and [[workspaced-agent]].

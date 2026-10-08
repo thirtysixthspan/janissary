@@ -11,7 +11,7 @@ db sqlite query notes CREATE TABLE items (id INTEGER PRIMARY KEY, text TEXT)
 
 `sqlite` is the only supported engine, and it is the first word after `db`. Any other engine name is rejected with `Unsupported engine "<name>". Only "sqlite" is supported.` The four subcommand words are the exception: in that position they read as an engine name, so `db list` and `db create notes` print `Usage: db sqlite <create|delete|query|list> [name] [query]` instead.
 
-Name the engine and database when querying: `db sqlite query notes SELECT * FROM items`. Unprefixed SQL in an agent tab receives the ordinary unknown-command response. The word after `db` is always read as the engine name, so `db SELECT * FROM items` is rejected with `Unsupported engine "select". Only "sqlite" is supported.`
+Name the engine and database when querying: `db sqlite query notes SELECT * FROM items`. Unprefixed SQL in a shell tab receives the ordinary unknown-command response. The word after `db` is always read as the engine name, so `db SELECT * FROM items` is rejected with `Unsupported engine "select". Only "sqlite" is supported.`
 
 ![A db sqlite create command followed by a db sqlite query command in a shell tab, with the query's result table rendered below it.](/screenshots/db-output.png)
 

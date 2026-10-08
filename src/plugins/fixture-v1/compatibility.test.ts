@@ -52,17 +52,27 @@ function makeManagers() {
   return { managers, openFiles, tabs };
 }
 
-describe('frozen tab plugin API v1 fixture', () => {
-  it('keeps the v1 declaration, claims, payload, intent, and disposal compatible', async () => {
-    expect(TAB_PLUGIN_API_VERSION).toBe(1);
-    expect(fixtureV1Manifest.apiVersion).toBe(1);
-    expect(createPluginOpeners([fixtureV1Manifest], [])[0].extensions)
+const fixtureV2Manifest = { ...fixtureV1Manifest, apiVersion: 2 };
+
+describe('host API v2 compatibility with the frozen fixture', () => {
+  it('rejects a v1 declaration without loading its activation', async () => {
+    const loader = vi.fn(async () => ({ activate }));
+    const host = new TabPluginHost(makeManagers().managers, [{ ...fixtureV1Manifest, apiVersion: 1 }], { 'fixture-v1': loader });
+    await host.runCommand('fixture-v1', 'fixture-v1 hello', { label: 'janus', command: 'fixture-v1 hello' });
+    expect(loader).not.toHaveBeenCalled();
+    expect(host.statusFor('fixture-v1')).toMatchObject({ state: 'disabled' });
+  });
+
+  it('keeps the fixture declaration, claims, payload, intent, and disposal compatible', async () => {
+    expect(TAB_PLUGIN_API_VERSION).toBe(2);
+    expect(fixtureV2Manifest.apiVersion).toBe(2);
+    expect(createPluginOpeners([fixtureV2Manifest], [])[0].extensions)
       .toEqual(['.janissary-plugin-v1']);
-    expect(createPluginCommands([fixtureV1Manifest], [])[0].name).toBe('fixture-v1');
+    expect(createPluginCommands([fixtureV2Manifest], [])[0].name).toBe('fixture-v1');
 
     const fixture = makeManagers();
     const dispose = vi.fn();
-    const host = new TabPluginHost(fixture.managers, [fixtureV1Manifest], {
+    const host = new TabPluginHost(fixture.managers, [fixtureV2Manifest], {
       'fixture-v1': async () => ({
         activate: () => ({ ...activate(), dispose }),
       }),
@@ -97,7 +107,7 @@ describe('frozen tab plugin API v1 fixture', () => {
 
   it('keeps the v1 command contribution and the failure boundary compatible', async () => {
     const fixture = makeManagers();
-    const host = new TabPluginHost(fixture.managers, [fixtureV1Manifest], {
+    const host = new TabPluginHost(fixture.managers, [fixtureV2Manifest], {
       'fixture-v1': async () => ({ activate }),
     });
     const origin = { label: 'janus', command: 'fixture-v1 hello' };

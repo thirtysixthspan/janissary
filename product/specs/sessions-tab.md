@@ -18,7 +18,7 @@ titled **sessions**.
 ### What is listed
 
 Every remote client this janissary holds, and every parked session it could come back to. That
-means remote harness tabs, remote agent tabs, remote shell tabs, plain `ssh <destination>` tabs, remote file
+means remote harness and shell tabs, plain `ssh <destination>` tabs, remote file
 navigators, and — for a session no longer attached — one row per process still alive on its host.
 
 There is deliberately no row standing for a connection. A connection shared by several tabs shows
@@ -26,7 +26,7 @@ itself by grouping, not by a row of its own.
 
 An empty list reads `No remote sessions`.
 
-The list header is a full-width metadata bar matching agent tabs, containing only Refresh and Split controls together at the right edge. A docked list combines Refresh and the dock-switch control at the right edge of one metadata bar, with no second header or Split control. This layout applies in either sidebar, including an empty list, and even when Sessions is the first plugin opened.
+The list header is a full-width metadata bar matching shell and harness tabs, containing only Refresh and Split controls together at the right edge. A docked list combines Refresh and the dock-switch control at the right edge of one metadata bar, with no second header or Split control. This layout applies in either sidebar, including an empty list, and even when Sessions is the first plugin opened.
 
 When there are no remote sessions, the tab shows only its `No remote sessions` empty-state message; it omits the table headings because there are no rows for them to describe.
 
@@ -34,8 +34,8 @@ When there are no remote sessions, the tab shows only its `No remote sessions` e
 
 Five named columns — Host, Type, Tab, State, Last activity, and an unlabeled actions column — list
 the bare host, what the row is running, its kind, its state, and how long ago it last changed. The
-third column shows the tab's own name — a harness, agent, or shell label, `ssh`, or a navigator's abbreviated
-root. The type is what the row *is*: `harness`, `agent`, `shell`, `ssh`, or `navigator`, matching the tab it
+third column shows the tab's own name — a harness or shell label, `ssh`, or a navigator's abbreviated
+root. The type is what the row *is*: `harness`, `zsh`, `shell`, `ssh`, or `navigator`, matching the tab it
 opens or would open. The row's tooltip carries the full destination
 and the remote workspace path, and the reason the last attempt on it failed when there was one.
 Headings and entries are left-aligned and share those columns, including joined rows. The final column reserves the same width in every row, so different numbers of action buttons do not shift the headings or values.
@@ -83,8 +83,8 @@ After attaching a detached remote shell, detaching and attaching it again restor
 **Detach** applies to a live session and gives it up locally while deliberately leaving it running.
 Closing the local tabs during that action never stops their remote processes.
 A detached harness remains listed after its local tab closes. Attaching restores the same running process and keeps its tab open; repeated detach and attach cycles do not start replacement harnesses. A late exit from an earlier connection does not close the restored tab or remove its session row.
-The restored harness displays its retained terminal output and transcript history without waiting for another response from the harness. A newly opened restored agent tab likewise shows its retained shell history in its transcript — each retained command as its own entry with the output it produced, in the order they ran, and without the shell's internal sentinel lines — so restored history reads the way live command output always has. Earlier history can be trimmed to keep retention bounded; repeated reconnections do not duplicate the displayed history.
-Once a remote agent is ready, its persistent shell keeps the session detachable even before the user runs a command. That shell keeps running on its host after the detach gives up the connection it was reached through, so the session still holds it when the attachment asks what survived. Attaching returns the agent to that retained shell, so it can continue working without starting a replacement shell.
+The restored harness displays its retained terminal output and transcript history without waiting for another response from the harness. A newly opened restored shell tab likewise shows its retained shell history in its transcript — each retained command as its own entry with the output it produced, in the order they ran, and without the shell's internal sentinel lines — so restored history reads the way live command output always has. Earlier history can be trimmed to keep retention bounded; repeated reconnections do not duplicate the displayed history.
+Detached sessions retain live shell and harness processes. Attaching recreates only those surviving tab types; legacy agent records remain readable but produce no agent tabs.
 It closes every tab and navigator riding that connection, so it asks for confirmation first, naming
 what will go. It acts on the whole connection — a per-tab detach would have to keep the connection up
 for the others and would mean nothing — so it sits on the launching row alone. It is unavailable
@@ -153,12 +153,7 @@ Every failed attachment also records a notification naming the session, host, an
 
 A peer that accepts an attach but reports no process state, including a timed-out answer, is told to
 shut down and its record dropped, rather than being left holding a remote workspace for a week with
-nothing in it. An attach
-that fails or ends also lets go of what it prepared for its tabs: a restored agent binds to the
-process still running on the far side when it is brought back, and that binding is dropped again once
-the attempt is over — so an agent tab recreated later under the same name starts its own shell on
-the connection it is actually on, never binding to a process belonging to a different session.
-Closing an attached tab before running anything releases the same binding.
+nothing in it. An attachment that fails releases its temporary SSH bridge. Shell tabs reattach to their retained PTY; harness tabs reattach to their retained harness process.
 
 ### Reporting
 

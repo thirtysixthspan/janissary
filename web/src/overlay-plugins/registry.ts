@@ -46,10 +46,10 @@ export const overlayPluginLoaders = {
 // the same list `src/plugins/command-adapter.ts` refuses against on the server.
 const RESERVED_COMMANDS = new Set([
   'schedule', 'harness', 'ssh', 'shell', 'help',
-  'agent', 'acp', 'browser', 'capture', 'close', 'command', 'connection', 'db',
-  'edit', 'exit', 'files', 'hist', 'msg', 'nav', 'notifications', 'plugins',
+  'acp', 'browser', 'capture', 'close', 'command', 'connection', 'db',
+  'edit', 'exit', 'files', 'hist', 'nav', 'notifications', 'plugins',
   'profile', 'queue', 'quit', 'search', 'send', 'sessions', 'task', 'theme',
-  'monitors', 'conversations', 'sql', 'monitor', 'broadcast',
+  'monitors', 'conversations', 'sql', 'monitor',
 ]);
 
 export type DeclarationRejection = { id: string; reason: string };

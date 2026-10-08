@@ -20,7 +20,7 @@ describe('isReportingTab', () => {
     expect(VIEWS.filter((view) => isReportingTab({ view }))).toEqual(['monitor']);
   });
 
-  it('is false for an agent tab with no view kind', () => {
+  it('is false for an tab with no view kind', () => {
     expect(isReportingTab({})).toBe(false);
   });
 });

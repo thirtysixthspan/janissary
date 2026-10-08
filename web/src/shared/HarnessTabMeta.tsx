@@ -14,9 +14,9 @@ import { RemoteSessionButton, type RemoteSessionState } from './RemoteSessionBut
 type Properties = {
   cwd?: string; cwdDisplay?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTargetView;
   connectionInFlags?: boolean;
-  onOpenFileNavigator?: () => void; onLaunchAgentHere?: () => void; onOpenTranscript?: () => void;
+  onOpenFileNavigator?: () => void; onLaunchShellHere?: () => void; onOpenTranscript?: () => void;
   // Set for the tab kinds that record at all — a harness or an ssh tab — even before the session has
-  // produced a file. An agent tab leaves it unset and shows no recording flag at all.
+  // produced a file. An tab leaves it unset and shows no recording flag at all.
   hasRecorder?: boolean;
   // Set only once this tab has a recording, and then it opens it — the same arrangement the
   // transcript button uses, so one absent handler means "there is nothing here to open yet".
@@ -42,8 +42,8 @@ function MetaChip({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function AgentTabMeta({
-  cwd, cwdDisplay, flags, model, effort, remote, connectionInFlags, onOpenFileNavigator, onLaunchAgentHere, onOpenTranscript,
+export function HarnessTabMeta({
+  cwd, cwdDisplay, flags, model, effort, remote, connectionInFlags, onOpenFileNavigator, onLaunchShellHere, onOpenTranscript,
   hasRecorder, onOpenRecording, connectionsButton, scheduleButton, onSplit, remoteSession,
   launchTitle, launchDisabled,
 }: Properties) {
@@ -63,7 +63,7 @@ export function AgentTabMeta({
         )}
         {/* The recording flag is not one of `flags`: it is the host's own fact about this tab's PTY,
             and it is drawn for the tab kinds that record at all — a harness or ssh tab even before it
-            has a file, an agent tab never. */}
+            has a file, an tab never. */}
         {hasRecorder && <RecordingFlag onOpen={onOpenRecording} />}
         {(flags ?? []).map((flag) => {
           const display = tabFlagDisplay[flag];
@@ -86,13 +86,13 @@ export function AgentTabMeta({
             <FontAwesomeIcon icon={openFilesIcon} />
           </button>
         )}
-        {onLaunchAgentHere && (
+        {onLaunchShellHere && (
           <button
             type="button"
-            className="tab-launch-agent"
-            title={launchTitle ?? (workspaced ? 'New agent in this workspace' : 'New agent here')}
+            className="tab-launch-shell"
+            title={launchTitle ?? (workspaced ? 'New shell in this workspace' : 'New shell here')}
             disabled={launchDisabled}
-            onClick={onLaunchAgentHere}
+            onClick={onLaunchShellHere}
           >
             <FontAwesomeIcon icon={newTabIcon} />
           </button>

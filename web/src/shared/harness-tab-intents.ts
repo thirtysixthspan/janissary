@@ -2,24 +2,23 @@ import type { AcpRef } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 
 // Which transcript RPC the metadata row's clipboard button sends. Supplied by the caller rather
-// than decided here: agent tabs and harness tabs open different transcripts, and branching on that
+// than decided here: tabs and harness tabs open different transcripts, and branching on that
 // would give this shared module knowledge of the features that use it.
-export type TranscriptMethod = 'openTranscriptFor' | 'openHarnessTranscriptFor';
+export type TranscriptMethod = 'openHarnessTranscriptFor';
 
 export type AgentTabIntents = {
   onOpenFileNavigator: () => void;
-  onLaunchAgentHere: () => void;
   onLaunchShellHere: () => void;
   onOpenTranscript: () => void;
   onToggleCollapse: () => void;
   onOpenAcpTranscript: (acpRef: AcpRef) => void;
   // Only on a tab that has a recording, because it is the metadata row's own signal that there is
   // one: the row draws its flag inert when this is absent and pressable when it is set, so the two
-  // cannot disagree. An agent tab never has one and so never sends it.
+  // cannot disagree. An tab never has one and so never sends it.
   onOpenRecording?: () => void;
 };
 
-export function agentTabIntents(
+export function harnessTabIntents(
   client: JanusClient,
   label: string,
   transcriptMethod: TranscriptMethod,
@@ -27,7 +26,6 @@ export function agentTabIntents(
 ): AgentTabIntents {
   return {
     onOpenFileNavigator: () => client.send({ method: 'openFileNavigatorFor', params: { label } }),
-    onLaunchAgentHere: () => client.send({ method: 'launchAgentFor', params: { label } }),
     onLaunchShellHere: () => client.send({ method: 'launchShellFor', params: { label } }),
     onOpenTranscript: () => client.send({ method: transcriptMethod, params: { label } }),
     onToggleCollapse: () => client.send({ method: 'toggleCollapse', params: {} }),

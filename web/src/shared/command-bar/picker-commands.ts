@@ -2,7 +2,7 @@
 // the matching overlay instead of reaching the server.
 //
 // Shared because two features hold this shape and neither may import the other: `pickers` builds the
-// openers and `agent-tabs` invokes them. Restating the nine fields in the consumer is exactly the
+// openers and `shared command bars` invokes them. Restating the nine fields in the consumer is exactly the
 // drift `usePickerOverlays` exists to prevent — a field added to one list and forgotten in the other
 // typechecks fine and fails at the call site instead.
 //

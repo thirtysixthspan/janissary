@@ -242,11 +242,11 @@ describe('ConversationTab', () => {
     const { intent, value } = capabilities();
     const rendered = render(<ConversationTab payload={payload()} capabilities={value} />);
     const files = screen.getByTitle('Open file navigator in this workspace');
-    const agent = screen.getByTitle('New agent in this workspace');
+    const agent = screen.getByTitle('New shell in this workspace');
     fireEvent.click(files);
     fireEvent.click(agent);
     expect(intent).toHaveBeenNthCalledWith(1, 'open-files', {});
-    expect(intent).toHaveBeenNthCalledWith(2, 'launch-agent', {});
+    expect(intent).toHaveBeenNthCalledWith(2, 'launch-shell', {});
 
     rendered.rerender(<ConversationTab payload={payload({ deleted: true })} capabilities={value} />);
     expect(files).toBeDisabled();

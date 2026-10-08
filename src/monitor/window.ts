@@ -63,7 +63,7 @@ export function updateMonitorMeta(managers: Managers, name: string, targets: str
 }
 
 // Close a persona's reporting tab (used when the last monitor feeding it goes away
-// with its owning agent tab).
+// with its owning tab).
 export function closeMonitorTab(managers: Managers, name: string): void {
   if (!managers.tab.monitorTab(name)) return;
   const index = managers.tab.findIndex(name);

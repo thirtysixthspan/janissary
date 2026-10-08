@@ -1,17 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { TabManager } from '../tab/manager.js';
 import { ShellManager } from './manager.js';
 import { loadConfig } from '../config.js';
-import { loadLearnedCommands, learnedCommands } from '../interactive/learned.js';
 import { messageBus, type BusEvent, type Subscription } from '../bus.js';
 import { makeTab } from '../tab/index.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
-import type { RestoredSink } from '../remote/shell-session.js';
-import { seedRootAgentTab } from '../tab/root-agent-test-fixture.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 const executeShellCmdMock = vi.fn();
 const queryShellPwdMock = vi.fn();
@@ -32,7 +30,7 @@ vi.mock('./index.js', () => ({
 function makeManagers(): Managers {
   const managers = {} as Managers;
   managers.tab = new TabManager(managers);
-  seedRootAgentTab(managers.tab);
+  seedRootTab(managers.tab);
   managers.pty = {
     spawnTransport: spawnTransportMock,
   } as unknown as Managers['pty'];
@@ -52,17 +50,8 @@ function completeCommand(result: string): void {
   onComplete(result);
 }
 
-// Release the trailing pwd query that gates the next command on the same shell.
-function resolvePwd(): void {
-  const onResult = queryShellPwdMock.mock.calls.at(-1)?.[2] as (pwd: string) => void;
-  onResult('/tmp');
-}
-
 // The restored sink the manager handed the adopted remote shell: where a replayed session's output
 // and retained history land.
-function restoredSink(): RestoredSink {
-  return createRemoteShellMock.mock.calls[0][6] as RestoredSink;
-}
 
 function resetShellMocks(): void {
   executeShellCmdMock.mockReset();
@@ -119,16 +108,6 @@ describe('ShellManager — which shell a tab gets', () => {
     rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('runs a local tab in a pty when detection is on', async () => {
-    const managers = makeManagers();
-    new ShellManager(managers).run('janus', 'ls');
-
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    expect(spawnTransportMock).toHaveBeenCalledTimes(1);
-    expect(spawnShellMock).not.toHaveBeenCalled();
-    expect(spawnTransportMock.mock.calls[0][5]).toMatchObject({ shellArgs: expect.any(Array) });
-  });
-
   it('runs a local tab in a piped shell when detection is off', async () => {
     writeFileSync(path.join(tmpDir, '.janissary', 'config.json'), JSON.stringify({ interactiveShellDetection: false }));
     loadConfig(tmpDir);
@@ -141,36 +120,12 @@ describe('ShellManager — which shell a tab gets', () => {
     expect(spawnTransportMock).not.toHaveBeenCalled();
   });
 
-  // A cwd recorded from a garbled pwd answer, or a directory since deleted, must not kill every shell
-  // the tab will ever start: `pty.spawn` exits at once in a working directory that does not exist.
-  it('starts a local pty shell in the project directory when the tab\'s cwd is not a directory', async () => {
-    const managers = makeManagers();
-    managers.tab = new TabManager(managers, tmpDir);
-    seedRootAgentTab(managers.tab);
-    managers.tab.setCwd('janus', `${tmpDir}\r\n__JS_END_0_1__\r\n%\r \rpwd\r\necho "`);
-    new ShellManager(managers).run('janus', 'ls');
-
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    expect(spawnTransportMock.mock.calls[0][3]).toBe(tmpDir);
-  });
-
-  it('starts a local pty shell in the tab\'s cwd when it is a directory', async () => {
-    const managers = makeManagers();
-    managers.tab = new TabManager(managers, tmpDir);
-    seedRootAgentTab(managers.tab);
-    managers.tab.setCwd('janus', path.join(tmpDir, '.janissary'));
-    new ShellManager(managers).run('janus', 'ls');
-
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    expect(spawnTransportMock.mock.calls[0][3]).toBe(path.join(tmpDir, '.janissary'));
-  });
-
   it('cds a piped shell into the project directory when the tab\'s cwd is not a directory', async () => {
     writeFileSync(path.join(tmpDir, '.janissary', 'config.json'), JSON.stringify({ interactiveShellDetection: false }));
     loadConfig(tmpDir);
     const managers = makeManagers();
     managers.tab = new TabManager(managers, tmpDir);
-    seedRootAgentTab(managers.tab);
+    seedRootTab(managers.tab);
     managers.tab.setCwd('janus', path.join(tmpDir, 'missing'));
     new ShellManager(managers).run('janus', 'ls');
 
@@ -190,410 +145,6 @@ describe('ShellManager — which shell a tab gets', () => {
     expect(createRemoteShellMock).toHaveBeenCalledTimes(1);
     expect(spawnTransportMock).not.toHaveBeenCalled();
   });
-
-  // An attached agent tab's shell is created lazily, so the recorded spawn id is parked here first
-  // — and only the channel the adoption was recorded against may claim it.
-  it('binds a remote tab\'s first shell to the adopted spawn id its channel still holds', async () => {
-    const managers = makeManagers();
-    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
-    managers.tab.cur().remote = 'devbox';
-    const shellManager = new ShellManager(managers);
-    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
-
-    shellManager.run('janus', 'ls');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    expect(createRemoteShellMock.mock.calls[0][1]).toBe('rsh9');
-    expect(createRemoteShellMock.mock.calls[0][5]).toBe(true);
-  });
-
-  // Closing the tab frees the adoption with it: a later tab granted the same label starts its own
-  // shell instead of binding to a spawn id nobody recorded for it.
-  it('drops an adopted spawn id when the tab closes', async () => {
-    const managers = makeManagers();
-    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
-    managers.tab.cur().remote = 'devbox';
-    const shellManager = new ShellManager(managers);
-    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
-    shellManager.closeTab('janus');
-
-    shellManager.run('janus', 'ls');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
-    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
-  });
-
-  // The label a tab holds is freed the moment it closes, and a fresh session that reuses it talks
-  // over a different channel — the adoption belongs to the old session and must not be claimed.
-  it('refuses an adoption whose recorded session no longer matches the tab\'s channel', async () => {
-    const managers = makeManagers();
-    managers.remote = { get: () => ({ sessionId: 'sess-2' }) } as unknown as Managers['remote'];
-    managers.tab.cur().remote = 'devbox';
-    const shellManager = new ShellManager(managers);
-    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
-
-    shellManager.run('janus', 'ls');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
-    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
-  });
-
-  it('releases an adopted spawn id when the attach says there is no shell to come back to', async () => {
-    const managers = makeManagers();
-    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
-    managers.tab.cur().remote = 'devbox';
-    const shellManager = new ShellManager(managers);
-    shellManager.adoptRemoteShell('janus', 'rsh9', 'sess-1');
-    shellManager.releaseAdoptedShell('janus');
-
-    shellManager.run('janus', 'ls');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    expect(createRemoteShellMock.mock.calls[0][1]).toMatch(/^rsh\d+/);
-    expect(createRemoteShellMock.mock.calls[0][1]).not.toBe('rsh9');
-  });
-
-  it('publishes restored output immediately and applies transcript retention', () => {
-    writeFileSync(path.join(tmpDir, '.janissary', 'config.json'), JSON.stringify({ transcriptMaxLines: 2 }));
-    loadConfig(tmpDir);
-    const managers = makeManagers();
-    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
-    const tab = managers.tab.cur();
-    tab.remote = { address: 'devbox', host: 'devbox' };
-    const shellManager = new ShellManager(managers);
-    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
-    shellManager.ensure(tab.label);
-    const restored = restoredSink();
-    const dirty = vi.fn();
-    const subscription = messageBus.on('state', 'dirty', dirty);
-    try {
-      restored.output('\u{1B}c');
-      expect(dirty).not.toHaveBeenCalled();
-      restored.output('\u{1B}cearlier output');
-      expect(tab.log).toEqual([{ input: '', output: 'earlier output' }]);
-      expect(dirty).toHaveBeenCalledOnce();
-      restored.output('later output');
-      restored.output('latest output');
-      expect(tab.log.map((entry) => entry.output)).toEqual(['later output', 'latest output']);
-      expect(dirty).toHaveBeenCalledTimes(3);
-    } finally {
-      subscription.unsubscribe();
-    }
-  });
-
-  it('strips shell sentinel lines from restored output', () => {
-    const managers = makeManagers();
-    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
-    const tab = managers.tab.cur();
-    tab.remote = { address: 'devbox', host: 'devbox' };
-    const shellManager = new ShellManager(managers);
-    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
-    shellManager.ensure(tab.label);
-    const restored = restoredSink();
-
-    restored.output('tsconfig.json\nvitest.config.ts\nweb\n__JS_END_3_1789964749418__\n');
-    restored.output('/remote/workspace/harun\n__PWD_3_1789964749468__\npwd\n/remote/workspace/harun\n__PWD_3_1789964749502__\n');
-    restored.output('zsh: operation not permitted: ps\n__JS_END_3_1789964752762__\n');
-
-    expect(tab.log.map((entry) => entry.output)).toEqual([
-      'tsconfig.json\nvitest.config.ts\nweb\n',
-      'zsh: operation not permitted: ps\n',
-    ]);
-  });
-
-  it('rebuilds a restored transcript from retained history runs, commands included', () => {
-    const managers = makeManagers();
-    managers.remote = { get: () => ({ sessionId: 'sess-1' }) } as unknown as Managers['remote'];
-    const tab = managers.tab.cur();
-    tab.remote = { address: 'devbox', host: 'devbox' };
-    const shellManager = new ShellManager(managers);
-    shellManager.adoptRemoteShell(tab.label, 'rsh9', 'sess-1');
-    shellManager.ensure(tab.label);
-    const restored = restoredSink();
-
-    restored.history([
-      { source: 'input', text: '{ :; ls\n} 2>&1; echo "__JS_END_3_1__"\n' },
-      { source: 'output', text: 'web\n__JS_END_3_1__\n' },
-      { source: 'input', text: 'pwd\necho "__PWD_3_2__"\n' },
-      { source: 'output', text: '/remote/workspace/harun\n__PWD_3_2__\n' },
-      { source: 'input', text: '{ :; ps\n} 2>&1; echo "__JS_END_3_3__"\n' },
-      { source: 'output', text: 'operation not permitted\n__JS_END_3_3__\n' },
-    ]);
-
-    expect(tab.log).toEqual([
-      { input: 'ls', output: 'web' },
-      { input: 'ps', output: 'operation not permitted' },
-    ]);
-  });
-});
-
-describe('ShellManager — promotion to a terminal', () => {
-  let tmpDir: string;
-  let managers: Managers;
-  let shellManager: ShellManager;
-  const ptyEvents: unknown[] = [];
-
-  const ESC = String.fromCodePoint(27);
-  const label = 'janus';
-  let ptySubscription: Subscription;
-
-  beforeEach(() => {
-    resetShellMocks();
-    ptyEvents.length = 0;
-    tmpDir = mkdtempSync(path.join(tmpdir(), 'shell-promote-'));
-    mkdirSync(path.join(tmpDir, '.janissary'), { recursive: true });
-    loadConfig(tmpDir);
-    loadLearnedCommands(tmpDir);
-    ptySubscription = messageBus.on('pty', 'data', (event) => { ptyEvents.push(event); });
-    managers = makeManagers();
-    shellManager = new ShellManager(managers);
-  });
-
-  afterEach(() => {
-    ptySubscription.unsubscribe();
-    rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  const tab = (): { activePty?: string; log: { output: string; running?: boolean }[] } =>
-    managers.tab.tabs.find((t) => t.label === label)!;
-
-  it('takes over the tab when output shows a program claiming the screen', async () => {
-    shellManager.run(label, 'mytui');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    streamOutput(['starting', `${ESC}[?1049h`]);
-
-    expect(tab().activePty).toBe('pty1');
-    expect(ptyEvents).toContainEqual({ type: 'data', id: 'pty1', data: `starting${ESC}[?1049h` });
-    expect(tab().log.at(-1)?.running).toBe(true);
-  });
-
-  it('restores the transcript with a note when the command finishes', async () => {
-    shellManager.run(label, 'mytui');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    streamOutput([`${ESC}[?1049h`]);
-    completeCommand('ignored screen bytes');
-
-    expect(tab().activePty).toBeUndefined();
-    expect(tab().log.at(-1)?.output).toBe('(ran in terminal)');
-    expect(tab().log.at(-1)?.running).toBe(false);
-  });
-
-  it('leaves an ordinary command in the transcript', async () => {
-    shellManager.run(label, 'ls');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    streamOutput(['file-a\nfile-b\n']);
-    completeCommand('file-a\nfile-b');
-
-    expect(tab().activePty).toBeUndefined();
-    expect(tab().log.at(-1)?.output).toBe('file-a\nfile-b');
-  });
-
-  it('never promotes a command that asked not to be detected, and still captures its output', async () => {
-    const onComplete = vi.fn();
-    shellManager.run(label, 'mytui', { detect: false, onComplete });
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    streamOutput([`${ESC}[?1049h`]);
-    expect(tab().activePty).toBeUndefined();
-
-    completeCommand('captured output');
-    expect(onComplete).toHaveBeenCalledWith('captured output');
-  });
-
-  it('promotes on request, for a program that never announced itself', async () => {
-    shellManager.run(label, 'sudo -S true');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    streamOutput(['Password:']);
-    expect(tab().activePty).toBeUndefined();
-
-    shellManager.promoteRunning(label);
-    expect(tab().activePty).toBe('pty1');
-  });
-
-  it('no-ops a promotion request when nothing is running', () => {
-    expect(() => { shellManager.promoteRunning(label); }).not.toThrow();
-    expect(tab().activePty).toBeUndefined();
-  });
-
-  it('learns a detected command but not one the user promoted by hand', async () => {
-    shellManager.run(label, 'mytui');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    streamOutput([`${ESC}[?1049h`]);
-    completeCommand('');
-    expect(learnedCommands().has('mytui')).toBe(true);
-
-    await vi.waitFor(() => { expect(queryShellPwdMock).toHaveBeenCalledTimes(1); });
-    resolvePwd();
-
-    shellManager.run(label, 'othertui');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(2); });
-    shellManager.promoteRunning(label);
-    completeCommand('');
-    expect(learnedCommands().has('othertui')).toBe(false);
-  });
-
-  it('streams post-promotion chunks to the bus as deltas in order', async () => {
-    shellManager.run(label, 'mytui');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    streamOutput(['starting', `${ESC}[?1049h`]);
-    expect(ptyEvents).toEqual([{ type: 'data', id: 'pty1', data: `starting${ESC}[?1049h` }]);
-
-    streamOutput([`starting${ESC}[?1049hframe one`, 'frame two']);
-
-    expect(ptyEvents).toEqual([
-      { type: 'data', id: 'pty1', data: `starting${ESC}[?1049h` },
-      { type: 'data', id: 'pty1', data: 'frame one' },
-      { type: 'data', id: 'pty1', data: 'frame two' },
-    ]);
-  });
-
-  it('emits no PTY data before the command is promoted', async () => {
-    shellManager.run(label, 'sudo -S true');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    streamOutput(['Password:', 'Password:prompt ack']);
-    expect(ptyEvents).toEqual([]);
-  });
-
-  it('streams deltas after a manual promotion too', async () => {
-    shellManager.run(label, 'sudo -S true');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    streamOutput(['Password:']);
-    shellManager.promoteRunning(label);
-    expect(ptyEvents).toEqual([{ type: 'data', id: 'pty1', data: 'Password:' }]);
-
-    streamOutput(['Password:prompt ack', 'done']);
-
-    expect(ptyEvents).toEqual([
-      { type: 'data', id: 'pty1', data: 'Password:' },
-      { type: 'data', id: 'pty1', data: 'prompt ack' },
-      { type: 'data', id: 'pty1', data: 'done' },
-    ]);
-  });
-});
-
-describe('ShellManager — a pty shell that exits', () => {
-  let tmpDir: string;
-  let managers: Managers;
-  let shellManager: ShellManager;
-  const label = 'janus';
-  const ESC = String.fromCodePoint(27);
-
-  // The exit hook the manager handed the pty manager for the `call`th transport it spawned.
-  const transportExit = (call: number): (() => void) =>
-    (spawnTransportMock.mock.calls[call][4] as { onExit: () => void }).onExit;
-
-  const tab = (): { activePty?: string; log: { input: string; output: string; running?: boolean }[] } =>
-    managers.tab.tabs.find((t) => t.label === label)!;
-
-  beforeEach(() => {
-    resetShellMocks();
-    let spawned = 0;
-    spawnTransportMock.mockImplementation(() => ({
-      id: `pty${++spawned}`, program: 'bash', write: vi.fn(), resize: vi.fn(), kill: vi.fn(),
-    }));
-    tmpDir = mkdtempSync(path.join(tmpdir(), 'shell-exit-'));
-    mkdirSync(path.join(tmpDir, '.janissary'), { recursive: true });
-    loadConfig(tmpDir);
-    loadLearnedCommands(tmpDir);
-    managers = makeManagers();
-    shellManager = new ShellManager(managers);
-  });
-
-  afterEach(() => {
-    rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  it('finishes the running command and respawns the shell on the next one', async () => {
-    const onComplete = vi.fn();
-    shellManager.run(label, 'exit', { onComplete });
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    const firstShell = executeShellCmdMock.mock.calls[0][0] as { stdin: { writable: boolean } };
-
-    transportExit(0)();
-    expect(firstShell.stdin.writable).toBe(false);
-    completeCommand('(shell exited)');
-
-    expect(onComplete).toHaveBeenCalledWith('(shell exited)');
-    expect(tab().log.at(-1)).toMatchObject({ input: 'exit', output: '(shell exited)', running: false });
-    expect(managers.tab.isBusy(label)).toBe(false);
-
-    await vi.waitFor(() => { expect(queryShellPwdMock).toHaveBeenCalledTimes(1); });
-    resolvePwd();
-
-    shellManager.run(label, 'ls');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(2); });
-    expect(spawnTransportMock).toHaveBeenCalledTimes(2);
-    expect(executeShellCmdMock.mock.calls[1][0]).not.toBe(firstShell);
-  });
-
-  // `connection close shell` retires the first shell and the next command starts a second; the first
-  // pty's exit lands only afterwards and must not strip the second shell's id, or promotion breaks.
-  it('keeps the replacement shell\'s pty id when the old shell\'s exit arrives late', async () => {
-    shellManager.run(label, 'ls');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    shellManager.close(label);
-
-    shellManager.run(label, 'mytui');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(2); });
-    expect(spawnTransportMock).toHaveBeenCalledTimes(2);
-
-    transportExit(0)();
-    streamOutput([`${ESC}[?1049h`]);
-
-    expect(tab().activePty).toBe('pty2');
-    expect(JSON.parse(readFileSync(path.join(tmpDir, '.janissary', 'interactive-commands.json'), 'utf8')))
-      .toEqual(['mytui']);
-  });
-
-  // Killing a shell ends its streams too, which completes its command — but the tab it would report
-  // to may be gone, so a command on a shell the manager retired itself stays silent.
-  it('drops the completion of a command whose shell the manager killed', async () => {
-    const onComplete = vi.fn();
-    shellManager.run(label, 'sleep 100', { onComplete });
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    shellManager.closeTab(label);
-    completeCommand('(shell exited)');
-
-    expect(onComplete).not.toHaveBeenCalled();
-    expect(queryShellPwdMock).not.toHaveBeenCalled();
-    expect(tab().log.at(-1)).toMatchObject({ input: 'sleep 100', running: true });
-  });
-
-  it('drops the completion of a command whose shell shutdown killed', async () => {
-    const onComplete = vi.fn();
-    shellManager.run(label, 'sleep 100', { onComplete });
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    shellManager.closeAll();
-    completeCommand('(shell exited)');
-
-    expect(onComplete).not.toHaveBeenCalled();
-    expect(tab().log.at(-1)).toMatchObject({ input: 'sleep 100', running: true });
-  });
-
-  // `connection close shell` leaves the tab open, so the command its shell was running finishes the
-  // way a shell's own exit finishes it — otherwise the tab stays busy and every later command queues.
-  it('finishes a command whose shell `connection close shell` killed, without querying its pwd', async () => {
-    const onComplete = vi.fn();
-    shellManager.run(label, 'sleep 100', { onComplete });
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-    expect(managers.tab.isBusy(label)).toBe(true);
-
-    expect(shellManager.close(label)).toBe(true);
-    completeCommand('partial\n(shell exited)');
-
-    expect(onComplete).toHaveBeenCalledWith('partial\n(shell exited)');
-    expect(tab().log.at(-1)).toMatchObject({ input: 'sleep 100', output: 'partial\n(shell exited)', running: false });
-    expect(managers.tab.isBusy(label)).toBe(false);
-    expect(queryShellPwdMock).not.toHaveBeenCalled();
-  });
 });
 
 // A shell command's entry is started and finished by the same transcript choreography every other
@@ -605,7 +156,6 @@ describe('ShellManager — transcript events', () => {
   let subscription: Subscription;
   const events: BusEvent[] = [];
   const label = 'janus';
-  const ESC = String.fromCodePoint(27);
 
   const appended = (): BusEvent[] => events.filter((event) => event.type === 'entry:appended');
   const tab = (name = label): Tab => managers.tab.tabs.find((t) => t.label === name)!;
@@ -616,7 +166,6 @@ describe('ShellManager — transcript events', () => {
     tmpDir = mkdtempSync(path.join(tmpdir(), 'shell-events-'));
     mkdirSync(path.join(tmpDir, '.janissary'), { recursive: true });
     loadConfig(tmpDir);
-    loadLearnedCommands(tmpDir);
     subscription = messageBus.on('transcript', ['entry:appended', 'entries:trimmed'], (event) => { events.push(event); });
     managers = makeManagers();
     managers.tab.setCwd(label, '/work');
@@ -645,17 +194,6 @@ describe('ShellManager — transcript events', () => {
     ]);
     expect(tab().log.at(-1)).toEqual({ input: 'ls', output: 'file-a', running: false, cwd: '/work' });
     expect(managers.tab.isBusy(label)).toBe(false);
-  });
-
-  it('emits no trailing output event for a command promoted to a terminal', async () => {
-    shellManager.run(label, 'mytui');
-    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
-
-    streamOutput([`${ESC}[?1049h`]);
-    completeCommand('screen bytes');
-
-    expect(appended()).toHaveLength(1);
-    expect(tab().log.at(-1)).toMatchObject({ input: 'mytui', output: '(ran in terminal)', running: false });
   });
 
   it('returns a scrolled-up transcript to the bottom when a command starts', () => {

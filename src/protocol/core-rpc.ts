@@ -23,10 +23,6 @@ export type CoreRpcCall =
   | { method: 'reorderTabTo'; params: { from: number; to: number } }
   | { method: 'toggleCollapse'; params: { tab?: string } }
   | { method: 'resetAcp'; params: { tab: string } }
-  // Move the active tab's running shell command into a full-tab terminal, for a program that needs
-  // one but never announced it (a password prompt, a bare REPL). No-ops when nothing is running or
-  // the tab's shell is not pty-backed.
-  | { method: 'promoteToTerminal'; params: Record<string, never> }
   // Close the "New harness" launch dialog without launching (Cancel/Escape).
   | { method: 'closeHarnessLaunch'; params: Record<string, never> }
   | { method: 'answerQuestion'; params: { tab: string; id: string; answer: string | null } }
@@ -50,15 +46,7 @@ export type CoreRpcCall =
   // undock it back to the center tab strip (`null`). Explicit set, not "cycle" — the cycle order
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.
   | { method: 'setDock'; params: { index: number; dock: 'left' | 'right' | null } }
-  // Launch a new agent tab whose working directory is the named tab's cwd, triggered by the ➕
-  // button in a harness/agent tab's metadata row. The new agent is auto-named from the pool, joins
-  // the source tab's group, and is focused. `label` is the requesting tab's own label.
-  | { method: 'launchAgentFor'; params: { label: string } }
   | { method: 'launchShellFor'; params: { label: string } }
-  // Write the named agent tab's full transcript to a plain-text file and open it in an editor
-  // tab, triggered by the clipboard button in an agent tab's metadata row. No-ops when the tab
-  // is missing or its log is empty. `label` is the requesting tab's own label.
-  | { method: 'openTranscriptFor'; params: { label: string } }
   // Open the named harness tab's session transcript file (the same file `harness transcript`
   // opens) in an editor tab, triggered by the clipboard button in a harness tab's metadata row.
   // No-ops when the tab has no transcript tailer or no transcript file yet. `label` is the

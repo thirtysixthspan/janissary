@@ -5,7 +5,7 @@ import type { ClientMessage } from '../protocol.js';
 
 // The seven methods declaring `params: Record<string, never>`; their dispatch arms read nothing.
 const NO_PARAMS_METHODS = [
-  'init', 'toggleCollapse', 'promoteToTerminal', 'closeHarnessLaunch',
+  'init', 'toggleCollapse', 'closeHarnessLaunch',
   'projectFiles', 'editorPersonas', 'closeScheduleLaunch',
 ] as const;
 

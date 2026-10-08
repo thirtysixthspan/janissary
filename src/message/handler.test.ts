@@ -20,7 +20,6 @@ const makeController = () =>
     },
     dispatch: vi.fn(),
     answerQuestion: vi.fn(),
-    launchAgentFor: vi.fn(),
     launchShellFor: vi.fn(),
     setActiveTab: vi.fn(),
     focusTab: vi.fn(),
@@ -33,7 +32,6 @@ const makeController = () =>
     reorderTab: vi.fn(),
     reorderTabTo: vi.fn(),
     toggleCollapse: vi.fn(),
-    promoteToTerminal: vi.fn(),
     complete: vi.fn(() => ({ suggestions: [] })),
     resize: vi.fn(),
     ptyInput: vi.fn(),
@@ -71,7 +69,6 @@ const makeController = () =>
     revealFileNavigatorItem: vi.fn(),
     fileNavigatorOpeners: vi.fn(() => ({ choices: [] })),
     reportFileNavigatorSelection: vi.fn(),
-    openTranscriptFor: vi.fn(),
     openHarnessTranscriptFor: vi.fn(),
     openAcpTranscript: vi.fn(),
     reportLayout: vi.fn(),
@@ -212,12 +209,6 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 6, { method: 'toggleCollapse', params: {} });
     expect(controller.toggleCollapse).toHaveBeenCalled();
-  });
-
-  it('routes promoteToTerminal', () => {
-    const controller = makeController();
-    dispatchCall(controller, 7, { method: 'promoteToTerminal', params: {} });
-    expect(controller.promoteToTerminal).toHaveBeenCalled();
   });
 
   it('routes resize', () => {
@@ -508,12 +499,6 @@ describe('handle', () => {
     expect(controller.answerQuestion).toHaveBeenCalledWith('janus', 'question-1', 'Yes');
   });
 
-  it('routes openTranscriptFor through the controller façade', () => {
-    const controller = makeController();
-    dispatchCall(controller, 28, { method: 'openTranscriptFor', params: { label: 'janus' } });
-    expect(controller.openTranscriptFor).toHaveBeenCalledWith('janus');
-  });
-
   it('routes openHarnessTranscriptFor through the controller façade', () => {
     const controller = makeController();
     dispatchCall(controller, 30, { method: 'openHarnessTranscriptFor', params: { label: 'claude' } });
@@ -575,12 +560,6 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 33, { method: 'revealFileNavigatorItem', params: { index: 0, relPath: 'src/a.ts' } });
     expect(controller.revealFileNavigatorItem).toHaveBeenCalledWith(0, 'src/a.ts');
-  });
-
-  it('routes launchAgentFor', () => {
-    const controller = makeController();
-    dispatchCall(controller, 42, { method: 'launchAgentFor', params: { label: 'janus' } });
-    expect(controller.launchAgentFor).toHaveBeenCalledWith('janus');
   });
 
   it('routes launchShellFor', () => {

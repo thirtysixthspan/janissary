@@ -18,14 +18,14 @@ const ROOT_LABEL = 'janus';
 const SHELL_COMMAND = 'zsh --no-workspace';
 
 // The throwaway tab the reset types from. The old shell is closed before the new one opens, so one
-// tab stands in between the two. An agent tab, so nothing the reset types reaches a zsh. Every
+// tab stands in between the two. A temporary shell tab for the application commands used during reset. Every
 // command the reset types lands here, and this tab is closed before the shot runs, which is why the
 // tab a shot stages in has never had a command typed into it.
 const STAGING_LABEL = 'resetting';
 
 // Unworkspaced, because the shell opened from it inherits its workspace: the starting shell has to
 // start unconfined at the launch directory, as the launch shell does.
-const STAGING_COMMAND = `agent ${STAGING_LABEL} --no-workspace`;
+const STAGING_COMMAND = `zsh ${STAGING_LABEL} --no-workspace`;
 
 // A shot can end with a picker, a dialog, or a half-typed command still on screen; all of it has to
 // go before the reset can read the tab strip or type into the command bar.

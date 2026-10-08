@@ -142,11 +142,11 @@ function detachedActions(launching: boolean, failed: boolean): RemoteSessionActi
 
 function detachedRows(entry: SessionDetached): RemoteSessionView[] {
   const { record, failure, terminating } = entry;
-  return record.processes.map((process) => ({
+  return record.processes.filter((process) => process.kind !== 'agent').map((process) => ({
     id: `${record.session}:${process.id}`,
     host: record.host,
     name: process.label,
-    kind: process.kind,
+    kind: process.kind === 'harness' ? 'harness' : 'shell',
     state: 'detached' as const,
     activity: record.activity,
     destination: record.destination,
@@ -160,8 +160,9 @@ function detachedRows(entry: SessionDetached): RemoteSessionView[] {
   }));
 }
 
-function terminatedRow(entry: SessionTerminated): RemoteSessionView {
-  return {
+function terminatedRow(entry: SessionTerminated): RemoteSessionView[] {
+  if (entry.kind === 'agent') return [];
+  return [{
     id: `${entry.session}:terminated`,
     host: entry.host,
     name: entry.name,
@@ -175,7 +176,7 @@ function terminatedRow(entry: SessionTerminated): RemoteSessionView {
     actions: ['forget'],
     label: entry.label,
     session: entry.session,
-  };
+  }];
 }
 
 /**
@@ -188,7 +189,7 @@ export function composeSessionRows(snapshot: SessionsSnapshot): RemoteSessionVie
     ...snapshot.channels.map((channel) => ({ activity: leadActivity(channel), rows: liveRows(channel) })),
     ...snapshot.ssh.map((tab) => ({ activity: tab.activity, rows: [sshRow(tab)] })),
     ...snapshot.detached.map((entry) => ({ activity: entry.record.activity, rows: detachedRows(entry) })),
-    ...snapshot.terminated.map((entry) => ({ activity: entry.activity, rows: [terminatedRow(entry)] })),
+    ...snapshot.terminated.map((entry) => ({ activity: entry.activity, rows: terminatedRow(entry) })),
   ];
   return groups
     .filter((group) => group.rows.length > 0)

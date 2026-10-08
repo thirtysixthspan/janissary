@@ -31,21 +31,15 @@ describe('transcriptIntents', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('turns onPromoteToTerminal into a promote request carrying no parameters', () => {
-    const { send } = fakeClient();
-    transcriptIntents(send).onPromoteToTerminal();
-    expect(send).toHaveBeenCalledWith({ method: 'promoteToTerminal', params: {} });
-  });
-
   // Each intent is one call on the object, not a fresh one: a renderer that re-derives them per
   // render would send through a different client reference each time.
-  it('returns the same four callbacks however many times it is asked', () => {
+  it('returns the same three callbacks however many times it is asked', () => {
     const { send } = fakeClient();
     const first = transcriptIntents(send);
     const second = transcriptIntents(send);
 
     const names = (value: object) => Object.keys(value).toSorted((a, b) => a.localeCompare(b));
-    expect(names(first)).toEqual(['onEditFile', 'onFocusTab', 'onOpenFile', 'onPromoteToTerminal']);
+    expect(names(first)).toEqual(['onEditFile', 'onFocusTab', 'onOpenFile']);
     expect(names(second)).toEqual(names(first));
   });
 });

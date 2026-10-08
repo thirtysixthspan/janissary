@@ -17,9 +17,9 @@ function run(status: TabPluginStatus) {
 
 describe('plugins command', () => {
   it.each([
-    [{ state: 'declared' }, 'video 1.0.0 api=1 state=declared'],
-    [{ state: 'active', activationMs: 7 }, 'video 1.0.0 api=1 state=active activation=7ms'],
-    [{ state: 'disabled', reason: 'chunk rejected' }, 'video 1.0.0 api=1 state=disabled reason=chunk rejected'],
+    [{ state: 'declared' }, 'video 1.0.0 api=2 state=declared'],
+    [{ state: 'active', activationMs: 7 }, 'video 1.0.0 api=2 state=active activation=7ms'],
+    [{ state: 'disabled', reason: 'chunk rejected' }, 'video 1.0.0 api=2 state=disabled reason=chunk rejected'],
   ] satisfies Array<[TabPluginStatus, string]>)('prints the catalog status %#', (status, expected) => {
     const fixture = run(status);
     expect(fixture.append).toHaveBeenCalledWith('janus', { input: 'plugins', output: expected });

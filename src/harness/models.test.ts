@@ -88,7 +88,7 @@ describe('the bundled catalog', () => {
     for (const model of modelsFor(harness)) expect(model).not.toMatch(excluded);
   });
 
-  // The ACP agent — every conversation and every remote agent tab — launches on this exact pair.
+  // The ACP agent — every conversation and every remote tab — launches on this exact pair.
   it('keeps the model the ACP agent launches with', () => {
     expect(modelsFor('opencode')).toContain('google/gemini-3.1-flash-lite');
   });

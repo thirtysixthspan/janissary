@@ -1,8 +1,5 @@
 import type { Command } from './types.js';
-import { command as agent } from './agent.js';
 import { command as next } from './next.js';
-import { command as message } from './msg.js';
-import { command as broadcast } from './broadcast.js';
 import { command as acp } from './acp.js';
 import { command as acpReset } from './acp-reset.js';
 import { command as database } from './db.js';
@@ -39,10 +36,7 @@ import { tabPluginCatalog } from '../plugins/catalog.js';
 import { createPluginCommands } from '../plugins/command-adapter.js';
 
 const coreCommands: Command[] = [
-  agent,
   next,
-  message,
-  broadcast,
   acpReset,
   acp,
   database,

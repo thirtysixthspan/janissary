@@ -159,7 +159,7 @@ export function renderLine(
   }
   if (line.running) {
     return (
-      <RunningLine key={index} hitProps={hitProps} onPromote={intents.onPromoteToTerminal}>
+      <RunningLine key={index} hitProps={hitProps}>
         {renderOutputText(line.text, highlight, index)}
       </RunningLine>
     );

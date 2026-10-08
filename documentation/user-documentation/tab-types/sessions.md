@@ -18,7 +18,7 @@ The list brings its own header bar. In the center it holds **Refresh** and **Spl
 
 ## What's in the list
 
-A row appears for every remote harness, remote agent, `ssh` tab, and remote file navigator this project has open, plus one row per process still running on a host you've detached from. There's no row for a connection by itself — tabs sharing one connection are grouped under the row that launched it, indented beneath it, so one glance shows what a single detach would take with it. Rows sort by most recent activity, newest first.
+A row appears for every remote harness, remote shell, `ssh` tab, and remote file navigator this project has open, plus one row per process still running on a host you've detached from. There's no row for a connection by itself — tabs sharing one connection are grouped under the row that launched it, indented beneath it, so one glance shows what a single detach would take with it. Rows sort by most recent activity, newest first.
 
 An empty list reads `No remote sessions`, and the column headings go with the rows — an empty list is just that line, with no header row above it.
 
@@ -27,7 +27,7 @@ An empty list reads `No remote sessions`, and the column headings go with the ro
 Each row shows:
 
 - **Host** — the bare hostname
-- **Type** — `harness`, `agent`, `ssh`, or `navigator`
+- **Type** — `harness`, `zsh`, `ssh`, or `navigator`
 - **Tab** — the tab's own name
 - **State** — see below
 - **Last activity** — how long ago the row last changed
@@ -79,7 +79,7 @@ Not every failed attach means the same thing, and the row tells you which kind y
 
 Either way a notification names the session, the host, and the reason, and it stays in the feed after the temporary connection tab it was raised in has closed.
 
-A host that accepts the attach but then reports no processes, or never answers at all once it has, is shut down and its record dropped rather than left holding a remote workspace with nothing in it. When an attempt ends, anything it prepared for its tabs is released too, so an agent tab you later open under the same name starts its own shell rather than binding to a process left over from a different session.
+A host that accepts the attach but then reports no processes, or never answers at all once it has, is shut down and its record dropped rather than left holding a remote workspace with nothing in it. When an attempt ends, anything it prepared for its tabs is released too, so a shell tab you later open under the same name starts its own shell rather than binding to a process left over from a different session.
 
 ## Reporting
 

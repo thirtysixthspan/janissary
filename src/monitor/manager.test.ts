@@ -137,6 +137,7 @@ describe('MonitorManager', () => {
     sessions[0].reply('[SUGGESTION]: Rotate that secret\n[COMMAND]: shell git status');
     expect(appended).toHaveLength(1);
     expect(appended[0].label).toBe('janus');
+    expect(appended[0].entry.background).toEqual(expect.any(String));
     expect(appended[0].entry.output).toBe('💡 security: Rotate that secret\nshell git status');
   });
 

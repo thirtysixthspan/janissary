@@ -1,7 +1,7 @@
 import { distinctColor } from '../tab/colors.js';
 import { uniqueLabel } from '../tab/utils.js';
 import type { Managers } from '../managers.js';
-import { startRemoteAgent } from '../profile/remote-agent.js';
+import { startSshBridge } from './ssh-bridge.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import { askSessionState } from '../remote/resume.js';
 import { restoreSessionTabs } from './restore-tabs.js';
@@ -25,7 +25,7 @@ export type AttachOutcome =
 // session whose every recorded process is a shell is still the shell-launched session it was before.
 function isShellSession(record: RemoteSessionRecord): boolean {
   return record.launchKind === 'shell'
-    || (record.processes.length > 0 && record.processes.every((process) => process.kind === 'shell'));
+    || (record.processes.some((process) => process.kind === 'shell') && record.processes.filter((process) => process.kind !== 'agent').every((process) => process.kind === 'shell'));
 }
 
 function shellLaunchLabel(record: RemoteSessionRecord): string {
@@ -95,10 +95,6 @@ export function startSessionAttach(
     const finish = (outcome: AttachOutcome): void => {
       if (settled) return;
       settled = true;
-      // An outcome other than a live attach leaves no shell bound to the adopted spawn id: terminated
-      // means the session is over, and a failure means nothing was established — either way the id
-      // is dropped so no later tab granted this label can claim it.
-      if (outcome.kind !== 'attached') managers.shell.releaseAdoptedShell(label);
       resolve(outcome);
     };
     const resume = {
@@ -137,16 +133,9 @@ export function startSessionAttach(
       return;
     }
 
-    // An agent-launched session: the tab is an ordinary agent tab whose shell runs on the far side,
-    // and its shell binds to the recorded spawn id the moment something asks for one.
-    const spawnId = spawnIdOf(record);
-    if (spawnId !== undefined && !shellSession) {
-      managers.shell.adoptRemoteShell(label, spawnId, record.session);
-    }
-    startRemoteAgent(managers, {
-      resolved: label, creator: managers.tab.cur(), address, offline: false,
+    startSshBridge(managers, {
+      resolved: label, creator: managers.tab.cur(), address,
       cwd: record.workspaceDir, resume: resumed,
-      out: () => {},
     });
   });
 }

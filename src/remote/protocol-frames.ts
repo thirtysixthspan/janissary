@@ -39,7 +39,7 @@ export type RemoteFilesystemArguments = {
 };
 
 // Local → remote. One process family (spawn/input/resize/kill) backs remote harness tabs, remote
-// agent tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
+// tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
   // Ask to take over a session that outlived its transport. `session` is the id the handshake
@@ -65,7 +65,7 @@ export type ClientFrame =
   | {
     type: 'spawn'; id: string; program: string; command: string;
     // How the remote runs it: `pty` for anything a terminal renders (the harness itself, a PTY
-    // takeover, an inline terminal card), `pipe` for an agent tab's persistent shell, whose
+    // takeover, an inline terminal card), `pipe` for an tab's persistent shell, whose
     // sentinel-delimited protocol would be corrupted by a tty's echo and line discipline.
     mode: 'pty' | 'pipe';
     // The harness name, when this process *is* the tab's harness: the remote uses it to build the
@@ -114,7 +114,7 @@ export type ClientFrame =
     type: 'filesystem-request'; session: string; request: string;
     operation: RemoteFilesystemOperation; args: RemoteFilesystemArguments;
   }
-  // The ACP family: a remote agent tab's ACP client is hosted by the far side, so what crosses here
+  // The ACP family: a remote tab's ACP client is hosted by the far side, so what crosses here
   // is prompts and reply text, never JSON-RPC. The local side still chooses which agent and model
   // run, which is why the open frame names the command rather than the remote deciding for itself.
   | {

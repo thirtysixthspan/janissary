@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useLayoutEffect } from 'react';
 // Type-only, so nothing from the catalog or any manifest reaches the browser bundle. It exists to
 // make a client entry that is missing, misspelled, or left behind a compile error rather than a
 // runtime "unknown client plugin" the first time somebody opens that plugin's tab.
@@ -56,7 +56,7 @@ export function clientPlugin<Payload>(
     const module = await loader();
     const Plugin = module.default;
     const ValidatedPlugin = ({ payload, capabilities, onMounted }: MountedProperties) => {
-      useEffect(onMounted, [onMounted]);
+      useLayoutEffect(onMounted, [onMounted]);
       if (!module.isPayload(payload)) throw new Error('invalid plugin payload');
       return <Plugin payload={payload} capabilities={capabilities} />;
     };

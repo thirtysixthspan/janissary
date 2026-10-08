@@ -12,7 +12,7 @@ scrollable transcript. It is a non-agent **view tab** (`view: 'notifications'`):
 standard transcript body fed by its own log, but has no command bar and takes no typed input. Like
 the file navigator tab (see `file-navigator-tab.md`) it is a **live, in-memory view** — never
 persisted, never restored on `--relaunch`. When the feed is empty it shows no content at all —
-unlike an agent tab's empty transcript, it does not show the "Type `help` for available commands"
+unlike a shell tab's empty transcript, it does not show the "Type `help` for available commands"
 hint, since there is no command bar to type into.
 
 There is only ever **one** notifications tab. The user opens it with the `notifications` command,
@@ -133,8 +133,6 @@ These event types can produce a notification line:
   `state-change` it is the idle half of a busy flag clearing, but where that one reports the
   transition and this one reports the tab having been left unread, it is **explicit**: it has no
   configuration toggle and always fires.
-- **`incoming-message`** — a `msg` or `broadcast` is delivered to a tab (detected by the delivered
-  entry carrying a sender).
 - **`schedule-fire`** — a scheduled command fires in a tab (see `scheduling.md`).
 - **`agent-start`** — an ACP session begins its first turn (busy false → true).
 - **`rate-limited`** — an ACP query fails because the underlying provider is rate limiting
@@ -227,7 +225,7 @@ These event types can produce a notification line:
   still alive and the tab stays open, so this line is the only sign of the refusal. Attributed to the
   first tab still holding the remote connection (see `remote-server.md`).
 
-The five ambient events (`state-change`, `incoming-message`, `schedule-fire`, `agent-start`,
+The four ambient events (`state-change`, `schedule-fire`, `agent-start`,
 `rate-limited`) are each **independently togglable and default off** — opt in by editing
 `.janissary/config.json` (see `application-config.md`). The `harness-idle`, `manual`, `auto-approve`, `auto-resume`,
 `editor-suggest`, `question`, `transcript-unavailable`, `e2e-browser-gone`, `file-operation`,
@@ -273,7 +271,7 @@ clock, and returns a fading one to fully visible; moving away restarts it with t
 left. **Clicking** a toast makes the feed visible and clears every toast on screen at once. The
 stack begins beneath the connection indicator, the visible tab's metadata row, and the floating
 status panels that already occupy that corner, so a toast never hides "Cannot reach session" and
-never covers a tab's working directory or its row of actions — on a shell tab as on an agent tab.
+never covers a tab's working directory or its row of actions — on a shell tab as on a shell tab.
 
 **A burst escalates to the feed.** On the third notification inside a ten-second window the
 notifications tab is made visible and every toast is removed at once — sustained activity is more
@@ -306,7 +304,7 @@ the only thing that empties it.
 `build-agent: deploy finished`). It is the deliberate counterpart to the four ambient events: an
 explicit signal that bypasses focus suppression and the per-event toggles, and — like every other
 recorded event — lands in the queue and, when no feed is on screen, appears as a toast.
-It is available from any tab, including agent tabs (an agent dispatches it like
+It is available from any tab, including shell and harness tabs (an agent dispatches it like
 any other command). It records a confirmation entry in the issuing tab. `notify` with no message is
 a usage error (`Usage: notify <message>.`) and records nothing in the feed.
 
@@ -331,7 +329,7 @@ play a short sound. This includes `question`, `harness-idle`, `manual`, `auto-ap
 `editor-suggest`, `transcript-unavailable`, the three recording-failed events,
 `e2e-browser-gone`, `file-operation`, `open-unsupported`, `plugin-note`, `plugin-failure`,
 `schedule-late`, the two remote-session events, the three launch events, and `remote-refused`.
-The five optional ambient events (`state-change`, `incoming-message`, `schedule-fire`,
+The four optional ambient events (`state-change`, `schedule-fire`,
 `agent-start`, `rate-limited`) do not raise a desktop alert or bell, even if their feed toggle is on.
 A report detected earlier and replayed later does not raise either: its detection time belongs in
 the feed, not in an alert implying it happened just now. A visible notifications feed does not
@@ -366,7 +364,7 @@ effect on the next run. The default MP3 assets live in the web bundle's `sounds/
 them requires rebuilding and replacing the installed bundle.
 
 Every notification line carries a colored dot, matching the sending tab's own tab-strip dot
-color — the same colored-dot treatment already used for cross-agent `msg`/`broadcast` deliveries.
+color — the shared tab-colored attribution treatment.
 The sending tab is the background tab whose activity produced the event (or, for `notify`, the
 issuing tab).
 

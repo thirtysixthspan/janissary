@@ -47,6 +47,7 @@ describe('askMonitor', () => {
     expect(managers.tab.startRunning).toHaveBeenCalledWith(
       'owner-tab',
       'monitor ask test-persona test question',
+      { background: expect.any(String) },
     );
     expect(finishRunning).toHaveBeenCalledWith(
       'owner-tab',

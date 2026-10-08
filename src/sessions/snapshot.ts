@@ -12,11 +12,11 @@ import type { RemoteProcessKind, RemoteSessionProcess, RemoteSessionRecord } fro
 // the list is here, so the composition next door stays a pure function of data.
 
 // What a tab is, for the row's third column: what it *is*, matching the tab it opens or would open.
-function tabKind(tab: Tab): RemoteSessionKind {
+function tabKind(tab: Tab): RemoteSessionKind | undefined {
   if (tab.plugin?.id === 'shell') return 'shell';
   if (tab.view === 'files') return 'navigator';
   if (tab.view === 'harness') return 'harness';
-  return 'agent';
+  return undefined;
 }
 
 // The second column: the tab's own name. A navigator shows its root in the abbreviated form the
@@ -30,7 +30,8 @@ function tabName(tab: Tab): string {
 function memberOf(managers: Managers, label: string, activity: number): SessionMember | undefined {
   const tab = managers.tab.byLabel(label);
   if (!tab) return;
-  return { label, name: tabName(tab), kind: tabKind(tab), activity };
+  const kind = tabKind(tab);
+  if (kind) return { label, name: tabName(tab), kind, activity };
 }
 
 /**
@@ -67,7 +68,7 @@ export function sshTabs(managers: Managers, activity: (label: string) => number)
   }));
 }
 
-// A harness process is the tab that launched the channel; a `pipe` process is a joined agent tab's
+// A harness process is the tab that launched the channel; a `pipe` process is a joined tab's
 // shell, whose spawn frame already carries that tab's label as its agent name. Anything else — a PTY
 // takeover, an inline terminal card — belongs to a tab that is already listed and contributes no row
 // of its own.
@@ -95,9 +96,6 @@ function processOf(
         offline: state.offline, cwd,
       };
     }
-  }
-  if (state.mode === 'pipe' && state.agentName !== undefined) {
-    return { id: state.id, label: state.agentName, kind: 'agent' as RemoteProcessKind };
   }
   return undefined;
 }
@@ -143,5 +141,5 @@ export function recordOf(managers: Managers, entry: RemoteEntry, now: number): R
 function launchKindOf(managers: Managers, label: string): RemoteProcessKind {
   const tab = managers.tab.byLabel(label);
   if (tab?.plugin?.id === 'shell') return 'shell';
-  return tab?.view === 'harness' ? 'harness' : 'agent';
+  return 'harness';
 }

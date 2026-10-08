@@ -11,7 +11,7 @@ import { LAUNCH_LABEL } from '../../launch-shell.js';
 // Each tab produces one element of the profile's single `tabs` array, appended in tab-strip order,
 // plus a bump of the per-type counter the save report reads. Monitor reporting tabs are
 // deliberately a no-op here (captured via the monitor manager's snapshot instead), so they never
-// land in `skipped`. An agent tab has no profile entry, so it lands in `skipped`. The launch shell —
+// land in `skipped`. An untyped tab has no profile entry, so it lands in `skipped`. The launch shell —
 // the first tab, labelled `janus` — is left out silently, since every launch opens its own.
 export type CaptureState = {
   harnesses: number;
@@ -48,8 +48,7 @@ export function captureTab(
 ): void {
   if (tab === managers.tab.tabs[0] && tab.label === LAUNCH_LABEL) return;
   switch (tab.view) {
-    case undefined:
-    case 'agent': {
+    case undefined: {
       state.skipped.push(tab.label);
       return;
     }

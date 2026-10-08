@@ -26,10 +26,6 @@ function deliverTo(target: Tab, text: string, managers: CommandManagers): string
     managers.tab.enqueue(target.label, text);
     return null;
   }
-  if (target.view === undefined || target.view === 'agent') {
-    managers.command.dispatchTo(target.label, text);
-    return null;
-  }
   return `Tab "${target.label}" does not accept input.`;
 }
 

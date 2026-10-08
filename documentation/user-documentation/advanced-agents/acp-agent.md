@@ -14,7 +14,7 @@ The reply streams as formatted Markdown in the **ACP** panel above the command b
 
 OpenCode must be installed, authenticated, and on your `PATH`. Run `opencode auth login` in a terminal if you have not signed in. There is no setting to choose a different provider for this connection.
 
-Agent tabs do not query ACP. Their command requests still execute shell, database, browser, and other supported commands, but unrecognized prose gets an unknown-command response. In a shell bar, unclaimed text goes to zsh, so use the explicit `acp` prefix when you want a model reply.
+Use the explicit `acp` prefix for a model reply; unclaimed text in a shell bar goes to zsh.
 
 ## Which model it runs
 

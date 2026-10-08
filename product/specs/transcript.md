@@ -21,10 +21,6 @@ entry it opened. When two runs are in flight on the same tab, whichever finishes
 overwrite the first one's entry with its own output — the interleaved command's entry keeps its own
 output and finishes on its own terms.
 
-### Hidden during interactive PTY takeover
-
-When an interactive program (htop, vim, less, etc.) is running in full-tab PTY mode on the current agent tab, the transcript and command bar are hidden and replaced by the full-tab terminal. When the program exits, the transcript is restored to exactly the state it was in before the PTY launched — no new entries are added.
-
 ### Auto-scroll on output
 
 New output resets scroll offset to 0 (bottom), showing the latest lines.

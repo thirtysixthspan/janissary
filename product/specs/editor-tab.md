@@ -16,7 +16,7 @@ Profiles may also open an editor tab through their `editors` configuration. Thos
 same file, line-targeting, missing-file, and duplicate-file behavior, while profile launch chooses
 the final active main-area tab from its configured focus settings.
 
-An editor tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
+An editor tab is created like a shell tab (see Tabs) — placed contiguously within the active tab's
 group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to
 the new editor tab, and keyboard focus lands in the buffer once its content has loaded, with the
 cursor on the first line (or the requested line, if one was given). If a file is already open in an
@@ -26,7 +26,7 @@ selection is dropped, and the line is scrolled into view. This happens on every 
 when it names the same line as the one before. A request without a line number leaves the cursor
 where it was.
 
-Unlike an agent tab, an editor tab has no shell, agent session, browser, transcript, or command
+Unlike a shell tab, an editor tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a live, in-memory view — like markdown tabs and image
 tabs, it is not saved and is not restored on `--relaunch`.
 
@@ -155,7 +155,7 @@ Tabs), so the horizontal and vertical arrow pairs behave consistently.
 The buffer keeps only the keys it binds. Every other window shortcut works while the buffer has
 focus, exactly as it does from any other tab: Cmd+Shift+[ / Cmd+Shift+] switch tabs, Ctrl+← / Ctrl+→
 move the tab, Ctrl+G opens the tab navigator, Ctrl+R the command history picker, Cmd+P Quick Open,
-and Cmd+T a new agent tab (see Keyboard Navigation). Where the buffer binds a chord that also has a
+and Cmd+T a new shell tab (see Keyboard Navigation). Where the buffer binds a chord that also has a
 window meaning, the buffer wins: Ctrl+A and Ctrl+E move to the line's start and end, Ctrl+P and
 Ctrl+N move the cursor, and Escape collapses the selection. An overlay opened from the editor
 appears over the editor tab and takes every keystroke until it is dismissed. The buffer is not

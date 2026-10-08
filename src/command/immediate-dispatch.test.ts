@@ -14,10 +14,10 @@ describe('agent dispatch without a command queue', () => {
     managers.tab.addBusy('worker');
 
     command.dispatch('shell echo typed');
-    command.dispatchTo('worker', 'shell echo sent', { detect: false });
+    command.dispatchTo('worker', 'shell echo sent');
 
-    expect(managers.shell.run).toHaveBeenCalledWith('worker', 'echo typed', { detect: undefined });
-    expect(managers.shell.run).toHaveBeenCalledWith('worker', 'echo sent', { detect: false });
+    expect(managers.shell.run).toHaveBeenCalledWith('worker', 'echo typed');
+    expect(managers.shell.run).toHaveBeenCalledWith('worker', 'echo sent');
     expect(managers.tab.queueFor('worker')).toEqual([]);
   });
 });

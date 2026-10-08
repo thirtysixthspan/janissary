@@ -28,7 +28,6 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'focusTab':
     case 'closeTab':
     case 'renameTab':
-    case 'promoteToTerminal':
     case 'editQueuedCommand':
     case 'deleteQueuedCommand':
     case 'moveTab':
@@ -40,9 +39,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'revealNotifications':
     case 'setDock':
     case 'openFileNavigatorFor':
-    case 'launchAgentFor':
     case 'launchShellFor':
-    case 'openTranscriptFor':
     case 'openHarnessTranscriptFor':
     case 'openRecordingFor':
     case 'openAcpTranscript': {

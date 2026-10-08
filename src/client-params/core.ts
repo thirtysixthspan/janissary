@@ -32,7 +32,6 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   reorderTabTo: (p) => isInteger(p.from) && isInteger(p.to),
   toggleCollapse: (p) => p.tab === undefined || isString(p.tab),
   resetAcp: (p) => isString(p.tab),
-  promoteToTerminal: noParams,
   closeHarnessLaunch: noParams,
   answerQuestion: (p) => isString(p.tab) && isString(p.id) && (p.answer === null || isString(p.answer)),
   complete: (p) => isString(p.text) && isInteger(p.cursor),
@@ -49,9 +48,7 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   reportTerminalColors: (p) => isString(p.id) && isString(p.fg) && isString(p.bg)
     && (p.palette === undefined || (Array.isArray(p.palette) && p.palette.length === 16 && p.palette.every((color) => isString(color)))),
   setDock: (p) => isInteger(p.index) && isOneOf(p.dock, DOCKS),
-  launchAgentFor: (p) => isString(p.label),
   launchShellFor: (p) => isString(p.label),
-  openTranscriptFor: (p) => isString(p.label),
   openHarnessTranscriptFor: (p) => isString(p.label),
   openRecordingFor: (p) => isString(p.label),
   openAcpTranscript: (p) => isAcpRef(p.acpRef),

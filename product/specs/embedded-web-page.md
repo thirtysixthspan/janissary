@@ -66,12 +66,12 @@ page's metadata header.
 
 ## Page tab
 
-Opening a web address inline opens a new **page tab**: a non-agent tab that displays the embedded
-web page, with no command bar. The tab is created like an agent tab (see Tabs) — placed
+Opening a web address inline opens a new **page tab**: a non-shell tab that displays the embedded
+web page, with no command bar. The tab is created like a shell tab (see Tabs) — placed
 contiguously within the active tab's group, inheriting that group's number and bar color and
 taking a distinct dot color. Focus moves to the new page tab.
 
-Unlike an agent tab, a page tab has no shell, agent session, browser, transcript, or command
+Unlike a shell tab, a page tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like image tabs and
 browser windows, it is not saved and is not restored on `--relaunch`. A profile does capture one,
 by the address it is showing, and reopens it by issuing the same `open` a user would type (see
@@ -146,7 +146,7 @@ highlight, and ordering — with two differences:
   [[tab-label-no-markers]], no type or status marker is appended — the domain only.
 - **Close button.** A close control is shown **right-aligned within the tab, immediately after the
   name**, exactly as for an image tab. Clicking it removes that tab without first selecting it; the
-  click does not also trigger tab selection. The close button is specific to view tabs (agent tabs
+  click does not also trigger tab selection. The close button is specific to view tabs (shell and harness tabs
   continue to close via the `close` command).
 
 ### Closing a page tab

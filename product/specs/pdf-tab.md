@@ -11,11 +11,11 @@ The PDF view is contributed by a **bundled tab plugin** rather than by the appli
 [[tab-plugins]]). Nothing about the view changes because of that: the same file types open the same
 way, and the plugin is present in every build.
 
-A PDF tab is created like an agent tab (see Tabs) — placed contiguously within the active tab's
+A PDF tab is created like a shell tab (see Tabs) — placed contiguously within the active tab's
 group, inheriting that group's number and bar color and taking a distinct dot color. Focus moves to
 the new PDF tab.
 
-Unlike an agent tab, a PDF tab has no shell, agent session, browser, transcript, or command history,
+Unlike a shell tab, a PDF tab has no shell, agent session, browser, transcript, or command history,
 and no persisted agent state. It is a **live, in-memory view** — like image and markdown tabs, it is
 not saved and is not restored on `--relaunch`. A profile can still capture one and reopen it on
 launch (see [[profiles]]). The document shown is the file as it was when opened; later edits to the

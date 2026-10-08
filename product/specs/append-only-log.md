@@ -15,7 +15,7 @@ One file per day, named `<YYYY-MM-DD>.json`. Each line is a single JSON object r
 | Field | Type | Description |
 |-------|------|-------------|
 | `timestamp` | string | Local time when the content was logged, formatted as `HH:MM:SS.mmm` |
-| `agent` | string | The label of the tab (agent) where the content appeared |
+| `zsh` | string | The label of the tab (agent) where the content appeared |
 | `text` | string | The content text (command input, shell output, message text, etc.) |
 
 ### Coverage

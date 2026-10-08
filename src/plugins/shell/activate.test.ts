@@ -112,6 +112,18 @@ function ask(
 }
 
 describe('the zsh command', () => {
+  it('opens a metadata sibling in the existing workspace and cwd without provisioning another clone', () => {
+    const { capabilities, launches, spawns } = fakeCapabilities({ origin: { label: 'harness', cwd: CLONE + '/src', root: '/repo', workspace: { dir: CLONE, offline: true } } });
+    activate().openSibling?.(capabilities);
+    expect(launches).toEqual([]);
+    expect(spawns[0]).toMatchObject({ cwd: CLONE + '/src', workspace: { dir: CLONE, offline: true }, shell: SHELL_PROGRAM });
+  });
+
+  it('opens a remote metadata sibling through the existing channel', () => {
+    const { capabilities, launches } = fakeCapabilities({ origin: { label: 'remote-harness', cwd: '/remote/work/src', root: '/repo', remote: true } });
+    activate().openSibling?.(capabilities);
+    expect(launches[0].request).toMatchObject({ remote: { join: true } });
+  });
   it('launches a shell with a fresh workspace by default, holding the provisioning placeholder', () => {
     const { capabilities, opened, spawns, launches } = fakeCapabilities();
 

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { MonitorSub } from './live-monitors.js';
 import { SUGGESTION_PREFIX } from './suggestion.js';
 import type { Managers } from '../managers.js';
@@ -20,7 +21,7 @@ export function askMonitor(
 ): void {
   reg.inFlight = true;
   let reply = '';
-  managers.tab.startRunning(owner, `monitor ask ${name} ${question}`);
+  managers.tab.startRunning(owner, `monitor ask ${name} ${question}`, { background: randomUUID() });
   const prompt = `[Question from the user]\n${question}\n\nAnswer directly; the suggestion format does not apply to this reply.`;
   recordContext(reg, prompt, 'input');
   reg.session.prompt(prompt, {

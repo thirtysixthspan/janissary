@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync } from
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createController, type Controller } from './controller.js';
-import { seedRootAgentTab } from './tab/root-agent-test-fixture.js';
+import { seedRootTab, seedTestTab } from './tab/root-tab-test-fixture.js';
 import { initGlobalHistory, globalCommands } from './global-history.js';
 import { initProfileDir } from './profiles.js';
 import { messageBus } from './bus.js';
@@ -12,7 +12,6 @@ import { abbreviatePath } from './paths.js';
 import { initDbDir, isConnectionOpen, closeAllConnections } from './connections.js';
 import { loadConfig } from './config.js';
 import { openNotificationsTab } from './notifications/tab.js';
-import { agentNames } from './agent/names.js';
 import { spawnPty } from './pty.js';
 import type { PtyHandlers } from './pty.js';
 import type { BusEvent } from './bus.js';
@@ -35,7 +34,7 @@ const liveControllers: Controller[] = [];
 const makeController = () => {
   let states = 0;
   const c = createController({ emitState: () => { states++; }, sendPty: () => {}, sendPtyExit: () => {} });
-  seedRootAgentTab(c.managers.tab);
+  seedRootTab(c.managers.tab);
   liveControllers.push(c);
   return { c, get states() { return states; } };
 };
@@ -98,41 +97,6 @@ describe('Controller', () => {
     expect(c.view()[0].bufferLines).toHaveLength(0);
   });
 
-  it('creates a named agent tab and switches focus to it', () => {
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    expect(c.view().map((t) => t.label)).toContain('bob');
-    // Focus switches to the new agent tab.
-    expect(c.view()[c.managers.tab.activeTab].label).toBe('bob');
-  });
-
-  it('draws a random pool name for a bare agent command', () => {
-    const { c } = makeController();
-    c.dispatch('agent --no-workspace');
-    const created = c.view().map((t) => t.label).filter((l) => l !== 'janus');
-    expect(created).toHaveLength(1);
-    expect(agentNames).toContain(created[0]);
-  });
-
-  it('refuses a second agent with an open tab\'s name in the notifications feed, not the transcript', () => {
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.dispatch('agent bob --no-workspace');
-    expect(c.managers.notifications.all.map((n) => n.message))
-      .toContain('Cannot launch "bob": a tab named "bob" is already open.');
-    expect(allText(c)).not.toContain('Cannot launch');
-    expect(c.view().filter((t) => t.label === 'bob')).toHaveLength(1);
-  });
-
-  it('a child agent inherits the creator group and bar color', () => {
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    const janus = c.view().find((t) => t.label === 'janus')!;
-    const bob = c.view().find((t) => t.label === 'bob')!;
-    expect(bob.group).toBe(janus.group);
-    expect(bob.groupColor).toBe(janus.groupColor);
-  });
-
   it('a launched profile forms its own group, distinct from the root', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-prof-'));
     initProfileDir(root); // profiles live under <root>/profiles/<name>
@@ -177,7 +141,7 @@ describe('Controller', () => {
   it('attributes a SQLite connection only to the tab that opened it', () => {
     initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-db-')));
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace'); // focus moves to bob
+    seedTestTab(c.managers.tab, 'bob'); // focus moves to bob
     c.setActiveTab(0);
     c.dispatch('db sqlite create panel_db'); // runs on the active tab (janus)
     try {
@@ -195,7 +159,7 @@ describe('Controller', () => {
     initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-db2-')));
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
-    seedRootAgentTab(c.managers.tab);
+    seedRootTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch('db sqlite create lastdb');
     expect(isConnectionOpen('lastdb')).toBe(true);
@@ -217,7 +181,7 @@ describe('Controller', () => {
   it('shutdown invokes a disposer added to any registered manager', () => {
     const { c } = makeController();
     const dispose = vi.fn();
-    c.managers.capture.dispose = dispose;
+    c.managers.connection.dispose = dispose;
 
     c.shutdown();
 
@@ -274,7 +238,7 @@ describe('Controller', () => {
   it('quit asks the host to exit', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
-    seedRootAgentTab(c.managers.tab);
+    seedRootTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch('quit');
     expect(isExited).toBe(true);
@@ -283,9 +247,9 @@ describe('Controller', () => {
   it('exit is an alias of close — with other tabs open it closes the tab, not the host', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
-    seedRootAgentTab(c.managers.tab);
+    seedRootTab(c.managers.tab);
     liveControllers.push(c);
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     c.setActiveTab(1);
     c.dispatch('exit');
     expect(isExited).toBe(false);
@@ -294,7 +258,7 @@ describe('Controller', () => {
 
   it('close removes the active tab and its connections', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     c.setActiveTab(1);
     c.dispatch('close');
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
@@ -304,8 +268,8 @@ describe('Controller', () => {
   // the tab the user acted on wherever the list has since placed it.
   it('closeTab closes the named tab rather than the one at any position', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.dispatch('agent carol --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
+    seedTestTab(c.managers.tab, 'carol');
     const before = c.view().map((t) => t.label);
     c.closeTab('bob');
     expect(c.view().map((t) => t.label)).toEqual(before.filter((label) => label !== 'bob'));
@@ -313,7 +277,7 @@ describe('Controller', () => {
 
   it('closeTab for a label no longer open closes nothing', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     const labels = c.view().map((t) => t.label);
     const active = c.managers.tab.activeTab;
     c.closeTab('nobody');
@@ -324,7 +288,7 @@ describe('Controller', () => {
   it('closing the last tab quits the app', () => {
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
-    seedRootAgentTab(c.managers.tab);
+    seedRootTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch('close'); // only tab open -> behaves like quit
     expect(isExited).toBe(true);
@@ -334,7 +298,7 @@ describe('Controller', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'janus-last-tab-'));
     let isExited = false;
     const c = createController({ emitState() {}, sendPty() {}, sendPtyExit() {}, exit() { isExited = true; } });
-    seedRootAgentTab(c.managers.tab);
+    seedRootTab(c.managers.tab);
     liveControllers.push(c);
     c.dispatch(`files left ${root}`);
     c.dispatch('close'); // close the active (janus) tab — only non-docked tab
@@ -370,14 +334,6 @@ describe('Controller', () => {
     expect(allText(c)).toBe('');
   });
 
-  it('tab-completes a msg recipient against agent names', () => {
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    const res = c.complete('msg b', 5);
-    expect(res.newInput).toBe('msg bob ');
-    expect(res.matches).toEqual(['bob']);
-  });
-
   it('tab-completes a filesystem path for shell commands', () => {
     const { c } = makeController(); // cwd is the repo root, which has README.md
     const res = c.complete('shell READ', 10);
@@ -386,7 +342,7 @@ describe('Controller', () => {
 
   it('cycles and toggles via UI shortcuts', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     c.setActiveTab(0);
     expect(c.managers.tab.activeTab).toBe(0);
     c.moveTab(1);
@@ -397,8 +353,8 @@ describe('Controller', () => {
 
   it('reorders the active tab within its group, renumbering and following the move', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.dispatch('agent carol --no-workspace'); // all three share group 1; order: janus, bob, carol
+    seedTestTab(c.managers.tab, 'bob');
+    seedTestTab(c.managers.tab, 'carol'); // all three share group 1; order: janus, bob, carol
     c.setActiveTab(2); // carol
     c.reorderTab(-1);
     expect(c.view().map((t) => t.label)).toEqual(['janus', 'carol', 'bob']);
@@ -408,7 +364,7 @@ describe('Controller', () => {
 
   it('is a no-op when reordering past the strip edge', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     c.setActiveTab(0);
     c.reorderTab(-1); // janus is already leftmost
     expect(c.view().map((t) => t.label)).toEqual(['janus', 'bob']);
@@ -427,8 +383,8 @@ describe('Controller', () => {
 
   it('reorders a non-active tab to an absolute position and follows it', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.dispatch('agent carol --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
+    seedTestTab(c.managers.tab, 'carol');
     openMonitorTab(c.managers, 'reviewer', '#fff');
     c.reorderTabTo(1, 0);
     expect(c.view().map((tab) => tab.label)).toEqual(['bob', 'janus', 'carol', 'reviewer']);
@@ -438,7 +394,7 @@ describe('Controller', () => {
 
   it('reorders reporting tabs without changing action focus', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     const activeLabel = c.view()[c.managers.tab.activeTab].label;
     openMonitorTab(c.managers, 'reviewer', '#fff');
     openMonitorTab(c.managers, 'security', '#fff');
@@ -464,40 +420,6 @@ describe('Controller', () => {
     expect(v.schedule.map((s) => s.id)).toContain('nightly');
     expect(v.schedule[0].next).toBeTruthy();
     expect(Array.isArray(v.connections)).toBe(true);
-  });
-
-  it('delivers an info message to another agent', () => {
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.setActiveTab(0);
-    c.dispatch('msg bob info hello there');
-    const bob = c.view().find((t) => t.label === 'bob')!;
-    const messageLine = bob.bufferLines.find((l) => l.type === 'message' && l.from === 'janus');
-    expect(messageLine?.text).toContain('hello there');
-  });
-
-  it('delivers a message to an agent addressed by its display alias', () => {
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.setActiveTab(c.view().findIndex((t) => t.label === 'bob'));
-    c.dispatch('rename buddy'); // bob now displays as "buddy"
-    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
-    c.dispatch('msg buddy info hello there');
-    const bob = c.view().find((t) => t.label === 'bob')!;
-    const messageLine = bob.bufferLines.find((l) => l.type === 'message' && l.from === 'janus');
-    expect(messageLine?.text).toContain('hello there');
-  });
-
-  it('broadcasts info to all other agents', () => {
-    const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
-    c.dispatch('agent carol --no-workspace');
-    c.setActiveTab(0);
-    c.dispatch('broadcast all info ping');
-    for (const label of ['bob', 'carol']) {
-      const tab = c.view().find((t) => t.label === label)!;
-      expect(tab.bufferLines.some((l) => l.type === 'message' && l.text.includes('ping'))).toBe(true);
-    }
   });
 
   it('lists connections (none open) and profiles (none)', () => {
@@ -705,7 +627,7 @@ describe('Controller page tabs', () => {
 
   it('close <tabname> closes the named tab', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     expect(c.view().map((t) => t.label)).toContain('bob');
     c.dispatch('close bob');
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
@@ -713,7 +635,7 @@ describe('Controller page tabs', () => {
 
   it('exit <tabname> closes the named tab (alias)', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     c.dispatch('exit bob');
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
   });
@@ -726,7 +648,7 @@ describe('Controller page tabs', () => {
 
   it('close <tabname> is case-insensitive', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     c.dispatch('close BOB');
     expect(c.view().map((t) => t.label)).toEqual(['janus']);
   });
@@ -974,13 +896,6 @@ describe('Controller ssh tab', () => {
     expect(c.view().map((t) => t.label)).not.toContain('ssh');
     expect(vi.mocked(spawnPty)).not.toHaveBeenCalled();
   });
-
-  it('regression: shell ssh host still opens an inline terminal card, not an ssh tab', () => {
-    const { c } = makeController();
-    c.dispatch('shell ssh host');
-    expect(c.view().map((t) => t.label)).not.toContain('host');
-    expect(c.view()[0].activePty).toBeDefined();
-  });
 });
 
 describe('Controller send command', () => {
@@ -1000,27 +915,10 @@ describe('Controller send command', () => {
     await vi.waitFor(() => expect(pty.write).toHaveBeenCalledWith('\r'));
   });
 
-  it('delivers text to an agent tab by dispatching it as a command', () => {
-    const { c } = makeController();
-    c.dispatch('agent worker --no-workspace');
-    c.dispatch('send worker state');
-    expect(c.view().find((t) => t.label === 'worker')!.cmdHistory).toContain('state');
-  });
-
   it('errors when the target tab does not exist', () => {
     const { c } = makeController();
     c.dispatch('send nobody hi');
     expect(allText(c)).toContain('No tab named "nobody".');
-  });
-
-  it('delivers text to a tab addressed by its display alias', () => {
-    const { c } = makeController();
-    c.dispatch('agent worker --no-workspace');
-    c.setActiveTab(c.view().findIndex((t) => t.label === 'worker'));
-    c.dispatch('rename reviewer'); // worker now displays as "reviewer"
-    c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
-    c.dispatch('send reviewer state'); // addressed by alias, not label
-    expect(c.view().find((t) => t.label === 'worker')!.cmdHistory).toContain('state');
   });
 
   it('errors when the target harness has exited', () => {
@@ -1059,7 +957,7 @@ describe('Controller schedule in another tab', () => {
 
   it('an `in <tab>` entry shows in the target tab view, not the issuing tab', () => {
     const { c } = makeController();
-    c.dispatch('agent worker --no-workspace');
+    seedTestTab(c.managers.tab, 'worker');
     c.setActiveTab(0);
     c.dispatch('schedule sweep in worker every 1h db vacuum');
     expect(c.view().find((t) => t.label === 'worker')!.schedule.map((s) => s.id)).toContain('sweep');
@@ -1123,7 +1021,7 @@ describe('Controller messageBus', () => {
 
   it('emits tab:removed when closeTab is called', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     const events = collect();
     c.closeTab('bob');
     expect(events.some((e) => e.type === 'tab:removed' && e.tabLabel === 'bob')).toBe(true);
@@ -1137,16 +1035,16 @@ describe('Controller messageBus', () => {
       loadConfig(root);
       const { c } = makeController();
       // `agent fooN` appended to the creator tab (janus) each time
-      c.dispatch('agent foo1 --no-workspace');
+      c.managers.tab.append('janus', { input: 'foo1', output: 'ready' });
       c.setActiveTab(0);
-      c.dispatch('agent foo2 --no-workspace');
+      c.managers.tab.append('janus', { input: 'foo2', output: 'ready' });
       c.setActiveTab(0);
-      c.dispatch('agent foo3 --no-workspace');
+      c.managers.tab.append('janus', { input: 'foo3', output: 'ready' });
       c.setActiveTab(0);
       const events: BusEvent[] = [];
       messageBus.on('transcript', ['entry:appended', 'entries:trimmed'], (e) => { events.push(e); });
       // 4th dispatch exceeds cap=3, triggering entries:trimmed then entry:appended
-      c.dispatch('agent foo4 --no-workspace');
+      c.managers.tab.append('janus', { input: 'foo4', output: 'ready' });
       const trimIdx = events.findIndex((e) => e.type === 'entries:trimmed');
       const appendIdx = events.findIndex((e) => e.type === 'entry:appended');
       expect(trimIdx).toBeGreaterThanOrEqual(0);
@@ -1167,7 +1065,7 @@ describe('Controller messageBus', () => {
 describe('Controller unread badge', () => {
   it('append to a non-active tab sets hasUnread', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     c.setActiveTab(0);
     const bobIndex = c.view().findIndex((t) => t.label === 'bob');
     expect(c.managers.tab.activeTab).not.toBe(bobIndex);
@@ -1185,7 +1083,7 @@ describe('Controller unread badge', () => {
     vi.useFakeTimers();
     try {
       const { c } = makeController();
-      c.dispatch('agent bob --no-workspace');
+      seedTestTab(c.managers.tab, 'bob');
       c.setActiveTab(0);
       c.managers.tab.append('bob', { input: 'hello', output: 'world' });
       expect(c.view().find((t) => t.label === 'bob')!.hasUnread).toBe(true);
@@ -1203,7 +1101,7 @@ describe('Controller unread badge', () => {
 
   it('finishRunning to a non-active tab sets hasUnread', () => {
     const { c } = makeController();
-    c.dispatch('agent bob --no-workspace');
+    seedTestTab(c.managers.tab, 'bob');
     c.setActiveTab(0);
     c.managers.tab.startRunning('bob', 'sleep 1');
     c.managers.tab.finishRunning('bob', 'done');
@@ -1541,102 +1439,6 @@ describe('Controller sidebar docking', () => {
   });
 });
 
-describe('Controller notifications feed', () => {
-  const withConfig = (events: Record<string, boolean>) => {
-    const root = mkdtempSync(path.join(tmpdir(), 'janus-notif-'));
-    mkdirSync(path.join(root, '.janissary'), { recursive: true });
-    writeFileSync(path.join(root, '.janissary', 'config.json'), JSON.stringify({ notifications: { events } }));
-    loadConfig(root);
-  };
-  const reset = () => loadConfig(mkdtempSync(path.join(tmpdir(), 'janus-notif-reset-')));
-
-  const feedText = (c: Controller) =>
-    c.view().find((t) => t.view === 'notifications')!.bufferLines.map((l) => l.text).join('\n');
-
-  it('records an incoming message to a background tab when the notifications tab is open', () => {
-    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
-    try {
-      const { c } = makeController();
-      c.dispatch('agent bob --no-workspace');
-      openNotificationsTab(c.managers);
-      c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is a background tab
-      c.dispatch('msg bob info hello there');
-      expect(feedText(c)).toContain('Message from janus in bob');
-    } finally {
-      reset();
-    }
-  });
-
-  it('colors the notification dot with the sending tab\'s own dotColor', () => {
-    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
-    try {
-      const { c } = makeController();
-      c.dispatch('agent bob --no-workspace');
-      const bobColor = c.view().find((t) => t.label === 'bob')!.dotColor;
-      openNotificationsTab(c.managers);
-      c.setActiveTab(c.view().findIndex((t) => t.label === 'janus')); // janus active; bob is a background tab
-      c.dispatch('msg bob info hello there');
-      const line = c.view().find((t) => t.view === 'notifications')!.bufferLines.find((l) => l.type === 'message');
-      expect(line?.from).toMatch(/ bob$/); // header is "<time> bob"
-      expect(line?.fromColor).toBe(bobColor);
-    } finally {
-      reset();
-    }
-  });
-
-  it('leads each recorded notification header with a 12-hour timestamp', () => {
-    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
-    try {
-      const { c } = makeController();
-      c.dispatch('agent bob --no-workspace');
-      openNotificationsTab(c.managers);
-      c.setActiveTab(c.view().findIndex((t) => t.label === 'janus'));
-      c.dispatch('msg bob info hello there');
-      const line = c.view().find((t) => t.view === 'notifications')!.bufferLines.find((l) => l.type === 'message');
-      expect(line?.from).toMatch(/^\d{1,2}:\d{2}(am|pm) bob$/);
-      expect(line?.text).toBe('Message from janus in bob');
-    } finally {
-      reset();
-    }
-  });
-
-  // One event no longer docks a sidebar in — it toasts — but it is held either way, so a feed
-  // opened afterwards renders it.
-  it('holds the event without opening a feed when the notifications tab is closed', () => {
-    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
-    try {
-      const { c } = makeController();
-      c.dispatch('agent bob --no-workspace');
-      c.setActiveTab(0);
-      c.dispatch('msg bob info hello there');
-      expect(c.view().find((t) => t.view === 'notifications')).toBeUndefined();
-      c.dispatch('notifications right');
-      expect(feedText(c)).toContain('Message from janus in bob');
-    } finally {
-      reset();
-    }
-  });
-
-  // Creating a tab focuses it, and docking a focused tab moves focus to whatever sits nearest — so
-  // without restoring it, a burst escalating in the background would move the user somewhere else.
-  it('leaves the active tab where it was when a burst opens the feed itself', () => {
-    withConfig({ incomingMessage: true, stateChange: false, scheduleFire: false, agentStart: false });
-    try {
-      const { c } = makeController();
-      c.dispatch('agent bob --no-workspace');
-      c.setActiveTab(0);
-      const before = c.view()[c.managers.tab.activeTab].label;
-      c.dispatch('msg bob info one');
-      c.dispatch('msg bob info two');
-      c.dispatch('msg bob info three');
-      expect(c.view().find((t) => t.view === 'notifications')?.dock).toBe('right');
-      expect(c.view()[c.managers.tab.activeTab].label).toBe(before);
-    } finally {
-      reset();
-    }
-  });
-});
-
 describe('Controller notifications command', () => {
   it('opens a singleton notifications tab and reuses it on a second invocation', () => {
     const { c } = makeController();
@@ -1771,13 +1573,6 @@ describe('Controller direct RPC delegators', () => {
     c.openFileNavigatorFor('janus');
     expect(c.view().some((t) => t.view === 'files')).toBe(true);
   });
-
-  it('launchAgentFor RPC launches a new agent rooted at the target tab\'s cwd', () => {
-    const { c } = makeController();
-    const before = c.view().length;
-    c.launchAgentFor('janus');
-    expect(c.view()).toHaveLength(before + 1);
-  });
 });
 
 // The remaining thin bindings on the controller itself. Each has one job — route the call to the
@@ -1842,30 +1637,6 @@ describe('Controller transcript buttons', () => {
     initHarnessCaptureDirectory(mkdtempSync(path.join(tmpdir(), 'janus-captures-')));
     return makeController();
   };
-
-  // Each of these writes what it opened to a capture file and opens it in an editor, so the
-  // assertion is that an editor tab appeared for a tab that had something to show.
-  it('openTranscriptFor opens an editor tab for a tab that has spoken', () => {
-    const { c } = makeCapturing();
-    c.managers.tab.append('janus', { input: 'hello', output: 'world' });
-    const before = editorTabs(c);
-    c.openTranscriptFor('janus');
-    expect(editorTabs(c)).toBe(before + 1);
-  });
-
-  it('openTranscriptFor opens nothing for a tab with nothing said in it', () => {
-    const { c } = makeCapturing();
-    const before = editorTabs(c);
-    c.openTranscriptFor('janus');
-    expect(editorTabs(c)).toBe(before);
-  });
-
-  it('openTranscriptFor opens nothing for a label no open tab carries', () => {
-    const { c } = makeCapturing();
-    const before = editorTabs(c);
-    expect(() => { c.openTranscriptFor('gone'); }).not.toThrow();
-    expect(editorTabs(c)).toBe(before);
-  });
 
   // A harness tab has no transcript of its own to print one into, so this is a silent no-op rather
   // than an error string: there is nothing to report when there was never a question asked.

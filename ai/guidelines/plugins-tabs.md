@@ -87,7 +87,7 @@ A plugin tab docks into either sidebar through the same mechanism the built-in d
 
 ## Host notifications
 
-A declaration may name host topics under `notifications`, and one that does must supply `notify` on its activation or it is disabled at activation — a notification has no caller and no transcript, so there is nothing for a rejection to answer into. v1 defines four topics — `schedules`, `conversations`, `sessions`, and `databases` — each carrying a named slice the host already computes. A topic is always a named, already-coalesced signal; the raw state broadcast is never one, because it fires on essentially every mutation including per-keystroke shell output.
+A declaration may name host topics under `notifications`, and one that does must supply `notify` on its activation or it is disabled at activation — a notification has no caller and no transcript, so there is nothing for a rejection to answer into. v2 defines four topics — `schedules`, `conversations`, `sessions`, and `databases` — each carrying a named slice the host already computes. A topic is always a named, already-coalesced signal; the raw state broadcast is never one, because it fires on essentially every mutation including per-keystroke shell output.
 
 A topic action returns nothing, so an action that needs a round trip carries a request id the plugin mints and the answer comes back on the next delivery carrying the same one. Keep that id and its follow-up together in the tab payload, mint it with `randomUUID()` rather than a counter (the host echoes it, so two plugins on one topic must not collide on `q1`), and re-issue rather than wait when an answer does not arrive. See `documentation/developer-documentation/tab-plugins.md` for the worked shape.
 
@@ -123,7 +123,7 @@ ESLint forbids concrete server plugins from reaching two levels into host intern
 
 The client plugin host — everything directly under `web/src/plugins/` — is reachable from the entry bundle, so it may not import a plugin shared contract at runtime at all; doing so ships that plugin's guards eagerly and defeats the lazy chunk. Type-only imports are fine because they are erased before the bundler sees them, and `web/src/plugins/registry.tsx` uses one to pin its entries against the catalog so a missing client entry is a compile error. Schema versions there are literals, checked against each plugin's own constant by a test rather than by an import. After changing anything in that file, rebuild and confirm each plugin's modules are still in its own chunk.
 
-`TAB_PLUGIN_API_VERSION` is one integer. Additive optional declaration fields, capabilities, or hooks keep v1 compatible. Removal, rename, type tightening, payload-meaning change, or observable ordering change increments it. Breaking the frozen `fixture-v1` round trip is a major bump by definition. Keep an API fixture until that version is formally removed; introduce replacements and a documented deprecation window before removal.
+`TAB_PLUGIN_API_VERSION` is one integer. Additive optional declaration fields, capabilities, or hooks keep the current API version compatible. Removal, rename, type tightening, payload-meaning change, or observable ordering change increments it. API v2 formally removes the agent launch contract. Preserve the frozen `fixture-v1` implementation; host tests reject explicit v1 declarations and exercise the same shared round-trip behavior under v2.
 
 ## Adding a plugin checklist
 
@@ -142,4 +142,4 @@ Before finishing a new tab plugin, verify all of these exist and agree:
 
 ## Core ACP
 
-ACP is a core tab service, never a concrete tab plugin. A tab plugin opts in with `startAcp`, `promptAcp`, and `resetAcp`, scoped to its own tab. Use the host's `useAcpResponse` surface for streaming rather than duplicating session, tool-loop, rendering, or lifecycle behavior in the plugin. Provider latency belongs to core and is exempt from plugin budgets. Agent tabs have no ACP command or prose route.
+ACP is a core tab service, never a concrete tab plugin. A tab plugin opts in with `startAcp`, `promptAcp`, and `resetAcp`, scoped to its own tab. Use the host's `useAcpResponse` surface for streaming rather than duplicating session, tool-loop, rendering, or lifecycle behavior in the plugin. Provider latency belongs to core and is exempt from plugin budgets.

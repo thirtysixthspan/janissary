@@ -6,8 +6,7 @@ import { createRemotePtySession, type RemotePtyOptions } from './remote/pty-sess
 import type { RemoteChannel } from './remote/channel/index.js';
 import type { Managers } from './managers.js';
 
-// Owns the live PTY sessions (keyed by their id) backing harness tabs, full-tab interactive command
-// takeovers, and inline terminal cards, plus the dimensions new PTYs are spawned at. The controller
+// Owns the live PTY sessions (keyed by their id) backing harness and plugin terminals, plus the dimensions new PTYs are spawned at. The controller
 // owns the tabs these PTYs belong to; this module owns the sessions and their I/O, handing
 // tab-affecting events back through the host.
 export class PseudoterminalManager {
@@ -96,7 +95,7 @@ export class PseudoterminalManager {
   // Register a process running on another machine as one of this tab's PTYs. The session satisfies
   // `PtySession`, so `input`, `resizeOne`, `kill`, `terminalsFor`, `closeTab`, and `closeAll` reach
   // it unchanged; an inbound exit frame is routed into the same private `handleExit` a local PTY's
-  // own exit handler calls, so the exit bus event, the `activePty` clear, and the inline-card status
+  // own exit handler calls, so the exit bus event and the inline-card status
   // update all happen identically.
   //
   // `recordedId` adopts a spawn id the far side already knows instead of minting one. That is what
@@ -183,33 +182,6 @@ export class PseudoterminalManager {
     }
   }
 
-  // Create an inline terminal card: spawn a PTY running `command` in the tab's cwd and attach its
-  // id to `tab.activePty` so the client renders a terminal widget in the transcript. A workspaced
-  // tab's own `workspaceDir`/`offline` carry over to inline PTYs (e.g. `shell vim` inside it).
-  // A remote tab has no local `workspaceDir`/`offline` to confine an inline PTY with, so it asks
-  // that tab's channel for one instead and lets the remote server apply its own sandbox — the
-  // confinement decision belongs to the machine the process runs on.
-  openInlinePty(label: string, command: string, program: string): void {
-    const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
-    const tab = this.managers.tab.byLabel(label);
-    const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
-    const id = channel
-      ? this.registerRemotePty(label, channel, { program, command })
-      : this.spawn(label, program, command, cwd, tab?.workspaceDir, tab?.offline);
-    for (const t of this.managers.tab.tabs) {
-      if (t.label === label) { t.activePty = id; break; }
-    }
-    messageBus.emit('state', { type: 'dirty' });
-  }
-
-  // Kill and forget every PTY belonging to a tab (on tab close).
-  //
-  // A transport is left alone whatever its channel's table entry says. Every path that ends a
-  // session drops the channel from `RemoteManager`'s table before running the sweep that closes its
-  // tabs, so asking the manager here answers "not a transport" exactly when the shutdown drain is in
-  // flight — and the first tab closed in that sweep would kill the ssh PTY out from under it,
-  // discarding the `shutdown` frame that stops the far side's work. `RemoteManager` ends its own
-  // transports; `closeAll` below is where an orphaned one is still reaped.
   closeTab(label: string): void {
     for (const [id, entry] of this.ptys) {
       if (entry.tabLabel !== label || entry.transport === true) continue;
@@ -235,15 +207,11 @@ export class PseudoterminalManager {
     this.closeAll();
   }
 
-  // Drop the exited PTY from the registry, clear `activePty` on full-tab takeovers, update inline
+  // Drop the exited PTY from the registry, update inline
   // terminal card entries, then let the controller handle harness updates and client notification.
   private handleExit(id: string, exitCode: number): void {
     const hadEntry = this.ptys.delete(id);
 
-    // Clear activePty for full-tab interactive PTY takeovers.
-    for (const tab of this.managers.tab.tabs) {
-      if (tab.activePty === id) tab.activePty = undefined;
-    }
 
     // Update inline terminal card status in the log.
     if (hadEntry) {

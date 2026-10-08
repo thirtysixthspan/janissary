@@ -1,3 +1,4 @@
+import { useBackgroundReplies } from './useBackgroundReplies';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CommandBarShell, useAppCommandBar, useCommandBarKeys, usePluginChordClaims, useAcpResponse } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
@@ -69,6 +70,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   });
 
   useShellTerminalStatus(capabilities);
+  useBackgroundReplies(capabilities.onBackgroundReply, displayReply);
 
   // Focus belongs to the command line at all times, and a tab that has just become the visible one is
   // exactly when it would otherwise be sitting on the body after a click elsewhere.
@@ -108,7 +110,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     }
     if (handleQueueKey(event, queueOpen, draft, appBar.onDeleteQueued)) return;
     if (appBar.overlayOwnsCommandBar) return;
-    // The history popup is modal over the bar while it is open, exactly as the agent tab's own history
+    // The history popup is modal over the bar while it is open, exactly as the tab's own history
     // picker is: its window listener owns Up, Down, Return and Escape. Handling them here as well would
     // mean one ArrowUp both moved its selection and rewrote the bar, since the bar's recall walks the
     // very lines the popup lists.

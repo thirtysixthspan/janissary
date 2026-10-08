@@ -15,7 +15,7 @@ Monitors are tool-less by default and receive no filesystem or terminal access. 
 
 `monitor <persona> [target...]` behaves differently depending on whether you give it targets:
 
-- **No targets (inline mode)**: the monitor watches the tab you started it from and posts suggestions right into that tab's own transcript, prefixed with the persona name and a sparkle.
+- **No targets (inline mode)**: the monitor watches the tab you started it from and posts suggestions into that shell’s visible output and shared activity log, prefixed with the persona name and a sparkle.
 - **One or more targets (reporting-tab mode)**: the monitor watches the named tabs (or groups) instead, and its suggestions go to a dedicated reporting tab, colored after the tab(s) it watches.
 
 A target is a tab label or `group:<n>`. A tab may also be named by its display alias (see [`rename`](/user-documentation/command-bar/commands)), matched case-insensitively; `unmonitor`'s target argument works the same way. Once the monitor's session connects, the owner tab's transcript shows a line naming the monitor, its model, and a one-sentence summary of the persona's role.
@@ -49,7 +49,7 @@ If two owner tabs share one reporting tab (the same persona started from two dif
 
 A monitor receives each target's **full existing history** the moment it starts, not just activity from then on:
 
-- An agent tab feeds its complete transcript, in order.
+- A shell tab feeds its application transcript in order; native zsh scrollback is not an application transcript.
 - A harness tab feeds its normalized session transcript first, then its latest on-screen text. The transcript includes subagent activity and arrives in history order; the screen follows so the monitor can see current interactive state such as a permission prompt, spinner, or TUI panel. The transcript is sent incrementally after the monitor's previous flush. An SSH tab has no session transcript, so it feeds only its latest on-screen text, refreshed when the screen changes.
 - An editor tab feeds its live (possibly unsaved) buffer content: the first feed is the full content, and every feed after that is a diff against what that monitor last saw.
 - A page tab feeds only the text currently visible in its viewport, the same way: full content first, diffs after.
@@ -72,7 +72,7 @@ In a reporting tab, a suggestion that carries a command shows it as a clickable 
 
 ## Asking a monitor directly
 
-`monitor ask <name> <question>` sends a question straight to a running monitor's session, skipping the batch buffer. The reply lands in the owner tab's transcript.
+`monitor ask <name> <question>` sends a question straight to a running monitor's session, skipping the batch buffer. The reply lands in the owner tab’s activity log and appears in its shell output.
 
 Only one direct question or scheduled flush can be in flight for a monitor at a time. If it is busy, wait and try again.
 

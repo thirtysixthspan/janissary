@@ -78,10 +78,6 @@ describe('notificationText', () => {
     expect(notificationText('rate-limited', 'build')).toBe("Agent 'build' is being rate limited");
   });
 
-  it('renders the incoming-message body with the sender and the tab', () => {
-    expect(notificationText('incoming-message', 'bob', 'janus')).toBe('Message from janus in bob');
-  });
-
   it('formats the waiting-agent message', () => {
     expect(notificationText('question', 'build')).toBe('Question from build');
   });

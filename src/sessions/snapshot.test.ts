@@ -48,6 +48,10 @@ function entry(overrides: Partial<RemoteEntry> = {}): RemoteEntry {
 const activity = () => 42;
 
 describe('channelOf member rows', () => {
+  it('uses a surviving harness label when it has no title and excludes legacy neutral tabs', () => {
+    const channel = channelOf(managers([harnessTab('claude'), tab('old-agent')]), entry({ labels: new Set(['claude', 'old-agent']) }), activity);
+    expect(channel.members).toEqual([{ label: 'claude', name: 'claude', kind: 'harness', activity: 42 }]);
+  });
   // The third column says what the tab *is*, matching the tab it opens or would open — so a tree is
   // a navigator row, not an agent one.
   it('reads a file navigator as a navigator named for its root', () => {
@@ -71,12 +75,6 @@ describe('channelOf member rows', () => {
 
     expect(channelOf(managers([shell]), entry({ labels: new Set(['scratch']) }), activity).members[0])
       .toMatchObject({ label: 'scratch', kind: 'shell' });
-  });
-
-  it('falls back to a tab\'s label when it has no title', () => {
-    const channel = channelOf(managers([tab('claude')]), entry(), activity);
-
-    expect(channel.members[0]).toMatchObject({ name: 'claude', kind: 'agent' });
   });
 
   // A joined tab can close while the channel lives on; its label stays in the entry's set, and a row
@@ -108,6 +106,16 @@ describe('sshTabs', () => {
 });
 
 describe('recordOf process rows', () => {
+  it('excludes legacy pipe processes while retaining live harnesses', () => {
+    const record = recordOf(managers([harnessTab('claude')]), withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude' }, { id: 'p2', mode: 'pipe', agentName: 'old-agent' }]), 7);
+    expect(record?.launchKind).toBe('harness');
+    expect(record?.processes).toEqual([{ id: 'p1', label: 'claude', kind: 'harness', harness: 'claude' }]);
+  });
+
+  it('uses a surviving process kind when it carries the launch label', () => {
+    const shell = tab('claude', { plugin: { id: 'shell' } as never });
+    expect(recordOf(managers([shell]), withProcesses([{ id: 'p2', mode: 'pty', harness: 'claude' }]), 7)?.launchKind).toBe('harness');
+  });
   function withProcesses(states: unknown[]): RemoteEntry {
     return entry({ channel: { sessionId: 'session-1', spawnedProcesses: () => states } as never });
   }
@@ -123,32 +131,6 @@ describe('recordOf process rows', () => {
     const record = recordOf(managers([harnessTab('claude')]), withProcesses([{ id: 'p1', mode: 'pty', harness: 'claude', autoApprove: true, autoResume: true }]), 7);
 
     expect(record?.processes[0]).toMatchObject({ autoApprove: true, autoResume: true });
-  });
-
-  // A joined agent tab's shell already carries that tab's label as its agent name, so it is listed
-  // against the tab it belongs to rather than against the channel that spawned it.
-  it('describes a pipe process as the agent tab that owns it', () => {
-    const record = recordOf(emptyManagers, withProcesses([{ id: 'p2', mode: 'pipe', agentName: 'claude-2' }]), 7);
-
-    expect(record?.processes).toEqual([{ id: 'p2', label: 'claude-2', kind: 'agent' }]);
-  });
-
-  // Nothing in that list carries the launching tab's own label, so the record falls back to saying a
-  // harness opened the channel — which is what a channel that only ever ran a remote harness is.
-  it('uses the launching plugin kind when no process carries the launch label', () => {
-    const shell = tab('claude', { plugin: { id: 'shell' } as never });
-    const record = recordOf(managers([shell]), withProcesses([{ id: 'p2', mode: 'pipe', agentName: 'claude-2' }]), 7);
-
-    expect(record?.launchKind).toBe('shell');
-  });
-
-  it('reads the launch kind off the process that carries the launch label', () => {
-    const record = recordOf(managers([harnessTab('claude')]), withProcesses([
-      { id: 'p1', mode: 'pty', harness: 'claude' },
-      { id: 'p2', mode: 'pipe', agentName: 'claude-2' },
-    ]), 7);
-
-    expect(record?.launchKind).toBe('harness');
   });
 
   it('records a shell nonce and offline mode with its live cwd from tab runtime', () => {

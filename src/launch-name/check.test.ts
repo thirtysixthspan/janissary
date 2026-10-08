@@ -24,8 +24,8 @@ describe('checkLaunchName — explicit names', () => {
     });
   });
 
-  it('refuses a name held by a live agent row too', () => {
-    const result = checkLaunchName({ name: 'foo', explicit: true, tabs: [], rows: [row('foo', 'detached', 'agent')] });
+  it('refuses a name held by a live shell row too', () => {
+    const result = checkLaunchName({ name: 'foo', explicit: true, tabs: [], rows: [row('foo', 'detached', 'shell')] });
     expect(result.accepted).toBe(false);
   });
 
@@ -76,7 +76,7 @@ describe('checkLaunchName — default names', () => {
 
   it('moves a default pool name to the next free pool name', () => {
     const result = checkLaunchName({
-      name: 'ada', explicit: false, candidates: ['ada', 'bekir', 'cem'], tabs: ['ada'], rows: [row('bekir', 'detached', 'agent')],
+      name: 'ada', explicit: false, candidates: ['ada', 'bekir', 'cem'], tabs: ['ada'], rows: [row('bekir', 'detached', 'shell')],
     });
     expect(result).toEqual({ accepted: true, name: 'cem', moved: true });
   });

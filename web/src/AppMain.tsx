@@ -1,7 +1,6 @@
 import React from 'react';
 import type { HarnessLaunchView, ScheduleLaunchView, TabView } from '@shared/protocol';
 import type { JanusClient } from './ws';
-import { AgentTabBody } from './agent-tabs/AgentTabBody';
 import { AppShell } from './AppShell';
 import { AppCenterActionArea } from './AppCenterActionArea';
 import { AppReportingSection } from './AppReportingSection';
@@ -11,17 +10,20 @@ import { QuitDialog } from './QuitDialog/QuitDialog';
 import { UnsavedQuitDialog } from './UnsavedQuitDialog';
 import { CloseSaveGuard } from './CloseSaveGuard';
 import { PickerOverlays } from './pickers/PickerOverlays';
-import { commandBarSuppressed, firstOpenOverlay } from './pickers/overlay-registry';
+import { firstOpenOverlay } from './pickers/overlay-registry';
 import type { PickerOverlayView } from './pickers/picker/overlay-view';
 import { mountedPickerOverlayProps } from './pickers/picker/overlay-props';
 import type { TabEntry } from './tab-entries';
+import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { LayoutState } from './useLayoutState';
-import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHandle } from './shared/tab/handles';
+import type { DirtyTabHandle, HarnessTabHandle, QuestionPanelHandle } from './shared/tab/handles';
 
-type AppMainProps = Omit<
-  React.ComponentProps<typeof AgentTabBody>,
-  'onSplit' | 'pickerOverlays' | 'blockingOverlayOpen'
-> & LayoutState & {
+type AppMainProps = LayoutState & {
+  current: TabView;
+  inputReference: React.RefObject<HTMLTextAreaElement | null>;
+  dropRef: React.RefObject<CommandInputDropHandle | null>;
+  quitConfirmOpen: boolean;
+  unsavedQuitOpen: boolean;
   // Every overlay's state, built once by `usePickerOverlays`. `PickerOverlays` takes exactly this
   // bag, and the two overlays a mounted harness tab renders are projected out of it below.
   pickers: PickerOverlayView;
@@ -36,7 +38,6 @@ type AppMainProps = Omit<
   tabNameMaxLength: number;
   activeTabNameMaxLength: number;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
-  shellHandles: React.RefObject<Map<string, ShellTabHandle>>;
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   dirtyPluginTabs: ReadonlySet<string>;
@@ -54,34 +55,19 @@ type AppMainProps = Omit<
 // The root render tree: the focused agent body plus the shell/sidebars/dialogs around it.
 // Split out of App.tsx to keep it under the file-size limit.
 export function AppMain({
-  current, client, lines, runCommand, transcriptReference, highlight, inputReference,
+  current, client, inputReference,
   pickers, pickerSourceTab, tabs,
-  search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
-  recallReference, dropRef,
+  quitConfirmOpen, unsavedQuitOpen, dropRef,
   activeTab, secondaryTab, windowFocused, actionEntries, reportingEntries, closeTab,
   tabNameMaxLength, activeTabNameMaxLength,
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
   reportingHeightPct, setReportingHeightPct, focusLeft, focusRight,
-  harnessHandles, shellHandles, questionPanelRef, tabHandles,
+  harnessHandles, questionPanelRef, tabHandles,
   dirtyPluginTabs, onPluginDirty,
   harnessLaunch, scheduleLaunch, confirmQuit, cancelQuit, confirmUnsavedQuit, cancelUnsavedQuit,
   guardRef,
 }: AppMainProps) {
   const pickerOverlays = <PickerOverlays {...pickers} />;
-  const focusedAgentBody = (
-    <AgentTabBody
-        current={current} client={client} lines={lines} runCommand={runCommand}
-        transcriptReference={transcriptReference} highlight={highlight} inputReference={inputReference}
-        pickerOverlays={pickerSourceTab ? null : pickerOverlays}
-        blockingOverlayOpen={commandBarSuppressed(pickers.overlays)}
-        search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
-        onCommandBarSubmit={onCommandBarSubmit}
-        quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
-        recallReference={recallReference}
-      dropRef={dropRef}
-      onSplit={() => client.send({ method: 'moveTabToOtherPane', params: { index: activeTab } })}
-    />
-  );
 
   return (
     <AppShell
@@ -100,15 +86,8 @@ export function AppMain({
         activeTabNameMaxLength={activeTabNameMaxLength}
         onFocusCommandBar={() => inputReference.current?.focus()}
         onFocusEditor={(label) => tabHandles.current.get(label)?.focus()}
-        windowFocused={windowFocused} current={current} focusedAgentBody={focusedAgentBody}
-        commandDrafts={commandDrafts}
+        windowFocused={windowFocused} current={current}
         dirtyTabs={dirtyPluginTabs}
-        shellProps={{
-          onHandle: (id, handle) => {
-            if (handle) shellHandles.current.set(id, handle);
-            else shellHandles.current.delete(id);
-          },
-        }}
         mountedProps={{
           harnessHandles, tabHandles, questionPanelRef,
           onPluginDirty,

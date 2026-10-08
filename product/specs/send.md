@@ -1,8 +1,6 @@
 # `send` command
 
-`send <label> <text>` delivers a line of input to any named tab. Unlike `msg`/`broadcast`,
-which deliver a *message* into another agent's inbox, `send` delivers the text as if it had
-been typed directly at the target — the delivery mechanism depends on the target tab's kind.
+`send <label> <text>` delivers a line of input to a named shell or harness tab. The delivery mechanism depends on the target tab's kind.
 
 ## Command
 
@@ -25,7 +23,7 @@ the same file.
 | Target tab kind | Delivery |
 | --- | --- |
 | Harness (`view === 'harness'`, `harness.status === 'running'`) | the text typed into the PTY as one burst write, followed by a separately delayed carriage return so the harness executes the line (matches xterm's own Enter key). For codex, whose composer otherwise classifies the burst as a paste and suppresses a quick Enter as a newline, the write is framed with bracketed-paste markers (`ESC[200~ … ESC[201~`) so it takes the explicit-paste path and the delayed Enter always submits. |
-| Agent (`view` undefined or `'agent'`) | `dispatchTo(label, text)` — runs `text` as a command in that tab's own command pipeline; dispatches immediately even if the target is busy or provisioning. |
+
 | Shell tab (plugin tab with an owned terminal) | The text joins the shell tab's FIFO command queue and runs through its command bar: application commands run in the app, and unclaimed lines are submitted to zsh. |
 | Harness that has exited | error: `Tab "<label>" is not a running harness.` |
 | Plugin without an owned terminal, image / page / markdown view | error: `Tab "<label>" does not accept input.` |
@@ -42,7 +40,7 @@ On success, the sender's transcript records:
 Errors from the routing table above are appended to the **sender's** transcript, so a failed
 send — interactive or scheduled — is always visible. `send` is fire-and-forget: there is no
 read-back of the target's output into the sender's transcript. Harness output stays in its
-own xterm buffer; agent output stays in the target tab's own transcript.
+own xterm buffer; shell output stays in the target shell’s terminal.
 
 ## Composing with `schedule`
 
@@ -52,7 +50,7 @@ that ran `schedule`), which runs `send` and forwards to the target:
 
 ```
 schedule standup every day at 9am send claude /standup   → types /standup into the claude harness every morning
-schedule sweep   every 1h        send worker db vacuum    → runs `db vacuum` in the worker agent tab hourly
+schedule sweep   every 1h        send worker db vacuum    → runs `db vacuum` in the worker shell tab hourly
 ```
 
 The scheduler's `## scheduled ##` comment marker is stripped before the command runs (see
@@ -73,5 +71,5 @@ handler backs `queue` and `close`/`exit`'s name argument (see [[tabs]]).
 - Sending to inline terminal cards (PTYs embedded in an agent's transcript) — only top-level
   tabs are addressable.
 - Sending **from** a harness tab — harnesses are pure PTYs with no command parser, so `send`
-  can only be run from an agent tab.
-- Addressing by tab number (`send 2 ...`) — labels only, consistent with `msg`.
+  can only be run from a shell tab.
+- Addressing by tab number (`send 2 ...`) — labels only.

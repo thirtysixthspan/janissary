@@ -18,7 +18,7 @@ describe('hostsCommandBar', () => {
   });
 
   it('is false for a non-plugin tab and for no tab at all', () => {
-    expect(hostsCommandBar(tab({ view: 'agent' }))).toBe(false);
+    expect(hostsCommandBar(tab({ view: undefined }))).toBe(false);
     expect(hostsCommandBar(undefined)).toBe(false);
   });
 });

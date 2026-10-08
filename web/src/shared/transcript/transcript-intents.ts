@@ -7,7 +7,6 @@ export type TranscriptIntents = {
   onOpenFile: (target: string) => void;
   onEditFile: (target: string) => void;
   onFocusTab: (label: string) => void;
-  onPromoteToTerminal: () => void;
 };
 
 export function transcriptIntents(send: (call: RpcCall) => void): TranscriptIntents {
@@ -15,6 +14,5 @@ export function transcriptIntents(send: (call: RpcCall) => void): TranscriptInte
     onOpenFile: (target) => send({ method: 'command', params: { text: `open ${target}` } }),
     onEditFile: (target) => send({ method: 'command', params: { text: `edit ${target}` } }),
     onFocusTab: (label) => send({ method: 'focusTab', params: { label } }),
-    onPromoteToTerminal: () => send({ method: 'promoteToTerminal', params: {} }),
   };
 }

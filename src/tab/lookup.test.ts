@@ -94,7 +94,7 @@ describe('the guard-typed accessors', () => {
     expect(accessor([hollow], 'hollow')).toBeUndefined();
   });
 
-  it.each(ACCESSORS)('%s is undefined for a plain agent tab', (_name, accessor) => {
+  it.each(ACCESSORS)('%s is undefined for a plain tab', (_name, accessor) => {
     expect(accessor(TABS, 'plain')).toBeUndefined();
   });
 });

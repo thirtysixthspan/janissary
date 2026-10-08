@@ -14,7 +14,7 @@ function makeTab(): TabView {
   return {
     label: 'build', number: 1, dotColor: '#fff', group: 1, groupColor: '#fff', busy: true, hasUnread: false,
     cwd: '/repo', connections: [], schedule: [], bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
-    view: 'agent',
+    view: undefined,
   };
 }
 
