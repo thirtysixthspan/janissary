@@ -21,6 +21,9 @@ ZDOTDIR = "include"
 "HOMEBREW_*" = "include"
 GH_TOKEN = "include"
 GITHUB_TOKEN = "include"
+JANISSARY_BROWSER_WS_ENDPOINT = "include"
+JANISSARY_PLAYWRIGHT = "include"
+JANISSARY_NODE = "include"
 
 [features]
 apps = false
