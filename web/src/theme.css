@@ -297,6 +297,19 @@ button.tab-recording { cursor: pointer; }
   font-size: 13px; padding: 0 4px; line-height: 1;
 }
 .tab-launch-agent:hover { color: var(--fg); }
+/* The new-shell button on a harness or ssh tab. Its class is the host's own, distinct from the
+   shell plugin's `.tab-launch-agent`, and it renders the same ➕ in the same row — so it carries
+   the same flat chrome. Without a rule it keeps the browser's default chrome: a raised light box
+   with a dark glyph, in a row of flat muted marks. Dimmed while the workspace provisions, the way
+   `.tab-remote-session` and the shell plugin's own button are. The `:disabled` rule restates the
+   colour rather than leaving it to `opacity` alone because it comes after the hover rule: without
+   it the button would brighten on hover while unavailable. */
+.tab-launch-shell {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.tab-launch-shell:hover { color: var(--fg); }
+.tab-launch-shell:disabled { color: var(--muted); cursor: default; opacity: 0.45; }
 .tab-open-transcript {
   background: transparent; border: none; color: var(--muted); cursor: pointer;
   font-size: 13px; padding: 0 4px; line-height: 1;

@@ -87,6 +87,40 @@ it('keeps the recording flag\'s green through a hover', () => {
   expect(theme).not.toMatch(/^\.tab-recording \{[^}]*cursor/m);
 });
 
+  // The harness/ssh row's ➕ is a `<button>` carrying its own class, and the four rules above are the
+  // whole of its styling. Nothing about that is visible to a component test — the launch-button cases
+  // in HarnessTabMeta.test.tsx assert the tooltip, the click and the disabled attribute, never the
+  // appearance — so a dropped rule or a class renamed on one side of this pair would render as the
+  // browser's default chrome in a row of flat muted marks, silently and green in the test run.
+  it('draws the new-shell button flat and muted, like the rest of the metadata row', () => {
+    const launchRule = theme.match(/^\.tab-launch-shell \{[^}]+\}/m)?.[0];
+    const hoverRule = theme.match(/^\.tab-launch-shell:hover \{[^}]+\}/m)?.[0];
+
+    expect(launchRule).toBeDefined();
+    expect(launchRule).toContain('background: transparent');
+    expect(launchRule).toContain('border: none');
+    expect(launchRule).toContain('color: var(--muted)');
+    expect(launchRule).toContain('cursor: pointer');
+    expect(launchRule).toContain('font-size: 13px');
+    expect(hoverRule).toContain('color: var(--fg)');
+  });
+
+  it('dims the new-shell button while its workspace is provisioning', () => {
+    const disabledRule = theme.match(/^\.tab-launch-shell:disabled \{[^}]+\}/m)?.[0];
+
+    expect(disabledRule).toBeDefined();
+    expect(disabledRule).toContain('opacity: 0.45');
+    expect(disabledRule).toContain('cursor: default');
+    expect(disabledRule).toContain('color: var(--muted)');
+    // After the hover rule, so an unavailable button does not brighten under the cursor.
+    expect(theme.indexOf('.tab-launch-shell:disabled {')).toBeGreaterThan(
+      theme.indexOf('.tab-launch-shell:hover {'),
+    );
+    expect(theme.indexOf('.tab-launch-shell:hover {')).toBeGreaterThan(
+      theme.indexOf('.tab-launch-shell {'),
+    );
+  });
+
   // The plugin half of the two rules above. Splitting them is what keeps a plugin's styling inside
   // its own lazy chunk, so the host stylesheet must not carry a plugin selector back in.
   it('leaves plugin metadata containers to the plugin stylesheets', () => {
