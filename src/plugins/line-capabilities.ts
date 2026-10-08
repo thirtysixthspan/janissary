@@ -5,6 +5,7 @@ import { complete } from '../controller/completion.js';
 import { recordGlobalHistory } from '../global-history.js';
 import { messageBus } from '../bus.js';
 import type { TabPluginDeclaration, TabPluginServerCapabilities } from './api.js';
+import { ownTabLabel } from './own-tab.js';
 
 // The capabilities that make a plugin tab a place a line can be typed and a process can be checked
 // on: where it is, which tab a line runs in, what output that line produces, what the application
@@ -26,14 +27,6 @@ export function lineCapabilities(input: {
   | 'recordGlobalHistory'
 > {
   const { managers, declaration, origin, answeringLabel, isEnabled, deadline } = input;
-  // The tab whose queue and recorded directory a line capability may change: the answering tab, or
-  // the origin when there is none, and only when it is one of this plugin's own tabs. A command,
-  // selection action or menu handler invoked from an tab has no answering tab, and without
-  // this check it would reach the invoking tab's runtime.
-  const ownLineLabel = () => {
-    const label = answeringLabel ?? origin.label;
-    return managers.tab.byLabel(label)?.plugin?.id === declaration.id ? label : undefined;
-  };
   // The labels of this plugin's own open tabs — the only terminals whose ids a plugin can legitimately
   // hold, because a payload factory is the only scope in which it may start one.
   const ownTabLabels = () => managers.tab.tabs
@@ -79,27 +72,33 @@ export function lineCapabilities(input: {
     // spawned", which is the question asked here.
     terminalRunning: (ptyId) => isEnabled() && managers.pty.isRunningFor(ptyId, ownTabLabels()),
     // This plugin's own answering tab's queue, never another's: a line typed into a plugin tab's
-    // command line waits in that tab, which is where the queue popup over it looks.
+    // command line waits in that tab, which is where the queue popup over it looks. A queue aimed at
+    // a tab this plugin does not own is refused rather than dropped, so the transcript says which
+    // call was turned away.
     queueLine: (line) => {
-      const label = isEnabled() ? ownLineLabel() : undefined;
-      if (label) managers.tab.enqueue(label, line);
+      if (!isEnabled()) return;
+      const label = ownTabLabel({ managers, declaration, origin, answeringLabel }, 'This plugin has no open tab to queue a line in.');
+      managers.tab.enqueue(label, line);
     },
     nextQueuedLine: () => {
-      const label = isEnabled() ? ownLineLabel() : undefined;
-      return label ? managers.tab.dequeue(label) ?? null : null;
+      if (!isEnabled()) return null;
+      const label = ownTabLabel({ managers, declaration, origin, answeringLabel }, 'This plugin has no open tab to take a queued line from.');
+      return managers.tab.dequeue(label) ?? null;
     },
     // This plugin's own answering tab's record only, for the same reason: a shell that changed
     // directory moves where its tab's next shell, file navigator and completion start, and no other tab's.
     recordCwd: (cwd) => {
-      const label = isEnabled() ? ownLineLabel() : undefined;
-      if (label) managers.tab.setCwd(label, cwd);
+      if (!isEnabled()) return;
+      const label = ownTabLabel({ managers, declaration, origin, answeringLabel }, 'This plugin has no open tab to record a directory in.');
+      managers.tab.setCwd(label, cwd);
     },
     // Attributed to this plugin's own answering tab, as an tab's line is to that tab. The state
     // broadcast carries the global history, so it goes out again for ghost text to see the line.
     recordGlobalHistory: (line) => {
-      const label = isEnabled() ? ownLineLabel() : undefined;
+      if (!isEnabled()) return;
+      const label = ownTabLabel({ managers, declaration, origin, answeringLabel }, 'This plugin has no open tab to record a line in.');
       const trimmed = line.trim();
-      if (!label || !trimmed) return;
+      if (!trimmed) return;
       recordGlobalHistory(trimmed, label);
       messageBus.emit('state', { type: 'dirty' });
     },

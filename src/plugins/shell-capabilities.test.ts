@@ -388,24 +388,24 @@ describe('queueLine and nextQueuedLine', () => {
 
   // A command invoked from an tab has no answering tab, so the label falls back to the agent
   // tab; its queue holds lines the user meant to run there, and is not this plugin's to change.
-  it('touches no queue of the tab a command was invoked from', () => {
+  // The call is answered with a rejection naming the capability rather than dropped, so the
+  // transcript says which call was turned away.
+  it('refuses rather than touching the queue of the tab a command was invoked from', () => {
     const { managers, enqueue, dequeue } = withQueue();
     const capabilities = answeringContext(managers, () => true, null);
 
-    capabilities.queueLine('rm -rf .');
-
-    expect(capabilities.nextQueuedLine()).toBeNull();
+    expect(() => capabilities.queueLine('rm -rf .')).toThrow('This plugin has no open tab to queue a line in.');
+    expect(() => capabilities.nextQueuedLine()).toThrow('This plugin has no open tab to take a queued line from.');
     expect(enqueue).not.toHaveBeenCalled();
     expect(dequeue).not.toHaveBeenCalled();
   });
 
-  it('touches no queue of a tab another plugin owns', () => {
+  it('refuses rather than touching the queue of a tab another plugin owns', () => {
     const { managers, enqueue, dequeue } = withQueue();
     const capabilities = answeringContext(managers, () => true, 'image1');
 
-    capabilities.queueLine('ls');
-
-    expect(capabilities.nextQueuedLine()).toBeNull();
+    expect(() => capabilities.queueLine('ls')).toThrow('This plugin has no open tab to queue a line in.');
+    expect(() => capabilities.nextQueuedLine()).toThrow('This plugin has no open tab to take a queued line from.');
     expect(enqueue).not.toHaveBeenCalled();
     expect(dequeue).not.toHaveBeenCalled();
   });
@@ -441,20 +441,19 @@ describe('recordCwd', () => {
   });
 
   // The tab's directory decides where its completion, file navigator and new shells start, so
-  // a plugin command invoked from it must not move that.
-  it('records nothing on the tab a command was invoked from', () => {
+  // a plugin command invoked from it must not move that — and the attempt is answered with a
+  // rejection naming the capability rather than dropped.
+  it('refuses rather than recording on the tab a command was invoked from', () => {
     const { capabilities, setCwd } = contextWith(() => true, null);
 
-    capabilities.recordCwd('/tmp');
-
+    expect(() => capabilities.recordCwd('/tmp')).toThrow('This plugin has no open tab to record a directory in.');
     expect(setCwd).not.toHaveBeenCalled();
   });
 
-  it('records nothing on a tab another plugin owns', () => {
+  it('refuses rather than recording on a tab another plugin owns', () => {
     const { capabilities, setCwd } = contextWith(() => true, 'image1');
 
-    capabilities.recordCwd('/tmp');
-
+    expect(() => capabilities.recordCwd('/tmp')).toThrow('This plugin has no open tab to record a directory in.');
     expect(setCwd).not.toHaveBeenCalled();
   });
 });
