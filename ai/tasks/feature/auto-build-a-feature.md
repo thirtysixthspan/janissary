@@ -2,7 +2,7 @@
 
 Take a supplied feature description through interactive planning and an interactive gap review that can widen the plan's scope. Then, autonomously, build it into one new open pull request, review that PR and resolve its backlog, test it and resolve its failures until no failing tests remain, and update its description, plan, specs, and help to match its final code.
 
-Invocation: `execute ./ai/tasks/auto-build.md "<feature description>"`.
+Invocation: `execute ./ai/tasks/feature/auto-build-a-feature.md "<feature description>"`.
 
 **Planning is interactive; everything after it runs autonomously.** In Steps 1 and 2, every planning question and every scope decision goes to the user, and the run waits for the answer. From Step 3 onward, whenever a child task requires a response or decision, generate it on the user's behalf using the decision policy below. Do not ask the user questions or wait for feedback after Step 2 ends. A child task's report returns control here; it does not end this task.
 
@@ -37,7 +37,7 @@ Keep the feature description, plan path, the gaps presented and the user's choic
 
 ## Step 1 — Plan with the user
 
-Execute `ai/tasks/plan-a-new-feature.md` with the full supplied feature description as its named feature. It is an interactive task, and it stays interactive here:
+Execute `ai/tasks/feature/plan-a-new-feature.md` with the full supplied feature description as its named feature. It is an interactive task, and it stays interactive here:
 
 1. Keep its reconnaissance, initial draft, decision phases, improvement passes, final question phase, and completeness checks. Ask the user every question it asks, in its rounds, with its recommended answers, and wait for each round's answers before continuing. Never answer a planning question on the user's behalf.
 2. Its improvement passes, `ai/tasks/planning/improve-plan.md` and `ai/tasks/planning/improve-plan-with-minimalism.md`, run on the exact draft as it directs. Their nested preparation follows Step 0's reuse rule. Every product or implementation decision they surface goes to the user in the planning task's final question phase.
@@ -63,7 +63,7 @@ Then put the gaps to the user and resolve the new scope:
 
 ## Step 3 — Build that plan and open one PR
 
-Execute `ai/tasks/build-a-feature.md` with the exact ready-plan path, never its default simplest-plan selection. Reuse preparation and apply the decision, complexity, and plan-revision rules above. Implement the plan, verify the changes, and update the feature's specs.
+Execute `ai/tasks/feature/build-a-feature.md` with the exact ready-plan path, never its default simplest-plan selection. Reuse preparation and apply the decision, complexity, and plan-revision rules above. Implement the plan, verify the changes, and update the feature's specs.
 
 Replace the build task's `git mv` example for ready-to-complete promotion with a normal file move: this plan is still untracked. Include the completed plan and any feature-backlog removal in the normal implementation commit. There is no separate planning commit.
 
@@ -74,21 +74,21 @@ Execute the build task's `ai/tasks/workspace/open-feature-pull-request.md` hando
 Use this procedure whenever a step says to drain. `./product/backlog/pull-request.md` on the recorded PR branch is the only source of repair work. It is a flat list, with no status sections, and file order is priority.
 
 1. Confirm the recorded PR is still open and the current branch is its head branch. Read the current backlog. A missing file means no recorded entries; an existing empty file retains the master skeleton defined by `review-pull-request.md`, its leading comment and `# pull-request` heading. Never delete it.
-2. Select the first entry whose prerequisites permit progress, retaining any blocked entries. Before implementation, verify its proposal against the actual feature and code. Execute `ai/tasks/work-an-issue.md` with the actual numeric PR number as its first argument and an optional selector for that entry, for example `execute ./ai/tasks/work-an-issue.md 232 "the empty state"`.
-3. Do not execute a proposal's quoted `"PR <number>: ..."` argument verbatim: `work-an-issue.md` treats it as ordinary issue text, not PR update mode. Review and test entries both carry that prefix. Never use ordinary issue mode or read or edit `./product/backlog/issues.md` in a drain. The numeric PR argument selects the required mode.
+2. Select the first entry whose prerequisites permit progress, retaining any blocked entries. Before implementation, verify its proposal against the actual feature and code. Execute `ai/tasks/feature/work-pull-request-issue.md` with the actual numeric PR number as its first argument and an optional selector for that entry, for example `execute ./ai/tasks/feature/work-pull-request-issue.md 232 "the empty state"`.
+3. Invoke only the dedicated PR issue task with the recorded numeric target. Never execute an inherited proposal's obsolete ordinary-issue invocation or quoted `"PR <number>: ..."` text: use the recorded entry as evidence for its selector instead. Newly generated review and test proposals name the dedicated task with an explicit target. Never invoke `work-an-issue.md` or read or edit `./product/backlog/issues.md` in a drain.
 4. Let the child plan, implement, verify, update affected specs and docs, remove the resolved entry, commit, push, and apply any required PR-description correction. Keep all work on this PR. Apply the complexity override without weakening verification.
 5. After the child returns, reread the backlog and confirm the repair, verification, push, and any required description correction all succeeded. Only then count the entry as resolved. A commit or local removal alone is insufficient. If publication or a description correction fails after removal, retain or restore the outstanding obligation in the backlog, preserve local work, and report the failure; do not claim the backlog is drained.
 6. Continue until no entries remain. Once empty, preserve or restore the exact comment-and-heading skeleton if the file exists. If one entry is blocked, continue other independent recorded work when the working tree and publication state permit it. If no remaining entry can progress, follow the blocked outcome below instead of clearing entries or repeatedly selecting the same failure.
 
 ## Step 4 — Review the PR, then drain
 
-Execute `ai/tasks/review-pull-request.md` with the recorded PR number. Review the entire diff across all five dimensions: description fidelity, plan fidelity, functionality gaps, introduced technical debt, and introduced security issues. Preserve its clean-tree requirement, deduplication, backlog-only edits, and no-fix/no-tooling rules. The review commits and pushes its findings on this PR branch and leaves the PR open.
+Execute `ai/tasks/feature/review-pull-request.md` with the recorded PR number. Review the entire diff across all five dimensions: description fidelity, plan fidelity, functionality gaps, introduced technical debt, and introduced security issues. Preserve its clean-tree requirement, deduplication, backlog-only edits, and no-fix/no-tooling rules. The review commits and pushes its findings on this PR branch and leaves the PR open.
 
 Record both newly added findings and unresolved duplicates. An all-duplicates report does not mean the PR is clean. After a successful review and publication, drain the backlog using the procedure above until it is empty. Continue to Step 5 only when that drain succeeds.
 
 ## Step 5 — Test the PR and drain until no failing tests remain
 
-Execute `ai/tasks/test-pull-request.md` with the recorded PR number. Keep its base-branch instructions, its preparation on `master` followed by `gh pr checkout`, its gated package update, its step classification and refusals, its tear-down, and its backlog-only commit and push. It records failures on this PR branch and leaves the PR open.
+Execute `ai/tasks/feature/test-pull-request.md` with the recorded PR number. Keep its base-branch instructions, its preparation on `master` followed by `gh pr checkout`, its gated package update, its step classification and refusals, its tear-down, and its backlog-only commit and push. It records failures on this PR branch and leaves the PR open.
 
 When it returns, confirm the current branch is the recorded head branch, the PR is still `OPEN`, and the working tree is clean. Record the run's results: steps passed, failed, intermittent, step corrections, `Not tested` steps with their reasons, and entries added or appended to. Then drain the backlog using the procedure above until it is empty.
 
@@ -98,7 +98,7 @@ A run that ends with `app did not start` or `browser lost` has not tested anythi
 
 ## Step 6 — Update the PR
 
-Execute `ai/tasks/update-pull-request.md` with the recorded PR number. It brings the PR's description, its plan, the specs, and `help.md` in line with the code the drains left behind, and folds the fix plans the drains added into the feature plan. Its Step 1 runs as written: it has no `master` checkout for Step 0's reuse rule to skip. The backlog is empty when this step starts, so the task's removal of unresolved entries never fires here, and the rule against deleting a real finding to empty the backlog still holds. It commits and pushes on this PR branch and leaves the PR open.
+Execute `ai/tasks/feature/update-pull-request.md` with the recorded PR number. It brings the PR's description, its plan, the specs, and `help.md` in line with the code the drains left behind, and folds the fix plans the drains added into the feature plan. Its Step 1 runs as written: it has no `master` checkout for Step 0's reuse rule to skip. The backlog is empty when this step starts, so the task's removal of unresolved entries never fires here, and the rule against deleting a real finding to empty the backlog still holds. It commits and pushes on this PR branch and leaves the PR open.
 
 Record what the update changed, or that the PR was already in sync. A push it could not complete or a description edit that failed is a failed publication: stop with `Status: blocked` and the reason.
 

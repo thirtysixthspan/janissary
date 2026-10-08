@@ -27,28 +27,28 @@ afterEach(() => {
 describe('listTasks', () => {
   it('lists top-level .md files sorted, keeping the extension, tagged as project', () => {
     writeTask(root, 'fix-a-small-issue.md');
-    writeTask(root, 'build-a-feature.md');
+    writeTask(root, 'example.md');
     expect(listTasks(root, janissary)).toEqual([
-      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false, source: 'project' },
+      { path: 'example.md', name: 'example.md', depth: 0, dir: false, source: 'project' },
       { path: 'fix-a-small-issue.md', name: 'fix-a-small-issue.md', depth: 0, dir: false, source: 'project' },
     ]);
   });
 
   it('ignores non-.md files', () => {
-    writeTask(root, 'build-a-feature.md');
+    writeTask(root, 'example.md');
     writeTask(root, 'notes.txt');
     expect(listTasks(root, janissary)).toEqual([
-      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false, source: 'project' },
+      { path: 'example.md', name: 'example.md', depth: 0, dir: false, source: 'project' },
     ]);
   });
 
   it('recurses into a non-special subdirectory, listing it as a dir row followed by its children', () => {
     writeTask(root, 'top.md');
-    writeTask(root, 'extra/nested.md');
+    writeTask(root, 'feature/build-a-feature.md');
     expect(listTasks(root, janissary)).toEqual([
       { path: 'top.md', name: 'top.md', depth: 0, dir: false, source: 'project' },
-      { path: 'extra', name: 'extra', depth: 0, dir: true, source: 'project' },
-      { path: 'extra/nested.md', name: 'nested.md', depth: 1, dir: false, source: 'project' },
+      { path: 'feature', name: 'feature', depth: 0, dir: true, source: 'project' },
+      { path: 'feature/build-a-feature.md', name: 'build-a-feature.md', depth: 1, dir: false, source: 'project' },
     ]);
   });
 
@@ -106,11 +106,11 @@ describe('listTasks', () => {
   });
 
   it('drops a Janissary task whose path is shadowed by the project copy', () => {
-    writeTask(root, 'build-a-feature.md');
-    writeTask(janissary, 'build-a-feature.md');
+    writeTask(root, 'example.md');
+    writeTask(janissary, 'example.md');
     writeTask(janissary, 'fix-a-bug.md');
     expect(listTasks(root, janissary)).toEqual([
-      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false, source: 'project' },
+      { path: 'example.md', name: 'example.md', depth: 0, dir: false, source: 'project' },
       { path: 'fix-a-bug.md', name: 'fix-a-bug.md', depth: 0, dir: false, source: 'janissary' },
     ]);
   });

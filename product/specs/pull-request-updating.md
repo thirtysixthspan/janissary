@@ -10,7 +10,7 @@ Every spec that describes behavior the pull request changes is corrected, whethe
 
 ### One plan per pull request
 
-A revised pull request carries several plans: its own, committed before any review fix existed, plus one fix plan for each repair made through the work-an-issue workflow. An update folds the work those fix plans record into the pull request's own plan, rewrites that plan so it describes what was actually built, and deletes the fix plans, so the pull request ends with one plan. The plan keeps its name, title, section structure, and original complexity rating, and carries no revision markers.
+A revised pull request carries several plans: its own, committed before any review fix existed, plus one fix plan for each repair made through the work-pull-request-issue workflow. An update folds the work those fix plans record into the pull request's own plan, rewrites that plan so it describes what was actually built, and deletes the fix plans, so the pull request ends with one plan. The plan keeps its name, title, section structure, and original complexity rating, and carries no revision markers.
 
 The pull request's own plan is the one its first commit adds. When the first commit adds no plan, or more than one, the update does not guess: every plan is left as it is, and the report names what it found.
 

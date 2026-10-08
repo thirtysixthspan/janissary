@@ -2,7 +2,7 @@
 
 <img class="agent-float" src="/agents/malik-south.png" alt="" />
 
-Your repository's `ai/tasks/` directory holds executable task files — self-contained instruction sets like `build-a-feature.md` or `work-an-issue.md` that an agent can be told to run. The task picker lists them so you can drop one onto the command line without typing its path by hand.
+Your repository's `ai/tasks/` directory holds executable task files, such as `feature/build-a-feature.md` or `work-an-issue.md`, that an agent can be told to run. The task picker lists them so you can drop one onto the command line without typing its path by hand.
 
 ## The `Ctrl+A` picker
 
@@ -51,6 +51,12 @@ A Janissary task reaches the app's own maintenance scripts the same way it was r
 <img class="agent-float" src="/agents/tahir-south-east.png" alt="" />
 
 Task files can chain together into a larger loop — one that plans work, hardens the plan, then executes it — by having each stage read and write the same set of project files. See [Product development workflow](/user-documentation/workflows/product-development) for a worked example.
+
+## Choosing a feature or issue task
+
+Expand **feature** to find the planning, building, removal, and pull request review, testing, and updating tasks. The combined workflow is named `auto-build-a-feature`. Moved tasks have no forwarding entries at their old locations, so use the picker or update any saved invocation to the new path.
+
+Choose `work-an-issue` for an ordinary issue on `master`. Every argument to it is issue text, including a number or PR URL. To repair a recorded pull request finding, choose `feature/work-pull-request-issue`, then append the PR number, `#number`, or GitHub PR URL and, optionally, the finding's summary. It repairs one recorded entry on that PR's branch and leaves the PR open. It needs an explicit target and does not accept a branch name or guess a PR from context.
 
 ## What a shipped task does when you pick it
 

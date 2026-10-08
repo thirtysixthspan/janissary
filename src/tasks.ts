@@ -41,7 +41,7 @@ function listOne(root: string, source: TaskRow['source']): TaskRow[] {
   }
 }
 
-// Executable task prompts: markdown files under `ai/tasks/` (`build-a-feature.md`,
+// Executable task prompts: markdown files under `ai/tasks/` (`feature/build-a-feature.md`,
 // `fix-a-small-issue.md`, …), recursed into any subdirectory. The `.md` extension is kept in
 // `path`. Tasks are drawn from two roots — the project working directory and the Janissary install
 // — tagged with their `source`. When the same relative `path` exists in both, the project copy

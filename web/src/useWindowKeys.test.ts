@@ -86,10 +86,11 @@ function TestComponent({
     queueIdx: 0,
     queueItems: ['q1', 'q2'],
     taskPickerOpen: taskPickerOpen ?? false,
-    taskPickerIdx: 0,
+    taskPickerIdx: 2,
     visibleTasks: [
-      { path: 'build-a-feature.md', name: 'build-a-feature.md', depth: 0, dir: false },
-      { path: 'fix-a-small-issue.md', name: 'fix-a-small-issue.md', depth: 0, dir: false },
+      { path: 'work-an-issue.md', name: 'work-an-issue.md', depth: 0, dir: false },
+      { path: 'feature', name: 'feature', depth: 0, dir: true },
+      { path: 'feature/build-a-feature.md', name: 'build-a-feature.md', depth: 1, dir: false },
     ],
     profilePickerOpen: profilePickerOpen ?? false,
     profilePickerIdx: 1,
@@ -315,7 +316,7 @@ describe('useWindowKeys', () => {
     const pickTask = vi.fn();
     render(React.createElement(TestComponent, { taskPickerOpen: true, callbacks: { pickTask } }));
     dispatchKey('Enter');
-    expect(pickTask).toHaveBeenCalledWith('build-a-feature.md');
+    expect(pickTask).toHaveBeenCalledWith('feature/build-a-feature.md');
   });
 
   it('routes Enter to the selected profile when the profile picker is open', () => {

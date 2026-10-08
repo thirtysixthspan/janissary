@@ -96,7 +96,7 @@ describe('parseSuggestion', () => {
     const reply = [
       '[SUMMARY]: Two parallel feature implementations underway:',
       '- **claude** (Opus): implementing git modified coloring for file navigator (mid-thought, has context ready)',
-      '- **claude-2** (Sonnet): just started executing `build-a-feature.md` for **acp-rate-limit-notification** — reading the task file now',
+      '- **claude-2** (Sonnet): just started executing `feature/build-a-feature.md` for **acp-rate-limit-notification** — reading the task file now',
     ].join('\n');
     expect(parseSuggestion(reply)).toEqual({ text: reply.replace('[SUMMARY]: ', '') });
   });
