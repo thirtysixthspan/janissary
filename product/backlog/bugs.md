@@ -2,8 +2,6 @@
 
 ## ready
 
-* when the laptop goes to sleep then resumes, the application stops with the ui disappearing and the server halting. The application should be tolerant of going to sleep and resuming. After the laptop resumes, the application UI and server should still be present and active. 
-
 * Make harness usage errors show their angle-bracket placeholders in a shell tab
 
 Existing Bug: In a shell tab, `harness claude as` answers `Usage: harness <claude|opencode|codex> as .` where the spec promises `Usage: harness <claude|opencode|codex> as <label>.`, and `harness capture` with no name answers `Usage: harness capture .` where the spec promises `Usage: harness capture <name>.`. Severity: 3/10
@@ -25,6 +23,8 @@ Proposal Risk: 2/10 - Rendering the button at every placement is additive, but a
 
 Proposal: product/specs/file-navigator-tab.md, "Header buttons": "Every file navigator tab's own header carries a **Search files** button, **New file** and **New directory** buttons, a **detail button**, and a **location button**... The location button cycles the tree through left sidebar → center tab strip → right sidebar → left sidebar, one step per click, with a tooltip naming the destination." Reproduce it: in a shell tab run `files`, then read the tree header's buttons. Expected: a location button among them. Observed: the header carries `files-pull`, `files-commit`, `files-search`, `files-new-file`, `files-new-directory`, `files-detail-cycle`, `tab-split`, and `files-collapse-all`, with no location button (`document.querySelectorAll('.files-dock-cycle').length` is 0); running `files left` then shows the button titled "Move to right sidebar", which toggles to the right sidebar and back to the left and never offers the center strip. The root cause is that `FileNavigatorHeader` in `web/src/file-navigator/FileNavigatorHeader.tsx` renders the button only under `{dock && …}`, while `FileNavigatorTab` in `web/src/file-navigator/FileNavigatorTab.tsx` passes `onCycleDock: dock === undefined ? undefined : () => intents.setDock(nextDock(dock))`, and `ViewTabBody.tsx` renders a center-strip tree with no `dock` prop at all; `nextDock` in `web/src/shared/dock-cycle.ts` only ever returns `'left'` or `'right'`. The fix is to give the center placement a dock state — a three-valued `dock` of `'left' | 'center' | 'right'`, or a nullable cycle target the header can always draw — so the button renders for every tree, and to make the cycle pass through the center strip as the spec describes. `web/src/file-navigator/FileNavigatorHeader.test.tsx` and the callers of `nextDock` in `web/src/shared/dock-cycle.ts` are where the button's presence and cycle are pinned; a regression test should render a center-strip navigator and assert the location button exists, click it and assert the tree is docked into the left sidebar, click it again and assert the tree is back in the center tab strip.
 
+
+* when the laptop goes to sleep then resumes, the application stops with the ui disappearing and the server halting. The application should be tolerant of going to sleep and resuming. After the laptop resumes, the application UI and server should still be present and active. 
 
 ## development
 
