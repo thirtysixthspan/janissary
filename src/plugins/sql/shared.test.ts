@@ -13,6 +13,7 @@ import {
   isSetPageSizeIntent,
   isUpdateCellIntent,
   PAGE_SIZES,
+  parseSqlArgument,
 } from './shared-intents.js';
 
 function payload(over: Partial<SqlPayload> = {}): SqlPayload {
@@ -266,5 +267,29 @@ describe('intent payload guards', () => {
     expect(isExportIntent({ format: 'csv' })).toBe(true);
     expect(isExportIntent({ format: 'json' })).toBe(true);
     expect(isExportIntent({ format: 'xlsx' })).toBe(false);
+  });
+});
+
+describe('parseSqlArgument', () => {
+  it('reads a bare argument as the current database with no dock side', () => {
+    expect(parseSqlArgument('')).toEqual({ name: '', dock: null });
+    expect(parseSqlArgument(' '.repeat(3))).toEqual({ name: '', dock: null });  });
+
+  it('reads the trailing token as a dock side through the published parser, in any case', () => {
+    expect(parseSqlArgument('left')).toEqual({ name: '', dock: 'left' });
+    expect(parseSqlArgument('LEFT')).toEqual({ name: '', dock: 'left' });
+    expect(parseSqlArgument('  Right  ')).toEqual({ name: '', dock: 'right' });
+    expect(parseSqlArgument('shop left')).toEqual({ name: 'shop', dock: 'left' });
+    expect(parseSqlArgument('shop LEFT')).toEqual({ name: 'shop', dock: 'left' });
+    expect(parseSqlArgument('shop right')).toEqual({ name: 'shop', dock: 'right' });
+  });
+
+  it('keeps a non-side trailing token in the name, leaving the dock undefined', () => {
+    expect(parseSqlArgument('shop')).toEqual({ name: 'shop', dock: undefined });
+    expect(parseSqlArgument('shop extra')).toEqual({ name: 'shop extra', dock: undefined });
+  });
+
+  it('peels only the trailing side, so a multi-word name the guard refuses keeps its shape', () => {
+    expect(parseSqlArgument('shop left right')).toEqual({ name: 'shop left', dock: 'right' });
   });
 });

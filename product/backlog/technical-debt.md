@@ -2,17 +2,6 @@
 
 ## ready
 
-* Read the sql plugin's dock side through the one published parser, so a typed `sql LEFT` cannot come back as a database named LEFT.
-
-Existing Debt: `src/plugins/dock-argument.ts` is the published dock-side parser, re-exported to plugins at `src/plugins/api.ts:406` and used by every other dockable list plugin, but `src/plugins/sql/shared-intents.ts` carries a second private parser, `parseOpenCommand`, that sql actually calls, and the two disagree about case, so sql's copy accepts a side only in the spelling it was typed in. Severity: 5/10
-
-Existing Risk: 5/10 - `sql LEFT`, `sql Right` and `sql shop LEFT` fall through as database names, pass `isValidDatabaseName`, and ask the host to open a database the registry has never heard of, so the user is told a name was invalid when what they typed was a side in the wrong case, and the activation comment claiming the two grammars cannot drift is the reason nobody looks there.
-
-Proposal Risk: 2/10 - The side vocabulary is then read once for every plugin, but sql still has to split its leading `<name>` tokens itself, so the argument split stays sql's own and a future change to what a dock side looks like has to reach both files.
-
-Proposal: `src/plugins/sql/activate.ts:15-17` says the dock side is read "through the one published parser so the two cannot drift", and `src/plugins/sql/activate.ts:50` calls `parseOpenCommand` from `./shared-intents.js` instead. Change `runCommand` at `src/plugins/sql/activate.ts:48-66` to peel the trailing token off the argument itself and hand that token to `parseDockArgument`, which lowercases and trims, so `sql left`, `sql LEFT` and `sql shop left` all resolve through the published rule. Then delete `parseOpenCommand` and its `OpenCommand` type from `src/plugins/sql/shared-intents.ts:84-95`, whose `'usage'` branch is unreachable as written, since `dock` is `undefined` only when `words` is non-empty, which makes `name` non-empty too. Keep `isValidDatabaseName` where it is so the existing `Invalid database name` refusal still answers a name the registry does not know. `src/plugins/dock-argument.test.ts` proves the published rule and nothing proves sql reaches it, so add the argument-splitting cases to `src/plugins/sql/shared.test.ts`, which already imports the sibling guards out of `shared-intents.js` and does not import `parseOpenCommand`.
-
-
 * Point the plugin guard copies at the contract guard that was published for them, so `isRecord` has one definition on each side of the plugin boundary.
 
 Existing Debt: `src/plugins/api.ts:423-426` re-exports `isRecord` and `isModelPair` with a comment saying they were published because every bundled plugin's `shared.ts` had its own copy of both, but fourteen server plugin modules and one client module still declare the identical predicate privately, so the publishing half of that migration landed and the consuming half never ran, leaving both mechanisms in the codebase at once. Severity: 5/10

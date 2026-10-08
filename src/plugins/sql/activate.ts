@@ -5,10 +5,10 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import { isSqlPayload, type SqlPayload, type SqlPending } from './shared.js';
-import { databasesFrom, NO_DATABASES, resultFor, SqlTabs, USAGE } from './tabs.js';
+import { databasesFrom, NO_DATABASES, resultFor, SqlTabs } from './tabs.js';
 import { dispatch, planRequest } from './request.js';
 import { openDatabase } from './open-tab.js';
-import { isValidDatabaseName, parseOpenCommand } from './shared-intents.js';
+import { isValidDatabaseName, parseSqlArgument } from './shared-intents.js';
 import { fold, registerExports } from './fold.js';
 import { intentsFor } from './intents.js';
 
@@ -47,9 +47,7 @@ export function activate(): TabPluginActivation {
 // trade the conversations plugin makes for a conversation titled `left`.
 function runCommand(argument: string, capabilities: TabPluginServerCapabilities, tabs: SqlTabs): void {
   const data = databasesFrom(capabilities);
-  const parsed = parseOpenCommand(argument);
-  if (parsed === 'usage') return capabilities.rejectRequest(USAGE);
-  const { name, dock } = parsed;
+  const { name, dock } = parseSqlArgument(argument);
   if (name) {
     if (!isValidDatabaseName(name)) return capabilities.rejectRequest(`Invalid database name "${name}".`);
     // A command is typed, and a typo in a typed command is the ordinary case — so a name the
