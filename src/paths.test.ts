@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { abbreviatePath, expandUserPath } from './paths.js';
+import { abbreviatePath, abbreviateWorkspaceDir, abbreviateWorkspacePath, expandUserPath } from './paths.js';
 
 const root = '/Users/name/dev/janissary';
 const home = '/Users/name';
@@ -35,6 +35,51 @@ describe('abbreviatePath', () => {
   it('does not match a sibling that merely shares the root prefix string', () => {
     // `…/janissary-extra` is not inside `…/janissary`; it falls back to the home shortcut.
     expect(ab('/Users/name/dev/janissary-extra/x')).toBe('~/dev/janissary-extra/x');
+  });
+});
+
+const clone = `${root}/.janissary/workspace/emrah`;
+
+describe('abbreviateWorkspaceDir', () => {
+  it('names the clone after its own directory', () => {
+    expect(abbreviateWorkspaceDir(clone)).toBe('$workspace/emrah');
+  });
+
+  it('names a remote clone the same way a local one is named', () => {
+    // A remote clone is a path no local `$root` abbreviation could reach, so naming it is the only
+    // form that fits both hosts.
+    expect(abbreviateWorkspaceDir('/srv/proj/.janissary/workspace/bekir')).toBe('$workspace/bekir');
+  });
+});
+
+describe('abbreviateWorkspacePath', () => {
+  it('reads the clone root as the clone name', () => {
+    expect(abbreviateWorkspacePath(clone, clone)).toBe('$workspace/emrah');
+  });
+
+  it('reads a path under the clone after the clone name', () => {
+    expect(abbreviateWorkspacePath(clone, `${clone}/notes`)).toBe('$workspace/emrah/notes');
+  });
+
+  it('reads a nested path with posix separators', () => {
+    expect(abbreviateWorkspacePath(clone, `${clone}/a/b/c.ts`)).toBe('$workspace/emrah/a/b/c.ts');
+  });
+
+  it('tolerates a workspace given with a trailing separator', () => {
+    expect(abbreviateWorkspacePath(`${clone}/`, `${clone}/notes`)).toBe('$workspace/emrah/notes');
+  });
+
+  it('leaves a sibling that shares the prefix outside the clone', () => {
+    // `…/workspace/emrah-2` is not inside `…/workspace/emrah`.
+    expect(abbreviateWorkspacePath(clone, `${root}/.janissary/workspace/emrah-2/notes`)).toBeUndefined();
+  });
+
+  it('leaves a path above the clone outside it', () => {
+    expect(abbreviateWorkspacePath(clone, `${root}/.janissary/workspace`)).toBeUndefined();
+  });
+
+  it('is undefined without a workspace to measure from', () => {
+    expect(abbreviateWorkspacePath(undefined, clone)).toBeUndefined();
   });
 });
 

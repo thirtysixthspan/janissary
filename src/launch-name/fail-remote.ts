@@ -54,7 +54,7 @@ function refuse(managers: Managers, failure: RemoteLaunchFailure, refusal: Launc
   closeTab(managers, failure.label);
   const { label, host, path, reason } = refusal;
   if (path !== undefined && reason !== undefined) {
-    notify(managers, 'launch-refused', retry.creator, removalFailedRefusal(label, path, reason, host));
+    notify(managers, 'launch-refused', retry.creator, removalFailedRefusal(label, reason, host));
     return;
   }
   if (retry.explicit) {
@@ -74,7 +74,7 @@ export function reportRemoteCleanup(
   managers: Managers, retry: RemoteNameRetry | undefined, label: string, host: string, cleaned: string | undefined,
 ): void {
   if (retry === undefined || cleaned === undefined) return;
-  notify(managers, 'launch-workspace-cleaned', retry.creator, cleanedNotice(label, cleaned, host));
+  notify(managers, 'launch-workspace-cleaned', retry.creator, cleanedNotice(label, host));
 }
 
 // A remote launch that cloned its host's missing project root first: say so, once, attributed to
@@ -83,7 +83,7 @@ export function reportRemoteClone(
   managers: Managers, retry: RemoteNameRetry | undefined, host: string, cloned: { url: string; path: string } | undefined,
 ): void {
   if (retry === undefined || cloned === undefined) return;
-  notify(managers, 'launch-root-cloned', retry.creator, clonedNotice(cloned.url, cloned.path, host));
+  notify(managers, 'launch-root-cloned', retry.creator, clonedNotice(cloned.url, host));
 }
 
 // A root refusal is shown on the placeholder in its composed form rather than the rejection's own

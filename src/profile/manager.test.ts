@@ -389,7 +389,7 @@ describe('ProfileManager.newAgent', () => {
 
     expect(managers.tab.deleteBusy).toHaveBeenCalledWith('bob');
     expect(appended).toEqual([
-      { input: 'agent bob --workspace', output: 'Agent "bob" ready. (workspace: /tmp/janus-workspaces/bob)' },
+      { input: 'agent bob --workspace', output: 'Agent "bob" ready. ($workspace/bob)' },
     ]);
   });
 
@@ -406,7 +406,7 @@ describe('ProfileManager.newAgent', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(appended).toEqual([
-      { input: 'agent bob --workspace', output: 'Agent "bob" ready. (workspace: /tmp/janus-workspaces/bob)' },
+      { input: 'agent bob --workspace', output: 'Agent "bob" ready. ($workspace/bob)' },
       { input: 'agent bob --workspace', output: 'workspace isolation off: sandbox-exec unavailable' },
     ]);
   });
@@ -493,7 +493,7 @@ describe('ProfileManager.newAgent — launch-name clashes', () => {
     new ProfileManager(managers).newAgent('agent bob -w');
 
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
-      'Cannot launch "bob": "bob" is already running (/proj/.janissary/workspace/bob).');
+      'Cannot launch "bob": "bob" is already running ($workspace/bob).');
     expect(managers.workspace.create).not.toHaveBeenCalled();
   });
 
@@ -507,7 +507,7 @@ describe('ProfileManager.newAgent — launch-name clashes', () => {
 
     expect(leftover.removeLeftoverWorkspace).toHaveBeenCalledWith('bob');
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-workspace-cleaned', 'janus',
-      'Removed leftover workspace "bob" (/proj/.janissary/workspace/bob) before launching.');
+      'Removed leftover workspace "bob" ($workspace/bob) before launching.');
     expect(managers.workspace.create).toHaveBeenCalledWith('bob');
   });
 
@@ -520,7 +520,7 @@ describe('ProfileManager.newAgent — launch-name clashes', () => {
     new ProfileManager(managers).newAgent('agent bob -w');
 
     expect(mocks.notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
-      'Cannot launch "bob": could not remove leftover workspace "bob" (/proj/.janissary/workspace/bob) — EACCES: permission denied.');
+      'Cannot launch "bob": could not remove leftover workspace "bob" ($workspace/bob) — EACCES: permission denied.');
     expect(managers.workspace.create).not.toHaveBeenCalled();
   });
 

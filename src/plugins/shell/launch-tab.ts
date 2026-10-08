@@ -65,8 +65,8 @@ export function launchShellTab(
       }));
       ready.notifyUser(
         host
-          ? `Shell "${label}" ready on ${host}. (workspace: ${event.displayDir})`
-          : `Shell "${label}" ready. (workspace: ${event.displayDir})`,
+          ? `Shell "${label}" ready on ${host}. (${event.displayDir})`
+          : `Shell "${label}" ready. (${event.displayDir})`,
         { tab: event.instanceKey },
       );
       if (event.sandboxNotice) ready.notifyUser(event.sandboxNotice, { tab: event.instanceKey });

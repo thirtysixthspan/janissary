@@ -232,7 +232,7 @@ describe('launchRemotePluginTab', () => {
     h.channels[0]?.handlers.onReady('/remote/docs', 'sandbox notice');
     await vi.waitFor(() => expect(ready).toHaveBeenCalled());
     expect(ready).toHaveBeenCalledWith(expect.objectContaining({
-      workspaceDir: '/remote/docs', displayDir: '/remote/docs', host: 'devbox', sandboxNotice: 'sandbox notice',
+      workspaceDir: '/remote/docs', displayDir: '$workspace/docs', host: 'devbox', sandboxNotice: 'sandbox notice',
     }), expect.anything());
     expect(h.managers.tab.setCwd).toHaveBeenCalledWith('docs', '/remote/docs');
     expect(h.tabs.find((tab) => tab.label === 'docs')?.plugin?.busy).toBe(false);

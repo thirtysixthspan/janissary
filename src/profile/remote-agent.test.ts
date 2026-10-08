@@ -254,6 +254,6 @@ describe('agent on <address> — the host refusing the name', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(notify).toHaveBeenCalledWith(h.managers, 'launch-workspace-cleaned', 'janus',
-      'Removed leftover workspace "bekir" on devbox (/srv/ws/bekir) before launching.');
+      'Removed leftover workspace "bekir" on devbox ($workspace/bekir) before launching.');
   });
 });

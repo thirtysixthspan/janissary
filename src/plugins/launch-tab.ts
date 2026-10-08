@@ -1,6 +1,7 @@
 import type { Managers } from '../managers.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
+import { abbreviateWorkspaceDir } from '../paths.js';
 import { unconfinedAgentCwd } from '../profile/inherited-cwd.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { NO_REPO, type ProvisioningWorkspace } from '../workspace/manager.js';
@@ -93,7 +94,7 @@ async function runReady(
   const outcome = await deferred.invoke((capabilities) => ready({
     instanceKey,
     workspaceDir: clone.dir,
-    displayDir: managers.tab.shorten(clone.dir),
+    displayDir: abbreviateWorkspaceDir(clone.dir),
     ...(notice && { sandboxNotice: notice }),
   }, capabilities), label);
   if (outcome.status === 'rejected' && launchedTab(managers, declaration.id, instanceKey)) {

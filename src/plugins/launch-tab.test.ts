@@ -175,7 +175,7 @@ describe('launchTab with a workspace', () => {
 
     const dir = path.join(root, '.janissary', 'workspace', 'docs');
     expect(ready).toHaveBeenCalledWith(expect.objectContaining({
-      instanceKey: 'lt-1', workspaceDir: dir, displayDir: managers.tab.shorten(dir),
+      instanceKey: 'lt-1', workspaceDir: dir, displayDir: '$workspace/docs',
       sandboxNotice: 'workspace isolation off: sandbox-exec unavailable',
     }), expect.anything());
     const call = vi.mocked(managers.pty.spawn).mock.calls[0];

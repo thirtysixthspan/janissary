@@ -112,6 +112,11 @@ the sidebar's own strip (see `sidebars.md`).
 
 ### Events that notify
 
+A feed line that names a filesystem path abbreviates it the way the rest of the interface does: a
+workspace clone as `$workspace/<name>` (and a path inside one as `$workspace/<name>/<rest>`), on a
+local launch and a remote one alike, and anything else under the project root as `$root/…` (see
+[[root-path]]). The line's own text is never shortened — only the paths the application put there.
+
 - **`schedule-late`** — a scheduled command is delivered more than five seconds late: `<command> ran <duration> late (system was asleep)` if it was already overdue when the machine last resumed, or `<command> ran <duration> late` otherwise.
 - **`remote-session-terminated`** — a remote peer, harness, or shell is confirmed to have terminated: `<what> on <host> terminated.` The line states the ending and nothing more, and is the wording the sessions tab's own termination line uses; the two remain distinct events, this one reporting a session that ended on its own. The affected tab stays open; no replacement session starts automatically.
 - **`remote-session`** — a remote session was detached, attached, terminated, or forgotten from the sessions tab or a tab's metadata row: `<what> on <host> detached — attach it from the sessions tab.`, `<what> on <host> attached.`, `<what> on <host> terminated.`, or `<what> on <host> forgotten — its record was removed.` `<what>` is the name the session's row shows. Distinct from `remote-session-terminated`, which reports a session terminating on its own rather than a decision the user made; each line is plain text carrying no click target, and is recorded so the change survives the tabs it happened to.
@@ -210,12 +215,13 @@ These event types can produce a notification line:
   typed in (or the issuing tab of a profile launch); nothing is written to that tab's transcript. See
   `agents.md`, `harness.md`, and `remote-server.md` for the full set of lines.
 - **`launch-workspace-cleaned`** — a leftover workspace folder with nothing running in it was removed
-  so a launch could go ahead: `Removed leftover workspace "<name>" (<path>) before launching.`, or
-  with ` on <host>` after the name when the folder was on a remote host. Attributed like
-  `launch-refused`.
+  so a launch could go ahead: `Removed leftover workspace "<name>" ($workspace/<name>) before
+  launching.`, or with ` on <host>` after the name when the folder was on a remote host. Attributed
+  like `launch-refused`.
 - **`launch-root-cloned`** — a remote launch found no clone of the project on its host, the user
-  accepted the offer to clone one, and the workspace is now ready: `Cloned <url> into <path> on
-  <host>.` Attributed like `launch-refused` (see `remote-server.md`).
+  accepted the offer to clone one, and the workspace is now ready: `Cloned <url> into $root on
+  <host>.` — the clone landed in that host's own project root, which `on <host>` identifies. Attributed
+  like `launch-refused` (see `remote-server.md`).
 - **`remote-refused`** — a remote host refused a request after its workspace was ready: `Remote
   janus on <host> refused a request: <message>`, where the message is the host's own. The session is
   still alive and the tab stays open, so this line is the only sign of the refusal. Attributed to the

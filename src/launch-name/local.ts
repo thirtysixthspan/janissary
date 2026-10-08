@@ -1,6 +1,5 @@
 import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
-import { workspacePath } from '../workspace/index.js';
 import { workspaceLabelError } from '../workspace/label.js';
 import { checkLaunchName, sameLaunchName } from './check.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from './leftover.js';
@@ -39,7 +38,7 @@ function runningCheck(managers: Managers, workspace: boolean): ((name: string) =
   if (!workspace) return undefined;
   const tabUses = (dir: string) => managers.tab.tabs.some((tab) => tab.workspaceDir !== undefined
     && sameLaunchName(tab.workspaceDir, dir));
-  return (name) => (isWorkspaceRunning(name, tabUses) ? localRunningRefusal(name, workspacePath(name)) : undefined);
+  return (name) => (isWorkspaceRunning(name, tabUses) ? localRunningRefusal(name) : undefined);
 }
 
 /**
@@ -75,12 +74,11 @@ export function resolveLocalLaunchName(managers: Managers, request: LocalLaunchN
 function clearLeftover(managers: Managers, creator: string, name: string): boolean {
   if (!hasLeftoverWorkspace(name)) return true;
   if (managers.workspace.preflight() !== undefined) return true;
-  const dir = workspacePath(name);
   const failure = removeLeftoverWorkspace(name);
   if (failure !== undefined) {
-    notify(managers, 'launch-refused', creator, removalFailedRefusal(name, dir, failure));
+    notify(managers, 'launch-refused', creator, removalFailedRefusal(name, failure));
     return false;
   }
-  notify(managers, 'launch-workspace-cleaned', creator, cleanedNotice(name, dir));
+  notify(managers, 'launch-workspace-cleaned', creator, cleanedNotice(name));
   return true;
 }

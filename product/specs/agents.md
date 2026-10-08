@@ -36,7 +36,7 @@ A typed name (`agent <name>`) is refused when it is taken. The refusal goes to t
 
 - `Cannot launch "<name>": a tab named "<name>" is already open.`
 - `Cannot launch "<name>": "<name>" is already in the sessions tab (<state> on <host>).`
-- `Cannot launch "<name>": "<name>" is already running (<path>).` for a local workspace still in use.
+- `Cannot launch "<name>": "<name>" is already running ($workspace/<name>).` for a local workspace still in use.
 
 A pool name (bare `agent`, `agent on <address>`, or the ➕ button) skips every taken name. When every pool name is taken, `All agent names are in use.` is posted to the notifications feed and no tab opens.
 
@@ -44,4 +44,4 @@ For a remote launch the target host answers after the placeholder tab is already
 
 ### Leftover workspaces
 
-A workspace folder under the chosen name with nothing running in it is a leftover. For a local `-w` launch it is removed, even with uncommitted or unpushed work in it, before the clone starts, and `Removed leftover workspace "<name>" (<path>) before launching.` is posted. If it cannot be removed, the launch is refused with `Cannot launch "<name>": could not remove leftover workspace "<name>" (<path>) — <reason>.`. Remote leftovers are handled the same way on the remote host (see `remote-server.md`).
+A workspace folder under the chosen name with nothing running in it is a leftover. For a local `-w` launch it is removed, even with uncommitted or unpushed work in it, before the clone starts, and `Removed leftover workspace "<name>" ($workspace/<name>) before launching.` is posted. If it cannot be removed, the launch is refused with `Cannot launch "<name>": could not remove leftover workspace "<name>" ($workspace/<name>) — <reason>.`. The folder is named by its workspace rather than by its absolute path (see [[root-path]]). Remote leftovers are handled the same way on the remote host (see `remote-server.md`).
