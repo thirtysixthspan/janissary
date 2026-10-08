@@ -146,7 +146,6 @@ export const MANAGER_TAB_RELEASE = [
   'remote',
   'database',
   'communication',
-  'command',
 ] as const satisfies readonly (keyof ManagerRegistry)[];
 
 // The same compile-time completeness check the dispose order has: a manager listed above whose

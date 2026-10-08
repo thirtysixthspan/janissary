@@ -20,7 +20,7 @@ This codebase already does this well and the pattern should be copied rather tha
 
 An extension point is a list the host walks, not a switch statement the host maintains. Adding a plugin adds an entry. It never edits a dispatcher.
 
-The repo has three working examples with three different resolution strategies, and they are the vocabulary to reach for. `src/openers/index.ts` resolves by first match on a declared claim (file extensions), so exactly one opener runs. `src/commands/index.ts` resolves by `match(command)` predicate over an ordered list. `src/recognizers/` polls every recognizer and picks the winner by a reliability score, which is the right shape when several candidates are plausible and the host must arbitrate.
+The repo has two working examples of resolution strategies, and they are the vocabulary to reach for. `src/openers/index.ts` resolves by first match on a declared claim (file extensions), so exactly one opener runs. `src/commands/index.ts` resolves by `match(command)` predicate over an ordered list.
 
 **Rule.** Pick a resolution strategy explicitly and document it in the extension point's own module: first match, all in order, or arbitrated. Never let it be an accident of array position. When order matters, see section 5.
 
@@ -96,7 +96,7 @@ Two hot paths in this app deserve specific care. `emitState` broadcasts the full
 
 Plugins attach on both sides, and the two sides connect only through the existing wire contract. That is the rule that keeps the rest of the architecture intact.
 
-On the server, the natural attachment points already exist and a plugin should extend them rather than invent parallel ones. Commands attach through the `src/commands/` registry shape, where each command has exactly one definition and one execution path. File type handling attaches through the openers registry. Unprefixed command routing attaches through the recognizers. Anything owning per-agent resources attaches to the agent's session object, which owns its own state and exposes it only through its own methods, never as a new `Map<label, …>` on a manager. Long-lived subsystems appear in `Managers` and get a `dispose`.
+On the server, the natural attachment points already exist and a plugin should extend them rather than invent parallel ones. Commands attach through the `src/commands/` registry shape, where each command has exactly one definition and one execution path. File type handling attaches through the openers registry. Anything owning per-agent resources attaches to the agent's session object, which owns its own state and exposes it only through its own methods, never as a new `Map<label, …>` on a manager. Long-lived subsystems appear in `Managers` and get a `dispose`.
 
 On the client, plugin surfaces are React components mounted through the existing view layering, and the server remains the single source of truth without exception. The server owns all state and every rendering decision. The client renders what the server sends and emits intents back. A client plugin may own ephemeral view state such as scroll position or which overlay is open. It may not compute state the server also computes, and it may not derive transcript or tab state locally.
 

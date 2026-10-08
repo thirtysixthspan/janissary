@@ -41,15 +41,7 @@ export class ControllerCore {
     );
   }
 
-  routeView(): { cmd: string; choices: string[] } | null {
-    return this.managers.command.routeView();
-  }
-
   stateEvent() { return buildStateEvent(this); }
-
-  chooseRoute(index: number): void {
-    this.managers.command.chooseRoute(index);
-  }
 
   harnessLaunchView() { return this.managers.harness.harnessLaunchView(); }
   closeHarnessLaunch(): void { this.managers.harness.closeLaunchDialog(); }

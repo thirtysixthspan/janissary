@@ -11,17 +11,12 @@ import type { PickerOverlaysState } from './overlays-state';
 //
 // Every overlay is left open at once — a state the application never reaches, chosen here so no
 // assertion passes by reading a flag that happened to be false, and so `overlays` below stays
-// consistent with the nine flags rather than being a fourth hand-written literal.
+// consistent with the eight flags rather than being a fourth hand-written literal.
 //
 // Test support only — nothing in the application imports this module.
 export function pickerStateFixture(): PickerOverlaysState {
   const tab = (label: string): TabView => ({ label, cwd: '/w', bufferLines: [], cmdHistory: [], commandQueue: [] } as unknown as TabView);
-  const route = { cmd: 'run', choices: ['shell', 'acp'] };
   return {
-    route,
-    setRoute: vi.fn(), routeIndex: 1, setRouteIndex: vi.fn(),
-    routeRef: createRef(), chooseRoute: vi.fn(),
-
     themePickerOpen: true, themePickerIndex: 2, setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(),
     openThemePicker: vi.fn(), pickTheme: vi.fn(),
 
@@ -58,7 +53,7 @@ export function pickerStateFixture(): PickerOverlaysState {
     recent: ['recent-command'], queueItems: ['queued-command'], tabs: [tab('open-tab')],
     commandInputRef: createRef(),
     overlays: buildOverlayOpenState({
-      route, themePickerOpen: true, appThemePickerOpen: true, quickOpenOpen: true, navOpen: true,
+      themePickerOpen: true, appThemePickerOpen: true, quickOpenOpen: true, navOpen: true,
       pickerOpen: true, queueOpen: true, taskPickerOpen: true, profilePickerOpen: true,
     }),
   };

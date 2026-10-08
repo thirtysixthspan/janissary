@@ -6,7 +6,6 @@ import type { ClientMessage, ServerEvent, RpcCall } from '../protocol.js';
 const makeController = () =>
   ({
     view: vi.fn(() => []),
-    routeView: vi.fn(() => null),
     stateEvent: vi.fn(() => ({ t: 'state' })),
     managers: {
       tab: {
@@ -35,7 +34,6 @@ const makeController = () =>
     reorderTabTo: vi.fn(),
     toggleCollapse: vi.fn(),
     promoteToTerminal: vi.fn(),
-    chooseRoute: vi.fn(),
     complete: vi.fn(() => ({ suggestions: [] })),
     resize: vi.fn(),
     ptyInput: vi.fn(),
@@ -220,12 +218,6 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 7, { method: 'promoteToTerminal', params: {} });
     expect(controller.promoteToTerminal).toHaveBeenCalled();
-  });
-
-  it('routes chooseRoute', () => {
-    const controller = makeController();
-    dispatchCall(controller, 7, { method: 'chooseRoute', params: { index: 0 } });
-    expect(controller.chooseRoute).toHaveBeenCalledWith(0);
   });
 
   it('routes resize', () => {

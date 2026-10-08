@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  OVERLAYS, buildOverlayOpenState, commandBarDisabled, commandBarSuppressed, firstOpenOverlay,
+  OVERLAYS, buildOverlayOpenState, commandBarSuppressed, firstOpenOverlay,
   type OverlayName, type OverlayOpenSources, type OverlayOpenState,
 } from './overlay-registry';
 import {
@@ -8,7 +8,7 @@ import {
 } from '../shared/contributed-overlays';
 
 const NONE: OverlayOpenState = {
-  route: false, syntaxTheme: false, appTheme: false, quickOpen: false,
+  syntaxTheme: false, appTheme: false, quickOpen: false,
   tabNav: false, history: false, queue: false, task: false, profile: false,
 };
 
@@ -21,7 +21,7 @@ describe('the overlay registry', () => {
   // than left implicit — reordering an overlay is a deliberate change to this list.
   it('lists every overlay once, in priority order', () => {
     expect(OVERLAYS.map((overlay) => overlay.name)).toEqual([
-      'route', 'syntaxTheme', 'appTheme', 'quickOpen',
+      'syntaxTheme', 'appTheme', 'quickOpen',
       'tabNav', 'history', 'queue', 'task', 'profile',
     ]);
     expect(new Set(OVERLAYS.map((overlay) => overlay.name)).size).toBe(OVERLAYS.length);
@@ -34,7 +34,7 @@ describe('the overlay registry', () => {
 });
 
 const CLOSED: OverlayOpenSources = {
-  route: null, themePickerOpen: false, appThemePickerOpen: false, quickOpenOpen: false,
+  themePickerOpen: false, appThemePickerOpen: false, quickOpenOpen: false,
   navOpen: false, pickerOpen: false, queueOpen: false, taskPickerOpen: false, profilePickerOpen: false,
 };
 
@@ -60,13 +60,9 @@ describe('buildOverlayOpenState', () => {
     expect(buildOverlayOpenState({ ...CLOSED, [source]: true })).toEqual(opened(name));
   });
 
-  it('treats a non-null route view as the route chooser being open', () => {
-    expect(buildOverlayOpenState({ ...CLOSED, route: { cmd: 'run', choices: ['shell'] } })).toEqual(opened('route'));
-  });
-
   it('covers every overlay the registry lists', () => {
     const byName = (a: string, b: string) => a.localeCompare(b);
-    expect([...SOURCE_OF.map(([, name]) => name), 'route'].toSorted(byName)).toEqual(
+    expect(SOURCE_OF.map(([, name]) => name).toSorted(byName)).toEqual(
       OVERLAYS.map((overlay) => overlay.name).toSorted(byName),
     );
   });
@@ -83,7 +79,6 @@ describe('firstOpenOverlay', () => {
 
   it('returns the highest-priority overlay when several are open', () => {
     expect(firstOpenOverlay(opened('profile', 'quickOpen', 'history'))).toBe('quickOpen');
-    expect(firstOpenOverlay(opened('task', 'route'))).toBe('route');
     expect(firstOpenOverlay(opened('profile', 'task'))).toBe('task');
   });
 });
@@ -103,29 +98,9 @@ describe('commandBarSuppressed', () => {
     'is true while %s is open',
     (name) => { expect(commandBarSuppressed(opened(name))).toBe(true); },
   );
-
-  it('is true when the queue is open alongside an overlay that does claim the bar', () => {
-    expect(commandBarSuppressed(opened('queue', 'route'))).toBe(true);
-  });
 });
 
-describe('commandBarDisabled', () => {
-  it('is false when nothing is open', () => {
-    expect(commandBarDisabled(NONE)).toBe(false);
-  });
-
-  // The route chooser is the spec's one modal overlay: the command input is disabled while it is open.
-  it('is true while the route chooser is open', () => {
-    expect(commandBarDisabled(opened('route'))).toBe(true);
-  });
-
-  it.each(OVERLAYS.filter((overlay) => overlay.name !== 'route').map((overlay) => overlay.name))(
-    'is false while only %s is open',
-    (name) => { expect(commandBarDisabled(opened(name))).toBe(false); },
-  );
-});
-
-// A contributed overlay ranks after every built-in one, so the nine core answers are unchanged and
+// A contributed overlay ranks after every built-in one, so the eight core answers are unchanged and
 // only the two that have to know about a plugin consult the seam.
 describe('a plugin-contributed overlay', () => {
   const registrations: (() => void)[] = [];
@@ -151,12 +126,6 @@ describe('a plugin-contributed overlay', () => {
     expect(commandBarSuppressed(opened())).toBe(true);
     closeContributedOverlay('clipboard-history');
     expect(commandBarSuppressed(opened())).toBe(false);
-  });
-
-  it('never disables the command bar, which must stay live for a paste at the caret', () => {
-    publish('clipboard-history');
-    openContributedOverlay('clipboard-history', null);
-    expect(commandBarDisabled(opened())).toBe(false);
   });
 
   it('answers with its own name once no built-in overlay is up', () => {

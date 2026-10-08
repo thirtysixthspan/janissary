@@ -5,9 +5,7 @@
 Each state update supplies the displayed tabs and selections, tab-name limits, command history,
 themes, task and profile lists, launch dialogs, and project title information together. The active
 tab's name limit is applied independently of the inactive-tab limit. An absent secondary selection
-clears the secondary tab. Missing or null route and launch dialogs are treated as closed. A newly
-opened route chooser selects its last choice, or its first position when there are no choices;
-repeated updates for the same command preserve the current choice.
+clears the secondary tab. Missing or null launch dialogs are treated as closed.
 
 The most recent snapshot is kept by the client, so the app shows the session's current state as
 soon as it is ready to display it, even when the snapshot answering `init` arrived first. A launch

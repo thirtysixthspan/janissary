@@ -13,7 +13,7 @@ import { focusedElement, returnFocus } from './overlay-focus';
 // the outside by installing an opener. A feature names a chord or a command word; it never learns
 // that a plugin exists, and never loads one itself.
 //
-// The open state lives here rather than in the projections the nine built-in overlays carry: an
+// The open state lives here rather than in the projections the eight built-in overlays carry: an
 // overlay's being open is the plugin's own state, not app state every consumer must be threaded
 // through, and a second source of truth for it would be the drift `overlay-registry.ts` exists to end.
 

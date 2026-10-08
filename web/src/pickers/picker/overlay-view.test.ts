@@ -11,9 +11,6 @@ const byName = (a: string, b: string) => a.localeCompare(b);
 // projection exists to make impossible.
 const MAPPING: ReadonlyArray<[string, unknown, unknown]> = [
   ['overlays', view.overlays, state.overlays],
-  ['route', view.route, state.route],
-  ['routeIndex', view.routeIndex, state.routeIndex],
-  ['onPickRoute', view.onPickRoute, state.chooseRoute],
   ['syntaxTheme', view.syntaxTheme, state.syntaxTheme],
   ['themePickerIndex', view.themePickerIndex, state.themePickerIndex],
   ['onPickTheme', view.onPickTheme, state.pickTheme],

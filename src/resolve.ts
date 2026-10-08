@@ -10,8 +10,7 @@ export type Resolution =
   | { kind: 'shell'; cmd: string; pty?: boolean }
   | { kind: 'app'; name: AppCommand; cmd: string }
   | { kind: 'output'; cmd: string; output: string }
-  // An unprefixed command that matches no built-in. The interactive dispatcher runs probabilistic
-  // recognition on it; other callers fall back to `output` (the unknown-command message).
+  // An unprefixed command that matches no built-in, with the existing unknown-command reply.
   | { kind: 'unknown'; cmd: string; output: string };
 
 /**
@@ -59,8 +58,7 @@ export function resolveCommand(raw: string, available: (name: string) => boolean
     }
   }
 
-  // `getOutput` reports which of the three it decided, so the interactive dispatcher can run
-  // command recognition on an `unknown` without reading the message text to find out.
+  // `getOutput` distinguishes help, empty input, and the unknown-command reply.
   const result = getOutput(command);
   // Shell commands require the `shell` keyword (handled above); a bare non-built-in is
   // reported as unknown rather than auto-run in the shell.

@@ -190,52 +190,6 @@ describe('Controller', () => {
     }
   });
 
-  it('auto-runs a bare SQL command as a db query when exactly one database is open', () => {
-    initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-route-')));
-    const { c } = makeController();
-    c.dispatch('db sqlite create routedb');
-    try {
-      c.dispatch('select 1 as n'); // recognized as a db query; one db open → runs against it
-      const text = allText(c);
-      expect(text).toContain('(1 row)');
-      expect(text).not.toContain('Unrecognized command');
-    } finally {
-      closeAllConnections();
-    }
-  });
-
-  it('opens a route chooser for an ambiguous command and cancels without running', () => {
-    const { c } = makeController();
-    const before = c.view()[0].bufferLines.length;
-    c.dispatch('select 1 as n'); // SQL-shaped but no db open → ambiguous
-    const rv = c.routeView();
-    expect(rv).not.toBeNull();
-    expect(rv!.cmd).toBe('select 1 as n');
-    expect(rv!.choices).toEqual(['shell']);
-    c.chooseRoute(-1); // cancel
-    expect(c.routeView()).toBeNull();
-    expect(c.view()[0].bufferLines.length).toBe(before); // nothing was run or appended
-  });
-
-  it('runs the chosen db route from the chooser when multiple databases are open', () => {
-    initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-chooser-db-')));
-    const { c } = makeController();
-    c.dispatch('db sqlite create d1');
-    c.dispatch('db sqlite create d2'); // two open dbs → a db query needs the user to pick one
-    try {
-      c.dispatch('select 1 as n');
-      const rv = c.routeView();
-      expect(rv).not.toBeNull();
-      const index = rv!.choices.findIndex((l) => l.includes('d1'));
-      expect(index).toBeGreaterThan(-1);
-      c.chooseRoute(index);
-      expect(c.routeView()).toBeNull();
-      expect(allText(c)).toContain('(1 row)'); // ran the query against d1
-    } finally {
-      closeAllConnections();
-    }
-  });
-
   // Closing the last tab exits the way `quit` does; the shutdown that exit runs closes the connections.
   it('closes all SQLite connections in the shutdown that closing the last tab requests', () => {
     initDbDir(mkdtempSync(path.join(tmpdir(), 'janus-db2-')));

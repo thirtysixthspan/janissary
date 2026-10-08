@@ -15,7 +15,6 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
   ['moveTabToOtherPane', { index: 0 }, [{ index: null }]],
   ['reorderTab', { dir: 1 }, [{ dir: 2 }]],
   ['reorderTabTo', { from: 0, to: 3 }, [{ from: 0 }, { from: '0', to: 3 }]],
-  ['chooseRoute', { index: 0 }, [{ index: 'first' }]],
   ['answerQuestion', { tab: 'one', id: 'q1', answer: 'yes' }, [{ tab: 'one', id: 'q1' }, { tab: 'one', id: 'q1', answer: 7 }]],
   ['complete', { text: 'shell RE', cursor: 8 }, [{ text: 'shell RE' }, { text: 'shell RE', cursor: '8' }]],
   ['resize', { cols: 80, rows: 24 }, [{ cols: 80 }, { cols: '80', rows: 24 }]],

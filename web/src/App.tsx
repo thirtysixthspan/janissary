@@ -132,8 +132,8 @@ export function App({ client }: { client: JanusClient }) {
   const { unsavedQuitOpen, guardedOpenQuitConfirm, confirmUnsavedQuit, cancelUnsavedQuit } =
     useUnsavedQuitGuard(tabs, tabHandles, openQuitConfirm, runCommand);
   const guardRef = useRef<((index: number) => boolean) | null>(null);
-  const { activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef } = useCmdWRefs(
-    activeTab, quitConfirmOpen, unsavedQuitOpen, pickers.overlays, pickers.route,
+  const { activeTabRef, quitConfirmOpenRef, pickerOpenRef } = useCmdWRefs(
+    activeTab, quitConfirmOpen, unsavedQuitOpen, pickers.overlays,
   );
   const focusedPluginTabIndexRef = useRef<number | undefined>(undefined);
   const focusedPluginTabIndex = focusedPluginTab === undefined
@@ -168,7 +168,7 @@ export function App({ client }: { client: JanusClient }) {
 
   useSectionNav(tabs, () => focusCenterVisibleTab(currentRef.current, harnessHandles, shellHandles, inputReference));
 
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, focusedPluginTabIndexRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, focusedPluginTabIndexRef);
 
   // Live snapshot + callbacks read by the window key handler, so it never has to re-register. Every
   // overlay-owned field arrives in one bag; only search's two are the app shell's to add.

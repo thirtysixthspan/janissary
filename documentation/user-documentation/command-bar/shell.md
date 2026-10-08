@@ -1,53 +1,26 @@
 # Shell commands
 
-Type a shell command the way you'd type it in a terminal, and it runs in the tab's shell:
+In an agent tab, prefix a shell command with `shell ` or `!`:
 
 ```
-ls -la
-git status
-npm test
+shell ls -la
+!git status
+shell npm test
 ```
 
-Output streams into the transcript line by line as it's produced, with ANSI colors and styling intact — a test suite's colored pass/fail summary looks the way it should. `file.ts:42`-style paths in the output are clickable and open the file in an [editor tab](/user-documentation/tab-types/editor) at that line.
+Output streams into the transcript line by line as it's produced, with ANSI colors and styling intact. `file.ts:42`-style paths in the output are clickable and open the file in an [editor tab](/user-documentation/tab-types/editor) at that line.
 
-Plain commands like these are recognized as shell input automatically. When a line could be read more than one way — a shell command, a SQL query, a prompt for the agent — the app asks instead of guessing, floating a chooser above the command bar; pick a route with `↑`/`↓` and `Return`, or `Escape` to cancel. To skip recognition entirely, prefix the line with `shell `:
+Everything after `shell ` goes to the shell. `!find . -name "*.ts"` is identical to `shell find . -name "*.ts"`. `!!` is shorthand for `shell --pty`, forcing the command into a full-tab terminal: `!!htop` is identical to `shell --pty htop`.
 
-```
-shell find . -name "*.ts"
-```
+A line that names no application command and has no shell prefix receives `Unknown command: "<what you typed>". Type "help" for available commands.` in an agent tab. A command sent by `msg` or `broadcast` follows the same explicit-command rules; a request returns the unknown-command reply to its sender. To query a database, name its engine and destination: `db sqlite query <name> <sql>`. See [Databases](/user-documentation/command-bar/database).
 
-The prefix is the deterministic escape hatch — whatever follows it goes straight to the shell. `!` is shorthand for the same thing — `!find . -name "*.ts"` is identical to `shell find . -name "*.ts"` — and `!!` is shorthand for `shell --pty`, forcing the command straight into a full-tab terminal (see below): `!!htop` is identical to `shell --pty htop`.
-
-The chooser lists `shell`; a tab supporting ACP also offers `acp (agent prompt)`. Agent tabs do not offer ACP. It also lists one `db query → <name>`
-option for each database connection open in the current tab. It does not offer a database route
-when that tab has no open database. A confident SQL guess runs immediately when exactly one database
-is open. With several open, the guess opens the chooser instead so you can pick the target; with
-none open, there is no target to pick and the guess is not offered as a database route. You can also
-use `acp ` in a shell tab, or skip recognition with `db ` followed by a whole database command —
-`db sqlite query <name> <sql>`, since the word after `db` is read as the engine name.
-
-A command word that is also an ordinary English word is read as the start of a sentence when the
-line looks like one. `find the largest file in this repo` opens the route chooser, while `find . -name
-"*.ts"` goes to the shell.
-
-The chooser is modal, so the command bar is disabled until you choose or cancel. It is titled
-`route: <the line you typed>`. Use `↑` and `↓`, press `Return`, or click a row. `acp (agent prompt)`
-is highlighted when offered; otherwise `shell` is highlighted.
-
-The chooser belongs to the tab that raised it. Answering it while you have clicked over to a different tab runs the command in the original one, not the one you are looking at. Keyboard tab-switching is blocked while a chooser is open, which hides this most of the time; the mouse is the way in.
-
-Only one chooser is open at a time, and that holds across the whole app, not just one tab. While one is open, nothing else can open one: a command in any other tab, or a scheduled or queued one, doesn't run, and its own tab shows `Another command is waiting for a route choice; run this again once it is answered.` Closing the tab that opened the chooser also closes the chooser.
-
-Typed in a tab, a line that no built-in command claims and that fits no confident route always gets the chooser, never a refusal — there is always `shell` to pick, plus any supported database or ACP route. The `Unknown command: "<what you typed>". Type "help" for available commands.` line exists, but a command sent to a tab by another one is the only path that produces it, and it arrives in the sender's transcript as that tab's answer.
-
-See [Databases](/user-documentation/command-bar/database) for database routing and [ACP agents](/user-documentation/advanced-agents/acp-agent)
-for agent-prompt routing.
+A shell tab opened with `zsh` accepts ordinary shell input directly. Its command bar runs application commands first and sends every unclaimed line to zsh. Use explicit `acp` in a supported tab to request a model reply; see [ACP agents](/user-documentation/advanced-agents/acp-agent).
 
 ## One shell per tab, and it persists
 
 <img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
-Each tab has its own shell process that lives as long as the tab does. State accumulates the way it would in a terminal: `cd` somewhere and later commands in that tab run there; exported variables stick around. The working directory is also remembered per tab, so a shell respawned after one dies starts where the last one left off. If the shell process dies unexpectedly, a fresh one is spawned on your next command.
+Each tab has its own shell process that lives as long as the tab does. State accumulates the way it would in a terminal: `shell cd` somewhere and later commands in that tab run there; exported variables stick around. The working directory is also remembered per tab, so a shell respawned after one dies starts where the last one left off. If the shell process dies unexpectedly, a fresh one is spawned on your next command.
 
 A remembered directory that has since been deleted or renamed is not worth starting a shell in. Such a tab's shell starts in the project directory instead, which is where a new tab starts anyway, and the next command you run there records that directory in place of the stale one.
 
@@ -66,8 +39,8 @@ What you do get is the environment `janus` itself was launched with. Export some
 If you need one of your aliases, the ways to get it are to run it through your shell yourself, to source the file first, or to open an interactive shell in the tab:
 
 ```
-zsh -ic "myalias"
-source ~/.zshrc && myalias
+shell zsh -ic "myalias"
+shell source ~/.zshrc && myalias
 shell --pty
 ```
 

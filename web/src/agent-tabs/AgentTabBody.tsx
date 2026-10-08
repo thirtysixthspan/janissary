@@ -28,8 +28,6 @@ type Properties = {
   inputReference: React.RefObject<HTMLTextAreaElement | null>;
   pickerOverlays: React.ReactNode;
   blockingOverlayOpen: boolean;
-  // The route chooser is open: the command line is disabled, not just stripped of its keys.
-  commandBarDisabled: boolean;
   search: ReturnType<typeof useViewSearchState>['search'];
   globalHistory: string[];
   // Every tab's unexecuted command text; this body's bar reads and writes its own tab's entry.
@@ -46,7 +44,7 @@ type Properties = {
 // Split out of App.tsx to keep it under the file-size limit.
 export function AgentTabBody({
   current, client, lines, runCommand, transcriptReference, highlight, inputReference,
-  pickerOverlays, blockingOverlayOpen, commandBarDisabled,
+  pickerOverlays, blockingOverlayOpen,
   search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
   recallReference, dropRef, onSplit,
 }: Properties) {
@@ -114,7 +112,6 @@ export function AgentTabBody({
         inputRef={inputReference}
         complete={requestCompletion(client)}
         pickerOpen={blockingOverlayOpen || quitConfirmOpen || unsavedQuitOpen}
-        disabled={commandBarDisabled}
         busy={current.busy}
         recallRef={recallReference}
         dropRef={dropRef}

@@ -69,17 +69,16 @@ Bare `Tab` keeps its command-completion behavior in the command bar.
 
 ## While an overlay is open
 
-The nine overlays that float above the command bar are mutually exclusive: only one is ever on screen. When more than one could be open, a fixed order decides which wins and which one your keystrokes go to:
+The eight overlays that float above the command bar are mutually exclusive: only one is ever on screen. When more than one could be open, a fixed order decides which wins and which one your keystrokes go to:
 
-1. route chooser
-2. syntax-theme picker
-3. application-theme picker
-4. Quick Open
-5. tab navigator
-6. command history picker
-7. command queue popup
-8. task picker
-9. profile picker
+1. syntax-theme picker
+2. application-theme picker
+3. Quick Open
+4. tab navigator
+5. command history picker
+6. command queue popup
+7. task picker
+8. profile picker
 
 An open overlay claims every keystroke. Nothing underneath it scrolls the transcript, switches tabs, or reorders them, and the shortcut that would open another overlay does nothing until the open one is dismissed. Quick Open holds its own text input and answers its own typing, arrows, `Enter`, and `Escape` there. The command queue popup is the one exception: its selected command is edited in the command bar, so the bar keeps working while it is open, with only `Enter`, the arrows, and `Backspace`/`Delete` on an empty line reserved by the popup.
 

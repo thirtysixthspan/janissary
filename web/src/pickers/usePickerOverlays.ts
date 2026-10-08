@@ -1,6 +1,6 @@
 import type React from 'react';
 import { useMemo } from 'react';
-import type { ProfileRow, RouteChooserView, TabView, TaskRow } from '@shared/protocol';
+import type { ProfileRow, TabView, TaskRow } from '@shared/protocol';
 import type { PickerCommands } from '../shared/command-bar/picker-commands';
 import type { JanusClient } from '../ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
@@ -11,7 +11,6 @@ import { buildOverlayOpenState } from './overlay-registry';
 import type { PickerOverlaysState } from './picker/overlays-state';
 import { buildPickerOverlayView, type PickerOverlayView } from './picker/overlay-view';
 import { buildPickerKeyBindings, type PickerKeySnapshot, type PickerKeyCallbacks } from './picker/key-bindings';
-import { useRouteChooser } from './useRouteChooser';
 import { useThemePicker } from './useThemePicker';
 import { useAppThemePicker } from './useAppThemePicker';
 import { useHistPicker } from './useHistPicker';
@@ -44,25 +43,20 @@ type Input = {
 // consumer can still reach the type through here.
 export type { PickerCommands } from '../shared/command-bar/picker-commands';
 
-// The route chooser's two setters and its seeding ref, plus the app theme's — what the server state
-// stream writes into the overlays it drives.
+// The app theme setter, written by the server state stream.
 export type PickerServerSetters = {
-  setRoute: (route: RouteChooserView | null) => void;
-  setRouteIndex: (index: number) => void;
   setTheme: (theme: string) => void;
-  routeRef: React.RefObject<RouteChooserView | null>;
 };
 
-// The one owner of every modal overlay's state. Nine hooks used to be called and destructured in
+// The one owner of every modal overlay's state. Eight hooks used to be called and destructured in
 // `App.tsx`, and their ~fifty results re-listed by hand three more times: as props on `AppMain` and
-// again on `PickerOverlays`, as a nine-field subset inside `AppMain`'s `mountedProps`, and as the
+// again on `PickerOverlays`, as an eight-field subset inside `AppMain`'s `mountedProps`, and as the
 // window key handler's snapshot and callbacks under a second set of names. Each consumer now gets one
 // bag built by one function, so a field can no longer be present in one restatement and missing from
 // another. The bags are separate — nothing here becomes a context, and the key handler's snapshot
 // stays a plain object read through `useLatestRef` at event time.
 export function usePickerOverlays(input: Input): {
   overlays: ReturnType<typeof buildOverlayOpenState>;
-  route: RouteChooserView | null;
   view: PickerOverlayView;
   keys: PickerKeySnapshot & PickerKeyCallbacks;
   commands: PickerCommands;
@@ -83,7 +77,6 @@ export function usePickerOverlays(input: Input): {
   const queueItems = useMemo(() => pickerTab?.commandQueue ?? [], [pickerTab]);
   const harnessPtyId = pickerTab?.view === 'harness' ? pickerTab.harness?.ptyId : undefined;
 
-  const route = useRouteChooser(client);
   const themes = useThemePicker(syntaxTheme, runCommand);
   const appThemes = useAppThemePicker(runCommand);
   const history = useHistPicker(recent, runCommand);
@@ -97,19 +90,18 @@ export function usePickerOverlays(input: Input): {
   );
 
   const overlays = buildOverlayOpenState({
-    route: route.route, themePickerOpen: themes.themePickerOpen, appThemePickerOpen: appThemes.appThemePickerOpen,
+    themePickerOpen: themes.themePickerOpen, appThemePickerOpen: appThemes.appThemePickerOpen,
     quickOpenOpen: quick.quickOpenOpen, navOpen: nav.navOpen, pickerOpen: history.pickerOpen,
     queueOpen: queue.queueOpen, taskPickerOpen: populate.taskPickerOpen, profilePickerOpen: populate.profilePickerOpen,
   });
 
   const state: PickerOverlaysState = {
-    ...route, ...themes, ...appThemes, ...history, ...nav, ...quick, ...queue, ...populate,
+    ...themes, ...appThemes, ...history, ...nav, ...quick, ...queue, ...populate,
     syntaxTheme, runCommand, recent, queueItems, tabs, commandInputRef: inputRef, overlays,
   };
 
   return {
     overlays,
-    route: route.route,
     view: buildPickerOverlayView(state),
     keys: buildPickerKeyBindings(state),
     commands: {
@@ -124,10 +116,7 @@ export function usePickerOverlays(input: Input): {
       openTabNavWithQuery: nav.openTabNavWithQuery,
     },
     serverState: {
-      setRoute: route.setRoute,
-      setRouteIndex: route.setRouteIndex,
       setTheme: appThemes.setTheme,
-      routeRef: route.routeRef,
     },
     onEditQueued: queue.onEditQueued,
     onDeleteQueued: queue.onDeleteQueued,

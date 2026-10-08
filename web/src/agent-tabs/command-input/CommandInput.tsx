@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { CompletionResult } from '@shared/protocol';
 import { handleTabCompletion } from './command-completion';
 import { useCommandDraft, type CommandDrafts } from './useCommandDrafts';
@@ -22,9 +22,6 @@ export type CommandInputProperties = {
   pickerOpen: boolean;
   busy: boolean;
   autoFocus?: boolean;
-  // The route chooser is open: the bar takes no text at all (see `disablesCommandBar` in the overlay
-  // registry), and takes focus back once it closes.
-  disabled?: boolean;
   // Exposes history recall to the application.
   recallRef?: React.RefObject<((text: string) => void) | null>;
   dropRef?: React.RefObject<CommandInputDropHandle | null>;
@@ -36,20 +33,11 @@ export type CommandInputProperties = {
 // points where it should take over.
 export function CommandInput({
   dotColor, draftKey, drafts, history, ghostHistory, onSubmit, inputRef, complete, pickerOpen, busy,
-  autoFocus = true, disabled = false, recallRef, dropRef,
+  autoFocus = true, recallRef, dropRef,
 }: CommandInputProperties) {
   const { value, setValue } = useCommandDraft(draftKey, drafts);
   const [completions, setCompletions] = useState<string[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
-  const wasDisabled = useRef(disabled);
-
-  // Disabling the textarea drops its focus, and the user was typing here when the chooser opened,
-  // so hand focus back the moment it is enabled again.
-  useEffect(() => {
-    if (wasDisabled.current && !disabled) inputRef.current?.focus();
-    wasDisabled.current = disabled;
-  }, [disabled, inputRef]);
-
   const bar = useCommandBarKeys({
     value, setValue, inputRef, history, ghostHistory, onSubmit,
     onClear: () => { setCompletions([]); },
@@ -102,7 +90,6 @@ export function CommandInput({
       dotColor={dotColor}
       busy={busy}
       autoFocus={autoFocus}
-      disabled={disabled}
     />
   );
 }

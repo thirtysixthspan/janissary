@@ -14,7 +14,7 @@ export function buildStateEvent(controller: ControllerCore): ServerEvent {
   return {
     t: 'state', tabs: controller.view(), activeTab: controller.managers.tab.activeTab,
     secondaryTab: secondaryTab === -1 ? undefined : secondaryTab,
-    route: controller.routeView(), harnessLaunch: controller.harnessLaunchView(),
+    harnessLaunch: controller.harnessLaunchView(),
     scheduleLaunch: controller.scheduleLaunchView(),
     tabNameMaxLength: getConfig().tabNameMaxLength,
     activeTabNameMaxLength: getConfig().activeTabNameMaxLength,

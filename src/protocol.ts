@@ -99,7 +99,6 @@ export type {
 export type {
   AcpRef,
   ConnectionView,
-  RouteChooserView,
   HarnessLaunchView,
   QuestionKind,
   PendingQuestionView,

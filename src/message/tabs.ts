@@ -5,7 +5,7 @@ import { unhandledClientMethod } from '../client-message.js';
 type TabMessage = Extract<ClientMessage, {
   method: 'command' | 'setActiveTab' | 'focusTab' | 'closeTab' | 'renameTab' | 'promoteToTerminal'
     | 'editQueuedCommand' | 'deleteQueuedCommand' | 'moveTab' | 'moveTabToOtherPane'
-    | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'resetAcp' | 'revealNotifications' | 'chooseRoute'
+    | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'resetAcp' | 'revealNotifications'
     | 'setDock' | 'openFileNavigatorFor' | 'launchAgentFor' | 'launchShellFor' | 'openTranscriptFor'
     | 'openHarnessTranscriptFor' | 'openAcpTranscript' | 'openRecordingFor';
 }>;
@@ -54,8 +54,6 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
       return controller.managers.command.executeCommand('acp-reset', 'acp reset', label, controller.managers.tab.findIndex(label));
     }
     case 'revealNotifications': { controller.revealNotifications(); break;
-    }
-    case 'chooseRoute': { controller.chooseRoute(message.params.index); break;
     }
     case 'setDock': { controller.setDock(message.params.index, message.params.dock); break;
     }

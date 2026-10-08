@@ -32,8 +32,6 @@ export type ConnectionView = { text: string; kind: 'shell' | 'acp' | 'browser' |
  */
 export type RemoteTargetView = RemoteTarget & { reconnecting?: boolean; provisioning?: boolean };
 
-// A pending route chooser: the unprefixed command plus the option labels to pick from.
-export type RouteChooserView = { cmd: string; choices: string[] };
 
 // The open "New harness" launch dialog's data: the ordered harness names and each harness's known
 // model catalog (empty for a harness with no catalog). Null in the snapshot when the dialog is closed.

@@ -33,7 +33,6 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   toggleCollapse: (p) => p.tab === undefined || isString(p.tab),
   resetAcp: (p) => isString(p.tab),
   promoteToTerminal: noParams,
-  chooseRoute: (p) => isInteger(p.index),
   closeHarnessLaunch: noParams,
   answerQuestion: (p) => isString(p.tab) && isString(p.id) && (p.answer === null || isString(p.answer)),
   complete: (p) => isString(p.text) && isInteger(p.cursor),

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
 import React, { createRef } from 'react';
-import type { RouteChooserView, TabView } from '@shared/protocol';
+import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { usePickerOverlays } from './usePickerOverlays';
 import { buildOverlayOpenState, firstOpenOverlay } from './overlay-registry';
@@ -60,7 +60,7 @@ describe('usePickerOverlays', () => {
     act(() => hook().commands[opener]());
     expect(firstOpenOverlay(hook().overlays)).toBe(name);
     expect(hook().view.overlays).toBe(hook().overlays);
-    // The key snapshot carries the nine flags rather than the built object, and `dispatchModalKey`
+    // The key snapshot carries the eight flags rather than the built object, and `dispatchModalKey`
     // rebuilds the registry state from them — so it must arrive at the same overlay.
     expect(firstOpenOverlay(buildOverlayOpenState(hook().keys))).toBe(name);
   });
@@ -72,16 +72,6 @@ describe('usePickerOverlays', () => {
     // reading the wrong picker's index would disagree.
     expect(hook().view.pickerIndex).toBe(2);
     expect(hook().keys.pickerIdx).toBe(2);
-  });
-
-  it('routes the server-driven chooser into the overlays, the view, and the snapshot', () => {
-    const view: RouteChooserView = { cmd: 'run', choices: ['shell', 'acp'] };
-    const hook = mount(agentTab());
-    act(() => hook().serverState.setRoute(view));
-    expect(firstOpenOverlay(hook().overlays)).toBe('route');
-    expect(hook().route).toBe(view);
-    expect(hook().view.route).toBe(view);
-    expect(hook().keys.route).toBe(view);
   });
 
   it('derives the history and queue rows from the active tab', () => {

@@ -1,7 +1,6 @@
 import type React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { OverlayOpenState } from '../overlay-registry';
-import type { useRouteChooser } from '../useRouteChooser';
 import type { useThemePicker } from '../useThemePicker';
 import type { useAppThemePicker } from '../useAppThemePicker';
 import type { useHistPicker } from '../useHistPicker';
@@ -10,7 +9,7 @@ import type { useQuickOpen } from '../useQuickOpen';
 import type { useQueuePicker } from '../useQueuePicker';
 import type { usePopulatePickers } from '../usePopulatePickers';
 
-// Everything `usePickerOverlays` owns, in one type — the union of what the nine overlay hooks return
+// Everything `usePickerOverlays` owns, in one type — the union of what the eight overlay hooks return
 // plus the few values the hook derives for them. It is written as an intersection of `ReturnType`s
 // rather than as a fifty-field literal on purpose: each hook already declares its own result, and
 // restating those declarations here is exactly the duplication this module exists to remove. A field
@@ -19,8 +18,7 @@ import type { usePopulatePickers } from '../usePopulatePickers';
 // The projections (`buildPickerOverlayView`, `buildPickerKeyBindings`) take this type and nothing
 // else, which is what lets them be plain functions testable without a render.
 export type PickerOverlaysState =
-  ReturnType<typeof useRouteChooser>
-  & ReturnType<typeof useThemePicker>
+  ReturnType<typeof useThemePicker>
   & ReturnType<typeof useAppThemePicker>
   & ReturnType<typeof useHistPicker>
   & ReturnType<typeof useTabNav>

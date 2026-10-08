@@ -108,7 +108,7 @@ function makePluginTab(label: string, url: string, id = 'video', hostsCommandBar
 // The production overlay stack with only the named overlays open.
 function overlayStack(open: Partial<OverlayOpenSources>) {
   const overlays = buildOverlayOpenState({
-    route: null, themePickerOpen: false, appThemePickerOpen: false, quickOpenOpen: false, navOpen: false,
+    themePickerOpen: false, appThemePickerOpen: false, quickOpenOpen: false, navOpen: false,
     pickerOpen: false, queueOpen: false, taskPickerOpen: false, profilePickerOpen: false, ...open,
   });
   return React.createElement(PickerOverlays, { ...buildPickerOverlayView(pickerStateFixture()), overlays });

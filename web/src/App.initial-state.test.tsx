@@ -37,7 +37,7 @@ describe('App mounted after the first state snapshot arrived', () => {
     bufferLines: [], cmdHistory: [], commandQueue: [], toolStepsExpanded: false,
   };
   const snapshot: StateEvent = {
-    t: 'state', tabs: [tab], activeTab: 0, route: null, tabNameMaxLength: 16, activeTabNameMaxLength: 50,
+    t: 'state', tabs: [tab], activeTab: 0, tabNameMaxLength: 16, activeTabNameMaxLength: 50,
     clipboardHistoryMaxEntries: 15, globalHistory: [], syntaxTheme: 'github-dark', theme: 'dark', tasks: [], profiles: [],
     projectDir: '/tmp', version: '1.2.3', harnessLaunch: null, scheduleLaunch: null,
   };

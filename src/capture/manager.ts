@@ -20,14 +20,13 @@ export class CaptureManager {
     const index = this.managers.tab.findIndex(label);
     if (index === -1) { callback('Tab not found'); return; }
 
-    const rerun = (l: string, t: string, cb: Reply): void => { this.run(l, t, cb); };
     switch (res.kind) {
       case 'app': { void this.runCommand(res.name, res.cmd, label, index, callback); return;
       }
       case 'output':
-      case 'unknown': { routeUnknownCommand(text, res.cmd, label, this.managers, rerun, callback); return;
+      case 'unknown': { routeUnknownCommand(text, res.cmd, label, this.managers, callback); return;
       }
-      case 'empty': { routeUnknownCommand(text, '', label, this.managers, rerun, callback); return;
+      case 'empty': { routeUnknownCommand(text, '', label, this.managers, callback); return;
       }
     }
   }

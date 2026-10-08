@@ -31,11 +31,10 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean; 
 }
 
 function TestComponent({
-  route, themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, profilePickerOpen,
+  themePickerOpen, pickerOpen, navOpen, queueOpen, taskPickerOpen, profilePickerOpen,
   canSearch, searchOpen, quickOpenOpen, handleScrollKey, callbacks, client,
   chords = createPluginChordRegistry(), currentPluginTab,
 }: {
-  route?: { cmd: string; choices: string[] } | null;
   themePickerOpen?: boolean;
   pickerOpen?: boolean;
   navOpen?: boolean;
@@ -50,8 +49,6 @@ function TestComponent({
   chords?: PluginChordRegistry;
   currentPluginTab?: string;
   callbacks?: Partial<{
-    setRouteIndex: (s: (p: number) => number) => void;
-    chooseRoute: (i: number) => void;
     runCommand: (t: string) => void;
     setPickerIndex: (s: (p: number) => number) => void;
     setPickerOpen: (o: boolean) => void;
@@ -83,8 +80,6 @@ function TestComponent({
     pickerOpen: pickerOpen ?? false,
     pickerIdx: 0,
     recent: ['cmd1', 'cmd2'],
-    route: route ?? null,
-    routeIdx: 0,
     canSearch: canSearch ?? true,
     searchOpen: searchOpen ?? false,
     themePickerOpen: themePickerOpen ?? false,
@@ -112,8 +107,6 @@ function TestComponent({
     currentPluginTab,
   });
   const cb = {
-    setRouteIndex: vi.fn(),
-    chooseRoute: vi.fn(),
     runCommand: vi.fn(),
     setPickerIndex: vi.fn(),
     setPickerOpen: vi.fn(),
@@ -149,10 +142,6 @@ function TestComponent({
 }
 
 describe('useWindowKeys', () => {
-  it('routes keys to route chooser when a route is open', () => {
-    render(React.createElement(TestComponent, { route: { cmd: 'run', choices: ['shell'] } }));
-    dispatchKey('ArrowDown');
-  });
 
   it('routes keys to theme picker when open', () => {
     render(React.createElement(TestComponent, { themePickerOpen: true }));
@@ -349,7 +338,7 @@ describe('useWindowKeys', () => {
 
     dispatchKey('r', { ctrlKey: true });
 
-    // A contributed overlay ranks below the nine, but it is the only one on screen, so it takes the
+    // A contributed overlay ranks below the eight, but it is the only one on screen, so it takes the
     // key — including a chord that would otherwise open a picker underneath it.
     expect(onKey).toHaveBeenCalled();
     expect(openPicker).not.toHaveBeenCalled();
@@ -403,12 +392,12 @@ describe('useWindowKeys', () => {
     const client = { send: sendMock } as never;
     function C() {
       const stateRef = useRef({
-        pickerOpen: false, pickerIdx: 0, recent: [], route: null, routeIdx: 0, canSearch: true, searchOpen: false,
+        pickerOpen: false, pickerIdx: 0, recent: [], canSearch: true, searchOpen: false,
         themePickerOpen: false, themePickerIdx: 0, navOpen: false, navQuery: '', navIdx: 0, navTabs: [],
         queueOpen: false, queueIdx: 0, queueItems: [],
       });
       const cb = {
-        setRouteIndex: vi.fn(), chooseRoute: vi.fn(), runCommand, setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
+        runCommand, setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
         openPicker: vi.fn(), openSearch: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
         setNavIndex: vi.fn(), setNavQuery: vi.fn(), selectNavTab: vi.fn(), setNavOpen: vi.fn(), openTabNav: vi.fn(),
         setQueueIndex: vi.fn(), setQueueOpen: vi.fn(), openQueue: vi.fn(),
@@ -429,12 +418,12 @@ describe('useWindowKeys', () => {
     const client = { send: sendMock } as never;
     function C() {
       const stateRef = useRef({
-        pickerOpen: false, pickerIdx: 0, recent: [], route: null, routeIdx: 0, canSearch: true, searchOpen: false,
+        pickerOpen: false, pickerIdx: 0, recent: [], canSearch: true, searchOpen: false,
         themePickerOpen: false, themePickerIdx: 0, navOpen: false, navQuery: '', navIdx: 0, navTabs: [],
         queueOpen: false, queueIdx: 0, queueItems: [],
       });
       const cb = {
-        setRouteIndex: vi.fn(), chooseRoute: vi.fn(), runCommand: vi.fn(), setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
+        runCommand: vi.fn(), setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
         openPicker: vi.fn(), openSearch: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
         setNavIndex: vi.fn(), setNavQuery: vi.fn(), selectNavTab: vi.fn(), setNavOpen: vi.fn(), openTabNav: vi.fn(),
         setQueueIndex: vi.fn(), setQueueOpen: vi.fn(), openQueue: vi.fn(),
@@ -462,11 +451,11 @@ describe('useWindowKeys', () => {
     const client = { send: sendMock } as never;
     function C() {
       const stateRef = useRef({
-        pickerOpen: false, pickerIdx: 0, recent: [], route: null, routeIdx: 0, canSearch: true, searchOpen: false,
+        pickerOpen: false, pickerIdx: 0, recent: [], canSearch: true, searchOpen: false,
         themePickerOpen: false, themePickerIdx: 0, navOpen: true, navQuery: '', navIdx: 0, navTabs: [],
       });
       const cb = {
-        setRouteIndex: vi.fn(), chooseRoute: vi.fn(), runCommand: vi.fn(), setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
+        runCommand: vi.fn(), setPickerIndex: vi.fn(), setPickerOpen: vi.fn(),
         openPicker: vi.fn(), openSearch: vi.fn(), setThemePickerIndex: vi.fn(), setThemePickerOpen: vi.fn(), pickTheme: vi.fn(),
         setNavIndex, setNavQuery: vi.fn(), selectNavTab: vi.fn(), setNavOpen: vi.fn(), openTabNav: vi.fn(),
       };

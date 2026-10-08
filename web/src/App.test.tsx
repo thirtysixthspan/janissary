@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { RouteChooserView, TabView, TaskRow } from '@shared/protocol';
+import type { TabView, TaskRow } from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
 import type { JanusClient, LayoutListener, StateListener } from './ws';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
@@ -19,7 +19,7 @@ const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matc
 // `StateListener` signature, so a change to that signature is a type error here rather than the
 // silent drift a hand-written module mock allowed.
 type EmitState = (
-  tabs: TabView[], activeTab: number, route: RouteChooserView | null, tabNameMaxLength: number, globalHistory: string[],
+  tabs: TabView[], activeTab: number, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, theme: string, tasks: TaskRow[],
 ) => void;
 let stateListener: EmitState | null = null;
@@ -34,9 +34,9 @@ const client = {
   registerStateCollector: registerStateCollectorMock,
   saveFile: () => Promise.resolve(undefined),
   onState(listener: StateListener) {
-    stateListener = (tabs, active, route, maxLength, history, syntax, theme, tasks) => {
+    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks) => {
       listener({
-        t: 'state', tabs, activeTab: active, route, tabNameMaxLength: maxLength,
+        t: 'state', tabs, activeTab: active, tabNameMaxLength: maxLength,
         activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: history,
         syntaxTheme: syntax, theme, tasks,
         profiles: [], projectDir: '/tmp', version: '1.2.3',
@@ -82,7 +82,7 @@ describe('App transcript-search interception', () => {
   it('does not send a command RPC when the pattern matches, opening search instead', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'an error occurred' }] })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'an error occurred' }] })], 0, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'search transcript error' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -93,7 +93,7 @@ describe('App transcript-search interception', () => {
   it('sends a command RPC when the pattern has no matches', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'all good' }] })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'all good' }] })], 0, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'search transcript zzznotfound' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -110,7 +110,7 @@ describe('App agent tab metadata row', () => {
   it('renders the active tab\'s cwd and flags in the metadata row', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ cwd: '~/project', flags: ['workspaced'] })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ cwd: '~/project', flags: ['workspaced'] })], 0, 16, [], 'github-dark', 'dark', []); });
     expect(screen.getByText('~/project')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Workspaced' })).toBeInTheDocument();
   });
@@ -118,7 +118,7 @@ describe('App agent tab metadata row', () => {
   it('sends openFileNavigatorFor with the active tab\'s label when the open-files button is clicked', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ label: 'janus' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ label: 'janus' })], 0, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByTitle('Open file navigator here'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'openFileNavigatorFor', params: { label: 'janus' } });
   });
@@ -126,7 +126,7 @@ describe('App agent tab metadata row', () => {
   it('sends launchAgentFor with the active tab\'s label when the launch-agent button is clicked', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ label: 'janus', remote: { address: 'devbox', host: 'devbox' } })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ label: 'janus', remote: { address: 'devbox', host: 'devbox' } })], 0, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByTitle('New agent here'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'launchAgentFor', params: { label: 'janus' } });
   });
@@ -141,7 +141,7 @@ describe('App app theme picker', () => {
   it('opens the app theme picker on "theme" and sends "theme <name>" on Enter', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'theme' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -160,7 +160,7 @@ describe('App syntax theme picker', () => {
   it('opens the theme picker on "syntax theme" and sends "syntax theme <name>" on Enter', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'syntax theme' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -172,7 +172,7 @@ describe('App syntax theme picker', () => {
   it('sends "close" as a command when there are multiple tabs', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'close' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -182,7 +182,7 @@ describe('App syntax theme picker', () => {
   it('renders a reporting section when a monitor tab is present', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ view: 'monitor', monitor: { suggestions: [], name: 'assistant', persona: 'assistant', targets: '', contextBytes: 0 }, groupColor: '#0f0' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ view: 'monitor', monitor: { suggestions: [], name: 'assistant', persona: 'assistant', targets: '', contextBytes: 0 }, groupColor: '#0f0' })], 0, 16, [], 'github-dark', 'dark', []); });
     expect(screen.getByText('janus')).toBeTruthy();
   }, 15_000);
 });
@@ -199,7 +199,7 @@ describe('App closing a tab from its button', () => {
   it('asks the server to close the tab the button belongs to', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, 16, [], 'github-dark', 'dark', []); });
 
     fireEvent.click(screen.getAllByTitle(/close/i)[1]!);
 
@@ -209,7 +209,7 @@ describe('App closing a tab from its button', () => {
   it('offers the quit confirm instead of closing the only tab', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
 
     fireEvent.click(screen.getAllByTitle(/close/i)[0]!);
 
@@ -229,7 +229,7 @@ describe('App splitting the focused pane', () => {
   it('moves the focused tab to the other pane by its index', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 1, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 1, 16, [], 'github-dark', 'dark', []); });
 
     fireEvent.click(screen.getByRole('button', { name: 'Split' }));
 
@@ -239,7 +239,7 @@ describe('App splitting the focused pane', () => {
   it('splits the first tab at index zero when it is the focused one', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab(), makeTab({ label: 'other' })], 0, 16, [], 'github-dark', 'dark', []); });
 
     fireEvent.click(screen.getByRole('button', { name: 'Split' }));
 
@@ -256,7 +256,7 @@ describe('App tab navigator', () => {
   it('opens the tab navigator seeded with the query on "nav <query>" instead of sending it to the server', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ label: 'deploy' }), makeTab({ label: 'shell', number: 2 })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ label: 'deploy' }), makeTab({ label: 'shell', number: 2 })], 0, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'nav depl' } });
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -274,7 +274,7 @@ describe('App closing the last tab', () => {
   it('clicking the tab strip × on the only remaining tab opens the quit dialog instead of sending closeTab', async () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
     fireEvent.click(container.querySelector('.tab-close')!);
     expect(screen.getByText('Are you sure you want to quit?')).toBeInTheDocument();
     expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
@@ -283,7 +283,7 @@ describe('App closing the last tab', () => {
   it('Cmd+W on the only remaining tab opens the quit dialog instead of sending closeTab', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
     expect(screen.getByText('Are you sure you want to quit?')).toBeInTheDocument();
     expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
@@ -292,7 +292,7 @@ describe('App closing the last tab', () => {
   it('clicking the tab strip × still sends closeTab directly when another tab remains', async () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, 16, [], 'github-dark', 'dark', []); });
     fireEvent.click(container.querySelector('.tab-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'one' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
@@ -319,7 +319,7 @@ describe('App close-tab chord under an overlay', () => {
     async (command) => {
       const { App } = await import('./App');
       render(<App client={client} />);
-      act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+      act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, 16, [], 'github-dark', 'dark', []); });
       openViaCommand(command);
       sendMock.mockClear();
       fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
@@ -331,49 +331,10 @@ describe('App close-tab chord under an overlay', () => {
   it('Cmd+W still closes the active tab when no overlay is open', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ label: 'one' }), makeTab({ label: 'two' })], 0, 16, [], 'github-dark', 'dark', []); });
     sendMock.mockClear();
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'one' } });
-  }, 15_000);
-});
-
-describe('App route chooser modality', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  const route: RouteChooserView = { cmd: 'zzz qqq xxx', choices: ['shell', 'acp (agent prompt)'] };
-
-  it('disables the command line while the chooser is open, so typed text never runs and Enter picks the route', async () => {
-    const user = userEvent.setup();
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, route, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox');
-
-    expect(input).toBeDisabled();
-    sendMock.mockClear();
-    await user.type(input, 'notify typed-during-chooser');
-    await user.keyboard('{Enter}');
-
-    expect(input).toHaveValue('');
-    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'command' }));
-    expect(sendMock).toHaveBeenCalledWith({ method: 'chooseRoute', params: { index: 1 } });
-  }, 15_000);
-
-  it('re-enables and refocuses the command line once the server reports route: null', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, route, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox');
-    expect(input).toBeDisabled();
-
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
-
-    expect(input).toBeEnabled();
-    expect(input).toHaveFocus();
   }, 15_000);
 });
 
@@ -387,7 +348,7 @@ describe('App agent tab body click focuses command input', () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
     act(() => {
-      stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []);
+      stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []);
     });
     const tabBody = container.querySelector('.tab-body') as HTMLElement;
     expect(tabBody).not.toBeNull();
@@ -399,7 +360,7 @@ describe('App agent tab body click focuses command input', () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
     act(() => {
-      stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []);
+      stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []);
     });
     const writeText = vi.fn();
     vi.stubGlobal('navigator', { clipboard: { writeText } });
@@ -416,7 +377,7 @@ describe('App agent tab body click focuses command input', () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
     act(() => {
-      stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []);
+      stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []);
     });
     const writeText = vi.fn();
     vi.stubGlobal('navigator', { clipboard: { writeText } });
@@ -439,13 +400,13 @@ describe('App per-tab command drafts', () => {
   it('keeps an unexecuted command with its own tab across a switch to another agent tab', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!(twoAgents(), 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(twoAgents(), 0, 16, [], 'github-dark', 'dark', []); });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'git status' } });
 
-    act(() => { stateListener!(twoAgents(), 1, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(twoAgents(), 1, 16, [], 'github-dark', 'dark', []); });
     expect(screen.getByRole('textbox')).toHaveValue('');
 
-    act(() => { stateListener!(twoAgents(), 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(twoAgents(), 0, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox');
     expect(input).toHaveValue('git status');
     fireEvent.keyDown(input, { key: 'Enter' });
@@ -456,22 +417,22 @@ describe('App per-tab command drafts', () => {
     const { App } = await import('./App');
     const tabs = () => [makeTab(), makeTab({ label: 'willow', number: 2, activePty: 'pty-1' })];
     render(<App client={client} />);
-    act(() => { stateListener!(tabs(), 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(tabs(), 0, 16, [], 'github-dark', 'dark', []); });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'git status' } });
 
-    act(() => { stateListener!(tabs(), 1, null, 16, [], 'github-dark', 'dark', []); });
-    act(() => { stateListener!(tabs(), 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(tabs(), 1, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(tabs(), 0, 16, [], 'github-dark', 'dark', []); });
     expect(screen.getByRole('textbox')).toHaveValue('git status');
   }, 15_000);
 
   it('drops the draft of a tab that has closed', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!(twoAgents(), 1, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(twoAgents(), 1, 16, [], 'github-dark', 'dark', []); });
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'git status' } });
 
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
-    act(() => { stateListener!(twoAgents(), 1, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!(twoAgents(), 1, 16, [], 'github-dark', 'dark', []); });
     expect(screen.getByRole('textbox')).toHaveValue('');
   }, 15_000);
 });
@@ -494,7 +455,7 @@ describe('App sidebar docking', () => {
             files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
           }),
         ],
-        0, null, 16, [], 'github-dark', 'dark', [],
+        0, 16, [], 'github-dark', 'dark', [],
       );
     });
     const stripLabels = [...container.querySelectorAll(':scope .app-center .tabstrip .tab')].map((el) => el.textContent);
@@ -514,7 +475,7 @@ describe('App sidebar docking', () => {
             files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] },
           }),
         ],
-        0, null, 16, [], 'github-dark', 'dark', [],
+        0, 16, [], 'github-dark', 'dark', [],
       );
     });
     fireEvent.click(container.querySelector(':scope .sidebar-left .tab-close')!);
@@ -535,7 +496,7 @@ describe('App layout WS event', () => {
     act(() => {
       stateListener!(
         [makeTab(), makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } })],
-        0, null, 16, [], 'github-dark', 'dark', [],
+        0, 16, [], 'github-dark', 'dark', [],
       );
     });
     act(() => { layoutListener!({ sidebarLeft: 320 }); });
@@ -553,7 +514,7 @@ describe('App layout WS event', () => {
           makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp/project', absoluteRoot: '/tmp/project', rows: [] } }),
           makeTab({ label: 'notifications', title: 'notifications', view: 'notifications', dock: 'right' }),
         ],
-        0, null, 16, [], 'github-dark', 'dark', [],
+        0, 16, [], 'github-dark', 'dark', [],
       );
     });
     act(() => { layoutListener!({ tabAreaPct: 75 }); });
@@ -574,7 +535,7 @@ describe('App tab rename', () => {
   it('renames a tab via double-click', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
     await userEvent.dblClick(screen.getByText('janus'));
     const input = screen.getByDisplayValue('janus');
     await act(async () => { fireEvent.change(input, { target: { value: 'my project' } }); });
@@ -593,7 +554,7 @@ describe('App ACP prompt toggles collapse', () => {
     const { App } = await import('./App');
     render(<App client={client} />);
     act(() => {
-      stateListener!([makeTab({ bufferLines: [{ type: 'prompt', acp: true, text: 'some command' }] })], 0, null, 16, [], 'github-dark', 'dark', []);
+      stateListener!([makeTab({ bufferLines: [{ type: 'prompt', acp: true, text: 'some command' }] })], 0, 16, [], 'github-dark', 'dark', []);
     });
     fireEvent.click(screen.getByText('+ some command'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'toggleCollapse', params: {} });
@@ -610,7 +571,7 @@ describe('App non-ACP prompt double-click runs command', () => {
     const { App } = await import('./App');
     render(<App client={client} />);
     act(() => {
-      stateListener!([makeTab({ bufferLines: [{ type: 'prompt', text: 'git status' }] })], 0, null, 16, [], 'github-dark', 'dark', []);
+      stateListener!([makeTab({ bufferLines: [{ type: 'prompt', text: 'git status' }] })], 0, 16, [], 'github-dark', 'dark', []);
     });
     fireEvent.dblClick(screen.getByText('git status'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'git status' } });
@@ -626,7 +587,7 @@ describe('App search on Cmd+F', () => {
   it('opens the search bar on Cmd+F when the tab is searchable', async () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'hello' }] })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ bufferLines: [{ type: 'output', text: 'hello' }] })], 0, 16, [], 'github-dark', 'dark', []); });
     expect(container.querySelector('.search-bar')).toBeNull();
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
     expect(container.querySelector('.search-bar')).not.toBeNull();
@@ -635,7 +596,7 @@ describe('App search on Cmd+F', () => {
   it('does not open search on Cmd+F when the tab has an active PTY', async () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, 16, [], 'github-dark', 'dark', []); });
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
     expect(container.querySelector('.search-bar')).toBeNull();
   }, 15_000);
@@ -643,7 +604,7 @@ describe('App search on Cmd+F', () => {
   it('does not open search on Cmd+F when the tab is a view tab', async () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ view: 'files' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ view: 'files' })], 0, 16, [], 'github-dark', 'dark', []); });
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'f', metaKey: true });
     expect(container.querySelector('.search-bar')).toBeNull();
   }, 15_000);
@@ -658,16 +619,16 @@ describe('App shell tab', () => {
   it('renders a ShellTab body when a tab has an active PTY', async () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, 16, [], 'github-dark', 'dark', []); });
     expect(container.querySelector('.harness-body')).not.toBeNull();
   }, 15_000);
 
   it('removes the ShellTab body when the active PTY is gone', async () => {
     const { App } = await import('./App');
     const { container } = render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab({ activePty: 'pty-1' })], 0, 16, [], 'github-dark', 'dark', []); });
     expect(container.querySelector('.harness-body')).not.toBeNull();
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
     expect(container.querySelector('.harness-body')).toBeNull();
   }, 15_000);
 });
@@ -682,7 +643,7 @@ describe('App autocomplete', () => {
   it('triggers completion on Tab', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([makeTab()], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([makeTab()], 0, 16, [], 'github-dark', 'dark', []); });
     const input = screen.getByRole('textbox') as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: 'some text' } });
     await act(async () => { fireEvent.keyDown(input, { key: 'Tab' }); await Promise.resolve(); });
@@ -718,7 +679,7 @@ describe('App reporting section callbacks', () => {
   it('calls runSuggestion when clicking a suggestion command', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([monitorTab], 0, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByRole('button', { name: 'npm run build' }));
     expect(sendMock).toHaveBeenCalledWith({ method: 'runSuggestion', params: { id: 's1' } });
   }, 15_000);
@@ -726,7 +687,7 @@ describe('App reporting section callbacks', () => {
   it('calls rateSuggestion when clicking thumbs up', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([monitorTab], 0, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByRole('button', { name: 'Helpful' }));
     expect(sendMock).toHaveBeenCalledWith({ method: 'rateSuggestion', params: { id: 's1', up: true } });
   }, 15_000);
@@ -734,7 +695,7 @@ describe('App reporting section callbacks', () => {
   it('calls rateSuggestion when clicking thumbs down', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([monitorTab], 0, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByRole('button', { name: 'Not helpful' }));
     expect(sendMock).toHaveBeenCalledWith({ method: 'rateSuggestion', params: { id: 's1', up: false } });
   }, 15_000);
@@ -742,7 +703,7 @@ describe('App reporting section callbacks', () => {
   it('calls resetMonitorContext when clicking the reset button', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([monitorTab], 0, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByTitle('Reset context'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'resetMonitorContext', params: { name: 'janus' } });
   }, 15_000);
@@ -750,7 +711,7 @@ describe('App reporting section callbacks', () => {
   it('calls monitorContextSnapshot when clicking the snapshot button', async () => {
     const { App } = await import('./App');
     render(<App client={client} />);
-    act(() => { stateListener!([monitorTab], 0, null, 16, [], 'github-dark', 'dark', []); });
+    act(() => { stateListener!([monitorTab], 0, 16, [], 'github-dark', 'dark', []); });
     await userEvent.click(screen.getByTitle('Open context snapshot'));
     expect(sendMock).toHaveBeenCalledWith({ method: 'monitorContextSnapshot', params: { name: 'janus' } });
   }, 15_000);
