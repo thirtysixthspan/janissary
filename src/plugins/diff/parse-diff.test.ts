@@ -5,6 +5,27 @@ import { parseDiff } from './parse-diff.js';
 // <file>`, and the quoted-path and no-newline-at-eof corner cases.
 
 describe('parseDiff', () => {
+  // A hunk whose trailing lines are removals, and one that holds nothing but removals.
+  const trailingRemovals = [
+    'diff --git a/end.txt b/end.txt',
+    '--- a/end.txt',
+    '+++ b/end.txt',
+    '@@ -1,3 +1,2 @@',
+    ' one',
+    '-two',
+    '+new',
+    '-three',
+  ].join('\n');
+  const removedHunk = [
+    'diff --git a/gone.txt b/gone.txt',
+    'deleted file mode 100644',
+    '--- a/gone.txt',
+    '+++ /dev/null',
+    '@@ -1,2 +0,0 @@',
+    '-first',
+    '-second',
+  ].join('\n');
+
   it('parses a modified file with its hunk numbers and line kinds', () => {
     const files = parseDiff([
       'diff --git a/a.txt b/a.txt',
@@ -105,6 +126,16 @@ describe('parseDiff', () => {
     expect(files).toEqual([{ path: 'new.md', oldPath: 'old.md', additions: 0, deletions: 0, hunks: [] }]);
   });
 
+  it('names a mode-only change, which has no hunks and no --- lines', () => {
+    const files = parseDiff([
+      'diff --git a/script.sh b/script.sh',
+      'old mode 100644',
+      'new mode 100755',
+    ].join('\n'));
+
+    expect(files).toEqual([{ path: 'script.sh', additions: 0, deletions: 0, hunks: [] }]);
+  });
+
   it('marks a binary file with no hunks', () => {
     const files = parseDiff([
       'diff --git a/bin.dat b/bin.dat',
@@ -180,6 +211,32 @@ describe('parseDiff', () => {
 
   it('answers nothing for empty output', () => {
     expect(parseDiff('')).toEqual([]);
+  });
+
+  it('borrows the next line for a removed line that has one after it', () => {
+    const files = parseDiff([
+      'diff --git a/mid.txt b/mid.txt',
+      '--- a/mid.txt',
+      '+++ b/mid.txt',
+      '@@ -1,2 +1,2 @@',
+      ' one',
+      '-two',
+      '+new',
+    ].join('\n'));
+    expect(files[0].hunks[0].lines.map((line) => line.jump)).toEqual([1, 2, 2]);
+  });
+
+  it('borrows the previous line when the hunk ends in removed lines', () => {
+    const files = parseDiff(trailingRemovals);
+    expect(files[0].hunks[0].lines.map((line) => [line.kind, line.jump])).toEqual([
+      ['context', 1], ['removed', 2], ['added', 2], ['removed', 2],
+    ]);
+  });
+
+  it('answers the line above a hunk that holds nothing but removals', () => {
+    const files = parseDiff(removedHunk);
+    expect(files[0].deleted).toBe(true);
+    expect(files[0].hunks[0].lines.map((line) => line.jump)).toEqual([1, 1]);
   });
 
   it('does not mistake hunk content for a header line', () => {

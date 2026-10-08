@@ -124,8 +124,25 @@ describe('diff plugin activation', () => {
     expect(openOrFocusTab).not.toHaveBeenCalled();
   });
 
+  it('rejects a path argument that is not a directory there, as a typo rather than a non-repository', () => {
+    const { capabilities, openOrFocusTab } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+    });
+    expect(() => activate().command?.('nosuchdir', capabilities)).toThrow('no such directory');
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+  });
+
+  it('rejects a path argument naming a file rather than a directory', () => {
+    const { capabilities, openOrFocusTab } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+    });
+    expect(() => activate().command?.('a.txt', capabilities)).toThrow('no such directory');
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+  });
+
   it('re-scopes the open tab rather than opening a second one', async () => {
     const origin = { label: 'shell', cwd: repo, root: repo, workspace: undefined };
+    mkdirSync(path.join(repo, 'sub'));
     const { capabilities, openOrFocusTab, updateTab } = makeCapabilities({ originTab: vi.fn(() => origin) });
     const activation = activate();
     activation.command?.('', capabilities);
@@ -236,6 +253,19 @@ describe('diff plugin activation', () => {
     activation.intent(intent(settledTab, 'refresh', { hideWhitespace: false }), capabilities);
     await settled(updateTab);
     expect(lastPayload(updateTab).files.map((file) => file.path)).toEqual(['a.txt']);
+  });
+
+  it('answers null from a refresh intent rather than nothing at all', async () => {
+    // The host validates an intent's result with `isJsonCompatible` and disables the plugin when it
+    // fails, and a handler resolving to `undefined` fails it — which a recompute returned from an
+    // async handler does. Assert the answer, not just that the recompute ran.
+    const { capabilities, updateTab } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+    });
+    const activation = activate();
+    activation.command?.('', capabilities);
+    await settled(updateTab);
+    expect(activation.intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities)).toBeNull();
   });
 
   it('rejects an intent name the table does not declare', () => {

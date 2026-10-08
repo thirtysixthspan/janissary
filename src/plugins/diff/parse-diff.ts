@@ -88,16 +88,23 @@ function binarySides(line: string): { old: string; new: string } | null {
 
 // The hunk's lines, numbered as they are walked. `jump` is filled in a second pass: a removed line
 // has no new-side position of its own, so it borrows the next added or context line's.
-// A removed line has no new-side position of its own, so it borrows the new-side number of the next
-// added or context line, and a hunk that ends in removed lines borrows its last new-side number.
-function assignJumps(lines: DiffLine[], lastNew: number): void {
+// A removed line has no new-side position of its own, so it borrows one: the next added or context
+// line, else the previous one, and for a hunk that holds neither — a pure deletion — the line above
+// where the hunk begins, clamped to the file's first line. Every answer is a line that exists.
+function assignJumps(lines: DiffLine[], oldStart: number): void {
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].kind !== 'removed') {
-      lines[i].jump = lines[i].number;
+    const line = lines[i];
+    if (line.kind !== 'removed') {
+      line.jump = line.number;
       continue;
     }
-    const next = lines.slice(i + 1).find((line) => line.kind !== 'removed');
-    lines[i].jump = next ? next.number : lastNew;
+    const next = lines.slice(i + 1).find((candidate) => candidate.kind !== 'removed');
+    if (next) {
+      line.jump = next.number;
+      continue;
+    }
+    const previous = lines.slice(0, i).findLast((candidate) => candidate.kind !== 'removed');
+    line.jump = previous ? previous.number : Math.max(1, oldStart - 1);
   }
 }
 
@@ -115,7 +122,7 @@ function hunkLines(oldStart: number, newStart: number, body: string[]): DiffLine
       newNumber += 1;
     }
   }
-  assignJumps(lines, newNumber - 1);
+  assignJumps(lines, oldStart);
   return lines;
 }
 
@@ -197,6 +204,13 @@ export function parseDiff(output: string, options: ParseOptions = {}): DiffFile[
   for (const line of lines) {
     if (line.startsWith('diff --git ')) {
       closeFile();
+      // Remembered as the fallback name for a record that prints no `---`/`+++` lines of its own — a
+      // mode-only change, the one kind git names only here, since a pure rename names itself through
+      // `rename to`. Last resort rather than primary source, because git does not quote a spaced path
+      // in this line and splitting it below is a heuristic.
+      const sides = line.slice('diff --git '.length).split(' b/');
+      file.oldPath = sidePath(sides[0] ?? '');
+      file.newPath = sidePath(sides[1] ?? sides[0] ?? '');
       continue;
     }
     // Inside a hunk, only its own content lines belong to it: a space, a `+`, a `-`, a `\` marker, or

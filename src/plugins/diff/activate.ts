@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { statSync } from 'node:fs';
 import {
   defineIntents,
   noFileOpener,
@@ -35,13 +36,18 @@ export function activate(): TabPluginActivation {
   };
 
   // The root a `diff [path]` argument names, resolved against the originating tab's project root and
-  // refused when it escapes it.
+  // refused when it escapes it or is not a directory. The second refusal matters: a path that does
+  // not exist fails git's own reads for the same reason a non-repository does, which would report
+  // "not a git repository" for what is really a typo.
   const rootFor = (argument: string, origin: DiffOrigin, capabilities: TabPluginServerCapabilities): string => {
     const trimmed = argument.trim();
     if (trimmed === '') return origin.root;
     const resolved = path.resolve(origin.root, trimmed);
     if (!isInsideRoot(origin.root, resolved)) {
       capabilities.rejectRequest(`Cannot diff <${trimmed}>: it is outside the project root <${origin.root}>.`);
+    }
+    if (statSync(resolved, { throwIfNoEntry: false })?.isDirectory() !== true) {
+      capabilities.rejectRequest(`Cannot diff <${trimmed}>: no such directory.`);
     }
     return resolved;
   };
@@ -65,9 +71,16 @@ export function activate(): TabPluginActivation {
       sessionFor(capabilities).open(workspace, origin);
     },
     intent: defineIntents('diff', isDiffPayload, {
+      // The recompute is started rather than awaited, and the answer is `null`: an intent's result is
+      // sent to the waiting client and must be JSON-compatible, so a handler that resolves to
+      // `undefined` disables this plugin — and a recompute that ran several git processes would spend
+      // the handler's whole budget doing it. The tab repaints itself when the diff lands.
       refresh: {
         payload: isRefreshIntent,
-        run: (_tab, payload: RefreshIntent, capabilities) => sessionFor(capabilities).refresh(payload.hideWhitespace),
+        run: (_tab, payload: RefreshIntent, capabilities) => {
+          void sessionFor(capabilities).refresh(payload.hideWhitespace);
+          return null;
+        },
       },
       open: {
         payload: isOpenIntent,

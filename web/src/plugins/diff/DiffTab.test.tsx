@@ -89,6 +89,12 @@ describe('DiffTab', () => {
     expect(intent).not.toHaveBeenCalled();
   });
 
+  it('opens nothing for a double-click on a line inside a deleted file', () => {
+    const { intent, container } = renderTab(payload({ files: [file({ deleted: true })] }));
+    fireEvent.doubleClick(container.querySelectorAll(':scope .diff-line')[1]);
+    expect(intent).not.toHaveBeenCalled();
+  });
+
   it('opens the file at a line\'s own position on a double-click of the line', () => {
     const { intent, container } = renderTab();
     fireEvent.doubleClick(container.querySelectorAll('.diff-line')[1]);
