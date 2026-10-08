@@ -10,7 +10,7 @@ import { ownTabLabel } from './own-tab.js';
 // The capabilities that make a plugin tab a place a line can be typed and a process can be checked
 // on: where it is, which tab a line runs in, what output that line produces, what the application
 // would complete it to, and whether the terminal behind it is still alive. They are one group because they are one pull request's
-// worth of additions, because each exists for the same reason — a plugin tab is not an tab, so it
+// worth of additions, because each exists for the same reason — a plugin tab is not a shell tab, so it
 // has no route to any of this — and because they depend on nothing here beyond the managers, the
 // declaration, the origin tab, the answering tab and the enabled check. `createPluginContext` composes
 // them back with one spread.
@@ -92,7 +92,7 @@ export function lineCapabilities(input: {
       const label = ownTabLabel({ managers, declaration, origin, answeringLabel }, 'This plugin has no open tab to record a directory in.');
       managers.tab.setCwd(label, cwd);
     },
-    // Attributed to this plugin's own answering tab, as an tab's line is to that tab. The state
+    // Attributed to this plugin's own answering tab, as a shell tab's line is to that tab. The state
     // broadcast carries the global history, so it goes out again for ghost text to see the line.
     recordGlobalHistory: (line) => {
       if (!isEnabled()) return;

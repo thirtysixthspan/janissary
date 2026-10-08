@@ -52,7 +52,7 @@ describe('operationFailureText', () => {
 describe('reportOperationFailure', () => {
   function makeManagers(append: ReturnType<typeof vi.fn>): Managers {
     const notif = { label: NOTIFICATIONS_LABEL, view: 'notifications', log: [] };
-    const active = { label: 'agent', log: [] };
+    const active = { label: 'shell', log: [] };
     const tabs = [active, notif];
     return {
       tab: { tabs, byLabel: (l: string) => tabs.find((t) => t.label === l), cur: () => active, append },
@@ -62,13 +62,13 @@ describe('reportOperationFailure', () => {
 
   it('posts no notification when there are no failures', () => {
     const append = vi.fn();
-    reportOperationFailure(makeManagers(append), 'agent', 'delete', { total: 1, failedPaths: [] });
+    reportOperationFailure(makeManagers(append), 'shell', 'delete', { total: 1, failedPaths: [] });
     expect(append).not.toHaveBeenCalled();
   });
 
   it('posts one notification when there are failures', () => {
     const append = vi.fn();
-    reportOperationFailure(makeManagers(append), 'agent', 'delete', { total: 1, failedPaths: ['notes.md'] });
+    reportOperationFailure(makeManagers(append), 'shell', 'delete', { total: 1, failedPaths: ['notes.md'] });
     expect(append).toHaveBeenCalledTimes(1);
   });
 });

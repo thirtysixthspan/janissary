@@ -17,7 +17,7 @@ import type { ClientFrame, RemoteProcessState, ServerFrame } from './protocol-fr
 // frame family, so there is no second table either.
 //
 // `pty` mode runs the program in a pseudo-terminal, exactly as the local server does. `pipe` mode
-// runs an tab's persistent shell with plain pipes: that shell's protocol is sentinel-delimited
+// runs a shell tab's persistent shell with plain pipes: that shell's protocol is sentinel-delimited
 // text, and a tty's echo would feed each written command straight back into the reader's buffer and
 // match the sentinel before the command had run.
 //

@@ -27,7 +27,7 @@ export type SandboxOptions = {
   selfBinaryHint?: string;
   // The project's configured credentials (see `src/project/tokens.ts`), each becoming the environment
   // variable its table row names. Applied for any workspaced spawn — not just a harness tab, since
-  // an tab's plain shell can invoke the same CLIs — and whether or not this machine can
+  // a shell tab's plain shell can invoke the same CLIs — and whether or not this machine can
   // actually confine the process, because a host that cannot confine anything still needs its
   // harness authenticated and its pushes credentialed.
   tokens?: ProjectTokens;

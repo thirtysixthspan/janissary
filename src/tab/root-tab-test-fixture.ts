@@ -5,7 +5,7 @@ import { distinctColor } from './colors.js';
 import { tabRuntime } from './runtime.js';
 
 // A `TabManager` starts with no tabs — the launch shell is opened later, through the shell plugin —
-// so a test that stages its commands in an tab seeds one here: a `janus` tab at index 0,
+// so a test that stages its commands in a shell tab seeds one here: a `janus` tab at index 0,
 // active, in the launch directory, the first palette colour, group 1.
 export function seedRootTab(manager: TabManager): Tab {
   const tab = makeTab('janus', distinctColor([]));

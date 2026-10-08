@@ -65,7 +65,7 @@ export type ClientFrame =
   | {
     type: 'spawn'; id: string; program: string; command: string;
     // How the remote runs it: `pty` for anything a terminal renders (the harness itself, a PTY
-    // takeover, an inline terminal card), `pipe` for an tab's persistent shell, whose
+    // takeover, an inline terminal card), `pipe` for a shell tab's persistent shell, whose
     // sentinel-delimited protocol would be corrupted by a tty's echo and line discipline.
     mode: 'pty' | 'pipe';
     // The harness name, when this process *is* the tab's harness: the remote uses it to build the

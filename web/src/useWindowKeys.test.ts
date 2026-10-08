@@ -508,7 +508,7 @@ describe('useWindowKeys', () => {
       expect(openPicker).toHaveBeenCalledTimes(1);
     });
 
-    // A docked shell holds its claim while it shows in the sidebar, but an tab's command bar sits
+    // A docked shell holds its claim while it shows in the sidebar, but a harness tab's command bar sits
     // inside no labelled tab, so the key typed there is the application's.
     it('leaves a claimed chord with the application when focus is in a tab with no plugin label', () => {
       const { chords, handler } = claimed('ctrl+r');
@@ -543,7 +543,7 @@ describe('useWindowKeys', () => {
 
     // The shell claims Cmd+T so the terminal, which has no key handler for it, opens a sibling shell
     // rather than letting the keydown fall through to the application's new tab.
-    it('spends a Cmd+T claim from focus inside the claiming tab instead of opening an tab', () => {
+    it('spends a Cmd+T claim from focus inside the claiming tab instead of opening a shell tab', () => {
       const { chords, handler } = claimed('meta+t');
       const runCommand = vi.fn();
       render(React.createElement(TestComponent, { chords, callbacks: { runCommand } }));

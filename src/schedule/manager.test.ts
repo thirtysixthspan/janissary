@@ -657,7 +657,7 @@ describe('ScheduleManager cancel', () => {
     return { id, command: 'clear', spec: 'every 5m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 };
   }
 
-  it('removes an tab entry, emits state.dirty, and returns true', () => {
+  it('removes a shell tab entry, emits state.dirty, and returns true', () => {
     const { managers } = makeManagers();
     const mgr = new ScheduleManager(managers);
     mgr.set('janus', [entry('a'), entry('b')]);
@@ -715,7 +715,7 @@ describe('ScheduleManager clearAll', () => {
     return { id, command: 'clear', spec: 'every 5m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 };
   }
 
-  it('clears an tab schedule and emits state.dirty', () => {
+  it('clears a shell tab schedule and emits state.dirty', () => {
     const { mgr } = makeMgr([{ label: 'janus' }]);
     mgr.set('janus', [entry('a')]);
     const emitSpy = vi.spyOn(messageBus, 'emit');

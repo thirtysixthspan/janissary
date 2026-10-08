@@ -261,7 +261,7 @@ export type TabPluginClientCapabilities = {
   // server cannot work the colors out itself, because they live only in the web stylesheet. Optional
   // because a plugin with no terminal of its own has nothing to report.
   reportTerminalColors?(id: string, colors: TerminalColors): void;
-  // Open a link the way a click on it in an tab's transcript does: a web address through `open`,
+  // Open a link the way a click on it in a shell tab's transcript does: a web address through `open`,
   // a `path:line` reference in an editor tab, and anything else not at all. A plugin rendering markdown
   // of its own needs it because the default for an anchor click is to navigate the whole application
   // window away. Optional for the same reason as `attachTerminal`.

@@ -26,7 +26,7 @@ export function ShellTabMeta({ payload, capabilities }: {
   capabilities: TabPluginClientCapabilities;
 }) {
   // The tab's own label, which is what the hook re-arms on: two shell tabs each get their own
-  // auto-show, and returning to this one shows its connections panel again as an tab's would.
+  // auto-show, and returning to this one shows its connections panel again as a harness tab's would.
   // The fallback is what a host that reports no label would get — one identity for every shell tab, so
   // the auto-show fires on mount rather than on each activation.
   const windows = useStatusWindows(capabilities.label ?? 'shell', {

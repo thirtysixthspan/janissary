@@ -41,7 +41,7 @@ function makeManagers(options: {
   existing?: string;
   attach?: boolean;
 } = {}) {
-  const source = options.source ?? { label: 'agent', cwd: tree() };
+  const source = options.source ?? { label: 'shell', cwd: tree() };
   const sourceTab = { label: source.label, ...(source.remote && { remote: source.remote }) };
   const tabs = [sourceTab];
   const opened: { root: string; waitingFor?: string }[] = [];
@@ -92,9 +92,9 @@ describe('openOrRetarget', () => {
   });
   it('opens a fresh navigator on a local directory, registered and watched', () => {
     const { managers, port, opened, setDock, setCwd } = makeManagers();
-    const root = managers.tab.cwdOf?.('agent');
+    const root = managers.tab.cwdOf?.('shell');
 
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
 
     expect(opened).toHaveLength(1);
     expect(opened[0].root).toBe(root);
@@ -117,8 +117,8 @@ describe('openOrRetarget', () => {
 
   it('opens nothing when the source cwd is not a directory', () => {
     const missing = path.join(tmpdir(), 'janus-navigator-open-absent');
-    const { port, opened, setActiveTab } = makeManagers({ source: { label: 'agent', cwd: missing } });
-    openOrRetarget(port, 'agent');
+    const { port, opened, setActiveTab } = makeManagers({ source: { label: 'shell', cwd: missing } });
+    openOrRetarget(port, 'shell');
     expect(opened).toEqual([]);
     expect(port.states.size).toBe(0);
     expect(setActiveTab).toHaveBeenCalled();
@@ -126,7 +126,7 @@ describe('openOrRetarget', () => {
 
   it('retargets the most recent navigator rather than opening a second one', () => {
     const { managers, port, opened, setCwd, tabs } = makeManagers({ existing: 'files-1' });
-    const target = managers.tab.cwdOf('agent');
+    const target = managers.tab.cwdOf('shell');
     tabs.push({ label: 'files-1' });
     port.states.set('files-1', {
       root: '/old', expanded: new Set(), watchers: new Map(), listings: new Map(),
@@ -134,7 +134,7 @@ describe('openOrRetarget', () => {
       details: 'name', stats: new Map(), filesystem: { dispose: vi.fn() },
     } as unknown as FilesTabState);
 
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
 
     expect(opened).toEqual([]);
     expect(port.states.get('files-1')?.root).toBe(target);
@@ -146,9 +146,9 @@ describe('openOrRetarget', () => {
   // would be a tab stuck on "waiting" with nothing that will ever answer.
   it('opens nothing for a remote source whose channel is not ready', () => {
     const remote = { host: 'devbox', address: 'devbox' };
-    const { port, opened, attach } = makeManagers({ source: { label: 'agent', remote } });
+    const { port, opened, attach } = makeManagers({ source: { label: 'shell', remote } });
     port.managers.remote.readyOf = vi.fn(() => undefined as unknown as Promise<string>);
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
     expect(opened).toEqual([]);
     expect(attach).not.toHaveBeenCalled();
   });
@@ -157,15 +157,15 @@ describe('openOrRetarget', () => {
   // answers — the source tab carries no cwd here, so the wait falls back to the process's own.
   it('opens a waiting navigator for a remote source, attached and owned', () => {
     const remote = { host: 'devbox', address: 'devbox' };
-    const { port, opened, attach } = makeManagers({ source: { label: 'agent', remote } });
+    const { port, opened, attach } = makeManagers({ source: { label: 'shell', remote } });
 
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
 
-    expect(attach).toHaveBeenCalledWith(port.managers.tab.cur().label, 'agent');
+    expect(attach).toHaveBeenCalledWith(port.managers.tab.cur().label, 'shell');
     const label = port.managers.tab.cur().label;
     const state = port.states.get(label);
     expect(opened[0].waitingFor).toBe(process.cwd());
-    expect(state?.ownerLabel).toBe('agent');
+    expect(state?.ownerLabel).toBe('shell');
     expect(state?.remote).toBe(remote);
   });
 
@@ -174,10 +174,10 @@ describe('openOrRetarget', () => {
   it('re-roots onto the workspace once the handshake settles', async () => {
     const remote = { host: 'devbox', address: 'devbox' };
     const { promise, resolve } = Promise.withResolvers<string>();
-    const { port, setCwd } = makeManagers({ source: { label: 'agent', remote } });
+    const { port, setCwd } = makeManagers({ source: { label: 'shell', remote } });
     port.managers.remote.readyOf = () => promise;
 
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
     const label = port.managers.tab.cur().label;
     expect(port.states.get(label)?.root).not.toBe('/remote/ws');
 
@@ -202,8 +202,8 @@ describe('openOrRetarget', () => {
   // navigator state with no channel would sit there "waiting" forever.
   it('opens no state for a remote tab the attach refused', () => {
     const remote = { host: 'devbox', address: 'devbox' };
-    const { port, opened } = makeManagers({ source: { label: 'agent', remote }, attach: false });
-    openOrRetarget(port, 'agent');
+    const { port, opened } = makeManagers({ source: { label: 'shell', remote }, attach: false });
+    openOrRetarget(port, 'shell');
     expect(opened).toHaveLength(1);
     expect(port.states.size).toBe(0);
   });
@@ -212,10 +212,10 @@ describe('openOrRetarget', () => {
   // again would tear down a live channel and re-establish it for no reason.
   it('leaves an already-owned navigator alone', () => {
     const remote = { host: 'devbox', address: 'devbox' };
-    const { port, attach } = makeManagers({ source: { label: 'agent', remote }, existing: 'files-1' });
-    port.states.set('files-1', { ownerLabel: 'agent' } as unknown as FilesTabState);
+    const { port, attach } = makeManagers({ source: { label: 'shell', remote }, existing: 'files-1' });
+    port.states.set('files-1', { ownerLabel: 'shell' } as unknown as FilesTabState);
 
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
 
     expect(attach).not.toHaveBeenCalled();
     expect(port.unwatchDir).not.toHaveBeenCalled();
@@ -223,7 +223,7 @@ describe('openOrRetarget', () => {
 
   it('releases the old owner and attaches the new one when retargeting a remote navigator', () => {
     const remote = { host: 'devbox', address: 'devbox' };
-    const { port, attach, release } = makeManagers({ source: { label: 'agent', remote }, existing: 'files-1' });
+    const { port, attach, release } = makeManagers({ source: { label: 'shell', remote }, existing: 'files-1' });
     port.states.set('files-1', {
       root: '/old', ownerLabel: 'other', expanded: new Set(), watchers: new Map(), listings: new Map(),
       listingLoads: new Set(), statLoads: new Set(), cacheGeneration: 0, undoStack: [], redoStack: [],
@@ -231,11 +231,11 @@ describe('openOrRetarget', () => {
       filesystem: { dispose: vi.fn() },
     } as unknown as FilesTabState);
 
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
 
     expect(release).toHaveBeenCalledWith('files-1');
-    expect(attach).toHaveBeenCalledWith('files-1', 'agent');
-    expect(port.states.get('files-1')?.ownerLabel).toBe('agent');
+    expect(attach).toHaveBeenCalledWith('files-1', 'shell');
+    expect(port.states.get('files-1')?.ownerLabel).toBe('shell');
   });
 
   // The old owner has already been released by this point, so an attach that fails here leaves the
@@ -243,7 +243,7 @@ describe('openOrRetarget', () => {
   // intact for the source it still belongs to.
   it('keeps the existing state when retargeting it to a source the attach refused', () => {
     const remote = { host: 'devbox', address: 'devbox' };
-    const { port, attach } = makeManagers({ source: { label: 'agent', remote }, existing: 'files-1', attach: false });
+    const { port, attach } = makeManagers({ source: { label: 'shell', remote }, existing: 'files-1', attach: false });
     port.states.set('files-1', {
       root: '/kept', ownerLabel: 'other', expanded: new Set(), watchers: new Map(), listings: new Map(),
       listingLoads: new Set(), statLoads: new Set(), cacheGeneration: 0, undoStack: [], redoStack: [],
@@ -251,9 +251,9 @@ describe('openOrRetarget', () => {
       filesystem: { dispose: vi.fn() },
     } as unknown as FilesTabState);
 
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
 
-    expect(attach).toHaveBeenCalledWith('files-1', 'agent');
+    expect(attach).toHaveBeenCalledWith('files-1', 'shell');
     expect(port.states.get('files-1')?.root).toBe('/kept');
     expect(port.unwatchDir).not.toHaveBeenCalled();
   });
@@ -262,7 +262,7 @@ describe('openOrRetarget', () => {
   // between the two lookups. There is nothing to retarget, so nothing is touched.
   it('retargets nothing for a most-recent label that has no state', () => {
     const { port, opened, setCwd } = makeManagers({ existing: 'files-1' });
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
     expect(opened).toEqual([]);
     expect(port.states.size).toBe(0);
     expect(port.watchDir).not.toHaveBeenCalled();
@@ -274,10 +274,10 @@ describe('openOrRetarget', () => {
   it('re-roots nothing when the handshake settles after the navigator closed', async () => {
     const remote = { host: 'devbox', address: 'devbox' };
     const { promise, resolve } = Promise.withResolvers<string>();
-    const { port } = makeManagers({ source: { label: 'agent', remote } });
+    const { port } = makeManagers({ source: { label: 'shell', remote } });
     port.managers.remote.readyOf = () => promise;
 
-    openOrRetarget(port, 'agent');
+    openOrRetarget(port, 'shell');
     const label = port.managers.tab.cur().label;
     port.states.delete(label);
 

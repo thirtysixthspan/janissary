@@ -207,7 +207,7 @@ export class ScheduleManager {
   }
 
   // Deliver a due entry to its tab: typed into a harness PTY or a plugin tab's own terminal as a
-  // line of input, or dispatched through an tab's command pipeline. Returns false when
+  // line of input, or dispatched through a plugin tab's command pipeline. Returns false when
   // delivery must wait (the harness is not running, or the terminal is gone), leaving the entry due
   // so it retries on a later tick.
   private fire(tab: Tab, e: ScheduleEntry): boolean {

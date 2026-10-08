@@ -233,7 +233,7 @@ describe('TabManager queue', () => {
 
   // A shell echoes what is typed back into the terminal, so its recording is the one recorded kind
   // that can capture a password. A project that declines that gets no recorder, and therefore no
-  // recording flag on the tab either — the state an tab is already in.
+  // recording flag on the tab either — the state a plugin tab is already in.
   it('records a plugin\'s terminal by default, including for a project that set no config', () => {
     const { tm, managers } = makeTabManagerWithManagers();
     managers.plugins.declarations.push({ id: 'shell', recordsTerminal: true });
@@ -870,13 +870,13 @@ describe('TabManager renameTab for editor tabs', () => {
     expect(tm.openFilePath(tab.editor!.url.slice('/open/'.length))).toBe(newPath);
   });
 
-  it('renaming an tab still sets an alias only', () => {
+  it('renaming a shell tab still sets an alias only', () => {
     const tm = makeTabManager();
     tm.renameTab(0, 'newlabel');
     expect(tm.tabs[0].title).toBe('newlabel');
   });
 
-  it('renaming an tab allows up to 50 characters, independent of tabNameMaxLength', () => {
+  it('renaming a shell tab allows up to 50 characters, independent of tabNameMaxLength', () => {
     const tm = makeTabManager();
     tm.renameTab(0, 'a'.repeat(60));
     expect(tm.tabs[0].title).toBe('a'.repeat(50));
