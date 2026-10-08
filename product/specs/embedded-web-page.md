@@ -29,7 +29,7 @@ ways:
   `https://` scheme, so a bare address works. Example: `open page slashdot.org` opens
   `https://slashdot.org`.
 
-Pages can also be opened by clicking a web link in the agent transcript's rendered Markdown output.
+Pages can also be opened by clicking a web link in an ACP response panel's rendered Markdown output, or in a command reply rendered into a shell tab's terminal.
 Clicking an `http` or `https` link in a Markdown-rendered message sends `open <url>` as a command,
 creating a page tab — the same as typing it manually. The click does not navigate the app away from
 its own page.

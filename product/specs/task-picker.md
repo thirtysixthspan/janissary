@@ -76,9 +76,10 @@ sources are the same directory) shows only the Project section.
 ### Openers
 
 `Ctrl+A` (or the `tasks` command) opens the task picker over the command line. The two openers are
-equivalent. On an agent or transcript tab, or a harness tab, `Ctrl+A` opens the picker. On a shell
-tab `Ctrl+A` reaches the terminal itself (shell line-start, tmux prefix) instead, since shell tabs
-run interactive programs that depend on receiving that keystroke; no popup appears there.
+equivalent. With the cursor in the command bar — in a shell tab or any other plugin tab — `Ctrl+A`
+opens the picker. While a shell tab's terminal holds the keyboard, `Ctrl+A` reaches the terminal
+itself (shell line-start, tmux prefix) instead, since shell tabs run interactive programs that
+depend on receiving that keystroke; no popup appears there.
 
 The picker always overlays whichever tab was focused when it opened, including a harness tab —
 never a different, unrelated tab.

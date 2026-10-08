@@ -1,6 +1,6 @@
 # Command queue
 
-Command queues are an optional core tab capability. Any tab may opt in; having a command bar, being busy, or owning a terminal does not create a queue. Shell tabs currently opt in. Shell and harness tabs have no queue: typed commands, `send`, scheduled commands, and accepted monitor suggestions dispatch immediately through their existing pipeline, including during workspace provisioning. Individual commands keep their own concurrency and readiness checks.
+Command queues are an optional core tab capability. Any tab may opt in; having a command bar, being busy, or owning a terminal does not create a queue. Shell tabs currently opt in. Harness tabs have no queue: their commands reach the PTY directly. Individual commands keep their own concurrency and readiness checks.
 
 ## Ownership and availability
 

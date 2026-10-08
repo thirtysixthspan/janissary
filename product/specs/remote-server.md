@@ -1,7 +1,7 @@
 # Remote Server
 
 Every tab janissary opens normally runs on the machine the server itself runs on. A **remote
-launch** puts an agent or a harness on another host instead: the `on <address>` clause names the
+launch** puts a shell or a harness on another host instead: the `on <address>` clause names the
 host, janissary opens one ssh session to it, and `janus remote-serve` on the far side provisions a
 workspace and runs the process there. The resulting tab is deliberately indistinguishable from a
 local one — same label, same tab strip, same busy dot, same capture, recording, transcript, and
@@ -455,7 +455,7 @@ cleared at launch and when the channel's last reference is released.
 #### Name check before provisioning
 
 Before a new launch opens any ssh connection, its name is checked locally against open tabs and the
-sessions tab (see `agents.md` and `harness.md`). The host then checks it again before cloning, since
+sessions tab (see `harness.md` § "Name clashes"). The host then checks it again before cloning, since
 only the host knows what is running there.
 
 A workspace named `<name>` on the host counts as running when a remote server peer on that host —

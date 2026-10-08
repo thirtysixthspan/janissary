@@ -35,7 +35,7 @@ When there are no remote sessions, the tab shows only its `No remote sessions` e
 Five named columns — Host, Type, Tab, State, Last activity, and an unlabeled actions column — list
 the bare host, what the row is running, its kind, its state, and how long ago it last changed. The
 third column shows the tab's own name — a harness or shell label, `ssh`, or a navigator's abbreviated
-root. The type is what the row *is*: `harness`, `zsh`, `shell`, `ssh`, or `navigator`, matching the tab it
+root. The type is what the row *is*: `harness`, `shell`, `ssh`, or `navigator`, matching the tab it
 opens or would open. The row's tooltip carries the full destination
 and the remote workspace path, and the reason the last attempt on it failed when there was one.
 Headings and entries are left-aligned and share those columns, including joined rows. The final column reserves the same width in every row, so different numbers of action buttons do not shift the headings or values.
@@ -83,9 +83,10 @@ After attaching a detached remote shell, detaching and attaching it again restor
 **Detach** applies to a live session and gives it up locally while deliberately leaving it running.
 Closing the local tabs during that action never stops their remote processes.
 A detached harness remains listed after its local tab closes. Attaching restores the same running process and keeps its tab open; repeated detach and attach cycles do not start replacement harnesses. A late exit from an earlier connection does not close the restored tab or remove its session row.
-The restored harness displays its retained terminal output and transcript history without waiting for another response from the harness. A newly opened restored shell tab likewise shows its retained shell history in its transcript — each retained command as its own entry with the output it produced, in the order they ran, and without the shell's internal sentinel lines — so restored history reads the way live command output always has. Earlier history can be trimmed to keep retention bounded; repeated reconnections do not duplicate the displayed history.
-Detached sessions retain live shell and harness processes. Attaching recreates only those surviving tab types; legacy agent records remain readable but produce no agent tabs.
-It closes every tab and navigator riding that connection, so it asks for confirmation first, naming
+The restored harness displays its retained terminal output and transcript history without waiting for another response from the harness. A newly opened restored shell tab likewise shows its retained shell history in its terminal — each retained command with the output it produced, in the order they ran, and without the shell's internal sentinel lines — so restored history reads the way live command output always has. Earlier history can be trimmed to keep retention bounded; repeated reconnections do not duplicate the displayed history.
+Detached sessions retain live shell and harness processes. Attaching recreates only those surviving tab types; a legacy record naming only removed agent processes is listed as detached and skipped on relaunch, never connected to and never rewritten.
+
+Detach closes every tab and navigator riding that connection, so it asks for confirmation first, naming
 what will go. It acts on the whole connection — a per-tab detach would have to keep the connection up
 for the others and would mean nothing — so it sits on the launching row alone. It is unavailable
 while the session is still provisioning: there is nothing to come back to yet. When the launching tab

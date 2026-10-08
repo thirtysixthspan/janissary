@@ -16,17 +16,17 @@ Sets the current tab's display alias — see `tabs.md` for how the alias behaves
 
 ### `syntax`
 
-`syntax theme <name>` sets the active syntax-highlighting theme for editor tabs; the theme applies globally, across every open editor tab, and persists to the application config so it survives a restart. Theme names are matched case-insensitively and canonicalized to their listed casing. An unrecognized name shows an error listing the available themes. If the config file cannot be written, the syntax theme stays as it was and the reply says it could not be saved and is unchanged. Bare `syntax theme` opens a theme-picker overlay instead of running on the server; if it does reach the server directly (e.g. from another agent), it replies with the theme list, the active one marked. Any other `syntax` subcommand shows usage.
+`syntax theme <name>` sets the active syntax-highlighting theme for editor tabs; the theme applies globally, across every open editor tab, and persists to the application config so it survives a restart. Theme names are matched case-insensitively and canonicalized to their listed casing. An unrecognized name shows an error listing the available themes. If the config file cannot be written, the syntax theme stays as it was and the reply says it could not be saved and is unchanged. Bare `syntax theme` opens a theme-picker overlay instead of running on the server; if it does reach the server directly (e.g. from a scheduled dispatch), it replies with the theme list, the active one marked. Any other `syntax` subcommand shows usage.
 
 ### `theme`
 
-`theme <name>` sets the active application color theme for the whole window chrome; it applies immediately without restart and persists to the application config. Theme names are matched case-insensitively and canonicalized to their listed casing. An unrecognized name shows an error listing the available themes. If the config file cannot be written, the theme stays as it was and the reply says it could not be saved and is unchanged. Bare `theme` opens a theme-picker overlay with per-theme color swatches instead of running on the server; if it does reach the server directly (e.g. from another agent), it replies with the theme list, the active one marked. `theme sync` sets the syntax theme to match the app theme when a syntax theme with the same name exists, and reports that none exists otherwise. See `application-themes.md`.
+`theme <name>` sets the active application color theme for the whole window chrome; it applies immediately without restart and persists to the application config. Theme names are matched case-insensitively and canonicalized to their listed casing. An unrecognized name shows an error listing the available themes. If the config file cannot be written, the theme stays as it was and the reply says it could not be saved and is unchanged. Bare `theme` opens a theme-picker overlay with per-theme color swatches instead of running on the server; if it does reach the server directly (e.g. from a scheduled dispatch), it replies with the theme list, the active one marked. `theme sync` sets the syntax theme to match the app theme when a syntax theme with the same name exists, and reports that none exists otherwise. See `application-themes.md`.
 
 ### `tasks`
 
 Bare `tasks` opens the task-picker overlay instead of running on the server — a client-side
 listing of the executable `ai/*.md` task files (see `task-picker.md`). If it does reach the server
-directly (e.g. from a scheduled dispatch or another agent), it is a no-op.
+directly (e.g. from a scheduled dispatch or a `send` into another tab), it is a no-op.
 
 ### `notifications`
 
@@ -34,7 +34,7 @@ directly (e.g. from a scheduled dispatch or another agent), it is a no-op.
 
 ### `notify`
 
-`notify <message>` pushes a custom line into the notifications feed, attributed to the issuing tab. It bypasses focus suppression and the per-event toggles, and — like every recorded event — is held in the notification queue and shown as a toast when no feed is on screen, so the message always lands somewhere. Bare `notify` (no message) is a usage error (`Usage: notify <message>.`). Available from any tab, agents included. See `notifications.md`.
+`notify <message>` pushes a custom line into the notifications feed, attributed to the issuing tab. It bypasses focus suppression and the per-event toggles, and — like every recorded event — is held in the notification queue and shown as a toast when no feed is on screen, so the message always lands somewhere. Bare `notify` (no message) is a usage error (`Usage: notify <message>.`). Available from any tab with a command bar, shell and harness tabs included. See `notifications.md`.
 
 ### `quit`
 

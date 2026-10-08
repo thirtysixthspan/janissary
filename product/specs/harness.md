@@ -116,7 +116,7 @@ harness opencode as quality -w
 
 ### Name clashes
 
-A label is in use when an open tab has it, when the sessions tab has a harness or agent row with it
+A label is in use when an open tab has it, when the sessions tab has a harness or shell row with it
 that is provisioning, active, reconnecting, or detached (on any host), when — for a remote launch —
 something with it is running on the target host, or when — for a local `-w` launch — a live janissary
 owner (an open tab or a running janus instance) still holds the workspace folder of that name. A
@@ -1070,4 +1070,4 @@ working directory, then model, then effort, then flags). Each chip is shown only
 was set — a harness launched with neither flag shows no chips and its row is unchanged. The chip
 displays the value verbatim; long values are visually truncated, and hovering a chip shows a
 tooltip carrying its label and full value (`Model: <value>` or `Effort: <value>`). These chips
-appear on harness tabs only — agent and shell tabs' metadata rows are unaffected.
+appear on harness tabs only — shell tabs' metadata rows are unaffected.

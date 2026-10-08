@@ -25,7 +25,7 @@
 | Cmd+P | Open the Quick Open file finder from any focused tab |
 | Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches an editor buffer |
 | Cmd+T | Open a new workspaced shell tab (same as typing `zsh`) |
-| Ctrl+T | Expand / collapse the current tab's agent tool-step runs |
+| Ctrl+T | Expand / collapse ACP tool steps in the current tab's response panel |
 | PageUp | Scroll transcript up by half terminal height |
 | PageDown | Scroll transcript down by half terminal height |
 | Escape | Reset scroll to bottom |
@@ -89,7 +89,7 @@ A plugin-contributed overlay ranks below all eight, so a chord pressed while one
 
 A contributed overlay takes the command bar's keys while it is open, exactly as a built-in one does, and none of them disables the bar outright.
 
-The history, clipboard-history, queue, tab-navigation, Quick Open, application-theme, and syntax-theme popups render above the command bar and stay inside the tab's colored left edge. On plugin tabs, the host positions these overlays against the tab body: each popup starts immediately beside the colored edge without covering it, spans to the tab's right side, and sits directly on top of the command bar at whatever height the bar currently has, so a multi-line draft or a completion strip never leaves a gap or an overlap. This holds whether the popup belongs to the plugin or to the application, so the clipboard-history, queue, tab-navigation, Quick Open, and theme popups opened over a shell tab rest on the shell's command bar exactly as its own history popup does. A plugin tab with no command bar has its popups sit at the bottom of the tab. On a shell tab, they stay within the transcript area.
+The history, clipboard-history, queue, tab-navigation, Quick Open, application-theme, and syntax-theme popups render above the command bar and stay inside the tab's colored left edge. On plugin tabs, the host positions these overlays against the tab body: each popup starts immediately beside the colored edge without covering it, spans to the tab's right side, and sits directly on top of the command bar at whatever height the bar currently has, so a multi-line draft or a completion strip never leaves a gap or an overlap. This holds whether the popup belongs to the plugin or to the application, so the clipboard-history, queue, tab-navigation, Quick Open, and theme popups opened over a shell tab rest on the shell's command bar exactly as its own history popup does. A plugin tab with no command bar has its popups sit at the bottom of the tab.
 
 While an overlay is open it claims every keystroke: nothing underneath it scrolls the transcript,
 switches tabs, or reorders them, and the shortcuts that open the other overlays do nothing until it

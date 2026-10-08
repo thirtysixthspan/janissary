@@ -12,7 +12,7 @@ scrollable transcript. It is a non-agent **view tab** (`view: 'notifications'`):
 standard transcript body fed by its own log, but has no command bar and takes no typed input. Like
 the file navigator tab (see `file-navigator-tab.md`) it is a **live, in-memory view** — never
 persisted, never restored on `--relaunch`. When the feed is empty it shows no content at all —
-unlike a shell tab's empty transcript, it does not show the "Type `help` for available commands"
+unlike a tab with a transcript, it does not show the "Type `help` for available commands"
 hint, since there is no command bar to type into.
 
 There is only ever **one** notifications tab. The user opens it with the `notifications` command,
@@ -271,7 +271,7 @@ clock, and returns a fading one to fully visible; moving away restarts it with t
 left. **Clicking** a toast makes the feed visible and clears every toast on screen at once. The
 stack begins beneath the connection indicator, the visible tab's metadata row, and the floating
 status panels that already occupy that corner, so a toast never hides "Cannot reach session" and
-never covers a tab's working directory or its row of actions — on a shell tab as on a shell tab.
+never covers a tab's working directory or its row of actions — on a shell tab as on a harness tab.
 
 **A burst escalates to the feed.** On the third notification inside a ten-second window the
 notifications tab is made visible and every toast is removed at once — sustained activity is more
@@ -304,7 +304,7 @@ the only thing that empties it.
 `build-agent: deploy finished`). It is the deliberate counterpart to the four ambient events: an
 explicit signal that bypasses focus suppression and the per-event toggles, and — like every other
 recorded event — lands in the queue and, when no feed is on screen, appears as a toast.
-It is available from any tab, including shell and harness tabs (an agent dispatches it like
+It is available from any tab with a command bar, including shell and harness tabs (each dispatches it like
 any other command). It records a confirmation entry in the issuing tab. `notify` with no message is
 a usage error (`Usage: notify <message>.`) and records nothing in the feed.
 

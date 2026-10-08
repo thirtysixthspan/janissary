@@ -20,6 +20,9 @@ Remove local and remote transcript-based agent tabs and the `agent`, `msg`, and 
 10. Publish plugin API v2, preserving the frozen v1 implementation and adapting host tests to reject v1 while exercising v2 round trips.
 11. Keep inline monitoring and deliver completed suggestions and question replies into the owning shell’s visible output; preserve reporting-tab mode.
 12. The user explicitly authorized fixing the red baseline and proceeding. Include the verified plugin mount-deadline correction in `web/src/plugins/registry.tsx`; mounting is acknowledged in a layout effect.
+13. After review, correct the current-behavior prose the mechanical substitution made wrong rather than leaving it to contradict itself. `product/specs/tabs.md` § Default tab, `product/specs/relaunch.md` item 3, and `product/specs/remote-server.md` § launch, § Lifecycle and cleanup, and protocol versions 8, 15, and 17 describe the surviving shell and harness tabs; `documentation/user-documentation/tab-types/conversations.md` and `file-navigator.md` match them. Protocol-version paragraphs keep the agent wording they historically recorded, and the ACP agent references that remain accurate stay.
+14. Correct the comments in live code that named files this change renamed or deleted: `src/controller/recording.ts` and `src/controller/transcript.ts` name `HarnessTabMeta.tsx`, and `src/shell/command-input.ts` names the live readers — `executeShellCmd` for the command wrapper and `queryShellPwd` for the pwd marker — instead of the deleted `restored-transcript.ts`. Comments only.
+15. Point `src/eslint-feature-boundaries.test.ts` at `HarnessTabMeta` in both fixtures. The shared-module rejection case linted under a `filePath` the rename deleted, and `import-x/no-restricted-paths` returns without reporting when resolution comes back empty, so it passed only when the resolver happened to resolve an import from a non-existent path. The allowance case was vacuous for the same reason.
 
 ## Implementation steps
 
@@ -29,14 +32,19 @@ Remove local and remote transcript-based agent tabs and the `agent`, `msg`, and 
 4. Remove agent UI bodies and command-input modules under `web/src/agent-tabs/`; move any genuinely shared modules needed by app composition/tests into `web/src/shared/command-bar/`. Detach `App.tsx`, `AppMain.tsx`, `AppCenterActionArea.tsx`, window chords, focus/search/scroll coordination, `ShellTabLayer`, and related app hooks. Remove agent-only wire variants and branches from `src/tab/`, `src/protocol/`, and client view handling. Keep neutral tab factories and shared test fixtures needed by surviving tests. Adapt affected tests and ESLint boundary declarations.
 5. Update `help.md`, `README.md`, current `product/specs/*.md`, `documentation/**/*.md`, `documentation/diagrams/architecture.html`, `documentation/.vitepress/config.mts`, `ai/guidelines/{architecture-principles,plugins-tabs}.md`, and `scripts/docs-screenshots/{manifest,reset}*` wherever they reference removed behavior. Delete messaging-only pages and screenshots; retain and rewrite shared naming/workspace pages. Remove obsolete agent-specific styles from `web/src/theme.css` and other affected stylesheets. Remove the agreed entries from `product/backlog/*.md` without changing unrelated entries. Do not edit historical completed plans or changelog sections.
 6. Remove newly orphaned declarations/files/dependencies discovered by the dead-code scan, after reference searches, restricted to orphans created by these changes. Move this plan to complete after verification and open a breaking-change PR for human merge.
+7. Correct the shell-tab prose the substitution made self-referential: the launch and command grammar, the naming pool, the transcript-referring sentences that now describe a shell tab as having its own transcript, and the `an \`zsh\`` grammatical slips. Correct the boundary test fixtures to the renamed component.
 
 ## Tests
 
 Run `./scripts/run.mjs check-diff` after each stage and repair regressions before proceeding. Preserve surviving test assertions, adapting their setup only within the explicit user exception. Add meaningful coverage for shell workspace joins, metadata-button routing, Cmd+T, unknown removed commands, and the SSH reattachment bridge. Delete feature-only tests and removed-feature assertions from mixed suites.
 
+The documentation and comment corrections add no tests: they describe behavior this change did not alter, already covered by `src/sessions/attach.test.ts`, `src/sessions/manager.test.ts`, `src/plugins/shell/activate.test.ts`, `src/conversations/manager.test.ts`, and `src/shell/index.test.ts`. The boundary-fixture correction adds no case either; it makes `rejects a shared module importing a feature` and `allows a feature to import shared UI` assert what they already claim, verified by running `src/eslint-feature-boundaries.test.ts` in isolation against a cold resolver and then as part of the full suite.
+
 ## Spec updates
 
 Update the current tabs, agents/naming, workspaces, shell, send, conversations, Sessions, command, keyboard, notification, monitoring, profile, state, plugin, and screenshot specs, plus cross-references from other current specs. Delete `product/specs/messaging.md` and its user documentation. Shared workspace/naming specs remain and describe surviving consumers.
+
+The follow-up prose corrections touch `product/specs/append-only-log.md`, `application-commands.md`, `command-queue.md`, `embedded-web-page.md`, `harness.md`, `history.md`, `keyboard-navigation.md`, `markdown-rendering.md`, `monitoring.md`, `notifications.md`, `quit-confirmation.md`, `remote-server.md`, `scheduling.md`, `send.md`, `sessions-tab.md`, `shell-tab.md`, `sleep-and-resume.md`, `tab-navigator.md`, `tab-plugins.md`, `tabs.md`, `task-picker.md`, and `transcript.md`; no spec is created or removed, and no user-visible behavior changes.
 
 ## Verification
 
@@ -58,6 +66,8 @@ Live checks, if the attached browser and runtime permit them: launch-shell start
 ## Out of scope
 
 Migrations, cleanup of users' persisted data or remote processes, deprecation shims/warnings, other feature removals, pre-existing dead code, unrelated backlog edits, historical plans/changelogs, and merging the PR.
+
+The follow-up corrections also stay out of scope: source behavior, the boundary rule and its zones, stale sentences in the files they touched that predate this change, historical protocol-version content beyond reverting the mechanical substitution, and whether `SessionListener.onHistory` having no production assignment is a lost feature — a behavioral question these comment edits do not answer.
 
 Final verification: PR hard gate passed: full typecheck and lint (the same pre-existing fuzzy-match warning), 840 test files and 11,871 tests passed with the same one pre-existing skip. Production server/web build and docs build passed. Bundled plugins still emit separate lazy chunks. The dead-code scan reports exactly the baseline findings after removing three new orphans: workspaceAgentCwd, the protocol CompletionResult re-export, and src/command/tokens.ts. No dependency changes were needed. Removed the app-shell agent transcript-search and scroll callbacks; editor search and shell terminal scrolling retain their own handlers. Relaunch skips legacy agent-only Sessions records without connecting or rewriting them.
 

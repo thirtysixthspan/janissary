@@ -5,7 +5,7 @@
 | `acp` | Query a core OpenCode ACP connection from a shell or another supported plugin tab; replies stream in the ACP panel (`acp reset` starts a fresh session) |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
-| `clear` | Clear the output log in a shell tab; in a shell tab, clear the terminal (use `/clear` to clear its output log) |
+| `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
 | `clip` | Open the clipboard-history popup: everything copied in this session, newest at the bottom (Ctrl+Shift+V or Cmd+Shift+V); choosing an entry pastes it at the cursor rather than running it |
 | `close` | Close the current tab (exits if last); `close <tabname>` closes a tab by its label (`page`, `page-2`, `image`, …) or display alias. `/close` and `/exit` are equivalent |
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh/terminal) |
@@ -36,7 +36,7 @@
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
 | `search` | `search` opens or focuses the project-wide search tab (Cmd+Shift+F); `search <phrase>` opens it and searches for the phrase; `search transcript <pattern>` searches the current tab's transcript with a case-insensitive regex |
-| `send` | Deliver a line to a harness, submit through a shell tab's command bar, or run a command in a shell tab |
+| `send` | Deliver a line to a harness, or submit it through a shell tab's command bar — application commands run in the app and unclaimed lines go to zsh |
 | `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
 | `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the database reached most recently, by `sql` or any `db` command (`sql [<name>] left`/`right` to dock it) |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
@@ -45,7 +45,7 @@
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
-| `zsh` | Open a shell tab through the bundled shell tab plugin, named from the agent-name pool like a shell tab: a live zsh terminal with the shell tab's metadata row and command line. The command line has focus when the tab opens; double-click the terminal or press `Shift+Tab` to type directly into zsh, and press `Shift+Tab` again to return to the command line. Double-clicking clears any terminal selection made by the gesture. A single click on the terminal returns focus to the command line. A command-bar line runs as an application command when it names one, and otherwise goes to zsh; prefix it with `!` to force the shell. While zsh is running a command the line reads `queue >`, and a submitted line waits in the tab's command queue until zsh returns to its prompt. `zsh [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]`: by default the shell gets a fresh sandboxed workspace clone, and starts at its root once the clone lands; lines typed meanwhile wait in the queue. `--no-workspace` opens an unsandboxed local shell in the issuing tab's directory, or the project root when that tab is sandboxed. `on <address>` opens a shell with its own remote workspace, even with `--no-workspace`; the tab shows SSH prompts while it provisions, and queued lines run when remote zsh reaches its prompt. Without a repository, a local shell opens unsandboxed and says why. The metadata row's new-shell button and `Cmd+T` open a sibling in the same place and workspace instead. In a remote tab, typed `zsh` joins the existing remote workspace and channel, inheriting offline mode; workspace flags are ignored, and `on <address>` is refused with `Cannot launch a remote shell from a remote tab.` |
+| `zsh` | Open a shell tab through the bundled shell tab plugin, named from the agent-name pool: a live zsh terminal with the shell tab's metadata row and command line. The command line has focus when the tab opens; double-click the terminal or press `Shift+Tab` to type directly into zsh, and press `Shift+Tab` again to return to the command line. Double-clicking clears any terminal selection made by the gesture. A single click on the terminal returns focus to the command line. A command-bar line runs as an application command when it names one, and otherwise goes to zsh; prefix it with `!` to force the shell. While zsh is running a command the line reads `queue >`, and a submitted line waits in the tab's command queue until zsh returns to its prompt. `zsh [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]`: by default the shell gets a fresh sandboxed workspace clone, and starts at its root once the clone lands; lines typed meanwhile wait in the queue. `--no-workspace` opens an unsandboxed local shell in the issuing tab's directory, or the project root when that tab is sandboxed. `on <address>` opens a shell with its own remote workspace, even with `--no-workspace`; the tab shows SSH prompts while it provisions, and queued lines run when remote zsh reaches its prompt. Without a repository, a local shell opens unsandboxed and says why. The metadata row's new-shell button and `Cmd+T` open a sibling in the same place and workspace instead. In a remote tab, typed `zsh` joins the existing remote workspace and channel, inheriting offline mode; workspace flags are ignored, and `on <address>` is refused with `Cannot launch a remote shell from a remote tab.` |
 
 ### Key Bindings
 
@@ -58,7 +58,7 @@
 | `Ctrl+R` | Open the command history picker (a shell tab opens its own history instead — see **Shell tab controls**) |
 | `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup (`clip`); choosing an entry pastes it at the cursor in the command bar, an editor buffer, or a terminal prompt. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+G` | Open the fuzzy tab navigator (also closes it if already open) |
-| `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead in a shell tab whose terminal has taken over |
+| `Ctrl+A` | Open the task picker (executable `ai/tasks/*.md` files, project and Janissary); Return inserts it into the command line at the cursor without running. Reaches the terminal instead while a shell tab's terminal holds the keyboard |
 | `Cmd+P` | Open the Quick Open file finder (fuzzy-match a project file; Return opens it in an editor tab) |
 | `Cmd+Shift+F` | Open or focus the project-wide search tab |
 | `Cmd+T` | Open a new shell tab (same as typing `zsh`); a shell tab opens another shell instead |
@@ -73,11 +73,6 @@
 | `↑` / `↓` | Previous / next command in history |
 | `Tab` | Complete a file path, a tab label for `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / monitor name / target |
 | `Enter` | Execute the current command |
-| `Shift+↑` / `Shift+↓` | Scroll the transcript up / down (accelerated — distance doubles each second) |
-| `Ctrl+↑` / `Ctrl+↓` | Scroll the transcript up / down (accelerated) |
-| `Page Up` / `Page Down` | Scroll the transcript up / down by half terminal height |
-| `Escape` | Reset scroll to bottom |
-| `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
 | `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues) |
 | `Ctrl+T` | Expand / collapse ACP tool steps in the response panel |
 | `Cmd+F` | Search for a line in an editor buffer |
@@ -93,7 +88,7 @@
 | `!` prefix | Send the line straight to zsh, even when it names an application command |
 | `↑` / `↓` | Walk this tab's command history — lines the command bar sent and commands typed into the terminal |
 | `→` / `End` (at the end of input) | Accept the ghost suggestion from the global history |
-| `Tab` | Complete the line as the shell tab's bar does; several choices show a strip |
+| `Tab` | Complete the line the way any application command bar does; several choices show a strip |
 | `Escape` | Close the completion strip when it is showing; otherwise return the terminal to the bottom of its scrollback |
 | `Shift+↑` / `Shift+↓` / `Ctrl+↑` / `Ctrl+↓` | Scroll the terminal up / down (accelerated) |
 | `Page Up` / `Page Down` | Scroll the terminal up / down by half a screen |

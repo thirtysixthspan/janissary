@@ -1,11 +1,10 @@
 # Shell Tab
 
-A **shell tab** is a tab whose body is a live pseudo terminal running zsh, laid out exactly like an
-shell tab: the metadata row on top, the terminal where the transcript would be, and the command line
+A **shell tab** is a tab whose body is a live pseudo terminal running zsh: the metadata row on top, the terminal where the transcript would be, and the command line
 beneath it. Type `zsh` in any tab's command bar to open one; by default it gets a sandboxed workspace clone
-of its own, as `zsh` does (see "Where the shell starts"). `zsh <name>` names the tab. Without a name, each
-shell tab is named from the agent-name pool exactly as an unnamed shell tab is — a name no open tab already holds, and no harness or agent
-session that is provisioning, active, reconnecting, or detached still holds (see "Name clashes" in [[agents]])
+of its own (see "Where the shell starts"). `zsh <name>` names the tab. Without a name, each
+shell tab is named from the agent-name pool — a name no open tab already holds, and no harness or remote shell
+session that is provisioning, active, reconnecting, or detached still holds (see "Name clashes" in [[harness]])
 — and the tab strip shows that name, so two shells read as two distinct tabs and either can be
 addressed by name. A shell therefore never takes the name of a detached remote shell that could come
 back under it. Once every name in the pool is held, a new shell tab is named `shell`, then `shell-2`,
@@ -73,9 +72,9 @@ here rather than sent onward. A quit typed in a shell tab asks the same confirma
 else (see [[quit-confirmation]]), and a bare word opens the same picker.
 
 `nav`, or `nav <query>`, submitted from the shell command bar opens the fuzzy tab navigator over the
-shell tab, pre-filled with the query, exactly as it does from a shell tab's bar; submitting `nav`
+shell tab, pre-filled with the query; submitting `nav`
 while the navigator is open closes it. Neither reaches zsh. The shell draws its overlays from the
-same overlay stack as a shell tab, so one navigator appears over it, whether `nav` or `Ctrl+G`
+same overlay stack as any plugin tab, so one navigator appears over it, whether `nav` or `Ctrl+G`
 opened it.
 
 The bare `theme` picker appears over the shell tab. While it is open, the application's arrow,
@@ -91,7 +90,7 @@ The shell opts into the core [[command-queue]]. Its bar queues while zsh is busy
 
 An application command that answers with text rather than opening something — `help`, for one — is
 shown in the terminal as a command line, followed by its reply on the next line. The reply is markdown, as
-it is in a shell tab's transcript, and is rendered for the terminal rather than shown as raw markup:
+it is in the ACP response panel, and is rendered for the terminal rather than shown as raw markup:
 headings and bold text are bold, the top heading underlined, italic and struck-through text keep
 their styles, inline and fenced code is colored and code blocks are indented, list items get bullets
 or numbers, quotes get a bar, links show their target after the text, and tables are lined up in
@@ -100,12 +99,12 @@ to zsh. Commands that open a picker keep their existing behavior.
 
 A slow application command never disables the shell. Its runtime is not charged to the shell plugin's
 handler deadline (see [[tab-plugins]]), so a command that takes longer than five seconds — another
-plugin's command, a large `open`, an agent launch — leaves every shell tab and its zsh process open.
+plugin's command, a large `open`, a shell launch — leaves every shell tab and its zsh process open.
 The reply waits for the command for at most 30 seconds. A command still running then shows the output
 it had produced so far, and keeps running.
 
 When the terminal is in its normal buffer and can measure the reply, it is rendered as HTML — the same
-markdown rendering a shell tab's transcript uses, in the terminal's theme colors — in a block placed
+markdown rendering the ACP response panel uses, in the terminal's theme colors — in a block placed
 in the terminal's scrollback directly under the echoed command and followed by zsh's prompt. Its
 rendered content fits the block without an internal scrollbar, and the reply scrolls with the
 terminal without adding an application-window scrollbar. The decoration stays inside the terminal
@@ -114,13 +113,13 @@ scrolling through it, even when its first row is above the viewport. The block i
 so terminal selection and search do not see it. When a full-screen program holds the terminal, or the reply cannot
 be measured or placed, it falls back to the styled terminal text described above.
 
-A link in a reply rendered as HTML opens the way the same link opens from a shell tab's transcript: a
+A link in a reply rendered as HTML opens the way the same link opens from the ACP response panel: a
 web address opens through `open`, and a `path:line` reference opens in an editor tab. A click on any
 link in the block never navigates the application window, so a link the application does not open
 does nothing.
 
-**Tab completion is the application's.** `Tab` in the command line asks the same completion the agent
-tab's bar asks, and shows the same strip when there is a choice to make. The shell tab keeps no list
+**Tab completion is the application's.** `Tab` in the command line asks the application's own
+completion, and shows the same strip when there is a choice to make. The shell tab keeps no list
 of its own. One match completes the line, several matches show the choice strip with two spaces
 between choices, and no matches leave
 the line unchanged. When several choices are visible, `Escape` closes the strip and leaves the
@@ -132,8 +131,8 @@ The shared pickers and the queue popup treat the shell this way because its decl
 `hostsCommandBar` and requests both core queue capabilities, not because the application knows the shell plugin by name (see [[tab-plugins]]).
 
 A picker opened from a shell's bar belongs to that shell, including a shell docked in a sidebar while
-a shell tab is current. It appears over the shell, a task picked from `tasks` lands in the shell's
-bar rather than the agent's, and `queue` lists, edits and deletes the shell's own queued lines. If the shell closes while its picker is open, the picker moves to the current tab. The queue popup closes if that tab has no queue edit surface.
+another tab is current. It appears over the shell, a task picked from `tasks` lands in the shell's
+own bar rather than the focused tab's, and `queue` lists, edits and deletes the shell's own queued lines. If the shell closes while its picker is open, the picker moves to the current tab. The queue popup closes if that tab has no queue edit surface.
 
 A shell that is not on screen opens no picker. That covers a shell hidden behind another centre tab
 and a docked shell behind another entry in its sidebar. A picker word reaching it, such as a queued
@@ -147,7 +146,7 @@ The command bar's status dot uses the same color as the shell tab's dot.
 
 `Cmd+T` opens another zsh tab beside this shell, exactly as the metadata row's **new shell here** button does. The new shell starts in the same working directory. Beside an unsandboxed shell it is unsandboxed; beside a sandboxed one it runs inside the same workspace clone with the same offline setting. A remote shell's sibling joins its existing remote channel and workspace, starts at its current directory when that directory is inside the workspace (otherwise at the workspace root), and inherits its offline setting. It never creates a workspace, which is what sets it apart from a typed `zsh`. While the source workspace is provisioning, `Cmd+T` does nothing. In other tabs, `Cmd+T` keeps opening a new shell tab.
 
-`Cmd+T` works the same with the terminal focused as with the command bar focused, and when the keyboard rests on the page with the shell as the current tab. It is a chord the shell plugin's declaration claims beside `Ctrl+R`, so like `Ctrl+R` it belongs to the shell only while the shell is the visible tab, or the selected entry in the sidebar it is docked to. `Cmd+T` pressed in a shell tab's command bar beside a docked shell still opens a new shell tab.
+`Cmd+T` works the same with the terminal focused as with the command bar focused, and when the keyboard rests on the page with the shell as the current tab. It is a chord the shell plugin's declaration claims beside `Ctrl+R`, so like `Ctrl+R` it belongs to the shell only while the shell is the visible tab, or the selected entry in the sidebar it is docked to. `Cmd+T` pressed in another tab's command bar beside a docked shell still opens a new shell tab.
 
 `Ctrl+C`, `Ctrl+D` and `Ctrl+Z` in the command line send interrupt, end-of-input and suspend to the
 shell — the characters a terminal would send. The terminal also accepts direct input when focused.
@@ -161,8 +160,7 @@ clipboard-history popup.
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and
 `Page Down` move by half a terminal screen, and `Escape` returns to the bottom of the scrollback.
 
-`Up` and `Down` walk the tab's command history, exactly as the shell tab's bar walks its tab's command
-history. It holds the lines the command bar has sent or the application has handled, and every command
+`Up` and `Down` walk the tab's command history. It holds the lines the command bar has sent or the application has handled, and every command
 typed directly into the terminal, in the order they ran. A line sent from the bar appears once, as it
 was typed in the bar, even though zsh also reports running it; a command typed into the terminal is
 recorded as zsh received it, including one spanning several lines. Every entry is stored without
@@ -173,13 +171,13 @@ them, so `history`, `Up` in the terminal, and `$HISTFILE` hold only what the use
 Ghost suggestions instead draw from the
 global history shared across tabs and runs (see [[history]]); `→` or `End` at the end of input accepts
 a suggestion. Every line the command bar records in this history — whether the application answered
-it or it went to zsh, a `!` line included — enters that global history too, attributed to this tab,
-as a line submitted in a shell tab's bar does. Commands typed directly into the terminal, and lines
+it or it went to zsh, a `!` line included — enters that global history too, attributed to this tab.
+Commands typed directly into the terminal, and lines
 another tab delivers with `send` or `queue`, do not.
 
 Every other chord belongs to the application, unchanged: `Ctrl+A` opens the task picker, `Ctrl+G` the
 tab navigator, `Cmd+P` quick open and `Cmd+Shift+F` the project search, all with the cursor in the
-command bar, exactly as in a shell tab. `Ctrl+E` opens the queue popup over the shell tab, as
+command bar. `Ctrl+E` opens the queue popup over the shell tab, as
 described above. `Cmd+F` does nothing here — a plugin tab has no transcript to search — which is the
 same in every plugin tab.
 
@@ -191,7 +189,7 @@ with the newest line selected at the bottom. It uses the same presentation and
 keyboard navigation as the application's history picker — a multi-line command shows as its first line
 with a `(N lines)` postfix, and is put back whole — but Return puts the selected line back in the
 command bar without running it. Focus any other tab and `Ctrl+R` opens the application's history picker
-again. That holds for a docked shell too: while it shows in a sidebar, `Ctrl+R` pressed in an agent
+again. That holds for a docked shell too: while it shows in a sidebar, `Ctrl+R` pressed in another
 tab's command bar opens the application's picker, however many shells are docked. A shell that is the
 current tab keeps the chord when the keyboard rests on the page itself, such as after a click on its
 metadata row.
@@ -210,7 +208,7 @@ act on: **open file navigator here**, **new shell here**, the split control, and
 schedule windows.
 
 While a shell's workspace clone is still provisioning, the row shows the spinning sync icon titled
-`Provisioning workspace` in the workspace mark's place, as a shell tab does, and the terminal area
+`Provisioning workspace` in the workspace mark's place, as a harness tab does, and the terminal area
 stays empty. The **new shell here** button is disabled and dimmed, with the tooltip `Waiting for the
 workspace`. **Open file navigator here** stays available and opens on the clone. Once zsh starts, the
 flag gives way to the workspace mark and the button comes back.
@@ -286,10 +284,10 @@ must be 32 lowercase hex characters, because it is written into the hook functio
 
 ## Where the shell starts
 
-The command is `zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]`, read the way `zsh` reads
+The command is `zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]`, read the way `harness` reads
 its own. A typed `zsh` creates a new sandbox by default, wherever it is typed, a sandboxed tab included:
 a fresh `git clone` of the project's `origin` under `.janissary/workspace/<name>/`, with zsh confined to
-it by the same Seatbelt profile and credential injection an `zsh -w` gets (see [[workspaced-agent]]).
+it by the same Seatbelt profile and credential injection a `harness -w` gets (see [[workspaced-agent]]).
 `-w` and `--workspace` confirm the default. `--no-workspace` opts out and wins when both are given.
 `--offline` provisions the clone with the offline sandbox profile, which denies network access, and
 changes nothing without a workspace. `on <address>` opens the shell on that remote host and implies
@@ -297,16 +295,16 @@ a workspace even when `--no-workspace` is present. Flags and `on` match case-ins
 `on <address>` clause may appear anywhere among the name and flags, and the address keeps its case
 and follows [[remote-server]]'s address grammar.
 
-The words after `zsh` that are not flags form the name, lowercased, as `zsh <name>`'s do. The name is
-the tab's label and, for a workspaced shell, the clone's folder. A typed name is held to `zsh`'s rules:
-one that clashes with an open tab or a live session is refused, a workspaced name must be a single
-folder name, and a leftover folder under it is removed before cloning, with `zsh`'s notifications-feed
-messages for each. Without a name the shell is named as described above.
+The words after `zsh` that are not flags form the name, lowercased, as `harness <name>`'s do. The name is
+the tab's label and, for a workspaced shell, the clone's folder. A typed name is held to the shared
+launch-name rules: one that clashes with an open tab or a live session is refused, a workspaced name must
+be a single folder name, and a leftover folder under it is removed before cloning, with the
+notifications-feed messages for each. Without a name the shell is named as described above.
 
 An address after `on` is checked before any connection opens. A missing or invalid address reports
 the address usage or validation error. A word starting with `-` that is not one of the four flags is
 refused with `Unknown option "<word>". Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline]
-[on <address>]` and nothing opens; unlike `zsh`, such a word never becomes part of the name.
+[on <address>]` and nothing opens; such a word never becomes part of the name.
 
 A workspaced shell's tab opens at once, while the clone runs, and zsh starts confined to the clone, at
 its root, when the clone finishes. With no git repository, or no readable `origin` remote, a typed `zsh`
@@ -315,7 +313,7 @@ workspace: <reason>.`, where the reason is `no git repository found` or `the rep
 remote`.
 
 An unsandboxed shell — `zsh --no-workspace`, or that fallback — never starts inside another tab's clone.
-It starts where `zsh --no-workspace` does: in the issuing tab's working directory when that tab is
+It starts in the issuing tab's working directory when that tab is
 local, has no workspace, and is inside the project checkout, and at the checkout root otherwise. The
 **new shell here** button and `Cmd+T` are the way to open another shell inside an existing clone.
 
@@ -375,7 +373,7 @@ A line submitted in a provisioning shell's command bar joins the shell's command
 
 Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. That recorded directory follows zsh's current directory, so after a `cd` the **new shell here** button and `Cmd+T` start the new shell where this one now is, and **open file navigator here** opens the navigator on that same directory. When zsh has moved outside the project root, and outside its workspace clone when it has one, the new shell starts in the workspace clone or the project root instead, because a terminal may only start inside the project. A new shell's recorded directory is the one its terminal actually started in, fallback included, from the moment the tab opens (`openPluginTab` in `src/tab/openers.ts` takes it from the spawned terminal, not from the source tab), so completion, the metadata row and anything opened from it agree with the shell even before zsh first reports its directory, which a shell no browser has mounted never does. A new shell from **new shell here** or `Cmd+T` inherits the shell's workspace and offline mode.
 
-When docked, bare `close` and `Cmd+W` act on the shell tab whose command bar has focus. An `zsh` command uses that shell tab as its source for the new shell's working directory and group.
+When docked, bare `close` and `Cmd+W` act on the shell tab whose command bar has focus. A `zsh` command uses that shell tab as its source for the new shell's working directory and group.
 
 One tab per `zsh`, always. `zsh` twice opens two tabs even in the same directory, because a shell is
 stateful and refocusing the first would take its foreground program and its directory away from the
@@ -426,7 +424,7 @@ Its terminal connection belongs only to that shell tab. A plugin tab cannot atta
 resize a terminal owned by another tab.
 
 Dragging rows from the file navigator onto the shell tab's command bar highlights the bar and, on
-release, inserts their names at its caret exactly as the shell tab's bar does (see
+release, inserts their names at its caret exactly as any application command bar does (see
 [[file-navigator-tab]]). Nothing is sent to zsh until the line is submitted.
 
 A paste into the command bar remains one editable command, subject to the same `!` and
