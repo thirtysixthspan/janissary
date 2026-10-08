@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Stop the diff tab from disabling itself on its first refresh, which the intent's missing return value does today.
-
-Existing Issue: The `refresh` intent handler in `src/plugins/diff/activate.ts` returns `session.refresh(...)`, an async function whose resolved value is `undefined`, and the host validates every intent's result with `isJsonCompatible` — which answers false for `undefined` — and then disables the plugin with "produced an invalid intent result", so the whole tab dies on the first refresh instead of repainting. Severity: 9/10
-
-Existing Risk: 9/10 - The tab is opened and then dies within a second, because the client's refresh loop, the whitespace toggle, and the Refresh button all send this intent, so the feature cannot be used at all in the running application and the failure looks like a broken plugin load rather than a wrong return value.
-
-Proposal Risk: 2/10 - The handler answers `null` and starts the recompute outside the guarded call, so the intent's contract is satisfied and a slow recompute cannot time the plugin's handler budget out; what remains is that the answer no longer carries the outcome, so a caller wanting to know the diff landed has to wait for the tab's own repaint.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1621 "stop the diff tab from disabling itself on its first refresh". In `src/plugins/diff/activate.ts`, change the `refresh` entry so it starts the recompute without returning it and answers `null`: `run: (_tab, payload: RefreshIntent, capabilities) => { void sessionFor(capabilities).refresh(payload.hideWhitespace); return null; }`. Keep the recompute itself unchanged — `DiffSession.refresh` already guards against one already in flight and drops a result whose root moved on. Add a regression test in `src/plugins/diff/activate.test.ts` that drives the intent through `defineIntents` and asserts the resolved value is exactly `null`, not merely that the recompute ran, because the unit tests' fake capabilities return the handler's value without the host's JSON check and so cannot catch this on their own. Point the test at the host's own rule rather than a local copy of it: the contract is in `src/plugins/context.ts` (`isJsonCompatible`) and the disabling path is in `src/plugins/requests.ts`, and a comment naming both keeps the next reader from reintroducing it.
-
-
 * Answer a real line number for a double-click inside a deleted file's hunk, and make that file's hunks inert.
 
 Existing Issue: The jump fallback in `hunkLines` in `src/plugins/diff/parse-diff.ts` uses the hunk's last new-side number, which for a pure deletion — a hunk whose `@@` header reads `-1,2 +0,0` — is `newStart - 1`, so the parser answers `jump: -1` for every removed line and a double-click emits an open intent for line -1. Severity: 6/10

@@ -17,9 +17,10 @@ re-finding it by hand in the editor.
 
 `diff` opens the tab, or focuses it when it is already open — there is only ever one. `diff <path>`
 opens it scoped to that path's changes, and a bare `diff` scopes it to the project's launch directory.
-A second route opens the same tab on the same terms: the **Show diff in the workspace** button in the
-metadata row of a shell or harness tab that has a workspace, which scopes the tab to that tab's own
-environment. The tab is titled **diff**.
+A path that is not a directory inside the project is refused before the tab opens. A second route opens
+the same tab on the same terms: the **Show diff in the workspace** button in the metadata row of a
+shell or harness tab that has a workspace, which scopes the tab to that tab's own environment. The
+tab is titled **diff**.
 
 The header names the directory being diffed in the application's own abbreviated form — `$root` for the
 launch directory, `$workspace/<name>` for a workspace clone, `~` for a path under home.
@@ -27,10 +28,11 @@ launch directory, `$workspace/<name>` for a workspace clone, `~` for a path unde
 ### What the tab shows
 
 One entry per changed file, in file path order, each entry's header carrying the file's project-relative
-path, its add and delete counts, and — for a renamed file — its old path and its new one. A deleted
-file's header is inert, because there is no file to open. A binary file is one entry naming it as such
-with no hunks, and its header opens the media tab the file's extension already opens — the image, video,
-audio, or PDF tab — rather than an editor tab.
+path, its add and delete counts, and — for a renamed file — its old path and its new one. A file whose
+only change is its mode is an entry with no hunks. A deleted file's header is inert, because there is
+no file to open, and so are its hunks. A binary file is one entry naming it as such with no hunks, and
+its header opens the media tab the file's extension already opens — the image, video, audio, or PDF
+tab — rather than an editor tab.
 
 Every hunk is expanded, and each hunk line carries its own file line number: the new-side number for an
 added or context line, the old-side number for a removed one. There is no cap: a change of any size is
@@ -59,7 +61,10 @@ reaches it. **Return** opens the file at the walked hunk's first changed line. A
 it and focuses the body, so the walk continues from where the mouse left off.
 
 Opening a file reuses the editor tab's existing de-duplication: a file already open in an editor tab is
-focused rather than duplicated, exactly as every other path into the editor behaves.
+focused rather than duplicated, exactly as every other path into the editor behaves. A double-click on a
+line of a file that exists opens that line, whichever side of the change it is on; a removed line opens
+the nearest line that does exist, because it has no position of its own on the new side. A deleted
+file's lines answer nothing, because the file they name is gone.
 
 ### Empty and failure states
 
