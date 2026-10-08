@@ -539,15 +539,17 @@ without seconds, so a limit hit at 7:36:15 against a reset at 7:36:40 states a t
 gone — resumes a minute from now rather than being pushed to the next occurrence of that clock time.
 The same rule covers a banner read long after the fact, including one replayed on reattach.
 
-**One resume per blockage.** The same screen redrawn unchanged schedules nothing further, and after a
-resume is delivered the tab stops: it does not retry a limit the first attempt did not clear, so a
-wall the user has to clear — `upgrade your plan`, `Quota exceeded` — is never typed at. If the
-blockage goes away before the resume is due — the user bought credits, or the limit was advisory —
-the pending entry is cancelled. A tab closed or exited in the meantime loses the entry silently,
-like any other harness timer: harness schedules live in memory and end with the tab. A user who
-cancels the entry themselves with `schedule cancel auto-resume in <label>` puts the flag straight back
-to plain **Auto-resume**, exactly as a blockage clearing on its own does. Nothing is
-written to the tab's transcript.
+**One resume per blockage.** The same screen redrawn unchanged schedules nothing further. While a
+resume is pending, later captures that still show a limit do not replace or move the scheduled
+entry, even if the rendered screen changes. If the blockage goes away before the resume is due —
+the user bought credits, or the limit was advisory — the pending entry is cancelled. Once the
+resume is delivered, a changed limit screen can be recognized as a new blockage; the same unchanged
+screen does not trigger another attempt, so a wall the user has to clear — `upgrade your plan`,
+`Quota exceeded` — is never repeatedly typed at. A tab closed or exited in the meantime loses the
+entry silently, like any other harness timer: harness schedules live in memory and end with the
+tab. A user who cancels the entry themselves with `schedule cancel auto-resume in <label>` puts the
+flag straight back to plain **Auto-resume**, exactly as a blockage clearing on its own does. Nothing
+is written to the tab's transcript.
 
 **The parked tab is quiet.** While a resume is pending the tab's dot stops blinking immediately — the
 harness is waiting, not working, the same rule a recognized permission prompt follows — and the tab is

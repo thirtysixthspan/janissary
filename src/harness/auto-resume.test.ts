@@ -256,13 +256,17 @@ describe('HarnessAutoResumer', () => {
 
   // Relative resets, so the two instants differ by the duration rather than by what time of day
   // the suite happens to run at.
-  it('schedules again for a new blockage on a changed screen', () => {
+  it('keeps its scheduled reset while a changed limit screen remains blocked, then detects a new reset after delivery', () => {
     const { resumer, scheduledAt } = makeResumer();
     resumer.onCapture(screen(limit('in 4 hours')));
     resumer.onCapture(screen(limit('in 5 hours')));
+    expect(scheduledAt).toEqual([pinned.getTime() + 4 * 3_600_000 + RESUME_MARGIN_MS]);
+
+    resumer.onSettled();
+    resumer.onCapture(screen(limit('in 6 hours')));
     expect(scheduledAt).toEqual([
       pinned.getTime() + 4 * 3_600_000 + RESUME_MARGIN_MS,
-      pinned.getTime() + 5 * 3_600_000 + RESUME_MARGIN_MS,
+      pinned.getTime() + 6 * 3_600_000 + RESUME_MARGIN_MS,
     ]);
   });
 
