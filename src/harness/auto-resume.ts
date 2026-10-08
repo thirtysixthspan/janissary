@@ -206,6 +206,7 @@ export class HarnessAutoResumer {
       }
       return;
     }
+    if (this.pendingId !== undefined) return;
     const resumeAt = resumeInstant(reset, new Date());
     if (this.actedAt === resumeAt) return;
     this.actedAt = resumeAt;
