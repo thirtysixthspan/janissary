@@ -1,22 +1,6 @@
-import type { RouteChooserView } from '@shared/protocol';
 import type { TabNavEntry } from './pickers/tab-nav-match';
 export { handlePickerKey } from './shared/picker-keyboard';
 
-export function handleRouteChooserKey(
-  e: KeyboardEvent,
-  route: RouteChooserView,
-  routeIdx: number,
-  setRouteIndex: (setter: (prev: number) => number) => void,
-  chooseRoute: (index: number) => void,
-): boolean {
-  switch (e.key) {
-  case 'ArrowUp': { e.preventDefault(); setRouteIndex((index) => Math.max(0, index - 1)); return true; }
-  case 'ArrowDown': { e.preventDefault(); setRouteIndex((index) => Math.min(route.choices.length - 1, index + 1)); return true; }
-  case 'Enter': { e.preventDefault(); chooseRoute(routeIdx); return true; }
-  case 'Escape': { e.preventDefault(); chooseRoute(-1); return true; }
-  }
-  return false;
-}
 
 // Navigation half of the queue popup's key handling (see `CommandInput`'s queueOpen branch for
 // the text-adjacent half: typing and Backspace-on-empty). Up/Down move the selector, each move

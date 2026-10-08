@@ -98,7 +98,7 @@ describe('JanusClient', () => {
     client.onState(listener);
     messageHandler!({
       data: JSON.stringify({
-        t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, route: null, tabNameMaxLength: 20,
+        t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, tabNameMaxLength: 20,
         activeTabNameMaxLength: 40, clipboardHistoryMaxEntries: 15,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
         profiles: [], projectDir: '/tmp', version: '1.2.3',
@@ -107,7 +107,7 @@ describe('JanusClient', () => {
     });
     expect(listener).toHaveBeenCalledTimes(1);
     expect(listener).toHaveBeenCalledWith({
-      t: 'state', tabs: [], activeTab: 0, secondaryTab: 2, route: null,
+      t: 'state', tabs: [], activeTab: 0, secondaryTab: 2,
       tabNameMaxLength: 20, activeTabNameMaxLength: 40, clipboardHistoryMaxEntries: 15, globalHistory: [],
       syntaxTheme: 'monokai', theme: 'dark', tasks: [],
       profiles: [], projectDir: '/tmp', version: '1.2.3',
@@ -123,7 +123,6 @@ describe('JanusClient', () => {
     client.onState(second);
     const snapshot: StateEvent = {
       t: 'state', tabs: [], activeTab: 1, secondaryTab: 3,
-      route: { cmd: 'command', choices: ['shell', 'acp'] },
       tabNameMaxLength: 23, activeTabNameMaxLength: 71, clipboardHistoryMaxEntries: 15, globalHistory: ['history'],
       syntaxTheme: 'monokai', theme: 'light', tasks: [],
       profiles: [], projectDir: '/project', version: '7.8.9',
@@ -140,19 +139,18 @@ describe('JanusClient', () => {
     const listener = vi.fn();
     client.onState(listener);
     messageHandler!({ data: JSON.stringify({
-      t: 'state', tabs: [], activeTab: 0, route: missing, harnessLaunch: missing, scheduleLaunch: missing,
+      t: 'state', tabs: [], activeTab: 0, harnessLaunch: missing, scheduleLaunch: missing,
       tabNameMaxLength: 16, activeTabNameMaxLength: 50, globalHistory: [], syntaxTheme: 'monokai',
       theme: 'dark', tasks: [], profiles: [], projectDir: '/project', version: '1.2.3',
     }) });
-    expect(listener).toHaveBeenCalledWith(expect.objectContaining({
-      route: null, harnessLaunch: null, scheduleLaunch: null, activeTabNameMaxLength: 50,
+    expect(listener).toHaveBeenCalledWith(expect.objectContaining({ harnessLaunch: null, scheduleLaunch: null, activeTabNameMaxLength: 50,
     }));
   });
 
   it('hands a listener that subscribes after a snapshot arrived the latest snapshot at once', () => {
     const client = new JanusClient();
     const snapshot = (activeTab: number) => ({
-      t: 'state', tabs: [], activeTab, route: null, tabNameMaxLength: 20, activeTabNameMaxLength: 40,
+      t: 'state', tabs: [], activeTab, tabNameMaxLength: 20, activeTabNameMaxLength: 40,
       globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
       profiles: [], projectDir: '/tmp', version: '1.2.3', harnessLaunch: null, scheduleLaunch: null,
     });
@@ -175,7 +173,7 @@ describe('JanusClient', () => {
     unsub();
     messageHandler!({
       data: JSON.stringify({
-        t: 'state', tabs: [], activeTab: 0, route: null, tabNameMaxLength: 20,
+        t: 'state', tabs: [], activeTab: 0, tabNameMaxLength: 20,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
         profiles: [], projectDir: '/tmp', version: '1.2.3',
       }),
@@ -348,7 +346,7 @@ describe('JanusClient', () => {
     client.dispose();
     messageHandler!({
       data: JSON.stringify({
-        t: 'state', tabs: [], activeTab: 0, route: null, tabNameMaxLength: 20,
+        t: 'state', tabs: [], activeTab: 0, tabNameMaxLength: 20,
         globalHistory: [], syntaxTheme: 'monokai', theme: 'dark', tasks: [],
         profiles: [], projectDir: '/tmp', version: '1.2.3',
       }),

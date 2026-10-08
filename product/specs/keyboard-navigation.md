@@ -12,7 +12,7 @@
 | Ctrl+→ | Move the current tab one position right |
 | ↑ | Walk backward through command history |
 | ↓ | Walk forward through command history |
-| Cmd+W / Ctrl+W | Close the current tab (also works when focus is inside an embedded web page; no-op while any modal overlay is on screen — the route chooser, the syntax-theme or app-theme picker, Quick Open, the tab navigator, the history, queue, task, or profile picker, or a plugin-contributed overlay such as the clipboard-history popup — while the quit dialog is up, or while any modal dialog is open, such as the save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation; the dialog keeps the chord and no tab behind it closes) |
+| Cmd+W / Ctrl+W | Close the current tab (also works when focus is inside an embedded web page; no-op while any modal overlay is on screen — the syntax-theme or app-theme picker, Quick Open, the tab navigator, the history, queue, task, or profile picker, or a plugin-contributed overlay such as the clipboard-history popup — while the quit dialog is up, or while any modal dialog is open, such as the save-changes prompt, a launch or schedule dialog, a file-navigator conflict dialog, or a confirmation; the dialog keeps the chord and no tab behind it closes) |
 | Shift+↑ / Ctrl+↑ | Scroll transcript up (accelerated — distance doubles each second held) |
 | Shift+↓ / Ctrl+↓ | Scroll transcript down (accelerated — distance doubles each second held) |
 | Ctrl+P | Scroll transcript up (fixed — one line per press) |
@@ -77,17 +77,16 @@ The modal overlays that float above the command bar are mutually exclusive: only
 screen. When more than one could be open, one order decides which wins, and the same order decides
 which one keystrokes go to:
 
-1. route chooser
-2. syntax-theme picker
-3. application-theme picker
-4. Quick Open
-5. tab navigator
-6. command history picker
-7. command queue popup
-8. task picker
-9. profile picker
+1. syntax-theme picker
+2. application-theme picker
+3. Quick Open
+4. tab navigator
+5. command history picker
+6. command queue popup
+7. task picker
+8. profile picker
 
-A plugin-contributed overlay ranks below all nine, so a chord pressed while one of them is open never reaches it. Inside the plugin band the order plugins declared in decides, so two of them claiming the same moment resolve the same way every time. Only one overlay is ever on screen, and which surfaces render one is its own question: the clipboard-history popup ([[clipboard-history]]) renders on an agent tab, an editor tab, and a harness or ssh tab, and a markdown, image, pdf, page, video, sql, or conversations tab renders none at all — its chord is still answered there, and the overlay it opens claims the keyboard without anything to show.
+A plugin-contributed overlay ranks below all eight, so a chord pressed while one of them is open never reaches it. Inside the plugin band the order plugins declared in decides, so two of them claiming the same moment resolve the same way every time. Only one overlay is ever on screen, and which surfaces render one is its own question: the clipboard-history popup ([[clipboard-history]]) renders on an agent tab, an editor tab, and a harness or ssh tab, and a markdown, image, pdf, page, video, sql, or conversations tab renders none at all — its chord is still answered there, and the overlay it opens claims the keyboard without anything to show.
 
 A contributed overlay takes the command bar's keys while it is open, exactly as a built-in one does, and none of them disables the bar outright.
 

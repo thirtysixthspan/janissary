@@ -81,10 +81,8 @@ export class JanusClient {
   private onEvent(event: ServerEvent): void {
     switch (event.t) {
     case 'state': {
-      // Must be `null`, not `undefined`: App gates the command line with `route !== null`, so an
-      // `undefined` route reads as "chooser open" and silently swallows every keystroke (incl. Enter).
       const snapshot: StateEvent = {
-        ...event, route: event.route ?? null,
+        ...event,
         harnessLaunch: event.harnessLaunch ?? null, scheduleLaunch: event.scheduleLaunch ?? null,
       };
       this.latestState = snapshot;

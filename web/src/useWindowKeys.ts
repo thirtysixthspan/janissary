@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { JanusClient } from './ws';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
-import { handleRouteChooserKey, handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
+import { handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';
 import { dispatchTaskPickerKey } from './pickers/task-picker-keys';
 import { dispatchProfilePickerKey } from './pickers/profile-picker-keys';
 import { buildOverlayOpenState, firstOpenOverlay } from './pickers/overlay-registry';
@@ -36,12 +36,6 @@ export type Callbacks = PickerKeyCallbacks & {
 // registry the render chain reads (see `pickers/overlay-registry`), not from the order written here.
 function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): boolean {
   switch (firstOpenOverlay(buildOverlayOpenState(snap))) {
-  // `snap.route` is what put this case in play, so it is non-null here; the compiler cannot see
-  // that across the registry lookup.
-  case 'route': {
-    handleRouteChooserKey(e, snap.route!, snap.routeIdx, cb.setRouteIndex, cb.chooseRoute);
-    return true;
-  }
   case 'syntaxTheme': {
     handlePickerKey(e, SYNTAX_THEMES, snap.themePickerIdx, cb.setThemePickerIndex, cb.pickTheme, cb.setThemePickerOpen);
     return true;
@@ -79,7 +73,7 @@ function dispatchModalKey(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks):
   }
   default: {
     // No built-in overlay is up, which is the only condition under which a contributed one can be:
-    // the registry ranks the nine above every plugin, so nothing below this line fires while one of
+    // the registry ranks the eight above every plugin, so nothing below this line fires while one of
     // them is open — including the chords that open them.
     const contributed = contributedOverlayOnScreen();
     if (!contributed) return false;

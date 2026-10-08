@@ -1,11 +1,11 @@
 // Server -> client events, composed into the shared contract by ../protocol.ts.
 import type { TaskRow } from '../tab/types.js';
 import type { ProfileRow } from '../profile/types.js';
-import type { TabView, RouteChooserView, HarnessLaunchView } from './tab.js';
+import type { TabView, HarnessLaunchView } from './tab.js';
 import type { ScheduleLaunchView } from './schedule.js';
 
 export type StateEvent = {
-  t: 'state'; tabs: TabView[]; activeTab: number; secondaryTab?: number; route: RouteChooserView | null;
+  t: 'state'; tabs: TabView[]; activeTab: number; secondaryTab?: number;
   // The open "New harness" launch dialog, or null when it is closed.
   harnessLaunch: HarnessLaunchView | null;
   // The open "New schedule" dialog, or null when it is closed.

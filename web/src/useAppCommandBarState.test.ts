@@ -9,7 +9,7 @@ const tab = (label: string, commandQueue: string[]) => ({ label, commandQueue })
 
 function view(queueOpen: boolean): PickerOverlayView {
   const overlays = buildOverlayOpenState({
-    route: null, themePickerOpen: false, appThemePickerOpen: false, quickOpenOpen: false, navOpen: false,
+    themePickerOpen: false, appThemePickerOpen: false, quickOpenOpen: false, navOpen: false,
     pickerOpen: false, queueOpen, taskPickerOpen: false, profilePickerOpen: false,
   });
   return { overlays, queueIndex: 1, queueItems: ['first', 'second'] } as unknown as PickerOverlayView;

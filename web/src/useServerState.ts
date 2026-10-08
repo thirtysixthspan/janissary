@@ -1,15 +1,12 @@
-import { ACP_ROUTE_LABEL } from '@shared/recognizers/route-choices';
 import { useEffect, useState } from 'react';
-import type React from 'react';
 import type { JanusClient } from './ws';
-import type { TabView, RouteChooserView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
+import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { useProjectTitle } from './useProjectTitle';
 
 type Setters = {
   setTabs: (tabs: TabView[]) => void;
   setActiveTab: (index: number) => void;
   setSecondaryTab: (index: number | undefined) => void;
-  setRoute: (route: RouteChooserView | null) => void;
   setHarnessLaunch: (view: HarnessLaunchView | null) => void;
   setScheduleLaunch: (view: ScheduleLaunchView | null) => void;
   setTabNameMaxLength: (length: number) => void;
@@ -20,8 +17,6 @@ type Setters = {
   setTheme: (theme: string) => void;
   setTasks: (tasks: TaskRow[]) => void;
   setProfiles: (profiles: ProfileRow[]) => void;
-  setRouteIndex: (index: number) => void;
-  routeRef: React.RefObject<RouteChooserView | null>;
 };
 
 export function useTabNameLimits() {
@@ -42,16 +37,16 @@ export function useClipboardHistoryCap() {
 // that field has no other consumer in `App.tsx`.
 export function useServerState(client: JanusClient, setters: Setters): void {
   const {
-    setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
+    setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries,
     setGlobalHistory, setSyntaxTheme, setTheme,
-    setTasks, setProfiles, setRouteIndex, routeRef,
+    setTasks, setProfiles,
   } = setters;
   const [projectDir, setProjectDir] = useState('');
   const [version, setVersion] = useState('');
   useProjectTitle(projectDir, version);
   useEffect(() => client.onState(({
-    tabs: nextTabs, activeTab: active, secondaryTab: secondary, route: nextRoute,
+    tabs: nextTabs, activeTab: active, secondaryTab: secondary,
     tabNameMaxLength: nextTabNameMaxLength, activeTabNameMaxLength: nextActiveTabNameMaxLength,
     clipboardHistoryMaxEntries: nextClipboardHistoryMaxEntries,
     globalHistory: nextGlobalHistory, syntaxTheme: nextSyntaxTheme, theme: nextTheme,
@@ -62,7 +57,6 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setTabs(nextTabs);
     setActiveTab(active);
     setSecondaryTab(secondary);
-    setRoute(nextRoute);
     setHarnessLaunch(nextHarnessLaunch);
     setScheduleLaunch(nextScheduleLaunch);
     setTabNameMaxLength(nextTabNameMaxLength);
@@ -75,17 +69,10 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setProfiles(nextProfiles);
     setProjectDir(nextProjectDir);
     setVersion(nextVersion);
-    // Prefer ACP when the source supports it; otherwise choose the first remaining route.
-    // (or its command changes), falling back to 0 if there are no choices to highlight.
-    const previous = routeRef.current;
-    routeRef.current = nextRoute;
-    if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) {
-      setRouteIndex(Math.max(0, nextRoute.choices.indexOf(ACP_ROUTE_LABEL)));
-    }
   }), [
-    client, setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,
+    client, setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries,
     setGlobalHistory, setSyntaxTheme, setTheme,
-    setTasks, setProfiles, setRouteIndex, routeRef,
+    setTasks, setProfiles,
   ]);
 }

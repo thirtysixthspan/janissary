@@ -30,9 +30,9 @@ The pressure did not disappear — it moved. No file under `src/` or `web/src/` 
 
 ## 4. Parse pure, execute effectful — and never blur the seam
 
-The codebase's biggest strength: `parseXCommand` functions (`parseDbCommand`, `parseScheduleCommand`, `parseConnectionCommand`, `parseOpen`, the recognizers) are pure — they return structured data or `{ error }` and do no I/O. Side effects live in the execution layer. This makes parsing trivially testable and routing predictable.
+The codebase's biggest strength: `parseXCommand` functions (`parseDbCommand`, `parseScheduleCommand`, `parseConnectionCommand`, `parseOpen`) are pure — they return structured data or `{ error }` and do no I/O. Side effects live in the execution layer. This makes parsing trivially testable and routing predictable.
 
-**Rule.** A parser returns a value; it never spawns a process, touches the filesystem, mutates state, or writes to a transcript. Effects happen only in the execution layer, which consumes parsed data. Protect this seam — it is why the recognizers and command tests stay simple.
+**Rule.** A parser returns a value; it never spawns a process, touches the filesystem, mutates state, or writes to a transcript. Effects happen only in the execution layer, which consumes parsed data. Protect this seam — it is why the parser and command tests stay simple.
 
 ## 5. One command, one definition — delete shadow systems
 
@@ -40,7 +40,7 @@ Each command has exactly **one** definition, and every command runs the same way
 
 One branch still runs ahead of the registry: `CommandManager.run` calls `resolveCommand` first and routes a `shell` resolution to its own `runShell` rather than through the registry. `harness` and `ssh` used to escape the same way, with no registry entry at all, which made them unknown commands on every dispatcher except the one they were typed into; they are `Command` entries now. `ROUTE_NAMES` in `src/plugins/command-adapter.ts` lists what a plugin still cannot claim for this reason — keep it as short as the branches it shadows.
 
-Agent messages (`msg … command`/`request`) enter through `CaptureManager.run` (`src/capture/manager.ts`), which classifies text with the same contextual `resolveInTab` and shares the unknown-command route recognition (`recognizeRoute` in `src/route-choice.ts`) with the command bar. What still differs is execution, because a message owes its sender captured text: a `shell` resolution runs piped with `detect: false` and anything interactive is refused, a command with an optional `capture` hook on `Command` (`browser`, and `acp` on supported plugin tabs) answers through it, and every other command runs through `executeCommand` with its reply read back from the tab's last new log entry. That last-entry read is the remaining seam — a `run` that returned its output would close it.
+Agent messages (`msg … command`/`request`) enter through `CaptureManager.run` (`src/capture/manager.ts`), which classifies text with the same contextual `resolveInTab` and returns the existing unknown-command reply for unclaimed input. What still differs is execution, because a message owes its sender captured text: a `shell` resolution runs piped with `detect: false` and anything interactive is refused, a command with an optional `capture` hook on `Command` (`browser`, and `acp` on supported plugin tabs) answers through it, and every other command runs through `executeCommand` with its reply read back from the tab's last new log entry. That last-entry read is the remaining seam — a `run` that returned its output would close it.
 
 **Rule.** Each command has exactly one definition and one execution path. When a migration leaves scaffolding behind, removing it is part of finishing the migration — not a separate "cleanup" someday. No code path that the system never takes. A new command belongs in `src/commands/<name>.ts` and in the registry — never as a branch ahead of it, however small the branch looks.
 

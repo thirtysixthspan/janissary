@@ -7,10 +7,9 @@ const state = pickerStateFixture();
 const keys = buildPickerKeyBindings(state);
 const byName = (a: string, b: string) => a.localeCompare(b);
 
-// The nine open/closed values `dispatchModalKey` rebuilds the registry state from. They keep their
+// The eight open/closed values `dispatchModalKey` rebuilds the registry state from. They keep their
 // app-level names through the projection, which is what lets the snapshot stay an `OverlayOpenSources`.
 const OPEN_STATE: ReadonlyArray<[string, unknown, unknown]> = [
-  ['route', keys.route, state.route],
   ['themePickerOpen', keys.themePickerOpen, state.themePickerOpen],
   ['appThemePickerOpen', keys.appThemePickerOpen, state.appThemePickerOpen],
   ['quickOpenOpen', keys.quickOpenOpen, state.quickOpenOpen],
@@ -24,7 +23,6 @@ const OPEN_STATE: ReadonlyArray<[string, unknown, unknown]> = [
 // The handlers' `*Idx` vocabulary against the hooks' `*Index`. This translation used to live in the
 // deps literal at the call site, where it was written out a second time beside the render props.
 const RENAMED: ReadonlyArray<[string, unknown, unknown]> = [
-  ['routeIdx', keys.routeIdx, state.routeIndex],
   ['pickerIdx', keys.pickerIdx, state.pickerIndex],
   ['themePickerIdx', keys.themePickerIdx, state.themePickerIndex],
   ['appThemePickerIdx', keys.appThemePickerIdx, state.appThemePickerIndex],
@@ -44,8 +42,6 @@ const CARRIED: ReadonlyArray<[string, unknown, unknown]> = [
 ];
 
 const CALLBACKS: ReadonlyArray<[string, unknown, unknown]> = [
-  ['setRouteIndex', keys.setRouteIndex, state.setRouteIndex],
-  ['chooseRoute', keys.chooseRoute, state.chooseRoute],
   ['runCommand', keys.runCommand, state.runCommand],
   ['setPickerIndex', keys.setPickerIndex, state.setPickerIndex],
   ['setPickerOpen', keys.setPickerOpen, state.setPickerOpen],

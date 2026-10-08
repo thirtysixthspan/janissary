@@ -76,7 +76,7 @@ A chord the application claims is refused separately, at construction, because s
 
 ## Resolution and ordering
 
-A plugin overlay ranks **below all nine built-in overlays** — the route chooser, the syntax-theme and application-theme pickers, Quick Open, the tab navigator, the command history picker, the queue popup, the task picker, and the profile picker. A built-in overlay always wins a tie, so a plugin's chord pressed while one of them is open does nothing. There is no band that lets a plugin preempt a built-in overlay; adding one later is one optional field on the declaration, not a change to the seam.
+A plugin overlay ranks **below all eight built-in overlays** — the syntax-theme and application-theme pickers, Quick Open, the tab navigator, the command history picker, the queue popup, the task picker, and the profile picker. A built-in overlay always wins a tie, so a plugin's chord pressed while one of them is open does nothing. There is no band that lets a plugin preempt a built-in overlay; adding one later is one optional field on the declaration, not a change to the seam.
 
 Within the plugin band, declaration order decides, so two plugins claiming the same moment resolve the same way every time. It is the declaration rather than the registration because a plugin has to be reachable before anything has loaded it: a chord or a command word resolves against the claims the host published at startup, and the chunk is fetched afterwards, when the plugin is first actually opened — or once the window has mounted, for a plugin that declares `activation: 'startup'`.
 

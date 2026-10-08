@@ -38,7 +38,6 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'toggleCollapse':
     case 'resetAcp':
     case 'revealNotifications':
-    case 'chooseRoute':
     case 'setDock':
     case 'openFileNavigatorFor':
     case 'launchAgentFor':

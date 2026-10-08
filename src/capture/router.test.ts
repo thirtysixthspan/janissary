@@ -21,12 +21,10 @@ function makeManagers(openDbs: string[]): { managers: Managers; appended: unknow
 describe('routeUnknownCommand', () => {
   it('appends and calls back with output when the command is a known built-in', () => {
     const { managers, appended } = makeManagers([]);
-    const run = vi.fn();
     const callback = vi.fn();
 
-    routeUnknownCommand('help', 'help', 'tab1', managers, run, callback);
+    routeUnknownCommand('help', 'help', 'tab1', managers, callback);
 
-    expect(run).not.toHaveBeenCalled();
     expect(callback).toHaveBeenCalledTimes(1);
     expect(callback.mock.calls[0][0]).toContain('help');
     expect(appended).toHaveLength(1);
@@ -36,7 +34,7 @@ describe('routeUnknownCommand', () => {
     const { managers, appended } = makeManagers([]);
     const callback = vi.fn();
 
-    routeUnknownCommand('help shell', 'help shell', 'tab1', managers, vi.fn(), callback);
+    routeUnknownCommand('help shell', 'help shell', 'tab1', managers, callback);
 
     expect(callback.mock.calls[0][0]).toContain('**Shell tab controls**');
     expect(appended).toEqual([{
@@ -45,28 +43,14 @@ describe('routeUnknownCommand', () => {
     }]);
   });
 
-  it('routes to the db recognizer and rewrites the command when exactly one db is open', () => {
-    const { managers } = makeManagers(['mydb']);
-    const run = vi.fn();
-    const callback = vi.fn();
-
-    routeUnknownCommand('SELECT * FROM foo;', 'SELECT * FROM foo;', 'tab1', managers, run, callback);
-
-    expect(run).toHaveBeenCalledTimes(1);
-    expect(run).toHaveBeenCalledWith('tab1', 'db sqlite query mydb SELECT * FROM foo;', callback);
-    expect(callback).not.toHaveBeenCalled();
-  });
-
   // One spelling, built in one place. This tail used to construct its own shorter copy of the
   // message, so a reword of the other one silently left the two disagreeing.
   it('falls back to the one unknown-command message when nothing matches', () => {
     const { managers } = makeManagers([]);
-    const run = vi.fn();
     const callback = vi.fn();
 
-    routeUnknownCommand('clear', 'clear', 'tab1', managers, run, callback);
+    routeUnknownCommand('clear', 'clear', 'tab1', managers, callback);
 
-    expect(run).not.toHaveBeenCalled();
     expect(callback).toHaveBeenCalledWith(unknownCommandMessage('clear'));
     expect(callback).toHaveBeenCalledWith('Unknown command: "clear". Type "help" for available commands.');
   });
@@ -77,7 +61,7 @@ describe('routeUnknownCommand', () => {
     const { managers } = makeManagers([]);
     const callback = vi.fn();
 
-    routeUnknownCommand('', '', 'tab1', managers, vi.fn(), callback);
+    routeUnknownCommand('', '', 'tab1', managers, callback);
 
     expect(callback).toHaveBeenCalledWith(unknownCommandMessage(''));
   });

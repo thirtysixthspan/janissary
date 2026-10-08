@@ -4,12 +4,11 @@ import { describe, expect, it, vi } from 'vitest';
 import { useDialogKeyboard } from './shared/useDialogKeyboard';
 import { useCmdW } from './useCmdW';
 
-function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen, focusedIndex }: {
+function TestComponent({ closeTab, active, quitOpen, pickerOpen, focusedIndex }: {
   closeTab: (n: number) => void;
   active: number;
   quitOpen: boolean;
   pickerOpen: boolean;
-  routeOpen: boolean;
   focusedIndex?: number;
 }) {
   const activeTabRef = useRef(active);
@@ -18,11 +17,9 @@ function TestComponent({ closeTab, active, quitOpen, pickerOpen, routeOpen, focu
   quitConfirmOpenRef.current = quitOpen;
   const pickerOpenRef = useRef(pickerOpen);
   pickerOpenRef.current = pickerOpen;
-  const routeRef = useRef(routeOpen ? {} : null);
-  routeRef.current = routeOpen ? {} : null;
   const focusedIndexRef = useRef(focusedIndex);
   focusedIndexRef.current = focusedIndex;
-  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, routeRef, focusedIndexRef);
+  useCmdW(closeTab, activeTabRef, quitConfirmOpenRef, pickerOpenRef, focusedIndexRef);
 
   return null;
 }
@@ -35,7 +32,7 @@ function Dialog() {
 }
 
 function renderIdle(closeTab: (n: number) => void) {
-  render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />);
+  render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} />);
 }
 
 function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean } = {}) {
@@ -47,42 +44,42 @@ function dispatchKey(key: string, opts: { metaKey?: boolean; ctrlKey?: boolean }
 describe('useCmdW', () => {
   it('calls closeTab with Cmd+W', () => {
     const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />);
+    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} />);
     dispatchKey('w', { metaKey: true });
     expect(closeTab).toHaveBeenCalledWith(2);
   });
 
   it('calls closeTab with Ctrl+W', () => {
     const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />);
+    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} />);
     dispatchKey('w', { ctrlKey: true });
     expect(closeTab).toHaveBeenCalledWith(2);
   });
 
   it('closes the focused docked shell tab instead of the center tab', () => {
     const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} focusedIndex={5} quitOpen={false} pickerOpen={false} routeOpen={false} />);
+    render(<TestComponent closeTab={closeTab} active={2} focusedIndex={5} quitOpen={false} pickerOpen={false} />);
     dispatchKey('w', { metaKey: true });
     expect(closeTab).toHaveBeenCalledWith(5);
   });
 
   it('ignores lowercase w without modifier', () => {
     const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />);
+    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} />);
     dispatchKey('w');
     expect(closeTab).not.toHaveBeenCalled();
   });
 
   it('ignores uppercase W without modifier', () => {
     const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />);
+    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} />);
     dispatchKey('W');
     expect(closeTab).not.toHaveBeenCalled();
   });
 
   it('ignores other meta+key combos', () => {
     const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />);
+    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} />);
     dispatchKey('s', { metaKey: true });
     dispatchKey('t', { metaKey: true });
     expect(closeTab).not.toHaveBeenCalled();
@@ -90,21 +87,14 @@ describe('useCmdW', () => {
 
   it('does nothing while history picker is open', () => {
     const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen routeOpen={false} />);
-    dispatchKey('w', { metaKey: true });
-    expect(closeTab).not.toHaveBeenCalled();
-  });
-
-  it('does nothing while route chooser is open', () => {
-    const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen />);
+    render(<TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen />);
     dispatchKey('w', { metaKey: true });
     expect(closeTab).not.toHaveBeenCalled();
   });
 
   it('does nothing while quit dialog is open', () => {
     const closeTab = vi.fn();
-    render(<TestComponent closeTab={closeTab} active={2} quitOpen pickerOpen={false} routeOpen={false} />);
+    render(<TestComponent closeTab={closeTab} active={2} quitOpen pickerOpen={false} />);
     dispatchKey('w', { metaKey: true });
     expect(closeTab).not.toHaveBeenCalled();
   });
@@ -138,7 +128,7 @@ describe('useCmdW', () => {
   it('removes listener on unmount', () => {
     const closeTab = vi.fn();
     const { unmount } = render(
-      <TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} routeOpen={false} />,
+      <TestComponent closeTab={closeTab} active={2} quitOpen={false} pickerOpen={false} />,
     );
     unmount();
     dispatchKey('w', { metaKey: true });
@@ -151,8 +141,7 @@ describe('useCmdW', () => {
       const ref = useRef<number>(null!);
       const qRef = useRef(false);
       const pRef = useRef(false);
-      const rRef = useRef(null);
-      useCmdW(closeTab, ref, qRef, pRef, rRef);
+      useCmdW(closeTab, ref, qRef, pRef);
       return null;
     }
     render(<NullRefComponent />);

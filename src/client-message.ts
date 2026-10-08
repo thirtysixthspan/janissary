@@ -7,7 +7,6 @@ export type ClientReplyMode = 'ack' | 'result' | 'deferred';
 export const CLIENT_METHOD_CONTRACTS = {
   resetAcp: 'ack',
   answerQuestion: 'ack',
-  chooseRoute: 'ack',
   closeEditorConnection: 'ack',
   commitEditorFile: 'ack',
   closeHarnessLaunch: 'ack',

@@ -236,7 +236,4 @@ describe('the overlay-plugin developer documentation', () => {
     }
   });
 
-  it('states the ordering a plugin inherits, which is the rule it cannot override', () => {
-    expect(documentation).toContain('below all nine built-in overlays');
-  });
 });

@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { RouteChooserView, TabView } from '@shared/protocol';
+import type { TabView } from '@shared/protocol';
 import type { OverlayOpenState } from '../overlay-registry';
 import type { PickerOverlaysState } from './overlays-state';
 import type { VisibleTaskRow } from '../task-picker-keys';
@@ -12,11 +12,6 @@ import type { FuzzyMatchResult } from '../../shared/fuzzy-match';
 export type PickerOverlayView = {
   // Which overlays are up, built once by `buildOverlayOpenState` where the picker state lives.
   overlays: OverlayOpenState;
-  // The route chooser renders from the view object rather than from `overlays.route`, so the view
-  // itself is still a field of its own.
-  route: RouteChooserView | null;
-  routeIndex: number;
-  onPickRoute: (index: number) => void;
   syntaxTheme: string;
   themePickerIndex: number;
   onPickTheme: (name: string) => void;
@@ -53,12 +48,11 @@ export type PickerOverlayView = {
 };
 
 // The one translation from the hooks' vocabulary to the render tree's. Before this existed, the
-// same renames — `chooseRoute` to `onPickRoute`, `visibleTasks` to `taskRows`, `visibleProfiles` to
+// same renames — `visibleTasks` to `taskRows`, `visibleProfiles` to
 // `profiles`, and the rest — were written out prop by prop in `App.tsx` and again in `AppMain.tsx`.
 export function buildPickerOverlayView(state: PickerOverlaysState): PickerOverlayView {
   return {
     overlays: state.overlays,
-    route: state.route, routeIndex: state.routeIndex, onPickRoute: state.chooseRoute,
     syntaxTheme: state.syntaxTheme, themePickerIndex: state.themePickerIndex, onPickTheme: state.pickTheme,
     theme: state.theme, appThemePickerIndex: state.appThemePickerIndex, onPickAppTheme: state.pickAppTheme,
     recent: state.recent, pickerIndex: state.pickerIndex, onPickHistory: state.pick,

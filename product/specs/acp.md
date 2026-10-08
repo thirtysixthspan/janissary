@@ -18,7 +18,7 @@ A plugin requesting `promptAcp` supports the core `acp` and `acp reset` commands
 
 The shell's ordinary application-command dispatcher recognizes these commands and marks their replies as core-rendered. It waits for the ACP operation without duplicating the reply in zsh's terminal. Unclaimed shell-bar lines still go to zsh; use an explicit `acp` prefix to query the connection. See [[shell-tab]].
 
-Agent tabs exclude these commands from contextual resolution. Their unknown-command chooser offers shell and database routes, without ACP; recognized prose does not start an ACP session. Executable `msg … request` and `msg … command` deliveries remain supported, while unrecognized prose receives the ordinary unknown-command response. See [[command-routing]] and [[messaging]].
+Agent tabs exclude these commands from contextual resolution. Unclaimed input receives the ordinary unknown-command response. Executable `msg … request` and `msg … command` deliveries remain supported; shell and database input requires explicit commands. See [[messaging]].
 
 ## Provider and model
 
