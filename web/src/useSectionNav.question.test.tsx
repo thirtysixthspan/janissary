@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import type { PendingQuestionView, TabView } from '@shared/protocol';
-import { QuestionPanel } from './QuestionPanel';
+import { QuestionPanel } from './shared/questions/QuestionPanel';
 import { useSectionNav } from './useSectionNav';
 import type { JanusClient } from './ws';
 

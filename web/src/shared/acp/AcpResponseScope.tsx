@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../../ws';
 import { AcpResponsePanel } from './AcpResponsePanel';
-import { QuestionPanel } from '../../QuestionPanel';
+import { QuestionPanel } from '../questions/QuestionPanel';
 
 const AcpResponseContext = createContext<ReactNode>(null);
 
