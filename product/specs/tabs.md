@@ -192,6 +192,8 @@ tab's metadata row" in `file-navigator-tab.md` for how it opens or retargets the
 
 Beside the file-navigator button, harness tabs show a new-shell button. Its tooltip is "New shell in this workspace" for a workspace and "New shell here" otherwise. It opens an auto-named shell in the source directory, group, and workspace through the shell plugin's guarded sibling hook. A remote source reuses its SSH channel; while its workspace is provisioning the button is disabled with "Waiting for the workspace". Conversation tabs have the same shell action rooted at their private workspace. Shell tabs retain their sibling-shell button.
 
+The new-shell button is drawn like the rest of that action group: a flat icon in the row's muted colour, brightening on hover. While it is disabled it is dimmed, so an unavailable button is not mistaken for a live one. The same holds for the button an ssh tab shows, since an ssh tab is a harness tab.
+
 Harness tabs show a clipboard-icon button, tooltip "Open transcript", but clicking it opens
 the harness's **session transcript** file instead (the same file `harness transcript` opens — see
 [[harness]] § Session transcript), since a harness tab has no command-bar transcript of its own. The
