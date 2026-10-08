@@ -2,17 +2,6 @@
 
 ## ready
 
-* Move the in-app notifications feed out of the app-shell root and into the notifications feature directory it already belongs to, so the capability stops being split across two locations.
-
-Existing Debt: `web/src/NotificationsTab.tsx` and `web/src/notifications-handlers.ts` sit in the flat app-shell root while the rest of the capability — `web/src/notifications/native-notifications.ts`, `web/src/notifications/useNativeNotifications.ts` and `web/src/notifications/alert-placement.ts` — lives in `web/src/notifications/`, in violation of §1 (organize by feature, not by file type), which keeps the feature's component and its pure logic module away from the directory that names it. Severity: 4/10
-
-Existing Risk: 4/10 - The two halves of notifications are two directories apart, so the next change to the capability is planned against whichever half happens to be open; `web/src/notifications-handlers.ts` already states that it mirrors `onMarkdownKey`, and with the feed a directory away nothing surfaces a drift, which shows up as a feed that scrolls by the wrong step.
-
-Proposal Risk: 2/10 - The move is path-only, but `web/src/notifications/` then holds two differently-shaped halves — the React feed and the OS Notification API — under one name, and nothing enforces where the next piece of the feature goes.
-
-Proposal: Move `web/src/NotificationsTab.tsx` and `web/src/NotificationsTab.test.tsx` into `web/src/notifications/` unchanged in content, and move `web/src/notifications-handlers.ts` to `web/src/notifications/feed-keys.ts` — renaming it because `notifications/notifications-handlers.ts` stutters, and `feed-keys.ts` is the convention this feature's neighbours use — keeping `onNotificationsKey` as its only export. Retarget the one source importer of the feed, `web/src/ViewTabBody.tsx`, whose `./NotificationsTab` becomes `./notifications/NotificationsTab`; `web/src/NotificationsTab.tsx`'s own `./notifications-handlers` becomes `./feed-keys`, which is unchanged in relative terms because the two move together. Blast radius is three file moves and two import-path retargets, and no feature imports a feature: `web/src/ViewTabBody.tsx` is app-shell composition and may import a feature under §3. Neither moved file carries a stylesheet import, so nothing else follows them. `web/src/NotificationsTab.test.tsx` moves with its source, needs no edit, and must keep passing — it is what pins the feed's rendering.
-
-
 * Drop the `use` prefix from the ranked-overlay key handler, which is a plain function that never touches a React hook, so the name stops promising state it does not hold.
 
 Existing Debt: `web/src/shared/ranked-overlay-keys.ts` exports `useRankedOverlayKeys`, which takes a selection, a count and three callbacks and returns a `React.KeyboardEventHandler` while calling no React hook at all, in violation of §6 (logic that calls no React hook is a plain function and must not carry the `use` prefix). Severity: 3/10
