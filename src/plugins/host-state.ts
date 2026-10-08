@@ -3,32 +3,19 @@ import { messageBus, type Subscription } from '../bus.js';
 import type { ConnectionView, ScheduleView } from '../protocol.js';
 import { tabRuntime } from '../tab/runtime.js';
 import type {
-  TabPluginActivation, TabPluginDeclaration, TabPluginHostState, TabPluginServerCapabilities,
+  TabPluginDeclaration, TabPluginHostState,
 } from './api.js';
-import type { PluginFailureOrigin } from './failure.js';
-import type { PluginCallOutcome } from './invoke.js';
-import type { PluginRecord } from './status.js';
+import { deliverBackground, type BackgroundDeliveryPort } from './background-delivery.js';
 
 export const TAB_PLUGIN_HOST_STATE_TIMEOUT_MS = 1000;
 
-const BACKGROUND_ORIGIN: PluginFailureOrigin = { label: '', command: '' };
-
 type Slice = TabPluginHostState;
 
-export type TabPluginHostStatePort = {
+// The shared guarded-delivery fields, plus the two readers this channel's slices are cut with.
+export type TabPluginHostStatePort = BackgroundDeliveryPort & {
   managers: Managers;
-  records(): readonly PluginRecord[];
-  timeoutMs: number;
   connectionsFor(label: string): ConnectionView[];
   scheduleView(label: string): ScheduleView[];
-  invoke(
-    record: PluginRecord,
-    activation: TabPluginActivation,
-    origin: PluginFailureOrigin,
-    call: (capabilities: TabPluginServerCapabilities) => void | Promise<void>,
-    timeoutMs: number,
-  ): Promise<PluginCallOutcome<void>>;
-  disable(record: PluginRecord, error: unknown, origin: PluginFailureOrigin): void;
 };
 
 // What a tab was last handed lives on the tab's own runtime record, so a push happens on a change
@@ -74,24 +61,6 @@ function readSlice(
   };
 }
 
-async function deliver(
-  port: TabPluginHostStatePort,
-  record: PluginRecord,
-  slice: Slice,
-): Promise<void> {
-  const activation = record.activation;
-  if (!activation?.hostState) return;
-  const outcome = await port.invoke(
-    record,
-    activation,
-    BACKGROUND_ORIGIN,
-    (capabilities) => activation.hostState?.(slice, capabilities),
-    port.timeoutMs,
-  );
-  // A rejection has no caller to answer, so only failure matters here.
-  if (outcome.status === 'failed') port.disable(record, outcome.error, BACKGROUND_ORIGIN);
-}
-
 // Fan out to every plugin that declared host state, owns at least one tab, and whose tabs have moved
 // since the last push. Concurrent, like a notification: a status window cannot influence a host
 // outcome, so nothing waits on it.
@@ -113,7 +82,7 @@ function dispatch(port: TabPluginHostStatePort): void {
       // emitting. And a handler that throws must not leave the tab looking stale and retrying on every
       // subsequent mutation for the rest of the session.
       runtime.hostStatePushed = print;
-      void deliver(port, record, slice);
+      void deliverBackground(port, record, record.activation?.hostState, slice);
     }
   }
 }

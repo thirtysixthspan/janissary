@@ -1,40 +1,22 @@
 import type { Managers } from '../managers.js';
 import type { Subscription } from '../bus.js';
 import type {
-  TabPluginActivation,
   TabPluginNotification,
   TabPluginNotificationTopic,
-  TabPluginServerCapabilities,
 } from './api.js';
 import { readTopicData, subscribeTopic } from './topics.js';
-import type { PluginFailureOrigin } from './failure.js';
-import type { PluginCallOutcome } from './invoke.js';
-import type { PluginRecord } from './status.js';
+import { deliverBackground, type BackgroundDeliveryPort } from './background-delivery.js';
 
 // A notification handler does no I/O beyond reading the slice it was handed, so it gets a tighter
 // budget than the 5000 ms a user-initiated opener, command, or intent runs under.
 export const TAB_PLUGIN_NOTIFY_TIMEOUT_MS = 1000;
 
-// Background work has no originating transcript. `note` no-ops when no tab matches its origin, so an
-// empty label is what stops a notification from appending to a transcript the user never pointed at
-// this plugin (see `createPluginContext`).
-const BACKGROUND_ORIGIN: PluginFailureOrigin = { label: '', command: '' };
-
 // What the dispatcher needs from the host: its plugin records, the guarded-call path, and the way it
 // disables a plugin. Passing these as functions keeps the delivery policy here and leaves the host
-// holding only the subscription's lifetime.
-export type TabPluginNotificationPort = {
+// holding only the subscription's lifetime. The guarded delivery itself is shared with the host-state
+// channel, which answers a failure the same way.
+export type TabPluginNotificationPort = BackgroundDeliveryPort & {
   managers: Managers;
-  records(): readonly PluginRecord[];
-  timeoutMs: number;
-  invoke(
-    record: PluginRecord,
-    activation: TabPluginActivation,
-    origin: PluginFailureOrigin,
-    call: (capabilities: TabPluginServerCapabilities) => void | Promise<void>,
-    timeoutMs: number,
-  ): Promise<PluginCallOutcome<void>>;
-  disable(record: PluginRecord, error: unknown, origin: PluginFailureOrigin): void;
 };
 
 // The instance keys of the tabs this plugin currently owns. Empty means there is nothing to tell it
@@ -52,24 +34,6 @@ function subscribers(port: TabPluginNotificationPort, topic: TabPluginNotificati
     && (record.declaration.notifications ?? []).includes(topic));
 }
 
-async function deliver(
-  port: TabPluginNotificationPort,
-  record: PluginRecord,
-  event: TabPluginNotification,
-): Promise<void> {
-  const activation = record.activation;
-  if (!activation?.notify) return;
-  const outcome = await port.invoke(
-    record,
-    activation,
-    BACKGROUND_ORIGIN,
-    (capabilities) => activation.notify?.(event, capabilities),
-    port.timeoutMs,
-  );
-  // A rejection has no caller to answer, so the only outcome that matters here is failure.
-  if (outcome.status === 'failed') port.disable(record, outcome.error, BACKGROUND_ORIGIN);
-}
-
 // Fan out one topic to every subscriber concurrently: a notification cannot influence a host
 // outcome, so nothing waits on it, and one slow plugin never delays another.
 function dispatch(port: TabPluginNotificationPort, topic: TabPluginNotificationTopic): void {
@@ -79,7 +43,7 @@ function dispatch(port: TabPluginNotificationPort, topic: TabPluginNotificationT
   if (records.length === 0) return;
   const data = readTopicData(port.managers, topic);
   for (const record of records) {
-    void deliver(port, record, {
+    void deliverBackground(port, record, record.activation?.notify, {
       topic,
       data,
       tabs: ownedTabs(port.managers, record.declaration.id),
