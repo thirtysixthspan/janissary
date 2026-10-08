@@ -21,7 +21,7 @@ describe('queue command', () => {
   });
 
   it('bare "queue" is a no-op on the server (the interactive picker is client-side)', () => {
-    const managers = { tab: { append: vi.fn(), enqueue: vi.fn() }, command: { drainQueue: vi.fn() } } as unknown as Managers;
+    const managers = { tab: { append: vi.fn(), enqueue: vi.fn() } } as unknown as Managers;
     command.run('queue', { label: 'janus', index: 0 }, managers);
     expect(managers.tab.append).not.toHaveBeenCalled();
     expect(managers.tab.enqueue).not.toHaveBeenCalled();
@@ -30,11 +30,11 @@ describe('queue command', () => {
 
 describe('parseQueueCommand', () => {
   it('errors with no args', () => {
-    expect(parseQueueCommand('queue')).toEqual({ error: 'Usage: queue <agent> <command>' });
+    expect(parseQueueCommand('queue')).toEqual({ error: 'Usage: queue <shell-tab> <command>' });
   });
 
   it('errors with no command text', () => {
-    expect(parseQueueCommand('queue claude')).toEqual({ error: 'Usage: queue <agent> <command>' });
+    expect(parseQueueCommand('queue claude')).toEqual({ error: 'Usage: queue <shell-tab> <command>' });
   });
 
   it('parses a label and command', () => {
@@ -51,7 +51,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; appended: string[] } {
       enqueue: vi.fn(),
     },
     pty: { terminalIdFor: vi.fn() },
-    command: { drainQueue: vi.fn() },
+    plugins: { declarations: [{ id: 'shell', capabilities: ['queueLine', 'nextQueuedLine'] }] },
   } as unknown as Managers;
   return { managers, appended };
 }
@@ -78,65 +78,25 @@ describe('queue command run (with an agent target)', () => {
     expect(managers.tab.enqueue).not.toHaveBeenCalled();
   });
 
-  it('appends to the target queue, drains, and confirms', () => {
-    const target = makeAgentTab('worker');
-    const { managers, appended } = makeManagers([target]);
-    command.run('queue worker echo hi', { label: 'janus', index: 0 }, managers);
-    expect(managers.tab.enqueue).toHaveBeenCalledWith('worker', 'echo hi');
-    expect(managers.command.drainQueue).toHaveBeenCalledWith('worker');
-    expect(appended).toEqual(['→ worker (queued): echo hi']);
-  });
-
-  it('matches a target by its display alias', () => {
-    const target = { ...makeAgentTab('worker'), title: 'reviewer' };
-    const { managers, appended } = makeManagers([target]);
-    command.run('queue reviewer echo hi', { label: 'janus', index: 0 }, managers);
-    expect(managers.tab.enqueue).toHaveBeenCalledWith('worker', 'echo hi');
-    expect(appended).toEqual(['→ reviewer (queued): echo hi']);
-  });
-
-  it('queues for a plugin tab with an owned terminal without running the agent drain', () => {
-    const target = { ...makeAgentTab('shell'), view: 'plugin' as const };
+  it('queues for a plugin tab with an owned terminal using the core queue', () => {
+    const target = { ...makeAgentTab('shell'), view: 'plugin' as const, plugin: { id: 'shell' } };
     const { managers, appended } = makeManagers([target]);
     vi.mocked(managers.pty.terminalIdFor).mockReturnValue('shell-pty');
 
     command.run('queue shell ls -al', { label: 'janus', index: 0 }, managers);
 
     expect(managers.tab.enqueue).toHaveBeenCalledWith('shell', 'ls -al');
-    expect(managers.command.drainQueue).not.toHaveBeenCalled();
     expect(appended).toEqual(['→ shell (queued): ls -al']);
   });
 
-  it('queues for a plugin tab whose workspace clone is still provisioning, without the agent drain', () => {
-    const target = { ...makeAgentTab('docs'), view: 'plugin' as const, workspaceDir: '/repo/.janissary/workspace/docs' };
+  it('queues for a plugin tab whose workspace clone is still provisioning, using the core queue', () => {
+    const target = { ...makeAgentTab('docs'), view: 'plugin' as const, plugin: { id: 'shell' }, workspaceDir: '/repo/.janissary/workspace/docs' };
     const { managers, appended } = makeManagers([target]);
     Object.assign(managers, { workspace: { provisioning: vi.fn(() => true) } });
 
     command.run('queue docs pwd', { label: 'janus', index: 0 }, managers);
 
     expect(managers.tab.enqueue).toHaveBeenCalledWith('docs', 'pwd');
-    expect(managers.command.drainQueue).not.toHaveBeenCalled();
     expect(appended).toEqual(['→ docs (queued): pwd']);
-  });
-
-  it('refuses a workspaced plugin tab that owns no terminal and is not provisioning', () => {
-    const target = { ...makeAgentTab('docs'), view: 'plugin' as const, workspaceDir: '/repo/.janissary/workspace/docs' };
-    const { managers, appended } = makeManagers([target]);
-    Object.assign(managers, { workspace: { provisioning: vi.fn(() => false) } });
-
-    command.run('queue docs pwd', { label: 'janus', index: 0 }, managers);
-
-    expect(managers.tab.enqueue).not.toHaveBeenCalled();
-    expect(appended).toEqual(['Tab "docs" has no command queue.']);
-  });
-
-  it('refuses a plugin tab with no owned terminal', () => {
-    const target = { ...makeAgentTab('viewer'), view: 'plugin' as const };
-    const { managers, appended } = makeManagers([target]);
-
-    command.run('queue viewer ls', { label: 'janus', index: 0 }, managers);
-
-    expect(managers.tab.enqueue).not.toHaveBeenCalled();
-    expect(appended).toEqual(['Tab "viewer" has no command queue.']);
   });
 });

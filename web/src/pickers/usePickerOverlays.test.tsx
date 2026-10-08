@@ -53,7 +53,6 @@ describe('usePickerOverlays', () => {
     ['history', 'openPicker'],
     ['syntaxTheme', 'openThemePicker'],
     ['appTheme', 'openAppThemePicker'],
-    ['queue', 'openQueue'],
     ['task', 'openTaskPicker'],
     ['profile', 'openProfilePicker'],
   ] as const)('opening the %s overlay shows up in the view and the key snapshot alike', (name, opener) => {
@@ -115,7 +114,7 @@ describe('usePickerOverlays', () => {
 function dockedShell(): TabView {
   return {
     label: 'shell1', cwd: '/w', bufferLines: [], cmdHistory: [], commandQueue: ['make test'],
-    view: 'plugin', dock: 'left', plugin: { id: 'shell', hostsCommandBar: true },
+    view: 'plugin', hasCommandQueue: true, dock: 'left', plugin: { id: 'shell', hostsCommandBar: true },
   } as unknown as TabView;
 }
 

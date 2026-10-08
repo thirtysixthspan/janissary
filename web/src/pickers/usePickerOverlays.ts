@@ -89,7 +89,7 @@ export function usePickerOverlays(input: Input): {
   const history = useHistPicker(recent, runCommand);
   const nav = useTabNav(client, tabs);
   const quick = useQuickOpen(client);
-  const queue = useQueuePicker(client, pickerTab, inputRef, recallRef, tabs);
+  const queue = useQueuePicker(client, pickerTab, tabs);
   const shellLabel = hostsCommandBar(pickerTab) ? pickerTab?.label : undefined;
   const populate = usePopulatePickers(
     tasks, profiles, recallRef, inputRef, client, harnessPtyId, dropRef, focusHarness,

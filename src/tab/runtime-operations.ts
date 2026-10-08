@@ -19,12 +19,9 @@ export function addBusy(tabs: Tab[], label: string): void {
   if (runtime) runtime.busy = true;
 }
 
-export function deleteBusy(
-  tabs: Tab[], label: string, queued: number, onIdle: ((label: string) => void) | null,
-): void {
+export function deleteBusy(tabs: Tab[], label: string): void {
   const runtime = runtimeFor(tabs, label);
   if (runtime) runtime.busy = false;
-  if (queued > 0) queueMicrotask(() => onIdle?.(label));
 }
 
 export function contextFor(tabs: Tab[], label: string): string[] {

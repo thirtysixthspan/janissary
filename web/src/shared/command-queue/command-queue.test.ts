@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ShellCommandQueue } from './shell-command-queue';
+import { CommandQueue } from './command-queue';
 
 // A server queue held in an array, so a case can see exactly what was queued and in which order.
 function makeQueue(options: { busy?: boolean; writesToShell?: (line: string) => boolean } = {}) {
@@ -13,7 +13,7 @@ function makeQueue(options: { busy?: boolean; writesToShell?: (line: string) => 
     enqueue: vi.fn(async (line: string) => { pending.push(line); }),
     dequeue: vi.fn(async () => pending.shift() ?? null),
   };
-  const queue = new ShellCommandQueue(transport, runner, options.busy ?? false);
+  const queue = new CommandQueue(transport, runner, options.busy ?? false);
   return { queue, pending, ran, runner, transport };
 }
 
@@ -21,7 +21,7 @@ async function settle() {
   for (let index = 0; index < 10; index += 1) await Promise.resolve();
 }
 
-describe('ShellCommandQueue', () => {
+describe('CommandQueue', () => {
   it('runs a line submitted while zsh is idle without queueing it', async () => {
     const { queue, runner, transport } = makeQueue();
 

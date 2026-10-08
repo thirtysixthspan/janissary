@@ -55,6 +55,8 @@ An opener or command that returns nothing completed without opening a tab, which
 
 ## Client contract
 
+Command queues are optional core tab capabilities. A plugin opts in by requesting both `queueLine` and `nextQueuedLine`; no terminal or command bar is required. Use the core `CommandQueue` service or `useCommandQueue` hook published through the client API rather than implementing a plugin-owned FIFO. The plugin supplies routing, transport adapters, and busy/idle signals. `hostsCommandBar` is independent of queue support; the core popup requires both a queue and a bar to edit its rows. See `product/specs/command-queue.md`.
+
 The client entry default-exports a React component accepting `{ payload, capabilities }` and named-exports `isPayload`. Write that guard as a type predicate: the registry infers the payload type from it and hands the component a value already narrowed, so no plugin asserts a type its own guard has already proven. The registry creates one `React.lazy` type at module scope; never create it during a render. The host checks the envelope schema and the entry guard before plugin behavior renders.
 
 `TabPluginClientCapabilities` exposes exactly eight things:

@@ -1,46 +1,43 @@
-// Lines the command bar submits while zsh is busy. They wait in the tab's own command queue on the
-// server — the one the queue popup lists and edits — and run one at a time once zsh is back at its
-// prompt. Framework-free: the hook that owns an instance feeds it zsh's command markers.
+// Core FIFO execution against server-owned storage. Consumers supply routing and busy/idle signals.
 
-export type ShellQueueTransport = {
+export type QueueTransport = {
   enqueue(line: string): Promise<void>;
   dequeue(): Promise<string | null>;
 };
 
-// Runs one line and answers whether it was written to zsh. A line zsh received has to finish before
-// the next queued one runs, so the drain stops there and resumes at zsh's next prompt. `queued` is
-// true for a line taken from the queue, which was recorded in the bar's history when it was queued.
-export type ShellLineRunner = (line: string, queued: boolean) => Promise<boolean>;
+// True pauses draining until the consumer reports idle. False continues to the next queued line.
+// `queued` distinguishes stored lines from a new submission, for consumers tracking input history.
+export type QueuedLineRunner = (line: string, queued: boolean) => Promise<boolean>;
 
-export class ShellCommandQueue {
+export class CommandQueue {
   private busy: boolean;
   private draining = false;
   private disposed = false;
 
   constructor(
-    private readonly transport: ShellQueueTransport,
-    private readonly run: ShellLineRunner,
+    private readonly transport: QueueTransport,
+    private readonly run: QueuedLineRunner,
     initiallyBusy = false,
   ) {
     this.busy = initiallyBusy;
   }
 
-  // Fed by zsh's own markers: true when a command starts, false when zsh returns to its prompt.
+  // The consumer reports completion; core never needs to know how that consumer executes work.
   setBusy(running: boolean): void {
     this.busy = running;
     if (!running) void this.drain();
   }
 
   // A line queued by another tab changes the shared queue without going through submit. Wake an
-  // idle shell so that line receives the same command-bar routing as one queued locally.
+  // idle consumer so the line receives the same routing as one queued locally.
   wake(): void {
     if (!this.busy) void this.drain();
   }
 
-  // Queues the line and answers true while zsh is busy or the queue is draining, so a new line never
+  // Queues the line and answers true while the consumer is busy or the queue is draining, so a new line never
   // overtakes one already waiting. Otherwise runs it now and answers false. That run counts as a drain
-  // until it settles, because zsh's command markers arrive only after the line has been written: a
-  // second line submitted before then must wait behind the first rather than reach zsh's input.
+  // until it settles, because the consumer's busy signals arrive only after the line has been written: a
+  // second line submitted before then must wait behind the first rather than reach the consumer's input.
   submit(line: string): boolean {
     if (this.busy || this.draining) {
       void this.transport.enqueue(line);
@@ -68,8 +65,7 @@ export class ShellCommandQueue {
       while (!this.busy && !this.disposed) {
         const line = await this.transport.dequeue();
         if (line === null || this.disposed) return;
-        // Busy until zsh's next prompt says otherwise: the command markers arrive after the line is
-        // written, and the next entry must not slip in ahead of them.
+        // Hold the next line until completion, even when the busy signal arrives asynchronously.
         if (await this.run(line, true)) this.busy = true;
       }
     } finally {

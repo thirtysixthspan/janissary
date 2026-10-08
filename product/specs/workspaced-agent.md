@@ -12,7 +12,7 @@ A workspaced agent is an agent tab with its own cloned workspace. This workspace
 
 If no git repository is found from the current directory, or the repository has no `origin` remote, an error is shown and no tab is created.
 
-The tab appears immediately, marked busy, with its workspace directory already known — it does not wait for the clone to finish. Anything typed into it while the clone is still running is queued and runs once the tab goes idle, the same as typing into any other busy agent tab. The creator tab's "Agent ready" confirmation (and the sandbox notice, if any) is posted once the clone actually finishes, not before. If the clone fails after the tab was created, the creator tab reports the failure and the half-created tab closes on its own shortly after.
+The tab appears immediately, marked busy, with its workspace directory already known — it does not wait for the clone to finish. Input dispatches immediately while the clone is running, as it does in every agent tab. Commands retain their own readiness checks; the busy mark does not defer input. The creator tab's "Agent ready" confirmation (and the sandbox notice, if any) is posted once the clone actually finishes, not before. If the clone fails after the tab was created, the creator tab reports the failure and the half-created tab closes on its own shortly after.
 
 Provisioning records the clone as trusted in Claude's user configuration. A missing configuration is
 created, and a valid configuration keeps all unrelated fields and per-project settings. If the file

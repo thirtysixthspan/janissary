@@ -30,7 +30,6 @@ type Properties = {
   blockingOverlayOpen: boolean;
   // The route chooser is open: the command line is disabled, not just stripped of its keys.
   commandBarDisabled: boolean;
-  queueOpen: boolean;
   search: ReturnType<typeof useViewSearchState>['search'];
   globalHistory: string[];
   // Every tab's unexecuted command text; this body's bar reads and writes its own tab's entry.
@@ -39,8 +38,6 @@ type Properties = {
   quitConfirmOpen: boolean;
   unsavedQuitOpen: boolean;
   recallReference: React.RefObject<((text: string) => void) | null>;
-  onEditQueued: React.ComponentProps<typeof CommandArea>['onEditQueued'];
-  onDeleteQueued: React.ComponentProps<typeof CommandArea>['onDeleteQueued'];
   dropRef: React.RefObject<CommandInputDropHandle | null>;
   onSplit?: () => void;
 };
@@ -49,9 +46,9 @@ type Properties = {
 // Split out of App.tsx to keep it under the file-size limit.
 export function AgentTabBody({
   current, client, lines, runCommand, transcriptReference, highlight, inputReference,
-  pickerOverlays, blockingOverlayOpen, commandBarDisabled, queueOpen,
+  pickerOverlays, blockingOverlayOpen, commandBarDisabled,
   search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
-  recallReference, onEditQueued, onDeleteQueued, dropRef, onSplit,
+  recallReference, dropRef, onSplit,
 }: Properties) {
   const statusWindows = useStatusWindows(current.label, {
     connectionsHaveContent: current.connections.length > 0,
@@ -119,10 +116,7 @@ export function AgentTabBody({
         pickerOpen={blockingOverlayOpen || quitConfirmOpen || unsavedQuitOpen}
         disabled={commandBarDisabled}
         busy={current.busy}
-        queueOpen={queueOpen}
         recallRef={recallReference}
-        onEditQueued={onEditQueued}
-        onDeleteQueued={onDeleteQueued}
         dropRef={dropRef}
       />
     </div>

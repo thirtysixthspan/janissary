@@ -33,7 +33,7 @@
 | `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
 | `profile` | `profile launch <name>` launches a project or built-in Janissary profile (bare `profile launch` opens a source-labeled picker); `profile save <name>` captures the running session in the project; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
 | `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
-| `queue` | Queue a command for another agent or shell tab (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
+| `queue` | Queue a command for a shell or another tab supporting queues (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
 | `schedule` | Run a command later — once or on a recurring schedule |
@@ -81,7 +81,7 @@
 | `Page Up` / `Page Down` | Scroll the transcript up / down by half terminal height |
 | `Escape` | Reset scroll to bottom |
 | `Ctrl+P` / `Ctrl+N` | Scroll the transcript up / down one line (fixed) |
-| `Ctrl+E` | Open the queue picker for the current agent or shell tab (no-op on other tabs) |
+| `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues) |
 | `Ctrl+T` | Expand / collapse agent tool steps in the transcript |
 | `Ctrl+O` | Move the running command into a full-tab terminal to type to it (no-op when nothing is running) |
 | `Cmd+F` | Open the search bar in the transcript; in an editor tab, search for a line in the buffer |

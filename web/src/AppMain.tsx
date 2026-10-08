@@ -20,7 +20,7 @@ import type { DirtyTabHandle, HarnessTabHandle, ShellTabHandle, QuestionPanelHan
 
 type AppMainProps = Omit<
   React.ComponentProps<typeof AgentTabBody>,
-  'onSplit' | 'pickerOverlays' | 'blockingOverlayOpen' | 'commandBarDisabled' | 'queueOpen'
+  'onSplit' | 'pickerOverlays' | 'blockingOverlayOpen' | 'commandBarDisabled'
 > & LayoutState & {
   // Every overlay's state, built once by `usePickerOverlays`. `PickerOverlays` takes exactly this
   // bag, and the two overlays a mounted harness tab renders are projected out of it below.
@@ -57,7 +57,7 @@ export function AppMain({
   current, client, lines, runCommand, transcriptReference, highlight, inputReference,
   pickers, pickerSourceTab, tabs,
   search, globalHistory, commandDrafts, onCommandBarSubmit, quitConfirmOpen, unsavedQuitOpen,
-  recallReference, onEditQueued, onDeleteQueued, dropRef,
+  recallReference, dropRef,
   activeTab, secondaryTab, windowFocused, actionEntries, reportingEntries, closeTab,
   tabNameMaxLength, activeTabNameMaxLength,
   sidebarLeftWidth, setSidebarLeftWidth, sidebarRightWidth, setSidebarRightWidth,
@@ -75,11 +75,10 @@ export function AppMain({
         pickerOverlays={pickerSourceTab ? null : pickerOverlays}
         blockingOverlayOpen={commandBarSuppressed(pickers.overlays)}
         commandBarDisabled={commandBarDisabled(pickers.overlays)}
-        queueOpen={pickers.overlays.queue}
         search={search} globalHistory={globalHistory} commandDrafts={commandDrafts}
         onCommandBarSubmit={onCommandBarSubmit}
         quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
-        recallReference={recallReference} onEditQueued={onEditQueued} onDeleteQueued={onDeleteQueued}
+        recallReference={recallReference}
       dropRef={dropRef}
       onSplit={() => client.send({ method: 'moveTabToOtherPane', params: { index: activeTab } })}
     />

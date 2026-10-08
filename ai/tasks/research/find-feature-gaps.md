@@ -59,7 +59,7 @@ Read every file in `product/specs/` (`ls product/specs/` first to see the full l
 - **Database tooling**: `database.md`, `connection.md` → DBeaver, TablePlus, DataGrip.
 - **Browser automation**: `browser.md`, `embedded-web-page.md` → Playwright Inspector/Trace Viewer, Puppeteer, browser devtools.
 - **Remote sessions**: `ssh-tab.md` → Termius, Royal TSX, PuTTY.
-- **Scheduling/automation**: `scheduling.md`, `agent-command-queue.md` → cron GUIs, GitHub Actions schedules, OS task schedulers.
+- **Scheduling/automation**: `scheduling.md`, `command-queue.md` → cron GUIs, GitHub Actions schedules, OS task schedulers.
 - **Agent orchestration**: `harness.md`, `agents.md`, `monitoring.md`, `profiles.md`, `messaging.md` → other AI coding agent CLIs/IDEs, multi-agent frameworks, observability tooling.
 
 This grouping is a starting point, not a fixed taxonomy — some specs may not fit cleanly, or may map to more than one comparison; use judgment.

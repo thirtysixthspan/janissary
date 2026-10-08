@@ -13,7 +13,7 @@ export type PlaceAgentOptions = {
   workspaceDir?: string;
   offline: boolean;
   // Marks the tab busy on creation (a launch still waiting on its clone or its ssh channel).
-  // Everything typed in the meantime queues through the ordinary busy-tab command queue.
+  // Input dispatches immediately; individual commands enforce their own readiness checks.
   busy?: boolean;
   // Set for an `on <address>` launch. `workspaceDir` deliberately stays undefined alongside it: the
   // clone is the remote's, and so is its removal.

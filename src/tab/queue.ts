@@ -1,4 +1,4 @@
-// Per-tab command queue: an agent's queued-but-not-yet-run commands (`queue <agent> <cmd>`).
+// Per-tab command queue: an opted-in tab's pending commands.
 // Persistence and change notification stay the caller's responsibility (TabManager).
 
 export function getQueue(queue: string[]): string[] {

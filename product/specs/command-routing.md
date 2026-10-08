@@ -76,8 +76,7 @@ can be aimed at a specific connection).
   a second command that would open a chooser (from another tab, or from a scheduled or queued command
   in the originating tab itself) does not replace it, because that would silently discard the command
   already waiting on it. The second command runs nothing, and its tab's transcript records it with the
-  output `Another command is waiting for a route choice; run this again once it is answered.` Only the
-  originating tab's queue pauses (see [[agent-command-queue]]), and `CommandManager.closeTab` drops the
+  output `Another command is waiting for a route choice; run this again once it is answered.` `CommandManager.closeTab` drops the
   chooser when the originating tab closes, broadcasting the cleared state so the overlay dismisses.
 
 ### Notes

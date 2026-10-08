@@ -265,59 +265,6 @@ describe('App tab navigator', () => {
   }, 15_000);
 });
 
-describe('App queue popup', () => {
-  beforeEach(() => {
-    sendMock.mockClear();
-    stateListener = null;
-  });
-
-  it('opens the queue popup on "queue" instead of sending a command RPC', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi'] })], 0, null, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'queue' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(screen.getByText('queue', { selector: '.picker-title' })).toBeInTheDocument();
-    expect(sendMock).not.toHaveBeenCalledWith({ method: 'command', params: { text: 'queue' } });
-  }, 15_000);
-
-  it('selecting the front entry copies it into the command line', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi', 'echo bye'] })], 0, null, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
-    fireEvent.change(input, { target: { value: 'queue' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(input.value).toBe('echo hi');
-  }, 15_000);
-
-  it('Cmd+W does nothing while the queue popup is open', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi'] })], 0, null, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'queue' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    sendMock.mockClear();
-    fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', metaKey: true });
-    expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
-  }, 15_000);
-
-  it('Escape closes the queue popup and clears the command line', async () => {
-    const { App } = await import('./App');
-    render(<App client={client} />);
-    act(() => { stateListener!([makeTab({ commandQueue: ['echo hi', 'echo bye'] })], 0, null, 16, [], 'github-dark', 'dark', []); });
-    const input = screen.getByRole('textbox') as HTMLTextAreaElement;
-    fireEvent.change(input, { target: { value: 'queue' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-    expect(input.value).toBe('echo hi');
-    fireEvent.keyDown(input, { key: 'Escape' });
-    expect(screen.queryByText('queue', { selector: '.picker-title' })).not.toBeInTheDocument();
-    expect(input.value).toBe('');
-  }, 15_000);
-});
-
 describe('App closing the last tab', () => {
   beforeEach(() => {
     sendMock.mockClear();

@@ -7,7 +7,6 @@ import { messageBus } from '../bus.js';
 import { resolveUnknownCommand } from './router.js';
 import { recordGlobalHistory } from '../global-history.js';
 import type { Managers } from '../managers.js';
-import { dispatchOrRunOp, drainQueueOp } from './queue.js';
 import { errorText } from '../error-text.js';
 import { executeAndCapture } from '../capture/execute-and-capture.js';
 
@@ -20,9 +19,7 @@ const ROUTE_BUSY ='Another command is waiting for a route choice; run this again
 export class CommandManager {
   private pendingRoute: PendingRoute | null = null;
 
-  constructor(private managers: Managers) {
-    this.managers.tab.setOnIdle((label) => this.drainQueue(label));
-  }
+  constructor(private managers: Managers) {}
 
   routeView(): { cmd: string; choices: string[] } | null {
     if (!this.pendingRoute) return null;
@@ -36,7 +33,6 @@ export class CommandManager {
       const index_ = this.managers.tab.findIndex(pending.label);
       if (index_ !== -1) this.run(toPrefixedCommand(pending.cmd, pending.choices[index]), pending.label, index_);
     }
-    if (pending) this.drainQueue(pending.label);
     messageBus.emit('state', { type: 'dirty' });
   }
 
@@ -60,34 +56,17 @@ export class CommandManager {
   dispatch(text: string): void {
     const trimmed = this.managers.tab.recordHistory(this.managers.tab.activeTab, text);
     if (trimmed) recordGlobalHistory(trimmed, this.managers.tab.cur().label);
-    this.dispatchOrRun(trimmed, this.managers.tab.cur().label, this.managers.tab.activeTab);
+    this.run(trimmed, this.managers.tab.cur().label, this.managers.tab.activeTab);
   }
 
   // `detect: false` marks a command nobody is watching interactively — a scheduled firing — so a
-  // program that takes over the screen never steals the tab. A command that queues behind a busy
-  // agent loses the flag, since the queue holds plain strings; accepted, and noted in the spec.
+  // program that takes over the screen never steals the tab.
   dispatchTo(label: string, text: string, options?: { detect?: boolean }): void {
     const index = this.managers.tab.findIndex(label);
     if (index === -1) return;
     const trimmed = this.managers.tab.recordHistory(index, text);
     if (trimmed) recordGlobalHistory(trimmed, label);
-    this.dispatchOrRun(trimmed, label, index, options?.detect);
-  }
-
-  // Gate seam: agent tabs queue while busy (or while idle with entries already waiting, to
-  // preserve FIFO) instead of running immediately. Non-agent tabs and empty input bypass the gate.
-  private dispatchOrRun(trimmed: string, label: string, index: number, detect?: boolean): void {
-    dispatchOrRunOp(
-      this.managers, trimmed, label, index,
-      (i, l, idx) => this.run(i, l, idx, detect), (l) => this.drainQueue(l),
-    );
-  }
-
-  // Runs queued commands FIFO until the tab goes busy, its queue empties, or one of its own
-  // commands opens a route chooser (resumed by `chooseRoute`); another tab's chooser never pauses
-  // it. Registered as `TabManager`'s onIdle hook.
-  drainQueue(label: string): void {
-    drainQueueOp(this.managers, label, () => this.pendingRoute?.label === label, (i, l, idx) => this.run(i, l, idx));
+    this.run(trimmed, label, index, options?.detect);
   }
 
   private run(input: string, label: string, index: number, detect?: boolean): void {

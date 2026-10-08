@@ -17,7 +17,7 @@ This is not [messaging](/user-documentation/command-bar/messaging). `msg` and `b
 
 For a [harness](/user-documentation/advanced-agents/harness) or [SSH](/user-documentation/advanced-agents/harness#ssh-sessions) tab, the text is typed into the terminal and submitted, exactly like typing into it by hand. That's how you drive a running `claude` or `codex` session from somewhere else. A [shell tab](/user-documentation/command-bar/shell) receives the line through its command bar: application commands run in the app, while unclaimed lines go to zsh. The line joins the shell's FIFO queue and waits for zsh's prompt when the shell is busy.
 
-For an agent tab, the text runs as a command in that tab's own pipeline — a shell command, a `db` query, anything you could type there. If that tab is busy, the command waits in its [queue](/user-documentation/command-bar/queue) instead of being lost.
+For an agent tab, the text runs as a command in that tab's own pipeline — a shell command, a `db` query, anything you could type there. The command dispatches immediately, even when the agent is busy.
 
 Other view tabs without a terminal do not accept input. Image, page, markdown, and editor tabs have no input line to deliver to.
 
@@ -31,7 +31,7 @@ Your own transcript records what you sent:
 → claude: /standup
 ```
 
-That's the whole acknowledgement. `send` is fire-and-forget: the target's output stays in the target's tab, and nothing is read back to you. To watch what a tab does with what you sent, switch to it, or point a [monitor](/user-documentation/automation/monitoring) at it. One case is worth knowing about: when the target is busy, the command waits in its [queue](/user-documentation/command-bar/queue) instead of running, and the `Queued: <text>` line for that lands in the **target's** transcript rather than yours, so your own tab shows the `→ <label>: <text>` acknowledgement and nothing more.
+That's the whole acknowledgement. `send` is fire-and-forget: the target's output stays in the target's tab, and nothing is read back to you. To watch what a tab does with what you sent, switch to it, or point a [monitor](/user-documentation/automation/monitoring) at it.
 
 Errors land in *your* transcript rather than the target's, so a send that went nowhere is always visible — including one fired by a schedule while you were elsewhere:
 

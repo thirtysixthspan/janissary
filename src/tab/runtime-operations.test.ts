@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   addBusy, appendContext, contextFor, cwdOf, deleteBusy, isBusy, setContext, setCwd,
 } from './runtime-operations.js';
@@ -28,23 +28,6 @@ describe('runtime accessors with no tab behind the label', () => {
       appendContext(empty, 'gone', 'x');
     }).not.toThrow();
     expect(empty).toEqual([]);
-  });
-
-  // The busy mark is guarded on the label, but the idle report is not: it answers whether the queue
-  // drained, which is a property of the request rather than of a runtime. A label that names no tab
-  // has no mark to clear, and the caller still gets told the queue is empty.
-  it('reports idle for a label no tab carries when work was queued', async () => {
-    const onIdle = vi.fn();
-    deleteBusy(empty, 'gone', 1, onIdle);
-    await Promise.resolve();
-    expect(onIdle).toHaveBeenCalledExactlyOnceWith('gone');
-  });
-
-  it('reports nothing for a label no tab carries when nothing was queued', async () => {
-    const onIdle = vi.fn();
-    deleteBusy(empty, 'gone', 0, onIdle);
-    await Promise.resolve();
-    expect(onIdle).not.toHaveBeenCalled();
   });
 });
 
@@ -81,43 +64,8 @@ describe('runtime accessors', () => {
     const tabs = [tab('agent')];
     addBusy(tabs, 'agent');
 
-    deleteBusy(tabs, 'agent', 0, null);
+    deleteBusy(tabs, 'agent');
 
-    expect(isBusy(tabs, 'agent')).toBe(false);
-  });
-
-  // Work still queued behind the current one keeps the tab busy: the mark clears only once the
-  // queue has drained, and the check is deferred so the tab that queued more work in between is
-  // seen in its current state rather than the state at the moment the first item finished.
-  it('stays busy while work is still queued, reporting idle on the next microtask', async () => {
-    const tabs = [tab('agent')];
-    addBusy(tabs, 'agent');
-    const onIdle = vi.fn();
-
-    deleteBusy(tabs, 'agent', 2, onIdle);
-
-    expect(onIdle).not.toHaveBeenCalled();
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(onIdle).toHaveBeenCalledExactlyOnceWith('agent');
-  });
-
-  it('reports idle only when the queue is empty', async () => {
-    const tabs = [tab('agent')];
-    addBusy(tabs, 'agent');
-    const onIdle = vi.fn();
-
-    deleteBusy(tabs, 'agent', 0, onIdle);
-    await Promise.resolve();
-
-    expect(onIdle).not.toHaveBeenCalled();
-  });
-
-  it('tolerates a null idle callback', async () => {
-    const tabs = [tab('agent')];
-    addBusy(tabs, 'agent');
-    expect(() => deleteBusy(tabs, 'agent', 1, null)).not.toThrow();
-    await Promise.resolve();
     expect(isBusy(tabs, 'agent')).toBe(false);
   });
 });

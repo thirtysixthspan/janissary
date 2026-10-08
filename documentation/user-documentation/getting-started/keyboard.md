@@ -31,7 +31,7 @@ The command bar accepts the shortcuts below while an agent tab is active. The on
 | `Ctrl+Shift+V` / `Cmd+Shift+V` | Open the clipboard-history popup — everything you have copied this session, newest at the bottom; choosing an entry pastes it at the cursor. `Ctrl+V` and `Cmd+V` are untouched |
 | `Ctrl+A` | Open the task picker |
 | `Ctrl+G` | Open the fuzzy tab navigator, or close it if it is open |
-| `Ctrl+E` | Open the queue picker; does nothing on a tab that is not an agent tab |
+| `Ctrl+E` | Open the queue picker for a shell tab; does nothing on tabs without a queue |
 | `Ctrl+T` | Expand or collapse the current tab's agent tool steps |
 | `Ctrl+O` | Move the command currently running into a full-tab terminal, where you can type to it; does nothing when nothing is running |
 | `Cmd+W` / `Ctrl+W` | Close the current tab |

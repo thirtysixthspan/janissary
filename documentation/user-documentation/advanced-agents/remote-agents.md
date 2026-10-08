@@ -58,7 +58,7 @@ The tab opens right away, before anything is checked, and shows the live SSH ses
 
 Each independent remote launch opens its own session, so a [profile](/user-documentation/automation/profiles) that opens several remote tabs asks you several times. Agents created with a remote tab's ➕ button share that tab's existing workspace and session, so they do not ask you to sign in again.
 
-Once the far side answers, the tab stops showing raw terminal output and starts running the agent or harness. Until then the tab counts as still provisioning, so anything sent to it with `send` or by a schedule waits in the queue instead of being typed into a password prompt.
+Once the far side answers, the tab stops showing raw terminal output and starts running the agent or harness. An agent tab dispatches input immediately, including while provisioning; commands that require a connected remote session enforce their own readiness checks. A harness schedule stays due until the harness is running. Use the terminal to answer SSH password and host-key prompts.
 
 ## Workspaces are always on
 

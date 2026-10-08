@@ -23,7 +23,6 @@ export class TabManager extends TabTranscriptState {
   tabs: Tab[] = [];
   activeTab = 0;
   secondaryTabLabel?: string;
-  private onIdle: ((label: string) => void) | null = null;
   private fileRegistry = new FileRegistry();
   // The startup files a `zshHooks` terminal's zsh reads, created with the first such terminal and
   // removed on dispose, which runs after `pty` has already ended the shells that read them.
@@ -72,10 +71,7 @@ export class TabManager extends TabTranscriptState {
   }
 
   deleteBusy(label: string): void {
-    runtimeOperations.deleteBusy(this.tabs, label, this.queueFor(label).length, this.onIdle);
-  }
-  setOnIdle(hook: (label: string) => void): void {
-    this.onIdle = hook;
+    runtimeOperations.deleteBusy(this.tabs, label);
   }
 
   protected queueChanged(): void {

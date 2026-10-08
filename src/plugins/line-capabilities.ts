@@ -29,7 +29,7 @@ export function lineCapabilities(input: {
   // The tab whose queue and recorded directory a line capability may change: the answering tab, or
   // the origin when there is none, and only when it is one of this plugin's own tabs. A command,
   // selection action or menu handler invoked from an agent tab has no answering tab, and without
-  // this check it would reach that agent tab's queue and directory.
+  // this check it would reach the invoking agent tab's runtime.
   const ownLineLabel = () => {
     const label = answeringLabel ?? origin.label;
     return managers.tab.byLabel(label)?.plugin?.id === declaration.id ? label : undefined;

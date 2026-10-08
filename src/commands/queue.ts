@@ -1,14 +1,14 @@
 import type { Command } from './types.js';
 import { resolveTarget } from './resolve-target.js';
-import { awaitsTerminal, ownsTerminal } from '../tab/plugin-terminals.js';
+import { supportsCommandQueue } from '../command-queue/support.js';
 
-/** Parse a `queue <agent> <command...>` command (the leading `queue` is optional). */
+/** Parse a `queue <shell-tab> <command...>` command (the leading `queue` is optional). */
 export function parseQueueCommand(input: string): { label: string; text: string } | { error: string } {
   const body = input.trim().replace(/^queue\b\s*/i, '');
   const parts = body.split(/\s+/).filter(Boolean);
   const label = parts[0];
   const text = parts.slice(1).join(' ');
-  if (!label || !text) return { error: 'Usage: queue <agent> <command>' };
+  if (!label || !text) return { error: 'Usage: queue <shell-tab> <command>' };
   return { label, text };
 }
 
@@ -26,13 +26,11 @@ export const command: Command = {
     if ('error' in parsed) { append(parsed.error); return; }
     const target = resolveTarget(parsed.label, managers, append);
     if (!target) return;
-    const pluginTerminal = ownsTerminal(target, managers.pty) || awaitsTerminal(target, managers.workspace);
-    if (target.view !== undefined && target.view !== 'agent' && !pluginTerminal) {
+    if (!supportsCommandQueue(target, managers.plugins.declarations)) {
       append(`Tab "${parsed.label}" has no command queue.`);
       return;
     }
     managers.tab.enqueue(target.label, parsed.text);
-    if (!pluginTerminal) managers.command.drainQueue(target.label);
     append(`→ ${parsed.label} (queued): ${parsed.text}`);
   },
 };

@@ -211,7 +211,6 @@ export function App({ client }: { client: JanusClient }) {
       onCommandBarSubmit={onCommandBarSubmit}
       quitConfirmOpen={quitConfirmOpen} unsavedQuitOpen={unsavedQuitOpen}
       recallReference={recallReference}
-      onEditQueued={pickers.onEditQueued} onDeleteQueued={pickers.onDeleteQueued}
       dropRef={dropReference}
       activeTab={activeTab} secondaryTab={secondaryTab} windowFocused={windowFocused}
       actionEntries={actionEntries} reportingEntries={reportingEntries} closeTab={closeTab}

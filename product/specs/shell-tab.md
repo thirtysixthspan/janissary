@@ -87,31 +87,7 @@ gives a light terminal — and they change with the theme, including when the pi
 different one. The padding between the focus line and the terminal text takes the same theme
 background, so no dark strip shows beside the text under a light theme. Harness terminals keep their shared dark terminal colors.
 
-While zsh is running a command, the command line reads `queue >`. A line submitted then goes into the
-shell tab's command queue instead of reaching zsh or the application, and it is recorded in the bar's
-history as it is queued. When zsh returns to its prompt, the queue drains one line at a time, oldest
-first: each line runs exactly as if it had just been submitted, and a line sent to zsh waits for zsh's
-next prompt before the following entry runs. Lines the application answers itself run straight on to
-the next entry. A line submitted while the queue is still draining joins the back of the queue, so
-nothing overtakes a line already waiting. The same holds from the moment a bar line is submitted to
-an idle shell: until that line settles, and when it went to zsh until zsh's next prompt, a further
-line is queued even though zsh has not yet reported the first one as running. Typing `ssh host` and
-then `ls` quickly therefore queues `ls` rather than typing it into the program `ssh host` starts.
-Keys typed directly into the terminal are never queued.
-
-Another tab can append a line with `queue <shell-tab> <command>`. The line joins the same FIFO as
-commands queued from this shell's own bar. If zsh is idle, it runs right away through the shell bar's
-application-command routing; if zsh is busy, it waits for the prompt before draining. That holds
-whether the shell is the current tab, docked in a sidebar, or hidden behind another tab: the shell
-watches its own queue, and a line queued for a different tab never makes it look for one. `send
-<shell-tab> <text>` queues the same way. The issuing tab records `→ <shell-tab> (queued): <command>`.
-
-The `queue` command and `Ctrl+E` open the application's queue popup over the shell tab. The selected
-queued line appears in the shell command bar; typing edits it, and Backspace or Delete on an empty bar
-removes it. Arrow keys change the selected queue entry, Return leaves the popup open without submitting,
-and Escape closes it and clears the bar. Only the shell the popup is open over takes part: a popup
-opened over an agent tab, or over another shell, leaves every other shell's unsent line and focus
-exactly as they were, and typing into one of those bars edits no queue entry.
+The shell opts into the core [[command-queue]]. Its bar queues while zsh is busy or provisioning; zsh's prompt signals wake the core FIFO service. The core spec owns submission ordering, cross-tab queue delivery, the `queue >` indicator, and popup editing. Shell supplies ordinary command-bar routing and records queued submissions in its own history. Direct terminal input bypasses the queue.
 
 An application command that answers with text rather than opening something — `help`, for one — is
 shown in the terminal as a command line, followed by its reply on the next line. The reply is markdown, as
@@ -153,13 +129,11 @@ command line unchanged.
 `Ctrl+A` and `tasks` open the shared task picker over the shell tab. Choosing a task inserts its
 `execute …` command at the shell command bar's caret and leaves it there for you to edit or submit.
 The shared pickers and the queue popup treat the shell this way because its declaration carries
-`hostsCommandBar`, not because the application knows the shell plugin by name (see [[tab-plugins]]).
+`hostsCommandBar` and requests both core queue capabilities, not because the application knows the shell plugin by name (see [[tab-plugins]]).
 
 A picker opened from a shell's bar belongs to that shell, including a shell docked in a sidebar while
 an agent tab is current. It appears over the shell, a task picked from `tasks` lands in the shell's
-bar rather than the agent's, and `queue` lists, edits and deletes the shell's own queued lines rather
-than the agent's. If the shell closes while its picker is open, the picker moves to the current tab
-and acts on that tab instead.
+bar rather than the agent's, and `queue` lists, edits and deletes the shell's own queued lines. If the shell closes while its picker is open, the picker moves to the current tab. The queue popup closes if that tab has no queue edit surface.
 
 A shell that is not on screen opens no picker. That covers a shell hidden behind another centre tab
 and a docked shell behind another entry in its sidebar. A picker word reaching it, such as a queued
