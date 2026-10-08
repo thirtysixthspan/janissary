@@ -13,6 +13,7 @@ import { tabBodyBorder } from './shared/tab/body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
 import { hostsCommandBar } from './shared/command-bar/hosts-command-bar';
 import { indexedTabs, isHarnessTabView, isEditorTabView, isPluginTabView } from './shared/tab/view-guards';
+import { useEditorPluginHost } from './useEditorPluginHost';
 
 type Properties = {
   tabs: TabView[];
@@ -67,6 +68,10 @@ export function MountedViewLayers({
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
 }: Properties) {
+  // This composition mounts every editor tab, so it owns the one session plugin host they all share
+  // and the disabled-plugin queue that host fills. Disabling is session-scoped rather than per tab,
+  // and a plugin can be disabled before any tab has mounted to report it.
+  const { host: editorPluginHost, reports: editorPluginReports } = useEditorPluginHost();
   const pluginOverlay = (t: TabView) => {
     if (hostsCommandBar(t)) return (!pickerSourceTab || pickerSourceTab === t.label) && pickerOverlays;
     return navOpen && onPickTab && (
@@ -102,6 +107,7 @@ export function MountedViewLayers({
             visible={visibleLabels.includes(t.label)}
             overlayOpen={overlayOpen}
             onSplit={onSplit ? () => onSplit(index) : undefined}
+            pluginHost={editorPluginHost} pluginReports={editorPluginReports}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
           {(pickerSourceTab ? pickerSourceTab === t.label : t.label === current.label) && pickerOverlays}
         </TabBodyDiv>
