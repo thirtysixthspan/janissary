@@ -346,8 +346,10 @@ describe('describeAutoApproveHarnesses', () => {
 });
 
 describe('autoApproveWithoutWorkspaceWarning', () => {
-  it('returns a warning string when auto-approve is on', () => {
-    expect(typeof autoApproveWithoutWorkspaceWarning(true)).toBe('string');
+  it('returns the warning text when auto-approve is on', () => {
+    expect(autoApproveWithoutWorkspaceWarning(true)).toBe(
+      'auto-approve is on without a workspace: prompts are approved unattended against your real files, with no sandbox confining the harness',
+    );
   });
 
   it('returns undefined when auto-approve is off', () => {

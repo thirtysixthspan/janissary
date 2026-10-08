@@ -41,6 +41,10 @@ import { deliverNotification } from './deliver.js';
 // `auto-resume` reports a harness hitting a subscription limit, naming the moment its resume will be
 // typed in — the counterpart to `auto-approve`, and explicit for the same reason: the app decided it,
 // on the tab's behalf, and the one line saying so is what a user watching a different tab needs.
+// `auto-approve-no-workspace` reports a harness tab that launched auto-approving with no workspace to
+// confine it, so an auto-approved prompt acts on the user's real files unattended. Explicit for the
+// same reason as the others: the tab it is attributed to is the one just launched, which is very
+// often the active one, and this is the only line that says so.
 export type NotificationEventType =
   | 'schedule-late'
   | 'remote-session-terminated'
@@ -52,6 +56,7 @@ export type NotificationEventType =
   | 'harness-idle'
   | 'manual'
   | 'auto-approve'
+  | 'auto-approve-no-workspace'
   | 'auto-resume'
   | 'editor-suggest'
   | 'question'
@@ -108,6 +113,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'harness-idle': true,
   manual: true,
   'auto-approve': true,
+  'auto-approve-no-workspace': true,
   'auto-resume': true,
   'editor-suggest': true,
   question: true,

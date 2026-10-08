@@ -36,7 +36,8 @@ export function withRepeatCount(message: string, count: number): string {
 // The message body for an event, rendered after the `<time> <tabLabel>:` header. `detail` carries
 // the event-specific extra: the command for `schedule-fire`, the sender label for
 // `incoming-message`, the user's message for `manual`, the approver's message for `auto-approve`,
-// and the persona name plus outcome for `editor-suggest`. The `manual`, `auto-approve`, and
+// the no-workspace warning for `auto-approve-no-workspace`, and the persona name plus outcome for
+// `editor-suggest`. The `manual`, `auto-approve`, `auto-approve-no-workspace`, and
 // `editor-suggest` bodies are the message alone — the tab label already leads the line via the
 // header, so repeating it here would double it.
 export function notificationText(event: NotificationEventType, tabLabel: string, detail?: string): string {
@@ -51,6 +52,7 @@ export function notificationText(event: NotificationEventType, tabLabel: string,
     case 'schedule-fire': { return `Scheduled: ${detail} in ${tabLabel}`; }
     case 'manual':
     case 'auto-approve':
+    case 'auto-approve-no-workspace':
     case 'auto-resume':
     case 'editor-suggest':
     case 'file-operation':

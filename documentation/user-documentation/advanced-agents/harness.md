@@ -146,7 +146,7 @@ All three permission menus are selection menus rather than yes/no questions, so 
 - **codex** — the app recognizes the approval overlay and confirms its highlighted one-time approval choice, never a persistent allowlist option.
 - **opencode** — the app recognizes the `△ Permission required` panel and confirms `Allow once`, the option it starts on. `Allow always` is never the one taken. The panel is still recognized with opencode's own sidebar open beside it, however narrow that leaves the prompt.
 
-Auto-approval doesn't require a workspace. Launching with `--no-workspace` still works, but unless you also pass `--no-auto-approve`, the new tab's terminal shows a security warning that prompts will be approved unattended against your real files.
+Auto-approval doesn't require a workspace. Launching with `--no-workspace` still works, but unless you also pass `--no-auto-approve`, the launch posts a security warning to the [notifications](/user-documentation/tab-types/notifications) feed: prompts will be approved unattended against your real files, with no sandbox confining the harness.
 
 A harness with auto-approval active shows the auto-permitting flag icon in its metadata row. The icon turns green once auto-approval has approved its first prompt, and its tooltip changes to "Auto-approval".
 

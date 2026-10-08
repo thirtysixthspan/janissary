@@ -8,6 +8,7 @@ const CATEGORIES: Record<ExplicitNotificationEvent, SoundCategory> = {
   question: 'warning',
   'harness-idle': 'warning',
   'auto-approve': 'warning',
+  'auto-approve-no-workspace': 'warning',
   'auto-resume': 'warning',
   'schedule-late': 'warning',
   'remote-session-terminated': 'warning',

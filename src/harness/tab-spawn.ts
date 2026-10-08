@@ -4,6 +4,7 @@ import { harnessSpawnEnv } from './scratch-dir.js';
 import { reportBrowserGone } from './browser-gone.js';
 import { reportBrowserStarted } from './browser-started.js';
 import { autoApproveWithoutWorkspaceWarning } from './auto-approve.js';
+import { notify } from '../notifications/index.js';
 import { harnessRuntime } from './observers.js';
 import { HarnessRuntimes } from './runtime-registry.js';
 import type { SpawnTabOptions } from './spawn-options.js';
@@ -105,8 +106,13 @@ export class HarnessTabSpawn {
       throw error;
     }
     if (remote) this.managers.tab.setCwd(label, cwd);
-    const notice = remote ? remoteNotice : (workspaceDir ? sandboxNotice() : autoApproveWithoutWorkspaceWarning(autoApprove));
+    const notice = remote ? remoteNotice : (workspaceDir ? sandboxNotice() : undefined);
     if (notice) this.managers.tab.append(label, { input: '', output: notice });
+    // Reported as a notification rather than a line in the tab: a harness tab renders its PTY, so
+    // anything appended to its transcript is never seen. A remote tab's workspace is the far host's,
+    // so there is nothing to warn about locally.
+    const warning = remote || workspaceDir ? undefined : autoApproveWithoutWorkspaceWarning(autoApprove);
+    if (warning) notify(this.managers, 'auto-approve-no-workspace', label, warning);
     messageBus.emit('state', { type: 'dirty' });
   }
 
