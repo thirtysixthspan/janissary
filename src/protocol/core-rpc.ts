@@ -47,6 +47,10 @@ export type CoreRpcCall =
   // lives client-side. The handler is generic, so both dockable tab kinds share this one RPC.
   | { method: 'setDock'; params: { index: number; dock: 'left' | 'right' | null } }
   | { method: 'launchShellFor'; params: { label: string } }
+  // Open the diff tab on the named tab's own workspace, triggered by the Show diff in the workspace
+  // button in a shell or harness tab's metadata row. No-ops when the tab has no workspace, which is
+  // the same thing the button's disabled state says on screen. `label` is the requesting tab's own.
+  | { method: 'openDiffFor'; params: { label: string } }
   // Open the named harness tab's session transcript file (the same file `harness transcript`
   // opens) in an editor tab, triggered by the clipboard button in a harness tab's metadata row.
   // No-ops when the tab has no transcript tailer or no transcript file yet. `label` is the

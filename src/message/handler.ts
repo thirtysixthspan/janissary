@@ -40,6 +40,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'setDock':
     case 'openFileNavigatorFor':
     case 'launchShellFor':
+    case 'openDiffFor':
     case 'openHarnessTranscriptFor':
     case 'openRecordingFor':
     case 'openAcpTranscript': {

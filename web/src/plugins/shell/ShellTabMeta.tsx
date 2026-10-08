@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ConnectionPlug, RecordingFlag, RemoteSessionButton, StatusPanels, StatusWindowButton,
-  connectionsWindowIcon, newTabIcon, openFilesIcon, scheduleWindowIcon, statusButton, syncIcon, useStatusWindows, workspacedIcon,
+  connectionsWindowIcon, diffIcon, newTabIcon, openFilesIcon, scheduleWindowIcon, statusButton, syncIcon, useStatusWindows, workspacedIcon,
   type TabPluginClientCapabilities,
 } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -76,6 +76,18 @@ export function ShellTabMeta({ payload, capabilities }: {
           >
             <FontAwesomeIcon icon={newTabIcon} />
           </button>
+          {payload.workspace && payload.host === undefined && (
+            <button
+              type="button"
+              className="tab-open-diff"
+              title="Show diff in the workspace"
+              aria-label="Show diff in the workspace"
+              disabled={payload.provisioning}
+              onClick={() => capabilities.openDiffHere?.()}
+            >
+              <FontAwesomeIcon icon={diffIcon} />
+            </button>
+          )}
           {/* The two status windows, and the buttons that open them. Rendering the panels without these
               is how the host pushed rows into this payload that nothing could ever show: the shell does
               own a connection — its own zsh — so the window has something true to list. */}

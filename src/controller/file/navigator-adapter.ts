@@ -34,6 +34,7 @@ export type FileNavigatorControllerAdapter = {
   setDock(index: number, dock: 'left' | 'right' | null): void;
   openFileNavigatorFor(label: string): void;
   launchShellFor(label: string): void;
+  openDiffFor(label: string): void;
 };
 
 export function createFileNavigatorControllerAdapter(managers: Managers): FileNavigatorControllerAdapter {
@@ -67,6 +68,9 @@ export function createFileNavigatorControllerAdapter(managers: Managers): FileNa
     openFileNavigatorFor: (label) => fileNavigatorRpc.openFileNavigatorFor(managers, label),
     launchShellFor: (label) => {
       void managers.plugins.openSibling('shell', { label, command: 'zsh' });
+    },
+    openDiffFor: (label) => {
+      void managers.plugins.openSibling('diff', { label, command: 'diff' });
     },
   };
 }

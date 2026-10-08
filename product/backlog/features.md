@@ -2,8 +2,6 @@
 
 ## ready
 
-* git diff tab used to inspect changes in a workspace. It should show changes in a format similar to github's files changed format. clicking files should open them in an editor tab. double clicking lines in the diff should take you to that position in the changed file in an editor tab.
-
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and receive the transcript as the agent works, and to recieve the response.
 
 ## development

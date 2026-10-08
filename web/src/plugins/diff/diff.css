@@ -1,0 +1,61 @@
+/* The diff tab's own look: a framed, scrolling body of file entries, each a header and its hunks,
+   rendered in the monospace the editor uses so a change reads as code. The added and removed rows
+   follow the editor's own inline suggest diff — green from --success, red from --error, the removed
+   line struck through — so the two look like one application. */
+.diff-tab { gap: 6px; }
+
+.diff-root { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+
+.diff-view { display: flex; align-items: center; gap: 2px; }
+.diff-view button,
+.diff-meta-actions button {
+  background: transparent; border: 1px solid transparent; border-radius: 3px; color: var(--muted);
+  cursor: pointer; font: inherit; font-size: 12px; padding: 0 6px;
+}
+.diff-view button:hover,
+.diff-meta-actions button:hover { color: var(--fg); }
+.diff-view button.on { border-color: var(--border); color: var(--accent); }
+
+.diff-refresh { line-height: 1.4; }
+
+.diff-body {
+  flex: 1; min-height: 0; overflow-y: auto; outline: none;
+  border: 1px solid var(--border); border-radius: 3px;
+  font-family: var(--mono, monospace); font-size: 12px;
+}
+
+.diff-empty { padding: 8px 12px; color: var(--muted); }
+
+.diff-file + .diff-file { border-top: 1px solid var(--border); }
+
+.diff-file-header {
+  display: flex; align-items: baseline; gap: 8px; padding: 4px 12px;
+  background: color-mix(in srgb, var(--muted) 8%, transparent); position: sticky; top: 0; z-index: 1;
+}
+.diff-file-name {
+  background: transparent; border: none; color: var(--fg); cursor: pointer; font: inherit;
+  padding: 0; text-align: left; word-break: break-all;
+}
+.diff-file-name:hover { color: var(--accent); text-decoration: underline; }
+.diff-file-name:disabled { color: var(--muted); cursor: default; text-decoration: none; }
+
+.diff-counts { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+.diff-added-count { color: var(--success); }
+.diff-removed-count { color: var(--error); }
+
+.diff-hunk { border-left: 2px solid transparent; cursor: text; }
+.diff-hunk.diff-walked { border-left-color: var(--accent); }
+
+.diff-line, .diff-cell {
+  display: flex; gap: 8px; padding: 0 12px 0 10px; white-space: pre; overflow-x: auto;
+}
+.diff-line.added, .diff-cell.added { background: color-mix(in srgb, var(--success) 15%, transparent); }
+.diff-line.removed, .diff-cell.removed { background: color-mix(in srgb, var(--error) 15%, transparent); }
+.diff-line.removed .diff-text, .diff-cell.removed .diff-text { text-decoration: line-through; }
+
+.diff-number { color: var(--faint); flex-shrink: 0; min-width: 3ch; text-align: right; user-select: none; }
+
+.diff-split-row { display: flex; }
+.diff-split-row .diff-cell { flex: 1; min-width: 0; }
+.diff-split-row .diff-cell.old { border-right: 1px solid var(--border); }
+.diff-split-row .diff-cell.empty { background: color-mix(in srgb, var(--muted) 5%, transparent); }

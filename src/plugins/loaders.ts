@@ -5,6 +5,7 @@ export const tabPluginLoaders = {
   asciicast: () => import('./asciicast/activate.js'),
   audio: () => import('./audio/activate.js'),
   conversations: () => import('./conversations/activate.js'),
+  diff: () => import('./diff/activate.js'),
   image: () => import('./image/activate.js'),
   markdown: () => import('./markdown/activate.js'),
   page: () => import('./page/activate.js'),

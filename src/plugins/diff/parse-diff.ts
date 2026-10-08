@@ -1,0 +1,221 @@
+import type { DiffFile, DiffHunk, DiffLine } from './shared.js';
+
+// The pure half of the diff: git's unified diff output in, the payload's file records out. No
+// process, no filesystem, and no path resolution beyond the prefix the caller supplies.
+//
+// The parser reads a file's paths from its `---`/`+++` lines rather than its `diff --git` line,
+// because a path with a space in it is ambiguous in the latter and is not ambiguous in the former:
+// git pads a spaced path with a trailing tab, and quotes a non-ASCII one. `rename from`/`rename to`
+// are consulted only for a pure rename, which carries no `---`/`+++` lines at all.
+
+type PendingFile = {
+  oldPath: string;
+  newPath: string;
+  oldIsNull: boolean;
+  newIsNull: boolean;
+  renamedFrom?: string;
+  renamedTo?: string;
+  deleted: boolean;
+  binary: boolean;
+  hunks: DiffHunk[];
+};
+
+type ParseOptions = {
+  // The repo-relative prefix of the diffed root, removed from every path so the records come back
+  // relative to the root the tab shows. Empty when the root is the repository root.
+  prefix?: string;
+  // The path to record, for an output that cannot name the file: an untracked file's `--no-index`
+  // diff carries only its basename in its `+++` line.
+  path?: string;
+};
+
+// `@@ -oldStart,oldCount +newStart,newCount @@`. The counts default to 1, which is what git omits
+// them for.
+const HUNK_HEADER = /^@@ -(\d+),?(\d*) \+(\d+),?(\d*) @@/;
+
+const ESCAPES: Record<string, number> = { n: 10, t: 9, r: 13, '"': 34, '\\': 92 };
+
+function unquote(raw: string): string {
+  if (raw.length < 2 || !raw.startsWith('"') || !raw.endsWith('"')) return raw;
+  const body = raw.slice(1, -1);
+  const bytes: number[] = [];
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch !== '\\') {
+      // Escaped octal sequences are the bytes of a UTF-8 path, so the unescaped characters are
+      // encoded to bytes the same way and the whole string is decoded once at the end.
+      bytes.push(...new TextEncoder().encode(ch));
+      continue;
+    }
+    const escape = body[++i];
+    if (escape === undefined) break;
+    const octal = escape + body[i + 1] + body[i + 2];
+    if (/^[0-7]{3}$/.test(octal)) {
+      bytes.push(Number.parseInt(octal, 8));
+      i += 2;
+      continue;
+    }
+    bytes.push(ESCAPES[escape] ?? escape.codePointAt(0) ?? 0);
+  }
+  return Buffer.from(bytes).toString('utf8');
+}
+
+// One path from a `---` or `+++` line: the value after the marker, its padding tab dropped, its
+// quotes decoded, and its `a/` or `b/` side prefix removed. `/dev/null` is answered as such.
+function sidePath(raw: string): string {
+  const value = raw.endsWith('\t') ? raw.slice(0, -1) : raw;
+  if (value === '/dev/null') return value;
+  const path = unquote(value);
+  return path.startsWith('a/') || path.startsWith('b/') ? path.slice(2) : path;
+}
+
+function stripPrefix(path: string, prefix: string): string {
+  return prefix && path.startsWith(prefix) ? path.slice(prefix.length) : path;
+}
+
+function pendingFile(): PendingFile {
+  return { oldPath: '', newPath: '', oldIsNull: false, newIsNull: false, deleted: false, binary: false, hunks: [] };
+}
+
+// The two sides of a `Binary files a/x and b/y differ` line: `Binary files ` and ` differ` stripped,
+// then split on the last ` and `, so a path containing one keeps its own tail. Greedy, because the
+// ambiguity is git's own and quoting is its answer to it.
+function binarySides(line: string): { old: string; new: string } | null {
+  const rest = line.slice('Binary files '.length, line.endsWith(' differ') ? -' differ'.length : undefined);
+  const sides = /^(.+) and (.+)$/.exec(rest);
+  return sides ? { old: sidePath(sides[1]), new: sidePath(sides[2]) } : null;
+}
+
+// The hunk's lines, numbered as they are walked. `jump` is filled in a second pass: a removed line
+// has no new-side position of its own, so it borrows the next added or context line's.
+// A removed line has no new-side position of its own, so it borrows the new-side number of the next
+// added or context line, and a hunk that ends in removed lines borrows its last new-side number.
+function assignJumps(lines: DiffLine[], lastNew: number): void {
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].kind !== 'removed') {
+      lines[i].jump = lines[i].number;
+      continue;
+    }
+    const next = lines.slice(i + 1).find((line) => line.kind !== 'removed');
+    lines[i].jump = next ? next.number : lastNew;
+  }
+}
+
+function hunkLines(oldStart: number, newStart: number, body: string[]): DiffLine[] {
+  const lines: DiffLine[] = [];
+  let oldNumber = oldStart;
+  let newNumber = newStart;
+  for (const raw of body) {
+    if (raw.startsWith('\\')) continue;
+    const kind = raw[0] === '+' ? 'added' : raw[0] === '-' ? 'removed' : 'context';
+    lines.push({ kind, number: kind === 'removed' ? oldNumber : newNumber, jump: 0, text: raw.slice(1) });
+    if (kind === 'removed') oldNumber += 1;
+    else {
+      oldNumber += 1;
+      newNumber += 1;
+    }
+  }
+  assignJumps(lines, newNumber - 1);
+  return lines;
+}
+
+function finish(file: PendingFile, options: ParseOptions): DiffFile | null {
+  const prefix = options.prefix ?? '';
+  const lines = file.hunks.flatMap((hunk) => hunk.lines);
+  const rawPath = file.renamedTo ?? (file.newIsNull ? file.oldPath : file.newPath);
+  if (rawPath === '' || rawPath === '/dev/null') return null;
+  const path = stripPrefix(rawPath, prefix);
+  const oldPath = file.renamedFrom ?? (file.oldIsNull || file.newIsNull || file.oldPath === file.newPath ? undefined : file.oldPath);
+  return {
+    path,
+    ...(oldPath !== undefined && oldPath !== path && { oldPath: stripPrefix(oldPath, prefix) }),
+    ...(file.deleted && { deleted: true }),
+    ...(file.binary && { binary: true }),
+    additions: lines.filter((line) => line.kind === 'added').length,
+    deletions: lines.filter((line) => line.kind === 'removed').length,
+    hunks: file.hunks,
+  };
+}
+
+// One line of the diff that is not hunk content, applied to the file being read. Answers a `@@`
+// header's two start lines, so the caller can open a hunk; every other header line is consumed.
+function readHeaderLine(file: PendingFile, line: string): { oldStart: number; newStart: number } | null {
+  if (line.startsWith('rename from ')) { file.renamedFrom = unquote(line.slice('rename from '.length)); return null; }
+  if (line.startsWith('rename to ')) { file.renamedTo = unquote(line.slice('rename to '.length)); return null; }
+  if (line.startsWith('deleted file mode')) { file.deleted = true; return null; }
+  if (line.startsWith('Binary files ')) {
+    file.binary = true;
+    // A tracked binary change prints no `---`/`+++` lines at all, so its two paths live only here.
+    const sides = binarySides(line);
+    if (sides) {
+      file.oldIsNull = sides.old === '/dev/null';
+      file.newIsNull = sides.new === '/dev/null';
+      file.oldPath = sides.old;
+      file.newPath = sides.new;
+    }
+    return null;
+  }
+  if (line.startsWith('--- ')) {
+    const value = sidePath(line.slice(4));
+    file.oldIsNull = value === '/dev/null';
+    file.oldPath = value;
+    return null;
+  }
+  if (line.startsWith('+++ ')) {
+    const value = sidePath(line.slice(4));
+    file.newIsNull = value === '/dev/null';
+    file.newPath = value;
+    return null;
+  }
+  const header = HUNK_HEADER.exec(line);
+  return header ? { oldStart: Number(header[1]), newStart: Number(header[3]) } : null;
+}
+
+export function parseDiff(output: string, options: ParseOptions = {}): DiffFile[] {
+  const lines = output.split('\n');
+  // The output ends with a newline, so the split leaves one empty element behind that is not a line
+  // of the diff. Pop it before the walk, or it reads as an empty context line on the last hunk.
+  if (lines.at(-1) === '') lines.pop();
+  const files: DiffFile[] = [];
+  let file = pendingFile();
+  let hunk: DiffHunk | null = null;
+  let body: string[] = [];
+
+  const closeHunk = (): void => {
+    if (hunk) hunk.lines = hunkLines(hunk.oldStart, hunk.newStart, body);
+    hunk = null;
+    body = [];
+  };
+
+  const closeFile = (): void => {
+    closeHunk();
+    const finished = finish(file, options);
+    if (finished) files.push(finished);
+    file = pendingFile();
+  };
+
+  for (const line of lines) {
+    if (line.startsWith('diff --git ')) {
+      closeFile();
+      continue;
+    }
+    // Inside a hunk, only its own content lines belong to it: a space, a `+`, a `-`, a `\` marker, or
+    // an empty line. Anything else closes the hunk and is read as a header again.
+    if (hunk) {
+      if (line === '' || line.startsWith(' ') || line.startsWith('+') || line.startsWith('-') || line.startsWith('\\')) {
+        body.push(line);
+        continue;
+      }
+      closeHunk();
+    }
+    const header = readHeaderLine(file, line);
+    if (header === null) continue;
+    hunk = { oldStart: header.oldStart, newStart: header.newStart, lines: [] };
+    file.hunks.push(hunk);
+  }
+  closeFile();
+
+  const forcedPath = options.path;
+  if (forcedPath === undefined) return files;
+  return files.map((entry) => ({ ...entry, path: forcedPath, oldPath: undefined }));
+}

@@ -1,0 +1,54 @@
+import React from 'react';
+import type { DiffFile } from '@shared/plugins/diff/shared';
+import { HunkLines } from './HunkLines';
+import { SplitHunks } from './SplitHunks';
+
+// One changed file: its header — the path, the rename it came from, its add and delete counts — and
+// every hunk it holds. A deleted file's header is inert, because there is no file to open; a binary
+// file's header opens the media tab its extension already opens instead.
+//
+// `offset` is how many hunks the files above this one contribute to the walk's flat list, and a hunk
+// with no lines contributes none, which is what keeps a walked index pointing at a real hunk.
+export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia }: {
+  file: DiffFile;
+  split: boolean;
+  offset: number;
+  walked: number | null;
+  onSelectHunk(index: number): void;
+  onOpenFile(): void;
+  onOpenLine(line: { number: number; jump: number }): void;
+  onOpenMedia(): void;
+}) {
+  let taken = 0;
+  const spots = file.hunks.map((hunk) => (hunk.lines.length === 0 ? -1 : offset + taken++));
+  return (
+    <div className="diff-file">
+      <div className="diff-file-header">
+        <button
+          type="button"
+          className="diff-file-name"
+          disabled={file.deleted}
+          title={file.path}
+          onClick={file.binary ? onOpenMedia : onOpenFile}
+        >
+          {file.oldPath === undefined ? file.path : `${file.oldPath} → ${file.path}`}
+        </button>
+        <span className="diff-counts">
+          {file.additions > 0 && <span className="diff-added-count">+{file.additions}</span>}
+          {file.deletions > 0 && <span className="diff-removed-count">−{file.deletions}</span>}
+        </span>
+      </div>
+      {file.hunks.map((hunk, index) => {
+        const spot = spots[index];
+        const walkedHere = spot >= 0 && walked === spot;
+        const shared = {
+          onSelect: () => { if (spot >= 0) onSelectHunk(spot); },
+          onOpenLine: (line: { number: number; jump: number }) => { onOpenLine(line); },
+        };
+        return split
+          ? <SplitHunks key={index} hunk={hunk} index={spot} walked={walkedHere} {...shared} />
+          : <HunkLines key={index} hunk={hunk} index={spot} walked={walkedHere} {...shared} />;
+      })}
+    </div>
+  );
+}

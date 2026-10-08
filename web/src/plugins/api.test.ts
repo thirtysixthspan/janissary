@@ -20,6 +20,13 @@ let host: PluginHost;
 beforeEach(() => { host = createPluginHost(); });
 
 describe('createPluginClientCapabilities', () => {
+  it('sends the tab-scoped RPC the diff button names', () => {
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities(host, 'shell', 'shell-1', client, true, null, vi.fn());
+    capabilities.openDiffHere?.();
+    expect(send).toHaveBeenCalledWith({ method: 'openDiffFor', params: { label: 'shell-1' } });
+  });
+
   it('authorizes a terminal attachment against the owning tab before listening', async () => {
     const { client, send } = makeClient(async () => ({ ok: true, value: true }));
     const attachPty = vi.fn(() => vi.fn());

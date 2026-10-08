@@ -21,6 +21,7 @@ const makeController = () =>
     dispatch: vi.fn(),
     answerQuestion: vi.fn(),
     launchShellFor: vi.fn(),
+    openDiffFor: vi.fn(),
     setActiveTab: vi.fn(),
     focusTab: vi.fn(),
     moveTabToOtherPane: vi.fn(),
@@ -566,6 +567,12 @@ describe('handle', () => {
     const controller = makeController();
     dispatchCall(controller, 48, { method: 'launchShellFor', params: { label: 'janus' } });
     expect(controller.launchShellFor).toHaveBeenCalledWith('janus');
+  });
+
+  it('routes openDiffFor', () => {
+    const controller = makeController();
+    dispatchCall(controller, 49, { method: 'openDiffFor', params: { label: 'janus' } });
+    expect(controller.openDiffFor).toHaveBeenCalledWith('janus');
   });
 
   it('routes editorPersonas to a reply carrying the editor persona names', () => {

@@ -85,7 +85,7 @@ export { isTextEntryElement } from '../shared/text-entry';
 // no glyph and no size, which is invisible rather than obviously broken. `openFilesIcon` and
 // `newTabIcon` are here for that reason: a metadata row of a plugin's own cannot draw its buttons.
 export { ConnectionPlug,  } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon,  workspacedIcon, syncIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon } from '../shared/icons';
+export { detachSessionIcon, attachSessionIcon,  workspacedIcon, syncIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon, diffIcon } from '../shared/icons';
 
 // The host's own floating status panels and the visibility hook that drives them, published for the
 // same reason and on the same terms: a plugin whose tab offers the connections and schedule buttons
@@ -246,6 +246,11 @@ export type TabPluginClientCapabilities = {
   // for the same reason as `attachTerminal`.
   openFileNavigator?(): void;
   launchShellHere?(): void;
+  // Open the diff tab on this tab's own workspace. The third of the metadata-row actions that are
+  // tab-scoped RPCs rather than commands, for the same reason as the two above: a command run in
+  // this tab would diff whatever its command line resolves, not the environment this tab is working
+  // in. Optional for the same reason as `attachTerminal`.
+  openDiffHere?(): void;
   onBackgroundReply?(receive: (reply: { id: string; output: string }) => void): () => void;
   // This tab's asciicast recording, or absent before the tab's terminal has produced any output. Its
   // presence is also what makes the recording flag pressable, so a plugin drawing that flag reads
@@ -330,6 +335,7 @@ export function createPluginClientCapabilities(
     onBackgroundReply: (receive) => subscribeBackgroundReplies(client, label, receive),
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
     launchShellHere: () => { client.send({ method: 'launchShellFor', params: { label } }); },
+    openDiffHere: () => { client.send({ method: 'openDiffFor', params: { label } }); },
     // The two are supplied together or not at all: a plugin drawing the recording flag needs one
     // answer to "does this tab have a recording", and a handler with no path behind it would be a
     // button that opens nothing.
