@@ -2,17 +2,6 @@
 
 ## ready
 
-* Move the pending-question dialog out of the app-shell root into a shared subdirectory beside the module that already depends on it, so the shared layer stops reaching up into the app shell.
-
-Existing Debt: `web/src/shared/acp/AcqResponseScope.tsx` imports `QuestionPanel` from `web/src/QuestionPanel.tsx` at the app root, importing upward out of the shared layer in violation of §3 (no feature imports another feature, and shared imports nothing from features or the app shell), and the file it reaches is a dialog rather than routing, layout, providers or composition. Severity: 7/10
-
-Existing Risk: 6/10 - `web/src/plugins/api.ts` publishes `useAcpResponse` from `web/src/shared/acp/AcpResponseScope.tsx` to every tab plugin, so the shared layer transitively depends on the app-shell root, and the first feature import `web/src/QuestionPanel.tsx` ever grows would land inside `shared/` where the `no-restricted-paths` zones that keep features apart cannot see it.
-
-Proposal Risk: 2/10 - The dialog becomes a shared module and `web/src/shared/acp/AcqResponseScope.tsx` imports a sibling, but the shared layer would still hold the question dialog, and nothing stops a later contributor from putting tab-specific knowledge into `web/src/shared/questions/QuestionPanel.tsx`.
-
-Proposal: Move `web/src/QuestionPanel.tsx` and `web/src/useAnswerButtons.ts`, each with its colocated test (`web/src/QuestionPanel.test.tsx` and `web/src/useAnswerButtons.test.ts`), into a new `web/src/shared/questions/` directory, keeping both file names. Inside the moved `QuestionPanel.tsx` retarget its own specifiers: `./ws` becomes `../../ws`, `./shared/ModalDialog` becomes `../ModalDialog`, `./shared/tab/handles` becomes `../tab/handles`, and `./useAnswerButtons` stays as it is because the two files move together. Retarget the two other value importers — `web/src/MountedViewLayers.tsx`, whose `./QuestionPanel` becomes `./shared/questions/QuestionPanel`, and `web/src/shared/acp/AcqResponseScope.tsx`, whose `../../QuestionPanel` becomes `../questions/QuestionPanel` — plus `web/src/useSectionNav.question.test.tsx`, whose `./QuestionPanel` becomes `./shared/questions/QuestionPanel`. The seven importers of the `QuestionPanelHandle` type read it from `web/src/shared/tab/handles.ts`, which does not move, so they need no edit. Blast radius is four file moves and three import-path retargets, and the same change fixes the smaller problem beside it: `web/src/useAnswerButtons.ts` is a one-consumer helper currently parked at the app root instead of beside the only component that uses it, which §2 also forbids. `web/src/QuestionPanel.test.tsx` and `web/src/useAnswerButtons.test.ts` move with their sources and keep their own relative specifiers; both must keep passing unchanged, and `web/src/QuestionPanel.test.tsx` is what pins the cancel-button focus contract.
-
-
 * Move the hunk-preview derivation and row scheduling out of the editor's line component into a pure module beside it, so the diff preview layout can be tested without rendering the buffer.
 
 Existing Debt: `web/src/editor/EditorLines.tsx` derives `previews` by mapping, filtering and sorting `pending.hunks` against `suggestDiffPreview`, and then runs a row-scheduling loop in the component body that decides which rows render, which are marked removed, where each hunk's added rows go, and which overlapping hunks are skipped, in violation of §5 (components render, they do not decide). Severity: 5/10

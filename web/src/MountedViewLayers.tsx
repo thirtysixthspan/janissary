@@ -7,7 +7,7 @@ import { HarnessTabLayer } from './harness/HarnessTabLayer';
 import type { PickerOverlayProps } from './pickers/picker/overlay-props';
 import { TaskPicker } from './pickers/TaskPicker';
 import { TabNavPicker } from './pickers/TabNavPicker';
-import { QuestionPanel } from './QuestionPanel';
+import { QuestionPanel } from './shared/questions/QuestionPanel';
 import type { QuestionPanelHandle } from './shared/tab/handles';
 import { tabBodyBorder } from './shared/tab/body-border';
 import { PluginTabLayer } from './plugins/PluginTabLayer';
