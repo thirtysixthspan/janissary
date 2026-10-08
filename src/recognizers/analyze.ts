@@ -22,6 +22,7 @@ export type AnalysisDecision =
 // when it is confident enough; otherwise the result is ambiguous and the caller should prompt.
 export function analyzeCommand(command: string, context: RecognizerContext): AnalysisDecision {
   const matches: RouteResult[] = recognizers
+    .filter((recognizer) => recognizer.route !== 'acp' || context.allowAcp !== false)
     .map((r) => ({ route: r.route, ...r.recognize(command, context) }))
     .filter((r) => r.match)
     .map(({ route, reliability }) => ({ route, reliability }))

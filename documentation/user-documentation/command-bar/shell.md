@@ -18,27 +18,27 @@ shell find . -name "*.ts"
 
 The prefix is the deterministic escape hatch — whatever follows it goes straight to the shell. `!` is shorthand for the same thing — `!find . -name "*.ts"` is identical to `shell find . -name "*.ts"` — and `!!` is shorthand for `shell --pty`, forcing the command straight into a full-tab terminal (see below): `!!htop` is identical to `shell --pty htop`.
 
-The chooser always lists `shell` and `acp (agent prompt)`. It also lists one `db query → <name>`
+The chooser lists `shell`; a tab supporting ACP also offers `acp (agent prompt)`. Agent tabs do not offer ACP. It also lists one `db query → <name>`
 option for each database connection open in the current tab. It does not offer a database route
 when that tab has no open database. A confident SQL guess runs immediately when exactly one database
 is open. With several open, the guess opens the chooser instead so you can pick the target; with
 none open, there is no target to pick and the guess is not offered as a database route. You can also
-skip recognition with the `acp ` prefix, or with `db ` followed by a whole database command —
+use `acp ` in a shell tab, or skip recognition with `db ` followed by a whole database command —
 `db sqlite query <name> <sql>`, since the word after `db` is read as the engine name.
 
 A command word that is also an ordinary English word is read as the start of a sentence when the
-line looks like one. `find the largest file in this repo` goes to the agent, while `find . -name
+line looks like one. `find the largest file in this repo` opens the route chooser, while `find . -name
 "*.ts"` goes to the shell.
 
 The chooser is modal, so the command bar is disabled until you choose or cancel. It is titled
 `route: <the line you typed>`. Use `↑` and `↓`, press `Return`, or click a row. `acp (agent prompt)`
-is highlighted when the chooser opens.
+is highlighted when offered; otherwise `shell` is highlighted.
 
 The chooser belongs to the tab that raised it. Answering it while you have clicked over to a different tab runs the command in the original one, not the one you are looking at. Keyboard tab-switching is blocked while a chooser is open, which hides this most of the time; the mouse is the way in.
 
 Only one chooser is open at a time, and that holds across the whole app, not just one tab. While one is open, nothing else can open one: a command in any other tab, or a scheduled or queued one, doesn't run, and its own tab shows `Another command is waiting for a route choice; run this again once it is answered.` Closing the tab that opened the chooser also closes the chooser.
 
-Typed in a tab, a line that no built-in command claims and that fits no confident route always gets the chooser, never a refusal — there is always `shell` and `acp (agent prompt)` to pick. The `Unknown command: "<what you typed>". Type "help" for available commands.` line exists, but a command sent to a tab by another one is the only path that produces it, and it arrives in the sender's transcript as that tab's answer.
+Typed in a tab, a line that no built-in command claims and that fits no confident route always gets the chooser, never a refusal — there is always `shell` to pick, plus any supported database or ACP route. The `Unknown command: "<what you typed>". Type "help" for available commands.` line exists, but a command sent to a tab by another one is the only path that produces it, and it arrives in the sender's transcript as that tab's answer.
 
 See [Databases](/user-documentation/command-bar/database) for database routing and [ACP agents](/user-documentation/advanced-agents/acp-agent)
 for agent-prompt routing.
@@ -149,3 +149,7 @@ Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh 
 With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.
 
 With the terminal focused, press `Ctrl+Shift+C` to copy its selection. On macOS, press `Cmd+C`. The copied text is available from your system clipboard and the clipboard-history popup.
+
+## Query ACP from a shell
+
+Use `acp <prompt>` in the shell command bar to query OpenCode. Replies stream as Markdown in the ACP panel above the bar, with tool steps and a responding status. **Reset ACP** stops the current connection immediately, including while a reply is in progress. The panel and its controls belong to that shell when it is docked too. See [ACP agents](/user-documentation/advanced-agents/acp-agent) for setup, tools, and remote connections.

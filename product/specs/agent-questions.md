@@ -1,6 +1,6 @@
 # Agent questions
 
-An ACP agent running in a Janissary agent tab can pause its tool loop and ask the human for an answer. The request belongs to the asking tab and does not block other tabs.
+A core ACP connection used by a shell or another plugin tab can pause its tool loop and ask the human for an answer. The request belongs to the asking tab and does not block other tabs.
 
 ### Commands
 

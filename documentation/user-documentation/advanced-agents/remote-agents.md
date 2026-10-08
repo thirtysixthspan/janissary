@@ -162,6 +162,6 @@ The command implies a remote workspace even if you include `--no-workspace`. It 
 
 ## Asking the remote agent
 
-`acp <prompt>` works in a remote agent tab, and the agent runs on the remote host against that host's workspace — see [ACP agents](/user-documentation/advanced-agents/acp-agent). The `db` and `browser` commands it runs on its own still act on your machine, not the remote.
+Use `acp <prompt>` in a remote shell tab to query a core ACP connection running against that host's workspace — see [ACP agents](/user-documentation/advanced-agents/acp-agent). The `db` and `browser` commands it runs on its own still act on your machine, not the remote.
 
 For this to work, `opencode` has to be installed and authenticated on the remote — or an OpenCode or Gemini API key configured in your local project, which is forwarded across the connection the same way the other credentials are.

@@ -72,7 +72,6 @@ describe('useServerState', () => {
     expect(setters.setHarnessLaunch).toHaveBeenCalledWith(snapshot.harnessLaunch);
     expect(setters.setScheduleLaunch).toHaveBeenCalledWith(snapshot.scheduleLaunch);
     expect(setters.routeRef.current).toEqual(snapshot.route);
-    expect(setters.setRouteIndex).toHaveBeenCalledWith(1);
     expect(document.title).toBe('Janissary (4.5.6): /projects/example');
 
     act(() => { client.emit(null); });

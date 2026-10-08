@@ -35,6 +35,9 @@ export type TabPluginCapabilityName =
   | 'nextQueuedLine'
   | 'recordCwd'
   | 'recordGlobalHistory'
+  | 'startAcp'
+  | 'promptAcp'
+  | 'resetAcp'
   | 'rejectRequest'
   | 'reportFailure';
 
@@ -70,6 +73,9 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   nextQueuedLine: true,
   recordCwd: true,
   recordGlobalHistory: true,
+  startAcp: true,
+  promptAcp: true,
+  resetAcp: true,
   rejectRequest: true,
   reportFailure: true,
 };

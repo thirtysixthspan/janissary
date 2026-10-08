@@ -26,7 +26,7 @@ export type Resolution =
  * - `output`: a built-in with textual output to display (also the "unknown command" reply).
  * - `empty`: nothing to do.
  */
-export function resolveCommand(raw: string): Resolution {
+export function resolveCommand(raw: string, available: (name: string) => boolean = () => true): Resolution {
   const trimmed = raw.trim();
   if (!trimmed) return { kind: 'empty' };
 
@@ -54,7 +54,7 @@ export function resolveCommand(raw: string): Resolution {
   const command = trimmed.replace(/^\//, '');
 
   for (const c of commands) {
-    if (c.match(command)) {
+    if (c.match(command) && available(c.name)) {
       return { kind: 'app', name: c.name, cmd: command };
     }
   }

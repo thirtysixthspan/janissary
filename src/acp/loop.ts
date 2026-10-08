@@ -23,6 +23,7 @@ export function runAcpToolLoop(
 
   // Start a turn's transcript entry, then issue the prompt into it.
   function turn(turnPrompt: string, isFirst: boolean, step: number) {
+    if (dependencies.signal?.aborted) return;
     h.startTurn(isFirst);
     promptOnce(turnPrompt, isFirst, step, 0);
   }
@@ -32,11 +33,13 @@ export function runAcpToolLoop(
   // the first prompt); retry the first turn once, reusing the same entry, before
   // treating an empty reply as a final (no-command) answer.
   function promptOnce(turnPrompt: string, isFirst: boolean, step: number, attempt: number) {
+    if (dependencies.signal?.aborted) return;
     let buffer = '';
     const sent = isFirst && dependencies.primer ? `${dependencies.primer}\n\n${userPrompt}` : turnPrompt;
     session.prompt(sent, {
       onChunk: (text) => { buffer += text; h.chunk(buffer); },
       onEnd: async () => {
+        if (dependencies.signal?.aborted) return;
         if (!buffer.trim() && isFirst && attempt === 0) {
           promptOnce(turnPrompt, isFirst, step, attempt + 1);
           return;
@@ -50,6 +53,7 @@ export function runAcpToolLoop(
           // see the full loop.
           const returnValue = dependencies.runCommand(command);
           const result = returnValue instanceof Promise ? await returnValue : returnValue;
+          if (dependencies.signal?.aborted) return;
           h.ranCommand(command, result);
           const followUp =
             `Output of \`${command}\`:\n${result}\n\n` +

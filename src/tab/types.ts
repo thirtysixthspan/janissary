@@ -253,6 +253,8 @@ export type MonitorSuggestion = {
 export type CenterPane = 'left' | 'right';
 
 export type TabRuntime = {
+  acpEntries?: WeakSet<LogEntry>;
+  acpPrompt?: { finish: (output: string) => void; abort: AbortController };
   cwd?: string;
   busy: boolean;
   context: string[];

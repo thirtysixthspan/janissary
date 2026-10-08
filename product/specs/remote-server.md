@@ -571,7 +571,7 @@ given ten minutes. A request still waiting when the session reconnects is not fa
 the remote replays its queued replies on reattach; a reply that arrives after its request has
 already been reported as failed is ignored.
 
-A remote agent tab's `acp` agent is a further exception, and it splits three ways. The **agent
+A remote shell or other supported plugin tab's core ACP agent is a further exception, and it splits three ways. The **agent
 process** runs on the remote, in the workspace clone, so it sees the files the tab is working on; the
 remote hosts the ACP client too, so what crosses the channel is prompt text and reply chunks rather
 than JSON-RPC. The **autonomous tool loop** stays local — a remote agent's `db`, `browser`, and

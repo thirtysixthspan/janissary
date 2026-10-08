@@ -1,0 +1,25 @@
+.acp-response {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 100px;
+  max-height: 40%;
+  overflow: hidden;
+  border-top: 1px solid var(--border);
+}
+
+.acp-response-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+}
+
+.acp-response-header button {
+  margin-left: auto;
+}
+
+.acp-response .transcript {
+  min-height: 0;
+  overflow-y: auto;
+}

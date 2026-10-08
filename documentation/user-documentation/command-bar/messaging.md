@@ -57,7 +57,7 @@ Reaching the other tabs is not reported back. What you do get is a line naming a
 
 A messaged `request` or `command` is never moved into a terminal, because it has to hand captured text back to the sender and a takeover has none to give. An interactive program is refused with `Cannot run interactive command remotely: vim`, and so is a forced-terminal spelling of one: `shell --pty <cmd>`, `!!<cmd>`, or a bare `shell --pty` or `!!`, which names your `$SHELL` instead. This is the first thing you hit when you message an editor or a REPL to another agent.
 
-`acp` and `browser` answer through their own command's capture rather than by reading back the last thing they wrote to the recipient's transcript. Every other command answers with the last entry it appended there.
+`browser` answers through its command's capture rather than by reading back the last thing they wrote to the recipient's transcript. Every other command answers with the last entry it appended there. Requests to agent tabs execute commands; prose that matches no command gets an unknown-command response. To query ACP, use a shell tab.
 
 ## When the recipient tab closes
 

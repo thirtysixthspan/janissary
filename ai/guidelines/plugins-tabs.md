@@ -139,3 +139,7 @@ Before finishing a new tab plugin, verify all of these exist and agree:
 8. Client tests for lazy loading, payload validation, rendering, intents, and failure.
 9. Product spec update and, for API changes, reference changelog update.
 10. `$janissary/scripts/run.mjs check-diff`, the production web build/chunk inspection, and the frozen fixture tests.
+
+## Core ACP
+
+ACP is a core tab service, never a concrete tab plugin. A tab plugin opts in with `startAcp`, `promptAcp`, and `resetAcp`, scoped to its own tab. Use the host's `useAcpResponse` surface for streaming rather than duplicating session, tool-loop, rendering, or lifecycle behavior in the plugin. Provider latency belongs to core and is exempt from plugin budgets. Agent tabs have no ACP command or prose route.

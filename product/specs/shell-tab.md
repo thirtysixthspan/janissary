@@ -443,3 +443,7 @@ answer a query into zsh or change its state. Control keys pressed in the command
 `Ctrl+D`, `Ctrl+Z`) are unaffected.
 
 See also [[tab-plugins]], [[shell]], [[agents]], and [[tabs]].
+
+## Core ACP connections
+
+The shell requests the core ACP start, prompt, and reset capabilities. `acp <prompt>` streams Markdown and tool steps in the core response panel above the bar, rather than duplicating them in zsh. The panel's Reset ACP control works while the bar is awaiting a response. It and the tool-step controls target this shell even when docked. A selected docked shell also shows its pending core question. Protocol, model selection, session reuse, local sandboxing, remote workspaces, and tool-loop rules live in [[acp]].

@@ -1,25 +1,24 @@
-import type { AcpSession, AcpInfo } from './types.js';
-import { connectAcp } from './index.js';
-import { createRemoteAcpSession } from '../remote/acp-session.js';
+import { AcpSessionManager } from './session-manager.js';
 import { runAcpToolLoop } from './loop.js';
+import { guardAcpHandlers } from './guard-handlers.js';
+import { appendAcp, settleAcpPrompt } from './response.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { isRateLimitError } from './rate-limit.js';
-import type { Managers } from '../managers.js';
 import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './tool-table.js';
-import { acpLaunchFor, MARKDOWN_INSTRUCTION } from './launch.js';
+import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { modelsFor } from '../harness/models.js';
-import type { PersonaHarness } from '../persona-parsing.js';
+import { errorText } from '../error-text.js';
 
-// The model the agent tab's ACP session prefers. A preference, not a fixed choice: the pair is
+// The model a tab's core ACP session prefers. A preference, not a fixed choice: the pair is
 // resolved against the harness catalog the other three ACP entry points already read, so a project
 // that overrides `.janissary/harness-models.json` gets a model from its own list.
 const PREFERRED_ACP_MODEL = 'google/gemini-3.1-flash-lite';
 
 // Refused rather than queued: `RemoteChannel.send` silently drops every frame until ssh has
 // authenticated and the handshake has landed, so a prompt typed into a provisioning tab would hang
-// forever with the busy dot lit. Agent input dispatches immediately, so every ACP entry point needs
-// this readiness check.
+// forever with the busy dot lit. Every core tab ACP entry point checks readiness; the caller can
+// retry once the remote workspace is ready.
 const STILL_CONNECTING = 'ACP: the remote session is still connecting.';
 
 // An override can leave nothing to run. Refused with a message rather than launched with a model the
@@ -34,103 +33,50 @@ function resolveAcpModel(): string | undefined {
   return available[0];
 }
 
-const acpHarnessFor = (model: string): PersonaHarness => ({ harness: 'opencode', model, variant: 'default' });
-
-// Split a `provider/model` config string into its parts; a bare `model` with no slash has no
-// provider. Drives the connections-panel label.
-function parseModel(model: string): AcpInfo {
-  const slash = model.indexOf('/');
-  return slash === -1 ? { model } : { provider: model.slice(0, slash), model: model.slice(slash + 1) };
-}
-
-// Hooks the caller supplies when connecting: `onError` surfaces connection-level errors into the tab
-// transcript, `onConnect` re-renders once the handshake completes (the manager records the session's
-// model info just before calling it, so the connection label resolves).
-type ConnectHooks = {
-  onError: (message: string) => void;
-  onConnect: () => void;
-};
-
-// Owns the per-tab ACP sessions (keyed by tab label) and their reported model info. Sessions connect
-// lazily on first use and persist across prompts; the manager spawns/reuses them, exposes the
-// connection label, and tears them down. The prompt/tool-loop orchestration stays with the caller —
-// the manager only hands back the live session.
-export class AcpManager {
-  private sessions = new Map<string, AcpSession>();
-  private info = new Map<string, AcpInfo>();
-  // Minted locally, like every other remote process id: routing by id makes a chunk still in flight
-  // from a session `acp reset` disposed land on a detached listener rather than in its successor.
-  private remoteCounter = 0;
-
-  constructor(private managers: Managers) {}
-
-  // Whether a tab has a connected (or connecting) ACP session. Drives the connections panel and completion.
-  has(label: string): boolean {
-    return this.sessions.has(label);
-  }
-
-  // The `provider/model` (or bare `model`) string for a tab's session, or undefined when none is
-  // connected. Display-only; populated on the connection handshake.
-  label(label: string): string | undefined {
-    const info = this.info.get(label);
-    if (!info) return undefined;
-    return info.provider ? `${info.provider}/${info.model ?? ''}` : info.model;
-  }
-
-  // The tab's ACP session, connecting one on first use and reusing it thereafter. A local tab's
-  // agent runs in `cwd`; a remote tab's runs on the other machine, inside the workspace clone that
-  // host provisioned, so `cwd` does not apply to it. `hooks.onConnect` fires after the handshake, by
-  // which point the session's model info is recorded (so `label` resolves).
-  //
-  // `model` is resolved by the caller, which is the only place that can report a catalog with
-  // nothing in it; what is recorded here is therefore the model the session actually launched with.
-  session(label: string, cwd: string, model: string, hooks: ConnectHooks): AcpSession {
-    let session = this.sessions.get(label);
-    if (!session) {
-      const info = parseModel(model);
-      const launch = acpLaunchFor(acpHarnessFor(model));
-      const tab = this.managers.tab.byLabel(label);
-      const connect: ConnectHooks = {
-        onError: hooks.onError,
-        onConnect: () => { this.info.set(label, info); hooks.onConnect(); },
-      };
-      const channel = tab?.remote ? this.managers.remote.get(label) : undefined;
-      session = channel
-        ? createRemoteAcpSession(channel, { ...launch, id: `racp${++this.remoteCounter}`, offline: tab?.offline }, connect)
-        : connectAcp({
-          ...launch, cwd,
-          onError: connect.onError,
-          onConnect: connect.onConnect,
-          workspaceDir: tab?.workspaceDir,
-          offline: tab?.offline,
-        });
-      this.sessions.set(label, session);
+export class AcpManager extends AcpSessionManager {
+  start(label: string): { model?: string; error?: string } {
+    if (this.stillConnecting(label)) return { error: STILL_CONNECTING };
+    const model = resolveAcpModel();
+    if (!model) return { error: NO_ACP_MODEL };
+    try {
+      this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), model, {
+        onError: (message) => {
+          appendAcp(this.managers, label, { input: '', output: `ACP: ${message}` });
+          this.close(label, `ACP: ${message}`);
+        },
+        onConnect: () => messageBus.emit('state', { type: 'dirty' }),
+      });
+      return { model };
+    } catch (error) {
+      const output = `ACP error: ${errorText(error)}`;
+      appendAcp(this.managers, label, { input: '', output });
+      this.close(label, output);
+      return { error: output };
     }
-    return session;
   }
 
-  // Kill and forget a tab's session (and its info). Returns whether one was open — the
-  // `connection close acp` path re-renders and reports only when it actually closed one.
-  close(label: string): boolean {
-    const session = this.sessions.get(label);
-    if (!session) return false;
-    session.kill();
-    this.sessions.delete(label);
-    this.info.delete(label);
-    return true;
-  }
-
-  closeTab(label: string): void { this.close(label); }
-
-  // Kill every session and forget all info (app shutdown).
-  closeAll(): void {
-    for (const [, session] of this.sessions) session.kill();
-    this.sessions.clear();
-    this.info.clear();
-  }
-
-  dispose(): void {
-    this.closeAll();
+  prompt(label: string, command: string): Promise<string> {
+    const tab = this.managers.tab.byLabel(label);
+    if (!tab) return Promise.resolve('Tab not found');
+    tab.runtime ??= { busy: false, context: [], queue: [] };
+    if (tab.runtime.acpPrompt) {
+      const output = 'ACP: a prompt is already running.';
+      appendAcp(this.managers, label, { input: command, output });
+      return Promise.resolve(output);
+    }
+    return new Promise((finish) => {
+      const pending = { finish, abort: new AbortController() };
+      tab.runtime!.acpPrompt = pending;
+      try {
+        this.run(label, command, (output) => {
+          if (tab.runtime?.acpPrompt === pending) settleAcpPrompt(this.managers, label, output);
+        });
+      } catch (error) {
+        const output = `ACP error: ${errorText(error)}`;
+        appendAcp(this.managers, label, { input: command, output });
+        this.close(label, output);
+      }
+    });
   }
 
   // A remote tab whose ssh channel has not finished authenticating yet. Its channel entry exists
@@ -144,15 +90,20 @@ export class AcpManager {
 
   run(label: string, command: string, onDone?: (output: string) => void): void {
     const prompt = command.replace(/^acp\b\s*/i, '').trim();
-    if (!prompt) { this.managers.tab.append(label, { input: command, output: 'Usage: acp <prompt>.' }); return; }
+    if (!prompt) {
+      const output = 'Usage: acp <prompt>.';
+      appendAcp(this.managers, label, { input: command, output });
+      onDone?.(output);
+      return;
+    }
     if (this.stillConnecting(label)) {
-      this.managers.tab.append(label, { input: command, output: STILL_CONNECTING });
+      appendAcp(this.managers, label, { input: command, output: STILL_CONNECTING });
       onDone?.(STILL_CONNECTING);
       return;
     }
     const model = resolveAcpModel();
     if (!model) {
-      this.managers.tab.append(label, { input: command, output: NO_ACP_MODEL });
+      appendAcp(this.managers, label, { input: command, output: NO_ACP_MODEL });
       onDone?.(NO_ACP_MODEL);
       return;
     }
@@ -163,11 +114,12 @@ export class AcpManager {
       // loop's own prompt-level errors (a rate limit, most importantly) deliberately do not come
       // here, so a session that merely failed a prompt keeps its accumulated conversation.
       onError: (m) => {
-        this.managers.tab.append(label, { input: '', output: `ACP: ${m}` });
-        this.close(label);
+        appendAcp(this.managers, label, { input: '', output: `ACP: ${m}` });
+        this.close(label, `ACP: ${m}`);
       },
       onConnect: () => messageBus.emit('state', { type: 'dirty' }),
     });
+    const request = this.managers.tab.byLabel(label)?.runtime?.acpPrompt;
 
     const updateRunning = (output: string, running: boolean) => {
       this.managers.tab.updateRunning(label, { markdown: true }, output, running, {
@@ -175,27 +127,29 @@ export class AcpManager {
       });
     };
 
-    const tools = createAcpToolTable(this.managers);
+    const tools = createAcpToolTable(this.managers, request?.abort.signal);
 
     let lastAnswer = '';
     runAcpToolLoop(session, prompt, {
+      signal: request?.abort.signal,
       primer: `${toolPrimer(tools)}\n\n${MARKDOWN_INSTRUCTION}`,
       runCommand: toolRunner(tools, label),
       extractCommand: toolExtractor(tools),
-    }, {
-      startTurn: (isFirst) => { this.managers.tab.addBusy(label); if (isFirst) notify(this.managers, 'agent-start', label); this.managers.tab.append(label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
+    }, guardAcpHandlers({
+      startTurn: (isFirst) => { this.managers.tab.addBusy(label); if (isFirst) notify(this.managers, 'agent-start', label); appendAcp(this.managers, label, { input: isFirst ? prompt : '', output: '', running: true, markdown: true }); },
       chunk: (buffer) => updateRunning(buffer, true),
       endTurn: (final) => { updateRunning(final, false); lastAnswer = final; },
-      ranCommand: (c, result) => this.managers.tab.append(label, { input: c, output: result, acp: true }),
+      ranCommand: (c, result) => appendAcp(this.managers, label, { input: c, output: result, acp: true }),
       finished: (reason, maxSteps) => {
         this.managers.tab.deleteBusy(label);
         notify(this.managers, 'state-change', label);
         if (isRateLimitError(lastAnswer)) notify(this.managers, 'rate-limited', label);
-        if (reason === 'capped') this.managers.tab.append(label, { input: '', output: `(stopped after ${maxSteps} tool steps)` });
+        if (reason === 'capped') appendAcp(this.managers, label, { input: '', output: `(stopped after ${maxSteps} tool steps)` });
         messageBus.emit('state', { type: 'dirty' });
         onDone?.(lastAnswer);
       },
       error: (m) => { updateRunning(`ACP error: ${m}`, false); this.managers.tab.deleteBusy(label); notify(this.managers, 'state-change', label); if (isRateLimitError(m)) notify(this.managers, 'rate-limited', label); onDone?.(`ACP error: ${m}`); },
-    });
+    }, () => this.isCurrent(label, session)
+      && (request === undefined || this.managers.tab.byLabel(label)?.runtime?.acpPrompt === request)));
   }
 }

@@ -49,6 +49,7 @@ export type AcpLoopSession = {
 };
 
 export type AcpLoopDeps = {
+  signal?: AbortSignal;
   // Prepended to the first prompt (e.g. the db primer) when starting a new session.
   primer?: string;
   // Execute an extracted command and return its textual output. May be async (e.g. a

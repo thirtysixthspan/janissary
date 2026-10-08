@@ -1,3 +1,4 @@
+import { ACP_ROUTE_LABEL } from '@shared/recognizers/route-choices';
 import { useEffect, useState } from 'react';
 import type React from 'react';
 import type { JanusClient } from './ws';
@@ -74,12 +75,12 @@ export function useServerState(client: JanusClient, setters: Setters): void {
     setProfiles(nextProfiles);
     setProjectDir(nextProjectDir);
     setVersion(nextVersion);
-    // Highlight the acp option (routeChoices always places it last) when a chooser newly opens
+    // Prefer ACP when the source supports it; otherwise choose the first remaining route.
     // (or its command changes), falling back to 0 if there are no choices to highlight.
     const previous = routeRef.current;
     routeRef.current = nextRoute;
     if (nextRoute && (!previous || previous.cmd !== nextRoute.cmd)) {
-      setRouteIndex(Math.max(0, nextRoute.choices.length - 1));
+      setRouteIndex(Math.max(0, nextRoute.choices.indexOf(ACP_ROUTE_LABEL)));
     }
   }), [
     client, setTabs, setActiveTab, setSecondaryTab, setRoute, setHarnessLaunch, setScheduleLaunch,

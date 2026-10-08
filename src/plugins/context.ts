@@ -21,6 +21,7 @@ import { liveRecordingPaths } from './live-recordings.js';
 import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 import { declaredResources } from './declared-resources.js';
 import { lineCapabilities } from './line-capabilities.js';
+import { acpCapabilities } from './acp-capabilities.js';
 import { launchCapabilities, type DeferredPluginCall } from './launch-tab.js';
 import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
 
@@ -241,6 +242,7 @@ export function createPluginContext(
     // The four a plugin tab needs to be a place a line can be typed and a process can be checked on,
     // moved out whole because they depend on nothing here beyond what they are handed.
     ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
+    ...acpCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

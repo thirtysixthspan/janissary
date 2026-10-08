@@ -1,5 +1,6 @@
 import type { RouteChoice } from '../recognizers/types.js';
-import { resolveCommand, type Resolution } from '../resolve.js';
+import type { Resolution } from '../resolve.js';
+import { resolveInTab } from './resolve-in-tab.js';
 import { isInteractive } from '../interactive/index.js';
 import { findCommand } from '../commands/index.js';
 import { toPrefixedCommand } from '../recognizers/route-choices.js';
@@ -70,7 +71,7 @@ export class CommandManager {
   }
 
   private run(input: string, label: string, index: number, detect?: boolean): void {
-    const res = resolveCommand(input);
+    const res = resolveInTab(input, label, this.managers);
     switch (res.kind) {
       case 'empty': { return;
       }
@@ -113,13 +114,18 @@ export class CommandManager {
     label: string,
     input: string,
     captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
-  ): Promise<{ dispatched: boolean; output: string }> {
-    const resolution = resolveCommand(input);
+  ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean }> {
+    const resolution = resolveInTab(input, label, this.managers);
     if (resolution.kind === 'output') {
       this.managers.tab.append(label, { input, output: resolution.output, markdown: true });
       return { dispatched: true, output: resolution.output };
     }
     if (resolution.kind !== 'app') return { dispatched: false, output: '' };
+
+    if (findCommand(resolution.name, resolution.cmd)?.coreResponse) {
+      await this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label));
+      return { dispatched: true, output: '', coreResponse: true };
+    }
 
     const output = await executeAndCapture(
       label,
@@ -132,6 +138,10 @@ export class CommandManager {
   async executeCommand(name: string, command: string, label: string, index: number): Promise<void> {
     const cmd = findCommand(name, command);
     if (!cmd) return;
+    if (cmd.available?.(label, this.managers) === false) {
+      this.run(command, label, index);
+      return;
+    }
     try {
       await cmd.run(command, { label, index }, this.managers);
     } catch (error) {

@@ -36,6 +36,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'reorderTab':
     case 'reorderTabTo':
     case 'toggleCollapse':
+    case 'resetAcp':
     case 'revealNotifications':
     case 'chooseRoute':
     case 'setDock':

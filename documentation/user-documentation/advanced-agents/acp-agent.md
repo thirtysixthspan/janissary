@@ -1,62 +1,69 @@
-# ACP agents
+# Query ACP from a shell
 
-<img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
-
-`acp <prompt>` sends a prompt to an external AI agent and streams its reply into the current tab's transcript. The agent speaks the [Agent Client Protocol](https://agentclientprotocol.com) (ACP); in this app it is fixed to OpenCode, so there is nothing to configure:
+Use `acp <prompt>` in a shell tab's command bar to query OpenCode:
 
 ```
 acp summarize the open TODO comments in this project
 ```
 
-You can also type an unprefixed natural-language prompt. If the app cannot recognize the line with
-confidence, it opens a route chooser with `shell`, any available database targets, and
-`acp (agent prompt)`. The ACP option is highlighted by default. Press `Return`, or click it, to
-send the prompt. Prefix the prompt with `acp ` when you want to bypass recognition.
+The reply streams as formatted Markdown in the **ACP** panel above the command bar. Headings, lists, tables, and code blocks render while the answer arrives. The agent uses the Agent Client Protocol (ACP), and the app manages its connection for you.
 
-The reply arrives as formatted Markdown: headings, lists, tables, and code blocks all render as it streams in.
+<img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
 ## Before the first prompt
 
-The `opencode` binary must be installed, authenticated, and on your `PATH`. If you have not signed in yet, run `opencode auth login` in a terminal first. There is no setting to point `acp` at a different agent.
+OpenCode must be installed, authenticated, and on your `PATH`. Run `opencode auth login` in a terminal if you have not signed in. There is no setting to choose a different provider for this connection.
+
+Agent tabs do not query ACP. Their command requests still execute shell, database, browser, and other supported commands, but unrecognized prose gets an unknown-command response. In a shell bar, unclaimed text goes to zsh, so use the explicit `acp` prefix when you want a model reply.
 
 ## Which model it runs
 
-The model comes from the OpenCode list in the harness model catalog — the same list [harnesses](/user-documentation/advanced-agents/harness) and monitors draw on, and the same one a project replaces by adding `.janissary/harness-models.json`. A built-in default is preferred while the catalog still offers it; otherwise `acp` uses the first model on the list, so overriding the catalog changes what `acp` runs too. The status popup shows the model the session actually started with. If your override leaves the OpenCode list empty there is nothing to run, and `acp` says so instead of starting a session.
+The model comes from the OpenCode list in the harness catalog, including a project's `.janissary/harness-models.json` override. The app prefers its default while that model is listed; otherwise it uses the first listed model. An empty list produces `ACP: no opencode model is available in the harness catalog.`.
+
+The connections popup shows the model the session started with. That choice is separate from the models used by monitors, conversations, and editor queries.
 
 ## One conversation per tab
 
-The first `acp` prompt in a tab starts the agent; later prompts in the same tab continue the same conversation, so the agent remembers what came before. Each tab has its own separate session, and the agent runs in the tab's current working directory.
+The first prompt starts a connection in the shell's working directory. Later prompts in the same tab reuse it and remember the earlier conversation. Each tab has its own session. Reset it after changing directories if you want a fresh connection in the new location.
 
-To start over, reset the session:
+To start over, enter:
 
 ```
 acp reset
 ```
 
-This ends the conversation and clears the accumulated context. The next `acp` prompt begins fresh, and the app confirms with `ACP session reset — next acp prompt will start fresh.`. When no session is active, `acp reset` replies `No active ACP session to reset.` instead of failing.
+You can also click **Reset ACP** in the panel while a reply is still arriving. This stops the connection immediately. The next prompt begins a fresh conversation; previous replies remain visible.
 
-An active session also appears in the tab's connections list under its provider and model, such as `acp:opencode/big-pickle`. That same name is what `connection close` takes.
+Reset cancels a question from that ACP request, including one waiting behind another question. Questions from unrelated requests stay pending.
 
-## The agent can look things up itself
+The command confirms `ACP session reset — next acp prompt will start fresh.`, or `No active ACP session to reset.`. Closing the shell closes its ACP connection too. A second prompt submitted directly to an already-running connection reports `ACP: a prompt is already running.`; the shell bar keeps its ordinary command ordering.
+
+## Let the agent look things up
 
 <img class="agent-float left" src="/agents/ekrem-south.png" alt="" />
 
-When answering needs data, the agent can run the app's own `db`, `browser`, and `question` commands on its own: query a SQLite database, fetch a web page, read its content, ask you a question. Each command it runs, and the result, is fed back to it so it can continue, up to a limit of 8 steps per prompt. If it hits the limit, the transcript shows `(stopped after 8 tool steps)`.
+The agent can run the app's database, browser, and question tools while answering: query a database, fetch a page, read its content, or ask you for an answer. The result goes back to the agent so it can continue, up to eight tool steps per prompt. The panel reports `(stopped after 8 tool steps)` when it reaches that limit.
 
-These automatic steps appear collapsed in the transcript as a tool-step entry. Click it, or press `Ctrl+T`, to expand and see exactly what the agent ran. Only `db`, `browser`, and `question` are available to it; the agent cannot run shell commands or anything else.
+Tool steps appear collapsed. Click a summary to expand it and see the command and result. Only these three tools are available in this loop; it cannot run arbitrary shell commands.
 
-## Usage errors
+Questions identify the tab asking them. Answer or cancel in the question panel. A selected docked shell can show its question too; hidden shells do not take focus with a question panel.
 
-Running `acp` with no prompt prints `Usage: acp <prompt>.`.
+## Use a docked shell
 
-## In a workspaced tab
+The ACP panel, reset button, and tool-step controls belong to their shell even when another tab is current. Resetting or expanding steps in a docked shell does not change another tab's connection or transcript. Replies do not duplicate themselves in zsh's terminal.
 
-If the tab is a [workspaced agent](/user-documentation/advanced-agents/workspaced-agent), the ACP agent is confined by the same sandbox as the tab's shell. See [Workspacing](/user-documentation/advanced-agents/workspacing) for what the sandbox allows and blocks.
+## In a workspace or on another host
 
-## In a remote agent tab
+<img class="agent-float" src="/agents/hamza-south-east.png" alt="" />
 
-`acp` works in a [remote agent tab](/user-documentation/advanced-agents/remote-agents) too, and the agent runs on the remote host, inside that host's workspace — so it reads and reasons about the files the tab is actually working on, not copies of them on your machine. Nothing about the tab looks different: replies stream in the same way, the busy dot behaves the same, and the status popup shows the same model.
+A sandboxed shell's ACP process uses the same workspace confinement and offline setting. A remote shell starts its ACP process on that host in the remote workspace. Model selection still comes from your local catalog.
 
-One thing to know, because it's easy to trip over: the `db` and `browser` commands the agent runs still act on **the machine janissary is running on**. Ask a remote agent to query a database and it queries your local database file, not one on the remote host.
+The database, browser, and question tools continue to act on the machine running Janissary. A remote ACP query therefore uses your local database and browser for those tools.
 
-If you type `acp` before the tab has finished connecting — while SSH is still asking for a password, say — you'll see `ACP: the remote session is still connecting.` Answer the prompt, then run it again.
+Before SSH has finished connecting, a prompt reports `ACP: the remote session is still connecting.`. Finish connecting and retry. See [Shell tabs](/user-documentation/command-bar/shell) for local and remote launches.
+
+## Errors and connection controls
+
+Bare `acp` prints `Usage: acp <prompt>.`. A process that dies is reported and forgotten, so the next prompt starts a new connection. A prompt-level failure, such as a rate limit, keeps a working conversation.
+
+The connection is listed as `acp:<provider/model>`. Use its close control or `connection close` to end it. Its transcript button opens a snapshot in an editor tab. See [Connections](/user-documentation/command-bar/connections).

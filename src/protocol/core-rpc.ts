@@ -7,7 +7,7 @@ import type { AcpRef } from './tab.js';
 // `toggleCollapse` are pure-UI shortcuts.
 export type CoreRpcCall =
   | { method: 'init'; params: Record<string, never> }
-  | { method: 'command'; params: { text: string } }
+  | { method: 'command'; params: { text: string; tab?: string } }
   | { method: 'setActiveTab'; params: { index: number } }
   | { method: 'focusTab'; params: { label: string } }
   | { method: 'closeTab'; params: { label: string } }
@@ -21,7 +21,8 @@ export type CoreRpcCall =
   | { method: 'moveTabToOtherPane'; params: { index: number } }
   | { method: 'reorderTab'; params: { dir: -1 | 1 } }
   | { method: 'reorderTabTo'; params: { from: number; to: number } }
-  | { method: 'toggleCollapse'; params: Record<string, never> }
+  | { method: 'toggleCollapse'; params: { tab?: string } }
+  | { method: 'resetAcp'; params: { tab: string } }
   // Move the active tab's running shell command into a full-tab terminal, for a program that needs
   // one but never announced it (a password prompt, a bare REPL). No-ops when nothing is running or
   // the tab's shell is not pty-backed.

@@ -19,7 +19,7 @@ function isAcpRef(value: unknown): boolean {
 // way `CLIENT_FRAME_TYPES` and `CAPABILITIES` are keyed by theirs.
 export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   init: noParams,
-  command: (p) => isString(p.text),
+  command: (p) => isString(p.text) && (p.tab === undefined || isString(p.tab)),
   setActiveTab: (p) => isInteger(p.index),
   focusTab: (p) => isString(p.label),
   closeTab: (p) => isString(p.label),
@@ -30,7 +30,8 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   moveTabToOtherPane: (p) => isInteger(p.index),
   reorderTab: (p) => isOneOf(p.dir, DIRECTIONS),
   reorderTabTo: (p) => isInteger(p.from) && isInteger(p.to),
-  toggleCollapse: noParams,
+  toggleCollapse: (p) => p.tab === undefined || isString(p.tab),
+  resetAcp: (p) => isString(p.tab),
   promoteToTerminal: noParams,
   chooseRoute: (p) => isInteger(p.index),
   closeHarnessLaunch: noParams,

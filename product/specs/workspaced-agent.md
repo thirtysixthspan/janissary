@@ -59,7 +59,7 @@ clone when its ssh session ends. See [[remote-server]].
 
 ### Isolation
 
-On macOS, a workspaced tab's processes (shell, harness PTY, or ACP session, and anything they
+On macOS, a workspaced tab's processes (shell, harness PTY, or a supported plugin tab's core ACP session, and anything they
 spawn) are confined to the workspace directory by a kernel-enforced Seatbelt sandbox — see
 [[sandbox]] for the full filesystem/IPC/environment policy. Isolation is on by default
 (`sandboxWorkspaces` in `.janissary/config.json`) and requires `sandbox-exec`; when it isn't

@@ -36,6 +36,8 @@ export function DockedPluginBody({
         <PluginBody
           plugin={tab.plugin} label={tab.label} client={client} active={visible} dock={tab.dock ?? null}
           onClose={onClose} remote={tab.remote}
+          acpResponse={tab.acpResponse}
+          pendingQuestion={tab.pendingQuestion}
         />
       </DockedActionsContext.Provider>
       {overlay}

@@ -1,6 +1,7 @@
 import { isInteractive } from '../interactive/index.js';
 import { findCommand } from '../commands/index.js';
-import { resolveCommand, type Resolution } from '../resolve.js';
+import type { Resolution } from '../resolve.js';
+import { resolveInTab } from '../command/resolve-in-tab.js';
 import { routeUnknownCommand } from './router.js';
 import { executeAndCapture } from './execute-and-capture.js';
 import type { Managers } from '../managers.js';
@@ -13,7 +14,7 @@ export class CaptureManager {
   // Classifies the text with the same resolver the command bar uses, so every shell spelling and
   // flag means what it means when typed; only the execution below is specific to a messaged command.
   run(label: string, text: string, callback: Reply): void {
-    const res = resolveCommand(text);
+    const res = resolveInTab(text, label, this.managers);
     if (res.kind === 'shell') { this.runShell(res, label, callback); return; }
 
     const index = this.managers.tab.findIndex(label);
