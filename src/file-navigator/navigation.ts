@@ -4,11 +4,19 @@ import { containedPath } from './batch-paths.js';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './state.js';
 import type { BasePort, NavigationPort } from './port.js';
+import type { FileNavigatorEntry } from './index.js';
 import { clearFilesystemCache } from './filesystem-cache.js';
 
 // The narrow slice of `FileNavigatorManager` internals this module needs, handed over as bound closures
 // so the tab-state map and watcher plumbing stay private to the manager (see `navPort()` there).
 export type NavPort = NavigationPort;
+
+// The member set the re-root sequence needs. Both the navigation port and the open port satisfy it
+// structurally — the latter through the `setCwd`/`hasTab` closures it already carries on its
+// managers — and the command path assembles one from its own callbacks.
+export type ReRootPort = Pick<
+  NavigationPort, 'unwatchDir' | 'watchDir' | 'setCwd' | 'rebuild' | 'refreshGit' | 'hasTab'
+>;
 
 function isPromise<T>(value: T | Promise<T>): value is Promise<T> {
   return typeof (value as Promise<T>).then === 'function';
@@ -36,9 +44,35 @@ export function toggleDir(port: NavPort, label: string, relPath: string): void {
 //
 // The expanded set is cleared along with the watchers because a stale entry would claim a row the
 // tree no longer shows, and the tree is rebuilt from that set.
-export function dropExpandedWatchers(port: BasePort, state: FilesTabState): void {
+export function dropExpandedWatchers(port: Pick<BasePort, 'unwatchDir'>, state: FilesTabState): void {
   for (const relPath of state.expanded) port.unwatchDir(state, relPath);
   state.expanded.clear();
+}
+
+// The whole re-root sequence, in one place so the paths that re-root cannot drift over any half of
+// it: drop every expanded watcher, unwatch the root, move the root, clear the git half — the
+// statuses, the branch and the flag that says metadata has loaded — so a refresh is required rather
+// than the previous root's answers staying on screen, clear the filesystem cache, re-watch, move the
+// tab's cwd, rebuild, and refresh git.
+//
+// `entries` is the new root's listing when the caller already read it, which is what puts content in
+// the tree the moment it rebuilds; a caller with no read lets the rebuild do that work. `label` is
+// the tab's, and a tab that has since closed is left without a cwd.
+export function reRootTree(
+  port: ReRootPort, label: string, state: FilesTabState, root: string, entries?: FileNavigatorEntry[],
+): void {
+  dropExpandedWatchers(port, state);
+  port.unwatchDir(state, '');
+  state.root = root;
+  state.gitStatuses = new Map();
+  state.branch = undefined;
+  state.gitMetadataLoaded = false;
+  clearFilesystemCache(state);
+  if (entries) state.listings.set('', entries);
+  port.watchDir(label, root, '');
+  if (port.hasTab(label)) port.setCwd(label, root);
+  port.rebuild(label);
+  port.refreshGit(label);
 }
 
 // Collapse every expanded directory back to just the root.
@@ -50,6 +84,8 @@ export function collapseAllDirs(port: NavPort, label: string): void {
 }
 
 // Re-root the tree to the parent directory. Clears expanded state and watchers, then rebuilds.
+// Resolves the target and runs the remote escape check here; the sequence itself is `reRootTree`,
+// which the remote paths share.
 export function rerootTree(port: NavPort, label: string, relPath?: string): void {
   const state = port.states.get(label);
   if (!state) return;
@@ -68,20 +104,12 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
     }
   }
   if (target === state.root) return;
-  const apply = (entries: Awaited<ReturnType<typeof state.filesystem.readDirectory>>) => {
+  // The new root is read first, so the tree has its listing the moment it rebuilds. A read that
+  // lands after another re-root has already moved the root is dropped rather than written into the
+  // newer one's cache.
+  const apply = (entries: FileNavigatorEntry[]) => {
     if (state.root !== previousRoot) return;
-    dropExpandedWatchers(port, state);
-    port.unwatchDir(state, '');
-    state.root = target;
-    state.gitStatuses = new Map();
-    state.branch = undefined;
-    state.gitMetadataLoaded = false;
-    clearFilesystemCache(state);
-    state.listings.set('', entries);
-    port.watchDir(label, target, '');
-    if (port.hasTab(label)) port.setCwd(label, target);
-    port.rebuild(label);
-    port.refreshGit(label);
+    reRootTree(port, label, state, target, entries);
   };
   const failed = (error: unknown) => port.reportFailure(label, target, error);
   try {

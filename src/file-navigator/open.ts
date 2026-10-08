@@ -5,21 +5,11 @@ import { RemoteFileSystemPort } from './remote/port.js';
 import { forgetRemoteFilesOf } from './remote/file-cache.js';
 import type { Managers } from '../managers.js';
 import type { RemoteTarget } from '../tab/types.js';
-import { dropExpandedWatchers } from './navigation.js';
+import { dropExpandedWatchers, reRootTree } from './navigation.js';
 import type { BasePort } from './port.js';
-import type { FilesTabState } from './state.js';
+import { freshFileNavigatorState, type FilesTabState } from './state.js';
 
 export interface OpenPort extends BasePort { managers: Managers }
-
-function freshState(
-  root: string, filesystem: FileSystemPort, remote?: RemoteTarget, ownerLabel?: string,
-): FilesTabState {
-  return {
-    root, filesystem, remote, ownerLabel, expanded: new Set(), watchers: new Map(),
-    listings: new Map(), listingLoads: new Set(), statLoads: new Set(), cacheGeneration: 0,
-    undoStack: [], redoStack: [], details: 'name', stats: new Map(),
-  };
-}
 
 // The metadata-row folder button preserves the existing fresh-open/most-recent-retarget rule. A
 // remote source swaps in a channel-backed port and ties the navigator to that source tab.
@@ -43,7 +33,7 @@ function openLocal(port: OpenPort, root: string, existing?: string): void {
     retarget(port, existing, root, new LocalFileSystemPort());
     return;
   }
-  const state = freshState(root, new LocalFileSystemPort());
+  const state = freshFileNavigatorState(root, new LocalFileSystemPort());
   port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: buildCachedRows(state, () => {}) });
   const label = port.managers.tab.cur().label;
   registerOpenedTab(port, label, root, state);
@@ -68,7 +58,7 @@ function openRemote(
   port.managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root, remote });
   const label = port.managers.tab.cur().label;
   if (!port.managers.remote.attach(label, ownerLabel)) return;
-  const state = freshState(root, new RemoteFileSystemPort(channel, label, ready), remote, ownerLabel);
+  const state = freshFileNavigatorState(root, new RemoteFileSystemPort(channel, label, ready), 'name', remote, ownerLabel);
   registerOpenedTab(port, label, root, state);
   updateRemoteRoot(port, label, ready);
 }
@@ -87,11 +77,16 @@ function updateRemoteRoot(port: OpenPort, label: string, ready: Promise<string>)
     const state = port.states.get(label);
     if (!state?.remote) return;
     state.remoteRoot = root;
+    // A root that moves takes the full re-root sequence — the git half included, so the workspace's
+    // own branch and statuses are read rather than the fallback root's staying on screen. A root that
+    // already matches only moves the cwd and rebuilds.
     if (state.root !== root) {
-      port.unwatchDir(state, '');
-      state.root = root;
-      clearFilesystemCache(state);
-      port.watchDir(label, root, '');
+      reRootTree({
+        ...port,
+        setCwd: (tab, dir) => port.managers.tab.setCwd(tab, dir),
+        hasTab: (tab) => port.managers.tab.tabs.some((open) => open.label === tab),
+      }, label, state, root);
+      return;
     }
     if (port.managers.tab.tabs.some((tab) => tab.label === label)) port.managers.tab.setCwd(label, root);
     port.rebuild(label);

@@ -191,6 +191,9 @@ describe('openFilesCommand over a remote label', () => {
     const h = harness();
     const stop = vi.fn();
     const label = run(h, 'files in other sub')!;
+    // Staged the way production holds it: an expanded directory beside its watcher, which is what
+    // the re-root sequence drops.
+    h.tabs.get(label)!.expanded.add('sub');
     h.tabs.get(label)!.watchers.set('sub', { stop });
     h.watchDir.mockClear();
 
@@ -202,6 +205,11 @@ describe('openFilesCommand over a remote label', () => {
     expect(h.tabs.get(label)!.watchers.size).toBe(0);
     expect(h.watchDir).toHaveBeenCalledWith(label, '/remote/elsewhere/sub', '');
     expect(h.rebuild).toHaveBeenCalledWith(label);
+    // The git half: the workspace's own branch and statuses are read, not the fallback root's.
+    expect(h.tabs.get(label)!.gitStatuses?.size).toBe(0);
+    expect(h.tabs.get(label)!.branch).toBeUndefined();
+    expect(h.tabs.get(label)!.gitMetadataLoaded).toBe(false);
+    expect(h.refreshGit).toHaveBeenCalledWith(label);
   });
 
   it('keeps a tree whose root already matches the workspace, and rebuilds it', async () => {

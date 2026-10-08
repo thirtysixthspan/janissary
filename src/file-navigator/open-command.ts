@@ -5,12 +5,13 @@ import { expandUserPath } from '../paths.js';
 import { resolveTarget } from '../commands/resolve-target.js';
 import type { Managers } from '../managers.js';
 import type { FileNavigatorDetail, RemoteTarget } from '../tab/types.js';
-import type { FilesTabState } from './state.js';
-import { LocalFileSystemPort, type FileSystemPort } from './filesystem-port.js';
+import { freshFileNavigatorState, type FilesTabState } from './state.js';
 import { buildCachedRows } from './filesystem-cache.js';
 import { RemoteFileSystemPort } from './remote/port.js';
-import { clearFilesystemCache } from './filesystem-cache.js';
+import { LocalFileSystemPort } from './filesystem-port.js';
 import { remoteCwd } from './remote-cwd.js';
+import { reRootTree } from './navigation.js';
+import { unwatchDir } from './watch.js';
 
 type CwdTarget = { cwd: string; sourceLabel?: string; remote?: RemoteTarget };
 
@@ -42,30 +43,6 @@ function resolveCwd(
   };
 }
 
-// A fresh per-tab state record for a tree rooted at `root`, starting in `details` mode.
-function freshState(
-  root: string, details: FileNavigatorDetail,
-  filesystem: FileSystemPort = new LocalFileSystemPort(), remote?: RemoteTarget, ownerLabel?: string,
-): FilesTabState {
-  return {
-    root,
-    filesystem,
-    remote,
-    ownerLabel,
-    expanded: new Set<string>(),
-    watchers: new Map(),
-    listings: new Map(),
-    listingLoads: new Set(),
-    statLoads: new Set(),
-    cacheGeneration: 0,
-    undoStack: [],
-    redoStack: [],
-    gitStatuses: new Map(),
-    details,
-    stats: new Map(),
-  };
-}
-
 function openRemoteTree(
   managers: Managers, tabs: Map<string, FilesTabState>, sourceLabel: string, remote: RemoteTarget,
   root: string, details: FileNavigatorDetail, dock: 'left' | 'right' | null,
@@ -80,7 +57,9 @@ function openRemoteTree(
   managers.tab.openFilesTab({ root, absoluteRoot: root, rows: [], waitingFor: root, details, remote });
   const label = managers.tab.cur().label;
   if (!managers.remote.attach(label, sourceLabel)) return undefined;
-  const state = freshState(root, details, new RemoteFileSystemPort(channel, label, ready), remote, sourceLabel);
+  const state = freshFileNavigatorState(
+    root, new RemoteFileSystemPort(channel, label, ready), details, remote, sourceLabel,
+  );
   state.remoteRoot = managers.remote.workspaceOf(sourceLabel);
   managers.tab.setCwd(label, root);
   tabs.set(label, state);
@@ -91,13 +70,19 @@ function openRemoteTree(
     if (current !== state) return;
     current.remoteRoot = workspace;
     const nextRoot = rootAfterReady(workspace);
+    // A root that moves takes the full re-root sequence — the git half included, so the workspace's
+    // own branch and statuses are read rather than the fallback root's staying on screen. A root that
+    // already matches only rebuilds.
     if (current.root !== nextRoot) {
-      for (const watcher of current.watchers.values()) watcher.stop();
-      current.watchers.clear();
-      current.root = nextRoot;
-      clearFilesystemCache(current);
-      managers.tab.setCwd(label, nextRoot);
-      watchDir(label, nextRoot, '');
+      reRootTree({
+        unwatchDir,
+        watchDir: (tab, absDir, relPath) => watchDir(tab, absDir, relPath),
+        setCwd: (tab, dir) => managers.tab.setCwd(tab, dir),
+        rebuild,
+        refreshGit,
+        hasTab: (tab) => managers.tab.findIndex(tab) !== -1,
+      }, label, current, nextRoot);
+      return;
     }
     if (managers.tab.findIndex(label) !== -1) rebuild(label);
   }, () => {});
@@ -219,7 +204,7 @@ export function openFilesCommand(
   const existing = managers.tab.filesTabByRoot(root);
   if (existing) return focusExisting(managers, tabs, existing.label, dock, details, rebuild);
 
-  const state = freshState(root, details ?? 'name');
+  const state = freshFileNavigatorState(root, new LocalFileSystemPort(), details ?? 'name');
   if (!exists) return openWaitingTree(managers, tabs, root, state, dock, pollForCreation);
   return openTree(managers, tabs, root, state, dock, watchDir, refreshGit);
 }
