@@ -191,6 +191,11 @@ describe('openOrRetarget', () => {
     expect(port.watchDir).toHaveBeenLastCalledWith(label, '/remote/ws/clone', '');
     expect(setCwd).toHaveBeenLastCalledWith(label, '/remote/ws/clone');
     expect(port.rebuild).toHaveBeenCalledWith(label);
+    // The git half: the workspace's own branch and statuses are read, not the fallback root's.
+    expect(state?.gitStatuses?.size).toBe(0);
+    expect(state?.branch).toBeUndefined();
+    expect(state?.gitMetadataLoaded).toBe(false);
+    expect(port.refreshGit).toHaveBeenCalledWith(label);
   });
 
   // An attach that fails leaves the opened tab with nothing behind it, so it is not registered: a

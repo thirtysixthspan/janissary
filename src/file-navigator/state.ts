@@ -8,6 +8,26 @@ import type { RowStat } from './stats.js';
 import type { FileNavigatorEntry } from './index.js';
 import type { FileSystemPort, WatchHandle } from './filesystem-port.js';
 
+// A fresh per-tab state record for a tree rooted at `root`. One factory rather than one per opening
+// path: the two constructors that existed before this already disagreed over `gitStatuses`, which is
+// how a remote tree came to start with no map where a local one started with an empty one, and a new
+// `FilesTabState` field had to be remembered twice.
+export function freshFileNavigatorState(
+  root: string,
+  filesystem: FileSystemPort,
+  details: FileNavigatorDetail = 'name',
+  remote?: RemoteTarget,
+  ownerLabel?: string,
+): FilesTabState {
+  return {
+    root, filesystem, remote, ownerLabel,
+    expanded: new Set(), watchers: new Map(),
+    listings: new Map(), listingLoads: new Set(), statLoads: new Set(), cacheGeneration: 0,
+    undoStack: [], redoStack: [], gitStatuses: new Map(),
+    details, stats: new Map(),
+  };
+}
+
 // Per files-tab state, keyed by the tab's label. `watchers` is keyed by each visible directory's
 // tree-relative path ('' for the root itself). `undoStack`/`redoStack` are purely in-memory and
 // reset with the rest of the tab's state on close. Declared here rather than in manager.ts so the
