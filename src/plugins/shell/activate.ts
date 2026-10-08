@@ -173,7 +173,7 @@ export function activate(): TabPluginActivation {
         run: (_tabPayload, line, capabilities) => capabilities.dispatchLineWithOutput(line),
       },
       // A line the bar recorded in its own history — whichever route it took — enters the global
-      // history too, as a line submitted in an tab's bar does.
+      // history too, as a line submitted in a plugin tab's bar does.
       remember: {
         payload: isShellDispatch,
         run: (_tabPayload, line, capabilities) => {

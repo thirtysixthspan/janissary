@@ -64,7 +64,7 @@ describe('useAppCommandLine', () => {
   });
 
   // The guard is the client's answer to "does this tab hold unsaved work", and it exists whether or
-  // not the line was typed into an tab: `CloseSaveGuard` is mounted for every tab's view.
+  // not the line was typed into a shell tab: `CloseSaveGuard` is mounted for every tab's view.
   it('lets the save guard keep a close that would discard unsaved work', () => {
     const { intercept, openQuitConfirm } = build({
       tabs: [tab('shell1'), tab('other')], guard: () => true,

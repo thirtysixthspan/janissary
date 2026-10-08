@@ -330,7 +330,7 @@ describe('terminalRunning', () => {
 });
 
 // `shell1` is one of the shell plugin's own tabs, `image1` belongs to another plugin, and `janus` is
-// an tab. The queue and directory capabilities may change only the first.
+// a shell tab. The queue and directory capabilities may change only the first.
 function withOwnedTabs(byLabel: ReturnType<typeof makeManagers>['byLabel']) {
   const tabs = [
     { label: 'shell1', plugin: { id: 'shell', instanceKey: 'shell1' } },
@@ -386,7 +386,7 @@ describe('queueLine and nextQueuedLine', () => {
     expect(dequeue).not.toHaveBeenCalled();
   });
 
-  // A command invoked from an tab has no answering tab, so the label falls back to the agent
+  // A command invoked from a shell tab has no answering tab, so the label falls back to the shell
   // tab; its queue holds lines the user meant to run there, and is not this plugin's to change.
   // The call is answered with a rejection naming the capability rather than dropped, so the
   // transcript says which call was turned away.

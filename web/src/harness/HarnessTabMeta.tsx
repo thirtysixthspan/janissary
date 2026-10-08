@@ -63,7 +63,7 @@ export function HarnessTabMeta({
         )}
         {/* The recording flag is not one of `flags`: it is the host's own fact about this tab's PTY,
             and it is drawn for the tab kinds that record at all — a harness or ssh tab even before it
-            has a file, an tab never. */}
+            has a file, a plugin tab never. */}
         {hasRecorder && <RecordingFlag onOpen={onOpenRecording} />}
         {(flags ?? []).map((flag) => {
           const display = tabFlagDisplay[flag];

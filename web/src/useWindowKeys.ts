@@ -166,7 +166,7 @@ function exhaust(action: AppChordAction | undefined): never {
 // nothing at all there.
 // The plugin tab a chord was pressed in: the labelled tab around the focused element, or the current
 // plugin tab when focus rests on the page itself. Focus inside an element no plugin tab encloses —
-// an tab's command bar — names no tab, so the application keeps the chord.
+// a harness tab's command bar — names no tab, so the application keeps the chord.
 function chordTabLabel(target: EventTarget | null, snap: StateSnapshot): string | undefined {
   const focusOnPage = !(target instanceof Element) || target === document.body || target === document.documentElement;
   if (focusOnPage) return snap.currentPluginTab;

@@ -21,7 +21,7 @@ function baseTab(overrides: Partial<TabView> = {}): TabView {
 }
 
 describe('ViewTabBody', () => {
-  it('returns null for an tab with no special view', () => {
+  it('returns null for a shell tab with no special view', () => {
     const tab = baseTab({ view: undefined });
     const { container } = render(React.createElement(ViewTabBody, { tab, client: {} as never, index: 0 }));
     expect(container.innerHTML).toBe('');

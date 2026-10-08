@@ -240,7 +240,7 @@ export type MonitorTarget =
   | { kind: 'group'; group: number };
 
 // One AI-monitor suggestion: produced by a persona-primed monitoring ACP session, shown either
-// inline in an tab's transcript or in the monitor reporting tab's feed.
+// inline in a shell tab's transcript or in the monitor reporting tab's feed.
 export type MonitorSuggestion = {
   id: string;
   text: string;

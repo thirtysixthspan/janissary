@@ -565,7 +565,7 @@ describe('buildTabViews', () => {
 
   // The recording flag is driven entirely by whether this field is present, so its absence has to
   // mean "not yet" rather than "not applicable" — a tab waiting on its workspace still shows a plain
-  // flag, and only an tab, which never records at all, is told apart by its view discriminant.
+  // flag, and only a plugin tab, which never records at all, is told apart by its view discriminant.
   it('sends no recording for a tab that has produced no output yet', () => {
     const views = build([remoteTab('a'), makeTab('notes', '#fff')], remoteManagers());
 
