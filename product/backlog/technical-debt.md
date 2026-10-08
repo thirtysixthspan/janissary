@@ -2,17 +2,6 @@
 
 ## ready
 
-* Move the hunk-preview derivation and row scheduling out of the editor's line component into a pure module beside it, so the diff preview layout can be tested without rendering the buffer.
-
-Existing Debt: `web/src/editor/EditorLines.tsx` derives `previews` by mapping, filtering and sorting `pending.hunks` against `suggestDiffPreview`, and then runs a row-scheduling loop in the component body that decides which rows render, which are marked removed, where each hunk's added rows go, and which overlapping hunks are skipped, in violation of §5 (components render, they do not decide). Severity: 5/10
-
-Existing Risk: 4/10 - The overlap-skip rule and the removed-range arithmetic can only be exercised by rendering the whole editor buffer, so a change to how pending hunks resolve is verified by looking at the diff rather than by a failing assertion, and an off-by-one in where added rows land reads as a cosmetic glitch until someone scrolls.
-
-Proposal Risk: 2/10 - The layout becomes plain functions anyone can call directly, but the transcription is behavior-preserving by eye only: nothing pins the current row plan, so a slip in the removed-range arithmetic would land as a mis-rendered diff rather than a type error.
-
-Proposal: Extract the `HunkPreview` type, the `previews` derivation, and the scheduling loop out of `web/src/editor/EditorLines.tsx` into a new `web/src/editor/editor-rows.ts` that exports a plain builder taking the buffer's lines, `pending.hunks` and `pending.resolved` and returning an ordered plan of row descriptors — a buffer row, a removed row, or an added row with its hunk index, text and position — calling the existing `suggestDiffPreview` from `./suggestDiff`. `web/src/editor/EditorLines.tsx` keeps `renderLine`, `renderQueryRow` and `renderRow`, because those own the refs and props, and reduces to mapping each descriptor onto the JSX row it already renders. Scope the change to that one file: its props, its export and its component name do not move, so `web/src/editor/EditorTab.tsx` is the only other source file naming it and needs no edit, and no import path changes anywhere. Blast radius is one existing source file plus the new module, with zero importers of the moved code to retarget. `web/src/editor/EditorLines.test.tsx` needs no edit and must keep passing — its four cases pin the gutter numbering and the query-row caret, which are the neighbouring rules this extraction must not disturb. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/editor/EditorLines.tsx`.
-
-
 * Move the two harness-named modules out of shared and into the harness feature directory, so the shared layer stops holding code only one feature can want.
 
 Existing Debt: `web/src/shared/HarnessTabMeta.tsx` and `web/src/shared/harness-tab-intents.ts` are each imported only by `web/src/harness/HarnessTab.tsx`, so shared code carrying the harness feature's own knowledge sits in the shared layer in violation of §2 (colocate by default, promote to shared on the second real consumer, and once shared a module may not know any particular feature). Severity: 5/10
