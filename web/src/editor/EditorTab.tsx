@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import { useEditor } from './useEditor';
@@ -10,7 +10,8 @@ import { useEditorSync } from './useEditorSync';
 import { useEditorSuggest } from './useEditorSuggest';
 import { useEditorConnections } from './useEditorConnections';
 import { useEditorFind } from './useEditorFind';
-import { useEditorPlugins } from './plugins/useEditorPlugins';
+import { useEditorPlugins, type PluginReport } from './plugins/useEditorPlugins';
+import { createEditorPluginHost, type EditorPluginHost } from './plugins/host';
 import { useEditorInteractions } from './useEditorInteractions';
 import { useEditorScrollRetention } from './useEditorScrollRetention';
 import { selectionsText } from './model';
@@ -43,7 +44,14 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
   // buffer hands them all on, hides its caret, and takes focus back once the overlay closes.
   overlayOpen?: boolean;
   onSplit?: () => void;
-}>(function EditorTab({ editor, tab, client, active, visible = true, overlayOpen = false, onSplit }, ref) {
+  // The session plugin host and its disabled-plugin report queue, owned by the composition that
+  // mounts every editor tab (`useEditorPluginHost`). Absent, this tab gets a host of its own — the
+  // arrangement for a standalone render, which has no session to share.
+  pluginHost?: EditorPluginHost;
+  pluginReports?: PluginReport[];
+}>(function EditorTab({
+  editor, tab, client, active, visible = true, overlayOpen = false, onSplit, pluginHost, pluginReports,
+}, ref) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const caretRef = useRef<HTMLSpanElement>(null);
@@ -73,7 +81,10 @@ export const EditorTab = forwardRef<DirtyTabHandle, {
     if (!find.findOpen || !result || state?.cursor.line !== result.index || !bodyRef.current || !caretRef.current) return;
     positionCaretAtQuarter(bodyRef.current, caretRef.current);
   }, [find.findOpen, find.results, find.selected, state?.cursor.line]);
-  const pluginKey = useEditorPlugins(client, editor.url, api, editor.name);
+  const ownHost = useMemo(() => createEditorPluginHost(() => {}), []);
+  const pluginKey = useEditorPlugins(
+    client, editor.url, api, editor.name, pluginHost ?? ownHost, pluginReports,
+  );
   const interactions = useEditorInteractions({ bodyRef, caretRef, textareaRef, api, suggest, find, pluginKey, overlayOpen });
 
   useEditorDrop(tab.label, visible, textareaRef, api.insert, api.paste);

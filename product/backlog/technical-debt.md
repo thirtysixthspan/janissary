@@ -1,16 +1,5 @@
 # technical-debt
-
 ## ready
-
-* Build the editor plugin host at the app edge the way the overlay plugin host is built, instead of constructing one when the module is imported.
-
-Existing Debt: `web/src/editor/plugins/useEditorPlugins.ts` creates its `pendingReports` array and the editor plugin host at module scope, so a host instance and a mutable queue come into existence the first time the module is imported and are shared by every editor tab for the life of the page, while the equivalent overlay host is built in a `useMemo` at the app shell and disposed in an effect cleanup. Severity: 4/10
-
-Existing Risk: 4/10 - A report queued when a plugin is disabled after mount is drained by whichever tab mounts next, and that tab sends it under its own `url`, so a failure in one editor tab is attributed to another; the module-level queue and host also outlive unmount and cannot be swapped in a test, so a test needing a different host or an empty queue has to go through the default-parameter seam rather than inject one.
-
-Proposal Risk: 3/10 - The host becomes per-instance and disposable like the overlay one, but a plugin's disabled state is deliberately session-scoped rather than per tab, so the ownership still has to be one host for the shell, which means the instance is created where the shell can hold it rather than by any tab.
-
-Proposal: `pendingReports` at `web/src/editor/plugins/useEditorPlugins.ts:22` and `sessionHost` at `:24-26` both run on import, and `useEditorPlugins` at `:57-64` takes them as default parameters, which is the seam but not the ownership. Build one host in the composition that owns the editor tabs, the same place `web/src/useOverlayPlugins.ts:71-81` builds its host in a `useMemo` and disposes at `:97`, and pass both the host and the report queue down, so the module exports no mutable state. The drain at `:65-76` runs from `useEffect(report)` with no dependency array, so it only fires on mount; give the queue an owner and make the drain an explicit method that owner calls, leaving the defaults in place only for tests. `web/src/editor/EditorTab.tsx` and `web/src/editor/plugins/useEditorPlugins.test.ts` are the call sites and the coverage that must keep passing.
 
 * Give the re-root sequence one owner across the file navigator's three re-root paths, so a remote workspace settling onto a different root behaves like a local reroot.
 

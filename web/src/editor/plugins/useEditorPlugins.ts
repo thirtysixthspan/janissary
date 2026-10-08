@@ -11,19 +11,13 @@ import type { EditorApi } from '../useEditor';
 import type { BoundBinding, EditorPluginRequest, EditorRange } from './api';
 import { applyPluginResult } from './apply-edits';
 import { matchBinding } from './chords';
-import { createEditorPluginHost, type EditorPluginHost } from './host';
+import type { EditorPluginHost } from './host';
 
-// Disabling is session-scoped rather than per tab, so the host is created once for the page and
-// shared by every open editor tab. Reports queue here because a plugin can be disabled at
-// construction — before any tab has mounted to send one — and are drained by whichever tab is next
-// to run or mount.
+// One disabled-plugin report, waiting for a tab to send it. Disabling is session-scoped rather than
+// per tab, so the host and this queue are owned by the composition that owns the editor tabs
+// (`useEditorPluginHost`), and a plugin can be disabled at construction — before any tab has mounted
+// to send one.
 export type PluginReport = { plugin: string; reason: string };
-
-const pendingReports: PluginReport[] = [];
-
-const sessionHost = createEditorPluginHost((plugin, reason) => {
-  pendingReports.push({ plugin, reason });
-});
 
 function wholeBuffer(state: EditorState): EditorRange {
   const last = state.lines.length - 1;
@@ -59,8 +53,8 @@ export function useEditorPlugins(
   url: string,
   api: EditorApi,
   file: string,
-  host: EditorPluginHost = sessionHost,
-  reports: PluginReport[] = pendingReports,
+  host: EditorPluginHost,
+  reports: PluginReport[] = [],
 ): (event: KeyLike) => boolean {
   const report = () => {
     const queued = [...reports];
