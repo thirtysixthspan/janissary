@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRankedOverlayKeys } from '../shared/ranked-overlay-keys';
+import { rankedOverlayKeys } from '../shared/ranked-overlay-keys';
 import type { FuzzyMatchResult } from '../shared/fuzzy-match';
 
 type Properties = {
@@ -52,7 +52,7 @@ function editorFindBody(query: string, results: FuzzyMatchResult[], selected: nu
 // belongs to `EditorTab`, which owns the buffer. Owns its own key handling so Up/Down/Enter/Escape
 // never reach the buffer behind it.
 export function EditorFind({ query, onChangeQuery, results, selected, onChangeSelected, onClose }: Properties) {
-  const onKeyDown = useRankedOverlayKeys(selected, results.length, onChangeSelected, () => {
+  const onKeyDown = rankedOverlayKeys(selected, results.length, onChangeSelected, () => {
     if (results.length > 0) onChangeSelected(0);
   }, onClose);
 

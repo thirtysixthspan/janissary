@@ -2,16 +2,6 @@
 
 ## ready
 
-* Drop the `use` prefix from the ranked-overlay key handler, which is a plain function that never touches a React hook, so the name stops promising state it does not hold.
-
-Existing Debt: `web/src/shared/ranked-overlay-keys.ts` exports `useRankedOverlayKeys`, which takes a selection, a count and three callbacks and returns a `React.KeyboardEventHandler` while calling no React hook at all, in violation of §6 (logic that calls no React hook is a plain function and must not carry the `use` prefix). Severity: 3/10
-
-Existing Risk: 3/10 - The `use` prefix is the signal both `react-hooks/rules-of-hooks` and the reader key on, so the rule stops guarding `web/src/pickers/QuickOpen.tsx` and `web/src/editor/EditorFind.tsx` at the point either calls it; the first person to add a `useState` inside it is doing so beside arrow-key arithmetic two features share, and the conditional-call checks fall silent exactly then.
-
-Proposal Risk: 2/10 - Renaming to a plain function is a two-file import update and cannot change behavior, but what remains is a `shared/` module whose name no longer rhymes with the `use…` hooks beside it, so a reader has to look twice to place it in the layer table.
-
-Proposal: In `web/src/shared/ranked-overlay-keys.ts`, rename `useRankedOverlayKeys` to `rankedOverlayKeys`, keeping the signature, the body and the returned handler type exactly as they are — the file already imports React as a type only, so no import changes. Update the two callers' import and call sites: `web/src/pickers/QuickOpen.tsx`, where the imported name and the call that assigns `onKeyDown` both change, and `web/src/editor/EditorFind.tsx`, where the same two sites change. Blast radius is three files — the module and its two consumers — and nothing else names `useRankedOverlayKeys`; there is no `ranked-overlay-keys` test to update. Both callers invoke it unconditionally at the top of a component body, which is why neither will notice the change, and both keep the same key behavior because only the name moves.
-
 * Give the "is this path inside that root" test one owner instead of four hand-rolled spellings of it.
 
 Existing Debt: `containedPath` in `src/file-navigator/batch-paths.ts` is the canonical containment test, but three further modules re-derive it: `inside` in `src/remote/filesystem/path-containment.ts` carries `containedPath`'s tail with the resolve step removed, `resolveSelected` in `src/file-navigator/selection-action.ts` spells a prefix comparison against the root, and `shellCwd` in `src/remote/serve-processes.ts` clamps a resolved cwd with a third spelling, so the predicate principle 9 calls an enforced, tested invariant is maintained four times and each copy treats absolute inputs, trailing separators and `..` differently. Severity: 6/10
