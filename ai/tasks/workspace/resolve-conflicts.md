@@ -52,7 +52,7 @@ State the pull request you are working and how you identified it, in one sentenc
 
 The plan is what you will check the implementation against in Step 5, so read it before touching a single conflict marker.
 
-1. Run `gh pr diff <number> --name-only` and look for a `./product/plans/**/*.md` entry. A feature pull request carries its plan there — moved into `./product/plans/complete/` by `ai/tasks/build-a-feature.md`, or written straight into it by `ai/tasks/work-an-issue.md`.
+1. Run `gh pr diff <number> --name-only` and look for a `./product/plans/**/*.md` entry. A feature pull request carries its plan there — moved into `./product/plans/complete/` by `ai/tasks/feature/build-a-feature.md`, or written straight into it by `ai/tasks/work-an-issue.md`.
 2. Read that plan **in full**: its goal, design decisions, file-by-file changes, tests, and out-of-scope list.
 3. Run `gh pr view <number> --json title,body` and read the description for intent the plan does not state.
 4. **If the diff carries no plan file** — a hygiene or documentation pull request, say — do not stop. Use the pull request body and the commit subjects from `git log origin/master..HEAD` as the statement of intent instead, and say so in the report.

@@ -83,7 +83,7 @@ The baseline runs before any question so that a project that cannot be worked on
 
 ## Step 3 — Identify the feature
 
-The user names the feature at invocation, in free text: a spec name (`image-tab`), a command name (`schedule`), or a description (`the audio player`), for example `execute ai/tasks/remove-an-existing-feature.md "the audio player"`. No backlog file is read for it. If nothing was named, your first question asks which feature to remove.
+The user names the feature at invocation, in free text: a spec name (`image-tab`), a command name (`schedule`), or a description (`the audio player`), for example `execute ai/tasks/feature/remove-an-existing-feature.md "the audio player"`. No backlog file is read for it. If nothing was named, your first question asks which feature to remove.
 
 Search the project's specs, command definitions, and documentation for the named text.
 
@@ -111,7 +111,7 @@ Search the codebase, specs, documentation, `help.md`, backlog files, and the cod
 
 ## Step 5 — Settle the scope with the user
 
-Work the scope decisions as a decision tree, using exactly the mechanism in the "Phased questioning — the decision tree" section of `plan-a-new-feature.md`: read the project's own `ai/tasks/plan-a-new-feature.md` when it has one, otherwise `$janissary/ai/tasks/plan-a-new-feature.md`. Ask in rounds of numbered questions over what is askable now, with your recommended answer for each, wait for the answers, then recompute the askable set. There is no cap on rounds or questions. Every question offers concrete options grounded in the Step 4 inventory, never an open "what should happen?". The questioning ends only when every scope decision is settled.
+Work the scope decisions as a decision tree, using exactly the mechanism in the "Phased questioning — the decision tree" section of `plan-a-new-feature.md`: read the project's own `ai/tasks/feature/plan-a-new-feature.md` when it has one, otherwise `$janissary/ai/tasks/feature/plan-a-new-feature.md`. Ask in rounds of numbered questions over what is askable now, with your recommended answer for each, wait for the answers, then recompute the askable set. There is no cap on rounds or questions. Every question offers concrete options grounded in the Step 4 inventory, never an open "what should happen?". The questioning ends only when every scope decision is settled.
 
 Before the first round, make sure you have at least one question in each of these four categories:
 
@@ -185,7 +185,7 @@ The remaining features are proven to work in three layers. The fast check after 
 
 **Live check of each detached feature.** Every remaining feature that touched the removed one, and so had to be detached from it, is checked in a scratch instance of the app the way `fix-a-bug.md` Step 5 does it. When nothing was detached, there is no live check.
 
-1. Decide whether it is possible. For a web app the tab needs an attached browser: confirm `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` are both set, printing only whether each exists. Each detached feature must also be reachable in a running app. Where either fails, skip that check and record the reason in one line. It goes in the plan's Verification section, the PR body, and the report. Never launch a browser of your own; [`sandbox-e2e-browser.md`](../guidelines/sandbox-e2e-browser.md) explains why that fails inside a workspace.
+1. Decide whether it is possible. For a web app the tab needs an attached browser: confirm `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` are both set, printing only whether each exists. Each detached feature must also be reachable in a running app. Where either fails, skip that check and record the reason in one line. It goes in the plan's Verification section, the PR body, and the report. Never launch a browser of your own; [`sandbox-e2e-browser.md`](../../guidelines/sandbox-e2e-browser.md) explains why that fails inside a workspace.
 2. Start a scratch instance by executing `start-application.md` with `./temp/remove-an-existing-feature/` as the scratch root. It builds the working tree, so it includes the uncommitted removal. Compare `git status --short` before and after the build; the build must add or change nothing tracked. A start failure with an environment cause (a sandbox denial, a held port, a missing binary) makes the live check not possible, with that reason. A start failure caused by the removal means the removal is broken: go back to Step 7.
 3. Drive every detached feature in one batch. Write the driver inside the scratch root and run it once:
 
@@ -212,7 +212,7 @@ mv ./product/plans/ready/remove-<feature-slug>.md ./product/plans/complete/remov
 
 Then execute `open-feature-pull-request.md` in full, resolved project-first. Follow its steps as written, and satisfy these three requirements as well:
 
-1. **Commit type.** A removal users can see (a command, a tab, a key binding, an option, documented behavior) uses `feat(<scope>)!: remove <feature>`, with a `BREAKING CHANGE:` footer at the end of the commit body naming what users lose. For example: `feat(audio)!: remove the audio player tab`. A removal users cannot see uses `refactor(<scope>): remove <feature>`. Both follow [`ai/guidelines/conventional-commits.md`](../guidelines/conventional-commits.md), and the PR title matches the commit subject.
+1. **Commit type.** A removal users can see (a command, a tab, a key binding, an option, documented behavior) uses `feat(<scope>)!: remove <feature>`, with a `BREAKING CHANGE:` footer at the end of the commit body naming what users lose. For example: `feat(audio)!: remove the audio player tab`. A removal users cannot see uses `refactor(<scope>): remove <feature>`. Both follow [`ai/guidelines/conventional-commits.md`](../../guidelines/conventional-commits.md), and the PR title matches the commit subject.
 2. **PR body.** Besides that workflow's sections, list every backlog entry the removal deleted, the pre-existing dead code left alone, each remaining feature that was detached and how, and each skipped live check with its reason.
 3. **No merge.** Leave the PR open for a human.
 

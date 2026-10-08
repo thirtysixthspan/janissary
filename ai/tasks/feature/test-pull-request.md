@@ -2,7 +2,7 @@
 
 Your job: take a pull request that is **already open** and check out its head branch. Build and start the app from that branch, then drive it through the browser Janissary attached to this tab, following the manual testing steps the pull request itself offers as proof that it works. Then write up to five additional use-case or edge-case steps of your own for the behavior it changes, run those too, and add them to the pull request's description in a section of their own. Every failure is rerun, researched to a likely root cause, and recorded as a structured entry in `./product/backlog/pull-request.md` on the pull request's own head branch. Each entry carries enough detail that an agent opening it cold can replicate the failing test. The entry is committed and pushed, and the pull request is **left open**.
 
-This task **tests and records**. It never fixes what it finds, never edits source code, never touches the pull request's description beyond its own **Additional test cases** section, and never merges or closes anything. Every recorded failure is addressed in a separate invocation of `execute ./ai/tasks/work-an-issue.md`, using its `PR <number>:` prefix to update the tested pull request's branch and leave it open. Steps that pass are shown in this run's report and nowhere else.
+This task **tests and records**. It never fixes what it finds, never edits source code, never touches the pull request's description beyond its own **Additional test cases** section, and never merges or closes anything. Every recorded failure is addressed in a separate invocation of `execute ./ai/tasks/feature/work-pull-request-issue.md`, with the explicit PR number and an optional backlog-entry selector to update the tested pull request's branch and leave it open. Steps that pass are shown in this run's report and nowhere else.
 
 **Project `./product/` directory.** Every `./product/...` path in this task refers to the product directory in the current working directory — the project being worked on — never to the Janissary codebase's own `product/` directory, even when this task file was launched from an absolute path inside the Janissary installation. Janissary's own scripts are reached as `$janissary/scripts/run.mjs`, the installation's copy, never through the branch's `./scripts/run.mjs`: the checked-out branch's scripts are part of what is under test.
 
@@ -28,8 +28,8 @@ Read any file in the repo. Check out `master` and run the preparation task there
 
 1. **Merging or closing the pull request, or pushing anywhere but its head branch.** Never run `gh pr merge`, never open a replacement pull request. Merging is the human's decision.
 2. **Working a pull request that is not `OPEN`, or an ambiguous target.** Report and stop; never substitute another pull request or branch.
-3. **Editing any tracked file other than `./product/backlog/pull-request.md`.** No source, test, spec, config, plan, or documentation edit. This task records; `work-an-issue.md` fixes.
-4. **Editing the pull request's title, editing its description outside the Additional test cases section, or posting to GitHub.** No `gh pr comment` or `gh pr review`, and no `gh pr edit` beyond Step 11's `--body-file` write. Every other part of the description, **How to verify** included, is the author's and stays byte-for-byte. A wrong testing step is recorded as a finding for `work-an-issue.md` to correct.
+3. **Editing any tracked file other than `./product/backlog/pull-request.md`.** No source, test, spec, config, plan, or documentation edit. This task records; `work-pull-request-issue.md` fixes.
+4. **Editing the pull request's title, editing its description outside the Additional test cases section, or posting to GitHub.** No `gh pr comment` or `gh pr review`, and no `gh pr edit` beyond Step 11's `--body-file` write. Every other part of the description, **How to verify** included, is the author's and stays byte-for-byte. A wrong testing step is recorded as a finding for `work-pull-request-issue.md` to correct.
 5. **Running the project's quality tooling.** No lint, typecheck, test suite, `check-diff`, `pr-check-gate`, or `npm run check`, even when a testing step asks for it. CI and the build and issue tasks own that tooling; this task tests behavior.
 6. **Installing anything outside Step 2's preparation of `master` and Step 3's gated package update, or letting a lifecycle script run.** The gate is what contains install-time code from a branch you did not write.
 7. **Launching a browser, closing or killing the attached browser, or navigating to a `file:` URL.** Never drive the human's live app or any instance other than the one this run started.
@@ -42,7 +42,7 @@ Read any file in the repo. Check out `master` and run the preparation task there
 
 ## Step 0 — Identify the pull request
 
-1. **If a value is passed in the task invocation** (e.g. `execute ai/tasks/test-pull-request.md 232`), that value is the target. A pull request number, `#232`, a full pull request URL, and a head branch name are all accepted directly by `gh pr view`.
+1. **If a value is passed in the task invocation** (e.g. `execute ai/tasks/feature/test-pull-request.md 232`), that value is the target. A pull request number, `#232`, a full pull request URL, and a head branch name are all accepted directly by `gh pr view`.
 2. **Otherwise, recognize the pull request from context.** Run `gh pr view --json state,number,headRefName,url` with no argument. If that finds nothing, run `gh pr list --state open --json number,title,headRefName,url` and take the pull request only when **exactly one** is open. With zero or more than one, report the candidates and stop.
 3. Run `gh pr view <target> --json state,number,headRefName,baseRefName,url` and record the number, head branch, base branch, and URL. If the lookup fails or the state is not `OPEN`, stop.
 
@@ -54,7 +54,7 @@ State the pull request you are testing and how you identified it, in one sentenc
 
 Confirm both `JANISSARY_BROWSER_WS_ENDPOINT` and `JANISSARY_PLAYWRIGHT` are set, printing only whether each exists and never the endpoint itself. If either is unset, stop before checking anything out. Report that this tab needs relaunching with `-b` (`harness <name> -b`, or **E2E browser** in the New harness dialog). There is no fallback that reads the steps instead of running them.
 
-Read [`sandbox-e2e-browser.md`](../guidelines/sandbox-e2e-browser.md) for the connection and lifecycle rules, and follow it for every driver this run writes.
+Read [`sandbox-e2e-browser.md`](../../guidelines/sandbox-e2e-browser.md) for the connection and lifecycle rules, and follow it for every driver this run writes.
 
 ---
 
@@ -98,7 +98,7 @@ Do not overstate what this buys. The gate keeps lifecycle scripts and known-bad 
 
 ## Step 4 — Collect the testing steps
 
-1. Run `gh pr view <number> --json title,body`. Take every step in the body's **How to verify** section, which [`open-feature-pull-request.md`](workspace/open-feature-pull-request.md) writes, including a **Replication steps** account inside it, which [`fix-a-bug.md`](fix-a-bug.md) writes there.
+1. Run `gh pr view <number> --json title,body`. Take every step in the body's **How to verify** section, which [`open-feature-pull-request.md`](../workspace/open-feature-pull-request.md) writes, including a **Replication steps** account inside it, which [`fix-a-bug.md`](../fix-a-bug.md) writes there.
 2. Run `gh pr diff <number> --name-only` and read each `./product/plans/**/*.md` file it lists. Take the manual checks in each plan's **Verification** section.
 3. A step that appears in both sources is run once, under its description id.
 4. Give each step an id by source: `D1`, `D2`, … for the description, `P1`, `P2`, … for the plan. Keep its verbatim text and its expected result exactly as the source states it.
@@ -164,7 +164,7 @@ Then run a second driver, `--out rerun`, holding only the steps that failed, eac
 
 Follow the observed behavior into the code, and name the file, the function, the mechanism, and a likely fix. Checking a hypothesis starts another batch the way Step 8 does. Do not change code or run its test suite.
 
-Decide here whether the code or the step is wrong. When the app does what the plan or a spec says and the step expects something else, or the step names a command, control, or message that does not exist, the failure is a **step correction**. A wrong step from a plan's Verification section is also corrected in the description's **How to verify**: `work-an-issue.md` in PR mode can edit the description but not another plan's text, and a completed plan is a historical record.
+Decide here whether the code or the step is wrong. When the app does what the plan or a spec says and the step expects something else, or the step names a command, control, or message that does not exist, the failure is a **step correction**. A wrong step from a plan's Verification section is also corrected in the description's **How to verify**: `work-pull-request-issue.md` can edit the description but not another plan's text, and a completed plan is a historical record.
 
 A failure whose root cause you cannot locate is still filed. Say plainly that the cause was not found, name what was checked and ruled out, and describe the fix only as far as the evidence supports it. Failures that share one root cause become one entry that lists every failing step, so the cause is fixed once.
 
@@ -200,16 +200,16 @@ Existing Risk: <N>/10 - <one sentence>
 
 Proposal Risk: <N>/10 - <one sentence>
 
-Proposal: Execute ./ai/tasks/work-an-issue.md "PR <number>: <concrete issue summary>". <The replication, the cause, and the fix.>
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md <number> "<concrete issue summary>". <The replication, the cause, and the fix.>
 ```
 
-This is the format [`review-pull-request.md`](review-pull-request.md) Step 4 defines, restated so this task stands alone. That file, [`find-technical-debt.md`](research/find-technical-debt.md), and this one share it, so a change to the format or to either scale belongs in all three.
+This is the format [`review-pull-request.md`](review-pull-request.md) Step 4 defines, restated so this task stands alone. That file, [`find-technical-debt.md`](../research/find-technical-debt.md), and this one share it, so a change to the format or to either scale belongs in all three.
 
 - **The summary bullet.** One sentence written as a change, not a complaint, naming what the fix makes work and where a user meets it: "Make the empty queue show its placeholder after the last item is removed", "Correct the pull request's testing step that expects a toast after saving". No fixed opener and no paths.
 - **Existing Issue.** One sentence stating what is wrong today — the failure as observed, or the step as wrong — then a trailing `Severity: <N>/10`.
 - **Existing Risk.** A score, then ` - `, then one sentence on what the issue risks if it is never resolved.
 - **Proposal Risk.** A score, then ` - `, then one sentence on the risk left once the fix lands. Write both risk sentences to stand on their own for a reader who has not reached `Proposal`.
-- **Proposal.** It begins with `Execute ./ai/tasks/work-an-issue.md "PR <number>: <concrete issue summary>".`, with the real number from Step 0. Then write it for an agent that never saw this run and must replicate the failure before fixing it, giving in this order: the step's id and source (description, plan, or generated) and its verbatim text; the exact inputs, commands, clicks, selectors, and any scratch fixture content the step depends on; the expected result with the sentence that promises it, and the observed result, with the intermittent rate and the steps it ran after when it is intermittent; the root cause, naming each file by path and each function by name, or what was checked and ruled out; the likely fix; and what a regression test should assert. A step correction's `Proposal` instead gives the step as it should read in the description's **How to verify**. Reference files by path only, never by line number. Keep it to one paragraph. The scratch driver is never kept or embedded; the prose is the replication.
+- **Proposal.** It begins with `Execute ./ai/tasks/feature/work-pull-request-issue.md <number> "<concrete issue summary>".`, with the real number from Step 0. Then write it for an agent that never saw this run and must replicate the failure before fixing it, giving in this order: the step's id and source (description, plan, or generated) and its verbatim text; the exact inputs, commands, clicks, selectors, and any scratch fixture content the step depends on; the expected result with the sentence that promises it, and the observed result, with the intermittent rate and the steps it ran after when it is intermittent; the root cause, naming each file by path and each function by name, or what was checked and ruled out; the likely fix; and what a regression test should assert. A step correction's `Proposal` instead gives the step as it should read in the description's **How to verify**. Reference files by path only, never by line number. Keep it to one paragraph. The scratch driver is never kept or embedded; the prose is the replication.
 
 "Low risk" is not a risk. If you genuinely see none in either risk paragraph, say what would make it visible if you were wrong.
 

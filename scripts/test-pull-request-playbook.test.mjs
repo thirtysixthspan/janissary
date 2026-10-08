@@ -2,13 +2,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// `ai/tasks/test-pull-request.md` runs a branch nobody has vouched for yet, and its safety rests on
+// `ai/tasks/feature/test-pull-request.md` runs a branch nobody has vouched for yet, and its safety rests on
 // a few sentences an unattended run obeys literally. A later edit that points the run back at the
 // branch's own copy of a task would still read fine and still pass every other check, so these
 // assertions pin the security-relevant wording and nothing else: not prose, not structure.
 
 const repoRoot = path.resolve(import.meta.dirname, '..');
-const playbook = readFileSync(path.join(repoRoot, 'ai/tasks/test-pull-request.md'), 'utf8');
+const playbook = readFileSync(path.join(repoRoot, 'ai/tasks/feature/test-pull-request.md'), 'utf8');
 
 const WORKSPACE_TASKS = ['start-application.md', 'stop-application.md'];
 const PREPARE_TASK = 'prepare-workspace.md';

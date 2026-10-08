@@ -1,6 +1,6 @@
 # Update an Open Pull Request
 
-Your job: take a pull request that is **already open** and has usually been built, reviewed, tested, and revised several times, check out its head branch, and read what its code does now. Then bring everything that describes the pull request back in line with that code: its description, its plan, the product specs, and `help.md`. The fix plans that `work-an-issue.md` added along the way are folded into the pull request's own plan and removed, so the pull request ends with one plan. Anything still in the branch's backlog is cleared. The file edits are committed and pushed to the pull request's own head branch, the description is rewritten, and the pull request is **left open**.
+Your job: take a pull request that is **already open** and has usually been built, reviewed, tested, and revised several times, check out its head branch, and read what its code does now. Then bring everything that describes the pull request back in line with the code: its description, its plan, the product specs, and `help.md`. The fix plans that `work-pull-request-issue.md` added along the way are folded into the pull request's own plan and removed, so the pull request ends with one plan. Anything still in the branch's backlog is cleared. The file edits are committed and pushed to the pull request's own head branch, the description is rewritten, and the pull request is **left open**.
 
 This task **describes**. The code on the head branch is the ground truth: when the text and the code disagree, the text changes and the code never does. The task edits no source, test, or config file, and so it runs no test suite, no lint, and no typecheck. It installs dependencies while preparing the workspace, and nothing else it does consumes them.
 
@@ -38,7 +38,7 @@ Read any file in the repo. Check out the pull request's head branch. Run Steps 2
 
 ## Step 0 — Identify the pull request
 
-1. **If a value is passed in the task invocation** (e.g. `execute ai/tasks/update-pull-request.md 232`), that value is the target. A pull request number, `#232`, a full pull request URL, and a head branch name are all accepted directly by `gh pr view`.
+1. **If a value is passed in the task invocation** (e.g. `execute ai/tasks/feature/update-pull-request.md 232`), that value is the target. A pull request number, `#232`, a full pull request URL, and a head branch name are all accepted directly by `gh pr view`.
 2. **Otherwise, recognize the pull request from context.** Run `gh pr view --json state,number,headRefName,url` with no argument — it resolves the pull request for the branch currently checked out. If that finds nothing, run `gh pr list --state open --json number,title,headRefName,url` and take the pull request only when **exactly one** is open. With zero or more than one, report the candidates and stop.
 3. Run `gh pr view <target> --json state,number,headRefName,url` and record the number, head branch, and URL for the rest of the task. If the lookup fails or the state is not `OPEN`, stop.
 
@@ -64,8 +64,8 @@ This step is reconnaissance. Write nothing yet.
 
 1. Run `git fetch origin master`, so every `origin/master` comparison below sees `master` as it stands on the remote. `gh pr checkout` does not fetch it.
 2. Run `gh pr view <number> --json title,body` and read the description in full.
-3. **Find the pull request's own plan.** Run `git log --reverse --format=%H origin/master..HEAD` and take its first line: the branch's first commit. Run `git show --name-status --format= <sha> -- product/plans/complete/` on it. When it adds (`A`) or moves in (`R`, which is how a `git mv` from `./product/plans/ready/` shows) **exactly one** plan, that is the pull request's own plan. It is the feature plan [`build-a-feature.md`](build-a-feature.md) promotes, or the bug plan [`fix-a-bug.md`](fix-a-bug.md) records; either is committed before any review fix exists. When the first commit adds no plan, or more than one, there is **no own plan**: do not guess which one wins.
-4. **Find the fix plans.** Run `git diff origin/master...HEAD --name-status`. Every `A` line under `product/plans/complete/` other than the own plan is a fix plan, one per repair [`work-an-issue.md`](work-an-issue.md) made in PR mode. With no own plan, there are no fix plans to fold either.
+3. **Find the pull request's own plan.** Run `git log --reverse --format=%H origin/master..HEAD` and take its first line: the branch's first commit. Run `git show --name-status --format= <sha> -- product/plans/complete/` on it. When it adds (`A`) or moves in (`R`, which is how a `git mv` from `./product/plans/ready/` shows) **exactly one** plan, that is the pull request's own plan. It is the feature plan [`build-a-feature.md`](build-a-feature.md) promotes, or the bug plan [`fix-a-bug.md`](../fix-a-bug.md) records; either is committed before any review fix exists. When the first commit adds no plan, or more than one, there is **no own plan**: do not guess which one wins.
+4. **Find the fix plans.** Run `git diff origin/master...HEAD --name-status`. Every `A` line under `product/plans/complete/` other than the own plan is a fix plan, one per repair [`work-pull-request-issue.md`](work-pull-request-issue.md) made on this PR. With no own plan, there are no fix plans to fold either.
 5. Read the own plan and every fix plan in full.
 6. `git diff origin/master...HEAD` — three dots — is the authoritative diff. Read it in full, file by file, opening the surrounding files rather than judging hunks in isolation. List every behavior it adds or changes: commands, flags, key bindings, messages, defaults, edge cases, and files.
 7. Read `./product/backlog/pull-request.md` if it exists.
@@ -104,7 +104,7 @@ Correct every `Commands` or `Key Bindings` row in `help.md` that describes behav
 
 ## Step 6 — Clear the backlog
 
-When `./product/backlog/pull-request.md` holds any entry, updating the pull request ends its revision cycle, so the entries go. First keep each entry's lead `*` summary bullet for the report. Then rewrite the file to the master skeleton, byte-for-byte, the state `work-an-issue.md` Step 7 leaves a drained backlog in:
+When `./product/backlog/pull-request.md` holds any entry, updating the pull request ends its revision cycle, so the entries go. First keep each entry's lead `*` summary bullet for the report. Then rewrite the file to the master skeleton, byte-for-byte, the state `work-pull-request-issue.md` Step 7 leaves a drained backlog in:
 
 ```
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
@@ -144,7 +144,7 @@ This comes after the push, never before. The description is live on GitHub the m
 1. Run `gh pr view <number> --json body` and take the current body.
 2. Correct and complete it against the code on the branch, in the author's structure:
    - Fix every claim the code no longer supports, and add behavior the code has that the description never mentions.
-   - Keep the author's section headings and their order. A description written by [`open-feature-pull-request.md`](workspace/open-feature-pull-request.md) carries **What**, **Behavior examples**, **How to verify**, and **Files changed**, and may carry a **Replication steps** account inside **How to verify** from `fix-a-bug.md`. Correct each section that exists; do not add missing sections or regenerate the body.
+   - Keep the author's section headings and their order. A description written by [`open-feature-pull-request.md`](../workspace/open-feature-pull-request.md) carries **What**, **Behavior examples**, **How to verify**, and **Files changed**, and may carry a **Replication steps** account inside **How to verify** from `fix-a-bug.md`. Correct each section that exists; do not add missing sections or regenerate the body.
    - Rewrite a **Behavior examples** transcript or a **How to verify** expected result that no longer matches from the code, its tests, and the specs. The app is never started to produce one.
    - Rebuild **Files changed** from `git diff origin/master...HEAD --name-status` as it stands after Step 7, grouped by area with a one-line description of each file, the way `open-feature-pull-request.md` writes it. It covers the plan consolidation too: deleted fix plans no longer appear.
    - Leave the **Additional test cases** section byte-for-byte, from its heading up to the next heading of the same or a higher level or the end of the body. Leave everything that is already accurate exactly as the author wrote it.

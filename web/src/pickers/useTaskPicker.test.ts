@@ -30,7 +30,7 @@ function TestComponent({ tasks, onHook }: { tasks: TaskRow[]; onHook: (hook: Ret
 describe('useTaskPicker', () => {
   it('openTaskPicker seats the index on the first selectable row (past the section header) and opens the popup', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
-    const tasks = [fileRow('build-a-feature.md')];
+    const tasks = [fileRow('work-an-issue.md')];
     render(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
     act(() => { hook!.setTaskPickerIndex(3); hook!.openTaskPicker(); });
     expect(hook!.taskPickerOpen).toBe(true);
@@ -42,13 +42,14 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
-      hook = useTaskPicker([fileRow('fix-a-small-issue.md')], mockClient, undefined, dropRef, vi.fn());
+      hook = useTaskPicker([dirRow('feature'), fileRow('feature/work-pull-request-issue.md', 1)], mockClient, undefined, dropRef, vi.fn());
       return null;
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
-    act(() => hook!.pickTask('fix-a-small-issue.md'));
-    expect(insertAtCaret).toHaveBeenCalledWith('execute ./ai/tasks/fix-a-small-issue.md');
+    act(() => hook!.toggleTaskDir('feature'));
+    act(() => hook!.pickTask('feature/work-pull-request-issue.md'));
+    expect(insertAtCaret).toHaveBeenCalledWith('execute ./ai/tasks/feature/work-pull-request-issue.md');
     expect(hook!.taskPickerOpen).toBe(false);
   });
 
@@ -57,13 +58,14 @@ describe('useTaskPicker', () => {
     let hook: ReturnType<typeof useTaskPicker> | undefined;
     function C() {
       const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
-      hook = useTaskPicker([fileRow('build-a-feature.md', 0, 'janissary')], mockClient, undefined, dropRef, vi.fn());
+      hook = useTaskPicker([dirRow('feature', 0, 'janissary'), fileRow('feature/build-a-feature.md', 1, 'janissary')], mockClient, undefined, dropRef, vi.fn());
       return null;
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
-    act(() => hook!.pickTask('build-a-feature.md'));
-    expect(insertAtCaret).toHaveBeenCalledWith('execute $janissary/ai/tasks/build-a-feature.md');
+    act(() => hook!.toggleTaskDir('feature'));
+    act(() => hook!.pickTask('feature/build-a-feature.md'));
+    expect(insertAtCaret).toHaveBeenCalledWith('execute $janissary/ai/tasks/feature/build-a-feature.md');
     expect(hook!.taskPickerOpen).toBe(false);
   });
 

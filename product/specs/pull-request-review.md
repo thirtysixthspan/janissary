@@ -10,6 +10,6 @@ The review backlog is one flat list of findings with no status grouping. Every e
 
 ### Follow-up work
 
-Every new finding directs its implementation through the work-an-issue workflow. The proposal identifies the reviewed pull request and a concrete issue summary, followed by an implementation and verification plan. Follow-up work uses PR update mode so the fix is committed to the same open pull request without merging it.
+Every new finding directs its implementation through the work-pull-request-issue workflow. The proposal gives the explicit reviewed PR number and a concrete issue summary as a backlog-entry selector, followed by an implementation and verification plan. Follow-up work repairs one recorded entry on that same open PR's head branch without merging it.
 
 The same route applies to all five review dimensions, including security. References to other tasks provide detection guidance only; they do not redirect implementation to another task or substitute a human-only handoff. Previously recorded entries are not rewritten by a later review solely to change their routing.

@@ -1,17 +1,31 @@
 # Task Picker
 
 Task files are the executable prompts kept under the repository's `ai/tasks/` directory —
-`build-a-feature.md`, `work-an-issue.md`, `merge-change-to-master.md`, and the like. Each is a
+`feature/build-a-feature.md`, `work-an-issue.md`, `workspace/merge-change-to-master.md`, and the like. Each is a
 self-contained instruction set an agent can be told to run. The task picker lists them so one can
 be dropped onto the command line without typing its path by hand.
 
+### Feature task grouping
+
+Feature planning, building, removal, and pull request review, testing, updating, and issue repair are grouped under `feature`. The combined workflow is named `auto-build-a-feature.md`. The moved tasks have no wrappers or aliases at their former root paths; saved invocations must use the new locations. Workspace tasks remain under `workspace`.
+
+### Ordinary and pull request issues
+
+`work-an-issue.md` prepares from `master`, reads its issues backlog, and delivers through the existing merge workflow. Every argument is ordinary issue text, including a number, `#number`, or PR URL. A matching backlog issue is used; otherwise the named text is the work item and is not added to the backlog. It never selects an existing PR or reads its review backlog.
+
+`feature/work-pull-request-issue.md` requires an explicit positive PR number, `#number`, or GitHub PR URL, optionally followed by a backlog-entry selector. It accepts no head branch name and never infers a target. Missing or malformed targets stop before checkout or installation with `Status: blocked` and `Reason: explicit pull request number, #number, or PR URL required`. Lookup failures and closed PRs report their specific reasons without substituting another target.
+
+The PR task checks out that open PR's head branch and prepares only its dependencies. It repairs one recorded entry from that branch's pull-request backlog. Without a selector, it takes the first entry rated below 7; with a selector, it uses only the matching entry and stops if it rates 7 or higher. Missing or empty backlogs, an unmatched selector, and no eligible entries stop without selecting other work or falling back to ordinary issues.
+
+The repair retains the existing plan, verification, specs, and affected-documentation workflow, removes the whole resolved entry, and restores the backlog's comment-and-heading skeleton when drained. It commits and pushes to the same branch without rewriting published history, applies only required description corrections after the push, never edits the title, and leaves the PR open. Push and description failures are reported as outstanding work rather than successful resolution.
+
 ### Planning a new feature
 
-`plan-a-new-feature.md` first writes an initial draft from the feature record and related code. It then questions the user in phases, each phase worked as a decision tree where every settled decision unblocks the decisions hanging off it — rounds of numbered questions, each with a recommended answer, continuing without any cap on question count until that phase's frontier is empty. The first phase resolves product decisions only (user flow, edge cases, scope, wording). The second phase resolves implementation decisions only — where code lives, which existing mechanism it extends or replaces — and runs only when the feature warrants implementation questions. After the plan exists, a further phase resolves any questions still open; after the two improvement passes, a final phase resolves any new questions they surfaced. It updates the draft after each round and completes only when every identified decision is resolved; the plan has no section for retaining unresolved questions.
+`feature/plan-a-new-feature.md` first writes an initial draft from the feature record and related code. It then questions the user in phases, each phase worked as a decision tree where every settled decision unblocks the decisions hanging off it — rounds of numbered questions, each with a recommended answer, continuing without any cap on question count until that phase's frontier is empty. The first phase resolves product decisions only (user flow, edge cases, scope, wording). The second phase resolves implementation decisions only — where code lives, which existing mechanism it extends or replaces — and runs only when the feature warrants implementation questions. After the plan exists, a further phase resolves any questions still open; after the two improvement passes, a final phase resolves any new questions they surfaced. It updates the draft after each round and completes only when every identified decision is resolved; the plan has no section for retaining unresolved questions.
 
 ### Removing a feature
 
-`remove-an-existing-feature.md` takes a feature the user names at invocation, in free text such as a spec name, a command name, or a description, and removes it with all of its code, tests, specs, and documentation. The target can also be part of a feature, such as one subcommand or option. When no name is given, or the name matches nothing or more than one thing, its first question offers the closest candidates; it never guesses.
+`feature/remove-an-existing-feature.md` takes a feature the user names at invocation, in free text such as a spec name, a command name, or a description, and removes it with all of its code, tests, specs, and documentation. The target can also be part of a feature, such as one subcommand or option. When no name is given, or the name matches nothing or more than one thing, its first question offers the closest candidates; it never guesses.
 
 It is interactive. Before it asks anything, it stops on a working tree with uncommitted or untracked files, on a project with no test command, and on a project whose typecheck, lint, or tests are already failing, changing nothing in each case. It then settles the scope of the removal with the user in the same decision-tree rounds the planning task uses, always covering four categories: the boundary of the feature, the remaining features that touch it, the pieces it shares with them, and the user-visible wording that has to change. A remaining feature that cannot be detached with a small change is put to the user, who chooses to remove it too, keep the piece it needs, or stop.
 
@@ -21,7 +35,7 @@ It proves the remaining features still work in three layers: a fast check after 
 
 ### Building a feature autonomously
 
-`auto-build.md` accepts a feature description and plans it with the user, then carries it through implementation and one new open pull request on its own. Planning is interactive: every question the planning task asks, including those raised by its two improvement passes, goes to the user in rounds with recommended answers.
+`feature/auto-build-a-feature.md` accepts a feature description and plans it with the user, then carries it through implementation and one new open pull request on its own. Planning is interactive: every question the planning task asks, including those raised by its two improvement passes, goes to the user in rounds with recommended answers.
 
 Once the plan is complete, the task researches how mature products handle the same capability and presents the gaps it finds to the user, each with its comparable product, a source, a rough complexity, and a recommendation. The user chooses which gaps join the plan. Chosen gaps become part of the feature, and the questions the wider scope raises go to the user in further rounds, followed by another pair of improvement passes and a final question phase. Declined gaps are listed as out of scope and are not proposed again during the run. No gap is written to any backlog. The plan is then promoted directly to ready without a planning commit, and the rest of the run asks nothing.
 
@@ -31,7 +45,7 @@ The task prepares a clean workspace once and preserves the plan and feature bran
 
 Gap research covers only the supplied feature. It skips unrelated ideas, ideas the plan already covers or excludes, and anything already in the features backlog, including deferred and declined entries. It presents at most ten gaps. Research that cannot be performed is reported to the user rather than treated as finding nothing.
 
-After opening the PR, the task reviews the entire PR and drains the backlog through numeric PR update mode until it is empty. It then tests the PR and drains the recorded failures, repeating the test until a run passes: no step fails, is intermittent, or needs a correction, and nothing new is recorded. Steps the test refuses as tooling, environment, or unsafe do not block a pass but are reported. A test run that cannot start the app or loses the browser is retried once before the run is blocked. Once a test run passes, the task updates the PR's description, plan, specs, and in-app help to match its final code, folding the fix plans the drains added into the feature plan ([[pull-request-updating]]).
+After opening the PR, the task reviews the entire PR and drains the backlog through the dedicated PR issue task with an explicit numeric target until it is empty. It then tests the PR and drains the recorded failures, repeating the test until a run passes: no step fails, is intermittent, or needs a correction, and nothing new is recorded. Steps the test refuses as tooling, environment, or unsafe do not block a pass but are reported. A test run that cannot start the app or loses the browser is retried once before the run is blocked. Once a test run passes, the task updates the PR's description, plan, specs, and in-app help to match its final code, folding the fix plans the drains added into the feature plan ([[pull-request-updating]]).
 
 Completion requires a test run to pass with no outstanding backlog entries, a successful update, successful verification and publication, and a clean local tree matching the open PR's remote head. The empty review backlog keeps its comment and heading. A failed push, pending description correction, failed update, or repeated lack of progress preserves outstanding work and produces `Status: blocked` with the reason. Successful runs report `Status: complete; PR open`. The task never merges or closes the PR, and a PR closed by another actor is reported without replacement.
 

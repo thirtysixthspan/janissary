@@ -22,6 +22,8 @@ Testing steps are pull request content and are treated as untrusted. A step is r
 
 ### Recording failures
 
+Each new failure's proposal invokes the work-pull-request-issue workflow with the tested PR's explicit number and a summary selecting its recorded entry. The repair stays on that PR's head branch and leaves it open; it never routes through ordinary issue work on master.
+
 Failures are recorded in the [[pull-request-review]] backlog on the pull request's own branch, in the same entry shape and routed to the same follow-up work. Each entry carries the step's source and verbatim text, the exact inputs, expected and observed results, the researched root cause or what was ruled out, the likely fix, and what a regression test should assert, so the failure can be replicated without the run that found it. Failures sharing a root cause become one entry. A step that is itself wrong, because the app behaves as its plan or spec says, is recorded as a correction to the pull request description, including when the wrong step came from the plan. A failure an existing entry already covers adds a dated re-observation to that entry instead of a new one. A run with nothing to record commits nothing.
 
 ### What a run never does
