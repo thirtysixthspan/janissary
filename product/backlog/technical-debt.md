@@ -102,6 +102,8 @@ Proposal: Replace `an tab` with the tab kind each sentence actually means, which
 
 ## development
 
+* Move the three flat `src/state-*.ts` files into `src/state/`: `state-dirs.ts`, `state-event.ts` and `state-listings.ts` sit in the flat `src/` root with two colocated tests and no bare `src/state.ts` entry, so the grouping lives in a filename prefix instead of a directory. They are one concern, the server's state layer: `state-dirs.ts` is the `.janissary/` init-and-clear boot registry every state-owning subsystem registers in, `state-listings.ts` is the cache behind the task and profile listings that ride every state broadcast, and `state-event.ts` builds the full state snapshot those listings feed. `src/state/` does not exist yet and no config file names any of the three paths literally, so the move is three source files and two tests relocated plus four import path rewrites, in `src/main.ts`, `src/index.ts`, `src/controller.ts` and `src/sessions/store.test.ts`. Resolve by running the `ai/tasks/hygiene/improve-namespacing.md` task against the `state` prefix. Severity: **low**.
+
 ## deferred
 
 ## declined
