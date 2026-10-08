@@ -18,6 +18,24 @@ const ACCOUNT_BANNER = 'You’ve hit your usage limit. Upgrade to Pro (https://c
 // The banner as codex actually paints it: it wraps mid-sentence across two rows.
 const WRAPPED = ['■ You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro), visit https://chatgpt.com/codex/settings/usage to', 'purchase more credits or try again at 1:20 PM.'].join('\n');
 
+// The reported banner, wrapped across three rows at the eighty columns a harness PTY gets by
+// default, with codex's composer painted beneath it. The banner's first row is seven rows from the
+// bottom of the screen, which is what the trailing-row window has to reach.
+const REPORTED = [
+  '■ You’ve hit your usage limit. Upgrade to Pro (https://chatgpt.com/explore/pro),',
+  'visit https://chatgpt.com/settings/usage to purchase more credits or try again',
+  'at 12:33 PM.',
+].join('\n');
+
+// codex's composer: the input box's border, input and border rows, then the send hint row that
+// `isLiveComposerLine` in `codex-permission-gate.ts` identifies as the live composer.
+const COMPOSER = [
+  '╭──────────────────────────────────────────────────────────────────────────────╮',
+  '│ >                                                                              │',
+  '╰──────────────────────────────────────────────────────────────────────────────╯',
+  '  ⏎ send   ⇧⏎ newline',
+].join('\n');
+
 const screen = (text: string): ScreenCapture => ({ text, capturedAt: 1_700_000_000_000 });
 
 describe('detectResumeLimit', () => {
@@ -31,6 +49,16 @@ describe('detectResumeLimit', () => {
 
   it('reads the same banner wrapped across two rows', () => {
     expect(detectResumeLimit(WRAPPED, 'codex')).toEqual({ kind: 'at', time: { hour: 13, minute: 20 } });
+  });
+
+  it('reads the reported banner wrapped across three rows above codex’s composer', () => {
+    expect(detectResumeLimit([REPORTED, COMPOSER].join('\n'), 'codex'))
+      .toEqual({ kind: 'at', time: { hour: 12, minute: 33 } });
+  });
+
+  it('reads the reported banner with one row of output printed since', () => {
+    expect(detectResumeLimit([REPORTED, 'Anything else?', COMPOSER].join('\n'), 'codex'))
+      .toEqual({ kind: 'at', time: { hour: 12, minute: 33 } });
   });
 
   it('matches a straight apostrophe as well as a typographic one', () => {
@@ -74,7 +102,7 @@ describe('detectResumeLimit', () => {
   });
 
   it('refuses a limit message the harness has scrolled past', () => {
-    const scrolled = [WRAPPED, 'Anything else?', '> working on the next step'].join('\n');
+    const scrolled = [WRAPPED, ...Array.from({ length: 7 }, () => '> working on the next step')].join('\n');
     expect(detectResumeLimit(scrolled, 'codex')).toBeUndefined();
   });
 
@@ -227,6 +255,13 @@ describe('HarnessAutoResumer', () => {
     const { resumer, scheduledAt } = makeResumer();
     resumer.onCapture(screen(BANNER));
     expect(scheduledAt).toHaveLength(1);
+    expect(resumer.isParked).toBe(true);
+  });
+
+  it('schedules a resume for the reported banner above codex’s composer', () => {
+    const { resumer, scheduledAt } = makeResumer();
+    resumer.onCapture(screen([REPORTED, COMPOSER].join('\n')));
+    expect(scheduledAt).toEqual([pinned.getTime() + 33 * 60_000 + RESUME_MARGIN_MS]);
     expect(resumer.isParked).toBe(true);
   });
 
