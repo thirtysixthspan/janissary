@@ -2,17 +2,6 @@
 
 ## ready
 
-* Move the two harness-named modules out of shared and into the harness feature directory, so the shared layer stops holding code only one feature can want.
-
-Existing Debt: `web/src/shared/HarnessTabMeta.tsx` and `web/src/shared/harness-tab-intents.ts` are each imported only by `web/src/harness/HarnessTab.tsx`, so shared code carrying the harness feature's own knowledge sits in the shared layer in violation of §2 (colocate by default, promote to shared on the second real consumer, and once shared a module may not know any particular feature). Severity: 5/10
-
-Existing Risk: 5/10 - `web/src/shared/HarnessTabMeta.tsx` is a 146-line component with a 470-line test parked in the layer every feature stands on, so `shared/` reads as the place a tab metadata row lives and the next tab kind to render one is invited to import it rather than colocate its own, which is how one feature's markup quietly becomes three callers' contract.
-
-Proposal Risk: 2/10 - After the move nothing imports the pair across a boundary, but `web/src/shared/remote-session-control.ts` and `web/src/shared/RemoteSessionButton.tsx` stay in shared with two consumers each and both carry comments naming `HarnessTabMeta`, so the shared layer still talks about a component whose home is a feature directory until those comments are corrected.
-
-Proposal: Move `web/src/shared/HarnessTabMeta.tsx` and `web/src/shared/harness-tab-intents.ts`, each with its colocated test (`web/src/shared/HarnessTabMeta.test.tsx` and `web/src/shared/harness-tab-intents.test.ts`), into `web/src/harness/`, keeping both file names and both exports. Inside the moved `HarnessTabMeta.tsx`, retarget every shared specifier for the new depth by adding one `../`: `./tab/flag-display`, `./icons`, `./status-windows/StatusWindowButton`, `./SplitTabButton`, `./RecordingFlag`, `./status-windows/status-button`, `./RemoteChip`, `./ConnectionPlug` and `./RemoteSessionButton`; in the moved `harness-tab-intents.ts`, `../ws` becomes `../../ws`. Retarget the single consumer, `web/src/harness/HarnessTab.tsx`, whose `../shared/HarnessTabMeta` and `../shared/harness-tab-intents` become `./HarnessTabMeta` and `./harness-tab-intents`; `web/src/harness/HarnessTab.test.tsx` names `HarnessTabMeta` only in a comment and needs no edit. Correct the stale wording in `web/src/shared/remote-session-control.ts` and `web/src/shared/RemoteSessionButton.tsx`, which stay in shared because `web/src/plugins/usePluginRemote.ts` and `web/src/harness/HarnessTab.tsx` both import them. Blast radius is four file moves, two import retargets and two comment corrections. `web/src/shared/HarnessTabMeta.test.tsx` is the suite that pins the row's flags, recording control, connections and schedule buttons and the remote detach control; it moves with its source unchanged and must keep passing.
-
-
 * Move the in-app notifications feed out of the app-shell root and into the notifications feature directory it already belongs to, so the capability stops being split across two locations.
 
 Existing Debt: `web/src/NotificationsTab.tsx` and `web/src/notifications-handlers.ts` sit in the flat app-shell root while the rest of the capability — `web/src/notifications/native-notifications.ts`, `web/src/notifications/useNativeNotifications.ts` and `web/src/notifications/alert-placement.ts` — lives in `web/src/notifications/`, in violation of §1 (organize by feature, not by file type), which keeps the feature's component and its pure logic module away from the directory that names it. Severity: 4/10

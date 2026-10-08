@@ -3,7 +3,7 @@ import type { JanusClient } from '../ws';
 
 // Which transcript RPC the metadata row's clipboard button sends. Supplied by the caller rather
 // than decided here: tabs and harness tabs open different transcripts, and branching on that
-// would give this shared module knowledge of the features that use it.
+// would give this module knowledge of the tabs that use it.
 export type TranscriptMethod = 'openHarnessTranscriptFor';
 
 export type AgentTabIntents = {
