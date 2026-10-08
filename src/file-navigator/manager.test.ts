@@ -127,7 +127,11 @@ describe('FileNavigatorManager', () => {
           tabs = [...tabs, { ...janus, label: 'notifications', view: 'notifications' }];
         },
         retargetEditorTab: retargetEditorTabMock,
+        // A failed navigation reports the directory it could not reach, abbreviated the way the
+        // transcript abbreviates one.
+        shorten: (p: string) => p,
       },
+      remote: { workspaceOf: () => undefined as string | undefined },
       notifications: new NotificationQueue(),
     };
   });

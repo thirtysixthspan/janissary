@@ -53,7 +53,7 @@ describe('rerootTree for remote workspaces', () => {
 
     expect(state.root).toBe('/remote/workspace');
     expect(port.reportFailure).toHaveBeenCalledWith(
-      'files', '/remote', expect.objectContaining({ message: 'outside the remote workspace /remote/workspace' }),
+      'files', '/remote', expect.objectContaining({ message: 'outside the remote workspace $workspace/workspace' }),
     );
   });
 });

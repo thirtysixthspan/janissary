@@ -4,6 +4,7 @@ import { poolCandidates, suffixCandidates } from '../launch-name/check.js';
 import { resolveLocalLaunchName } from '../launch-name/local.js';
 import { failRemoteLaunch, reportRemoteCleanup, reportRemoteClone, type RemoteNameRetry } from '../launch-name/fail-remote.js';
 import { notify } from '../notifications/index.js';
+import { abbreviateWorkspaceDir } from '../paths.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import { isInsideRoot } from './files.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
@@ -90,12 +91,13 @@ export function launchRemotePluginTab(
     const live = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
     if (!live || !deferred || !input.isEnabled()) return;
     live.plugin.busy = false;
-    managers.tab.setCwd(label, remote.cwd());
+    const workspace = remote.cwd();
+    managers.tab.setCwd(label, workspace);
     messageBus.emit('state', { type: 'dirty' });
     reportRemoteCleanup(managers, closeRetry, label, parsed.host, remote.cleaned());
     reportRemoteClone(managers, closeRetry, parsed.host, remote.cloned());
     const outcome = await deferred.invoke((capabilities) => ready({
-      instanceKey, workspaceDir: remote.cwd(), displayDir: remote.cwd(), host: parsed.host,
+      instanceKey, workspaceDir: workspace, displayDir: abbreviateWorkspaceDir(workspace), host: parsed.host,
       ...(remote.notice() && { sandboxNotice: remote.notice() }),
     }, capabilities), label);
     if (outcome.status === 'rejected') {

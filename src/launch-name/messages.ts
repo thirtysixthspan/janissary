@@ -1,10 +1,15 @@
+import { abbreviateWorkspaceDir } from '../paths.js';
 import type { RootRefusal } from '../remote/root-refusal.js';
 
 // Every line a launch-name refusal, a remote root refusal, a leftover cleanup, or a root clone posts
 // to the notifications feed, in one place so the local check, the remote answer's routing, and the
-// tests all read the same wording.
-// `<host>` is the bare host as the sessions tab shows it; `<path>` is the workspace's absolute path
-// on the machine that holds it.
+// tests all read the same wording. `<host>` is the bare host as the sessions tab shows it.
+//
+// No line here prints a path. A leftover workspace is named as `$workspace/<name>` — which is exact,
+// since the folder it refers to *is* the workspace of that name — and a root the remote just cloned
+// as `$root`, the host's own project root, which the line already says which host it is on. The
+// absolute paths these used to print are the only thing the abbreviation costs: nothing else on the
+// line depended on them.
 
 export const POOL_EXHAUSTED = 'All agent names are in use.';
 
@@ -21,9 +26,9 @@ export function remoteRunningRefusal(name: string, host: string): string {
 }
 
 // The local counterpart of `remoteRunningRefusal`: a workspace on this machine that a live tab or a
-// live janus instance is still using. There is no host to name, so the path says where it is.
-export function localRunningRefusal(name: string, path: string): string {
-  return `Cannot launch "${name}": "${name}" is already running (${path}).`;
+// live janus instance is still using. There is no host to name, so the workspace says where it is.
+export function localRunningRefusal(name: string): string {
+  return `Cannot launch "${name}": "${name}" is already running (${abbreviateWorkspaceDir(name)}).`;
 }
 
 // A name that cannot become a workspace folder at all; `reason` is `workspaceLabelError`'s answer.
@@ -36,9 +41,9 @@ export function checkUnansweredRefusal(name: string, host: string, reason: strin
 }
 
 // `host` is left out for a local removal.
-export function removalFailedRefusal(name: string, path: string, reason: string, host?: string): string {
+export function removalFailedRefusal(name: string, reason: string, host?: string): string {
   const where = host === undefined ? '' : ` on ${host}`;
-  return `Cannot launch "${name}": could not remove leftover workspace "${name}"${where} (${path}) — ${stripStop(reason)}.`;
+  return `Cannot launch "${name}": could not remove leftover workspace "${name}"${where} (${abbreviateWorkspaceDir(name)}) — ${stripStop(reason)}.`;
 }
 
 export function harnessRetriesRefusal(first: string, last: string, host: string): string {
@@ -50,19 +55,22 @@ export function poolRetriesRefusal(tried: readonly string[], host: string): stri
 }
 
 // `host` is left out for a local cleanup.
-export function cleanedNotice(name: string, path: string, host?: string): string {
+export function cleanedNotice(name: string, host?: string): string {
   const where = host === undefined ? '' : ` on ${host}`;
-  return `Removed leftover workspace "${name}"${where} (${path}) before launching.`;
+  return `Removed leftover workspace "${name}"${where} (${abbreviateWorkspaceDir(name)}) before launching.`;
 }
 
-// A remote launch whose missing project root was cloned onto the host first.
-export function clonedNotice(url: string, path: string, host: string): string {
-  return `Cloned ${url} into ${path} on ${host}.`;
+// A remote launch whose missing project root was cloned onto the host first. The clone landed in
+// that host's own project root, which is what `$root` names there, and `on <host>` says whose.
+export function clonedNotice(url: string, host: string): string {
+  return `Cloned ${url} into $root on ${host}.`;
 }
 
 // Why a remote host could not settle a project root for `name`, one line per refusal kind. `path` is
 // the folder each kind is about; for a declined or failed clone, the folder the clone would have
-// gone into.
+// gone into. Unlike every other line here it keeps the absolute path: each is a directory that
+// failed to become that host's root, so `$root` would name it wrongly, and it is the one thing on
+// the line a user can go and fix.
 export function rootRefusalMessage(name: string, host: string, refusal: RootRefusal): string {
   const { path } = refusal;
   const prefix = `Cannot launch "${name}": `;

@@ -123,7 +123,7 @@ owner (an open tab or a running janus instance) still holds the workspace folder
 terminated, ssh, or file-navigator row never makes a label in use. Labels compare case-insensitively.
 
 - **Default label** (bare `harness <name>`): moves on to the next free `-2`, `-3`, … past every label in use, as above.
-- **`as <label>` or a profile entry's `name`**: refused. The refusal is posted to the notifications feed, attributed to the tab the command was typed in, with nothing written to that tab's transcript, and no tab opens. The lines read `Cannot launch "<label>": a tab named "<label>" is already open.`, `Cannot launch "<label>": "<label>" is already in the sessions tab (<state> on <host>).`, or `Cannot launch "<label>": "<label>" is already running (<path>).`.
+- **`as <label>` or a profile entry's `name`**: refused. The refusal is posted to the notifications feed, attributed to the tab the command was typed in, with nothing written to that tab's transcript, and no tab opens. The lines read `Cannot launch "<label>": a tab named "<label>" is already open.`, `Cannot launch "<label>": "<label>" is already in the sessions tab (<state> on <host>).`, or `Cannot launch "<label>": "<label>" is already running ($workspace/<label>).`.
 
 A remote launch's host answers only after the placeholder tab has opened. When it reports the label
 running, the placeholder closes at once, without showing an error. For an `as` label,
@@ -138,10 +138,11 @@ reason), the placeholder shows the connection's error and closes shortly after a
 
 A leftover workspace folder under the chosen label with nothing running in it is removed before the
 clone, locally for `-w` and on the host for `on <address>`, even with uncommitted or unpushed work in
-it. The removal is announced as `Removed leftover workspace "<label>" (<path>) before launching.` (with
+it. The removal is announced as `Removed leftover workspace "<label>" ($workspace/<label>) before launching.` (with
 ` on <host>` after the label for a remote one). A removal that fails refuses the launch with
-`Cannot launch "<label>": could not remove leftover workspace "<label>" (<path>) — <reason>.`, closing
-a remote placeholder at once.
+`Cannot launch "<label>": could not remove leftover workspace "<label>" ($workspace/<label>) — <reason>.`, closing
+a remote placeholder at once. The folder is named by its workspace rather than by its absolute path,
+on a local launch and a remote one alike (see [[root-path]]).
 
 A workspace launch's label must be a single folder name: not empty, not `.` or `..`, and without `/`
 or `\`. A local `-w` launch (typed `as <label>` or a profile entry's `name`) with any other label is

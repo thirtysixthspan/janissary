@@ -42,7 +42,7 @@ workspace: `git clone` of `origin`, stored at `.janissary/workspace/<label>/`, r
 
 ### Workspace shell tab
 
-`zsh` creates a shell tab with a cloned workspace by default using the same mechanism, with `agent`'s flags: `-w`/`--workspace` confirms the default, `--no-workspace` opts out and wins if both are present, and `--offline` selects the offline sandbox profile. `zsh <name>` names the tab and its clone under `agent <name>`'s name checks and leftover cleanup. The tab opens at once with the provisioning flag, and zsh starts confined to the clone, at its root, when the clone lands; the notifications feed then shows `Shell "<name>" ready. (workspace: <clone dir>)`. A failed clone posts `Failed to create workspace for "<name>": <reason>` and closes the tab, as for an agent. Unlike `agent`, a project with no git repository or no readable `origin` does not refuse `zsh`: the shell opens unsandboxed and answers `Shell "<name>" has no workspace: <reason>.`. The shell tab's ➕ and `Cmd+T` open a sibling shell in the same clone rather than a fresh one, and do nothing while the clone is still provisioning. The launch shell `janus` and a profile's shell entries stay unsandboxed. See [[shell-tab]].
+`zsh` creates a shell tab with a cloned workspace by default using the same mechanism, with `agent`'s flags: `-w`/`--workspace` confirms the default, `--no-workspace` opts out and wins if both are present, and `--offline` selects the offline sandbox profile. `zsh <name>` names the tab and its clone under `agent <name>`'s name checks and leftover cleanup. The tab opens at once with the provisioning flag, and zsh starts confined to the clone, at its root, when the clone lands; the notifications feed then shows `Shell "<name>" ready. ($workspace/<name>)`. A failed clone posts `Failed to create workspace for "<name>": <reason>` and closes the tab, as for an agent. Unlike `agent`, a project with no git repository or no readable `origin` does not refuse `zsh`: the shell opens unsandboxed and answers `Shell "<name>" has no workspace: <reason>.`. The shell tab's ➕ and `Cmd+T` open a sibling shell in the same clone rather than a fresh one, and do nothing while the clone is still provisioning. The launch shell `janus` and a profile's shell entries stay unsandboxed. See [[shell-tab]].
 
 ### Remote workspaces
 
@@ -208,10 +208,10 @@ Workspace directories are ephemeral:
   remote, the folder is left alone and the launch fails with its usual workspace error, since it
   could never have cloned. Otherwise
   the folder and its scratch sibling are removed, even with uncommitted or unpushed work in them,
-  `Removed leftover workspace "<name>" (<path>) before launching.` is posted to the notifications
+  `Removed leftover workspace "<name>" ($workspace/<name>) before launching.` is posted to the notifications
   feed, and the clone goes ahead. A cleanup that fails — including a failure to update the Claude
   trust file, which is tried first and leaves the folder untouched — refuses the launch with
-  `Cannot launch "<name>": could not remove leftover workspace "<name>" (<path>) — <reason>.` and
+  `Cannot launch "<name>": could not remove leftover workspace "<name>" ($workspace/<name>) — <reason>.` and
   posts no removal notice. A removal that fails partway leaves whatever it could not remove in
   place, and the next launch under that name treats it as a leftover again. A
   remote launch gets the same treatment on the remote host (see [[remote-server]]).

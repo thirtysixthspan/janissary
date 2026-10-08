@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { abbreviateWorkspaceDir } from '../paths.js';
 import { containedPath } from './batch-paths.js';
 import { parentPath } from './index.js';
 import type { FilesTabState } from './state.js';
@@ -62,7 +63,7 @@ export function rerootTree(port: NavPort, label: string, relPath?: string): void
   if (state.remoteRoot) {
     const relative = path.relative(path.resolve(state.remoteRoot), target);
     if (relative && !containedPath(state.remoteRoot, relative)) {
-      port.reportFailure(label, target, new Error(`outside the remote workspace ${state.remoteRoot}`));
+      port.reportFailure(label, target, new Error(`outside the remote workspace ${abbreviateWorkspaceDir(state.remoteRoot)}`));
       return;
     }
   }

@@ -95,7 +95,7 @@ describe('failRemoteLaunch', () => {
     expect(labels).toEqual(['janus']);
     expect(nameRetry.relaunch).not.toHaveBeenCalled();
     expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
-      'Cannot launch "claude": could not remove leftover workspace "claude" on devbox (/srv/ws/claude) — EACCES: permission denied.');
+      'Cannot launch "claude": could not remove leftover workspace "claude" on devbox ($workspace/claude) — EACCES: permission denied.');
   });
 
   it('shows an unanswered check on the tab, refuses it in the feed, and closes after the delay', async () => {
@@ -165,7 +165,7 @@ describe('reportRemoteCleanup', () => {
     const { managers } = makeManagers([]);
     reportRemoteCleanup(managers, retry(), 'claude', 'devbox', '/srv/ws/claude');
     expect(notify).toHaveBeenCalledWith(managers, 'launch-workspace-cleaned', 'janus',
-      'Removed leftover workspace "claude" on devbox (/srv/ws/claude) before launching.');
+      'Removed leftover workspace "claude" on devbox ($workspace/claude) before launching.');
   });
 
   it('posts nothing when nothing was cleaned, or for an attach', () => {
@@ -183,7 +183,7 @@ describe('reportRemoteClone', () => {
     const { managers } = makeManagers([]);
     reportRemoteClone(managers, retry(), 'devbox', { url: 'https://github.com/o/repo.git', path: '/home/ada/repo' });
     expect(notify).toHaveBeenCalledWith(managers, 'launch-root-cloned', 'janus',
-      'Cloned https://github.com/o/repo.git into /home/ada/repo on devbox.');
+      'Cloned https://github.com/o/repo.git into $root on devbox.');
   });
 
   it('posts nothing when nothing was cloned, or for an attach', () => {
@@ -213,7 +213,15 @@ describe('rootRefusalMessage', () => {
     expect(rootRefusalMessage('fariz', 'devbox', refusal)).toBe(line);
   });
 
+  it('leaves the refused folder unabbreviated, the one line that keeps its absolute path', () => {
+    // Every other line here names a workspace, which `$workspace/<name>` names exactly. This one
+    // names a directory that failed to become that host's root, so `$root` would misname it, and it
+    // is the one thing on the line a user can go and fix.
+    expect(rootRefusalMessage('fariz', 'devbox', { kind: 'occupied', path: '/home/ada/repo' }))
+      .toContain('/home/ada/repo');
+  });
+
   it('words the clone notice', () => {
-    expect(clonedNotice(url, '/home/ada/repo', 'devbox')).toBe(`Cloned ${url} into /home/ada/repo on devbox.`);
+    expect(clonedNotice(url, 'devbox')).toBe(`Cloned ${url} into $root on devbox.`);
   });
 });

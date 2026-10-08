@@ -35,7 +35,7 @@ Bare `agent` draws a random unused name from a preset pool of 52 lowercase names
 
 <img class="agent-float left" src="/agents/malik-south-east.png" alt="" />
 
-A workspace folder left over from an earlier run is the one case that clears its own way. If nothing is running in it, it is removed before the clone starts, uncommitted work and all, and the removal is announced as `Removed leftover workspace "bilal" (<path>) before launching.` A folder that can't be removed refuses the launch instead of proceeding. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for where that folder lives and how long it lasts.
+A workspace folder left over from an earlier run is the one case that clears its own way. If nothing is running in it, it is removed before the clone starts, uncommitted work and all, and the removal is announced as `Removed leftover workspace "bilal" ($workspace/bilal) before launching.` A folder that can't be removed refuses the launch instead of proceeding. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for where that folder lives and how long it lasts.
 
 On a remote host the answer arrives after the placeholder tab is already open, and a name that host reports as running is refused in a different way. See [Remote agents](/user-documentation/advanced-agents/remote-agents#when-the-name-is-already-in-use).
 

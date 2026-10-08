@@ -2,7 +2,7 @@ import type { Tab } from './types.js';
 import type { ConnectionView, PendingQuestionView, ScheduleView, TabView } from '../protocol.js';
 import type { Managers } from '../managers.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
-import path from 'node:path';
+import { abbreviateWorkspacePath } from '../paths.js';
 import { flattenBuffer } from './formatting.js';
 import { remoteFileNavigatorRoot } from './remote-file-navigator-root.js';
 import { remoteFileNavigatorTarget } from './remote-file-navigator-view.js';
@@ -90,7 +90,12 @@ export function buildTabView(
     busy: busy || tab.plugin?.busy === true,
     hasUnread: !!tab.hasUnread,
     cwd: shorten(cwd),
-    cwdDisplay: workspaceCwdDisplay(cwd, workspacePrefix),
+    // The metadata row's display symbol for a workspaced tab's working directory: the clone's own
+    // name after `$workspace` (`$workspace/salih`), continuing with the path below it. Local and
+    // remote clones alike — a remote clone is a path the local `$root` abbreviation could never
+    // shorten. Naming the clone is what keeps a strip of parallel workspaced agents
+    // distinguishable. Display-only, so `cwd` keeps the value every other consumer reads.
+    cwdDisplay: abbreviateWorkspacePath(workspacePrefix, cwd),
     // A remote tab is workspaced too — its clone just lives on the other host, so the flag is
     // derived from either field rather than from `workspaceDir` alone. The provisioning spinner
     // stands in for it until the workspace lands.
@@ -194,21 +199,4 @@ function autoResumeFlag(tab: Tab): string[] {
 function browserFlag(tab: Tab): string[] {
   if (!tab.browser) return [];
   return tab.harness?.browserRunning ? ['browserInUse'] : ['browser'];
-}
-
-// The metadata row's display symbol for a workspaced tab's working directory: the clone's own name
-// after `$workspace` at the clone root (`$workspace/salih`), continuing with the path below it
-// (`$workspace/salih/notes`) — local and remote clones alike, since a remote clone
-// is a path the local `$root` abbreviation could never shorten. Naming the clone is what keeps a
-// strip of parallel workspaced agents distinguishable. Undefined when no workspace prefix applies
-// or the cwd leaves the clone; display-only, so `cwd` keeps the value every other consumer reads.
-function workspaceCwdDisplay(cwd: string, workspace?: string): string | undefined {
-  if (!workspace) return undefined;
-  const name = path.basename(workspace);
-  if (cwd === workspace) return `$workspace/${name}`;
-  if (cwd.startsWith(workspace + path.sep)) {
-    const relative = path.relative(workspace, cwd).split(path.sep).join('/');
-    return `$workspace/${name}${relative ? `/${relative}` : ''}`;
-  }
-  return undefined;
 }

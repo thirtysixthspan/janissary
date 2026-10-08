@@ -1,5 +1,6 @@
 import { messageBus } from '../bus.js';
 import { startRemoteLaunch } from '../harness/remote-launch.js';
+import { abbreviateWorkspaceDir } from '../paths.js';
 import { wireProvisioning } from '../workspace/provision-wire.js';
 import { failRemoteLaunch, reportRemoteCleanup, reportRemoteClone, type RemoteNameRetry } from '../launch-name/fail-remote.js';
 import { placeAgent } from './place-agent.js';
@@ -55,7 +56,7 @@ export function startRemoteAgent(managers: Managers, launch: RemoteAgentLaunch):
       messageBus.emit('state', { type: 'dirty' });
       reportRemoteCleanup(managers, launch.nameRetry, resolved, address.host, remote.cleaned());
       reportRemoteClone(managers, launch.nameRetry, address.host, remote.cloned());
-      out(`Agent "${resolved}" ready on ${address.host}. (workspace: ${remote.cwd()})`);
+      out(`Agent "${resolved}" ready on ${address.host}. (${abbreviateWorkspaceDir(remote.cwd())})`);
       const notice = remote.notice();
       if (notice) out(notice);
     },

@@ -2,6 +2,7 @@ import { parseAgentCommand } from '../agent/commands.js';
 import type { AgentCommand } from '../agent/types.js';
 import { resolveLocalLaunchName } from '../launch-name/local.js';
 import { poolCandidates } from '../launch-name/check.js';
+import { abbreviateWorkspaceDir } from '../paths.js';
 import { sandboxNotice } from '../sandbox/index.js';
 import { wireProvisioning, PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { messageBus } from '../bus.js';
@@ -82,7 +83,7 @@ function startWorkspaceAgent(managers: Managers, launch: AgentLaunch, resolved: 
       managers.tab.deleteBusy(resolved);
       messageBus.emit('state', { type: 'dirty' });
       const notice = sandboxNotice();
-      out(`Agent "${resolved}" ready. (workspace: ${managers.tab.shorten(result.dir)})`);
+      out(`Agent "${resolved}" ready. (${abbreviateWorkspaceDir(result.dir)})`);
       if (notice) out(notice);
     },
     (message) => {

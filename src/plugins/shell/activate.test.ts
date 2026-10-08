@@ -248,7 +248,7 @@ describe('the zsh command', () => {
     activate().command?.('--offline', capabilities);
 
     await launches[0].ready({
-      instanceKey: 'shell-1', workspaceDir: CLONE, displayDir: '.janissary/workspace/kemal',
+      instanceKey: 'shell-1', workspaceDir: CLONE, displayDir: '$workspace/kemal',
       sandboxNotice: 'workspace isolation off: sandbox-exec unavailable',
     }, capabilities);
 
@@ -264,7 +264,7 @@ describe('the zsh command', () => {
     });
     expect(isShellPayload(updated[0].payload)).toBe(true);
     expect(capabilities.notifyUser).toHaveBeenCalledWith(
-      'Shell "kemal" ready. (workspace: .janissary/workspace/kemal)', { tab: 'shell-1' },
+      'Shell "kemal" ready. ($workspace/kemal)', { tab: 'shell-1' },
     );
     expect(capabilities.notifyUser).toHaveBeenCalledWith(
       'workspace isolation off: sandbox-exec unavailable', { tab: 'shell-1' },
@@ -276,7 +276,7 @@ describe('the zsh command', () => {
     activate().command?.('docs on devbox', capabilities);
 
     await launches[0].ready({
-      instanceKey: 'shell-1', workspaceDir: '/remote/project', displayDir: '/remote/project', host: 'devbox',
+      instanceKey: 'shell-1', workspaceDir: '/remote/project', displayDir: '$workspace/project', host: 'devbox',
     }, capabilities);
 
     expect(spawns).toEqual([{
@@ -285,7 +285,7 @@ describe('the zsh command', () => {
     }]);
     expect(updated[0]?.payload).toMatchObject({ host: 'devbox', prompted: false, workspaceDir: '/remote/project' });
     expect(capabilities.notifyUser).toHaveBeenCalledWith(
-      'Shell "kemal" ready on devbox. (workspace: /remote/project)', { tab: 'shell-1' },
+      'Shell "kemal" ready on devbox. ($workspace/project)', { tab: 'shell-1' },
     );
   });
 });

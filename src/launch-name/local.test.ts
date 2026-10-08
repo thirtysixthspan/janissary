@@ -40,7 +40,7 @@ describe('resolveLocalLaunchName', () => {
     const resolved = resolveLocalLaunchName(managers, { creator: 'janus', name: 'Foo', explicit: true, workspace: true });
 
     expect(resolved).toBeUndefined();
-    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', localRunningRefusal('Foo', workspacePath('Foo')));
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', localRunningRefusal('Foo'));
     expect(existsSync(path.join(workspacePath('foo'), 'live.txt'))).toBe(true);
   });
 

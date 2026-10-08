@@ -135,19 +135,23 @@ directory shorten to `~`.
 A [workspaced](/user-documentation/advanced-agents/workspaced-agent) tab's metadata row shortens
 one step further: the clone reads as `$workspace/<name>` (its own directory name, e.g.
 `$workspace/salih`), and anything inside it as `$workspace/<name>/<rest>` — on remote hosts too,
-where the raw clone path has no meaning to the local root shortcut. This symbol appears only in
-the metadata row; transcript lines and paths you type keep the forms above. Where the app does not
-know the clone's directory — a tab whose shell lives on another host — the metadata row falls back
-to the ordinary `$root` form instead of showing `$workspace` at all.
+where the raw clone path has no meaning to the local root shortcut. The same form is used by the
+[notifications](/user-documentation/tab-types/notifications) feed, where an
+[agent](/user-documentation/getting-started/agents#workspaced-agents) or shell launch announces its
+clone as `Agent "emrah" ready. ($workspace/emrah)`. Paths you type keep the forms above. Where the
+app does not know the clone's directory — a tab whose shell lives on another host — the metadata row
+falls back to the ordinary `$root` form instead of showing `$workspace` at all.
 
 The shortcut appears in the working directory beside a command prompt, the connections panel, an
-editor tab's metadata header, a file navigator's root, and the transcript line a workspaced
-[agent](/user-documentation/getting-started/agents#workspaced-agents) launch writes once its clone is
-ready: `Agent "emrah" ready. (workspace: $root/workspace/emrah)`. It is **not** used for the launch
-and refusal lines the notifications feed posts, which name the workspace by its full absolute path;
-see [Agents](/user-documentation/getting-started/agents#names) for how those read. It is display-only.
-The underlying absolute paths do not change, and the raw output of your shell commands is never
-rewritten.
+editor tab's metadata header, a file navigator's root, and the launch lines the notifications feed
+posts. A launch's refusal lines name the workspace the same way — a folder a launch's leftovers and
+refusals name *is* the workspace of that name, so `$workspace/<name>` is exact rather than a
+shortening. One line is the exception: a directory a remote host was asked to use as its project root
+and could not — a missing path, a folder with no `origin`, an occupied home-directory target — keeps
+its absolute path, since `$root` would misname it and it is the one thing on the line you can go and
+fix. See [Remote agents](/user-documentation/advanced-agents/remote-agents#when-the-name-is-already-in-use).
+Everything here is display-only. The underlying absolute paths do not change, and the raw output of
+your shell commands is never rewritten.
 
 You can also type `$root` or `~` at the start of a path passed to `open`, `edit`, `newfile`, `newdir`, or `files`:
 

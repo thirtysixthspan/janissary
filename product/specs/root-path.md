@@ -31,13 +31,28 @@ other host. Its file navigator header shows the remote workspace root as `$works
 paths below it as `$workspace/<name>/<rest>`. When the clone's directory is gone (a remote channel
 no longer knows its workspace), the metadata row falls back to the ordinary abbreviation above.
 
+The **notifications feed** uses the same `$workspace/<name>` form for a clone, on a local launch and
+a remote one alike: an agent's or shell's ready line reads `Agent "<name>" ready. ($workspace/<name>)`
+or `Shell "<name>" ready on <host>. ($workspace/<name>)`, and a leftover-workspace line reads
+`Removed leftover workspace "<name>" ($workspace/<name>) before launching.` A remote clone is a path
+no local `$root` abbreviation could reach, so naming the clone is the one form that fits both hosts —
+and it is exact, since the folder a launch's leftovers and refusals name *is* the workspace of that
+name.
+
+A directory a remote host was asked to use as its project root and could not — a missing path, a
+folder with no `origin`, an occupied home-directory target — is the one place a launch line keeps
+its absolute path. `$root` would misname it, since it is not that host's root, and it is the one
+thing on the line a user can go and fix.
+
 ### Where it applies
 
-The shortcut is applied wherever the application itself renders a path into a tab's transcript, including:
+The shortcut is applied wherever the application itself renders a path into a tab's transcript or into the notifications feed, including:
 
 - the working directory shown alongside each command's prompt,
 - the working directory listed in a tab's connections panel,
-- the file's location in an editor tab's metadata header, and
+- the file's location in an editor tab's metadata header,
+- the notifications feed's launch lines — a workspace clone as `$workspace/<name>`, and a project
+  root a remote launch just cloned as `$root`, and
 - the application's own status messages that name a path (for example, the location reported when a workspaced agent is created).
 
 ### Composition with the home shortcut

@@ -1361,7 +1361,7 @@ describe('HarnessManager remote launch', () => {
     expect(launchedLabels()).toEqual(['claude']);
     expect(tabs.map((t) => t.label)).toEqual(['janus']);
     expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus',
-      'Cannot launch "claude": could not remove leftover workspace "claude" on devbox (/srv/proj/.janissary/workspace/claude) — EACCES: permission denied.');
+      'Cannot launch "claude": could not remove leftover workspace "claude" on devbox ($workspace/claude) — EACCES: permission denied.');
   });
 
   it('posts the check-unanswered refusal on an early channel end and keeps today\'s provisionError', async () => {
@@ -1386,7 +1386,7 @@ describe('HarnessManager remote launch', () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(notify).toHaveBeenCalledWith(managers, 'launch-workspace-cleaned', 'janus',
-      'Removed leftover workspace "claude" on devbox (/srv/ws/claude) before launching.');
+      'Removed leftover workspace "claude" on devbox ($workspace/claude) before launching.');
   });
 
   it('closes the tab when the channel drops after the harness is running', async () => {
