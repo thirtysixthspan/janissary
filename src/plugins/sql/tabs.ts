@@ -13,7 +13,6 @@ import type {
 
 export const DEFAULT_PAGE_SIZE = 100;
 export const NO_DATABASES = 'No databases. Create one with: db sqlite create <name>';
-export const USAGE = 'Usage: sql [<database>] [left|right]';
 
 // How many finished exports a tab keeps. The files stay on disk; only the allow-list references are
 // bounded, because a tab holding a thousand of them would register a thousand of them.
