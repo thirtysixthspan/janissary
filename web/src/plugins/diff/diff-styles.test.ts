@@ -22,6 +22,39 @@ function row(kind: string): { row: HTMLElement; text: HTMLElement } {
 }
 
 describe('diff styles', () => {
+  it.each([
+    'diff-line diff-context', 'diff-line diff-added', 'diff-line diff-removed',
+    'diff-cell diff-context', 'diff-cell diff-added', 'diff-cell diff-removed',
+  ])('shows a pointer cursor for a %s code row', (kind) => {
+    loadStyles();
+    expect(getComputedStyle(row(kind).row).cursor).toBe('pointer');
+  });
+
+  it('tints hovered code rows in both layouts without replacing change backgrounds', () => {
+    loadStyles();
+    const rules = [...document.styleSheets[0].cssRules];
+    const hover = rules.find((rule) => rule instanceof CSSStyleRule
+      && rule.selectorText === '.diff-line:hover, .diff-cell:not(.diff-empty):hover');
+    expect(hover).toBeInstanceOf(CSSStyleRule);
+    if (!(hover instanceof CSSStyleRule)) throw new Error('Missing code-row hover rule');
+    expect(hover.style.getPropertyValue('box-shadow'))
+      .toBe('inset 0 0 0 100vmax color-mix(in srgb, var(--accent) 12%, transparent)');
+    expect(hover.style.getPropertyValue('background')).toBe('');
+    expect(hover.style.getPropertyValue('background-color')).toBe('');
+    expect(row('diff-cell diff-empty').row.matches(hover.selectorText.replaceAll(':hover', ''))).toBe(false);
+  });
+
+  it('keeps empty split placeholders on the hunk text cursor', () => {
+    loadStyles();
+    const hunk = document.createElement('div');
+    hunk.className = 'diff-hunk';
+    const placeholder = row('diff-cell diff-empty').row;
+    hunk.append(placeholder);
+    document.body.append(hunk);
+    expect(getComputedStyle(hunk).cursor).toBe('text');
+    expect(getComputedStyle(placeholder).cursor).not.toBe('pointer');
+  });
+
   it('wraps a line\'s text to the body\'s width at word boundaries', () => {
     loadStyles();
     const { text } = row('diff-line diff-context');

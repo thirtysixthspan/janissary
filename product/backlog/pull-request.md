@@ -19,5 +19,3 @@
 * File addition and deletion counts — Show a compact change summary in each file header, such as +24 −8, using green for additions and red for deletions. Counts should reflect actual added and removed lines rather than the number of visible diff rows. Present these values in a consistently aligned position to make scanning multiple file headers easy. Optionally use a small proportional bar showing the relationship between additions and deletions, but retain the numeric counts for precision and accessibility.
 
 * Keyboard file navigation — Provide keyboard shortcuts for moving between files without using the mouse. Follow GitHub's J and K convention for next and previous file navigation where appropriate. Keyboard navigation must respect filters and current navigation mode. Do not trigger file-navigation shortcuts while focus is inside a text input, comment editor, dropdown, or other editable element. Provide discoverability through tooltips or a keyboard-shortcut help menu.
-
-* when a line of code is hovered with the mouse, it should be highlighted and the mouse pointer should indicate it is clickable

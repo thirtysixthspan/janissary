@@ -80,6 +80,8 @@ what it held belongs to the directory it left.
 
 ### Reading the diff
 
+Hovering a code line highlights the line with a subtle accent tint and shows a pointer cursor in both unified and split layouts. Addition, removal, and changed-character colors remain visible beneath the highlight. Empty split alignment placeholders do not highlight or show a pointer cursor. Moving the mouse away clears the highlight; double-clicking a code line keeps its existing navigation behavior.
+
 The header carries two view controls:
 
 - **Unified / Split** — the change set opens in the unified layout GitHub opens in, one column per line,
