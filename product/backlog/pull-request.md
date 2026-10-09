@@ -19,5 +19,3 @@
 * Keyboard file navigation — Provide keyboard shortcuts for moving between files without using the mouse. Follow GitHub's J and K convention for next and previous file navigation where appropriate. Keyboard navigation must respect filters and current navigation mode. Do not trigger file-navigation shortcuts while focus is inside a text input, comment editor, dropdown, or other editable element. Provide discoverability through tooltips or a keyboard-shortcut help menu.
 
 * the refresh button in the metadata row should be light on dark.
-
-* merge the split/unified button into a single font awesome plus-minus icon

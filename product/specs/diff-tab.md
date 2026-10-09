@@ -88,12 +88,13 @@ what it held belongs to the directory it left.
 
 Hovering an added or context line highlights it with a subtle accent tint and shows a pointer cursor in both unified and split layouts. Removed lines remain inert: they have no pointer cursor or hover highlight, and double-clicking them does not open a file. Addition, removal, and changed-character colors remain visible beneath the highlight. Empty split alignment placeholders do not highlight or show a pointer cursor. Moving the mouse away clears the highlight; double-clicking an added or context line opens the file at that line.
 
-The header carries two view controls:
+The header carries a layout control:
 
-- **Unified / Split** — the change set opens in the unified layout GitHub opens in, one column per line,
-  and **Split** lays the old content on one side and the new content on the other, each side carrying its
-  own side's line numbers. The layout is a standing preference: the tab opens in the layout last chosen,
-  and the choice carries to the next diff tab the session opens.
+- **Plus-minus icon** — switches between the unified layout, with one column per line, and the split
+  layout, with old and new content in separate columns and each side carrying its own line numbers.
+  The button's pressed state shows whether split layout is active, and its tooltip names the layout it
+  will switch to. The layout is a standing preference: the tab opens in the layout last chosen, and
+  the choice carries to the next diff tab the session opens.
 
 The body is the tab's one focusable region. Clicking into it focuses it, and while it holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,

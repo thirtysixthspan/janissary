@@ -239,13 +239,17 @@ describe('DiffTab', () => {
     ]);
   });
 
-  it('asks for the other layout with the layout intent rather than switching on its own', () => {
-    const { intent } = renderTab();
-    fireEvent.click(screen.getByText('Split'));
-    expect(intent).toHaveBeenCalledWith('layout', { split: true });
-    intent.mockClear();
-    fireEvent.click(screen.getByText('Unified'));
-    expect(intent).toHaveBeenCalledWith('layout', { split: false });
+  it.each([
+    { split: false, title: 'Switch to split layout' },
+    { split: true, title: 'Switch to unified layout' },
+  ])('toggles from the $split layout using the plus-minus button', ({ split, title }) => {
+    const { intent, container } = renderTab(payload({ split }));
+    const toggle = screen.getByRole('button', { name: 'Diff layout' });
+    expect(toggle.getAttribute('aria-pressed')).toBe(String(split));
+    expect(toggle.getAttribute('title')).toBe(title);
+    expect(container.querySelector('svg[data-icon="plus-minus"]')).not.toBeNull();
+    fireEvent.click(toggle);
+    expect(intent).toHaveBeenCalledWith('layout', { split: !split });
   });
 
   it('walks the changed hunks with the arrows and opens at the walked hunk on Return', () => {

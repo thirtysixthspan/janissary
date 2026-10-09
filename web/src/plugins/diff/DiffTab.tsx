@@ -1,4 +1,6 @@
 import React, { useCallback } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlusMinus } from '@fortawesome/free-solid-svg-icons';
 import type { DiffPayload } from '@shared/plugins/diff/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { FileEntry } from './FileEntry';
@@ -10,8 +12,8 @@ import { useHunkWalk } from './useHunkWalk';
 // change set below — one entry per changed file, every hunk expanded, GitHub's files-changed layout.
 // The body is the tab's one focusable region: clicking into it or tabbing to it gives the keyboard
 // walk the arrows, and Return opens the file at the walked hunk's first changed line. The layout the
-// payload names is the layout the session saved, so the two view buttons ask for the other one rather
-// than keeping a layout of their own.
+// payload names is the layout the session saved, so the layout toggle asks for the other one rather
+// than keeping a layout of its own.
 export function DiffTab({
   payload, capabilities,
 }: {
@@ -53,19 +55,13 @@ export function DiffTab({
           <span className="diff-view">
             <button
               type="button"
-              className={split ? '' : 'on'}
-              aria-pressed={!split}
-              onClick={() => setLayout(false)}
-            >
-              Unified
-            </button>
-            <button
-              type="button"
               className={split ? 'on' : ''}
+              aria-label="Diff layout"
               aria-pressed={split}
-              onClick={() => setLayout(true)}
+              title={split ? 'Switch to unified layout' : 'Switch to split layout'}
+              onClick={() => setLayout(!split)}
             >
-              Split
+              <FontAwesomeIcon icon={faPlusMinus} />
             </button>
           </span>
           <button type="button" className="diff-refresh" title="Refresh" aria-label="Refresh" onClick={refresh.refresh}>
