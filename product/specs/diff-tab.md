@@ -37,10 +37,12 @@ the image, video, audio, or PDF tab — rather than an editor tab. A file's head
 content: it sits at the top of its entry and goes by with the hunks beneath it rather than staying
 pinned while the list moves.
 
-Every hunk is expanded, and each hunk line carries its own file line number: the new-side number for an
-added or context line, the old-side number for a removed one. There is no cap: a change of any size is
-shown whole. A line longer than the body's width wraps at word boundaries onto as many rows as it needs,
-so the whole line reads without a scrollbar and a wrapped line's number stays beside its first row.
+Every hunk is expanded, and each hunk line carries its file's number on both sides: two narrow
+right-aligned gutters in the unified layout, the original number blank on an added line and the new
+number blank on a removed one, and in the split layout the original number in the left column with
+the modified one in the right. There is no cap: a change of any size is shown whole. A line longer
+than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads
+without a scrollbar and a wrapped line's number stays beside its first row.
 Every added line carries a **+** beside its number and every removed line a **−**, and the number itself
 takes the row's own color — a saturated green on an addition, a darker red on a removal — so a change
 reads by its sign with the color as the secondary cue and a surviving line is the row without either.

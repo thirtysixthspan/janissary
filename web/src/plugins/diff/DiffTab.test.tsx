@@ -11,11 +11,11 @@ function file(overrides: Partial<DiffFile> = {}): DiffFile {
     path: 'a.txt', additions: 1, deletions: 1,
     hunks: [{
       oldStart: 1, newStart: 1,
-      lines: [
-        { kind: 'context', number: 1, jump: 1, text: 'kept' },
-        { kind: 'removed', number: 2, jump: 3, text: 'gone' },
-        { kind: 'added', number: 3, jump: 3, text: 'here' },
-      ],
+        lines: [
+          { kind: 'context', number: 1, jump: 1, oldNumber: 1, text: 'kept' },
+          { kind: 'removed', number: 2, jump: 3, oldNumber: 2, text: 'gone' },
+          { kind: 'added', number: 3, jump: 3, text: 'here' },
+        ],
     }],
     ...overrides,
   };
@@ -91,13 +91,55 @@ describe('DiffTab', () => {
     expect(screen.getByTitle('new.txt').textContent).toBe('old.txt → new.txt');
   });
 
-  it('renders each line with its file line number and its kind', () => {
-    const { container } = renderTab();
-    const numbers = [...container.querySelectorAll(':scope .diff-line .diff-number')].map((node) => node.textContent);
-    expect(numbers).toEqual(['1', '2', '3']);
-    expect([...container.querySelectorAll(':scope .diff-line')].map((node) => node.className)).toEqual([
-      'diff-line diff-context', 'diff-line diff-removed', 'diff-line diff-added',
-    ]);
+  describe('line number gutters', () => {
+    it('renders each line with its file line number and its kind', () => {
+      const { container } = renderTab();
+      const numbers = [...container.querySelectorAll(':scope .diff-line .diff-number')].map((node) => node.textContent);
+      expect(numbers).toEqual(['1', '1', '2', '', '', '3']);
+      expect([...container.querySelectorAll(':scope .diff-line')].map((node) => node.className)).toEqual([
+        'diff-line diff-context', 'diff-line diff-removed', 'diff-line diff-added',
+      ]);
+    });
+
+    it("renders both sides' numbers on a row, blank where the side has no position", () => {
+      const { container } = renderTab(payload({ files: [file({
+        hunks: [{
+          oldStart: 1, newStart: 1,
+          lines: [
+            { kind: 'context', number: 1, jump: 1, oldNumber: 1, text: 'kept' },
+            { kind: 'removed', number: 2, jump: 3, oldNumber: 2, text: 'gone' },
+            { kind: 'added', number: 3, jump: 3, text: 'here' },
+          ],
+        }],
+      })] }));
+      expect([...container.querySelectorAll(':scope .diff-line .diff-number')].map((node) => node.textContent))
+        .toEqual(['1', '1', '2', '', '', '3']);
+    });
+
+    it("shows the split layout's left column the original number of a context line", () => {
+      const { container } = renderTab(payload({ split: true, files: [file()] }));
+      const row = container.querySelector(':scope .diff-split-row') as HTMLElement;
+      const [oldSide, newSide] = [...row.children];
+      expect(oldSide.querySelector('.diff-number')?.textContent).toBe('1');
+      expect(newSide.querySelector('.diff-number')?.textContent).toBe('1');
+    });
+
+    it("shows the split layout's left column the old side's number where the two sides have drifted", () => {
+      const { container } = renderTab(payload({ split: true, files: [file({
+        hunks: [{
+          oldStart: 1, newStart: 1,
+          lines: [
+            { kind: 'context', number: 1, jump: 1, oldNumber: 5, text: 'kept' },
+            { kind: 'removed', number: 2, jump: 2, oldNumber: 6, text: 'gone' },
+            { kind: 'added', number: 2, jump: 2, text: 'here' },
+          ],
+        }],
+      })] }));
+      const row = container.querySelector(':scope .diff-split-row') as HTMLElement;
+      const [oldSide, newSide] = [...row.children];
+      expect(oldSide.querySelector('.diff-number')?.textContent).toBe('5');
+      expect(newSide.querySelector('.diff-number')?.textContent).toBe('1');
+    });
   });
 
   it('shows the add and delete counts on the file header', () => {

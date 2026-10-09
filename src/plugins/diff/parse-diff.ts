@@ -115,12 +115,18 @@ function hunkLines(oldStart: number, newStart: number, body: string[]): DiffLine
   for (const raw of body) {
     if (raw.startsWith('\\')) continue;
     const kind = raw[0] === '+' ? 'added' : raw[0] === '-' ? 'removed' : 'context';
-    lines.push({ kind, number: kind === 'removed' ? oldNumber : newNumber, jump: 0, text: raw.slice(1) });
-    if (kind === 'removed') oldNumber += 1;
-    else {
-      oldNumber += 1;
-      newNumber += 1;
-    }
+    // An added line has no position on the original side, so it carries no `oldNumber`; the other two
+    // kinds do, and the unified and split gutters each need them.
+    const before = kind === 'added' ? undefined : oldNumber;
+    lines.push({
+      kind, number: kind === 'removed' ? oldNumber : newNumber,
+      ...(before !== undefined && { oldNumber: before }), jump: 0, text: raw.slice(1),
+    });
+    // The two sides advance on their own: only a line the original side holds moves its counter, and
+    // only a line the new side holds moves the other. An added line exists on one side alone, so it
+    // must not shift the numbers of anything printed after it.
+    if (kind !== 'added') oldNumber += 1;
+    if (kind !== 'removed') newNumber += 1;
   }
   assignJumps(lines, oldStart);
   return lines;

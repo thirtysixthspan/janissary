@@ -1,15 +1,18 @@
-export const DIFF_PAYLOAD_SCHEMA_VERSION = 2;
+export const DIFF_PAYLOAD_SCHEMA_VERSION = 3;
 
 // One line of a hunk. `kind` is which side git printed it on; `number` is the line's number on that
 // side — the old-side number for a removed line, the new-side number for an added or context one — so
 // the client renders a number per row without computing anything; and `jump` is the new-side line a
 // double-click on this line opens the file at. A removed line has no new-side position, so its `jump`
 // is the new-side number of the next added or context line, and a hunk whose trailing lines are all
-// removed uses the hunk's last new-side number.
+// removed uses the hunk's last new-side number. `oldNumber` is the line's position on the original
+// side — set for a context or removed line, absent for an added one, which has no position before it —
+// so a row can show both sides' numbers with the blank on the side it has none.
 export type DiffLine = {
   kind: 'added' | 'removed' | 'context';
   number: number;
   jump: number;
+  oldNumber?: number;
   text: string;
 };
 
@@ -74,6 +77,7 @@ function isDiffLine(value: unknown): value is DiffLine {
     && ['added', 'removed', 'context'].includes(value.kind as string)
     && typeof value.number === 'number'
     && typeof value.jump === 'number'
+    && (value.oldNumber === undefined || typeof value.oldNumber === 'number')
     && typeof value.text === 'string';
 }
 

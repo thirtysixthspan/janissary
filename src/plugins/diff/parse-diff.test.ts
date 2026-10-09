@@ -48,14 +48,30 @@ describe('parseDiff', () => {
         oldStart: 1,
         newStart: 1,
         lines: [
-          { kind: 'context', number: 1, jump: 1, text: 'one' },
-          { kind: 'removed', number: 2, jump: 2, text: 'two' },
+          { kind: 'context', number: 1, jump: 1, oldNumber: 1, text: 'one' },
+          { kind: 'removed', number: 2, jump: 2, oldNumber: 2, text: 'two' },
           { kind: 'added', number: 2, jump: 2, text: 'TWO' },
-          { kind: 'context', number: 3, jump: 3, text: 'three' },
+          { kind: 'context', number: 3, jump: 3, oldNumber: 3, text: 'three' },
           { kind: 'added', number: 4, jump: 4, text: 'four' },
         ],
       }],
     }]);
+  });
+
+  it('carries the original side\'s number on a context or removed line and none on an added one', () => {
+    const files = parseDiff([
+      'diff --git a/a.txt b/a.txt',
+      '--- a/a.txt',
+      '+++ b/a.txt',
+      '@@ -1,3 +1,4 @@',
+      ' one',
+      '-two',
+      '+TWO',
+      '+four',
+    ].join('\n'));
+
+    const lines = files[0].hunks[0].lines;
+    expect(lines.map((line) => line.oldNumber)).toEqual([1, 2, undefined, undefined]);
   });
 
   it('marks an added file from its /dev/null old side', () => {
@@ -192,8 +208,8 @@ describe('parseDiff', () => {
 
     const lines = files[0].hunks[0].lines;
     expect(lines).toHaveLength(5);
-    expect(lines[1]).toEqual({ kind: 'context', number: 2, jump: 2, text: '' });
-    expect(lines[4]).toEqual({ kind: 'context', number: 4, jump: 4, text: 'c' });
+    expect(lines[1]).toEqual({ kind: 'context', number: 2, jump: 2, oldNumber: 2, text: '' });
+    expect(lines[4]).toEqual({ kind: 'context', number: 4, jump: 4, oldNumber: 4, text: 'c' });
   });
 
   it('strips the diffed root repo-relative prefix', () => {

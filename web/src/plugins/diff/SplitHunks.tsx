@@ -39,7 +39,7 @@ function SplitSide({ line, side, spans, onOpenLine }: {
   if (line === undefined) return <div className={`diff-cell diff-${side} diff-empty`}><span className="diff-number" /><span className="diff-marker" /><span className="diff-text"> </span></div>;
   return (
     <div className={`diff-cell diff-${side} diff-${line.kind}`} onDoubleClick={() => onOpenLine(line)}>
-      <span className="diff-number">{line.number}</span>
+      <span className="diff-number">{side === 'old' ? line.oldNumber ?? line.number : line.number}</span>
       <span className="diff-marker">{markerOf(line.kind)}</span>
       <ChangedText line={line} spans={spans ?? []} />
     </div>

@@ -48,7 +48,8 @@ function Line({ line, spans, onOpenLine }: {
 }) {
   return (
     <div className={`diff-line diff-${line.kind}`} onDoubleClick={() => onOpenLine(line)}>
-      <span className="diff-number">{line.number}</span>
+      <span className="diff-number">{line.oldNumber ?? ''}</span>
+      <span className="diff-number">{line.kind === 'removed' ? '' : line.number}</span>
       <span className="diff-marker">{markerOf(line.kind)}</span>
       <ChangedText line={line} spans={spans ?? []} />
     </div>
