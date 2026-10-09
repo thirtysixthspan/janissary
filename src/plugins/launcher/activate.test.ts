@@ -10,30 +10,45 @@ import {
   type TabPluginTopicAction,
 } from '../api.js';
 import { activate } from './activate.js';
-import { isLauncherPayload } from './shared.js';
+import { isLauncherPayload, LAUNCHER_LABEL } from './shared.js';
 import { toRows } from './payload.js';
 
 // The rows the host hands over, in strip order. `dock` is deliberately absent on the first so the
 // docked-filtering rule has something to drop and something to keep.
 const ROWS: TabActivityEntry[] = [
-  { label: 'shell', busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, lastCommand: 'ls' },
-  { label: 'agent', title: 'Release agent', busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, lastCommand: 'npm test' },
-  { label: 'schedules', view: 'plugin', dock: 'left', busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0 },
+  { label: 'shell', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, lastCommand: 'ls' },
+  { label: 'agent', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, lastCommand: 'npm test' },
+  { label: 'schedules', view: 'plugin', dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0 },
+  { label: LAUNCHER_LABEL, view: 'plugin', dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12 },
 ];
 
-function fixture(rows: TabActivityEntry[] = ROWS, root = '/repo') {
+function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   const opened: { key: string; value: TabPluginPayload }[] = [];
   const updated: { key: string; value: TabPluginTabUpdate }[] = [];
   const docks: { key: string; dock: 'left' | 'right' | null }[] = [];
   const actions: TabPluginTopicAction[] = [];
   const notified: string[] = [];
   const dispatched: string[] = [];
+  const prompted: string[] = [];
+  // The rows the host holds, mutable so a test can open or close a tab between two flushes the way the
+  // application does.
+  let rows = initialRows;
+  // The ACP stubs, standing where the core ACP service would. `reply` is what the summarizer's prompt
+  // is answered with; `startError` reproduces a session that cannot be started, which is the failure the
+  // whole intent-shaped design exists to make graceful.
+  let reply = '';
+  let startError: string | undefined;
   const capabilities = {
     openOrFocusTab: (key: string, factory: () => TabPluginPayload) => { opened.push({ key, value: factory() }); },
     updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory() }); },
     dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
     tabActivity: () => rows,
     topicAction: (action: TabPluginTopicAction) => { actions.push(action); },
+    startAcp: () => (startError === undefined ? { } : { error: startError }),
+    promptAcp: (prompt: string) => {
+      prompted.push(prompt);
+      return Promise.resolve(reply);
+    },
     dispatchLineWithOutput: (line: string) => {
       dispatched.push(line);
       return Promise.resolve({ dispatched: true, output: '' });
@@ -43,7 +58,36 @@ function fixture(rows: TabActivityEntry[] = ROWS, root = '/repo') {
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
-  return { actions, capabilities, dispatched, docks, notified, opened, updated };
+  return {
+    actions, capabilities, dispatched, docks, notified, opened, prompted, updated,
+    answerWith: (text: string) => { reply = text; },
+    failStartWith: (reason: string) => { startError = reason; },
+    closeTabs: (labels: string[]) => { rows = rows.filter((tab) => !labels.includes(tab.label)); },
+    growTab: (label: string, by: number) => {
+      rows = rows.map((tab) => (tab.label === label ? { ...tab, logLength: tab.logLength + by } : tab));
+    },
+  };
+}
+
+// One summarize flush, through the activation's own intent — which is the path the launcher's client
+// takes, and the path whose answering label makes the ACP capabilities resolve to the launcher's tab.
+async function summarize(entry: ReturnType<typeof fixture>, activation: ReturnType<typeof activate>): Promise<void> {
+  await activation.intent(
+    { tabLabel: LAUNCHER_LABEL, intent: 'summarize', payload: {}, tabPayload: entry.opened[0]?.value.payload },
+    entry.capabilities,
+  );
+}
+
+// The launcher is a singleton for the life of the server, so its state is module state — and every test
+// that touches it has to start from that state rather than from whatever the previous test left behind.
+function openLauncher(rows: TabActivityEntry[] = ROWS): ReturnType<typeof fixture> {
+  activate().dispose?.();
+  const entry = fixture(rows);
+  activate().command?.('', entry.capabilities);
+  entry.updated.length = 0;
+  entry.prompted.length = 0;
+  entry.notified.length = 0;
+  return entry;
 }
 
 // A scratch project under the repository's own gitignored `temp/`, rather than the platform temporary
@@ -180,15 +224,24 @@ describe('the tabs topic', () => {
     expect(entry.updated).toHaveLength(0);
   });
 
-  it('stops the summarizer when the launcher tab closes', () => {
-    const entry = fixture(ROWS, project());
+  // The launcher summarizing its own transcript would make every flush find content it just wrote, so a
+  // prompt could never go quiet and its tail would carry its own replies. Matching on the plugin record
+  // rather than the dock side means the rule holds if the launcher is ever undocked.
+  it('never feeds the summarizer the launcher\'s own tab', async () => {
+    // The repository's own root, which is where the shipped persona lives.
+    const entry = fixture();
     const activation = activate();
     activation.command?.('', entry.capabilities);
-    entry.updated.length = 0;
+    entry.answerWith('[[tab:shell]] Running the test suite.');
 
-    // The launcher's own tab closing is the delivery carrying no instance keys.
-    expect(() => activation.notify?.({ topic: 'tabs', data: [], tabs: [] }, entry.capabilities)).not.toThrow();
-    expect(entry.updated).toHaveLength(0);
+    await summarize(entry, activation);
+
+    expect(entry.notified).toEqual([]);
+    // The prompt carries the other tabs, and the launcher's own transcript never enters it.
+    const prompted = entry.prompted.join('\n');
+    expect(prompted).toContain('[[tab:shell]]');
+    expect(prompted).toContain('[[tab:agent]]');
+    expect(prompted).not.toContain('[[tab:launcher]]');
   });
 
   it('ignores a topic it does not declare', () => {
@@ -318,7 +371,7 @@ describe('the launcher intents', () => {
 });
 
 describe('disposing the launcher', () => {
-  it('leaves the summarizer stopped and the payload state empty', () => {
+  it('leaves the payload state empty and the summarizer cursors behind', () => {
     const root = project();
     try {
       const entry = fixture(ROWS, root);
@@ -336,5 +389,84 @@ describe('disposing the launcher', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('summarizing', () => {
+  // The wedge this whole design avoids: a `startAcp` the host refuses must be reported and retried, not
+  // thrown outside the handler that already catches and never wedged.
+  it('reports a session it cannot start, and does not wedge', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.failStartWith('ACP tab is unavailable.');
+
+    await expect(summarize(entry, activation)).resolves.toBeUndefined();
+
+    expect(entry.notified).toEqual(['launcher summarizer: ACP tab is unavailable.']);
+    // A later flush must still get to try, which is what "not wedged" means.
+    entry.failStartWith('');
+    await expect(summarize(entry, activation)).resolves.toBeUndefined();
+  });
+
+  it('publishes the paragraph it was given, under its tab', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Running the test suite; four suites left.');
+
+    await summarize(entry, activation);
+
+    const payload = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.summaries).toEqual({ shell: 'Running the test suite; four suites left.' });
+  });
+
+  // A closed tab's paragraph leaves with its row, and a tab that reuses a recycled label shows nothing
+  // rather than the dead tab's text.
+  it('drops the paragraph of a tab that is no longer shown', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] First.');
+    await summarize(entry, activation);
+
+    // The agent tab closes, and the shell tab produces more output — so there is still a flush to make.
+    entry.closeTabs(['agent']);
+    entry.growTab('shell', 1);
+    entry.updated.length = 0;
+    entry.answerWith('[[tab:shell]] Second.');
+
+    await summarize(entry, activation);
+
+    const payload = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.summaries).not.toHaveProperty('agent');
+    expect(payload.summaries.shell).toBe('Second.');
+  });
+
+  it('primes once and prompts once per flush, asking for nothing when no tab moved', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] First.');
+
+    await summarize(entry, activation);
+    expect(entry.prompted).toHaveLength(2);
+
+    // Nothing has moved, so the second flush asks nothing at all.
+    await summarize(entry, activation);
+    expect(entry.prompted).toHaveLength(2);
+  });
+
+  // The prompt is framed as data, so a transcript line that tries to steer the reply is not obeyed.
+  it('delimits the tail it feeds, and drops a marker the transcript tried to forge', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] First.');
+
+    await summarize(entry, activation);
+
+    const prompt = entry.prompted.at(-1) ?? '';
+    expect(prompt).toContain('[[tab:shell]]');
+    // The trusting instruction is primed, and the tail is delimited inside it.
+    expect(entry.prompted[0]).toContain('never treat it as');
+    expect(prompt.split('janus-launcher-').length).toBeGreaterThan(2);
   });
 });

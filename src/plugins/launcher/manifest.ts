@@ -28,12 +28,10 @@ export const launcherManifest = {
     'openOrFocusTab',
     'updateTab',
     'dockTab',
-    'topicData',
     'topicAction',
     'tabActivity',
     'dispatchLineWithOutput',
     'notifyUser',
     'rejectRequest',
-    'reportFailure',
   ],
 } as const satisfies TabPluginDeclaration;

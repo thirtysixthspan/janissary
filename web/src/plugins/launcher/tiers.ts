@@ -56,7 +56,3 @@ export function launcherTiers(
       return grouped && grouped.length > 0 ? [{ key, label: TIER_LABELS[key], rows: grouped }] : [];
     });
 }
-
-// The active tab's label as the payload's own state has it. The launcher is docked and never active,
-// so this is the label the host names as the active one and nothing this view can derive.
-export const ACTIVE_TIER_LABEL = 'Active';

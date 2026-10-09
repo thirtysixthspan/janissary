@@ -4,7 +4,7 @@ import { launcherTiers } from './tiers';
 
 function row(label: string, overrides: Partial<LauncherTabRow> = {}): LauncherTabRow {
   return {
-    label, busy: false, hasUnread: false, needsInput: false,
+    label, dotColor: '#5b9cff', active: false, busy: false, hasUnread: false, needsInput: false,
     lastActivity: 60_000, cwd: '/repo', ...overrides,
   };
 }

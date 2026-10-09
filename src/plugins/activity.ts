@@ -13,12 +13,18 @@ export type TabActivityEntry = {
   label: string;
   // The tab's display name when it has an alias, absent otherwise.
   title?: string;
+  // The tab's own dot colour — the one its strip entry is drawn in — so a rail row can match it rather
+  // than rendering an application-wide default that says nothing about which tab it stands for.
+  dotColor: string;
   // Body kind: undefined is a normal transcript tab, the rest are the named live views.
   view?: 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   dock?: 'left' | 'right';
   pane?: 'right';
   busy: boolean;
   hasUnread: boolean;
+  // Whether this tab is the host's active one. The launcher is docked and can never be it, so the flag
+  // is what lets a rail row be lifted into the active tier without the view deriving it for itself.
+  active: boolean;
   // True when the tab is holding a prompt or question the user has to answer right now — a pending
   // agent question, or a harness blocked on a permission prompt. The one state worth interrupting
   // for, so it is reported separately from `busy` rather than inferred from it.
@@ -80,11 +86,15 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
   return {
     label: tab.label,
     ...(tab.title !== undefined && { title: tab.title }),
+    dotColor: tab.dotColor,
     ...(tab.view !== undefined && { view: tab.view }),
     ...(tab.dock !== undefined && { dock: tab.dock }),
     ...(tab.pane !== undefined && { pane: tab.pane }),
     busy,
     hasUnread: tab.hasUnread === true,
+    // The host's own answer to which tab is active, read the same way `buildTabView` reads it, so a rail
+    // row and the strip can never disagree about where the user is.
+    active: managers.tab.activeTab >= 0 && managers.tab.tabs[managers.tab.activeTab]?.label === tab.label,
     // The two ways a tab can be waiting on the user rather than on work: a question it has asked,
     // or a harness sitting at a permission gate. A gate is a screen state, so it is durable only for
     // a harness the app observes itself — `src/harness/busy-status.ts` records it on the tab's

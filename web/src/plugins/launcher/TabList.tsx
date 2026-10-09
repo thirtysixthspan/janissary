@@ -1,19 +1,7 @@
 import type { LauncherPayload, LauncherTabRow } from '@shared/plugins/launcher/shared';
-import { useListSelection, type ListSelection } from '../api';
+import { nextListSelection, useListSelection, type ListSelection } from '../api';
 import { launcherTiers, type Tier } from './tiers';
 import { LauncherTabRowView } from './LauncherTabRowView';
-
-// Arrows step by one and stop at the ends, so holding a key settles on the last or first rather than
-// cycling past it. Home and End jump. A list with no selection yet starts at the first row.
-function listStep(length: number, selected: number | null, key: string): number | null {
-  if (length === 0) return null;
-  const at = selected ?? 0;
-  if (key === 'ArrowDown') return Math.min(at + 1, length - 1);
-  if (key === 'ArrowUp') return Math.max(at - 1, 0);
-  if (key === 'Home') return 0;
-  if (key === 'End') return length - 1;
-  return selected;
-}
 
 // The tab list, one tier per group of rows that need the same kind of attention. A tier with no rows is
 // not drawn at all rather than drawn empty, so the rail never spends a line on a state nothing is in.
@@ -24,9 +12,12 @@ export function LauncherTabList({ payload, listRef, onFocus }: {
 }) {
   const rows = payload.tabs;
   const selection = useListSelection(rows.length);
-  const tiers = launcherTiers(rows);
+  // The active tier is the host's answer to which tab the user is on, carried per row, so this list
+  // never derives it and never has a tier it cannot fill.
+  const activeLabel = rows.find((row) => row.active)?.label;
+  const tiers = launcherTiers(rows, activeLabel);
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
-    if (selection.navigate(event.key, listStep)) { event.preventDefault(); return; }
+    if (selection.navigate(event.key, nextListSelection)) { event.preventDefault(); return; }
     if (event.key === 'Enter' && selection.selected !== null) {
       event.preventDefault();
       const row = rows[selection.selected];

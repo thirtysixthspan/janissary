@@ -19,7 +19,7 @@ Which commands appear is configured in `.janissary/launcher.json`, written by `j
 
 The label is the user's own wording for the command, so two projects may call the same command different things. The icon is a Font Awesome icon name, drawn as a neutral fallback glyph when it is not one the build recognises — the command it belongs to still runs.
 
-A `~/.janissary/launcher.json` in the user's home directory **replaces** the project file wholesale when it exists. An absent file, an unreadable one, one that is not valid JSON, and one that is a valid but empty array all fall back to a built-in default command set; the launcher reports what was wrong to the notifications feed once, and leaves the file on disk untouched. An empty array is treated as no configuration at all rather than as a choice to show nothing.
+A `~/.janissary/launcher.json` in the user's home directory **replaces** the project file wholesale when it exists. An absent file, an unreadable one, one that is not valid JSON, and one whose entries are all malformed fall back to a built-in default command set; the launcher reports what was wrong to the notifications feed once, and leaves the file on disk untouched. A file with some good entries and some bad keeps the good ones and reports how many were lost. An empty array is treated as no configuration at all rather than as a choice to show nothing.
 
 The rail's **Configure** button opens whichever file is currently in effect — the home override when one exists, otherwise the project's — in an editor tab, so what it opens is what the launcher reads back.
 
@@ -29,7 +29,7 @@ Below the rail is every open tab in the center strip, sorted into five tiers, ea
 
 A tab ranks **needs you** when it is holding something the user has to answer — a pending agent question, or a harness sitting at a permission prompt. It sits above every other tier, including unread and active, because it is the one state worth interrupting for; without the tier, a blocked tab reads as merely busy, which is the row chrome a working tab gets.
 
-Docked tabs are never listed. A docked tab is never the active tab and cannot be focused from here, so listing one would offer a click that cannot do what the list promises.
+Docked tabs are never listed, and neither is the launcher's own tab. A docked tab is never the active tab and cannot be focused from here, so listing one would offer a click that cannot do what the list promises.
 
 Clicking a row focuses that tab in the center strip, the same way clicking it in the strip does — which starts the ordinary unread dwell, so a row read for three seconds loses its flag exactly as the strip's own. Clicking a tab that closed between the click and its answer does nothing.
 
@@ -41,15 +41,19 @@ Every row carries the same status chrome the tab strip gives it, plus its time: 
 
 Each row also carries a short paragraph saying what that tab is doing, written by an ACP session the launcher owns. It is the same idea as a monitor persona's recap, applied to the whole application rather than to one target: one prompt every thirty seconds describing every open tab, one paragraph back per tab.
 
-The summarizer reads each tab's label, its view kind, whether it is busy or badged or waiting on the user, when it was last active, its last command line, and a size-capped slice of its recent transcript. Everything it is fed is framed as data rather than as instruction, the same defence a monitor's target receives, because a transcript slice carries verbatim file contents and tool output. It may use no tools.
+The summarizer runs on the launcher tab's own ACP connection rather than a subprocess of its own, and is tool-less: it may read, and it may not act. It never summarizes the launcher's own tab, because that tab's transcript is where its own prompts and replies land — leaving it in would make every flush find content it had just written, and an application where nothing is happening would never be quiet.
 
-Nothing is prompted when no tab's content has changed since the previous flush, so an application where nothing is happening costs nothing. A row whose summary has not arrived shows no summary line rather than a placeholder, and the launcher otherwise works normally.
+The summarizer reads each tab's label, its view kind, whether it is busy or badged or waiting on the user, when it was last active, its last command line, and a size-capped slice of its recent transcript. Everything it is fed is framed as data rather than as instruction, and each slice is wrapped in a marker unique to the session so nothing inside it can claim to be an instruction — the same defence a monitor's target receives, because a transcript slice carries verbatim file contents and tool output.
+
+Nothing is prompted when no tab's content has changed since the previous flush, so an application where nothing is happening costs nothing. A row whose summary has not arrived shows no summary line rather than a placeholder, and the launcher otherwise works normally. A session that cannot be started is reported to the notifications feed rather than failing silently, and the next flush tries again.
 
 The paragraph is clamped to three lines of the row's width and expands to as many as eight while the pointer is over the row, so a long summary is never lost — only held back until it is wanted.
 
 ### Hovering a row
 
-Hovering a tab row opens a small card carrying what the row has no width for: the tab's name, its label when they differ, its working directory, its remote host when it has one, and the last command it ran. The card is hover-only — it appears on pointer-over and closes on pointer-out, and never on touch or keyboard focus alone.
+Hovering a tab row opens a small card carrying what the row has no width for: the tab's name, its label when they differ, its working directory, its remote host when it has one, and the last command it ran. It is drawn just below the row wherever the row sits, so the list's own scrolling never cuts it off. The card is hover-only — it appears on pointer-over and closes on pointer-out, and never on touch or keyboard focus alone.
+
+The file executes what it names: a row's click runs its command as if it had been typed, so a project's committed `launcher.json` is a set of commands this application will run. `~/.janissary/launcher.json` replaces the project's file rather than merging with it.
 
 ### The command bar
 

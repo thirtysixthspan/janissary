@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGear } from '@fortawesome/free-solid-svg-icons';
 import type { LauncherPayload } from '@shared/plugins/launcher/shared';
+import { SUMMARIZER_FLUSH_MS } from '@shared/plugins/launcher/shared';
 import {
   CommandBarShell,
   PluginActionsHeader,
@@ -42,6 +43,19 @@ export function LauncherTab({ payload, capabilities }: Properties) {
     if (capabilities.active) commandsRef.current?.focus();
   }, [capabilities.active]);
 
+  // The summarizer's cadence. A flush is an intent the launcher's own client raises, because
+  // `pluginIntent` binds the answering label to the tab it names — which is what lets the core ACP
+  // capabilities run against *this* tab rather than against whichever tab a command happened to be typed
+  // in. The interval lives in the client rather than in a server timer for the same reason, and it stops
+  // when nothing is connected, so a rail nobody is looking at costs nothing.
+  useEffect(() => {
+    if (!capabilities.active) return;
+    const timer = setInterval(() => {
+      void capabilities.intent('summarize', {}).catch(() => {});
+    }, SUMMARIZER_FLUSH_MS);
+    return () => { clearInterval(timer); };
+  }, [capabilities.active, capabilities]);
+
   const submit = useLauncherSubmit({
     appBar,
     capabilities,
@@ -49,13 +63,17 @@ export function LauncherTab({ payload, capabilities }: Properties) {
     clear: () => { setDraft(''); },
   });
 
+  // The lines this bar has sent, held here so the published keymap can walk them with ArrowUp and
+  // ArrowDown. One entry per submitted line, because this is one tab and one bar.
+  const [sent, setSent] = useState<string[]>([]);
+
   const bar = useCommandBarKeys({
     value: draft,
     setValue: setDraft,
     inputRef: barRef,
-    history: [],
+    history: sent,
     ghostHistory: appBar.ghostHistory,
-    onSubmit: submit,
+    onSubmit: (line) => { setSent((previous) => [...previous, line]); submit(line); },
     onClear: () => { setReply(null); },
   });
 
@@ -87,6 +105,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
           const entry = payload.commands[index];
           if (entry) void capabilities.intent('run-command', { id: entry.id }).catch(() => {});
         }}
+        onUnknownIcon={(icon) => { void capabilities.intent('report-icon', { icon }).catch(() => {}); }}
       />
       <LauncherTabList
         payload={payload}

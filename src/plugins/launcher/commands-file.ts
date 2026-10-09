@@ -101,8 +101,20 @@ export function readLauncherFile(home: string, root: string): LauncherFileRead {
     };
   }
   const commands = toCommands(parsed);
+  // An empty array is no configuration at all rather than a choice to show nothing, so a project that
+  // committed one by accident still gets a working rail — and still gets no complaint, because there is
+  // nothing wrong with it.
   if (commands.length === 0) {
-    return { commands: [...DEFAULT_LAUNCHER_COMMANDS], source: 'default', filePath };
+    const problem = parsed.length === 0 ? undefined :
+      `launcher.json holds ${parsed.length} commands, none of them usable, at ${filePath}`;
+    return {
+      commands: [...DEFAULT_LAUNCHER_COMMANDS], source: 'default', filePath,
+      ...(problem !== undefined && { problem }),
+    };
   }
-  return { commands, source, filePath };
+  // Some entries survived and some did not. The partial loss is worth one line, because the reason a row
+  // the user wrote is missing is otherwise invisible.
+  const problem = commands.length === parsed.length ? undefined :
+    `launcher.json holds ${parsed.length} commands, ${commands.length} of them usable, at ${filePath}`;
+  return { commands, source, filePath, ...(problem !== undefined && { problem }) };
 }

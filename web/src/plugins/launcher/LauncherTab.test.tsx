@@ -27,7 +27,7 @@ function command(overrides: Partial<LauncherCommand> = {}): LauncherCommand {
 
 function row(label: string, overrides: Partial<LauncherTabRow> = {}): LauncherTabRow {
   return {
-    label, busy: false, hasUnread: false, needsInput: false,
+    label, dotColor: '#5b9cff', active: false, busy: false, hasUnread: false, needsInput: false,
     lastActivity: Date.now() - 60_000, cwd: '/repo', ...overrides,
   };
 }
@@ -132,6 +132,49 @@ describe('the command rail', () => {
 
     expect(caps.intent).toHaveBeenCalledWith('configure', { id: 'configure' });
   });
+
+  // One bad icon name costs one glyph and one notification, not the command it belongs to — and a
+  // repaint is not a second notification.
+  it('reports an icon this build cannot draw, once per name', () => {
+    const caps = capabilities();
+    const { rerender } = launcher(payload({
+      commands: [
+        command({ id: 'tasks', icon: 'faNotAGlyph', label: 'Tasks' }),
+        command({ id: 'search', icon: 'faAlsoMissing', label: 'Search' }),
+      ],
+    }), caps);
+
+    fireEvent.click(screen.getByRole('option', { name: /Tasks/ }));
+
+    // Each unrecognised name is reported once, and two names are two reports.
+    const reported = caps.intent.mock.calls.filter(([name]) => name === 'report-icon');
+    expect(reported).toEqual([
+      ['report-icon', { icon: 'faNotAGlyph' }],
+      ['report-icon', { icon: 'faAlsoMissing' }],
+    ]);
+
+    // A repaint of the same rail reports nothing new.
+    caps.intent.mockClear();
+    rerender(
+      <AppCommandBarProvider bar={{
+        intercept: () => false,
+        ghostHistory: [],
+        blockingOverlayOpen: false,
+        overlayOwnsCommandBar: false,
+        queueOpen: false,
+        queueIndex: 0,
+        queueItems: [],
+        queuedLinesOf: () => [],
+        registerCommandLineInsertion: () => () => {},
+      }}>
+        <AppCommandBarTabScope label="launcher">
+          <LauncherTab payload={payload({ commands: [command({ icon: 'faNotAGlyph', label: 'Tasks' })] })} capabilities={caps.value} />
+        </AppCommandBarTabScope>
+      </AppCommandBarProvider>,
+    );
+
+    expect(caps.intent.mock.calls.filter(([name]) => name === 'report-icon')).toEqual([]);
+  });
 });
 
 describe('the tab list', () => {
@@ -141,13 +184,14 @@ describe('the tab list', () => {
         row('busy-one', { busy: true }),
         row('unread-one', { hasUnread: true }),
         row('idle-one'),
+        row('here', { active: true }),
       ],
     }));
 
     const tiers = screen.getByRole('listbox', { name: 'Open tabs' }).querySelectorAll<HTMLElement>('.launcher-tier');
-    expect([...tiers].map((tier) => tier.dataset.tier)).toEqual(['unread', 'busy', 'idle']);
+    expect([...tiers].map((tier) => tier.dataset.tier)).toEqual(['unread', 'active', 'busy', 'idle']);
     expect([...tiers].map((tier) => tier.querySelector('.launcher-tier-label')?.textContent))
-      .toEqual(['Unread', 'Working', 'Idle']);
+      .toEqual(['Unread', 'Active', 'Working', 'Idle']);
   });
 
   // A docked tab never reaches this view at all — the host drops it from the payload, because the rule
@@ -181,6 +225,26 @@ describe('the tab list', () => {
 
     expect(screen.getByText('Running the test suite.')).toBeInTheDocument();
     expect(screen.queryByText('', { selector: '.launcher-summary' })).not.toBeInTheDocument();
+  });
+
+
+  it("draws every row with its tab's own dot colour, so a row matches its strip entry", () => {
+    const { container } = launcher(payload({
+      tabs: [row('janus', { dotColor: '#5b9cff' }), row('claude', { dotColor: '#c678dd' })],
+    }));
+
+    const dots = [...container.querySelectorAll<HTMLElement>('.launcher-dot')];
+    expect(dots.map((dot) => dot.style.color)).toEqual(['rgb(91, 156, 255)', 'rgb(198, 120, 221)']);
+  });
+
+  it('lifts the row the host names as active into its own tier', () => {
+    launcher(payload({
+      tabs: [row('here', { active: true }), row('elsewhere', { busy: true })],
+    }));
+
+    const tiers = screen.getByRole('listbox', { name: 'Open tabs' }).querySelectorAll<HTMLElement>('.launcher-tier');
+    expect([...tiers].map((tier) => tier.dataset.tier)).toEqual(['active', 'busy']);
+    expect(tiers[0]?.querySelector('.launcher-tab-name')?.textContent).toBe('here');
   });
 
   it('says the rail is empty when nothing is open', () => {

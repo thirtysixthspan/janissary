@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import { DEFAULT_LAUNCHER_COMMANDS } from '../plugins/launcher/commands-file.js';
 
 // The `ai/` and `product/` directory tree this tool's task/backlog/plan/spec workflow expects,
 // as documented in the Project Structure section of the target repo's own `AGENTS.md`.
@@ -38,27 +39,18 @@ function installConfigDirectory(source: string, destination: string): void {
   }
 }
 
-// The command rail the launcher tab shows when a project has configured it, written on `janus init`
-// and never overwritten. Every entry is a command the application already answers to, so a project
-// that never edits the file still gets a working rail.
-export const DEFAULT_LAUNCHER_JSON = [
-  { icon: 'faTerminal', label: 'New shell', command: 'zsh' },
-  { icon: 'faRobot', label: 'New agent', command: 'harness' },
-  { icon: 'faFolderOpen', label: 'File navigator', command: 'files' },
-  { icon: 'faBell', label: 'Notifications', command: 'notifications' },
-  { icon: 'faClock', label: 'Schedules', command: 'schedules' },
-  { icon: 'faPlug', label: 'Sessions', command: 'sessions' },
-  { icon: 'faComments', label: 'Conversations', command: 'conversations' },
-  { icon: 'faMagnifyingGlass', label: 'Search tab', command: 'search' },
-  { icon: 'faListCheck', label: 'Tasks', command: 'tasks' },
-  { icon: 'faClockRotateLeft', label: 'History', command: 'hist' },
-];
-
-// The files `janus init` writes into a project's `.janissary/` on first use, none of them overwritten
-// once they exist — the same rule the backlog files follow, because a user's edits to either would
-// otherwise be silently discarded by a later re-init.
+// The `.janissary/` files `janus init` scaffolds, none of them overwritten once they exist — the same
+// rule the backlog files follow, because a user's edits to either would otherwise be silently discarded
+// by a later re-init. `launcher.json`'s default rail is the launcher plugin's own, derived rather than
+// copied, so the file a project starts from and the rail shown when that file is missing cannot describe
+// different commands.
 function stateFiles(): { name: string; content: string }[] {
-  return [{ name: 'launcher.json', content: `${JSON.stringify(DEFAULT_LAUNCHER_JSON, null, 2)}\n` }];
+  return [{
+    name: 'launcher.json',
+    content: `${JSON.stringify(
+      DEFAULT_LAUNCHER_COMMANDS.map(({ icon, label, command }) => ({ icon, label, command })), null, 2,
+    )}\n`,
+  }];
 }
 
 // `janus init [<project-dir>]`: create the standard `ai/`/`product/` scaffold recursively, seed

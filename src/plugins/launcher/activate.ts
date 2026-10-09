@@ -8,25 +8,31 @@ import {
   isDispatchIntent,
   isFocusTabIntent,
   isLauncherPayload,
+  isReportIconIntent,
   isRunCommandIntent,
   type LauncherDispatchIntent,
   type LauncherFocusTabIntent,
+  type LauncherReportIconIntent,
   type LauncherRunCommandIntent,
 } from './shared.js';
 import { readLauncherFile } from './commands-file.js';
 import { readPersonaBody } from './persona.js';
-import { createSummarizer } from './summarizer.js';
+import {
+  initialSummarizerState,
+  summarizeOnce,
+  type SummarizerState,
+} from './summarizer.js';
 import { initialState, payloadOf, rowsChanged, toRows, type LauncherState } from './payload.js';
 
-// There is one launcher for the life of the server, so its state is module state. The one thing that
-// must be per-launcher rather than per-server is the summarizer's session, which stops the moment the
-// launcher's tab closes.
+// There is one launcher for the life of the server, so its state is module state. The one thing that must
+// be per-launcher rather than per-server is the summarizer's cursors, which describe what this tab has
+// already been told and reset when it does.
 const state: LauncherState = initialState();
-let summarizer: ReturnType<typeof createSummarizer> | undefined;
+let summarizer: SummarizerState = initialSummarizerState();
 
 // Read the effective `launcher.json`. The home file replaces the project's wholesale, which is a
-// deliberate asymmetry: a home file is the user's own preference over a project's committed rail, and
-// a merge would leave them guessing which project entry won.
+// deliberate asymmetry: a home file is the user's own preference over a project's committed rail, and a
+// merge would leave them guessing which project entry won.
 function readCommands(capabilities: TabPluginServerCapabilities): void {
   const root = capabilities.originTab()?.root ?? process.cwd();
   const read = readLauncherFile(homedir(), root);
@@ -39,21 +45,18 @@ function readCommands(capabilities: TabPluginServerCapabilities): void {
 }
 
 // Report a problem with the effective file once, to the notifications feed. The rail is a docked view
-// with no transcript of its own, so a line written into one would never be read — and a problem
-// repeated on every republish would be a notification per keystroke.
+// with no transcript of its own, so a line written into one would never be read — and a problem repeated
+// on every republish would be a notification per keystroke.
 function reportProblem(capabilities: TabPluginServerCapabilities): void {
   if (state.reported || state.problem === undefined) return;
   state.reported = true;
   capabilities.notifyUser(state.problem);
 }
 
-// Republish the payload from the rows just handed over, unless nothing moved. Returns whether it
-// wrote, so the `tabs` topic's handler can tell a republish from a no-op.
-function republish(
-  capabilities: TabPluginServerCapabilities,
-  rows: readonly TabActivityEntry[],
-): boolean {
-  const projected = toRows(rows);
+// Republish the payload from the rows just handed over, unless nothing moved. Returns whether it wrote,
+// so the `tabs` topic's handler can tell a republish from a no-op.
+function republish(capabilities: TabPluginServerCapabilities, rows: readonly TabActivityEntry[]): boolean {
+  const projected = toRows(rows, activeLabelOf(capabilities));
   if (!rowsChanged(state, projected)) return false;
   state.rows = projected;
   capabilities.updateTab(LAUNCHER_INSTANCE_KEY, () => ({
@@ -63,14 +66,35 @@ function republish(
   return true;
 }
 
+// The label of the tab the host names as active, or undefined when there is none to name. The launcher's
+// own tab is docked and can never be it, so this is a tab it is showing rather than itself.
+function activeLabelOf(capabilities: TabPluginServerCapabilities): string | undefined {
+  const active = capabilities.tabActivity().find((tab) => tab.active);
+  return active?.label;
+}
+
+// The tabs the launcher shows and the summarizer reads: every tab the host has open, minus this
+// launcher's own. The launcher's transcript is where its own prompts and replies land, so leaving it in
+// would make every flush find new content in a tab the summarizer itself just wrote — a prompt that can
+// never go quiet, whose tail contains its own previous replies. It is matched on the plugin record
+// rather than on the dock side, so the rail and the summarizer agree even if the launcher is undocked.
+function ownTabs(capabilities: TabPluginServerCapabilities): TabActivityEntry[] {
+  return capabilities.tabActivity().filter((tab) => !isLauncherOwn(tab));
+}
+
+// Whether one activity entry is the launcher's own tab.
+function isLauncherOwn(tab: TabActivityEntry): boolean {
+  return tab.view === 'plugin' && tab.label === LAUNCHER_LABEL;
+}
+
 export function activate(): TabPluginActivation {
   return {
     isPayload: isLauncherPayload,
     opener: noFileOpener('launcher'),
-    // `launcher` opens or focuses the singleton tab docked left; `launcher right` puts it on the
-    // right. The argument grammar is the one every dockable list plugin reads, so the three commands
-    // cannot drift apart — the one difference is the default, because the launcher's whole purpose is
-    // to be the sidebar's home rather than another tab in the strip.
+    // `launcher` opens or focuses the singleton tab docked left; `launcher right` puts it on the right.
+    // The argument grammar is the one every dockable list plugin reads, so the commands cannot drift
+    // apart — the one difference is the default, because the launcher's whole purpose is to be the
+    // sidebar's home rather than another tab in the strip.
     command: (argument, capabilities) => {
       const dock = parseDockArgument(argument);
       if (dock === undefined) {
@@ -80,25 +104,17 @@ export function activate(): TabPluginActivation {
       readCommands(capabilities);
       capabilities.openOrFocusTab(LAUNCHER_INSTANCE_KEY, () => ({
         title: LAUNCHER_LABEL,
-        payload: payloadOf(state, state.rows ?? toRows(capabilities.tabActivity())),
+        payload: payloadOf(state, state.rows ?? toRows(ownTabs(capabilities), activeLabelOf(capabilities))),
       }));
       capabilities.dockTab(LAUNCHER_INSTANCE_KEY, dock ?? 'left');
-      republish(capabilities, capabilities.tabActivity());
+      republish(capabilities, ownTabs(capabilities));
       reportProblem(capabilities);
-      summarizer ??= summarize(capabilities);
     },
     // The `tabs` topic's push. Delivered on the raw state broadcast, which is why the handler drops a
     // republish whose rows have not moved — this is what keeps a per-mutation signal from becoming a
     // per-mutation broadcast.
     notify: (event: TabPluginNotification, capabilities) => {
       if (event.topic !== 'tabs') return;
-      // The launcher closing is a tab change like any other, and it is the one that matters most: the
-      // summarizer runs on its own 30-second timer and would otherwise outlive the view it writes for.
-      if (event.tabs.length === 0) {
-        summarizer?.dispose();
-        summarizer = undefined;
-        return;
-      }
       republish(capabilities, event.data);
     },
     intent: defineIntents('launcher', isLauncherPayload, {
@@ -113,8 +129,8 @@ export function activate(): TabPluginActivation {
           return null;
         },
       },
-      // A click on a tab row: focus it in the centre strip. Refused by the host for a label with no
-      // open tab, so a row that closed between a click and its intent does nothing.
+      // A click on a tab row: focus it in the centre strip. Refused by the host for a label with no open
+      // tab, so a row that closed between a click and its intent does nothing.
       'focus-tab': {
         payload: isFocusTabIntent,
         run: (_tab, payload: LauncherFocusTabIntent, capabilities) => {
@@ -132,50 +148,69 @@ export function activate(): TabPluginActivation {
           return null;
         },
       },
-      // A line typed into the launcher's own command bar. Answered with what the line produced, so
-      // the bar can show the reply instead of running a command silently — the same answer the
-      // dispatcher's other caller gets, from the same one call.
+      // A line typed into the launcher's own command bar. Answered with what the line produced, so the
+      // bar can show the reply instead of running a command silently.
       dispatch: {
         payload: isDispatchIntent,
         run: async (_tab, payload: LauncherDispatchIntent, capabilities) =>
           capabilities.dispatchLineWithOutput(payload.line),
       },
+      // A glyph the client's own build cannot draw, reported once so a typo in `launcher.json` is
+      // explained rather than merely rendered as a fallback.
+      'report-icon': {
+        payload: isReportIconIntent,
+        run: (_tab, payload: LauncherReportIconIntent, capabilities) => {
+          capabilities.notifyUser(
+            `launcher: ${payload.icon} is not an icon this build can draw — showing a fallback for its command`,
+          );
+          return null;
+        },
+      },
+      // One summarizer flush, raised by the launcher's own client on its interval. It is an intent
+      // rather than a timer of the plugin's own because `pluginIntent` binds the answering label to the
+      // tab it names, and the core ACP capabilities only work addressed to this plugin's own tab.
+      summarize: {
+        payload: isEmptyLauncherIntent,
+        run: async (_tab, _payload: Record<string, never>, capabilities) => {
+          const live = ownTabs(capabilities);
+          try {
+            const summaries = await summarizeOnce({
+              capabilities,
+              state: summarizer,
+              personaBody: readPersonaBody(capabilities.originTab()?.root ?? process.cwd()),
+              readTabs: () => live,
+            });
+            if (summaries.size === 0) return null;
+            // Rebuilt from the tabs live *now* rather than merged into a map that only grows: a closed
+            // tab's paragraph disappears with its row, and a new tab that inherits a recycled label
+            // shows nothing until its own first paragraph rather than the dead tab's text.
+            const shown = new Set(live.map((tab) => tab.label));
+            state.summaries = Object.fromEntries(
+              [...summaries].filter(([label]) => shown.has(label)),
+            );
+            const rows = state.rows;
+            if (rows === null) return null;
+            capabilities.updateTab(LAUNCHER_INSTANCE_KEY, () => ({
+              title: LAUNCHER_LABEL,
+              payload: payloadOf(state, rows),
+            }));
+            return null;
+          } catch (error) {
+            capabilities.notifyUser(`launcher summarizer: ${error instanceof Error ? error.message : String(error)}`);
+            return null;
+          }
+        },
+      },
     }),
     dispose: () => {
-      summarizer?.dispose();
-      summarizer = undefined;
+      // A closed launcher starts its next incarnation from nothing: the rows, the summaries, and the
+      // summarizer's cursors all describe a tab that no longer exists.
       Object.assign(state, initialState());
+      summarizer = initialSummarizerState();
     },
   };
 }
 
-// The ACP session that answers "what is each tab doing", running through the launcher tab's own core ACP
-// connection — the published `startAcp`/`promptAcp` route, which a plugin can use and a subprocess of its
-// own cannot, and which is tool-less by construction because core denies a tool request the caller has
-// not opted in.
-//
-// It reads the host's tabs itself at flush time through the launcher's own capability, so a prompt never
-// summarizes a stale snapshot, and it stops the moment the launcher's tab is gone — which is how it
-// knows, since the launcher's own tab closing is the `tabs` delivery that carries no instance keys.
-//
-// The persona's first line is a harness directive naming a subprocess this session never spawns, so only
-// the body after it is sent. The session's model is the launcher tab's own ACP model.
-function summarize(capabilities: TabPluginServerCapabilities): ReturnType<typeof createSummarizer> {
-  const root = () => capabilities.originTab()?.root ?? process.cwd();
-  return createSummarizer({
-    capabilities,
-    personaBody: () => readPersonaBody(root()),
-    readTabs: () => capabilities.tabActivity(8),
-    isTabOpen: () => summarizer !== undefined,
-    publish: (summaries) => {
-      state.summaries = { ...state.summaries, ...Object.fromEntries(summaries) };
-      const rows = state.rows;
-      if (rows === null) return;
-      capabilities.updateTab(LAUNCHER_INSTANCE_KEY, () => ({
-        title: LAUNCHER_LABEL,
-        payload: payloadOf(state, rows),
-      }));
-    },
-    onError: (reason) => { capabilities.notifyUser(`launcher summarizer: ${reason}`); },
-  });
+function isEmptyLauncherIntent(value: unknown): value is Record<string, never> {
+  return typeof value === 'object' && value !== null && Object.keys(value).length === 0;
 }

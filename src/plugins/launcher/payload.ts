@@ -31,12 +31,14 @@ export function initialState(): LauncherState {
 //
 // A row also drops the transcript tail a summarizer needs but a row does not draw: what crosses the
 // wire is what the rail shows and what its hover card adds, never another tab's content.
-export function toRows(tabs: readonly TabActivityEntry[]): LauncherTabRow[] {
+export function toRows(tabs: readonly TabActivityEntry[], activeLabel?: string): LauncherTabRow[] {
   return tabs
     .filter((tab) => tab.dock === undefined)
     .map((tab) => ({
       label: tab.label,
       ...(tab.title !== undefined && { title: tab.title }),
+      dotColor: tab.dotColor,
+      active: activeLabel === tab.label,
       ...(tab.view !== undefined && { view: tab.view }),
       ...(tab.pane !== undefined && { pane: tab.pane }),
       busy: tab.busy,

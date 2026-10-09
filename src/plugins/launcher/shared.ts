@@ -9,6 +9,12 @@ export const LAUNCHER_INSTANCE_KEY = 'launcher';
 // The launcher tab's label and the name it opens under.
 export const LAUNCHER_LABEL = 'launcher';
 
+// How long the launcher's client waits between summarizer flushes. It lives in the shared contract
+// rather than in either side's own module because the client owns the interval and the server owns the
+// prompt it paces, and the two must agree about the number. It mirrors the monitor's flush cycle: one
+// cheap prompt every 30 seconds is the cadence an ACP-backed summary can afford.
+export const SUMMARIZER_FLUSH_MS = 30_000;
+
 // One row of the command rail: a glyph, the user's own wording, and the application command line
 // clicking it dispatches. The label is the user's, not derived — two projects call the same command
 // different things, and the rail is what a user reads.
@@ -25,6 +31,11 @@ export type LauncherCommand = {
 export type LauncherTabRow = {
   label: string;
   title?: string;
+  // The tab's own dot colour, so the row matches its strip entry.
+  dotColor: string;
+  // Whether this is the tab the host names as active. A position in the rail rather than a property of
+  // the tab, which is why the host answers it and this view never derives it.
+  active: boolean;
   view?: 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   dock?: 'left' | 'right';
   pane?: 'right';
@@ -73,6 +84,10 @@ export type LauncherDispatchReply = { dispatched: boolean; output: string; coreR
 // has no second intent shape to remember.
 export const CONFIGURE_INTENT_ID = 'configure';
 
+// A glyph the client's own build cannot draw, named back to the host so it can be reported once. The
+// icon set is the client's, so the client is the only side that can tell — this is how it says so.
+export type LauncherReportIconIntent = { icon: string };
+
 // Focus a tab in the center strip, by the label the host already delivered in the payload.
 export type LauncherFocusTabIntent = { label: string };
 
@@ -95,6 +110,8 @@ function isRow(value: unknown): value is LauncherTabRow {
   return isRecord(value)
     && typeof value.label === 'string' && value.label.length > 0
     && isOptionalString(value.title)
+    && typeof value.dotColor === 'string' && value.dotColor.length > 0
+    && typeof value.active === 'boolean'
     && (value.view === undefined || (typeof value.view === 'string' && VIEWS.has(value.view)))
     && (value.dock === undefined || (typeof value.dock === 'string' && DOCKS.has(value.dock)))
     && (value.pane === undefined || value.pane === 'right')
@@ -131,6 +148,10 @@ export function isRunCommandIntent(value: unknown): value is LauncherRunCommandI
 
 export function isDispatchIntent(value: unknown): value is LauncherDispatchIntent {
   return isRecord(value) && typeof value.line === 'string' && value.line.length > 0;
+}
+
+export function isReportIconIntent(value: unknown): value is LauncherReportIconIntent {
+  return isRecord(value) && typeof value.icon === 'string' && value.icon.length > 0;
 }
 
 export function isFocusTabIntent(value: unknown): value is LauncherFocusTabIntent {
