@@ -31,7 +31,7 @@
 
 .diff-file-header {
   display: flex; align-items: baseline; gap: 8px; padding: 4px 12px;
-  background: color-mix(in srgb, var(--muted) 8%, transparent); position: sticky; top: 0; z-index: 1;
+  background: color-mix(in srgb, var(--muted) 8%, transparent);
 }
 .diff-file-name {
   background: transparent; border: none; color: var(--fg); cursor: pointer; font: inherit;

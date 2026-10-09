@@ -2,7 +2,6 @@
 
 # pull-request
 
-* the header for each file should stay at the top of the file content when scrolling rather than staying in view while scrolling.
 * when a whole file has changes, it should be shown collapsed, where a double click expands the view to the whole file.
 * file changes 
 * diff views should have the same syntax highlighting as the editor tab

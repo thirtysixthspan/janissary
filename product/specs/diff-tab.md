@@ -32,7 +32,8 @@ path, its add and delete counts, and — for a renamed file — its old path and
 only change is its mode is an entry with no hunks. A deleted file's header is inert, because there is
 no file to open, and so are its hunks. A binary file is one entry naming it as such with no hunks, and
 its header opens the media tab the file's extension already opens — the image, video, audio, or PDF
-tab — rather than an editor tab.
+tab — rather than an editor tab. A file's header scrolls with its own content: it sits at the top of
+its entry and goes by with the hunks beneath it rather than staying pinned while the list moves.
 
 Every hunk is expanded, and each hunk line carries its own file line number: the new-side number for an
 added or context line, the old-side number for a removed one. There is no cap: a change of any size is

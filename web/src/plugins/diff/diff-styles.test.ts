@@ -39,4 +39,12 @@ describe('diff styles', () => {
     loadStyles();
     expect(getComputedStyle(row(kind).row).overflowX).not.toBe('auto');
   });
+
+  it('lets a file header scroll away with its entry rather than staying pinned', () => {
+    loadStyles();
+    const header = document.createElement('div');
+    header.className = 'diff-file-header';
+    document.body.append(header);
+    expect(getComputedStyle(header).position).toBe('static');
+  });
 });
