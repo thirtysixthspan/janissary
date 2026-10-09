@@ -21,6 +21,7 @@ function tab(overrides: Partial<TabActivityEntry> = {}): TabActivityEntry {
     lastActivity: Date.now(),
     cwd: '/repo',
     logLength: 3,
+    revision: 3,
     ...overrides,
   };
 }
@@ -264,8 +265,8 @@ describe('summarizeOnce', () => {
   }
 
   const tabs = (): TabActivityEntry[] => [
-    { label: 'shell', dotColor: '#fff', active: true, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 4, tail: 'ls\nfile' },
-    { label: 'agent', dotColor: '#fff', active: false, busy: true, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 2, tail: 'npm test' },
+    { label: 'shell', dotColor: '#fff', active: true, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 4, revision: 4, tail: 'ls\nfile' },
+    { label: 'agent', dotColor: '#fff', active: false, busy: true, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 2, revision: 2, tail: 'npm test' },
   ];
 
   it('primes once, then prompts once per flush', async () => {
@@ -282,7 +283,12 @@ describe('summarizeOnce', () => {
 
   it('asks for nothing when no tab has moved past its cursor', async () => {
     const stubs = stub(tabs(), '[[tab:shell]] First.');
-    const summarizer = state({ fed: new Map([['shell', 4], ['agent', 2]]) });
+    const summarizer = state({
+      fed: new Map([
+        ['shell', { length: 4, revision: 4 }],
+        ['agent', { length: 2, revision: 2 }],
+      ]),
+    });
 
     const published = await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', readTabs: tabs });
 
@@ -302,16 +308,16 @@ describe('summarizeOnce', () => {
     const recovered = stub(tabs(), '[[tab:shell]] Back.');
     await summarizeOnce({ capabilities: recovered.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
 
-    expect(summarizer.fed.get('shell')).toBe(4);
+    expect(summarizer.fed.get('shell')).toEqual({ length: 4, revision: 4 });
   });
 
   it('prompts a tab that reuses a label it has already seen, once its transcript moves', async () => {
     const fresh: TabActivityEntry[] = [
-      { label: 'shell', dotColor: '#fff', active: true, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 1, tail: 'uptime' },
+      { label: 'shell', dotColor: '#fff', active: true, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 1, revision: 1, tail: 'uptime' },
     ];
     const stubs = stub(fresh, '[[tab:shell]] New.');
-    // A cursor from a closed shell tab that held four entries; the new one holds one.
-    const summarizer = state({ fed: new Map([['shell', 4]]) });
+    // A cursor from a closed shell tab that held four entries and had been written seven times.
+    const summarizer = state({ fed: new Map([['shell', { length: 4, revision: 7 }]]) });
 
     const published = await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => fresh });
 
@@ -322,12 +328,12 @@ describe('summarizeOnce', () => {
 
   it('drops a cursor for a label nothing shows any more', async () => {
     const stubs = stub(tabs(), '[[tab:shell]] First.');
-    const summarizer = state({ fed: new Map([['gone', 3]]) });
+    const summarizer = state({ fed: new Map([['gone', { length: 3, revision: 3 }]]) });
 
     await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
 
     expect(summarizer.fed.has('gone')).toBe(false);
-    expect(summarizer.fed.get('shell')).toBe(4);
+    expect(summarizer.fed.get('shell')).toEqual({ length: 4, revision: 4 });
   });
 
   it('runs one flush at a time, and reports a start the host refused', async () => {
@@ -338,6 +344,41 @@ describe('summarizeOnce', () => {
       .rejects.toThrow('ACP tab is unavailable.');
     expect(stubs.prompted).toHaveLength(0);
     expect(summarizer.inFlight).toBe(false);
+  });
+
+  // The two writes a log's length cannot show. Output streamed into a running entry leaves it exactly
+  // where it was, so the tab would otherwise keep its first paragraph forever while its output — and
+  // then its result — changed underneath it.
+  it('prompts a tab whose output was rewritten in place at an unchanged length', async () => {
+    const grown = tabs();
+    grown[0] = { ...grown[0], revision: grown[0].revision + 1 };
+    const stubs = stub(grown, '[[tab:shell]] Finished the suite; two left.');
+    const summarizer = state({ primed: true, fed: new Map([['shell', { length: 4, revision: 4 }]]) });
+
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => grown });
+
+    expect(stubs.prompted).toHaveLength(1);
+    expect(summarizer.fed.get('shell')).toEqual({ length: 4, revision: 5 });
+  });
+
+  // The other one: an append once the log is at its cap drops the oldest entry, so the length sits at
+  // its ceiling forever and the newest output is invisible to a length-only cursor.
+  it('prompts a tab whose capped log took another entry at an unchanged length', async () => {
+    const full = tabs();
+    full[1] = { ...full[1], revision: full[1].revision + 1 };
+    const stubs = stub(full, '[[tab:agent]] Now waiting on the deploy step.');
+    const summarizer = state({
+      primed: true,
+      fed: new Map([
+        ['shell', { length: 4, revision: 4 }],
+        ['agent', { length: 2, revision: 2 }],
+      ]),
+    });
+
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => full });
+
+    expect(stubs.prompted).toHaveLength(1);
+    expect(summarizer.fed.get('agent')).toEqual({ length: 2, revision: 3 });
   });
 
   // The boundary the host enforces is the one this asks for: a session with no tool table, so a

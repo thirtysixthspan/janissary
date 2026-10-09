@@ -38,9 +38,14 @@ export type TabActivityEntry = {
   remote?: string;
   // The last command line the tab ran, when its transcript records one.
   lastCommand?: string;
-  // How many transcript entries the tab holds. A caller that keeps its own cursor through a tab's
+  // How many entries the tab's transcript holds. A caller that keeps its own cursor through a tab's
   // transcript compares against this to learn whether anything is new, without re-reading the tail.
   logLength: number;
+  // How many times the tab's transcript has been written. Not a substitute for `logLength` but a
+  // companion to it: a cursor comparing only the length cannot see output rewritten into a running
+  // entry, or an entry appended once the log is already at its cap, because neither of them moves it.
+  // 0 for a tab nothing has been written to yet.
+  revision: number;
   // The tab's most recent transcript entries as text, capped by the host. Present only when the
   // caller asked for it.
   tail?: string;
@@ -106,6 +111,7 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
     ...(tab.remote && { remote: tab.remote.host }),
     lastCommand: lastCommandOf(tab.log),
     logLength: tab.log.length,
+    revision: tab.runtime?.transcriptRevision ?? 0,
     ...(tailLines !== undefined && { tail: tailOf(tab.log, tailLines) }),
   };
 }

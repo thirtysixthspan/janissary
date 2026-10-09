@@ -238,6 +238,23 @@ describe('the tabs topic', () => {
     expect(entry.updated).toHaveLength(0);
   });
 
+  // A streaming tab rewrites its running entry on every chunk, so its revision rises constantly. A row
+  // carries no revision, so none of that reaches the fingerprint and no republish is forced by it.
+  it('drops a republish whose rows differ only by a transcript revision', () => {
+    const entry = fixture(ROWS, project());
+    const activation = activate();
+    activation.command?.('', entry.capabilities);
+    entry.updated.length = 0;
+
+    activation.notify?.({
+      topic: 'tabs',
+      data: ROWS.map((row) => ({ ...row, revision: row.revision + 4 })),
+      tabs: ['launcher'],
+    }, entry.capabilities);
+
+    expect(entry.updated).toHaveLength(0);
+  });
+
   // The launcher summarizing its own transcript would make every flush find content it just wrote, so a
   // prompt could never go quiet and its tail would carry its own replies. Matching on the plugin record
   // rather than the dock side means the rule holds if the launcher is ever undocked.

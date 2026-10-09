@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Detect transcript edits and capped-log appends when deciding whether to refresh a summary.
-
-Existing Issue: The summarizer cursor compares only logLength, so output rewritten into a running entry and new entries appended after the log reaches its cap are treated as unchanged. Severity: 7/10
-
-Existing Risk: 7/10 - A working tab can retain its initial summary indefinitely even as its output and eventual result change.
-
-Proposal Risk: 2/10 - A host-issued content revision distinguishes real transcript changes while preserving the idle no-prompt behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "detect transcript edits and capped-log appends when deciding whether to refresh a summary". Add a monotonic transcript revision owned by TabRuntime in src/tab/types.ts and advance it on real transcript writes in src/tab/transcript/events.ts, including append, update, clear, and capped replacement. Carry it through the pull activity contract in src/plugins/activity.ts and src/plugins/api.ts, and use it with tab identity for the fed cursor in src/plugins/launcher/summarizer.ts; keep it out of display-row fingerprints so streaming does not force payload republishes. Add tests for in-place output growth, completed output, a full capped log receiving another entry, and unchanged idle state in src/plugins/launcher/summarizer.test.ts and colocated transcript tests.
-
-
 * Keep existing summaries for live tabs omitted from a later reply.
 
 Existing Issue: The summarize intent replaces state.summaries with the latest reply map even though prompts include only changed tabs and the plan promises omitted tabs keep their previous paragraphs. Severity: 6/10

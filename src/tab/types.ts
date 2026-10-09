@@ -266,6 +266,11 @@ export type TabRuntime = {
   // a `LogEntry` carries no timestamp, and adding one would touch every producer, the wire
   // projection, and every persisted shape for a value only a reader wants. In-memory only.
   lastActivity?: number;
+  // How many times this tab's transcript has actually been written. A reader's cursor cannot watch
+  // the log's length instead, because two real writes leave it alone: output streamed into a running
+  // entry rewrites in place, and an append to a log already at its cap drops the oldest to make
+  // room. In-memory only, beside `lastActivity` for the same reason.
+  transcriptRevision?: number;
   // Whether this harness tab is currently sitting at a permission gate. A screen state, so it is
   // durable only while the app is observing the screen: `src/harness/busy-status.ts` writes it from
   // each capture, and a remote harness's transition says only "idle and badged" and leaves it alone.

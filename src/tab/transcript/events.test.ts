@@ -315,3 +315,55 @@ describe('clearTranscriptTab', () => {
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
   });
 });
+
+// The revision is what lets a reader see the two writes a log's length cannot show — output rewritten
+// into a running entry, and an append to a log already at its cap.
+describe('the transcript revision', () => {
+  const revisionOf = (tab: ReturnType<typeof makeTab>) => tab.runtime?.transcriptRevision;
+
+  it('is absent on a tab nothing has been written to', () => {
+    expect(revisionOf(makeTab('bob', 'red'))).toBeUndefined();
+  });
+
+  it('advances on an append, and again on a capped append that kept the length', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'old', output: '' }]);
+
+    appendTab([tab], 'bob', { input: 'new', output: '' }, (log) => log, vi.fn());
+    expect(revisionOf(tab)).toBe(1);
+
+    appendTab([tab], 'bob', { input: 'newer', output: '' }, (log) => capLog(log, 1), vi.fn());
+    // The length never moved off its cap, and the write is still visible.
+    expect(tab.log).toHaveLength(1);
+    expect(revisionOf(tab)).toBe(2);
+  });
+
+  it('advances when output is streamed into a running entry, and again when it completes', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'sleep', output: '', running: true }]);
+
+    updateRunningEntry([tab], 'bob', { command: 'sleep' }, 'half', true, {});
+    expect(revisionOf(tab)).toBe(1);
+    expect(tab.log).toHaveLength(1);
+
+    updateRunningEntry([tab], 'bob', { command: 'sleep' }, 'woke up', false, { trailing: true });
+    expect(revisionOf(tab)).toBe(2);
+    expect(tab.log[0]).toEqual({ input: 'sleep', output: 'woke up', running: false });
+  });
+
+  it('advances when the log is cleared', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'ls', output: 'x' }]);
+
+    clearTranscriptTab([tab], 'bob');
+
+    expect(revisionOf(tab)).toBe(1);
+  });
+
+  // A write that changed nothing must not look like one: a flush woken by a no-op is a prompt the
+  // user pays for.
+  it('does not advance for an update whose match found no running entry', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'ls', output: 'x' }]);
+
+    updateRunningEntry([tab], 'bob', { command: 'other' }, 'nothing', false, {});
+
+    expect(revisionOf(tab)).toBeUndefined();
+  });
+});

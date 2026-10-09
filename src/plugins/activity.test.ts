@@ -115,6 +115,18 @@ describe('the tabActivity reader', () => {
     expect(rows[0]?.lastCommand).toBe('ls');
   });
 
+  it('reports the transcript revision the host wrote, and zero for a tab with none yet', () => {
+    const { managers: host } = managers([
+      tab({ label: 'written', runtime: { busy: false, context: [], queue: [], transcriptRevision: 5 } }),
+      tab({ label: 'fresh' }),
+    ]);
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows[0]?.revision).toBe(5);
+    expect(rows[1]?.revision).toBe(0);
+  });
+
   it('carries no transcript content at all when the caller did not ask for it', () => {
     const { managers: host } = managers([tab({ label: 'shell', log: [{ input: 'ls', output: 'a b c' }] })]);
 

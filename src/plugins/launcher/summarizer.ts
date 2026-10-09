@@ -137,9 +137,13 @@ export function primingText(personaBody: string, delimiter: string): string {
 
 export type SummarizerState = {
   // Per label, how much of that tab's transcript has already been fed. A prompt is skipped for a tab
-  // that has not moved past its cursor, which is what stops a 30-second timer from being a 30-second ACP
-  // bill on an application where nothing is happening.
-  fed: Map<string, number>;
+  // that has not moved past its cursor, which is what stops a 30-second timer from being a 30-second
+  // ACP bill on an application where nothing is happening.
+  //
+  // A cursor holds the length as well as the revision because the revision is not the only writer the
+  // host has: a tab whose log is appended outside `src/tab/transcript/events.ts` — a remote tab's
+  // channel output — moves the length and nothing else.
+  fed: Map<string, { length: number; revision: number }>;
   primed: boolean;
   inFlight: boolean;
   // The delimiter this session's priming taught the persona. Rotated when the session is re-primed, so a
@@ -149,6 +153,14 @@ export type SummarizerState = {
 
 export function initialSummarizerState(): SummarizerState {
   return { fed: new Map(), primed: false, inFlight: false, delimiter: generateDelimiter() };
+}
+
+// A tab is prompted when either half of its cursor has moved. The comparison is by inequality rather
+// than by growth, because a cursor *ahead* of a tab's transcript cannot describe that tab: the
+// agent-name pool recycles a label as soon as its tab closes, and a new tab that inherits one starts
+// with a shorter log than the dead tab left behind.
+function movedPastCursor(tab: TabActivityEntry, cursor: { length: number; revision: number } | undefined): boolean {
+  return cursor === undefined || tab.logLength !== cursor.length || tab.revision !== cursor.revision;
 }
 
 // One flush. Resolves with the summaries to publish, or an empty map when there was nothing to ask.
@@ -161,12 +173,8 @@ export function initialSummarizerState(): SummarizerState {
 // answer with the tab the command was typed into, which is not this plugin's tab, and every prompt is
 // refused.
 //
-// A tab is prompted when its transcript is not the length the cursor last recorded for its label, and the
-// cursors of labels nothing shows are dropped first. The comparison is by inequality rather than by
-// growth, because a cursor *ahead* of a tab's transcript cannot describe that tab: the agent-name pool
-// recycles a label as soon as its tab closes, and a new tab that inherits one starts with a shorter log
-// than the dead tab left behind. The cursor is advanced only after a reply lands, so a prompt that fails
-// is retried on the next flush rather than being believed already fed.
+// The cursors of labels nothing shows are dropped first. The cursor is advanced only after a reply
+// lands, so a prompt that fails is retried on the next flush rather than being believed already fed.
 export async function summarizeOnce(input: {
   capabilities: TabPluginServerCapabilities;
   state: SummarizerState;
@@ -182,7 +190,7 @@ export async function summarizeOnce(input: {
   for (const label of state.fed.keys()) {
     if (!live.has(label)) state.fed.delete(label);
   }
-  const tabs = current.filter((tab) => tab.logLength !== (state.fed.get(tab.label) ?? -1));
+  const tabs = current.filter((tab) => movedPastCursor(tab, state.fed.get(tab.label)));
   if (tabs.length === 0) return new Map();
   // One clock for the whole flush, so every tab's recency is measured against the same moment.
   const now = Date.now();
@@ -197,7 +205,9 @@ export async function summarizeOnce(input: {
     }
     const reply = await capabilities.promptAcp(buildSummarizerPrompt(tabs, state.delimiter, now));
     // Cursors advance only now, so a failure above leaves them where they were.
-    for (const tab of tabs) state.fed.set(tab.label, tab.logLength);
+    for (const tab of tabs) {
+      state.fed.set(tab.label, { length: tab.logLength, revision: tab.revision });
+    }
     return parseTabSummaries(reply);
   } catch (error) {
     state.fed = new Map(cursors);
