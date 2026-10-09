@@ -94,7 +94,7 @@ describe('client feature boundaries', () => {
   it('rejects a shared module importing a feature', async () => {
     const messages = await boundaryMessages(
       "import { HarnessTab } from '../harness/HarnessTab'; void HarnessTab;",
-      'web/src/shared/HarnessTabMeta.tsx',
+      'web/src/shared/dock-cycle.ts',
     );
     expect(messages).toHaveLength(1);
     expect(messages[0]?.message).toContain('Shared modules must not import a feature');
