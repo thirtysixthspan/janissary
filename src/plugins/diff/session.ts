@@ -41,7 +41,6 @@ function resultChanges(result: ChangeSetResult): Partial<DiffPayload> {
 
 export class DiffSession {
   private root = '';
-  private hideWhitespace = true;
   // The layout as last read from or written to the settings entry, so a session that never changes
   // it does not rewrite the config, and a write the file refused is retried by the next change.
   private split = false;
@@ -77,11 +76,9 @@ export class DiffSession {
     void this.recompute();
   }
 
-  // Recompute for the tab's current root. `hideWhitespace` travels with the request because it
-  // changes which lines git reports, so the server holds no toggle state between calls. A recompute
-  // already in flight is neither joined nor queued: the tab's own poll comes round again shortly.
-  async refresh(hideWhitespace: boolean): Promise<void> {
-    this.hideWhitespace = hideWhitespace;
+  // Recompute for the tab's current root. A recompute already in flight is neither joined nor
+  // queued: the tab's own poll comes round again shortly.
+  async refresh(): Promise<void> {
     await this.recompute();
   }
 
@@ -128,7 +125,7 @@ export class DiffSession {
     this.inFlight = true;
     const rootAtStart = this.root;
     try {
-      const result = await readChangeSet(rootAtStart, this.hideWhitespace);
+      const result = await readChangeSet(rootAtStart);
       if (!this.disposed && this.root === rootAtStart) this.safely(resultChanges(result));
     } catch (error) {
       this.safely({ state: 'error', message: reasonOf(error), files: [] });

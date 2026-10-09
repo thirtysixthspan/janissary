@@ -79,8 +79,8 @@ export function activate(): TabPluginActivation {
       // the handler's whole budget doing it. The tab repaints itself when the diff lands.
       refresh: {
         payload: isRefreshIntent,
-        run: (_tab, payload: RefreshIntent, capabilities) => {
-          void sessionFor(capabilities).refresh(payload.hideWhitespace);
+        run: (_tab, _payload: RefreshIntent, capabilities) => {
+          void sessionFor(capabilities).refresh();
           return null;
         },
       },

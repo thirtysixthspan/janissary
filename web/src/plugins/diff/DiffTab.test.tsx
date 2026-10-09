@@ -206,19 +206,20 @@ describe('DiffTab', () => {
       const { intent } = renderTab();
       expect(intent).not.toHaveBeenCalled();
       fireEvent.click(screen.getByLabelText('Refresh'));
-      expect(intent).toHaveBeenCalledWith('refresh', { hideWhitespace: true });
+      expect(intent).toHaveBeenCalledWith('refresh', {});
       intent.mockClear();
       act(() => { vi.advanceTimersByTime(1000); });
-      expect(intent).toHaveBeenCalledWith('refresh', { hideWhitespace: true });
+      expect(intent).toHaveBeenCalledWith('refresh', {});
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('recomputes when the whitespace toggle changes, having defaulted to on', () => {
+  it('does not render a whitespace filtering control', () => {
     const { intent } = renderTab();
-    fireEvent.click(screen.getByTitle('Hide whitespace changes'));
-    expect(intent).toHaveBeenCalledWith('refresh', { hideWhitespace: false });
+    expect(screen.queryByTitle('Hide whitespace changes')).toBeNull();
+    expect(screen.queryByText('Hide whitespace')).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
   });
 
   it('renders the split layout its payload names, where each side carries its own line numbers', () => {

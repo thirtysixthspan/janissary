@@ -97,7 +97,7 @@ describe('readChangeSet', () => {
     expect(await readChangeSet(path.join(root, 'missing'))).toEqual({ kind: 'not-repository' });
   });
 
-  it('hides a whitespace-only change when asked and shows it when not', async () => {
+  it('includes whitespace-only changes', async () => {
     initRepo(root);
     writeFileSync(path.join(root, 'spaces.txt'), 'one\ntwo\n');
     writeFileSync(path.join(root, 'other.txt'), 'a\n');
@@ -106,19 +106,19 @@ describe('readChangeSet', () => {
     writeFileSync(path.join(root, 'other.txt'), 'b\n');
     writeFileSync(path.join(root, 'pad.txt'), '  padded\n');
 
-    // `pad.txt` stays either way: it is a new file, and an all-added file has no whitespace change
-    // for `-w` to hide, because there is no other side to compare against.
-    expect(pathsOf(await readChangeSet(root, true))).toEqual(['other.txt', 'pad.txt']);
-    expect(pathsOf(await readChangeSet(root, false))).toEqual(['other.txt', 'pad.txt', 'spaces.txt']);
+    const result = await readChangeSet(root);
+    expect(pathsOf(result)).toEqual(['other.txt', 'pad.txt', 'spaces.txt']);
+    const whitespaceChange = result.kind === 'files' ? result.files.find((file) => file.path === 'spaces.txt') : undefined;
+    expect(whitespaceChange?.hunks[0].lines.map((line) => line.kind)).toEqual(['removed', 'added', 'context']);
   });
 
-  it('leaves an untracked file visible with the whitespace flag on', async () => {
+  it('includes a whitespace-only untracked file', async () => {
     initRepo(root);
     writeFileSync(path.join(root, 'seed.txt'), 'seed');
     commitAll(root, 'init');
     writeFileSync(path.join(root, 'blank.txt'), '   \n');
 
-    expect(pathsOf(await readChangeSet(root, true))).toEqual(['blank.txt']);
+    expect(pathsOf(await readChangeSet(root))).toEqual(['blank.txt']);
   });
 
   it('scopes the records to a subdirectory and strips the repository prefix', async () => {

@@ -66,9 +66,9 @@ async function untrackedPaths(root: string): Promise<string[]> {
 // One untracked file's change set, diffed against nothing. `git diff --no-index` exits 1 when the
 // files differ, which is the only outcome worth reading here, so its stdout is read off the
 // rejection.
-async function untrackedFile(root: string, relPath: string, hideWhitespace: boolean): Promise<DiffFile | null> {
+async function untrackedFile(root: string, relPath: string): Promise<DiffFile | null> {
   try {
-    const stdout = await git(root, ['diff', '--no-index', '--no-color', ...(hideWhitespace ? ['-w'] : []), '--', '/dev/null', path.join(root, relPath)]);
+    const stdout = await git(root, ['diff', '--no-index', '--no-color', '--', '/dev/null', path.join(root, relPath)]);
     return parseDiff(stdout, { path: relPath })[0] ?? null;
   } catch (error) {
     const stdout = (error as { stdout?: string }).stdout;
@@ -77,12 +77,12 @@ async function untrackedFile(root: string, relPath: string, hideWhitespace: bool
   }
 }
 
-async function untrackedFiles(root: string, hideWhitespace: boolean): Promise<DiffFile[]> {
+async function untrackedFiles(root: string): Promise<DiffFile[]> {
   const paths = await untrackedPaths(root);
   const files: DiffFile[] = [];
   for (let index = 0; index < paths.length; index += UNTRACKED_CONCURRENCY) {
     const batch = await Promise.all(
-      paths.slice(index, index + UNTRACKED_CONCURRENCY).map((relPath) => untrackedFile(root, relPath, hideWhitespace)),
+      paths.slice(index, index + UNTRACKED_CONCURRENCY).map((relPath) => untrackedFile(root, relPath)),
     );
     files.push(...batch.filter((file): file is DiffFile => file !== null));
   }
@@ -92,7 +92,7 @@ async function untrackedFiles(root: string, hideWhitespace: boolean): Promise<Di
 // The repository-with-no-commits route: every file gitignore admits, diffed against nothing. A path
 // the index holds but the working tree no longer does becomes a deleted record with no hunks — the
 // content lived only in the index, and a diff view cannot recover it.
-async function unbornChangeSet(root: string, hideWhitespace: boolean): Promise<DiffFile[]> {
+async function unbornChangeSet(root: string): Promise<DiffFile[]> {
   const listed = await git(root, ['ls-files', '--exclude-standard', '-z']);
   const files: DiffFile[] = [];
   const indexed = listed.split('\0').filter(Boolean);
@@ -100,25 +100,24 @@ async function unbornChangeSet(root: string, hideWhitespace: boolean): Promise<D
     if (existsSync(path.join(root, relPath))) continue;
     files.push({ path: relPath, deleted: true, additions: 0, deletions: 0, hunks: [] });
   }
-  return [...files, ...await untrackedFiles(root, hideWhitespace)];
+  return [...files, ...await untrackedFiles(root)];
 }
 
 // Read the working tree's changes versus `HEAD` under `root`: tracked changes with rename detection,
 // then each untracked file as an all-added record. Never writes to the index — no intent-to-add — so
 // the repository the user is working in is untouched.
-export async function readChangeSet(root: string, hideWhitespace = false): Promise<ChangeSetResult> {
+export async function readChangeSet(root: string): Promise<ChangeSetResult> {
   const prefix = await prefixIn(root);
   if (prefix === null) return { kind: 'not-repository' };
-  const whitespace = hideWhitespace ? ['-w'] : [];
   try {
-    if (!await hasHead(root)) return { kind: 'files', files: await unbornChangeSet(root, hideWhitespace) };
+    if (!await hasHead(root)) return { kind: 'files', files: await unbornChangeSet(root) };
     const tracked = parseDiff(
       // The `-- .` pathspec scopes the diff to the root's own subtree: `git diff` without one is
       // repository-wide even when run from a subdirectory, the way `changedPaths` handles it.
-      await git(root, ['diff', 'HEAD', '-M', '--no-ext-diff', '--no-color', ...whitespace, '--', '.']),
+      await git(root, ['diff', 'HEAD', '-M', '--no-ext-diff', '--no-color', '--', '.']),
       { prefix },
     );
-    const untracked = await untrackedFiles(root, hideWhitespace);
+    const untracked = await untrackedFiles(root);
     // One list in file path order, the way GitHub's files-changed view lists files and the way the
     // keyboard walk expects them, rather than tracked files first because that is how they were read.
     return { kind: 'files', files: [...tracked, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path)) };

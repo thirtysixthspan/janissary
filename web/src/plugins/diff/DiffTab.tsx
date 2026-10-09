@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import type { DiffPayload } from '@shared/plugins/diff/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { FileEntry } from './FileEntry';
@@ -19,13 +19,11 @@ export function DiffTab({
   capabilities: TabPluginClientCapabilities;
 }) {
   const split = payload.split;
-  const [hideWhitespace, setHideWhitespace] = useState(true);
   const setLayout = (next: boolean) => { void capabilities.intent('layout', { split: next }); };
   const files = payload.files;
 
   const refresh = useDiffRefresh(
-    useCallback(() => capabilities.intent('refresh', { hideWhitespace }), [capabilities, hideWhitespace]),
-    hideWhitespace,
+    useCallback(() => capabilities.intent('refresh', {}), [capabilities]),
   );
   const walk = useHunkWalk(files);
 
@@ -70,15 +68,6 @@ export function DiffTab({
               Split
             </button>
           </span>
-          <button
-            type="button"
-            className={hideWhitespace ? 'on' : ''}
-            aria-pressed={hideWhitespace}
-            title="Hide whitespace changes"
-            onClick={() => setHideWhitespace(!hideWhitespace)}
-          >
-            Hide whitespace
-          </button>
           <button type="button" className="diff-refresh" title="Refresh" aria-label="Refresh" onClick={refresh.refresh}>
             ⟳
           </button>

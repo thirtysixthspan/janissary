@@ -248,7 +248,7 @@ describe('diff plugin activation', () => {
     expect(dispatchLineWithOutput).toHaveBeenCalledWith(`open ${path.join(repo, 'pic.png')}`);
   });
 
-  it('carries the whitespace flag into the recompute', async () => {
+  it('refreshes with whitespace-only changes included', async () => {
     const { capabilities, updateTab } = makeCapabilities({
       originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
     });
@@ -256,10 +256,7 @@ describe('diff plugin activation', () => {
     activation.command?.('', capabilities);
     await settled(updateTab);
     writeFileSync(path.join(repo, 'a.txt'), 'one   ');
-    activation.intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities);
-    await settled(updateTab);
-    expect(lastPayload(updateTab).files).toEqual([]);
-    activation.intent(intent(settledTab, 'refresh', { hideWhitespace: false }), capabilities);
+    activation.intent(intent(settledTab, 'refresh', {}), capabilities);
     await settled(updateTab);
     expect(lastPayload(updateTab).files.map((file) => file.path)).toEqual(['a.txt']);
   });
@@ -274,7 +271,7 @@ describe('diff plugin activation', () => {
     const activation = activate();
     activation.command?.('', capabilities);
     await settled(updateTab);
-    expect(activation.intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities)).toBeNull();
+    expect(activation.intent(intent(settledTab, 'refresh', {}), capabilities)).toBeNull();
   });
 
   it('publishes a payload the host accepts, untracked file included', async () => {
@@ -302,7 +299,7 @@ describe('diff plugin activation', () => {
     const activation = activate();
     activation.command?.('', capabilities);
     await rest();
-    const answered = activation.intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities);
+    const answered = activation.intent(intent(settledTab, 'refresh', {}), capabilities);
     expect(answered).toBeNull();
     await rest();
     expect(refusing).toHaveBeenCalled();
@@ -350,7 +347,7 @@ describe('diff plugin activation', () => {
 
   it('rejects a refresh intent whose payload is malformed', () => {
     const { capabilities } = makeCapabilities();
-    expect(() => activate().intent(intent(settledTab, 'refresh', {}), capabilities))
+    expect(() => activate().intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities))
       .toThrow('invalid refresh payload');
   });
 
@@ -364,7 +361,7 @@ describe('diff plugin activation', () => {
     const activation = activate();
     activation.command?.('', capabilities);
     const standing = await settled(updateTab);
-    activation.intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities);
+    activation.intent(intent(settledTab, 'refresh', {}), capabilities);
     expect(lastPayload(updateTab)).toBe(standing);
     expect(lastPayload(updateTab).state).toBe('done');
     await settled(updateTab);

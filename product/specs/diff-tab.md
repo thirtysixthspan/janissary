@@ -78,6 +78,7 @@ change, not the file: a large file with one changed line shows that line in full
 
 The tab recomputes on its own every second, so the change set stays live while files are edited around
 it, and the header's **Refresh** button recomputes on demand. Re-running the command recomputes as well.
+A whitespace-only edit appears as a change, including when it is the repository's only change.
 A recompute leaves the tab showing what it already shows until its result lands, so the refresh never
 blanks the body: on an empty change set **No changes** stays put rather than vanishing with each
 redraw. Re-scoping the tab to another directory is the one case that clears the body first, because
@@ -93,10 +94,6 @@ The header carries two view controls:
   and **Split** lays the old content on one side and the new content on the other, each side carrying its
   own side's line numbers. The layout is a standing preference: the tab opens in the layout last chosen,
   and the choice carries to the next diff tab the session opens.
-- **Hide whitespace changes** — **on by default**, it drops whitespace-only differences, so a
-  formatter's reindent does not bury a real change. A file whose changes are all whitespace leaves the
-  list, and a repository whose only changes are whitespace shows **No changes**. This choice lasts for
-  the life of the tab and is not remembered across restarts.
 
 The body is the tab's one focusable region. Clicking into it focuses it, and while it holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,
@@ -122,6 +119,5 @@ A repository with no commits yet reads as every file added, rather than as an er
 ### Lifetime
 
 The diff tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is not
-restored on `--relaunch`. Closing the tab forgets what it held — the hunks it showed, the expansions and
-the keyboard walk — and forgets the whitespace choice with them. The layout is the one thing kept: it
-outlives the tab that chose it.
+restored on `--relaunch`. Closing the tab forgets what it held — the hunks it showed, the expansions
+and the keyboard walk. The layout is the one thing kept: it outlives the tab that chose it.

@@ -47,8 +47,7 @@ export type DiffFile = {
 export type DiffState = 'loading' | 'done' | 'not-repository' | 'error';
 
 // Which layout the change set renders in. `split` is the standing preference the tab opens with —
-// the session saves it in the plugin's settings entry — while `hideWhitespace` travels with the
-// refresh intent instead, because it decides which lines git reports.
+// the session saves it in the plugin's settings entry.
 export type DiffPayload = {
   root: string;
   state: DiffState;
@@ -57,9 +56,8 @@ export type DiffPayload = {
   files: DiffFile[];
 };
 
-// Recompute. Carries the hide-whitespace flag because the flag changes which lines git reports, so it
-// cannot be state the server holds between calls.
-export type RefreshIntent = { hideWhitespace: boolean };
+// Recompute without any options.
+export type RefreshIntent = Record<string, never>;
 
 // The layout the user chose, which becomes the layout every later diff tab opens with.
 export type LayoutIntent = { split: boolean };
@@ -116,7 +114,7 @@ export function isDiffPayload(value: unknown): value is DiffPayload {
 }
 
 export function isRefreshIntent(value: unknown): value is RefreshIntent {
-  return isRecord(value) && typeof value.hideWhitespace === 'boolean';
+  return isRecord(value) && Object.keys(value).length === 0;
 }
 
 export function isLayoutIntent(value: unknown): value is LayoutIntent {
