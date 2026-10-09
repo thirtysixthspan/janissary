@@ -90,6 +90,22 @@ describe('parseDiff', () => {
     expect(files[0].path).toBe('new.txt');
     expect(files[0].oldPath).toBeUndefined();
     expect(files[0].additions).toBe(2);
+    // The header names the file as added, because an append reads as additions with no deletions and
+    // the two must not be told apart by counting.
+    expect(files[0].added).toBe(true);
+  });
+
+  it('leaves an ordinary modification unmarked as added', () => {
+    const files = parseDiff([
+      'diff --git a/a.txt b/a.txt',
+      '--- a/a.txt',
+      '+++ b/a.txt',
+      '@@ -1,1 +1,2 @@',
+      ' one',
+      '+two',
+    ].join('\n'));
+
+    expect(files[0].added).toBeUndefined();
   });
 
   it('marks a deleted file from its /dev/null new side, and names it from the old side', () => {

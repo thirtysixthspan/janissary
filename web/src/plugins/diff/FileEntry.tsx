@@ -5,11 +5,12 @@ import type { DiffFile } from '@shared/plugins/diff/shared';
 import { HunkLines } from './HunkLines';
 import { SplitHunks } from './SplitHunks';
 import { oversizedLines, CHANGE_LINE_CAP } from './size-cap';
+import { fileStatus } from './status';
 import { isWholeFileChange } from './whole-file';
 
-// One changed file: its header — the path, the rename it came from, its add and delete counts — and
-// every hunk it holds. A deleted file's header is inert, because there is no file to open; a binary
-// file's header opens the media tab its extension already opens instead.
+// One changed file: its header — the path, the rename it came from, its status, its add and delete
+// counts — and every hunk it holds. A deleted file's header is inert, because there is no file to
+// open; a binary file's header opens the media tab its extension already opens instead.
 //
 // `offset` is how many hunks the files above this one contribute to the walk's flat list, and a hunk
 // with no lines contributes none, which is what keeps a walked index pointing at a real hunk.
@@ -32,6 +33,7 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
   const over = oversizedLines(file);
   const collapsed = flipped ?? (isWholeFileChange(file) || over > 0);
   const flip = () => setFlipped(!collapsed);
+  const status = fileStatus(file);
   const openName = (event: React.MouseEvent) => {
     if (event.detail >= 2) return;
     if (file.binary) { onOpenMedia(); return; }
@@ -62,6 +64,7 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
           {file.oldPath === undefined ? file.path : `${file.oldPath} → ${file.path}`}
         </button>
         <span className="diff-counts">
+          <span className={`diff-status diff-status-${status.kind}`}>{status.label}</span>
           {file.additions > 0 && <span className="diff-added-count">+{file.additions}</span>}
           {file.deletions > 0 && <span className="diff-removed-count">−{file.deletions}</span>}
           {collapsed && <span className="diff-whole-file">whole file — double-click to expand</span>}

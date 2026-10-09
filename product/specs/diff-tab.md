@@ -28,7 +28,12 @@ launch directory, `$workspace/<name>` for a workspace clone, `~` for a path unde
 ### What the tab shows
 
 One entry per changed file, in file path order, each entry's header carrying the file's project-relative
-path, its add and delete counts, and — for a renamed file — its old path and its new one. Consecutive
+path, its add and delete counts, and — for a renamed file — its old path and its new one. The header
+names what happened to the file — **added**, **modified**, **deleted**, **renamed**, **binary**, or a
+mode-only change — as a word beside the counts, with the color behind the word as the second cue. A
+file is **added** when it did not exist before and **modified** when the change only added or removed
+lines, because an append reads as additions with no deletions and the two are not to be told apart by
+counting. Consecutive
 entries are set off from each other by a rule and a little space, so a change set of many files reads as
 separate sections. A file whose only change is its mode is an entry with no hunks. A deleted file's
 header is inert, because there is no file to open, and so are its hunks. A binary file is one entry

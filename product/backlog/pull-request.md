@@ -14,7 +14,7 @@
 
 * Full-file expansion — Provide a way to reveal all unchanged lines within a changed file rather than limiting the display to the original diff context. When activated, render the complete file with existing additions, deletions, and modifications still clearly highlighted. Allow users to navigate to and comment on unchanged lines that were not originally visible. Preserve the user's current scroll position as closely as possible, and provide a way to return to the condensed diff. Do not confuse this functionality with opening a separate, read-only file viewer.
 
-* File change status — Display an appropriate status for each changed file: added, modified, deleted, renamed, or another supported change type. Use recognizable labels or icons, with color providing a secondary visual cue. For newly added files, render only new content; for deleted files, render only old content; for renamed files, show the relationship between the previous and current paths. The file header should continue to communicate status even when the diff content is collapsed or unavailable.
+File presentation and navigation
 
 * File addition and deletion counts — Show a compact change summary in each file header, such as +24 −8, using green for additions and red for deletions. Counts should reflect actual added and removed lines rather than the number of visible diff rows. Present these values in a consistently aligned position to make scanning multiple file headers easy. Optionally use a small proportional bar showing the relationship between additions and deletions, but retain the numeric counts for precision and accessibility.
 

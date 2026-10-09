@@ -46,6 +46,9 @@
 .diff-counts { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
 .diff-added-count { color: var(--success); }
 .diff-removed-count { color: var(--error); }
+.diff-status { color: var(--muted); }
+.diff-status.diff-status-added { color: var(--success); }
+.diff-status.diff-status-removed { color: var(--error); }
 .diff-whole-file, .diff-large-file { color: var(--muted); }
 
 .diff-hunk { border-left: 2px solid transparent; cursor: text; }

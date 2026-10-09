@@ -1,4 +1,4 @@
-export const DIFF_PAYLOAD_SCHEMA_VERSION = 3;
+export const DIFF_PAYLOAD_SCHEMA_VERSION = 4;
 
 // One line of a hunk. `kind` is which side git printed it on; `number` is the line's number on that
 // side — the old-side number for a removed line, the new-side number for an added or context one — so
@@ -26,13 +26,16 @@ export type DiffHunk = {
 
 // One changed file. `path` is project-relative and forward-slashed; `oldPath` is set only for a
 // rename; `deleted` marks a file the working tree no longer holds, so clicking its name does nothing;
-// `binary` marks a change git reported as binary, which carries no hunks and whose entry opens the
-// media tab for the file instead of an editor tab. `additions` and `deletions` are counted from the
-// hunk lines.
+// `added` marks a file that did not exist before — git answers a record with no original side by
+// printing `--- /dev/null` — because an append reads as additions with no deletions and the two must
+// not be told apart by counting; `binary` marks a change git reported as binary, which carries no
+// hunks and whose entry opens the media tab for the file instead of an editor tab. `additions` and
+// `deletions` are counted from the hunk lines.
 export type DiffFile = {
   path: string;
   oldPath?: string;
   deleted?: boolean;
+  added?: boolean;
   binary?: boolean;
   additions: number;
   deletions: number;
@@ -94,6 +97,7 @@ function isDiffFile(value: unknown): value is DiffFile {
     && typeof value.path === 'string'
     && (value.oldPath === undefined || typeof value.oldPath === 'string')
     && (value.deleted === undefined || typeof value.deleted === 'boolean')
+    && (value.added === undefined || typeof value.added === 'boolean')
     && (value.binary === undefined || typeof value.binary === 'boolean')
     && typeof value.additions === 'number'
     && typeof value.deletions === 'number'

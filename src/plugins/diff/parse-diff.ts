@@ -108,26 +108,32 @@ function assignJumps(lines: DiffLine[], oldStart: number): void {
   }
 }
 
-function hunkLines(oldStart: number, newStart: number, body: string[]): DiffLine[] {
-  const lines: DiffLine[] = [];
-  let oldNumber = oldStart;
-  let newNumber = newStart;
-  for (const raw of body) {
-    if (raw.startsWith('\\')) continue;
-    const kind = raw[0] === '+' ? 'added' : raw[0] === '-' ? 'removed' : 'context';
+// One line of the hunk as a record, and the two sides' counters advanced past it. The two sides
+// advance on their own: only a line the original side holds moves its counter, and only a line the new
+// side holds moves the other — an added line exists on one side alone, so it must not shift the
+// numbers of anything printed after it. A `\ No newline` marker is not a line and answers null.
+function stepLine(raw: string, walk: { old: number; next: number }): DiffLine | null {
+  if (raw.startsWith('\\')) return null;
+  const kind = raw[0] === '+' ? 'added' : raw[0] === '-' ? 'removed' : 'context';
+  const line: DiffLine = {
+    kind,
+    number: kind === 'removed' ? walk.old : walk.next,
     // An added line has no position on the original side, so it carries no `oldNumber`; the other two
     // kinds do, and the unified and split gutters each need them.
-    const before = kind === 'added' ? undefined : oldNumber;
-    lines.push({
-      kind, number: kind === 'removed' ? oldNumber : newNumber,
-      ...(before !== undefined && { oldNumber: before }), jump: 0, text: raw.slice(1),
-    });
-    // The two sides advance on their own: only a line the original side holds moves its counter, and
-    // only a line the new side holds moves the other. An added line exists on one side alone, so it
-    // must not shift the numbers of anything printed after it.
-    if (kind !== 'added') oldNumber += 1;
-    if (kind !== 'removed') newNumber += 1;
-  }
+    ...(kind !== 'added' && { oldNumber: walk.old }),
+    jump: 0,
+    text: raw.slice(1),
+  };
+  walk.old += kind === 'added' ? 0 : 1;
+  walk.next += kind === 'removed' ? 0 : 1;
+  return line;
+}
+
+function hunkLines(oldStart: number, newStart: number, body: string[]): DiffLine[] {
+  const walk = { old: oldStart, next: newStart };
+  const lines = body
+    .map((raw) => stepLine(raw, walk))
+    .filter((line): line is DiffLine => line !== null);
   assignJumps(lines, oldStart);
   return lines;
 }
@@ -143,6 +149,10 @@ function finish(file: PendingFile, options: ParseOptions): DiffFile | null {
     path,
     ...(oldPath !== undefined && oldPath !== path && { oldPath: stripPrefix(oldPath, prefix) }),
     ...(file.deleted && { deleted: true }),
+    // A record with no original side — git answers it with `--- /dev/null` — is a file that did not
+    // exist, which the header names as added. An append reads as additions with no deletions, so the
+    // flag is the only honest way to tell the two apart.
+    ...(file.oldIsNull && { added: true }),
     ...(file.binary && { binary: true }),
     additions: lines.filter((line) => line.kind === 'added').length,
     deletions: lines.filter((line) => line.kind === 'removed').length,

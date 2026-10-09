@@ -274,39 +274,6 @@ describe('DiffTab', () => {
     expect(intent).toHaveBeenCalledWith('open', { path: 'b.txt', line: 3 });
   });
 
-  it('opens a whole-file change collapsed, with the way out named', () => {
-    const { container } = renderTab(payload({ files: [wholeFile()] }));
-    expect(screen.getByText('whole file — double-click to expand')).toBeTruthy();
-    expect(container.querySelectorAll('.diff-line').length).toBe(0);
-  });
-
-  it('expands a whole-file change to every line on a double-click of its header', () => {
-    const { intent, container } = renderTab(payload({ files: [wholeFile()] }));
-    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
-    expect([...container.querySelectorAll(':scope .diff-line .diff-text')].map((node) => node.textContent)).toEqual(['old', 'new']);
-    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
-  });
-
-  it('collapses an expanded whole-file change again on a second double-click', () => {
-    const { container } = renderTab(payload({ files: [wholeFile()] }));
-    const header = container.querySelector('.diff-file-header') as HTMLElement;
-    fireEvent.doubleClick(header);
-    fireEvent.doubleClick(header);
-    expect(container.querySelectorAll('.diff-line').length).toBe(0);
-  });
-
-  it('opens a deleted file\'s whole-file change collapsed and expands it on a double-click', () => {
-    const { container } = renderTab(payload({
-      files: [wholeFile({ deleted: true, hunks: [{
-        oldStart: 1, newStart: 1,
-        lines: [{ kind: 'removed', number: 1, jump: 1, text: 'old' }],
-      }] })],
-    }));
-    expect(container.querySelectorAll('.diff-line').length).toBe(0);
-    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
-    expect([...container.querySelectorAll(':scope .diff-line .diff-text')].map((node) => node.textContent)).toEqual(['old']);
-  });
-
   it('marks an added line with its sign and a removed one with its own, context with none', () => {
     const { container } = renderTab();
     expect([...container.querySelectorAll(':scope .diff-line .diff-marker')].map((node) => node.textContent)).toEqual(['', '−', '+']);
@@ -315,39 +282,6 @@ describe('DiffTab', () => {
   it('marks each side of the split layout by its own sign, with no marker on a context line', () => {
     const { container } = renderTab(payload({ split: true }));
     expect([...container.querySelectorAll(':scope .diff-cell .diff-marker')].map((node) => node.textContent)).toEqual(['', '', '−', '+']);
-  });
-
-  it('shows a change with surviving lines without a double-click', () => {
-    const { container } = renderTab();
-    expect(container.querySelectorAll('.diff-line').length).toBe(3);
-  });
-
-  it('opens a change over the cap collapsed, with the cap and the count named', () => {
-    const { container } = renderTab(payload({ files: [oversized()] }));
-    expect(screen.getByText(`${CHANGE_LINE_CAP + 40} lines over the ${CHANGE_LINE_CAP}-line cap — double-click to expand`)).toBeTruthy();
-    expect(container.querySelectorAll('.diff-line').length).toBe(0);
-    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
-    expect(container.querySelectorAll('.diff-line').length).toBe(2);
-  });
-
-  it('shows a change within the cap with no note and no double-click', () => {
-    const { container } = renderTab(payload({ files: [file({ additions: CHANGE_LINE_CAP, deletions: 0 })] }));
-    expect(container.querySelector('.diff-large-file')).toBeNull();
-    expect(container.querySelectorAll('.diff-line').length).toBe(3);
-  });
-
-  it('carries both notes for a whole-file change that is also over the cap', () => {
-    const { container } = renderTab(payload({
-      files: [oversized({ additions: CHANGE_LINE_CAP + 40, hunks: [{
-        oldStart: 1, newStart: 1,
-        lines: [{ kind: 'added', number: 1, jump: 1, text: 'new' }],
-      }] })],
-    }));
-    expect(container.querySelector('.diff-whole-file')).toBeTruthy();
-    expect(container.querySelector('.diff-large-file')).toBeTruthy();
-    expect(container.querySelectorAll('.diff-line').length).toBe(0);
-    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
-    expect(container.querySelectorAll('.diff-line').length).toBe(1);
   });
 
   it("marks the changed characters inside a replaced line in the unified layout", () => {
@@ -431,6 +365,92 @@ describe('DiffTab', () => {
     expect(oldSide.querySelector('.diff-number')?.textContent).toBe('3');
   });
 
+  it("names each entry's change status in its header, there when the entry is collapsed too", () => {
+    const { container } = renderTab(payload({
+      files: [
+        file({ path: 'a.txt', added: true }),
+        file({ path: 'old.txt', deleted: true }),
+        file({ path: 'new.txt', added: true }),
+      ],
+    }));
+    expect([...container.querySelectorAll(':scope .diff-status')].map((node) => node.textContent))
+      .toEqual(['added', 'deleted', 'added']);
+  });
+
+  it('scrolls the walked hunk into view', () => {
+    const { container } = renderTab();
+    fireEvent.keyDown(body(), { key: 'ArrowDown' });
+    expect(scrollIntoView).toHaveBeenCalled();
+    expect(container.querySelector('.diff-walked')).toBeTruthy();
+  });
+
+  describe('collapsing an entry', () => {
+  it('opens a whole-file change collapsed, with the way out named', () => {
+    const { container } = renderTab(payload({ files: [wholeFile()] }));
+    expect(screen.getByText('whole file — double-click to expand')).toBeTruthy();
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+  });
+
+  it('expands a whole-file change to every line on a double-click of its header', () => {
+    const { intent, container } = renderTab(payload({ files: [wholeFile()] }));
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    expect([...container.querySelectorAll(':scope .diff-line .diff-text')].map((node) => node.textContent)).toEqual(['old', 'new']);
+    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
+  });
+
+  it('collapses an expanded whole-file change again on a second double-click', () => {
+    const { container } = renderTab(payload({ files: [wholeFile()] }));
+    const header = container.querySelector('.diff-file-header') as HTMLElement;
+    fireEvent.doubleClick(header);
+    fireEvent.doubleClick(header);
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+  });
+
+  it('opens a deleted file\'s whole-file change collapsed and expands it on a double-click', () => {
+    const { container } = renderTab(payload({
+      files: [wholeFile({ deleted: true, hunks: [{
+        oldStart: 1, newStart: 1,
+        lines: [{ kind: 'removed', number: 1, jump: 1, text: 'old' }],
+      }] })],
+    }));
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    expect([...container.querySelectorAll(':scope .diff-line .diff-text')].map((node) => node.textContent)).toEqual(['old']);
+  });
+
+  it('shows a change with surviving lines without a double-click', () => {
+    const { container } = renderTab();
+    expect(container.querySelectorAll('.diff-line').length).toBe(3);
+  });
+
+  it('opens a change over the cap collapsed, with the cap and the count named', () => {
+    const { container } = renderTab(payload({ files: [oversized()] }));
+    expect(screen.getByText(`${CHANGE_LINE_CAP + 40} lines over the ${CHANGE_LINE_CAP}-line cap — double-click to expand`)).toBeTruthy();
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    expect(container.querySelectorAll('.diff-line').length).toBe(2);
+  });
+
+  it('shows a change within the cap with no note and no double-click', () => {
+    const { container } = renderTab(payload({ files: [file({ additions: CHANGE_LINE_CAP, deletions: 0 })] }));
+    expect(container.querySelector('.diff-large-file')).toBeNull();
+    expect(container.querySelectorAll('.diff-line').length).toBe(3);
+  });
+
+  it('carries both notes for a whole-file change that is also over the cap', () => {
+    const { container } = renderTab(payload({
+      files: [oversized({ additions: CHANGE_LINE_CAP + 40, hunks: [{
+        oldStart: 1, newStart: 1,
+        lines: [{ kind: 'added', number: 1, jump: 1, text: 'new' }],
+      }] })],
+    }));
+    expect(container.querySelector('.diff-whole-file')).toBeTruthy();
+    expect(container.querySelector('.diff-large-file')).toBeTruthy();
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    expect(container.querySelectorAll('.diff-line').length).toBe(1);
+  });
+
   it("collapses an entry's hunks on a click of its chevron and restores them on another", () => {
     const { container } = renderTab();
     const chevron = screen.getByRole('button', { name: 'Collapse this file' });
@@ -456,10 +476,6 @@ describe('DiffTab', () => {
     expect(container.querySelectorAll('.diff-line').length).toBe(2);
   });
 
-  it('scrolls the walked hunk into view', () => {
-    const { container } = renderTab();
-    fireEvent.keyDown(body(), { key: 'ArrowDown' });
-    expect(scrollIntoView).toHaveBeenCalled();
-    expect(container.querySelector('.diff-walked')).toBeTruthy();
   });
+
 });
