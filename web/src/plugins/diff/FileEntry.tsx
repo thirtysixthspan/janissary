@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { DiffFile } from '@shared/plugins/diff/shared';
 import { HunkLines } from './HunkLines';
 import { SplitHunks } from './SplitHunks';
+import { oversizedLines, CHANGE_LINE_CAP } from './size-cap';
 import { isWholeFileChange } from './whole-file';
 
 // One changed file: its header — the path, the rename it came from, its add and delete counts — and
@@ -23,7 +24,8 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
   let taken = 0;
   const spots = file.hunks.map((hunk) => (hunk.lines.length === 0 ? -1 : offset + taken++));
   const [expanded, setExpanded] = useState(false);
-  const collapsed = isWholeFileChange(file) && !expanded;
+  const over = oversizedLines(file);
+  const collapsed = (isWholeFileChange(file) || over > 0) && !expanded;
   const openName = (event: React.MouseEvent) => {
     if (event.detail >= 2) return;
     if (file.binary) { onOpenMedia(); return; }
@@ -48,6 +50,7 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
           {file.additions > 0 && <span className="diff-added-count">+{file.additions}</span>}
           {file.deletions > 0 && <span className="diff-removed-count">−{file.deletions}</span>}
           {collapsed && <span className="diff-whole-file">whole file — double-click to expand</span>}
+          {over > 0 && <span className="diff-large-file">{`${file.additions + file.deletions} lines over the ${CHANGE_LINE_CAP}-line cap — double-click to expand`}</span>}
         </span>
       </div>
       {!collapsed && file.hunks.map((hunk, index) => {

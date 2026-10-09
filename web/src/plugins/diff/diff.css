@@ -43,7 +43,7 @@
 .diff-counts { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
 .diff-added-count { color: var(--success); }
 .diff-removed-count { color: var(--error); }
-.diff-whole-file { color: var(--muted); }
+.diff-whole-file, .diff-large-file { color: var(--muted); }
 
 .diff-hunk { border-left: 2px solid transparent; cursor: text; }
 .diff-hunk.diff-walked { border-left-color: var(--accent); }

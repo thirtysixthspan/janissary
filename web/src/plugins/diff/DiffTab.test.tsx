@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DiffFile, DiffPayload } from '@shared/plugins/diff/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { DiffTab } from './DiffTab';
+import { CHANGE_LINE_CAP } from './size-cap';
 
 function file(overrides: Partial<DiffFile> = {}): DiffFile {
   return {
@@ -28,6 +29,20 @@ function wholeFile(overrides: Partial<DiffFile> = {}): DiffFile {
       lines: [
         { kind: 'removed', number: 1, jump: 1, text: 'old' },
         { kind: 'added', number: 1, jump: 1, text: 'new' },
+      ],
+    }],
+    ...overrides,
+  };
+}
+
+function oversized(overrides: Partial<DiffFile> = {}): DiffFile {
+  return {
+    path: 'big.txt', additions: CHANGE_LINE_CAP + 40, deletions: 0,
+    hunks: [{
+      oldStart: 1, newStart: CHANGE_LINE_CAP + 41,
+      lines: [
+        { kind: 'context', number: 1, jump: 1, text: 'kept' },
+        { kind: 'added', number: 2, jump: 2, text: 'more' },
       ],
     }],
     ...overrides,
@@ -227,6 +242,34 @@ describe('DiffTab', () => {
   it('shows a change with surviving lines without a double-click', () => {
     const { container } = renderTab();
     expect(container.querySelectorAll('.diff-line').length).toBe(3);
+  });
+
+  it('opens a change over the cap collapsed, with the cap and the count named', () => {
+    const { container } = renderTab(payload({ files: [oversized()] }));
+    expect(screen.getByText(`${CHANGE_LINE_CAP + 40} lines over the ${CHANGE_LINE_CAP}-line cap — double-click to expand`)).toBeTruthy();
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    expect(container.querySelectorAll('.diff-line').length).toBe(2);
+  });
+
+  it('shows a change within the cap with no note and no double-click', () => {
+    const { container } = renderTab(payload({ files: [file({ additions: CHANGE_LINE_CAP, deletions: 0 })] }));
+    expect(container.querySelector('.diff-large-file')).toBeNull();
+    expect(container.querySelectorAll('.diff-line').length).toBe(3);
+  });
+
+  it('carries both notes for a whole-file change that is also over the cap', () => {
+    const { container } = renderTab(payload({
+      files: [oversized({ additions: CHANGE_LINE_CAP + 40, hunks: [{
+        oldStart: 1, newStart: 1,
+        lines: [{ kind: 'added', number: 1, jump: 1, text: 'new' }],
+      }] })],
+    }));
+    expect(container.querySelector('.diff-whole-file')).toBeTruthy();
+    expect(container.querySelector('.diff-large-file')).toBeTruthy();
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    expect(container.querySelectorAll('.diff-line').length).toBe(1);
   });
 
   it('scrolls the walked hunk into view', () => {

@@ -3,7 +3,6 @@
 # pull-request
 
 * diff views should have the same font size and syntax highlighting as the editor tab
-* diff views of very large files should be shown collapsed, with a note of the filesize cap. 
 * when there are no changes, there should be no flickering of the no changes message as if the content is being redrawn.
 * add whitespace separation between file sections
 

@@ -47,6 +47,10 @@ again. A click on the file's name still opens the file, expanded or not. The key
 an entry's hunks wherever they happen to be shown, so **Return** opens the file at the walked hunk's
 first changed line either way.
 
+An entry whose change holds **more than 400 changed lines** also opens collapsed, its header noting how
+many lines the change holds and what the cap is, and the same double-click expands it. The cap is on the
+change, not the file: a large file with one changed line shows that line in full.
+
 The tab recomputes on its own every second, so the change set stays live while files are edited around
 it, and the header's **Refresh** button recomputes on demand. Re-running the command recomputes as well.
 
