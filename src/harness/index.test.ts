@@ -49,7 +49,7 @@ describe('parseHarnessCommand', () => {
   it('returns a usage error for capture with no label', () => {
     const result = parseHarnessCommand('harness capture');
     expect('error' in result).toBe(true);
-    expect((result as { error: string }).error).toBe('Usage: harness capture <name>.');
+    expect((result as { error: string }).error).toBe(String.raw`Usage: harness capture \<name\>.`);
   });
 
   it('never treats capture as an unknown harness name', () => {
@@ -73,7 +73,7 @@ describe('parseHarnessCommand', () => {
   it('returns a usage error for transcript with no label', () => {
     const result = parseHarnessCommand('harness transcript');
     expect('error' in result).toBe(true);
-    expect((result as { error: string }).error).toBe('Usage: harness transcript <name>.');
+    expect((result as { error: string }).error).toBe(String.raw`Usage: harness transcript \<name\>.`);
   });
 
   it('never treats transcript as an unknown harness name', () => {

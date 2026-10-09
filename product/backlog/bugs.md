@@ -2,17 +2,6 @@
 
 ## ready
 
-* Make harness usage errors show their angle-bracket placeholders in a shell tab
-
-Existing Bug: In a shell tab, `harness claude as` answers `Usage: harness <claude|opencode|codex> as .` where the spec promises `Usage: harness <claude|opencode|codex> as <label>.`, and `harness capture` with no name answers `Usage: harness capture .` where the spec promises `Usage: harness capture <name>.`. Severity: 3/10
-
-Existing Risk: 3/10 - Every application usage error that carries a `<placeholder>` reads wrong on a shell tab, the one tab a session opens on, so a user who mistypes a harness command is told less than the spec promises about what the command expects.
-
-Proposal Risk: 2/10 - Escaping the placeholders in the usage strings fixes every message at once, but the narrowness matters: a reply that legitimately contains HTML (a link, a table) must keep rendering, so a broad markdown-escape or an always-on fallback to the ANSI renderer could visibly change other replies.
-
-Proposal: product/specs/harness.md promises `Usage: harness <claude|opencode|codex> as <label>.` for `harness claude as` and `Usage: harness capture <name>.` for `harness capture`. Reproduce it on a fresh launch: in the `janus` shell tab's command bar type `harness claude as` and press Enter, then `harness capture` and press Enter, and read the replies in the terminal. Expected: the two lines read as the spec words them. Observed: `Usage: harness <claude|opencode|codex> as .` and `Usage: harness capture .` — the `<label>` and `<name>` tokens are absent from what is drawn. The root cause is that a shell tab renders an application command's reply as markdown HTML: `insertMarkdownBlock` in `web/src/plugins/shell/markdown-block.ts` calls `renderMarkdown`, which in `web/src/shared/transcript/markdown.ts` is `DOMPurify.sanitize(marked.parse(text, …))`; `marked` passes a raw `<label>` through as an HTML token and `<label>` is a real element DOMPurify keeps, so it becomes an invisible element inside the block rather than visible text, and `<name>` is dropped the same way. The fix is to make the placeholders survive the render: either escape the angle brackets in the usage strings built by `parseHarnessFlags`, `findFlagValue`, and `parseLabelSubcommand` in `src/harness/command-parse.ts` (which also covers `Usage: harness <claude|opencode|codex> --model <value>.` and `Usage: harness <claude|opencode|codex> [options] with <prompt>.`, which travel the same path), or have the shell tab fall back to `markdownToAnsi` in `web/src/plugins/shell/markdown-to-ansi.ts`, which renders `<label>` verbatim. `src/harness/command-parse.test.ts` pins the parser's exact strings, and `web/src/shared/transcript/markdown.test.ts` plus `web/src/plugins/shell/markdown-block.test.ts` cover the two renderers; a regression test should render `Usage: harness <claude|opencode|codex> as <label>.` through `renderMarkdown` and assert the resulting HTML's text content still contains `<label>`.
-
-
 * Give a file navigator in the center tab strip its location button
 
 Existing Bug: The spec promises every file navigator header carries a location button that cycles the tree through left sidebar → center tab strip → right sidebar → left sidebar; observed on a tree opened with `files`: the header has no location button at all, and once docked the button only toggles left ↔ right and never returns the tree to the center strip. Severity: 3/10

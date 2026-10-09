@@ -325,25 +325,25 @@ describe('parseHarnessCommand — error paths', () => {
 
   it('errors when --model has no value', () => {
     expect(parseHarnessCommand('harness claude --model')).toEqual({
-      error: expect.stringContaining('--model <value>'),
+      error: String.raw`Usage: harness \<claude|opencode|codex\> --model \<value\>.`,
     });
   });
 
   it('errors when --effort has no value', () => {
     expect(parseHarnessCommand('harness claude --effort')).toEqual({
-      error: expect.stringContaining('--effort <value>'),
+      error: String.raw`Usage: harness \<claude|opencode|codex\> --effort \<value\>.`,
     });
   });
 
   it('errors when as has no label', () => {
     expect(parseHarnessCommand('harness claude as')).toEqual({
-      error: expect.stringContaining('as <label>'),
+      error: String.raw`Usage: harness \<claude|opencode|codex\> as \<label\>.`,
     });
   });
 
   it('errors when with has no prompt', () => {
     expect(parseHarnessCommand('harness claude with')).toEqual({
-      error: expect.stringContaining('with <prompt>'),
+      error: String.raw`Usage: harness \<claude|opencode|codex\> [options] with \<prompt\>.`,
     });
   });
 
@@ -354,10 +354,22 @@ describe('parseHarnessCommand — error paths', () => {
   });
 
   it('errors when capture has no label', () => {
-    expect(parseHarnessCommand('harness capture')).toEqual({ error: 'Usage: harness capture <name>.' });
+    expect(parseHarnessCommand('harness capture')).toEqual({ error: String.raw`Usage: harness capture \<name\>.` });
   });
 
   it('errors when transcript has no label', () => {
-    expect(parseHarnessCommand('harness transcript')).toEqual({ error: 'Usage: harness transcript <name>.' });
+    expect(parseHarnessCommand('harness transcript')).toEqual({ error: String.raw`Usage: harness transcript \<name\>.` });
+  });
+
+  // A usage error is replied as markdown, and markdown reads a bare `<label>` as raw HTML — kept
+  // as an invisible element, with a `<name>` it does not allow dropped outright — so the angle
+  // brackets are escaped for the renderer to turn back into visible characters.
+  it('escapes the angle brackets of every usage error so a renderer prints its placeholders', () => {
+    for (const command of ['harness', 'harness claude as', 'harness capture', 'harness transcript', 'harness claude with', 'harness claude --model']) {
+      const parsed = parseHarnessCommand(command);
+      const error = 'error' in parsed ? parsed.error : '';
+      expect(error).not.toBe('');
+      expect(error.replaceAll(String.raw`\<`, '')).not.toContain('<');
+    }
   });
 });

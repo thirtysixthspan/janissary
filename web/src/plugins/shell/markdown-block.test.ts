@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
+import { parseHarnessCommand } from '@shared/harness/command-parse.js';
 import { insertMarkdownBlock } from './markdown-block';
+
+// The usage error the `harness` command itself answers with for `command`, so the test renders the
+// reply the way the shell tab receives it rather than a string retyped here.
+function usageError(command: string): string {
+  const parsed = parseHarnessCommand(command);
+  return 'error' in parsed ? parsed.error : `no usage error for ${command}`;
+}
 
 type Fake = {
   terminal: Terminal;
@@ -158,6 +166,28 @@ describe('insertMarkdownBlock', () => {
     element.querySelector('a')?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
 
     expect(openLink).toHaveBeenCalledOnce();
+  });
+
+  it('draws the placeholders of a usage error as visible text', () => {
+    const fake = fakeTerminal();
+    const markdown = usageError('harness claude as');
+
+    expect(insertMarkdownBlock(fake.terminal, 'harness claude as', markdown, vi.fn())).toBe(true);
+
+    const element = document.createElement('div');
+    fake.render(element);
+    expect(element.textContent).toContain('Usage: harness <claude|opencode|codex> as <label>.');
+  });
+
+  it('draws the placeholder of a subcommand usage error as visible text', () => {
+    const fake = fakeTerminal();
+    const markdown = usageError('harness capture');
+
+    expect(insertMarkdownBlock(fake.terminal, 'harness capture', markdown, vi.fn())).toBe(true);
+
+    const element = document.createElement('div');
+    fake.render(element);
+    expect(element.textContent).toContain('Usage: harness capture <name>.');
   });
 
   it('places nothing when the reply measures nothing', () => {
