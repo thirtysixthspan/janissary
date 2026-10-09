@@ -298,6 +298,38 @@ describe('DiffTab', () => {
     expect(container.querySelectorAll('.diff-line').length).toBe(1);
   });
 
+  it("marks the changed characters inside a replaced line in the unified layout", () => {
+    const { container } = renderTab(payload({ files: [file({
+      hunks: [{
+        oldStart: 1, newStart: 1,
+        lines: [
+          { kind: 'context', number: 1, jump: 1, text: 'func main() {' },
+          { kind: 'removed', number: 2, jump: 2, text: 'timeout = 30' },
+          { kind: 'added', number: 2, jump: 2, text: 'timeout = 60' },
+        ],
+      }],
+    })] }));
+    const changed = [...container.querySelectorAll(':scope .diff-changed')].map((node) => node.textContent);
+    expect(changed).toEqual(['3', '6']);
+    expect(container.querySelector(':scope .diff-line.diff-added .diff-text')?.textContent).toBe('timeout = 60');
+  });
+
+  it("carries each side's changed characters in its own column in the split layout", () => {
+    const { container } = renderTab(payload({ split: true, files: [file({
+      hunks: [{
+        oldStart: 1, newStart: 1,
+        lines: [
+          { kind: 'context', number: 1, jump: 1, text: 'func main() {' },
+          { kind: 'removed', number: 2, jump: 2, text: 'timeout = 30' },
+          { kind: 'added', number: 2, jump: 2, text: 'timeout = 60' },
+        ],
+      }],
+    })] }));
+    const [oldSide, newSide] = [...container.querySelectorAll(':scope .diff-split-row')].at(-1)!.children;
+    expect([...oldSide.querySelectorAll('.diff-changed')].map((node) => node.textContent)).toEqual(['3']);
+    expect([...newSide.querySelectorAll('.diff-changed')].map((node) => node.textContent)).toEqual(['6']);
+  });
+
   it('scrolls the walked hunk into view', () => {
     const { container } = renderTab();
     fireEvent.keyDown(body(), { key: 'ArrowDown' });

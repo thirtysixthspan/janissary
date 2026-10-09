@@ -1,12 +1,15 @@
 import type { DiffLine } from '@shared/plugins/diff/shared';
 
-// One row of the split layout: the old side and the new side of the same place in the file, either
-// of which may be absent — a removed line with no counterpart beside it, or an added one.
+// One place in the file, as two sides: the old side and the new one, either of which may be absent —
+// a removed line with no counterpart beside it, or an added one.
 export type SplitRow = { old?: DiffLine; next?: DiffLine };
 
-// The hunk's lines laid out as split rows. A context line appears on both sides of one row, and a
-// run of removed lines is paired row by row with the run of added lines that follows it, so a
-// replaced read happens on one row the way GitHub's split view pairs it.
+// A hunk's lines laid out as rows. A context line appears on both sides of one row, and a run of
+// removed lines is paired row by row with the run of added lines that follows it, so a replaced read
+// sits on one row the way GitHub's split view pairs it. The split layout lays the two sides beside
+// each other; the unified layout draws the old side above the new one, which is the order git printed
+// them in — which is why the pairing lives here rather than in the split layout alone: the character
+// alignment of a replaced line needs the same pairs the split layout has.
 export function splitRows(hunk: { lines: DiffLine[] }): SplitRow[] {
   const rows: SplitRow[] = [];
   let index = 0;

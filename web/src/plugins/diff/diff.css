@@ -62,6 +62,8 @@
 .diff-marker { flex-shrink: 0; width: 1ch; user-select: none; }
 .diff-line.added .diff-marker, .diff-cell.added .diff-marker { color: var(--success); }
 .diff-line.removed .diff-marker, .diff-cell.removed .diff-marker { color: var(--error); }
+.diff-line.removed .diff-changed, .diff-cell.removed .diff-changed { background: color-mix(in srgb, var(--error) 45%, transparent); }
+.diff-line.added .diff-changed, .diff-cell.added .diff-changed { background: color-mix(in srgb, var(--success) 45%, transparent); }
 
 .diff-text { min-width: 0; white-space: pre-wrap; overflow-wrap: break-word; }
 

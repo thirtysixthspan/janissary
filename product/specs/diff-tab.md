@@ -45,6 +45,12 @@ Every added line carries a **+** beside its number and every removed line a **�
 takes the row's own color — a saturated green on an addition, a darker red on a removal — so a change
 reads by its sign with the color as the secondary cue and a surviving line is the row without either.
 
+Where a line was replaced rather than added or removed whole, the characters that changed carry a
+stronger tint of the row's own color — the numerals in `timeout = 30` against `timeout = 60` — so the
+edit reads at a glance, in the unified layout and in each of the split layout's columns. A pair of lines
+too unlike each other for their alignment to mean anything carries no such mark, and neither does a
+line long enough that aligning it would take longer than reading it.
+
 An entry whose change left nothing of the old content — a file added, a file deleted, or a file rewritten
 line for line — opens **collapsed**, showing only its header with a note that the entry holds the whole
 file. A **double-click on the header expands it** to every line, and a further double-click collapses it
