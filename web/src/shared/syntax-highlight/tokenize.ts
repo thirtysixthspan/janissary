@@ -1,4 +1,5 @@
 import { hljs } from './hljs';
+import { codeOperatorTokens } from './code-operators';
 
 export type TokenRange = { from: number; to: number; scope: string };
 
@@ -28,7 +29,8 @@ function walk(node: ChildNode, scope: string | undefined, state: WalkState, perL
 }
 
 function computeTokens(text: string, language: string): TokenRange[][] {
-  const lineCount = text.split('\n').length;
+  const lines = text.split('\n');
+  const lineCount = lines.length;
   const perLine: TokenRange[][] = Array.from({ length: lineCount }, () => []);
   let html: string;
   try {
@@ -41,7 +43,7 @@ function computeTokens(text: string, language: string): TokenRange[][] {
   if (!root) return perLine;
   const state: WalkState = { line: 0, col: 0 };
   for (const child of root.childNodes) walk(child, undefined, state, perLine);
-  return perLine;
+  return perLine.map((tokens, index) => codeOperatorTokens(lines[index], tokens, language));
 }
 
 function sameTokens(a: TokenRange[] | undefined, b: TokenRange[] | undefined): boolean {

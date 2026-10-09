@@ -283,6 +283,8 @@ A blinking vertical bar marks the cursor position — where text will be inserte
 
 The editor colors text by its syntactic role — keywords, strings, comments, and so on — for Markdown, JavaScript, TypeScript, and JSON files. The language is chosen by the file's extension (`.md`/`.markdown`, `.js`/`.mjs`/`.cjs`/`.jsx`, `.ts`/`.tsx`/`.mts`/`.cts`, `.json`); files with any other extension, or no extension, render as plain text, exactly as before.
 
+JavaScript and TypeScript symbol operators use the active theme's operator color. Symbols inside text already recognized as a string, comment, regular expression, or named identifier keep that construct's syntax color. The diff tab uses the same treatment.
+
 Highlighting recomputes immediately when a file finishes loading, and shortly after each edit (a brief pause after typing stops, so keystrokes are never slowed down by it). Highlighting is skipped — the file renders as plain text — for buffers larger than 10,000 lines or 1 MB, so opening a very large file never becomes sluggish.
 
 Each editor tab highlights independently: a tab only redraws the lines its own edit changed, and editing in one tab never costs anything in another, including when several open tabs hold files of the same language.

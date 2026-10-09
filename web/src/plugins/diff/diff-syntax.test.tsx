@@ -28,6 +28,48 @@ function show(split: boolean, lines: DiffLine[], path = 'a.ts', oldPath?: string
 describe.each([false, true])('diff syntax with split=%s', (split) => {
   const rowSelector = split ? '.diff-cell' : '.diff-line';
 
+  it('gives old and new keywords, strings, comments, literals, operators, and named identifiers the same syntax colors', () => {
+    applySyntaxTheme('github-dark');
+    const text = 'function compute() { const text = "value"; return true && 30 + 1; } // note';
+    const { container } = show(split, [line('removed', text), line('added', text)]);
+    const old = container.querySelector(`${rowSelector}.diff-removed .diff-text`)!;
+    const next = container.querySelector(`${rowSelector}.diff-added .diff-text`)!;
+    expect(old.textContent).toBe(text);
+    expect(next.textContent).toBe(text);
+    for (const [scope, value] of [
+      ['hljs-keyword', 'function'], ['hljs-string', '"value"'], ['hljs-comment', '// note'],
+      ['hljs-literal', 'true'], ['hljs-number', '30'], ['hljs-operator', '='], ['hljs-title', 'compute'],
+    ]) {
+      const before = old.querySelector(`.${scope}`)!;
+      const after = next.querySelector(`.${scope}`)!;
+      expect(before.textContent).toBe(value);
+      expect(after.textContent).toBe(value);
+      expect(getComputedStyle(after).color).not.toBe('');
+      expect(getComputedStyle(after).color).toBe(getComputedStyle(before).color);
+    }
+  });
+
+  it('preserves operator syntax scopes inside character-change marks', () => {
+    const old = 'const result = 1 + 2;';
+    const next = 'const result = 1 - 2;';
+    const { container } = show(split, [line('removed', old), line('added', next)]);
+    expect(container.querySelector(`${rowSelector}.diff-removed .diff-changed.hljs-operator`)?.textContent).toBe('+');
+    expect(container.querySelector(`${rowSelector}.diff-added .diff-changed.hljs-operator`)?.textContent).toBe('-');
+    expect(container.querySelector(`${rowSelector}.diff-removed .diff-text`)?.textContent).toBe(old);
+    expect(container.querySelector(`${rowSelector}.diff-added .diff-text`)?.textContent).toBe(next);
+  });
+
+  it.each(['a.txt', 'README'])('renders %s as plain text on both sides without guessing a language', (path) => {
+    const text = '\tconst value = "<tag>&"; // + 1';
+    const { container } = show(split, [line('removed', text), line('added', text)], path);
+    const old = container.querySelector(`${rowSelector}.diff-removed .diff-text`)!;
+    const next = container.querySelector(`${rowSelector}.diff-added .diff-text`)!;
+    expect(old.textContent).toBe(text);
+    expect(next.textContent).toBe(text);
+    expect(container.querySelector('[class*="hljs-"]')).toBeNull();
+    expect(container.querySelector('tag')).toBeNull();
+  });
+
   it.each([
     ['a.js', 'const value = 1;', 'hljs-keyword'],
     ['a.ts', 'const value: number = 1;', 'hljs-built_in'],

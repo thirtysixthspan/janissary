@@ -87,6 +87,8 @@ what it held belongs to the directory it left.
 
 Unified and split diff code use the same font size and syntax colors as the editor tab. Markdown, JavaScript, TypeScript, and JSON are highlighted by file extension; unsupported extensions render as plain text. A renamed file uses its original extension on the old side and its current extension on the new side.
 
+Keywords, strings, comments, literals, and recognized named identifiers use their language's syntax roles. JavaScript and TypeScript symbol operators also use the active theme's operator color. Existing string, comment, regular-expression, and identifier colors take precedence, so symbols inside those constructs keep their original treatment. The same syntax role has the same color on the original and modified sides. Unsupported and extensionless filenames remain plain text without guessing a language.
+
 The old and new text are highlighted independently within each visible hunk, preserving multiline syntax across the lines available in that hunk. Omitted context is not available for determining syntax state. A side containing more than 10,000 lines or 1 MB of visible text renders as plain text to keep the tab responsive.
 
 The active syntax theme applies to every open editor and diff tab, and switching it updates both diff layouts immediately. Syntax colors preserve change backgrounds and character marks, indentation, text selection and copying, and the existing line-opening behavior.
