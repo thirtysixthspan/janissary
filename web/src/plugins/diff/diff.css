@@ -1,6 +1,6 @@
 /* The diff tab's own look: a framed, scrolling body of file entries, each a header and its hunks,
    rendered in the monospace the editor uses so a change reads as code. A line longer than the body
-   wraps to its width rather than scrolling beside it. The added and removed rows follow the editor's
+   wraps within its column; split hunks scroll horizontally when both columns cannot fit. The added and removed rows follow the editor's
    own inline suggest diff — green from --success, red from --error, the removed line struck through —
    so the two look like one application. */
 .diff-tab { gap: 6px; }
@@ -69,23 +69,24 @@
   box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .diff-line.diff-removed, .diff-cell.diff-removed { cursor: default; }
-.diff-line.added, .diff-cell.added { background: color-mix(in srgb, var(--success) 15%, transparent); }
-.diff-line.removed, .diff-cell.removed { background: color-mix(in srgb, var(--error) 15%, transparent); }
-.diff-line.removed .diff-text, .diff-cell.removed .diff-text { text-decoration: line-through; }
+.diff-line.diff-added, .diff-cell.diff-added { background: color-mix(in srgb, var(--success) 15%, transparent); }
+.diff-line.diff-removed, .diff-cell.diff-removed { background: color-mix(in srgb, var(--error) 15%, transparent); }
+.diff-line.diff-removed .diff-text, .diff-cell.diff-removed .diff-text { text-decoration: line-through; }
 
 .diff-number { color: var(--faint); flex-shrink: 0; min-width: 3ch; text-align: right; user-select: none; }
-.diff-line.added .diff-number, .diff-cell.added .diff-number { color: color-mix(in srgb, var(--success) 55%, var(--faint)); }
-.diff-line.removed .diff-number, .diff-cell.removed .diff-number { color: color-mix(in srgb, var(--error) 55%, var(--faint)); }
+.diff-line.diff-added .diff-number, .diff-cell.diff-added .diff-number { color: color-mix(in srgb, var(--success) 55%, var(--faint)); }
+.diff-line.diff-removed .diff-number, .diff-cell.diff-removed .diff-number { color: color-mix(in srgb, var(--error) 55%, var(--faint)); }
 
 .diff-marker { flex-shrink: 0; width: 1ch; user-select: none; }
-.diff-line.added .diff-marker, .diff-cell.added .diff-marker { color: var(--success); }
-.diff-line.removed .diff-marker, .diff-cell.removed .diff-marker { color: var(--error); }
-.diff-line.removed .diff-changed, .diff-cell.removed .diff-changed { background: color-mix(in srgb, var(--error) 45%, transparent); }
-.diff-line.added .diff-changed, .diff-cell.added .diff-changed { background: color-mix(in srgb, var(--success) 45%, transparent); }
+.diff-line.diff-added .diff-marker, .diff-cell.diff-added .diff-marker { color: var(--success); }
+.diff-line.diff-removed .diff-marker, .diff-cell.diff-removed .diff-marker { color: var(--error); }
+.diff-line.diff-removed .diff-changed, .diff-cell.diff-removed .diff-changed { background: color-mix(in srgb, var(--error) 45%, transparent); }
+.diff-line.diff-added .diff-changed, .diff-cell.diff-added .diff-changed { background: color-mix(in srgb, var(--success) 45%, transparent); }
 
 .diff-text { min-width: 0; white-space: pre-wrap; overflow-wrap: break-word; }
 
-.diff-split-row { display: flex; }
-.diff-split-row .diff-cell { flex: 1; min-width: 0; }
-.diff-split-row .diff-cell.old { border-right: 1px solid var(--border); }
-.diff-split-row .diff-cell.empty { background: color-mix(in srgb, var(--muted) 5%, transparent); }
+.diff-split { min-width: 0; overflow-x: auto; }
+.diff-split-row { display: flex; min-width: 96ch; align-items: stretch; }
+.diff-split-row .diff-cell { flex: 1 1 0px; min-width: 0; }
+.diff-split-row .diff-cell.diff-old { border-right: 1px solid var(--border); }
+.diff-split-row .diff-cell.diff-empty { background: color-mix(in srgb, var(--muted) 5%, transparent); }

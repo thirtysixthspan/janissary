@@ -51,9 +51,7 @@ or one over the cap — opens with the same chevron, so the header's reason note
 A double-click on the header does the same thing. Each hunk line carries its file's number on both
 sides: two narrow right-aligned gutters in the unified layout, the original number blank on an added
 line and the new number blank on a removed one, and in the split layout the original number in the left
-column with the modified one in the right. There is no cap: a change of any size is shown whole. A line longer
-than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads
-without a scrollbar and a wrapped line's number stays beside its first row.
+column with the modified one in the right. There is no cap: a change of any size is shown whole. In unified layout, a line longer than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads without a horizontal scrollbar and a wrapped line's number stays beside its first row. Split layout wraps text within each column and preserves readable column widths through horizontal scrolling in narrow panes.
 
 Every added line carries a **+** beside its number and every removed line a **−**, and the number itself
 takes the row's own color — a saturated green on an addition, a darker red on a removal — so a change
@@ -104,6 +102,10 @@ The header carries a layout control:
   The button's pressed state shows whether split layout is active, and its tooltip names the layout it
   will switch to. The layout is a standing preference: the tab opens in the layout last chosen, and
   the choice carries to the next diff tab the session opens.
+
+Split layout shows original content on the left and modified content on the right. Unchanged lines appear on both sides, and replacements are paired row by row. When one side has fewer lines, shaded empty cells occupy the remaining rows without a number or marker. Each pair of cells has the same height even when one side wraps, keeping the columns aligned. A divider separates the old column from the new one.
+
+Both columns retain equal, readable widths. When the available space is too narrow, each hunk scrolls horizontally with both columns moving together. All files and both sides continue sharing the tab body's vertical scroll. Added lines remain green, removed lines remain red and struck through, and each column keeps its own line numbers, signs, syntax colors, and character-change marks.
 
 The body is the tab's one focusable region. Clicking into it focuses it, and while it holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,
