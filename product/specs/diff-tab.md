@@ -100,8 +100,10 @@ The header carries a layout control:
 The body is the tab's one focusable region. Clicking into it focuses it, and while it holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,
 stopping at the first and last change rather than wrapping and scrolling a file into view as the walk
-reaches it. **Return** opens the file at the walked hunk's first changed line. A click on a hunk selects
-it and focuses the body, so the walk continues from where the mouse left off.
+reaches it. **j and k move between files** instead, one file at a time — the next file's first hunk and
+the previous one's — stopping at the first and last file rather than wrapping. **Return** opens the file
+at the walked hunk's first changed line. A click on a hunk selects it and focuses the body, so the walk
+continues from where the mouse left off.
 
 Opening a file reuses the editor tab's existing de-duplication: a file already open in an editor tab is
 focused rather than duplicated, exactly as every other path into the editor behaves. A double-click on

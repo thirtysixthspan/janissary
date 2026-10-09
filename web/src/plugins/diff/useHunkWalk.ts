@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { nextListSelection, useListSelection, type ListRowClick, type ListSelection } from '../api';
 import type { DiffFile } from '@shared/plugins/diff/shared';
+import { fileStop, fileStarts } from './file-starts';
 import { hunkSpots, type HunkSpot } from './hunk-index';
 
 export type HunkWalk = {
@@ -9,6 +10,9 @@ export type HunkWalk = {
   navigate(key: string): boolean;
   rowClicked(index: number): void;
   spot: HunkSpot | null;
+  // The j and k keys: the next or previous file's first hunk, one file at a time, stopping at the
+  // ends. Reports whether the key moved, so the tab can answer it.
+  moveFile(forward: boolean): boolean;
 };
 
 // The walk over the change set's hunks, composed on the host's shared list selection: the arrows,
@@ -27,12 +31,20 @@ export function useHunkWalk(files: DiffFile[]): HunkWalk {
     (index: number) => { selection.rowClicked(index, (at: number): ListRowClick => ({ selected: at, opens: false })); },
     [selection],
   );
+  const moveFile = useCallback(
+    (forward: boolean) => {
+      const stop = fileStop(fileStarts(files), selected, forward);
+      return stop === null ? false : selection.select(stop);
+    },
+    [selection, files, selected],
+  );
 
   return {
     listRef: selection.listRef,
     selected,
     navigate,
     rowClicked,
+    moveFile,
     spot: selected === null ? null : spots[selected] ?? null,
   };
 }

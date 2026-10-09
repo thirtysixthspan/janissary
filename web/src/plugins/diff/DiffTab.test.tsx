@@ -382,6 +382,33 @@ describe('DiffTab', () => {
       .toEqual(['added', 'deleted', 'added']);
   });
 
+  it('moves between files with j and k, one file at a time', () => {
+    const { intent } = renderTab(payload({
+      files: [file({ path: 'a.txt' }), file({ path: 'b.txt', hunks: file().hunks })],
+    }));
+    fireEvent.keyDown(body(), { key: 'j' });
+    fireEvent.keyDown(body(), { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('open', { path: 'b.txt', line: 3 });
+    fireEvent.keyDown(body(), { key: 'k' });
+    fireEvent.keyDown(body(), { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('open', { path: 'a.txt', line: 3 });
+  });
+
+  it('stops j at the last file and k at the first rather than wrapping', () => {
+    const { intent, container } = renderTab(payload({
+      files: [file({ path: 'a.txt' }), file({ path: 'b.txt', hunks: file().hunks })],
+    }));
+    fireEvent.keyDown(body(), { key: 'j' });
+    fireEvent.keyDown(body(), { key: 'j' });
+    fireEvent.keyDown(body(), { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('open', { path: 'b.txt', line: 3 });
+    fireEvent.keyDown(body(), { key: 'k' });
+    fireEvent.keyDown(body(), { key: 'k' });
+    fireEvent.keyDown(body(), { key: 'Enter' });
+    expect(intent).toHaveBeenCalledWith('open', { path: 'a.txt', line: 3 });
+    expect(container.querySelector('.diff-walked')).toBeTruthy();
+  });
+
   it('scrolls the walked hunk into view', () => {
     const { container } = renderTab();
     fireEvent.keyDown(body(), { key: 'ArrowDown' });

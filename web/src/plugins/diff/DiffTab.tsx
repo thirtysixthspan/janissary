@@ -41,6 +41,10 @@ export function DiffTab({
 
   const onKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (walk.navigate(event.key)) { event.preventDefault(); return; }
+    if (event.key === 'j' || event.key === 'k') {
+      if (walk.moveFile(event.key === 'j')) { event.preventDefault(); }
+      return;
+    }
     if (event.key === 'Enter' && walk.spot) {
       event.preventDefault();
       openLine(files[walk.spot.file].path, walk.spot.line);
@@ -70,7 +74,13 @@ export function DiffTab({
           {capabilities.splitAction}
         </span>
       </div>
-      <div className="diff-body" ref={walk.listRef} tabIndex={0} onKeyDown={onKeyDown}>
+      <div
+        className="diff-body"
+        ref={walk.listRef}
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        title="j and k move between files; the arrows walk the hunks; Return opens the walked hunk's line"
+      >
         {payload.state === 'not-repository' && <div className="diff-empty">This directory is not a git repository</div>}
         {payload.state === 'error' && <div className="diff-empty">{payload.message}</div>}
         {payload.state === 'done' && files.length === 0 && <div className="diff-empty">No changes</div>}
