@@ -15,7 +15,7 @@ export type AgentTabIntents = {
   onOpenDiffHere?: () => void;
   onToggleCollapse: () => void;
   onOpenAcpTranscript: (acpRef: AcpRef) => void;
-  // Set only on a tab that has a recording, because it is the metadata row's own signal that there is
+  // Only on a tab that has a recording, because it is the metadata row's own signal that there is
   // one: the row draws its flag inert when this is absent and pressable when it is set, so the two
   // cannot disagree. An tab never has one and so never sends it.
   onOpenRecording?: () => void;
