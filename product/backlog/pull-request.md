@@ -16,8 +16,6 @@
 
 File presentation and navigation
 
-* File diff header — Render a distinct header above each changed file containing the file path, change-status indicator, addition/deletion counts, review-state control, and a menu of file-specific actions. The file path should be prominent enough to orient the user but should truncate intelligently when long. Use compact controls and keep the header visually separate from the code content. Where space permits, display the header on a single horizontal row. When the file is collapsed, keep its header visible as the primary way to reopen the diff.
-
 * Per-file collapse and expand — Place a disclosure chevron at the beginning of every file header. Clicking it should collapse the file's diff content while leaving the header visible, including the file path, status, counts, and review controls. Clicking again restores the previous content, including expanded hunks where practical. The disclosure icon must rotate or change direction to indicate the current state. Collapsing one file should not affect the expanded state of unrelated files.
 
 * File change status — Display an appropriate status for each changed file: added, modified, deleted, renamed, or another supported change type. Use recognizable labels or icons, with color providing a secondary visual cue. For newly added files, render only new content; for deleted files, render only old content; for renamed files, show the relationship between the previous and current paths. The file header should continue to communicate status even when the diff content is collapsed or unavailable.
