@@ -5,6 +5,7 @@ import { PDF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/pdf/shared';
 import { SCHEDULES_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/schedules/shared';
 import { VIDEO_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/video/shared';
 import { CONVERSATIONS_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/conversations/shared';
+import { DIFF_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/diff/shared';
 import { SQL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/sql/shared';
 import { SHELL_PAYLOAD_SCHEMA_VERSION } from '@shared/plugins/shell/shared';
 import { clientPluginLoaders, clientPluginRegistry } from './registry';
@@ -17,6 +18,7 @@ describe('client plugin registry', () => {
     expect(clientPluginRegistry.get('image')?.schemaVersion).toBe(IMAGE_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('conversations')?.schemaVersion)
       .toBe(CONVERSATIONS_PAYLOAD_SCHEMA_VERSION);
+    expect(clientPluginRegistry.get('diff')?.schemaVersion).toBe(DIFF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('markdown')?.schemaVersion).toBe(MARKDOWN_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('pdf')?.schemaVersion).toBe(PDF_PAYLOAD_SCHEMA_VERSION);
     expect(clientPluginRegistry.get('schedules')?.schemaVersion).toBe(SCHEDULES_PAYLOAD_SCHEMA_VERSION);
