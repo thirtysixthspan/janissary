@@ -58,4 +58,18 @@ describe('diff styles', () => {
     expect(getComputedStyle(first).marginTop).toBe('0');
     expect(getComputedStyle(second).marginTop).toBe('8px');
   });
+
+  it('tints an added row\'s gutter and marker toward the addition color, and a removed row\'s toward the removal color', () => {
+    // Stated as matches rather than computed styles: jsdom resolves no `var()` and no `color-mix()`,
+    // so a computed color would look identical to the faint gray the requirement is argued against.
+    const gutterAdded = styles.match(/^\.diff-line\.added \.diff-number, \.diff-cell\.added \.diff-number \{[^}]+\}/m)?.[0];
+    const gutterRemoved = styles.match(/^\.diff-line\.removed \.diff-number, \.diff-cell\.removed \.diff-number \{[^}]+\}/m)?.[0];
+    const markerAdded = styles.match(/^\.diff-line\.added \.diff-marker, \.diff-cell\.added \.diff-marker \{[^}]+\}/m)?.[0];
+    const markerRemoved = styles.match(/^\.diff-line\.removed \.diff-marker, \.diff-cell\.removed \.diff-marker \{[^}]+\}/m)?.[0];
+    for (const rule of [gutterAdded, gutterRemoved, markerAdded, markerRemoved]) expect(rule).toBeDefined();
+    expect(gutterAdded).toContain('color-mix(in srgb, var(--success)');
+    expect(gutterRemoved).toContain('color-mix(in srgb, var(--error)');
+    expect(markerAdded).toContain('color: var(--success)');
+    expect(markerRemoved).toContain('color: var(--error)');
+  });
 });

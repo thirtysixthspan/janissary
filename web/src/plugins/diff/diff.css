@@ -56,6 +56,12 @@
 .diff-line.removed .diff-text, .diff-cell.removed .diff-text { text-decoration: line-through; }
 
 .diff-number { color: var(--faint); flex-shrink: 0; min-width: 3ch; text-align: right; user-select: none; }
+.diff-line.added .diff-number, .diff-cell.added .diff-number { color: color-mix(in srgb, var(--success) 55%, var(--faint)); }
+.diff-line.removed .diff-number, .diff-cell.removed .diff-number { color: color-mix(in srgb, var(--error) 55%, var(--faint)); }
+
+.diff-marker { flex-shrink: 0; width: 1ch; user-select: none; }
+.diff-line.added .diff-marker, .diff-cell.added .diff-marker { color: var(--success); }
+.diff-line.removed .diff-marker, .diff-cell.removed .diff-marker { color: var(--error); }
 
 .diff-text { min-width: 0; white-space: pre-wrap; overflow-wrap: break-word; }
 

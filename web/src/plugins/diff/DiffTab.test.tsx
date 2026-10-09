@@ -255,6 +255,16 @@ describe('DiffTab', () => {
     expect([...container.querySelectorAll(':scope .diff-line .diff-text')].map((node) => node.textContent)).toEqual(['old']);
   });
 
+  it('marks an added line with its sign and a removed one with its own, context with none', () => {
+    const { container } = renderTab();
+    expect([...container.querySelectorAll(':scope .diff-line .diff-marker')].map((node) => node.textContent)).toEqual(['', '−', '+']);
+  });
+
+  it('marks each side of the split layout by its own sign, with no marker on a context line', () => {
+    const { container } = renderTab(payload({ split: true }));
+    expect([...container.querySelectorAll(':scope .diff-cell .diff-marker')].map((node) => node.textContent)).toEqual(['', '', '−', '+']);
+  });
+
   it('shows a change with surviving lines without a double-click', () => {
     const { container } = renderTab();
     expect(container.querySelectorAll('.diff-line').length).toBe(3);

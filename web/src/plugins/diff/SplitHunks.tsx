@@ -2,6 +2,13 @@ import React from 'react';
 import type { DiffHunk, DiffLine } from '@shared/plugins/diff/shared';
 import { splitRows } from './split-rows';
 
+// The side's sign: + on an addition, − on a removal, nothing on a context line or an empty side.
+function markerOf(kind: DiffLine['kind']): string {
+  if (kind === 'added') return '+';
+  if (kind === 'removed') return '−';
+  return '';
+}
+
 // The same hunk in the split layout: the old side's removed and context lines beside the new side's
 // added and context lines, each column carrying its own side's line numbers. A double-click on
 // either side opens the file at that line.
@@ -29,10 +36,11 @@ function SplitSide({ line, side, onOpenLine }: {
   side: 'old' | 'new';
   onOpenLine(line: DiffLine): void;
 }) {
-  if (line === undefined) return <div className={`diff-cell diff-${side} diff-empty`}><span className="diff-number" /><span className="diff-text"> </span></div>;
+  if (line === undefined) return <div className={`diff-cell diff-${side} diff-empty`}><span className="diff-number" /><span className="diff-marker" /><span className="diff-text"> </span></div>;
   return (
     <div className={`diff-cell diff-${side} diff-${line.kind}`} onDoubleClick={() => onOpenLine(line)}>
       <span className="diff-number">{line.number}</span>
+      <span className="diff-marker">{markerOf(line.kind)}</span>
       <span className="diff-text">{line.text === '' ? ' ' : line.text}</span>
     </div>
   );

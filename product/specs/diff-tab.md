@@ -41,6 +41,9 @@ Every hunk is expanded, and each hunk line carries its own file line number: the
 added or context line, the old-side number for a removed one. There is no cap: a change of any size is
 shown whole. A line longer than the body's width wraps at word boundaries onto as many rows as it needs,
 so the whole line reads without a scrollbar and a wrapped line's number stays beside its first row.
+Every added line carries a **+** beside its number and every removed line a **−**, and the number itself
+takes the row's own color — a saturated green on an addition, a darker red on a removal — so a change
+reads by its sign with the color as the secondary cue and a surviving line is the row without either.
 
 An entry whose change left nothing of the old content — a file added, a file deleted, or a file rewritten
 line for line — opens **collapsed**, showing only its header with a note that the entry holds the whole
