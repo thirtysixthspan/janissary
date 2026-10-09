@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import styles from './diff.css?raw';
+import appStyles from '../../theme.css?raw';
 
 afterEach(() => { document.head.replaceChildren(); document.body.replaceChildren(); });
 
@@ -22,6 +23,20 @@ function row(kind: string): { row: HTMLElement; text: HTMLElement } {
 }
 
 describe('diff styles', () => {
+  it('inherits the same default font size as the editor body', () => {
+    const style = document.createElement('style');
+    style.textContent = `${appStyles}\n${styles}`;
+    document.head.append(style);
+    const rules = [...document.styleSheets[0].cssRules].filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule);
+    const root = rules.find((rule) => rule.selectorText === 'html, body, #root')!;
+    expect(root.style.getPropertyValue('font-size')).toBe('13.1625px');
+    for (const selector of ['.editor-body', '.diff-body']) {
+      const body = rules.find((rule) => rule.selectorText === selector)!;
+      expect(body.style.getPropertyValue('font-size')).toBe('');
+      expect(body.style.getPropertyValue('font-family')).toContain('--mono');
+    }
+  });
+
   it('keeps the refresh control light on its dark background', () => {
     loadStyles();
     const refresh = [...document.styleSheets[0].cssRules].find((item) => item instanceof CSSStyleRule

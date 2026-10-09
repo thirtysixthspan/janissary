@@ -6,7 +6,7 @@ import { EditorLine, DiffAddedLine, lineExtras, lineSelection } from './render';
 import type { EditorSuggestApi } from './useEditorSuggest';
 import { suggestPillLabel } from './suggest-request';
 import { buildEditorRows } from './editor-rows';
-import type { TokenRange } from './highlight/tokenize';
+import type { TokenRange } from '../shared/syntax-highlight/tokenize';
 import { approveIcon, rejectIcon } from '../shared/icons';
 
 type EditorLinesProps = {

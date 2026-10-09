@@ -26,7 +26,7 @@
 .diff-body {
   flex: 1; min-height: 0; overflow-y: auto; outline: none;
   border: 1px solid var(--border); border-radius: 3px;
-  font-family: var(--mono, monospace); font-size: 12px;
+  font-family: var(--mono, monospace);
 }
 
 .diff-empty { padding: 8px 12px; color: var(--muted); }

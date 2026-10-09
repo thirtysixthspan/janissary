@@ -2,8 +2,6 @@
 
 # pull-request
 
-* diff views should have the same font size and syntax highlighting as the editor tab
-
 * Unified diff view — Render the original and modified versions of a file in a single, vertically scrolling code display. Unchanged lines appear once, deleted lines appear with a red-tinted background and a − marker, and added lines appear with a green-tinted background and a + marker. When code is replaced, show the removed lines immediately before the added lines. Each row must maintain consistent alignment between its line numbers, change indicators, and code content. Preserve indentation and whitespace using a monospaced font. The unified view should support line selection, syntax highlighting, inline comments, and context expansion.
 
 * Split diff view — Render the original version of the file in a left column and the modified version in a right column, with both columns sharing a common vertical scroll position. Deleted lines appear in the left column, while added lines appear in the right column. Unchanged lines appear on both sides, aligned horizontally. When one side has fewer corresponding lines, insert empty placeholder rows to preserve alignment. Each column has its own line-number gutter, change indicators, and syntax-highlighted code. On narrower screens, maintain readable code widths through horizontal scrolling rather than allowing the columns to become unusably narrow.

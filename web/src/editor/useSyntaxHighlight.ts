@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EditorState } from './model';
 import { toText } from './model';
-import { hljs } from './highlight/hljs';
-import { languageForFile } from './highlight/registry';
-import { createTokenizer, type TokenRange } from './highlight/tokenize';
+import { createFileTokenizer, syntaxLanguage } from '../shared/syntax-highlight/file-tokenize';
+import type { TokenRange } from '../shared/syntax-highlight/tokenize';
 
 // Pathological files skip highlighting entirely (plain text) so typing never gets sluggish.
-const MAX_LINES = 10_000;
-const MAX_CHARS = 1_000_000;
 const DEBOUNCE_MS = 100;
 
 // Owns the tokenize schedule for one editor tab: language resolution by file extension, a
@@ -17,16 +14,14 @@ export function useSyntaxHighlight(state: EditorState | null, fileName: string):
   const [tokens, setTokens] = useState<TokenRange[][]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const loadedRef = useRef(false);
-  const tokenize = useRef(createTokenizer()).current;
+  const tokenize = useRef(createFileTokenizer()).current;
 
   useEffect(() => {
     if (!state) { setTokens([]); return; }
-    const language = languageForFile(fileName, hljs);
-    if (!language) { setTokens([]); return; }
     const text = toText(state);
-    if (state.lines.length > MAX_LINES || text.length > MAX_CHARS) { setTokens([]); return; }
+    if (!syntaxLanguage(text, fileName)) { setTokens([]); return; }
 
-    const recompute = () => setTokens(tokenize(text, language));
+    const recompute = () => setTokens(tokenize(text, fileName));
 
     if (!loadedRef.current) {
       loadedRef.current = true;

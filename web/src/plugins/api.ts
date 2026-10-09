@@ -12,6 +12,10 @@ import type { RemoteSessionState } from '../shared/RemoteSessionButton';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
 
+// Filename detection, token scopes, and size limits are shared by editor and plugin code views.
+export { createFileTokenizer } from '../shared/syntax-highlight/file-tokenize';
+export type { TokenRange } from '../shared/syntax-highlight/tokenize';
+
 // The host's command bar, published so a plugin whose tab takes a line of text renders the one the
 // tab renders rather than a second textarea that drifts from it. Both are free of any feature:
 // the shell is markup plus its autosize, the hook is the baseline keymap, and a plugin with keys of

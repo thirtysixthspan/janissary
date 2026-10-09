@@ -14,7 +14,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `clear` | Empty the current tab's transcript — other tabs are unaffected. In a shell tab, `clear` clears the terminal; use `/clear` to empty the transcript |
 | `rename [newname]` | Set (or, bare, clear) the tab's display alias — see [Tabs](/user-documentation/getting-started/tabs) |
 | `theme [name]` | Switch the application color theme; bare form opens a picker |
-| `syntax theme [name]` | Switch the editor syntax theme; bare form opens a picker |
+| `syntax theme [name]` | Switch the editor and diff syntax theme; bare form opens a picker |
 | `notifications [left\|right]` | Open the [notifications](/user-documentation/tab-types/notifications) feed, optionally docked in a sidebar |
 | `notifications clear` | Empty the notifications queue, record file, and any toasts on screen |
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
@@ -55,7 +55,7 @@ The theme applies to the whole window — there is no per-tab or per-workspace t
 
 <img class="agent-float left" src="/agents/orhan-south-east.png" alt="" />
 
-`syntax theme <name>` sets the syntax-highlighting theme used by every open [editor tab](/user-documentation/tab-types/editor), and persists it so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the available themes — which is also a quick way to see what's on offer. Bare `syntax theme` opens a picker overlay instead: arrows move, `Return` picks, `Escape` closes. Any other `syntax` subcommand prints `Usage: syntax theme [name]`.
+`syntax theme <name>` sets the syntax-highlighting theme used by every open [editor tab](/user-documentation/tab-types/editor) and diff tab, and persists it so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the available themes — which is also a quick way to see what's on offer. Bare `syntax theme` opens a picker overlay instead: arrows move, `Return` picks, `Escape` closes. Any other `syntax` subcommand prints `Usage: syntax theme [name]`.
 
 A picker needs a screen, so a command that arrives from somewhere without one answers with the list instead of opening anything. Another agent running `syntax theme`, or a [schedule](/user-documentation/automation/scheduling) firing it, gets the available themes printed with the active one marked `*`. The same is true of bare `theme`.
 

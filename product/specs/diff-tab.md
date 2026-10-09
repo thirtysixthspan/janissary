@@ -85,6 +85,14 @@ blanks the body: on an empty change set **No changes** stays put rather than van
 redraw. Re-scoping the tab to another directory is the one case that clears the body first, because
 what it held belongs to the directory it left.
 
+### Syntax highlighting
+
+Unified and split diff code use the same font size and syntax colors as the editor tab. Markdown, JavaScript, TypeScript, and JSON are highlighted by file extension; unsupported extensions render as plain text. A renamed file uses its original extension on the old side and its current extension on the new side.
+
+The old and new text are highlighted independently within each visible hunk, preserving multiline syntax across the lines available in that hunk. Omitted context is not available for determining syntax state. A side containing more than 10,000 lines or 1 MB of visible text renders as plain text to keep the tab responsive.
+
+The active syntax theme applies to every open editor and diff tab, and switching it updates both diff layouts immediately. Syntax colors preserve change backgrounds and character marks, indentation, text selection and copying, and the existing line-opening behavior.
+
 ### Reading the diff
 
 Hovering an added or context line highlights it with a subtle accent tint and shows a pointer cursor in both unified and split layouts. Removed lines remain inert: they have no pointer cursor or hover highlight, and double-clicking them does not open a file. Addition, removal, and changed-character colors remain visible beneath the highlight. Empty split alignment placeholders do not highlight or show a pointer cursor. Moving the mouse away clears the highlight; double-clicking an added or context line opens the file at that line.

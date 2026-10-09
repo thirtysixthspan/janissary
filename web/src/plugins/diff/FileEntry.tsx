@@ -75,6 +75,8 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
         const spot = spots[index];
         const walkedHere = spot >= 0 && walked === spot;
         const shared = {
+          fileName: file.path,
+          oldFileName: file.oldPath ?? file.path,
           onSelect: () => { if (spot >= 0) onSelectHunk(spot); },
           // A deleted file's hunks are inert: there is no file to take the user to, and the line
           // numbers they carry are the old file's.

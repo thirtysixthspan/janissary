@@ -2,7 +2,7 @@ import React, { createRef } from 'react';
 import { render } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { EditorLine, DiffAddedLine } from './render';
-import type { TokenRange } from './highlight/tokenize';
+import type { TokenRange } from '../shared/syntax-highlight/tokenize';
 import type { SuggestPill } from './suggest-request';
 
 describe('EditorLine token segments', () => {

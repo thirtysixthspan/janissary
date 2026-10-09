@@ -1,7 +1,7 @@
 import React from 'react';
 import type { EditorState } from './model';
 import { selectionBounds, selectionRange } from './model';
-import type { TokenRange } from './highlight/tokenize';
+import type { TokenRange } from '../shared/syntax-highlight/tokenize';
 import type { SuggestPill } from './suggest-request';
 
 // Selection column bounds for one line as primitives ([-1, -1] when the line is outside the

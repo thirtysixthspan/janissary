@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { DiffHunk, DiffLine } from '@shared/plugins/diff/shared';
+import type { TokenRange } from '../api';
 import { ChangedText } from './ChangedText';
 import { changedSpans } from './intraline';
 import { hunkRange } from './hunk-range';
 import { splitRows } from './split-rows';
+import { highlightHunk } from './highlight-hunk';
 
 // The line's sign: + on an addition, − on a removal, nothing on a context line, which is what leaves
 // a surviving line's row unmarked.
@@ -21,8 +23,10 @@ export function markerOf(kind: DiffLine['kind']): string {
 // The rows come from the pairing the split layout uses as well: a run of removed lines beside the run
 // of added lines that replaced them, which is what gives the character alignment inside a replaced
 // line its two sides. The old side is drawn above the new one, the order git printed them in.
-export function HunkLines({ hunk, index, walked, onSelect, onOpenLine }: {
+export function HunkLines({ hunk, fileName, oldFileName, index, walked, onSelect, onOpenLine }: {
   hunk: DiffHunk;
+  fileName: string;
+  oldFileName: string;
   index: number;
   walked: boolean;
   onSelect(): void;
@@ -30,21 +34,24 @@ export function HunkLines({ hunk, index, walked, onSelect, onOpenLine }: {
 }) {
   const rows = splitRows(hunk);
   const spans = changedSpans(hunk);
+  const tokens = useMemo(() => highlightHunk(hunk, fileName, oldFileName), [hunk, fileName, oldFileName]);
+  const tokensFor = (line: DiffLine) => (line.kind === 'removed' ? tokens.old : tokens.next).get(line) ?? [];
   return (
     <div className={walked ? 'diff-hunk diff-walked' : 'diff-hunk'} data-index={index} onMouseDown={onSelect}>
       <div className="diff-hunk-header">{hunkRange(hunk)}</div>
       {rows.map((row, at) => (
         <React.Fragment key={at}>
-          {row.old !== undefined && <Line line={row.old} spans={spans.get(row.old)} onOpenLine={onOpenLine} />}
-          {row.next !== undefined && row.next !== row.old && <Line line={row.next} spans={spans.get(row.next)} onOpenLine={onOpenLine} />}
+          {row.old !== undefined && <Line line={row.old} tokens={tokensFor(row.old)} spans={spans.get(row.old)} onOpenLine={onOpenLine} />}
+          {row.next !== undefined && row.next !== row.old && <Line line={row.next} tokens={tokensFor(row.next)} spans={spans.get(row.next)} onOpenLine={onOpenLine} />}
         </React.Fragment>
       ))}
     </div>
   );
 }
 
-function Line({ line, spans, onOpenLine }: {
+function Line({ line, tokens, spans, onOpenLine }: {
   line: DiffLine;
+  tokens: TokenRange[];
   spans: { from: number; to: number }[] | undefined;
   onOpenLine(line: DiffLine): void;
 }) {
@@ -56,7 +63,7 @@ function Line({ line, spans, onOpenLine }: {
       <span className="diff-number">{line.oldNumber ?? ''}</span>
       <span className="diff-number">{line.kind === 'removed' ? '' : line.number}</span>
       <span className="diff-marker">{markerOf(line.kind)}</span>
-      <ChangedText line={line} spans={spans ?? []} />
+      <ChangedText line={line} tokens={tokens} spans={spans ?? []} />
     </div>
   );
 }

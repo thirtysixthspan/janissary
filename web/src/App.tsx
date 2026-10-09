@@ -20,7 +20,7 @@ import { firstOpenOverlay } from './pickers/overlay-registry';
 import { useAppCommandBarState } from './useAppCommandBarState';
 import { useServerState, useTabNameLimits, useClipboardHistoryCap } from './useServerState';
 import { useLayoutState } from './useLayoutState';
-import { applySyntaxTheme } from './editor/highlight/themes';
+import { applySyntaxTheme } from './shared/syntax-highlight/themes';
 import { useWindowFocus } from './useWindowFocus';
 import { useNativeNotifications } from './notifications/useNativeNotifications';
 import { sidebarSelectionFor } from './sidebar-selection-coordinator';
