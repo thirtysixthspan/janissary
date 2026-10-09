@@ -18,7 +18,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { REMOTE_DETACH_TIMEOUT_MS } from '../remote/serve-detach.js';
-import { STATE_DIRECTORY_ENTRIES } from '../state-dirs.js';
+import { STATE_DIRECTORY_ENTRIES } from '../state/dirs.js';
 import {
   initRemoteSessionStore,
   loadRemoteSessions,

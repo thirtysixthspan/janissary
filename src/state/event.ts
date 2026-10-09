@@ -1,9 +1,9 @@
-import type { ControllerCore } from './controller.js';
-import type { ServerEvent } from './protocol.js';
-import { getConfig } from './config.js';
-import { globalCommands } from './global-history.js';
-import { cachedTasks, cachedProfileRows } from './state-listings.js';
-import { appVersionNumber } from './cli-info.js';
+import type { ControllerCore } from '../controller.js';
+import type { ServerEvent } from '../protocol.js';
+import { getConfig } from '../config.js';
+import { globalCommands } from '../global-history.js';
+import { cachedTasks, cachedProfileRows } from './listings.js';
+import { appVersionNumber } from '../cli-info.js';
 
 // Full state snapshot sent on `init` and whenever anything changes — shared by index.ts's
 // broadcast-driving emitState and message-handler.ts's `init` reply.

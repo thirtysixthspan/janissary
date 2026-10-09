@@ -21,55 +21,55 @@ const mocks = vi.hoisted(() => ({
   initNotificationRecord: vi.fn(),
 }));
 
-vi.mock('./harness/capture/file.js', () => ({
+vi.mock('../harness/capture/file.js', () => ({
   initHarnessCaptureDirectory: mocks.initHarnessCaptureDirectory,
   clearCaptureDirectory: mocks.clearCaptureDirectory,
 }));
-vi.mock('./harness/recording-file.js', () => ({
+vi.mock('../harness/recording-file.js', () => ({
   initHarnessRecordingDirectory: mocks.initHarnessRecordingDirectory,
   clearHarnessRecordingDirectory: mocks.clearHarnessRecordingDirectory,
 }));
-vi.mock('./harness/transcript-file.js', () => ({
+vi.mock('../harness/transcript-file.js', () => ({
   initHarnessTranscriptDirectory: mocks.initHarnessTranscriptDirectory,
   clearHarnessTranscriptDirectory: mocks.clearHarnessTranscriptDirectory,
 }));
-vi.mock('./browser/browser-log.js', () => ({
+vi.mock('../browser/browser-log.js', () => ({
   initBrowserLogDirectory: mocks.initBrowserLogDirectory,
   clearBrowserLogDirectory: mocks.clearBrowserLogDirectory,
 }));
-vi.mock('./git/failure-output.js', () => ({
+vi.mock('../git/failure-output.js', () => ({
   initGitFailureDirectory: mocks.initGitFailureDirectory,
   clearGitFailureDirectory: mocks.clearGitFailureDirectory,
 }));
-vi.mock('./global-history.js', () => ({
+vi.mock('../global-history.js', () => ({
   initGlobalHistory: mocks.initGlobalHistory,
 }));
-vi.mock('./connections.js', () => ({
+vi.mock('../connections.js', () => ({
   initDbDir: mocks.initDbDir,
 }));
-vi.mock('./profiles.js', () => ({
+vi.mock('../profiles.js', () => ({
   initProfileDir: mocks.initProfileDir,
 }));
-vi.mock('./workspace/index.js', () => ({
+vi.mock('../workspace/index.js', () => ({
   initWorkspaceDir: mocks.initWorkspaceDir,
   clearWorkspaceDir: mocks.clearWorkspaceDir,
 }));
-vi.mock('./file-navigator/remote/file-cache.js', () => ({
+vi.mock('../file-navigator/remote/file-cache.js', () => ({
   initRemoteFileCache: mocks.initRemoteFileCache,
   clearRemoteFileCache: mocks.clearRemoteFileCache,
 }));
-vi.mock('./notifications/record.js', () => ({
+vi.mock('../notifications/record.js', () => ({
   initNotificationRecord: mocks.initNotificationRecord,
 }));
-vi.mock('./transcript/logger.js', () => ({
+vi.mock('../transcript/logger.js', () => ({
   TranscriptLogger: vi.fn(),
 }));
 
 import {
   initStateDirectories, clearStateDirectories,
   STATE_DIRECTORY_ENTRIES, STATE_DIRECTORY_ORDER_IS_COMPLETE,
-} from './state-dirs.js';
-import * as loggerModule from './transcript/logger.js';
+} from './dirs.js';
+import * as loggerModule from '../transcript/logger.js';
 
 const OPTIONS = { projectDir: '/project', packageRoot: '/package-root' };
 

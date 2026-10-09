@@ -4,7 +4,7 @@ import { createController } from './controller.js';
 import { makeToken, originAllowed, tokenFromReq as tokenFromRequest, tokenMatches } from './security.js';
 import type { ServerEvent } from './protocol.js';
 import { handle } from './message/handler.js';
-import { buildStateEvent } from './state-event.js';
+import { buildStateEvent } from './state/event.js';
 import { clientParamsProblem, isClientMessage } from './client-message.js';
 import { guardRequest } from './request-boundary.js';
 import { staticFileServer } from './serve-static.js';

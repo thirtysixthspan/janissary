@@ -7,7 +7,7 @@ import { messageBus } from './bus.js';
 import type { TabView } from './protocol.js';
 import { MANAGER_DISPOSE_ORDER, type Managers } from './managers.js';
 import type { AcpRef } from './protocol.js';
-import { buildStateEvent } from './state-event.js';
+import { buildStateEvent } from './state/event.js';
 import { openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
 import { openRecordingFor } from './controller/recording.js';
 import { setClientLayout } from './client-layout.js';
