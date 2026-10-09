@@ -47,6 +47,8 @@ The summarizer reads each tab's label, its view kind, whether it is busy or badg
 
 Nothing is prompted when no tab's content has changed since the previous flush, so an application where nothing is happening costs nothing. What counts as a change is the tab's transcript having been written to, not its length having moved: output streamed into a running entry rewrites in place, and an append to a log already at its cap displaces the oldest entry, so neither of them changes the length and both are seen. A row whose summary has not arrived shows no summary line rather than a placeholder, and the launcher otherwise works normally. A session that cannot be started is reported to the notifications feed rather than failing silently, and the next flush tries again.
 
+A tab keeps its paragraph until it closes or until a reply replaces it. A flush asks only about the tabs whose transcript has changed, so a reply normally names only those — and the tabs it did not ask about keep what they already had rather than showing nothing until the next prompt that happened to include them. A tab that closes loses its paragraph with its row, and its label is recycled the moment it goes, so nothing is kept under a name a new tab could inherit.
+
 The paragraph is clamped to three lines of the row's width and expands to as many as eight while the pointer is over the row, so a long summary is never lost — only held back until it is wanted.
 
 ### Hovering a row

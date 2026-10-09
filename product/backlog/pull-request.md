@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep existing summaries for live tabs omitted from a later reply.
-
-Existing Issue: The summarize intent replaces state.summaries with the latest reply map even though prompts include only changed tabs and the plan promises omitted tabs keep their previous paragraphs. Severity: 6/10
-
-Existing Risk: 6/10 - Updating one tab erases the useful summaries of other tabs that have not changed.
-
-Proposal Risk: 2/10 - Merging validated reply entries into a live-tab-filtered map preserves unaffected summaries while allowing closed entries to be removed.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "keep existing summaries for live tabs omitted from a later reply". In src/plugins/launcher/activate.ts, retain previous summaries for still-live tab identities, overlay only matching paragraphs returned by src/plugins/launcher/summarizer.ts, and remove entries for closed tabs even when the reply is empty. Extend src/plugins/launcher/activate.test.ts to summarize two tabs, advance only one, and confirm the other's paragraph survives; also test a partial reply and a close with no new transcript activity. The existing publish test covers a first paragraph but does not cover preservation across partial replies.
-
-
 * Reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations.
 
 Existing Issue: Launcher state and priming survive ordinary tab closure because dispose runs only on plugin shutdown or disablement, and replies are filtered against the pre-await live snapshot rather than current tab identities. Severity: 7/10

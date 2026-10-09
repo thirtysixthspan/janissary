@@ -486,6 +486,73 @@ describe('summarizing', () => {
     expect(entry.prompted).toHaveLength(2);
   });
 
+  // A flush asks about the tabs that moved, so the reply normally names only those. Every other tab's
+  // paragraph is one the launcher already has, and losing it would erase the recap of a tab that was
+  // merely quiet until the next prompt that happened to include it.
+  it('keeps the paragraph of a live tab the flush did not ask about', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Running the suite.\n[[tab:agent]] Waiting on the deploy.');
+    await summarize(entry, activation);
+    entry.updated.length = 0;
+
+    // Only the shell tab moves, so only the shell tab is asked about.
+    entry.growTab('shell', 1);
+    entry.answerWith('[[tab:shell]] Four suites left.');
+
+    await summarize(entry, activation);
+
+    const payload = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.summaries).toEqual({
+      shell: 'Four suites left.',
+      agent: 'Waiting on the deploy.',
+    });
+  });
+
+  // Both tabs were asked about, and the reply answered only one. The tab it stayed silent about keeps
+  // what it had: a reply that names no tab at all is a reply with nothing to replace.
+  it('keeps a paragraph when a reply that covered the tab stayed silent about it', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Running the suite.\n[[tab:agent]] Waiting on the deploy.');
+    await summarize(entry, activation);
+    entry.updated.length = 0;
+
+    entry.growTab('shell', 1);
+    entry.growTab('agent', 1);
+    entry.answerWith('[[tab:agent]] Deploying now.');
+
+    await summarize(entry, activation);
+
+    const payload = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.summaries).toEqual({
+      shell: 'Running the suite.',
+      agent: 'Deploying now.',
+    });
+  });
+
+  // A label is recycled the moment its tab closes, so a paragraph kept under a dead label would be
+  // inherited by whatever takes the name. The close has to prune even when the flush had nothing to
+  // say and therefore asked for no prompt at all.
+  it('drops a closed tab\'s paragraph on a flush that prompted nothing', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Running the suite.\n[[tab:agent]] Waiting on the deploy.');
+    await summarize(entry, activation);
+    entry.closeTabs(['agent']);
+    entry.updated.length = 0;
+
+    // The agent tab closed, and nothing else moved — so there is no prompt to make, and the closed
+    // tab's paragraph still has to go.
+    await summarize(entry, activation);
+
+    const payload = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.summaries).toEqual({ shell: 'Running the suite.' });
+  });
+
   // The prompt is framed as data, so a transcript line that tries to steer the reply is not obeyed.
   it('delimits the tail it feeds, and drops a marker the transcript tried to forge', async () => {
     const entry = openLauncher();

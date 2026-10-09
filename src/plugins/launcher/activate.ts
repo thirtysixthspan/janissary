@@ -192,14 +192,23 @@ export function activate(): TabPluginActivation {
               personaBody: readPersonaBody(capabilities.originTab()?.root ?? process.cwd()),
               readTabs: () => live,
             });
-            if (summaries.size === 0) return null;
-            // Rebuilt from the tabs live *now* rather than merged into a map that only grows: a closed
-            // tab's paragraph disappears with its row, and a new tab that inherits a recycled label
-            // shows nothing until its own first paragraph rather than the dead tab's text.
+            // A flush asks about the tabs that moved, so the reply normally names only those. The
+            // paragraphs it did not name are kept rather than replaced: dropping them would erase the
+            // recap of every tab that happened to be quiet this time. Only the tabs that have closed
+            // lose theirs, and a label is recycled the moment its tab goes — so a paragraph kept for
+            // a dead label would be inherited by whatever takes the name next.
             const shown = new Set(live.map((tab) => tab.label));
-            state.summaries = Object.fromEntries(
-              [...summaries].filter(([label]) => shown.has(label)),
+            const merged = Object.fromEntries(
+              [
+                ...Object.entries(state.summaries).filter(([label]) => shown.has(label)),
+                ...[...summaries].filter(([label]) => shown.has(label)),
+              ],
             );
+            // A flush that asked nothing, on a set of tabs that has not changed, still costs nothing:
+            // either a reply delivered a paragraph or a closed tab took one away, and nothing else
+            // moves the map.
+            if (JSON.stringify(merged) === JSON.stringify(state.summaries)) return null;
+            state.summaries = merged;
             const rows = state.rows;
             if (rows === null) return null;
             capabilities.updateTab(LAUNCHER_INSTANCE_KEY, () => ({
