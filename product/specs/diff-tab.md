@@ -57,6 +57,8 @@ Every added line carries a **+** beside its number and every removed line a **�
 takes the row's own color — a saturated green on an addition, a darker red on a removal — so a change
 reads by its sign with the color as the secondary cue and a surviving line is the row without either.
 
+Removed text is not crossed out in either layout. The red background, minus sign, gutter color, syntax colors, and changed-character marks remain visible, while removed lines remain inert.
+
 Where a line was replaced rather than added or removed whole, the characters that changed carry a
 stronger tint of the row's own color — the numerals in `timeout = 30` against `timeout = 60` — so the
 edit reads at a glance, in the unified layout and in each of the split layout's columns. A pair of lines
@@ -107,7 +109,7 @@ The header carries a layout control:
 
 Split layout shows original content on the left and modified content on the right. Unchanged lines appear on both sides, and replacements are paired row by row. When one side has fewer lines, shaded empty cells occupy the remaining rows without a number or marker. Each pair of cells has the same height even when one side wraps, keeping the columns aligned. A divider separates the old column from the new one.
 
-Both columns retain equal, readable widths. When the available space is too narrow, each hunk scrolls horizontally with both columns moving together. All files and both sides continue sharing the tab body's vertical scroll. Added lines remain green, removed lines remain red and struck through, and each column keeps its own line numbers, signs, syntax colors, and character-change marks.
+Both columns retain equal, readable widths. When the available space is too narrow, each hunk scrolls horizontally with both columns moving together. All files and both sides continue sharing the tab body's vertical scroll. Added lines remain green, removed lines remain red, and each column keeps its own line numbers, signs, syntax colors, and character-change marks.
 
 The body is the tab's one focusable region. Clicking into it focuses it, and while it holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,

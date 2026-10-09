@@ -104,7 +104,20 @@ describe('split diff presentation', () => {
       expect(declaredStyle(changed, 'color')).toBe('');
     }
     const removed = container.querySelector(`${prefix}.diff-removed .diff-text`)!;
-    expect(getComputedStyle(removed).textDecoration).toBe('line-through');
+    expect(getComputedStyle(removed).textDecoration).not.toContain('line-through');
+  });
+
+  it.each([true, false])('renders removed code and its nested syntax and character marks without crossout with split=%s', (split) => {
+    const { container } = show(split);
+    const prefix = split ? '.diff-cell' : '.diff-line';
+    const removed = container.querySelector(`${prefix}.diff-removed .diff-text`)!;
+    expect(removed.textContent).toBe('const value = 30;');
+    expect(removed.querySelector('.hljs-keyword')?.textContent).toBe('const');
+    expect(removed.querySelector('.diff-changed.hljs-number')?.textContent).toBe('3');
+    for (const span of [removed, ...removed.querySelectorAll('span')]) {
+      expect(getComputedStyle(span).textDecoration).not.toContain('line-through');
+      expect(declaredStyle(span, 'text-decoration')).toBe('');
+    }
   });
 
   it('keeps unified wrapping free of the split minimum width and horizontal scroller', () => {

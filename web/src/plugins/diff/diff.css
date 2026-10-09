@@ -1,7 +1,7 @@
 /* The diff tab's own look: a framed, scrolling body of file entries, each a header and its hunks,
    rendered in the monospace the editor uses so a change reads as code. A line longer than the body
    wraps within its column; split hunks scroll horizontally when both columns cannot fit. The added and removed rows follow the editor's
-   own inline suggest diff — green from --success, red from --error, the removed line struck through —
+   own inline suggest diff colors — green from --success, red from --error —
    so the two look like one application. */
 .diff-tab { gap: 6px; }
 
@@ -71,7 +71,6 @@
 .diff-line.diff-removed, .diff-cell.diff-removed { cursor: default; }
 .diff-line.diff-added, .diff-cell.diff-added { background: color-mix(in srgb, var(--success) 15%, transparent); }
 .diff-line.diff-removed, .diff-cell.diff-removed { background: color-mix(in srgb, var(--error) 15%, transparent); }
-.diff-line.diff-removed .diff-text, .diff-cell.diff-removed .diff-text { text-decoration: line-through; }
 
 .diff-number { color: var(--faint); flex-shrink: 0; min-width: 3ch; text-align: right; user-select: none; }
 .diff-line.diff-added .diff-number, .diff-cell.diff-added .diff-number { color: color-mix(in srgb, var(--success) 55%, var(--faint)); }
