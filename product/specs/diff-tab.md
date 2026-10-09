@@ -40,6 +40,13 @@ added or context line, the old-side number for a removed one. There is no cap: a
 shown whole. A line longer than the body's width wraps at word boundaries onto as many rows as it needs,
 so the whole line reads without a scrollbar and a wrapped line's number stays beside its first row.
 
+An entry whose change left nothing of the old content — a file added, a file deleted, or a file rewritten
+line for line — opens **collapsed**, showing only its header with a note that the entry holds the whole
+file. A **double-click on the header expands it** to every line, and a further double-click collapses it
+again. A click on the file's name still opens the file, expanded or not. The keyboard walk counts such
+an entry's hunks wherever they happen to be shown, so **Return** opens the file at the walked hunk's
+first changed line either way.
+
 The tab recomputes on its own every second, so the change set stays live while files are edited around
 it, and the header's **Refresh** button recomputes on demand. Re-running the command recomputes as well.
 

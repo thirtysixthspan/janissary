@@ -20,6 +20,20 @@ function file(overrides: Partial<DiffFile> = {}): DiffFile {
   };
 }
 
+function wholeFile(overrides: Partial<DiffFile> = {}): DiffFile {
+  return {
+    path: 'a.txt', additions: 3, deletions: 3,
+    hunks: [{
+      oldStart: 1, newStart: 1,
+      lines: [
+        { kind: 'removed', number: 1, jump: 1, text: 'old' },
+        { kind: 'added', number: 1, jump: 1, text: 'new' },
+      ],
+    }],
+    ...overrides,
+  };
+}
+
 function payload(overrides: Partial<DiffPayload> = {}): DiffPayload {
   return { root: '$root/', state: 'done', message: '', files: [file()], ...overrides };
 }
@@ -175,6 +189,44 @@ describe('DiffTab', () => {
     fireEvent.mouseDown(container.querySelectorAll('.diff-hunk')[1]);
     fireEvent.keyDown(body(), { key: 'Enter' });
     expect(intent).toHaveBeenCalledWith('open', { path: 'b.txt', line: 3 });
+  });
+
+  it('opens a whole-file change collapsed, with the way out named', () => {
+    const { container } = renderTab(payload({ files: [wholeFile()] }));
+    expect(screen.getByText('whole file — double-click to expand')).toBeTruthy();
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+  });
+
+  it('expands a whole-file change to every line on a double-click of its header', () => {
+    const { intent, container } = renderTab(payload({ files: [wholeFile()] }));
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    expect([...container.querySelectorAll(':scope .diff-line .diff-text')].map((node) => node.textContent)).toEqual(['old', 'new']);
+    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
+  });
+
+  it('collapses an expanded whole-file change again on a second double-click', () => {
+    const { container } = renderTab(payload({ files: [wholeFile()] }));
+    const header = container.querySelector('.diff-file-header') as HTMLElement;
+    fireEvent.doubleClick(header);
+    fireEvent.doubleClick(header);
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+  });
+
+  it('opens a deleted file\'s whole-file change collapsed and expands it on a double-click', () => {
+    const { container } = renderTab(payload({
+      files: [wholeFile({ deleted: true, hunks: [{
+        oldStart: 1, newStart: 1,
+        lines: [{ kind: 'removed', number: 1, jump: 1, text: 'old' }],
+      }] })],
+    }));
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    expect([...container.querySelectorAll(':scope .diff-line .diff-text')].map((node) => node.textContent)).toEqual(['old']);
+  });
+
+  it('shows a change with surviving lines without a double-click', () => {
+    const { container } = renderTab();
+    expect(container.querySelectorAll('.diff-line').length).toBe(3);
   });
 
   it('scrolls the walked hunk into view', () => {

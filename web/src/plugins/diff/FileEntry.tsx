@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { DiffFile } from '@shared/plugins/diff/shared';
 import { HunkLines } from './HunkLines';
 import { SplitHunks } from './SplitHunks';
+import { isWholeFileChange } from './whole-file';
 
 // One changed file: its header — the path, the rename it came from, its add and delete counts — and
 // every hunk it holds. A deleted file's header is inert, because there is no file to open; a binary
@@ -21,24 +22,35 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
 }) {
   let taken = 0;
   const spots = file.hunks.map((hunk) => (hunk.lines.length === 0 ? -1 : offset + taken++));
+  const [expanded, setExpanded] = useState(false);
+  const collapsed = isWholeFileChange(file) && !expanded;
+  const openName = (event: React.MouseEvent) => {
+    if (event.detail >= 2) return;
+    if (file.binary) { onOpenMedia(); return; }
+    onOpenFile();
+  };
   return (
     <div className="diff-file">
-      <div className="diff-file-header">
+      <div
+        className="diff-file-header"
+        onDoubleClick={() => setExpanded((was) => !was)}
+      >
         <button
           type="button"
           className="diff-file-name"
           disabled={file.deleted}
           title={file.path}
-          onClick={file.binary ? onOpenMedia : onOpenFile}
+          onClick={file.binary ? onOpenMedia : openName}
         >
           {file.oldPath === undefined ? file.path : `${file.oldPath} → ${file.path}`}
         </button>
         <span className="diff-counts">
           {file.additions > 0 && <span className="diff-added-count">+{file.additions}</span>}
           {file.deletions > 0 && <span className="diff-removed-count">−{file.deletions}</span>}
+          {collapsed && <span className="diff-whole-file">whole file — double-click to expand</span>}
         </span>
       </div>
-      {file.hunks.map((hunk, index) => {
+      {!collapsed && file.hunks.map((hunk, index) => {
         const spot = spots[index];
         const walkedHere = spot >= 0 && walked === spot;
         const shared = {
