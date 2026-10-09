@@ -46,10 +46,12 @@ const intent = (tab: DiffPayload, name: string, payload: unknown) =>
 // further is published is measuring a settled outcome rather than a slow one.
 const rest = () => new Promise((resolve) => setTimeout(resolve, 250));
 
-// A recompute runs real git processes, so a fixed wait races the suite's load. Poll until the payload
-// leaves the loading state, which is the one state a recompute is guaranteed to leave.
+// A recompute runs real git processes, so a fixed wait races the suite's load. Wait for the publish
+// that is newer than the one the test starts from, which is the recompute's result itself — a
+// recompute publishes nothing while it runs, so the body never blinks between polls.
 const settled = async (updateTab: ReturnType<typeof vi.fn>): Promise<DiffPayload> => {
-  await vi.waitFor(() => { expect(lastPayload(updateTab).state).not.toBe('loading'); }, { timeout: 10_000, interval: 25 });
+  const before = updateTab.mock.calls.length;
+  await vi.waitFor(() => { expect(updateTab.mock.calls.length).toBeGreaterThan(before); }, { timeout: 10_000, interval: 25 });
   return lastPayload(updateTab);
 };
 
@@ -313,6 +315,22 @@ describe('diff plugin activation', () => {
     const { capabilities } = makeCapabilities();
     expect(() => activate().intent(intent(settledTab, 'refresh', {}), capabilities))
       .toThrow('invalid refresh payload');
+  });
+
+  it('publishes nothing while a recompute is in flight, so the body never blinks', async () => {
+    // The symptom as reported: the once-a-second refresh published a loading payload first, and the
+    // client's No changes message renders only while the state reads done, so the message unmounted
+    // and remounted with every redraw. Assert the publish stays away, not just the final state.
+    const { capabilities, updateTab } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+    });
+    const activation = activate();
+    activation.command?.('', capabilities);
+    const standing = await settled(updateTab);
+    activation.intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities);
+    expect(lastPayload(updateTab)).toBe(standing);
+    expect(lastPayload(updateTab).state).toBe('done');
+    await settled(updateTab);
   });
 
   it('publishes nothing more from a recompute still in flight when disposed', async () => {

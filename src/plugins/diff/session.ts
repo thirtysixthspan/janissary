@@ -49,9 +49,9 @@ export class DiffSession {
   constructor(private capabilities: TabPluginServerCapabilities) {}
 
   // Open the tab on `root`, or focus the one already open. The factory runs only when the tab has to
-  // be built, so a tab already showing another root is focused and then re-scoped here; the payload
-  // the factory builds carries the new root's loading state, and the recompute repaints the tab
-  // through `updateTab`.
+  // be built, so a tab already showing another root is focused and then re-scoped here. A re-scope
+  // publishes the cleared payload itself, because the recompute that follows paints only when it
+  // lands; a root with nothing known yet shows nothing rather than another root's change set.
   open(root: string, origin: DiffOrigin): void {
     if (this.disposed || root === '') return;
     const rescope = root !== this.root;
@@ -62,6 +62,7 @@ export class DiffSession {
       ...(rescope && { state: 'loading', message: '', files: [] }),
     };
     this.capabilities.openOrFocusTab(INSTANCE_KEY, () => ({ title: TAB_TITLE, payload: this.payload }));
+    if (rescope) this.safely({});
     void this.recompute();
   }
 
@@ -98,11 +99,13 @@ export class DiffSession {
   // rejection takes the process down, which would close every tab in the application rather than
   // this one. Every failure the git layer can answer is already a result; this catches the one that
   // is not, and answers it as the tab's error state.
+  //
+  // A recompute paints the tab when its result lands, never when it starts: the payload already
+  // published stands until the answer replaces it, so the once-a-second poll never blanks the body.
   private async recompute(): Promise<void> {
     if (this.inFlight || this.disposed) return;
     this.inFlight = true;
     const rootAtStart = this.root;
-    this.safely({ state: 'loading' });
     try {
       const result = await readChangeSet(rootAtStart, this.hideWhitespace);
       if (!this.disposed && this.root === rootAtStart) this.safely(resultChanges(result));
