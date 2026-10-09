@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Frame all model-fed tab text as untrusted data to close the prompt-injection gap.
-
-Existing Issue: describeTab delimits only the transcript tail while interpolating a tab's title and last command directly into the instruction-bearing part of the prompt. Severity: 7/10
-
-Existing Risk: 7/10 - A command or title containing instruction-like text can steer the summarizer outside the boundary the trust framing tells it to respect.
-
-Proposal Risk: 2/10 - Keeping externally supplied strings inside unpredictable data markers contains this route, although model adherence still requires defense in depth.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "frame all model-fed tab text as untrusted data to close the prompt-injection gap". In src/plugins/launcher/summarizer.ts, place titles, command lines, and any other externally supplied textual metadata inside the same untrusted-data framing as transcript tails, keeping only validated routing identity and fixed host facts outside. Generate the delimiter with a cryptographically strong random source rather than Math.random, and retain explicit priming that the framed values are data. Extend src/plugins/launcher/summarizer.test.ts with multiline titles and commands that attempt to override reply instructions, asserting that every such string lies inside the markers; update product/specs/launcher.md to avoid claiming framing makes injection impossible.
-
-
 * Deliver the plan's transcript-backed status summaries by requesting capped tails.
 
 Existing Issue: The summarize intent obtains its rows from ownTabs, which calls tabActivity without a tail limit, so every real prompt substitutes 'No transcript content yet.' for the promised output slice. Severity: 8/10
