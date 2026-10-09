@@ -2,6 +2,7 @@ import React from 'react';
 import type { DiffHunk, DiffLine } from '@shared/plugins/diff/shared';
 import { ChangedText } from './ChangedText';
 import { changedSpans } from './intraline';
+import { hunkRange } from './hunk-range';
 import { markerOf } from './HunkLines';
 import { splitRows } from './split-rows';
 
@@ -20,6 +21,7 @@ export function SplitHunks({ hunk, index, walked, onSelect, onOpenLine }: {
   const spans = changedSpans(hunk);
   return (
     <div className={walked ? 'diff-hunk diff-split diff-walked' : 'diff-hunk diff-split'} data-index={index} onMouseDown={onSelect}>
+      <div className="diff-hunk-header">{hunkRange(hunk)}</div>
       {rows.map((row, index) => (
         <div className="diff-split-row" key={index}>
           <SplitSide line={row.old} side="old" spans={row.old === undefined ? undefined : spans.get(row.old)} onOpenLine={onOpenLine} />

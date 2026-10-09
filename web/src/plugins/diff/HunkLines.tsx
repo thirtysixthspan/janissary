@@ -2,6 +2,7 @@ import React from 'react';
 import type { DiffHunk, DiffLine } from '@shared/plugins/diff/shared';
 import { ChangedText } from './ChangedText';
 import { changedSpans } from './intraline';
+import { hunkRange } from './hunk-range';
 import { splitRows } from './split-rows';
 
 // The line's sign: + on an addition, − on a removal, nothing on a context line, which is what leaves
@@ -31,6 +32,7 @@ export function HunkLines({ hunk, index, walked, onSelect, onOpenLine }: {
   const spans = changedSpans(hunk);
   return (
     <div className={walked ? 'diff-hunk diff-walked' : 'diff-hunk'} data-index={index} onMouseDown={onSelect}>
+      <div className="diff-hunk-header">{hunkRange(hunk)}</div>
       {rows.map((row, at) => (
         <React.Fragment key={at}>
           {row.old !== undefined && <Line line={row.old} spans={spans.get(row.old)} onOpenLine={onOpenLine} />}

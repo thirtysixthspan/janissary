@@ -372,6 +372,32 @@ describe('DiffTab', () => {
     expect([...newSide.querySelectorAll('.diff-changed')].map((node) => node.textContent)).toEqual(['6']);
   });
 
+  it("introduces every hunk with the range git printed, in both layouts", () => {
+    const hunks = [
+      {
+        oldStart: 12, newStart: 12,
+        lines: [
+          { kind: 'context' as const, number: 12, jump: 12, oldNumber: 12, text: 'kept' },
+          { kind: 'removed' as const, number: 13, jump: 13, oldNumber: 13, text: 'gone' },
+          { kind: 'added' as const, number: 13, jump: 13, text: 'here' },
+        ],
+      },
+      {
+        oldStart: 30, newStart: 30,
+        lines: [{ kind: 'added' as const, number: 30, jump: 30, text: 'more' }],
+      },
+    ];
+    const { container } = renderTab(payload({ files: [file({ hunks })] }));
+    expect([...container.querySelectorAll(':scope .diff-hunk-header')].map((node) => node.textContent))
+      .toEqual(['@@ -12,2 +12,2 @@', '@@ -30,0 +30,1 @@']);
+  });
+
+  it("introduces every hunk with its range header in the split layout too", () => {
+    const { container } = renderTab(payload({ split: true }));
+    expect([...container.querySelectorAll(':scope .diff-hunk-header')].map((node) => node.textContent))
+      .toEqual(['@@ -1,2 +1,2 @@']);
+  });
+
   it('scrolls the walked hunk into view', () => {
     const { container } = renderTab();
     fireEvent.keyDown(body(), { key: 'ArrowDown' });

@@ -47,6 +47,9 @@
 
 .diff-hunk { border-left: 2px solid transparent; cursor: text; }
 .diff-hunk.diff-walked { border-left-color: var(--accent); }
+.diff-hunk + .diff-hunk { margin-top: 6px; }
+
+.diff-hunk-header { padding: 2px 12px 2px 10px; color: var(--faint); font-size: 11px; user-select: none; }
 
 .diff-line, .diff-cell {
   display: flex; gap: 8px; padding: 0 12px 0 10px;
