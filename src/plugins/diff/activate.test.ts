@@ -100,6 +100,12 @@ describe('diff plugin activation', () => {
     expect(activation.intent(intent(initial, 'context', { path: 'a.txt' }), capabilities)).toBeNull();
     await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBe(23); });
     expect(lastPayload(updateTab).files[0].hunks[0].lines.length).toBeGreaterThan(initial.files[0].hunks[0].lines.length);
+    activation.intent(intent(initial, 'context', { path: 'a.txt', fullFile: true }), capabilities);
+    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBe(1_000_000); });
+    expect(lastPayload(updateTab).files[0].hunks[0].lines.filter((line) => line.kind !== 'removed')).toHaveLength(60);
+    activation.intent(intent(initial, 'context', { path: 'a.txt', fullFile: false }), capabilities);
+    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBeUndefined(); });
+    expect(lastPayload(updateTab).files[0].hunks[0].lines.length).toBe(initial.files[0].hunks[0].lines.length);
     expect(isJsonCompatible(lastPayload(updateTab))).toBe(true);
     activation.dispose?.();
   });

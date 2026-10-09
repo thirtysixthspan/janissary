@@ -11,6 +11,7 @@ import { LineCommentsProvider } from './LineCommentsProvider';
 import { ExpandContextControl } from './ExpandContextControl';
 import { canExpandFileContext } from './context-controls';
 import { gutterWidth } from './gutter-width';
+import { FullFileControl, isFullFileContext } from './FullFileControl';
 
 // One changed file: its header — the path, the rename it came from, its status, its add and delete
 // counts — and every hunk it holds. A deleted file's header is inert, because there is no file to
@@ -18,7 +19,7 @@ import { gutterWidth } from './gutter-width';
 //
 // `offset` is how many hunks the files above this one contribute to the walk's flat list, and a hunk
 // with no lines contributes none, which is what keeps a walked index pointing at a real hunk.
-export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onExpandContext }: {
+export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onExpandContext, onToggleFullFile }: {
   file: DiffFile;
   split: boolean;
   offset: number;
@@ -28,6 +29,7 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
   onOpenLine(line: { number: number; jump: number }): void;
   onOpenMedia(): void;
   onExpandContext?(): Promise<unknown>;
+  onToggleFullFile?(fullFile: boolean): Promise<unknown>;
 }) {
   let taken = 0;
   const spots = file.hunks.map((hunk) => (hunk.lines.length === 0 ? -1 : offset + taken++));
@@ -72,6 +74,13 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
           </button>
           {onExpandContext && !collapsed && canExpandFileContext(file) && (
             <ExpandContextControl pending={file.expandingContext === true} error={file.contextError} expand={onExpandContext} />
+          )}
+          {onToggleFullFile && !collapsed && !file.binary && !file.added && !file.deleted && file.hunks.length > 0 && (
+            <FullFileControl
+              expanded={isFullFileContext(file.contextLines)}
+              pending={file.expandingContext === true}
+              toggle={onToggleFullFile}
+            />
           )}
           <span className="diff-counts">
             <span className={`diff-status diff-status-${status.kind}`}>{status.label}</span>

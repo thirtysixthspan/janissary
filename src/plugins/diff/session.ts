@@ -115,6 +115,21 @@ export class DiffSession {
     void this.recompute();
   }
 
+  setFullFile(path: string, fullFile: boolean): void {
+    const file = this.payload.files.find((candidate) => candidate.path === path);
+    if (!file || file.binary || file.added || file.deleted || file.hunks.length === 0) {
+      this.capabilities.rejectRequest('Cannot expand context for a file outside the current text diff.');
+      return;
+    }
+    if (file.expandingContext) return;
+    if (fullFile) this.contexts.set(path, 1_000_000);
+    else this.contexts.delete(path);
+    this.revision++;
+    this.safely({ files: this.payload.files.map((candidate) => candidate.path === path
+      ? { ...candidate, expandingContext: true, contextError: '' } : candidate) });
+    void this.recompute();
+  }
+
   // Open a file at a line in an editor tab, through the same containment check the search tab's
   // `openMatch` makes: a path the diff never produced gets nothing.
   openFile(relPath: string, line: number): void {

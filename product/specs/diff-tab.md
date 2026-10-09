@@ -145,6 +145,8 @@ The control is disabled while a request is pending and disappears when no more c
 
 Expanded context remains during periodic refresh and is forgotten when the tab closes or changes directory. This is per-file context widening; it is separate from the file disclosure chevron and from opening a file in the editor.
 
+Tracked text-file entries also offer **Show full file**. It reveals every unchanged line in that changed file inside the same diff, retaining added and removed markings, line numbers, syntax highlighting, navigation, and unified comments. **Show condensed diff** returns to the initial three-line context. The control is disabled while the request is pending, and the current scroll position is restored when the full-file view arrives. Full-file context remains during refresh and is forgotten when the tab closes or changes directory.
+
 ### Empty and failure states
 
 - A directory outside a git repository shows **This directory is not a git repository**.

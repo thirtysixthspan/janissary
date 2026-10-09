@@ -57,6 +57,16 @@ describe('context expansion', () => {
     expect(await file(100)).toEqual(expanded);
   });
 
+  it('reads every line of a changed file when full-file context is requested', async () => {
+    change();
+    const expanded = await file(1_000_000);
+    const lines = expanded.hunks.flatMap((hunk) => hunk.lines).filter((line) => line.kind !== 'removed');
+    expect(lines).toHaveLength(80);
+    expect(lines[0]).toMatchObject({ number: 1, text: 'const value1 = 1;' });
+    expect(lines.at(-1)).toMatchObject({ number: 80, text: 'const value80 = 80;' });
+    expect(expanded.canExpandContext).toBe(false);
+  });
+
   it('uses literal pathspecs for names containing glob characters', async () => {
     change('a[1].ts');
     expect(await file(23, 'a[1].ts')).toMatchObject({ path: 'a[1].ts', contextLines: 23, additions: 2, deletions: 2 });
@@ -80,12 +90,14 @@ describe('context expansion', () => {
 });
 
 describe('context guards', () => {
-  it.each([null, [], {}, { path: '' }, { path: 1 }])('rejects an invalid expansion request: %j', (value) => {
+  it.each([null, [], {}, { path: '' }, { path: 1 }, { path: 'a.ts', fullFile: 'yes' }])('rejects an invalid expansion request: %j', (value) => {
     expect(isContextIntent(value)).toBe(false);
   });
 
   it('accepts a filename request and validates optional context metadata', () => {
     expect(isContextIntent({ path: 'a.ts' })).toBe(true);
+    expect(isContextIntent({ path: 'a.ts', fullFile: true })).toBe(true);
+    expect(isContextIntent({ path: 'a.ts', fullFile: false })).toBe(true);
     const file = { path: 'a.ts', additions: 0, deletions: 0, hunks: [], contextLines: 23, canExpandContext: true };
     const payload = { root: '', state: 'done', message: '', split: false, files: [file] };
     expect(isDiffPayload(payload)).toBe(true);

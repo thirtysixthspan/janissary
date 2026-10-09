@@ -100,6 +100,13 @@
 }
 .diff-context-control button:disabled, .diff-line-comment button:disabled { opacity: 0.5; cursor: default; }
 .diff-context-control [role="alert"] { color: var(--error); }
+.diff-full-file-control { display: flex; align-items: baseline; gap: 8px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.diff-full-file-control button {
+  font: inherit; color: var(--fg); background: var(--bg-soft);
+  border: 1px solid var(--border); border-radius: 3px; cursor: pointer; padding: 1px 6px;
+}
+.diff-full-file-control button:disabled { opacity: 0.5; cursor: default; }
+.diff-full-file-control [role="alert"] { color: var(--error); }
 .diff-comment-add {
   align-self: flex-start; flex: none; margin-left: auto; padding: 0 2px;
   font: inherit; border: none; color: var(--muted); background: transparent; cursor: pointer; opacity: 0.4; user-select: none;

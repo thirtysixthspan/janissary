@@ -262,7 +262,28 @@ describe('context controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show more context' }));
     await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull(); });
     update(payload({ files: [file({ contextError: 'Git failed' })] }));
-    expect(screen.getByRole('alert').textContent).toContain('Git failed');
+    expect(screen.getAllByRole('alert')[0].textContent).toContain('Git failed');
+  });
+
+  it('shows a complete file in the diff and restores the condensed view without losing the scroll position', async () => {
+    const { requests, container, update } = show();
+    const body = container.querySelector<HTMLElement>('.diff-body')!;
+    body.scrollTop = 120;
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Show full file' }));
+      await Promise.resolve();
+    });
+    expect(requests).toHaveBeenCalledWith('context', { path: 'a.ts', fullFile: true });
+    const expanded = file({ contextLines: 1_000_000, expandingContext: false, canExpandContext: false });
+    expanded.hunks[0].lines.push({ kind: 'context', number: 5, oldNumber: 5, jump: 5, text: 'const expanded = 5;' });
+    update(payload({ files: [expanded] }));
+    expect(screen.getByRole('button', { name: 'Show condensed diff' })).toBeTruthy();
+    expect(body.scrollTop).toBe(120);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Show condensed diff' }));
+      await Promise.resolve();
+    });
+    expect(requests).toHaveBeenNthCalledWith(2, 'context', { path: 'a.ts', fullFile: false });
   });
 
   it.each([{ added: true }, { deleted: true }, { binary: true }, { canExpandContext: false }])

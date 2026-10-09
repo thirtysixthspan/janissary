@@ -98,7 +98,8 @@ export function activate(): TabPluginActivation {
       context: {
         payload: isContextIntent,
         run: (_tab, payload: ContextIntent, capabilities) => {
-          sessionFor(capabilities).expandContext(payload.path);
+          if (payload.fullFile === undefined) sessionFor(capabilities).expandContext(payload.path);
+          else sessionFor(capabilities).setFullFile(payload.path, payload.fullFile);
           return null;
         },
       },

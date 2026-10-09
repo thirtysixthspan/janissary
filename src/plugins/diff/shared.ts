@@ -65,7 +65,7 @@ export type RefreshIntent = Record<string, never>;
 
 // The layout the user chose, which becomes the layout every later diff tab opens with.
 export type LayoutIntent = { split: boolean };
-export type ContextIntent = { path: string };
+export type ContextIntent = { path: string; fullFile?: boolean };
 
 // Open a file at a line in an editor tab. `path` is project-relative; `line` is the line's payload
 // record's own `jump`.
@@ -132,7 +132,8 @@ export function isLayoutIntent(value: unknown): value is LayoutIntent {
 }
 
 export function isContextIntent(value: unknown): value is ContextIntent {
-  return isRecord(value) && typeof value.path === 'string' && value.path.length > 0;
+  return isRecord(value) && typeof value.path === 'string' && value.path.length > 0
+    && (value.fullFile === undefined || typeof value.fullFile === 'boolean');
 }
 
 export function isOpenIntent(value: unknown): value is OpenIntent {

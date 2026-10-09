@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useLayoutEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlusMinus } from '@fortawesome/free-solid-svg-icons';
 import type { DiffPayload } from '@shared/plugins/diff/shared';
@@ -23,6 +23,7 @@ export function DiffTab({
   const split = payload.split;
   const setLayout = (next: boolean) => { void capabilities.intent('layout', { split: next }); };
   const files = payload.files;
+  const fullFileScroll = useRef<number | null>(null);
 
   const refresh = useDiffRefresh(
     useCallback(() => capabilities.intent('refresh', {}), [capabilities]),
@@ -38,6 +39,11 @@ export function DiffTab({
   const openMedia = useCallback((path: string) => {
     void capabilities.intent('open-media', { path });
   }, [capabilities]);
+  useLayoutEffect(() => {
+    if (fullFileScroll.current === null || files.some((file) => file.expandingContext) || !walk.listRef.current) return;
+    walk.listRef.current.scrollTop = fullFileScroll.current;
+    fullFileScroll.current = null;
+  }, [files, walk.listRef]);
 
   const onKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
@@ -97,6 +103,10 @@ export function DiffTab({
             onOpenLine={(line) => openLine(file.path, line.jump)}
             onOpenMedia={() => openMedia(file.path)}
             onExpandContext={() => capabilities.intent('context', { path: file.path })}
+            onToggleFullFile={(fullFile) => {
+              fullFileScroll.current = walk.listRef.current?.scrollTop ?? 0;
+              return capabilities.intent('context', { path: file.path, fullFile });
+            }}
           />
         ))}
       </div>
