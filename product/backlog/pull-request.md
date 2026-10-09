@@ -10,6 +10,4 @@
 
 * Full-file expansion — Provide a way to reveal all unchanged lines within a changed file rather than limiting the display to the original diff context. When activated, render the complete file with existing additions, deletions, and modifications still clearly highlighted. Allow users to navigate to and comment on unchanged lines that were not originally visible. Preserve the user's current scroll position as closely as possible, and provide a way to return to the condensed diff. Do not confuse this functionality with opening a separate, read-only file viewer.
 
-File presentation and navigation
-
-* Keyboard file navigation — Provide keyboard shortcuts for moving between files without using the mouse. Follow GitHub's J and K convention for next and previous file navigation where appropriate. Keyboard navigation must respect filters and current navigation mode. Do not trigger file-navigation shortcuts while focus is inside a text input, comment editor, dropdown, or other editable element. Provide discoverability through tooltips or a keyboard-shortcut help menu.
+* remove the crossout of removed text.
