@@ -1,7 +1,8 @@
 /* The diff tab's own look: a framed, scrolling body of file entries, each a header and its hunks,
-   rendered in the monospace the editor uses so a change reads as code. The added and removed rows
-   follow the editor's own inline suggest diff — green from --success, red from --error, the removed
-   line struck through — so the two look like one application. */
+   rendered in the monospace the editor uses so a change reads as code. A line longer than the body
+   wraps to its width rather than scrolling beside it. The added and removed rows follow the editor's
+   own inline suggest diff — green from --success, red from --error, the removed line struck through —
+   so the two look like one application. */
 .diff-tab { gap: 6px; }
 
 .diff-root { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
@@ -47,13 +48,15 @@
 .diff-hunk.diff-walked { border-left-color: var(--accent); }
 
 .diff-line, .diff-cell {
-  display: flex; gap: 8px; padding: 0 12px 0 10px; white-space: pre; overflow-x: auto;
+  display: flex; gap: 8px; padding: 0 12px 0 10px;
 }
 .diff-line.added, .diff-cell.added { background: color-mix(in srgb, var(--success) 15%, transparent); }
 .diff-line.removed, .diff-cell.removed { background: color-mix(in srgb, var(--error) 15%, transparent); }
 .diff-line.removed .diff-text, .diff-cell.removed .diff-text { text-decoration: line-through; }
 
 .diff-number { color: var(--faint); flex-shrink: 0; min-width: 3ch; text-align: right; user-select: none; }
+
+.diff-text { min-width: 0; white-space: pre-wrap; overflow-wrap: break-word; }
 
 .diff-split-row { display: flex; }
 .diff-split-row .diff-cell { flex: 1; min-width: 0; }

@@ -36,7 +36,8 @@ tab — rather than an editor tab.
 
 Every hunk is expanded, and each hunk line carries its own file line number: the new-side number for an
 added or context line, the old-side number for a removed one. There is no cap: a change of any size is
-shown whole.
+shown whole. A line longer than the body's width wraps at word boundaries onto as many rows as it needs,
+so the whole line reads without a scrollbar and a wrapped line's number stays beside its first row.
 
 The tab recomputes on its own every second, so the change set stays live while files are edited around
 it, and the header's **Refresh** button recomputes on demand. Re-running the command recomputes as well.
