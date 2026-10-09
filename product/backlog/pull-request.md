@@ -7,3 +7,5 @@
 * diff views of very large files should be shown collapsed, with a note of the filesize cap. 
 * when there are no changes, there should be no flickering of the no changes message as if the content is being redrawn.
 * add whitespace separation between file sections
+* lines with additions should have a light green background and lines with subtractions should have a light red background.
+* when a line only has a partial modification, the modification should be especially highlighted.
