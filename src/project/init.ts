@@ -38,10 +38,34 @@ function installConfigDirectory(source: string, destination: string): void {
   }
 }
 
+// The command rail the launcher tab shows when a project has configured it, written on `janus init`
+// and never overwritten. Every entry is a command the application already answers to, so a project
+// that never edits the file still gets a working rail.
+export const DEFAULT_LAUNCHER_JSON = [
+  { icon: 'faTerminal', label: 'New shell', command: 'zsh' },
+  { icon: 'faRobot', label: 'New agent', command: 'harness' },
+  { icon: 'faFolderOpen', label: 'File navigator', command: 'files' },
+  { icon: 'faBell', label: 'Notifications', command: 'notifications' },
+  { icon: 'faClock', label: 'Schedules', command: 'schedules' },
+  { icon: 'faPlug', label: 'Sessions', command: 'sessions' },
+  { icon: 'faComments', label: 'Conversations', command: 'conversations' },
+  { icon: 'faMagnifyingGlass', label: 'Search tab', command: 'search' },
+  { icon: 'faListCheck', label: 'Tasks', command: 'tasks' },
+  { icon: 'faClockRotateLeft', label: 'History', command: 'hist' },
+];
+
+// The files `janus init` writes into a project's `.janissary/` on first use, none of them overwritten
+// once they exist — the same rule the backlog files follow, because a user's edits to either would
+// otherwise be silently discarded by a later re-init.
+function stateFiles(): { name: string; content: string }[] {
+  return [{ name: 'launcher.json', content: `${JSON.stringify(DEFAULT_LAUNCHER_JSON, null, 2)}\n` }];
+}
+
 // `janus init [<project-dir>]`: create the standard `ai/`/`product/` scaffold recursively, seed
-// `product/backlog/` with the standard backlog files, and drop a `.gitkeep` in every directory
-// that is still empty afterward so git tracks it. Idempotent — safe to run against a directory
-// that already has some or all of the scaffold in place; never overwrites an existing backlog file.
+// `product/backlog/` with the standard backlog files, seed `.janissary/launcher.json` with the default
+// command rail, and drop a `.gitkeep` in every directory that is still empty afterward so git tracks
+// it. Idempotent — safe to run against a directory that already has some or all of the scaffold in
+// place; never overwrites an existing backlog file or launcher file.
 export function scaffoldProject(projectDir: string): string[] {
   for (const dir of SCAFFOLD_DIRS) {
     mkdirSync(path.join(projectDir, dir), { recursive: true });
@@ -51,6 +75,12 @@ export function scaffoldProject(projectDir: string): string[] {
     if (!existsSync(filePath)) {
       writeFileSync(filePath, backlogFileContent(name));
     }
+  }
+  const stateDirectory = path.join(projectDir, '.janissary');
+  mkdirSync(stateDirectory, { recursive: true });
+  for (const file of stateFiles()) {
+    const filePath = path.join(stateDirectory, file.name);
+    if (!existsSync(filePath)) writeFileSync(filePath, file.content);
   }
   for (const configDir of CONFIG_DIRS) {
     installConfigDirectory(

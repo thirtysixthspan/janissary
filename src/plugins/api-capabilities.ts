@@ -27,6 +27,7 @@ export type TabPluginCapabilityName =
   | 'readSettings'
   | 'saveSettings'
   | 'isRecordingLive'
+  | 'tabActivity'
   | 'originTab'
   | 'dispatchLineWithOutput'
   | 'completeLine'
@@ -65,6 +66,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   readSettings: true,
   saveSettings: true,
   isRecordingLive: true,
+  tabActivity: true,
   originTab: true,
   dispatchLineWithOutput: true,
   completeLine: true,

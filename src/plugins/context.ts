@@ -1,46 +1,23 @@
 import type { Managers } from '../managers.js';
-import { getConfig } from '../config.js';
 import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
-import { didOsOpen } from '../openers/os-open.js';
 import {
   TAB_PLUGIN_CAPABILITY_NAMES,
   TabPluginRejection,
   type TabPluginActivation,
   type TabPluginCapabilityName,
   type TabPluginDeclaration,
-  type TabPluginNotificationTopic,
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
 import type { HandlerDeadline } from './guard.js';
-import { projectFilesFor } from '../project/files.js';
-import { isInsideRoot } from './files.js';
-import { readPluginSettings, savePluginSettings } from './settings.js';
-import { liveRecordingPaths } from './live-recordings.js';
-import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 import { declaredResources } from './declared-resources.js';
 import { lineCapabilities } from './line-capabilities.js';
 import { acpCapabilities } from './acp-capabilities.js';
+import { fileCapabilities } from './file-capabilities.js';
 import { launchCapabilities, type DeferredPluginCall } from './launch-tab.js';
 import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
-
-export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
-  if (typeof value === 'number') return Number.isFinite(value);
-  if (typeof value !== 'object') return false;
-  if (seen.has(value)) return false;
-  seen.add(value);
-  const valid = Array.isArray(value)
-    ? value.every((item) => isJsonCompatible(item, seen))
-    : Object.values(value).every((item) => isJsonCompatible(item, seen));
-  seen.delete(value);
-  return valid;
-}
-
-function isSettingsObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) && isJsonCompatible(value);
-}
+import { isJsonCompatible } from './json-compatible.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -72,18 +49,6 @@ function validateTabValue(
   if (value.title !== undefined && !value.title.trim()) throw new Error('produced an empty tab title');
   if (!activation.isPayload(value.payload) || !isJsonCompatible(value.payload)) {
     throw new Error('produced an invalid tab payload');
-  }
-}
-
-// Reading or acting on a topic the manifest never named reaches past the declaration exactly as
-// using an undeclared capability does, so it fails the same way: an ordinary error across the
-// failure boundary rather than a rejection the caller could have avoided.
-function requireDeclaredTopic(
-  declaration: TabPluginDeclaration,
-  topic: TabPluginNotificationTopic,
-): void {
-  if (!(declaration.notifications ?? []).includes(topic)) {
-    throw new Error(`used topic "${topic}" without declaring it`);
   }
 }
 
@@ -197,52 +162,11 @@ export function createPluginContext(
       const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
       if (tab) tab.pageSnapshot = { text, capturedAt: Date.now() };
     },
-    openClaimedFiles: (target) => {
-      if (!isEnabled()) return;
-      openRequests.push(target);
-    },
-    // The same gitignore-aware file list the `projectFiles` RPC already serves to Quick Open, so a
-    // plugin that scans the repository cannot drift from the set Quick Open searches. The root comes
-    // back alongside the paths because a relative path is not a path a plugin can open without it.
-    projectFileList: () => {
-      if (!isEnabled()) return Promise.resolve({ root: '', paths: [] });
-      return projectFilesFor(managers);
-    },
-    // Opens a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline —
-    // so the tab is de-duplicated, the line is centered, and the file is served by the same
-    // authenticated `/open/<id>` allow-list as any other editor open. Deliberately not
-    // `openClaimedFiles`, which is pinned to the plugin's own extensions and cannot express a line.
-    //
-    // A path outside the launch directory is refused. The capability is this plugin's whole reach
-    // over the filesystem, so the boundary belongs here rather than in each plugin that asks: a
-    // plugin holding one could otherwise name any path on the machine and have it opened and served.
-    openInEditor: (absPath, line) => {
-      if (!isEnabled()) return;
-      if (!isInsideRoot(managers.tab.launchDir, absPath)) return;
-      managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
-    },
-    topicData: (topic) => {
-      requireDeclaredTopic(declaration, topic);
-      return isEnabled() ? readTopicData(managers, topic) : emptyTopicData(topic);
-    },
-    topicAction: (action) => {
-      requireDeclaredTopic(declaration, action.topic);
-      if (isEnabled()) runTopicAction(managers, action);
-    },
-    configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
-    openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),
-    readSettings: () => isEnabled() ? readPluginSettings(declaration.id) : {},
-    saveSettings: (settings) => {
-      if (!isSettingsObject(settings)) throw new Error('saved settings that are not a JSON object');
-      return isEnabled() && savePluginSettings(declaration.id, settings);
-    },
-    // True only while an open tab's recorder is still writing this very file. The host owns the
-    // recorders, so the host is what answers; a plugin reaches no tab list of its own to ask.
-    isRecordingLive: (absPath) => isEnabled() && liveRecordingPaths(managers).has(absPath),
     // The four a plugin tab needs to be a place a line can be typed and a process can be checked on,
     // moved out whole because they depend on nothing here beyond what they are handed.
     ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     ...acpCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
+    ...fileCapabilities({ managers, declaration, origin, isEnabled, openRequests }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

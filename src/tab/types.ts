@@ -261,6 +261,16 @@ export type TabRuntime = {
   busy: boolean;
   context: string[];
   queue: string[];
+  // When content last arrived in this tab's transcript, in epoch milliseconds. A tab's activity is
+  // its own output, so this is written wherever the transcript grows rather than read from the log:
+  // a `LogEntry` carries no timestamp, and adding one would touch every producer, the wire
+  // projection, and every persisted shape for a value only a reader wants. In-memory only.
+  lastActivity?: number;
+  // Whether this harness tab is currently sitting at a permission gate. A screen state, so it is
+  // durable only while the app is observing the screen: `src/harness/busy-status.ts` writes it from
+  // each capture, and a remote harness's transition says only "idle and badged" and leaves it alone.
+  // In-memory only.
+  gateOpen?: boolean;
   // A harness tab's pending idle escalation, owned by `src/harness/idle-notification.ts`.
   idleEscalation?: NodeJS.Timeout;
   // A plugin tab's last host-state delivery, fingerprinted, owned by `src/plugins/host-state.ts`.

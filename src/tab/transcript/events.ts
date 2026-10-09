@@ -40,6 +40,9 @@ export function updateRunningEntry(
       if (tab.runtime?.acpEntries?.has(previous)) tab.runtime.acpEntries.add(log[index]);
     }
     tab.log = log;
+    // Output landing in the tab is the tab doing something, so it moves activity whether or not the
+    // entry it wrote into existed — a stream whose match found nothing still wrote.
+    markActive(tabs, label);
     if (!running) {
       hooks.finalize?.(tab);
       hooks.markUnread?.(label);
@@ -123,6 +126,14 @@ export function finishRunningTab(
   });
 }
 
+// Stamp a tab's activity at now. A `LogEntry` carries no timestamp and the answer "is this tab doing
+// anything" is wanted per tab rather than per entry, so it lives on the tab's runtime record and is
+// written wherever the transcript grows. Minute-rounded by its readers, not here.
+export function markActive(tabs: Tab[], label: string): void {
+  const runtime = runtimeFor(tabs, label);
+  if (runtime) runtime.lastActivity = Date.now();
+}
+
 export function appendTab(
   tabs: Tab[], label: string, entry: LogEntry,
   capLog: (log: LogEntry[]) => LogEntry[],
@@ -133,6 +144,7 @@ export function appendTab(
   const trimmed = appendEntry(tab, entry, capLog);
   if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
   messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry, tab });
+  markActive(tabs, label);
   markUnread(label);
   messageBus.emit('state', { type: 'dirty' });
 }
@@ -141,6 +153,7 @@ export function clearTranscriptTab(tabs: Tab[], label: string): void {
   const tab = tabs.find((t) => t.label === label);
   if (!tab) return;
   clearLog(tab);
+  markActive(tabs, label);
   messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
   messageBus.emit('state', { type: 'dirty' });
 }

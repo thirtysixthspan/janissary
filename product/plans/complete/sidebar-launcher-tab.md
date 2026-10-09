@@ -1,0 +1,163 @@
+# Sidebar launcher tab
+
+**Complexity: 7/10** — a first-of-its-kind docked list plugin with a config file read at two paths, plus a new host capability and an ACP session owning cross-tab reads, where the correctness work is in the sort tiers and the summarizer's flush/lifecycle rules rather than in the amount of code.
+
+## Goal
+
+A single dockable **launcher** tab that acts as the application's sidebar home: a rail of launch commands with icons, and a live list of every open center tab sorted by what needs attention, so a user can reach any feature or any working tab without hunting through the center strip. Clicking a command runs it; clicking a tab focuses it.
+
+The reference shape is the Paseo sidebar (<https://paseo.sh/>): a short stack of named actions at the top, then the open workspaces underneath grouped by what they are doing right now.
+
+There are two halves:
+
+1. **Commands.** A vertical list of application commands, each a row with an icon and a label. Clicking a row launches the feature that command names, the same way typing it would.
+2. **Tabs.** A vertical list of every open center-strip tab, sorted into five tiers by what needs attention — needs-input, unread, active, busy-inactive, idle-inactive. Clicking a row focuses that tab.
+
+Each tab row also carries a short **status summary** written by an ACP session, in the same spirit as a monitor persona's `[SUMMARY]:` recap — a paragraph saying what that tab is doing, so the list is scannable rather than a bare list of names.
+
+## Design decisions
+
+**The launcher is a tab plugin.** A bundled plugin under `src/plugins/`, with a client entry under `web/src/plugins/`, is the only mechanism that produces a dockable, live, in-memory view tab. It follows the shape of `schedules` and `sessions`: it opens on no file (claims no file extensions), is reached only by its own command, and reads its command's dock argument with the shared `parseDockArgument` grammar. "Docks into the sidebar" therefore needs no new docking rule — the launcher is one more dockable kind sharing the existing mechanism, and the one-tab-per-kind-per-side rule displaces a previous launcher rather than stacking one.
+
+**Its command is `launcher`, and it opens docked left.** `launcher` opens or focuses the singleton tab docked into the left sidebar. `launcher right` puts it on the right; a bare `launcher` when it is already open refocuses it. The singleton is addressed by one stable instance key, so a second invocation focuses the existing tab instead of opening a second. Its label is `launcher`.
+
+**Clicking a command dispatches the application command line.** The row does not reimplement any feature's placement rules: it dispatches the exact line from `launcher.json` (`notifications left`, `files`, `sessions right`, …) from the launcher tab, exactly as if typed. So `notifications left` still docks right and a feature's own reply still lands in the tab that asked.
+
+**The launcher hosts the application's command bar.** Because it dispatches commands, it declares `hostsCommandBar` and renders the application's own bar beneath its two lists, so a dispatched command's answer or error is visible in the launcher itself, and a user can type any command straight into the rail. This is the published-bar path `tab-plugins.md` describes, not a second textarea.
+
+**The tab list is every center-strip tab, and nothing else.** Docked tabs are omitted: a docked tab is never the active tab, and cannot be focused from here, so listing it would offer a click that cannot do what the list promises. Clicking a center tab's row focuses it through the existing `setActiveTab` RPC the center strip uses — which also starts the ordinary unread dwell, so a row read for three seconds loses its badge exactly as the strip's own.
+
+**The rows are built on the host, not on the client — the plan's original claim that the client already holds this state is wrong and is corrected here.** A plugin body receives only its own payload and its capabilities; it never sees `App.tsx`'s `TabView[]`, because a plugin must not read the websocket client or any host state. So the host builds the rows and republishes the launcher's payload, and the client renders what it is given. This costs two additions to the published contract rather than zero, and is the reason the plan carries them.
+
+**The `tabActivity` capability reads host tab state.** It hands a declaring plugin, per open tab, its label, display title, view kind, dock side, pane, busy and unread flags, whether it is holding a prompt or question, when it last had any activity, its working directory, its remote host when it has one, its last command line, its transcript length, and a size-capped recent transcript tail. It is a pull: the summarizer reads it at its own flush cadence rather than being handed a copy on every mutation, and the activation reads it once when the tab opens. It reads from `managers.tab.tabs` at `src/plugins/context.ts` beside `topicData` and `originTab`.
+
+**A `tabs` notification topic republishes the payload as the rows move.** The rows change on essentially every application mutation — a transcript append moves a tab's last activity, a focus changes the active row, a badge raises a tier — and `state: dirty` is the only signal that covers all of it, so the topic subscribes to it, as `schedules` and `sessions` do to their own named channels. Delivering on every raw mutation would put a payload update and a broadcast behind every keystroke, which is precisely what `src/plugins/host-state.ts` documents and avoids by fingerprinting. So the topic's rows carry **last activity rounded down to the minute**, and the launcher's `notify` handler drops any republish whose rows are unchanged. Two appends inside one minute therefore produce identical rows and no second broadcast, while the row still reads "4m ago", because a minute-resolution rendering cannot tell the difference. The launcher is the only subscriber, the dispatcher already skips a plugin with no open tab, and one extra self-terminating broadcast per real change is the rate.
+
+**A `tabs` topic action focuses a row.** The plugin client reaches the server only through intents, so a row's click goes intent → `topicAction({ topic: 'tabs', action: 'focus', label })` → `setActiveTab`, the same route the center strip's own click takes. It is refused for a label with no open tab, which is the same authorisation rule `sessions.focus` follows — checked against the manager's own current rows rather than against a payload the host remembers having delivered — and it is strictly narrower than the `dispatchLineWithOutput` grant the launcher already declares, whose command table contains `close <name>`.
+
+**Last activity is a runtime stamp, not a transcript field.** A tab's activity is its own output, so it is written wherever the transcript grows — `appendTab`, `updateRunningEntry`, and `clearTranscriptTab` in `src/tab/transcript/events.ts`, which is the single writer for each — onto `TabRuntime.lastActivity`. This corrects the plan's earlier claim that it is "the timestamp of the last transcript entry": a `LogEntry` carries no timestamp, and adding one would have touched every producer, the wire projection, and every persisted shape for a value only a reader wants. The same value is minute-rounded in the payload and read exact by the summarizer as its change-detection cursor.
+
+**A gate is remembered because nothing else can.** Whether a harness is sitting at a permission gate is a screen state, so it survives only if the observation writes it down. `busyStatusHandler` in `src/harness/busy-status.ts` records it on `TabRuntime.gateOpen` from each capture it already holds, and `needsInput` reads that beside `questions.pendingFor`. A remote harness's transition arrives as a bare busy/unread pair, so a remote gate reads as idle-unread and not as needs-input — a documented limitation of the tier, not an oversight.
+
+**The tab list is sorted into five tiers, and each tier is labelled.** In order: needs-input, unread, active, busy-inactive, idle-inactive. Tabs keep their existing center-strip order inside a tier, so a row never jumps within a tier. A small muted label sits above each tier group. The two halves of the rail carry no section headings of their own.
+
+The **needs-input** tier is the state the launcher exists to surface, and it sits above unread, active, busy, and idle alike, the ordering Paseo uses (`needs_input → failed → attention → running → done`, `packages/protocol/src/agent-state-bucket.ts`). Without it, a blocked tab reads as busy, which is the same row chrome a working tab gets, and the one state worth interrupting for looks like the ordinary one. A tab ranks needs-input when it is holding a prompt or question *right now*: a pending agent question (`TabView.pendingQuestion`, `src/protocol/tab.ts`), or a harness blocked on a permission prompt — the state that already stops the tab's busy dot and badges it unread (`product/specs/harness.md` § Busy/ready status). Both are already on the wire, so the tier is a fifth bucket plus one field in the `tabActivity` capability's payload.
+
+Last activity is the timestamp of the tab's last transcript entry — the same position the summarizer already tracks for its change-detection cursor, so one number covers both the row's "last active Xm ago" and "has anything new arrived". No new `Tab` field and no new writer on every mutation is needed.
+
+**Every tab row shows the same status chrome the strip shows, plus its time:** the tab's dot color, a busy indicator, the unread flag when the server has raised one, and how long ago the tab was last active — since the sort is by status, the badge is what tells the reader why a row is where it is.
+
+**Recency is exposed as data, not as a re-sort.** The relative time is shown on every row and re-resolves as the interval coarsens, the way a Paseo row's timestamp resolves from minutes to hours as it ages (`use-time-ago.ts`). The rows themselves stay in their stable tier order rather than being re-sorted most-recently-used-first: VS Code closed MRU *sorting* of editor tabs as not-planned (`microsoft/vscode#242846`, "this could lead to some very ugly flickering"), and the number the user actually wants — which tab was I just on — is answered by the timestamp on the row, not by the list order. No previous/next recency cycle is included in this version.
+
+**The summary is one paragraph per tab row.** It is capped at three lines of the row's width and ends in an ellipsis when longer, expanding to as many as eight lines while the pointer is over the row. A row whose summary has not arrived, or whose summarizer cannot connect, shows no summary line at all — the launcher otherwise works normally.
+
+**Hovering a tab row opens a small card, the way the sidebar's neighbours already preview.** It carries what the row itself has no width for: the tab's display name and label, its working directory, its remote host when it has one, and the last command line it ran — the same fields a Paseo row's hover card shows (`workspace-hover-card.tsx`: branch, path, host, PR badge, diff stat) and that Conductor added in 0.44.0 ("hover any workspace to see metadata and get easy access to next actions"). Every one of those fields already arrives in the `tabActivity` snapshot, so the card is client-rendered from data the capability already returns and adds no host state. It is hover-only chrome: it opens on pointer-over and closes on pointer-out, holds no state, and never appears on touch or keyboard focus alone.
+
+**The command list is user-configurable in `.janissary/launcher.json`.** One array, each entry an object with an `icon`, a `label`, and a `command`:
+
+```json
+[
+  { "icon": "faTerminal", "label": "New shell", "command": "zsh" },
+  { "icon": "faBell", "label": "Notifications", "command": "notifications left" }
+]
+```
+
+`janus init` writes the file, idempotently, and never overwrites one that already exists. A `~/.janissary/launcher.json` in the user's home directory **replaces** the project file wholesale when it exists. An absent file — or one that is invalid JSON, unreadable, or holds a malformed entry — falls back to a built-in default command set, and the launcher reports one line to the notifications feed naming the file and what was wrong with it, leaving the file on disk untouched. An icon named in the file that is not a real Font Awesome name is drawn as a neutral fallback glyph with its own notifications-feed line; the command it belongs to still runs. Because an empty array is treated as no configuration at all rather than as a choice to show nothing, an empty file also yields the default set.
+
+**The launcher's Configure button opens the file it will read.** It sits in the launcher's own plugin header, beside the application's dock control, and opens whichever file is currently in effect — the home override when one exists, otherwise the project's — in a normal editor tab, so what it opens is what it reads back.
+
+**Keyboard navigation is arrows plus Enter.** Arrow keys move the selection within the focused list and Enter activates the highlighted row, matching the sessions and schedules lists the sidebar already hosts. Keyboard focus arriving at the docked launcher lands on the command list first, since it comes first in the rail.
+
+**The summarizer is a new server-side ACP session owned by the launcher**, driven by a shipped persona at `ai/personas/launcher/summarizer.md`, and it is tool-less by default exactly as a monitor's is. It is fed, per open center tab, both a capped status snapshot (the tab's label, view kind, busy and unread state, how long since its last activity, and its last command line or last transcript line) and a size-capped recent transcript tail — the two together, so a summary can say both that a tab is busy and what it is busy doing. It runs on a fixed 30-second interval, mirroring the monitor's flush cycle, plus once when the launcher tab opens. Nothing is prompted when no tab's content has changed since the previous flush, and only one prompt is in flight at a time.
+
+**The summarizer's lifecycle follows the monitor's.** It starts when the launcher tab opens and stops when the launcher closes, and a reply arriving after its session was replaced or its launcher closed is ignored: it updates nothing, restarts nothing, and writes no line.
+
+## What already exists (reuse, don't rebuild)
+
+| Piece | Where |
+|---|---|
+| Bundled dockable-list plugin pattern | `src/plugins/sessions/`, `src/plugins/schedules/` |
+| `defineDockableList` (command + notify wiring) | `src/plugins/define-list-tab.ts` |
+| `parseDockArgument` (the `[left|right]` grammar) | `src/plugins/dock-argument.ts` |
+| Plugin manifest type, capability set, the v2 version rule | `src/plugins/api.ts`, `src/plugins/api-capabilities.ts` |
+| Client plugin registry (lazy chunk) | `web/src/plugins/registry.tsx` |
+| Docked plugin body inside a sidebar, and the shared metadata bar | `web/src/plugins/DockedPluginBody.tsx`, `web/src/plugins/PluginActionsHeader.tsx` |
+| `PluginActionsHeader` / `useListSelection` for a list-shaped docked view | `web/src/plugins/api.ts` |
+| Client tab state, `TabView[]` | `web/src/App.tsx` (`useState<TabView[]>`) |
+| `hasUnread`, busy, dock on `TabView` | `src/protocol/tab.ts` |
+| `setActiveTab` RPC (focus a center tab) | `src/protocol/core-rpc.ts` |
+| Persona file format (directive, tools line, body) | `src/personas.ts`, `src/persona-parsing.ts` |
+| Tool-less ACP session shape | `src/monitor/acp.ts` |
+| `[SUMMARY]` marker parsing | `src/monitor/reply-format.ts` |
+| Icon registry | `web/src/shared/icons.ts` |
+| Config read/write, atomic replace, invalid-JSON warning policy | `src/config.ts` |
+| Project scaffold written by `janus init` | `src/project/init.ts` |
+| Per-tab transcript, `LogEntry` | `src/tab/types.ts` |
+
+## Proposed changes
+
+- `src/plugins/launcher/` — the whole server side: the manifest (command `launcher`, no file extensions, `openOrFocusTab`, `updateTab`, `dockTab`, `dispatchLineWithOutput`, the new `tabActivity` capability, `reportFailure`), the activation that reads the effective `launcher.json`, builds the payload, and republishes it whenever the `tabs` topic fires and the rows have actually moved, plus the Summarizer that owns the single tool-less ACP session. The summarizer lives here rather than in a top-level `src/launcher/`, because the launcher plugin is its only owner and no other feature is expected to want one — which is only possible because the one thing it needs from outside itself, every open tab's activity, arrives through a capability rather than through an import.
+- A new **`tabActivity` capability** on the v2 tab-plugin contract: a pull over the host's open tabs returning each one's label, title, view kind, dock, pane, busy, unread, needs-input, last activity, working directory, remote host, last command line, transcript length, and a capped recent transcript tail. It is additive, so `TAB_PLUGIN_API_VERSION` stays at 2.
+- A new **`tabs` notification topic**, its rows the launcher's display rows with last activity minute-rounded, delivered on `state: dirty` and skipped when the rows have not moved; plus a **`focus` action** on that topic, refused for a label with no open tab. Both are data additions to `src/plugins/topics.ts` and `api-topics.ts`.
+- A **lastActivity stamp on `TabRuntime`**, written wherever the transcript grows in `src/tab/transcript/events.ts`, and a **gateOpen stamp** written by the capture handler in `src/harness/busy-status.ts`. Both are in-memory only and are the two tab facts the tier and the row need that nothing currently records.
+- `web/src/plugins/launcher/` — the client entry: the command rail, the five-tier tab list with per-row summaries, timestamps, and hover cards, the Configure button, the borrowed command bar, keyboard navigation, and the CSS the plugin owns. The hover card is client-rendered from the `tabActivity` snapshot the plugin already receives for its rows, so it carries no host state of its own.
+- `src/project/init.ts` — write `.janissary/launcher.json` with the default command set, never overwriting an existing file.
+- `ai/personas/launcher/summarizer.md`, parsed by the launcher's own copy of the persona-file format rather than through `src/personas.ts`, which the plugin boundary blocks.
+
+The project root the persona file and `launcher.json` are read against comes from `originTab().root` (`src/plugins/api.ts:302`), so the plugin never receives a path it has to trust from a client.
+
+Last activity is derived per tab on the host and carried in the same `tabActivity` snapshot as `busy` and `hasUnread`, so the client never computes a timestamp from anything but a number the server measured.
+
+### How the summarizer works
+
+**One tool-less ACP session, prompted every 30 seconds** plus once when the launcher opens. Each flush assembles one prompt from every open center tab — the tab's label and view kind, whether it is busy or badged, how long since its last activity, its last command line or last transcript line, and a size-capped recent transcript tail — and asks for one paragraph per tab in reply.
+
+The prompt primes the session once, at spawn, with the persona file's body plus an instruction to answer in a fixed shape: one line per tab, each beginning with a marker carrying that tab's label and nothing else, then the paragraph. The reply is parsed by the same marker-capture approach `src/monitor/reply-format.ts` uses for `[SUGGESTION]` and `[SUMMARY]`, keyed on the label rather than on a fixed marker word, so a line naming a tab that no longer exists is dropped and a reply matching nothing delivers nothing at all. A tab named in the prompt but absent from the reply keeps whatever summary it already had, and a tab with no summary yet never gets a placeholder.
+
+**Nothing is prompted when nothing changed.** The summarizer tracks, per tab, the position in its transcript it has already fed. When no tab has produced new content since the previous flush, no prompt is sent — the same emptiness check `src/monitor/live-monitors.ts` makes before a flush — and the existing summaries stand. Only one prompt is in flight at a time.
+
+**A reply arriving after its session was replaced, or after the launcher closed, is ignored.** It updates no payload, starts nothing, and writes no line. Its lifecycle follows `src/monitor/live-monitors.ts`: the session starts with the launcher tab and stops when the launcher closes, so a closed launcher leaves no untracked ACP session behind.
+
+**The prompt is framed as data, not instruction.** Fed content is wrapped in a per-session delimiter, and the persona is primed at spawn to treat everything between the markers as data from a monitored tab, never as instructions — the same indirect-prompt-injection defence every monitor target gets, applied uniformly here because a transcript tail carries verbatim file contents and tool output.
+
+**The summary map rides the launcher's own payload.** The republished tab carries `summaries`, a record keyed by tab label, through the `updateTab` capability — the path `tab-plugins.md`'s "Changing what a tab shows" already defines. The tab keeps its place, group, and focus, and no title is sent. Every client rebuilds the map from the record on any republish, so the rows keep their ordering even when a key disappears.
+
+**Persona loading.** `ai/personas/launcher/summarizer.md` is the persona, its filename (`summarizer`) being the name. Because `src/personas.ts` is a host internal the plugin boundary at `eslint.plugin-boundaries.mjs:33` blocks, the plugin reads and parses the file itself with the same format `src/persona-parsing.ts` defines — a required first-line harness directive, an optional `[//]: # tools:` line, and the body after it — resolved against the project root `originTab()` reports. Its first line is the harness directive the activity monitor uses, so a project that cannot reach that harness gets the same spawn failure a monitor does. The shared directive parsing is lifted into the plugin only if that is genuinely one fewer place to change; `src/personas.ts` and its parser keep serving the monitor and editor kinds untouched.
+
+**A spawn failure is silent in the rail.** If the persona file is missing, its directive names a harness that is not installed, or the connection fails, no summary lines appear — the launcher otherwise works, and the reason is reported to the notifications feed rather than written into the transcript of a docked tab.
+
+**The Configure button dispatches, it does not open.** It issues the application's own `edit <path>` line for whichever file is in effect, from the launcher tab, which lands in the launcher's command bar and answer — the same `dispatchLineWithOutput` route the command rows use, and one that reaches a path outside the project root because the application's own `edit` has no such boundary.
+
+## Tests
+
+- Server: the `launcher` command opens the singleton tab docked left, refocuses on a second invocation, docks right on `launcher right`, and refuses any other argument with the usage line the other list plugins use.
+- Server: `launcher.json` decoding — the home override replacing the project file, an absent file falling back to the default set, invalid JSON producing one notifications-feed line and leaving the file untouched, an unknown icon falling back to the neutral glyph, and an empty array producing the default set.
+- Server: the `tabActivity` capability — it returns the host's open tabs with label, view kind, busy, unread, needs-input, last activity, and a transcript tail; it is refused as an unknown capability by a plugin whose declaration does not name it; and it adds nothing to the wire, so `TAB_PLUGIN_API_VERSION` stays 2.
+- Server: the `tabs` topic — a republish is emitted when the rows move and skipped when they do not, so two transcript appends inside one minute cost no second broadcast; the `focus` action is refused for a label with no open tab and is narrower than the `dispatchLineWithOutput` grant the launcher already holds.
+- Server: last activity is stamped on the tab runtime whenever content arrives, and gate state is stamped from each capture — so a tab's needs-input reading does not depend on a frame still being in memory.
+- Server: last activity derives from the tab's last transcript entry, is minute-rounded in the payload so it cannot force a republish per append, and is read exact by the summarizer as its change-detection cursor.
+- Server: the summarizer — one prompt per flush, no prompt when nothing changed, only one in flight at a time, a late reply from a replaced session ignored, and the session stopped when the launcher tab closes.
+- Client: the five-tier sort with each tier's internal order preserved; the row chrome (dot color, busy, unread flag, relative timestamp); a command row dispatching its exact line; a center-tab row sending `setActiveTab`; the absent-summary case rendering no summary line; keyboard navigation moving the selection and Enter activating; the docked case omitting docked tabs; a needs-input tab sorting first; the timestamp coarsening as it ages; and the hover card opening on pointer-over with the tab's label, cwd, host, and last command line, and closing on pointer-out.
+
+## Out of scope
+
+Declined during gap research against Paseo, Conductor, Raycast, and VS Code, and deliberately deferred so no later phase re-proposes them:
+
+- **Type-to-filter, fuzzy matching, and ⌘1–⌘9 digit jumps in the rail.** Paseo's Command Center and the app's own tab navigator both have these; the rail ships arrows plus Enter only. Declined for now — worth its own pass over the shared list-selection helper rather than a second implementation here.- **Pinned rows, collapsible tiers with counts, and row context menus.** Pinned rows above the tiers, a per-tier count when collapsed, and a menu offering rename / close / mark read. Declined because the menu pulls close and rename into the launcher, which this version deliberately keeps a navigator rather than an editor.
+- **User-created and reorderable sections.** Conductor's user-named, emoji-tagged, runtime-editable section headers. Declined as a bigger follow-on over the tier set.
+- **A versioned, schema'd, per-entry-merged `launcher.json`.** Conductor's `settings.toml` shape: five precedence tiers matched per entry by id, a per-entry `hide`, and entry-scoped rather than file-scoped validation. Declined as a format revision of its own, so the bare array ships first and the surprise of wholesale home-over-project replacement is a known, recorded consequence rather than a bug.
+- **Rail rows contributed by plugins.** Paseo extends its rail through `addSidebarHeaderItem` and lets one item render a runtime-changing list of rows; Raycast's rail is the extension registry. Declined — a plugin-API expansion that deserves its own plan rather than a rider on this feature.
+- **A previous/next recency cycle.** Paseo and Conductor both ship one, ordered by last activity. Dropped during scope review on the decision that the timestamp on each row answers the question without adding a second navigation route; recorded here so a later phase can add it without re-researching why it was left out.
+
+And the feature's own boundaries:
+
+- Any change to the sidebar mechanism: resizing, the strip, the dock control, the docking rules, or the docked-tab-never-active invariant.
+- Renaming, closing, or reordering tabs from the launcher. It navigates; it does not edit. (Launching features is what the command half is for.)
+- A launcher-configured command list that reaches anything other than the application's existing commands — no new commands are invented here.
+- Reordering the command rail by dragging, and a `hide` flag per entry.
+- Any change to the monitor command, its personas, or its reporting tabs. The summarizer borrows their shapes, not their code, and the plugin boundary forbids it from reaching them.
+
+## Verification
+
+- `./scripts/run.mjs check-diff` after each change.
+- Manual: run `launcher`, confirm the tab docks into the left sidebar and shows the command rail and the tab list. Click each command and confirm the feature opens where it says it will. Produce unread content on a background tab and confirm its row moves to the second tier with a flag, below any needs-input tab. Block a harness on a permission prompt and confirm its row leads the list. Confirm a busy background tab sorts above an idle one. Click rows and confirm each focuses. Confirm a summary paragraph appears per row, updates on the 30-second flush, and clamps to three lines with a hover expansion. Confirm the relative timestamp appears per row and coarsens as it ages. Confirm hovering a row shows the label, cwd, host, and last command line. Confirm a docked tab never appears in the list. Run `janus init` on a project without `.janissary/launcher.json` and confirm the file appears with the default set. Confirm `plugins` still reports `api=2` for every plugin.

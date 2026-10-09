@@ -1,0 +1,172 @@
+import { describe, expect, it } from 'vitest';
+import { tabActivityRows, recordGateOpen } from './activity.js';
+import type { Managers } from '../managers.js';
+import type { Tab } from '../tab/types.js';
+
+// The managers the activity reader needs, stubbed to exactly what it asks for: the tab list, the launch
+// directory, the pending questions, and one label lookup. Anything more would be a stub pretending to be
+// a host it is not.
+type ManagersStub = Pick<Managers, 'tab' | 'questions'>;
+
+function tab(overrides: Partial<Tab> = {}): Tab {
+  return {
+    label: 'shell',
+    dotColor: '#5b9cff',
+    number: 1,
+    group: 1,
+    groupColor: '#5b9cff',
+    log: [],
+    cmdHistory: [],
+    cmdHistoryIdx: -1,
+    scrollOffset: 0,
+    runtime: { busy: false, context: [], queue: [] },
+    ...overrides,
+  } as Tab;
+}
+
+type PendingFor = (label: string) => unknown;
+
+function managers(tabs: Tab[], pendingFor: PendingFor = () => null): { managers: ManagersStub } {
+  return {
+    managers: {
+      tab: {
+        tabs,
+        launchDir: '/repo',
+        byLabel: (label: string) => tabs.find((candidate) => candidate.label === label),
+      } as unknown as ManagersStub['tab'],
+      questions: { pendingFor } as unknown as ManagersStub['questions'],
+    },
+  };
+}
+
+describe('the tabActivity reader', () => {
+  it('reports every tab in strip order, with its dock, pane, and view facts', () => {
+    const { managers: host } = managers([
+      tab({ label: 'one', view: 'plugin', dock: 'left' }),
+      tab({ label: 'two', view: 'harness', pane: 'right' }),
+    ]);
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows.map((row) => row.label)).toEqual(['one', 'two']);
+    expect(rows[0]?.dock).toBe('left');
+    expect(rows[0]?.view).toBe('plugin');
+    expect(rows[1]?.pane).toBe('right');
+    expect(rows[1]?.view).toBe('harness');
+  });
+
+  it('reports busy from either the runtime flag or a plugin-lit dot', () => {
+    const { managers: host } = managers([
+      tab({ label: 'running', runtime: { busy: true, context: [], queue: [] } }),
+      tab({
+        label: 'plugin-lit', plugin: { id: 'audio', instanceKey: 'audio', schemaVersion: 1, payload: {}, busy: true },
+      }),
+      tab({ label: 'idle' }),
+    ]);
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows.map((row) => row.busy)).toEqual([true, true, false]);
+  });
+
+  it('reports needs input for a pending question, and for a gate the capture handler recorded', () => {
+    const { managers: host } = managers(
+      [
+        tab({ label: 'asking', runtime: { busy: false, context: [], queue: [], gateOpen: true } }),
+        tab({ label: 'questioning', runtime: { busy: false, context: [], queue: [] } }),
+        tab({ label: 'working' }),
+      ],
+      (label: string) => (label === 'questioning' ? { id: 'q1', tab: label, kind: 'ask', question: 'Yes?' } : undefined),
+    );
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows.map((row) => row.needsInput)).toEqual([true, true, false]);
+  });
+
+  it('reports last activity minute-rounded, and zero for a tab with nothing yet', () => {
+    const at = new Date('2026-01-01T12:34:56.789Z').getTime();
+    const { managers: host } = managers([
+      tab({ label: 'active', runtime: { busy: false, context: [], queue: [], lastActivity: at } }),
+      tab({ label: 'fresh' }),
+    ]);
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows[0]?.lastActivity).toBe(new Date('2026-01-01T12:34:00.000Z').getTime());
+    expect(rows[1]?.lastActivity).toBe(0);
+  });
+
+  it('carries the transcript tail only when the caller asked for it', () => {
+    const { managers: host } = managers([
+      tab({
+        label: 'shell',
+        log: [
+          { input: 'ls', output: 'a b c' },
+          { input: '', output: 'idle again' },
+        ],
+      }),
+    ]);
+
+    const rows = tabActivityRows(host as unknown as Managers, 8);
+
+    expect(rows[0]?.logLength).toBe(2);
+    expect(rows[0]?.tail).toBe('ls\na b c\n\nidle again');
+    expect(rows[0]?.lastCommand).toBe('ls');
+  });
+
+  it('carries no transcript content at all when the caller did not ask for it', () => {
+    const { managers: host } = managers([tab({ label: 'shell', log: [{ input: 'ls', output: 'a b c' }] })]);
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows[0]?.tail).toBeUndefined();
+    expect(rows[0]?.logLength).toBe(1);
+  });
+
+  it('caps one tail by both entry count and characters', () => {
+    const { managers: host } = managers([tab({
+      label: 'shell',
+      log: [
+        { input: 'first', output: 'a'.repeat(3000) },
+        { input: 'second', output: 'b'.repeat(3000) },
+      ],
+    })]);
+
+    const rows = tabActivityRows(host as unknown as Managers, 1);
+
+    expect(rows[0]?.tail).toBe('second\n' + 'b'.repeat(3000));
+  });
+
+  it('reports the remote host a tab runs on, and the last command it ran', () => {
+    const { managers: host } = managers([
+      tab({ label: 'far', remote: { address: 'a@b:1', host: 'b' } as Tab['remote'], log: [{ input: 'uptime', output: 'ok' }] }),
+    ]);
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows[0]?.remote).toBe('b');
+    expect(rows[0]?.lastCommand).toBe('uptime');
+  });
+});
+
+describe('recording a permission gate', () => {
+  const stubFor = (tabs: Tab[], label: string): Managers =>
+    ({ tab: { byLabel: (name: string) => (name === label ? tabs[0] : undefined) } }) as unknown as Managers;
+
+  it('writes it onto the tab the host hands it', () => {
+    const blocked = tab({ label: 'shell', runtime: { busy: false, context: [], queue: [] } });
+
+    recordGateOpen(stubFor([blocked], 'shell'), 'shell', true);
+
+    expect(blocked.runtime?.gateOpen).toBe(true);
+  });
+
+  it('does nothing for a label with no open tab', () => {
+    const blocked = tab({ label: 'shell', runtime: { busy: false, context: [], queue: [] } });
+
+    recordGateOpen(stubFor([blocked], 'other'), 'shell', true);
+
+    expect(blocked.runtime?.gateOpen).toBeUndefined();
+  });
+});

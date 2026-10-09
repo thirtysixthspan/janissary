@@ -5,6 +5,7 @@ import { BUSY_TABLE, classifyBusy, endsWithRecap } from './busy-classify.js';
 import { armHarnessIdleEscalation } from './idle-notification.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import { recordGateOpen } from '../plugins/activity.js';
 
 export type BusyTransition = { busy: boolean; unread: boolean };
 
@@ -111,6 +112,11 @@ export function busyStatusHandler(
     const before = dotSnapshot(managers, label);
     const transition = tracker.observe(capture, name, !approver || approver.isStuck, resumer?.isParked ?? false);
     if (transition) applyBusyTransition(managers, label, transition);
+    // The gate is a screen state the tab has to remember, because nothing downstream can re-read the
+    // capture it was seen in — the launcher's needs-input tier asks whether this tab is waiting on
+    // the user long after the frame is gone. Detection stays pure in auto-approve; this is the record
+    // of what the last capture said.
+    recordGateOpen(managers, label, detectPermissionGate(capture.text, name));
     if (dotSnapshot(managers, label) !== before) messageBus.emit('state', { type: 'dirty' });
   };
 }

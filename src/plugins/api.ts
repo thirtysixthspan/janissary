@@ -2,6 +2,7 @@ import type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
 } from './api-topics.js';
 import type { TabPluginCapabilityName } from './api-capabilities.js';
+import type { TabActivityEntry } from './activity.js';
 import type {
   TabPluginLaunchFactory, TabPluginLaunchReadyHandler, TabPluginLaunchRequest, TabPluginLaunchResult,
 } from './api-launch.js';
@@ -13,6 +14,9 @@ export {
   TAB_PLUGIN_API_VERSION, TAB_PLUGIN_CAPABILITY_NAMES, isTabPluginCapability, TabPluginRejection,
 } from './api-capabilities.js';
 export type { TabPluginCapabilityName } from './api-capabilities.js';
+// The one open tab the `tabActivity` capability reports and the `tabs` topic delivers. Re-exported
+// from beside its reader so a plugin reaches both from this module, the only one a plugin may import.
+export type { TabActivityEntry } from './activity.js';
 
 export {
    isTabPluginNotificationTopic,
@@ -293,6 +297,14 @@ export type TabPluginServerCapabilities = {
   // derivable from the file: a recording ended by its tab closing carries no exit event, so nothing
   // in it distinguishes a finished session from a live one.
   isRecordingLive(absPath: string): boolean;
+  // Every tab the host has open, each as a `TabActivityEntry`, as of now. The pull counterpart to
+  // the `tabs` topic: a plugin that must read tab state on its own schedule — a summarizer on a
+  // flush timer, or a tab building its first payload — asks here, rather than being handed a copy on
+  // every application mutation. `tailLines` caps how much recent transcript each entry carries;
+  // omitted, no entry carries any, so a plugin that only lists tabs reads no other tab's output.
+  // Unlike every topic here this is host-wide rather than one tab's, because the question it answers
+  // is "what is the application doing", which no single tab can speak for.
+  tabActivity(tailLines?: number): TabActivityEntry[];
   // The tab a plugin command was invoked from: its label, where it is working, and the workspace
   // clone it runs in when it has one. A plugin's command handler is handed the argument and its
   // capabilities and nothing else, so this is the only way one learns what the user was standing in

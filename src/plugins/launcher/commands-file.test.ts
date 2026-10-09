@@ -1,0 +1,205 @@
+import { describe, expect, it } from 'vitest';
+import { readLauncherFile, DEFAULT_LAUNCHER_COMMANDS } from './commands-file.js';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import path from 'node:path';
+
+type Scratch = { project: string; home: string };
+
+// Under the repository's own gitignored `temp/`, rather than the platform temporary directory: a
+// sandbox a run may live in does not necessarily have one, and a scratch directory that cannot be
+// created is a test that cannot run.
+function scratch(): Scratch {
+  mkdirSync(path.join(process.cwd(), 'temp'), { recursive: true });
+  const root = mkdtempSync(path.join(process.cwd(), 'temp', 'launcher-commands-'));
+  return {
+    project: path.join(root, 'project'),
+    home: path.join(root, 'home'),
+  };
+}
+
+function cleanup(directories: Scratch): void {
+  rmSync(path.dirname(directories.project), { recursive: true, force: true });
+}
+
+function projectFile(directories: Scratch, content: unknown | string): void {
+  const directory = path.join(directories.project, '.janissary');
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    path.join(directory, 'launcher.json'),
+    typeof content === 'string' ? content : `${JSON.stringify(content, null, 2)}\n`,
+  );
+}
+
+function homeFile(directories: Scratch, content: unknown | string): void {
+  const directory = path.join(directories.home, '.janissary');
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    path.join(directory, 'launcher.json'),
+    typeof content === 'string' ? content : `${JSON.stringify(content, null, 2)}\n`,
+  );
+}
+
+describe('reading launcher.json', () => {
+  it('falls back to the default set when no file exists, and names where it would be written', () => {
+    const directories = scratch();
+    try {
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.source).toBe('default');
+      expect(read.commands).toEqual([...DEFAULT_LAUNCHER_COMMANDS]);
+      expect(read.filePath).toBe(path.join(directories.project, '.janissary', 'launcher.json'));
+      expect(read.problem).toBeUndefined();
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  it("reads the project's own file, keeping the user's label and command verbatim", () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, [{ icon: 'faTerminal', label: 'My shell', command: 'zsh --no-workspace' }]);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.source).toBe('project');
+      expect(read.commands).toEqual([
+        { id: 'command-0', icon: 'faTerminal', label: 'My shell', command: 'zsh --no-workspace' },
+      ]);
+      expect(read.problem).toBeUndefined();
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  // A user's own file replaces the project's wholesale rather than merging with it, so two people
+  // sharing a project never have to work out which entry won.
+  it("replaces the project's file with the user's own when one exists", () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, [{ icon: 'faTerminal', label: 'Project shell', command: 'zsh' }]);
+      homeFile(directories, [{ icon: 'faRobot', label: 'Home agent', command: 'harness' }]);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.source).toBe('home');
+      expect(read.filePath).toBe(path.join(directories.home, '.janissary', 'launcher.json'));
+      expect(read.commands).toEqual([{ id: 'command-0', icon: 'faRobot', label: 'Home agent', command: 'harness' }]);
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  // An icon that is not one this build draws still leaves the command in place: one bad name costs one
+  // glyph, not one missing row.
+  it('keeps a command whose icon the client will not recognise', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, [{ icon: 'faNotAGlyph', label: 'Odd', command: 'tasks' }]);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.commands).toEqual([{ id: 'command-0', icon: 'faNotAGlyph', label: 'Odd', command: 'tasks' }]);
+      expect(read.problem).toBeUndefined();
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  it('keeps an entry whose id is absent, numbering it by position', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, [
+        { icon: 'faTerminal', label: 'One', command: 'zsh' },
+        { icon: 'faRobot', label: 'Two', command: 'harness' },
+      ]);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.commands.map((entry) => entry.id)).toEqual(['command-0', 'command-1']);
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  it('drops an entry with nothing to dispatch, keeping the rest', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, [
+        { icon: 'faTerminal', label: 'Kept', command: 'zsh' },
+        { icon: 'faRobot', label: 'No command' },
+        { icon: 'faBell', label: 'Empty command', command: ' ' },
+        'not even an object',
+      ]);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.commands).toEqual([{ id: 'command-0', icon: 'faTerminal', label: 'Kept', command: 'zsh' }]);
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  it('reports invalid JSON, leaves the file alone, and still shows the default set', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, '{ not json at all');
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.source).toBe('default');
+      expect(read.commands).toEqual([...DEFAULT_LAUNCHER_COMMANDS]);
+      expect(read.problem).toContain('not valid JSON');
+      expect(read.problem).toContain('launcher.json');
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  it('reports a file whose top level is not a list', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, { commands: [] });
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.source).toBe('default');
+      expect(read.problem).toContain('not a list of commands');
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  // An empty array is treated as no configuration at all rather than as a choice to show nothing, so a
+  // project that committed one by accident still gets a working rail.
+  it('treats an empty array as no configuration at all', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, []);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.source).toBe('default');
+      expect(read.commands).toEqual([...DEFAULT_LAUNCHER_COMMANDS]);
+      expect(read.problem).toBeUndefined();
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  it('reports a file that cannot be read, and still shows the default set', () => {
+    const directories = scratch();
+    try {
+      // A directory in a file's place cannot be read as one, which is the closest a test gets to an
+      // unreadable file without changing permissions.
+      const directory = path.join(directories.project, '.janissary', 'launcher.json');
+      mkdirSync(directory, { recursive: true });
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.source).toBe('default');
+      expect(read.problem).toContain('could not be read');
+    } finally {
+      cleanup(directories);
+    }
+  });
+});
