@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { startServer } from './index.js';
 import { makeToken } from './security.js';
-import { initStateDirectories, clearStateDirectories } from './state-dirs.js';
+import { initStateDirectories, clearStateDirectories } from './state/dirs.js';
 import { acquireLock, releaseLock } from './instance-lock.js';
 import { stopInstance } from './stop-instance.js';
 import { scaffoldProject } from './project/init.js';

@@ -1,13 +1,13 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
-import type { TaskRow } from './tab/types.js';
-import type { ProfileRow } from './profile/types.js';
-import type * as StateListings from './state-listings.js';
+import type { TaskRow } from '../tab/types.js';
+import type { ProfileRow } from '../profile/types.js';
+import type * as StateListings from './listings.js';
 
 const listTasks = vi.fn<(projectDir: string) => TaskRow[]>();
 const listProfileRows = vi.fn<() => ProfileRow[]>();
 
-vi.mock('./tasks.js', () => ({ listTasks: (projectDir: string) => listTasks(projectDir) }));
-vi.mock('./profiles.js', () => ({ listProfileRows: () => listProfileRows() }));
+vi.mock('../tasks.js', () => ({ listTasks: (projectDir: string) => listTasks(projectDir) }));
+vi.mock('../profiles.js', () => ({ listProfileRows: () => listProfileRows() }));
 
 let listings: typeof StateListings;
 
@@ -19,7 +19,7 @@ beforeEach(async () => {
   vi.resetModules();
   listTasks.mockReset();
   listProfileRows.mockReset();
-  listings = await import('./state-listings.js');
+  listings = await import('./listings.js');
 });
 
 describe('cachedTasks', () => {

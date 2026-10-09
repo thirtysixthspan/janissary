@@ -1,16 +1,16 @@
-import { initHarnessCaptureDirectory, clearCaptureDirectory } from './harness/capture/file.js';
-import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from './harness/recording-file.js';
-import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from './harness/transcript-file.js';
-import { initBrowserLogDirectory, clearBrowserLogDirectory } from './browser/browser-log.js';
-import { initGitFailureDirectory, clearGitFailureDirectory } from './git/failure-output.js';
-import { initGlobalHistory } from './global-history.js';
-import { initDbDir } from './connections.js';
-import { initProfileDir } from './profiles.js';
-import { initWorkspaceDir, clearWorkspaceDir } from './workspace/index.js';
-import { initRemoteFileCache, clearRemoteFileCache } from './file-navigator/remote/file-cache.js';
-import { initRemoteSessionStore } from './sessions/store.js';
-import { initNotificationRecord } from './notifications/record.js';
-import { TranscriptLogger } from './transcript/logger.js';
+import { initHarnessCaptureDirectory, clearCaptureDirectory } from '../harness/capture/file.js';
+import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from '../harness/recording-file.js';
+import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from '../harness/transcript-file.js';
+import { initBrowserLogDirectory, clearBrowserLogDirectory } from '../browser/browser-log.js';
+import { initGitFailureDirectory, clearGitFailureDirectory } from '../git/failure-output.js';
+import { initGlobalHistory } from '../global-history.js';
+import { initDbDir } from '../connections.js';
+import { initProfileDir } from '../profiles.js';
+import { initWorkspaceDir, clearWorkspaceDir } from '../workspace/index.js';
+import { initRemoteFileCache, clearRemoteFileCache } from '../file-navigator/remote/file-cache.js';
+import { initRemoteSessionStore } from '../sessions/store.js';
+import { initNotificationRecord } from '../notifications/record.js';
+import { TranscriptLogger } from '../transcript/logger.js';
 
 // The per-subsystem init/clear pairs of the state directory, in the order `boot()` established.
 // Everything that owns state under `.janissary/` has exactly one entry here, so wiring a new

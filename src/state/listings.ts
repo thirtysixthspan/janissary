@@ -1,7 +1,7 @@
-import { listTasks } from './tasks.js';
-import { listProfileRows } from './profiles.js';
-import type { TaskRow } from './tab/types.js';
-import type { ProfileRow } from './profile/types.js';
+import { listTasks } from '../tasks.js';
+import { listProfileRows } from '../profiles.js';
+import type { TaskRow } from '../tab/types.js';
+import type { ProfileRow } from '../profile/types.js';
 
 // The task and profile listings ride on every state broadcast, which fires on essentially every
 // mutation (each shell or ACP output chunk, each keystroke). Walking the disk each time put several
