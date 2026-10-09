@@ -79,13 +79,10 @@ export function LauncherTab({ payload, capabilities }: Properties) {
 
   return (
     <div className="launcher plugin-tab" data-doc-shot="launcher">
+      {/* The application's dock control sits in the sidebar's metadata bar; the Configure button joins
+          it there, and nothing of the launcher's own is drawn in the bar — a portaled header is
+          chrome, and the rail's own lines belong in the rail. */}
       <PluginActionsHeader className="plugin-meta launcher-header">
-        <span className="launcher-source">
-          {payload.source === 'home' && <span title={payload.filePath}>your launcher.json</span>}
-          {payload.problem !== undefined && (
-            <span className="launcher-problem" title={payload.problem}>launcher.json problem</span>
-          )}
-        </span>
         <span className="plugin-actions">
           <button
             type="button"
@@ -97,6 +94,14 @@ export function LauncherTab({ payload, capabilities }: Properties) {
           </button>
         </span>
       </PluginActionsHeader>
+      {(payload.source === 'home' || payload.problem !== undefined) && (
+        <div className="launcher-source">
+          {payload.source === 'home' && <span title={payload.filePath}>your launcher.json</span>}
+          {payload.problem !== undefined && (
+            <span className="launcher-problem" title={payload.problem}>launcher.json problem</span>
+          )}
+        </div>
+      )}
 
       <LauncherCommandList
         commands={payload.commands}
