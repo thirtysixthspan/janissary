@@ -21,13 +21,26 @@ export type HarnessParsed =
   | { transcript: true; label: string }
   | { error: string };
 
+// A usage error is replied as markdown — rendered as HTML in the transcript, and on a shell tab as
+// a markdown block or its ANSI fallback — and markdown reads a bare `<label>` as raw HTML: it
+// survives sanitizing as a real element and holds no visible text, while a `<name>` no renderer
+// allows is dropped outright. Either way the placeholder the reader needs is gone from what is
+// drawn. Escaping the angle brackets makes every one of those renderers print them, so the line
+// reads as `product/specs/harness.md` words it; marked turns the escape back into a plain character
+// in both the HTML and the ANSI path. The renderers are left alone, so a reply that legitimately
+// carries HTML keeps rendering it.
+function usage(body: string): string {
+  const placeholders = body.replaceAll('<', String.raw`\<`).replaceAll('>', String.raw`\>`);
+  return `Usage: ${placeholders}`;
+}
+
 // Find a `--flag <value>` pair anywhere in `tokens`. Returns the value, `undefined` if the flag
 // isn't present, or an error string if the flag is present with no following value.
 function findFlagValue(tokens: string[], flag: string): string | undefined | { error: string } {
   const index = tokens.findIndex((t) => t.toLowerCase() === flag);
   if (index === -1) return undefined;
   const value = tokens[index + 1];
-  if (!value) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> ${flag} <value>.` };
+  if (!value) return { error: usage(`harness <${HARNESS_NAMES.join('|')}> ${flag} <value>.`) };
   return value;
 }
 
@@ -50,7 +63,7 @@ function splitWithClause(rest: string): { left: string; prompt?: string } | { er
   const withMatch = /\bwith\b/i.exec(rest);
   if (!withMatch) return { left: rest };
   const prompt = rest.slice(withMatch.index + withMatch[0].length).trim();
-  if (!prompt) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [options] with <prompt>.` };
+  if (!prompt) return { error: usage(`harness <${HARNESS_NAMES.join('|')}> [options] with <prompt>.`) };
   return { left: rest.slice(0, withMatch.index).trim(), prompt };
 }
 
@@ -93,7 +106,7 @@ function parseHarnessFlags(
   const asIndex = tokens.findIndex((t) => t.toLowerCase() === 'as');
   if (asIndex === -1) return { workspace, offline, autoApprove, browser, autoResume, model, effort, remote };
   const label = tokens[asIndex + 1];
-  if (!label) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> as <label>.` };
+  if (!label) return { error: usage(`harness <${HARNESS_NAMES.join('|')}> as <label>.`) };
   return { workspace, offline, autoApprove, browser, autoResume, model, effort, label, remote };
 }
 
@@ -105,7 +118,7 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
   const subcommand = tokens[0].toLowerCase();
   if (subcommand !== 'capture' && subcommand !== 'transcript') return undefined;
   const label = tokens[1];
-  if (!label) return { error: `Usage: harness ${subcommand} <name>.` };
+  if (!label) return { error: usage(`harness ${subcommand} <name>.`) };
   return subcommand === 'capture' ? { capture: true, label } : { transcript: true, label };
 }
 
@@ -142,7 +155,7 @@ function parseLabelSubcommand(tokens: string[]): HarnessParsed | undefined {
  */
 export function parseHarnessCommand(input: string): HarnessParsed {
   const rest = input.replace(/^harness\b\s*/i, '').trim();
-  if (!rest) return { error: `Usage: harness <${HARNESS_NAMES.join('|')}> [as <label>] [-w] [-y].` };
+  if (!rest) return { error: usage(`harness <${HARNESS_NAMES.join('|')}> [as <label>] [-w] [-y].`) };
   const clause = splitWithClause(rest);
   if ('error' in clause) return clause;
   const { left, prompt } = clause;

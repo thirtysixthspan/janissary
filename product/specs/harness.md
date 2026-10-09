@@ -114,6 +114,9 @@ harness opencode as quality -w
 
 - `harness claude as` (no label after `as`) — error: `Usage: harness <claude|opencode|codex> as <label>.`
 
+Every `harness` usage error is shown wherever the reply is rendered — a shell tab's terminal, an agent
+tab's transcript — with its `<placeholder>` tokens intact, exactly as the line above is worded.
+
 ### Name clashes
 
 A label is in use when an open tab has it, when the sessions tab has a harness or shell row with it

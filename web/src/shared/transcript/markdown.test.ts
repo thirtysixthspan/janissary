@@ -62,4 +62,22 @@ describe('renderMarkdown', () => {
     expect(out).toContain('<strong');
     expect(out).toContain('https://example.com');
   });
+
+  // An escaped angle bracket is what keeps a `<placeholder>` in a usage error visible: a bare
+  // `<label>` reaches marked as raw HTML, which sanitize keeps as an element rather than as text,
+  // and a `<name>` it does not know is dropped outright (see `src/harness/command-parse.ts`).
+  it('renders escaped angle brackets as text', async () => {
+    const out = await sanitize(String.raw`Usage: harness \<claude|opencode|codex\> as \<label\>.`);
+    const host = document.createElement('div');
+    host.innerHTML = out;
+    expect(host.textContent).toBe('Usage: harness <claude|opencode|codex> as <label>.\n');
+    expect(out).toContain('&lt;label&gt;');
+  });
+
+  it('renders a bare angle-bracket placeholder as raw HTML, dropping its text', async () => {
+    const out = await sanitize('Usage: harness <claude|opencode|codex> as <label>.');
+    const host = document.createElement('div');
+    host.innerHTML = out;
+    expect(host.textContent).toBe('Usage: harness <claude|opencode|codex> as .\n');
+  });
 });
