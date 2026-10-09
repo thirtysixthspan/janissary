@@ -166,10 +166,20 @@ describe('DiffTab', () => {
     expect(intent).not.toHaveBeenCalled();
   });
 
-  it('opens the file at a line\'s own position on a double-click of the line', () => {
+  it('does not open a file on a double-click of a removed line in either layout', () => {
+    for (const split of [false, true]) {
+      const { intent, container, unmount } = renderTab(payload({ split }));
+      const removed = container.querySelector(split ? '.diff-cell.diff-removed' : '.diff-line.diff-removed');
+      fireEvent.doubleClick(removed!);
+      expect(intent).not.toHaveBeenCalled();
+      unmount();
+    }
+  });
+
+  it.each(['context', 'added'] as const)('opens a file at a %s line on double-click', (kind) => {
     const { intent, container } = renderTab();
-    fireEvent.doubleClick(container.querySelectorAll('.diff-line')[1]);
-    expect(intent).toHaveBeenCalledWith('open', { path: 'a.txt', line: 3 });
+    fireEvent.doubleClick(container.querySelector(`.diff-line.diff-${kind}`)!);
+    expect(intent).toHaveBeenCalledWith('open', { path: 'a.txt', line: kind === 'context' ? 1 : 3 });
   });
 
   it('opens a binary entry through the media intent rather than the editor', () => {

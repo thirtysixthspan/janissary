@@ -7,8 +7,8 @@ import { markerOf } from './HunkLines';
 import { splitRows } from './split-rows';
 
 // The same hunk in the split layout: the old side's removed and context lines beside the new side's
-// added and context lines, each column carrying its own side's line numbers. A double-click on
-// either side opens the file at that line. The pairing is the row walk's, and the character alignment
+// added and context lines, each column carrying its own side's line numbers. A double-click on an
+// added or context line opens the file there; removed lines are inert. The pairing is the row walk's, and the character alignment
 // of a replaced line marks each side's own changed characters in its own column.
 export function SplitHunks({ hunk, index, walked, onSelect, onOpenLine }: {
   hunk: DiffHunk;
@@ -40,7 +40,10 @@ function SplitSide({ line, side, spans, onOpenLine }: {
 }) {
   if (line === undefined) return <div className={`diff-cell diff-${side} diff-empty`}><span className="diff-number" /><span className="diff-marker" /><span className="diff-text"> </span></div>;
   return (
-    <div className={`diff-cell diff-${side} diff-${line.kind}`} onDoubleClick={() => onOpenLine(line)}>
+    <div
+      className={`diff-cell diff-${side} diff-${line.kind}`}
+      onDoubleClick={line.kind === 'removed' ? undefined : () => onOpenLine(line)}
+    >
       <span className="diff-number">{side === 'old' ? line.oldNumber ?? line.number : line.number}</span>
       <span className="diff-marker">{markerOf(line.kind)}</span>
       <ChangedText line={line} spans={spans ?? []} />

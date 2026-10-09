@@ -15,7 +15,7 @@ export function markerOf(kind: DiffLine['kind']): string {
 
 // One hunk as GitHub's files-changed view shows it: a row per line, its file line number on its own
 // side, green for an addition and red for a removal, and a double-click on any line opening the file
-// at that line. `index` is the hunk's place in the walk's flat list, which is what the shared
+// at that line; removed lines are inert because their position no longer exists. `index` is the hunk's place in the walk's flat list, which is what the shared
 // selection scrolls into view; `walked` marks the hunk the keyboard walk is on, and Return acts on.
 //
 // The rows come from the pairing the split layout uses as well: a run of removed lines beside the run
@@ -49,7 +49,10 @@ function Line({ line, spans, onOpenLine }: {
   onOpenLine(line: DiffLine): void;
 }) {
   return (
-    <div className={`diff-line diff-${line.kind}`} onDoubleClick={() => onOpenLine(line)}>
+    <div
+      className={`diff-line diff-${line.kind}`}
+      onDoubleClick={line.kind === 'removed' ? undefined : () => onOpenLine(line)}
+    >
       <span className="diff-number">{line.oldNumber ?? ''}</span>
       <span className="diff-number">{line.kind === 'removed' ? '' : line.number}</span>
       <span className="diff-marker">{markerOf(line.kind)}</span>

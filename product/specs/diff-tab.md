@@ -5,9 +5,9 @@ this workspace, and where*. It shows every change the working tree holds against
 unstaged together, untracked files included — the way GitHub renders the files-changed view of a pull
 request: one entry per changed file, its add and delete counts on the entry's header, and beneath it the
 changed hunks with added lines green and removed lines red. Clicking a file's name opens that file in an
-editor tab; double-clicking any line in the diff, added or removed or context, opens the file at that
-line. The tab is read-only: nothing in it stages, discards, or commits, and nothing writes to the
-repository's index.
+editor tab; double-clicking an added or context line opens the file at that line. Removed lines are
+inert because their positions no longer exist in the file. The tab is read-only: nothing in it stages,
+discards, or commits, and nothing writes to the repository's index.
 
 Before it, the only way to inspect changes was to type `git diff` into a shell tab and read the
 unified-diff text it printed, where no line was clickable and reaching the line a hunk concerned meant
@@ -80,7 +80,7 @@ what it held belongs to the directory it left.
 
 ### Reading the diff
 
-Hovering a code line highlights the line with a subtle accent tint and shows a pointer cursor in both unified and split layouts. Addition, removal, and changed-character colors remain visible beneath the highlight. Empty split alignment placeholders do not highlight or show a pointer cursor. Moving the mouse away clears the highlight; double-clicking a code line keeps its existing navigation behavior.
+Hovering an added or context line highlights it with a subtle accent tint and shows a pointer cursor in both unified and split layouts. Removed lines remain inert: they have no pointer cursor or hover highlight, and double-clicking them does not open a file. Addition, removal, and changed-character colors remain visible beneath the highlight. Empty split alignment placeholders do not highlight or show a pointer cursor. Moving the mouse away clears the highlight; double-clicking an added or context line opens the file at that line.
 
 The header carries two view controls:
 
@@ -100,10 +100,10 @@ reaches it. **Return** opens the file at the walked hunk's first changed line. A
 it and focuses the body, so the walk continues from where the mouse left off.
 
 Opening a file reuses the editor tab's existing de-duplication: a file already open in an editor tab is
-focused rather than duplicated, exactly as every other path into the editor behaves. A double-click on a
-line of a file that exists opens that line, whichever side of the change it is on; a removed line opens
-the nearest line that does exist, because it has no position of its own on the new side. A deleted
-file's lines answer nothing, because the file they name is gone.
+focused rather than duplicated, exactly as every other path into the editor behaves. A double-click on
+an added or context line of a file that exists opens that line. A removed line opens nothing because
+its position no longer exists in the file. A deleted file's lines answer nothing, because the file they
+name is gone.
 
 ### Empty and failure states
 

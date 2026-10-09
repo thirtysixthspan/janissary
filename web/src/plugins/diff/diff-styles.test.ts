@@ -23,18 +23,23 @@ function row(kind: string): { row: HTMLElement; text: HTMLElement } {
 
 describe('diff styles', () => {
   it.each([
-    'diff-line diff-context', 'diff-line diff-added', 'diff-line diff-removed',
-    'diff-cell diff-context', 'diff-cell diff-added', 'diff-cell diff-removed',
+    'diff-line diff-context', 'diff-line diff-added',
+    'diff-cell diff-context', 'diff-cell diff-added',
   ])('shows a pointer cursor for a %s code row', (kind) => {
     loadStyles();
     expect(getComputedStyle(row(kind).row).cursor).toBe('pointer');
+  });
+
+  it.each(['diff-line diff-removed', 'diff-cell diff-removed'])('keeps a %s code row inert', (kind) => {
+    loadStyles();
+    expect(getComputedStyle(row(kind).row).cursor).toBe('default');
   });
 
   it('tints hovered code rows in both layouts without replacing change backgrounds', () => {
     loadStyles();
     const rules = [...document.styleSheets[0].cssRules];
     const hover = rules.find((rule) => rule instanceof CSSStyleRule
-      && rule.selectorText === '.diff-line:hover, .diff-cell:not(.diff-empty):hover');
+      && rule.selectorText === '.diff-line:not(.diff-removed):hover, .diff-cell:not(.diff-empty):not(.diff-removed):hover');
     expect(hover).toBeInstanceOf(CSSStyleRule);
     if (!(hover instanceof CSSStyleRule)) throw new Error('Missing code-row hover rule');
     expect(hover.style.getPropertyValue('box-shadow'))
@@ -42,6 +47,7 @@ describe('diff styles', () => {
     expect(hover.style.getPropertyValue('background')).toBe('');
     expect(hover.style.getPropertyValue('background-color')).toBe('');
     expect(row('diff-cell diff-empty').row.matches(hover.selectorText.replaceAll(':hover', ''))).toBe(false);
+    expect(row('diff-cell diff-removed').row.matches(hover.selectorText.replaceAll(':hover', ''))).toBe(false);
   });
 
   it('keeps empty split placeholders on the hunk text cursor', () => {
