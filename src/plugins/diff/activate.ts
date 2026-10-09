@@ -9,9 +9,11 @@ import {
 import { isInsideRoot } from '../files.js';
 import {
   isDiffPayload,
+  isLayoutIntent,
   isOpenIntent,
   isOpenMediaIntent,
   isRefreshIntent,
+  type LayoutIntent,
   type OpenIntent,
   type OpenMediaIntent,
   type RefreshIntent,
@@ -79,6 +81,15 @@ export function activate(): TabPluginActivation {
         payload: isRefreshIntent,
         run: (_tab, payload: RefreshIntent, capabilities) => {
           void sessionFor(capabilities).refresh(payload.hideWhitespace);
+          return null;
+        },
+      },
+      // The layout the user chose. The session republishes the tab with it and remembers it in the
+      // plugin's settings entry, so every diff tab after this one opens the same way.
+      layout: {
+        payload: isLayoutIntent,
+        run: (_tab, payload: LayoutIntent, capabilities) => {
+          sessionFor(capabilities).layout(payload.split);
           return null;
         },
       },

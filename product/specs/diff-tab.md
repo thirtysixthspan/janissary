@@ -66,12 +66,12 @@ The header carries two view controls:
 
 - **Unified / Split** — the change set opens in the unified layout GitHub opens in, one column per line,
   and **Split** lays the old content on one side and the new content on the other, each side carrying its
-  own side's line numbers. The choice lasts for the life of the tab and is not remembered across
-  restarts.
+  own side's line numbers. The layout is a standing preference: the tab opens in the layout last chosen,
+  and the choice carries to the next diff tab the session opens.
 - **Hide whitespace changes** — **on by default**, it drops whitespace-only differences, so a
   formatter's reindent does not bury a real change. A file whose changes are all whitespace leaves the
-  list, and a repository whose only changes are whitespace shows **No changes**. This choice also lasts
-  for the life of the tab and is not remembered across restarts.
+  list, and a repository whose only changes are whitespace shows **No changes**. This choice lasts for
+  the life of the tab and is not remembered across restarts.
 
 The body is the tab's one focusable region. Clicking into it focuses it, and while it holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,
@@ -97,4 +97,6 @@ A repository with no commits yet reads as every file added, rather than as an er
 ### Lifetime
 
 The diff tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is not
-restored on `--relaunch`. Closing the tab forgets everything it held, including the two view choices.
+restored on `--relaunch`. Closing the tab forgets what it held — the hunks it showed, the expansions and
+the keyboard walk — and forgets the whitespace choice with them. The layout is the one thing kept: it
+outlives the tab that chose it.

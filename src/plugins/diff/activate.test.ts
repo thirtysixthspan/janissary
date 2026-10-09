@@ -22,16 +22,19 @@ function makeCapabilities(overrides: Record<string, unknown> = {}) {
   const rejectRequest = vi.fn((reason: string) => { throw new Error(reason); });
   const reportFailure = vi.fn((reason: unknown) => { throw new Error(String(reason)); });
   const originTab = vi.fn(() => ({ label: 'shell', cwd: '', root: '', workspace: undefined as { dir: string } | undefined }));
+  const readSettings = vi.fn(() => ({}) as Record<string, unknown>);
+  const saveSettings = vi.fn(() => true);
   const capabilities = {
     openOrFocusTab, updateTab, openInEditor, dispatchLineWithOutput, rejectRequest, reportFailure, originTab,
+    readSettings, saveSettings,
     ...overrides,
   };
   return {
-    capabilities: capabilities as never, openOrFocusTab, updateTab, openInEditor, dispatchLineWithOutput, originTab,
+    capabilities: capabilities as never, openOrFocusTab, updateTab, openInEditor, dispatchLineWithOutput, originTab, readSettings, saveSettings,
   };
 }
 
-const settledTab: DiffPayload = { root: '$root/', state: 'done', message: '', files: [] };
+const settledTab: DiffPayload = { root: '$root/', state: 'done', message: '', split: false, files: [] };
 
 function lastPayload(updateTab: ReturnType<typeof vi.fn>): DiffPayload {
   const factory = updateTab.mock.calls.at(-1)?.[1] as (() => { payload: DiffPayload }) | undefined;
@@ -303,6 +306,40 @@ describe('diff plugin activation', () => {
     expect(answered).toBeNull();
     await rest();
     expect(refusing).toHaveBeenCalled();
+  });
+
+  it('opens the tab in the layout its settings entry saved, and switches on the layout intent', async () => {
+    // The requirement: the layout is a standing preference rather than a per-tab one, the way the
+    // search tab opens with the view modes it last used. Assert both halves — the payload the tab
+    // opens with carries the saved layout, and the intent changes it and saves the new one.
+    const { capabilities, updateTab, saveSettings } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+      readSettings: vi.fn(() => ({ split: true })),
+    });
+    const activation = activate();
+    activation.command?.('', capabilities);
+    await settled(updateTab);
+    expect(lastPayload(updateTab).split).toBe(true);
+    activation.intent(intent(settledTab, 'layout', { split: false }), capabilities);
+    expect(lastPayload(updateTab).split).toBe(false);
+    expect(saveSettings).toHaveBeenCalledWith({ split: false });
+  });
+
+  it('writes the settings entry once for a layout it already saved', () => {
+    const { capabilities, saveSettings } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+      readSettings: vi.fn(() => ({ split: true })),
+    });
+    const activation = activate();
+    activation.command?.('', capabilities);
+    activation.intent(intent(settledTab, 'layout', { split: true }), capabilities);
+    expect(saveSettings).not.toHaveBeenCalled();
+  });
+
+  it('rejects a layout intent whose payload is malformed', () => {
+    const { capabilities } = makeCapabilities();
+    expect(() => activate().intent(intent(settledTab, 'layout', {}), capabilities))
+      .toThrow('invalid layout payload');
   });
 
   it('rejects an intent name the table does not declare', () => {

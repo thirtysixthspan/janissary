@@ -1,4 +1,4 @@
-export const DIFF_PAYLOAD_SCHEMA_VERSION = 1;
+export const DIFF_PAYLOAD_SCHEMA_VERSION = 2;
 
 // One line of a hunk. `kind` is which side git printed it on; `number` is the line's number on that
 // side — the old-side number for a removed line, the new-side number for an added or context one — so
@@ -40,16 +40,23 @@ export type DiffFile = {
 // inside one, and `error` when git itself failed — the reason, as one line, in `message`.
 export type DiffState = 'loading' | 'done' | 'not-repository' | 'error';
 
+// Which layout the change set renders in. `split` is the standing preference the tab opens with —
+// the session saves it in the plugin's settings entry — while `hideWhitespace` travels with the
+// refresh intent instead, because it decides which lines git reports.
 export type DiffPayload = {
   root: string;
   state: DiffState;
   message: string;
+  split: boolean;
   files: DiffFile[];
 };
 
 // Recompute. Carries the hide-whitespace flag because the flag changes which lines git reports, so it
 // cannot be state the server holds between calls.
 export type RefreshIntent = { hideWhitespace: boolean };
+
+// The layout the user chose, which becomes the layout every later diff tab opens with.
+export type LayoutIntent = { split: boolean };
 
 // Open a file at a line in an editor tab. `path` is project-relative; `line` is the line's payload
 // record's own `jump`.
@@ -95,12 +102,17 @@ export function isDiffPayload(value: unknown): value is DiffPayload {
     && typeof value.root === 'string'
     && ['loading', 'done', 'not-repository', 'error'].includes(value.state as string)
     && typeof value.message === 'string'
+    && typeof value.split === 'boolean'
     && Array.isArray(value.files)
     && value.files.every(isDiffFile);
 }
 
 export function isRefreshIntent(value: unknown): value is RefreshIntent {
   return isRecord(value) && typeof value.hideWhitespace === 'boolean';
+}
+
+export function isLayoutIntent(value: unknown): value is LayoutIntent {
+  return isRecord(value) && typeof value.split === 'boolean';
 }
 
 export function isOpenIntent(value: unknown): value is OpenIntent {

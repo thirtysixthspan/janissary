@@ -16,8 +16,8 @@ const TAB_TITLE = 'diff';
 // against, and the workspace clone when the opening tab has one.
 export type DiffOrigin = { root: string; workspace?: { dir: string } };
 
-function emptyPayload(): DiffPayload {
-  return { root: '', state: 'done', message: '', files: [] };
+function emptyPayload(split = false): DiffPayload {
+  return { root: '', state: 'done', message: '', split, files: [] };
 }
 
 function reasonOf(error: unknown): string {
@@ -42,11 +42,22 @@ function resultChanges(result: ChangeSetResult): Partial<DiffPayload> {
 export class DiffSession {
   private root = '';
   private hideWhitespace = true;
+  // The layout as last read from or written to the settings entry, so a session that never changes
+  // it does not rewrite the config, and a write the file refused is retried by the next change.
+  private split = false;
+  private savedSplit = false;
   private payload: DiffPayload = emptyPayload();
   private inFlight = false;
   private disposed = false;
 
-  constructor(private capabilities: TabPluginServerCapabilities) {}
+  constructor(private capabilities: TabPluginServerCapabilities) {
+    const saved = capabilities.readSettings().split;
+    if (typeof saved === 'boolean') {
+      this.split = saved;
+      this.savedSplit = saved;
+    }
+    this.payload = emptyPayload(this.split);
+  }
 
   // Open the tab on `root`, or focus the one already open. The factory runs only when the tab has to
   // be built, so a tab already showing another root is focused and then re-scoped here. A re-scope
@@ -72,6 +83,16 @@ export class DiffSession {
   async refresh(hideWhitespace: boolean): Promise<void> {
     this.hideWhitespace = hideWhitespace;
     await this.recompute();
+  }
+
+  // The layout the user chose, remembered in this plugin's settings entry so every diff tab after
+  // this one opens with it. A choice already saved writes nothing: the layout is a standing
+  // preference rather than something a repaint rewrites, and a write the file refused is retried by
+  // the next change. The repaint is what switches the layout on screen.
+  layout(split: boolean): void {
+    this.split = split;
+    if (split !== this.savedSplit && this.capabilities.saveSettings({ split })) this.savedSplit = split;
+    this.safely({ split });
   }
 
   // Open a file at a line in an editor tab, through the same containment check the search tab's

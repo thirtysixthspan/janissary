@@ -50,7 +50,7 @@ function oversized(overrides: Partial<DiffFile> = {}): DiffFile {
 }
 
 function payload(overrides: Partial<DiffPayload> = {}): DiffPayload {
-  return { root: '$root/', state: 'done', message: '', files: [file()], ...overrides };
+  return { root: '$root/', state: 'done', message: '', split: false, files: [file()], ...overrides };
 }
 
 function makeCapabilities() {
@@ -169,14 +169,30 @@ describe('DiffTab', () => {
     expect(intent).toHaveBeenCalledWith('refresh', { hideWhitespace: false });
   });
 
-  it('switches to the split layout, where each side carries its own line numbers', () => {
-    const { container } = renderTab();
-    expect(container.querySelector('.diff-split')).toBeNull();
-    fireEvent.click(screen.getByText('Split'));
+  it('renders the split layout its payload names, where each side carries its own line numbers', () => {
+    const { container } = renderTab(payload({ split: true }));
+    expect(container.querySelector('.diff-split')).toBeTruthy();
     const cells = [...container.querySelectorAll(':scope .diff-cell .diff-number')].map((node) => node.textContent);
     expect(cells).toEqual(['1', '1', '2', '3']);
     expect(container.querySelectorAll(':scope .diff-cell.diff-removed').length).toBe(1);
     expect(container.querySelectorAll(':scope .diff-cell.diff-added').length).toBe(1);
+  });
+
+  it('renders the unified layout when its payload names it', () => {
+    const { container } = renderTab(payload({ split: false }));
+    expect(container.querySelector('.diff-split')).toBeNull();
+    expect([...container.querySelectorAll(':scope .diff-line')].map((node) => node.className)).toEqual([
+      'diff-line diff-context', 'diff-line diff-removed', 'diff-line diff-added',
+    ]);
+  });
+
+  it('asks for the other layout with the layout intent rather than switching on its own', () => {
+    const { intent } = renderTab();
+    fireEvent.click(screen.getByText('Split'));
+    expect(intent).toHaveBeenCalledWith('layout', { split: true });
+    intent.mockClear();
+    fireEvent.click(screen.getByText('Unified'));
+    expect(intent).toHaveBeenCalledWith('layout', { split: false });
   });
 
   it('walks the changed hunks with the arrows and opens at the walked hunk on Return', () => {

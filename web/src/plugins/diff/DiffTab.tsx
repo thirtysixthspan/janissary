@@ -9,15 +9,18 @@ import { useHunkWalk } from './useHunkWalk';
 // The diff tab: a metadata header naming the diffed root with the view controls beside it, and the
 // change set below — one entry per changed file, every hunk expanded, GitHub's files-changed layout.
 // The body is the tab's one focusable region: clicking into it or tabbing to it gives the keyboard
-// walk the arrows, and Return opens the file at the walked hunk's first changed line.
+// walk the arrows, and Return opens the file at the walked hunk's first changed line. The layout the
+// payload names is the layout the session saved, so the two view buttons ask for the other one rather
+// than keeping a layout of their own.
 export function DiffTab({
   payload, capabilities,
 }: {
   payload: DiffPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
-  const [split, setSplit] = useState(false);
+  const split = payload.split;
   const [hideWhitespace, setHideWhitespace] = useState(true);
+  const setLayout = (next: boolean) => { void capabilities.intent('layout', { split: next }); };
   const files = payload.files;
 
   const refresh = useDiffRefresh(
@@ -54,7 +57,7 @@ export function DiffTab({
               type="button"
               className={split ? '' : 'on'}
               aria-pressed={!split}
-              onClick={() => setSplit(false)}
+              onClick={() => setLayout(false)}
             >
               Unified
             </button>
@@ -62,7 +65,7 @@ export function DiffTab({
               type="button"
               className={split ? 'on' : ''}
               aria-pressed={split}
-              onClick={() => setSplit(true)}
+              onClick={() => setLayout(true)}
             >
               Split
             </button>

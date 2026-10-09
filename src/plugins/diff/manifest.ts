@@ -8,7 +8,8 @@ import { DIFF_PAYLOAD_SCHEMA_VERSION } from './shared.js';
 // no file: it claims no extensions and is reached through its `diff` command, or through the
 // workspace button on a shell or harness tab, which the host routes to this plugin's `openSibling`
 // hook. It holds the tab's current root and payload across calls, which is why it declares
-// `updateTab` to repaint in place.
+// `updateTab` to repaint in place, and it keeps the layout the user last chose in the plugin's own
+// settings entry, which is why it declares the two settings capabilities the search tab also does.
 export const diffManifest = {
   id: 'diff',
   version: '1.0.0',
@@ -23,6 +24,8 @@ export const diffManifest = {
     'openInEditor',
     'originTab',
     'dispatchLineWithOutput',
+    'readSettings',
+    'saveSettings',
     'rejectRequest',
     'reportFailure',
   ],
