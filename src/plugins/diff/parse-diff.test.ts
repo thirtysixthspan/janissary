@@ -213,6 +213,25 @@ describe('parseDiff', () => {
     expect(parseDiff('')).toEqual([]);
   });
 
+  it('leaves no undefined-valued key on a record the caller named', () => {
+    // The host validates a published payload with `isJsonCompatible`, which answers false for a
+    // property whose value is `undefined` — so a record must omit an absent `oldPath`, not carry it.
+    const files = parseDiff([
+      'diff --git a/untracked.md b/untracked.md',
+      'new file mode 100644',
+      '--- /dev/null',
+      '+++ b/untracked.md',
+      '@@ -0,0 +1 @@',
+      '+new',
+    ].join('\n'), { path: 'untracked.md' });
+
+    expect(files).toHaveLength(1);
+    expect(files[0].path).toBe('untracked.md');
+    expect(files[0].additions).toBe(1);
+    expect(files[0].hunks[0].lines[0]).toEqual({ kind: 'added', number: 1, jump: 1, text: 'new' });
+    expect(Object.hasOwn(files[0], 'oldPath')).toBe(false);
+  });
+
   it('borrows the next line for a removed line that has one after it', () => {
     const files = parseDiff([
       'diff --git a/mid.txt b/mid.txt',

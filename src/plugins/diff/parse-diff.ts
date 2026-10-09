@@ -229,7 +229,11 @@ export function parseDiff(output: string, options: ParseOptions = {}): DiffFile[
   }
   closeFile();
 
+  // An output that cannot name its own file — an untracked file's `--no-index` diff carries only its
+  // basename — takes the caller's path instead. Built without an `oldPath` key rather than with an
+  // undefined one: the host validates a published payload with `isJsonCompatible`, which answers
+  // false for a property whose value is `undefined`, so an explicit undefined would refuse the tab.
   const forcedPath = options.path;
   if (forcedPath === undefined) return files;
-  return files.map((entry) => ({ ...entry, path: forcedPath, oldPath: undefined }));
+  return files.map(({ oldPath: _ignored, ...entry }) => ({ ...entry, path: forcedPath }));
 }

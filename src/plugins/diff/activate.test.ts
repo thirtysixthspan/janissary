@@ -6,6 +6,10 @@ import path from 'node:path';
 import { activate } from './activate.js';
 import type { DiffPayload } from './shared.js';
 
+// The host's own rule for a published payload, imported rather than copied: it is what refuses a
+// tab whose payload carries a property whose value is `undefined`, which no guard notices.
+import { isJsonCompatible } from '../context.js';
+
 // The plugin under test, run against a real temporary repository: the change set it renders is
 // git's answer, and only git gives that. The capabilities are fakes, the way the search plugin's
 // activation test fakes them.
@@ -266,6 +270,37 @@ describe('diff plugin activation', () => {
     activation.command?.('', capabilities);
     await settled(updateTab);
     expect(activation.intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities)).toBeNull();
+  });
+
+  it('publishes a payload the host accepts, untracked file included', async () => {
+    // The host validates every published payload with `isJsonCompatible` and refuses the tab when it
+    // fails. This is the check that catches an undefined-valued property, which no guard notices and
+    // which a unit test with a hand-built payload never meets.
+    const { capabilities, updateTab } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+    });
+    writeFileSync(path.join(repo, 'untracked.md'), 'new');
+    activate().command?.('', capabilities);
+    await settled(updateTab);
+    const factory = updateTab.mock.calls.at(-1)?.[1] as () => { payload: unknown };
+    expect(isJsonCompatible(factory().payload)).toBe(true);
+  });
+
+  it('answers an error state rather than throwing when a publish is refused', async () => {
+    // The recompute runs outside the intent that asked for it, so a throw here would escape as an
+    // unhandled rejection and take the process down, closing every tab rather than this one.
+    const refusing = vi.fn(() => { throw new Error('produced an invalid tab payload'); });
+    const { capabilities } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+      updateTab: refusing,
+    });
+    const activation = activate();
+    activation.command?.('', capabilities);
+    await rest();
+    const answered = activation.intent(intent(settledTab, 'refresh', { hideWhitespace: true }), capabilities);
+    expect(answered).toBeNull();
+    await rest();
+    expect(refusing).toHaveBeenCalled();
   });
 
   it('rejects an intent name the table does not declare', () => {

@@ -5,7 +5,6 @@ import type { ChangeSetResult } from './change-set.js';
 import { readChangeSet } from './change-set.js';
 import { displayRoot } from './display.js';
 import type { DiffPayload } from './shared.js';
-
 // The state one diff tab holds between calls: which root it is showing and what it currently shows.
 // Kept beside `activate.ts` because it is the plugin's whole lifetime — `dispose` has to reach it —
 // while `activate.ts` is about wiring handlers. One tab at a time, addressed by one instance key, the
@@ -19,6 +18,11 @@ export type DiffOrigin = { root: string; workspace?: { dir: string } };
 
 function emptyPayload(): DiffPayload {
   return { root: '', state: 'done', message: '', files: [] };
+}
+
+function reasonOf(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.split('\n').find((line) => line.trim().length > 0) ?? 'git diff failed';
 }
 
 function resultChanges(result: ChangeSetResult): Partial<DiffPayload> {
@@ -89,21 +93,39 @@ export class DiffSession {
     this.disposed = true;
   }
 
+  // Nothing this method does may escape. The intent that asks for a recompute answers immediately
+  // and leaves it running, so a throw here would be an unhandled rejection — and an unhandled
+  // rejection takes the process down, which would close every tab in the application rather than
+  // this one. Every failure the git layer can answer is already a result; this catches the one that
+  // is not, and answers it as the tab's error state.
   private async recompute(): Promise<void> {
     if (this.inFlight || this.disposed) return;
     this.inFlight = true;
     const rootAtStart = this.root;
-    this.publish({ state: 'loading' });
-    const result = await readChangeSet(rootAtStart, this.hideWhitespace);
-    this.inFlight = false;
-    // A recompute that started on another root, or one that finished after the plugin was disposed,
-    // publishes nothing: the tab has moved on, or is gone.
-    if (this.disposed || this.root !== rootAtStart) return;
-    this.publish(resultChanges(result));
+    this.safely({ state: 'loading' });
+    try {
+      const result = await readChangeSet(rootAtStart, this.hideWhitespace);
+      if (!this.disposed && this.root === rootAtStart) this.safely(resultChanges(result));
+    } catch (error) {
+      this.safely({ state: 'error', message: reasonOf(error), files: [] });
+    } finally {
+      this.inFlight = false;
+    }
   }
 
   private publish(changes: Partial<DiffPayload>): void {
     this.payload = { ...this.payload, ...changes };
     this.capabilities.updateTab(INSTANCE_KEY, () => ({ payload: this.payload }));
+  }
+
+  // A publish the host refuses — a payload it will not accept — leaves nothing to answer with: the
+  // tab is already gone as far as the application is concerned. Swallow it here rather than let it
+  // climb out of a call nothing is awaiting.
+  private safely(changes: Partial<DiffPayload>): void {
+    try {
+      this.publish(changes);
+    } catch {
+      // Deliberately empty.
+    }
   }
 }
