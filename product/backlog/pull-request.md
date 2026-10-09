@@ -2,6 +2,8 @@
 
 # pull-request
 
+* error when executing diff command: Tab plugin "diff" disabled: payload schema 2 is not supported; expected 1.
+
 * diff views should have the same font size and syntax highlighting as the editor tab
 
 * Unified diff view — Render the original and modified versions of a file in a single, vertically scrolling code display. Unchanged lines appear once, deleted lines appear with a red-tinted background and a − marker, and added lines appear with a green-tinted background and a + marker. When code is replaced, show the removed lines immediately before the added lines. Each row must maintain consistent alignment between its line numbers, change indicators, and code content. Preserve indentation and whitespace using a monospaced font. The unified view should support line selection, syntax highlighting, inline comments, and context expansion.
