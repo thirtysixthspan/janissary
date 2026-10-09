@@ -421,6 +421,31 @@ describe('DiffTab', () => {
     expect(oldSide.querySelector('.diff-number')?.textContent).toBe('3');
   });
 
+  it("collapses an entry's hunks on a click of its chevron and restores them on another", () => {
+    const { container } = renderTab();
+    const chevron = screen.getByRole('button', { name: 'Collapse this file' });
+    fireEvent.click(chevron);
+    expect(container.querySelectorAll('.diff-line').length).toBe(0);
+    expect(screen.getByRole('button', { name: 'Expand this file' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand this file' }));
+    expect(container.querySelectorAll('.diff-line').length).toBe(3);
+  });
+
+  it("collapses one entry on its own chevron, leaving the others' rows rendered", () => {
+    const { container } = renderTab(payload({ files: [file({ path: 'a.txt' }), file({ path: 'b.txt' })] }));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Collapse this file' })[0]);
+    const entries = [...container.querySelectorAll(':scope .diff-file')];
+    expect(entries[0].querySelectorAll('.diff-line').length).toBe(0);
+    expect(entries[1].querySelectorAll('.diff-line').length).toBe(3);
+  });
+
+  it("opens an entry collapsed of its own accord with the same chevron", () => {
+    const { container } = renderTab(payload({ files: [wholeFile()] }));
+    expect(screen.getByRole('button', { name: 'Expand this file' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand this file' }));
+    expect(container.querySelectorAll('.diff-line').length).toBe(2);
+  });
+
   it('scrolls the walked hunk into view', () => {
     const { container } = renderTab();
     fireEvent.keyDown(body(), { key: 'ArrowDown' });

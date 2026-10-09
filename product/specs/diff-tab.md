@@ -39,10 +39,14 @@ pinned while the list moves.
 
 Every hunk is expanded and introduced by the range it occupies, `@@ -start,length +start,length @@`,
 so the reader sees where the change begins and ends on each side and that the lines between two hunks
-were skipped rather than removed. Each hunk line carries its file's number on both sides: two narrow
-right-aligned gutters in the unified layout, the original number blank on an added line and the new
-number blank on a removed one, and in the split layout the original number in the left column with
-the modified one in the right. There is no cap: a change of any size is shown whole. A line longer
+were skipped rather than removed. Every file entry's header carries a **disclosure chevron**: clicking
+it collapses the entry to its header, and clicking it again restores exactly what was there, one entry
+at a time. The chevron turns with the state, and an entry that starts collapsed — a whole-file change,
+or one over the cap — opens with the same chevron, so the header's reason note and the control agree.
+A double-click on the header does the same thing. Each hunk line carries its file's number on both
+sides: two narrow right-aligned gutters in the unified layout, the original number blank on an added
+line and the new number blank on a removed one, and in the split layout the original number in the left
+column with the modified one in the right. There is no cap: a change of any size is shown whole. A line longer
 than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads
 without a scrollbar and a wrapped line's number stays beside its first row.
 

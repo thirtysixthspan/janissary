@@ -16,8 +16,6 @@
 
 File presentation and navigation
 
-* Per-file collapse and expand — Place a disclosure chevron at the beginning of every file header. Clicking it should collapse the file's diff content while leaving the header visible, including the file path, status, counts, and review controls. Clicking again restores the previous content, including expanded hunks where practical. The disclosure icon must rotate or change direction to indicate the current state. Collapsing one file should not affect the expanded state of unrelated files.
-
 * File change status — Display an appropriate status for each changed file: added, modified, deleted, renamed, or another supported change type. Use recognizable labels or icons, with color providing a secondary visual cue. For newly added files, render only new content; for deleted files, render only old content; for renamed files, show the relationship between the previous and current paths. The file header should continue to communicate status even when the diff content is collapsed or unavailable.
 
 * File addition and deletion counts — Show a compact change summary in each file header, such as +24 −8, using green for additions and red for deletions. Counts should reflect actual added and removed lines rather than the number of visible diff rows. Present these values in a consistently aligned position to make scanning multiple file headers easy. Optionally use a small proportional bar showing the relationship between additions and deletions, but retain the numeric counts for precision and accessibility.

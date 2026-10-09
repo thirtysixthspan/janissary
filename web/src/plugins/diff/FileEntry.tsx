@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import type { DiffFile } from '@shared/plugins/diff/shared';
 import { HunkLines } from './HunkLines';
 import { SplitHunks } from './SplitHunks';
@@ -23,9 +25,13 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
 }) {
   let taken = 0;
   const spots = file.hunks.map((hunk) => (hunk.lines.length === 0 ? -1 : offset + taken++));
-  const [expanded, setExpanded] = useState(false);
+  // Three answers about one entry: the reason it collapsed of its own accord, the user's own flip of
+  // it, and nothing yet. A user's flip stands because a whole-file change that grows a surviving line
+  // is still an entry the user closed.
+  const [flipped, setFlipped] = useState<boolean | null>(null);
   const over = oversizedLines(file);
-  const collapsed = (isWholeFileChange(file) || over > 0) && !expanded;
+  const collapsed = flipped ?? (isWholeFileChange(file) || over > 0);
+  const flip = () => setFlipped(!collapsed);
   const openName = (event: React.MouseEvent) => {
     if (event.detail >= 2) return;
     if (file.binary) { onOpenMedia(); return; }
@@ -35,8 +41,17 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
     <div className="diff-file">
       <div
         className="diff-file-header"
-        onDoubleClick={() => setExpanded((was) => !was)}
+        onDoubleClick={flip}
       >
+        <button
+          type="button"
+          className="diff-chevron"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Expand this file' : 'Collapse this file'}
+          onClick={flip}
+        >
+          <FontAwesomeIcon icon={collapsed ? faCaretRight : faCaretDown} />
+        </button>
         <button
           type="button"
           className="diff-file-name"
