@@ -398,6 +398,29 @@ describe('DiffTab', () => {
       .toEqual(['@@ -1,2 +1,2 @@']);
   });
 
+  it('fills the side a split row has nothing for with an empty, numberless cell', () => {
+    // The requirement: an alignment row holds the half of the pair that has no lines, shaded and the
+    // same height, without a fake number or a sign of its own — which is what keeps the two columns
+    // aligned where a run of removals outruns the run that replaced it.
+    const { container } = renderTab(payload({ split: true, files: [file({
+      hunks: [{
+        oldStart: 1, newStart: 1,
+        lines: [
+          { kind: 'context', number: 1, jump: 1, oldNumber: 1, text: 'kept' },
+          { kind: 'removed', number: 2, jump: 2, oldNumber: 2, text: 'one' },
+          { kind: 'removed', number: 3, jump: 3, oldNumber: 3, text: 'two' },
+          { kind: 'added', number: 2, jump: 2, text: 'new' },
+        ],
+      }],
+    })] }));
+    const row = container.querySelectorAll(':scope .diff-split-row')[2];
+    const [oldSide, newSide] = [...row.children];
+    expect(newSide.className).toBe('diff-cell diff-new diff-empty');
+    expect(newSide.querySelector('.diff-number')?.textContent).toBe('');
+    expect(newSide.querySelector('.diff-marker')?.textContent).toBe('');
+    expect(oldSide.querySelector('.diff-number')?.textContent).toBe('3');
+  });
+
   it('scrolls the walked hunk into view', () => {
     const { container } = renderTab();
     fireEvent.keyDown(body(), { key: 'ArrowDown' });
