@@ -47,4 +47,15 @@ describe('diff styles', () => {
     document.body.append(header);
     expect(getComputedStyle(header).position).toBe('static');
   });
+
+  it('sets consecutive file sections off with whitespace as well as the rule', () => {
+    loadStyles();
+    const first = document.createElement('div');
+    first.className = 'diff-file';
+    const second = document.createElement('div');
+    second.className = 'diff-file';
+    document.body.append(first, second);
+    expect(getComputedStyle(first).marginTop).toBe('0');
+    expect(getComputedStyle(second).marginTop).toBe('8px');
+  });
 });
