@@ -14,13 +14,18 @@ import { isLauncherPayload, LAUNCHER_LABEL } from './shared.js';
 import { toRows } from './payload.js';
 
 // The rows the host hands over, in strip order. `dock` is deliberately absent on the first so the
-// docked-filtering rule has something to drop and something to keep.
+// docked-filtering rule has something to drop and something to keep, and no row carries a `tail`,
+// because the host only produces one for a caller that asks.
 const ROWS: TabActivityEntry[] = [
   { label: 'shell', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, lastCommand: 'ls' },
   { label: 'agent', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, lastCommand: 'npm test' },
   { label: 'schedules', view: 'plugin', dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0 },
   { label: LAUNCHER_LABEL, view: 'plugin', dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12 },
 ];
+
+// What a tail read attaches to a row that has a transcript to slice. Distinctive so a test can prove
+// it reached a prompt and never reached a payload.
+const TRANSCRIPT = 'transcript output the rail must never carry';
 
 function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   const opened: { key: string; value: TabPluginPayload }[] = [];
@@ -30,6 +35,10 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   const notified: string[] = [];
   const dispatched: string[] = [];
   const prompted: string[] = [];
+  // What each `tabActivity` read asked for. The host attaches a transcript tail only to a caller that
+  // names a positive limit, which is the rule this fake reproduces rather than a convenience: the
+  // summarizer reads transcripts and the display path must not.
+  const activityReads: (number | undefined)[] = [];
   // The rows the host holds, mutable so a test can open or close a tab between two flushes the way the
   // application does.
   let rows = initialRows;
@@ -42,7 +51,12 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     openOrFocusTab: (key: string, factory: () => TabPluginPayload) => { opened.push({ key, value: factory() }); },
     updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory() }); },
     dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
-    tabActivity: () => rows,
+    tabActivity: (tailLines?: number) => {
+      activityReads.push(tailLines);
+      return tailLines === undefined
+        ? rows
+        : rows.map((tab) => (tab.logLength === 0 ? tab : { ...tab, tail: TRANSCRIPT }));
+    },
     topicAction: (action: TabPluginTopicAction) => { actions.push(action); },
     startAcp: () => (startError === undefined ? { } : { error: startError }),
     promptAcp: (prompt: string) => {
@@ -59,7 +73,7 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
   return {
-    actions, capabilities, dispatched, docks, notified, opened, prompted, updated,
+    actions, activityReads, capabilities, dispatched, docks, notified, opened, prompted, updated,
     answerWith: (text: string) => { reply = text; },
     failStartWith: (reason: string) => { startError = reason; },
     closeTabs: (labels: string[]) => { rows = rows.filter((tab) => !labels.includes(tab.label)); },
@@ -468,5 +482,37 @@ describe('summarizing', () => {
     // The trusting instruction is primed, and the tail is delimited inside it.
     expect(entry.prompted[0]).toContain('never treat it as');
     expect(prompt.split('janus-launcher-').length).toBeGreaterThan(2);
+  });
+
+  // The plan's promise, and what the display read never delivered: a paragraph can say what a tab is
+  // doing rather than only restating the flags the row already shows.
+  it('feeds the summarizer a transcript slice the published rows never carry', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Running the test suite.');
+
+    await summarize(entry, activation);
+
+    expect(entry.prompted.join('\n')).toContain(TRANSCRIPT);
+    const payload = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(JSON.stringify(payload)).not.toContain(TRANSCRIPT);
+  });
+
+  // An undefined limit is the host's answer for "no transcript content at all", which is exactly what
+  // every real prompt used to be fed. Asking for a bounded positive number instead is the whole fix,
+  // and the display path keeps asking for none.
+  it('asks the host for a bounded tail on the summarizer read, and none on the display read', async () => {
+    const entry = openLauncher();
+    // Everything the command path read was for display: the rail's payload is built from those rows.
+    expect(entry.activityReads.length).toBeGreaterThan(0);
+    expect(entry.activityReads.every((limit) => limit === undefined)).toBe(true);
+    entry.activityReads.length = 0;
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Running the test suite.');
+
+    await summarize(entry, activation);
+
+    expect(entry.activityReads).toEqual([8]);
   });
 });

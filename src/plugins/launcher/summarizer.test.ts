@@ -108,6 +108,20 @@ describe('describing one tab to the summarizer', () => {
     expect(describeTab(tab(), DELIMITER)).toContain('a terminal tab');
   });
 
+  // The plan promises the recency fact the row's timestamp shows, and the prompt never carried it: a
+  // recap that cannot tell a tab that just moved from one that has been quiet for an hour says only
+  // what the flags already say.
+  it('says how long ago the tab was last active, at the resolution the host stamps', () => {
+    const now = 1_800_000_000_000;
+
+    expect(describeTab(tab({ lastActivity: now - 30_000 }), DELIMITER, now)).toContain('was active just now');
+    expect(describeTab(tab({ lastActivity: now - 60_000 }), DELIMITER, now)).toContain('was last active 1 minute ago');
+    expect(describeTab(tab({ lastActivity: now - 24 * 60_000 }), DELIMITER, now)).toContain('was last active 24 minutes ago');
+    expect(describeTab(tab({ lastActivity: now - 3 * 3_600_000 }), DELIMITER, now)).toContain('was last active 3 hours ago');
+    // 0 is the host's "no activity yet", which has no age to report rather than an age of now.
+    expect(describeTab(tab({ lastActivity: 0 }), DELIMITER, now)).toContain('has not been active yet');
+  });
+
   // The tail is the one part of the prompt a third party can write into, so it is the one part that is
   // delimited — and a line inside it that mimics the reply format stays inside its markers.
   it('delimits the tail, so content inside it cannot close the block early', () => {
@@ -163,6 +177,19 @@ describe('building one flush prompt', () => {
 
     expect(prompt.indexOf('[[tab:one]]')).toBeLessThan(prompt.indexOf('[[tab:two]]'));
     expect(prompt).toContain('These are the tabs currently open');
+  });
+
+  // One clock for the whole flush, so a prompt cannot describe one tab as of now and the next as of a
+  // moment the flush has already moved past.
+  it('measures every tab against the one moment the flush was built at', () => {
+    const now = 1_800_000_000_000;
+    const prompt = buildSummarizerPrompt([
+      tab({ label: 'one', lastActivity: now - 8 * 60_000 }),
+      tab({ label: 'two', lastActivity: now - 5 * 60_000 }),
+    ], DELIMITER, now);
+
+    expect(prompt).toContain('[[tab:one]] a terminal tab, idle, not waiting on the user, has no unseen output, was last active 8 minutes ago.');
+    expect(prompt).toContain('[[tab:two]] a terminal tab, idle, not waiting on the user, has no unseen output, was last active 5 minutes ago.');
   });
 
   it('asks for nothing at all about an empty list', () => {

@@ -70,6 +70,18 @@ export function parseTabSummaries(reply: string): Map<string, string> {
   return summaries;
 }
 
+// How long ago a tab was last active, in the words a recap reads it. Minute resolution is the
+// resolution the host stamps it at, so the phrasing is never more precise than the number; a tab that
+// has done nothing at all has no age to report.
+function recencyOf(lastActivity: number, now: number): string {
+  if (lastActivity <= 0) return 'has not been active yet';
+  const minutes = Math.max(0, Math.floor((now - lastActivity) / 60_000));
+  if (minutes < 1) return 'was active just now';
+  if (minutes < 60) return `was last active ${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60);
+  return `was last active ${hours} hour${hours === 1 ? '' : 's'} ago`;
+}
+
 // One tab's entry in the prompt: its label and the flags a recap needs, then every string the tab
 // itself supplied between the session's markers. The label and the flags are the only things outside
 // them — the label because the reply is keyed on it, the flags because the host measured them — and
@@ -77,13 +89,19 @@ export function parseTabSummaries(reply: string): Map<string, string> {
 // flags come off the same `TabActivityEntry` the launcher's rows are built from, so what is fed and
 // what is shown can never be two answers to "what is this tab doing". The tail itself is read at
 // flush time through the capability that produces it, so a prompt never summarizes a snapshot the
-// host has moved past.
-export function describeTab(tab: TabActivityEntry, delimiter: string): string {
+// host has moved past. `now` is the one moment every tab in a flush is measured against, so a prompt
+// cannot describe two tabs as of two different clocks.
+export function describeTab(
+  tab: TabActivityEntry,
+  delimiter: string,
+  now: number = Date.now(),
+): string {
   const facts = [
     tab.view ? `a ${tab.view} tab` : 'a terminal tab',
     tab.busy ? 'busy running work right now' : 'idle',
     tab.needsInput ? 'waiting on the user to answer a prompt' : 'not waiting on the user',
     tab.hasUnread ? 'has unseen output' : 'has no unseen output',
+    recencyOf(tab.lastActivity, now),
   ];
   const framed = [
     ...(tab.title ? [`named ${tab.title}`] : []),
@@ -100,10 +118,14 @@ export function describeTab(tab: TabActivityEntry, delimiter: string): string {
 // rows are drawn so a reader comparing the rail to the prompt sees the same list twice. The delimiter
 // is the one this session's priming named, so the persona can tell where its untrusted block begins
 // and ends.
-export function buildSummarizerPrompt(tabs: readonly TabActivityEntry[], delimiter: string): string {
+export function buildSummarizerPrompt(
+  tabs: readonly TabActivityEntry[],
+  delimiter: string,
+  now: number = Date.now(),
+): string {
   return [
     'These are the tabs currently open in the application, and where each one stands.',
-    ...tabs.filter((tab) => isRoutingLabel(tab.label)).map((tab) => describeTab(tab, delimiter)),
+    ...tabs.filter((tab) => isRoutingLabel(tab.label)).map((tab) => describeTab(tab, delimiter, now)),
   ].join('\n\n');
 }
 
@@ -162,6 +184,8 @@ export async function summarizeOnce(input: {
   }
   const tabs = current.filter((tab) => tab.logLength !== (state.fed.get(tab.label) ?? -1));
   if (tabs.length === 0) return new Map();
+  // One clock for the whole flush, so every tab's recency is measured against the same moment.
+  const now = Date.now();
   const cursors = new Map(state.fed);
   state.inFlight = true;
   try {
@@ -171,7 +195,7 @@ export async function summarizeOnce(input: {
       await capabilities.promptAcp(primingText(personaBody, state.delimiter));
       state.primed = true;
     }
-    const reply = await capabilities.promptAcp(buildSummarizerPrompt(tabs, state.delimiter));
+    const reply = await capabilities.promptAcp(buildSummarizerPrompt(tabs, state.delimiter, now));
     // Cursors advance only now, so a failure above leaves them where they were.
     for (const tab of tabs) state.fed.set(tab.label, tab.logLength);
     return parseTabSummaries(reply);

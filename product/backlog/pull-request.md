@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's transcript-backed status summaries by requesting capped tails.
-
-Existing Issue: The summarize intent obtains its rows from ownTabs, which calls tabActivity without a tail limit, so every real prompt substitutes 'No transcript content yet.' for the promised output slice. Severity: 8/10
-
-Existing Risk: 7/10 - Users receive summaries inferred only from metadata even when tabs hold the output needed to explain their work.
-
-Proposal Risk: 2/10 - Explicit tail requests and integration coverage keep output available to summarization without placing raw transcripts in the row payload.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "deliver the plan's transcript-backed status summaries by requesting capped tails". In src/plugins/launcher/activate.ts, separate display-only activity reads from summarizer reads and pass a bounded positive entry limit to tabActivity for each flush. Feed only eligible center tabs into src/plugins/launcher/summarizer.ts, and include the promised recency fact in describeTab. Preserve the tail stripping in src/plugins/launcher/payload.ts. Extend src/plugins/launcher/activate.test.ts with a capability fake that omits tails unless requested, and assert actual transcript text reaches the prompt while published LauncherPayload rows contain none; src/plugins/activity.test.ts already covers optional tail behavior and caps.
-
-
 * Detect transcript edits and capped-log appends when deciding whether to refresh a summary.
 
 Existing Issue: The summarizer cursor compares only logLength, so output rewritten into a running entry and new entries appended after the log reaches its cap are treated as unchanged. Severity: 7/10
