@@ -6,7 +6,7 @@ unstaged together, untracked files included — the way GitHub renders the files
 request: one entry per changed file, its add and delete counts on the entry's header, and beneath it the
 changed hunks with added lines green and removed lines red. Clicking a file's name opens that file in an
 editor tab; double-clicking an added or context line opens the file at that line. Removed lines are
-inert because their positions no longer exist in the file. The tab is read-only: nothing in it stages,
+inert for opening files because their positions no longer exist in the file. The code is read-only: nothing in the tab stages,
 discards, or commits, and nothing writes to the repository's index.
 
 Before it, the only way to inspect changes was to type `git diff` into a shell tab and read the
@@ -58,6 +58,8 @@ takes the row's own color — a saturated green on an addition, a darker red on 
 reads by its sign with the color as the secondary cue and a surviving line is the row without either.
 
 Removed text is not crossed out in either layout. The red background, minus sign, gutter color, syntax colors, and changed-character marks remain visible, while removed lines remain inert.
+
+Unified layout displays each unchanged line once. Within a replacement, the complete block of removed lines appears immediately before the complete block of added lines. A file's gutters keep a consistent width across all its visible original and modified line numbers, so crossing a digit boundary does not shift the markers or code. Indentation, whitespace-only lines, and empty source lines are preserved exactly.
 
 Where a line was replaced rather than added or removed whole, the characters that changed carry a
 stronger tint of the row's own color — the numerals in `timeout = 30` against `timeout = 60` — so the
@@ -111,7 +113,7 @@ Split layout shows original content on the left and modified content on the righ
 
 Both columns retain equal, readable widths. When the available space is too narrow, each hunk scrolls horizontally with both columns moving together. All files and both sides continue sharing the tab body's vertical scroll. Added lines remain green, removed lines remain red, and each column keeps its own line numbers, signs, syntax colors, and character-change marks.
 
-The body is the tab's one focusable region. Clicking into it focuses it, and while it holds focus the
+The code body is focusable for navigation. Clicking into a hunk focuses it, and while the body itself holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,
 stopping at the first and last change rather than wrapping and scrolling a file into view as the walk
 reaches it. **j and k move between files** instead, one file at a time — the next file's first hunk and
@@ -119,11 +121,29 @@ the previous one's — stopping at the first and last file rather than wrapping.
 at the walked hunk's first changed line. A click on a hunk selects it and focuses the body, so the walk
 continues from where the mouse left off.
 
+Navigation shortcuts leave comment editors and buttons alone. In a comment editor, arrows move the caret, Return inserts a new line, and Escape cancels the draft.
+
 Opening a file reuses the editor tab's existing de-duplication: a file already open in an editor tab is
 focused rather than duplicated, exactly as every other path into the editor behaves. A double-click on
 an added or context line of a file that exists opens that line. A removed line opens nothing because
 its position no longer exists in the file. A deleted file's lines answer nothing, because the file they
 name is gone.
+
+### Inline comments
+
+In unified layout, each source line has a **+** comment control. It opens a plain-text editor beside that line; **Save comment** keeps the note locally, **Cancel** discards the current edit, and an empty comment cannot be saved. Saved comments can be edited or deleted. These controls also work on removed lines without opening their missing file positions. Original and modified comments at the same line number remain separate.
+
+Comments retain the source text they were written against. If an annotated line changes, the note identifies that change and shows the earlier text. Original-side notes remain available when their line becomes unchanged context. Comment editing preserves source selection, syntax colors, and line targeting, and typing a note does not rerender unchanged source code.
+
+Saved comments and drafts are temporary, remain local to this tab, and are not sent to an external service or written to source files. While the same file entry remains present, they survive refresh, file collapse, context expansion and hunk merging, and layout changes. Split layout temporarily hides the comment interface; returning to unified layout restores it. Closing the tab, changing its directory, or removing the file entry forgets its comments and drafts.
+
+### Context expansion
+
+Expanded tracked text-file entries that contain unchanged context offer **Show more context** in their header. The initial view uses three surrounding lines. Each request reveals up to twenty more unchanged lines at each hunk edge, widening all the change groups in that file within the same code display. Neighboring hunks merge when their revealed context connects. Addition and deletion counts remain unchanged, and revealed lines retain their correct original/new numbers, syntax colors, selection, and unified comment controls.
+
+The control is disabled while a request is pending and disappears when no more context can be revealed. Expansion is bounded to one million surrounding lines. Binary, added, deleted, and mode-only entries do not offer this control. A file-specific expansion failure appears beside the control, leaves the previous display intact, and can be retried. Requests made during a refresh are applied after that read finishes; changing directories discards results from the previous directory.
+
+Expanded context remains during periodic refresh and is forgotten when the tab closes or changes directory. This is per-file context widening; it is separate from the file disclosure chevron and from opening a file in the editor.
 
 ### Empty and failure states
 
@@ -137,5 +157,5 @@ A repository with no commits yet reads as every file added, rather than as an er
 ### Lifetime
 
 The diff tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is not
-restored on `--relaunch`. Closing the tab forgets what it held — the hunks it showed, the expansions
+restored on `--relaunch`. Closing the tab forgets what it held — the hunks it showed, temporary comments and drafts, the expansions
 and the keyboard walk. The layout is the one thing kept: it outlives the tab that chose it.

@@ -1,4 +1,4 @@
-export const DIFF_PAYLOAD_SCHEMA_VERSION = 4;
+export const DIFF_PAYLOAD_SCHEMA_VERSION = 5;
 
 // One line of a hunk. `kind` is which side git printed it on; `number` is the line's number on that
 // side — the old-side number for a removed line, the new-side number for an added or context one — so
@@ -40,6 +40,10 @@ export type DiffFile = {
   additions: number;
   deletions: number;
   hunks: DiffHunk[];
+  contextLines?: number;
+  canExpandContext?: boolean;
+  expandingContext?: boolean;
+  contextError?: string;
 };
 
 // `loading` while a recompute runs, `done` once it settles, `not-repository` when the root is not
@@ -61,6 +65,7 @@ export type RefreshIntent = Record<string, never>;
 
 // The layout the user chose, which becomes the layout every later diff tab opens with.
 export type LayoutIntent = { split: boolean };
+export type ContextIntent = { path: string };
 
 // Open a file at a line in an editor tab. `path` is project-relative; `line` is the line's payload
 // record's own `jump`.
@@ -99,6 +104,11 @@ function isDiffFile(value: unknown): value is DiffFile {
     && (value.binary === undefined || typeof value.binary === 'boolean')
     && typeof value.additions === 'number'
     && typeof value.deletions === 'number'
+    && (value.contextLines === undefined || (typeof value.contextLines === 'number'
+      && Number.isSafeInteger(value.contextLines) && value.contextLines >= 3 && value.contextLines <= 1_000_000))
+    && (value.canExpandContext === undefined || typeof value.canExpandContext === 'boolean')
+    && (value.expandingContext === undefined || typeof value.expandingContext === 'boolean')
+    && (value.contextError === undefined || typeof value.contextError === 'string')
     && Array.isArray(value.hunks)
     && value.hunks.every(isDiffHunk);
 }
@@ -119,6 +129,10 @@ export function isRefreshIntent(value: unknown): value is RefreshIntent {
 
 export function isLayoutIntent(value: unknown): value is LayoutIntent {
   return isRecord(value) && typeof value.split === 'boolean';
+}
+
+export function isContextIntent(value: unknown): value is ContextIntent {
+  return isRecord(value) && typeof value.path === 'string' && value.path.length > 0;
 }
 
 export function isOpenIntent(value: unknown): value is OpenIntent {

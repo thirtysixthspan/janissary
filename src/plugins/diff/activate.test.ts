@@ -85,6 +85,25 @@ describe('diff plugin activation', () => {
 
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
+  it('accepts a context intent, answers null immediately, and publishes expanded Git context', async () => {
+    const lines = Array.from({ length: 60 }, (_, index) => `line ${index + 1}`);
+    writeFileSync(path.join(repo, 'a.txt'), `${lines.join('\n')}\n`);
+    commitAll(repo);
+    lines[29] = 'changed';
+    writeFileSync(path.join(repo, 'a.txt'), `${lines.join('\n')}\n`);
+    const { capabilities, updateTab } = makeCapabilities({
+      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
+    });
+    const activation = activate();
+    activation.command?.('', capabilities);
+    const initial = await settled(updateTab);
+    expect(activation.intent(intent(initial, 'context', { path: 'a.txt' }), capabilities)).toBeNull();
+    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBe(23); });
+    expect(lastPayload(updateTab).files[0].hunks[0].lines.length).toBeGreaterThan(initial.files[0].hunks[0].lines.length);
+    expect(isJsonCompatible(lastPayload(updateTab))).toBe(true);
+    activation.dispose?.();
+  });
+
   it('validates its own payload', () => {
     const activation = activate();
     expect(activation.isPayload({})).toBe(false);

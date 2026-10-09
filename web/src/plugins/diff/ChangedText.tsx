@@ -11,10 +11,9 @@ export function ChangedText({ line, spans, tokens }: {
   spans: { from: number; to: number }[];
   tokens: TokenRange[];
 }) {
-  const shown = line.text === '' ? ' ' : line.text;
   return (
     <span className="diff-text">
-      {syntaxSegments(shown, spans, tokens).map((segment) => (
+      {syntaxSegments(line.text, spans, tokens).map((segment) => (
         <span className={segment.className || undefined} key={segment.from}>{segment.text}</span>
       ))}
     </span>

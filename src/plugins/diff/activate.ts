@@ -13,10 +13,12 @@ import {
   isOpenIntent,
   isOpenMediaIntent,
   isRefreshIntent,
+  isContextIntent,
   type LayoutIntent,
   type OpenIntent,
   type OpenMediaIntent,
   type RefreshIntent,
+  type ContextIntent,
 } from './shared.js';
 import { DiffSession, type DiffOrigin } from './session.js';
 
@@ -90,6 +92,13 @@ export function activate(): TabPluginActivation {
         payload: isLayoutIntent,
         run: (_tab, payload: LayoutIntent, capabilities) => {
           sessionFor(capabilities).layout(payload.split);
+          return null;
+        },
+      },
+      context: {
+        payload: isContextIntent,
+        run: (_tab, payload: ContextIntent, capabilities) => {
+          sessionFor(capabilities).expandContext(payload.path);
           return null;
         },
       },

@@ -40,6 +40,7 @@ export function DiffTab({
   }, [capabilities]);
 
   const onKeyDown = useCallback((event: React.KeyboardEvent) => {
+    if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     if (walk.navigate(event.key)) { event.preventDefault(); return; }
     if (event.key === 'j' || event.key === 'k') {
       if (walk.moveFile(event.key === 'j')) { event.preventDefault(); }
@@ -86,7 +87,7 @@ export function DiffTab({
         {payload.state === 'done' && files.length === 0 && <div className="diff-empty">No changes</div>}
         {files.map((file, index) => (
           <FileEntry
-            key={file.path}
+            key={JSON.stringify([payload.root, file.path])}
             file={file}
             split={split}
             offset={hunkOffset(files, index)}
@@ -95,6 +96,7 @@ export function DiffTab({
             onOpenFile={() => openFile(file.path)}
             onOpenLine={(line) => openLine(file.path, line.jump)}
             onOpenMedia={() => openMedia(file.path)}
+            onExpandContext={() => capabilities.intent('context', { path: file.path })}
           />
         ))}
       </div>

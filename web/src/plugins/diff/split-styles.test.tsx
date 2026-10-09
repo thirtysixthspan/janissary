@@ -7,7 +7,7 @@ import styles from './diff.css?raw';
 
 afterEach(() => { document.querySelector('#diff-test-styles')?.remove(); });
 
-function show(split = true) {
+function show(split = true, overrides: Partial<DiffFile> = {}) {
   const sheet = document.createElement('style');
   sheet.id = 'diff-test-styles';
   sheet.textContent = styles;
@@ -19,7 +19,7 @@ function show(split = true) {
       { kind: 'removed', number: 2, oldNumber: 2, jump: 2, text: 'const value = 30;' },
       { kind: 'removed', number: 3, oldNumber: 3, jump: 2, text: 'const extra = 2;' },
       { kind: 'added', number: 2, jump: 2, text: 'const value = 60;' },
-    ] }],
+    ] }], ...overrides,
   };
   return render(<div className="diff-body"><FileEntry
     file={file} split={split} offset={0} walked={null} onSelectHunk={vi.fn()}
@@ -35,6 +35,21 @@ function declaredStyle(element: Element, property: string): string {
 }
 
 describe('split diff presentation', () => {
+  it.each([false, true])('keeps gutters aligned across a line-number digit boundary with split=%s', (split) => {
+    const { container } = show(split, { additions: 1, deletions: 1, hunks: [{ oldStart: 999, newStart: 999, lines: [
+      { kind: 'context', number: 999, oldNumber: 999, jump: 999, text: 'const kept = 0;' },
+      { kind: 'removed', number: 1000, oldNumber: 1000, jump: 1000, text: 'const value = 1;' },
+      { kind: 'added', number: 1000, jump: 1000, text: 'const value = 2;' },
+      { kind: 'context', number: 1001, oldNumber: 1001, jump: 1001, text: 'const tail = 0;' },
+    ] }] });
+    const entry = container.querySelector<HTMLElement>('.diff-file')!;
+    expect(entry.style.getPropertyValue('--diff-gutter-width')).toBe('4ch');
+    for (const number of container.querySelectorAll('.diff-number')) {
+      expect(declaredStyle(number, 'width')).toBe('var(--diff-gutter-width, 3ch)');
+      expect(declaredStyle(number, 'min-width')).toBe('var(--diff-gutter-width, 3ch)');
+    }
+  });
+
   it('keeps every paired row at a readable width inside one shared horizontal scroller', () => {
     const { container } = show();
     const hunk = container.querySelector('.diff-split')!;

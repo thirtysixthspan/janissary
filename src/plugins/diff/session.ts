@@ -4,7 +4,8 @@ import { isInsideRoot } from '../files.js';
 import type { ChangeSetResult } from './change-set.js';
 import { readChangeSet } from './change-set.js';
 import { displayRoot } from './display.js';
-import type { DiffPayload } from './shared.js';
+import type { DiffFile, DiffPayload } from './shared.js';
+import { preserveContextErrors } from './context-results.js';
 // The state one diff tab holds between calls: which root it is showing and what it currently shows.
 // Kept beside `activate.ts` because it is the plugin's whole lifetime — `dispose` has to reach it —
 // while `activate.ts` is about wiring handlers. One tab at a time, addressed by one instance key, the
@@ -25,7 +26,7 @@ function reasonOf(error: unknown): string {
   return message.split('\n').find((line) => line.trim().length > 0) ?? 'git diff failed';
 }
 
-function resultChanges(result: ChangeSetResult): Partial<DiffPayload> {
+function resultChanges(result: ChangeSetResult, previous: DiffFile[]): Partial<DiffPayload> {
   switch (result.kind) {
     case 'not-repository': {
       return { state: 'not-repository', message: '', files: [] };
@@ -34,7 +35,7 @@ function resultChanges(result: ChangeSetResult): Partial<DiffPayload> {
       return { state: 'error', message: result.reason, files: [] };
     }
     default: {
-      return { state: 'done', message: '', files: result.files };
+      return { state: 'done', message: '', files: preserveContextErrors(result.files, previous) };
     }
   }
 }
@@ -48,6 +49,8 @@ export class DiffSession {
   private payload: DiffPayload = emptyPayload();
   private inFlight = false;
   private disposed = false;
+  private contexts = new Map<string, number>();
+  private revision = 0;
 
   constructor(private capabilities: TabPluginServerCapabilities) {
     const saved = capabilities.readSettings().split;
@@ -65,13 +68,19 @@ export class DiffSession {
   open(root: string, origin: DiffOrigin): void {
     if (this.disposed || root === '') return;
     const rescope = root !== this.root;
+    if (rescope) { this.contexts.clear(); this.revision++; }
     this.root = root;
     this.payload = {
       ...this.payload,
       root: displayRoot(root, origin.root, origin.workspace?.dir),
       ...(rescope && { state: 'loading', message: '', files: [] }),
     };
-    this.capabilities.openOrFocusTab(INSTANCE_KEY, () => ({ title: TAB_TITLE, payload: this.payload }));
+    this.capabilities.openOrFocusTab(INSTANCE_KEY, () => {
+      this.contexts.clear();
+      this.revision++;
+      this.payload = { ...emptyPayload(this.split), root: this.payload.root, state: 'loading' };
+      return { title: TAB_TITLE, payload: this.payload };
+    });
     if (rescope) this.safely({});
     void this.recompute();
   }
@@ -90,6 +99,20 @@ export class DiffSession {
     this.split = split;
     if (split !== this.savedSplit && this.capabilities.saveSettings({ split })) this.savedSplit = split;
     this.safely({ split });
+  }
+
+  expandContext(path: string): void {
+    const file = this.payload.files.find((candidate) => candidate.path === path);
+    if (!file || file.binary || file.added || file.deleted || file.hunks.length === 0) {
+      this.capabilities.rejectRequest('Cannot expand context for a file outside the current text diff.');
+      return;
+    }
+    if (file.expandingContext || file.canExpandContext === false) return;
+    this.contexts.set(path, Math.min(1_000_000, (file.contextLines ?? 3) + 20));
+    this.revision++;
+    this.safely({ files: this.payload.files.map((candidate) => candidate.path === path
+      ? { ...candidate, expandingContext: true, contextError: '' } : candidate) });
+    void this.recompute();
   }
 
   // Open a file at a line in an editor tab, through the same containment check the search tab's
@@ -124,13 +147,16 @@ export class DiffSession {
     if (this.inFlight || this.disposed) return;
     this.inFlight = true;
     const rootAtStart = this.root;
+    const revisionAtStart = this.revision;
+    const contexts = new Map(this.contexts);
     try {
-      const result = await readChangeSet(rootAtStart);
-      if (!this.disposed && this.root === rootAtStart) this.safely(resultChanges(result));
+      const result = await readChangeSet(rootAtStart, contexts);
+      if (!this.disposed && this.root === rootAtStart && this.revision === revisionAtStart) this.safely(resultChanges(result, this.payload.files));
     } catch (error) {
-      this.safely({ state: 'error', message: reasonOf(error), files: [] });
+      if (!this.disposed && this.revision === revisionAtStart) this.safely({ state: 'error', message: reasonOf(error), files: [] });
     } finally {
       this.inFlight = false;
+      if (!this.disposed && this.revision !== revisionAtStart) void this.recompute();
     }
   }
 

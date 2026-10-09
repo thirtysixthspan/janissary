@@ -1,9 +1,9 @@
-import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { promisify } from 'node:util';
 import path from 'node:path';
 import { parseDiff } from './parse-diff.js';
 import type { DiffFile } from './shared.js';
+import { git } from './git.js';
+import { expandContextFiles } from './context-diff.js';
 
 // The effectful half of the diff: the working tree's changes versus `HEAD`, read without ever
 // writing to the repository. Follows the `execFileAsync` pattern `changedPaths` uses in
@@ -11,8 +11,6 @@ import type { DiffFile } from './shared.js';
 // whole diff can exceed the default. Untracked files are read in bounded batches, because one git
 // process per file is a lot of processes on a workspace full of generated output.
 
-const execFileAsync = promisify(execFile);
-const MAX_BUFFER = 1024 * 1024 * 64;
 const UNTRACKED_CONCURRENCY = 8;
 
 export type ChangeSetResult =
@@ -27,11 +25,6 @@ function firstLine(text: string): string {
 function reasonOf(error: unknown): string {
   const stderr = (error as { stderr?: string }).stderr;
   return firstLine(typeof stderr === 'string' ? stderr : String(error));
-}
-
-async function git(root: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', args, { cwd: root, maxBuffer: MAX_BUFFER });
-  return stdout;
 }
 
 // Whether `root` sits inside a git repository at all, answered by the prefix read itself: a
@@ -106,7 +99,7 @@ async function unbornChangeSet(root: string): Promise<DiffFile[]> {
 // Read the working tree's changes versus `HEAD` under `root`: tracked changes with rename detection,
 // then each untracked file as an all-added record. Never writes to the index — no intent-to-add — so
 // the repository the user is working in is untouched.
-export async function readChangeSet(root: string): Promise<ChangeSetResult> {
+export async function readChangeSet(root: string, contexts: ReadonlyMap<string, number> = new Map()): Promise<ChangeSetResult> {
   const prefix = await prefixIn(root);
   if (prefix === null) return { kind: 'not-repository' };
   try {
@@ -114,13 +107,14 @@ export async function readChangeSet(root: string): Promise<ChangeSetResult> {
     const tracked = parseDiff(
       // The `-- .` pathspec scopes the diff to the root's own subtree: `git diff` without one is
       // repository-wide even when run from a subdirectory, the way `changedPaths` handles it.
-      await git(root, ['diff', 'HEAD', '-M', '--no-ext-diff', '--no-color', '--', '.']),
+      await git(root, ['diff', 'HEAD', '-M', '--no-ext-diff', '--no-color', '--unified=3', '--', '.']),
       { prefix },
     );
     const untracked = await untrackedFiles(root);
+    const expanded = await expandContextFiles(root, tracked, prefix, contexts);
     // One list in file path order, the way GitHub's files-changed view lists files and the way the
     // keyboard walk expects them, rather than tracked files first because that is how they were read.
-    return { kind: 'files', files: [...tracked, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path)) };
+    return { kind: 'files', files: [...expanded, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path)) };
   } catch (error) {
     return { kind: 'error', reason: reasonOf(error) };
   }

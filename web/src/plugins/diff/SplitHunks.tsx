@@ -4,7 +4,7 @@ import type { TokenRange } from '../api';
 import { ChangedText } from './ChangedText';
 import { changedSpans } from './intraline';
 import { hunkRange } from './hunk-range';
-import { markerOf } from './HunkLines';
+import { markerOf } from './line-marker';
 import { splitRows } from './split-rows';
 import { highlightHunk } from './highlight-hunk';
 

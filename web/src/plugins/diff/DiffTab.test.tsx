@@ -79,6 +79,22 @@ const renderTab = (value: DiffPayload = payload()) => {
 const body = () => document.querySelector('.diff-body') as HTMLElement;
 
 describe('DiffTab', () => {
+  it.each([1, 2, 3])('places the entire removed block before %s replacement additions in unified layout', (count) => {
+    const removed = ['const value = 30;', 'const extra = 1;'];
+    const added = Array.from({ length: count }, (_, index) => `const value = ${60 + index};`);
+    const { container } = renderTab(payload({ files: [file({ path: 'a.ts', hunks: [{
+      oldStart: 1, newStart: 1, lines: [
+        { kind: 'context', number: 1, oldNumber: 1, jump: 1, text: 'const kept = 0;' },
+        ...removed.map((text, index) => ({ kind: 'removed' as const, number: index + 2, oldNumber: index + 2, jump: 2, text })),
+        ...added.map((text, index) => ({ kind: 'added' as const, number: index + 2, jump: index + 2, text })),
+      ],
+    }] })] }));
+    expect([...container.querySelectorAll(':scope .diff-line .diff-text')].map((node) => node.textContent))
+      .toEqual(['const kept = 0;', ...removed, ...added]);
+    expect(container.querySelectorAll('.diff-line.diff-context')).toHaveLength(1);
+    expect(container.querySelector(':scope .diff-line.diff-removed .diff-changed')?.textContent).toBe('3');
+  });
+
   it('renders the diffed root and one entry per changed file', () => {
     renderTab(payload({ files: [file({ path: 'a.txt' }), file({ path: 'b.txt', hunks: [] })] }));
     expect(screen.getByText('$root/')).toBeTruthy();
