@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Enforce the summarizer's promised tool-less security boundary.
-
-Existing Issue: The launcher calls the ordinary core ACP prompt path, which installs and executes browser, question, and database tools despite the plan and spec claiming that the summarizer cannot act. Severity: 9/10
-
-Existing Risk: 8/10 - An injected or mistaken model reply can execute host tools, including database commands, from an automatic background summary.
-
-Proposal Risk: 2/10 - An explicitly enforced empty tool set prevents model replies from invoking host tools, with regression tests exposing any accidental grant.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "enforce the summarizer's promised tool-less security boundary". Add an additive, tab-scoped way to request tool-less ACP operation through src/plugins/api.ts and src/plugins/acp-capabilities.ts, and enforce it in src/acp/manager.ts before creating the tool primer, extractor, and runner from src/acp/tool-table.ts. Opt the launcher into that mode in src/plugins/launcher/manifest.ts and src/plugins/launcher/summarizer.ts; preserve ordinary ACP callers' existing tools. Add a host-level test whose summary reply contains a recognized browser, question, or database command and prove that none executes, while existing ACP tool-loop tests still cover interactive operation. Update product/specs/launcher.md and documentation/developer-documentation/tab-plugins.md to describe the enforced contract.
-
-
 * Frame all model-fed tab text as untrusted data to close the prompt-injection gap.
 
 Existing Issue: describeTab delimits only the transcript tail while interpolating a tab's title and last command directly into the instruction-bearing part of the prompt. Severity: 7/10

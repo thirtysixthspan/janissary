@@ -206,7 +206,14 @@ export type TabPluginSelectionAction = {
 
 export type TabPluginServerCapabilities = {
   // Core ACP connection operations, scoped to this plugin's own answering tab.
-  startAcp(): { model?: string; error?: string };
+  //
+  // `startAcp` takes an optional request. `{ withoutTools: true }` asks for a session with no tool
+  // table at all, so a reply that emits a browser, question, or database command has nothing that
+  // runs it and nothing that recognizes it — the shape a consumer whose reply is only ever read
+  // should ask for. It is recorded against the tab, so every prompt on that session is held to it.
+  // Additive, and a strictly smaller session than the ordinary one, so it needs no declaration of
+  // its own: omit it and the full tool loop is what runs.
+  startAcp(request?: { withoutTools?: true }): { model?: string; error?: string };
   promptAcp(prompt: string): Promise<string>;
   resetAcp(): boolean;
   note(text: string): void;

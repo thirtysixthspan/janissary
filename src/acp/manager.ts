@@ -34,10 +34,16 @@ function resolveAcpModel(): string | undefined {
 }
 
 export class AcpManager extends AcpSessionManager {
-  start(label: string): { model?: string; error?: string } {
+  // Tabs whose session was asked for without a tool table. Held against the tab rather than the
+  // session: the request describes what that tab may run, so a session that dies is replaced by one
+  // held to the same rule, and only the tab's own release forgets it.
+  private withoutTools = new Set<string>();
+
+  start(label: string, request?: { withoutTools?: true }): { model?: string; error?: string } {
     if (this.stillConnecting(label)) return { error: STILL_CONNECTING };
     const model = resolveAcpModel();
     if (!model) return { error: NO_ACP_MODEL };
+    if (request?.withoutTools === true) this.withoutTools.add(label);
     try {
       this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), model, {
         onError: (message) => {
@@ -88,6 +94,18 @@ export class AcpManager extends AcpSessionManager {
     return channel !== undefined && !channel.attached;
   }
 
+  // The tab's own release is the one place the rule is forgotten, so a recycled label never
+  // inherits the restriction the tab that held it before was started under.
+  override closeTab(label: string): void {
+    this.withoutTools.delete(label);
+    super.closeTab(label);
+  }
+
+  override closeAll(): void {
+    this.withoutTools.clear();
+    super.closeAll();
+  }
+
   run(label: string, command: string, onDone?: (output: string) => void): void {
     const prompt = command.replace(/^acp\b\s*/i, '').trim();
     if (!prompt) {
@@ -127,12 +145,15 @@ export class AcpManager extends AcpSessionManager {
       });
     };
 
-    const tools = createAcpToolTable(this.managers, request?.abort.signal);
+    // A tool-less session builds no tool table at all, which is the whole enforcement: the primer
+    // grows no tool text, no reply line is recognized as a command, and `toolRunner` has nothing to
+    // resolve an emitted command to.
+    const tools = this.withoutTools.has(label) ? [] : createAcpToolTable(this.managers, request?.abort.signal);
 
     let lastAnswer = '';
     runAcpToolLoop(session, prompt, {
       signal: request?.abort.signal,
-      primer: `${toolPrimer(tools)}\n\n${MARKDOWN_INSTRUCTION}`,
+      primer: [toolPrimer(tools), MARKDOWN_INSTRUCTION].filter(Boolean).join('\n\n'),
       runCommand: toolRunner(tools, label),
       extractCommand: toolExtractor(tools),
     }, guardAcpHandlers({

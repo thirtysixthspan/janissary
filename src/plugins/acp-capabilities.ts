@@ -21,7 +21,7 @@ export function acpCapabilities(input: {
     return ownTabLabel({ managers, declaration, origin, answeringLabel }, 'ACP tab is unavailable.');
   };
   return {
-    startAcp: () => managers.acp.start(ownLabel()),
+    startAcp: (request) => managers.acp.start(ownLabel(), request),
     promptAcp: (prompt) => {
       const label = ownLabel();
       const run = () => managers.acp.prompt(label, `acp ${prompt}`);

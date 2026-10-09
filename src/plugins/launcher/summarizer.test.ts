@@ -154,11 +154,17 @@ describe('summarizeOnce', () => {
 
   function stub(tabs: TabActivityEntry[], reply: string, startError?: string) {
     const prompted: string[] = [];
+    // What each flush asked the host to start. Recorded because the tool-less request is the
+    // launcher's half of the boundary `src/acp/manager.ts` enforces.
+    const starts: ({ withoutTools?: true } | undefined)[] = [];
     const capabilities = {
-      startAcp: () => (startError === undefined ? {} : { error: startError }),
+      startAcp: (request?: { withoutTools?: true }) => {
+        starts.push(request);
+        return startError === undefined ? {} : { error: startError };
+      },
       promptAcp: (prompt: string) => { prompted.push(prompt); return Promise.resolve(reply); },
     } as unknown as Parameters<typeof summarizeOnce>[0]['capabilities'];
-    return { capabilities, prompted };
+    return { capabilities, prompted, starts };
   }
 
   const tabs = (): TabActivityEntry[] => [
@@ -236,5 +242,16 @@ describe('summarizeOnce', () => {
       .rejects.toThrow('ACP tab is unavailable.');
     expect(stubs.prompted).toHaveLength(0);
     expect(summarizer.inFlight).toBe(false);
+  });
+
+  // The boundary the host enforces is the one this asks for: a session with no tool table, so a
+  // reply naming a browser, question, or database command has nothing to run it.
+  it('starts its session without tools', async () => {
+    const stubs = stub(tabs(), '[[tab:shell]] First.');
+    const summarizer = state();
+
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+
+    expect(stubs.starts).toEqual([{ withoutTools: true }]);
   });
 });

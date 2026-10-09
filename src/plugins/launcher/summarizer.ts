@@ -144,7 +144,7 @@ export async function summarizeOnce(input: {
   const cursors = new Map(state.fed);
   state.inFlight = true;
   try {
-    const started = capabilities.startAcp();
+    const started = capabilities.startAcp({ withoutTools: true });
     if (started.error !== undefined) throw new Error(started.error);
     if (!state.primed) {
       await capabilities.promptAcp(primingText(personaBody, state.delimiter));

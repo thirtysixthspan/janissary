@@ -108,6 +108,58 @@ describe('AcpManager.run', () => {
     });
   });
 
+  // A session started without tools must not be able to reach them, and the proof has to be in what
+  // the loop is handed rather than in what the model is told: an empty table means the primer grows
+  // no tool text, no reply line is recognized as a command, and an emitted command has nothing to
+  // resolve to.
+  it('hands the loop no tools at all for a session started without them', () => {
+    const { acp } = setup();
+    acp.start('tab1', { withoutTools: true });
+
+    acp.run('tab1', 'acp summarize this');
+
+    const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
+    expect(deps.primer).toBe('Write your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.');
+    expect(deps.extractCommand('Let me look.\nbrowser open https://example.com')).toBeNull();
+    expect(deps.extractCommand('question ask "What port?"')).toBeNull();
+    expect(deps.extractCommand('db sqlite list')).toBeNull();
+    expect(() => deps.runCommand('db sqlite list')).toThrow('No ACP tool matched command: db sqlite list');
+  });
+
+  // The contrast that makes the case above a regression test: an ordinary start still gets the whole
+  // table, so a reply that emits a command on a tool-less session is refused by the session and not
+  // by an application that lost its tools.
+  it('hands the loop the full tool table for an ordinary session', () => {
+    const { acp } = setup();
+    acp.start('tab1');
+
+    acp.run('tab1', 'acp summarize this');
+
+    const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
+    expect(deps.primer).toContain('db primer');
+    expect(deps.extractCommand('question ask "What port?"')).toBe('question ask "What port?"');
+  });
+
+  // The restriction belongs to the tab, not to the session that happened to be open: a session that
+  // dies is replaced by one held to the same rule, and only the tab's own release forgets it.
+  it('keeps the tool-less rule across a closed session, and forgets it when the tab closes', () => {
+    const { acp } = setup();
+    acp.start('tab1', { withoutTools: true });
+    acp.run('tab1', 'acp hello');
+    expect(acp.close('tab1')).toBe(true);
+
+    acp.run('tab1', 'acp hello again');
+
+    expect(((mocks.runAcpToolLoop.mock.calls[1][2]) as AcpLoopDeps).primer)
+      .not.toContain('db primer');
+
+    acp.closeTab('tab1');
+    acp.run('tab1', 'acp hello');
+
+    expect(((mocks.runAcpToolLoop.mock.calls[2][2]) as AcpLoopDeps).primer)
+      .toContain('db primer');
+  });
+
   it('error handler updates output, cleans up busy, and calls onDone', () => {
     const { acp, deleteBusy, updateRunning } = setup();
     const onDone = vi.fn();

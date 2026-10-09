@@ -6,7 +6,7 @@ ACP is a core service for starting and querying Agent Client Protocol connection
 
 A plugin requests `startAcp`, `promptAcp`, and `resetAcp` in its declaration. Each capability is bound to that plugin's own answering tab, or its own invoking tab when there is no answering tab. It cannot start or query a different plugin's tab or a shell tab that invoked its command. An unavailable or disabled owner returns the ordinary request rejection `ACP tab is unavailable.`.
 
-- `startAcp()` begins or reuses the tab's connection and returns `{ model }` or `{ error }`. Startup is lazy and the handshake may still be pending.
+- `startAcp()` begins or reuses the tab's connection and returns `{ model }` or `{ error }`. Startup is lazy and the handshake may still be pending. It takes an optional request: `startAcp({ withoutTools: true })` records that the tab's session runs without a tool table, so no browser, question, or database command can run on it and no reply line is recognized as one. The request belongs to the tab, so it holds for every prompt on that session and is forgotten only when the tab closes.
 - `promptAcp(prompt)` runs the core database/browser/question loop and resolves with the final answer. Connection startup is automatic if needed. Provider and tool wait time belongs to core and is exempt from the plugin handler deadline.
 - `resetAcp()` closes the connection and returns whether one existed. It settles in-flight requests and prevents obsolete callbacks from updating a replacement prompt.
 
@@ -50,6 +50,8 @@ The connections panel retains the `acp:<provider/model>` row, close action, and 
 Each user prompt receives the existing database, browser, and question primers plus the Markdown instruction. `runAcpToolLoop` in `src/acp/loop.ts` streams each turn, extracts the last recognized command line, runs it, and feeds the result back until there is a final answer or eight tool steps have run.
 
 The tools are declared once in `src/acp/tool-table.ts`: browser, question, then database. Their order controls command ownership; extraction selects the reply's last recognized tool line. Fences and common prompt prefixes are tolerated. Only the final occurrence of an emitted command is removed from the displayed reply. A cold, empty first reply is retried once in the same transcript entry.
+
+A session a plugin started with `withoutTools` builds no tool table at all. Its primer carries no tool text, no reply line is read as a command, and an emitted command has nothing that runs it — the loop answers with the reply as prose. Every other session, including a line typed at the `acp` command, runs the full table.
 
 Tool results are recorded as ACP steps and collapse through the existing transcript rendering. The cap reports `(stopped after 8 tool steps)`. Arbitrary shell commands are not ACP tools. Database/browser/question execution remains on the machine running Janissary, even when the provider runs remotely.
 

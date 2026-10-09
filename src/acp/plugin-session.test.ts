@@ -136,4 +136,45 @@ describe('core ACP for plugin tabs', () => {
     await expect(answering).resolves.toBe('reply');
     managers.acp.closeAll();
   });
+
+  // The summarizer's promised boundary, held by the host rather than asked of the model: a session
+  // started without tools runs the real loop with no table behind it, so a reply that names a
+  // browser, question, or database command is answered as prose and nothing is dispatched.
+  it('refuses every tool for a plugin session started without them', async () => {
+    const { managers, handlers } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+
+    expect(capabilities.startAcp({ withoutTools: true }).model).toBeDefined();
+    const answer = capabilities.promptAcp('summarize the open tabs');
+    handlers().onChunk('Reading the output now.\nbrowser open https://example.com');
+    handlers().onEnd('end_turn');
+
+    await expect(answer).resolves.toBe('Reading the output now.\nbrowser open https://example.com');
+    expect(managers.browser.run).not.toHaveBeenCalled();
+    expect(managers.questions.pendingFor('consumer')).toBeUndefined();
+  });
+
+  // The contrast that makes the case above a regression test rather than a tautology: the same reply
+  // on an ordinary session does reach the browser, so what stopped it was the session.
+  it('still runs the tools for an ordinary plugin session', async () => {
+    const { managers, handlers } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+
+    capabilities.startAcp();
+    const answer = capabilities.promptAcp('open the release page');
+    handlers().onChunk('Opening it now.\nbrowser open https://example.com');
+    handlers().onEnd('end_turn');
+    // The browser command ran, so the loop is on its follow-up turn rather than finished.
+    handlers().onChunk('Done.');
+    handlers().onEnd('end_turn');
+
+    await expect(answer).resolves.toBe('Done.');
+    expect(managers.browser.run).toHaveBeenCalledWith('consumer', 'browser open https://example.com');
+  });
 });
