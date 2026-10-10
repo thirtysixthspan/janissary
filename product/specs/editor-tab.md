@@ -139,8 +139,10 @@ If the user never renames a new-file tab and saves while a file named the same a
 target already exists in that directory (created by another new-file tab saved first), the save
 does not overwrite it — it silently picks the next free name in the same directory (`untitled.md` →
 `untitled-2.md` → `untitled-3.md`, …) and updates the tab's displayed name and path to match. This
-only applies to a new-file editor's still-unsaved target; once any file has been saved, further
-saves on that tab overwrite it normally, exactly like any other editor tab.
+also replaces the editor's file-content reference as part of the retargeting, so the reference no
+longer reaches the conflicting original file. This only applies to a new-file editor's still-unsaved
+target; once any file has been saved, further saves on that tab overwrite it normally, exactly like
+any other editor tab.
 
 ### Keyboard input
 

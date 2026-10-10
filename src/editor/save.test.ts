@@ -304,9 +304,14 @@ describe('saveFile new-file auto-suffix', () => {
     const tab = managers.tab.tabs.find((t) => t.editor);
     expect(tab?.editor?.path).toBe(path.join(dir, 'untitled-2.md'));
     expect(tab?.editor?.name).toBe('untitled-2.md');
+    expect(tab?.title).toBe('untitled-2.md');
     expect(readFileSync(path.join(dir, 'untitled-2.md'), 'utf8')).toBe('hello');
     expect(readFileSync(path.join(dir, 'untitled.md'), 'utf8')).toBe('existing');
     expect(tab?.editor?.newFile).toBe(false);
+    expect(managers.tab.openFilePath(url.slice('/open/'.length))).toBeUndefined();
+    expect(managers.tab.openFilePath(tab?.editor?.url.slice('/open/'.length) ?? '')).toBe(path.join(dir, 'untitled-2.md'));
+    expect(() => saveFile(managers, url, 'overwritten')).toThrow('unknown file ref');
+    expect(readFileSync(path.join(dir, 'untitled.md'), 'utf8')).toBe('existing');
   });
 
   it('a non-new-file editor still overwrites as before, even if the target already exists', () => {

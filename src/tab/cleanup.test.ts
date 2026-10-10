@@ -193,4 +193,17 @@ describe('closeTabResources', () => {
 
     expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
   });
+
+  it('drops the current reference after an editor has been retargeted', () => {
+    const managers = makeManagers();
+    const tab = {
+      ...makeTab('untitled-2.md', 'red'),
+      editor: { name: 'untitled-2.md', path: '/tmp/untitled-2.md', size: '5 B', url: '/open/current' },
+    };
+    const openFiles = new Map([['current', '/tmp/untitled-2.md'], ['keep', '/tmp/keep.txt']]);
+
+    closeTabResources(tab, managers, openFiles);
+
+    expect([...openFiles]).toEqual([['keep', '/tmp/keep.txt']]);
+  });
 });
