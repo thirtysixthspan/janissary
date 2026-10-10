@@ -4,17 +4,6 @@
 
 ## development
 
-* Coalesce the tabs notification source before the plugin host reads rows and invokes subscribers.
-
-Existing Debt: The tabs topic subscribes directly to every raw state mutation and relies on the launcher to discard unchanged rows only after the host has read activity and constructed a guarded plugin call. Severity: 6/10
-
-Existing Risk: 5/10 - Bursts of shell or ACP output repeatedly scan all tabs and transcripts and create notification calls on the server's output path, increasing interaction latency as tabs and subscribers accumulate.
-
-Proposal Risk: 3/10 - A bounded notification delay can briefly postpone a focus or badge update, and each delivery still scans current activity, but one output burst no longer requires one plugin call per mutation.
-
-Proposal: Change only the `tabs` source's subscription policy in `src/plugins/topics.ts` to schedule one delivery within a named short window, retaining the latest state by calling `readTopicData` at delivery time rather than storing the first event's snapshot. Return a subscription whose `unsubscribe` both removes the bus listener and cancels the scheduled delivery, so `src/plugins/host-channels.ts` retains ownership of its lifetime. Keep subscriber and open-tab eligibility checks in `src/plugins/notifications.ts` at delivery time, and retain the launcher's value comparison in `src/plugins/launcher/activate.ts` as a second guard against unchanged payloads. This contains the work currently triggered by synchronous `messageBus.emit` in `src/bus.ts`, including `lastCommandOf` scans in `src/plugins/activity.ts` and the additional `tabActivity` read made by the launcher. Preserve the other topics' delivery policies. Add fake-timer coverage in `src/plugins/notifications.test.ts` for a burst producing one tabs delivery with the latest focus and unread state, cancellation on host disposal, and a plugin closing or becoming disabled before delivery; keep `src/plugins/topics.test.ts`, `src/plugins/activity.test.ts`, and `src/plugins/launcher/activate.test.ts` as coverage for routing and projection. The existing conversations burst test covers coalescing at its producer and does not cover the raw tabs source.
-
-
 * Move launcher icon failure reporting into an effect that records successful reports.
 
 Existing Debt: Launcher command rows issue reporting RPCs and mutate a module-wide reported-icon set during rendering, with no relationship between the cache entry and whether the host accepted the report. Severity: 4/10
