@@ -156,9 +156,27 @@ describe('appendTab', () => {
 
     expect(markUnread).not.toHaveBeenCalled();
   });
+
+  it('stamps activity when it appends a transcript entry', () => {
+    const tab = makeTab('bob', 'red');
+    vi.spyOn(Date, 'now').mockReturnValue(123_456);
+
+    appendTab([tab], 'bob', { input: 'ls', output: 'files' }, (log) => log, vi.fn());
+
+    expect(tab.runtime?.lastActivity).toBe(123_456);
+  });
 });
 
 describe('updateRunningEntry', () => {
+  it('stamps activity when it writes into a running transcript entry', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'ls', output: '', running: true }]);
+    vi.spyOn(Date, 'now').mockReturnValue(234_567);
+
+    updateRunningEntry([tab], 'bob', { command: 'ls' }, 'files', true, {});
+
+    expect(tab.runtime?.lastActivity).toBe(234_567);
+  });
+
   it('does nothing for a label with no matching tab but still emits dirty', () => {
     const persist = vi.fn();
     const emit = vi.spyOn(messageBus, 'emit');
@@ -313,6 +331,15 @@ describe('clearTranscriptTab', () => {
     expect(tab.log).toEqual([]);
     expect(emit).toHaveBeenCalledWith('transcript', { type: 'tab:cleared', tabLabel: 'bob' });
     expect(emit).toHaveBeenCalledWith('state', { type: 'dirty' });
+  });
+
+  it('stamps activity when it clears the transcript', () => {
+    const tab = makeTab('bob', 'red', 1, [], [{ input: 'ls', output: 'files' }]);
+    vi.spyOn(Date, 'now').mockReturnValue(345_678);
+
+    clearTranscriptTab([tab], 'bob');
+
+    expect(tab.runtime?.lastActivity).toBe(345_678);
   });
 });
 

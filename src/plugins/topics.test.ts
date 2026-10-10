@@ -352,6 +352,7 @@ describe('the tabs topic source', () => {
   // the action does nothing rather than moving focus somewhere unintended.
   it('does nothing for a label with no open tab', () => {
     const { managers, setActiveTab } = makeManagers();
+    expect(readTopicData(managers, 'tabs').some((tab) => tab.label === 'closed-tab')).toBe(false);
 
     runTopicAction(managers, { topic: 'tabs', action: 'focus', label: 'closed-tab' });
 

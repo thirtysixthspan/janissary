@@ -183,7 +183,7 @@ function movedPastCursor(
 // The cursors of labels nothing shows are dropped first. The cursor is advanced only after a reply
 // lands, so a prompt that fails is retried on the next flush rather than being believed already fed.
 export async function summarizeOnce(input: {
-  capabilities: TabPluginServerCapabilities;
+  capabilities: Pick<TabPluginServerCapabilities, 'startAcp' | 'promptAcpResult'>;
   state: SummarizerState;
   personaBody: string;
   readTabs: () => TabActivityEntry[];

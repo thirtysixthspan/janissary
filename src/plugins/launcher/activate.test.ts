@@ -11,7 +11,7 @@ import {
 } from '../api.js';
 import { activate } from './activate.js';
 import { isLauncherPayload, LAUNCHER_LABEL } from './shared.js';
-import { toRows } from './payload.js';
+import { emptyTopicData } from '../topics.js';
 
 // The rows the host hands over, in strip order. `dock` is deliberately absent on the first so the
 // docked-filtering rule has something to drop and something to keep, and no row carries a `tail`,
@@ -56,15 +56,35 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   // What the core answers a flush with when it refuses: core resolves a refusal with a line of prose,
   // so the summarizer is told which kind of line it got rather than left to read the text.
   let refusal: string | undefined;
-  const capabilities = {
-    openOrFocusTab: (key: string, factory: () => TabPluginPayload) => {
+  const resources = {
+    registerFile: (file: string) => file,
+    spawnTerminal: () => ({ ptyId: 'test-pty', cols: 80, rows: 24, running: false }),
+  };
+  const capabilities: TabPluginServerCapabilities = {
+    startAcp: () => (startError === undefined ? {} : { error: startError }),
+    promptAcp: async () => '',
+    promptAcpResult: async (prompt) => {
+      prompted.push(prompt);
+      return refusal === undefined
+        ? { answered: true, reply, session: 'acp-test' }
+        : { answered: false, error: refusal };
+    },
+    resetAcp: () => false,
+    note: () => {},
+    notifyUser: (text) => { notified.push(text); },
+    openOrFocusTab: (key, factory) => {
       focused.push(key);
       if (openKeys.has(key)) return;
       openKeys.add(key);
-      opened.push({ key, value: factory() });
+      opened.push({ key, value: factory(resources) });
     },
-    updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory() }); },
+    launchTab: () => {},
+    updateTab: (key, factory) => { updated.push({ key, value: factory(resources) }); },
+    setUnread: () => {},
+    setBusy: () => {},
     dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
+    snapshotTab: () => {},
+    topicData: (topic) => emptyTopicData(topic),
     tabActivity: (tailLines?: number) => {
       activityReads.push(tailLines);
       return tailLines === undefined
@@ -72,22 +92,28 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
         : rows.map((tab) => (tab.logLength === 0 ? tab : { ...tab, tail: TRANSCRIPT }));
     },
     topicAction: (action: TabPluginTopicAction) => { actions.push(action); },
-    startAcp: () => (startError === undefined ? { } : { error: startError }),
-    promptAcpResult: (prompt: string) => {
-      prompted.push(prompt);
-      return Promise.resolve(refusal === undefined
-        ? { answered: true, reply, session: 'acp-test' }
-        : { answered: false, error: refusal });
-    },
-    dispatchLineWithOutput: (line: string) => {
-      dispatched.push(line);
-      return Promise.resolve({ dispatched: true, output: '' });
-    },
+    openClaimedFiles: () => {},
+    projectFileList: async () => ({ root: '', paths: [] }),
+    openInEditor: () => {},
+    configuredViewer: () => '',
+    openExternally: () => false,
+    readSettings: () => ({}),
+    saveSettings: () => true,
+    isRecordingLive: () => false,
     originTab: () => ({ label: 'launcher', cwd: '/repo', root }),
-    notifyUser: (text: string) => { notified.push(text); },
+    dispatchLineWithOutput: async (line: string) => {
+      dispatched.push(line);
+      return { dispatched: true, output: '' };
+    },
+    completeLine: () => ({ newInput: '', newCursor: 0, matches: [] }),
+    terminalRunning: () => false,
+    queueLine: () => {},
+    nextQueuedLine: () => null,
+    recordCwd: () => {},
+    recordGlobalHistory: () => {},
     rejectRequest: (reason: string): never => { throw new TabPluginRejection(reason); },
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
-  } as unknown as TabPluginServerCapabilities;
+  };
   return {
     actions, activityReads, capabilities, dispatched, docks, notified, opened, focused, prompted, updated,
     answerWith: (text: string) => { reply = text; },
@@ -237,10 +263,7 @@ describe('the tabs topic', () => {
     activation.command?.('', entry.capabilities);
     entry.updated.length = 0;
 
-    const moved = toRows([
-      ROWS[0]!,
-      { ...ROWS[1]!, hasUnread: true },
-    ]);
+    const moved = ROWS.map((row) => (row.label === 'agent' ? { ...row, hasUnread: true } : row));
     activation.notify?.({ topic: 'tabs', data: moved, tabs: ['launcher'] }, entry.capabilities);
 
     expect(entry.updated).toHaveLength(1);
@@ -325,7 +348,7 @@ describe('the tabs topic', () => {
     entry.updated.length = 0;
 
     activation.notify?.(
-      { topic: 'sessions', data: [], tabs: ['launcher'] } as unknown as Parameters<NonNullable<typeof activation.notify>>[0],
+      { topic: 'sessions', data: [], tabs: ['launcher'] },
       entry.capabilities,
     );
 
@@ -349,9 +372,9 @@ describe('the tabs topic', () => {
   // The other half of the same rule: a row that holds the label but not the ownership is somebody
   // else's tab and belongs in the rail like any other.
   it('shows a tab that merely shares the launcher\'s label', () => {
-    const collided = [...ROWS, {
+    const collided: TabActivityEntry[] = [...ROWS, {
       label: LAUNCHER_LABEL, view: 'plugin', plugin: { id: 'shell', instanceKey: 'shell-1' },
-      dotColor: '#98c379', active: false, busy: false, hasUnread: false,
+      incarnation: 'shell-plugin-incarnation', dotColor: '#98c379', active: false, busy: false, hasUnread: false,
       needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 3,
     }];
     const entry = openLauncher(collided);
