@@ -93,6 +93,13 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return remoteGitCommit(this.requester(), this.paths, root, message, relPaths);
   }
 
+  // The far side reads the change set in its own workspace and answers with the same result a local
+  // read produces, so the answer is handed back as it arrived: the tab that asked validates it,
+  // because a value that crossed a channel is not one this process produced.
+  changeSet(root: string, fullFiles: readonly string[]): Promise<unknown> {
+    return this.request('change-set', { fullFiles: [...fullFiles] });
+  }
+
   async search(root: string): Promise<string[]> {
     return remoteSearch(this.requester(), this.paths, root);
   }

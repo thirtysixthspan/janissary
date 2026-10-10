@@ -25,7 +25,10 @@ function file(overrides: Partial<DiffFile> = {}): DiffFile {
 }
 
 function payload(overrides: Partial<DiffPayload> = {}): DiffPayload {
-  return { root: '$root/', state: 'done', message: '', split: false, files: [file()], ...overrides };
+  return {
+    instanceKey: 'diff', root: '$root/', state: 'done', message: '', split: false, files: [file()],
+    ...overrides,
+  };
 }
 
 function twoHunks(): DiffFile {

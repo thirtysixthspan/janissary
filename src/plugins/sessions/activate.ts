@@ -80,15 +80,16 @@ export function activate(): TabPluginActivation {
 // Each verb names a row by the id the list is already showing, and the row itself says whether it
 // offers that verb — so a client cannot detach a row that carries no detach, or attach one that is
 // already live, even before the host's own narrowing runs.
-const ROW_VERBS = ['detach', 'focus', 'close', 'attach', 'terminate', 'forget'] as const;
+const ROW_VERBS = ['detach', 'focus', 'close', 'attach', 'terminate', 'forget', 'diff'] as const;
 
 type RowIntent = typeof ROW_VERBS[number];
 
-// The three that act on a tab this janissary holds. The rest act on a session that may have no tab
-// at all, which is why they are addressed by session id instead.
-type TabIntent = 'detach' | 'focus' | 'close';
+// The four that act on a tab this janissary holds — the row's own, for `focus` and `close`, and the
+// tab whose workspace a diff opens. The rest act on a session that may have no tab at all, which is
+// why they are addressed by session id instead.
+type TabIntent = 'detach' | 'focus' | 'close' | 'diff';
 
-const TAB_INTENTS = new Set<string>(['detach', 'focus', 'close']);
+const TAB_INTENTS = new Set<string>(['detach', 'focus', 'close', 'diff']);
 
 function isTabIntent(intent: RowIntent): intent is TabIntent {
   return TAB_INTENTS.has(intent);

@@ -33,21 +33,44 @@ export function lineCapabilities(input: {
     .filter((tab) => tab.plugin?.id === declaration.id)
     .map((tab) => tab.label);
   return {
-    originTab: () => {
+    originTab: (label?: string) => {
       if (!isEnabled()) return null;
-      const tab = managers.tab.byLabel(answeringLabel ?? origin.label);
+      // No label: the tab answering when the host named one, the tab a command came from otherwise —
+      // which is what every caller without an argument has always read. With one: that open tab,
+      // resolved the way a command naming a tab by typed name resolves it, so a plugin asks about a
+      // tab it was not invoked from without reading the host's tab list.
+      const tab = label === undefined
+        ? managers.tab.byLabel(answeringLabel ?? origin.label)
+        : managers.tab.byLabelOrAlias(label);
       // The launch shell has no tab to come from, so it starts where a new tab does: the project root.
-      if (!tab && origin.launch) {
+      if (!tab && origin.launch && label === undefined) {
         return { label: origin.label, cwd: managers.tab.launchDir, root: managers.tab.launchDir };
       }
       if (!tab) return null;
+      // A remote tab holds no local directory — the clone lives on the far side and its removal is
+      // that host's business — so the workspace the question is about is read from the session.
       const workspaceDir = tab.workspaceDir ?? (tab.remote ? managers.remote?.workspaceOf?.(tab.label) : undefined);
+      // Whether the workspace named has landed. A local clone's directory is known the moment its
+      // tab opens, so the path alone cannot answer it, and a command that names a workspace still
+      // being cloned has a wait to report rather than a directory to read. A remote tab's directory
+      // is the channel's own, undefined until the far side answers — which is the wait to report,
+      // read the same way `buildTabView` reads it for the metadata row's spinner.
+      const provisioning = workspaceDir === undefined
+        ? (tab.remote !== undefined && managers.remote?.workspaceOf?.(tab.label) === undefined)
+        : managers.workspace?.provisioning?.(workspaceDir) ?? false;
       return {
         label: tab.label,
         cwd: managers.tab.cwdOf(tab.label) ?? managers.tab.launchDir,
         root: managers.tab.launchDir,
+        // Which kind of tab this is, and which plugin owns it when it is one. The workspace a
+        // command may ask about belongs to a shell or a harness tab, and both are shaped by what
+        // they are rather than by anything the record's other fields read — so a caller that is
+        // allowed to serve one of the two and not the rest is told which of them it holds.
+        ...(tab.view !== undefined && { view: tab.view }),
+        ...(tab.plugin?.id !== undefined && { plugin: tab.plugin.id }),
         ...(workspaceDir && { workspace: { dir: workspaceDir, offline: tab.offline ?? false } }),
         ...(tab.remote && { remote: true as const }),
+        ...(provisioning && { provisioning: true as const }),
       };
     },
     // The tab a dispatched line runs in. That is the tab answering when the host named one — a line

@@ -99,7 +99,7 @@ export type TabPluginTopicAction =
   // data both names the target *and* offers that verb — presence alone is not enough, since a
   // recorded row's label is a name belonging to no live tab and would otherwise let `close` reach
   // whatever tab happened to share it.
-  | { topic: 'sessions'; action: 'detach' | 'focus' | 'close'; label: string }
+  | { topic: 'sessions'; action: 'detach' | 'focus' | 'close' | 'diff'; label: string }
   | { topic: 'sessions'; action: 'attach' | 'terminate' | 'forget'; session: string }
   // Re-read local state and rebuild the rows. It opens no ssh connection: reachability is learned
   // only by pressing attach or terminate.

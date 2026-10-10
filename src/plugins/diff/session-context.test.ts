@@ -18,6 +18,9 @@ const file = (overrides: Partial<DiffFile> = {}): DiffFile => ({
 });
 const result = (value = file()): ChangeSetResult => ({ kind: 'files', files: [value] });
 
+// The one project-root diff tab, addressed by the instance key the session always gives it.
+const KEY = 'diff';
+
 function host() {
   const updates: DiffPayload[] = [];
   let opened = false;
@@ -32,7 +35,10 @@ function host() {
     updateTab: (_key: string, factory: () => { payload: DiffPayload }) => { updates.push(factory().payload); },
     rejectRequest,
   };
-  return { session: new DiffSession(capabilities as never), updates, rejectRequest, close: () => { opened = false; } };
+  return {
+    capabilities, session: new DiffSession(capabilities as never), updates, rejectRequest,
+    close: () => { opened = false; },
+  };
 }
 
 async function loaded(record = file()) {
@@ -47,17 +53,18 @@ describe('diff full-file session', () => {
   it.each([{ binary: true }, { added: true }, { deleted: true }, { hunks: [] }])
     ('rejects full-file view for an ineligible record: %j', async (overrides) => {
       const { session } = await loaded(file(overrides));
-      expect(() => session.setFullFile('a.ts', true)).toThrow('outside the current text diff');
+      expect(() => session.setFullFile(KEY, 'a.ts', true)).toThrow('outside the current text diff');
       expect(read).toHaveBeenCalledTimes(1);
       session.dispose();
     });
 
   it('keeps the expanded file through refresh and resets when the tab is reopened', async () => {
-    const { session, close } = await loaded();
+    const { session, close, capabilities } = await loaded();
     read.mockResolvedValueOnce(result(file({ contextLines: 1_000_000 })));
-    session.setFullFile('a.ts', true);
+    session.setFullFile(KEY, 'a.ts', true);
     await vi.waitFor(() => { expect(read.mock.calls.at(-1)?.[1]?.has('a.ts')).toBe(true); });
-    await session.refresh();
+    read.mockResolvedValueOnce(result(file({ contextLines: 1_000_000 })));
+    await session.refresh(KEY, capabilities);
     expect(read.mock.calls.at(-1)?.[1]?.has('a.ts')).toBe(true);
     close();
     read.mockResolvedValueOnce(result());
@@ -67,11 +74,11 @@ describe('diff full-file session', () => {
   });
 
   it('queues a full-file request during a refresh', async () => {
-    const { session, updates } = await loaded();
+    const { session, updates, capabilities } = await loaded();
     const pending = Promise.withResolvers<ChangeSetResult>();
     read.mockReturnValueOnce(pending.promise).mockResolvedValue(result(file({ contextLines: 1_000_000 })));
-    const refresh = session.refresh();
-    session.setFullFile('a.ts', true);
+    const refresh = session.refresh(KEY, capabilities);
+    session.setFullFile(KEY, 'a.ts', true);
     expect(updates.at(-1)?.files[0].expandingContext).toBe(true);
     pending.resolve(result());
     await refresh;
@@ -80,11 +87,11 @@ describe('diff full-file session', () => {
   });
 
   it('discards a stale root read and clears full-file settings on rescope', async () => {
-    const { session } = await loaded();
+    const { session, capabilities } = await loaded();
     const pending = Promise.withResolvers<ChangeSetResult>();
     read.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(result(file({ path: 'b.ts' })));
-    const refresh = session.refresh();
-    session.setFullFile('a.ts', true);
+    const refresh = session.refresh(KEY, capabilities);
+    session.setFullFile(KEY, 'a.ts', true);
     session.open('/project/two', { root: '/project/two' });
     pending.resolve(result(file({ contextLines: 1_000_000 })));
     await refresh;
@@ -97,23 +104,23 @@ describe('diff full-file session', () => {
     const { session, updates } = await loaded();
     const previous = updates.at(-1)!.files[0];
     read.mockResolvedValueOnce(result(file({ contextLines: 1_000_000, contextError: 'Git failed' })));
-    session.setFullFile('a.ts', true);
+    session.setFullFile(KEY, 'a.ts', true);
     await vi.waitFor(() => { expect(updates.at(-1)?.files[0].contextError).toBe('Git failed'); });
     expect(updates.at(-1)?.files[0].hunks).toEqual(previous.hunks);
     expect(updates.at(-1)?.files[0].expandingContext).toBe(false);
     read.mockResolvedValueOnce(result(file({ contextLines: 1_000_000 })));
-    session.setFullFile('a.ts', true);
+    session.setFullFile(KEY, 'a.ts', true);
     await vi.waitFor(() => { expect(updates.at(-1)?.files[0].contextError).toBeUndefined(); });
     session.dispose();
   });
 
   it('rejects an unrecorded path and ignores duplicate requests while pending', async () => {
     const { session } = await loaded();
-    expect(() => session.setFullFile('../escape.ts', true)).toThrow('outside the current text diff');
+    expect(() => session.setFullFile(KEY, '../escape.ts', true)).toThrow('outside the current text diff');
     const pending = Promise.withResolvers<ChangeSetResult>();
     read.mockReturnValueOnce(pending.promise);
-    session.setFullFile('a.ts', true);
-    session.setFullFile('a.ts', true);
+    session.setFullFile(KEY, 'a.ts', true);
+    session.setFullFile(KEY, 'a.ts', true);
     expect(read).toHaveBeenCalledTimes(2);
     pending.resolve(result(file({ contextLines: 1_000_000 })));
     await vi.waitFor(() => { expect(read.mock.calls.at(-1)?.[1]?.has('a.ts')).toBe(true); });

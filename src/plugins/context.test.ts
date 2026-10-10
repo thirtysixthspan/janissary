@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { getConfig, loadConfig } from '../config.js';
@@ -14,7 +14,7 @@ import {
   type TabPluginDeclaration,
   type TabPluginServerCapabilities,
 } from './api.js';
-import { createPluginContext, isJsonCompatible } from './context.js';
+import { createPluginContext } from './context.js';
 import { messageBus } from '../bus.js';
 import { TabPluginHost } from './host.js';
 
@@ -218,49 +218,6 @@ describe('setBusy', () => {
 // Everything a plugin produces — a tab payload, an intent result — is broadcast or replied to as
 // JSON. Values JavaScript is happy with but JSON is not would be silently rewritten in transit, so
 // the host refuses them at the boundary rather than letting a client receive something else.
-describe('isJsonCompatible', () => {
-  it('accepts the JSON value space, including nesting', () => {
-    expect(isJsonCompatible(null)).toBe(true);
-    expect(isJsonCompatible('text')).toBe(true);
-    expect(isJsonCompatible(false)).toBe(true);
-    expect(isJsonCompatible(0)).toBe(true);
-    expect(isJsonCompatible([1, 'two', { three: [true, null] }])).toBe(true);
-    expect(isJsonCompatible({ nested: { deeper: ['ok'] } })).toBe(true);
-  });
-
-  it('refuses numbers that JSON cannot round-trip', () => {
-    expect(isJsonCompatible(NaN)).toBe(false);
-    expect(isJsonCompatible(Infinity)).toBe(false);
-    expect(isJsonCompatible({ size: NaN })).toBe(false);
-    expect(isJsonCompatible([1, -Infinity])).toBe(false);
-  });
-
-  it('refuses values with no JSON representation at all', () => {
-    expect(isJsonCompatible(undefined)).toBe(false);
-    expect(isJsonCompatible(1n)).toBe(false);
-    expect(isJsonCompatible(() => {})).toBe(false);
-    expect(isJsonCompatible(Symbol('nope'))).toBe(false);
-  });
-
-  // Serializing one of these throws rather than producing wrong output, so the walk has to notice
-  // the cycle itself instead of recursing until the stack runs out.
-  it('refuses a cycle without recursing forever', () => {
-    const circular: Record<string, unknown> = { name: 'loop' };
-    circular.self = circular;
-    expect(isJsonCompatible(circular)).toBe(false);
-
-    const viaArray: unknown[] = ['first'];
-    viaArray.push(viaArray);
-    expect(isJsonCompatible(viaArray)).toBe(false);
-  });
-
-  it('accepts the same value appearing twice without calling it a cycle', () => {
-    const shared = { shared: true };
-    expect(isJsonCompatible({ left: shared, right: shared })).toBe(true);
-    expect(isJsonCompatible([shared, shared])).toBe(true);
-  });
-});
-
 // Capabilities are revoked the moment a plugin stops being the host's live plugin — after a timeout
 // it lost, after disablement, after shutdown. A handler that kept running does not get to keep
 // acting through the object it was handed.
@@ -504,5 +461,212 @@ describe('capability revocation', () => {
     expect(() => capabilities.reportFailure('plain string reason')).toThrow('plain string reason');
     expect(() => capabilities.reportFailure(new Error('already an error')))
       .toThrow('already an error');
+  });
+});
+
+// A command that names a tab other than its own asks about it through `originTab` with a label, which
+// is the only way a plugin learns anything about a tab it was not invoked from — it reaches no tab
+// list of its own. Called bare, it answers exactly what it always did.
+describe('originTab with a label', () => {
+  function managersWith(tabs: unknown[], workspaceProvisioning: (dir: string) => boolean = () => false) {
+    const managers = {
+      tab: {
+        tabs, launchDir: '/repo', cwdOf: () => '/repo/src',
+        byLabel: (label: string) => tabs.find((tab) => tab.label === label),
+        byLabelOrAlias: (name: string) => tabs.find((tab) => tab.label?.toLowerCase() === name.toLowerCase()
+          || tab.title?.toLowerCase() === name.toLowerCase()),
+      },
+      remote: { workspaceOf: (label: string) => (label === 'remote' ? '/srv/work' : undefined) },
+      workspace: { provisioning: workspaceProvisioning },
+    } as unknown as Managers;
+    return { managers };
+  }
+
+  const contextWith = (managers: Managers) => createPluginContext(
+    managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+  );
+
+  it('answers the record of the tab the label names', () => {
+    const { managers } = managersWith([
+      { label: 'shell1', workspaceDir: '/repo/.janissary/workspace/demir', offline: false },
+    ]);
+
+    expect(contextWith(managers).originTab('shell1')).toEqual({
+      label: 'shell1', cwd: '/repo/src', root: '/repo',
+      workspace: { dir: '/repo/.janissary/workspace/demir', offline: false },
+    });
+  });
+
+  it('resolves a display alias the way a command naming a tab does', () => {
+    const { managers } = managersWith([{ label: 'shell-2', title: 'Reviewer' }]);
+
+    expect(contextWith(managers).originTab('reviewer')).toMatchObject({ label: 'shell-2' });
+  });
+
+  it('reads a remote tab workspace from the session, since the tab holds no local directory', () => {
+    const { managers } = managersWith([
+      { label: 'remote', remote: { address: 'devbox', host: 'devbox' }, offline: false },
+    ]);
+
+    expect(contextWith(managers).originTab('remote')).toMatchObject({
+      label: 'remote', remote: true, workspace: { dir: '/srv/work' },
+    });
+  });
+
+  it('answers null for a label no open tab holds', () => {
+    const { managers } = managersWith([{ label: 'shell1' }]);
+
+    expect(contextWith(managers).originTab('nobody')).toBeNull();
+  });
+
+  it('names the tab\'s view and the plugin behind it, and omits both for one that has neither', () => {
+    const { managers } = managersWith([
+      { label: 'shell1', view: 'plugin', workspaceDir: '/repo/.janissary/workspace/demir', plugin: { id: 'shell' } },
+      { label: 'editor-1', view: 'editor', editor: { name: 'a.txt' } },
+    ]);
+
+    expect(contextWith(managers).originTab('shell1')).toEqual({
+      label: 'shell1', cwd: '/repo/src', root: '/repo', view: 'plugin', plugin: 'shell',
+      workspace: { dir: '/repo/.janissary/workspace/demir', offline: false },
+    });
+    expect(contextWith(managers).originTab('editor-1')).toEqual({
+      label: 'editor-1', cwd: '/repo/src', root: '/repo', view: 'editor',
+    });
+  });
+
+  it('answers a record with no view for a plain agent tab, exactly as before', () => {
+    const { managers } = managersWith([{ label: 'agent-1' }]);
+
+    expect(contextWith(managers).originTab('agent-1')).toEqual({
+      label: 'agent-1', cwd: '/repo/src', root: '/repo',
+    });
+  });
+
+  it('reports a local tab whose clone is still landing, and omits the flag once it has', () => {
+    const dir = '/repo/.janissary/workspace/demir';
+    const cloning = managersWith(
+      [{ label: 'shell1', workspaceDir: dir, offline: false }], (asked) => asked === dir,
+    );
+    const settled = managersWith([{ label: 'shell1', workspaceDir: dir, offline: false }]);
+
+    expect(contextWith(cloning.managers).originTab('shell1')).toEqual({
+      label: 'shell1', cwd: '/repo/src', root: '/repo',
+      workspace: { dir, offline: false }, provisioning: true,
+    });
+    expect(contextWith(settled.managers).originTab('shell1')).toEqual({
+      label: 'shell1', cwd: '/repo/src', root: '/repo',
+      workspace: { dir, offline: false },
+    });
+  });
+
+  it('reports a remote tab whose far-side workspace has not answered, and omits it once it has', () => {
+    const landing = managersWith([
+      { label: 'remote-1', remote: { address: 'devbox:/srv/project', host: 'devbox' }, offline: false },
+    ]);
+    const landed = managersWith([
+      { label: 'remote', remote: { address: 'devbox:/srv/project', host: 'devbox' }, offline: false },
+    ]);
+
+    expect(contextWith(landing.managers).originTab('remote-1')).toMatchObject({
+      label: 'remote-1', remote: true, provisioning: true,
+    });
+    expect(contextWith(landed.managers).originTab('remote')).toMatchObject({
+      label: 'remote', remote: true, workspace: { dir: '/srv/work' },
+    });
+    expect(contextWith(landed.managers).originTab('remote')?.provisioning).toBeUndefined();
+  });
+
+  it('still answers the invoking tab when called with no label', () => {
+    const { managers } = managersWith([{ label: 'janus' }, { label: 'shell1', workspaceDir: '/repo/w' }]);
+
+    expect(contextWith(managers).originTab()).toEqual({ label: 'janus', cwd: '/repo/src', root: '/repo' });
+  });
+});
+
+// The two reads a plugin tab makes against a remote workspace it rides. Both are answered through the
+// channel the tab holds, and both answer null when the tab rides none.
+describe('remote workspace capabilities', () => {
+  const port = {
+    changeSet: vi.fn(() => ({ kind: 'files', files: [] })),
+    readFile: vi.fn(async () => new Uint8Array()),
+    dispose: vi.fn(),
+  };
+
+  function managersRiding() {
+    return {
+      tab: {
+        tabs: [{ label: 'diff' }], launchDir: '/repo', cwdOf: () => '/repo',
+        byLabel: (label: string) => (label === 'diff' ? { label: 'diff' } : undefined),
+      },
+      remote: {
+        get: () => ({ attachNavigator: vi.fn(), detachNavigator: vi.fn() }),
+        readyOf: () => Promise.resolve('/srv/work'),
+        workspaceOf: () => '/srv/work',
+        addressOf: () => ({ address: 'devbox', host: 'devbox' }),
+        workspaceLabelOf: () => 'remote',
+      },
+    } as unknown as Managers;
+  }
+
+  beforeEach(() => {
+    vi.resetModules();
+    vi.doMock('../file-navigator/remote/port.js', () => ({
+      RemoteFileSystemPort: vi.fn(function portFactory() { return port; }),
+    }));
+    port.changeSet.mockReturnValue({ kind: 'files', files: [] });
+    port.readFile.mockResolvedValue(new Uint8Array());
+  });
+
+  afterEach(() => { vi.doUnmock('../file-navigator/remote/port.js'); vi.resetModules(); });
+
+  const capabilitiesFor = async (managers: Managers) => {
+    const { remoteCapabilities } = await import('./remote-capabilities.js');
+    return remoteCapabilities({ managers, originLabel: 'diff', isEnabled: () => true });
+  };
+
+  it('answers the change set the far side sent, unchanged', async () => {
+    const capabilities = await capabilitiesFor(managersRiding());
+
+    await expect(Promise.resolve(capabilities.readWorkspaceChangeSet([])))
+      .resolves.toEqual({ kind: 'files', files: [] });
+    expect(port.changeSet).toHaveBeenCalledWith('/srv/work', []);
+    expect(port.dispose).not.toHaveBeenCalled();
+  });
+
+  it('answers null when the tab rides no channel', async () => {
+    const managers = managersRiding();
+    const noChannel = { ...managers.remote } as Record<string, unknown>;
+    noChannel.get = () => null;
+    (managers as { remote: unknown }).remote = noChannel;
+    const capabilities = await capabilitiesFor(managers);
+
+    expect(capabilities.readWorkspaceChangeSet([])).toBeNull();
+    await expect(capabilities.materializeRemoteFile('a.txt')).resolves.toBeNull();
+  });
+
+  it('materializes a remote file to a local path the ordinary openers can open', async () => {
+    const cache = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));
+    const { initRemoteFileCache, clearRemoteFileCache, isRemoteCacheFile } =
+      await import('../file-navigator/remote/file-cache.js');
+    initRemoteFileCache(cache);
+    port.readFile.mockResolvedValue(new TextEncoder().encode('remote bytes'));
+    const capabilities = await capabilitiesFor(managersRiding());
+
+    const local = await capabilities.materializeRemoteFile('src/a.txt');
+
+    expect(local).toBeTruthy();
+    expect(readFileSync(local!, 'utf8')).toBe('remote bytes');
+    expect(isRemoteCacheFile(local!)).toBe(true);
+    // The record the cache leaves names the port the tab rides, so a save from an editor opened out
+    // of the diff tab writes back to the workspace for as long as that tab holds the channel.
+    clearRemoteFileCache();
+    rmSync(cache, { recursive: true, force: true });
+  });
+
+  it('answers null when the remote file could not be read', async () => {
+    port.readFile.mockRejectedValue(new Error('the connection closed'));
+    const capabilities = await capabilitiesFor(managersRiding());
+
+    await expect(capabilities.materializeRemoteFile('a.txt')).resolves.toBeNull();
   });
 });

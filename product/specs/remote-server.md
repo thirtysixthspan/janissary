@@ -227,6 +227,14 @@ after the user chooses **Overwrite**; otherwise the remote host checks its actua
 answers with a conflict without replacing anything. A version-23 remote ignores that flag and could
 replace the destination without consent, so it is refused at the handshake like any other mismatch.
 
+Reading a workspace's change set on the far side moves the protocol to 29, with one new filesystem
+operation and no new field: the diff tab asks the host that already provisioned the workspace to read its changes
+against `HEAD` there and answer with the same records a local read produces, so a remote workspace shows the same
+change set a local one does. A version-28 remote refuses the operation as unknown, so a remote diff against one
+would report a failure rather than a half-working change set — which is what the handshake refuses instead. The
+request carries the set of files to expand to their whole contents and nothing else, because a peer has one workspace
+and there is no path to contain.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
@@ -686,7 +694,8 @@ ssh session before then ends the server instead of parking it, since there is no
 
 Its capability surface is deliberately closed: it provisions one workspace clone, runs processes
 inside it, drives one ACP agent per tab sharing its channel, tails a harness transcript, reads and watches files inside
-that workspace, applies the navigator's filesystem mutations there, and removes the clone on exit. It
+that workspace, applies the navigator's filesystem mutations there, reads that workspace's own change set against
+`HEAD` for a diff tab, and removes the clone on exit. It
 will not open tabs, serve paths outside the provisioned workspace, run anything outside that
 workspace, or accept a message outside its protocol. The ACP agent is killed before the clone is
 removed, so the clone is never taken out from under a live agent, and every one of them is killed —

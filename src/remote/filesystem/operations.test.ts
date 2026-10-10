@@ -7,7 +7,7 @@ import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../pr
 const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
   'read-directory', 'stat', 'watch', 'unwatch', 'git', 'git-pull', 'git-commit', 'search',
   'read-file', 'write-file', 'move', 'move-many', 'delete', 'delete-many', 'rename', 'paste',
-  'create-file', 'create-directory', 'replay',
+  'create-file', 'create-directory', 'replay', 'change-set',
 ];
 
 // One representative argument record per operation, and the paths that record names. This is the
@@ -20,6 +20,9 @@ const PATH_CASES: [RemoteFilesystemOperation, RemoteFilesystemArguments, string[
   ['unwatch', { path: 'src' }, ['src']],
   ['git', {}, []],
   ['git-pull', {}, []],
+  // The workspace's own change set, with the files to expand to whole-file context. No path of its
+  // own: one workspace per peer, so the directory is the session's.
+  ['change-set', { fullFiles: ['a.txt'] }, []],
   ['git-commit', { message: 'commit: a.txt', paths: ['a.txt', 'b.txt'] }, ['a.txt', 'b.txt']],
   ['git-commit', { message: 'commit: 2 files', paths: [], root: 'src' }, ['src']],
   ['search', {}, []],
@@ -51,6 +54,8 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['unwatch', {}],
   ['git', { path: 'src' }],
   ['git-pull', { path: 'src' }],
+  ['change-set', { fullFiles: 'a.txt' }],
+  ['change-set', { fullFiles: [3] }],
   ['git-commit', { message: '', paths: ['a.txt'] }],
   ['git-commit', { message: 'x', paths: [], root: 3 }],
   ['search', { path: 'src' }],

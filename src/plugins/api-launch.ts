@@ -11,7 +11,10 @@ export type TabPluginLaunchRequest = {
   // the result says why.
   workspace?: { offline: boolean };
   // Start over an SSH channel and provision the workspace on that host.
-  remote?: { address: string } | { join: true } | {
+  // `join` rides the channel an already-open tab holds rather than starting one: true for the tab
+  // this call came from, which is what a remote tab's own ➕ uses, or a label naming another tab —
+  // the route a command has when the tab it names is not the one it was typed in.
+  remote?: { address: string } | { join: true; label?: string } | {
     adopt: { ptyId: string; cwd: string; workspaceDir: string; offline: boolean; host: string };
   };
 };

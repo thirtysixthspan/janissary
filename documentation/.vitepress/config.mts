@@ -106,6 +106,7 @@ export default defineConfig({
             { text: "Asking a persona for a change", link: "/user-documentation/tab-types/editor-persona-query" },
             { text: "Git-synced files", link: "/user-documentation/tab-types/editor-git-sync" },
             { text: "File navigator", link: "/user-documentation/tab-types/file-navigator" },
+            { text: "Diff", link: "/user-documentation/tab-types/diff" },
             { text: "Notifications", link: "/user-documentation/tab-types/notifications" },
             { text: "Conversations", link: "/user-documentation/tab-types/conversations" },
             { text: "Sessions", link: "/user-documentation/tab-types/sessions" },

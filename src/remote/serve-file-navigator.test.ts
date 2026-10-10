@@ -219,6 +219,26 @@ describe('RemoteFileNavigators', () => {
     holder.dispose();
   });
 
+  it('reads the change set of the workspace the session provisioned, with the files to expand', async () => {
+    const changeSet = vi.fn().mockResolvedValue({ kind: 'files', files: [{ path: 'src/a.txt' }] });
+    const fake = { changeSet } as unknown as FileSystemPort;
+    const holder = new RemoteFileNavigators((frame) => { frames.push(frame); }, root, fake);
+    holder.open('files2');
+
+    holder.request({
+      type: 'filesystem-request', session: 'files2', request: 'q1',
+      operation: 'change-set', args: { fullFiles: ['src/a.txt'] },
+    });
+    await vi.waitFor(() => expect(changeSet).toHaveBeenCalled());
+
+    // The one workspace the peer provisioned, so the port is asked for the session's own root and
+    // nothing else — there is no path to contain.
+    expect(changeSet).toHaveBeenCalledWith(root, ['src/a.txt']);
+    expect(frames.find((frame) => frame.type === 'filesystem-reply' && frame.request === 'q1'))
+      .toMatchObject({ result: { kind: 'files', files: [{ path: 'src/a.txt' }] } });
+    holder.dispose();
+  });
+
   it('stops every watcher on close and dispose', async () => {
     const stop = vi.fn();
     const fake = {

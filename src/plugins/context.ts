@@ -1,6 +1,5 @@
 import type { Managers } from '../managers.js';
 import { getConfig } from '../config.js';
-import { messageBus } from '../bus.js';
 import { notify } from '../notifications/index.js';
 import { didOsOpen } from '../openers/os-open.js';
 import {
@@ -23,24 +22,9 @@ import { declaredResources } from './declared-resources.js';
 import { lineCapabilities } from './line-capabilities.js';
 import { acpCapabilities } from './acp-capabilities.js';
 import { launchCapabilities, type DeferredPluginCall } from './launch-tab.js';
-import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
-
-export function isJsonCompatible(value: unknown, seen = new Set<object>()): boolean {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
-  if (typeof value === 'number') return Number.isFinite(value);
-  if (typeof value !== 'object') return false;
-  if (seen.has(value)) return false;
-  seen.add(value);
-  const valid = Array.isArray(value)
-    ? value.every((item) => isJsonCompatible(item, seen))
-    : Object.values(value).every((item) => isJsonCompatible(item, seen));
-  seen.delete(value);
-  return valid;
-}
-
-function isSettingsObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) && isJsonCompatible(value);
-}
+import { remoteCapabilities } from './remote-capabilities.js';
+import { ownTabCapabilities } from './own-tab-capabilities.js';
+import { isPluginSettings, validateTabValue } from './tab-value.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -60,19 +44,6 @@ function restrictToDeclared(
     };
   }
   return restricted;
-}
-
-// The checks a plugin-produced tab value must pass, shared by the creation and update paths so a
-// payload can never enter a tab through one route under weaker rules than the other. A title is
-// checked only when there is one: creation always supplies it, an update may leave it alone.
-function validateTabValue(
-  activation: TabPluginActivation,
-  value: { title?: string; payload: unknown },
-): void {
-  if (value.title !== undefined && !value.title.trim()) throw new Error('produced an empty tab title');
-  if (!activation.isPayload(value.payload) || !isJsonCompatible(value.payload)) {
-    throw new Error('produced an invalid tab payload');
-  }
 }
 
 // Reading or acting on a topic the manifest never named reaches past the declaration exactly as
@@ -161,42 +132,7 @@ export function createPluginContext(
         return update;
       });
     },
-    setUnread: (instanceKey, unread) => {
-      if (!isEnabled()) return;
-      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-      if (!tab) return;
-      if (unread) {
-        if (managers.tab.markUnread(tab.label)) armHarnessIdleEscalation(managers, tab.label);
-      } else {
-        managers.tab.clearUnread(tab.label);
-        cancelHarnessIdleEscalation(managers, tab.label);
-      }
-    },
-    // The dot only, on the plugin's own record: a broadcast goes out when it changes, and nothing the
-    // host routes by — the tab's runtime busy flag — moves with it.
-    setBusy: (instanceKey, busy) => {
-      if (!isEnabled()) return;
-      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-      if (!tab || (tab.plugin.busy ?? false) === busy) return;
-      tab.plugin.busy = busy;
-      messageBus.emit('state', { type: 'dirty' });
-    },
-    // Placement, addressed like `updateTab` so a plugin reaches only its own tab, and delegating to
-    // the same `setDock` the client's dock-cycle control uses — there is still one docking path.
-    dockTab: (instanceKey, dock) => {
-      if (!isEnabled()) return;
-      const index = managers.tab.tabs.findIndex(
-        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
-      );
-      if (index !== -1) managers.tab.setDock(index, dock);
-    },
-    // Server-only transient state, addressed like `updateTab`. It never reaches `buildTabView`, so
-    // writing it neither marks the view dirty nor sends anything to a client.
-    snapshotTab: (instanceKey, text) => {
-      if (!isEnabled()) return;
-      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-      if (tab) tab.pageSnapshot = { text, capturedAt: Date.now() };
-    },
+    ...ownTabCapabilities({ managers, declaration, isEnabled }),
     openClaimedFiles: (target) => {
       if (!isEnabled()) return;
       openRequests.push(target);
@@ -233,7 +169,7 @@ export function createPluginContext(
     openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),
     readSettings: () => isEnabled() ? readPluginSettings(declaration.id) : {},
     saveSettings: (settings) => {
-      if (!isSettingsObject(settings)) throw new Error('saved settings that are not a JSON object');
+      if (!isPluginSettings(settings)) throw new Error('saved settings that are not a JSON object');
       return isEnabled() && savePluginSettings(declaration.id, settings);
     },
     // True only while an open tab's recorder is still writing this very file. The host owns the
@@ -242,6 +178,7 @@ export function createPluginContext(
     // The four a plugin tab needs to be a place a line can be typed and a process can be checked on,
     // moved out whole because they depend on nothing here beyond what they are handed.
     ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
+    ...remoteCapabilities({ managers, originLabel: origin.label, answeringLabel, isEnabled }),
     ...acpCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);

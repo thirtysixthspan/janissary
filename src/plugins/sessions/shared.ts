@@ -14,7 +14,7 @@ export type SessionRowState =
   | 'provisioning' | 'active' | 'reconnecting' | 'detached' | 'terminated';
 
 export type SessionRowAction =
-  | 'attach' | 'detach' | 'terminate' | 'forget' | 'focus' | 'close';
+  | 'attach' | 'detach' | 'terminate' | 'forget' | 'focus' | 'close' | 'diff';
 
 export type SessionRow = {
   id: string;
@@ -42,7 +42,7 @@ export type SessionIntent = { id: string };
 
 const KINDS = new Set<string>(['harness', 'shell', 'ssh', 'navigator']);
 const STATES = new Set<string>(['provisioning', 'active', 'reconnecting', 'detached', 'terminated']);
-const ACTIONS = new Set<string>(['attach', 'detach', 'terminate', 'forget', 'focus', 'close']);
+const ACTIONS = new Set<string>(['attach', 'detach', 'terminate', 'forget', 'focus', 'close', 'diff']);
 
 function isOptionalString(value: unknown): boolean {
   return value === undefined || typeof value === 'string';

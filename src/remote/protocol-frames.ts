@@ -11,7 +11,7 @@ import type { ResumeReset } from '../harness/auto-resume.js';
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
   | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
-  | 'create-file' | 'create-directory' | 'replay';
+  | 'create-file' | 'create-directory' | 'replay' | 'change-set';
 
 export type RemoteFilesystemArguments = {
   path?: string;
@@ -36,6 +36,9 @@ export type RemoteFilesystemArguments = {
   direction?: 'undo' | 'redo';
   overwrite?: boolean;
   skipConflicts?: boolean;
+  // `change-set`'s workspace-relative paths to expand to their whole file contents, empty for a
+  // compact change set. There is one workspace per peer, so the operation carries no root of its own.
+  fullFiles?: string[];
 };
 
 // Local → remote. One process family (spawn/input/resize/kill) backs remote harness tabs, remote

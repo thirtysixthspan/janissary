@@ -35,6 +35,8 @@ export type TabPluginCapabilityName =
   | 'nextQueuedLine'
   | 'recordCwd'
   | 'recordGlobalHistory'
+  | 'readWorkspaceChangeSet'
+  | 'materializeRemoteFile'
   | 'startAcp'
   | 'promptAcp'
   | 'resetAcp'
@@ -73,6 +75,8 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   nextQueuedLine: true,
   recordCwd: true,
   recordGlobalHistory: true,
+  readWorkspaceChangeSet: true,
+  materializeRemoteFile: true,
   startAcp: true,
   promptAcp: true,
   resetAcp: true,
