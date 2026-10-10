@@ -12,7 +12,7 @@ A plugin's own ACP session can be started without a tool table at all, and a sum
 
 1. **`src/plugins/api.ts`** widens `startAcp` to take an optional request: `startAcp(request?: { withoutTools?: true })`. The field is additive, the option object has exactly one member, and it grants nothing an ordinary caller did not already have — a tool-less loop is a strictly smaller one — so it needs no new capability name and no API integer bump.
 2. **`src/plugins/acp-capabilities.ts`** forwards the request to `managers.acp.start`, still resolving the answering label first. A plugin that omits it changes nothing.
-3. **`src/acp/manager.ts`** records the request against the tab label and enforces it in `run`, before the tool table is built: a tool-less tab gets an empty table, so `toolPrimer` contributes nothing, `toolExtractor` recognizes no line, and `toolRunner` has nothing to resolve to. The record is dropped when the tab is released (`closeTab`) and on shutdown (`closeAll`), so a recycled label never inherits the previous tab's restriction; a session that dies mid-life keeps it, because the next prompt on that tab is held to the same rule.
+3. **`src/acp/manager.ts`** records the policy on the owning tab's runtime when `start` is handed `{ withoutTools: true }`, and reads it the same way in `run`, before the tool table is built. It is the tab's own field rather than a manager-owned collection: a session that dies is replaced by one held to the same rule, and the tab record is what goes away with the tab, so a recycled label starts on the ordinary policy with no second collection to keep in step.
 4. **`src/plugins/launcher/summarizer.ts`** requests the tool-less session on every flush's start. The summarizer is the only caller that asks.
 
 ### Rejected alternatives
@@ -25,13 +25,14 @@ A plugin's own ACP session can be started without a tool table at all, and a sum
 
 1. Widen `startAcp` in `src/plugins/api.ts`.
 2. Forward the request in `src/plugins/acp-capabilities.ts`.
-3. Add the per-tab record, the enforcement in `run`, and the two releases in `src/acp/manager.ts`.
+3. Add the per-tab field on `TabRuntime`, record it through the owning tab and read it in `run`, in `src/acp/manager.ts`.
 4. Request it in `src/plugins/launcher/summarizer.ts`.
 5. Update the tests below and run `./scripts/run.mjs check-diff`.
 
 ## Tests
 
 - `src/acp/manager.test.ts`: a tool-less start followed by a run asserts the loop receives a primer holding only the Markdown instruction, that the extractor recognizes no command line for any of the three grammars, and that the runner refuses rather than dispatching. An ordinary start on the same setup still receives the full table.
+- `src/acp/manager.test.ts`: the restriction is the tab's own field, so a closed-and-replaced session is still held to it, and a tab record recreated under the same label starts on the ordinary policy.
 - `src/acp/plugin-session.test.ts` (host level, real loop): start tool-less through the plugin capability object and prompt a reply whose last line is `browser open https://example.com`; assert the prompt resolves with the reply and that neither the browser, the question registrar, nor the database was touched. The contrast case — the same reply with the ordinary capability object — does reach the browser, which is what makes the first assertion a regression test rather than a tautology.
 - `src/plugins/launcher/summarizer.test.ts`: the stub records the request, and a flush asserts it asked for the tool-less session.
 

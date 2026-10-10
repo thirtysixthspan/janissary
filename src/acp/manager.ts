@@ -9,6 +9,7 @@ import { createAcpToolTable, toolPrimer, toolRunner, toolExtractor } from './too
 import { MARKDOWN_INSTRUCTION } from './launch.js';
 import { modelsFor } from '../harness/models.js';
 import { errorText } from '../error-text.js';
+import { tabRuntime } from '../tab/runtime.js';
 import type { AcpPromptResult } from './types.js';
 
 // The model a tab's core ACP session prefers. A preference, not a fixed choice: the pair is
@@ -35,16 +36,11 @@ function resolveAcpModel(): string | undefined {
 }
 
 export class AcpManager extends AcpSessionManager {
-  // Tabs whose session was asked for without a tool table. Held against the tab rather than the
-  // session: the request describes what that tab may run, so a session that dies is replaced by one
-  // held to the same rule, and only the tab's own release forgets it.
-  private withoutTools = new Set<string>();
-
   start(label: string, request?: { withoutTools?: true }): { model?: string; error?: string; session?: string } {
     if (this.stillConnecting(label)) return { error: STILL_CONNECTING };
     const model = resolveAcpModel();
     if (!model) return { error: NO_ACP_MODEL };
-    if (request?.withoutTools === true) this.withoutTools.add(label);
+    if (request?.withoutTools === true) this.withoutToolsFor(label, true);
     try {
       this.session(label, this.managers.tab.cwdOf(label) ?? process.cwd(), model, {
         onError: (message) => {
@@ -96,6 +92,15 @@ export class AcpManager extends AcpSessionManager {
     });
   }
 
+  // The tab's own ACP tool policy. The restriction is the tab's rather than the manager's, so it rides
+  // the tab record and survives a session being replaced — and it is forgotten when the tab goes away,
+  // with no second collection to keep in step.
+  private withoutToolsFor(label: string, withoutTools: boolean): void {
+    const tab = this.managers.tab.byLabel(label);
+    if (!tab) return;
+    tabRuntime(tab).acpWithoutTools = withoutTools;
+  }
+
   // A remote tab whose ssh channel has not finished authenticating yet. Its channel entry exists
   // well before the handshake lands, so a prompt sent now would be dropped on the floor.
   private stillConnecting(label: string): boolean {
@@ -105,18 +110,8 @@ export class AcpManager extends AcpSessionManager {
     return channel !== undefined && !channel.attached;
   }
 
-  // The tab's own release is the one place the rule is forgotten, so a recycled label never
-  // inherits the restriction the tab that held it before was started under.
-  override closeTab(label: string): void {
-    this.withoutTools.delete(label);
-    super.closeTab(label);
-  }
-
-  override closeAll(): void {
-    this.withoutTools.clear();
-    super.closeAll();
-  }
-
+  // The tab's own release forgets the rule, because the tab record goes with it — so a tab whose label
+  // is recycled starts on the ordinary policy, with nothing here to keep in step.
   run(label: string, command: string, onDone?: (result: AcpPromptResult) => void): void {
     const prompt = command.replace(/^acp\b\s*/i, '').trim();
     if (!prompt) {
@@ -162,7 +157,9 @@ export class AcpManager extends AcpSessionManager {
     // A tool-less session builds no tool table at all, which is the whole enforcement: the primer
     // grows no tool text, no reply line is recognized as a command, and `toolRunner` has nothing to
     // resolve an emitted command to.
-    const tools = this.withoutTools.has(label) ? [] : createAcpToolTable(this.managers, request?.abort.signal);
+    const tools = this.managers.tab.byLabel(label)?.runtime?.acpWithoutTools === true
+      ? []
+      : createAcpToolTable(this.managers, request?.abort.signal);
 
     let lastAnswer = '';
     runAcpToolLoop(session, prompt, {

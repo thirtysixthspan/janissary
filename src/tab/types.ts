@@ -251,6 +251,11 @@ export type MonitorSuggestion = {
   command?: string;
   timestamp: number;
   persona: string;
+  // Whether this tab's core ACP session runs without a tool table, asked for by whichever consumer
+  // started it with `{ withoutTools: true }`. It is the tab's own policy rather than a screen or content
+  // fact, and it is sticky: a session that dies is replaced by one held to the same rule, and only the
+  // tab's own release forgets it, so a recycled label starts on the ordinary policy. In-memory only.
+  acpWithoutTools?: boolean;
   // The tab whose activity prompted the suggestion (where "Run" executes).
   about: string;
 };
@@ -261,6 +266,11 @@ export type TabRuntime = {
   closing?: boolean;
   acpEntries?: WeakSet<LogEntry>;
   acpPrompt?: { finish: (result: AcpPromptResult) => void; abort: AbortController };
+  // Whether this tab's core ACP session runs without a tool table, asked for by whichever consumer
+  // started it with `{ withoutTools: true }`. It is the tab's own policy rather than a screen or content
+  // fact, and it is sticky: a session that dies is replaced by one held to the same rule, and only the
+  // tab's own release forgets it, so a recycled label starts on the ordinary policy. In-memory only.
+  acpWithoutTools?: boolean;
   cwd?: string;
   busy: boolean;
   context: string[];

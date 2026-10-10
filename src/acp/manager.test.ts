@@ -64,6 +64,14 @@ const setup = () => {
   return { acp, append, addBusy, deleteBusy, managers, registerQuestion, updateRunning: (managers as { tab: { updateRunning: ReturnType<typeof vi.fn> } }).tab.updateRunning };
 };
 
+// `promptResult` looks the tab up first, which `run` on its own does not, and the tool restriction is
+// recorded on the tab record — so the cases that need one give the stub a tab to find.
+function withTab() {
+  const base = setup();
+  (base.managers as unknown as { tab: { tabs: { label: string }[] } }).tab.tabs.push({ label: 'tab1' });
+  return base;
+}
+
 describe('AcpManager.run', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -113,7 +121,7 @@ describe('AcpManager.run', () => {
   // no tool text, no reply line is recognized as a command, and an emitted command has nothing to
   // resolve to.
   it('hands the loop no tools at all for a session started without them', () => {
-    const { acp } = setup();
+    const { acp } = withTab();
     acp.start('tab1', { withoutTools: true });
 
     acp.run('tab1', 'acp summarize this');
@@ -140,23 +148,26 @@ describe('AcpManager.run', () => {
     expect(deps.extractCommand('question ask "What port?"')).toBe('question ask "What port?"');
   });
 
-  // The restriction belongs to the tab, not to the session that happened to be open: a session that
-  // dies is replaced by one held to the same rule, and only the tab's own release forgets it.
-  it('keeps the tool-less rule across a closed session, and forgets it when the tab closes', () => {
-    const { acp } = setup();
+  // The restriction is the tab's own policy rather than a manager's collection, so a session that dies
+  // is replaced by one held to the same rule — and the tab record is what goes away with the tab, so a
+  // new one under the recycled label starts on the ordinary policy.
+  it('keeps the tool-less rule across a closed session, and forgets it when the tab is recreated', () => {
+    const { acp, managers } = withTab();
+    const tabs = (managers as unknown as { tab: { tabs: { label: string }[] } }).tab.tabs;
     acp.start('tab1', { withoutTools: true });
     acp.run('tab1', 'acp hello');
     expect(acp.close('tab1')).toBe(true);
 
     acp.run('tab1', 'acp hello again');
 
-    expect(((mocks.runAcpToolLoop.mock.calls[1][2]) as AcpLoopDeps).primer)
-      .not.toContain('db primer');
+    const deps = mocks.runAcpToolLoop.mock.calls[1][2] as AcpLoopDeps;
+    expect(deps.primer).not.toContain('db primer');
 
-    acp.closeTab('tab1');
+    tabs.length = 0;
+    tabs.push({ label: 'tab1' });
     acp.run('tab1', 'acp hello');
 
-    expect(((mocks.runAcpToolLoop.mock.calls[2][2]) as AcpLoopDeps).primer)
+    expect((mocks.runAcpToolLoop.mock.calls[2][2] as AcpLoopDeps).primer)
       .toContain('db primer');
   });
 
@@ -327,14 +338,6 @@ describe('AcpManager.run', () => {
 // A refusal resolves with a line of prose, so the caller is told which kind of line arrived rather
 // than left to read its text.
 describe('AcpManager.promptResult', () => {
-  // `promptResult` looks the tab up first, which `run` on its own does not — so these cases give the
-  // stub a tab to find.
-  function withTab() {
-    const base = setup();
-    (base.managers as unknown as { tab: { tabs: { label: string }[] } }).tab.tabs.push({ label: 'tab1' });
-    return base;
-  }
-
   it('answers with the reply and the session that produced it', async () => {
     const { acp } = withTab();
     const pending = acp.promptResult('tab1', 'acp hello');
