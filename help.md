@@ -13,35 +13,35 @@
 | `db` | Create, delete, query, or list SQLite databases |
 | `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that path's changes |
 | `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image, the PDF viewer for a PDF |
-| `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; `files <path> in <label>` targets another tab; remote paths resolve on that host inside its workspace; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
-| `harness` | Open an AI coding harness in a disposable workspace with an E2E browser attached; claude, opencode, and codex auto-approve prompts by default and opencode and codex also schedule their own resume after a usage limit (`--no-workspace`, `--no-browser`, `--no-auto-approve`, and `--no-auto-resume` opt out); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
+| `files` | `files [path]` opens a navigator here; `files <path> in <label>` targets another tab. Remote paths use that host's workspace. Add `with <name\|size\|modified\|permissions>` to choose a detail column |
+| `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out; `capture <name>` saves a screen |
 | `help` | List available commands; `help <section>` shows one section, such as `help commands` or `help shell` |
 | `hist` | Open command history picker |
-| `launcher` | Open or focus the launcher tab in the left sidebar (`launcher right` for the right): a command rail and center tabs sorted by attention, with optional status summaries. Select a command row, then click it again to run; click a tab row to focus it |
+| `launcher` | Open or focus the launcher (`launcher right` for the right sidebar). Select a command row and click again to run it, or select a tab row to focus that tab |
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `monitors` | List active monitors with their targets and suggestion counts |
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |
 | `newdir <directory>` | Create a directory immediately, choosing a free name if needed; its parent must exist |
 | `newfile <file>` | Open a new unsaved plain-text file, choosing a free name if needed; Save writes it to disk |
 | `next` | Switch to the next tab |
-| `notifications` | `notifications [left\|right]` opens (or docks) the notifications tab; live alerts can also show desktop banners (if browser permission is already granted) and play category sounds for background tabs needing attention. Edit `.janissary/config.json` for event and sound settings |
+| `notifications` | `notifications [left\|right]` opens or docks notifications, where live alerts appear; alerts can also show desktop banners and play category sounds. Configure them in `.janissary/config.json` |
 | `notify` | `notify <message>` pushes a custom line into the notifications feed |
 | `open` | Open images/files in a tab, or web pages embedded (`open https://…` / `open page …`) — sites that refuse framing render too; `open external` uses the OS viewer/browser |
 | `pdf` | `pdf <path>` opens a PDF through the bundled PDF tab plugin; accepts the same paths and wildcards as `open` |
-| `play` | `play <name>` plays a file in the tab that plays its kind — `play devbox` plays the newest `.cast` recording of the session named `devbox`, `play clip.mp4` opens a video, `play song.mp3` queues a track; what plays a file is decided by its extension |
+| `play` | Play a file in the tab for its type: `play devbox` opens its newest `.cast` recording, `play clip.mp4` opens a video, and `play song.mp3` queues audio |
 | `plugins` | List bundled tab plugins with their API version, activation state and duration, or disabled reason |
-| `profile` | `profile launch <name>` launches a project or built-in Janissary profile (bare `profile launch` opens a source-labeled picker); `profile save <name>` captures the running session in the project; `profile list` lists profiles; `profile validate [name]` checks a profile's structure |
+| `profile` | Use `profile launch <name>` to launch a profile, or bare `profile launch` to pick one. `profile save <name>` saves the session; `profile list` and `profile validate [name]` list or check profiles |
 | `question` | `question ask "<question>"` opens a free-text answer panel; `question approve "<question>" <option> …` opens an option-button panel |
 | `queue` | Queue a command for a shell or another tab supporting queues (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
-| `search` | `search` opens or focuses the project-wide search tab (Cmd+Shift+F); `search <phrase>` opens it and searches for the phrase; `search transcript <pattern>` searches the current tab's transcript with a case-insensitive regex |
+| `search` | `search` opens project search; `search <phrase>` searches for a phrase. Use `search transcript <pattern>` to search this tab's transcript with a case-insensitive regex |
 | `send` | Deliver a line to a harness, or submit it through a shell tab's command bar — application commands run in the app and unclaimed lines go to zsh |
 | `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
-| `shell` | Open a shell tab through the bundled shell tab plugin, named from the agent-name pool: a live zsh terminal with the shell tab's metadata row and command line. The command line has focus when the tab opens; double-click the terminal or press `Shift+Tab` to type directly into zsh, and press `Shift+Tab` again to return to the command line. Double-clicking clears any terminal selection made by the gesture. A single click on the terminal returns focus to the command line. A command-bar line runs as an application command when it names one, and otherwise goes to zsh; prefix it with `!` to force the shell. While zsh is running a command the line reads `queue >`, and a submitted line waits in the tab's command queue until zsh returns to its prompt. `shell [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]`: by default the shell gets a fresh sandboxed workspace clone, and starts at its root once the clone lands; lines typed meanwhile wait in the queue. `--no-workspace` opens an unsandboxed local shell in the issuing tab's directory, or the project root when that tab is sandboxed. `on <address>` opens a shell with its own remote workspace, even with `--no-workspace`; the tab shows SSH prompts while it provisions, and queued lines run when remote zsh reaches its prompt. Without a repository, a local shell opens unsandboxed and says why. The metadata row's new-shell button and `Cmd+T` open a sibling in the same place and workspace instead. In a remote tab, typed `shell` joins the existing remote workspace and channel, inheriting offline mode; workspace flags are ignored, and `on <address>` is refused with `Cannot launch a remote shell from a remote tab.` |
-| `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the database reached most recently, by `sql` or any `db` command (`sql [<name>] left`/`right` to dock it) |
+| `shell` | `shell [name] [-w\|--workspace\|--no-workspace] [--offline] [on <address>]` opens a shell with a fresh workspace; `--no-workspace` uses a local shell, and `on <address>` opens a remote shell |
+| `sql` | `sql [<name>]` opens a database browser with table filtering, sorting, paging, editing, export, and a SQL console. Bare `sql` opens the most recently used database; add `left` or `right` to dock it |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
 | `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
