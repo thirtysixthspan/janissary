@@ -15,11 +15,12 @@ import { FileViewControl, isFullFileContext } from './FileViewControl';
 //
 // `offset` is how many hunks the files above this one contribute to the walk's flat list, and a hunk
 // with no lines contributes none, which is what keeps a walked index pointing at a real hunk.
-export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onToggleFullFile }: {
+export function FileEntry({ file, split, offset, walked, hasWalkedHunk, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onToggleFullFile }: {
   file: DiffFile;
   split: boolean;
   offset: number;
   walked: number | null;
+  hasWalkedHunk: boolean;
   onSelectHunk(index: number): void;
   onOpenFile(): void;
   onOpenLine(line: { number: number; jump: number }): void;
@@ -55,7 +56,7 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
   };
   return (
     <LineCommentsProvider>
-      <div className="diff-file" style={style}>
+      <div className={`diff-file${collapsed && hasWalkedHunk ? ' diff-file-walked' : ''}`} style={style}>
         <div
           className="diff-file-header"
           onDoubleClick={flip}

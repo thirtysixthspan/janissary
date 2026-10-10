@@ -2,9 +2,6 @@
 
 # pull-request
 
-* when a file change is collapsed and focused with the keyboard, the left hand border should be colored.
-
 * remove the navigation tooltip
 
 * remove the refresh button in the metadata bar.
-

@@ -120,6 +120,8 @@ closed, compact, and expanded views.** **j and k move between files**, one file
 at a time — the next file's first hunk and the previous one's — stopping at the first and last file
 rather than wrapping. **Return** opens the file at the walked hunk's first changed line. A click on a
 hunk selects it and focuses the body, so the walk continues from where the mouse left off.
+When the walked hunk's file is collapsed, its entry keeps the accent left border so the keyboard
+selection remains visible while the hunk is hidden.
 
 Navigation shortcuts leave comment editors and buttons alone. In a comment editor, arrows move the caret, Return inserts a new line, and Escape cancels the draft.
 

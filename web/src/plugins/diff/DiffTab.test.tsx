@@ -455,6 +455,15 @@ describe('DiffTab', () => {
     expect(container.querySelector('.diff-walked')).toBeTruthy();
   });
 
+  it('keeps the walked file marked when the selected change is collapsed', () => {
+    const { container } = renderTab(payload({ files: [wholeFile()] }));
+    fireEvent.keyDown(body(), { key: 'ArrowDown' });
+    fireEvent.keyDown(body(), { key: 'ArrowRight' });
+    fireEvent.keyDown(body(), { key: 'ArrowLeft' });
+    expect(container.querySelector('.diff-file-walked')).toBeTruthy();
+    expect(container.querySelector('.diff-walked')).toBeNull();
+  });
+
   describe('collapsing an entry', () => {
   it('opens a whole-file change collapsed, with the way out named', () => {
     const { container } = renderTab(payload({ files: [wholeFile()] }));

@@ -103,6 +103,7 @@ export function DiffTab({
             split={split}
             offset={hunkOffset(files, index)}
             walked={walk.selected}
+            hasWalkedHunk={walk.spot?.file === index}
             onSelectHunk={walk.rowClicked}
             onOpenFile={() => openFile(file.path)}
             onOpenLine={(line) => openLine(file.path, line.jump)}

@@ -19,7 +19,7 @@ function show(split: boolean, lines: DiffLine[], path = 'a.ts', oldPath?: string
     hunks: [{ oldStart: 1, newStart: 1, lines: [line('context', '', 1), ...lines] }],
   };
   const view = render(<FileEntry
-    file={file} split={split} offset={0} walked={null} onSelectHunk={vi.fn()}
+    file={file} split={split} offset={0} walked={null} hasWalkedHunk={false} onSelectHunk={vi.fn()}
     onOpenFile={vi.fn()} onOpenLine={onOpenLine} onOpenMedia={vi.fn()}
   />);
   return { ...view, onOpenLine };

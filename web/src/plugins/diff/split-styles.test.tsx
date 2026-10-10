@@ -22,7 +22,7 @@ function show(split = true, overrides: Partial<DiffFile> = {}) {
     ] }], ...overrides,
   };
   return render(<div className="diff-body"><FileEntry
-    file={file} split={split} offset={0} walked={null} onSelectHunk={vi.fn()}
+    file={file} split={split} offset={0} walked={null} hasWalkedHunk={false} onSelectHunk={vi.fn()}
     onOpenFile={vi.fn()} onOpenLine={vi.fn()} onOpenMedia={vi.fn()}
   /></div>);
 }
