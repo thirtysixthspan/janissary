@@ -85,7 +85,7 @@ describe('diff plugin activation', () => {
 
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
-  it('accepts a context intent, answers null immediately, and publishes expanded Git context', async () => {
+  it('accepts full-file view intents and publishes expanded Git context', async () => {
     const lines = Array.from({ length: 60 }, (_, index) => `line ${index + 1}`);
     writeFileSync(path.join(repo, 'a.txt'), `${lines.join('\n')}\n`);
     commitAll(repo);
@@ -98,22 +98,14 @@ describe('diff plugin activation', () => {
     const activation = activate();
     activation.command?.('', capabilities);
     const initial = await settled(updateTab);
-    expect(activation.intent(intent(initial, 'context', { path: 'a.txt' }), capabilities)).toBeNull();
-    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBe(23); });
-    expect(lastPayload(updateTab).files[0].hunks[0].lines.length).toBeGreaterThan(initial.files[0].hunks[0].lines.length);
-    activation.intent(intent(initial, 'context', { path: 'a.txt', fullFile: true }), capabilities);
+    expect(activation.intent(intent(initial, 'context', { path: 'a.txt', fullFile: true }), capabilities)).toBeNull();
     await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBe(1_000_000); });
     expect(lastPayload(updateTab).files[0].hunks[0].lines.filter((line) => line.kind !== 'removed')).toHaveLength(60);
     activation.intent(intent(initial, 'context', { path: 'a.txt', fullFile: false }), capabilities);
     await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBeUndefined(); });
     expect(lastPayload(updateTab).files[0].hunks[0].lines.length).toBe(initial.files[0].hunks[0].lines.length);
-    const boundary = lastPayload(updateTab).files[0].contextBoundaries?.find((item) => item.position === 'between');
-    expect(boundary).toBeTruthy();
-    activation.intent(intent(initial, 'context', { path: 'a.txt', boundary: boundary!.id }), capabilities);
-    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].hunks).toHaveLength(1); });
-    expect(lastPayload(updateTab).files[0].contextBoundaries?.some((item) => item.id === boundary!.id)).toBe(false);
     activation.intent(intent(initial, 'refresh', {}), capabilities);
-    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextBoundaries?.some((item) => item.id === boundary!.id)).toBe(false); });
+    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBeUndefined(); });
     expect(isJsonCompatible(lastPayload(updateTab))).toBe(true);
     activation.dispose?.();
   });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { DiffFile, DiffPayload } from '@shared/plugins/diff/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -134,16 +134,15 @@ describe('unified inline comments', () => {
   });
 
   it('retains drafts through refresh, collapse, and layout switches', () => {
-    const { update } = show();
+    const { update, container } = show();
     fireEvent.change(begin(), { target: { value: 'Draft review' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add comment on modified line 2' }));
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Draft review');
     update(payload());
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Draft review');
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse this file' }));
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Show more context' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Expand this file' }));
+    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Draft review');
     update(payload({ split: true }));
     expect(screen.queryByRole('textbox')).toBeNull();
@@ -172,35 +171,6 @@ describe('unified inline comments', () => {
     save('Root-specific note');
     update(payload({ root: '$root/a', files: [file({ path: 'b:c.ts' })] }));
     expect(screen.queryByText('Root-specific note')).toBeNull();
-  });
-
-  it('preserves a draft when context expansion merges its hunk into an earlier one', () => {
-    const initial = file();
-    const later = { oldStart: 20, newStart: 20, lines: [
-      { kind: 'context' as const, number: 20, oldNumber: 20, jump: 20, text: 'const near = 20;' },
-      { kind: 'added' as const, number: 21, jump: 21, text: 'const extra = 21;' },
-    ] };
-    const { update, requests } = show(payload({ files: [{ ...initial, hunks: [...initial.hunks, later],
-      contextBoundaries: [{ id: 'between:changed:later', position: 'between', hunkIndex: 0 }] }] }));
-    fireEvent.change(begin('modified', 21), { target: { value: 'Still drafting' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Show lines between changes' }));
-    expect(requests).toHaveBeenCalledWith('context', { path: 'a.ts', boundary: 'between:changed:later' });
-    update(payload({ files: [{ ...initial, contextLines: 23, hunks: [{ ...initial.hunks[0],
-      lines: [...initial.hunks[0].lines, ...later.lines],
-    }] }] }));
-    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Still drafting');
-  });
-
-  it.each([false, true])('places compact controls at the omitted boundaries in %s layout', (split) => {
-    const contextBoundaries = [
-      { id: 'top:removed:2:2', position: 'top' as const },
-      { id: 'between:added:0:3:added:0:20', position: 'between' as const, hunkIndex: 0 },
-      { id: 'bottom:added:0:20', position: 'bottom' as const },
-    ];
-    const { requests } = show(payload({ split, files: [{ ...twoHunks(), contextBoundaries }] }));
-    const control = screen.getByRole('button', { name: 'Show lines between changes' });
-    fireEvent.click(control);
-    expect(requests).toHaveBeenCalledWith('context', { path: 'a.ts', boundary: contextBoundaries[1].id });
   });
 
   it('keeps comment editor keys and mouse events from navigating hunks or opening files', () => {
@@ -235,82 +205,33 @@ describe('unified inline comments', () => {
   });
 });
 
-describe('context controls', () => {
-  it('requests context for the current file and renders expanded lines in the same body without changing counts', async () => {
-    const { requests, container, update } = show();
-    const body = container.querySelector('.diff-body');
-    fireEvent.click(screen.getByRole('button', { name: 'Show more context' }));
-    await waitFor(() => { expect(requests).toHaveBeenCalledWith('context', { path: 'a.ts' }); });
-    const expanded = file({ contextLines: 23, canExpandContext: false });
-    expanded.hunks[0].lines.push({ kind: 'context', number: 5, oldNumber: 5, jump: 5, text: 'const expanded = 5;' });
-    update(payload({ files: [expanded] }));
-    expect(container.querySelector('.diff-body')).toBe(body);
-    expect([...container.querySelectorAll('.diff-text')].map((node) => node.textContent)).toContain('const expanded = 5;');
-    expect(container.querySelector('.diff-added-count')?.textContent).toBe('+2');
-    expect(container.querySelector('.diff-removed-count')?.textContent).toBe('−2');
-    expect(screen.queryByRole('button', { name: 'Show more context' })).toBeNull();
-  });
-
-  it('disables duplicate requests while pending and does not collapse the file on double click', async () => {
-    const { requests, update } = show();
-    let resolveRequest: (value: unknown) => void = () => {};
-    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- The web project uses the ES2023 library.
-    const pending = new Promise<unknown>((resolve) => { resolveRequest = resolve; });
-    requests.mockReturnValueOnce(pending);
-    const button = screen.getByRole('button', { name: 'Show more context' }) as HTMLButtonElement;
-    fireEvent.click(button);
-    expect(button.disabled).toBe(true);
-    fireEvent.doubleClick(button);
-    expect(screen.getByRole('button', { name: 'Collapse this file' })).toBeTruthy();
-    await act(async () => { resolveRequest(null); await pending; });
-    update(payload({ files: [file({ expandingContext: true })] }));
-    expect((screen.getByRole('button', { name: 'Show more context' }) as HTMLButtonElement).disabled).toBe(true);
-    expect(requests).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows recoverable request and server errors', async () => {
-    const { requests, update } = show();
-    requests.mockRejectedValueOnce(new Error('Request failed'));
-    fireEvent.click(screen.getByRole('button', { name: 'Show more context' }));
-    const alert = await screen.findByRole('alert');
-    expect(alert.textContent).toContain('Request failed');
-    fireEvent.click(screen.getByRole('button', { name: 'Show more context' }));
-    await waitFor(() => { expect(screen.queryByRole('alert')).toBeNull(); });
-    update(payload({ files: [file({ contextError: 'Git failed' })] }));
-    expect(screen.getAllByRole('alert')[0].textContent).toContain('Git failed');
-  });
-
-  it('shows a complete file in the diff and restores the condensed view without losing the scroll position', async () => {
+describe('file view control', () => {
+  it('expands the file and returns to compact view without losing the scroll position', async () => {
     const { requests, container, update } = show();
     const body = container.querySelector<HTMLElement>('.diff-body')!;
     body.scrollTop = 120;
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Show full file' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cycle file view' }));
       await Promise.resolve();
     });
     expect(requests).toHaveBeenCalledWith('context', { path: 'a.ts', fullFile: true });
-    const expanded = file({ contextLines: 1_000_000, expandingContext: false, canExpandContext: false });
+    const expanded = file({ contextLines: 1_000_000, expandingContext: false });
     expanded.hunks[0].lines.push({ kind: 'context', number: 5, oldNumber: 5, jump: 5, text: 'const expanded = 5;' });
     update(payload({ files: [expanded] }));
-    expect(screen.getByRole('button', { name: 'Show condensed diff' })).toBeTruthy();
+    expect([...container.querySelectorAll('.diff-text')].map((node) => node.textContent)).toContain('const expanded = 5;');
     expect(body.scrollTop).toBe(120);
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Show condensed diff' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Cycle file view' }));
       await Promise.resolve();
     });
     expect(requests).toHaveBeenNthCalledWith(2, 'context', { path: 'a.ts', fullFile: false });
+    expect(container.querySelectorAll('.diff-line')).toHaveLength(0);
   });
-
-  it.each([{ added: true }, { deleted: true }, { binary: true }, { canExpandContext: false }])
-    ('hides expansion for a file that cannot reveal context: %j', (overrides) => {
-      show(payload({ files: [file(overrides)] }));
-      expect(screen.queryByRole('button', { name: 'Show more context' })).toBeNull();
-    });
 
   it('leaves keyboard events on file controls to those controls', () => {
     const { requests, container } = show(payload({ files: [twoHunks()] }));
     const selected = container.querySelector<HTMLElement>('.diff-walked')?.dataset.index;
-    const button = screen.getByRole('button', { name: 'Show more context' });
+    const button = screen.getByRole('button', { name: 'Cycle file view' });
     for (const key of ['j', 'ArrowDown', 'Enter']) fireEvent.keyDown(button, { key });
     expect(requests).not.toHaveBeenCalled();
     expect(container.querySelector<HTMLElement>('.diff-walked')?.dataset.index).toBe(selected);

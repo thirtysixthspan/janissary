@@ -43,106 +43,80 @@ async function loaded(record = file()) {
   return value;
 }
 
-describe('diff context session', () => {
+describe('diff full-file session', () => {
   it.each([{ binary: true }, { added: true }, { deleted: true }, { hunks: [] }])
-    ('rejects expansion for a non-expandable record: %j', async (overrides) => {
+    ('rejects full-file view for an ineligible record: %j', async (overrides) => {
       const { session } = await loaded(file(overrides));
-      expect(() => session.expandContext('a.ts')).toThrow('outside the current text diff');
+      expect(() => session.setFullFile('a.ts', true)).toThrow('outside the current text diff');
       expect(read).toHaveBeenCalledTimes(1);
       session.dispose();
     });
 
-  it('clears expanded context when a closed tab is opened again on the same root', async () => {
-    const { session, updates, close } = await loaded();
-    read.mockResolvedValueOnce(result(file({ contextLines: 23, canExpandContext: true })));
-    session.expandContext('a.ts');
-    await vi.waitFor(() => { expect(updates.at(-1)?.files[0].contextLines).toBe(23); });
+  it('keeps the expanded file through refresh and resets when the tab is reopened', async () => {
+    const { session, close } = await loaded();
+    read.mockResolvedValueOnce(result(file({ contextLines: 1_000_000 })));
+    session.setFullFile('a.ts', true);
+    await vi.waitFor(() => { expect(read.mock.calls.at(-1)?.[1]?.has('a.ts')).toBe(true); });
+    await session.refresh();
+    expect(read.mock.calls.at(-1)?.[1]?.has('a.ts')).toBe(true);
     close();
     read.mockResolvedValueOnce(result());
     session.open('/project/one', { root: '/project/one' });
-    await vi.waitFor(() => { expect(updates.at(-1)?.files[0]?.contextLines).toBeUndefined(); });
-    expect(read.mock.calls.at(-1)?.[1]?.size).toBe(0);
+    await vi.waitFor(() => { expect(read.mock.calls.at(-1)?.[1]?.size).toBe(0); });
     session.dispose();
   });
 
-  it('queues expansion requested during a refresh and keeps it through later refreshes', async () => {
+  it('queues a full-file request during a refresh', async () => {
     const { session, updates } = await loaded();
     const pending = Promise.withResolvers<ChangeSetResult>();
-    read.mockReturnValueOnce(pending.promise).mockResolvedValue(result(file({ contextLines: 23, canExpandContext: true })));
+    read.mockReturnValueOnce(pending.promise).mockResolvedValue(result(file({ contextLines: 1_000_000 })));
     const refresh = session.refresh();
-    session.expandContext('a.ts');
+    session.setFullFile('a.ts', true);
     expect(updates.at(-1)?.files[0].expandingContext).toBe(true);
     pending.resolve(result());
     await refresh;
-    await vi.waitFor(() => { expect(updates.at(-1)?.files[0].contextLines).toBe(23); });
-    expect(read.mock.calls[2][1]?.get('a.ts')).toBe(23);
-    await session.refresh();
-    expect(read.mock.calls.at(-1)?.[1]?.get('a.ts')).toBe(23);
+    await vi.waitFor(() => { expect(read.mock.calls.at(-1)?.[1]?.has('a.ts')).toBe(true); });
     session.dispose();
   });
 
-  it('discards a stale root read and computes the newly scoped root with no expansion settings', async () => {
-    const { session, updates } = await loaded();
+  it('discards a stale root read and clears full-file settings on rescope', async () => {
+    const { session } = await loaded();
     const pending = Promise.withResolvers<ChangeSetResult>();
     read.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(result(file({ path: 'b.ts' })));
     const refresh = session.refresh();
-    session.expandContext('a.ts');
+    session.setFullFile('a.ts', true);
     session.open('/project/two', { root: '/project/two' });
-    pending.resolve(result(file({ contextLines: 23 })));
+    pending.resolve(result(file({ contextLines: 1_000_000 })));
     await refresh;
-    await vi.waitFor(() => { expect(updates.at(-1)?.files[0]?.path).toBe('b.ts'); });
-    expect(read.mock.calls.at(-1)?.[0]).toBe('/project/two');
+    await vi.waitFor(() => { expect(read.mock.calls.at(-1)?.[0]).toBe('/project/two'); });
     expect(read.mock.calls.at(-1)?.[1]?.size).toBe(0);
     session.dispose();
   });
 
-  it('retains displayed hunks on an expansion failure and allows a successful retry', async () => {
+  it('keeps displayed hunks after a failed expansion and permits retry', async () => {
     const { session, updates } = await loaded();
     const previous = updates.at(-1)!.files[0];
-    read.mockResolvedValueOnce(result(file({ hunks: [], contextLines: 23, contextError: 'Git failed' })));
-    session.expandContext('a.ts');
+    read.mockResolvedValueOnce(result(file({ contextLines: 1_000_000, contextError: 'Git failed' })));
+    session.setFullFile('a.ts', true);
     await vi.waitFor(() => { expect(updates.at(-1)?.files[0].contextError).toBe('Git failed'); });
     expect(updates.at(-1)?.files[0].hunks).toEqual(previous.hunks);
     expect(updates.at(-1)?.files[0].expandingContext).toBe(false);
-    read.mockResolvedValueOnce(result(file({ contextLines: 23, canExpandContext: false })));
-    session.expandContext('a.ts');
-    await vi.waitFor(() => { expect(updates.at(-1)?.files[0].canExpandContext).toBe(false); });
-    expect(updates.at(-1)?.files[0].contextError).toBeUndefined();
+    read.mockResolvedValueOnce(result(file({ contextLines: 1_000_000 })));
+    session.setFullFile('a.ts', true);
+    await vi.waitFor(() => { expect(updates.at(-1)?.files[0].contextError).toBeUndefined(); });
     session.dispose();
   });
 
-  it('rejects an unrecorded path without starting any Git read', async () => {
+  it('rejects an unrecorded path and ignores duplicate requests while pending', async () => {
     const { session } = await loaded();
-    expect(() => session.expandContext('../escape.ts')).toThrow('outside the current text diff');
-    expect(read).toHaveBeenCalledTimes(1);
-    session.dispose();
-  });
-
-  it('ignores another expansion while pending and stops at exhausted context', async () => {
-    const { session, updates } = await loaded();
+    expect(() => session.setFullFile('../escape.ts', true)).toThrow('outside the current text diff');
     const pending = Promise.withResolvers<ChangeSetResult>();
     read.mockReturnValueOnce(pending.promise);
-    session.expandContext('a.ts');
-    session.expandContext('a.ts');
+    session.setFullFile('a.ts', true);
+    session.setFullFile('a.ts', true);
     expect(read).toHaveBeenCalledTimes(2);
-    pending.resolve(result(file({ contextLines: 23, canExpandContext: false })));
-    await vi.waitFor(() => { expect(updates.at(-1)?.files[0].canExpandContext).toBe(false); });
-    session.expandContext('a.ts');
-    expect(read).toHaveBeenCalledTimes(2);
+    pending.resolve(result(file({ contextLines: 1_000_000 })));
+    await vi.waitFor(() => { expect(read.mock.calls.at(-1)?.[1]?.has('a.ts')).toBe(true); });
     session.dispose();
-  });
-
-  it('does not publish or queue a new read after disposal', async () => {
-    const { session, updates } = await loaded();
-    const pending = Promise.withResolvers<ChangeSetResult>();
-    read.mockReturnValueOnce(pending.promise);
-    const refresh = session.refresh();
-    session.expandContext('a.ts');
-    session.dispose();
-    const before = updates.length;
-    pending.resolve(result());
-    await refresh;
-    expect(updates).toHaveLength(before);
-    expect(read).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCaretDown, faCaretRight } from '@fortawesome/free-solid-svg-icons';
 import type { DiffFile } from '@shared/plugins/diff/shared';
 import { HunkLines } from './HunkLines';
 import { SplitHunks } from './SplitHunks';
@@ -8,11 +6,8 @@ import { oversizedLines, CHANGE_LINE_CAP } from './size-cap';
 import { fileStatus } from './status';
 import { isWholeFileChange } from './whole-file';
 import { LineCommentsProvider } from './LineCommentsProvider';
-import { ExpandContextControl } from './ExpandContextControl';
-import { canExpandFileContext } from './context-controls';
 import { gutterWidth } from './gutter-width';
-import { FullFileControl, isFullFileContext } from './FullFileControl';
-import { ExpandBoundaryControl } from './ExpandBoundaryControl';
+import { FileViewControl, isFullFileContext } from './FileViewControl';
 
 // One changed file: its header — the path, the rename it came from, its status, its add and delete
 // counts — and every hunk it holds. A deleted file's header is inert, because there is no file to
@@ -20,7 +15,7 @@ import { ExpandBoundaryControl } from './ExpandBoundaryControl';
 //
 // `offset` is how many hunks the files above this one contribute to the walk's flat list, and a hunk
 // with no lines contributes none, which is what keeps a walked index pointing at a real hunk.
-export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onExpandContext, onToggleFullFile, onExpandBoundary }: {
+export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onToggleFullFile }: {
   file: DiffFile;
   split: boolean;
   offset: number;
@@ -29,9 +24,7 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
   onOpenFile(): void;
   onOpenLine(line: { number: number; jump: number }): void;
   onOpenMedia(): void;
-  onExpandContext?(): Promise<unknown>;
   onToggleFullFile?(fullFile: boolean): Promise<unknown>;
-  onExpandBoundary?(boundary: string): Promise<unknown>;
 }) {
   let taken = 0;
   const spots = file.hunks.map((hunk) => (hunk.lines.length === 0 ? -1 : offset + taken++));
@@ -42,6 +35,17 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
   const over = oversizedLines(file);
   const collapsed = flipped ?? (isWholeFileChange(file) || over > 0);
   const flip = () => setFlipped(!collapsed);
+  const cycleView = async () => {
+    if (collapsed) { setFlipped(false); return; }
+    if (isFullFileContext(file.contextLines)) {
+      setFlipped(true);
+      await onToggleFullFile?.(false);
+      return;
+    }
+    if (onToggleFullFile && !file.binary && !file.added && !file.deleted && file.hunks.length > 0) {
+      await onToggleFullFile(true);
+    } else setFlipped(true);
+  };
   const status = fileStatus(file);
   const style: React.CSSProperties & { '--diff-gutter-width': string } = { '--diff-gutter-width': `${gutterWidth(file)}ch` };
   const openName = (event: React.MouseEvent) => {
@@ -58,15 +62,6 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
         >
           <button
             type="button"
-            className="diff-chevron"
-            aria-expanded={!collapsed}
-            aria-label={collapsed ? 'Expand this file' : 'Collapse this file'}
-            onClick={flip}
-          >
-            <FontAwesomeIcon icon={collapsed ? faCaretRight : faCaretDown} />
-          </button>
-          <button
-            type="button"
             className="diff-file-name"
             disabled={file.deleted}
             title={file.path}
@@ -74,27 +69,15 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
           >
             {file.oldPath === undefined ? file.path : `${file.oldPath} → ${file.path}`}
           </button>
-          {onExpandContext && !collapsed && canExpandFileContext(file) && (
-            <ExpandContextControl pending={file.expandingContext === true} error={file.contextError} expand={onExpandContext} />
-          )}
-          {onToggleFullFile && !collapsed && !file.binary && !file.added && !file.deleted && file.hunks.length > 0 && (
-            <FullFileControl
-              expanded={isFullFileContext(file.contextLines)}
-              pending={file.expandingContext === true}
-              toggle={onToggleFullFile}
-            />
-          )}
+          <FileViewControl collapsed={collapsed} expanded={isFullFileContext(file.contextLines)}
+            pending={file.expandingContext === true} error={file.contextError} cycle={cycleView} />
           <span className="diff-counts">
             <span className={`diff-status diff-status-${status.kind}`}>{status.label}</span>
             {file.additions > 0 && <span className="diff-added-count">+{file.additions}</span>}
             {file.deletions > 0 && <span className="diff-removed-count">−{file.deletions}</span>}
-            {collapsed && <span className="diff-whole-file">whole file — double-click to expand</span>}
             {over > 0 && <span className="diff-large-file">{`${file.additions + file.deletions} lines over the ${CHANGE_LINE_CAP}-line cap — double-click to expand`}</span>}
           </span>
         </div>
-        {!collapsed && onExpandBoundary && file.contextBoundaries?.find((boundary) => boundary.position === 'top') && (
-          <BoundaryControl boundary={file.contextBoundaries.find((item) => item.position === 'top')!} expand={onExpandBoundary} />
-        )}
         {!collapsed && file.hunks.map((hunk, index) => {
           const spot = spots[index];
           const walkedHere = spot >= 0 && walked === spot;
@@ -111,26 +94,10 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
               {split
                 ? <SplitHunks hunk={hunk} index={spot} walked={walkedHere} {...shared} />
                 : <HunkLines hunk={hunk} index={spot} walked={walkedHere} {...shared} />}
-              {!collapsed && onExpandBoundary && file.contextBoundaries?.find((boundary) => boundary.position === 'between'
-                && boundary.hunkIndex === index) && (
-                <BoundaryControl boundary={file.contextBoundaries.find((item) => item.position === 'between'
-                  && item.hunkIndex === index)!} expand={onExpandBoundary} />
-              )}
             </React.Fragment>
           );
         })}
-        {!collapsed && onExpandBoundary && file.contextBoundaries?.find((boundary) => boundary.position === 'bottom') && (
-          <BoundaryControl boundary={file.contextBoundaries.find((item) => item.position === 'bottom')!} expand={onExpandBoundary} />
-        )}
       </div>
     </LineCommentsProvider>
   );
-}
-
-function BoundaryControl({ boundary, expand }: {
-  boundary: NonNullable<DiffFile['contextBoundaries']>[number];
-  expand(boundary: string): Promise<unknown>;
-}) {
-  return <ExpandBoundaryControl position={boundary.position} pending={boundary.expanding === true} error={boundary.error}
-    expand={() => expand(boundary.id)} />;
 }

@@ -37,8 +37,14 @@
   display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 4px 12px;
   background: color-mix(in srgb, var(--muted) 8%, transparent);
 }
-.diff-chevron { flex: none; background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 10px; padding: 0; width: 1em; }
-.diff-chevron:hover { color: var(--fg); }
+.diff-file-view-control { display: inline-flex; align-items: center; flex: none; }
+.diff-view-cycle {
+  background: transparent; border: 1px solid transparent; border-radius: 3px; color: var(--muted);
+  cursor: pointer; font: inherit; padding: 1px 4px;
+}
+.diff-view-cycle:hover, .diff-view-cycle:focus-visible { color: var(--fg); border-color: var(--border); }
+.diff-view-cycle:disabled { opacity: 0.5; cursor: default; }
+.diff-file-view-control [role="alert"] { color: var(--error); }
 
 .diff-file-name {
   background: transparent; border: none; color: var(--fg); cursor: pointer; font: inherit;
@@ -53,7 +59,7 @@
 .diff-status { color: var(--muted); }
 .diff-status.diff-status-added { color: var(--success); }
 .diff-status.diff-status-removed { color: var(--error); }
-.diff-whole-file, .diff-large-file { color: var(--muted); }
+.diff-large-file { color: var(--muted); }
 
 .diff-hunk { border-left: 2px solid transparent; cursor: text; }
 .diff-hunk.diff-walked { border-left-color: var(--accent); }
@@ -93,30 +99,11 @@
 .diff-split-row .diff-cell.diff-old { border-right: 1px solid var(--border); }
 .diff-split-row .diff-cell.diff-empty { background: color-mix(in srgb, var(--muted) 5%, transparent); }
 
-.diff-context-control { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
-.diff-context-control button, .diff-line-comment button {
+.diff-line-comment button {
   font: inherit; color: var(--fg); background: var(--bg-soft);
   border: 1px solid var(--border); border-radius: 3px; cursor: pointer; padding: 1px 6px;
 }
-.diff-context-control button:disabled, .diff-line-comment button:disabled { opacity: 0.5; cursor: default; }
-.diff-context-control [role="alert"] { color: var(--error); }
-.diff-full-file-control { display: flex; align-items: baseline; gap: 8px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
-.diff-full-file-control button {
-  font: inherit; color: var(--fg); background: var(--bg-soft);
-  border: 1px solid var(--border); border-radius: 3px; cursor: pointer; padding: 1px 6px;
-}
-.diff-full-file-control button:disabled { opacity: 0.5; cursor: default; }
-.diff-full-file-control [role="alert"] { color: var(--error); }
-.diff-context-boundary {
-  display: flex; align-items: center; justify-content: center; min-height: 24px; gap: 8px;
-  background: color-mix(in srgb, var(--muted) 12%, transparent); border-block: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
-}
-.diff-context-boundary button {
-  font: inherit; color: var(--muted); background: transparent; border: 0; cursor: pointer; padding: 2px 8px;
-}
-.diff-context-boundary button:hover, .diff-context-boundary button:focus-visible { color: var(--fg); }
-.diff-context-boundary button:disabled { opacity: 0.55; cursor: default; }
-.diff-context-boundary [role="alert"] { color: var(--error); }
+.diff-line-comment button:disabled { opacity: 0.5; cursor: default; }
 .diff-comment-add {
   align-self: flex-start; flex: none; margin-left: auto; padding: 0 2px;
   font: inherit; border: none; color: var(--muted); background: transparent; cursor: pointer; opacity: 0.4; user-select: none;

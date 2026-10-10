@@ -91,7 +91,7 @@ export function DiffTab({
         ref={walk.listRef}
         tabIndex={0}
         onKeyDown={onKeyDown}
-        title="Left collapses a file; Right expands its changes, then the full file; up and down walk hunks; j and k move between files; Return opens the walked hunk's line"
+        title="Left collapses a file; Right cycles its view; up and down walk hunks; j and k move between files; Return opens the walked hunk's line"
       >
         {payload.state === 'not-repository' && <div className="diff-empty">This directory is not a git repository</div>}
         {payload.state === 'error' && <div className="diff-empty">{payload.message}</div>}
@@ -107,12 +107,10 @@ export function DiffTab({
             onOpenFile={() => openFile(file.path)}
             onOpenLine={(line) => openLine(file.path, line.jump)}
             onOpenMedia={() => openMedia(file.path)}
-            onExpandContext={() => capabilities.intent('context', { path: file.path })}
             onToggleFullFile={(fullFile) => {
               fullFileScroll.current = walk.listRef.current?.scrollTop ?? 0;
               return capabilities.intent('context', { path: file.path, fullFile });
             }}
-            onExpandBoundary={(boundary) => capabilities.intent('context', { path: file.path, boundary })}
           />
         ))}
       </div>
@@ -122,18 +120,13 @@ export function DiffTab({
 
 function handleFileArrow(entry: Element | undefined, key: 'ArrowLeft' | 'ArrowRight'): boolean {
   if (!entry) return false;
-  const chevron = entry.querySelector<HTMLButtonElement>(':scope .diff-chevron');
+  const control = entry.querySelector<HTMLButtonElement>(':scope .diff-view-cycle');
+  if (!control) return false;
   if (key === 'ArrowLeft') {
-    if (chevron?.getAttribute('aria-expanded') !== 'true') return false;
-    chevron.click();
+    if (control.getAttribute('aria-expanded') !== 'true') return false;
+    entry.querySelector<HTMLElement>(':scope .diff-file-header')?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     return true;
   }
-  if (chevron?.getAttribute('aria-expanded') === 'false') {
-    chevron.click();
-    return true;
-  }
-  const fullFile = entry.querySelector<HTMLButtonElement>(':scope .diff-full-file-control button');
-  if (!fullFile?.textContent?.includes('Show full file')) return false;
-  fullFile.click();
+  control.click();
   return true;
 }

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* use font awesome arrows-up-down icon for a button that toggles the view of a file between closed, compact, and expanded. remove the 'whole file — double-click to expand' button. remove the show lines above, below and between changes buttons and functionality. remove share more context button and functionality.
-
 * changes like the following should show only line highlighting
 - Given an array, arr, containing only of the characters 'R' (red), 'W' (white), and 'B' (blue), sort the array in place so that the same colors are adjacent, with the colors in the order red, white, and blue.
 + subtracted long text

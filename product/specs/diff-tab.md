@@ -44,11 +44,10 @@ pinned while the list moves.
 
 Every hunk is expanded and introduced by the range it occupies, `@@ -start,length +start,length @@`,
 so the reader sees where the change begins and ends on each side and that the lines between two hunks
-were skipped rather than removed. Every file entry's header carries a **disclosure chevron**: clicking
-it collapses the entry to its header, and clicking it again restores exactly what was there, one entry
-at a time. The chevron turns with the state, and an entry that starts collapsed — a whole-file change,
-or one over the cap — opens with the same chevron, so the header's reason note and the control agree.
-A double-click on the header does the same thing. Each hunk line carries its file's number on both
+were skipped rather than removed. Every file entry's header carries a **Font Awesome arrows-up-down
+button** that cycles the entry through closed, compact diff, and expanded full-file views. Whole-file
+changes start closed without an explanatory note; changes over the cap also start closed and retain
+their line-count note. A double-click on the header toggles closed and compact views. Each hunk line carries its file's number on both
 sides: two narrow right-aligned gutters in the unified layout, the original number blank on an added
 line and the new number blank on a removed one, and in the split layout the original number in the left
 column with the modified one in the right. In unified layout, a line longer than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads without a horizontal scrollbar and a wrapped line's number stays beside its first row. Split layout wraps text within each column and preserves readable column widths through horizontal scrolling in narrow panes.
@@ -116,8 +115,8 @@ Both columns retain equal, readable widths. When the available space is too narr
 The code body is focusable for navigation. Clicking into a hunk focuses it, and while the body itself holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,
 stopping at the first and last change rather than wrapping and scrolling a file into view as the walk
-reaches it. **Left collapses the file containing the walked hunk. Right expands a collapsed file to its
-changed hunks, then requests the full file on a second press.** **j and k move between files**, one file
+reaches it. **Left collapses the file containing the walked hunk. Right cycles that file through its
+closed, compact, and expanded views.** **j and k move between files**, one file
 at a time — the next file's first hunk and the previous one's — stopping at the first and last file
 rather than wrapping. **Return** opens the file at the walked hunk's first changed line. A click on a
 hunk selects it and focuses the body, so the walk continues from where the mouse left off.
@@ -136,19 +135,15 @@ In unified layout, each source line has a **+** comment control. It opens a plai
 
 Comments retain the source text they were written against. If an annotated line changes, the note identifies that change and shows the earlier text. Original-side notes remain available when their line becomes unchanged context. Comment editing preserves source selection, syntax colors, and line targeting, and typing a note does not rerender unchanged source code.
 
-Saved comments and drafts are temporary, remain local to this tab, and are not sent to an external service or written to source files. While the same file entry remains present, they survive refresh, file collapse, context expansion and hunk merging, and layout changes. Split layout temporarily hides the comment interface; returning to unified layout restores it. Closing the tab, changing its directory, or removing the file entry forgets its comments and drafts.
+Saved comments and drafts are temporary, remain local to this tab, and are not sent to an external service or written to source files. While the same file entry remains present, they survive refresh, file collapse, full-file expansion, and layout changes. Split layout temporarily hides the comment interface; returning to unified layout restores it. Closing the tab, changing its directory, or removing the file entry forgets its comments and drafts.
 
-### Context expansion
+### File views
 
-Expanded tracked text-file entries that contain unchanged context offer **Show more context** in their header. The initial view uses three surrounding lines. Each request reveals up to twenty more unchanged lines at each hunk edge, widening all the change groups in that file within the same code display. Neighboring hunks merge when their revealed context connects. Addition and deletion counts remain unchanged, and revealed lines retain their correct original/new numbers, syntax colors, selection, and unified comment controls.
-
-The control is disabled while a request is pending and disappears when no more context can be revealed. Expansion is bounded to one million surrounding lines. Binary, added, deleted, and mode-only entries do not offer this control. A file-specific expansion failure appears beside the control, leaves the previous display intact, and can be retried. Requests made during a refresh are applied after that read finishes; changing directories discards results from the previous directory.
-
-Each omitted region also has its own compact control: above the first hunk, between separated hunks, and below the last hunk. Expanding one reveals that region in place while leaving other boundaries condensed. When the revealed lines connect two hunks, they become one continuous hunk. The controls have a subtle background, and revealed lines keep their syntax highlighting, line numbers, selection, navigation, and unified comments. Binary, added, deleted, and mode-only entries have no context boundaries.
-
-Expanded context remains during periodic refresh and is forgotten when the tab closes or changes directory. This is per-file context widening; it is separate from the file disclosure chevron and from opening a file in the editor.
-
-Tracked text-file entries also offer **Show full file**. It reveals every unchanged line in that changed file inside the same diff, retaining added and removed markings, line numbers, syntax highlighting, navigation, and unified comments. **Show condensed diff** returns to the initial three-line context. The control is disabled while the request is pending, and the current scroll position is restored when the full-file view arrives. Full-file context remains during refresh and is forgotten when the tab closes or changes directory.
+Tracked text-file entries can expand from the compact three-line diff to show every unchanged line in
+the file. The arrows-up-down button requests that full-file view and then cycles back through the
+closed and compact views. Expanded context remains during periodic refresh and is forgotten when the
+tab closes or changes directory. The current scroll position is restored when the full-file view
+arrives. Added, deleted, binary, and mode-only entries have no additional full-file context to reveal.
 
 ### Empty and failure states
 

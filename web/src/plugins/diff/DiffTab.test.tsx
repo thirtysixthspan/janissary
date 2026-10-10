@@ -73,7 +73,7 @@ beforeEach(() => { scrollIntoView.mockClear(); });
 const renderTab = (value: DiffPayload = payload()) => {
   const { capabilities, intent } = makeCapabilities();
   const rendered = render(<DiffTab payload={value} capabilities={capabilities} />);
-  return { ...rendered, intent };
+  return { ...rendered, intent, update: (next: DiffPayload) => rendered.rerender(<DiffTab payload={next} capabilities={capabilities} />) };
 };
 
 const body = () => document.querySelector('.diff-body') as HTMLElement;
@@ -296,6 +296,19 @@ describe('DiffTab', () => {
     expect(intent).toHaveBeenCalledWith('context', { path: 'a.txt', fullFile: true });
   });
 
+  it('cycles a file from closed to compact to full-file and back to closed', async () => {
+    const { intent, container, update } = renderTab(payload({ files: [wholeFile()] }));
+    const control = screen.getByRole('button', { name: 'Cycle file view' });
+    expect(container.querySelectorAll('.diff-line')).toHaveLength(0);
+    fireEvent.click(control);
+    expect(container.querySelectorAll('.diff-line')).toHaveLength(2);
+    fireEvent.click(control);
+    expect(intent).toHaveBeenCalledWith('context', { path: 'a.txt', fullFile: true });
+    update(payload({ files: [wholeFile({ contextLines: 1_000_000 })] }));
+    fireEvent.click(control);
+    expect(container.querySelectorAll('.diff-line')).toHaveLength(0);
+  });
+
   it('moves the walk to a hunk clicked with the mouse', () => {
     const { intent, container } = renderTab(payload({
       files: [file({ path: 'a.txt' }), file({ path: 'b.txt', hunks: file().hunks })],
@@ -445,7 +458,7 @@ describe('DiffTab', () => {
   describe('collapsing an entry', () => {
   it('opens a whole-file change collapsed, with the way out named', () => {
     const { container } = renderTab(payload({ files: [wholeFile()] }));
-    expect(screen.getByText('whole file — double-click to expand')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cycle file view' })).toBeTruthy();
     expect(container.querySelectorAll('.diff-line').length).toBe(0);
   });
 
@@ -502,35 +515,33 @@ describe('DiffTab', () => {
         lines: [{ kind: 'added', number: 1, jump: 1, text: 'new' }],
       }] })],
     }));
-    expect(container.querySelector('.diff-whole-file')).toBeTruthy();
+    expect(container.querySelector('.diff-whole-file')).toBeNull();
     expect(container.querySelector('.diff-large-file')).toBeTruthy();
     expect(container.querySelectorAll('.diff-line').length).toBe(0);
     fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
     expect(container.querySelectorAll('.diff-line').length).toBe(1);
   });
 
-  it("collapses an entry's hunks on a click of its chevron and restores them on another", () => {
+  it("double-clicking an entry header collapses and restores its hunks", () => {
     const { container } = renderTab();
-    const chevron = screen.getByRole('button', { name: 'Collapse this file' });
-    fireEvent.click(chevron);
+    const header = container.querySelector('.diff-file-header') as HTMLElement;
+    fireEvent.doubleClick(header);
     expect(container.querySelectorAll('.diff-line').length).toBe(0);
-    expect(screen.getByRole('button', { name: 'Expand this file' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Expand this file' }));
+    fireEvent.doubleClick(header);
     expect(container.querySelectorAll('.diff-line').length).toBe(3);
   });
 
-  it("collapses one entry on its own chevron, leaving the others' rows rendered", () => {
+  it("double-clicking one entry header leaves the others' rows rendered", () => {
     const { container } = renderTab(payload({ files: [file({ path: 'a.txt' }), file({ path: 'b.txt' })] }));
-    fireEvent.click(screen.getAllByRole('button', { name: 'Collapse this file' })[0]);
     const entries = [...container.querySelectorAll(':scope .diff-file')];
+    fireEvent.doubleClick(entries[0].querySelector('.diff-file-header') as HTMLElement);
     expect(entries[0].querySelectorAll('.diff-line').length).toBe(0);
     expect(entries[1].querySelectorAll('.diff-line').length).toBe(3);
   });
 
   it("opens an entry collapsed of its own accord with the same chevron", () => {
     const { container } = renderTab(payload({ files: [wholeFile()] }));
-    expect(screen.getByRole('button', { name: 'Expand this file' })).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: 'Expand this file' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cycle file view' }));
     expect(container.querySelectorAll('.diff-line').length).toBe(2);
   });
 
