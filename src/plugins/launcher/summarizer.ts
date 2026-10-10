@@ -197,7 +197,7 @@ export async function summarizeOnce(input: {
   for (const [label, cursor] of state.fed) {
     if (live.get(label) !== cursor.incarnation) state.fed.delete(label);
   }
-  const tabs = current.filter((tab) => movedPastCursor(tab, state.fed.get(tab.label)));
+  const tabs = current.filter((tab) => isRoutingLabel(tab.label) && movedPastCursor(tab, state.fed.get(tab.label)));
   if (tabs.length === 0) return new Map();
   // One clock for the whole flush, so every tab's recency is measured against the same moment.
   const now = Date.now();
@@ -224,10 +224,11 @@ export async function summarizeOnce(input: {
     // Re-read after the awaited prompt. A label can be closed and immediately reused while ACP is
     // answering, so neither its reply nor its cursor belongs to the replacement incarnation.
     const latest = new Map(readTabs().map((tab) => [tab.label, tab]));
+    const summaries = parseTabSummaries(answered.reply);
     const acceptedLabels = new Set<string>();
     for (const tab of tabs) {
       const fresh = latest.get(tab.label);
-      if (!fresh || fresh.incarnation !== tab.incarnation) continue;
+      if (!fresh || fresh.incarnation !== tab.incarnation || !summaries.has(tab.label)) continue;
       acceptedLabels.add(tab.label);
       state.fed.set(tab.label, {
         incarnation: tab.incarnation,
@@ -236,7 +237,7 @@ export async function summarizeOnce(input: {
         ...(tab.contentFingerprint !== undefined && { contentFingerprint: tab.contentFingerprint }),
       });
     }
-    return new Map([...parseTabSummaries(answered.reply)].filter(([label]) => acceptedLabels.has(label)));
+    return new Map([...summaries].filter(([label]) => acceptedLabels.has(label)));
   } finally {
     state.inFlight = false;
   }

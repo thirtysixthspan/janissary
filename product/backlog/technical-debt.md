@@ -4,17 +4,6 @@
 
 ## development
 
-* Advance launcher summary cursors only for tabs whose replies contain an accepted summary.
-
-Existing Debt: The launcher treats a completed ACP prompt as acknowledgement of every requested tab before checking which tab summaries the reply actually contains. Severity: 5/10
-
-Existing Risk: 5/10 - An empty, malformed, or partial model reply marks omitted tabs as already summarized, leaving their summaries absent or stale until their content changes again.
-
-Proposal Risk: 2/10 - A model can still repeatedly omit a tab, but its unchanged content remains eligible for a later flush instead of being silently acknowledged forever.
-
-Proposal: In `summarizeOnce` in `src/plugins/launcher/summarizer.ts`, parse `answered.reply` once before updating `state.fed`, intersect its nonempty summaries with the requested tabs and the fresh incarnation checks, and advance a cursor only when that intersection includes its label. Filter unroutable labels before forming the requested tab set so tabs deliberately excluded by `buildSummarizerPrompt` are never treated as successfully fed; return without starting ACP if that set is empty. Preserve the existing one-flush-at-a-time guard, per-session priming, original content cursor values, and close-and-reuse protection. `src/plugins/launcher/summarizer.test.ts` covers transport refusals and incarnation changes, but its priming test supplies a reply for only one of two requested tabs and currently expects both to be skipped on the next flush; update that expectation and add empty, malformed, and partial reply cases proving that omitted tabs are requested again while accepted tabs are skipped. Keep the merge of previously published summaries in `src/plugins/launcher/activate.ts` and its coverage in `src/plugins/launcher/activate.test.ts` unchanged in behavior.
-
-
 * Coalesce the tabs notification source before the plugin host reads rows and invokes subscribers.
 
 Existing Debt: The tabs topic subscribes directly to every raw state mutation and relies on the launcher to discard unchanged rows only after the host has read activity and constructed a guarded plugin call. Severity: 6/10

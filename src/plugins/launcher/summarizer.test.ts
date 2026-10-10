@@ -284,16 +284,46 @@ describe('summarizeOnce', () => {
   // so a summarizer that reads one string cannot tell it from an answer and has to guess at the text.
   let refusal: string | undefined;
 
-  it('primes once, then prompts once per flush', async () => {
+  it('primes once, then prompts once per eligible flush', async () => {
     const stubs = stub(tabs(), '[[tab:shell]] First.');
     const summarizer = state();
 
     await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', readTabs: tabs });
     await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'You summarize.', readTabs: tabs });
 
-    expect(stubs.prompted).toHaveLength(2);
+    expect(stubs.prompted).toHaveLength(3);
     expect(stubs.prompted[0]).toContain('You summarize.');
     expect(stubs.prompted[0]).toContain(REPLY_FORMAT);
+  });
+
+  it.each([
+    ['empty', '', false],
+    ['malformed', 'No tab markers in this reply.', false],
+    ['partial', '[[tab:shell]] First.', true],
+  ])('retries tabs omitted from an %s reply while skipping accepted tabs', async (_kind, reply, acceptedShell) => {
+    const summarizer = state();
+    const first = stub(tabs(), reply);
+    await summarizeOnce({ capabilities: first.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+    expect(summarizer.fed.has('shell')).toBe(acceptedShell);
+    expect(summarizer.fed.has('agent')).toBe(false);
+
+    const retry = stub(tabs(), '[[tab:agent]] Second.');
+    await summarizeOnce({ capabilities: retry.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+    expect(retry.prompted).toHaveLength(1);
+    expect(retry.prompted[0]).toContain('[[tab:agent]]');
+    expect(retry.prompted[0].includes('[[tab:shell]]')).toBe(!acceptedShell);
+  });
+
+  it('does not start ACP when every changed tab has an unroutable label', async () => {
+    const rows = [tab({ label: 'bad]]' })];
+    const stubs = stub(rows, '');
+    const summarizer = state();
+
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => rows });
+
+    expect(stubs.starts).toHaveLength(0);
+    expect(stubs.prompted).toHaveLength(0);
+    expect(summarizer.fed.size).toBe(0);
   });
 
   it('asks for nothing when no tab has moved past its cursor', async () => {
