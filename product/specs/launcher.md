@@ -61,7 +61,7 @@ The paragraph is clamped to three lines of the row's width and expands to as man
 
 Hovering a tab row opens a small card carrying what the row has no width for: the tab's name, its label when they differ, its working directory, its remote host when it has one, and the last command it ran. It is drawn just below the row wherever the row sits, so the list's own scrolling never cuts it off. The card is hover-only — it appears on pointer-over and closes on pointer-out, and never on touch or keyboard focus alone.
 
-The file executes what it names: a row's click runs its command as if it had been typed, so a project's committed `launcher.json` is a set of commands this application will run. `~/.janissary/launcher.json` replaces the project's file rather than merging with it.
+The file executes what it names: the first click highlights a command row, and clicking that highlighted row again runs its command as if it had been typed. A project's committed `launcher.json` is therefore a set of commands this application will run. `~/.janissary/launcher.json` replaces the project's file rather than merging with it.
 
 ### The command bar
 
