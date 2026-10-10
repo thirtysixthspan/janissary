@@ -40,15 +40,24 @@ type WorkspaceRoute =
   | { kind: 'provisioning' }
   | { kind: 'none' };
 
+// The two kinds of tab whose workspace the clause is for, exactly as the usage line, the refusal, and
+// the spec name them. A shell tab is a plugin tab whose id is `shell` — the plugin that owns the
+// shell tabs — and every other view carries its own workspace-less payload, so a navigator rooted at
+// a clone reads as no workspace at all rather than as one the clause accepts.
+function clauseTab(record: { view?: string; plugin?: string }): boolean {
+  return record.view === 'harness' || (record.view === 'plugin' && record.plugin === 'shell');
+}
+
 function resolveWorkspace(
   capabilities: TabPluginServerCapabilities, name: string,
 ): WorkspaceRoute {
   const record = capabilities.originTab(name);
+  if (record === null || !clauseTab(record)) return { kind: 'none' };
   // The directory of a clone is known before the clone is, so a workspace that has not landed reads
   // as one that exists — and asking for its diff would answer "not a git repository" for what is
   // really a wait.
-  if (record?.provisioning) return { kind: 'provisioning' };
-  if (record?.workspace) {
+  if (record.provisioning) return { kind: 'provisioning' };
+  if (record.workspace) {
     const origin = { root: record.root, workspace: { dir: record.workspace.dir } };
     return { kind: record.remote ? 'remote' : 'local', origin };
   }

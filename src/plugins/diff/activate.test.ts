@@ -21,7 +21,7 @@ function makeCapabilities(overrides: Record<string, unknown> = {}) {
   const dispatchLineWithOutput = vi.fn(async () => ({ dispatched: true, output: '' }));
   const rejectRequest = vi.fn((reason: string) => { throw new Error(reason); });
   const reportFailure = vi.fn((reason: unknown) => { throw new Error(String(reason)); });
-  const originTab = vi.fn(() => ({ label: 'shell', cwd: '', root: '', workspace: undefined as { dir: string } | undefined }));
+  const originTab = vi.fn(() => shellRecord());
   const readSettings = vi.fn(() => ({}) as Record<string, unknown>);
   const saveSettings = vi.fn(() => true);
   // A remote workspace's tab joins the channel through `launchTab`, which never focuses an existing
@@ -36,6 +36,13 @@ function makeCapabilities(overrides: Record<string, unknown> = {}) {
     capabilities: capabilities as never, openOrFocusTab, updateTab, openInEditor, dispatchLineWithOutput,
     originTab, readSettings, saveSettings, launchTab,
   };
+}
+
+// The record the host answers for a shell tab, which is the kind whose workspace the clause serves.
+// Built the way `lineCapabilities` builds it, so the clause's narrowing is exercised rather than
+// blended away by a fake that answers a bare workspace.
+function shellRecord(overrides: Record<string, unknown> = {}) {
+  return { view: 'plugin' as const, plugin: 'shell', ...overrides };
 }
 
 const settledTab: DiffPayload = {
@@ -241,9 +248,9 @@ describe('diff plugin activation', () => {
     writeFileSync(path.join(workspace, 'w.txt'), 'one');
     commitAll(workspace);
     writeFileSync(path.join(workspace, 'w.txt'), 'two');
-    const named = { label: 'selim', cwd: workspace, root: repo, workspace: { dir: workspace } };
+    const named = { label: 'selim', cwd: workspace, root: repo, ...shellRecord({ workspace: { dir: workspace } }) };
     const { capabilities, openOrFocusTab, updateTab } = makeCapabilities({
-      originTab: vi.fn((name?: string) => (name === 'selim' ? named : { label: 'shell', cwd: repo, root: repo })),
+      originTab: vi.fn((name?: string) => (name === 'selim' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     const activation = activate();
     activation.command?.('on selim', capabilities);
@@ -259,8 +266,8 @@ describe('diff plugin activation', () => {
   it('joins the channel of a remote workspace the clause names, and reads through it', () => {
     const { capabilities, launchTab, openOrFocusTab } = makeCapabilities({
       originTab: vi.fn((name?: string) => (name === 'remote'
-        ? { label: 'remote', cwd: '/srv/proj', root: repo, workspace: { dir: '/srv/proj/.janissary/workspace/remote' }, remote: true as const }
-        : { label: 'shell', cwd: repo, root: repo })),
+        ? { label: 'remote', cwd: '/srv/proj', root: repo, remote: true as const, workspace: { dir: '/srv/proj/.janissary/workspace/remote' }, ...shellRecord() }
+        : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     activate().command?.('on remote', capabilities);
     expect(launchTab).toHaveBeenCalledTimes(1);
@@ -276,9 +283,9 @@ describe('diff plugin activation', () => {
     const workspace = path.join(root, '.janissary', 'workspace', 'kamil');
     mkdirSync(workspace, { recursive: true });
     initRepo(workspace);
-    const named = { label: 'kamil', cwd: workspace, root: repo, workspace: { dir: workspace } };
+    const named = { label: 'kamil', cwd: workspace, root: repo, ...shellRecord({ workspace: { dir: workspace } }) };
     const { capabilities, openOrFocusTab, updateTab } = makeCapabilities({
-      originTab: vi.fn((name?: string) => (name === 'kamil' || name === undefined ? named : { label: 'shell', cwd: repo, root: repo })),
+      originTab: vi.fn((name?: string) => (name === 'kamil' || name === undefined ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     const activation = activate();
     activation.command?.('on kamil', capabilities);
@@ -300,8 +307,8 @@ describe('diff plugin activation', () => {
     }
     const { capabilities, openOrFocusTab, updateTab } = makeCapabilities({
       originTab: vi.fn((name?: string) => (name === 'second'
-        ? { label: 'second', cwd: second, root: repo, workspace: { dir: second } }
-        : { label: 'first', cwd: first, root: repo, workspace: { dir: first } })),
+        ? { label: 'second', cwd: second, root: repo, ...shellRecord({ workspace: { dir: second } }) }
+        : { label: 'first', cwd: first, root: repo, ...shellRecord({ workspace: { dir: first } }) })),
     });
     const activation = activate();
     activation.command?.('on first', capabilities);
@@ -326,9 +333,9 @@ describe('diff plugin activation', () => {
 
   it('refuses the clause for a tab whose workspace is still being prepared, opening nothing', () => {
     const workspace = path.join(root, '.janissary', 'workspace', 'landing');
-    const named = { label: 'landing', cwd: workspace, root: repo, workspace: { dir: workspace }, provisioning: true as const };
+    const named = { label: 'landing', cwd: workspace, root: repo, ...shellRecord({ workspace: { dir: workspace }, provisioning: true as const }) };
     const { capabilities, openOrFocusTab, launchTab } = makeCapabilities({
-      originTab: vi.fn((name?: string) => (name === 'landing' ? named : { label: 'shell', cwd: repo, root: repo })),
+      originTab: vi.fn((name?: string) => (name === 'landing' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     expect(() => activate().command?.('on landing', capabilities)).toThrow(
       'Cannot diff on <landing>: the workspace of "landing" is still being prepared.',
@@ -337,12 +344,70 @@ describe('diff plugin activation', () => {
     expect(launchTab).not.toHaveBeenCalled();
   });
 
+  // The clause is written for a shell or a harness tab, and a record's workspace directory answers
+  // for whichever tab happens to be standing in one. Both of these carry one and neither is one, so
+  // the refusal the wording already promises is the answer — which is also how the diff of that
+  // clone stays reachable, through the shell or harness tab that opened it.
+  it('refuses the clause for a files tab that carries a workspace directory', () => {
+    const named = { label: 'files-1', cwd: repo, root: repo, view: 'files' as const, workspace: { dir: repo } };
+    const { capabilities, openOrFocusTab, launchTab } = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === 'files-1' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
+    });
+    expect(() => activate().command?.('on files-1', capabilities)).toThrow(
+      'Cannot diff on <files-1>: no open shell or harness tab named "files-1" has a workspace.',
+    );
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+    expect(launchTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses the clause for an editor tab that carries a workspace directory', () => {
+    const named = { label: 'editor-1', cwd: repo, root: repo, view: 'editor' as const, workspace: { dir: repo } };
+    const { capabilities, openOrFocusTab, launchTab } = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === 'editor-1' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
+    });
+    expect(() => activate().command?.('on editor-1', capabilities)).toThrow(
+      'Cannot diff on <editor-1>: no open shell or harness tab named "editor-1" has a workspace.',
+    );
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+    expect(launchTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses the clause for another plugin\'s tab that carries a workspace directory', () => {
+    const named = { label: 'search-1', cwd: repo, root: repo, view: 'plugin' as const, plugin: 'search', workspace: { dir: repo } };
+    const { capabilities, openOrFocusTab } = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === 'search-1' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
+    });
+    expect(() => activate().command?.('on search-1', capabilities)).toThrow(
+      'Cannot diff on <search-1>: no open shell or harness tab named "search-1" has a workspace.',
+    );
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+  });
+
+  it('opens the workspace the clause names on a harness tab, the other kind it is for', async () => {
+    const workspace = path.join(root, '.janissary', 'workspace', 'demir');
+    mkdirSync(workspace, { recursive: true });
+    initRepo(workspace);
+    writeFileSync(path.join(workspace, 'w.txt'), 'one');
+    commitAll(workspace);
+    writeFileSync(path.join(workspace, 'w.txt'), 'two');
+    const named = { label: 'demir', cwd: workspace, root: repo, view: 'harness' as const, workspace: { dir: workspace } };
+    const { capabilities, openOrFocusTab, updateTab } = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === 'demir' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
+    });
+    const activation = activate();
+    activation.command?.('on demir', capabilities);
+    const payload = await settled(updateTab);
+    expect(openOrFocusTab).toHaveBeenCalledTimes(1);
+    expect(payload.files.map((file) => file.path)).toEqual(['w.txt']);
+  });
+
   it('refuses the clause for a remote tab whose far-side workspace has not answered yet', () => {
     const named = {
-      label: 'remote-1', cwd: '/srv/proj', root: repo, remote: true as const, provisioning: true as const,
+      label: 'remote-1', cwd: '/srv/proj', root: repo, remote: true as const,
+      ...shellRecord({ provisioning: true as const }),
     };
     const { capabilities, openOrFocusTab, launchTab } = makeCapabilities({
-      originTab: vi.fn((name?: string) => (name === 'remote-1' ? named : { label: 'shell', cwd: repo, root: repo })),
+      originTab: vi.fn((name?: string) => (name === 'remote-1' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     expect(() => activate().command?.('on remote-1', capabilities)).toThrow(
       'Cannot diff on <remote-1>: the workspace of "remote-1" is still being prepared.',
@@ -358,9 +423,9 @@ describe('diff plugin activation', () => {
     writeFileSync(path.join(workspace, 'w.txt'), 'one');
     commitAll(workspace);
     writeFileSync(path.join(workspace, 'w.txt'), 'two');
-    const named = { label: 'landed', cwd: workspace, root: repo, workspace: { dir: workspace }, provisioning: false };
+    const named = { label: 'landed', cwd: workspace, root: repo, ...shellRecord({ workspace: { dir: workspace }, provisioning: false }) };
     const { capabilities, openOrFocusTab, updateTab } = makeCapabilities({
-      originTab: vi.fn((name?: string) => (name === 'landed' ? named : { label: 'shell', cwd: repo, root: repo })),
+      originTab: vi.fn((name?: string) => (name === 'landed' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     const activation = activate();
     activation.command?.('on landed', capabilities);
@@ -370,7 +435,7 @@ describe('diff plugin activation', () => {
   });
 
   it('refuses the clause for a name no open tab holds', () => {
-    const shell = { label: 'shell', cwd: repo, root: repo };
+    const shell = shellRecord({ label: 'shell', cwd: repo, root: repo });
     const { capabilities } = makeCapabilities({
       originTab: vi.fn((name?: string) => (name === undefined ? shell : null)),
     });
@@ -381,7 +446,7 @@ describe('diff plugin activation', () => {
 
   it('refuses a path argument and a clause together, with the usage line', () => {
     const { capabilities, openOrFocusTab } = makeCapabilities({
-      originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: { dir: repo } })),
+      originTab: vi.fn(() => shellRecord({ label: 'shell', cwd: repo, root: repo, workspace: { dir: repo } })),
     });
     expect(() => activate().command?.('src on shell', capabilities)).toThrow('Usage: diff [path] [on <tab name>]');
     expect(openOrFocusTab).not.toHaveBeenCalled();

@@ -62,6 +62,12 @@ export function lineCapabilities(input: {
         label: tab.label,
         cwd: managers.tab.cwdOf(tab.label) ?? managers.tab.launchDir,
         root: managers.tab.launchDir,
+        // Which kind of tab this is, and which plugin owns it when it is one. The workspace a
+        // command may ask about belongs to a shell or a harness tab, and both are shaped by what
+        // they are rather than by anything the record's other fields read — so a caller that is
+        // allowed to serve one of the two and not the rest is told which of them it holds.
+        ...(tab.view !== undefined && { view: tab.view }),
+        ...(tab.plugin?.id !== undefined && { plugin: tab.plugin.id }),
         ...(workspaceDir && { workspace: { dir: workspaceDir, offline: tab.offline ?? false } }),
         ...(tab.remote && { remote: true as const }),
         ...(provisioning && { provisioning: true as const }),

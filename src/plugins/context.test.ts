@@ -519,6 +519,29 @@ describe('originTab with a label', () => {
     expect(contextWith(managers).originTab('nobody')).toBeNull();
   });
 
+  it('names the tab\'s view and the plugin behind it, and omits both for one that has neither', () => {
+    const { managers } = managersWith([
+      { label: 'shell1', view: 'plugin', workspaceDir: '/repo/.janissary/workspace/demir', plugin: { id: 'shell' } },
+      { label: 'editor-1', view: 'editor', editor: { name: 'a.txt' } },
+    ]);
+
+    expect(contextWith(managers).originTab('shell1')).toEqual({
+      label: 'shell1', cwd: '/repo/src', root: '/repo', view: 'plugin', plugin: 'shell',
+      workspace: { dir: '/repo/.janissary/workspace/demir', offline: false },
+    });
+    expect(contextWith(managers).originTab('editor-1')).toEqual({
+      label: 'editor-1', cwd: '/repo/src', root: '/repo', view: 'editor',
+    });
+  });
+
+  it('answers a record with no view for a plain agent tab, exactly as before', () => {
+    const { managers } = managersWith([{ label: 'agent-1' }]);
+
+    expect(contextWith(managers).originTab('agent-1')).toEqual({
+      label: 'agent-1', cwd: '/repo/src', root: '/repo',
+    });
+  });
+
   it('reports a local tab whose clone is still landing, and omits the flag once it has', () => {
     const dir = '/repo/.janissary/workspace/demir';
     const cloning = managersWith(

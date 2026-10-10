@@ -186,8 +186,22 @@ describe('launchTab with a workspace', () => {
     host.dispose();
   });
 
-  it('posts the failure and closes the tab after the delay when the clone fails', async () => {
+  // The source `resolveWorkspace`'s narrowing reads: a launched tab identifies itself as a plugin tab
+  // of the plugin that owns it, which is what tells a shell tab from any other plugin's.
+  it('places the tab as a plugin tab of its own plugin, which is how a shell tab is recognised', async () => {
     const managers = makeManagers();
+    const { host } = hostFor(managers, { name: 'docs', workspace: { offline: false } });
+
+    await launch(host, managers, 'docs');
+
+    const [tab] = pluginTabs(managers);
+    expect(tab?.view).toBe('plugin');
+    expect(tab?.plugin?.id).toBe('lt');
+    expect(tab?.workspaceDir).toBe(path.join(root, '.janissary', 'workspace', 'docs'));
+    host.dispose();
+  });
+
+  it('posts the failure and closes the tab after the delay when the clone fails', async () => {    const managers = makeManagers();
     const { host } = hostFor(managers, { name: 'docs', workspace: { offline: false } });
 
     await launch(host, managers, 'docs');

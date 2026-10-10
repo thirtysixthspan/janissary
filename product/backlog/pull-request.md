@@ -3,17 +3,6 @@
 # pull-request
 
 
-* Restrict the `on <tab name>` clause to shell and harness tabs, as its usage line, its refusal, and the spec all promise.
-
-Existing Issue: The clause's wording in `product/specs/diff-tab.md`, the usage line, and the no-workspace refusal all name "an open shell or harness tab", but `resolveWorkspace` in `src/plugins/diff/activate.ts` accepts any open tab whose record carries a workspace, and a file navigator rooted at a workspace clone inherits its `workspaceDir` — so `diff on <a navigator's label>` opens that clone's diff. Severity: 3/10
-
-Existing Risk: 4/10 - The name a user types opens a tab the wording says it cannot, so the refusal reads as false the first time someone tries a navigator's label, and the set the clause accepts is whatever happens to inherit a workspace directory rather than what the spec says.
-
-Proposal Risk: 2/10 - The clause answers exactly the three outcomes the spec describes, and the navigator case falls into the existing no-workspace refusal.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1629 "restrict the diff on clause to shell and harness tabs". The record `originTab` answers identifies a tab by label, cwd, root, workspace, and remote, so the plugin has no way to tell a shell from a navigator today. Add the tab's view to that record — `view?: 'harness' | 'files' | 'plugin' | 'editor' | 'monitor' | 'notifications'`, read from `tab.view` in `src/plugins/line-capabilities.ts` and documented in `src/plugins/api.ts` — then have `resolveWorkspace` in `src/plugins/diff/activate.ts` answer the no-workspace refusal for a record whose view is neither a harness tab nor one of this plugin's own shell tabs, which is the pair the clause is for. Keep the diff of a workspace a navigator is rooted at reachable the way it always was: the shell or harness tab that opened it carries the same workspace, so naming that tab still opens the same diff. Cover it in `src/plugins/diff/activate.test.ts` with fake records for a files tab and an editor tab, each carrying a workspace, asserting the refusal and that no tab opens, and in the `originTab with a label` block of `src/plugins/context.test.ts` asserting the record names the view. `product/specs/diff-tab.md` needs no edit — the wording it already carries is what the code will then do.
-
-
 * Draw the sessions row's diff button while the workspace is still provisioning, disabled, the way the plan records it.
 
 Existing Issue: The plan's product decision states the sessions row's diff button "is disabled while the channel's workspace is still provisioning", but `liveActions` in `src/sessions/rows.ts` omits the `diff` verb for a channel that has not landed its workspace, so the button is absent for the whole provisioning window rather than present and unpressable, and `product/specs/sessions-tab.md`'s **Diff** paragraph was written to match the absence. Severity: 3/10
