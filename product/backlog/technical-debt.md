@@ -4,17 +4,6 @@
 
 ## development
 
-* Bound and cancel background Git reads in the diff tab so a stalled refresh cannot block later refreshes indefinitely.
-
-Existing Debt: The diff session starts asynchronous Git reads outside the plugin handler deadline, but owns neither a deadline for the read nor a cancellation handle for the child processes. Severity: 6/10
-
-Existing Risk: 5/10 - A stalled Git read keeps the session's in-flight flag set indefinitely, preventing refreshes and root changes from completing while disposal leaves the child process running.
-
-Proposal Risk: 2/10 - A large repository can still exceed the read deadline and show a recoverable error, but subsequent refreshes can run and obsolete reads release their processes.
-
-Proposal: In `src/plugins/diff/session.ts`, give each `recompute` an owned AbortController and a named read deadline, abort the previous read when `open` changes roots or `dispose` runs, and clear the deadline and controller in `finally` while retaining the existing revision checks and queued context recompute. Thread the signal through `readChangeSet` in `src/plugins/diff/change-set.ts`, `expandFullFileContext` in `src/plugins/diff/context-diff.ts`, and the `execFileAsync` options in `src/plugins/diff/git.ts`; stop starting further untracked-file batches once aborted. Cancellation and timeout must propagate through `prefixIn`, `hasHead`, `untrackedFile`, and context expansion rather than being converted to a non-repository result, an omitted file, or a context error. A deadline should publish a recoverable error for the current read, while disposal or a superseding root must publish nothing from the obsolete read. Preserve normal change detection, rename handling, bounded untracked-file concurrency, and the standing payload during refresh, covered by `src/plugins/diff/change-set.test.ts`, `src/plugins/diff/context-diff.test.ts`, `src/plugins/diff/session-context.test.ts`, and `src/plugins/diff/activate.test.ts`. The disposal test currently checks only that publication stops; add focused cases for an aborted child read, a deadline followed by a successful refresh, and root changes during a stalled read.
-
-
 * Advance launcher summary cursors only for tabs whose replies contain an accepted summary.
 
 Existing Debt: The launcher treats a completed ACP prompt as acknowledgement of every requested tab before checking which tab summaries the reply actually contains. Severity: 5/10

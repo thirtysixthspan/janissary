@@ -12,6 +12,7 @@ import { preserveContextErrors } from './context-results.js';
 // way the search tab's `SearchSession` holds its query and rows.
 const INSTANCE_KEY = 'diff';
 const TAB_TITLE = 'diff';
+const READ_DEADLINE_MS = 30_000;
 
 // Where the route that opened the tab was standing: the launch directory every path resolves
 // against, and the workspace clone when the opening tab has one.
@@ -51,6 +52,8 @@ export class DiffSession {
   private disposed = false;
   private fullFiles = new Set<string>();
   private revision = 0;
+  private readController: AbortController | undefined;
+  private readDeadline: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private capabilities: TabPluginServerCapabilities) {
     const saved = capabilities.readSettings().split;
@@ -68,7 +71,11 @@ export class DiffSession {
   open(root: string, origin: DiffOrigin): void {
     if (this.disposed || root === '') return;
     const rescope = root !== this.root;
-    if (rescope) { this.fullFiles.clear(); this.revision++; }
+    if (rescope) {
+      this.fullFiles.clear();
+      this.revision++;
+      this.cancelRead(new Error('Diff root changed'));
+    }
     this.root = root;
     this.payload = {
       ...this.payload,
@@ -134,6 +141,7 @@ export class DiffSession {
 
   dispose(): void {
     this.disposed = true;
+    this.cancelRead(new Error('Diff tab closed'));
   }
 
   // Nothing this method does may escape. The intent that asks for a recompute answers immediately
@@ -150,15 +158,35 @@ export class DiffSession {
     const rootAtStart = this.root;
     const revisionAtStart = this.revision;
     const fullFiles = new Set(this.fullFiles);
+    const controller = new AbortController();
+    const deadlineError = new Error(`Git diff read timed out after ${READ_DEADLINE_MS} ms`);
+    let timedOut = false;
+    this.readController = controller;
+    this.readDeadline = setTimeout(() => {
+      timedOut = true;
+      controller.abort(deadlineError);
+    }, READ_DEADLINE_MS);
     try {
-      const result = await readChangeSet(rootAtStart, fullFiles);
+      const result = await readChangeSet(rootAtStart, fullFiles, controller.signal);
       if (!this.disposed && this.root === rootAtStart && this.revision === revisionAtStart) this.safely(resultChanges(result, this.payload.files));
     } catch (error) {
-      if (!this.disposed && this.revision === revisionAtStart) this.safely({ state: 'error', message: reasonOf(error), files: [] });
+      if (!this.disposed && this.root === rootAtStart && this.revision === revisionAtStart) {
+        const failure = timedOut ? deadlineError : error;
+        this.safely({ state: 'error', message: reasonOf(failure), files: [] });
+      }
     } finally {
+      if (this.readDeadline !== undefined) clearTimeout(this.readDeadline);
+      this.readDeadline = undefined;
+      if (this.readController === controller) this.readController = undefined;
       this.inFlight = false;
       if (!this.disposed && this.revision !== revisionAtStart) void this.recompute();
     }
+  }
+
+  private cancelRead(reason: Error): void {
+    if (this.readDeadline !== undefined) clearTimeout(this.readDeadline);
+    this.readDeadline = undefined;
+    this.readController?.abort(reason);
   }
 
   private publish(changes: Partial<DiffPayload>): void {
