@@ -4,17 +4,6 @@
 
 ## development
 
-* Bind editor sync completions to the owning tab and latest request.
-
-Existing Debt: Editor Git sync completions identify their owner only by a reusable tab label and carry no request generation, allowing an old operation to update a new tab or supersede a newer pending status. Severity: 5/10
-
-Existing Risk: 5/10 - Closing a synced editor and opening an ordinary editor with the same label can attach the old sync result to the new tab, and rapid successive saves can display synced while the latest cycle is still pending.
-
-Proposal Risk: 2/10 - A shared pull can still change other open files, so watcher refresh remains necessary even when the initiating tab has closed or its status update has been superseded.
-
-Proposal: Add a small editor sync-status helper used by `syncAfterSave` in `src/editor/save.ts` and `resyncEditorTab` in `src/editor/resync.ts`. Begin each operation with a token carrying the owning `TabRuntime` object and an incremented server-only generation stored in `src/tab/types.ts`; complete it only if the currently resolved editor still owns that runtime, is not closing, and holds the same generation. Use `tabRuntime` from `src/tab/runtime.ts` rather than comparing the outer tab object: `removeTabAt` in `src/tab/reorder.ts` copies surviving tab records while retaining their runtime, and `uniqueEditorLabel` in `src/tab/unique-labels.ts` reuses labels after close. Keep `refreshSyncedTabs` in `src/editor/refresh-synced.ts` independent of whether the initiating status token remains current, because the pull affects the shared clone. Ensure an old failure notification cannot be attributed to a replacement editor. `src/editor/save.test.ts` and `src/editor/resync.test.ts` cover one pending cycle at a time; extend them with two delayed saves, a tab close followed by label reuse, and an unrelated tab removal during sync so the ownership guard does not reject a valid survivor.
-
-
 * Keep editor file watches attached after external atomic replacements.
 
 Existing Debt: Editor observation is attached to a file handle and rearmed only by application saves or explicit refreshes, leaving external replacement events without an equivalent lifecycle transition. Severity: 5/10

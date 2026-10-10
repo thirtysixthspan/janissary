@@ -564,6 +564,8 @@ error runs longer, the whole of it is kept in a file the line links.
 
 Sync cycles from opens, saves, and manual resyncs run one at a time in request order across all synced files. A cycle finishes its failure recovery before the next begins, and a failed cycle does not prevent later requests from running. Waiting for another file's sync does not delay the local save confirmation.
 
+When several sync cycles overlap for one editor, only the latest cycle for that still-open tab updates its status icon or reports a save failure under that tab. Closing an editor and opening another under the same tab label does not transfer the older cycle's status to the new editor. Every completed pull still refreshes all open synced files it may have changed.
+
 The metadata header's connections-status button area also shows a status icon for a synced file,
 reflecting whether that file's sync is currently being provisioned, syncing, synced, or has hit an
 error. A sync error (for example a network problem, an authentication failure, or a conflicting

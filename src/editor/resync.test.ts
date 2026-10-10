@@ -3,6 +3,8 @@ import { resyncEditorTab } from './resync.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import type { EditorView } from '../tab/types.js';
+import { tabRuntime } from '../tab/runtime.js';
+import { removeTabAt } from '../tab/reorder.js';
 
 function setup(openSync: () => Promise<{ dir: string } | { error: string }>, sync: EditorView['sync'] = 'synced') {
   const managers = {} as Managers;
@@ -70,6 +72,59 @@ describe('resyncEditorTab', () => {
     const { managers, url } = setup(() => Promise.resolve({ error: 'network down' }));
     await resyncEditorTab(managers, url);
     expect(managers.editorWatch.refresh).not.toHaveBeenCalled();
+  });
+
+  it('does not let an older manual resync replace the latest request status', async () => {
+    const first = Promise.withResolvers<{ dir: string } | { error: string }>();
+    const second = Promise.withResolvers<{ dir: string } | { error: string }>();
+    const openSync = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const { managers, url } = setup(openSync);
+    const tab = managers.tab.tabs.find((item) => item.editor)!;
+    const firstRequest = resyncEditorTab(managers, url);
+    tab.editor = { ...tab.editor!, sync: 'synced' };
+    const secondRequest = resyncEditorTab(managers, url);
+
+    first.resolve({ error: 'old failure' });
+    await firstRequest;
+    expect(tab.editor?.sync).toBe('syncing');
+
+    second.resolve({ dir: '/repo' });
+    await secondRequest;
+    expect(tab.editor?.sync).toBe('synced');
+  });
+
+  it('does not attribute a pending pull to a replacement editor with a reused label', async () => {
+    const pending = Promise.withResolvers<{ dir: string } | { error: string }>();
+    const { managers, url } = setup(() => pending.promise);
+    const previous = managers.tab.tabs.find((item) => item.editor)!;
+    const request = resyncEditorTab(managers, url);
+    tabRuntime(previous).closing = true;
+    managers.tab.tabs = managers.tab.tabs.filter((item) => item !== previous);
+    const replacementLabel = managers.tab.openEditorTab({
+      name: 'replacement.txt', path: '/repo/replacement.txt', size: '1 B',
+      url: managers.tab.registerFile('/repo/replacement.txt'), sync: 'synced',
+    });
+    const replacement = managers.tab.editorTab(replacementLabel)!;
+
+    pending.resolve({ error: 'old editor failure' });
+    await request;
+
+    expect(replacementLabel).toBe(previous.label);
+    expect(replacement.editor?.sync).toBe('synced');
+  });
+
+  it('keeps manual resync ownership when another tab is removed', async () => {
+    const pending = Promise.withResolvers<{ dir: string }>();
+    const { managers, url } = setup(() => pending.promise);
+    const owner = managers.tab.tabs.find((item) => item.editor)!;
+    managers.tab.openEditorTab({ name: 'other.txt', path: '/repo/other.txt', size: '1 B', url: managers.tab.registerFile('/repo/other.txt') });
+    const request = resyncEditorTab(managers, url);
+    managers.tab.tabs = removeTabAt(managers.tab.tabs, managers.tab.tabs.findIndex((item) => item.label === 'editor-2'));
+
+    pending.resolve({ dir: '/repo' });
+    await request;
+
+    expect(owner.editor?.sync).toBe('synced');
   });
 
   it('no-ops for a tab with no sync field', async () => {
