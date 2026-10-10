@@ -64,8 +64,8 @@ function TestComponent({
     setTaskPickerIndex: (s: (p: number) => number) => void;
     setTaskPickerOpen: (o: boolean) => void;
     openTaskPicker: () => void;
-    pickTask: (n: string) => void;
-    toggleTaskDir: (p: string) => void;
+    pickTask: (row: { path: string; source: 'project' | 'janissary' }) => void;
+    toggleTaskDir: (row: { path: string; source: 'project' | 'janissary' }) => void;
     setProfilePickerIndex: (s: (p: number) => number) => void;
     setProfilePickerOpen: (o: boolean) => void;
     pickProfile: (n: string) => void;
@@ -88,9 +88,9 @@ function TestComponent({
     taskPickerOpen: taskPickerOpen ?? false,
     taskPickerIdx: 2,
     visibleTasks: [
-      { path: 'work-an-issue.md', name: 'work-an-issue.md', depth: 0, dir: false },
-      { path: 'feature', name: 'feature', depth: 0, dir: true },
-      { path: 'feature/build-a-feature.md', name: 'build-a-feature.md', depth: 1, dir: false },
+      { path: 'work-an-issue.md', name: 'work-an-issue.md', depth: 0, dir: false, source: 'project' as const },
+      { path: 'feature', name: 'feature', depth: 0, dir: true, source: 'project' as const },
+      { path: 'feature/build-a-feature.md', name: 'build-a-feature.md', depth: 1, dir: false, source: 'project' as const },
     ],
     profilePickerOpen: profilePickerOpen ?? false,
     profilePickerIdx: 1,
@@ -316,7 +316,7 @@ describe('useWindowKeys', () => {
     const pickTask = vi.fn();
     render(React.createElement(TestComponent, { taskPickerOpen: true, callbacks: { pickTask } }));
     dispatchKey('Enter');
-    expect(pickTask).toHaveBeenCalledWith('feature/build-a-feature.md');
+    expect(pickTask).toHaveBeenCalledWith({ path: 'feature/build-a-feature.md', source: 'project' });
   });
 
   it('routes Enter to the selected profile when the profile picker is open', () => {

@@ -143,7 +143,7 @@ describe('usePickerOverlays with a picker raised from a docked shell', () => {
   it('inserts a picked task into the shell\'s bar rather than the agent\'s', () => {
     const { hook, insertIntoShell, insertIntoAgent } = mountWithSource('shell1');
     act(() => hook().commands.openTaskPicker('shell1'));
-    act(() => hook().keys.pickTask('fix.md'));
+    act(() => hook().keys.pickTask({ path: 'fix.md', source: 'project' }));
     expect(insertIntoShell).toHaveBeenCalledWith('execute ./ai/tasks/fix.md');
     expect(insertIntoAgent).not.toHaveBeenCalled();
   });
@@ -152,7 +152,7 @@ describe('usePickerOverlays with a picker raised from a docked shell', () => {
     for (const source of [undefined, 'gone']) {
       const { hook, insertIntoShell, insertIntoAgent } = mountWithSource(source);
       expect(hook().view.queueItems).toEqual(['queued one', 'queued two']);
-      act(() => hook().keys.pickTask('fix.md'));
+      act(() => hook().keys.pickTask({ path: 'fix.md', source: 'project' }));
       expect(insertIntoAgent).toHaveBeenCalledWith('execute ./ai/tasks/fix.md');
       expect(insertIntoShell).not.toHaveBeenCalled();
     }

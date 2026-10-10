@@ -87,6 +87,11 @@ source contributes no tasks is omitted entirely (no empty header): a project wit
 shows only the Janissary section, and running inside the Janissary repository itself (where the two
 sources are the same directory) shows only the Project section.
 
+Shadowing applies to files, not directory rows. If a project task overrides one built-in file in a
+folder that still contains other built-in tasks, that folder and its remaining built-in children stay
+in the Janissary section. The same relative folder can therefore appear in both sections; each copy
+expands independently, and navigation stays within the section where it started.
+
 ### Openers
 
 `Ctrl+A` (or the `tasks` command) opens the task picker over the command line. The two openers are

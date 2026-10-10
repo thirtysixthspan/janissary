@@ -48,7 +48,18 @@ function listOne(root: string, source: TaskRow['source']): TaskRow[] {
 // wins and the built-in copy is dropped; project rows are listed before Janissary rows.
 export function listTasks(projectDir: string = process.cwd(), janissaryDir: string = janissaryRoot()): TaskRow[] {
   const project = listOne(projectDir, 'project');
-  const projectPaths = new Set(project.map((row) => row.path));
-  const janissary = listOne(janissaryDir, 'janissary').filter((row) => !projectPaths.has(row.path));
+  const projectFiles = new Set(project.filter((row) => !row.dir).map((row) => row.path));
+  const builtInRows = listOne(janissaryDir, 'janissary');
+  const janissaryFiles = builtInRows.filter((row) => !row.dir && !projectFiles.has(row.path));
+  const janissaryPaths = new Set<string>();
+  for (const file of janissaryFiles) {
+    janissaryPaths.add(file.path);
+    let ancestor = path.posix.dirname(file.path);
+    while (ancestor !== '.') {
+      janissaryPaths.add(ancestor);
+      ancestor = path.posix.dirname(ancestor);
+    }
+  }
+  const janissary = builtInRows.filter((row) => janissaryPaths.has(row.path));
   return [...project, ...janissary];
 }

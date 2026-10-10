@@ -47,8 +47,8 @@ describe('useTaskPicker', () => {
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
-    act(() => hook!.toggleTaskDir('feature'));
-    act(() => hook!.pickTask('feature/work-pull-request-issue.md'));
+    act(() => hook!.toggleTaskDir({ path: 'feature', source: 'project' }));
+    act(() => hook!.pickTask({ path: 'feature/work-pull-request-issue.md', source: 'project' }));
     expect(insertAtCaret).toHaveBeenCalledWith('execute ./ai/tasks/feature/work-pull-request-issue.md');
     expect(hook!.taskPickerOpen).toBe(false);
   });
@@ -63,10 +63,34 @@ describe('useTaskPicker', () => {
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
-    act(() => hook!.toggleTaskDir('feature'));
-    act(() => hook!.pickTask('feature/build-a-feature.md'));
+    act(() => hook!.toggleTaskDir({ path: 'feature', source: 'janissary' }));
+    act(() => hook!.pickTask({ path: 'feature/build-a-feature.md', source: 'janissary' }));
     expect(insertAtCaret).toHaveBeenCalledWith('execute $janissary/ai/tasks/feature/build-a-feature.md');
     expect(hook!.taskPickerOpen).toBe(false);
+  });
+
+  it('keeps expansion independent and routes an overlapping built-in task by its selected source', () => {
+    const insertAtCaret = vi.fn();
+    let hook: ReturnType<typeof useTaskPicker> | undefined;
+    const tasks = [
+      dirRow('research', 0, 'project'), fileRow('research/local.md', 1, 'project'),
+      dirRow('research', 0, 'janissary'), fileRow('research/audit.md', 1, 'janissary'),
+    ];
+    function C() {
+      const dropRef = useRef<CommandInputDropHandle | null>(makeDrop(insertAtCaret));
+      hook = useTaskPicker(tasks, mockClient, undefined, dropRef, vi.fn());
+      return null;
+    }
+    render(React.createElement(C));
+    act(() => hook!.toggleTaskDir({ path: 'research', source: 'project' }));
+
+    expect(hook!.visibleTasks.filter((row) => !row.header).map((row) => `${row.source}:${row.path}`)).toEqual([
+      'project:research', 'project:research/local.md', 'janissary:research',
+    ]);
+
+    act(() => hook!.toggleTaskDir({ path: 'research', source: 'janissary' }));
+    act(() => hook!.pickTask({ path: 'research/audit.md', source: 'janissary' }));
+    expect(insertAtCaret).toHaveBeenCalledWith('execute $janissary/ai/tasks/research/audit.md');
   });
 
   it('pickTask sends ptyInput to the harness when harnessPtyId is set, instead of the command line', () => {
@@ -81,7 +105,7 @@ describe('useTaskPicker', () => {
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
-    act(() => hook!.pickTask('fix-a-small-issue.md'));
+    act(() => hook!.pickTask({ path: 'fix-a-small-issue.md', source: 'project' }));
     expect(send).toHaveBeenCalledWith({ method: 'ptyInput', params: { id: 'pty-1', data: 'execute ./ai/tasks/fix-a-small-issue.md' } });
     expect(insertAtCaret).not.toHaveBeenCalled();
     expect(hook!.taskPickerOpen).toBe(false);
@@ -98,7 +122,7 @@ describe('useTaskPicker', () => {
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
-    act(() => hook!.pickTask('work-an-issue.md'));
+    act(() => hook!.pickTask({ path: 'work-an-issue.md', source: 'janissary' }));
     expect(send).toHaveBeenCalledWith({
       method: 'ptyInput',
       params: { id: 'pty-1', data: 'execute $janissary/ai/tasks/work-an-issue.md' },
@@ -119,7 +143,7 @@ describe('useTaskPicker', () => {
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
-    act(() => hook!.pickTask('fix-a-small-issue.md'));
+    act(() => hook!.pickTask({ path: 'fix-a-small-issue.md', source: 'project' }));
     expect(focusHarness).toHaveBeenCalledExactlyOnceWith('pty-1');
   });
 
@@ -133,7 +157,7 @@ describe('useTaskPicker', () => {
     }
     render(React.createElement(C));
     act(() => hook!.openTaskPicker());
-    act(() => hook!.pickTask('fix-a-small-issue.md'));
+    act(() => hook!.pickTask({ path: 'fix-a-small-issue.md', source: 'project' }));
     expect(focusHarness).not.toHaveBeenCalled();
   });
 
@@ -169,10 +193,10 @@ describe('useTaskPicker', () => {
     render(React.createElement(TestComponent, { tasks, onHook: (h) => { hook = h; } }));
     expect(paths()).toEqual(['sub', 'top.md']);
 
-    act(() => hook!.toggleTaskDir('sub'));
+    act(() => hook!.toggleTaskDir({ path: 'sub', source: 'project' }));
     expect(paths()).toEqual(['sub', 'sub/nested.md', 'top.md']);
 
-    act(() => hook!.toggleTaskDir('sub'));
+    act(() => hook!.toggleTaskDir({ path: 'sub', source: 'project' }));
     expect(paths()).toEqual(['sub', 'top.md']);
   });
 });

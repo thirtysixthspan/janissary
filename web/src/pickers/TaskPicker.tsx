@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { VisibleTaskRow } from './task-picker-keys';
+import { taskRowKey, type TaskRowIdentity, type VisibleTaskRow } from './task-picker-keys';
 import { expandedIcon, collapsedIcon } from '../shared/icons';
 
 // The Ctrl+A / `tasks` overlay listing the executable `ai/tasks/*.md` task files, recursively
@@ -8,7 +8,7 @@ import { expandedIcon, collapsedIcon } from '../shared/icons';
 // collapse/expand a directory or move to its parent, Enter toggles a directory or copies
 // `execute ./ai/tasks/<path>` into the command line without submitting, Escape closes — handled by
 // App's key handler; a row can also be clicked (toggling a directory, picking a file).
-type Properties = { rows: VisibleTaskRow[]; selected: number; onPick: (path: string) => void; onToggleDir: (path: string) => void };
+type Properties = { rows: VisibleTaskRow[]; selected: number; onPick: (row: TaskRowIdentity) => void; onToggleDir: (row: TaskRowIdentity) => void };
 
 export function TaskPicker({ rows, selected, onPick, onToggleDir }: Properties) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -29,10 +29,10 @@ export function TaskPicker({ rows, selected, onPick, onToggleDir }: Properties) 
           <div key={row.path} className="picker-section">{row.name}</div>
         ) : (
           <div
-            key={row.path}
+          key={taskRowKey(row.source, row.path)}
             className={`picker-row${index === selected ? ' selected' : ''}`}
             style={{ paddingLeft: 12 + row.depth * 16 }}
-            onClick={() => (row.dir ? onToggleDir(row.path) : onPick(row.path))}
+            onClick={() => (row.dir ? onToggleDir({ path: row.path, source: row.source }) : onPick({ path: row.path, source: row.source }))}
           >
             {row.dir && <span className="picker-chevron"><FontAwesomeIcon icon={row.expanded ? expandedIcon : collapsedIcon} /></span>}
             {row.dir ? row.name : row.name.replace(/\.md$/, '')}

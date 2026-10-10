@@ -115,6 +115,32 @@ describe('listTasks', () => {
     ]);
   });
 
+  it('keeps both source trees when a project task shadows one file in a shared directory', () => {
+    writeTask(root, 'research/local.md');
+    writeTask(janissary, 'research/local.md');
+    writeTask(janissary, 'research/audit.md');
+    writeTask(janissary, 'research/nested/deep.md');
+
+    expect(listTasks(root, janissary)).toEqual([
+      { path: 'research', name: 'research', depth: 0, dir: true, source: 'project' },
+      { path: 'research/local.md', name: 'local.md', depth: 1, dir: false, source: 'project' },
+      { path: 'research', name: 'research', depth: 0, dir: true, source: 'janissary' },
+      { path: 'research/audit.md', name: 'audit.md', depth: 1, dir: false, source: 'janissary' },
+      { path: 'research/nested', name: 'nested', depth: 1, dir: true, source: 'janissary' },
+      { path: 'research/nested/deep.md', name: 'deep.md', depth: 2, dir: false, source: 'janissary' },
+    ]);
+  });
+
+  it('omits built-in directories when every task beneath them is shadowed', () => {
+    writeTask(root, 'research/local.md');
+    writeTask(janissary, 'research/local.md');
+
+    expect(listTasks(root, janissary)).toEqual([
+      { path: 'research', name: 'research', depth: 0, dir: true, source: 'project' },
+      { path: 'research/local.md', name: 'local.md', depth: 1, dir: false, source: 'project' },
+    ]);
+  });
+
   it('lists only the Janissary section when the project has no tasks', () => {
     writeTask(janissary, 'built-in.md');
     expect(listTasks(root, janissary)).toEqual([

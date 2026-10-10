@@ -1,5 +1,5 @@
 import type React from 'react';
-import type { VisibleTaskRow } from '../task-picker-keys';
+import type { TaskRowIdentity, VisibleTaskRow } from '../task-picker-keys';
 import type { PickerOverlayView } from './overlay-view';
 import { contributedOverlayOnScreen } from '../../shared/contributed-overlays';
 
@@ -9,8 +9,8 @@ export type PickerOverlayProps = {
   taskPickerOpen?: boolean;
   taskRows?: VisibleTaskRow[];
   taskPickerIndex?: number;
-  onPickTask?: (path: string) => void;
-  onToggleTaskDir?: (path: string) => void;
+  onPickTask?: (row: TaskRowIdentity) => void;
+  onToggleTaskDir?: (row: TaskRowIdentity) => void;
   navOpen?: boolean;
   navQuery?: string;
   navIndex?: number;
