@@ -20,7 +20,7 @@ A workspace gets a tab of its own, named after the tab it belongs to. Three rout
 diff on ahmed
 ```
 
-The name is matched the way every other tab name in the app is: case doesn't matter. Two shell tabs sharing one workspace — the metadata row's **New shell in this workspace** button opens a sibling in the same clone — share one diff tab, because they're looking at the same changes. A tab with no workspace is refused by name: `Cannot diff on <name>: no open shell or harness tab named "<name>" has a workspace.`
+The name is matched the way every other tab name in the app is: case doesn't matter. Two shell tabs sharing one workspace — the metadata row's **New shell in this workspace** button opens a sibling in the same clone — share one diff tab, because they're looking at the same changes. A tab with no workspace is refused by name: `Cannot diff on <name>: no open shell or harness tab named "<name>" has a workspace.` A tab whose workspace is still landing is refused instead, with the wait: `Cannot diff on <name>: the workspace of "<name>" is still being prepared.`
 
 ## Read the changes
 

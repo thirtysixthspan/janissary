@@ -26,7 +26,9 @@ below, which would have two answers for which directory it means.
 button in the action group of a **sessions** tab row whose channel has landed its workspace, and `diff on <tab name>`
 typed in any tab. The name matches an open shell or harness tab by label or display alias, ignoring case. A tab with no
 workspace, and a name no open tab holds, are refused with
-`Cannot diff on <name>: no open shell or harness tab named "<name>" has a workspace.` Both buttons stay inert while the
+`Cannot diff on <name>: no open shell or harness tab named "<name>" has a workspace.` A name whose workspace has not
+landed yet — the clone is still running, or the far side has not answered — is refused instead with
+`Cannot diff on <name>: the workspace of "<name>" is still being prepared.` Both buttons stay inert while the
 workspace is still landing. A workspace diff is titled **diff on <tab name>**, and two tabs sharing one clone — the
 metadata row's ➕ opens a sibling shell in the same one — share one diff tab, because they are looking at the same
 changes.

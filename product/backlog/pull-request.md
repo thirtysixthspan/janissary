@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's still-provisioning refusal for the `on <tab name>` clause, which the command route never answers.
-
-Existing Issue: The plan promises `Cannot diff on <name>: the workspace of "<name>" is still being prepared.` for a named tab whose workspace is still landing, but `resolveWorkspace` in `src/plugins/diff/activate.ts` treats a record with no workspace as a tab with no workspace at all — and a local shell's `workspaceDir` is set the moment its tab opens, before the clone exists — so a `diff on <name>` typed while the clone lands opens a workspace diff whose first read answers not-repository, and the tab then closes itself. Severity: 5/10
-
-Existing Risk: 5/10 - A user who asks for a workspace diff a moment too early watches a tab open and immediately vanish, and the only thing they are told names a problem the tab does not have.
-
-Proposal Risk: 2/10 - The route reports the wait instead, and the guard mirrors the one the metadata button already runs through the host.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1629 "deliver the still-provisioning refusal for the diff on clause". The record `originTab` answers carries the workspace directory but no flag saying whether that workspace has landed, so the plugin cannot tell a tab still cloning from one that will never clone. Add the flag to the record `src/plugins/line-capabilities.ts` builds — `provisioning?: boolean`, true when `managers.workspace.provisioning(workspaceDir)` for a local tab and when `tab.remote?.provisioning` for a remote one — and name it in the capability's contract in `src/plugins/api.ts` beside the `workspace` field it qualifies. Then have `resolveWorkspace` in `src/plugins/diff/activate.ts` answer a third route for a tab whose workspace is present but not ready, and the command handler refuse with `Cannot diff on <${parsed.tab}>: the workspace of "${parsed.tab}" is still being prepared.` before any tab opens. Cover it in `src/plugins/diff/activate.test.ts` beside the two refusals already there — a fake `originTab` answering a workspace plus the new flag, and an assertion that `openOrFocusTab` was not called — and in the `originTab with a label` block of `src/plugins/context.test.ts`, asserting a provisioning local tab and a provisioning remote tab each report it. The `openSibling` route keeps its host-side guard untouched in `src/plugins/host.ts`; the change is only in what the record says and what the command route does about it.
-
 
 * Test the remote change-set reader and its guard, which decide whether a far side's answer becomes the tab's payload.
 

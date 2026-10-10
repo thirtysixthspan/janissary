@@ -468,7 +468,7 @@ describe('capability revocation', () => {
 // is the only way a plugin learns anything about a tab it was not invoked from — it reaches no tab
 // list of its own. Called bare, it answers exactly what it always did.
 describe('originTab with a label', () => {
-  function managersWith(tabs: unknown[]) {
+  function managersWith(tabs: unknown[], workspaceProvisioning: (dir: string) => boolean = () => false) {
     const managers = {
       tab: {
         tabs, launchDir: '/repo', cwdOf: () => '/repo/src',
@@ -477,6 +477,7 @@ describe('originTab with a label', () => {
           || tab.title?.toLowerCase() === name.toLowerCase()),
       },
       remote: { workspaceOf: (label: string) => (label === 'remote' ? '/srv/work' : undefined) },
+      workspace: { provisioning: workspaceProvisioning },
     } as unknown as Managers;
     return { managers };
   }
@@ -516,6 +517,40 @@ describe('originTab with a label', () => {
     const { managers } = managersWith([{ label: 'shell1' }]);
 
     expect(contextWith(managers).originTab('nobody')).toBeNull();
+  });
+
+  it('reports a local tab whose clone is still landing, and omits the flag once it has', () => {
+    const dir = '/repo/.janissary/workspace/demir';
+    const cloning = managersWith(
+      [{ label: 'shell1', workspaceDir: dir, offline: false }], (asked) => asked === dir,
+    );
+    const settled = managersWith([{ label: 'shell1', workspaceDir: dir, offline: false }]);
+
+    expect(contextWith(cloning.managers).originTab('shell1')).toEqual({
+      label: 'shell1', cwd: '/repo/src', root: '/repo',
+      workspace: { dir, offline: false }, provisioning: true,
+    });
+    expect(contextWith(settled.managers).originTab('shell1')).toEqual({
+      label: 'shell1', cwd: '/repo/src', root: '/repo',
+      workspace: { dir, offline: false },
+    });
+  });
+
+  it('reports a remote tab whose far-side workspace has not answered, and omits it once it has', () => {
+    const landing = managersWith([
+      { label: 'remote-1', remote: { address: 'devbox:/srv/project', host: 'devbox' }, offline: false },
+    ]);
+    const landed = managersWith([
+      { label: 'remote', remote: { address: 'devbox:/srv/project', host: 'devbox' }, offline: false },
+    ]);
+
+    expect(contextWith(landing.managers).originTab('remote-1')).toMatchObject({
+      label: 'remote-1', remote: true, provisioning: true,
+    });
+    expect(contextWith(landed.managers).originTab('remote')).toMatchObject({
+      label: 'remote', remote: true, workspace: { dir: '/srv/work' },
+    });
+    expect(contextWith(landed.managers).originTab('remote')?.provisioning).toBeUndefined();
   });
 
   it('still answers the invoking tab when called with no label', () => {
