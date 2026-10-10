@@ -24,7 +24,8 @@
 .launcher-command-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The tiered tab list. Each tier is a label then its rows, and an empty tier is not drawn at all. */
-.launcher-tabs { flex: 1; min-height: 0; overflow-y: auto; outline: none; }
+.launcher-tabs { flex: 1; min-height: 0; overflow-y: auto; outline: none; scrollbar-width: none; }
+.launcher-tabs::-webkit-scrollbar { display: none; }
 .launcher-empty { padding: 8px; color: var(--muted); font-size: 12px; }
 .launcher-tier-label {
   padding: 4px 8px 2px 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
