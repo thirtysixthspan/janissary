@@ -23,6 +23,7 @@ function capabilities(dock: TabPluginClientCapabilities['dock'] = 'left') {
     active: true,
     dock,
     close: vi.fn(),
+    openAcpTranscript: vi.fn(),
     reportFailure: vi.fn(),
   };
   return { intent, value };
@@ -91,7 +92,7 @@ function launcher(value = payload(), caps = capabilities()) {
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
-  // The host's response surface measures its own scroll area.
+  // A response may still be provided by the host, though the launcher no longer renders it.
   vi.stubGlobal('ResizeObserver', class {
     observe() {}
     disconnect() {}
@@ -583,10 +584,7 @@ describe('the tab list', () => {
     });
   });
 
-  // The bar below dispatches any line, `acp` among them, and a reply marked `coreResponse` is the host's
-// to render. Without the host's surface mounted, such a line is answered nowhere at all — no streamed
-// text, no Reset control, no way to stop a request the user started.
-describe('a line sent to the core ACP session', () => {
+describe('the launcher ACP response and transcript action', () => {
   const STREAMED = { lines: [{ type: 'markdown' as const, text: '# Streamed answer' }], running: true };
 
   function mounted(caps: ReturnType<typeof capabilities>, reply: unknown) {
@@ -603,30 +601,36 @@ describe('a line sent to the core ACP session', () => {
     );
   }
 
-  it('answers in the host\'s surface, with that surface\'s controls', async () => {
+  it('does not render the host ACP response surface in the launcher', async () => {
     const caps = capabilities();
     mounted(caps, { dispatched: true, output: '', coreResponse: true });
     const shell = screen.getByLabelText('Launcher command');
     fireEvent.change(shell, { target: { value: 'acp summarize the open tabs' } });
     fireEvent.keyDown(shell, { key: 'Enter' });
 
-    expect(await screen.findByRole('heading', { name: 'Streamed answer' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reset ACP' })).toBeInTheDocument();
-    // And the host's surface is the answer, not a second copy of it.
-    expect(document.querySelector('.launcher-reply')).toBeNull();
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByRole('heading', { name: 'Streamed answer' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset ACP' })).not.toBeInTheDocument();
   });
 
-  // Everything that is not a core response still has its own reply area: a dispatched command's text is
-  // the rail's to show, which is what the `coreResponse` flag's absence means.
-  it('still shows a dispatched reply that is not a core response', async () => {
+  it('opens the launcher tab\'s ACP transcript from its metadata bar', () => {
     const caps = capabilities();
-    mounted(caps, { dispatched: true, output: 'Opened the task list.' });
-    const shell = screen.getByLabelText('Launcher command');
-    fireEvent.change(shell, { target: { value: 'tasks' } });
-    fireEvent.keyDown(shell, { key: 'Enter' });
+    launcher(payload(), caps);
+    fireEvent.click(screen.getByRole('button', { name: 'Open ACP transcript' }));
 
-    expect(await screen.findByText('Opened the task list.')).toBeInTheDocument();
+    expect(caps.value.openAcpTranscript).toHaveBeenCalledOnce();
   });
+});
+
+it('still shows a dispatched reply that is not a core response', async () => {
+  const caps = capabilities();
+  caps.intent.mockResolvedValue({ dispatched: true, output: 'Opened the task list.' });
+  launcher(payload(), caps);
+  const shell = screen.getByLabelText('Launcher command');
+  fireEvent.change(shell, { target: { value: 'tasks' } });
+  fireEvent.keyDown(shell, { key: 'Enter' });
+
+  expect(await screen.findByText('Opened the task list.')).toBeInTheDocument();
 });
 
 describe('a typed launcher command', () => {

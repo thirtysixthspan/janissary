@@ -73,4 +73,4 @@ The file executes what it names: the first click highlights a command row, and c
 
 The launcher hosts the application's own command bar beneath its lists, so a dispatched command's answer and any error is visible in the launcher itself, and a command can be typed straight into the rail. A line the application claims runs as that command; one nothing claims is reported as such, because the launcher has no shell to hand it to.
 
-A line sent to the core ACP session is answered in the host's own response surface, drawn above the bar and carrying that surface's controls — the streamed answer, its tool steps, and Reset ACP. The rail's own reply area shows nothing for such a line, so the answer is not given twice. That surface also carries the summarizer's turns, because the summarizer runs on this tab's connection and its turns are this session's.
+The launcher does not show the core ACP response surface. Its metadata bar has an **Open ACP transcript** button that opens the launcher's ACP transcript in an editor tab. The summarizer continues to use the launcher's ACP session.

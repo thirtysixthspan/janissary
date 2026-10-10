@@ -27,6 +27,16 @@ describe('createPluginClientCapabilities', () => {
     expect(send).toHaveBeenCalledWith({ method: 'openDiffFor', params: { label: 'shell-1' } });
   });
 
+  it('opens the calling plugin tab\'s ACP transcript', () => {
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities(host, 'launcher', 'launcher-2', client, true, 'right', vi.fn());
+    capabilities.openAcpTranscript?.();
+    expect(send).toHaveBeenCalledWith({
+      method: 'openAcpTranscript',
+      params: { acpRef: { scope: 'tab', label: 'launcher-2' } },
+    });
+  });
+
   it('authorizes a terminal attachment against the owning tab before listening', async () => {
     const { client, send } = makeClient(async () => ({ ok: true, value: true }));
     const attachPty = vi.fn(() => vi.fn());

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* remove the acp section of the launcher tab. Add a clipboard icon in the metadata bar that opens the existing acp transcript file in an editor tab.
-
 * remove the command bar from the launcher.
 
 * instead of 'never' for a time, leave the value blank.

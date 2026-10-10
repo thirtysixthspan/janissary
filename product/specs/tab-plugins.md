@@ -281,7 +281,7 @@ A plugin claimed only through its own command opens no file, so its opener is th
 
 ## Core ACP access
 
-A tab plugin requests `startAcp`, `promptAcp`, and `resetAcp` to use the core [[acp]] service on its own answering tab. No terminal is required. Core owns sessions, tool execution, streamed transcript projection, and lifecycle; provider latency is exempt from handler deadlines. The client API publishes `useAcpResponse` for the core-rendered response surface. The shell opts in; harness tabs do not.
+A tab plugin requests `startAcp`, `promptAcp`, and `resetAcp` to use the core [[acp]] service on its own answering tab. No terminal is required. Core owns sessions, tool execution, streamed transcript projection, and lifecycle; provider latency is exempt from handler deadlines. The client API publishes `useAcpResponse` for the core-rendered response surface. A plugin may instead omit that surface and use the scoped `openAcpTranscript()` client action to open its own session transcript in an editor tab. The launcher does this; the shell uses the response surface, and harness tabs do neither.
 
 ## API version 2
 
