@@ -21,7 +21,7 @@ Each tab row also carries a short **status summary** written by an ACP session, 
 
 **Its command is `launcher`, and it opens docked left.** `launcher` opens or focuses the singleton tab docked into the left sidebar. `launcher right` puts it on the right; a bare `launcher` when it is already open refocuses it. The singleton is addressed by one stable instance key, so a second invocation focuses the existing tab instead of opening a second. Its label is `launcher`.
 
-**Clicking a command dispatches the application command line.** The row does not reimplement any feature's placement rules: it dispatches the exact line from `launcher.json` (`notifications left`, `files`, `sessions right`, …) from the launcher tab, exactly as if typed. So `notifications left` still docks right and a feature's own reply still lands in the tab that asked.
+**Clicking a command dispatches the application command line.** The row does not reimplement any feature's placement rules: it dispatches the exact line from `launcher.json` (`notifications left`, `files`, `sessions right`, …) from the launcher tab, exactly as if typed. So `notifications left` docks the feed into the left sidebar, where the two different-kind occupants share it through the sidebar's tab-switcher rather than one displacing the other, and a feature's own reply still lands in the tab that asked.
 
 **The launcher hosts the application's command bar.** Because it dispatches commands, it declares `hostsCommandBar` and renders the application's own bar beneath its two lists, so a dispatched command's answer or error is visible in the launcher itself, and a user can type any command straight into the rail. This is the published-bar path `tab-plugins.md` describes, not a second textarea.
 

@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Correct the description's claim that docking Notifications displaces the launcher.
-
-Existing Issue: The PR's command example and verification instructions say notifications left displaces the launcher, while applyDock preserves different view kinds and the new spec additionally says that command docks right. Severity: 3/10
-
-Existing Risk: 4/10 - Reviewers and future tests use contradictory placement expectations for a core launcher action.
-
-Proposal Risk: 1/10 - Accurate examples make the existing shared-sidebar behavior explicit, with existing docking tests exposing any future behavior drift.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "correct the description's claim that docking notifications displaces the launcher". Correct the PR body's command example and verification step to say notifications left joins the left sidebar alongside the launcher, selecting the feed through the normal sidebar mechanism. Correct the contradictory direction and displacement statements in product/specs/launcher.md and product/plans/complete/sidebar-launcher-tab.md. Use src/tab/dock.ts and src/tab/operations.test.ts as the behavior reference, and preserve the existing different-kind occupant rule rather than changing docking to match the prose.
-
-
 * Keep the launcher shared contract import-free as required by the plugin architecture.
 
 Existing Issue: The new launcher shared module imports isRecord from the server plugin API at runtime even though plugin shared contracts must import nothing. Severity: 5/10
