@@ -45,6 +45,8 @@ Clicking a row focuses that tab in the center strip, the same way clicking it in
 
 Keyboard navigation walks the rows in the order they are drawn, group by group and tier by tier, with Enter focusing the highlighted row and a click handing the keyboard to the list. The order the rows are drawn in is the order the keyboard walks, so a selection moved by an arrow key is the row the highlight is on — never the row the same position would have been in the host's own ordering.
 
+Tab and Shift+Tab move focus between the launch command list and the open tab list. Either key toggles to the other list; modifier shortcuts such as Ctrl+Tab remain available to the host.
+
 ### What each row shows
 
 Every row carries the tab's color dot, name, type, and time. Its static dot uses the tab's own color in the same shape the tab strip draws, while its left border and the status header's left border use the tab group's color. Shell, harness, and SSH tabs may also show a status summary. Other tab types stay on one metadata line and never show a summary. The type identifies a regular agent, editor, monitor, file navigator, or plugin tab. The row's tier shows whether the tab needs you, has unread output, is active, is working, or is idle. The unread flag also appears when a tab has unseen output. The time says how long ago the tab was last active — a relative age that coarsens from minutes to hours to days as it grows — and stays blank for a tab that has never been active. The age advances on its own while the launcher is on screen, without anything being broadcast or prompted, and stops while it is not.

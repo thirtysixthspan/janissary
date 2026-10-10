@@ -260,6 +260,24 @@ describe('the command rail', () => {
 });
 
 describe('the tab list', () => {
+  it.each([
+    ['Tab', 'Launch commands', 'Open tabs', false],
+    ['Shift+Tab', 'Launch commands', 'Open tabs', true],
+    ['Tab', 'Open tabs', 'Launch commands', false],
+    ['Shift+Tab', 'Open tabs', 'Launch commands', true],
+  ])('%s toggles focus from %s to %s', (key, from, to, shiftKey) => {
+    launcher();
+    const source = screen.getByRole('listbox', { name: from });
+    const destination = screen.getByRole('listbox', { name: to });
+    source.focus();
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true });
+    source.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(destination);
+  });
+
   it('draws the tiers in order, each labelled, and no tier nothing is in', () => {
     launcher(payload({
       tabs: [

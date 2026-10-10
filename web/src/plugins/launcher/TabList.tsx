@@ -6,9 +6,10 @@ import { useComposedListRef } from './list-ref';
 
 // The tab list, one tier per group of rows that need the same kind of attention. A tier with no rows is
 // not drawn at all rather than drawn empty, so the rail never spends a line on a state nothing is in.
-export function LauncherTabList({ payload, listRef, onFocus, now }: {
+export function LauncherTabList({ payload, listRef, onToggleFocus, onFocus, now }: {
   payload: LauncherPayload;
   listRef: React.RefObject<HTMLDivElement | null>;
+  onToggleFocus(): void;
   onFocus(row: LauncherTabRow): void;
   now: number;
 }) {
@@ -25,6 +26,11 @@ export function LauncherTabList({ payload, listRef, onFocus, now }: {
   const selection = useListSelection(displayed.length);
   const composed = useComposedListRef(listRef, selection.listRef);
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      onToggleFocus();
+      return;
+    }
     if (selection.navigate(event.key, nextListSelection)) { event.preventDefault(); return; }
     if (event.key === 'Enter' && selection.selected !== null) {
       event.preventDefault();

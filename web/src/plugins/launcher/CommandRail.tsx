@@ -50,15 +50,21 @@ export function LauncherCommandRow({ entry, index, selection, onOpen, onUnknownI
 
 // The command list, its selection, and the Enter key that runs the highlighted row. Kept apart from the
 // rail so the shared list-selection helper stays the one thing that answers a key.
-export function LauncherCommandList({ commands, listRef, onOpen, onUnknownIcon }: {
+export function LauncherCommandList({ commands, listRef, onToggleFocus, onOpen, onUnknownIcon }: {
   commands: readonly LauncherCommand[];
   listRef: React.RefObject<HTMLDivElement | null>;
+  onToggleFocus(): void;
   onOpen(index: number): void;
   onUnknownIcon?(icon: string): void;
 }) {
   const selection = useListSelection(commands.length);
   const composed = useComposedListRef(listRef, selection.listRef);
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      onToggleFocus();
+      return;
+    }
     if (selection.navigate(event.key, nextListSelection)) { event.preventDefault(); return; }
     if (event.key === 'Enter' && selection.selected !== null) {
       event.preventDefault();

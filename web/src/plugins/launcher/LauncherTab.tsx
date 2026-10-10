@@ -87,6 +87,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
       <LauncherCommandList
         commands={payload.commands}
         listRef={commandsRef}
+        onToggleFocus={() => { tabsRef.current?.focus(); }}
         onOpen={(index) => {
           const entry = payload.commands[index];
           if (entry) actions.command(entry);
@@ -96,6 +97,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
       <LauncherTabList
         payload={payload}
         listRef={tabsRef}
+        onToggleFocus={() => { commandsRef.current?.focus(); }}
         onFocus={(row) => { void capabilities.intent('focus-tab', { label: row.label }).catch(() => {}); }}
         now={now}
       />
