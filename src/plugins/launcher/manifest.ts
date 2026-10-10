@@ -10,10 +10,8 @@ import { LAUNCHER_PAYLOAD_SCHEMA_VERSION } from './shared.js';
 // `.janissary/launcher.json`, or the host's open tabs, which it reads through the `tabs` topic and the
 // `tabActivity` capability.
 //
-// It declares `dispatchLineWithOutput` because a click on a command row is the user's own command line
-// running, and `hostsCommandBar` because a docked view with no command bar of its own has nowhere to
-// show a dispatched command's answer. Both are the published route a plugin has to the dispatcher and
-// the bar, not a second implementation of either.
+// It declares `dispatchLineWithOutput` because a click on a command row runs the user's selected
+// command through the application's dispatcher.
 export const launcherManifest = {
   id: 'launcher',
   version: '1.0.0',
@@ -22,7 +20,6 @@ export const launcherManifest = {
   tabLabelPrefix: 'launcher',
   fileExtensions: {},
   command: 'launcher',
-  hostsCommandBar: true,
   notifications: ['tabs'],
   capabilities: [
     'openOrFocusTab',

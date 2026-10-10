@@ -4,15 +4,12 @@ import { faClipboard, faGear } from '@fortawesome/free-solid-svg-icons';
 import type { LauncherPayload } from '@shared/plugins/launcher/shared';
 import { SUMMARIZER_FLUSH_MS } from '@shared/plugins/launcher/shared';
 import {
-  CommandBarShell,
   PluginActionsHeader,
-  useAppCommandBar,
-  useCommandBarKeys,
   type TabPluginClientCapabilities,
 } from '../api';
 import { LauncherCommandList } from './CommandRail';
 import { LauncherTabList } from './TabList';
-import { useLauncherSubmit } from './useLauncherSubmit';
+import { createLauncherActions } from './launcher-actions';
 import { useClock } from './useClock';
 
 type Properties = {
@@ -20,22 +17,15 @@ type Properties = {
   capabilities: TabPluginClientCapabilities;
 };
 
-// The launcher's own command bar. A docked view that dispatches commands needs somewhere to show the
-// answer, and the bar is the one answer to that the application already has — so the launcher hosts the
-// application's own bar rather than a second textarea that would drift from it.
-//
 // The rows are the host's, built server-side and republished by the `tabs` topic: a plugin body sees no
 // other tab's state and must not, so the sort, the badge, and the hover card all read what the payload
 // carries rather than anything the client could otherwise know.
 //
-// The last reply is held here rather than in the payload, because it is this tab's own answer to a line
-// this tab typed — it belongs to the view, not to the host's state.
+// The last reply is held here rather than in the payload, because it is this tab's own answer to a
+// command selected from its rail — it belongs to the view, not to the host's state.
 export function LauncherTab({ payload, capabilities }: Properties) {
   const commandsRef = useRef<HTMLDivElement>(null);
   const tabsRef = useRef<HTMLDivElement>(null);
-  const barRef = useRef<HTMLTextAreaElement>(null);
-  const appBar = useAppCommandBar();
-  const [draft, setDraft] = useState('');
   const [reply, setReply] = useState<string | null>(null);
   // The rail's own clock, so a row's age advances while the launcher is on screen even though nothing
   // has been broadcast to make it. One minute is the coarsest unit a row's age is expressed in.
@@ -49,7 +39,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
 
   // The summarizer's cadence. A flush is an intent the launcher's own client raises, because
   // `pluginIntent` binds the answering label to the tab it names — which is what lets the core ACP
-  // capabilities run against *this* tab rather than against whichever tab a command happened to be typed
+  // capabilities run against *this* tab rather than against whichever tab a command happened to be run
   // in. The interval lives in the client rather than in a server timer for the same reason, and it stops
   // when nothing is connected, so a rail nobody is looking at costs nothing.
   useEffect(() => {
@@ -60,32 +50,11 @@ export function LauncherTab({ payload, capabilities }: Properties) {
     return () => { clearInterval(timer); };
   }, [capabilities.active, capabilities]);
 
-  const submit = useLauncherSubmit({
-    appBar,
-    capabilities,
-    onReply: (text) => { setReply(text); },
-    clear: () => { setDraft(''); },
-  });
-
-  // The lines this bar has sent, held here so the published keymap can walk them with ArrowUp and
-  // ArrowDown. One entry per submitted line, because this is one tab and one bar.
-  const [sent, setSent] = useState<string[]>([]);
-
-  const bar = useCommandBarKeys({
-    value: draft,
-    setValue: setDraft,
-    inputRef: barRef,
-    history: sent,
-    ghostHistory: appBar.ghostHistory,
-    onSubmit: (line) => { setSent((previous) => [...previous, line]); submit.line(line); },
-    onClear: () => { setReply(null); },
-  });
+  const actions = createLauncherActions(capabilities, (text) => { setReply(text); });
 
   return (
     <div className="launcher plugin-tab" data-doc-shot="launcher">
-      {/* The application's dock control sits in the sidebar's metadata bar; the Configure button joins
-          it there, and nothing of the launcher's own is drawn in the bar — a portaled header is
-          chrome, and the rail's own lines belong in the rail. */}
+      {/* The application's dock control sits in the sidebar's metadata bar; launcher actions join it. */}
       <PluginActionsHeader className="plugin-meta launcher-header">
         <span className="plugin-actions">
           <button
@@ -100,7 +69,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
             type="button"
             title="Open launcher.json"
             aria-label="Open launcher.json"
-            onClick={() => { submit.configure(payload.filePath); }}
+            onClick={() => { actions.configure(payload.filePath); }}
           >
             <FontAwesomeIcon icon={faGear} />
           </button>
@@ -120,9 +89,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
         listRef={commandsRef}
         onOpen={(index) => {
           const entry = payload.commands[index];
-          // The same path a typed line takes: the application answers a picker command itself, and
-          // otherwise the row is dispatched and its answer shows where a typed line's does.
-          if (entry) submit.command(entry);
+          if (entry) actions.command(entry);
         }}
         onUnknownIcon={(icon) => { void capabilities.intent('report-icon', { icon }).catch(() => {}); }}
       />
@@ -133,19 +100,6 @@ export function LauncherTab({ payload, capabilities }: Properties) {
         now={now}
       />
       {reply !== null && <div className="launcher-reply">{reply}</div>}
-      <CommandBarShell
-        value={draft}
-        disabled={appBar.blockingOverlayOpen}
-        inputRef={barRef}
-        onChange={(next: string) => { setDraft(next); }}
-        onKeyDown={bar.onKeyDown}
-        onFocus={() => { appBar.onFocusChange(true); }}
-        onBlur={() => { appBar.onFocusChange(false); }}
-        ghost={bar.ghost}
-        dotColor={capabilities.dotColor}
-        autoFocus={false}
-        ariaLabel="Launcher command"
-      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ It is one tab kind among the sidebar's dockable kinds and shares the docking mec
 
 ### The command rail
 
-The rail lists application commands, one row each, with an icon and a label. The first click highlights a command; clicking it again runs the command it names, exactly as typing it would — so `notifications left` docks the notifications feed into the left sidebar, where it joins the launcher rather than displacing it, and the feed is selected there through the normal sidebar mechanism. A command's own answer lands in the launcher's transcript rather than in a second copy of its rules. A command the application answers itself, such as a picker word, is answered the same way it would be in the command bar and nothing reaches the server. The answer, whatever produced it, appears where a typed line's does.
+The rail lists application commands, one row each, with an icon and a label. The first click highlights a command; clicking it again runs the command it names — so `notifications left` docks the notifications feed into the left sidebar, where it joins the launcher rather than displacing it, and the feed is selected there through the normal sidebar mechanism. A command's answer or error appears below the tab list. A configured command the application does not recognize is reported as such.
 
 Which commands appear is configured in `.janissary/launcher.json`, written by `janus init` and edited by hand. It holds an array of entries, each with an `icon`, a `label`, and a `command`:
 
@@ -29,7 +29,7 @@ Every `launcher` invocation re-reads the file in effect, and the rail is republi
 
 The rail's **Configure** button opens whichever file is currently in effect — the home override when one exists, otherwise the project's — in an editor tab, so what it opens is what the launcher reads back.
 
-A long command list scrolls within its own bounded area, leaving the tab list and command bar available in the sidebar.
+A long command list scrolls within its own bounded area, leaving the tab list available in the sidebar.
 
 ### The tab list
 
@@ -67,10 +67,6 @@ The paragraph is clamped to three lines of the row's width and expands to as man
 
 Hovering a tab row opens a small card carrying what the row has no width for: the tab's name, its label when they differ, its working directory, its remote host when it has one, and the last command it ran. It is drawn just below the row wherever the row sits, so the list's own scrolling never cuts it off. The card is hover-only — it appears on pointer-over and closes on pointer-out, and never on touch or keyboard focus alone.
 
-The file executes what it names: the first click highlights a command row, and clicking that highlighted row again runs its command as if it had been typed. A project's committed `launcher.json` is therefore a set of commands this application will run. `~/.janissary/launcher.json` replaces the project's file rather than merging with it.
-
-### The command bar
-
-The launcher hosts the application's own command bar beneath its lists, so a dispatched command's answer and any error is visible in the launcher itself, and a command can be typed straight into the rail. A line the application claims runs as that command; one nothing claims is reported as such, because the launcher has no shell to hand it to.
+The file executes what it names: the first click highlights a command row, and clicking that highlighted row again dispatches its command. The launcher has no text command bar. A project's committed `launcher.json` is therefore a set of commands this application will run. `~/.janissary/launcher.json` replaces the project's file rather than merging with it.
 
 The launcher does not show the core ACP response surface. Its metadata bar has an **Open ACP transcript** button that opens the launcher's ACP transcript in an editor tab. The summarizer continues to use the launcher's ACP session.

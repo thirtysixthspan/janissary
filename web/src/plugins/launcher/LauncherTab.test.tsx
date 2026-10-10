@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isLauncherPayload, type LauncherCommand, type LauncherPayload, type LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { AcpResponseScope } from '../../shared/acp/AcpResponseScope';
-import { AppCommandBarProvider, AppCommandBarTabScope } from '../../shared/command-bar/AppCommandBar';
 import type { JanusClient } from '../../ws';
 import { LauncherTab } from './LauncherTab';
 
@@ -51,43 +50,12 @@ function payload(overrides: Partial<LauncherPayload> = {}): LauncherPayload {
   };
 }
 
-function bar(intercept: (line: string) => boolean) {
-  return {
-    intercept,
-    ghostHistory: [],
-    blockingOverlayOpen: false,
-    overlayOwnsCommandBar: false,
-    queueOpen: false,
-    queueIndex: 0,
-    queueItems: [],
-    queuedLinesOf: () => [],
-    registerCommandLineInsertion: () => () => {},
-  };
-}
-
-function launcherElement(
-  value: LauncherPayload,
-  caps: TabPluginClientCapabilities,
-  intercept: (line: string) => boolean = () => false,
-) {
-  return (
-    <AppCommandBarProvider bar={bar(intercept)}>
-      <AppCommandBarTabScope label="launcher">
-        <LauncherTab payload={value} capabilities={caps} />
-      </AppCommandBarTabScope>
-    </AppCommandBarProvider>
-  );
+function launcherElement(value: LauncherPayload, caps: TabPluginClientCapabilities) {
+  return <LauncherTab payload={value} capabilities={caps} />;
 }
 
 function launcher(value = payload(), caps = capabilities()) {
-  // The launcher hosts the application's own command bar, so the bar's provider has to be above it. A
-  // spy for `intercept` rather than a no-op, so a case can tell whether a line was answered by the
-  // application at all.
-  const intercept = vi.fn<(line: string) => boolean>(() => false);
-  return {
-    ...render(launcherElement(value, caps.value, intercept)),
-    intercept,
-  };
+  return render(launcherElement(value, caps.value));
 }
 
 beforeEach(() => {
@@ -127,23 +95,6 @@ describe('the command rail', () => {
 
   // `tasks` and `hist` — the launcher's own default rows — are the application's pickers. The client
   // classifies them, so a click on a row naming one opens the picker and sends nothing to the server,
-  // exactly as typing the same word into the bar below would.
-  it.each(['tasks', 'hist'])('opens the application\'s own picker for %s, sending nothing', (line) => {
-    const caps = capabilities();
-    const { intercept } = launcher(payload({
-      commands: [command({ id: line, label: line, command: line })],
-    }), caps);
-    intercept.mockReturnValue(true);
-
-    const row = screen.getByRole('option', { name: new RegExp(line, 'i') });
-    fireEvent.click(row);
-    fireEvent.click(row);
-
-    // The application answered it, as whatever tab the line came from — which is this one.
-    expect(intercept.mock.calls.map(([asked]) => asked)).toEqual([line]);
-    expect(caps.intent).not.toHaveBeenCalled();
-  });
-
   // The rail sends the id the host validated against launcher.json, never the command line, so the
   // host's own read of the file stays the thing that decides what may run.
   it('sends the id the host validated, never the command line', async () => {
@@ -291,23 +242,7 @@ describe('the command rail', () => {
 
     // A repaint of the same rail reports nothing new.
     caps.intent.mockClear();
-    rerender(
-      <AppCommandBarProvider bar={{
-        intercept: () => false,
-        ghostHistory: [],
-        blockingOverlayOpen: false,
-        overlayOwnsCommandBar: false,
-        queueOpen: false,
-        queueIndex: 0,
-        queueItems: [],
-        queuedLinesOf: () => [],
-        registerCommandLineInsertion: () => () => {},
-      }}>
-        <AppCommandBarTabScope label="launcher">
-          <LauncherTab payload={payload({ commands: [command({ icon: 'faNotAGlyph', label: 'Tasks' })] })} capabilities={caps.value} />
-        </AppCommandBarTabScope>
-      </AppCommandBarProvider>,
-    );
+    rerender(<LauncherTab payload={payload({ commands: [command({ icon: 'faNotAGlyph', label: 'Tasks' })] })} capabilities={caps.value} />);
 
     expect(caps.intent.mock.calls.filter(([name]) => name === 'report-icon')).toEqual([]);
   });
@@ -563,19 +498,13 @@ describe('the tab list', () => {
         const caps = capabilities('left');
         caps.value.active = false;
         const rows = [row('shell', { lastActivity: started.getTime() })];
-        const { rerender, intercept } = launcher(payload({ tabs: rows }), caps);
+        const { rerender } = launcher(payload({ tabs: rows }), caps);
 
         tick(4);
         expect(age()).toBe('now');
 
         caps.value.active = true;
-        rerender(
-          <AppCommandBarProvider bar={bar(intercept)}>
-            <AppCommandBarTabScope label="launcher">
-              <LauncherTab payload={payload({ tabs: rows })} capabilities={caps.value} />
-            </AppCommandBarTabScope>
-          </AppCommandBarProvider>,
-        );
+        rerender(<LauncherTab payload={payload({ tabs: rows })} capabilities={caps.value} />);
 
         expect(age()).toBe('4m');
       } finally {
@@ -587,28 +516,18 @@ describe('the tab list', () => {
 describe('the launcher ACP response and transcript action', () => {
   const STREAMED = { lines: [{ type: 'markdown' as const, text: '# Streamed answer' }], running: true };
 
-  function mounted(caps: ReturnType<typeof capabilities>, reply: unknown) {
-    const intercept = vi.fn<(line: string) => boolean>(() => false);
-    caps.intent.mockResolvedValue(reply);
+  function mounted(caps: ReturnType<typeof capabilities>) {
     return render(
-      <AppCommandBarProvider bar={bar(intercept)}>
-        <AcpResponseScope label="launcher" client={client()} response={STREAMED}>
-          <AppCommandBarTabScope label="launcher">
-            <LauncherTab payload={payload()} capabilities={caps.value} />
-          </AppCommandBarTabScope>
-        </AcpResponseScope>
-      </AppCommandBarProvider>,
+      <AcpResponseScope label="launcher" client={client()} response={STREAMED}>
+        <LauncherTab payload={payload()} capabilities={caps.value} />
+      </AcpResponseScope>,
     );
   }
 
-  it('does not render the host ACP response surface in the launcher', async () => {
+  it('does not render a command bar or the host ACP response surface', () => {
     const caps = capabilities();
-    mounted(caps, { dispatched: true, output: '', coreResponse: true });
-    const shell = screen.getByLabelText('Launcher command');
-    fireEvent.change(shell, { target: { value: 'acp summarize the open tabs' } });
-    fireEvent.keyDown(shell, { key: 'Enter' });
-
-    await act(async () => { await Promise.resolve(); });
+    mounted(caps);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Streamed answer' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reset ACP' })).not.toBeInTheDocument();
   });
@@ -619,31 +538,6 @@ describe('the launcher ACP response and transcript action', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open ACP transcript' }));
 
     expect(caps.value.openAcpTranscript).toHaveBeenCalledOnce();
-  });
-});
-
-it('still shows a dispatched reply that is not a core response', async () => {
-  const caps = capabilities();
-  caps.intent.mockResolvedValue({ dispatched: true, output: 'Opened the task list.' });
-  launcher(payload(), caps);
-  const shell = screen.getByLabelText('Launcher command');
-  fireEvent.change(shell, { target: { value: 'tasks' } });
-  fireEvent.keyDown(shell, { key: 'Enter' });
-
-  expect(await screen.findByText('Opened the task list.')).toBeInTheDocument();
-});
-
-describe('a typed launcher command', () => {
-  it('shows an error when a dispatch intent rejects', async () => {
-    const caps = capabilities();
-    caps.intent.mockRejectedValue(new Error('typed dispatch failed'));
-    launcher(payload(), caps);
-    const shell = screen.getByLabelText('Launcher command');
-
-    fireEvent.change(shell, { target: { value: 'unknown' } });
-    fireEvent.keyDown(shell, { key: 'Enter' });
-
-    expect(await screen.findByText('Could not run "unknown": typed dispatch failed')).toBeInTheDocument();
   });
 });
 

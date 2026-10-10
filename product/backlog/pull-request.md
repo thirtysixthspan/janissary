@@ -2,6 +2,4 @@
 
 # pull-request
 
-* remove the command bar from the launcher.
-
 * instead of 'never' for a time, leave the value blank.

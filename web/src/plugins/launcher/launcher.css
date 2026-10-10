@@ -1,6 +1,5 @@
-/* Launcher: the sidebar's home. A command rail above a tiered list of open tabs, with the
-   application's command bar beneath both. Narrow by design — it lives in a sidebar, so every rule
-   here is about fitting rather than filling. */
+/* Launcher: the sidebar's home. A command rail above a tiered list of open tabs. Narrow by design —
+   it lives in a sidebar, so every rule here is about fitting rather than filling. */
 .launcher { gap: 0; padding: 0; }
 .launcher-header { min-height: 28px; padding: 6px 8px; font-size: 11px; border-bottom: 1px solid var(--border); }
 .launcher-header .plugin-actions button {
