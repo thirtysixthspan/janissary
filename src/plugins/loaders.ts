@@ -7,6 +7,7 @@ export const tabPluginLoaders = {
   conversations: () => import('./conversations/activate.js'),
   diff: () => import('./diff/activate.js'),
   image: () => import('./image/activate.js'),
+  launcher: () => import('./launcher/activate.js'),
   markdown: () => import('./markdown/activate.js'),
   page: () => import('./page/activate.js'),
   pdf: () => import('./pdf/activate.js'),

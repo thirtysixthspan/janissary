@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { tmpdir } from 'node:os';
 import { scaffoldProject } from './init.js';
+import { DEFAULT_LAUNCHER_COMMANDS } from '../plugins/launcher/commands-file.js';
 
 let projectDir: string;
 
 beforeEach(() => {
-  projectDir = mkdtempSync(path.join(tmpdir(), 'project-init-test-'));
+  const scratchDirectory = path.join(process.cwd(), 'temp');
+  mkdirSync(scratchDirectory, { recursive: true });
+  projectDir = mkdtempSync(path.join(scratchDirectory, 'project-init-test-'));
 });
 
 describe('scaffoldProject', () => {
@@ -105,6 +107,21 @@ describe('scaffoldProject', () => {
     writeFileSync(issuesPath, '# issues\n\n## ready\n\n* custom item\n');
     scaffoldProject(projectDir);
     expect(readFileSync(issuesPath, 'utf8')).toContain('custom item');
+  });
+
+  it('seeds launcher defaults once and preserves a launcher file on later init', () => {
+    const launcherPath = path.join(projectDir, '.janissary', 'launcher.json');
+    scaffoldProject(projectDir);
+
+    expect(JSON.parse(readFileSync(launcherPath, 'utf8'))).toEqual(
+      DEFAULT_LAUNCHER_COMMANDS.map(({ icon, label, command }) => ({ icon, label, command })),
+    );
+
+    const customContent = '[{"icon":"faWandMagicSparkles","label":"Custom","command":"help"}]\n';
+    writeFileSync(launcherPath, customContent);
+    scaffoldProject(projectDir);
+
+    expect(readFileSync(launcherPath, 'utf8')).toBe(customContent);
   });
 
   afterEach(() => {

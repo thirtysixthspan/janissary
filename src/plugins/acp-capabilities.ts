@@ -12,7 +12,7 @@ export function acpCapabilities(input: {
   answeringLabel?: string;
   isEnabled: () => boolean;
   deadline?: HandlerDeadline;
-}): Pick<TabPluginServerCapabilities, 'startAcp' | 'promptAcp' | 'resetAcp'> {
+}): Pick<TabPluginServerCapabilities, 'startAcp' | 'promptAcp' | 'promptAcpResult' | 'resetAcp'> {
   const { managers, declaration, origin, answeringLabel, isEnabled, deadline } = input;
   // The same ownership answer the line capabilities get, from the same predicate: this plugin's own
   // tab, or a rejection. A disabled plugin is its own question, asked first.
@@ -21,10 +21,15 @@ export function acpCapabilities(input: {
     return ownTabLabel({ managers, declaration, origin, answeringLabel }, 'ACP tab is unavailable.');
   };
   return {
-    startAcp: () => managers.acp.start(ownLabel()),
+    startAcp: (request) => managers.acp.start(ownLabel(), request),
     promptAcp: (prompt) => {
       const label = ownLabel();
       const run = () => managers.acp.prompt(label, `acp ${prompt}`);
+      return deadline ? deadline.exempt(run) : run();
+    },
+    promptAcpResult: (prompt) => {
+      const label = ownLabel();
+      const run = () => managers.acp.promptResult(label, `acp ${prompt}`);
       return deadline ? deadline.exempt(run) : run();
     },
     resetAcp: () => managers.acp.close(ownLabel()),

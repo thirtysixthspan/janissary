@@ -2,10 +2,12 @@ import type {
   TabPluginNotification, TabPluginNotificationTopic, TabPluginTopicAction,
 } from './api-topics.js';
 import type { TabPluginCapabilityName } from './api-capabilities.js';
+import type { TabActivityEntry } from './activity.js';
 import type {
   TabPluginLaunchFactory, TabPluginLaunchReadyHandler, TabPluginLaunchRequest, TabPluginLaunchResult,
 } from './api-launch.js';
 import type { CompletionResult } from '../completion/types.js';
+import type { AcpPromptResult } from '../acp/types.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
 // are re-exported here, so a plugin still reads the whole v2 contract from one module.
@@ -13,6 +15,12 @@ export {
   TAB_PLUGIN_API_VERSION, TAB_PLUGIN_CAPABILITY_NAMES, isTabPluginCapability, TabPluginRejection,
 } from './api-capabilities.js';
 export type { TabPluginCapabilityName } from './api-capabilities.js';
+// The one open tab the `tabActivity` capability reports and the `tabs` topic delivers. Re-exported
+// from beside its reader so a plugin reaches both from this module, the only one a plugin may import.
+export type { TabActivityEntry } from './activity.js';
+// What a core ACP prompt answered with, re-exported so a plugin reading a result names the type from
+// the same module it read the capability from.
+export type { AcpPromptResult } from '../acp/types.js';
 
 export {
    isTabPluginNotificationTopic,
@@ -202,8 +210,25 @@ export type TabPluginSelectionAction = {
 
 export type TabPluginServerCapabilities = {
   // Core ACP connection operations, scoped to this plugin's own answering tab.
-  startAcp(): { model?: string; error?: string };
+  //
+  // `startAcp` takes an optional request. `{ withoutTools: true }` asks for a session with no tool
+  // table at all, so a reply that emits a browser, question, or database command has nothing that
+  // runs it and nothing that recognizes it — the shape a consumer whose reply is only ever read
+  // should ask for. It is recorded against the tab, so every prompt on that session is held to it.
+  // Additive, and a strictly smaller session than the ordinary one, so it needs no declaration of
+  // its own: omit it and the full tool loop is what runs.
+  //
+  // `session` names the session that was begun or reused, and changes whenever the tab's session is
+  // replaced. A caller that primed one session — a persona, a trust delimiter — compares it to learn
+  // that the session it is now talking to is a different one.
+  startAcp(request?: { withoutTools?: true }): { model?: string; error?: string; session?: string };
   promptAcp(prompt: string): Promise<string>;
+  // The same prompt as `promptAcp`, answered as a result rather than as a string: the reply and the
+  // session that produced it, or the reason there was none. A refusal — a session that closed, a
+  // prompt already running — resolves with a line of prose, so a caller handed one string cannot tell
+  // an answer from a refusal and has to guess at its text. Use this one when what you do next depends
+  // on the reply being a reply.
+  promptAcpResult(prompt: string): Promise<AcpPromptResult>;
   resetAcp(): boolean;
   note(text: string): void;
   // Report one line to the notifications feed, attributed to the tab the plugin was invoked from.
@@ -293,6 +318,15 @@ export type TabPluginServerCapabilities = {
   // derivable from the file: a recording ended by its tab closing carries no exit event, so nothing
   // in it distinguishes a finished session from a live one.
   isRecordingLive(absPath: string): boolean;
+  // Every tab the host has open, each as a `TabActivityEntry`, as of now. The pull counterpart to
+  // the `tabs` topic: a plugin that must read tab state on its own schedule — a summarizer on a
+  // flush timer, or a tab building its first payload — asks here, rather than being handed a copy on
+  // every application mutation. A finite positive `tailLines` is rounded down to whole entries;
+  // values that round below one, and zero, negative, or non-finite values, attach no transcript tail.
+  // Omit it and no entry carries any, so a plugin that only lists tabs reads no other tab's output.
+  // Unlike every topic here this is host-wide rather than one tab's, because the question it answers
+  // is "what is the application doing", which no single tab can speak for.
+  tabActivity(tailLines?: number): TabActivityEntry[];
   // The tab a plugin command was invoked from: its label, where it is working, and the workspace
   // clone it runs in when it has one. A plugin's command handler is handed the argument and its
   // capabilities and nothing else, so this is the only way one learns what the user was standing in

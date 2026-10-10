@@ -59,6 +59,22 @@ describe('metadata theme', () => {
     expect(actionRule).toContain('margin-left: auto');
   });
 
+  it('draws the workspace diff button flat and muted, including while disabled', () => {
+    const buttonRule = theme.match(/^\.tab-open-diff \{[^}]+\}/m)?.[0];
+    const hoverRule = theme.match(/^\.tab-open-diff:hover \{[^}]+\}/m)?.[0];
+    const disabledRule = theme.match(/^\.tab-open-diff:disabled \{[^}]+\}/m)?.[0];
+
+    expect(buttonRule).toBeDefined();
+    expect(buttonRule).toContain('background: transparent');
+    expect(buttonRule).toContain('border: none');
+    expect(buttonRule).toContain('color: var(--muted)');
+    expect(buttonRule).toContain('cursor: pointer');
+    expect(hoverRule).toContain('color: var(--fg)');
+    expect(disabledRule).toContain('color: var(--muted)');
+    expect(disabledRule).toContain('cursor: default');
+    expect(disabledRule).toContain('opacity: 0.45');
+  });
+
   // The recording flag is the one flag in this row that is also a control, so it is a `<button>` and
   // carries a class the plain flags do not. That class sits *after* `.tab-flag--active` in this file,
   // which is the whole hazard: two single-class rules, and whichever comes last wins. So the rule that

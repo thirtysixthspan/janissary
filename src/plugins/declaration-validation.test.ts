@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { shellManifest } from './shell/manifest.js';
+import { launcherManifest } from './launcher/manifest.js';
 import type { Managers } from '../managers.js';
 import { TabManager } from '../tab/manager.js';
 import {
@@ -214,5 +215,19 @@ describe('the shell plugin declares every capability its activation reaches for'
   it('declares the capability the mount-time status question asks about', () => {
     // Named separately because it is the one whose absence is invisible until a user opens a tab.
     expect(shellManifest.capabilities).toContain('terminalRunning');
+  });
+});
+
+// The same failure mode, and the launcher hit it: `originTab` is reached for the project root and
+// `startAcp`/`promptAcp` for the summarizer's session, and a manifest naming neither gets the plugin
+// disabled the first time `launcher` is typed — a tab that simply never opens.
+describe('the launcher plugin declares every capability its activation reaches for', () => {
+  it('covers each capability named in its activation', () => {
+    const declared = new Set<string>(launcherManifest.capabilities);
+    const source = readFileSync(new URL('launcher/activate.ts', import.meta.url), 'utf8');
+
+    const used = new Set([...source.matchAll(/capabilities\.([a-zA-Z]+)\(/g)].map((match) => match[1]));
+    expect(used.size).toBeGreaterThan(0);
+    expect(used.difference(declared)).toEqual(new Set());
   });
 });

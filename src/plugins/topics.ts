@@ -5,6 +5,7 @@ import type {
   TabPluginNotificationTopic,
   TabPluginTopicAction,
 } from './api.js';
+import { tabActivityRows } from './activity.js';
 
 // Where each host topic comes from, what it carries, and what a plugin may ask the host to do to it.
 // One entry per topic, so adding a topic is a data change here rather than a new branch anywhere
@@ -109,6 +110,19 @@ function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
   }
 }
 
+// Focus the tab a `tabs` row names, refused for a label with no open tab — the same
+// authorisation-by-current-state rule `sessions.focus` follows, checked against the manager's own
+// tab list rather than against a payload the host remembers having delivered. It is also strictly
+// narrower than a grant a plugin already holds: `dispatchLineWithOutput` reaches the application's
+// whole command table, `close <name>` included, so being able to focus a tab by its label adds no
+// reach a plugin did not already have.
+function actOnTabs(managers: Managers, action: TabPluginTopicAction): void {
+  if (action.topic !== 'tabs' || action.action !== 'focus') return;
+  const index = managers.tab.findIndex(action.label);
+  if (index === -1) return;
+  managers.tab.setActiveTab(index);
+}
+
 // Every database-browser verb, each one delegated to the manager method that owns it. The request
 // id the plugin minted rides through and is stamped on the answer; the emit is what carries that
 // answer back, since `topicAction` returns nothing. One emit per action, whatever the action was —
@@ -154,6 +168,16 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     read: (managers) => managers.database.readView(),
     act: actOnDatabases,
     empty: { databases: [], results: [], lastOpened: null },
+  },
+  tabs: {
+    // The one topic that rides the raw state broadcast, because every display-relevant tab fact — a
+    // focus, a badge, a dock, a title, an open, a close — ends there and nowhere else. The rows it
+    // hands over are minute-rounded, so a republish is forced by a real change and not by every
+    // transcript append.
+    subscribe: (fire) => messageBus.on('state', 'dirty', fire),
+    read: (managers) => tabActivityRows(managers),
+    act: actOnTabs,
+    empty: [],
   },
 };
 

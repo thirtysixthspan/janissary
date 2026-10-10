@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs';
 import type { LogEntry, MonitorTarget } from '../tab/types.js';
 import type { Managers } from '../managers.js';
+import { currentEditorContent } from '../editor/content.js';
 import { resolveTargetTabs } from './targets.js';
 import { diffFeedEntry } from './feed-diff.js';
 
@@ -19,38 +19,12 @@ export function editorFeedEntries(
   const entries: { tabLabel: string; entry: LogEntry }[] = [];
   for (const tab of resolveTargetTabs(managers.tab.tabs, targets)) {
     if (tab.view !== 'editor' || !tab.editor) continue;
-    const current = currentContent(managers, tab.editorDraft, tab.editor.url);
+    const current = currentEditorContent(managers, tab.editorDraft, tab.editor.url);
     if (current === undefined) continue;
     const entry = diffFeedEntry(editorSeen, tab.label, current, tab.editor.name);
     if (entry) entries.push(entry);
   }
   return entries;
-}
-
-// Resolve an editor tab's current content: the live unsaved draft when present, otherwise the file
-// read from disk. Returns undefined only when there is no draft and the `/open/<id>` ref no longer
-// resolves, meaning the tab should be skipped entirely.
-function currentContent(managers: Managers, draft: { content: string } | undefined, url: string): string | undefined {
-  if (draft) return draft.content;
-  const filePath = resolveOpenFilePath(managers, url);
-  return filePath ? readContent(filePath) : undefined;
-}
-
-// Resolve an editor tab's `/open/<id>` ref to its on-disk path through the same allow-list
-// `src/editor/save.ts` uses. Returns undefined for an id that no longer resolves (skip that tab).
-function resolveOpenFilePath(managers: Managers, url: string): string | undefined {
-  const id = url.startsWith('/open/') ? url.slice('/open/'.length) : '';
-  return id ? managers.tab.openFilePath(id) : undefined;
-}
-
-// Read the file, treating a missing/unreadable file as empty content (Decision 8): a never-saved new
-// file contributes nothing, and a deleted file reads as `''`, yielding a diff that removes every line.
-function readContent(filePath: string): string {
-  try {
-    return readFileSync(filePath, 'utf8');
-  } catch {
-    return '';
-  }
 }
 
 

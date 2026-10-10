@@ -7,7 +7,7 @@ import { openTranscriptLink } from '../shared/transcript/open-link';
 import { transcriptIntents } from '../shared/transcript/transcript-intents';
 import type { TerminalColors } from '../shared/terminal/colors';
 import type { PluginHost } from './host';
-import type { RemoteTargetView } from '@shared/protocol';
+import type { AcpRef, RemoteTargetView } from '@shared/protocol';
 import type { RemoteSessionState } from '../shared/RemoteSessionButton';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
@@ -255,6 +255,9 @@ export type TabPluginClientCapabilities = {
   // this tab would diff whatever its command line resolves, not the environment this tab is working
   // in. Optional for the same reason as `attachTerminal`.
   openDiffHere?(): void;
+  // Open this plugin tab's own ACP transcript as an editor tab. The host supplies the label so a
+  // plugin cannot ask to open another tab's transcript.
+  openAcpTranscript?(): void;
   onBackgroundReply?(receive: (reply: { id: string; output: string }) => void): () => void;
   // This tab's asciicast recording, or absent before the tab's terminal has produced any output. Its
   // presence is also what makes the recording flag pressable, so a plugin drawing that flag reads
@@ -304,6 +307,10 @@ export function createPluginClientCapabilities(
     dotColor,
     ...remoteCapabilities,
     close: onClose,
+    openAcpTranscript: () => {
+      const acpRef: AcpRef = { scope: 'tab', label };
+      client.send({ method: 'openAcpTranscript', params: { acpRef } });
+    },
     registerDirtyHandle: onDirtyHandle,
     resourceUrl,
     copyText: (text: string) => { systemCopyText(text); },

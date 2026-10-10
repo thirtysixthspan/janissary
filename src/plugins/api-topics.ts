@@ -2,9 +2,9 @@ import type {
   AggregatedScheduleView,
   ConversationsView,
   DatabasesView,
-  DatabaseGridQuery,
-  RemoteSessionView,
-} from '../protocol.js';
+  TabActivityEntry,
+} from './api.js';
+import type { DatabaseGridQuery, RemoteSessionView } from '../protocol.js';
 
 // The topic half of the v1 tab plugin contract: the host topics a plugin may declare an interest in,
 // the shape of one delivery, and the actions it may ask the host to perform on them. Split out of
@@ -14,7 +14,15 @@ import type {
 // Host state a plugin may ask to be told about. A topic is always a named, already-coalesced signal
 // — never the raw state broadcast, which fires on essentially every mutation including per-keystroke
 // shell output. Adding one is additive; each needs its own justification and its own data slice.
-export type TabPluginNotificationTopic = 'schedules' | 'conversations' | 'sessions' | 'databases';
+//
+// `tabs` is the one exception to the coalescing rule, and deliberately so: a tail's display state
+// genuinely changes on the raw state broadcast, because that is what a focus, a badge, a dock, a
+// title, and a tab opening or closing all end in. It pays for that with the tightest rows of any
+// topic — last activity is minute-rounded, so two transcript appends inside one minute report the
+// same value — and its subscriber is expected to drop a republish whose rows have not moved, which
+// is what keeps a per-mutation signal from becoming a per-mutation broadcast.
+export type TabPluginNotificationTopic =
+  | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs';
 
 // Keyed by the union for the same reason `CAPABILITIES` is: a topic added to the type without a
 // source here is a compile error rather than a name the host would silently never deliver.
@@ -23,6 +31,7 @@ const NOTIFICATION_TOPICS: Record<TabPluginNotificationTopic, true> = {
   conversations: true,
   sessions: true,
   databases: true,
+  tabs: true,
 };
 
 export const TAB_PLUGIN_NOTIFICATION_TOPICS =
@@ -58,6 +67,14 @@ export type TabPluginNotification =
   | {
     topic: 'databases';
     data: DatabasesView;
+    tabs: readonly string[];
+  }
+  // Every tab the host has open, in strip order, as the rows a launcher-style view shows. It is the
+  // only topic whose data is the application's whole tab set rather than one subsystem's slice, so it
+  // is also the only one whose subscriber must drop an unchanged republish.
+  | {
+    topic: 'tabs';
+    data: readonly TabActivityEntry[];
     tabs: readonly string[];
   };
 
@@ -104,6 +121,13 @@ export type TabPluginTopicAction =
   // Re-read local state and rebuild the rows. It opens no ssh connection: reachability is learned
   // only by pressing attach or terminate.
   | { topic: 'sessions'; action: 'refresh' }
+  // Focus one of the host's open tabs, refused for a label with no open tab. It is the only way a
+  // plugin client reaches a tab it does not own, because the client RPC surface a plugin is given is
+  // its own intent function and nothing else. Refusing an unknown label rather than a row it was not
+  // shown is the same authorisation rule `sessions.focus` follows — checked against the manager's
+  // own current rows — and it is strictly narrower than the `dispatchLineWithOutput` grant, whose
+  // command table already holds `close <name>`.
+  | { topic: 'tabs'; action: 'focus'; label: string }
   // The nine verbs the database browser may ask the host for. Each names a database and the
   // `requestId` its answer will arrive under; the four write-shaped ones carry an opaque row key and
   // column/value pairs, never SQL, so a plugin cannot compose a statement of its own. `run` is the

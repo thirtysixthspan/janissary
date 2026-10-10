@@ -64,6 +64,14 @@ const setup = () => {
   return { acp, append, addBusy, deleteBusy, managers, registerQuestion, updateRunning: (managers as { tab: { updateRunning: ReturnType<typeof vi.fn> } }).tab.updateRunning };
 };
 
+// `promptResult` looks the tab up first, which `run` on its own does not, and the tool restriction is
+// recorded on the tab record — so the cases that need one give the stub a tab to find.
+function withTab() {
+  const base = setup();
+  (base.managers as unknown as { tab: { tabs: { label: string }[] } }).tab.tabs.push({ label: 'tab1' });
+  return base;
+}
+
 describe('AcpManager.run', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -108,6 +116,61 @@ describe('AcpManager.run', () => {
     });
   });
 
+  // A session started without tools must not be able to reach them, and the proof has to be in what
+  // the loop is handed rather than in what the model is told: an empty table means the primer grows
+  // no tool text, no reply line is recognized as a command, and an emitted command has nothing to
+  // resolve to.
+  it('hands the loop no tools at all for a session started without them', () => {
+    const { acp } = withTab();
+    acp.start('tab1', { withoutTools: true });
+
+    acp.run('tab1', 'acp summarize this');
+
+    const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
+    expect(deps.primer).toBe('Write your replies in GitHub-flavored Markdown (headings, lists, tables, fenced code blocks, etc.); the tab renders them as formatted Markdown.');
+    expect(deps.extractCommand('Let me look.\nbrowser open https://example.com')).toBeNull();
+    expect(deps.extractCommand('question ask "What port?"')).toBeNull();
+    expect(deps.extractCommand('db sqlite list')).toBeNull();
+    expect(() => deps.runCommand('db sqlite list')).toThrow('No ACP tool matched command: db sqlite list');
+  });
+
+  // The contrast that makes the case above a regression test: an ordinary start still gets the whole
+  // table, so a reply that emits a command on a tool-less session is refused by the session and not
+  // by an application that lost its tools.
+  it('hands the loop the full tool table for an ordinary session', () => {
+    const { acp } = setup();
+    acp.start('tab1');
+
+    acp.run('tab1', 'acp summarize this');
+
+    const deps = mocks.runAcpToolLoop.mock.calls[0][2] as AcpLoopDeps;
+    expect(deps.primer).toContain('db primer');
+    expect(deps.extractCommand('question ask "What port?"')).toBe('question ask "What port?"');
+  });
+
+  // The restriction is the tab's own policy rather than a manager's collection, so a session that dies
+  // is replaced by one held to the same rule — and the tab record is what goes away with the tab, so a
+  // new one under the recycled label starts on the ordinary policy.
+  it('keeps the tool-less rule across a closed session, and forgets it when the tab is recreated', () => {
+    const { acp, managers } = withTab();
+    const tabs = (managers as unknown as { tab: { tabs: { label: string }[] } }).tab.tabs;
+    acp.start('tab1', { withoutTools: true });
+    acp.run('tab1', 'acp hello');
+    expect(acp.close('tab1')).toBe(true);
+
+    acp.run('tab1', 'acp hello again');
+
+    const deps = mocks.runAcpToolLoop.mock.calls[1][2] as AcpLoopDeps;
+    expect(deps.primer).not.toContain('db primer');
+
+    tabs.length = 0;
+    tabs.push({ label: 'tab1' });
+    acp.run('tab1', 'acp hello');
+
+    expect((mocks.runAcpToolLoop.mock.calls[2][2] as AcpLoopDeps).primer)
+      .toContain('db primer');
+  });
+
   it('error handler updates output, cleans up busy, and calls onDone', () => {
     const { acp, deleteBusy, updateRunning } = setup();
     const onDone = vi.fn();
@@ -116,7 +179,7 @@ describe('AcpManager.run', () => {
     handlers.error('something failed');
     expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'ACP error: something failed', false, expect.objectContaining({ trailing: true }));
     expect(deleteBusy).toHaveBeenCalledOnce();
-    expect(onDone).toHaveBeenCalledWith('ACP error: something failed');
+    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP error: something failed' });
   });
 
   it('finished handler cleans up busy and calls onDone with the last answer when reason is answered', () => {
@@ -128,7 +191,7 @@ describe('AcpManager.run', () => {
     handlers.finished('answered', 8);
     expect(deleteBusy).toHaveBeenCalledOnce();
     expect(mocks.messageBusEmit).toHaveBeenCalledWith('state', { type: 'dirty' });
-    expect(onDone).toHaveBeenCalledWith('the final answer');
+    expect(onDone).toHaveBeenCalledWith({ answered: true, reply: 'the final answer', session: expect.any(String) });
   });
 
   it('finished handler appends a capped message when reason is capped', () => {
@@ -272,6 +335,58 @@ describe('AcpManager.run', () => {
   });
 });
 
+// A refusal resolves with a line of prose, so the caller is told which kind of line arrived rather
+// than left to read its text.
+describe('AcpManager.promptResult', () => {
+  it('answers with the reply and the session that produced it', async () => {
+    const { acp } = withTab();
+    const pending = acp.promptResult('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+
+    handlers.endTurn('the answer');
+    handlers.finished('answered', 8);
+
+    await expect(pending).resolves.toEqual({ answered: true, reply: 'the answer', session: expect.any(String) });
+  });
+
+  it('answers a refusal as a failure carrying the line the user is shown', async () => {
+    const { acp } = withTab();
+    const pending = acp.promptResult('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+
+    handlers.error('rate limited');
+
+    await expect(pending).resolves.toEqual({ answered: false, error: 'ACP error: rate limited' });
+  });
+
+  it('resolves prompt with the text alone, either way', async () => {
+    const { acp } = withTab();
+    const answered = acp.prompt('tab1', 'acp hello');
+    const first = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    first.endTurn('the answer');
+    first.finished('answered', 8);
+
+    await expect(answered).resolves.toBe('the answer');
+
+    const refused = acp.prompt('tab1', 'acp hello');
+    const second = mocks.runAcpToolLoop.mock.calls[1][3] as AcpLoopHandlers;
+    second.error('rate limited');
+
+    await expect(refused).resolves.toBe('ACP error: rate limited');
+  });
+
+  it('reports the identity of a replaced session the next time one is created', () => {
+    const { acp } = setup();
+    const before = acp.start('tab1').session;
+
+    acp.close('tab1');
+    const after = acp.start('tab1').session;
+
+    expect(after).toBeDefined();
+    expect(after).not.toBe(before);
+  });
+});
+
 describe('AcpManager.label', () => {
   it('returns undefined when no session exists for a tab', () => {
     const { acp } = setup();
@@ -386,7 +501,7 @@ describe('AcpManager — remote tabs', () => {
     expect(append).toHaveBeenCalledWith('tab1', {
       input: 'acp hello', output: 'ACP: the remote session is still connecting.',
     });
-    expect(onDone).toHaveBeenCalledWith('ACP: the remote session is still connecting.');
+    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: the remote session is still connecting.' });
     expect(addBusy).not.toHaveBeenCalled();
     expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
     expect(channel.attachAcp).not.toHaveBeenCalled();
@@ -542,6 +657,6 @@ describe('AcpManager model resolution', () => {
       input: 'acp hello',
       output: 'ACP: no opencode model is available in the harness catalog.',
     });
-    expect(onDone).toHaveBeenCalledWith('ACP: no opencode model is available in the harness catalog.');
+    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: no opencode model is available in the harness catalog.' });
   });
 });

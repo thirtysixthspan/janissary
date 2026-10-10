@@ -38,8 +38,13 @@ export function updateRunningEntry(
       const previous = log[index];
       log[index] = { ...previous, output, running };
       if (tab.runtime?.acpEntries?.has(previous)) tab.runtime.acpEntries.add(log[index]);
+      // The entry was rewritten, so the log is not the log it was — even though its length is.
+      markRevised(tab);
     }
     tab.log = log;
+    // Output landing in the tab is the tab doing something, so it moves activity whether or not the
+    // entry it wrote into existed — a stream whose match found nothing still wrote.
+    markActive(tabs, label);
     if (!running) {
       hooks.finalize?.(tab);
       hooks.markUnread?.(label);
@@ -123,6 +128,23 @@ export function finishRunningTab(
   });
 }
 
+// Stamp a tab's activity at now. A `LogEntry` carries no timestamp and the answer "is this tab doing
+// anything" is wanted per tab rather than per entry, so it lives on the tab's runtime record and is
+// written wherever the transcript grows. Minute-rounded by its readers, not here.
+export function markActive(tabs: Tab[], label: string): void {
+  const runtime = runtimeFor(tabs, label);
+  if (runtime) runtime.lastActivity = Date.now();
+}
+
+// Advance a tab's transcript revision, beside every write that really changed its log. A cursor
+// watching the log's length alone cannot see two of them — output rewritten into a running entry, and
+// an append to a log already at its cap — so the count of writes is its own record. Not advanced by a
+// write that changed nothing, so a reader is not woken by a no-op.
+function markRevised(tab: Tab): void {
+  tab.runtime ??= { busy: false, context: [], queue: [] };
+  tab.runtime.transcriptRevision = (tab.runtime.transcriptRevision ?? 0) + 1;
+}
+
 export function appendTab(
   tabs: Tab[], label: string, entry: LogEntry,
   capLog: (log: LogEntry[]) => LogEntry[],
@@ -133,6 +155,9 @@ export function appendTab(
   const trimmed = appendEntry(tab, entry, capLog);
   if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
   messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry, tab });
+  markActive(tabs, label);
+  // Every append writes, whether it grew the log or displaced its oldest entry at the cap.
+  markRevised(tab);
   markUnread(label);
   messageBus.emit('state', { type: 'dirty' });
 }
@@ -141,6 +166,8 @@ export function clearTranscriptTab(tabs: Tab[], label: string): void {
   const tab = tabs.find((t) => t.label === label);
   if (!tab) return;
   clearLog(tab);
+  markActive(tabs, label);
+  markRevised(tab);
   messageBus.emit('transcript', { type: 'tab:cleared', tabLabel: label });
   messageBus.emit('state', { type: 'dirty' });
 }

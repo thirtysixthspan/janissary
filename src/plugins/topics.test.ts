@@ -59,13 +59,17 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
   const cancel = vi.fn();
   const clearAll = vi.fn();
   const setActiveTab = vi.fn();
-  const tabs = [{ label: 'janus' }, { label: 'agent-1' }];
+  const tabs = [{ label: 'janus', log: [] }, { label: 'agent-1', log: [] }];
   const managers = {
     tab: {
       tabs,
       findIndex: (label: string) => tabs.findIndex((tab) => tab.label === label),
       setActiveTab,
     },
+    // The `tabs` topic's rows are built by the activity reader, which asks these two beside the tab
+    // list — so a stub for that topic has to answer them.
+    questions: { pendingFor: (): unknown => undefined },
+    launchDir: undefined,
     schedule: { aggregatedView: () => rows, cancel, clearAll },
     conversations: {
       view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
@@ -325,6 +329,34 @@ describe('the sessions topic source', () => {
     const { managers } = makeManagers();
     runTopicAction(managers, action as TabPluginTopicAction);
     expect(managers.sessions[method]).not.toHaveBeenCalled();
+  });
+});
+
+describe('the tabs topic source', () => {
+  it('reads the activity rows the host already computes', () => {
+    const { managers } = makeManagers();
+    expect(readTopicData(managers, 'tabs').map((row) => row.label)).toEqual(['janus', 'agent-1']);
+  });
+
+  // A rail click is navigation: the row's label is resolved to a tab and made active, which is also
+  // the route that starts the unread dwell — so nothing client-side clears a badge.
+  it('focuses the tab a row names', () => {
+    const { managers, setActiveTab } = makeManagers();
+
+    runTopicAction(managers, { topic: 'tabs', action: 'focus', label: 'agent-1' });
+
+    expect(setActiveTab).toHaveBeenCalledWith(1);
+  });
+
+  // The closed-target case: a tab that closed between the click and its answer has no row to focus, and
+  // the action does nothing rather than moving focus somewhere unintended.
+  it('does nothing for a label with no open tab', () => {
+    const { managers, setActiveTab } = makeManagers();
+    expect(readTopicData(managers, 'tabs').some((tab) => tab.label === 'closed-tab')).toBe(false);
+
+    runTopicAction(managers, { topic: 'tabs', action: 'focus', label: 'closed-tab' });
+
+    expect(setActiveTab).not.toHaveBeenCalled();
   });
 });
 
