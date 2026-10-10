@@ -7,6 +7,8 @@ import type {
 } from './api.js';
 import { tabActivityRows } from './activity.js';
 
+const TABS_NOTIFICATION_WINDOW_MS = 100;
+
 // Where each host topic comes from, what it carries, and what a plugin may ask the host to do to it.
 // One entry per topic, so adding a topic is a data change here rather than a new branch anywhere
 // else — the notification dispatcher, the `topicData` capability, and the `topicAction` capability
@@ -144,6 +146,24 @@ function actOnDatabases(managers: Managers, action: TabPluginTopicAction): void 
   messageBus.emit('databases', { type: 'changed' });
 }
 
+function subscribeTabs(fire: () => void): Subscription {
+  let delivery: ReturnType<typeof setTimeout> | undefined;
+  const listener = messageBus.on('state', 'dirty', () => {
+    if (delivery !== undefined) return;
+    delivery = setTimeout(() => {
+      delivery = undefined;
+      fire();
+    }, TABS_NOTIFICATION_WINDOW_MS);
+  });
+  return {
+    unsubscribe: () => {
+      listener.unsubscribe();
+      if (delivery !== undefined) clearTimeout(delivery);
+      delivery = undefined;
+    },
+  };
+}
+
 const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
   schedules: {
     subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
@@ -174,7 +194,7 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     // focus, a badge, a dock, a title, an open, a close — ends there and nowhere else. The rows it
     // hands over are minute-rounded, so a republish is forced by a real change and not by every
     // transcript append.
-    subscribe: (fire) => messageBus.on('state', 'dirty', fire),
+    subscribe: subscribeTabs,
     read: (managers) => tabActivityRows(managers),
     act: actOnTabs,
     empty: [],

@@ -11,16 +11,15 @@ import type { DatabaseGridQuery, RemoteSessionView } from '../protocol.js';
 // `api.ts` beside `define-intents.ts` and re-exported from it, so a plugin still imports the whole
 // contract — capabilities, declaration, activation — from one module.
 
-// Host state a plugin may ask to be told about. A topic is always a named, already-coalesced signal
-// — never the raw state broadcast, which fires on essentially every mutation including per-keystroke
-// shell output. Adding one is additive; each needs its own justification and its own data slice.
+// Host state a plugin may ask to be told about. A topic is a named signal with its own delivery
+// policy — never a direct view of the raw state broadcast, which fires on essentially every mutation
+// including per-keystroke shell output. Adding one is additive; each needs its own justification and
+// its own data slice.
 //
-// `tabs` is the one exception to the coalescing rule, and deliberately so: a tail's display state
-// genuinely changes on the raw state broadcast, because that is what a focus, a badge, a dock, a
-// title, and a tab opening or closing all end in. It pays for that with the tightest rows of any
-// topic — last activity is minute-rounded, so two transcript appends inside one minute report the
-// same value — and its subscriber is expected to drop a republish whose rows have not moved, which
-// is what keeps a per-mutation signal from becoming a per-mutation broadcast.
+// `tabs` listens to raw state changes because focus, badges, docking, titles, opening, and closing all
+// end there. Its source coalesces each burst into one delivery within a short window and reads the
+// latest rows at delivery time. Last activity is minute-rounded, and the launcher drops unchanged
+// rows as a second guard against repeated payloads.
 export type TabPluginNotificationTopic =
   | 'schedules' | 'conversations' | 'sessions' | 'databases' | 'tabs';
 

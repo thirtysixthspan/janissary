@@ -158,6 +158,87 @@ describe('tab plugin notifications', () => {
     vi.useRealTimers();
   });
 
+  it('coalesces tab-state bursts and delivers the latest focus and unread state', async () => {
+    vi.useFakeTimers();
+    const managers = makeManagers();
+    const notify = vi.fn();
+    const host = new TabPluginHost(managers, [manifest('fixture', ['tabs'])], {
+      fixture: async () => ({ activate: () => activationFor(notify) }),
+    });
+    try {
+      const pluginTab = await openTab(host, managers);
+      await vi.advanceTimersByTimeAsync(100);
+      notify.mockClear();
+
+      managers.tab.setActiveTab(0);
+      managers.tab.setActiveTab(1);
+      const rootTab = managers.tab.tabs[0];
+      if (rootTab) rootTab.hasUnread = true;
+      messageBus.emit('state', { type: 'dirty' });
+
+      await vi.advanceTimersByTimeAsync(99);
+      expect(notify).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+
+      expect(notify).toHaveBeenCalledOnce();
+      const event = notify.mock.calls[0]?.[0] as TabPluginNotification | undefined;
+      const rootRow = event?.topic === 'tabs' ? event.data.find((row) => row.label === 'janus') : undefined;
+      const activeRow = event?.topic === 'tabs' ? event.data.find((row) => row.label === pluginTab.label) : undefined;
+      expect(rootRow).toMatchObject({ hasUnread: true, active: false });
+      expect(activeRow?.active).toBe(true);
+    } finally {
+      host.dispose();
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancels a pending tabs delivery when the host is disposed', async () => {
+    vi.useFakeTimers();
+    const managers = makeManagers();
+    const notify = vi.fn();
+    const host = new TabPluginHost(managers, [manifest('fixture', ['tabs'])], {
+      fixture: async () => ({ activate: () => activationFor(notify) }),
+    });
+    try {
+      await openTab(host, managers);
+      await vi.advanceTimersByTimeAsync(100);
+      notify.mockClear();
+      messageBus.emit('state', { type: 'dirty' });
+
+      host.dispose();
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(notify).not.toHaveBeenCalled();
+    } finally {
+      host.dispose();
+      vi.useRealTimers();
+    }
+  });
+
+  it('rechecks plugin eligibility when a tabs delivery is pending', async () => {
+    vi.useFakeTimers();
+    const managers = makeManagers();
+    const notify = vi.fn();
+    const host = new TabPluginHost(managers, [manifest('fixture', ['tabs'])], {
+      fixture: async () => ({ activate: () => activationFor(notify) }),
+    });
+    try {
+      const tab = await openTab(host, managers);
+      await vi.advanceTimersByTimeAsync(100);
+      notify.mockClear();
+      messageBus.emit('state', { type: 'dirty' });
+
+      host.clientFailed(tab.label, 'client closed');
+      await vi.advanceTimersByTimeAsync(100);
+
+      expect(host.statusFor('fixture')?.state).toBe('disabled');
+      expect(notify).not.toHaveBeenCalled();
+    } finally {
+      host.dispose();
+      vi.useRealTimers();
+    }
+  });
+
   it('delivers the current rows and the plugin\'s own instance keys', async () => {
     const managers = makeManagers();
     const seen: TabPluginNotification[] = [];
