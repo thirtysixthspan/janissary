@@ -21,6 +21,8 @@ The label is the user's own wording for the command, so two projects may call th
 
 A `~/.janissary/launcher.json` in the user's home directory **replaces** the project file wholesale when it exists. An absent file, an unreadable one, one that is not valid JSON, and one whose entries are all malformed fall back to a built-in default command set; the launcher reports what was wrong to the notifications feed once, and leaves the file on disk untouched. A file with some good entries and some bad keeps the good ones and reports how many were lost. An empty array is treated as no configuration at all rather than as a choice to show nothing.
 
+Every `launcher` invocation re-reads the file in effect, and the rail is republished from it whenever it has changed — so the labels and commands the rail shows are the ones a click will run, even when no tab row moved to make the change visible.
+
 The rail's **Configure** button opens whichever file is currently in effect — the home override when one exists, otherwise the project's — in an editor tab, so what it opens is what the launcher reads back.
 
 ### The tab list

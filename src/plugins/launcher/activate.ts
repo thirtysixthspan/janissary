@@ -22,7 +22,7 @@ import {
   summarizeOnce,
   type SummarizerState,
 } from './summarizer.js';
-import { initialState, payloadOf, rowsChanged, toRows, type LauncherState } from './payload.js';
+import { initialState, payloadOf, configFingerprint, payloadChanged, toRows, type LauncherState } from './payload.js';
 
 // There is one launcher for the life of the server, so its state is module state. The one thing that must
 // be per-launcher rather than per-server is the summarizer's cursors, which describe what this tab has
@@ -53,12 +53,14 @@ function reportProblem(capabilities: TabPluginServerCapabilities): void {
   capabilities.notifyUser(state.problem);
 }
 
-// Republish the payload from the rows just handed over, unless nothing moved. Returns whether it wrote,
-// so the `tabs` topic's handler can tell a republish from a no-op.
+// Republish the payload from the rows just handed over, unless nothing moved — in the rows, or in the
+// command configuration the rail is drawn from. Returns whether it wrote, so the `tabs` topic's
+// handler can tell a republish from a no-op.
 function republish(capabilities: TabPluginServerCapabilities, rows: readonly TabActivityEntry[]): boolean {
   const projected = toRows(rows, activeLabelOf(capabilities));
-  if (!rowsChanged(state, projected)) return false;
+  if (!payloadChanged(state, projected)) return false;
   state.rows = projected;
+  state.publishedConfig = configFingerprint(state);
   capabilities.updateTab(LAUNCHER_INSTANCE_KEY, () => ({
     title: LAUNCHER_LABEL,
     payload: payloadOf(state, projected),

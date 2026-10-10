@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Publish edited launcher configuration when the existing singleton is reopened.
-
-Existing Issue: readCommands changes module state on every launcher invocation, but an existing tab skips its creation factory and republish compares only tab rows, leaving unchanged rows with the old visible command configuration. Severity: 6/10
-
-Existing Risk: 6/10 - The user sees stale labels and commands after editing launcher.json, while server-side IDs may already resolve to different commands.
-
-Proposal Risk: 2/10 - Publishing configuration changes explicitly keeps displayed entries and dispatched commands synchronized.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "publish edited launcher configuration when the existing singleton is reopened". In src/plugins/launcher/activate.ts and src/plugins/launcher/payload.ts, include commands, source, filePath, and problem in the publication decision or explicitly update the existing singleton after re-reading configuration. Keep notification deduplication independent of row fingerprints. Extend src/plugins/launcher/activate.test.ts with a host fake that skips the factory for an existing instance, edit a command and its label without changing tabs, invoke launcher again, and assert the visible payload and executed command agree. The current fake always runs the factory and hides this case.
-
-
 * Route command-rail clicks through application interception and visible reply handling.
 
 Existing Issue: Command-rail clicks use a fire-and-forget run-command intent, bypass client interception, and discard dispatch results, so the default Tasks and History rows are server no-ops and command errors never reach the visible reply area. Severity: 7/10

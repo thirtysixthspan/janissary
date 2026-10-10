@@ -29,6 +29,11 @@ const TRANSCRIPT = 'transcript output the rail must never carry';
 
 function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   const opened: { key: string; value: TabPluginPayload }[] = [];
+  const focused: string[] = [];
+  // The instance keys this plugin has a tab open for. The host runs the creation factory only when it
+  // does not: `openPluginTab` focuses the tab already holding the key and returns, which is the case a
+  // second `launcher` is — and the case the configuration republish exists for.
+  const openKeys = new Set<string>();
   const updated: { key: string; value: TabPluginTabUpdate }[] = [];
   const docks: { key: string; dock: 'left' | 'right' | null }[] = [];
   const actions: TabPluginTopicAction[] = [];
@@ -51,7 +56,12 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   // so the summarizer is told which kind of line it got rather than left to read the text.
   let refusal: string | undefined;
   const capabilities = {
-    openOrFocusTab: (key: string, factory: () => TabPluginPayload) => { opened.push({ key, value: factory() }); },
+    openOrFocusTab: (key: string, factory: () => TabPluginPayload) => {
+      focused.push(key);
+      if (openKeys.has(key)) return;
+      openKeys.add(key);
+      opened.push({ key, value: factory() });
+    },
     updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory() }); },
     dockTab: (key: string, dock: 'left' | 'right' | null) => { docks.push({ key, dock }); },
     tabActivity: (tailLines?: number) => {
@@ -78,10 +88,13 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     reportFailure: (reason: unknown): never => { throw new Error(String(reason)); },
   } as unknown as TabPluginServerCapabilities;
   return {
-    actions, activityReads, capabilities, dispatched, docks, notified, opened, prompted, updated,
+    actions, activityReads, capabilities, dispatched, docks, notified, opened, focused, prompted, updated,
     answerWith: (text: string) => { reply = text; },
     failStartWith: (reason: string) => { startError = reason; },
     refuseWith: (reason: string | undefined) => { refusal = reason; },
+    // The host closing this plugin's tab with it, so the next invocation creates one rather than
+    // focusing a tab that is no longer there.
+    closeLauncher: () => { openKeys.clear(); },
     closeTabs: (labels: string[]) => { rows = rows.filter((tab) => !labels.includes(tab.label)); },
     growTab: (label: string, by: number) => {
       rows = rows.map((tab) => (tab.label === label ? { ...tab, logLength: tab.logLength + by } : tab));
@@ -160,8 +173,10 @@ describe('the launcher command', () => {
     activation.command?.('', entry.capabilities);
     activation.command?.('', entry.capabilities);
 
-    expect(entry.opened).toHaveLength(2);
-    expect(entry.opened.map((open) => open.key)).toEqual(['launcher', 'launcher']);
+    expect(entry.focused).toEqual(['launcher', 'launcher']);
+    // One creation, because the host focuses the tab that already holds the key rather than running
+    // the factory again.
+    expect(entry.opened).toHaveLength(1);
     expect(entry.docks).toHaveLength(2);
   });
 
@@ -417,7 +432,10 @@ describe('disposing the launcher', () => {
 
       expect(() => activation.dispose?.()).not.toThrow();
 
-      // A command after a dispose starts from scratch rather than resuming the old state.
+      // The host closed this plugin's tab with it, so the next invocation creates one rather than
+      // focusing a tab that is gone — and that one starts from scratch rather than resuming the old
+      // state.
+      entry.closeLauncher();
       activation.command?.('', entry.capabilities);
       const payload = entry.opened.at(-1)?.value.payload;
       if (!isLauncherPayload(payload)) throw new Error('payload rejected');
@@ -432,6 +450,53 @@ describe('disposing the launcher', () => {
 describe('summarizing', () => {
   // The wedge this whole design avoids: a `startAcp` the host refuses must be reported and retried, not
   // thrown outside the handler that already catches and never wedged.
+  // `readCommands` re-reads the file on every invocation, so the server resolves a row's command
+  // against the new entry. The rail has to say so too: a republish that asks only about rows drops the
+  // change, and the row the user clicks no longer runs the command the row names.
+  it('republishes the rail when the file behind it changed and no row moved', () => {
+    const root = project();
+    try {
+      const entry = fixture(ROWS, root);
+      const activation = activate();
+      activation.command?.('', entry.capabilities);
+      entry.updated.length = 0;
+
+      writeFileSync(
+        path.join(root, '.janissary', 'launcher.json'),
+        `${JSON.stringify([{ id: 'tasks', icon: 'faBell', label: 'Work items', command: 'schedules' }], null, 2)}\n`,
+      );
+      activation.command?.('', entry.capabilities);
+
+      const payload = entry.updated.at(-1)?.value.payload;
+      if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+      expect(payload.commands).toEqual([
+        { id: 'tasks', icon: 'faBell', label: 'Work items', command: 'schedules' },
+      ]);
+      // And the row the client clicks now dispatches the line the file holds.
+      entry.dispatched.length = 0;
+      activation.intent(
+        { tabLabel: 'launcher', intent: 'run-command', payload: { id: 'tasks' }, tabPayload: payload },
+        entry.capabilities,
+      );
+      expect(entry.dispatched).toEqual(['schedules']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // The other half of the same decision: an invocation where nothing at all changed still publishes
+  // nothing, so the new fingerprint cannot become a per-invocation broadcast.
+  it('publishes nothing when neither the rows nor the file moved', () => {
+    const entry = fixture(ROWS, project());
+    const activation = activate();
+    activation.command?.('', entry.capabilities);
+    entry.updated.length = 0;
+
+    activation.command?.('', entry.capabilities);
+
+    expect(entry.updated).toHaveLength(0);
+  });
+
   it('reports a session it cannot start, and does not wedge', async () => {
     const entry = openLauncher();
     const activation = activate();

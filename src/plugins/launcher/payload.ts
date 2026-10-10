@@ -3,7 +3,8 @@ import type { LauncherCommand, LauncherPayload, LauncherTabRow } from './shared.
 
 // What the launcher's single tab holds beyond its payload, in module state because there is exactly
 // one launcher for the life of the server. The summaries are the ACP-written paragraphs keyed by
-// label; `rows` is the last set published, which is what an unchanged republish is dropped against.
+// label; `rows` is the last set published, which is what an unchanged republish is dropped against;
+// `publishedConfig` is the command half as last published, for the same reason.
 export type LauncherState = {
   rows: LauncherTabRow[] | null;
   summaries: Record<string, string>;
@@ -12,6 +13,7 @@ export type LauncherState = {
   filePath: string;
   problem?: string;
   reported: boolean;
+  publishedConfig?: string;
 };
 
 export function initialState(): LauncherState {
@@ -22,6 +24,7 @@ export function initialState(): LauncherState {
     source: 'default',
     filePath: '',
     reported: false,
+    publishedConfig: undefined,
   };
 }
 
@@ -64,10 +67,24 @@ export function payloadOf(state: LauncherState, rows: LauncherTabRow[]): Launche
   };
 }
 
+// The command half of the state as one fingerprint: the rail, the file it came from, whether one was
+// in effect at all, and what the host had to say about it. It is published beside the rows rather than
+// inside them, because editing `launcher.json` and typing `launcher` again moves this half and not one
+// row — and a republish that asks only about rows leaves the rail showing the file as it was.
+export function configFingerprint(state: LauncherState): string {
+  return JSON.stringify([state.commands, state.source, state.filePath, state.problem ?? null]);
+}
+
 // Whether these rows differ from the last set published. The comparison is by value, which is what
 // the `tabs` topic's handler needs: a per-mutation signal must not become a per-mutation broadcast,
 // and the only honest way to tell is to ask whether anything actually changed.
 export function rowsChanged(state: LauncherState, rows: LauncherTabRow[]): boolean {
   if (state.rows === null) return true;
   return JSON.stringify(rows) !== JSON.stringify(state.rows);
+}
+
+// Whether publishing would change what the tab shows: the rows have moved, or the command
+// configuration behind them has. Either half alone is not the whole payload.
+export function payloadChanged(state: LauncherState, rows: LauncherTabRow[]): boolean {
+  return rowsChanged(state, rows) || state.publishedConfig !== configFingerprint(state);
 }
