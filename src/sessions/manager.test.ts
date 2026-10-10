@@ -384,6 +384,12 @@ describe('SessionsManager offers', () => {
     const h = harness([entry()]);
     expect(h.sessions.offers('focus', { label: 'nothing-here' })).toBeUndefined();
   });
+
+  it('authorises diff on a ready live row, and refuses a label no row names', () => {
+    const h = harness([entry()]);
+    expect(h.sessions.offers('diff', { label: 'claude' })).toMatchObject({ label: 'claude' });
+    expect(h.sessions.offers('diff', { label: 'nothing-here' })).toBeUndefined();
+  });
 });
 
 describe('SessionsManager attachTab', () => {

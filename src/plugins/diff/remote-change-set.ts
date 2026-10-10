@@ -15,7 +15,14 @@ const UNUSABLE_ANSWER = 'The remote host did not answer with a change set.';
 export async function readRemoteChangeSet(
   capabilities: TabPluginServerCapabilities, fullFiles: ReadonlySet<string>,
 ): Promise<ChangeSetResult> {
-  const answer = capabilities.readWorkspaceChangeSet([...fullFiles]);
-  const value = answer === null ? undefined : await answer;
+  // A far side that throws is indistinguishable from one that answered unusably: both are a host that
+  // did not give this plugin a change set, and the tab's error state says exactly that.
+  let value: unknown;
+  try {
+    const answer = capabilities.readWorkspaceChangeSet([...fullFiles]);
+    value = answer === null ? undefined : await answer;
+  } catch {
+    return { kind: 'error', reason: UNUSABLE_ANSWER };
+  }
   return isChangeSetResult(value) ? value : { kind: 'error', reason: UNUSABLE_ANSWER };
 }
