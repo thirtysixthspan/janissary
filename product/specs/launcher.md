@@ -31,7 +31,7 @@ The rail's **Configure** button opens whichever file is currently in effect — 
 
 Below the rail is every open tab in the center strip, sorted into five tiers, each labelled. In order: **needs you**, **unread**, **active**, **working**, **idle**. Tabs keep their existing strip order inside a tier, so a row never moves within its tier. A tier no tab is in is not drawn at all.
 
-A tab ranks **needs you** when it is holding something the user has to answer — a pending agent question, or a harness sitting at a permission prompt. It sits above every other tier, including unread and active, because it is the one state worth interrupting for; without the tier, a blocked tab reads as merely busy, which is the row chrome a working tab gets.
+A tab ranks **needs you** when it is holding something the user has to answer — a pending agent question, or a harness sitting at a permission prompt the application is not answering for it. It sits above every other tier, including unread and active, because it is the one state worth interrupting for; without the tier, a blocked tab reads as merely busy, which is the row chrome a working tab gets. A permission gate the application is clearing itself, and a tab parked on a resume it has already scheduled, are not waiting on the user and do not put a tab in this tier.
 
 Docked tabs are never listed, and neither is the launcher's own tab. A docked tab is never the active tab and cannot be focused from here, so listing one would offer a click that cannot do what the list promises.
 

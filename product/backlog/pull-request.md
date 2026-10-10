@@ -24,17 +24,6 @@ Proposal Risk: 2/10 - Typed faithful fixtures and focused integration cases expo
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "repair the new review fixtures so they exercise the published types and real lifecycle contracts". Repair src/plugins/launcher/summarizer.test.ts so its TabActivityEntry helper supplies dotColor and active, its view values match the contract, every buildSummarizerPrompt call supplies a delimiter, and the asserted marker text matches the actual description. Repair the moved-topic fixture in src/plugins/launcher/activate.test.ts to deliver TabActivityEntry objects rather than LauncherTabRow projections lacking logLength. Replace forced capability casts where they hide these mismatches and add host-backed singleton and close tests. Add the plan's currently absent regression assertions for janus init idempotent launcher-file seeding, timestamp writers in src/tab/transcript/events.ts, and tabs.focus on a missing label, using the existing project-init, transcript, and topic test files. Run the appropriate diff-scoped checks during the separate implementation task; this review has identified these issues by reading only.
 
 
-* Handle automatically answered permission gates without falsely raising the needs-you tier.
-
-Existing Issue: busyStatusHandler records every detected gate as gateOpen even when its approver is clearing it, and the activity reader interprets that raw screen fact as needsInput independently of the existing stuck decision. Severity: 5/10
-
-Existing Risk: 5/10 - Normal auto-approved harness work repeatedly jumps into the highest-priority tier and tells the user to answer prompts the application is already answering.
-
-Proposal Risk: 2/10 - Separating gate presence from required human attention preserves genuine blocked prompts, with capture-order tests needed to catch a missed transition when approval stands down.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "exclude automatically answered gates from the needs-you tier". In src/harness/busy-status.ts, derive and record whether a detected permission gate actually requires the user using the same approver absence or isStuck decision already passed to BusyTracker.observe, also respecting the parked resumer state. Either give that attention fact its own TabRuntime field in src/tab/types.ts or explicitly redefine the existing field and its comments, then use it in src/plugins/activity.ts while retaining pending questions as an independent needsInput source. Preserve the capture ordering in src/harness/capture/wire.ts, where approval runs before busy classification. Extend src/harness/busy-status.test.ts and src/plugins/activity.test.ts with a successfully auto-approved gate, an identical gate that makes the approver stand down, a gate without an approver, and a cleared gate, checking both row status and dirty emission. Keep existing busy and unread behavior unchanged and document the distinction in product/specs/launcher.md.
-
-
 * Deliver the plan's single-click tab focusing instead of requiring confirmation on a second click.
 
 Existing Issue: LauncherTabRowView routes tab clicks through openOnConfirm, so the first click on a different row only selects it despite the plan, spec, and PR description promising the same focus behavior as a tab-strip click. Severity: 5/10

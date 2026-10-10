@@ -107,11 +107,13 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
     // row and the strip can never disagree about where the user is.
     active: managers.tab.activeTab >= 0 && managers.tab.tabs[managers.tab.activeTab]?.label === tab.label,
     // The two ways a tab can be waiting on the user rather than on work: a question it has asked,
-    // or a harness sitting at a permission gate. A gate is a screen state, so it is durable only for
-    // a harness the app observes itself — `src/harness/busy-status.ts` records it on the tab's
-    // runtime as each capture lands. A remote harness's gate arrives as a busy/unread transition
-    // that says only "idle and badged", so it reads as idle-unread there and not as needs-input.
-    needsInput: pending !== undefined || tab.runtime?.gateOpen === true,
+    // or a harness blocked on a permission prompt the application is not answering for it. A gate is
+    // a screen state, so it is durable only for a harness the app observes itself —
+    // `src/harness/busy-status.ts` records it on the tab's runtime as each capture lands, after the
+    // approver has already seen that capture, and leaves it false for a gate the approver is clearing
+    // or a tab parked on a scheduled resume. A remote harness's transition arrives as a bare
+    // busy/unread pair, so a remote gate reads as idle-unread there and not as needs-input.
+    needsInput: pending !== undefined || tab.runtime?.gateNeedsUser === true,
     lastActivity: Math.floor((tab.runtime?.lastActivity ?? 0) / MINUTE_MS) * MINUTE_MS,
     cwd: tab.runtime?.cwd ?? managers.tab.launchDir,
     ...(tab.remote && { remote: tab.remote.host }),
@@ -129,13 +131,15 @@ export function tabActivityRows(managers: Managers, tailLines?: number): TabActi
   return managers.tab.tabs.map((tab) => entryFor(tab, managers, tailLines));
 }
 
-// Record whether a harness tab is currently sitting at a permission gate, so the state outlives the
-// capture it was read from. Called from the capture handler that already holds the screen text; the
-// gate detection itself stays where it was, in `src/harness/auto-approve.ts`.
-export function recordGateOpen(managers: Managers, label: string, open: boolean): void {
+// Record whether a harness tab is currently held at a permission gate the user has to answer. A gate
+// is a screen state the tab has to remember, because nothing downstream can re-read the capture it was
+// seen in — the launcher's needs-input tier asks long after the frame is gone. Detection stays pure in
+// auto-approve; this is the record of what the last capture meant, which is the raw detection anded
+// with whether anything is answering the gate.
+export function recordGateNeedsUser(managers: Managers, label: string, needsUser: boolean): void {
   const tab = managers.tab.byLabel(label);
   if (!tab) return;
   const runtime = tabRuntime(tab);
-  if ((runtime.gateOpen ?? false) === open) return;
-  runtime.gateOpen = open;
+  if ((runtime.gateNeedsUser ?? false) === needsUser) return;
+  runtime.gateNeedsUser = needsUser;
 }

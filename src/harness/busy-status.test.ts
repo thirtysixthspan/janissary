@@ -437,6 +437,90 @@ describe('busyStatusHandler state push', () => {
   });
 });
 
+// What the tab is recorded as is not whether a gate is on screen but whether anybody has to answer it —
+// the same question `observe` is asked through `stuck`, from the same inputs. The launcher's needs-you
+// tier reads it, so a gate the application is answering itself must not put a tab there.
+describe('busyStatusHandler and the gate the user has to answer', () => {
+  const GATE = ' Do you want to proceed?\n ❯ 1. Yes\n   2. No';
+
+  function gated(name: string, autoApprove = false) {
+    // A freshly spawned harness tab starts busy, the way the real spawn path leaves it.
+    const busy = new Set([name]);
+    const tabRecord = { label: name, hasUnread: false, runtime: { busy: false, context: [], queue: [] } as Tab['runtime'] };
+    const tabs = [tabRecord];
+    const tab = {
+      tabs,
+      byLabel: (label: string) => tabs.find((t) => t.label === label),
+      isBusy: (label: string) => busy.has(label),
+      addBusy: (label: string) => { busy.add(label); },
+      deleteBusy: (label: string) => { busy.delete(label); },
+      markUnread: () => { tabs[0].hasUnread = true; },
+      clearUnread: () => { tabs[0].hasUnread = false; },
+    };
+    const approver = autoApprove
+      ? new HarnessAutoApprover({ harnessName: name, approve: vi.fn(), notify: vi.fn() })
+      : undefined;
+    const busyHandler = busyStatusHandler(name, name, { tab } as unknown as Managers, approver);
+    if (!busyHandler) throw new Error(`no busy entry for ${name}`);
+    const handler = (next: ScreenCapture) => {
+      approver?.onCapture(next);
+      busyHandler(next);
+    };
+    return { tabs, handler };
+  }
+
+  let dirtyCount = 0;
+  let subscription: Subscription;
+
+  beforeEach(() => {
+    dirtyCount = 0;
+    subscription = messageBus.on('state', 'dirty', () => { dirtyCount += 1; });
+  });
+
+  afterEach(() => { subscription.unsubscribe(); });
+
+  // The capture-order case: the approver has already seen this frame and is answering it, so nothing is
+  // waiting on the user and the tier must stay down.
+  it('records nothing to answer for a gate auto-approve is clearing', () => {
+    const { tabs, handler } = gated('claude', true);
+    handler(capture(GATE));
+
+    expect(tabs[0].runtime?.gateNeedsUser).not.toBe(true);
+    expect(dirtyCount).toBe(1);
+  });
+
+  // The identical gate again is what makes the approver stand down, and that is the case it does need
+  // the user — the same capture, read one step later, is the opposite answer.
+  it('records the gate once the approver stands down on it', () => {
+    const { tabs, handler } = gated('claude', true);
+    handler(capture(GATE));
+    const before = dirtyCount;
+    handler(capture(GATE));
+
+    expect(tabs[0].runtime?.gateNeedsUser).toBe(true);
+    expect(dirtyCount).toBe(before + 1);
+  });
+
+  it('records a gate with no approver at all', () => {
+    const { tabs, handler } = gated('claude');
+    handler(capture(GATE));
+
+    expect(tabs[0].runtime?.gateNeedsUser).toBe(true);
+  });
+
+  it('records nothing once the gate clears', () => {
+    const { tabs, handler } = gated('claude');
+    handler(capture(GATE));
+    expect(tabs[0].runtime?.gateNeedsUser).toBe(true);
+    const before = dirtyCount;
+
+    handler(capture('anything', CLAUDE_BUSY_TITLE));
+
+    expect(tabs[0].runtime?.gateNeedsUser).toBe(false);
+    expect(dirtyCount).toBe(before + 1);
+  });
+});
+
 // The escalation is armed from `applyBusyTransition` — the one place a local capture and a remote
 // harness's reported transition both arrive — and only when the badge was genuinely raised. These
 // drive real captures through the real handler with the real notification path behind it, which is

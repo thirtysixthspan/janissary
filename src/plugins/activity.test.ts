@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { tabActivityRows, recordGateOpen } from './activity.js';
+import { tabActivityRows, recordGateNeedsUser } from './activity.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 
@@ -72,7 +72,7 @@ describe('the tabActivity reader', () => {
   it('reports needs input for a pending question, and for a gate the capture handler recorded', () => {
     const { managers: host } = managers(
       [
-        tab({ label: 'asking', runtime: { busy: false, context: [], queue: [], gateOpen: true } }),
+        tab({ label: 'asking', runtime: { busy: false, context: [], queue: [], gateNeedsUser: true } }),
         tab({ label: 'questioning', runtime: { busy: false, context: [], queue: [] } }),
         tab({ label: 'working' }),
       ],
@@ -162,23 +162,36 @@ describe('the tabActivity reader', () => {
   });
 });
 
-describe('recording a permission gate', () => {
+describe('recording a permission gate the user has to answer', () => {
   const stubFor = (tabs: Tab[], label: string): Managers =>
     ({ tab: { byLabel: (name: string) => (name === label ? tabs[0] : undefined) } }) as unknown as Managers;
 
   it('writes it onto the tab the host hands it', () => {
     const blocked = tab({ label: 'shell', runtime: { busy: false, context: [], queue: [] } });
 
-    recordGateOpen(stubFor([blocked], 'shell'), 'shell', true);
+    recordGateNeedsUser(stubFor([blocked], 'shell'), 'shell', true);
 
-    expect(blocked.runtime?.gateOpen).toBe(true);
+    expect(blocked.runtime?.gateNeedsUser).toBe(true);
   });
 
   it('does nothing for a label with no open tab', () => {
     const blocked = tab({ label: 'shell', runtime: { busy: false, context: [], queue: [] } });
 
-    recordGateOpen(stubFor([blocked], 'other'), 'shell', true);
+    recordGateNeedsUser(stubFor([blocked], 'other'), 'shell', true);
 
-    expect(blocked.runtime?.gateOpen).toBeUndefined();
+    expect(blocked.runtime?.gateNeedsUser).toBeUndefined();
+  });
+
+  // The fact is a decision, not a detection: a gate the application is answering is recorded as
+  // nothing to answer, and the launcher's needs-you tier is not raised for a prompt nobody has to read.
+  it('leaves a gate the approver is clearing out of the needs-you tier', () => {
+    const blocked = tab({ label: 'shell', runtime: { busy: false, context: [], queue: [] } });
+    const host = { tab: { tabs: [blocked], launchDir: '/repo', byLabel: () => blocked }, questions: { pendingFor: (): unknown => undefined } };
+
+    recordGateNeedsUser(stubFor([blocked], 'shell'), 'shell', false);
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows[0]?.needsInput).toBe(false);
+    expect(blocked.runtime?.gateNeedsUser).not.toBe(true);
   });
 });

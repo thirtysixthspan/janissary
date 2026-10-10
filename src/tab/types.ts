@@ -275,11 +275,14 @@ export type TabRuntime = {
   // entry rewrites in place, and an append to a log already at its cap drops the oldest to make
   // room. In-memory only, beside `lastActivity` for the same reason.
   transcriptRevision?: number;
-  // Whether this harness tab is currently sitting at a permission gate. A screen state, so it is
-  // durable only while the app is observing the screen: `src/harness/busy-status.ts` writes it from
-  // each capture, and a remote harness's transition says only "idle and badged" and leaves it alone.
-  // In-memory only.
-  gateOpen?: boolean;
+  // Whether this harness tab is currently held at a permission gate the user has to answer. A screen
+  // state, so it survives only if the observation writes it down: `src/harness/busy-status.ts` records
+  // it from each capture, together with whether the application is answering the gate itself. A gate
+  // auto-approve is clearing, and a tab parked on a scheduled resume, are not waiting on anybody, so
+  // they are recorded as false — the launcher's needs-you tier reads this and must not be raised for a
+  // prompt nobody has to read. A remote harness's transition says only "idle and badged" and leaves it
+  // alone. In-memory only.
+  gateNeedsUser?: boolean;
   // A harness tab's pending idle escalation, owned by `src/harness/idle-notification.ts`.
   idleEscalation?: NodeJS.Timeout;
   // A plugin tab's last host-state delivery, fingerprinted, owned by `src/plugins/host-state.ts`.

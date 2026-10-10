@@ -5,7 +5,7 @@ import { BUSY_TABLE, classifyBusy, endsWithRecap } from './busy-classify.js';
 import { armHarnessIdleEscalation } from './idle-notification.js';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
-import { recordGateOpen } from '../plugins/activity.js';
+import { recordGateNeedsUser } from '../plugins/activity.js';
 
 export type BusyTransition = { busy: boolean; unread: boolean };
 
@@ -68,14 +68,14 @@ export class BusyTracker {
 }
 
 // The tab facts a capture can change, flattened for change detection: the busy flag, the unread badge,
-// and whether the tab is currently held at a permission gate. All three are surfaced above the command
-// bar, so a capture that flips one of them without touching the others still has to emit — `state: dirty`
-// must fire only when something a client can see actually moves, and a gate flipping while busy and
-// badge hold still is exactly that.
+// and whether the tab is held at a permission gate the user has to answer. All three are surfaced above
+// the command bar, so a capture that flips one of them without touching the others still has to emit —
+// `state: dirty` must fire only when something a client can see actually moves, and a gate flipping while
+// busy and badge hold still is exactly that.
 function dotSnapshot(managers: Managers, label: string): string {
   const tab = managers.tab.byLabel(label);
   const unread = tab?.hasUnread ?? false;
-  return `${managers.tab.isBusy(label)}:${unread}:${tab?.runtime?.gateOpen ?? false}`;
+  return `${managers.tab.isBusy(label)}:${unread}:${tab?.runtime?.gateNeedsUser ?? false}`;
 }
 
 // Apply one reported transition to the harness tab, for the local handler below and the remote
@@ -117,13 +117,21 @@ export function busyStatusHandler(
     // tier has to hear about, and comparing only the dot would leave it silent until some unrelated
     // mutation moved something else.
     const before = dotSnapshot(managers, label);
-    const transition = tracker.observe(capture, name, !approver || approver.isStuck, resumer?.isParked ?? false);
+    const gate = detectPermissionGate(capture.text, name);
+    const parked = resumer?.isParked ?? false;
+    // What the tab is recorded as is not whether a gate is on screen but whether anybody has to answer
+    // it — the same question `observe` is asked through `stuck`, from the same inputs. A gate the
+    // approver is clearing, and a tab parked on a resume the application has already scheduled, are
+    // waiting on nobody, and recording them as needing the user would raise the launcher's highest tier
+    // for a prompt that is already being answered.
+    const needsUser = gate && !parked && (!approver || approver.isStuck);
+    const transition = tracker.observe(capture, name, !approver || approver.isStuck, parked);
     if (transition) applyBusyTransition(managers, label, transition);
-    // The gate is a screen state the tab has to remember, because nothing downstream can re-read the
-    // capture it was seen in — the launcher's needs-input tier asks whether this tab is waiting on
-    // the user long after the frame is gone. Detection stays pure in auto-approve; this is the record
-    // of what the last capture said.
-    recordGateOpen(managers, label, detectPermissionGate(capture.text, name));
+    // A gate is a screen state the tab has to remember, because nothing downstream can re-read the
+    // capture it was seen in — the launcher's needs-input tier asks whether this tab is waiting on the
+    // user long after the frame is gone. Detection stays pure in auto-approve; this is the record of
+    // what the last capture meant.
+    recordGateNeedsUser(managers, label, needsUser);
     if (dotSnapshot(managers, label) !== before) messageBus.emit('state', { type: 'dirty' });
   };
 }
