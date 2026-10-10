@@ -39,13 +39,16 @@ export function SessionRowActions({
       {BUTTONS.filter((action) => row.actions.includes(action)).map((action) => {
         const { icon, label } = PRESENTATION[action];
         // Decision 12: while a workspace is still landing there is nothing to come back to, so the
-        // control stays where the eye expects it and is simply not pressable yet.
+        // control stays where the eye expects it and is simply not pressable yet. The same shape
+        // covers a diff on a row whose workspace has not landed, for the same reason: the verb is
+        // read on the workspace and there is none yet to read.
         //
         // The same shape covers a terminate already reaching the host: pressing Terminate again would
         // open a second ssh connection to the same peer and leak the first, since that channel is
         // keyed by a label the second attempt overwrites.
         const inFlight = row.terminating === true && (action === 'terminate' || action === 'attach');
-        const disabled = (action === 'detach' && row.state === 'provisioning') || inFlight;
+        const waiting = row.state === 'provisioning' && (action === 'detach' || action === 'diff');
+        const disabled = waiting || inFlight;
         return (
           <button
             key={action}

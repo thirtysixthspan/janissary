@@ -186,6 +186,20 @@ describe('SessionList buttons', () => {
     expect(screen.getByLabelText('Detach claude')).toBeDisabled();
   });
 
+  // The button is drawn from the moment the row appears, so the control does not jump once the clone
+  // lands; the row's state is what says there is nothing to read yet.
+  it('draws the diff button on a provisioning row, unpressable, and pressable once it is active', () => {
+    const { container, unmount } = list([
+      row({ state: 'provisioning', actions: ['focus', 'detach', 'diff'] }),
+    ]);
+    expect(container.querySelector('[data-action="diff"]')).toBeInTheDocument();
+    expect(screen.getByLabelText('Show diff in the workspace claude')).toBeDisabled();
+    unmount();
+
+    list([row({ state: 'active', actions: ['focus', 'detach', 'diff'] })]);
+    expect(screen.getByLabelText('Show diff in the workspace claude')).toBeEnabled();
+  });
+
   // A second End would open a second ssh connection to the same peer and leak the first, since the
   // end channel is keyed by a label the second attempt overwrites.
   it('holds the destructive buttons while an end attempt is in flight', () => {
@@ -387,6 +401,11 @@ describe('SessionList docked layout', () => {
   it('keeps detach disabled while provisioning', () => {
     list([row({ state: 'provisioning' })], capabilities('left').value);
     expect(screen.getByLabelText('Detach claude')).toBeDisabled();
+  });
+
+  it('keeps the diff button disabled while provisioning in the docked layout too', () => {
+    list([row({ state: 'provisioning', actions: ['focus', 'diff'] })], capabilities('left').value);
+    expect(screen.getByLabelText('Show diff in the workspace claude')).toBeDisabled();
   });
 
   it('keeps attach and terminate disabled during termination', () => {
