@@ -251,6 +251,7 @@ saves. The save itself does not trigger an external-change reload or overwrite-c
 While an editor tab is open, its underlying file is watched for changes made by other processes
 (outside the app). If the buffer has no unsaved changes, an external change is loaded automatically
 — the buffer refreshes to the new on-disk content and the cursor stays on the same line. The
+watch remains attached across atomic file replacement and deletion followed by recreation. The
 editor's own saves never trigger this reload; only changes made elsewhere do.
 
 If the buffer has unsaved changes when an external change is detected, the buffer is left alone —

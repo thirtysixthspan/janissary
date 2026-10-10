@@ -1,6 +1,7 @@
 import { watch, statSync, type FSWatcher } from 'node:fs';
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
+import path from 'node:path';
 
 const DEBOUNCE_MS = 100;
 
@@ -11,9 +12,8 @@ type WatchState = {
   debounce?: ReturnType<typeof setTimeout>;
 };
 
-// Watches an open editor tab's underlying file for changes made by other processes, keyed by tab
-// label. `markSaved` re-arms the watcher after atomic replacement and moves the baseline mtime
-// forward, so the app's own saves never appear as an external change.
+// Watches the directory containing an open editor file, keyed by tab label, so observation stays
+// attached to the pathname when another process atomically replaces the file itself.
 export class EditorWatchManager {
   private tabs = new Map<string, WatchState>();
 
@@ -24,8 +24,13 @@ export class EditorWatchManager {
     let baselineMtimeMs: number;
     try { baselineMtimeMs = statSync(filePath).mtimeMs; } catch { return; }
     try {
-      const watcher = watch(filePath, () => this.scheduleCheck(label));
-      this.tabs.set(label, { filePath, watcher, baselineMtimeMs });
+      const watcher = watch(path.dirname(filePath), (_event, filename) => {
+        if (filename && filename !== path.basename(filePath)) return;
+        this.scheduleCheck(label);
+      });
+      const state: WatchState = { filePath, watcher, baselineMtimeMs };
+      this.tabs.set(label, state);
+      watcher.on('error', () => this.handleWatcherError(label, state));
     } catch {
       // Exotic filesystems, fd limits, races — the editor still works, just without live reload.
     }
@@ -62,6 +67,13 @@ export class EditorWatchManager {
   private unwatch(label: string): void {
     const state = this.tabs.get(label);
     if (!state) return;
+    if (state.debounce) clearTimeout(state.debounce);
+    try { state.watcher.close(); } catch { /* already gone */ }
+    this.tabs.delete(label);
+  }
+
+  private handleWatcherError(label: string, state: WatchState): void {
+    if (this.tabs.get(label) !== state) return;
     if (state.debounce) clearTimeout(state.debounce);
     try { state.watcher.close(); } catch { /* already gone */ }
     this.tabs.delete(label);

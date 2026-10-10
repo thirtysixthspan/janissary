@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, writeFileSync, rmSync, statSync, utimesSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, statSync, utimesSync, renameSync } from 'node:fs';
 import type * as NodeFs from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -30,17 +30,24 @@ describe('EditorWatchManager', () => {
   let tabs: Tab[];
   let managers: unknown;
   let closeFns: (() => void)[];
+  let errorFns: (() => void)[];
 
   beforeEach(() => {
     root = mkdtempSync(path.join(tmpdir(), 'editor-watch-mgr-'));
     file = path.join(root, 'notes.txt');
     writeFileSync(file, 'hello');
     closeFns = [];
+    errorFns = [];
     watchMock.mockReset();
     watchMock.mockImplementation(() => {
       const close = vi.fn();
       closeFns.push(close);
-      return { close };
+      const watcher = { close, on: vi.fn() };
+      watcher.on.mockImplementation((_event, listener) => {
+        errorFns.push(listener as () => void);
+        return watcher;
+      });
+      return watcher;
     });
     tabs = [makeTab('notes', { name: 'notes.txt', path: file, size: '5 B', url: '/open/1' })];
     managers = {
@@ -63,6 +70,7 @@ describe('EditorWatchManager', () => {
     const manager = run();
     try {
       manager.watch('notes', file);
+      expect(watchMock).toHaveBeenCalledWith(root, expect.any(Function));
       const oldEvent = watchMock.mock.calls[0][1] as () => void;
       oldEvent();
       const       saveManagers = {
@@ -116,6 +124,78 @@ describe('EditorWatchManager', () => {
     }
   });
 
+  it('ignores named events for another entry and checks unnamed events', () => {
+    vi.useFakeTimers();
+    try {
+      const manager = run();
+      manager.watch('notes', file);
+      writeFileSync(file, 'changed elsewhere');
+      const onEvent = watchMock.mock.calls[0][1] as (event: string, filename: string | null) => void;
+
+      onEvent('change', 'other.txt');
+      vi.advanceTimersByTime(150);
+      expect(tabs[0].editor?.mtimeMs).toBeUndefined();
+
+      onEvent('rename', null);
+      vi.advanceTimersByTime(150);
+      expect(tabs[0].editor?.mtimeMs).toBe(statSync(file).mtimeMs);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('continues observing after successive atomic replacements and a later edit', () => {
+    vi.useFakeTimers();
+    try {
+      const manager = run();
+      manager.watch('notes', file);
+      const onEvent = watchMock.mock.calls[0][1] as (event: string, filename: string | null) => void;
+      for (const attempt of [1, 2]) {
+        const replacement = `${file}.${attempt}`;
+        writeFileSync(replacement, `replacement ${attempt}`);
+        const future = new Date(Date.now() + attempt * 2000);
+        utimesSync(replacement, future, future);
+        renameSync(replacement, file);
+        onEvent('rename', 'notes.txt');
+        vi.advanceTimersByTime(150);
+        expect(tabs[0].editor?.mtimeMs).toBe(statSync(file).mtimeMs);
+      }
+
+      writeFileSync(file, 'later edit');
+      const later = new Date(Date.now() + 6000);
+      utimesSync(file, later, later);
+      onEvent('change', 'notes.txt');
+      vi.advanceTimersByTime(150);
+      expect(tabs[0].editor?.mtimeMs).toBe(statSync(file).mtimeMs);
+      expect(watchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps observing a target while it is deleted and recreated', () => {
+    vi.useFakeTimers();
+    try {
+      const manager = run();
+      manager.watch('notes', file);
+      const onEvent = watchMock.mock.calls[0][1] as (event: string, filename: string | null) => void;
+      rmSync(file);
+      onEvent('rename', 'notes.txt');
+      vi.advanceTimersByTime(150);
+      expect(tabs[0].editor?.mtimeMs).toBeUndefined();
+
+      writeFileSync(file, 'recreated');
+      const future = new Date(Date.now() + 4000);
+      utimesSync(file, future, future);
+      onEvent('rename', 'notes.txt');
+      vi.advanceTimersByTime(150);
+      expect(tabs[0].editor?.mtimeMs).toBe(statSync(file).mtimeMs);
+      expect(watchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('ignores a watch event when the mtime has not actually moved', () => {
     vi.useFakeTimers();
     try {
@@ -154,6 +234,47 @@ describe('EditorWatchManager', () => {
     manager.watch('notes', file);
     manager.closeTab('notes');
     expect(closeFns[0]).toHaveBeenCalled();
+  });
+
+  it('closeTab cancels a pending check and watcher errors remove the failed state', () => {
+    vi.useFakeTimers();
+    try {
+      const manager = run();
+      manager.watch('notes', file);
+      const onEvent = watchMock.mock.calls[0][1] as () => void;
+      onEvent();
+      manager.closeTab('notes');
+      vi.advanceTimersByTime(150);
+      expect(tabs[0].editor?.mtimeMs).toBeUndefined();
+
+      manager.watch('notes', file);
+      writeFileSync(file, 'changed');
+      errorFns[1]();
+      expect(closeFns[1]).toHaveBeenCalledOnce();
+      manager.refresh('notes');
+      expect(watchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('dispose cancels a pending directory event check', () => {
+    vi.useFakeTimers();
+    try {
+      const manager = run();
+      manager.watch('notes', file);
+      writeFileSync(file, 'changed elsewhere');
+      const onEvent = watchMock.mock.calls[0][1] as () => void;
+      onEvent();
+
+      manager.dispose();
+      vi.advanceTimersByTime(150);
+
+      expect(tabs[0].editor?.mtimeMs).toBeUndefined();
+      expect(closeFns[0]).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('watch replaces an existing watcher for the same label', () => {
