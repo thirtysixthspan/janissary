@@ -13,9 +13,9 @@ const DAY = 24 * HOUR;
 export const timeAgoPrefix = 'active ';
 
 // The duration since `at`, in the coarsest unit that still says something. A tab that has done nothing
-// at all reads "never", because there is nothing to age — a freshly opened tab has no activity.
+// at all has no time value to show.
 export function relativeTime(at: number, now: number = Date.now()): string {
-  if (at <= 0) return 'never';
+  if (at <= 0) return '';
   const elapsed = Math.max(0, now - at);
   if (elapsed < MINUTE) return 'now';
   if (elapsed < HOUR) return `${Math.floor(elapsed / MINUTE)}m`;

@@ -11,9 +11,10 @@ describe('relative time', () => {
     expect(relativeTime(ago(2 * 24 * 60 * 60_000), NOW)).toBe('2d');
   });
 
-  it('reads anything under a minute as now, and a tab with nothing yet as never', () => {
+  it('reads anything under a minute as now, and leaves a tab with nothing yet blank', () => {
     expect(relativeTime(ago(30_000), NOW)).toBe('now');
-    expect(relativeTime(0, NOW)).toBe('never');
+    expect(relativeTime(0, NOW)).toBe('');
+    expect(relativeTime(-1, NOW)).toBe('');
   });
 
   // The host rounds a tab's activity down to the minute, which shifts the age shown by at most the 59
