@@ -1,5 +1,8 @@
 type SendDraft = (text: string) => Promise<boolean>;
 
+const RETRY_DELAY_MS = 1000;
+const MAX_RETRIES = 3;
+
 export class DraftSync {
   private desired: string | null = null;
   private acknowledged: string | null = null;
@@ -8,6 +11,7 @@ export class DraftSync {
   private send: SendDraft | undefined;
   private pending: object | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  private retries = 0;
 
   constructor(private debounceMs = 500) {}
 
@@ -22,6 +26,7 @@ export class DraftSync {
   detach(): void {
     clearTimeout(this.timer);
     this.timer = undefined;
+    this.retries = 0;
     this.pending = undefined;
     this.send = undefined;
     this.connected = false;
@@ -36,6 +41,7 @@ export class DraftSync {
     if (this.desired === text) return;
     this.desired = text;
     this.hasDraft = true;
+    this.retries = 0;
     this.schedule();
   }
 
@@ -46,18 +52,21 @@ export class DraftSync {
     clearTimeout(this.timer);
     this.timer = undefined;
     if (connected && this.hasDraft) {
+      this.retries = 0;
       this.acknowledged = null;
       void this.flush();
+    } else if (!connected) {
+      this.retries = 0;
     }
   }
 
-  private schedule(): void {
+  private schedule(delayMs = this.debounceMs): void {
     clearTimeout(this.timer);
     if (!this.connected || !this.send) return;
     this.timer = setTimeout(() => {
       this.timer = undefined;
       void this.flush();
-    }, this.debounceMs);
+    }, delayMs);
   }
 
   private async flush(): Promise<void> {
@@ -70,7 +79,15 @@ export class DraftSync {
     try { accepted = await this.send(text); } catch { accepted = false; }
     if (this.pending !== attempt) return;
     this.pending = undefined;
-    if (accepted) this.acknowledged = text;
-    if (this.desired !== text) this.schedule();
+    if (accepted) {
+      this.acknowledged = text;
+      this.retries = 0;
+    }
+    if (this.desired !== text) {
+      this.schedule();
+    } else if (!accepted && this.retries < MAX_RETRIES) {
+      this.retries += 1;
+      this.schedule(RETRY_DELAY_MS);
+    }
   }
 }

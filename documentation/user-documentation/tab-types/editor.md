@@ -175,6 +175,8 @@ As you type, the editor also keeps a transient, unsaved copy of your buffer sync
 
 If the connection drops, a monitor may temporarily see an older draft. Once reconnected, the current draft is sent again automatically, even if you have stopped typing.
 
+If a draft send fails while the connection stays open, the editor retries a few times. A later edit starts fresh retries; if they are exhausted, the current draft will be sent again after another edit or reconnection.
+
 ## Syntax highlighting
 
 <img class="agent-float" src="/agents/orhan-south-west.png" alt="" />

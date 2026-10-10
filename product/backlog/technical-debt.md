@@ -4,17 +4,6 @@
 
 ## development
 
-* Give editor draft synchronization a bounded recovery path for failed sends while the connection stays open.
-
-Existing Debt: Draft synchronization retains an unacknowledged snapshot after a failed send but schedules further work only when the text changes or another connection event occurs. Severity: 4/10
-
-Existing Risk: 4/10 - A failed final draft send on a connection that remains open leaves monitors and launcher summaries reading older editor content for an indefinite period after the user stops typing.
-
-Proposal Risk: 2/10 - Persistent transport failures can still leave the server draft stale after retries are exhausted, but a transient failure has a bounded chance to recover without another edit or reconnection.
-
-Proposal: Add a small capped retry policy to `flush` in `web/src/editor/draft-sync.ts` for an unaccepted current snapshot while the same transport remains connected, using its existing timer and pending-attempt identity to preserve one send at a time. Retry the latest desired text, reset the retry budget after acknowledgement or a new edit, and cancel retry timers on `detach` and disconnection; late acknowledgements from a replaced transport must remain ignored. Keep disk saving independent of this transient draft channel. `web/src/editor/useEditorSync.ts` is the adapter that reduces `editorSync` results to the acceptance boolean, and `src/editor/sync.ts` remains an idempotent in-memory draft update, making replay of the current snapshot safe. The stale draft is consumed by `currentEditorContent` in `src/editor/content.ts`, `src/monitor/editor-feed.ts`, and `src/plugins/activity.ts`. Extend `web/src/editor/draft-sync.test.ts` with connected failure followed by success without another edit, exhausted retries, latest-text replacement during retry, and teardown during backoff; its existing failure cases recover only after calling `setConnected`. Preserve acknowledgement, reconnection, URL replacement, and unmount behavior covered by that file and `web/src/editor/useEditorSync.test.ts`.
-
-
 * Separate transcript file-link parsing from React rendering so execution helpers can depend on the parser alone.
 
 Existing Debt: The file-link parser imports React and exports `renderFileLinkSegments` beside its parsing functions, so the framework-free link dispatcher imports a rendering module to classify a path in violation of §8 (pure modules and services sit below components). Severity: 4/10
