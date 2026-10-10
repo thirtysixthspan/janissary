@@ -177,4 +177,47 @@ describe('core ACP for plugin tabs', () => {
     await expect(answer).resolves.toBe('Done.');
     expect(managers.browser.run).toHaveBeenCalledWith('consumer', 'browser open https://example.com');
   });
+
+  // A refusal resolves with a line of prose, so the caller is told which kind of line arrived rather
+  // than left to read its text. The loop's own error path is the refusal a summarizer meets.
+  it('answers a prompt the loop failed as a refusal, with the line the user is shown', async () => {
+    const { managers, handlers } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+
+    capabilities.startAcp({ withoutTools: true });
+    const answer = capabilities.promptAcpResult('summarize the open tabs');
+    handlers().onChunk('partial');
+    handlers().onError('rate limited');
+
+    await expect(answer).resolves.toEqual({ answered: false, error: 'ACP error: rate limited' });
+  });
+
+  // A tab's session is replaced whenever the old one dies, and the successor arrives with nothing the
+  // previous one was primed with. The identity is what lets a caller see it.
+  it('reports a different session after the one it primed is replaced', async () => {
+    const { managers, handlers } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+    const first = capabilities.startAcp({ withoutTools: true });
+
+    const primed = capabilities.promptAcpResult('priming');
+    handlers().onChunk('primed');
+    handlers().onEnd('end_turn');
+    await expect(primed).resolves.toMatchObject({ answered: true, session: first.session });
+
+    managers.acp.close('consumer');
+    const second = capabilities.startAcp({ withoutTools: true });
+    expect(second.session).not.toBe(first.session);
+
+    const answered = capabilities.promptAcpResult('summarize the open tabs');
+    handlers().onChunk('[[tab:shell]] First.');
+    handlers().onEnd('end_turn');
+
+    await expect(answered).resolves.toMatchObject({ answered: true, session: second.session });
+  });
 });

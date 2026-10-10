@@ -1,3 +1,7 @@
+// The tab's own shapes. A leaf module on purpose: it imports nothing but this one type, which the
+// tab's in-flight ACP prompt settles with.
+import type { AcpPromptResult } from '../acp/types.js';
+
 export type LogEntry = {
   input: string;
   output: string;
@@ -256,7 +260,7 @@ export type CenterPane = 'left' | 'right';
 export type TabRuntime = {
   closing?: boolean;
   acpEntries?: WeakSet<LogEntry>;
-  acpPrompt?: { finish: (output: string) => void; abort: AbortController };
+  acpPrompt?: { finish: (result: AcpPromptResult) => void; abort: AbortController };
   cwd?: string;
   busy: boolean;
   context: string[];

@@ -38,6 +38,7 @@ export type TabPluginCapabilityName =
   | 'recordGlobalHistory'
   | 'startAcp'
   | 'promptAcp'
+  | 'promptAcpResult'
   | 'resetAcp'
   | 'rejectRequest'
   | 'reportFailure';
@@ -77,6 +78,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   recordGlobalHistory: true,
   startAcp: true,
   promptAcp: true,
+  promptAcpResult: true,
   resetAcp: true,
   rejectRequest: true,
   reportFailure: true,

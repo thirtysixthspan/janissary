@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Recover summary priming and cursors after core ACP returns an error or restarts.
-
-Existing Issue: The summarizer treats resolved ACP error strings as successful replies, advances every cursor, and keeps primed true even when the core session has been closed and replaced. Severity: 6/10
-
-Existing Risk: 6/10 - A transient ACP failure can permanently suppress a tab's summary until its transcript length changes, and a replacement session receives no persona or trust framing.
-
-Proposal Risk: 2/10 - Structured session identity and failure results make retries explicit while preserving successful-session priming.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "recover summary priming and cursors after core acp returns an error or restarts". Expose a structured success or failure result and a session identity through an additive plugin ACP surface in src/plugins/api.ts, src/plugins/acp-capabilities.ts, and src/acp/manager.ts rather than guessing from model text. In src/plugins/launcher/summarizer.ts, advance cursors only after a successful usable summary response, and re-prime with a new delimiter when session identity changes. Add tests for a prompt error returned as a resolved core response, a connection close between flushes, an empty or malformed reply, and retry without further tab output. Preserve the existing ordinary ACP string API for callers that depend on it.
-
-
 * Publish edited launcher configuration when the existing singleton is reopened.
 
 Existing Issue: readCommands changes module state on every launcher invocation, but an existing tab skips its creation factory and republish compares only tab rows, leaving unchanged rows with the old visible command configuration. Severity: 6/10

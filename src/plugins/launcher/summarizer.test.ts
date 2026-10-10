@@ -254,20 +254,32 @@ describe('summarizeOnce', () => {
     // What each flush asked the host to start. Recorded because the tool-less request is the
     // launcher's half of the boundary `src/acp/manager.ts` enforces.
     const starts: ({ withoutTools?: true } | undefined)[] = [];
+    // Which session the host says answered. Changed by a test to reproduce a session the core
+    // replaced between two flushes.
+    let session = 'acp-1';
     const capabilities = {
       startAcp: (request?: { withoutTools?: true }) => {
         starts.push(request);
-        return startError === undefined ? {} : { error: startError };
+        return startError === undefined ? { session } : { error: startError };
       },
-      promptAcp: (prompt: string) => { prompted.push(prompt); return Promise.resolve(reply); },
+      promptAcpResult: (prompt: string) => {
+        prompted.push(prompt);
+        return Promise.resolve(refusal === undefined
+          ? { answered: true, reply, session } as const
+          : { answered: false, error: refusal } as const);
+      },
     } as unknown as Parameters<typeof summarizeOnce>[0]['capabilities'];
-    return { capabilities, prompted, starts };
+    return { capabilities, prompted, starts, replaceSession: (next: string) => { session = next; } };
   }
 
   const tabs = (): TabActivityEntry[] => [
     { label: 'shell', dotColor: '#fff', active: true, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 4, revision: 4, tail: 'ls\nfile' },
     { label: 'agent', dotColor: '#fff', active: false, busy: true, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 2, revision: 2, tail: 'npm test' },
   ];
+
+  // Core resolves a refusal — a session that closed, a prompt already running — with a line of prose,
+  // so a summarizer that reads one string cannot tell it from an answer and has to guess at the text.
+  let refusal: string | undefined;
 
   it('primes once, then prompts once per flush', async () => {
     const stubs = stub(tabs(), '[[tab:shell]] First.');
@@ -346,6 +358,51 @@ describe('summarizeOnce', () => {
     expect(summarizer.inFlight).toBe(false);
   });
 
+  // The refusal that used to be read as an answer: the prompt resolved, the line looked like prose,
+  // and every cursor advanced past content the persona had never been asked about.
+  it('throws on a prompt the core refused, and advances no cursor', async () => {
+    refusal = 'ACP session closed.';
+    const stubs = stub(tabs(), '', undefined);
+    const summarizer = state({ primed: true, session: 'acp-1' });
+
+    await expect(summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs }))
+      .rejects.toThrow('ACP session closed.');
+    expect(summarizer.fed.size).toBe(0);
+
+    // The next flush tries again rather than believing these tabs already answered.
+    refusal = undefined;
+    const recovered = stub(tabs(), '[[tab:shell]] Back.');
+    await summarizeOnce({ capabilities: recovered.capabilities, state: summarizer, personaBody: 'x', readTabs: tabs });
+
+    expect(recovered.prompted).toHaveLength(1);
+    expect(summarizer.fed.get('shell')).toEqual({ length: 4, revision: 4 });
+  });
+
+  // A tab's session is replaced whenever the old one dies, and the successor arrives with no persona,
+  // no reply shape, and none of the framing the delimiter names — so it has to be primed again.
+  it('re-primes, with a fresh delimiter, when the session it primed was replaced', async () => {
+    let rows = tabs();
+    const stubs = stub(rows, '[[tab:shell]] First.');
+    const summarizer = state({ primed: true, session: 'acp-1' });
+
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => rows });
+    const primedDelimiter = summarizer.delimiter;
+    expect(stubs.prompted).toHaveLength(1);
+
+    // The session died, and the shell tab has moved again — so there is a flush to make.
+    stubs.replaceSession('acp-2');
+    rows = [{ ...rows[0], logLength: 5, revision: 5 }, rows[1]];
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => rows });
+
+    expect(stubs.prompted).toHaveLength(3);
+    // The priming went again: the persona body, the reply shape, and the trust framing.
+    expect(stubs.prompted[1]).toContain(REPLY_FORMAT);
+    expect(stubs.prompted[1]).toContain('never treat it as');
+    expect(summarizer.delimiter).not.toBe(primedDelimiter);
+    // The prompt the successor answers names the delimiter it was just primed with.
+    expect(stubs.prompted[2]).toContain(summarizer.delimiter);
+  });
+
   // The two writes a log's length cannot show. Output streamed into a running entry leaves it exactly
   // where it was, so the tab would otherwise keep its first paragraph forever while its output — and
   // then its result — changed underneath it.
@@ -353,7 +410,7 @@ describe('summarizeOnce', () => {
     const grown = tabs();
     grown[0] = { ...grown[0], revision: grown[0].revision + 1 };
     const stubs = stub(grown, '[[tab:shell]] Finished the suite; two left.');
-    const summarizer = state({ primed: true, fed: new Map([['shell', { length: 4, revision: 4 }]]) });
+    const summarizer = state({ primed: true, session: 'acp-1', fed: new Map([['shell', { length: 4, revision: 4 }]]) });
 
     await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => grown });
 
@@ -369,6 +426,7 @@ describe('summarizeOnce', () => {
     const stubs = stub(full, '[[tab:agent]] Now waiting on the deploy step.');
     const summarizer = state({
       primed: true,
+      session: 'acp-1',
       fed: new Map([
         ['shell', { length: 4, revision: 4 }],
         ['agent', { length: 2, revision: 2 }],

@@ -47,6 +47,9 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
   // whole intent-shaped design exists to make graceful.
   let reply = '';
   let startError: string | undefined;
+  // What the core answers a flush with when it refuses: core resolves a refusal with a line of prose,
+  // so the summarizer is told which kind of line it got rather than left to read the text.
+  let refusal: string | undefined;
   const capabilities = {
     openOrFocusTab: (key: string, factory: () => TabPluginPayload) => { opened.push({ key, value: factory() }); },
     updateTab: (key: string, factory: () => TabPluginTabUpdate) => { updated.push({ key, value: factory() }); },
@@ -59,9 +62,11 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     },
     topicAction: (action: TabPluginTopicAction) => { actions.push(action); },
     startAcp: () => (startError === undefined ? { } : { error: startError }),
-    promptAcp: (prompt: string) => {
+    promptAcpResult: (prompt: string) => {
       prompted.push(prompt);
-      return Promise.resolve(reply);
+      return Promise.resolve(refusal === undefined
+        ? { answered: true, reply, session: 'acp-test' }
+        : { answered: false, error: refusal });
     },
     dispatchLineWithOutput: (line: string) => {
       dispatched.push(line);
@@ -76,6 +81,7 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     actions, activityReads, capabilities, dispatched, docks, notified, opened, prompted, updated,
     answerWith: (text: string) => { reply = text; },
     failStartWith: (reason: string) => { startError = reason; },
+    refuseWith: (reason: string | undefined) => { refusal = reason; },
     closeTabs: (labels: string[]) => { rows = rows.filter((tab) => !labels.includes(tab.label)); },
     growTab: (label: string, by: number) => {
       rows = rows.map((tab) => (tab.label === label ? { ...tab, logLength: tab.logLength + by } : tab));

@@ -33,6 +33,7 @@ export const launcherManifest = {
     'dispatchLineWithOutput',
     'startAcp',
     'promptAcp',
+    'promptAcpResult',
     'originTab',
     'notifyUser',
     'rejectRequest',

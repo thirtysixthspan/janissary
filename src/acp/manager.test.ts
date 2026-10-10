@@ -168,7 +168,7 @@ describe('AcpManager.run', () => {
     handlers.error('something failed');
     expect(updateRunning).toHaveBeenCalledWith('tab1', { markdown: true }, 'ACP error: something failed', false, expect.objectContaining({ trailing: true }));
     expect(deleteBusy).toHaveBeenCalledOnce();
-    expect(onDone).toHaveBeenCalledWith('ACP error: something failed');
+    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP error: something failed' });
   });
 
   it('finished handler cleans up busy and calls onDone with the last answer when reason is answered', () => {
@@ -180,7 +180,7 @@ describe('AcpManager.run', () => {
     handlers.finished('answered', 8);
     expect(deleteBusy).toHaveBeenCalledOnce();
     expect(mocks.messageBusEmit).toHaveBeenCalledWith('state', { type: 'dirty' });
-    expect(onDone).toHaveBeenCalledWith('the final answer');
+    expect(onDone).toHaveBeenCalledWith({ answered: true, reply: 'the final answer', session: expect.any(String) });
   });
 
   it('finished handler appends a capped message when reason is capped', () => {
@@ -324,6 +324,66 @@ describe('AcpManager.run', () => {
   });
 });
 
+// A refusal resolves with a line of prose, so the caller is told which kind of line arrived rather
+// than left to read its text.
+describe('AcpManager.promptResult', () => {
+  // `promptResult` looks the tab up first, which `run` on its own does not — so these cases give the
+  // stub a tab to find.
+  function withTab() {
+    const base = setup();
+    (base.managers as unknown as { tab: { tabs: { label: string }[] } }).tab.tabs.push({ label: 'tab1' });
+    return base;
+  }
+
+  it('answers with the reply and the session that produced it', async () => {
+    const { acp } = withTab();
+    const pending = acp.promptResult('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+
+    handlers.endTurn('the answer');
+    handlers.finished('answered', 8);
+
+    await expect(pending).resolves.toEqual({ answered: true, reply: 'the answer', session: expect.any(String) });
+  });
+
+  it('answers a refusal as a failure carrying the line the user is shown', async () => {
+    const { acp } = withTab();
+    const pending = acp.promptResult('tab1', 'acp hello');
+    const handlers = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+
+    handlers.error('rate limited');
+
+    await expect(pending).resolves.toEqual({ answered: false, error: 'ACP error: rate limited' });
+  });
+
+  it('resolves prompt with the text alone, either way', async () => {
+    const { acp } = withTab();
+    const answered = acp.prompt('tab1', 'acp hello');
+    const first = mocks.runAcpToolLoop.mock.calls[0][3] as AcpLoopHandlers;
+    first.endTurn('the answer');
+    first.finished('answered', 8);
+
+    await expect(answered).resolves.toBe('the answer');
+
+    const refused = acp.prompt('tab1', 'acp hello');
+    const second = mocks.runAcpToolLoop.mock.calls[1][3] as AcpLoopHandlers;
+    second.error('rate limited');
+
+    await expect(refused).resolves.toBe('ACP error: rate limited');
+  });
+
+  it('reports the identity of a replaced session the next time one is created', () => {
+    const { acp } = setup();
+    const before = acp.start('tab1').session;
+
+    acp.close('tab1');
+    const after = acp.start('tab1').session;
+
+    expect(after).toBeDefined();
+    expect(after).not.toBe(before);
+  });
+});
+
 describe('AcpManager.label', () => {
   it('returns undefined when no session exists for a tab', () => {
     const { acp } = setup();
@@ -438,7 +498,7 @@ describe('AcpManager — remote tabs', () => {
     expect(append).toHaveBeenCalledWith('tab1', {
       input: 'acp hello', output: 'ACP: the remote session is still connecting.',
     });
-    expect(onDone).toHaveBeenCalledWith('ACP: the remote session is still connecting.');
+    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: the remote session is still connecting.' });
     expect(addBusy).not.toHaveBeenCalled();
     expect(mocks.runAcpToolLoop).not.toHaveBeenCalled();
     expect(channel.attachAcp).not.toHaveBeenCalled();
@@ -594,6 +654,6 @@ describe('AcpManager model resolution', () => {
       input: 'acp hello',
       output: 'ACP: no opencode model is available in the harness catalog.',
     });
-    expect(onDone).toHaveBeenCalledWith('ACP: no opencode model is available in the harness catalog.');
+    expect(onDone).toHaveBeenCalledWith({ answered: false, error: 'ACP: no opencode model is available in the harness catalog.' });
   });
 });

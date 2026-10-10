@@ -14,6 +14,16 @@ export type AcpSession = {
 
 export type AcpInfo = { provider?: string; model?: string };
 
+// What a prompt through the core ACP service produced: the session's answer, or the reason there was
+// none. A refusal — a tab that has gone, a session that closed mid-prompt, a prompt already running, a
+// model the catalog no longer lists — resolves with a line of prose, so a caller handed one string
+// cannot tell an answer from a refusal and has to guess at its text. `session` names the session that
+// answered: a tab's session is replaced whenever the old one dies, and a caller that primed the old one
+// has to be able to see that it is no longer the one being talked to.
+export type AcpPromptResult =
+  | { answered: true; reply: string; session: string }
+  | { answered: false; error: string };
+
 export type AcpOptions = {
   command: string;
   args: string[];

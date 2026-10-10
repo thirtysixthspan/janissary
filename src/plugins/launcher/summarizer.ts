@@ -146,8 +146,11 @@ export type SummarizerState = {
   fed: Map<string, { length: number; revision: number }>;
   primed: boolean;
   inFlight: boolean;
-  // The delimiter this session's priming taught the persona. Rotated when the session is re-primed, so a
-  // transcript author cannot guess a marker that long outlived the session it bounded.
+  // The identity of the core session this state was primed against, and the delimiter that priming
+  // taught it. A tab's session is replaced whenever the old one dies, and the successor arrives with
+  // no persona, no reply shape, and none of the framing — so a different identity means the prompt
+  // that follows has to be primed again, with a delimiter the new session has never seen.
+  session?: string;
   delimiter: string;
 };
 
@@ -199,16 +202,27 @@ export async function summarizeOnce(input: {
   try {
     const started = capabilities.startAcp({ withoutTools: true });
     if (started.error !== undefined) throw new Error(started.error);
-    if (!state.primed) {
-      await capabilities.promptAcp(primingText(personaBody, state.delimiter));
+    // A session the host replaced since the last flush is one nobody primed: it has no persona, no
+    // reply shape, and none of the framing this delimiter names. The delimiter is minted afresh too,
+    // so a delimiter a dead session was taught cannot be guessed from one this session has seen.
+    if (!state.primed || state.session !== started.session) {
+      state.delimiter = generateDelimiter();
+      const primed = await capabilities.promptAcpResult(primingText(personaBody, state.delimiter));
+      if (!primed.answered) throw new Error(primed.error);
       state.primed = true;
+      state.session = primed.session;
     }
-    const reply = await capabilities.promptAcp(buildSummarizerPrompt(tabs, state.delimiter, now));
+    const answered = await capabilities.promptAcpResult(
+      buildSummarizerPrompt(tabs, state.delimiter, now),
+    );
+    // A refusal is not a reply, so nothing has been fed: the cursors stay where they were and the next
+    // flush asks again, rather than believing these tabs already answered.
+    if (!answered.answered) throw new Error(answered.error);
     // Cursors advance only now, so a failure above leaves them where they were.
     for (const tab of tabs) {
       state.fed.set(tab.label, { length: tab.logLength, revision: tab.revision });
     }
-    return parseTabSummaries(reply);
+    return parseTabSummaries(answered.reply);
   } catch (error) {
     state.fed = new Map(cursors);
     throw error;
