@@ -3,27 +3,32 @@ import type { JanusClient } from '../../ws';
 import { copyAbsolutePaths, copySelectionToClipboards } from './navigator-copy';
 import { newFileTargetDir, newDirectoryTargetPath } from './navigator-new-file';
 import { normalizeOperationPaths } from './navigator-selection';
-import type { useFileNavigatorSelection } from '../useFileNavigatorSelection';
 import type { FileNavigatorMenuActions } from './navigator-menu-items';
-import type { useFileNavigatorOpener } from '../useFileNavigatorOpener';
-import type { useFileNavigatorPaste } from '../useFileNavigatorPaste';
-import type { useFileNavigatorDelete } from '../useFileNavigatorDelete';
-import type { useFileNavigatorRename } from '../useFileNavigatorRename';
-import type { useFileNavigatorRowEvents } from '../use-file-navigator-row-events';
-import type { useFileNavigatorCommit } from '../useFileNavigatorCommit';
+
+type SelectionPort = {
+  cursor: string | null;
+  selected: Set<string>;
+  operationPaths: string[];
+};
 
 type Params = {
   files: FileNavigatorView;
   client: JanusClient;
   index: number;
   label: string;
-  selection: ReturnType<typeof useFileNavigatorSelection>;
-  opener: ReturnType<typeof useFileNavigatorOpener>;
-  paste: ReturnType<typeof useFileNavigatorPaste>;
-  deletion: ReturnType<typeof useFileNavigatorDelete>;
-  rename: ReturnType<typeof useFileNavigatorRename>;
-  rowEvents: ReturnType<typeof useFileNavigatorRowEvents>;
-  commit: ReturnType<typeof useFileNavigatorCommit>;
+  selection: SelectionPort;
+  opener: {
+    open: (path: string, edit: boolean) => void;
+    openWith: (path: string, paths?: string[]) => void;
+  };
+  paste: {
+    paste: (rows: FileNavigatorRow[], cursor: string | null) => void;
+    duplicate: (row: FileNavigatorRow) => void;
+  };
+  deletion: { request: (paths: string[]) => void };
+  rename: { begin: (relPath: string, currentName: string) => void };
+  rowEvents: { onRowDoubleClick: (row: FileNavigatorRow, shiftKey: boolean) => void };
+  commit: { request: (paths: string[], defaultMessage?: string, fileCount?: number) => void };
   // Which paths Open and Edit fan out over when the clicked row belongs to the multi-row
   // selection, already resolved by the app shell's classifier — null when it does not apply.
   multiOpenSelection: string[] | null;
