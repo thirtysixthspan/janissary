@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { flattenVisibleTaskRows, handleTaskPickerKey, dispatchTaskPickerKey } from './task-picker-keys';
+import { flattenVisibleTaskRows, handleTaskPickerKey, dispatchTaskPickerKey, taskRowKey } from './task-picker-keys';
 import type { TaskRow } from '@shared/protocol';
 import type { VisibleTaskRow } from './task-picker-keys';
 
@@ -39,13 +39,13 @@ describe('flattenVisibleTaskRows', () => {
   });
 
   it('reveals a directory\'s direct children once expanded, keeping nested dirs collapsed', () => {
-    const visible = flattenVisibleTaskRows(rows, new Set(['sub']));
+    const visible = flattenVisibleTaskRows(rows, new Set([taskRowKey('project', 'sub')]));
     expect(taskPaths(visible)).toEqual(['top.md', 'sub', 'sub/nested.md', 'sub/inner']);
     expect(visible.find((r) => r.path === 'sub/inner')!.expanded).toBe(false);
   });
 
   it('reveals nested descendants once both ancestor directories are expanded', () => {
-    const visible = flattenVisibleTaskRows(rows, new Set(['sub', 'sub/inner']));
+    const visible = flattenVisibleTaskRows(rows, new Set([taskRowKey('project', 'sub'), taskRowKey('project', 'sub/inner')]));
     expect(taskPaths(visible)).toEqual(['top.md', 'sub', 'sub/nested.md', 'sub/inner', 'sub/inner/deep.md']);
   });
 
@@ -59,10 +59,36 @@ describe('flattenVisibleTaskRows', () => {
     const visible = flattenVisibleTaskRows([fileRow('b.md', 0, 'janissary')], new Set());
     expect(visible.map((r) => (r.header ? `#${r.name}` : r.path))).toEqual(['#Janissary', 'b.md']);
   });
+
+  it('keeps a Janissary tree visible after a collapsed project folder at the same path', () => {
+    const overlapping: TaskRow[] = [
+      dirRow('research', 0, 'project'), fileRow('research/local.md', 1, 'project'),
+      dirRow('research', 0, 'janissary'), fileRow('research/audit.md', 1, 'janissary'),
+    ];
+
+    const visible = flattenVisibleTaskRows(overlapping, new Set());
+
+    expect(visible.map((row) => row.header ? `#${row.name}` : `${row.source}:${row.path}`)).toEqual([
+      '#Project', 'project:research', '#Janissary', 'janissary:research',
+    ]);
+  });
+
+  it('expands matching relative paths independently for each source', () => {
+    const overlapping: TaskRow[] = [
+      dirRow('research', 0, 'project'), fileRow('research/local.md', 1, 'project'),
+      dirRow('research', 0, 'janissary'), fileRow('research/audit.md', 1, 'janissary'),
+    ];
+
+    const visible = flattenVisibleTaskRows(overlapping, new Set([taskRowKey('project', 'research')]));
+
+    expect(visible.filter((row) => !row.header).map((row) => `${row.source}:${row.path}`)).toEqual([
+      'project:research', 'project:research/local.md', 'janissary:research',
+    ]);
+  });
 });
 
 describe('handleTaskPickerKey — selection movement', () => {
-  const visible = flattenVisibleTaskRows(rows, new Set(['sub'])); // [#Project, top.md, sub, sub/nested, sub/inner]
+  const visible = flattenVisibleTaskRows(rows, new Set([taskRowKey('project', 'sub')])); // [#Project, top.md, sub, sub/nested, sub/inner]
 
   it('ArrowDown moves to the next visible row', () => {
     expect(handleTaskPickerKey(visible, 1, 'ArrowDown').index).toBe(2);
@@ -120,6 +146,21 @@ describe('handleTaskPickerKey — cross-section movement', () => {
   it('ArrowUp skips the Janissary header back to the previous task', () => {
     expect(handleTaskPickerKey(visible, 3, 'ArrowUp').index).toBe(1);
   });
+
+  it('moves to the parent directory in the same source when paths overlap', () => {
+    const overlapping: TaskRow[] = [
+      dirRow('research', 0, 'project'), fileRow('research/local.md', 1, 'project'),
+      dirRow('research', 0, 'janissary'), fileRow('research/audit.md', 1, 'janissary'),
+    ];
+    const rows = flattenVisibleTaskRows(overlapping, new Set([
+      taskRowKey('project', 'research'), taskRowKey('janissary', 'research'),
+    ]));
+    const taskIndex = rows.findIndex((row) => row.source === 'janissary' && row.path === 'research/audit.md');
+
+    expect(handleTaskPickerKey(rows, taskIndex, 'ArrowLeft').index).toBe(
+      rows.findIndex((row) => row.source === 'janissary' && row.path === 'research'),
+    );
+  });
 });
 
 describe('handleTaskPickerKey — expand/collapse/parent', () => {
@@ -127,11 +168,11 @@ describe('handleTaskPickerKey — expand/collapse/parent', () => {
     const visible = flattenVisibleTaskRows(rows, new Set());
     const result = handleTaskPickerKey(visible, 2, 'ArrowRight');
     expect(result.index).toBe(2);
-    expect(result.action).toEqual({ type: 'toggle', path: 'sub' });
+    expect(result.action).toEqual({ type: 'toggle', row: { path: 'sub', source: 'project' } });
   });
 
   it('ArrowRight on an expanded dir moves selection to its first child', () => {
-    const visible = flattenVisibleTaskRows(rows, new Set(['sub']));
+    const visible = flattenVisibleTaskRows(rows, new Set([taskRowKey('project', 'sub')]));
     const result = handleTaskPickerKey(visible, 2, 'ArrowRight');
     expect(result.index).toBe(3);
     expect(result.action).toBeUndefined();
@@ -144,14 +185,14 @@ describe('handleTaskPickerKey — expand/collapse/parent', () => {
   });
 
   it('ArrowLeft on an expanded dir collapses it', () => {
-    const visible = flattenVisibleTaskRows(rows, new Set(['sub']));
+    const visible = flattenVisibleTaskRows(rows, new Set([taskRowKey('project', 'sub')]));
     const result = handleTaskPickerKey(visible, 2, 'ArrowLeft');
     expect(result.index).toBe(2);
-    expect(result.action).toEqual({ type: 'toggle', path: 'sub' });
+    expect(result.action).toEqual({ type: 'toggle', row: { path: 'sub', source: 'project' } });
   });
 
   it('ArrowLeft on a child moves selection to its parent directory', () => {
-    const visible = flattenVisibleTaskRows(rows, new Set(['sub']));
+    const visible = flattenVisibleTaskRows(rows, new Set([taskRowKey('project', 'sub')]));
     const result = handleTaskPickerKey(visible, 3, 'ArrowLeft');
     expect(result.index).toBe(2);
     expect(result.action).toBeUndefined();
@@ -169,11 +210,11 @@ describe('handleTaskPickerKey — activation', () => {
   const visible = flattenVisibleTaskRows(rows, new Set()); // [#Project, top.md, sub]
 
   it('Enter on a directory toggles it', () => {
-    expect(handleTaskPickerKey(visible, 2, 'Enter').action).toEqual({ type: 'toggle', path: 'sub' });
+    expect(handleTaskPickerKey(visible, 2, 'Enter').action).toEqual({ type: 'toggle', row: { path: 'sub', source: 'project' } });
   });
 
   it('Enter on a file picks it', () => {
-    expect(handleTaskPickerKey(visible, 1, 'Enter').action).toEqual({ type: 'pick', path: 'top.md' });
+    expect(handleTaskPickerKey(visible, 1, 'Enter').action).toEqual({ type: 'pick', row: { path: 'top.md', source: 'project' } });
   });
 
   it('Enter on a header row re-seats the selection without picking', () => {
@@ -201,7 +242,7 @@ describe('dispatchTaskPickerKey', () => {
     const e = keyEvent('Enter');
     dispatchTaskPickerKey(e, visible, 1, vi.fn(), toggleDir, pickTask, vi.fn());
     expect(e.preventDefault).toHaveBeenCalled();
-    expect(pickTask).toHaveBeenCalledWith('top.md');
+    expect(pickTask).toHaveBeenCalledWith({ path: 'top.md', source: 'project' });
     expect(toggleDir).not.toHaveBeenCalled();
   });
 
@@ -210,7 +251,7 @@ describe('dispatchTaskPickerKey', () => {
     const toggleDir = vi.fn();
     const e = keyEvent('Enter');
     dispatchTaskPickerKey(e, visible, 2, vi.fn(), toggleDir, vi.fn(), vi.fn());
-    expect(toggleDir).toHaveBeenCalledWith('sub');
+    expect(toggleDir).toHaveBeenCalledWith({ path: 'sub', source: 'project' });
   });
 
   it('ignores unhandled keys', () => {

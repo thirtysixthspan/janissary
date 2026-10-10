@@ -2,7 +2,7 @@ import type React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { OverlayOpenState } from '../overlay-registry';
 import type { PickerOverlaysState } from './overlays-state';
-import type { VisibleTaskRow } from '../task-picker-keys';
+import type { TaskRowIdentity, VisibleTaskRow } from '../task-picker-keys';
 import type { VisibleProfileRow } from '../profile-picker-keys';
 import type { FuzzyMatchResult } from '../../shared/fuzzy-match';
 
@@ -30,8 +30,8 @@ export type PickerOverlayView = {
   onSelectQueue: (index: number) => void;
   taskRows: VisibleTaskRow[];
   taskPickerIndex: number;
-  onPickTask: (path: string) => void;
-  onToggleTaskDir: (path: string) => void;
+  onPickTask: (row: TaskRowIdentity) => void;
+  onToggleTaskDir: (row: TaskRowIdentity) => void;
   profiles: VisibleProfileRow[];
   profilePickerIndex: number;
   onPickProfile: (name: string) => void;

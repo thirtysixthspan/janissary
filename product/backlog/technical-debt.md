@@ -4,17 +4,6 @@
 
 ## development
 
-* Preserve each task source's directory tree when project tasks shadow built-in files.
-
-Existing Debt: Task discovery deduplicates directory rows together with files even though the picker interprets each source as a complete tree, and client expansion state identifies directories only by their relative path. Severity: 5/10
-
-Existing Risk: 4/10 - A project task folder can remove the built-in folder row while leaving its deeper children, causing shipped tasks to disappear behind a collapsed project directory or appear without their parent.
-
-Proposal Risk: 2/10 - Task selection can still move by position when the filesystem changes, as documented, but source boundaries and ancestor directories no longer make valid tasks unreachable.
-
-Proposal: In `src/tasks.ts`, `listTasks` builds `projectPaths` from every row and filters every matching Janissary row, so a project `research/local.md` removes the built-in `research` directory while retaining a distinct built-in `research/audit.md` at depth one. Deduplicate task files and then retain the ancestor directories needed by each source's surviving files, omitting a source that has no surviving tasks. In `flattenVisibleTaskRows` in `web/src/pickers/task-picker-keys.ts`, reset collapse tracking on a source change before testing row depth, and keep parent and child navigation inside that source. Use source plus relative path for expansion state in `web/src/pickers/useTaskPicker.ts`, rendered keys in `web/src/pickers/TaskPicker.tsx`, and directory toggle outcomes and callbacks; carry the selected row's source to command construction rather than recovering it from a path alone. Preserve project file precedence and the command forms in `product/specs/task-picker.md`. `src/tasks.test.ts` covers duplicate top-level files and `web/src/pickers/task-picker-keys.test.ts` covers two flat source lists, but neither covers overlapping folder trees. Extend both with shared directories containing distinct and shadowed files, nested ancestors, and a collapsed last project folder; update `web/src/pickers/useTaskPicker.test.ts` and `web/src/pickers/TaskPicker.test.tsx` for independent expansion and correct source routing.
-
-
 * Handle SQL intent rejections and retain drafts until the request is accepted.
 
 Existing Debt: The SQL action adapter discards every rejecting intent promise and exposes void mutation callbacks, so input surfaces close or clear drafts before knowing whether their request was accepted. Severity: 5/10

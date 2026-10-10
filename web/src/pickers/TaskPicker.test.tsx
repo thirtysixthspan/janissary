@@ -66,7 +66,7 @@ describe('TaskPicker', () => {
     const rows = [fileRow('a.md'), fileRow('sub/b.md')];
     const { container } = render(React.createElement(TaskPicker, { rows, selected: 0, onPick, onToggleDir: vi.fn() }));
     fireEvent.click(container.querySelectorAll('.picker-row')[1]);
-    expect(onPick).toHaveBeenCalledWith('sub/b.md');
+    expect(onPick).toHaveBeenCalledWith({ path: 'sub/b.md', source: 'project' });
   });
 
   it('calls onToggleDir (not onPick) when a directory row is clicked', () => {
@@ -75,8 +75,21 @@ describe('TaskPicker', () => {
     const rows = [dirRow('sub', false), fileRow('a.md')];
     const { container } = render(React.createElement(TaskPicker, { rows, selected: 0, onPick, onToggleDir }));
     fireEvent.click(container.querySelector('.picker-row')!);
-    expect(onToggleDir).toHaveBeenCalledWith('sub');
+    expect(onToggleDir).toHaveBeenCalledWith({ path: 'sub', source: 'project' });
     expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it('keeps click identity distinct when project and built-in paths overlap', () => {
+    const onPick = vi.fn();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const rows = [fileRow('research/audit.md', 1, 'project'), fileRow('research/audit.md', 1, 'janissary')];
+    const { container } = render(React.createElement(TaskPicker, { rows, selected: 1, onPick, onToggleDir: vi.fn() }));
+
+    fireEvent.click(container.querySelectorAll('.picker-row')[1]);
+
+    expect(onPick).toHaveBeenCalledWith({ path: 'research/audit.md', source: 'janissary' });
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 
   it('renders section header rows as non-selectable dividers, not picker rows', () => {

@@ -1,6 +1,6 @@
 import type { OverlayOpenSources } from '../overlay-registry';
 import type { PickerOverlaysState } from './overlays-state';
-import type { VisibleTaskRow } from '../task-picker-keys';
+import type { TaskRowIdentity, VisibleTaskRow } from '../task-picker-keys';
 import type { VisibleProfileRow } from '../profile-picker-keys';
 import type { TabNavEntry } from '../tab-nav-match';
 
@@ -49,8 +49,8 @@ export type PickerKeyCallbacks = {
   setTaskPickerIndex: (setter: (prev: number) => number) => void;
   setTaskPickerOpen: (open: boolean) => void;
   openTaskPicker: () => void;
-  pickTask: (path: string) => void;
-  toggleTaskDir: (path: string) => void;
+  pickTask: (row: TaskRowIdentity) => void;
+  toggleTaskDir: (row: TaskRowIdentity) => void;
   setProfilePickerIndex: (setter: (prev: number) => number) => void;
   setProfilePickerOpen: (open: boolean) => void;
   openProfilePicker: () => void;

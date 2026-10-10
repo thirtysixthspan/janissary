@@ -3,7 +3,7 @@ import type { TaskRow } from '@shared/protocol';
 import type { JanusClient } from '../ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import type { PluginCommandLineInsertions } from '../shared/command-bar/AppCommandBar';
-import { flattenVisibleTaskRows } from './task-picker-keys';
+import { flattenVisibleTaskRows, taskRowKey, type TaskRowIdentity } from './task-picker-keys';
 import { firstSelectable, normalizeIndex } from './sectioned-rows';
 import { insertIntoCommandLine } from './populate-command-line';
 
@@ -43,8 +43,7 @@ export function useTaskPicker(
     setTaskPickerOpen(true);
   }, [visibleTasks]);
 
-  const pickTask = useCallback((path: string) => {
-    const source = tasks.find((task) => task.path === path)?.source ?? 'project';
+  const pickTask = useCallback(({ path, source }: TaskRowIdentity) => {
     const command = source === 'janissary'
       ? `execute $janissary/ai/tasks/${path}`
       : `execute ./ai/tasks/${path}`;
@@ -56,12 +55,13 @@ export function useTaskPicker(
       insertIntoCommandLine(command, client, undefined, dropRef, focusHarness);
     }
     setTaskPickerOpen(false);
-  }, [tasks, client, harnessPtyId, dropRef, focusHarness, pluginCommandLineInsertions, shellLabel]);
+  }, [client, harnessPtyId, dropRef, focusHarness, pluginCommandLineInsertions, shellLabel]);
 
-  const toggleTaskDir = useCallback((path: string) => {
+  const toggleTaskDir = useCallback(({ path, source }: TaskRowIdentity) => {
     setExpandedTaskDirs((prev) => {
       const next = new Set(prev);
-      if (next.has(path)) next.delete(path); else next.add(path);
+      const key = taskRowKey(source, path);
+      if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   }, []);
