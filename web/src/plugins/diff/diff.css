@@ -59,7 +59,6 @@
 .diff-status { color: var(--muted); }
 .diff-status.diff-status-added { color: var(--success); }
 .diff-status.diff-status-removed { color: var(--error); }
-.diff-large-file { color: var(--muted); }
 
 .diff-hunk { border-left: 2px solid transparent; cursor: text; }
 .diff-hunk.diff-walked { border-left-color: var(--accent); }

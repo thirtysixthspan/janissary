@@ -5,8 +5,8 @@ import type { DiffFile } from '@shared/plugins/diff/shared';
 // of the change set, which is the point of the cap.
 export const CHANGE_LINE_CAP = 400;
 
-// How many of an entry's changed lines are past the cap, answering 0 for an entry within it, so the
-// count can name itself in the header's note.
+// How many of an entry's changed lines are past the cap, answering 0 for an entry within it so the
+// file view can decide whether to start closed.
 export function oversizedLines(file: DiffFile): number {
   return Math.max(0, file.additions + file.deletions - CHANGE_LINE_CAP);
 }

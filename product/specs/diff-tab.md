@@ -46,8 +46,7 @@ Every hunk is expanded and introduced by the range it occupies, `@@ -start,lengt
 so the reader sees where the change begins and ends on each side and that the lines between two hunks
 were skipped rather than removed. Every file entry's header carries a **Font Awesome arrows-up-down
 button** that cycles the entry through closed, compact diff, and expanded full-file views. Whole-file
-changes start closed without an explanatory note; changes over the cap also start closed and retain
-their line-count note. A double-click on the header toggles closed and compact views. Each hunk line carries its file's number on both
+changes start closed without a reason message. A double-click on the header toggles closed and compact views. Each hunk line carries its file's number on both
 sides: two narrow right-aligned gutters in the unified layout, the original number blank on an added
 line and the new number blank on a removed one, and in the split layout the original number in the left
 column with the modified one in the right. In unified layout, a line longer than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads without a horizontal scrollbar and a wrapped line's number stays beside its first row. Split layout wraps text within each column and preserves readable column widths through horizontal scrolling in narrow panes.
@@ -74,8 +73,8 @@ opens the file, expanded or not. The keyboard walk counts such
 an entry's hunks wherever they happen to be shown, so **Return** opens the file at the walked hunk's
 first changed line either way.
 
-An entry whose change holds **more than 400 added and removed lines combined** also opens collapsed, its header noting how
-many lines the change holds and what the cap is, and the same double-click expands it. The cap is on the
+An entry whose change holds **more than 400 added and removed lines combined** also opens collapsed
+without a line-count message; the view-cycle button or a double-click expands it. The cap is on the
 change, not the file: a large file with one changed line shows that line in full.
 
 The tab recomputes on its own every second, so the change set stays live while files are edited around

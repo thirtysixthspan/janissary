@@ -494,11 +494,11 @@ describe('DiffTab', () => {
     expect(container.querySelectorAll('.diff-line').length).toBe(3);
   });
 
-  it('opens a change over the cap collapsed, with the cap and the count named', () => {
+  it('opens a change over the cap collapsed without a line-count message', () => {
     const { container } = renderTab(payload({ files: [oversized()] }));
-    expect(screen.getByText(`${CHANGE_LINE_CAP + 40} lines over the ${CHANGE_LINE_CAP}-line cap — double-click to expand`)).toBeTruthy();
+    expect(container.querySelector('.diff-large-file')).toBeNull();
     expect(container.querySelectorAll('.diff-line').length).toBe(0);
-    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Cycle file view' }));
     expect(container.querySelectorAll('.diff-line').length).toBe(2);
   });
 
@@ -508,7 +508,7 @@ describe('DiffTab', () => {
     expect(container.querySelectorAll('.diff-line').length).toBe(3);
   });
 
-  it('carries both notes for a whole-file change that is also over the cap', () => {
+  it('keeps a whole-file change over the cap closed without a message', () => {
     const { container } = renderTab(payload({
       files: [oversized({ additions: CHANGE_LINE_CAP + 40, hunks: [{
         oldStart: 1, newStart: 1,
@@ -516,9 +516,9 @@ describe('DiffTab', () => {
       }] })],
     }));
     expect(container.querySelector('.diff-whole-file')).toBeNull();
-    expect(container.querySelector('.diff-large-file')).toBeTruthy();
+    expect(container.querySelector('.diff-large-file')).toBeNull();
     expect(container.querySelectorAll('.diff-line').length).toBe(0);
-    fireEvent.doubleClick(container.querySelector('.diff-file-header') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: 'Cycle file view' }));
     expect(container.querySelectorAll('.diff-line').length).toBe(1);
   });
 

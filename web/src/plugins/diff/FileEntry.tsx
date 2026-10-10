@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { DiffFile } from '@shared/plugins/diff/shared';
 import { HunkLines } from './HunkLines';
 import { SplitHunks } from './SplitHunks';
-import { oversizedLines, CHANGE_LINE_CAP } from './size-cap';
+import { oversizedLines } from './size-cap';
 import { fileStatus } from './status';
 import { isWholeFileChange } from './whole-file';
 import { LineCommentsProvider } from './LineCommentsProvider';
@@ -75,7 +75,6 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
             <span className={`diff-status diff-status-${status.kind}`}>{status.label}</span>
             {file.additions > 0 && <span className="diff-added-count">+{file.additions}</span>}
             {file.deletions > 0 && <span className="diff-removed-count">−{file.deletions}</span>}
-            {over > 0 && <span className="diff-large-file">{`${file.additions + file.deletions} lines over the ${CHANGE_LINE_CAP}-line cap — double-click to expand`}</span>}
           </span>
         </div>
         {!collapsed && file.hunks.map((hunk, index) => {
