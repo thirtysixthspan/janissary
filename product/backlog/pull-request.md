@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Exclude the launcher itself from every tab list and summarize only center tabs.
-
-Existing Issue: notify projects all undocked tabs without excluding the launcher, while ownTabs identifies ownership by a literal label and includes other docked tabs in summary flushes. Severity: 6/10
-
-Existing Risk: 6/10 - Undocking the launcher lists itself, a label collision defeats self-exclusion, and hidden docked tabs consume summary work outside the planned center-tab scope.
-
-Proposal Risk: 2/10 - Using host-provided plugin ownership and center placement consistently prevents self-feeding and unwanted docked summaries.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "exclude the launcher itself from every tab list and summarize only center tabs". Extend the activity contract in src/plugins/activity.ts with an appropriate host-owned plugin identity or scoped exclusion facility, and use it in src/plugins/launcher/activate.ts and src/plugins/launcher/payload.ts to exclude every launcher-owned tab on both pull and push paths. Filter summary inputs to center tabs, and do not assume LAUNCHER_LABEL equals the unique label the host minted. Add tests for an undocked launcher, another tab already named launcher, and non-launcher docked tabs; existing tests exclude only a docked literal launcher label.
-
-
 * Reject duplicate launcher command IDs before they can dispatch a different row.
 
 Existing Issue: commands-file accepts explicit IDs without checking uniqueness, while run-command resolves the first matching ID and React also keys rows by that ID. Severity: 6/10

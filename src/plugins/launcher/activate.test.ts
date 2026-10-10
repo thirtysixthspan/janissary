@@ -15,12 +15,13 @@ import { toRows } from './payload.js';
 
 // The rows the host hands over, in strip order. `dock` is deliberately absent on the first so the
 // docked-filtering rule has something to drop and something to keep, and no row carries a `tail`,
-// because the host only produces one for a caller that asks.
+// because the host only produces one for a caller that asks. The launcher's own row carries its plugin
+// record, and the docked plugin row carries one too.
 const ROWS: TabActivityEntry[] = [
   { label: 'shell', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, lastCommand: 'ls' },
   { label: 'agent', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, lastCommand: 'npm test' },
-  { label: 'schedules', view: 'plugin', dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0 },
-  { label: LAUNCHER_LABEL, view: 'plugin', dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12 },
+  { label: 'schedules', view: 'plugin', plugin: { id: 'schedules', instanceKey: 'schedules' }, dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0 },
+  { label: LAUNCHER_LABEL, view: 'plugin', plugin: { id: 'launcher', instanceKey: 'launcher' }, dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12 },
 ];
 
 // What a tail read attaches to a row that has a transcript to slice. Distinctive so a test can prove
@@ -296,6 +297,27 @@ describe('the tabs topic', () => {
     expect(prompted).not.toContain('[[tab:launcher]]');
   });
 
+  // The push path: the `tabs` topic hands over every open tab, docked and undocked, and the launcher's
+  // own row is one of them once it has been undocked.
+  it('drops the launcher\'s own row from a topic delivery, even undocked', () => {
+    const undocked = ROWS.map((row) => (row.label === LAUNCHER_LABEL
+      ? { ...row, dock: undefined, label: 'launcher-2' }
+      : row));
+    const entry = openLauncher(undocked);
+    const activation = activate();
+
+    // The shell tab starts running something, so its row moves and there is a republish to make.
+    activation.notify?.({
+      topic: 'tabs',
+      data: undocked.map((row) => (row.label === 'shell' ? { ...row, busy: true } : row)),
+      tabs: ['launcher'],
+    }, entry.capabilities);
+
+    const payload = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.tabs.map((row) => row.label)).toEqual(['shell', 'agent']);
+  });
+
   it('ignores a topic it does not declare', () => {
     const entry = fixture(ROWS, project());
     const activation = activate();
@@ -308,6 +330,50 @@ describe('the tabs topic', () => {
     );
 
     expect(entry.updated).toHaveLength(0);
+  });
+
+  // The launcher names its own tabs by the instance key it opened them under, because a label is the
+  // host's to mint: `uniquePluginLabel` hands the launcher `launcher-2` when anything else holds
+  // `launcher`, and a shell the user named `launcher` is not the launcher's tab at all.
+  it('excludes the launcher\'s own tab by ownership, so an undocked one is still excluded', () => {
+    const undocked = ROWS.map((row) => (row.label === LAUNCHER_LABEL
+      ? { ...row, dock: undefined, label: 'launcher-2' }
+      : row));
+    const entry = openLauncher(undocked);
+
+    const payload = entry.opened[0].value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.tabs.map((row) => row.label)).toEqual(['shell', 'agent']);
+  });
+
+  // The other half of the same rule: a row that holds the label but not the ownership is somebody
+  // else's tab and belongs in the rail like any other.
+  it('shows a tab that merely shares the launcher\'s label', () => {
+    const collided = [...ROWS, {
+      label: LAUNCHER_LABEL, view: 'plugin', plugin: { id: 'shell', instanceKey: 'shell-1' },
+      dotColor: '#98c379', active: false, busy: false, hasUnread: false,
+      needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 3,
+    }];
+    const entry = openLauncher(collided);
+
+    const payload = entry.opened[0].value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.tabs.map((row) => row.label)).toEqual(['shell', 'agent', 'launcher']);
+  });
+
+  // A docked tab is never in the centre strip and never what a user is working on, so a flush does not
+  // spend an ACP prompt on one.
+  it('asks the summarizer for no docked tab', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Running the test suite.');
+
+    await summarize(entry, activation);
+
+    const prompt = entry.prompted.at(-1) ?? '';
+    expect(prompt).toContain('[[tab:shell]]');
+    expect(prompt).toContain('[[tab:agent]]');
+    expect(prompt).not.toContain('[[tab:schedules]]');
   });
 });
 

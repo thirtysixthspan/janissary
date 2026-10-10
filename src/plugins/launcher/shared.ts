@@ -9,6 +9,18 @@ export const LAUNCHER_INSTANCE_KEY = 'launcher';
 // The launcher tab's label and the name it opens under.
 export const LAUNCHER_LABEL = 'launcher';
 
+// Whether an activity entry is one of the launcher's own tabs. Asked by the key the tab was opened
+// under rather than by its label, because a label is the host's to mint and not the launcher's to
+// reserve: `uniquePluginLabel` hands the launcher `launcher-2` when anything else holds `launcher`, and
+// a shell the user named `launcher` is not the launcher's tab at all. A plugin tab is the only kind
+// this can be, and the instance key is the one piece of a tab's identity the launcher already holds.
+//
+// One predicate because both the pull and the push path need it: the rows a flush reads and the rows
+// the `tabs` topic delivers are the same rows, and two rules would drift.
+export function isLauncherOwn(tab: { label: string; plugin?: { id: string; instanceKey: string } }): boolean {
+  return tab.plugin?.instanceKey === LAUNCHER_INSTANCE_KEY;
+}
+
 // How long the launcher's client waits between summarizer flushes. It lives in the shared contract
 // rather than in either side's own module because the client owns the interval and the server owns the
 // prompt it paces, and the two must agree about the number. It mirrors the monitor's flush cycle: one

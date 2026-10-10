@@ -13,6 +13,11 @@ export type TabActivityEntry = {
   label: string;
   // The tab's display name when it has an alias, absent otherwise.
   title?: string;
+  // Which plugin owns this tab, when one does: its declaration id and the instance key it was opened
+  // with. Absent for every other tab. It is the host's own record of ownership, and a plugin can
+  // already speak it — a plugin knows the instance keys it opens with — so a reader can name its own
+  // tabs without assuming anything about the label the host minted for them.
+  plugin?: { id: string; instanceKey: string };
   // The tab's own dot colour — the one its strip entry is drawn in — so a rail row can match it rather
   // than rendering an application-wide default that says nothing about which tab it stands for.
   dotColor: string;
@@ -91,6 +96,7 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
   return {
     label: tab.label,
     ...(tab.title !== undefined && { title: tab.title }),
+    ...(tab.plugin && { plugin: { id: tab.plugin.id, instanceKey: tab.plugin.instanceKey } }),
     dotColor: tab.dotColor,
     ...(tab.view !== undefined && { view: tab.view }),
     ...(tab.dock !== undefined && { dock: tab.dock }),

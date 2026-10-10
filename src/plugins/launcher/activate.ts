@@ -7,6 +7,7 @@ import {
   LAUNCHER_LABEL,
   isDispatchIntent,
   isFocusTabIntent,
+  isLauncherOwn,
   isLauncherPayload,
   isReportIconIntent,
   isRunCommandIntent,
@@ -80,25 +81,21 @@ function activeLabelOf(capabilities: TabPluginServerCapabilities): string | unde
 // a display read omits it, and a prompt fed only metadata has nothing to summarize.
 const SUMMARIZER_TAIL_ENTRIES = 8;
 
-// The tabs the launcher shows: every tab the host has open, minus this launcher's own. The
-// launcher's transcript is where its own prompts and replies land, so leaving it in would make every
-// flush find new content in a tab the summarizer itself just wrote — a prompt that can never go
-// quiet, whose tail contains its own previous replies. It is matched on the plugin record
-// rather than on the dock side, so the rail and the summarizer agree even if the launcher is undocked.
+// The rows the launcher shows: every tab the host has open. What the rail draws from them is the
+// projection's own rule — the docked and the launcher's own are dropped there — so this read is the
+// host's answer and nothing more.
 function ownTabs(capabilities: TabPluginServerCapabilities): TabActivityEntry[] {
-  return capabilities.tabActivity().filter((tab) => !isLauncherOwn(tab));
+  return capabilities.tabActivity();
 }
 
-// What a summarizer flush reads: the same tabs, re-read with their transcript tails attached. A
+// What a summarizer flush reads: the centre tabs, re-read with their transcript tails attached. A
 // display read asks for none — the rail draws no transcript content, and the payload must never carry
-// it — so this is a second read rather than the same one with a flag flipped.
+// it — so this is a second read rather than the same one with a flag flipped. Docked tabs are left out
+// because a flush describes work in the centre strip, and a docked view's transcript is chrome rather
+// than something the user is doing.
 function summarizedTabs(capabilities: TabPluginServerCapabilities): TabActivityEntry[] {
-  return capabilities.tabActivity(SUMMARIZER_TAIL_ENTRIES).filter((tab) => !isLauncherOwn(tab));
-}
-
-// Whether one activity entry is the launcher's own tab.
-function isLauncherOwn(tab: TabActivityEntry): boolean {
-  return tab.view === 'plugin' && tab.label === LAUNCHER_LABEL;
+  return capabilities.tabActivity(SUMMARIZER_TAIL_ENTRIES)
+    .filter((tab) => tab.dock === undefined && !isLauncherOwn(tab));
 }
 
 export function activate(): TabPluginActivation {

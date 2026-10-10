@@ -1,5 +1,6 @@
 import type { TabActivityEntry } from '../api.js';
 import type { LauncherCommand, LauncherPayload, LauncherTabRow } from './shared.js';
+import { isLauncherOwn } from './shared.js';
 
 // What the launcher's single tab holds beyond its payload, in module state because there is exactly
 // one launcher for the life of the server. The summaries are the ACP-written paragraphs keyed by
@@ -28,15 +29,17 @@ export function initialState(): LauncherState {
   };
 }
 
-// The rows the launcher shows: every open centre tab, with docked ones dropped. The docked are
-// dropped here rather than on the client because the rule is a property of what a row can do — a
-// docked tab can never be focused from here — and the payload is the one place that rule lives.
+// The rows the launcher shows: every open centre tab, with the docked dropped and so are the launcher's
+// own. The docked are dropped here rather than on the client because the rule is a property of what a
+// row can do — a docked tab can never be focused from here — and the payload is the one place that rule
+// lives. The launcher's own tabs are dropped here because this projection is also what the `tabs`
+// topic's rows go through, and a dock check would not catch one that had been undocked.
 //
 // A row also drops the transcript tail a summarizer needs but a row does not draw: what crosses the
 // wire is what the rail shows and what its hover card adds, never another tab's content.
 export function toRows(tabs: readonly TabActivityEntry[], activeLabel?: string): LauncherTabRow[] {
   return tabs
-    .filter((tab) => tab.dock === undefined)
+    .filter((tab) => tab.dock === undefined && !isLauncherOwn(tab))
     .map((tab) => ({
       label: tab.label,
       ...(tab.title !== undefined && { title: tab.title }),
