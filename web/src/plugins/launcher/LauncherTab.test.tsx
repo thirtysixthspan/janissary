@@ -483,6 +483,26 @@ describe('the tab list', () => {
     expect(card).toHaveTextContent('npm test');
   });
 
+  // The row shows the display name and has no width for the label, so the card carries both: the one
+  // a user recognises the tab by, and the one a command that addresses tabs takes.
+  it('carries a row\'s label beside its alias', () => {
+    launcher(payload({ tabs: [row('agent', { title: 'Release agent' })] }));
+
+    fireEvent.mouseEnter(screen.getByRole('option', { name: /Release agent/ }));
+
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Release agent');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('agent');
+  });
+
+  // A tab with no alias has one name, and the card does not say it twice.
+  it('carries an unaliased row\'s label once', () => {
+    launcher(payload({ tabs: [row('shell', { title: 'shell' })] }));
+
+    fireEvent.mouseEnter(screen.getByRole('option', { name: /shell/ }));
+
+    expect(screen.getByRole('tooltip').querySelectorAll('.launcher-hover-row-label')).toHaveLength(0);
+  });
+
   it('closes when the pointer leaves', () => {
     launcher(payload({ tabs: [row('shell')] }));
     const entry = screen.getByRole('option', { name: /shell/ });

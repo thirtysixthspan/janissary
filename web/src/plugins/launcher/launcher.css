@@ -66,6 +66,7 @@
   pointer-events: none;
 }
 .launcher-hover-label { color: var(--fg); font-weight: 600; }
+.launcher-hover-row-label { color: var(--faint); }
 .launcher-hover-command { color: var(--faint); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* A dispatched command's answer, above the bar that asked for it. */

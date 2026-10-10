@@ -75,6 +75,12 @@ function LauncherHoverCard({ row, anchor }: { row: LauncherTabRow; anchor: DOMRe
       style={{ top: `${anchor.bottom + 4}px`, left: `${anchor.left}px` }}
     >
       <span className="launcher-hover-label">{row.title ?? row.label}</span>
+      {/* The row shows the display name, so the card carries the label beside it — the form a command
+          that addresses tabs takes, and the one thing the row's width cannot hold. Drawn only when the
+          two differ, because otherwise it would repeat the line above it. */}
+      {row.title !== undefined && row.title !== row.label && (
+        <span className="launcher-hover-row-label">{row.label}</span>
+      )}
       <span className="launcher-hover-cwd">{row.cwd}</span>
       {row.remote !== undefined && <span className="launcher-hover-remote">{row.remote}</span>}
       {row.lastCommand !== undefined && <span className="launcher-hover-command">{row.lastCommand}</span>}

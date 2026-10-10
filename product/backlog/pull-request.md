@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Show both a tab's alias and its label in the planned hover metadata.
-
-Existing Issue: LauncherHoverCard displays row.title instead of row.label when an alias exists, so the label promised by the spec is absent. Severity: 3/10
-
-Existing Risk: 3/10 - A user cannot identify the command-addressable label of an aliased tab from its hover card.
-
-Proposal Risk: 1/10 - Displaying the label alongside a differing title makes the alias-to-label relationship visible without changing focus behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "show both a tab's alias and its label in the planned hover metadata". In web/src/plugins/launcher/LauncherTabRowView.tsx, render the display title and a separate label only when they differ, styling the secondary label in launcher.css. Extend the aliased-tab hover test in LauncherTab.test.tsx to assert both Release agent and agent appear in the tooltip; preserve existing cwd, host, last-command, and pointer-out coverage.
-
-
 * Correct the description's claim that docking Notifications displaces the launcher.
 
 Existing Issue: The PR's command example and verification instructions say notifications left displaces the launcher, while applyDock preserves different view kinds and the new spec additionally says that command docks right. Severity: 3/10
