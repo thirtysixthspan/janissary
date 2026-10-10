@@ -24,17 +24,6 @@ Proposal Risk: 2/10 - Typed faithful fixtures and focused integration cases expo
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "repair the new review fixtures so they exercise the published types and real lifecycle contracts". Repair src/plugins/launcher/summarizer.test.ts so its TabActivityEntry helper supplies dotColor and active, its view values match the contract, every buildSummarizerPrompt call supplies a delimiter, and the asserted marker text matches the actual description. Repair the moved-topic fixture in src/plugins/launcher/activate.test.ts to deliver TabActivityEntry objects rather than LauncherTabRow projections lacking logLength. Replace forced capability casts where they hide these mismatches and add host-backed singleton and close tests. Add the plan's currently absent regression assertions for janus init idempotent launcher-file seeding, timestamp writers in src/tab/transcript/events.ts, and tabs.focus on a missing label, using the existing project-init, transcript, and topic test files. Run the appropriate diff-scoped checks during the separate implementation task; this review has identified these issues by reading only.
 
 
-* Deliver the plan's single-click tab focusing instead of requiring confirmation on a second click.
-
-Existing Issue: LauncherTabRowView routes tab clicks through openOnConfirm, so the first click on a different row only selects it despite the plan, spec, and PR description promising the same focus behavior as a tab-strip click. Severity: 5/10
-
-Existing Risk: 5/10 - A user clicks a tab expecting to inspect its work but remains on the previous tab, and the intended unread dwell does not begin.
-
-Proposal Risk: 2/10 - Immediate focus restores the promised navigation, with tests needed to prevent duplicate focus requests and preserve keyboard selection.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "focus launcher tab rows on the first click". In web/src/plugins/launcher/LauncherTabRowView.tsx, keep selection bookkeeping but activate on the first row click using the shared list-selection contract or an explicit focus callback. Leave the separately documented two-click command confirmation in web/src/plugins/launcher/CommandRail.tsx intact. Update the tab-click case in web/src/plugins/launcher/LauncherTab.test.tsx to assert one click sends exactly one focus-tab intent, and add keyboard activation and a closed-target regression case through src/plugins/topics.ts and the existing tab navigation tests. src/tab/navigation-commands.ts already owns the unread dwell and rejects missing or docked targets, so preserve that server route rather than clearing unread locally. Keep product/specs/launcher.md and the completed plan consistent with the resulting interaction.
-
-
 * Correct the plan's whole-file fallback claim to match its shipped partial configuration validation.
 
 Existing Issue: The completed launcher plan says a malformed entry falls back to the default command set and declines entry-scoped validation, while the implementation, its tests, and the functional spec keep usable entries from a mixed file. Severity: 3/10

@@ -295,6 +295,32 @@ describe('the tab list', () => {
     expect(screen.getByText('docked')).toBeInTheDocument();
   });
 
+  // A tab row is navigation rather than a command, so one click focuses it — the same way clicking the
+  // tab in the strip does, which is what this list has always promised. The rail's two-click rule is
+  // the rail's own.
+  it('focuses a row on the first click', () => {
+    const caps = capabilities();
+    launcher(payload({ tabs: [row('shell')] }), caps);
+
+    fireEvent.click(screen.getByRole('option', { name: /shell/ }));
+
+    expect(caps.intent).toHaveBeenCalledTimes(1);
+    expect(caps.intent).toHaveBeenCalledWith('focus-tab', { label: 'shell' });
+  });
+
+  // The row that is already focused is not asked for again: a second request for a tab that is current
+  // only costs the server an answer that changes nothing.
+  it('does not ask again when the focused row is clicked twice', () => {
+    const caps = capabilities();
+    launcher(payload({ tabs: [row('shell')] }), caps);
+    const entry = screen.getByRole('option', { name: /shell/ });
+
+    fireEvent.click(entry);
+    fireEvent.click(entry);
+
+    expect(caps.intent).toHaveBeenCalledTimes(1);
+  });
+
   it('focuses the row that was clicked twice', () => {
     const caps = capabilities();
     launcher(payload({ tabs: [row('shell')] }), caps);
