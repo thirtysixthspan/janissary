@@ -14,12 +14,13 @@ import { initialDrafts, insertCells } from './insert-draft';
 // reason.
 
 export function InsertForm({
-  object, columns, onSave, onCancel,
+  object, columns, onSave, onCancel, pending = false,
 }: {
   object: string;
   columns: readonly SqlColumn[];
   onSave(cells: SqlInsertCell[]): void;
   onCancel(): void;
+  pending?: boolean;
 }) {
   // Every column is offered, so the form is a picture of the row rather than a question about which
   // columns to fill in. Only the columns the user has given a value or an explicit null are named by
@@ -46,7 +47,7 @@ export function InsertForm({
               </span>
               <input
                 value={draft.text}
-                disabled={draft.isNull}
+                disabled={draft.isNull || pending}
                 onChange={(event) => setDrafts({ ...drafts, [column.name]: { text: event.target.value, isNull: false } })}
                 aria-label={`New ${column.name}`}
               />
@@ -54,6 +55,7 @@ export function InsertForm({
                 <input
                   type="checkbox"
                   checked={draft.isNull}
+                  disabled={pending}
                   onChange={(event) => setDrafts({ ...drafts, [column.name]: { text: '', isNull: event.target.checked } })}
                   aria-label={`${column.name} is null`}
                 />
@@ -67,7 +69,7 @@ export function InsertForm({
         {insertStatement(object, cells, columns)}
       </pre>
       <div className="sql-insert-actions">
-        <button type="button" onClick={() => onSave(cells)}>
+        <button type="button" disabled={pending} onClick={() => onSave(cells)}>
           <FontAwesomeIcon icon={faSave} /> Save
         </button>
         <button type="button" onClick={onCancel}>Cancel</button>

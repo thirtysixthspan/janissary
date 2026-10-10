@@ -38,10 +38,11 @@ export function SqlTab({
   // which one is open and the grid draws them.
   const [inserting, setInserting] = useState(false);
   const [choosingColumns, setChoosingColumns] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const consoleRef = useRef<HTMLTextAreaElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const docked = capabilities.dock !== null;
-  const actions = useSqlActions(capabilities);
+  const actions = useSqlActions(capabilities, setRequestError);
   // Whichever pane does not have the focus takes it, so `Tab` is a toggle between the two rather
   // than a walk out of the tab. Focus follows the same path a user pressing it twice would take.
   const toGrid = () => { gridRef.current?.focus(); };
@@ -98,6 +99,13 @@ export function SqlTab({
           {capabilities.splitAction}
         </span>
       </div>
+
+      {requestError && (
+        <div className="sql-error" role="alert">
+          SQL request failed: {requestError}
+          <button type="button" onClick={() => setRequestError(null)}>Dismiss</button>
+        </div>
+      )}
 
       <DataGrid
         payload={payload}

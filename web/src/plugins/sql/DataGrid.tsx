@@ -13,6 +13,7 @@ import { FilterChips, FilterRow, GlobalFilter } from './Filters';
 import { Pager } from './Pager';
 import { DeleteRowDialog } from './DeleteRowDialog';
 import type { SqlActions } from './useSqlActions';
+import { useSqlGridDrafts } from './useSqlDraftAcceptance';
 
 // The data grid: the object on screen and one page of its rows. A read-only object keeps the whole
 // grid and loses only the write affordances, so a view is still useful when it cannot be edited.
@@ -48,7 +49,6 @@ export function DataGrid({
   onEnter?(): void;
 }) {
   const object = payload.objects.find((entry) => entry.name === payload.object);
-  const [editing, setEditing] = useState<{ row: string; column: string } | null>(null);
   const [deleting, setDeleting] = useState<SqlRow | null>(null);
   const [filtering, setFiltering] = useState<string | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
@@ -69,7 +69,8 @@ export function DataGrid({
   const selection = useGridSelection({
     grid, active: capabilities.active, containerRef: scrollRef, onError: setCopyError,
   });
-  useColumnFit({ frameRef: scrollRef, grid, hidden: payload.hidden, editing });
+  const draft = useSqlGridDrafts(actions, payload.object, onInserting);
+  useColumnFit({ frameRef: scrollRef, grid, hidden: payload.hidden, editing: draft.editing });
 
   return (
     <div className="sql-grid-area">
@@ -93,10 +94,8 @@ export function DataGrid({
         <InsertForm
           object={object.name}
           columns={object.columns}
-          onSave={(cells) => {
-            onInserting(false);
-            actions.insertRow(payload.object, cells);
-          }}
+          pending={draft.pending}
+          onSave={draft.insertRow}
           onCancel={() => onInserting(false)}
         />
       )}
@@ -179,18 +178,18 @@ export function DataGrid({
                 position={index}
                 shown={shown}
                 object={object}
-                editingColumn={editing?.row === row.key ? editing.column : null}
+                editingColumn={draft.editing?.row === row.key ? draft.editing.column : null}
                 deleting={writable}
                 selected={selection.selected(index)}
                 onSelectRow={(extend) => selection.selectRow(index, extend)}
                 onEdit={(column) => {
-                  if (writable) setEditing({ row: row.key, column });
+                  if (!writable) return;
+                  const cell = row.cells[grid?.columns.indexOf(column) ?? -1];
+                  draft.beginCellEdit(row.key, column, cell?.isNull ? null : cell?.text ?? '');
                 }}
-                onCommit={(column, value) => {
-                  setEditing(null);
-                  actions.updateCell(row.key, column, value);
-                }}
-                onCancel={() => setEditing(null)}
+                onCommit={(column, value) => draft.commitCell(row.key, column, value)}
+                onDraftChange={(column, value) => draft.updateCellDraft(row.key, column, value)}
+                onCancel={draft.cancelCellEdit}
                 onFollow={actions.selectObject}
                 onDelete={() => setDeleting(row)}
               />

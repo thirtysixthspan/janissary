@@ -48,4 +48,21 @@ describe('createSqlActions', () => {
       ['clear-filters', {}],
     ]);
   });
+
+  it('normalizes rejected draft requests and returns an unaccepted outcome without retrying', async () => {
+    const intent = vi.fn().mockRejectedValue(new Error('connection dropped'));
+    const onRequestError = vi.fn();
+    const actions = createSqlActions(intent, onRequestError);
+
+    const outcomes = await Promise.all([
+      actions.run('SELECT 1'),
+      actions.updateCell('r1', 'status', 'shipped'),
+      actions.insertRow('orders', [{ column: 'status', value: 'paid' }]),
+    ]);
+
+    expect(outcomes).toEqual([false, false, false]);
+    expect(intent).toHaveBeenCalledTimes(3);
+    expect(onRequestError).toHaveBeenCalledTimes(3);
+    expect(onRequestError).toHaveBeenCalledWith('connection dropped');
+  });
 });

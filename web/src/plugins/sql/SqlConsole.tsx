@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { CommandBarShell, useCommandBarKeys } from '../api';
 
 // How many statements the console recalls. Long enough to walk back through a session of
@@ -15,7 +15,7 @@ export type SqlConsoleProperties = {
   // The text in the field, held by the frame rather than here, so it survives a re-read of the grid.
   value: string;
   onValue(next: string): void;
-  onSend(sql: string): void;
+  onSend(sql: string): Promise<boolean>;
   /** Hand focus to the grid: a bare `Tab` leaves the bar for the other pane of this tab. */
   onLeave(): void;
 };
@@ -37,17 +37,41 @@ export function SqlConsole({
   active, busy, inputRef, value, onValue, onSend, onLeave,
 }: SqlConsoleProperties) {
   const [history, setHistory] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const draftRevision = useRef(0);
+  const resetHistoryWalk = useRef<() => void>(() => {});
+
+  const updateValue = (next: string) => {
+    draftRevision.current += 1;
+    onValue(next);
+  };
 
   // Oldest first, which is the order the shared keymap's `history` is walked in: it steps back from
   // the end of the list, so a list kept newest-first recalled the oldest statement first. Keeping the
   // console's own state in the order its consumer documents costs nothing at the call site, where a
   // reversal would have to be repeated on every render to read the same list.
-  const send = (text: string) => {
-    setHistory((previous) => [...previous.filter((entry) => entry !== text), text].slice(-HISTORY_LIMIT));
-    onSend(text);
+  const send = async (text: string) => {
+    if (submittingRef.current) return;
+    const sql = text.trim();
+    if (!sql) return;
+    const submittedRevision = draftRevision.current;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      const accepted = await onSend(sql);
+      if (!accepted) return;
+      setHistory((previous) => [...previous.filter((entry) => entry !== sql), sql].slice(-HISTORY_LIMIT));
+      resetHistoryWalk.current();
+      if (draftRevision.current === submittedRevision) updateValue('');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
   };
 
-  const bar = useCommandBarKeys({ value, setValue: onValue, inputRef, history, onSubmit: send });
+  const bar = useCommandBarKeys({ value, setValue: updateValue, inputRef, history, onSubmit: (text) => { void send(text); } });
+  resetHistoryWalk.current = bar.resetHistoryWalk;
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // A held modifier is never this key's: `Shift+Tab` is the host's, and it walks out of a plugin
@@ -55,6 +79,12 @@ export function SqlConsole({
     if (event.key === 'Tab' && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault();
       onLeave();
+      return;
+    }
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      void send(value);
       return;
     }
     bar.onKeyDown(event);
@@ -67,7 +97,7 @@ export function SqlConsole({
       onKeyDown={onKeyDown}
       inputRef={inputRef}
       ghost={bar.ghost}
-      busy={busy}
+      busy={busy || submitting}
       autoFocus={active}
       ariaLabel="SQL"
       label={<>SQL</>}

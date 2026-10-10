@@ -8,11 +8,11 @@ export type SqlActions = {
   open(name: string): void;
   selectObject(selection: string | SqlReferenceSelection): void;
   export(format: 'csv' | 'json'): void;
-  run(sql: string): void;
+  run(sql: string): Promise<boolean>;
   setColumns(hidden: string[]): void;
-  insertRow(object: string, cells: SqlInsertCell[]): void;
+  insertRow(object: string, cells: SqlInsertCell[]): Promise<boolean>;
   setOrder(column: string): void;
-  updateCell(row: string, column: string, value: string | null): void;
+  updateCell(row: string, column: string, value: string | null): Promise<boolean>;
   deleteRow(row: string): void;
   setPage(offset: number): void;
   setPageSize(limit: number): void;
@@ -25,29 +25,45 @@ export type SqlActions = {
 
 type Intent = TabPluginClientCapabilities['intent'];
 
-export function createSqlActions(intent: Intent): SqlActions {
-  const send = (name: string, payload: unknown) => { void intent(name, payload); };
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return String(error);
+}
+
+export function createSqlActions(intent: Intent, onRequestError: (reason: string) => void = () => {}): SqlActions {
+  const send = async (name: string, payload: unknown): Promise<boolean> => {
+    try {
+      await intent(name, payload);
+      return true;
+    } catch (error) {
+      onRequestError(errorMessage(error));
+      return false;
+    }
+  };
+  const dispatch = (name: string, payload: unknown): void => { void send(name, payload); };
 
   return {
-    open: (name) => send('open', { name }),
-    selectObject: (selection) => send('select-object', typeof selection === 'string' ? { object: selection } : selection),
-    export: (format) => send('export', { format }),
+    open: (name) => dispatch('open', { name }),
+    selectObject: (selection) => dispatch('select-object', typeof selection === 'string' ? { object: selection } : selection),
+    export: (format) => dispatch('export', { format }),
     run: (sql) => send('run', { sql }),
-    setColumns: (hidden) => send('set-columns', { hidden }),
+    setColumns: (hidden) => dispatch('set-columns', { hidden }),
     insertRow: (object, cells) => send('insert-row', { object, cells }),
-    setOrder: (column) => send('set-order', { column }),
+    setOrder: (column) => dispatch('set-order', { column }),
     updateCell: (row, column, value) => send('update-cell', { row, column, value }),
-    deleteRow: (row) => send('delete-row', { row }),
-    setPage: (offset) => send('set-page', { offset }),
-    setPageSize: (limit) => send('set-page-size', { limit }),
-    refresh: () => send('refresh', {}),
-    setFilter: (column, op, value) => send('set-filter', value === undefined ? { column, op } : { column, op, value }),
-    setFilterEnabled: (column, enabled) => send('set-filter-enabled', { column, enabled }),
-    setGlobalFilter: (value) => send('set-global-filter', { value }),
-    clearFilters: () => send('clear-filters', {}),
+    deleteRow: (row) => dispatch('delete-row', { row }),
+    setPage: (offset) => dispatch('set-page', { offset }),
+    setPageSize: (limit) => dispatch('set-page-size', { limit }),
+    refresh: () => dispatch('refresh', {}),
+    setFilter: (column, op, value) => dispatch('set-filter', value === undefined ? { column, op } : { column, op, value }),
+    setFilterEnabled: (column, enabled) => dispatch('set-filter-enabled', { column, enabled }),
+    setGlobalFilter: (value) => dispatch('set-global-filter', { value }),
+    clearFilters: () => dispatch('clear-filters', {}),
   };
 }
 
-export function useSqlActions(capabilities: TabPluginClientCapabilities): SqlActions {
-  return useMemo(() => createSqlActions(capabilities.intent), [capabilities.intent]);
+export function useSqlActions(
+  capabilities: TabPluginClientCapabilities, onRequestError: (reason: string) => void = () => {},
+): SqlActions {
+  return useMemo(() => createSqlActions(capabilities.intent, onRequestError), [capabilities.intent, onRequestError]);
 }
