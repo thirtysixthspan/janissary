@@ -37,12 +37,17 @@ import { parseDiffArgument } from './parse-argument.js';
 type WorkspaceRoute =
   | { kind: 'local'; origin: { root: string; workspace: { dir: string } } }
   | { kind: 'remote'; origin: { root: string; workspace: { dir: string } } }
+  | { kind: 'provisioning' }
   | { kind: 'none' };
 
 function resolveWorkspace(
   capabilities: TabPluginServerCapabilities, name: string,
 ): WorkspaceRoute {
   const record = capabilities.originTab(name);
+  // The directory of a clone is known before the clone is, so a workspace that has not landed reads
+  // as one that exists — and asking for its diff would answer "not a git repository" for what is
+  // really a wait.
+  if (record?.provisioning) return { kind: 'provisioning' };
   if (record?.workspace) {
     const origin = { root: record.root, workspace: { dir: record.workspace.dir } };
     return { kind: record.remote ? 'remote' : 'local', origin };
@@ -103,6 +108,11 @@ export function activate(): TabPluginActivation {
         if (route.kind === 'none') {
           return capabilities.rejectRequest(
             `Cannot diff on <${parsed.tab}>: no open shell or harness tab named "${parsed.tab}" has a workspace.`,
+          );
+        }
+        if (route.kind === 'provisioning') {
+          return capabilities.rejectRequest(
+            `Cannot diff on <${parsed.tab}>: the workspace of "${parsed.tab}" is still being prepared.`,
           );
         }
         openWorkspace(active, parsed.tab, route);

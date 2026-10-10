@@ -303,8 +303,11 @@ export type TabPluginServerCapabilities = {
   // Called with a label, the same record for that open tab instead of the invoking one, resolved the
   // way every command that addresses a tab by typed name resolves one — by label or display alias,
   // ignoring case. It is how a command that names a tab other than its own asks about it without
-  // reading the host's tab list, and it answers null for a name no open tab holds.
-  originTab(label?: string): { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean }; remote?: true } | null;
+  // reading the host's tab list, and it answers null for a name no open tab holds. `provisioning` is
+  // set, and only then, when the workspace that tab names has not landed yet: a local clone still
+  // running, or a remote tab whose far side has not answered — so a caller can report the wait
+  // rather than open a tab that would read the workspace as absent.
+  originTab(label?: string): { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean }; remote?: true; provisioning?: true } | null;
   // The change set of the remote workspace this plugin's own answering tab rides, as the far side
   // computed it — the same records a local read produces, validated by the plugin's own guard before
   // it publishes anything. Null when the answering tab rides no remote workspace, because a

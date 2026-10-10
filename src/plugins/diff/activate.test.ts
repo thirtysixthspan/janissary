@@ -324,6 +324,51 @@ describe('diff plugin activation', () => {
     );
   });
 
+  it('refuses the clause for a tab whose workspace is still being prepared, opening nothing', () => {
+    const workspace = path.join(root, '.janissary', 'workspace', 'landing');
+    const named = { label: 'landing', cwd: workspace, root: repo, workspace: { dir: workspace }, provisioning: true as const };
+    const { capabilities, openOrFocusTab, launchTab } = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === 'landing' ? named : { label: 'shell', cwd: repo, root: repo })),
+    });
+    expect(() => activate().command?.('on landing', capabilities)).toThrow(
+      'Cannot diff on <landing>: the workspace of "landing" is still being prepared.',
+    );
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+    expect(launchTab).not.toHaveBeenCalled();
+  });
+
+  it('refuses the clause for a remote tab whose far-side workspace has not answered yet', () => {
+    const named = {
+      label: 'remote-1', cwd: '/srv/proj', root: repo, remote: true as const, provisioning: true as const,
+    };
+    const { capabilities, openOrFocusTab, launchTab } = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === 'remote-1' ? named : { label: 'shell', cwd: repo, root: repo })),
+    });
+    expect(() => activate().command?.('on remote-1', capabilities)).toThrow(
+      'Cannot diff on <remote-1>: the workspace of "remote-1" is still being prepared.',
+    );
+    expect(openOrFocusTab).not.toHaveBeenCalled();
+    expect(launchTab).not.toHaveBeenCalled();
+  });
+
+  it('opens the tab for the same settled record the flag came off', async () => {
+    const workspace = path.join(root, '.janissary', 'workspace', 'landed');
+    mkdirSync(workspace, { recursive: true });
+    initRepo(workspace);
+    writeFileSync(path.join(workspace, 'w.txt'), 'one');
+    commitAll(workspace);
+    writeFileSync(path.join(workspace, 'w.txt'), 'two');
+    const named = { label: 'landed', cwd: workspace, root: repo, workspace: { dir: workspace }, provisioning: false };
+    const { capabilities, openOrFocusTab, updateTab } = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === 'landed' ? named : { label: 'shell', cwd: repo, root: repo })),
+    });
+    const activation = activate();
+    activation.command?.('on landed', capabilities);
+    const payload = await settled(updateTab);
+    expect(openOrFocusTab).toHaveBeenCalledTimes(1);
+    expect(payload.workspace).toBe(true);
+  });
+
   it('refuses the clause for a name no open tab holds', () => {
     const shell = { label: 'shell', cwd: repo, root: repo };
     const { capabilities } = makeCapabilities({
