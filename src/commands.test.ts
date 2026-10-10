@@ -118,6 +118,19 @@ describe('getOutput("help <section>")', () => {
     expect(names).toEqual(names.toSorted((left, right) => left.localeCompare(right)));
   });
 
+  it('keeps every command description within 200 characters', () => {
+    const descriptions = sectionText('help commands')
+      .split('\n')
+      .filter((line) => line.startsWith('| `'))
+      .map((line) => {
+        const separator = line.indexOf(' | ', line.indexOf('`') + 1);
+        return line.slice(separator + 3, line.lastIndexOf(' |'));
+      });
+
+    expect(descriptions.length).toBeGreaterThan(1);
+    expect(descriptions.filter((description) => description.length > 200)).toEqual([]);
+  });
+
   it('leaves a word that only starts with help unknown', () => {
     expect(getOutput('helper').kind).toBe('unknown');
   });
