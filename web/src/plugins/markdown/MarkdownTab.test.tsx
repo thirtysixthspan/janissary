@@ -73,7 +73,7 @@ describe('MarkdownTab', () => {
   it('fetches the file through the host-supplied resource url', async () => {
     renderTab();
     await waitFor(() => screen.getByRole('heading', { level: 1 }));
-    expect(fetch).toHaveBeenCalledWith('/open/1?token=');
+    expect(fetch).toHaveBeenCalledWith('/open/1?token=', { signal: expect.any(AbortSignal) });
   });
 
   it('offers Split and ignores global keys while its pane is inactive', async () => {
@@ -114,6 +114,14 @@ describe('MarkdownTab', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     renderTab();
     await waitFor(() => expect(screen.getByText('Failed to load README.md')).toBeInTheDocument());
+  });
+
+  it('renders a markup-bearing filename in the failure line as text', async () => {
+    const filename = '<img src=x onerror=alert(1)>';
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    const { container } = renderTab({ markdown: makeMarkdown({ name: filename }) });
+    await waitFor(() => expect(screen.getByText(`Failed to load ${filename}`)).toBeInTheDocument());
+    expect(container.querySelector('img')).toBeNull();
   });
 
   it('falls back to a failure line when the response is not ok', async () => {

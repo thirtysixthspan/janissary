@@ -30,6 +30,6 @@ The keys only reach the preview you are looking at. A markdown tab behind anothe
 
 <img class="agent-float left" src="/agents/demir-south.png" alt="" />
 
-The view is a snapshot of the file as it was when you opened it — edits on disk aren't picked up until you open it again. If the file disappears or cannot be read while the view is loading, the tab shows `Failed to load <name>` instead of an empty document or server error page. Relative links to other local files (an image referenced as `./diagram.png`, say) aren't resolved; only the Markdown text itself renders. Active markup in the file is stripped before rendering, and a file that fails to parse falls back to plain text.
+The view is a snapshot of the file as it was when you opened it — edits on disk aren't picked up until you open it again. If the file disappears or cannot be read while the view is loading, the tab shows `Failed to load <name>` as text instead of an empty document or server error page. Relative links to other local files (an image referenced as `./diagram.png`, say) aren't resolved; only the Markdown text itself renders. Active markup in the file is stripped before rendering, and a file that fails to parse falls back to plain text.
 
 Like the other view tabs, a markdown tab is a live view: it isn't restored by `janus --relaunch`, and closing it (× button or `close`) just removes the view. To open the file in the OS default viewer instead, use `open external <file>.md`. To *edit* a Markdown file, use `edit` — see [Editor](/user-documentation/tab-types/editor).
