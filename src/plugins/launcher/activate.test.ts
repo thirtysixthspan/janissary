@@ -5,6 +5,7 @@ import {
   TabPluginRejection,
   type TabActivityEntry,
   type TabPluginPayload,
+  type TabPluginIntent,
   type TabPluginServerCapabilities,
   type TabPluginTabUpdate,
   type TabPluginTopicAction,
@@ -18,10 +19,10 @@ import { emptyTopicData } from '../topics.js';
 // because the host only produces one for a caller that asks. The launcher's own row carries its plugin
 // record, and the docked plugin row carries one too.
 const ROWS: TabActivityEntry[] = [
-  { label: 'shell', incarnation: 'shell-incarnation', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, lastCommand: 'ls' },
-  { label: 'agent', incarnation: 'agent-incarnation', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, lastCommand: 'npm test' },
-  { label: 'schedules', incarnation: 'schedules-incarnation', view: 'plugin', plugin: { id: 'schedules', instanceKey: 'schedules' }, dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0 },
-  { label: LAUNCHER_LABEL, incarnation: 'launcher-incarnation', view: 'plugin', plugin: { id: 'launcher', instanceKey: 'launcher' }, dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12 },
+  { label: 'shell', incarnation: 'shell-incarnation', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, revision: 0, lastCommand: 'ls' },
+  { label: 'agent', incarnation: 'agent-incarnation', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, revision: 0, lastCommand: 'npm test' },
+  { label: 'schedules', incarnation: 'schedules-incarnation', view: 'plugin', plugin: { id: 'schedules', instanceKey: 'schedules' }, dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0, revision: 0 },
+  { label: LAUNCHER_LABEL, incarnation: 'launcher-incarnation', view: 'plugin', plugin: { id: 'launcher', instanceKey: 'launcher' }, dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12, revision: 0 },
 ];
 
 // What a tail read attaches to a row that has a transcript to slice. Distinctive so a test can prove
@@ -61,7 +62,7 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     spawnTerminal: () => ({ ptyId: 'test-pty', cols: 80, rows: 24, running: false }),
   };
   const capabilities: TabPluginServerCapabilities = {
-    startAcp: () => (startError === undefined ? {} : { error: startError }),
+    startAcp: () => (startError === undefined ? { session: 'acp-test' } : { error: startError }),
     promptAcp: async () => '',
     promptAcpResult: async (prompt) => {
       prompted.push(prompt);
@@ -133,9 +134,13 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
 // takes, and the path whose answering label makes the ACP capabilities resolve to the launcher's tab.
 async function summarize(entry: ReturnType<typeof fixture>, activation: ReturnType<typeof activate>): Promise<void> {
   await activation.intent(
-    { tabLabel: LAUNCHER_LABEL, intent: 'summarize', payload: {}, tabPayload: entry.opened[0]?.value.payload },
+    intentRequest('summarize', {}, entry.opened[0]?.value.payload),
     entry.capabilities,
   );
+}
+
+function intentRequest(intent: string, payload: unknown, tabPayload: unknown): TabPluginIntent {
+  return { tab: LAUNCHER_LABEL, intent, payload, tabPayload };
 }
 
 // The launcher is a singleton for the life of the server, so its state is module state — and every test
@@ -375,7 +380,7 @@ describe('the tabs topic', () => {
     const collided: TabActivityEntry[] = [...ROWS, {
       label: LAUNCHER_LABEL, view: 'plugin', plugin: { id: 'shell', instanceKey: 'shell-1' },
       incarnation: 'shell-plugin-incarnation', dotColor: '#98c379', active: false, busy: false, hasUnread: false,
-      needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 3,
+      needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 3, revision: 0,
     }];
     const entry = openLauncher(collided);
 
@@ -414,10 +419,7 @@ describe('the launcher intents', () => {
       activation.command?.('', entry.capabilities);
       entry.dispatched.length = 0;
 
-      activation.intent(
-        { tabLabel: 'launcher', intent: 'run-command', payload: { id: 'tasks' }, tabPayload: entry.opened[0].value.payload },
-        entry.capabilities,
-      );
+      activation.intent(intentRequest('run-command', { id: 'tasks' }, entry.opened[0].value.payload), entry.capabilities);
 
       expect(entry.dispatched).toEqual(['tasks']);
     } finally {
@@ -433,7 +435,7 @@ describe('the launcher intents', () => {
       entry.dispatched.length = 0;
 
       activation.intent(
-        { tabLabel: 'launcher', intent: 'run-command', payload: { id: 'not-a-real-entry' }, tabPayload: entry.opened[0].value.payload },
+        intentRequest('run-command', { id: 'not-a-real-entry' }, entry.opened[0].value.payload),
         entry.capabilities,
       );
 
@@ -449,10 +451,7 @@ describe('the launcher intents', () => {
       const { activation, entry } = intentFor('focus-tab', { label: 'shell' }, root);
       activation.command?.('', entry.capabilities);
 
-      activation.intent(
-        { tabLabel: 'launcher', intent: 'focus-tab', payload: { label: 'shell' }, tabPayload: entry.opened[0].value.payload },
-        entry.capabilities,
-      );
+      activation.intent(intentRequest('focus-tab', { label: 'shell' }, entry.opened[0].value.payload), entry.capabilities);
 
       expect(entry.actions).toEqual([{ topic: 'tabs', action: 'focus', label: 'shell' }]);
     } finally {
@@ -466,10 +465,7 @@ describe('the launcher intents', () => {
       const { activation, entry } = intentFor('configure', { id: 'configure' }, root);
       activation.command?.('', entry.capabilities);
 
-      activation.intent(
-        { tabLabel: 'launcher', intent: 'configure', payload: { id: 'configure' }, tabPayload: entry.opened[0].value.payload },
-        entry.capabilities,
-      );
+      activation.intent(intentRequest('configure', { id: 'configure' }, entry.opened[0].value.payload), entry.capabilities);
 
       expect(entry.dispatched).toEqual([`edit ${path.join(root, '.janissary', 'launcher.json')}`]);
     } finally {
@@ -484,7 +480,7 @@ describe('the launcher intents', () => {
       activation.command?.('', entry.capabilities);
 
       const reply = await activation.intent(
-        { tabLabel: 'launcher', intent: 'dispatch', payload: { line: 'tasks' }, tabPayload: entry.opened[0].value.payload },
+        intentRequest('dispatch', { line: 'tasks' }, entry.opened[0].value.payload),
         entry.capabilities,
       );
 
@@ -518,10 +514,7 @@ describe('the launcher intents', () => {
       expect(payload.commands.map((command) => command.command)).toEqual(['tasks']);
       expect(entry.notified.join('\n')).toContain('sharing an id another entry already holds');
 
-      activation.intent(
-        { tabLabel: 'launcher', intent: 'run-command', payload: { id: 'tasks' }, tabPayload: payload },
-        entry.capabilities,
-      );
+      activation.intent(intentRequest('run-command', { id: 'tasks' }, payload), entry.capabilities);
 
       // The surviving row runs its own command.
       expect(entry.dispatched).toEqual(['tasks']);
@@ -537,7 +530,7 @@ describe('the launcher intents', () => {
       activation.command?.('', entry.capabilities);
 
       expect(() => activation.intent(
-        { tabLabel: 'launcher', intent: 'nope', payload: {}, tabPayload: entry.opened[0].value.payload },
+        intentRequest('nope', {}, entry.opened[0].value.payload),
         entry.capabilities,
       )).toThrow('unknown launcher intent "nope"');
     } finally {
@@ -598,10 +591,7 @@ describe('summarizing', () => {
       ]);
       // And the row the client clicks now dispatches the line the file holds.
       entry.dispatched.length = 0;
-      activation.intent(
-        { tabLabel: 'launcher', intent: 'run-command', payload: { id: 'tasks' }, tabPayload: payload },
-        entry.capabilities,
-      );
+      activation.intent(intentRequest('run-command', { id: 'tasks' }, payload), entry.capabilities);
       expect(entry.dispatched).toEqual(['schedules']);
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -701,6 +691,20 @@ describe('summarizing', () => {
     // Nothing has moved, so the second flush asks nothing at all.
     await summarize(entry, activation);
     expect(entry.prompted).toHaveLength(2);
+  });
+
+  it('primes once across flushes when transcript changes in the same ACP session', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] First.');
+    await summarize(entry, activation);
+
+    entry.growTab('shell', 1);
+    entry.answerWith('[[tab:shell]] Second.');
+    await summarize(entry, activation);
+
+    expect(entry.prompted).toHaveLength(3);
+    expect(entry.prompted.filter((prompt) => prompt.includes('Answer with one block per tab'))).toHaveLength(1);
   });
 
   // A flush asks about the tabs that moved, so the reply normally names only those. Every other tab's

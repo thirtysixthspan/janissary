@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Complete the plan's faithful contract fixtures and command-id collision regression.
-
-Existing Issue: Activation fixtures omit required activity revisions and send `tabLabel` instead of the published intent's `tab`, the activity fake returns null for an absent question, the activation ACP start fake omits the session identity, and the positional-id collision test contains no collision. Severity: 5/10
-
-Existing Risk: 5/10 - Tests exercise impossible host values, a revision-only case computes NaN, and the intended session-reuse and generated-id collision regressions can pass without covering their production contracts.
-
-Proposal Risk: 2/10 - Correcting fixtures may expose existing failures, but preserving their behavioral assertions makes those failures useful rather than hiding them with casts.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "finish faithful launcher fixtures and the generated-id collision regression". Supply numeric `revision` values for every `TabActivityEntry` in `src/plugins/launcher/activate.test.ts`, construct requests with the published `TabPluginIntent` field `tab`, and have `startAcp` and `promptAcpResult` report the same stable session. Assert priming occurs once across two flushes whose transcripts actually change. In `src/plugins/activity.test.ts`, make the no-question fake return undefined as `src/questions.ts` does, and assert an ordinary row does not need input. In `src/plugins/launcher/commands-file.test.ts`, place an explicit `command-1` id at index 0 and an unnamed entry at index 1 so the fixture genuinely collides, then assert the explicit id survives and both resulting ids are unique. Keep fixtures typed without forced casts that conceal these differences and run the appropriate diff-scoped checks in the implementation task.
-
-
 * Honor zero and invalid transcript-tail limits in the new activity capability.
 
 Existing Issue: The activity reader attaches a tail for every defined limit, and `slice(-0)` or `slice(-NaN)` selects the whole log rather than zero entries, contrary to the plan's positive-limit-only rule. Severity: 4/10

@@ -24,9 +24,11 @@ function tab(overrides: Partial<Tab> = {}): Tab {
   } as Tab;
 }
 
-type PendingFor = (label: string) => unknown;
+type PendingFor = Managers['questions']['pendingFor'];
 
-function managers(tabs: Tab[], pendingFor: PendingFor = () => null): { managers: ManagersStub } {
+function noPendingQuestion(): undefined {}
+
+function managers(tabs: Tab[], pendingFor: PendingFor = noPendingQuestion): { managers: ManagersStub } {
   return {
     managers: {
       tab: {
@@ -97,6 +99,14 @@ describe('the tabActivity reader', () => {
     const rows = tabActivityRows(host as unknown as Managers);
 
     expect(rows.map((row) => row.needsInput)).toEqual([true, true, false]);
+  });
+
+  it('does not mark an ordinary tab as needing input when no question is pending', () => {
+    const { managers: host } = managers([tab()]);
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows[0]?.needsInput).toBe(false);
   });
 
   it('reports last activity minute-rounded, and zero for a tab with nothing yet', () => {

@@ -150,13 +150,15 @@ describe('reading launcher.json', () => {
     const directories = scratch();
     try {
       projectFile(directories, [
-        { icon: 'faTerminal', label: 'One', command: 'zsh' },
-        { id: 'command-1', icon: 'faRobot', label: 'Two', command: 'harness' },
+        { id: 'command-1', icon: 'faTerminal', label: 'One', command: 'zsh' },
+        { icon: 'faRobot', label: 'Two', command: 'harness' },
       ]);
 
       const read = readLauncherFile(directories.home, directories.project);
 
-      expect(read.commands.map((entry) => entry.id)).toEqual(['command-0', 'command-1']);
+      const ids = read.commands.map((entry) => entry.id);
+      expect(ids).toEqual(['command-1', 'command-1-2']);
+      expect(new Set(ids).size).toBe(2);
       expect(read.problem).toBeUndefined();
     } finally {
       cleanup(directories);
