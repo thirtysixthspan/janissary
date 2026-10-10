@@ -290,6 +290,72 @@ describe('the tab list', () => {
     expect(caps.intent).toHaveBeenCalledWith('focus-tab', { label: 'shell' });
   });
 
+  // The keyboard walks the rows in the order they are drawn, which is tier order. The payload's own
+  // order is not that order, so an index into it would light the second row on screen and act on the
+  // row the highlight is not on.
+  it('highlights the first row drawn, whichever row the payload names first', () => {
+    launcher(payload({
+      tabs: [row('quiet', { busy: false }), row('badged', { hasUnread: true })],
+    }));
+
+    const drawn = [...screen.getByRole('listbox', { name: 'Open tabs' })
+      .querySelectorAll<HTMLElement>('.launcher-tab-row')];
+    expect(drawn.map((el) => el.dataset.label)).toEqual(['badged', 'quiet']);
+    // Both rows number themselves by where they were drawn, not by where the payload had them.
+    expect(drawn.map((el) => el.dataset.index)).toEqual(['0', '1']);
+    expect(drawn[0]?.getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('moves the highlight along the drawn rows, and acts on the highlighted one', () => {
+    const caps = capabilities();
+    launcher(payload({
+      tabs: [row('quiet', { busy: false }), row('badged', { hasUnread: true })],
+    }), caps);
+    const list = screen.getByRole('listbox', { name: 'Open tabs' });
+
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    fireEvent.keyDown(list, { key: 'Enter' });
+
+    // Down from the unread row is the idle one, and that is the row Enter focuses.
+    expect(caps.intent).toHaveBeenCalledWith('focus-tab', { label: 'quiet' });
+  });
+
+  // A click both highlights and confirms. An arrow afterwards moves on and drops the confirmation, so
+  // the row the user stepped away from is not the one the next Enter acts on.
+  it('steps from the row that was clicked rather than from the top of the list', () => {
+    const caps = capabilities();
+    launcher(payload({
+      tabs: [row('one', { busy: true }), row('two', { busy: true }), row('three', { busy: true })],
+    }), caps);
+    const list = screen.getByRole('listbox', { name: 'Open tabs' });
+
+    fireEvent.click(screen.getByRole('option', { name: /two/ }));
+    // The click also hands the keyboard to the list, which is the other half of the composed ref.
+    expect(list).toHaveFocus();
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    fireEvent.keyDown(list, { key: 'Enter' });
+
+    expect(caps.intent).toHaveBeenCalledWith('focus-tab', { label: 'three' });
+  });
+
+  // A selection moved by keyboard has to be visible without the caller chasing the DOM, and the shared
+  // hook can only scroll a row it can reach — which it could not while the tab held the only ref.
+  it('scrolls the row a keyboard selection lands on into view', () => {
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    const names = ['one', 'two', 'three', 'four', 'five'];
+    launcher(payload({ tabs: names.map((label) => row(label, { busy: true })) }));
+    const list = screen.getByRole('listbox', { name: 'Open tabs' });
+
+    fireEvent.keyDown(list, { key: 'End' });
+
+    const drawn = [...list.querySelectorAll<HTMLElement>('.launcher-tab-row')];
+    // The hook scrolls a selection whenever it moves, so the last scroll is the row the keyboard
+    // landed on — reached through the composed ref, which is what it could not do before.
+    expect(scrollIntoView.mock.instances.at(-1)).toBe(drawn[4]);
+    expect(drawn[4]?.getAttribute('aria-selected')).toBe('true');
+  });
+
   it('shows the status paragraph when a tab has one, and nothing when it does not', () => {
     launcher(payload({
       tabs: [row('shell'), row('quiet')],

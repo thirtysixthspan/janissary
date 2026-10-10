@@ -2,6 +2,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { LauncherCommand } from '@shared/plugins/launcher/shared';
 import { nextListSelection, useListSelection, type ListRowClick, type ListSelection } from '../api';
 import { launchIcon } from './launcher-icons';
+import { useComposedListRef } from './list-ref';
 
 // A click highlights and confirms in one step; the row opens on the second click of an already
 // highlighted one. One rule for every list here, because "click twice to run" is what a terminal user's
@@ -56,6 +57,7 @@ export function LauncherCommandList({ commands, listRef, onOpen, onUnknownIcon }
   onUnknownIcon?(icon: string): void;
 }) {
   const selection = useListSelection(commands.length);
+  const composed = useComposedListRef(listRef, selection.listRef);
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
     if (selection.navigate(event.key, nextListSelection)) { event.preventDefault(); return; }
     if (event.key === 'Enter' && selection.selected !== null) {
@@ -66,7 +68,7 @@ export function LauncherCommandList({ commands, listRef, onOpen, onUnknownIcon }
   return (
     <div
       className="launcher-commands"
-      ref={listRef}
+      ref={composed}
       tabIndex={0}
       role="listbox"
       aria-label="Launch commands"

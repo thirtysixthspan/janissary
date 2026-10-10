@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Navigate tab rows in their rendered tier order and wire selection focus and scrolling.
-
-Existing Issue: TabList renders rows in tier order but selects and activates them by the original payload index, and both launcher lists attach the caller's ref instead of the ref useListSelection uses to focus and scroll. Severity: 6/10
-
-Existing Risk: 6/10 - Arrow keys jump through the displayed list out of order, and clicking a row does not transfer keyboard focus or scroll later selections into view.
-
-Proposal Risk: 2/10 - Selecting from the flattened rendered list and sharing the actual DOM ref aligns keyboard activation with visible highlights.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "navigate tab rows in their rendered tier order and wire selection focus and scrolling". In web/src/plugins/launcher/TabList.tsx, flatten launcherTiers into the exact displayed row order and use it for selection indices, Enter activation, and row rendering. In that file and web/src/plugins/launcher/CommandRail.tsx, compose the external list ref with selection.listRef so the shared hook can focus and scroll the mounted list. Add interaction tests with payload order different from tier order, arrow traversal, Enter, clicking then pressing an arrow, and a selected row outside the viewport; current tier tests check grouping but no keyboard traversal across tiers.
-
-
 * Advance displayed relative ages while the application is idle.
 
 Existing Issue: Row ages are computed with Date.now only during render and no clock tick schedules a render when the row payload stays unchanged. Severity: 5/10

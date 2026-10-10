@@ -35,6 +35,8 @@ Docked tabs are never listed, and neither is the launcher's own tab. A docked ta
 
 Clicking a row focuses that tab in the center strip, the same way clicking it in the strip does — which starts the ordinary unread dwell, so a row read for three seconds loses its flag exactly as the strip's own. Clicking a tab that closed between the click and its answer does nothing.
 
+Keyboard navigation walks the rows in the order they are drawn, tier by tier, with Enter focusing the highlighted row and a click handing the keyboard to the list. The order the rows are drawn in is the order the keyboard walks, so a selection moved by an arrow key is the row the highlight is on — never the row the same position would have been in the host's own ordering.
+
 ### What each row shows
 
 Every row carries the same status chrome the tab strip gives it, plus its time: the tab's dot color (blinking while the tab is busy), its name, its unread flag, and how long ago it was last active — a relative age that coarsens from minutes to hours to days as it grows.
