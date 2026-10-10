@@ -24,17 +24,6 @@ Proposal Risk: 2/10 - Typed faithful fixtures and focused integration cases expo
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "repair the new review fixtures so they exercise the published types and real lifecycle contracts". Repair src/plugins/launcher/summarizer.test.ts so its TabActivityEntry helper supplies dotColor and active, its view values match the contract, every buildSummarizerPrompt call supplies a delimiter, and the asserted marker text matches the actual description. Repair the moved-topic fixture in src/plugins/launcher/activate.test.ts to deliver TabActivityEntry objects rather than LauncherTabRow projections lacking logLength. Replace forced capability casts where they hide these mismatches and add host-backed singleton and close tests. Add the plan's currently absent regression assertions for janus init idempotent launcher-file seeding, timestamp writers in src/tab/transcript/events.ts, and tabs.focus on a missing label, using the existing project-init, transcript, and topic test files. Run the appropriate diff-scoped checks during the separate implementation task; this review has identified these issues by reading only.
 
 
-* Handle core ACP command replies by rendering the host's response surface in the launcher.
-
-Existing Issue: The launcher discards dispatch results marked coreResponse but never renders useAcpResponse, so an acp command typed into its bar has no visible answer or streaming controls. Severity: 7/10
-
-Existing Risk: 6/10 - A user can start a provider request from the launcher and receive neither its answer nor the response panel needed to stop or reset it.
-
-Proposal Risk: 2/10 - Composing the existing host response surface exposes its controls, although automatic summarizer output sharing that ACP session needs an explicit presentation decision.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "render core ACP command replies in the launcher". In web/src/plugins/launcher/LauncherTab.tsx, consume useAcpResponse through the published client API and render the host-provided node in a scrollable area beside the existing reply and command bar, following web/src/plugins/shell/ShellTab.tsx. Keep web/src/plugins/launcher/useLauncherSubmit.ts from duplicating coreResponse text, and decide how automatic summarizer turns appear when the same session is shown rather than silently dropping user-requested responses. web/src/plugins/PluginBody.tsx supplies the response scope but does not render its node, and src/commands/acp.ts marks this command as a core response. Extend web/src/plugins/launcher/LauncherTab.test.tsx with a populated host response scope and a dispatched ACP line, asserting visible streaming output and host controls without a second textual reply; existing tests cover list rendering but not this command path. Update product/specs/launcher.md to describe the resulting response presentation.
-
-
 * Handle automatically answered permission gates without falsely raising the needs-you tier.
 
 Existing Issue: busyStatusHandler records every detected gate as gateOpen even when its approver is clearing it, and the activity reader interprets that raw screen fact as needsInput independently of the existing stuck decision. Severity: 5/10

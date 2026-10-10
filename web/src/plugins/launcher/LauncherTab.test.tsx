@@ -4,8 +4,14 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LauncherCommand, LauncherPayload, LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { TabPluginClientCapabilities } from '../api';
+import { AcpResponseScope } from '../../shared/acp/AcpResponseScope';
 import { AppCommandBarProvider, AppCommandBarTabScope } from '../../shared/command-bar/AppCommandBar';
+import type { JanusClient } from '../../ws';
 import { LauncherTab } from './LauncherTab';
+
+function client(): JanusClient {
+  return { send: vi.fn(), attachPty: vi.fn() } as unknown as JanusClient;
+}
 
 function capabilities(dock: TabPluginClientCapabilities['dock'] = 'left') {
   const intent = vi.fn<(name: string, payload: unknown) => Promise<unknown>>(async () => null);
@@ -77,6 +83,11 @@ function launcher(value = payload(), caps = capabilities()) {
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
+  // The host's response surface measures its own scroll area.
+  vi.stubGlobal('ResizeObserver', class {
+    observe() {}
+    disconnect() {}
+  });
 });
 
 describe('the command rail', () => {
@@ -469,8 +480,53 @@ describe('the tab list', () => {
     });
   });
 
-  describe('the hover card', () => {
-  it('opens over a row the pointer enters, carrying what the row has no width for', () => {
+  // The bar below dispatches any line, `acp` among them, and a reply marked `coreResponse` is the host's
+// to render. Without the host's surface mounted, such a line is answered nowhere at all — no streamed
+// text, no Reset control, no way to stop a request the user started.
+describe('a line sent to the core ACP session', () => {
+  const STREAMED = { lines: [{ type: 'markdown' as const, text: '# Streamed answer' }], running: true };
+
+  function mounted(caps: ReturnType<typeof capabilities>, reply: unknown) {
+    const intercept = vi.fn<(line: string) => boolean>(() => false);
+    caps.intent.mockResolvedValue(reply);
+    return render(
+      <AppCommandBarProvider bar={bar(intercept)}>
+        <AcpResponseScope label="launcher" client={client()} response={STREAMED}>
+          <AppCommandBarTabScope label="launcher">
+            <LauncherTab payload={payload()} capabilities={caps.value} />
+          </AppCommandBarTabScope>
+        </AcpResponseScope>
+      </AppCommandBarProvider>,
+    );
+  }
+
+  it('answers in the host\'s surface, with that surface\'s controls', async () => {
+    const caps = capabilities();
+    mounted(caps, { dispatched: true, output: '', coreResponse: true });
+    const shell = screen.getByLabelText('Launcher command');
+    fireEvent.change(shell, { target: { value: 'acp summarize the open tabs' } });
+    fireEvent.keyDown(shell, { key: 'Enter' });
+
+    expect(await screen.findByRole('heading', { name: 'Streamed answer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset ACP' })).toBeInTheDocument();
+    // And the host's surface is the answer, not a second copy of it.
+    expect(document.querySelector('.launcher-reply')).toBeNull();
+  });
+
+  // Everything that is not a core response still has its own reply area: a dispatched command's text is
+  // the rail's to show, which is what the `coreResponse` flag's absence means.
+  it('still shows a dispatched reply that is not a core response', async () => {
+    const caps = capabilities();
+    mounted(caps, { dispatched: true, output: 'Opened the task list.' });
+    const shell = screen.getByLabelText('Launcher command');
+    fireEvent.change(shell, { target: { value: 'tasks' } });
+    fireEvent.keyDown(shell, { key: 'Enter' });
+
+    expect(await screen.findByText('Opened the task list.')).toBeInTheDocument();
+  });
+});
+
+describe('the hover card', () => {  it('opens over a row the pointer enters, carrying what the row has no width for', () => {
     launcher(payload({
       tabs: [row('agent', { title: 'Release agent', cwd: '/repo/ws', remote: 'devbox', lastCommand: 'npm test' })],
     }));

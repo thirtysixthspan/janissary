@@ -6,6 +6,7 @@ import { SUMMARIZER_FLUSH_MS } from '@shared/plugins/launcher/shared';
 import {
   CommandBarShell,
   PluginActionsHeader,
+  useAcpResponse,
   useAppCommandBar,
   useCommandBarKeys,
   type TabPluginClientCapabilities,
@@ -35,6 +36,10 @@ export function LauncherTab({ payload, capabilities }: Properties) {
   const tabsRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLTextAreaElement>(null);
   const appBar = useAppCommandBar();
+  // The host's own surface for this tab's core ACP session. The bar below dispatches any line, `acp`
+  // among them, and the answer to one is the host's to render — the rail shows its own reply area for
+  // everything else and repeats nothing this surface is already showing.
+  const acpResponse = useAcpResponse();
   const [draft, setDraft] = useState('');
   const [reply, setReply] = useState<string | null>(null);
   // The rail's own clock, so a row's age advances while the launcher is on screen even though nothing
@@ -131,6 +136,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
         now={now}
       />
       {reply !== null && <div className="launcher-reply">{reply}</div>}
+      {acpResponse !== null && <div className="launcher-acp">{acpResponse}</div>}
       <CommandBarShell
         value={draft}
         disabled={appBar.blockingOverlayOpen}

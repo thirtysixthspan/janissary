@@ -74,3 +74,10 @@
   flex: 0 0 auto; max-height: 8em; overflow-y: auto; padding: 4px 8px;
   font-size: 11px; color: var(--muted); white-space: pre-wrap; border-top: 1px solid var(--border);
 }
+
+/* The host's own core ACP surface, for a line this bar sent to the session this tab runs. It carries
+   that surface's own controls, and it scrolls because a reply can outgrow the rail. The summarizer's
+   turns appear here too: they run on this tab's connection, so they are this session's turns. */
+.launcher-acp {
+  flex: 0 0 auto; max-height: 14em; overflow-y: auto; border-top: 1px solid var(--border);
+}
