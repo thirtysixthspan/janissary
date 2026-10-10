@@ -6,13 +6,11 @@ import type { LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { ListRowClick, ListSelection } from '../api';
 import { relativeTime } from './time-ago';
 
-// A tab row is navigation rather than a command, so one click focuses it — the way clicking the tab in
-// the strip does, which is what this list has always promised. A repeat click on the row already
-// confirmed is not sent again: that tab is already focused, and the server would only answer a request
-// that changes nothing. The command rail's own two-click rule lives beside it, because a rail runs
-// commands and a list is navigated.
-function openOnClick(index: number, confirmed: number | null): ListRowClick {
-  return { selected: index, opens: confirmed !== index };
+// A tab row is navigation rather than a command, so an inactive row focuses on one click — the way
+// clicking the tab in the strip does. The host's active fact is authoritative; a remembered position
+// may now hold another row after a tier reorder, or be inactive after focus moved elsewhere.
+function openOnClick(index: number, active: boolean): ListRowClick {
+  return { selected: index, opens: !active };
 }
 
 // One tab row: its dot, its name, its unread flag, its relative time, and its status paragraph. The dot
@@ -46,7 +44,7 @@ export function LauncherTabRowView({ row, summary, index, selection, onFocus, no
       data-label={row.label}
       role="option"
       aria-selected={selection.selected === index}
-      onClick={() => { if (selection.rowClicked(index, openOnClick)) onFocus(row); }}
+      onClick={() => { if (selection.rowClicked(index, (at) => openOnClick(at, row.active))) onFocus(row); }}
       onMouseEnter={show}
       onMouseLeave={() => { setHovered(false); setAnchor(null); }}
     >

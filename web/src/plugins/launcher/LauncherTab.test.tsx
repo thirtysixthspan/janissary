@@ -64,19 +64,27 @@ function bar(intercept: (line: string) => boolean) {
   };
 }
 
+function launcherElement(
+  value: LauncherPayload,
+  caps: TabPluginClientCapabilities,
+  intercept: (line: string) => boolean = () => false,
+) {
+  return (
+    <AppCommandBarProvider bar={bar(intercept)}>
+      <AppCommandBarTabScope label="launcher">
+        <LauncherTab payload={value} capabilities={caps} />
+      </AppCommandBarTabScope>
+    </AppCommandBarProvider>
+  );
+}
+
 function launcher(value = payload(), caps = capabilities()) {
   // The launcher hosts the application's own command bar, so the bar's provider has to be above it. A
   // spy for `intercept` rather than a no-op, so a case can tell whether a line was answered by the
   // application at all.
   const intercept = vi.fn<(line: string) => boolean>(() => false);
   return {
-    ...render(
-      <AppCommandBarProvider bar={bar(intercept)}>
-        <AppCommandBarTabScope label="launcher">
-          <LauncherTab payload={value} capabilities={caps.value} />
-        </AppCommandBarTabScope>
-      </AppCommandBarProvider>,
-    ),
+    ...render(launcherElement(value, caps.value, intercept)),
     intercept,
   };
 }
@@ -308,28 +316,48 @@ describe('the tab list', () => {
     expect(caps.intent).toHaveBeenCalledWith('focus-tab', { label: 'shell' });
   });
 
-  // The row that is already focused is not asked for again: a second request for a tab that is current
-  // only costs the server an answer that changes nothing.
-  it('does not ask again when the focused row is clicked twice', () => {
+  it('does not ask again after the host acknowledges that the row is active', () => {
     const caps = capabilities();
-    launcher(payload({ tabs: [row('shell')] }), caps);
+    const view = launcher(payload({ tabs: [row('shell')] }), caps);
     const entry = screen.getByRole('option', { name: /shell/ });
 
     fireEvent.click(entry);
+    view.rerender(launcherElement(payload({ tabs: [row('shell', { active: true })] }), caps.value));
     fireEvent.click(entry);
 
     expect(caps.intent).toHaveBeenCalledTimes(1);
   });
 
-  it('focuses the row that was clicked twice', () => {
+  it('focuses an acknowledged row again after external focus makes it inactive', () => {
     const caps = capabilities();
-    launcher(payload({ tabs: [row('shell')] }), caps);
-
+    const view = launcher(payload({ tabs: [row('shell', { needsInput: true })] }), caps);
     const entry = screen.getByRole('option', { name: /shell/ });
+
     fireEvent.click(entry);
+    view.rerender(launcherElement(payload({ tabs: [row('shell', { needsInput: true, active: true })] }), caps.value));
+    fireEvent.click(entry);
+    expect(caps.intent).toHaveBeenCalledTimes(1);
+
+    view.rerender(launcherElement(payload({ tabs: [row('shell', { needsInput: true })] }), caps.value));
     fireEvent.click(entry);
 
-    expect(caps.intent).toHaveBeenCalledWith('focus-tab', { label: 'shell' });
+    expect(caps.intent).toHaveBeenCalledTimes(2);
+    expect(caps.intent).toHaveBeenLastCalledWith('focus-tab', { label: 'shell' });
+  });
+
+  it('focuses the different inactive row that reorders into the confirmed index', () => {
+    const caps = capabilities();
+    const view = launcher(payload({ tabs: [row('first', { needsInput: true }), row('second', { busy: true })] }), caps);
+
+    fireEvent.click(screen.getByRole('option', { name: /first/ }));
+    view.rerender(launcherElement(
+      payload({ tabs: [row('first'), row('second', { needsInput: true })] }),
+      caps.value,
+    ));
+    fireEvent.click(screen.getByRole('option', { name: /second/ }));
+
+    expect(caps.intent).toHaveBeenCalledTimes(2);
+    expect(caps.intent).toHaveBeenLastCalledWith('focus-tab', { label: 'second' });
   });
 
   // The keyboard walks the rows in the order they are drawn, which is tier order. The payload's own

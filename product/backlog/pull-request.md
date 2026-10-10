@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep tab clicks functional after external focus changes and tier reordering.
-
-Existing Issue: A tab row suppresses a click whenever its numeric index matches the last confirmed index, although confirmation survives same-length payload changes and does not indicate which tab the host currently has focused. Severity: 6/10
-
-Existing Risk: 5/10 - Returning to a previously clicked needs-input row after focusing another tab, or clicking a different tab that moved into the old index, can silently fail to navigate.
-
-Proposal Risk: 2/10 - Focus acknowledgement is asynchronous, so the click policy must tolerate a pending acknowledgement without confusing a displayed position with a stable tab identity.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "focus launcher tab rows after external focus and tier changes". Replace the index-based suppression in `web/src/plugins/launcher/LauncherTabRowView.tsx` with a policy based on the row's stable identity and the host's current active fact, or send the ordinary focus intent on each navigation click. Keep selection and keyboard handoff through the shared list hook. Extend `web/src/plugins/launcher/LauncherTab.test.tsx` with a needs-input row clicked, acknowledged active, then made inactive by an external focus update and clicked again at the same index; also cover a same-length tier reorder placing a different label at the previous confirmed index. Preserve Enter activation and server-owned unread dwell, and adapt the repeat-click test to acknowledge actual host focus before suppressing a repeat.
-
-
 * Deliver the plan's visible replies for Configure results and rejected command intents.
 
 Existing Issue: Configure returns a dispatch-result object that the client discards through a string-only check, while typed-command and rail-command promise rejections clear the reply instead of displaying their error. Severity: 5/10
