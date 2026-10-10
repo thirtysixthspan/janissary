@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle labels and icon names that collide with inherited object properties.
-
-Existing Issue: Summary and icon lookups use ordinary object indexing, so a valid tab label such as `__proto__` reads an inherited object as its absent summary, incarnation tracking cannot store that key normally, and an unknown icon named `constructor` is incorrectly treated as known. Severity: 6/10
-
-Existing Risk: 6/10 - A supported explicit tab name can make React reject the summary child and disable the launcher, while inherited keys can also bypass stale-summary pruning and the promised icon fallback.
-
-Proposal Risk: 2/10 - Dictionary storage must still survive JSON transport, and tests using parsed payloads can expose any difference between internal maps and the ordinary objects clients receive.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "make launcher dictionary keys safe for arbitrary labels and icon names". In `web/src/plugins/launcher/TabList.tsx` and `web/src/plugins/launcher/launcher-icons.ts`, distinguish own entries from inherited properties before returning a summary or icon. Make the incarnation dictionary in `src/plugins/launcher/payload.ts` and its writes and pruning in `src/plugins/launcher/activate.ts` safe for arbitrary string keys, using a Map or a dictionary without a prototype internally. Add client regressions for `__proto__`, `constructor`, and `toString` labels with no summary after a JSON round trip, icon fallback cases for the same names, and a server regression proving a summary under `__proto__` is pruned when its tab incarnation changes. Preserve the payload's JSON shape and the existing close/reopen coverage.
-
-
 * Keep tab clicks functional after external focus changes and tier reordering.
 
 Existing Issue: A tab row suppresses a click whenever its numeric index matches the last confirmed index, although confirmation survives same-length payload changes and does not indicate which tab the host currently has focused. Severity: 6/10

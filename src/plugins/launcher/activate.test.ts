@@ -834,4 +834,27 @@ describe('summarizing', () => {
     if (!isLauncherPayload(payload)) throw new Error('payload rejected');
     expect(payload.summaries.shell).toBeUndefined();
   });
+
+  it('prunes a __proto__ summary when that label belongs to a replacement tab', async () => {
+    const rows = ROWS.map((row) => (row.label === 'shell' ? { ...row, label: '__proto__' } : row));
+    const entry = openLauncher(rows);
+    const activation = activate();
+    entry.answerWith('[[tab:__proto__]] First tab.');
+    await summarize(entry, activation);
+
+    const first = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(first)) throw new Error('payload rejected');
+    expect(Object.hasOwn(first.summaries, '__proto__')).toBe(true);
+    expect(first.summaries['__proto__']).toBe('First tab.');
+
+    activation.notify?.({
+      topic: 'tabs',
+      data: rows.map((row) => (row.label === '__proto__' ? { ...row, incarnation: 'replacement' } : row)),
+      tabs: ['launcher'],
+    }, entry.capabilities);
+
+    const replaced = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(replaced)) throw new Error('payload rejected');
+    expect(Object.hasOwn(replaced.summaries, '__proto__')).toBe(false);
+  });
 });

@@ -34,7 +34,7 @@ const ICONS: Record<string, IconDefinition> = {
 // carries. `known` lets the caller tell the two apart, which is what lets it report an unrecognised
 // name exactly once rather than on every render.
 export function launchIcon(name: string): { icon: IconDefinition; known: boolean } {
-  const icon = ICONS[name];
+  const icon = Object.hasOwn(ICONS, name) ? ICONS[name] : undefined;
   return icon === undefined
     ? { icon: LAUNCHER_FALLBACK_ICON, known: false }
     : { icon, known: true };

@@ -42,9 +42,9 @@ function resetLauncherState(): void {
 function pruneIncarnations(rows: readonly TabActivityEntry[]): boolean {
   const current = new Map(rows.map((tab) => [tab.label, tab.incarnation]));
   let changed = false;
-  for (const [label, incarnation] of Object.entries(state.summaryIncarnations)) {
+  for (const [label, incarnation] of state.summaryIncarnations) {
     if (current.get(label) === incarnation) continue;
-    delete state.summaryIncarnations[label];
+    state.summaryIncarnations.delete(label);
     delete state.summaries[label];
     changed = true;
   }
@@ -240,7 +240,7 @@ export function activate(): TabPluginActivation {
             state.summaries = merged;
             for (const label of summaries.keys()) {
               const tab = live.find((candidate) => candidate.label === label);
-              if (tab) state.summaryIncarnations[label] = tab.incarnation;
+              if (tab) state.summaryIncarnations.set(label, tab.incarnation);
             }
             const rows = state.rows;
             if (rows === null) return null;

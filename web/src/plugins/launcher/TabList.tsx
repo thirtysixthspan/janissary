@@ -74,7 +74,7 @@ function LauncherTier({ tier, displayed, summaries, selection, onFocus, now }: {
         <LauncherTabRowView
           key={row.label}
           row={row}
-          summary={summaries[row.label]}
+          summary={Object.hasOwn(summaries, row.label) ? summaries[row.label] : undefined}
           index={displayed.indexOf(row)}
           selection={selection}
           onFocus={onFocus}

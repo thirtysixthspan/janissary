@@ -9,7 +9,7 @@ import { isLauncherOwn } from './shared.js';
 export type LauncherState = {
   rows: LauncherTabRow[] | null;
   summaries: Record<string, string>;
-  summaryIncarnations: Record<string, string>;
+  summaryIncarnations: Map<string, string>;
   commands: LauncherCommand[];
   source: LauncherPayload['source'];
   filePath: string;
@@ -22,7 +22,7 @@ export function initialState(): LauncherState {
   return {
     rows: null,
     summaries: {},
-    summaryIncarnations: {},
+    summaryIncarnations: new Map(),
     commands: [],
     source: 'default',
     filePath: '',

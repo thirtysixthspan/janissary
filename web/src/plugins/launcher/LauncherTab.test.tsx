@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LauncherCommand, LauncherPayload, LauncherTabRow } from '@shared/plugins/launcher/shared';
+import { isLauncherPayload, type LauncherCommand, type LauncherPayload, type LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { AcpResponseScope } from '../../shared/acp/AcpResponseScope';
 import { AppCommandBarProvider, AppCommandBarTabScope } from '../../shared/command-bar/AppCommandBar';
@@ -406,6 +406,17 @@ describe('the tab list', () => {
 
     expect(screen.getByText('Running the test suite.')).toBeInTheDocument();
     expect(screen.queryByText('', { selector: '.launcher-summary' })).not.toBeInTheDocument();
+  });
+
+  it.each(['__proto__', 'constructor', 'toString'])('renders label %s without an inherited summary', (label) => {
+    const serialized = JSON.stringify(payload({ tabs: [row(label)] }));
+    const decoded: unknown = JSON.parse(serialized);
+    if (!isLauncherPayload(decoded)) throw new Error('payload rejected');
+
+    const { container } = launcher(decoded);
+
+    expect(screen.getByRole('option', { name: new RegExp(label) })).toBeInTheDocument();
+    expect(container.querySelector('.launcher-summary')).not.toBeInTheDocument();
   });
 
 
