@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LauncherCommand, LauncherPayload, LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -371,6 +372,9 @@ describe('the tab list', () => {
   });
 
 
+  // An empty span with the right colour on it is what this row used to draw: the colour was right, so
+  // the colour test passed, and nothing was painted. The dot is the tab's own glyph in the tab's own
+  // colour, and it has a size to be seen at.
   it("draws every row with its tab's own dot colour, so a row matches its strip entry", () => {
     const { container } = launcher(payload({
       tabs: [row('janus', { dotColor: '#5b9cff' }), row('claude', { dotColor: '#c678dd' })],
@@ -378,6 +382,12 @@ describe('the tab list', () => {
 
     const dots = [...container.querySelectorAll<HTMLElement>('.launcher-dot')];
     expect(dots.map((dot) => dot.style.color)).toEqual(['rgb(91, 156, 255)', 'rgb(198, 120, 221)']);
+    // The glyph the rest of the application's tab chrome draws, inside the span that carries the
+    // colour — and a size in the stylesheet, so the shape has dimensions of its own.
+    expect(dots.map((dot) => dot.querySelector('svg'))).toHaveLength(2);
+    expect(dots.every((dot) => dot.querySelector('svg') !== null)).toBe(true);
+    expect(readFileSync('web/src/plugins/launcher/launcher.css', 'utf8'))
+      .toContain('width: 9px; height: 9px;');
   });
 
   it('lifts the row the host names as active into its own tier', () => {

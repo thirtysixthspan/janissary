@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Render a visible status dot for each launcher tab row.
-
-Existing Issue: LauncherTabRowView renders an empty launcher-dot span whose CSS specifies color and animation but no content, dimensions, background, or pseudo-element. Severity: 5/10
-
-Existing Risk: 5/10 - The promised colored busy indicator is invisible even though the DOM tests see the correct color attribute.
-
-Proposal Risk: 1/10 - An actual glyph or sized shape makes the supplied color and busy animation visible, with a visual assertion guarding the styling.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "render a visible status dot for each launcher tab row". In web/src/plugins/launcher/LauncherTabRowView.tsx and web/src/plugins/launcher/launcher.css, render the same visible dot shape used by existing tab chrome or a sized circle using currentColor, preserving the busy animation. Add a meaningful styling or browser assertion that the dot has visible content or nonzero painted dimensions; the existing color-only test in LauncherTab.test.tsx cannot detect an empty unpainted span.
-
-
 * Exclude the launcher itself from every tab list and summarize only center tabs.
 
 Existing Issue: notify projects all undocked tabs without excluding the launcher, while ownTabs identifies ownership by a literal label and includes other docked tabs in summary flushes. Severity: 6/10

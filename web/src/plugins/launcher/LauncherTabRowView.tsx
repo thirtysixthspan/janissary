@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFlag } from '@fortawesome/free-regular-svg-icons';
+import { faCircle } from '@fortawesome/free-solid-svg-icons';
 import type { LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { ListRowClick, ListSelection } from '../api';
 import { relativeTime } from './time-ago';
@@ -45,7 +46,9 @@ export function LauncherTabRowView({ row, summary, index, selection, onFocus, no
       onMouseLeave={() => { setHovered(false); setAnchor(null); }}
     >
       <span className="launcher-tab-primary">
-        <span className={`launcher-dot${row.busy ? ' busy' : ''}`} style={{ color: row.dotColor }} />
+        <span className={`launcher-dot${row.busy ? ' busy' : ''}`} style={{ color: row.dotColor }}>
+          <FontAwesomeIcon icon={faCircle} />
+        </span>
         <span className="launcher-tab-name">{row.title ?? row.label}</span>
         {row.hasUnread && (
           <span className="launcher-tab-flag" role="img" aria-label="unread">
