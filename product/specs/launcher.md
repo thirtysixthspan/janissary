@@ -6,7 +6,7 @@ It is one tab kind among the sidebar's dockable kinds and shares the docking mec
 
 ### The command rail
 
-The rail lists application commands, one row each, with an icon and a label. Clicking a row runs the command it names, exactly as typing it would — so `notifications left` docks the notifications feed to the right, and a command's own answer lands in the launcher's transcript rather than in a second copy of its rules.
+The rail lists application commands, one row each, with an icon and a label. Clicking a row runs the command it names, exactly as typing it would — so `notifications left` docks the notifications feed to the right, and a command's own answer lands in the launcher's transcript rather than in a second copy of its rules. A command the application answers itself, such as a picker word, is answered the same way it would be in the command bar and nothing reaches the server. The answer, whatever produced it, appears where a typed line's does.
 
 Which commands appear is configured in `.janissary/launcher.json`, written by `janus init` and edited by hand. It holds an array of entries, each with an `icon`, a `label`, and a `command`:
 

@@ -100,6 +100,79 @@ describe('the command rail', () => {
     expect(caps.intent).toHaveBeenCalledWith('run-command', { id: 'tasks' });
   });
 
+  // `tasks` and `hist` — the launcher's own default rows — are the application's pickers. The client
+  // classifies them, so a click on a row naming one opens the picker and sends nothing to the server,
+  // exactly as typing the same word into the bar below would.
+  it.each(['tasks', 'hist'])('opens the application\'s own picker for %s, sending nothing', (line) => {
+    const caps = capabilities();
+    const { intercept } = launcher(payload({
+      commands: [command({ id: line, label: line, command: line })],
+    }), caps);
+    intercept.mockReturnValue(true);
+
+    const row = screen.getByRole('option', { name: new RegExp(line, 'i') });
+    fireEvent.click(row);
+    fireEvent.click(row);
+
+    // The application answered it, as whatever tab the line came from — which is this one.
+    expect(intercept.mock.calls.map(([asked]) => asked)).toEqual([line]);
+    expect(caps.intent).not.toHaveBeenCalled();
+  });
+
+  // The rail sends the id the host validated against launcher.json, never the command line, so the
+  // host's own read of the file stays the thing that decides what may run.
+  it('sends the id the host validated, never the command line', async () => {
+    const caps = capabilities();
+    launcher(payload({ commands: [command()] }), caps);
+
+    const row = screen.getByRole('option', { name: /Tasks/ });
+    fireEvent.click(row);
+    fireEvent.click(row);
+
+    expect(caps.intent).toHaveBeenCalledWith('run-command', { id: 'tasks' });
+    expect(caps.intent.mock.calls.map(([, sent]) => sent)).not.toContainEqual({ line: 'tasks' });
+  });
+
+  // A row whose command nothing claims was silent, because the intent's answer was discarded. It now
+  // says so, which is what the bar directly below it already did.
+  it('reports a configured command the application did not claim', async () => {
+    const caps = capabilities();
+    caps.intent.mockResolvedValue({ dispatched: false, output: '' });
+    launcher(payload({ commands: [command()] }), caps);
+
+    const row = screen.getByRole('option', { name: /Tasks/ });
+    fireEvent.click(row);
+    fireEvent.click(row);
+
+    expect(await screen.findByText('No application command matches "tasks".')).toBeInTheDocument();
+  });
+
+  it('shows what a configured command produced', async () => {
+    const caps = capabilities();
+    caps.intent.mockResolvedValue({ dispatched: true, output: 'Opened the task list.' });
+    launcher(payload({ commands: [command()] }), caps);
+
+    const row = screen.getByRole('option', { name: /Tasks/ });
+    fireEvent.click(row);
+    fireEvent.click(row);
+
+    expect(await screen.findByText('Opened the task list.')).toBeInTheDocument();
+  });
+
+  // An id the file no longer holds answers `null` — the host's own validation. Showing it as unclaimed
+  // keeps a row that stale from looking like it worked.
+  it('reports a row the host no longer resolves as unclaimed', async () => {
+    const caps = capabilities();
+    caps.intent.mockResolvedValue(null);
+    launcher(payload({ commands: [command()] }), caps);
+
+    const row = screen.getByRole('option', { name: /Tasks/ });
+    fireEvent.click(row);
+    fireEvent.click(row);
+
+    expect(await screen.findByText('No application command matches "tasks".')).toBeInTheDocument();
+  });
+
   it('runs the highlighted command on Enter', () => {
     const caps = capabilities();
     launcher(payload({ commands: [command()] }), caps);

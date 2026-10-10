@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Route command-rail clicks through application interception and visible reply handling.
-
-Existing Issue: Command-rail clicks use a fire-and-forget run-command intent, bypass client interception, and discard dispatch results, so the default Tasks and History rows are server no-ops and command errors never reach the visible reply area. Severity: 7/10
-
-Existing Risk: 7/10 - Default launcher actions do nothing and failures are hidden even though typed commands in the same launcher have working interception and feedback.
-
-Proposal Risk: 2/10 - One submission path lets both input surfaces use existing picker behavior and exposes dispatch failures to the user.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "route command-rail clicks through application interception and visible reply handling". Unify command-row submission with the application interception and reply handling in web/src/plugins/launcher/LauncherTab.tsx and web/src/plugins/launcher/useLauncherSubmit.ts. Preserve server validation of configured IDs in src/plugins/launcher/activate.ts while returning the dispatch result to the client for non-intercepted rows; handle Configure failures through the same visible feedback. Add client tests that the default Tasks and History clicks open their pickers without a server dispatch, and that a failing or unclaimed configured command displays feedback. src/commands/tasks.ts and src/commands/hist.ts intentionally do nothing on the server.
-
-
 * Navigate tab rows in their rendered tier order and wire selection focus and scrolling.
 
 Existing Issue: TabList renders rows in tier order but selects and activates them by the original payload index, and both launcher lists attach the caller's ref instead of the ref useListSelection uses to focus and scroll. Severity: 6/10

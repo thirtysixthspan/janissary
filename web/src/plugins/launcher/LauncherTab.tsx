@@ -73,7 +73,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
     inputRef: barRef,
     history: sent,
     ghostHistory: appBar.ghostHistory,
-    onSubmit: (line) => { setSent((previous) => [...previous, line]); submit(line); },
+    onSubmit: (line) => { setSent((previous) => [...previous, line]); submit.line(line); },
     onClear: () => { setReply(null); },
   });
 
@@ -88,7 +88,13 @@ export function LauncherTab({ payload, capabilities }: Properties) {
             type="button"
             title="Open launcher.json"
             aria-label="Open launcher.json"
-            onClick={() => { void capabilities.intent('configure', { id: 'configure' }).catch(() => {}); }}
+            onClick={() => {
+              void capabilities.intent('configure', { id: 'configure' })
+                .then((reply) => { setReply(typeof reply === 'string' ? reply : null); })
+                .catch((error: unknown) => {
+                  setReply(`Could not open launcher.json: ${error instanceof Error ? error.message : String(error)}`);
+                });
+            }}
           >
             <FontAwesomeIcon icon={faGear} />
           </button>
@@ -108,7 +114,9 @@ export function LauncherTab({ payload, capabilities }: Properties) {
         listRef={commandsRef}
         onOpen={(index) => {
           const entry = payload.commands[index];
-          if (entry) void capabilities.intent('run-command', { id: entry.id }).catch(() => {});
+          // The same path a typed line takes: the application answers a picker command itself, and
+          // otherwise the row is dispatched and its answer shows where a typed line's does.
+          if (entry) submit.command(entry);
         }}
         onUnknownIcon={(icon) => { void capabilities.intent('report-icon', { icon }).catch(() => {}); }}
       />

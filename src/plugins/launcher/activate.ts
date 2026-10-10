@@ -133,14 +133,14 @@ export function activate(): TabPluginActivation {
     },
     intent: defineIntents('launcher', isLauncherPayload, {
       // A click on a command rail row. The server resolves the id back to the line it read from the
-      // file, so a client cannot name a line the file did not hold.
+      // file, so a client cannot name a line the file did not hold, and hands back what the line
+      // produced — the same answer a typed line gets, so the rail can show either.
       'run-command': {
         payload: isRunCommandIntent,
         run: (_tab, payload: LauncherRunCommandIntent, capabilities) => {
           const entry = state.commands.find((candidate) => candidate.id === payload.id);
           if (!entry) return null;
-          void capabilities.dispatchLineWithOutput(entry.command);
-          return null;
+          return capabilities.dispatchLineWithOutput(entry.command);
         },
       },
       // A click on a tab row: focus it in the centre strip. Refused by the host for a label with no open
@@ -153,13 +153,13 @@ export function activate(): TabPluginActivation {
         },
       },
       // The Configure button. It dispatches the application's own `edit` on the file in effect rather
-      // than opening it through `openInEditor`, whose root boundary would refuse the home file.
+      // than opening it through `openInEditor`, whose root boundary would refuse the home file. The
+      // answer the dispatch gives comes back with it, so a failure is shown rather than swallowed.
       configure: {
         payload: isRunCommandIntent,
         run: (_tab, payload: LauncherRunCommandIntent, capabilities) => {
           if (payload.id !== CONFIGURE_INTENT_ID) return null;
-          void capabilities.dispatchLineWithOutput(`edit ${state.filePath}`);
-          return null;
+          return capabilities.dispatchLineWithOutput(`edit ${state.filePath}`);
         },
       },
       // A line typed into the launcher's own command bar. Answered with what the line produced, so the
