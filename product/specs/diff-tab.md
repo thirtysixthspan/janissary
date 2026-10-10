@@ -46,7 +46,8 @@ Every hunk is expanded and introduced by the range it occupies, `@@ -start,lengt
 so the reader sees where the change begins and ends on each side and that the lines between two hunks
 were skipped rather than removed. Every file entry's header carries a **Font Awesome arrows-up-down
 button** that cycles the entry through closed, compact diff, and expanded full-file views. Whole-file
-changes start closed without a reason message. A double-click on the header toggles closed and compact views. Each hunk line carries its file's number on both
+changes start closed without a reason message. A double-click on the header toggles between the closed
+state and the current visible view. Each hunk line carries its file's number on both
 sides: two narrow right-aligned gutters in the unified layout, the original number blank on an added
 line and the new number blank on a removed one, and in the split layout the original number in the left
 column with the modified one in the right. In unified layout, a line longer than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads without a horizontal scrollbar and a wrapped line's number stays beside its first row. Split layout wraps text within each column and preserves readable column widths through horizontal scrolling in narrow panes.
