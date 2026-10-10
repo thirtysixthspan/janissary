@@ -165,15 +165,19 @@ describe('composeSessionRows channels without their launching member', () => {
     expect(rows[1].actions).toEqual(['focus', 'close', 'diff']);
   });
 
-  it('offers no diff on a row whose workspace has not landed', () => {
+  // The control stays where the eye expects it while the clone lands; the row's state is what says
+  // it cannot be pressed yet, which is the treatment `detach` already has.
+  it('offers diff on a row whose workspace has not landed, with the state carrying the wait', () => {
     const rows = composeSessionRows(snapshot({
-      channels: [channel({ workspace: '', members: [
+      channels: [channel({ workspace: '', provisioning: true, members: [
         { label: 'claude', name: 'claude', kind: 'harness', activity: 100 },
         { label: 'bekir', name: 'bekir', kind: 'shell', activity: 90 },
       ] })],
     }));
-    expect(rows[0].actions).not.toContain('diff');
-    expect(rows[1].actions).toEqual(['focus', 'close']);
+    expect(rows[0].actions).toContain('diff');
+    expect(rows[0].state).toBe('provisioning');
+    expect(rows[1].actions).toEqual(['focus', 'close', 'diff']);
+    expect(rows[1].state).toBe('provisioning');
   });
 });
 

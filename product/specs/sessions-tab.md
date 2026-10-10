@@ -71,12 +71,13 @@ Detach and Attach use directional plug glyphs: a minus for detaching and a plus 
 Terminate and Close use a circle-xmark, making the actions that end something immediately recognizable.
 The diff action carries the same plus-minus glyph the metadata rows use, because it opens the same tab.
 
-**Diff** applies to every row of a live channel whose workspace has landed, and only those: one channel
-holds one workspace, so every row of it is looking at the same changes and the same diff tab. It opens a
+**Diff** applies to every row of a live channel, and only those: one channel holds one workspace, so
+every row of it is looking at the same changes and the same diff tab. It opens a
 diff tab on that workspace — titled **diff on <tab name>** and shared with the tab's own metadata-row
-button — and holds the channel open for as long as that tab is. It asks nothing of the connection, so it
-is offered rather than refused while the transport is being retried, and it is absent on a channel still
-provisioning, on an ssh row, and on a detached or terminated row. See [[diff-tab]].
+button — and holds the channel open for as long as that tab is. It asks nothing of the connection, so
+it is offered rather than refused while the transport is being retried, and it is drawn unpressable
+on a channel still provisioning rather than absent, the way a detach button is on the same row. It is
+absent on an ssh row, and on a detached or terminated row. See [[diff-tab]].
 
 **Attach** applies to a parked session, and to a live one whose transport is being retried. On a
 parked session it opens one ssh connection and brings the whole peer back, opening a tab for each

@@ -67,12 +67,6 @@ export type SessionsSnapshot = {
   terminated: SessionTerminated[];
 };
 
-// A remote channel has landed its clone when the snapshot carries its path. A row with no path has
-// nothing to diff, and a reconnecting one has no channel to read it through.
-function channelReady(channel: SessionChannel): boolean {
-  return channel.workspace !== '';
-}
-
 function liveState(channel: SessionChannel): RemoteSessionView['state'] {
   if (channel.provisioning) return 'provisioning';
   return channel.reconnecting ? 'reconnecting' : 'active';
@@ -93,14 +87,15 @@ function liveState(channel: SessionChannel): RemoteSessionView['state'] {
 // does. It is the same verb as a parked session's because it is the same request — bring this back —
 // and the row's state is what says which kind of waiting it ends.
 //
-// `diff` belongs on every row of a live channel with a workspace, and only those: one channel holds
+// `diff` belongs on every row of a live channel, on the same reasoning as `detach`: one channel holds
 // one workspace, so every row of it is looking at the same changes and the same diff tab. It is a
-// read, so it asks nothing of the connection and is refused rather than offered while the workspace
-// is still landing.
-function liveActions(launching: boolean, reconnecting: boolean, terminable: boolean, ready: boolean): RemoteSessionAction[] {
-  if (!launching) return ready ? ['focus', 'close', 'diff'] : ['focus', 'close'];
+// read, so it asks nothing of the connection — and the row's state is what says whether there is
+// anything to read yet, which the host's own `openSibling` guard answers for a request that reached
+// it anyway.
+function liveActions(launching: boolean, reconnecting: boolean, terminable: boolean): RemoteSessionAction[] {
+  if (!launching) return ['focus', 'close', 'diff'];
   const actions: RemoteSessionAction[] = reconnecting ? ['focus', 'attach', 'detach'] : ['focus', 'detach'];
-  if (ready) actions.push('diff');
+  actions.push('diff');
   if (terminable) actions.push('terminate');
   return actions;
 }
@@ -122,9 +117,6 @@ function liveRows(channel: SessionChannel): RemoteSessionView[] {
       launchAbsent || member.label === channel.launchLabel,
       state === 'reconnecting',
       !channel.provisioning && channel.session !== undefined,
-      // A workspace have landed: the channel's clone path is the one thing a diff needs, and a row
-      // without one has nothing to diff.
-      channelReady(channel),
     ),
     label: member.label,
     ...(channel.session !== undefined && { session: channel.session }),
