@@ -22,7 +22,9 @@ export function openHarnessEntry(
   }
   const cwd = entry.cwd ? expandUserPath(entry.cwd, { root: managers.tab.launchDir }) : issuing.cwd;
   const withCwd: ProfileHarnessEntry = { ...entry, cwd };
-  const error = managers.harness.openFromProfile(withCwd, entry.name, group, groupColor, issuing.label);
+  const error = entry.groupName === undefined
+    ? managers.harness.openFromProfile(withCwd, entry.name, group, groupColor, issuing.label)
+    : managers.harness.openFromProfile(withCwd, entry.name, group, groupColor, issuing.label, entry.groupName);
   if (error) return error;
   const schedule = buildHarnessSchedule(entry, (message) => { notes.push(message); });
   if (schedule.length > 0) managers.schedule.set(entry.name, schedule);

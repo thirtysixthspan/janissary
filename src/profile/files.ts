@@ -34,7 +34,7 @@ function placeInGroup(
   const active = managers.tab.tabs[managers.tab.activeTab];
   if (active?.label !== treeLabel) return;
   const group = entry.group ?? defaultGroup;
-  relocateToGroup(managers, group, colorForGroup(group, active.dotColor));
+  relocateToGroup(managers, group, colorForGroup(group, active.dotColor), entry.groupName);
 }
 
 export function openProfileFiles(

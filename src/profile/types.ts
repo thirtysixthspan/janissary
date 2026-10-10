@@ -10,6 +10,7 @@ export type ProfileTabRuntime = {
   number?: number;
   focus?: boolean;
   group?: number;
+  groupName?: string;
   groupColor?: string;
   pane?: CenterPane;
 };
@@ -58,6 +59,7 @@ export type ProfileTabPresentation = {
   number?: number;
   focus?: boolean;
   group?: number;
+  groupName?: string;
   groupColor?: string;
   pane?: CenterPane;
 };

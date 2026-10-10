@@ -147,3 +147,7 @@ from running.
 `profile` launches a saved set of harnesses and the tabs that support them. See the Profiles section. `profile launch <name>` opens a tab for each entry in the named profile, closing and reopening any tab that collides with a relaunch; `profile list` lists the available profiles; `profile save <name>` captures the running session into a new or overwritten profile; `profile validate [<name>]` checks one or every profile file against the schema. Malformed invocations return a `Usage:` message.
 If an asynchronous save or launch fails, its issuing transcript receives one
 `Profile command failed: <reason>.` result instead of leaving the command unfinished.
+
+### Group names
+
+Every tab presentation may carry `groupName` beside its numeric `group` ID. `profile save` writes the group's current name, and `profile launch` restores it with the same ID. An older profile without `groupName` uses `launch` for ID 1 and `group-<id>` for another explicit ID; an entry without a `group` uses the name assigned to the profile's newly allocated group.

@@ -39,9 +39,23 @@ describe('parseShellArgument', () => {
     });
   });
 
+  it('parses a named or numeric group selector anywhere among the launch words', () => {
+    expect(parseShellArgument('Docs in group Review --offline')).toEqual({
+      name: 'docs', workspace: true, offline: true, group: 'Review',
+    });
+    expect(parseShellArgument('in group 4 --no-workspace')).toEqual({
+      name: '', workspace: false, offline: false, group: '4',
+    });
+  });
+
+  it('rejects a missing or invalid group selector', () => {
+    expect(parseShellArgument('in group')).toEqual({ error: `Invalid group name or ID. ${SHELL_USAGE}` });
+    expect(parseShellArgument('in group 0')).toEqual({ error: `Invalid group name or ID. ${SHELL_USAGE}` });
+  });
+
   it('refuses an unknown option with the usage line', () => {
     expect(parseShellArgument('docs --sandbox')).toEqual({ error: `Unknown option "--sandbox". ${SHELL_USAGE}` });
     expect(parseShellArgument('-x')).toEqual({ error: `Unknown option "-x". ${SHELL_USAGE}` });
-    expect(SHELL_USAGE).toBe('Usage: shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]');
+    expect(SHELL_USAGE).toBe('Usage: shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>] [in group <name|id>]');
   });
 });

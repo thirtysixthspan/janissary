@@ -68,7 +68,8 @@ export function launchRemotePluginTab(
         input.validate(payload);
         return payload;
       },
-      { label, cwd: launchCwd(input), remote: { address: parsed.address, host: parsed.host } },
+      { label, cwd: launchCwd(input), remote: { address: parsed.address, host: parsed.host },
+        ...(request.group !== undefined && { group: request.group }) },
     );
   } catch (error) {
     void remote.ready.catch(() => false);
@@ -139,7 +140,8 @@ function adoptRemotePluginTab(
         return payload;
       },
       { label, cwd: adopt.cwd, remote: source.remote,
-        workspace: { dir: adopt.workspaceDir, offline: adopt.offline }, recordedPtyId: adopt.ptyId },
+        workspace: { dir: adopt.workspaceDir, offline: adopt.offline }, recordedPtyId: adopt.ptyId,
+        ...(request.group !== undefined && { group: request.group }) },
     );
   } catch (error) {
     managers.remote.release(label);
@@ -178,7 +180,7 @@ function launchJoinedRemotePluginTab(
         input.validate(payload);
         return payload;
       },
-      { label, cwd, remote: source.remote },
+      { label, cwd, remote: source.remote, ...(request.group !== undefined && { group: request.group }) },
     );
   } catch (error) {
     managers.remote.release(label);

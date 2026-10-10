@@ -9,6 +9,7 @@ harness claude
 harness opencode as quality        custom tab label
 harness claude --no-workspace      opt out of the default workspace
 harness claude --no-browser        opt out of the default browser
+harness claude in group review    join or create the review group
 ```
 
 The harness takes over the whole tab: no transcript, no command bar — you're talking straight to the harness's own interface, exactly as you would in a terminal. The launch command is written to the tab you ran it from before the new tab appears, so the launch stays on the record even if the binary turns out to be missing, in which case the harness tab closes as soon as it opens.
@@ -106,7 +107,7 @@ Claude, opencode, and codex all accept auto-approval, so switching harnesses kee
 ## Choosing a model and effort level
 
 ```
-harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--no-auto-resume] [--no-browser] [--model <name>] [--effort <level>]
+harness <name> [as <label>] [--no-workspace] [--no-auto-approve] [--no-auto-resume] [--no-browser] [--model <name>] [--effort <level>] [in group <name|id>]
 ```
 
 `--model <name>` picks a model, passed to the harness binary's `--model` flag verbatim. It's checked against that harness's known model catalog first — an unknown model errors with `Unknown model "<model>" for harness "<name>" — add it to harness-models.json.` and no tab opens. The bundled catalog covers claude, codex, and opencode; the opencode entries carry a provider prefix (`opencode/…`, `opencode-go/…`, `google/…`) because that harness reaches three providers, and the model you name has to match the one whose key you've configured.
@@ -130,7 +131,7 @@ Whichever of `--model` and `--effort` you set show up as small chips in the harn
 
 Harnesses start inside a disposable clone by default — the same isolation agents get. `-w`/`--workspace` explicitly confirms the default, and `--no-workspace` opts out. See [Workspaced agents](/user-documentation/advanced-agents/workspaced-agent) for how the clone, sandboxing, and GitHub authentication work.
 
-A harness tab lands in the same [group](/user-documentation/getting-started/groups) as the tab you launched it from, with its own dot color, and takes part in reordering and grouping like any other tab. One a [profile](/user-documentation/automation/profiles) opens joins that profile's own group instead.
+A harness tab joins the same [group](/user-documentation/getting-started/groups) as the tab you launched it from by default. Add `in group <name|id>` to join a group by its name or number; an unknown name or positive number creates a group. Names match without regard to case. Profile launches keep using the profile's group. Each new tab gets its own dot color and takes part in reordering like any other tab.
 
 A codex tab always runs its session in its own process rather than handing it to the shared background server recent codex releases start, which a workspace sandbox can't run at all and which would otherwise run a workspaced session with another codex's environment and credentials. The app checks whether the installed codex offers the switch before asking for it, so a release from before the shared server launches exactly as it did. This holds for a remote codex tab too, checked against the codex on that host.
 

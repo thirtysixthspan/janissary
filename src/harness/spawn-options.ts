@@ -13,6 +13,7 @@ export interface SpawnTabOptions {
   workspaceDir: string | undefined;
   offline: boolean;
   group: number;
+  groupName?: string;
   groupColor: string;
   dotColor: string;
   autoApprove: boolean;

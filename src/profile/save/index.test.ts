@@ -130,6 +130,7 @@ describe('saveProfile', () => {
     });
     claude.offline = true;
     claude.autoApprove = true;
+    claude.groupName = 'Review';
     const managers = makeManagers([claude], { claude: '/work/claude' });
 
     await saveProfile('demo', managers);
@@ -137,7 +138,7 @@ describe('saveProfile', () => {
     expect(load('demo').entries).toEqual([{
       name: 'claude', tool: 'claude', model: 'sonnet', effort: 'high', workspace: false,
       offline: true, autoApprove: true, browser: undefined, dotColor: '#ccc', cwd: '/work/claude',
-      number: 1, group: 1, groupColor: '#ccc', focus: undefined, pane: 'left',
+      number: 1, group: 1, groupName: 'Review', groupColor: '#ccc', focus: undefined, pane: 'left',
     }]);
   });
 
@@ -245,7 +246,7 @@ describe('saveProfile', () => {
 
     expect(load('demo').files).toEqual([{
       path: '$root/src', expanded: ['a', 'a/b'], dotColor: '#444', number: 3, group: 2,
-      groupColor: '#555', pane: 'left', focus: undefined, dock: undefined,
+      groupName: 'group-2', groupColor: '#555', pane: 'left', focus: undefined, dock: undefined,
     }]);
   });
 
@@ -321,7 +322,7 @@ describe('saveProfile', () => {
 
     expect(load('demo').editors).toEqual([
       {
-        path: '/notes.txt', dotColor: '#222', number: 1, group: 1, groupColor: '#222',
+        path: '/notes.txt', dotColor: '#222', number: 1, group: 1, groupName: 'launch', groupColor: '#222',
         pane: 'left', focus: undefined,
       },
     ]);

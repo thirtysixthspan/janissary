@@ -2,6 +2,7 @@ import { HARNESS_COMMANDS, HARNESS_NAMES } from './index.js';
 import { describeAutoApproveHarnesses, supportsHarnessAutoApprove } from './auto-approve.js';
 import { describeAutoResumeHarnesses, supportsHarnessAutoResume } from './auto-resume.js';
 import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
+import { isValidGroupSelector } from '../tab/groups.js';
 
 // The `harness` command's parsing, split out of index.ts: a distinct concern from the
 // shell-command-string building (shellQuote/buildHarnessCommand) that remains there.
@@ -12,7 +13,7 @@ import { parseRemoteAddress, type RemoteAddress } from '../remote/address.js';
 // transposition typechecks and ships.
 export type HarnessLaunch = {
   name: string; workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean;
-  label?: string; model?: string; effort?: string; prompt?: string; remote?: RemoteAddress;
+  label?: string; model?: string; effort?: string; prompt?: string; remote?: RemoteAddress; group?: string;
 };
 
 export type HarnessParsed =
@@ -55,6 +56,17 @@ function findRemoteClause(tokens: string[]): RemoteAddress | undefined | { error
   return parseRemoteAddress(tokens[index + 1]);
 }
 
+function findGroupClause(tokens: string[]): { tokens: string[]; group?: string } | { error: string } {
+  const index = tokens.findIndex((token, tokenIndex) =>
+    token.toLowerCase() === 'in' && tokens[tokenIndex + 1]?.toLowerCase() === 'group');
+  if (index === -1) return { tokens };
+  const group = tokens[index + 2];
+  if (!group || !isValidGroupSelector(group)) {
+    return { error: usage(`harness <${HARNESS_NAMES.join('|')}> [options] in group <name|id>.`) };
+  }
+  return { tokens: [...tokens.slice(0, index), ...tokens.slice(index + 3)], group };
+}
+
 // Split a trailing `with <prompt>` clause off the harness command's argument string, before any
 // option parsing so flag-like words inside the prompt are never scanned as options. Returns the
 // options portion (`left`) plus the verbatim prompt when a standalone `with` token is present, an
@@ -77,7 +89,7 @@ function parseHarnessFlags(
   name: string,
 ): {
   workspace: boolean; offline: boolean; autoApprove: boolean; browser: boolean; autoResume: boolean;
-  model?: string; effort?: string; label?: string; remote?: RemoteAddress;
+  model?: string; effort?: string; label?: string; remote?: RemoteAddress; group?: string;
 } | { error: string } {
   const remote = findRemoteClause(tokens);
   if (remote !== undefined && 'error' in remote) return remote;
@@ -162,11 +174,13 @@ export function parseHarnessCommand(input: string): HarnessParsed {
   const tokens = left.split(/\s+/);
   const subcommand = parseLabelSubcommand(tokens);
   if (subcommand) return subcommand;
-  const name = tokens[0].toLowerCase();
+  const groupClause = findGroupClause(tokens);
+  if ('error' in groupClause) return groupClause;
+  const name = groupClause.tokens[0].toLowerCase();
   if (HARNESS_COMMANDS[name] === undefined) {
     return { error: `Unknown harness "${name}". Choose from: ${HARNESS_NAMES.join(', ')}.` };
   }
-  const flags = parseHarnessFlags(tokens.slice(1), name);
+  const flags = parseHarnessFlags(groupClause.tokens.slice(1), name);
   if ('error' in flags) return flags;
-  return { name, ...flags, prompt };
+  return { name, ...flags, ...(groupClause.group !== undefined && { group: groupClause.group }), prompt };
 }

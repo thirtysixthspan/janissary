@@ -159,7 +159,7 @@ describe('loadProfile', () => {
     writeJson('legacy-image', { tabs: [{ type: 'image', path: 'a.png', group: 2 }] });
     const loaded = loadProfile('legacy-image') as LoadedProfile;
     expect(loaded.views).toEqual([
-      expect.objectContaining({ type: 'plugin', id: 'image', path: 'a.png', group: 2 }),
+      expect.objectContaining({ type: 'plugin', id: 'image', path: 'a.png', group: 2, groupName: 'group-2' }),
     ]);
   });
 
@@ -178,7 +178,7 @@ describe('loadProfile', () => {
     });
     const loaded = loadProfile('flat') as LoadedProfile;
     expect(loaded.entries[0]).toEqual(expect.objectContaining({
-      dotColor: '#aaa', number: 2, group: 3, groupColor: '#bbb', pane: 'right',
+      dotColor: '#aaa', number: 2, group: 3, groupName: 'group-3', groupColor: '#bbb', pane: 'right',
     }));
   });
 

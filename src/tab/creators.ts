@@ -3,9 +3,11 @@ import {
   makePluginTab, makeEditorTab, makeFilesTab, makeNotificationsTab,
 } from './index.js';
 import { distinctColor } from './colors.js';
+import { defaultGroupName, tabGroupName } from './groups.js';
 import { insertTabInGroup } from './utils.js';
 import { NOTIFICATIONS_LABEL } from '../notifications/tab.js';
 import type { LaunchNameRow } from '../launch-name/check.js';
+import type { TabGroup } from './groups.js';
 import {
   uniquePluginLabel, uniqueEditorLabel, uniqueFilesLabel, unusedAgentName,
 } from './unique-labels.js';
@@ -22,16 +24,17 @@ function finalizeTab(tabs: Tab[], tab: Tab, label: string, title: string): TabAn
 // launch shell uses it: the tab the application opens at launch is always `janus`.
 export function addPluginTab(
   tabs: Tab[], activeTab: number, labelPrefix: string, title: string, plugin: PluginTabRecord,
-  agentNamed = false, rows: readonly LaunchNameRow[] = [], fixedLabel?: string,
+  agentNamed = false, rows: readonly LaunchNameRow[] = [], fixedLabel?: string, groupOverride?: TabGroup,
 ): TabAndActive {
   const creator = tabs[activeTab];
   const name = fixedLabel ?? (agentNamed ? unusedAgentName(tabs, rows) : undefined);
   const label = name ?? uniquePluginLabel(tabs, labelPrefix);
   const shownTitle = name ?? title;
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));
-  const group = creator?.group ?? 1;
-  const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makePluginTab(label, dotColor, tabs.length + 1, group, groupColor, shownTitle, plugin);
+  const group = groupOverride?.id ?? creator?.group ?? 1;
+  const groupColor = groupOverride?.color ?? creator?.groupColor ?? dotColor;
+  const groupName = groupOverride?.name ?? (creator ? tabGroupName(creator) : defaultGroupName(group));
+  const tab = makePluginTab(label, dotColor, tabs.length + 1, group, groupColor, shownTitle, plugin, groupName);
   return finalizeTab(tabs, tab, label, shownTitle);
 }
 
@@ -42,7 +45,8 @@ export function addEditorTab(tabs: Tab[], activeTab: number, view: EditorView): 
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makeEditorTab(label, dotColor, tabs.length + 1, group, groupColor, view);
+  const groupName = creator ? tabGroupName(creator) : defaultGroupName(group);
+  const tab = makeEditorTab(label, dotColor, tabs.length + 1, group, groupColor, view, groupName);
   return finalizeTab(tabs, tab, label, view.name);
 }
 
@@ -52,25 +56,27 @@ export function addFilesTab(tabs: Tab[], activeTab: number, view: FileNavigatorV
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makeFilesTab(label, dotColor, tabs.length + 1, group, groupColor, view);
+  const groupName = creator ? tabGroupName(creator) : defaultGroupName(group);
+  const tab = makeFilesTab(label, dotColor, tabs.length + 1, group, groupColor, view, groupName);
   const newTabs = insertTabInGroup(tabs, tab, 'start');
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
 
 function addStartTab(
   tabs: Tab[], activeTab: number, label: string,
-  makeTab: (dotColor: string, group: number, groupColor: string) => Tab,
+  makeTab: (dotColor: string, group: number, groupColor: string, groupName: string) => Tab,
 ): TabAndActive {
   const creator = tabs[activeTab];
   const dotColor = distinctColor(tabs.map((t) => t.dotColor));
   const group = creator?.group ?? 1;
   const groupColor = creator?.groupColor ?? dotColor;
-  const tab = makeTab(dotColor, group, groupColor);
+  const groupName = creator ? tabGroupName(creator) : defaultGroupName(group);
+  const tab = makeTab(dotColor, group, groupColor, groupName);
   const newTabs = insertTabInGroup(tabs, tab, 'start');
   return { tabs: newTabs, activeTab: newTabs.findIndex((t) => t.label === label) };
 }
 
 export function addNotificationsTab(tabs: Tab[], activeTab: number): TabAndActive {
-  return addStartTab(tabs, activeTab, NOTIFICATIONS_LABEL, (dotColor, group, groupColor) =>
-    makeNotificationsTab(NOTIFICATIONS_LABEL, dotColor, tabs.length + 1, group, groupColor));
+  return addStartTab(tabs, activeTab, NOTIFICATIONS_LABEL, (dotColor, group, groupColor, groupName) =>
+    makeNotificationsTab(NOTIFICATIONS_LABEL, dotColor, tabs.length + 1, group, groupColor, groupName));
 }

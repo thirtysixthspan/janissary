@@ -8,6 +8,7 @@ import { abbreviateWorkspacePath } from '../paths.js';
 import { flattenBuffer } from './formatting.js';
 import { remoteFileNavigatorRoot } from './remote-file-navigator-root.js';
 import { remoteFileNavigatorTarget } from './remote-file-navigator-view.js';
+import { tabGroupName } from './groups.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -89,6 +90,7 @@ export function buildTabView(
     number: tab.number,
     dotColor: tab.dotColor,
     group: tab.group,
+    groupName: tabGroupName(tab),
     groupColor: tab.groupColor,
     // A plugin lights its own tab's dot through `setBusy`, beside the host's runtime flag.
     busy: busy || tab.plugin?.busy === true,

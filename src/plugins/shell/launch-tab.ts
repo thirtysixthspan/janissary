@@ -20,6 +20,7 @@ export function launchShellTab(
     instanceKey,
     {
       ...(argument.name && { name: argument.name }),
+      ...(argument.group !== undefined && { group: argument.group }),
       ...(joining
         ? { remote: { join: true } }
         : {

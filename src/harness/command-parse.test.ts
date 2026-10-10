@@ -106,6 +106,15 @@ describe('parseHarnessCommand — launch form', () => {
     expect(parseHarnessCommand('harness claude as reviewer')).toMatchObject({ label: 'reviewer' });
   });
 
+  it('parses a group name or ID alongside the existing clauses', () => {
+    expect(parseHarnessCommand('harness codex in group Review as bot --model gpt-5 with inspect')).toMatchObject({
+      group: 'Review', label: 'bot', model: 'gpt-5', prompt: 'inspect',
+    });
+    expect(parseHarnessCommand('harness claude --no-workspace in group 4')).toMatchObject({
+      group: '4', workspace: false,
+    });
+  });
+
   it('parses every option together, in any order', () => {
     expect(parseHarnessCommand('harness codex --effort low as bot -y --offline -b --model gpt-5 -w')).toEqual({
       name: 'codex',
@@ -339,6 +348,13 @@ describe('parseHarnessCommand — error paths', () => {
     expect(parseHarnessCommand('harness claude as')).toEqual({
       error: String.raw`Usage: harness \<claude|opencode|codex\> as \<label\>.`,
     });
+  });
+
+  it('errors when the group clause has no valid name or ID', () => {
+    expect(parseHarnessCommand('harness claude in group')).toEqual({
+      error: String.raw`Usage: harness \<claude|opencode|codex\> [options] in group \<name|id\>.`,
+    });
+    expect(parseHarnessCommand('harness claude in group 0')).toMatchObject({ error: expect.stringContaining('group') });
   });
 
   it('errors when with has no prompt', () => {

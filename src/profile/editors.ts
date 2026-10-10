@@ -2,18 +2,25 @@ import { insertTabInGroup } from '../tab/utils.js';
 import type { Managers } from '../managers.js';
 import type { ProfileEditorsEntry } from './types.js';
 import type { MainAreaCandidate } from './focus.js';
+import { defaultGroupName, tabGroupName } from '../tab/groups.js';
 
 // A newly created editor tab inherits its group from whichever tab is currently active in the
 // TabManager (see `addEditorTab`), which does not necessarily match this entry's own authored
 // `group` (or the launch's default group, when the entry authors none). When it doesn't,
 // relocate the tab into its intended group, preserving that group's contiguity in the tab strip.
 // Shared with `view-tabs.ts`, whose four tab kinds are opened the same way.
-export function relocateToGroup(managers: Managers, targetGroup: number, groupColor: string): void {
+export function relocateToGroup(managers: Managers, targetGroup: number, groupColor: string, requestedName?: string): void {
   const index = managers.tab.activeTab;
   const tab = managers.tab.tabs[index];
-  if (!tab || tab.group === targetGroup) return;
+  if (!tab) return;
+  const existing = managers.tab.tabs.find((candidate) => candidate.group === targetGroup);
+  const groupName = existing ? tabGroupName(existing) : requestedName ?? defaultGroupName(targetGroup);
+  if (tab.group === targetGroup) {
+    tab.groupName = groupName;
+    return;
+  }
   const without = [...managers.tab.tabs.slice(0, index), ...managers.tab.tabs.slice(index + 1)];
-  const moved = { ...tab, group: targetGroup, groupColor };
+  const moved = { ...tab, group: targetGroup, groupName, groupColor };
   managers.tab.tabs = insertTabInGroup(without, moved);
   managers.tab.setActiveTab(managers.tab.findIndex(moved.label));
 }
@@ -35,7 +42,7 @@ export function openProfileEditors(
     const dotColor = editor?.dotColor ?? '';
     if (editor && editor.group !== targetGroup) {
       managers.tab.setActiveTab(managers.tab.findIndex(result.label));
-      relocateToGroup(managers, targetGroup, colorForGroup(targetGroup, dotColor));
+      relocateToGroup(managers, targetGroup, colorForGroup(targetGroup, dotColor), entry.groupName);
     }
     opened.push({ label: result.label, number: entry.number, focus: entry.focus, pane: entry.pane });
     notes.push('Opened editor tab.');

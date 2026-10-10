@@ -146,6 +146,16 @@ describe('the shell command', () => {
     expect(launches[0].request).toEqual({ name: 'docs tab', workspace: { offline: true } });
   });
 
+  it('passes an explicit group selector through to the host', () => {
+    const { capabilities, launches } = fakeCapabilities();
+
+    activate().command?.('Docs in group Review --offline', capabilities);
+
+    expect(launches[0].request).toEqual({
+      name: 'docs', group: 'Review', workspace: { offline: true },
+    });
+  });
+
   it('opens an unconfined shell where the host says to start with --no-workspace', () => {
     const { capabilities, opened, spawns, launches } = fakeCapabilities();
 

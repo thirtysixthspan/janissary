@@ -33,12 +33,12 @@ export class HarnessTabSpawn {
   // the clone. `model`/`effort`, when given, are passed to the harness binary via
   // `buildHarnessCommand`.
   protected spawnTab(options: SpawnTabOptions): void {
-    const { name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, autoResume, model, effort, remote } = options;
+    const { name, label, cwd, workspaceDir, offline, group, groupName, groupColor, dotColor, autoApprove, autoResume, model, effort, remote } = options;
     const provisioning = options.ready !== undefined || remote !== undefined;
     const harness: HarnessView = { name, program: HARNESS_COMMANDS[name], ptyId: '', status: provisioning ? 'provisioning' : 'running' };
     if (model !== undefined) harness.model = model;
     if (effort !== undefined) harness.effort = effort;
-    const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir);
+    const tab = makeHarnessTab(label, dotColor, this.managers.tab.tabs.length + 1, group, groupColor, harness, workspaceDir, groupName);
     tab.offline = offline;
     tab.autoApprove = autoApprove;
     tab.autoResume = autoResume;

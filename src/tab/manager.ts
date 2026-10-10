@@ -18,6 +18,7 @@ import * as runtimeOperations from './runtime-operations.js';
 import * as selectionOperations from './selection-operations.js';
 import * as viewOperations from './view-operations.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
+import { inheritGroupNames } from './groups.js';
 
 export class TabManager extends TabTranscriptState {
   tabs: Tab[] = [];
@@ -141,6 +142,7 @@ export class TabManager extends TabTranscriptState {
   mostRecentFileNavigatorLabel(): string | undefined { return selectionOperations.mostRecentFileNavigatorLabel(this); }
 
   applyOpenResult(result: { tabs: Tab[]; activeTab: number }): void {
+    inheritGroupNames(result.tabs);
     selectionOperations.applyOpenResult(this, result);
   }
 
@@ -167,7 +169,10 @@ export class TabManager extends TabTranscriptState {
 
   toggleCollapse(label?: string): void { tabOperations.toggleCollapse(this, label); }
 
-  insertTabInGroup(tab: Tab): void { tabOperations.insertTab(this, tab); }
+  insertTabInGroup(tab: Tab): void {
+    inheritGroupNames([...this.tabs, tab]);
+    tabOperations.insertTab(this, tab);
+  }
 
   retargetEditorTab(oldAbsPath: string, newAbsPath: string): void {
     retargetEditorTabOp(

@@ -996,8 +996,12 @@ SSH harness tabs have no screen reader, so they remain unwatchable. See [[monito
 
 ## Placement and grouping
 
-A harness tab is created adjacent to the active tab's group (same group number and bar color), like
+A harness tab is created adjacent to the active tab's group (same group name, number, and bar color), like
 an image or page view tab. It participates in tab reordering and grouping as any ordinary tab would.
+A launch may include `in group <name|id>` to select an existing group by case-insensitive name or positive
+numeric ID. An unknown name creates a group with the next available ID; an unknown ID creates that group
+with the generated name `group-<id>`. The new group's bar color is the first launched tab's dot color.
+A launch without the clause inherits the issuing tab's group. See [[tabs]].
 A harness tab opened by `profile launch` instead joins the profile's own group (see Profiles).
 
 ## Persistence

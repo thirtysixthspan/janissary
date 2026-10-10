@@ -61,6 +61,7 @@ export type TabView = {
   number: number;
   dotColor: string;
   group: number;
+  groupName?: string;
   groupColor: string;
   busy: boolean;
   // True when the tab has unseen output (see Tab.hasUnread). Drives the tab-strip badge.

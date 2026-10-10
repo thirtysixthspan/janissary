@@ -345,6 +345,9 @@ export type Tab = {
   // Group number, shared by an agent and every agent it (transitively) creates. The root agent
   // is group 1; a launched profile forms its own group.
   group: number;
+  // User-facing identity used by launch commands to find this group. Older profile entries may
+  // omit it; their numeric group receives the stable `group-<id>` fallback.
+  groupName?: string;
   // The group's bar color, fixed when the group is first assigned (the color of its first
   // agent). Stored per tab so it never shifts when tabs are moved or a group member is closed.
   groupColor: string;

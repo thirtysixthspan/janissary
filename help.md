@@ -49,6 +49,8 @@
 | `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |
 | `video` | `video <path>` opens a video through the bundled video tab plugin; accepts the same paths and wildcards as `open` |
 
+Both `shell` and `harness` launches accept `in group <name|id>` to join an existing group by its case-insensitive name or numeric ID. An unknown name creates a group; an unknown positive ID creates that numbered group. Without the clause, the new tab joins the issuing tab's group.
+
 ### Key Bindings
 
 **Global key bindings** (work from every tab; where a tab's own controls below take a key, that tab says so):

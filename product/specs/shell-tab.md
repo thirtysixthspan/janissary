@@ -2,7 +2,7 @@
 
 A **shell tab** is a tab whose body is a live pseudo terminal running zsh: the metadata row on top, the terminal where the transcript would be, and the command line
 beneath it. Type `shell` in any tab's command bar to open one; by default it gets a sandboxed workspace clone
-of its own (see "Where the shell starts"). `shell <name>` names the tab. Without a name, each
+of its own (see "Where the shell starts"). `shell <name>` names the tab. `shell … in group <name|id>` selects a group by its case-insensitive name or positive numeric ID, creating a group when the selector is not present. Without a group clause, the shell joins the issuing tab's group. Without a name, each
 shell tab is named from the agent-name pool — a name no open tab already holds, and no harness or remote shell
 session that is provisioning, active, reconnecting, or detached still holds (see "Name clashes" in [[harness]])
 — and the tab strip shows that name, so two shells read as two distinct tabs and either can be
@@ -12,7 +12,7 @@ and so on.
 
 Every launch opens one shell tab of its own, before any other tab exists: the **launch shell**,
 labelled `janus` rather than given a pool name, started in the project directory with no workspace,
-in the first palette colour and group 1 (see [[tabs]]). It is an ordinary shell tab in every other
+in the first palette colour and the `launch` group (ID 1; see [[tabs]]). It is an ordinary shell tab in every other
 respect — `exit` closes it, and as the last tab that quits the app — and the application opens it
 through the same plugin as `shell`, from no tab at all.
 

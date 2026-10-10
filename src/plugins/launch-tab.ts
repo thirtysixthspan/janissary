@@ -123,7 +123,7 @@ function openLaunched(
         input.validate(created);
         return created;
       },
-      { label, cwd, ...(workspace && { workspace }) },
+      { label, cwd, ...(workspace && { workspace }), ...(request.group !== undefined && { group: request.group }) },
     );
   } catch (error) {
     if (clone) releaseClone(managers, label, clone);

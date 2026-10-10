@@ -1,10 +1,12 @@
 import type { LogEntry, Tab, PluginTabRecord, EditorView, HarnessView, FileNavigatorView } from './types.js';
+import { defaultGroupName } from './groups.js';
 
-export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDirectory?: string, group: number = 1, groupColor: string = dotColor): Tab => ({
+export const makeTab = (label: string, dotColor: string, number: number = 1, commandHistory: string[] = [], log: LogEntry[] = [], workspaceDirectory?: string, group: number = 1, groupColor: string = dotColor, groupName = defaultGroupName(group)): Tab => ({
   label,
   dotColor,
   number,
   group,
+  groupName,
   groupColor,
   log,
   cmdHistory: commandHistory,
@@ -19,9 +21,9 @@ export const makeTab = (label: string, dotColor: string, number: number = 1, com
 // derived from the plugin's label prefix so several can coexist.
 export const makePluginTab = (
   label: string, dotColor: string, number: number, group: number, groupColor: string,
-  title: string, plugin: PluginTabRecord,
+  title: string, plugin: PluginTabRecord, groupName = defaultGroupName(group),
 ): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor, groupName),
   view: 'plugin',
   title,
   plugin,
@@ -29,22 +31,22 @@ export const makePluginTab = (
 
 
 // An editor view tab (opened via `open <text file>` or `edit <file>`). Hosts the plain-text editor.
-export const makeEditorTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, editor: EditorView): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+export const makeEditorTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, editor: EditorView, groupName = defaultGroupName(group)): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor, groupName),
   view: 'editor',
   title: editor.name,
   editor,
 });
 
 // A harness view tab (opened via `harness <name>`). The entire tab body is a live PTY terminal.
-export const makeHarnessTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, harness: HarnessView, workspaceDirectory?: string): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], workspaceDirectory, group, groupColor),
+export const makeHarnessTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, harness: HarnessView, workspaceDirectory?: string, groupName = defaultGroupName(group)): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], workspaceDirectory, group, groupColor, groupName),
   view: 'harness', title: label, harness,
 });
 
 // A file navigator view tab (opened via `files [path]`). Shows a directory tree rooted at `files.root`.
-export const makeFilesTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, files: FileNavigatorView): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+export const makeFilesTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, files: FileNavigatorView, groupName = defaultGroupName(group)): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor, groupName),
   view: 'files',
   title: 'navigator',
   files,
@@ -53,9 +55,8 @@ export const makeFilesTab = (label: string, dotColor: string, number: number, gr
 // A notifications view tab (opened via `notifications`). A singleton, view-only feed whose body is
 // the standard transcript fed by its own `log`; it takes no typed input. Live and in-memory like
 // the file navigator tab — never persisted, never restored on `--relaunch`.
-export const makeNotificationsTab = (label: string, dotColor: string, number: number, group: number, groupColor: string): Tab => ({
-  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor),
+export const makeNotificationsTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, groupName = defaultGroupName(group)): Tab => ({
+  ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor, groupName),
   view: 'notifications',
   title: 'notifications',
 });
-
