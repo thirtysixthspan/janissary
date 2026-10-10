@@ -4,6 +4,104 @@
 
 ## development
 
+* Contain conversation storage failures within the response lifecycle.
+
+Existing Debt: Conversation responses mutate their in-memory lifecycle around fallible storage calls without a recovery boundary, so a filesystem failure can strand a pending turn or escape an asynchronous ACP callback. Severity: 6/10
+
+Existing Risk: 8/10 - An unwritable conversation directory can leave a reply permanently streaming, and a failed record write inside an ACP process error callback can escape into the server and interrupt every open tab.
+
+Proposal Risk: 3/10 - A response that cannot be persisted still needs to be copied or saved later, but its unsaved state is visible and the conversation remains usable.
+
+Proposal: In `src/conversations/responder.ts`, `send` installs the pending turn before `ConversationStore.ensure` and session construction can throw, while `complete` and `fail` remove the pending entry and then call `store.write` before broadcasting the terminal state. Add a recovery boundary around these response transitions: roll back a failed startup, and retain the completed response in memory with an explicit persistence error when a terminal write fails. Ensure timers, pending entries, and failed sessions are released and `changed()` runs on every terminal outcome; reporting a storage error must not call the same failing writer recursively. Inject the error reporter from `src/conversations/manager.ts` so a storage failure reaches the turn or notifications as a recoverable domain error. `src/acp/index.ts` invokes the connection error handler from subprocess events, outside the guarded plugin request, so no storage exception may leave that callback. `src/conversations/store.test.ts` already injects a writer that throws, but `src/conversations/manager.test.ts` covers successful persistence and provider errors separately; extend the manager fixtures to cover failed workspace creation, failed completion writes, and failed writes during connection errors, including another successful send afterward.
+
+
+* Serialize completed conversation history when metadata changes during a reply.
+
+Existing Debt: Conversation metadata shares its persistence record with the active streamed turn, allowing ordinary title changes to serialize a transient shape that the record reader rejects. Severity: 6/10
+
+Existing Risk: 7/10 - Renaming during a streamed reply can replace valid saved history with an unreadable record that remains unreadable after cancellation or shutdown, making the conversation disappear on restart.
+
+Proposal Risk: 2/10 - An interrupted partial response remains unsaved by design, so restarting can still lose that partial response while previously completed history remains readable.
+
+Proposal: `src/conversations/responder.ts` appends a turn with `streaming: true` to the conversation's shared `turns` array, and `rename` in `src/conversations/manager.ts` writes the whole record whenever that array is nonempty. `isTurn` in `src/conversations/store.ts` rejects every stored turn carrying a `streaming` field, and cancellation does not rewrite the record. Introduce a durable snapshot serializer in the conversation store that includes completed or failed turns only and leaves the live record untouched. Give the store an explicit check for an existing conversation record, and use that check for metadata persistence instead of treating a pending turn or an existing workspace directory as proof that history has been saved. Preserve the rename and cancellation semantics in `product/specs/conversations.md`, including workspace controls being allowed to persist an empty conversation. `src/conversations/manager.test.ts` currently expects a rename after an uncompleted first query to write a record; revise that case to distinguish pending from completed history. Add cases that complete a turn, start another, rename, cancel or dispose, and reopen through a fresh `ConversationStore`, plus a first pending turn renamed before any record exists. Keep the atomic-write and malformed-record behavior covered by `src/conversations/store.test.ts`.
+
+
+* Bound Git sync commands and cancel queued work during shutdown.
+
+Existing Debt: The shared Git sync queue serializes operations but gives its subprocesses no deadline or owned cancellation lifecycle, so one stalled command holds every subsequent cycle indefinitely. Severity: 6/10
+
+Existing Risk: 6/10 - A hanging pull, push, hook, or credential helper can keep all synced editors provisioning or syncing indefinitely and leave Git work running while shutdown removes the shared clone.
+
+Proposal Risk: 3/10 - A timed-out push can still have reached the remote before its reply was lost, so users may need to inspect the remote before retrying while local saves and commits remain available.
+
+Proposal: Introduce a focused subprocess helper for `src/git/sync.ts` that applies explicit finite deadlines, tracks the active child, and settles only after the child has stopped. Route staging, diff, commit, pull, recovery abort, and push through it; extend the branch readers in `src/git/status.ts` with optional execution bounds so `readyBranch` cannot hold the same queue indefinitely. Add an idempotent `GitSync.dispose()` that marks the service closed, cancels active work, and makes queued operations return an error without starting another subprocess. `src/managers.ts` already places `gitSync` before `workspace` in `MANAGER_DISPOSE_ORDER`; preserve that lifecycle order. Failure recovery needs its own bounded command rather than inheriting an already-aborted signal, and `commitIfChanged` must distinguish the expected diff exit indicating staged changes from timeout, cancellation, or command failure. Preserve path-scoped commits, local history on rebase failure, and synchronous local save confirmation. `src/git/sync.test.ts` already holds commands to test queue ordering and recovery; extend its child-process fake to assert timeout settlement, recovery ordering, disposal with queued cycles, and refusal to commit after a failed diff. Keep `src/editor/save-synced-stale.test.ts` as the integration coverage for preserving local and upstream content.
+
+
+* Reconcile schedule callbacks across replacement, cancellation, and remote auto-resume.
+
+Existing Debt: Schedule entries and their lifecycle callbacks have separate mutation paths, so replacing the entry list can remove work without settling its owner and remote resume callbacks omit the removal outcome. Severity: 6/10
+
+Existing Risk: 6/10 - Cancelling auto-resume through the command line can leave the local harness believing a removed timer is pending, while cancelling a remote timer can leave the far-side detector waiting for an acknowledgement that never comes.
+
+Proposal Risk: 2/10 - Transport loss can still delay a remote acknowledgement, but every local removal has a defined completion path and cannot leave a callback attached to a later entry that reuses its id.
+
+Proposal: `schedule cancel` and `schedule clear` in `src/commands/schedule.ts` replace the list through `ScheduleManager.set`, but `set` in `src/schedule/manager.ts` updates only the entries while `cancel`, `clearAll`, and `delete` also settle removal callbacks. Make list replacement reconcile callbacks for removed or replaced entries while retaining callbacks for surviving entries; replacing an entry through `add` also needs to settle the previous owner before registering its replacement. Detach callbacks before invoking them so reentrant schedule changes cannot settle an entry twice. Keep the command parser and its messages intact, with all mutation routes relying on the manager's lifecycle rule. In `src/remote/pty-session.ts`, the `onResumeEvent` registration supplies only a fired callback despite promising acknowledgement on cancellation; supply the removal callback too and settle the metadata flag through `src/harness/auto-resume-state.ts`. `src/schedule/manager.test.ts` covers direct cancel and clear hooks, and `src/commands/schedule.test.ts` uses a map-only schedule fake, so add coverage connecting CLI cancellation and clearing to a real manager. Extend `src/harness/auto-resume-wire.test.ts` and `src/remote/pty-session.test.ts` to cover removal, replacement, retained hooks, and remote acknowledgements without typing a cancelled prompt.
+
+
+* Replace the editor's served-file reference when a first save chooses another filename.
+
+Existing Debt: The first-save collision path implements its own editor retargeting and registers a new file reference without releasing the previous one, bypassing the replacement lifecycle already used by renames. Severity: 5/10
+
+Existing Risk: 6/10 - A stale reference can still read or overwrite the original conflicting file after the editor moves to a suffixed path, and closing the editor revokes only its current reference.
+
+Proposal Risk: 2/10 - A request using the retired reference will fail and may require a retry with the updated tab state, but it cannot silently write to the file the first save avoided.
+
+Proposal: In `finishSave` in `src/editor/save.ts`, the `targetPath !== filePath` branch calls `managers.tab.registerFile(targetPath)` while leaving the original `url` in the allow-list. Use `managers.tab.replaceFile(url, targetPath)`, backed by `FileRegistry.replace` in `src/tab/file-registry.ts`, and update the tab title with the editor's name, path, and reference as one retargeting transition. Follow the ownership behavior in `src/tab/rename-editor.ts` and `src/tab/retarget-editor.ts`; the new-file branch still establishes the watcher only after the successful write. `src/tab/cleanup.ts` releases only the current editor reference, so the old reference must be revoked at retargeting time. Extend the auto-suffix cases in `src/editor/save.test.ts` to assert that the original file is preserved, the old reference is absent, the new reference resolves to the suffixed file, and a save through the old URL is refused. Add cleanup coverage in `src/tab/cleanup.test.ts` for a retargeted editor, and preserve the duplicate-open registration behavior already pinned by `src/tab/opening-state.test.ts`. No existing test asserts revocation after a first-save collision.
+
+
+* Bind editor sync completions to the owning tab and latest request.
+
+Existing Debt: Editor Git sync completions identify their owner only by a reusable tab label and carry no request generation, allowing an old operation to update a new tab or supersede a newer pending status. Severity: 5/10
+
+Existing Risk: 5/10 - Closing a synced editor and opening an ordinary editor with the same label can attach the old sync result to the new tab, and rapid successive saves can display synced while the latest cycle is still pending.
+
+Proposal Risk: 2/10 - A shared pull can still change other open files, so watcher refresh remains necessary even when the initiating tab has closed or its status update has been superseded.
+
+Proposal: Add a small editor sync-status helper used by `syncAfterSave` in `src/editor/save.ts` and `resyncEditorTab` in `src/editor/resync.ts`. Begin each operation with a token carrying the owning `TabRuntime` object and an incremented server-only generation stored in `src/tab/types.ts`; complete it only if the currently resolved editor still owns that runtime, is not closing, and holds the same generation. Use `tabRuntime` from `src/tab/runtime.ts` rather than comparing the outer tab object: `removeTabAt` in `src/tab/reorder.ts` copies surviving tab records while retaining their runtime, and `uniqueEditorLabel` in `src/tab/unique-labels.ts` reuses labels after close. Keep `refreshSyncedTabs` in `src/editor/refresh-synced.ts` independent of whether the initiating status token remains current, because the pull affects the shared clone. Ensure an old failure notification cannot be attributed to a replacement editor. `src/editor/save.test.ts` and `src/editor/resync.test.ts` cover one pending cycle at a time; extend them with two delayed saves, a tab close followed by label reuse, and an unrelated tab removal during sync so the ownership guard does not reject a valid survivor.
+
+
+* Keep editor file watches attached after external atomic replacements.
+
+Existing Debt: Editor observation is attached to a file handle and rearmed only by application saves or explicit refreshes, leaving external replacement events without an equivalent lifecycle transition. Severity: 5/10
+
+Existing Risk: 5/10 - An external atomic replacement can orphan observation of the pathname, leaving a clean editor on stale content and hiding later changes until a manual refresh or save conflict reveals them.
+
+Proposal Risk: 2/10 - Filesystem failures or edits preserving the same modification time can still delay reloads, while the content hash check continues to guard disk saves against unseen changes.
+
+Proposal: `watch` in `src/editor/watch-manager.ts` subscribes to the file itself and ignores the event type; `check` updates its modification-time baseline but never reattaches observation after an external replacement. The existing `refresh` comment already records that replacement can make later changes invisible. Prefer watching the containing directory and filtering events for the target basename, with unnamed events triggering a pathname check, so replacing the file does not replace the watched object. Keep the existing debounce and `markSaved` baseline suppression, handle watcher errors explicitly, and ensure any bounded retry used for a missing or recreated path is owned by the watch state and cancelled by `unwatch`, `closeTab`, and `dispose`. `src/editor/watch-manager.test.ts` covers in-place external writes and rearming after application saves, while the real observation case in `src/editor/save.test.ts` exercises only the application's own replacements. Extend those cases to perform two successive external atomic replacements followed by another edit, deletion and recreation, and tab closure with a pending check. Preserve the clean-reload and dirty-conflict behavior covered by `web/src/editor/useEditorWatchReload.test.ts` and the save hash protection in `src/editor/save-conflict.test.ts`.
+
+
+* Preserve each task source's directory tree when project tasks shadow built-in files.
+
+Existing Debt: Task discovery deduplicates directory rows together with files even though the picker interprets each source as a complete tree, and client expansion state identifies directories only by their relative path. Severity: 5/10
+
+Existing Risk: 4/10 - A project task folder can remove the built-in folder row while leaving its deeper children, causing shipped tasks to disappear behind a collapsed project directory or appear without their parent.
+
+Proposal Risk: 2/10 - Task selection can still move by position when the filesystem changes, as documented, but source boundaries and ancestor directories no longer make valid tasks unreachable.
+
+Proposal: In `src/tasks.ts`, `listTasks` builds `projectPaths` from every row and filters every matching Janissary row, so a project `research/local.md` removes the built-in `research` directory while retaining a distinct built-in `research/audit.md` at depth one. Deduplicate task files and then retain the ancestor directories needed by each source's surviving files, omitting a source that has no surviving tasks. In `flattenVisibleTaskRows` in `web/src/pickers/task-picker-keys.ts`, reset collapse tracking on a source change before testing row depth, and keep parent and child navigation inside that source. Use source plus relative path for expansion state in `web/src/pickers/useTaskPicker.ts`, rendered keys in `web/src/pickers/TaskPicker.tsx`, and directory toggle outcomes and callbacks; carry the selected row's source to command construction rather than recovering it from a path alone. Preserve project file precedence and the command forms in `product/specs/task-picker.md`. `src/tasks.test.ts` covers duplicate top-level files and `web/src/pickers/task-picker-keys.test.ts` covers two flat source lists, but neither covers overlapping folder trees. Extend both with shared directories containing distinct and shadowed files, nested ancestors, and a collapsed last project folder; update `web/src/pickers/useTaskPicker.test.ts` and `web/src/pickers/TaskPicker.test.tsx` for independent expansion and correct source routing.
+
+
+* Handle SQL intent rejections and retain drafts until the request is accepted.
+
+Existing Debt: The SQL action adapter discards every rejecting intent promise and exposes void mutation callbacks, so input surfaces close or clear drafts before knowing whether their request was accepted. Severity: 5/10
+
+Existing Risk: 5/10 - A connection failure or server refusal can erase a SQL statement, cell edit, or insert draft and leave only an unhandled promise rejection with no actionable feedback in the tab.
+
+Proposal Risk: 3/10 - A lost acknowledgement can still leave a write's outcome unknown, so the retained draft supports manual recovery while automatic replay would risk applying a mutation twice.
+
+Proposal: `createSqlActions` in `web/src/plugins/sql/useSqlActions.ts` calls `void intent(name, payload)`, although `createPluginClientCapabilities` in `web/src/plugins/api.ts` rejects on RPC failure. Make the SQL sender catch and normalize rejections into a visible local error and return an explicit acceptance outcome for draft-producing actions. Have the console in `web/src/plugins/sql/SqlConsole.tsx` and the commit handlers in `web/src/plugins/sql/DataGrid.tsx` await acceptance before clearing the submitted line, closing the cell editor or insert form, or recording a successful local history transition; compose the console's submission handling around the existing command-bar keys so Shift+Enter and recall remain intact. Bind completion to the submitted draft so a late acknowledgement cannot erase newer typing, and prevent duplicate submissions while acceptance is pending. Expose request errors through `web/src/plugins/sql/SqlTab.tsx`, using a separate local error from the authoritative query errors already carried in the payload. An accepted intent is not proof that its later database operation succeeded, and ambiguous transport failures must never trigger automatic retries. `web/src/plugins/sql/useSqlActions.test.ts` currently checks only mappings with resolving intents; extend it with rejected intents and add delayed acceptance, rejection, and newer-draft cases to `web/src/plugins/sql/SqlConsole.test.tsx` and `web/src/plugins/sql/DataGrid.test.tsx`. Extract a focused hook if the grid's added coordination would exceed the file-size limit.
+
 ## deferred
 
 * Move the websocket client out of the app-shell root and into the shared layer it belongs to, so `web/src/shared/` stops importing from `../ws`. — deferred: complexity 8/10, 138 files import `./ws`/`../ws` and each retarget is a per-depth specifier recomputation, the cluster includes the `toasts/` directory that `clientFeatureDirectories` names in `eslint.config.mjs` — a question the entry does not settle — and the change adds a new eslint zone plus its boundary case, which is a deliberate enforcement design rather than a mechanical sweep.
