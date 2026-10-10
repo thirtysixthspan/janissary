@@ -2,7 +2,4 @@
 
 # pull-request
 
-* from the launcher, file navigator should launch in the left sidebar
-
 * add a SQL launcher item that launches the sql command
-

@@ -8,7 +8,7 @@ import type { LauncherCommand, LauncherSource } from './shared.js';
 export const DEFAULT_LAUNCHER_COMMANDS: readonly LauncherCommand[] = [
   { id: 'zsh', icon: 'faTerminal', label: 'Shell', command: 'zsh' },
   { id: 'harness', icon: 'faRobot', label: 'Harness', command: 'harness' },
-  { id: 'files', icon: 'faFolderOpen', label: 'File navigator', command: 'files' },
+  { id: 'files', icon: 'faFolderOpen', label: 'File navigator', command: 'files left' },
   { id: 'notifications', icon: 'faBell', label: 'Notifications', command: 'notifications right' },
   { id: 'schedules', icon: 'faClock', label: 'Schedules', command: 'schedules right' },
   { id: 'sessions', icon: 'faPlug', label: 'Sessions', command: 'sessions right' },
