@@ -17,7 +17,7 @@
 | `harness` | Open an AI coding harness in a disposable workspace with an E2E browser attached; claude, opencode, and codex auto-approve prompts by default and opencode and codex also schedule their own resume after a usage limit (`--no-workspace`, `--no-browser`, `--no-auto-approve`, and `--no-auto-resume` opt out); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
 | `help` | List available commands; `help <section>` shows one section, such as `help commands` or `help shell` |
 | `hist` | Open command history picker |
-| `launcher` | Open the launcher tab in the left sidebar (`launcher right` for the right): a rail of application commands from `.janissary/launcher.json`, and every open tab sorted by what needs attention — needs you, unread, active, working, idle — with an AI-written line about each. Click a command to run it, click a tab to focus it |
+| `launcher` | Open or focus the launcher tab in the left sidebar (`launcher right` for the right): a command rail and center tabs sorted by attention, with optional status summaries. Select a command row, then click it again to run; click a tab row to focus it |
 | `monitor` | Start a persona-driven AI monitor — inline on the current tab, or watching other tabs/groups into a reporting tab |
 | `monitors` | List active monitors with their targets and suggestion counts |
 | `nav` | Open the fuzzy tab navigator (Ctrl+G); `nav <query>` pre-fills the search |

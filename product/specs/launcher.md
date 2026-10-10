@@ -6,7 +6,7 @@ It is one tab kind among the sidebar's dockable kinds and shares the docking mec
 
 ### The command rail
 
-The rail lists application commands, one row each, with an icon and a label. Clicking a row runs the command it names, exactly as typing it would — so `notifications left` docks the notifications feed into the left sidebar, where it joins the launcher rather than displacing it, and the feed is selected there through the normal sidebar mechanism. A command's own answer lands in the launcher's transcript rather than in a second copy of its rules. A command the application answers itself, such as a picker word, is answered the same way it would be in the command bar and nothing reaches the server. The answer, whatever produced it, appears where a typed line's does. A command the application answers itself, such as a picker word, is answered the same way it would be in the command bar and nothing reaches the server. The answer, whatever produced it, appears where a typed line's does.
+The rail lists application commands, one row each, with an icon and a label. The first click highlights a command; clicking it again runs the command it names, exactly as typing it would — so `notifications left` docks the notifications feed into the left sidebar, where it joins the launcher rather than displacing it, and the feed is selected there through the normal sidebar mechanism. A command's own answer lands in the launcher's transcript rather than in a second copy of its rules. A command the application answers itself, such as a picker word, is answered the same way it would be in the command bar and nothing reaches the server. The answer, whatever produced it, appears where a typed line's does.
 
 Which commands appear is configured in `.janissary/launcher.json`, written by `janus init` and edited by hand. It holds an array of entries, each with an `icon`, a `label`, and a `command`:
 
@@ -49,7 +49,7 @@ Labels are shown as text without interpreting their spelling, and a tab without 
 
 ### The status summary
 
-Each row also carries a short paragraph saying what that tab is doing, written by an ACP session the launcher owns. It is the same idea as a monitor persona's recap, applied to the whole application rather than to one target: one prompt every thirty seconds describing every open tab, one paragraph back per tab.
+Each row may carry a short paragraph saying what that tab is doing, written by an ACP session the launcher owns. While connected, the launcher checks every thirty seconds for changed center tabs and prompts only for those tabs. Docked tabs and the launcher's own tab are excluded; unchanged tabs keep their existing paragraph.
 
 The summarizer is an ACP session the launcher's own tab runs, not a subprocess of its own, and is tool-less: it may read, and it may not act. Its persona is the project's own `ai/personas/launcher/summarizer.md` when the project has written one, and the copy the application otherwise, because `janus init` creates `ai/personas/` and writes nothing into it — so a summarizer that read only the project's tree would never find a persona in an ordinary project. Only the body is primed: a persona's directive line names a subprocess this session never spawns. It never summarizes the launcher's own tab, because that tab's transcript is where its own prompts and replies land — leaving it in would make every flush find content it had just written, and an application where nothing is happening would never be quiet.
 
