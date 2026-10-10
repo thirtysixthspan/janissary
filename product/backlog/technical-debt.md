@@ -4,17 +4,6 @@
 
 ## development
 
-* Serialize completed conversation history when metadata changes during a reply.
-
-Existing Debt: Conversation metadata shares its persistence record with the active streamed turn, allowing ordinary title changes to serialize a transient shape that the record reader rejects. Severity: 6/10
-
-Existing Risk: 7/10 - Renaming during a streamed reply can replace valid saved history with an unreadable record that remains unreadable after cancellation or shutdown, making the conversation disappear on restart.
-
-Proposal Risk: 2/10 - An interrupted partial response remains unsaved by design, so restarting can still lose that partial response while previously completed history remains readable.
-
-Proposal: `src/conversations/responder.ts` appends a turn with `streaming: true` to the conversation's shared `turns` array, and `rename` in `src/conversations/manager.ts` writes the whole record whenever that array is nonempty. `isTurn` in `src/conversations/store.ts` rejects every stored turn carrying a `streaming` field, and cancellation does not rewrite the record. Introduce a durable snapshot serializer in the conversation store that includes completed or failed turns only and leaves the live record untouched. Give the store an explicit check for an existing conversation record, and use that check for metadata persistence instead of treating a pending turn or an existing workspace directory as proof that history has been saved. Preserve the rename and cancellation semantics in `product/specs/conversations.md`, including workspace controls being allowed to persist an empty conversation. `src/conversations/manager.test.ts` currently expects a rename after an uncompleted first query to write a record; revise that case to distinguish pending from completed history. Add cases that complete a turn, start another, rename, cancel or dispose, and reopen through a fresh `ConversationStore`, plus a first pending turn renamed before any record exists. Keep the atomic-write and malformed-record behavior covered by `src/conversations/store.test.ts`.
-
-
 * Bound Git sync commands and cancel queued work during shutdown.
 
 Existing Debt: The shared Git sync queue serializes operations but gives its subprocesses no deadline or owned cancellation lifecycle, so one stalled command holds every subsequent cycle indefinitely. Severity: 6/10

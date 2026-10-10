@@ -477,9 +477,8 @@ describe('ConversationsManager', () => {
     manager.dispose();
   });
 
-  // `selectModel`'s rule: a conversation already on disk is rewritten, one that is not stays that
-  // way — a rename is not among the things that create the conversation's directory.
-  it('persists a rename only for a conversation that already has turns', () => {
+  // A pending first turn does not make a durable record; an existing record is rewritten instead.
+  it('persists a rename only when a conversation record already exists', () => {
     mocks.connectAcp.mockReturnValue(fakeSession());
     const { manager, store } = fixture();
     const write = vi.spyOn(store, 'write');
@@ -490,10 +489,39 @@ describe('ConversationsManager', () => {
 
     manager.send('first', 'First');
     write.mockClear();
-    manager.rename('first', 'After a query');
+    manager.rename('first', 'While the first query is pending');
+
+    expect(write).not.toHaveBeenCalled();
+    expect(store.read('first')).toBeUndefined();
+
+    const session = mocks.connectAcp.mock.results[0].value as FakeSession;
+    session.prompts[0].handlers.onEnd();
+    write.mockClear();
+    manager.rename('first', 'After a completed query');
 
     expect(write).toHaveBeenCalledOnce();
     manager.dispose();
+  });
+
+  it('rewrites completed history without the active turn when renamed during a reply', () => {
+    const session = fakeSession();
+    mocks.connectAcp.mockReturnValue(session);
+    const { manager, store } = fixture();
+    manager.create('first');
+    manager.send('first', 'First');
+    session.prompts[0].handlers.onEnd();
+    manager.send('first', 'Second');
+    session.prompts[1].handlers.onChunk('partial');
+
+    manager.rename('first', 'Kept history');
+
+    expect(store.read('first')).toMatchObject({ title: 'Kept history', turns: [{ query: 'First' }] });
+    expect(store.read('first')?.turns).toHaveLength(1);
+    expect(manager.cancel('first')).toBe(true);
+    manager.dispose();
+
+    expect(new ConversationStore({ home }).read('first'))
+      .toMatchObject({ title: 'Kept history', turns: [{ query: 'First' }] });
   });
 
   it('refuses a rename with no name in it, and one for an unknown conversation', () => {

@@ -26,6 +26,21 @@ beforeEach(() => { home = mkdtempSync(path.join(tmpdir(), 'conversations-store-'
 afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
 describe('ConversationStore', () => {
+  it('writes only completed turns and reports whether a record exists', () => {
+    const store = new ConversationStore({ home });
+    const pending: Conversation['turns'][number] = {
+      query: 'Second question', response: 'partial',
+      pair: { harness: 'opencode', model: 'google/gemini' }, streaming: true,
+    };
+    const value = { ...conversation(), turns: [...conversation().turns, pending] };
+
+    expect(store.hasRecord('first')).toBe(false);
+    store.write(value);
+
+    expect(store.hasRecord('first')).toBe(true);
+    expect(store.read('first')).toEqual(conversation());
+  });
+
   it('round-trips a conversation through an atomic write', () => {
     const store = new ConversationStore({ home });
     store.write(conversation());
