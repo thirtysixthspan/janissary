@@ -65,4 +65,6 @@ The flush is an intent tied to the launcher tab, so its ACP capabilities use tha
 
 ## Verification
 
-The implementation is covered by the focused server, plugin, initialization, and client tests listed above. Manual behavior to check includes left/right singleton docking, shared sidebar occupancy, command confirmation and dispatch, focus and sorting across all five tiers, needs-user handling, live configuration reload, relative ages and hover details, and summaries updating only for changed center tabs while respecting tool-less ACP behavior. No verification command is recorded here as having been run.
+The implementation is covered by the focused server, plugin, initialization, and client tests listed above. After the rebase, `check-diff` and the full `pr-check-gate` passed. Manual behavior to check includes left/right singleton docking, shared sidebar occupancy, command confirmation and dispatch, focus and sorting across all five tiers, needs-user handling, live configuration reload, relative ages and hover details, and summaries updating only for changed center tabs while respecting tool-less ACP behavior.
+
+During the rebase, master added the diff plugin and moved the shared JSON compatibility guard into `json-compatible.ts`; the catalog retains the diff, markdown, and launcher manifests, and the diff test imports the guard from its defining module.

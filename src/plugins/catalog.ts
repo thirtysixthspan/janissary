@@ -17,7 +17,7 @@ import { videoManifest } from './video/manifest.js';
 
 export const tabPluginCatalog = [
   asciicastManifest, audioManifest, conversationsManifest, diffManifest, imageManifest, launcherManifest,
-  pageManifest, pdfManifest, schedulesManifest, searchManifest, sessionsManifest, shellManifest,
-  sqlManifest, videoManifest,
+  markdownManifest, pageManifest, pdfManifest, schedulesManifest, searchManifest, sessionsManifest,
+  shellManifest, sqlManifest, videoManifest,
 ] as const satisfies readonly TabPluginDeclaration[];
 export type ProductionTabPluginId = (typeof tabPluginCatalog)[number]['id'];
