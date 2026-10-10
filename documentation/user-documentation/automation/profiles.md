@@ -61,6 +61,8 @@ The ten types are `harness`, `editor`, `files`, `notifications`, `schedules`, `p
 
 Every entry that takes a place in the tab strip carries its presentation as plain keys alongside `type`: `color` (the dot color), `number` (tab order), `group`, `groupColor`, `pane`, and `focus`. Set `pane` to `left` or `right` to reopen that entry in a two-pane center layout; omitting it means left. Any main-area entry with `focus: true` can claim keyboard focus after launch; the lowest-numbered focused entry wins, while the other pane keeps one of its own tabs visible. Without one, the first newly opened profile tab stays active.
 
+Every tab entry can use `group` as its numeric group ID and `groupName` as the group's name. `profile save` records both so a launch restores named groups too. Older entries without a name use `launch` for group `1` and `group-<id>` for another explicit ID.
+
 Two profile-level keys sit outside `tabs`, because neither is a tab: `monitors` and `layout`. A monitor entry names its persona and targets:
 
 ```json

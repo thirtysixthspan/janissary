@@ -11,6 +11,7 @@ import { releaseFileReference } from './file-registry.js';
 import { tabRuntime } from './runtime.js';
 import type { LaunchNameRow } from '../launch-name/check.js';
 import { terminalConfinement, type TabClone } from './terminal-workspace.js';
+import { requestedTabGroup } from './group-placement.js';
 
 // What a host-owned launch fixes about a plugin tab before its factory runs: the label, the
 // directory it starts in, and the workspace clone it owns from the first moment.
@@ -20,6 +21,7 @@ export type PluginTabPreset = {
   workspace?: { dir: string; offline: boolean };
   remote?: { address: string; host: string };
   recordedPtyId?: string;
+  group?: string;
 };
 
 // Minimal surface these openers need from the TabManager. Kept structural (rather than importing
@@ -129,6 +131,7 @@ export function openPluginTab(
   const sourceIndex = target.tabs.findIndex((tab) => tab.label === sourceLabel);
   const creatorIndex = sourceIndex === -1 ? target.activeTab : sourceIndex;
   const source = target.tabs[sourceIndex];
+  const group = requestedTabGroup(target.tabs, preset?.group, source);
   const own = preset?.workspace && preset.remote === undefined
     ? { workspaceDir: preset.workspace.dir, offline: preset.workspace.offline }
     : undefined;
@@ -142,7 +145,7 @@ export function openPluginTab(
     payload: created.payload,
     fileRefs,
     sourceLabel,
-  }, agentNamed, rows, preset?.label), () => {
+  }, agentNamed, rows, preset?.label, group), () => {
     // The terminals were spawned before this tab had a label, so they are adopted onto the one just
     // minted. Adopt before publishing state so the first host-state delivery sees every terminal row.
     // Every terminal the factory started is adopted, not just the first — one left on the label it was

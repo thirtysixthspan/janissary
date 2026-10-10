@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { TabManager } from './manager.js';
 import type { Managers } from '../managers.js';
 import { agentNames } from '../agent/names.js';
+import { seedRootTab } from './root-tab-test-fixture.js';
 
 function makeTabManager(extra: Record<string, unknown> = {}): TabManager {
   const managers = {} as Managers;
@@ -46,6 +47,21 @@ describe('TabOpeningState.openPluginTab', () => {
       payload: { path: '/tmp/clip.mp4' }, sourceLabel: 'janus',
     });
     expect(tm.openFiles).toHaveLength(1);
+  });
+
+  it('places a launched plugin tab into a named group and reuses its identity', () => {
+    const tm = makeTabManager();
+    seedRootTab(tm);
+    const openShell = (instanceKey: string, group: string) => tm.openPluginTab(
+      'shell', 'shell', instanceKey, 1, 'janus', () => ({ title: 'shell', payload: {} }),
+      { label: instanceKey, group },
+    );
+
+    openShell('shell-review', 'Review');
+    openShell('shell-review-2', 'review');
+
+    expect(tm.tabs.filter((tab) => tab.group === 2).map((tab) => [tab.groupName, tab.groupColor]))
+      .toEqual([['Review', tm.tabs[1].groupColor], ['Review', tm.tabs[1].groupColor]]);
   });
 
   it('adopts a remote terminal without treating its workspace as a local clone', () => {

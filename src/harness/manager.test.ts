@@ -1195,6 +1195,16 @@ describe('HarnessManager spawn options', () => {
     expect(tabs.at(-1)).toMatchObject({ offline: false, autoApprove: true });
   });
 
+  it('creates and reuses a named group for harness launches', () => {
+    const { managers, tabs } = makeManagers();
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude in group Review')).toBeUndefined();
+    expect(tabs.at(-1)).toMatchObject({ group: 2, groupName: 'Review' });
+    expect(manager.run('harness opencode in group review')).toBeUndefined();
+    expect(tabs.at(-1)).toMatchObject({ group: 2, groupName: 'Review', groupColor: tabs.at(-2)?.groupColor });
+  });
+
   it('does not swap a profile entry\'s model and effort', () => {
     const { managers, tabs } = makeManagers();
     const manager = new HarnessManager(managers);

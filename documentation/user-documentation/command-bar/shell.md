@@ -13,10 +13,11 @@ A multi-line command stays editable in the bar until you submit it. If it goes t
 By default, `shell` gives the new shell a sandbox of its own: a fresh workspace clone of the project, a separate checkout, with zsh confined to it. The full form is:
 
 ```
-shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]
+shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>] [in group <name|id>]
 ```
 
 - `shell docs` names the tab, and its clone folder, `docs`. A name already in use is refused in the notifications feed, as for `shell`.
+- `in group <name|id>` joins an existing group by name or number. Names match without regard to case. An unknown name creates a group; an unknown positive number creates that numbered group.
 - `--no-workspace` opens an unsandboxed shell instead. It starts in the current tab's directory when that tab is unsandboxed and inside the project, and at the project root otherwise.
 - `--offline` creates the clone with network access denied.
 - `shell … on <address>` opens the shell on that host in its own remote workspace. It implies a workspace even with `--no-workspace`.

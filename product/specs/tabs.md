@@ -8,7 +8,7 @@ Every launch, `--relaunch` included, opens a single zsh shell tab (see [[shell-t
 
 ### Shell tab creation
 
-`shell [name]` opens a shell through the bundled shell plugin. An unnamed shell draws a free name from the shared pool; a named shell applies the common launch-name checks. It joins the issuing tab's group and takes focus. Typed launches normally create a fresh workspace, while metadata-row shell buttons join the source workspace. See [[shell-tab]] and [[agents]].
+`shell [name] [in group <name|id>]` opens a shell through the bundled shell plugin. An unnamed shell draws a free name from the shared pool; a named shell applies the common launch-name checks. Without a group clause it joins the issuing tab's group. A group clause selects an existing group by case-insensitive name or numeric ID; an unknown name creates a group with the next available ID, and an unknown positive ID creates that ID with the generated name `group-<id>`. A typed launch takes focus. Typed launches normally create a fresh workspace, while metadata-row shell buttons join the source workspace. See [[shell-tab]] and [[agents]].
 
 ### Tab dot colors
 
@@ -16,11 +16,12 @@ Each tab has a colored dot drawn from a 15-color palette, cycling as tabs are ad
 
 ### Tab grouping
 
-Every tab belongs to a **group**, identified by a `group` number and a fixed `groupColor` (the group's bar color). A group renders as a colored top border spanning each member tab's full width, drawn at full strength on every tab in the group — active or inactive, never faded — so related tabs read as a connected band in the strip.
+Every tab belongs to a **group**, identified by a name, a positive numeric ID, and a fixed bar color. The default group is named `launch` and has ID 1. Existing groups keep their names and IDs while any member tab remains open; groups named only by a numeric ID use the generated name `group-<id>`. A group renders as a colored top border spanning each member tab's full width, drawn at full strength on every tab in the group — active or inactive, never faded — so related tabs read as a connected band in the strip.
 
-- **Root group.** The launch shell is group 1, and its group color is its own dot color.
+- **Root group.** The launch shell is the `launch` group (ID 1), and its group color is its own dot color.
 - **Inheritance.** A shell created with `shell` / `shell <name>` joins the group of the tab it was created from (the active tab), inheriting that group's number and bar color. Because creation is transitive, a chain of shells spawned from one another all share a single group.
 - **Profiles form a group.** Launching a profile creates one new group (the next free group number) shared by all of that profile's tabs; the group's bar color is fixed to the first launched tab's color. See Profiles.
+- **Explicit placement.** `shell` and `harness` launches accept `in group <name|id>`. Names compare without regard to case. An unknown name creates a group with the next available ID; an unknown positive ID creates that ID and gives it the generated name `group-<id>`. Its bar color is the first launched tab's dot color. Profile saves retain group names; older profiles without a name use the generated name for their stored ID.
 - **Fixed color.** A group's bar color is set when the group is first created (the color of its first member) and stored per tab, so it never shifts when tabs are reordered or a member is closed.
 - **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab.ts`) so each group stays a single connected run in the strip. Reordering with `Ctrl+←` / `Ctrl+→` or by dragging a label may only move a tab **within the same group** (`canMoveTab`), so groups always stay contiguous and a tab can never be dragged out of its group. A tab can be temporarily absent from the strip while docked into a sidebar; see `sidebars.md`.
 

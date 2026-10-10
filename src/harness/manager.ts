@@ -22,6 +22,7 @@ import { oneShotRunEntry } from '../profile/harness-schedule.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import { cancelHarnessIdleEscalation, disposeHarnessIdleEscalations } from './idle-notification.js';
 import type { TerminalColors } from './terminal-colors.js';
+import { resolveTabGroup } from '../tab/groups.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
 // fresh `--workspace` git clone, and optionally under a custom `as <label>`) and naming it uniquely.
@@ -163,10 +164,10 @@ export class HarnessManager extends HarnessTabSpawn {
     if (typeof dir === 'string') return dir;
     const { cwd, workspaceDir, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
-    const group = creator?.group ?? 1;
-    const groupColor = creator?.groupColor ?? dotColor;
+    const group = resolveTabGroup(this.managers.tab.tabs, launch.group, creator, dotColor);
     this.spawnTab({
-      name, label, cwd, workspaceDir, offline, group, groupColor, dotColor, autoApprove, autoResume, browser, model, effort, ready, remote,
+      name, label, cwd, workspaceDir, offline, group: group.id, groupName: group.name, groupColor: group.color,
+      dotColor, autoApprove, autoResume, browser, model, effort, ready, remote,
       ...(nameRetry && { nameRetry }),
     });
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
@@ -181,6 +182,7 @@ export class HarnessManager extends HarnessTabSpawn {
   // against `creator`, the issuing tab) rather than suffixing it.
   openFromProfile(
     entry: ProfileHarnessEntry, label: string, group: number, groupColor: string, creator: string,
+    groupName?: string,
   ): string | undefined {
     const remote = entry.remote === undefined ? undefined : parseRemoteAddress(entry.remote);
     if (remote && 'error' in remote) return remote.error;
@@ -194,7 +196,8 @@ export class HarnessManager extends HarnessTabSpawn {
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
     this.spawnTab({
       name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
-      group, groupColor, dotColor, autoApprove: entry.autoApprove ?? supportsHarnessAutoApprove(entry.tool),
+      group, groupName: groupName ?? this.managers.tab.tabs.find((tab) => tab.group === group)?.groupName,
+      groupColor, dotColor, autoApprove: entry.autoApprove ?? supportsHarnessAutoApprove(entry.tool),
       autoResume: supportsHarnessAutoResume(entry.tool),
       browser: entry.browser ?? true, model: entry.model, effort: entry.effort, ready, remote,
       ...(remote && { nameRetry: { creator, explicit: true, tried: [unique], relaunch: () => {} } }),

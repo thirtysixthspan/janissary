@@ -21,6 +21,12 @@ function checkPane(obj: Record<string, unknown>, loc: string): string[] {
   return [`${loc}: pane must be "left" or "right"`];
 }
 
+function checkGroupName(obj: Record<string, unknown>, loc: string): string[] {
+  const name = obj.groupName;
+  if (name === undefined || (typeof name === 'string' && name.length > 0 && !/\s/u.test(name))) return [];
+  return [`${loc}: groupName must be a non-empty single word`];
+}
+
 // `details`, when present, must name one of the four file-navigator detail modes.
 function checkDetails(obj: Record<string, unknown>, loc: string): string[] {
   const details = obj.details;
@@ -35,6 +41,8 @@ export function presentationProblems(value: Record<string, unknown>, loc: string
     ...checkField(value, 'number', 'number', loc),
     ...checkField(value, 'focus', 'boolean', loc),
     ...checkField(value, 'group', 'number', loc),
+    ...checkField(value, 'groupName', 'string', loc),
+    ...checkGroupName(value, loc),
     ...checkField(value, 'groupColor', 'string', loc),
     ...checkPane(value, loc),
   ];

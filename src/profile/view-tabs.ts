@@ -154,7 +154,7 @@ export async function openProfileViewTabs(
       continue;
     }
     const group = entry.group ?? defaultGroup;
-    relocateToGroup(managers, group, colorForGroup(group, tab.dotColor));
+    relocateToGroup(managers, group, colorForGroup(group, tab.dotColor), entry.groupName);
     opened.push({ label: tab.label, number: entry.number, focus: entry.focus, pane: entry.pane });
     notes.push(`Opened ${target.kind} tab.`);
   }

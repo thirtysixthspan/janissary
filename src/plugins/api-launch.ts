@@ -7,6 +7,8 @@ import type { TabPluginPayload, TabPluginResources, TabPluginServerCapabilities 
 export type TabPluginLaunchRequest = {
   // A typed name. Held to the same name checks an agent launch is; absent, the host draws one.
   name?: string;
+  // Place the tab in an existing group by name or ID, or create a group for an unknown name.
+  group?: string;
   // Ask for a fresh workspace clone. Without a repository the launch still opens, unconfined, and
   // the result says why.
   workspace?: { offline: boolean };
