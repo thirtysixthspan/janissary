@@ -1,4 +1,5 @@
 import { isRateLimitError } from '../acp/rate-limit.js';
+import { errorText } from '../error-text.js';
 import type { ConversationTurnView } from '../protocol.js';
 import type { ConversationSessions } from './sessions.js';
 import type { Conversation } from './store.js';
@@ -34,6 +35,7 @@ export class ConversationResponder {
     private sessions: ConversationSessions,
     private now: () => number,
     private changed: () => void,
+    private reportStorageError: (id: string, message: string) => void,
   ) {}
 
   ids(): IterableIterator<string> {
@@ -66,17 +68,22 @@ export class ConversationResponder {
     this.inFlight.set(id, pending);
     this.changed();
 
-    const workspace = this.store.ensure(id);
-    const session = this.sessions.session(id, pair, workspace, {
-      onError: (message) => { this.fail(id, pending, message); },
-    });
-    const text = hadSession ? contextPrompt(context, query) : conversationPrompt(query, storedTurns, context);
-    session.prompt(text, {
-      onChunk: (text) => { this.chunk(id, pending, text); },
-      onEnd: () => { this.complete(id, pending); },
-      onError: (message) => { this.fail(id, pending, message); },
-    });
-    return true;
+    try {
+      const workspace = this.store.ensure(id);
+      const session = this.sessions.session(id, pair, workspace, {
+        onError: (message) => { this.fail(id, pending, message); },
+      });
+      const text = hadSession ? contextPrompt(context, query) : conversationPrompt(query, storedTurns, context);
+      session.prompt(text, {
+        onChunk: (text) => { this.chunk(id, pending, text); },
+        onEnd: () => { this.complete(id, pending); },
+        onError: (message) => { this.fail(id, pending, message); },
+      });
+      return true;
+    } catch (error) {
+      if (this.inFlight.get(id) === pending) this.rollbackStartup(id, pending, error);
+      return false;
+    }
   }
 
   cancel(id: string): boolean {
@@ -122,7 +129,7 @@ export class ConversationResponder {
     if (pending.timer) clearTimeout(pending.timer);
     delete pending.turn.streaming;
     this.inFlight.delete(id);
-    this.store.write(pending.conversation);
+    this.writeTerminal(id, pending);
     this.changed();
   }
 
@@ -133,7 +140,38 @@ export class ConversationResponder {
     pending.turn.error = isRateLimitError(message) ? `Rate limited: ${message}` : message;
     this.inFlight.delete(id);
     this.sessions.close(id);
-    this.store.write(pending.conversation);
+    this.writeTerminal(id, pending);
     this.changed();
+  }
+
+  private rollbackStartup(id: string, pending: InFlight, error: unknown): void {
+    if (pending.timer) clearTimeout(pending.timer);
+    pending.conversation.turns = pending.conversation.turns.filter((turn) => turn !== pending.turn);
+    if (pending.naming && pending.conversation.title === pending.naming.to) {
+      pending.conversation.title = pending.naming.from;
+    }
+    pending.conversation.updatedAt = pending.previousUpdatedAt;
+    this.inFlight.delete(id);
+    this.sessions.close(id);
+    this.report(id, `Could not start the response: ${errorText(error)}`);
+    this.changed();
+  }
+
+  private writeTerminal(id: string, pending: InFlight): void {
+    try {
+      this.store.write(pending.conversation);
+    } catch (error) {
+      const message = `Response is available but could not be saved: ${errorText(error)}`;
+      pending.turn.error = pending.turn.error ? `${pending.turn.error}; ${message}` : message;
+      this.report(id, message);
+    }
+  }
+
+  private report(id: string, message: string): void {
+    try {
+      this.reportStorageError(id, message);
+    } catch {
+      // Reporting must not turn a handled storage failure into another failed response callback.
+    }
   }
 }

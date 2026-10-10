@@ -4,17 +4,6 @@
 
 ## development
 
-* Contain conversation storage failures within the response lifecycle.
-
-Existing Debt: Conversation responses mutate their in-memory lifecycle around fallible storage calls without a recovery boundary, so a filesystem failure can strand a pending turn or escape an asynchronous ACP callback. Severity: 6/10
-
-Existing Risk: 8/10 - An unwritable conversation directory can leave a reply permanently streaming, and a failed record write inside an ACP process error callback can escape into the server and interrupt every open tab.
-
-Proposal Risk: 3/10 - A response that cannot be persisted still needs to be copied or saved later, but its unsaved state is visible and the conversation remains usable.
-
-Proposal: In `src/conversations/responder.ts`, `send` installs the pending turn before `ConversationStore.ensure` and session construction can throw, while `complete` and `fail` remove the pending entry and then call `store.write` before broadcasting the terminal state. Add a recovery boundary around these response transitions: roll back a failed startup, and retain the completed response in memory with an explicit persistence error when a terminal write fails. Ensure timers, pending entries, and failed sessions are released and `changed()` runs on every terminal outcome; reporting a storage error must not call the same failing writer recursively. Inject the error reporter from `src/conversations/manager.ts` so a storage failure reaches the turn or notifications as a recoverable domain error. `src/acp/index.ts` invokes the connection error handler from subprocess events, outside the guarded plugin request, so no storage exception may leave that callback. `src/conversations/store.test.ts` already injects a writer that throws, but `src/conversations/manager.test.ts` covers successful persistence and provider errors separately; extend the manager fixtures to cover failed workspace creation, failed completion writes, and failed writes during connection errors, including another successful send afterward.
-
-
 * Serialize completed conversation history when metadata changes during a reply.
 
 Existing Debt: Conversation metadata shares its persistence record with the active streamed turn, allowing ordinary title changes to serialize a transient shape that the record reader rejects. Severity: 6/10
