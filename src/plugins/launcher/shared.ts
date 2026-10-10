@@ -1,6 +1,17 @@
-import { isRecord } from '../api.js';
+// The launcher's shared contract: the payload shape, the intent shapes, and the guards both sides
+// check against. It imports nothing, because the client reaches it from inside the launcher's own
+// lazy chunk and a contract that reached the host's module graph would drag it in. The one predicate
+// below is the reason: it is three lines, and borrowing them from `src/plugins/api.ts` would cost the
+// whole of `api.ts`.
 
 export const LAUNCHER_PAYLOAD_SCHEMA_VERSION = 1;
+
+// Whether a decoded value is a JSON object rather than a scalar or an array. Written out here rather
+// than imported for the reason above, and kept in step with `src/value-guards.ts` by the contract's
+// own tests.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 // The instance key the launcher's singleton tab is addressed by. One key because there is one
 // launcher: `openOrFocusTab` focuses what is already there, and `updateTab` and `dockTab` address it.

@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Keep the launcher shared contract import-free as required by the plugin architecture.
-
-Existing Issue: The new launcher shared module imports isRecord from the server plugin API at runtime even though plugin shared contracts must import nothing. Severity: 5/10
-
-Existing Risk: 5/10 - The browser contract depends on the server API module graph and its NodeNext imports, weakening isolation and making future API changes affect client loading.
-
-Proposal Risk: 2/10 - A local import-free guard preserves the intended browser-safe contract boundary and can be pinned by a source-boundary test.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "keep the launcher shared contract import-free as required by the plugin architecture". In src/plugins/launcher/shared.ts, define the small record predicate locally without any imports, and use the same predicate for empty-intent validation instead of maintaining a separate weaker check in src/plugins/launcher/activate.ts. Add shared guard tests for null, arrays, missing required fields, and all intent payloads, plus coverage enforcing that the shared contract has no imports. Preserve client lazy registration in web/src/plugins/registry.tsx and verify the launcher remains a separate production chunk when this finding is implemented.
-
-
 * Repair the new review fixtures so they exercise the published types and real lifecycle contracts.
 
 Existing Issue: The new tests contain incomplete activity objects, unsupported view values, missing required prompt arguments, and simplified fakes that bypass singleton creation and ordinary tab closure. Severity: 6/10

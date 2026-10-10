@@ -6,6 +6,7 @@ import {
   LAUNCHER_INSTANCE_KEY,
   LAUNCHER_LABEL,
   isDispatchIntent,
+  isEmptyIntent,
   isFocusTabIntent,
   isLauncherOwn,
   isLauncherPayload,
@@ -181,7 +182,7 @@ export function activate(): TabPluginActivation {
       // rather than a timer of the plugin's own because `pluginIntent` binds the answering label to the
       // tab it names, and the core ACP capabilities only work addressed to this plugin's own tab.
       summarize: {
-        payload: isEmptyLauncherIntent,
+        payload: isEmptyIntent,
         run: async (_tab, _payload: Record<string, never>, capabilities) => {
           const live = summarizedTabs(capabilities);
           try {
@@ -229,8 +230,4 @@ export function activate(): TabPluginActivation {
       summarizer = initialSummarizerState();
     },
   };
-}
-
-function isEmptyLauncherIntent(value: unknown): value is Record<string, never> {
-  return typeof value === 'object' && value !== null && Object.keys(value).length === 0;
 }
