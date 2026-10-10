@@ -54,7 +54,7 @@ Each user prompt receives the existing database, browser, and question primers p
 
 The tools are declared once in `src/acp/tool-table.ts`: browser, question, then database. Their order controls command ownership; extraction selects the reply's last recognized tool line. Fences and common prompt prefixes are tolerated. Only the final occurrence of an emitted command is removed from the displayed reply. A cold, empty first reply is retried once in the same transcript entry.
 
-A session a plugin started with `withoutTools` builds no tool table at all. Its primer carries no tool text, no reply line is read as a command, and an emitted command has nothing that runs it — the loop answers with the reply as prose. Every other session, including a line typed at the `acp` command, runs the full table.
+A session a plugin started with `withoutTools` builds no tool table at all. Its primer carries no tool text, no reply line is read as a command, and an emitted command has nothing that runs it — the loop answers with the reply as prose. This policy belongs to the tab and applies to every prompt on it, including a prompt typed with the `acp` command, until the tab closes. A typed `acp` command on an unrestricted tab still runs the full table.
 
 Tool results are recorded as ACP steps and collapse through the existing transcript rendering. The cap reports `(stopped after 8 tool steps)`. Arbitrary shell commands are not ACP tools. Database/browser/question execution remains on the machine running Janissary, even when the provider runs remotely.
 
