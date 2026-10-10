@@ -6,6 +6,7 @@ import type {
   TabPluginLaunchFactory, TabPluginLaunchReadyHandler, TabPluginLaunchRequest, TabPluginLaunchResult,
 } from './api-launch.js';
 import type { CompletionResult } from '../completion/types.js';
+import type { Tab } from '../tab/types.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
 // are re-exported here, so a plugin still reads the whole v2 contract from one module.
@@ -306,8 +307,11 @@ export type TabPluginServerCapabilities = {
   // reading the host's tab list, and it answers null for a name no open tab holds. `provisioning` is
   // set, and only then, when the workspace that tab names has not landed yet: a local clone still
   // running, or a remote tab whose far side has not answered — so a caller can report the wait
-  // rather than open a tab that would read the workspace as absent.
-  originTab(label?: string): { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean }; remote?: true; provisioning?: true } | null;
+  // rather than open a tab that would read the workspace as absent. `view` is the tab's body kind
+  // and `plugin` the id of the plugin behind it when it is one, so a caller whose route is written
+  // for a shell or a harness tab — the two whose workspace it serves — can tell one from a
+  // navigator's without reading the host's tab list either.
+  originTab(label?: string): { label: string; cwd: string; root: string; view?: Tab['view']; plugin?: string; workspace?: { dir: string; offline?: boolean }; remote?: true; provisioning?: true } | null;
   // The change set of the remote workspace this plugin's own answering tab rides, as the far side
   // computed it — the same records a local read produces, validated by the plugin's own guard before
   // it publishes anything. Null when the answering tab rides no remote workspace, because a
