@@ -273,11 +273,15 @@ It claims `Ctrl+R` for its own history — the lines its command bar has sent �
 
 ### Bundled diff plugin
 
-The diff plugin shows the workspace's changes as a tab, GitHub's files-changed layout, and is reached two ways: its own `diff` command, which takes an optional path, and the **Show diff in the workspace** button in another tab's metadata row. It is the second plugin reached through `openSibling` — the host reads the origin tab's workspace directory, returns early while that workspace is still provisioning, and so never opens the tab on a clone that does not exist yet.
+The diff plugin shows the workspace's changes as a tab, GitHub's files-changed layout, and is reached three ways: its own `diff` command, which takes an optional path or an `on <tab name>` clause, and the **Show diff in the workspace** button in another tab's metadata row. It is the second plugin reached through `openSibling` — the host reads the origin tab's workspace directory, returns early while that workspace is still provisioning, and so never opens the tab on a clone that does not exist yet.
+
+A plugin's `diff [path]` argument keeps its path meaning, and `on <tab name>` opens the workspace of the tab it names, which is any open shell or harness tab with a workspace — local or remote. The clause is read the way `zsh`'s own `on <address>` clause is read: case-insensitive, wherever it appears among the words, and a path and a clause together is a usage refusal rather than two answers for which directory it means. A tab with no workspace is refused by name.
 
 It is also the plugin that shows what host state is not: everything it renders comes from its own git reads rather than from a declared topic, because a change set is a question asked about the working tree rather than host state that changes on its own. Its client recomputes on an interval while the tab is mounted, so the tab is live without the host pushing anything. It saves the selected unified or split layout as a plugin setting; the other temporary review state belongs to the open tab. What the tab shows and does is in [[diff-tab]].
 
 A plugin claimed only through its own command opens no file, so its opener is the shared refusal; the file it does open — a changed file at a line, through the `openInEditor` capability — goes to an editor tab, and a binary file goes to the media tab its extension already owns by offering the application's own `open` line through `dispatchLineWithOutput`, which keeps opener resolution in one place.
+
+A remote workspace's reads are the plugin's own two capabilities rather than host internals: `readWorkspaceChangeSet` answers the change set the far side computed, as it arrived, for the plugin's own guard to check, and `materializeRemoteFile` answers the local path one of that workspace's files has been materialized to, through the same cache a remote file navigator's rows open through. Both answer `null` for a tab riding no channel, so a plugin that never asks is unaffected. The tab joins that channel through `launchTab`'s `join` form naming the tab, which is what holds the session for as long as the diff tab is open. `originTab` answers the record of another open tab when it is called with a label, resolved the way every command that addresses a tab by typed name resolves one.
 
 ## Core ACP access
 

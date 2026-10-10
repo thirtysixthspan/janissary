@@ -129,6 +129,23 @@ describe('SessionList buttons', () => {
     expect(screen.queryByLabelText('Terminate claude')).not.toBeInTheDocument();
   });
 
+  // The row's diff verb reads the workspace the channel already holds, so it carries the same
+  // plus-minus the metadata rows do and raises the same verb name.
+  it('raises the diff verb on a row that carries it', () => {
+    const { intent, value } = capabilities();
+    list([row({ actions: ['focus', 'close', 'diff'] })], value);
+    const button = screen.getByLabelText('Show diff in the workspace claude');
+    expect(button).toHaveAttribute('title', 'Show diff in the workspace');
+    fireEvent.click(button);
+    expect(intent).toHaveBeenCalledWith('diff', { id: 'claude' });
+  });
+
+  it('draws the plus-minus for the diff verb', () => {
+    const { container } = list([row({ actions: ['diff'] })]);
+    expect(container.querySelector<SVGElement>(':scope [data-action="diff"] svg')?.dataset.icon)
+      .toBe('plus-minus');
+  });
+
   // Attach and detach carry the connection's directional plug glyphs. The two actions that end a
   // session or close a row instead share the unmistakable closing glyph.
   it('draws directional plugs and circle-xmarks for closing actions', () => {

@@ -68,6 +68,17 @@ function actOnConversations(managers: Managers, action: TabPluginTopicAction): v
   }
 }
 
+// The three verbs that act on a tab this janissary holds. Each is refused unless a row both names the
+// target and offers the verb, and each acts through the row that authorised it rather than looking
+// the target up a second time.
+function actOnSessionTab(managers: Managers, verb: 'detach' | 'focus' | 'close', label: string): void {
+  const row = managers.sessions.offers(verb, { label });
+  if (!row) return;
+  if (verb === 'detach') managers.sessions.detach(row.label);
+  else if (verb === 'focus') managers.sessions.focus(row.label);
+  else managers.sessions.close(row.label);
+}
+
 // Every session action is refused unless a row both names the target and offers that verb, which
 // keeps the grant as narrow as the list that motivates it: a plugin may do what the host already
 // showed it could be done, and nothing else. Matching the name alone was wider — a recorded row's
@@ -78,21 +89,9 @@ function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
   if (action.topic !== 'sessions') return;
   switch (action.action) {
     case 'refresh': { managers.sessions.refresh(); return; }
-    case 'detach': {
-      const row = managers.sessions.offers('detach', { label: action.label });
-      if (row) managers.sessions.detach(row.label);
-      return;
-    }
-    case 'focus': {
-      const row = managers.sessions.offers('focus', { label: action.label });
-      if (row) managers.sessions.focus(row.label);
-      return;
-    }
-    case 'close': {
-      const row = managers.sessions.offers('close', { label: action.label });
-      if (row) managers.sessions.close(row.label);
-      return;
-    }
+    case 'detach': { actOnSessionTab(managers, 'detach', action.label); return; }
+    case 'focus': { actOnSessionTab(managers, 'focus', action.label); return; }
+    case 'close': { actOnSessionTab(managers, 'close', action.label); return; }
     case 'attach': {
       if (managers.sessions.offers('attach', { session: action.session })) {
         managers.sessions.attach(action.session);
@@ -105,6 +104,13 @@ function actOnSessions(managers: Managers, action: TabPluginTopicAction): void {
     }
     case 'forget': {
       if (managers.sessions.offers('forget', { session: action.session })) managers.sessions.forget(action.session);
+      return;
+    }
+    // A read of the workspace the row's channel holds, so it is offered on every ready row of a live
+    // channel and answers with the host's own `openSibling` rather than a manager of its own.
+    case 'diff': {
+      const row = managers.sessions.offers('diff', { label: action.label });
+      if (row) void managers.plugins.openSibling('diff', { label: row.label, command: 'diff' });
     }
   }
 }

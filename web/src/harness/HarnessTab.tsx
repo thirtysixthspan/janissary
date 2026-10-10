@@ -54,13 +54,15 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
   const ptyId = harness.ptyId;
   useHarnessPtyDrop(ptyId, client, focusTerm);
 
+  // A workspaced tab, local or remote: the clone either lands here or has already landed there, and
+  // either way it is the workspace the diff button opens.
+  const workspacedTab = flags?.some((flag) => flag === 'workspaced' || flag === 'provisioning') === true;
+  const provisioning = remote?.provisioning === true || flags?.includes('provisioning') === true;
   // Every harness and ssh tab records, so the flag is drawn from the moment the tab opens — a `-w`
   // tab still provisioning included, which is when it is drawn but not yet pressable.
   const intents = harnessTabIntents(
-    client, label, 'openHarnessTranscriptFor', harness.recording,
-    flags?.some((flag) => flag === 'workspaced' || flag === 'provisioning') === true,
+    client, label, 'openHarnessTranscriptFor', harness.recording, workspacedTab,
   );
-  const provisioning = remote?.provisioning === true || flags?.includes('provisioning') === true;
   const isExited = harness.status === 'exited';
   return (
     <div className="harness-tab" data-doc-shot="harness-view">
@@ -76,7 +78,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
         onLaunchShellHere={remote !== undefined || cwd !== undefined ? intents.onLaunchShellHere : undefined}
         launchTitle={provisioning ? 'Waiting for the workspace' : remote ? 'New shell in this workspace' : undefined}
         launchDisabled={provisioning}
-        onOpenDiffHere={remote === undefined ? intents.onOpenDiffHere : undefined}
+        onOpenDiffHere={workspacedTab ? intents.onOpenDiffHere : undefined}
         onOpenTranscript={intents.onOpenTranscript}
         hasRecorder
         onOpenRecording={intents.onOpenRecording}

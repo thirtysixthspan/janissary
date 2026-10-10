@@ -631,8 +631,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 28', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(28);
+  it('is 29', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(29);
   });
 });
 

@@ -98,6 +98,12 @@ export class TabManager extends TabTranscriptState {
   byLabel(label: string): Tab | undefined {
     return lookup.byLabel(this.tabs, label);
   }
+  // The tab a user-typed name means — its label or its display alias, ignoring case. The rule every
+  // command that addresses a tab by typed name resolves it with, so a plugin asking about a tab by
+  // name gets the same answer a command does.
+  byLabelOrAlias(name: string): Tab | undefined {
+    return lookup.byLabelOrAlias(this.tabs, name);
+  }
   harnessTab(label: string) {
     return lookup.harnessTab(this.tabs, label);
   }

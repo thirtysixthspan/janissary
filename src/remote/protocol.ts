@@ -169,7 +169,11 @@
 // working directory in process state so later attaches can reconstruct the same shell.
 // Version 28 adds plugin PTY launch arguments and environment overrides to `spawn`; a version-27
 // peer would accept the frame but silently launch with a different argv and environment.
-export const REMOTE_PROTOCOL_VERSION = 28;
+// Version 29 adds the `change-set` filesystem operation, reading a workspace's changes against `HEAD`
+// on the far side so a diff tab can show a remote workspace. A version-28 peer refuses it as unknown,
+// so a remote diff against one would report a failure rather than a half-working change set — which
+// is why the handshake refuses the mismatch instead.
+export const REMOTE_PROTOCOL_VERSION = 29;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

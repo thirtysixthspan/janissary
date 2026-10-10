@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { parseDiff } from './parse-diff.js';
-import type { DiffFile } from './shared.js';
+import { isDiffFile, type DiffFile } from './shared.js';
 import { git } from './git.js';
 import { expandFullFileContext } from './context-diff.js';
 
@@ -17,6 +17,18 @@ export type ChangeSetResult =
   | { kind: 'files'; files: DiffFile[] }
   | { kind: 'not-repository' }
   | { kind: 'error'; reason: string };
+
+// A decoded change set as it arrives from another machine. The reads run where the repository is, so
+// a remote workspace's result crosses a channel and is a value this plugin did not produce — checked
+// before it is believed, and answered as the tab's error state when it is not one of these three.
+export function isChangeSetResult(value: unknown): value is ChangeSetResult {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  if (result.kind === 'not-repository') return true;
+  if (result.kind === 'error') return typeof result.reason === 'string';
+  if (result.kind === 'files') return Array.isArray(result.files) && result.files.every(isDiffFile);
+  return false;
+}
 
 function firstLine(text: string): string {
   return text.split('\n').map((line) => line.trim()).find((line) => line.length > 0) ?? 'git diff failed';

@@ -16,7 +16,7 @@ export type RemoteSessionState =
 // What a row offers. Kept as a list on the row rather than derived by the client from kind and
 // state, so the server stays the single source of truth about what may be pressed (principle 1).
 export type RemoteSessionAction =
-  | 'attach' | 'detach' | 'terminate' | 'forget' | 'focus' | 'close';
+  | 'attach' | 'detach' | 'terminate' | 'forget' | 'focus' | 'close' | 'diff';
 
 export type RemoteSessionView = {
   // Stable row identity: the tab label for a live row, `<session>:<spawn id>` for a recorded one.

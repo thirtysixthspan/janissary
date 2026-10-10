@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ConnectionPlug, RecordingFlag, RemoteSessionButton, StatusPanels, StatusWindowButton,
-  connectionsWindowIcon, diffIcon, newTabIcon, openFilesIcon, scheduleWindowIcon, statusButton, syncIcon, useStatusWindows, workspacedIcon,
+  connectionsWindowIcon, newTabIcon, openFilesIcon, plusMinusIcon, scheduleWindowIcon, statusButton, syncIcon, useStatusWindows, workspacedIcon,
   type TabPluginClientCapabilities,
 } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -76,7 +76,7 @@ export function ShellTabMeta({ payload, capabilities }: {
           >
             <FontAwesomeIcon icon={newTabIcon} />
           </button>
-          {payload.workspace && payload.host === undefined && (
+          {payload.workspace && (
             <button
               type="button"
               className="tab-open-diff"
@@ -85,7 +85,7 @@ export function ShellTabMeta({ payload, capabilities }: {
               disabled={payload.provisioning}
               onClick={() => capabilities.openDiffHere?.()}
             >
-              <FontAwesomeIcon icon={diffIcon} />
+              <FontAwesomeIcon icon={plusMinusIcon} />
             </button>
           )}
           {/* The two status windows, and the buttons that open them. Rendering the panels without these

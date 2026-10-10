@@ -299,7 +299,22 @@ export type TabPluginServerCapabilities = {
   // when they asked for it. The host already resolves that tab for `note` and `openOrFocusTab`;
   // this makes the same resolution readable rather than new. `remote` is set, and only then, when the
   // tab's session runs on another host: its directory belongs to that host, not to this filesystem.
-  originTab(): { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean }; remote?: true } | null;
+  //
+  // Called with a label, the same record for that open tab instead of the invoking one, resolved the
+  // way every command that addresses a tab by typed name resolves one — by label or display alias,
+  // ignoring case. It is how a command that names a tab other than its own asks about it without
+  // reading the host's tab list, and it answers null for a name no open tab holds.
+  originTab(label?: string): { label: string; cwd: string; root: string; workspace?: { dir: string; offline?: boolean }; remote?: true } | null;
+  // The change set of the remote workspace this plugin's own answering tab rides, as the far side
+  // computed it — the same records a local read produces, validated by the plugin's own guard before
+  // it publishes anything. Null when the answering tab rides no remote workspace, because a
+  // directory that is not on another machine has no far side to ask.
+  readWorkspaceChangeSet(fullFiles: readonly string[]): Promise<unknown> | null;
+  // The local path one file of that remote workspace has been materialized to, answered by the same
+  // cache a remote file navigator's row opens through, or null when the asking tab rides no remote
+  // workspace or the file could not be read. The plugin opens that path through the routes it
+  // already has, so a remote row's click is the same open a local row's is.
+  materializeRemoteFile(relPath: string): Promise<string | null> | null;
   // Offer one line to the application's own command dispatcher, answering whether it ran and with the
   // output it added to the answering tab's transcript. A line that resolves to a command runs as that
   // command in the tab this was called from; a line that resolves to nothing is the caller's to

@@ -15,15 +15,38 @@ re-finding it by hand in the editor.
 
 ### Opening the tab
 
-`diff` opens the tab, or focuses it when it is already open — there is only ever one. `diff <path>`
-opens it scoped to that path's changes, and a bare `diff` scopes it to the project's launch directory.
-A path that is not a directory inside the project is refused before the tab opens. A second route opens
-the same tab on the same terms: the **Show diff in the workspace** button in the metadata row of a
-shell or harness tab that has a workspace, which scopes the tab to that tab's own environment. The
-tab is titled **diff**.
+There are two kinds of diff tab. **The project-root diff** is one tab: `diff` opens it or focuses it, `diff <path>`
+opens it scoped to that path's changes, and a bare `diff` scopes it to the project's launch directory. It is titled
+**diff**, and a route for another root re-scopes the open tab in place rather than opening a second one. A path that is
+not a directory inside the project is refused before the tab opens, as is a path argument combined with the clause
+below, which would have two answers for which directory it means.
+
+**A workspace diff** is one tab per workspace, named after the tab whose workspace it is. Three routes open one: the
+**Show diff in the workspace** button in the metadata row of a shell or harness tab that has a workspace, the same
+button in the action group of a **sessions** tab row whose channel has landed its workspace, and `diff on <tab name>`
+typed in any tab. The name matches an open shell or harness tab by label or display alias, ignoring case. A tab with no
+workspace, and a name no open tab holds, are refused with
+`Cannot diff on <name>: no open shell or harness tab named "<name>" has a workspace.` Both buttons stay inert while the
+workspace is still landing. A workspace diff is titled **diff on <tab name>**, and two tabs sharing one clone — the
+metadata row's ➕ opens a sibling shell in the same one — share one diff tab, because they are looking at the same
+changes.
 
 The header names the directory being diffed in the application's own abbreviated form — `$root` for the
-launch directory, `$workspace/<name>` for a workspace clone, `~` for a path under home.
+launch directory, `$workspace/<name>` for a workspace clone, `~` for a path under home. A workspace on another host is
+named after that host, the way a remote tab's metadata row carries a host chip.
+
+### A workspace on another host
+
+A remote workspace's changes are read on the far side and carried back over the channel the tab already holds, so the
+tab shows the same change set a local one does. Holding one open keeps that session alive the way a remote file
+navigator does: the diff tab joins the channel and releases it when it closes. A row's name opens the file, a
+double-click on an added or context line opens it at that line, a binary entry opens its media tab, and the
+arrows-up-down control expands a text file — all of them materialized through the same cache a remote file navigator's
+rows open through, so a save from that editor writes back to the workspace for as long as the tab holds the channel.
+
+A workspace diff whose workspace is gone closes itself: the clone was deleted locally, or the remote session ended,
+and there is nothing left to read. The project-root diff says a non-repository directory is not one instead, because
+that is an answer rather than a loss.
 
 ### What the tab shows
 
@@ -160,4 +183,5 @@ A repository with no commits yet reads as every file added, rather than as an er
 
 The diff tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is not
 restored on `--relaunch`. Closing the tab forgets what it held — the hunks it showed, temporary comments and drafts, the expansions
-and the keyboard walk. The layout is the one thing kept: it outlives the tab that chose it.
+and the keyboard walk. The layout is the one thing kept: it outlives the tab that chose it. A workspace
+diff also releases the channel it joined when it closes.

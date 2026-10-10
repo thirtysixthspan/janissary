@@ -190,6 +190,31 @@ describe('launchRemotePluginTab', () => {
     expect(h.managers.remote.attach).toHaveBeenCalledWith(expect.any(String), 'remote-shell');
   });
 
+  it('joins the channel the request names rather than the one the call came from', () => {
+    const h = harness();
+    h.tabs.push({ label: 'remote-shell', remote: { address: 'devbox', host: 'devbox' } });
+    vi.mocked(h.managers.remote.workspaceOf).mockImplementation((label) => (
+      label === 'remote-shell' ? '/remote/work' : undefined
+    ));
+    vi.mocked(h.managers.remote.attach).mockImplementation((label, sourceLabel) => (
+      sourceLabel === 'remote-shell' && label !== 'remote-shell'
+    ));
+    const joinedFactory = vi.fn((_resources: object, start: TabPluginLaunchStart) => ({ title: 'shell', payload: start }));
+
+    const capabilities = launchCapabilities(h.input);
+    expect(capabilities.launchTab('shell-1', { remote: { join: true, label: 'remote-shell' } }, joinedFactory, ready))
+      .toEqual({ label: expect.any(String) });
+    expect(h.managers.remote.attach).toHaveBeenCalledWith(expect.any(String), 'remote-shell');
+    expect(joinedFactory).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ workspaceDir: '/remote/work' }));
+  });
+
+  it('refuses to join a tab that rides no channel', () => {
+    const h = harness();
+
+    expect(() => launchRemotePluginTab(h.input, 'shell-1', { remote: { join: true, label: 'local-shell' } }, factory, ready))
+      .toThrow(TabPluginRejection);
+  });
+
   it('starts a joined shell at the remote workspace root when the source cwd is outside it', () => {
     const h = harness({
       sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work', cwd: '/remote/other',

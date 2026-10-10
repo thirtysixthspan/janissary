@@ -1,4 +1,4 @@
-export const DIFF_PAYLOAD_SCHEMA_VERSION = 7;
+export const DIFF_PAYLOAD_SCHEMA_VERSION = 8;
 
 // One line of a hunk. `kind` is which side git printed it on; `number` is the line's number on that
 // side — the old-side number for a removed line, the new-side number for an added or context one — so
@@ -52,11 +52,21 @@ export type DiffState = 'loading' | 'done' | 'not-repository' | 'error';
 // Which layout the change set renders in. `split` is the standing preference the tab opens with —
 // the session saves it in the plugin's settings entry.
 export type DiffPayload = {
+  // The host's own name for this tab, so an intent can say which tab it is about: one plugin owns
+  // several now — the project-root diff and one per workspace — and the client answers about one.
+  instanceKey: string;
   root: string;
   state: DiffState;
   message: string;
   split: boolean;
   files: DiffFile[];
+  // The host a remote workspace's changes are read on, and the tab name that names it — both
+  // server-decided display facts the client renders rather than computing.
+  host?: string;
+  // Set on a workspace diff and absent on the project-root one, because the two behave differently
+  // when the workspace under them disappears: the tab closes itself rather than saying a directory
+  // is not a repository.
+  workspace?: boolean;
 };
 
 // Recompute without any options.
@@ -94,7 +104,7 @@ function isDiffHunk(value: unknown): value is DiffHunk {
     && value.lines.every(isDiffLine);
 }
 
-function isDiffFile(value: unknown): value is DiffFile {
+export function isDiffFile(value: unknown): value is DiffFile {
   return isRecord(value)
     && typeof value.path === 'string'
     && (value.oldPath === undefined || typeof value.oldPath === 'string')
@@ -113,12 +123,19 @@ function isDiffFile(value: unknown): value is DiffFile {
 
 export function isDiffPayload(value: unknown): value is DiffPayload {
   return isRecord(value)
+    && typeof value.instanceKey === 'string'
     && typeof value.root === 'string'
     && ['loading', 'done', 'not-repository', 'error'].includes(value.state as string)
     && typeof value.message === 'string'
     && typeof value.split === 'boolean'
     && Array.isArray(value.files)
-    && value.files.every(isDiffFile);
+    && value.files.every(isDiffFile)
+    && isOptionalString(value.host)
+    && (value.workspace === undefined || typeof value.workspace === 'boolean');
+}
+
+function isOptionalString(value: unknown): boolean {
+  return value === undefined || typeof value === 'string';
 }
 
 export function isRefreshIntent(value: unknown): value is RefreshIntent {

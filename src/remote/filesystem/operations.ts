@@ -85,6 +85,15 @@ const READ_OPERATIONS = {
   // Pulls the far side's own workspace root — no path arguments, so nothing to contain. The
   // rejection (git's own error) travels back as the request's error reply.
   'git-pull': descriptorFor({ ...noArguments, run: (context: OperationContext) => context.filesystem.pull(context.root) }),
+  // Reads the workspace's changes against `HEAD`, the diff tab's own read, with the named files
+  // expanded to their whole contents. No path arguments for the same reason `git-pull` has none: one
+  // workspace per peer, so the directory is the session's own.
+  'change-set': descriptorFor({
+    valid: (args) => stringArray(args.fullFiles),
+    decode: (args) => ({ fullFiles: args.fullFiles as string[] }),
+    paths: () => [],
+    run: (context, args) => context.filesystem.changeSet(context.root, args.fullFiles),
+  }),
   search: descriptorFor({ ...noArguments, run: (context: OperationContext) => context.filesystem.search(context.root) }),
   'read-file': descriptorFor({
     valid: (args) => stringValue(args.path),

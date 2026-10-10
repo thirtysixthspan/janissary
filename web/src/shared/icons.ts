@@ -37,5 +37,6 @@ export {
   faTableList as fileDetailIcon,
   faFilm as recordingIcon,
   faCodeCommit as diffIcon,
+  faPlusMinus as plusMinusIcon,
 } from '@fortawesome/free-solid-svg-icons';
 export { faFlag as unreadIcon, faClipboard as viewCaptureIcon } from '@fortawesome/free-regular-svg-icons';
