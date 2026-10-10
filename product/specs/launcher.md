@@ -27,6 +27,8 @@ Every `launcher` invocation re-reads the file in effect, and the rail is republi
 
 The rail's **Configure** button opens whichever file is currently in effect — the home override when one exists, otherwise the project's — in an editor tab, so what it opens is what the launcher reads back.
 
+A long command list scrolls within its own bounded area, leaving the tab list and command bar available in the sidebar.
+
 ### The tab list
 
 Below the rail is every open tab in the center strip, sorted into five tiers, each labelled. In order: **needs you**, **unread**, **active**, **working**, **idle**. Tabs keep their existing strip order inside a tier, so a row never moves within its tier. A tier no tab is in is not drawn at all.

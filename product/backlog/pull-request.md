@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep long configured command rails scrollable alongside the tab list and command bar.
-
-Existing Issue: The command rail uses `flex: 0 0 auto` with no height bound, so it neither shrinks nor gains a constrained scrolling viewport when a user's command list exceeds the sidebar height. Severity: 4/10
-
-Existing Risk: 4/10 - A long launcher configuration consumes the available column height, collapses the tab list, and can push the command bar or later rail entries outside the visible sidebar.
-
-Proposal Risk: 2/10 - Sharing a constrained height between the two lists must work at small window sizes as well as with the default rail.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "bound the command rail while keeping launcher navigation reachable". Adjust the launcher layout in `web/src/plugins/launcher/launcher.css` so the command rail can shrink and scroll within a bounded portion of the body while the tab list and command bar retain usable space. Preserve the host's sidebar sizing and the composed selection ref's scroll-into-view behavior. Verify a long custom rail in a constrained-height browser viewport, including reaching its last command, navigating a tab row, and typing in the bar; retain the default-rail client interaction coverage in `web/src/plugins/launcher/LauncherTab.test.tsx`. Document the long-list scrolling behavior in `product/specs/launcher.md`.
-
-
 * Preserve the host's plugin namespace when identifying the launcher's own tabs.
 
 Existing Issue: The new ownership predicate compares only `instanceKey`, while the host identifies a plugin tab by the pair of plugin id and instance key, so another plugin's valid key named `launcher` is classified as belonging to the launcher. Severity: 4/10

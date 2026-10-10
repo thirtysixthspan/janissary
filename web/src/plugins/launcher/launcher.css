@@ -13,7 +13,7 @@
 .launcher-problem { color: var(--warn, var(--accent)); }
 
 /* The command rail: one row per configured command, icon then the user's own label. */
-.launcher-commands { flex: 0 0 auto; overflow-y: auto; padding: 4px 0; border-bottom: 1px solid var(--border); outline: none; }
+.launcher-commands { flex: 0 1 auto; min-height: 0; max-height: 45%; overflow-y: auto; padding: 4px 0; border-bottom: 1px solid var(--border); outline: none; }
 .launcher-command {
   display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 8px;
   background: transparent; border: none; color: var(--fg); font-size: 12px; text-align: left; cursor: pointer;
