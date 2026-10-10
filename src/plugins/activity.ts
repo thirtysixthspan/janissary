@@ -109,6 +109,10 @@ function normalizeTailLines(tailLines: number | undefined): number | undefined {
 function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): TabActivityEntry {
   const busy = tab.runtime?.busy === true || tab.plugin?.busy === true;
   const pending = managers.questions.pendingFor(tab.label);
+  const harnessEntries = tailLines === undefined || tab.view !== 'harness'
+    ? []
+    : managers.harness.transcriptTailer(tab.label)?.entriesAfter(0) ?? [];
+  const transcriptLength = tab.log.length + harnessEntries.length;
   return {
     label: tab.label,
     incarnation: incarnationOf(tab),
@@ -135,9 +139,13 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
     cwd: tab.runtime?.cwd ?? managers.tab.launchDir,
     ...(tab.remote && { remote: tab.remote.host }),
     lastCommand: lastCommandOf(tab.log),
-    logLength: tab.log.length,
+    logLength: transcriptLength,
     revision: tab.runtime?.transcriptRevision ?? 0,
-    ...(tailLines !== undefined && { tail: tailOf(tab.log, tailLines) }),
+    ...(tailLines !== undefined && {
+      tail: tab.view === 'harness' && harnessEntries.length > 0
+        ? harnessEntries.slice(-tailLines).join('\n\n').slice(-ACTIVITY_TAIL_CHARS)
+        : tailOf(tab.log, tailLines),
+    }),
   };
 }
 

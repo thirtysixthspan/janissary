@@ -6,7 +6,7 @@ import type { Tab } from '../tab/types.js';
 // The managers the activity reader needs, stubbed to exactly what it asks for: the tab list, the launch
 // directory, the pending questions, and one label lookup. Anything more would be a stub pretending to be
 // a host it is not.
-type ManagersStub = Pick<Managers, 'tab' | 'questions'>;
+type ManagersStub = Pick<Managers, 'tab' | 'questions' | 'harness'>;
 
 function tab(overrides: Partial<Tab> = {}): Tab {
   return {
@@ -28,7 +28,11 @@ type PendingFor = Managers['questions']['pendingFor'];
 
 function noPendingQuestion(): undefined {}
 
-function managers(tabs: Tab[], pendingFor: PendingFor = noPendingQuestion): { managers: ManagersStub } {
+function managers(
+  tabs: Tab[],
+  pendingFor: PendingFor = noPendingQuestion,
+  harnessTranscripts: Record<string, string[]> = {},
+): { managers: ManagersStub } {
   return {
     managers: {
       tab: {
@@ -37,6 +41,13 @@ function managers(tabs: Tab[], pendingFor: PendingFor = noPendingQuestion): { ma
         byLabel: (label: string) => tabs.find((candidate) => candidate.label === label),
       } as unknown as ManagersStub['tab'],
       questions: { pendingFor } as unknown as ManagersStub['questions'],
+      harness: {
+        transcriptTailer: (label: string) => {
+          const entries = harnessTranscripts[label];
+          if (!entries) return;
+          return { entriesAfter: (index: number) => entries.slice(index) } as unknown as ReturnType<Managers['harness']['transcriptTailer']>;
+        },
+      } as unknown as ManagersStub['harness'],
     },
   };
 }
@@ -181,6 +192,30 @@ describe('the tabActivity reader', () => {
 
     expect(rows[0]?.tail).toBeUndefined();
     expect(rows[0]?.logLength).toBe(1);
+  });
+
+  it('includes normalized harness transcript entries only in a requested tail', () => {
+    const harness = tab({ label: 'claude', view: 'harness' });
+    const { managers: host } = managers([harness], noPendingQuestion, {
+      claude: ['user: inspect the build', 'assistant: found a missing export'],
+    });
+
+    const displayRows = tabActivityRows(host as unknown as Managers);
+    const summaryRows = tabActivityRows(host as unknown as Managers, 1);
+
+    expect(displayRows[0]?.tail).toBeUndefined();
+    expect(summaryRows[0]?.tail).toBe('assistant: found a missing export');
+    expect(summaryRows[0]?.logLength).toBe(2);
+  });
+
+  it('caps harness transcript tails by characters', () => {
+    const { managers: host } = managers([tab({ label: 'claude', view: 'harness' })], noPendingQuestion, {
+      claude: ['a'.repeat(3000), 'b'.repeat(3000)],
+    });
+
+    const rows = tabActivityRows(host as unknown as Managers, 2);
+
+    expect(rows[0]?.tail).toBe(`${'a'.repeat(998)}\n\n${'b'.repeat(3000)}`);
   });
 
   it('caps one tail by both entry count and characters', () => {
