@@ -101,10 +101,19 @@ export class ConversationStore {
     }
   }
 
+  hasRecord(id: string): boolean {
+    assertId(id);
+    return existsSync(this.file(id));
+  }
+
   write(conversation: Conversation): void {
     assertId(conversation.id);
+    const durable = {
+      ...conversation,
+      turns: conversation.turns.filter((turn) => turn.streaming !== true),
+    };
     mkdirSync(this.directory(conversation.id), { recursive: true });
-    this.writeFile(this.file(conversation.id), `${JSON.stringify(conversation, null, 2)}\n`);
+    this.writeFile(this.file(conversation.id), `${JSON.stringify(durable, null, 2)}\n`);
     this.summaries?.set(conversation.id, {
       id: conversation.id,
       title: conversation.title,

@@ -126,7 +126,7 @@ export class ConversationsManager {
     if (!conversation || !hasConversationModel(pair)) return false;
     this.cancel(id);
     conversation.pair = pair;
-    if (conversation.turns.length > 0) this.store.write(conversation);
+    if (this.store.hasRecord(id)) this.store.write(conversation);
     this.store.writeLastUsedPair(pair);
     this.changed();
     return true;
@@ -141,7 +141,7 @@ export class ConversationsManager {
     const trimmed = title.trim().slice(0, CONVERSATION_TITLE_MAX_LENGTH);
     if (!conversation || !trimmed) return false;
     conversation.title = trimmed;
-    if (conversation.turns.length > 0) this.store.write(conversation);
+    if (this.store.hasRecord(id)) this.store.write(conversation);
     this.changed();
     return true;
   }

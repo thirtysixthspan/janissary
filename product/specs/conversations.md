@@ -70,6 +70,8 @@ If workspace or session setup fails after a query is submitted, the pending turn
 
 Each conversation is stored in its own directory under the user's Janissary data directory. That directory contains the conversation record, an empty private workspace, and the workspace's private temporary directory. The directory is created when the first query is sent or either workspace control is used. Using a workspace control before the first query also saves the otherwise-empty conversation, so its workspace remains available after a restart. The directory survives application restarts and project workspace sweeps and is removed only when the conversation is deleted.
 
+Conversation records contain completed and failed turns, never a streaming turn. Renaming or changing the model while a reply is in progress updates an existing record without storing the partial response. A pending first query does not create a record through a metadata change; workspace controls can still save an empty conversation explicitly.
+
 The conversation's ACP agent is tool-less. It runs with its current directory and sandbox workspace set to that conversation's private workspace, so it receives neither the project tree nor another conversation's data. Seatbelt confinement is best-effort: it applies on macOS while workspace sandboxing is enabled and available.
 
 ### Profiles
