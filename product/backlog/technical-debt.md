@@ -4,17 +4,6 @@
 
 ## development
 
-* Move launcher icon failure reporting into an effect that records successful reports.
-
-Existing Debt: Launcher command rows issue reporting RPCs and mutate a module-wide reported-icon set during rendering, with no relationship between the cache entry and whether the host accepted the report. Severity: 4/10
-
-Existing Risk: 3/10 - An abandoned render or rejected reporting RPC can consume the one allowed report for an icon, suppressing its explanation for subsequent launcher renders and mounts.
-
-Proposal Risk: 1/10 - A disconnected client can still miss an explanation temporarily, but reporting happens after a committed render and a failed attempt cannot be mistaken for a successful notification.
-
-Proposal: Remove `reportedIcons` and the `onUnknownIcon` invocation from `LauncherCommandRow` in `web/src/plugins/launcher/CommandRail.tsx`, leaving glyph selection and markup pure. Add a colocated hook under `web/src/plugins/launcher/` that collects distinct unknown icon names from the command list using `launchIcon` in `web/src/plugins/launcher/launcher-icons.ts`, reports them from an effect, and tracks pending and successfully reported names for the mounted launcher. Wire the hook from `web/src/plugins/launcher/LauncherTab.tsx` through a callback returning the `report-icon` intent promise, so success is recorded only after acknowledgement; allow a failed name to be retried on a later activation or command-list change without starting an immediate retry loop on every render. Drop stale completion effects on unmount and keep each command runnable with its fallback glyph. Update the existing once-per-name case in `web/src/plugins/launcher/LauncherTab.test.tsx` to await effect-driven reporting, and add cases for rejected reports and duplicate names; its current synchronous render test does not cover acknowledgement or teardown.
-
-
 * Give editor draft synchronization a bounded recovery path for failed sends while the connection stays open.
 
 Existing Debt: Draft synchronization retains an unacknowledged snapshot after a failed send but schedules further work only when the text changes or another connection event occurs. Severity: 4/10
