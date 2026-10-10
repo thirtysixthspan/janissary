@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { LauncherPayload, LauncherTabRow } from '@shared/plugins/launcher/shared';
 import { nextListSelection, useListSelection, type ListSelection } from '../api';
 import { launcherTiers, type TabGroup, type Tier } from './tiers';
@@ -24,11 +25,17 @@ export function LauncherTabList({ payload, listRef, onToggleFocus, onFocus, now 
   // on the row the highlight is not on.
   const displayed = groups.flatMap((group) => group.tiers.flatMap((tier) => tier.rows));
   const selection = useListSelection(displayed.length);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const composed = useComposedListRef(listRef, selection.listRef);
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Tab' && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault();
       onToggleFocus();
+      return;
+    }
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      setExpandedIndex(event.key === 'ArrowRight' ? selection.selected : null);
       return;
     }
     if (selection.navigate(event.key, nextListSelection)) { event.preventDefault(); return; }
@@ -49,17 +56,18 @@ export function LauncherTabList({ payload, listRef, onToggleFocus, onFocus, now 
     >
       {displayed.length === 0 && <div className="launcher-empty">No open tabs</div>}
       {groups.map((group) => (
-        <LauncherGroup key={group.number} group={group} displayed={displayed} summaries={payload.summaries} selection={selection} onFocus={onFocus} now={now} />
+        <LauncherGroup key={group.number} group={group} displayed={displayed} summaries={payload.summaries} selection={selection} expandedIndex={expandedIndex} onFocus={onFocus} now={now} />
       ))}
     </div>
   );
 }
 
-function LauncherGroup({ group, displayed, summaries, selection, onFocus, now }: {
+function LauncherGroup({ group, displayed, summaries, selection, expandedIndex, onFocus, now }: {
   group: TabGroup;
   displayed: readonly LauncherTabRow[];
   summaries: LauncherPayload['summaries'];
   selection: ListSelection;
+  expandedIndex: number | null;
   onFocus(row: LauncherTabRow): void;
   now: number;
 }) {
@@ -73,6 +81,7 @@ function LauncherGroup({ group, displayed, summaries, selection, onFocus, now }:
           summaries={summaries}
           groupColor={group.color}
           selection={selection}
+          expandedIndex={expandedIndex}
           onFocus={onFocus}
           now={now}
         />
@@ -83,12 +92,13 @@ function LauncherGroup({ group, displayed, summaries, selection, onFocus, now }:
 
 // One tier: its label, then its rows. The label is small and muted, because the rows themselves carry
 // the state — the label is a wayfinding aid rather than a second statement of it.
-function LauncherTier({ tier, displayed, summaries, groupColor, selection, onFocus, now }: {
+function LauncherTier({ tier, displayed, summaries, groupColor, selection, expandedIndex, onFocus, now }: {
   tier: Tier;
   displayed: readonly LauncherTabRow[];
   summaries: LauncherPayload['summaries'];
   groupColor: string;
   selection: ListSelection;
+  expandedIndex: number | null;
   onFocus(row: LauncherTabRow): void;
   now: number;
 }) {
@@ -102,6 +112,7 @@ function LauncherTier({ tier, displayed, summaries, groupColor, selection, onFoc
           summary={Object.hasOwn(summaries, row.label) ? summaries[row.label] : undefined}
           index={displayed.indexOf(row)}
           selection={selection}
+          expanded={expandedIndex === displayed.indexOf(row) && selection.selected === displayed.indexOf(row)}
           onFocus={onFocus}
           now={now}
         />

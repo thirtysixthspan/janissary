@@ -53,7 +53,7 @@
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   margin-top: 2px; font-size: 11px; line-height: 1.35; color: var(--muted); white-space: pre-wrap;
 }
-.launcher-tab-row:hover .launcher-summary { -webkit-line-clamp: 8; }
+.launcher-tab-row:hover .launcher-summary, .launcher-tab-row.expanded .launcher-summary { -webkit-line-clamp: 8; }
 
 /* A dispatched command's answer, above the bar that asked for it. */
 .launcher-reply {

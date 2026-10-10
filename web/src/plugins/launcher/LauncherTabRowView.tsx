@@ -15,11 +15,12 @@ function openOnClick(index: number, active: boolean): ListRowClick {
 // One tab row: its dot, its name, its unread flag, its relative time, and its status paragraph. The dot
 // is the host's own colour for that tab, so a row matches its tab in the strip. A tab with no summary
 // yet shows no line at all rather than a placeholder.
-export function LauncherTabRowView({ row, summary, index, selection, onFocus, now }: {
+export function LauncherTabRowView({ row, summary, index, selection, expanded, onFocus, now }: {
   row: LauncherTabRow;
   summary: string | undefined;
   index: number;
   selection: ListSelection;
+  expanded: boolean;
   onFocus(row: LauncherTabRow): void;
   // The moment the rail's own clock is at, rather than the moment this row happens to be drawn at —
   // so an unchanged payload still advances its ages.
@@ -27,12 +28,13 @@ export function LauncherTabRowView({ row, summary, index, selection, onFocus, no
 }) {
   return (
     <div
-      className={`launcher-tab-row${selection.selected === index ? ' selected' : ''}`}
+      className={`launcher-tab-row${selection.selected === index ? ' selected' : ''}${expanded ? ' expanded' : ''}`}
       style={{ borderLeftColor: row.groupColor }}
       data-index={index}
       data-label={row.label}
       role="option"
       aria-selected={selection.selected === index}
+      aria-expanded={summary === undefined ? undefined : expanded}
       onClick={() => { if (selection.rowClicked(index, (at) => openOnClick(at, row.active))) onFocus(row); }}
     >
       <span className="launcher-tab-primary">

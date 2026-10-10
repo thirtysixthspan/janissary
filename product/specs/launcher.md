@@ -65,7 +65,7 @@ Nothing is prompted when no tab's content has changed since the previous flush, 
 
 A tab keeps its paragraph until that tab closes or a reply replaces it. A flush asks only about the tabs whose transcript has changed, so a reply normally names only those — and the tabs it did not ask about keep what they already had rather than showing nothing until the next prompt that happened to include them. Closing the launcher clears its summaries and transcript cursors; reopening it starts fresh. If a tab closes while a prompt is waiting and another tab reuses its label, the late reply is discarded for that label, so no paragraph or cursor is inherited by the new tab.
 
-The paragraph is clamped to three lines of the row's width and expands to as many as eight while the pointer is over the row, so a long summary is never lost — only held back until it is wanted.
+The paragraph is clamped to three lines of the row's width and expands to as many as eight while the pointer is over the row, so a long summary is never lost — only held back until it is wanted. When a row is selected by keyboard, Right Arrow expands its summary and Left Arrow collapses it; moving the selection makes the prior row's expanded state inactive.
 
 ### Hovering a row
 

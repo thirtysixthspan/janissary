@@ -471,6 +471,39 @@ describe('the tab list', () => {
     expect(screen.queryByText('', { selector: '.launcher-summary' })).not.toBeInTheDocument();
   });
 
+  it('expands and collapses the selected tab summary with the arrow keys', () => {
+    launcher(payload({
+      tabs: [row('shell', { busy: true })],
+      summaries: { shell: 'Running the test suite.' },
+    }));
+    const list = screen.getByRole('listbox', { name: 'Open tabs' });
+    const selected = screen.getByRole('option', { name: /shell/ });
+
+    fireEvent.keyDown(list, { key: 'ArrowRight' });
+    expect(selected).toHaveAttribute('aria-expanded', 'true');
+    expect(selected).toHaveClass('expanded');
+
+    fireEvent.keyDown(list, { key: 'ArrowLeft' });
+    expect(selected).toHaveAttribute('aria-expanded', 'false');
+    expect(selected).not.toHaveClass('expanded');
+  });
+
+  it('shows expansion only on the currently selected tab', () => {
+    launcher(payload({
+      tabs: [row('first', { busy: true }), row('second', { busy: true })],
+      summaries: { first: 'First summary.', second: 'Second summary.' },
+    }));
+    const list = screen.getByRole('listbox', { name: 'Open tabs' });
+    const first = screen.getByRole('option', { name: /first/ });
+    const second = screen.getByRole('option', { name: /second/ });
+
+    fireEvent.keyDown(list, { key: 'ArrowRight' });
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+
+    expect(first).toHaveAttribute('aria-expanded', 'false');
+    expect(second).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('shows other tab types on one metadata line and ignores their summaries', () => {
     const { container } = launcher(payload({
       tabs: [row('readme', { type: 'editor', view: 'editor', title: 'README.md' })],
