@@ -2,7 +2,4 @@
 
 # pull-request
 
-* in the launcher, tabs show their group color as a right hand border. the border color should also be shown on the grouping state header borders.
-
 * in the launcher, the file navigator button should open the file navigator in the $root directory of the project.   
-

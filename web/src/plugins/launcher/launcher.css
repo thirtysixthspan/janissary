@@ -27,12 +27,13 @@
 .launcher-tabs { flex: 1; min-height: 0; overflow-y: auto; outline: none; }
 .launcher-empty { padding: 8px; color: var(--muted); font-size: 12px; }
 .launcher-tier-label {
-  padding: 4px 8px 2px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--faint);
+  padding: 4px 5px 2px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--faint); border-right: 3px solid var(--border);
 }
 .launcher-tier[data-tier='needsInput'] .launcher-tier-label { color: var(--warn, var(--accent)); }
 .launcher-tier[data-tier='unread'] .launcher-tier-label { color: var(--accent); }
 
-.launcher-tab-row { padding: 4px 8px 4px 5px; cursor: pointer; border-bottom: 1px solid var(--border); border-left: 3px solid var(--border); }
+.launcher-tab-row { padding: 4px 5px 4px 8px; cursor: pointer; border-bottom: 1px solid var(--border); border-right: 3px solid var(--border); }
 .launcher-tab-row:hover { background: var(--border); }
 .launcher-tab-row.selected { background: var(--bg-soft); }
 .launcher-tab-primary { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--fg); }

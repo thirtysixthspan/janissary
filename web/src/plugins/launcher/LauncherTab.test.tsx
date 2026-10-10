@@ -393,7 +393,12 @@ describe('the tab list', () => {
     expect(drawn.map((el) => el.dataset.label)).toEqual([
       'group two unread', 'group two idle', 'group one needs input', 'group one idle',
     ]);
-    expect(drawn.map((el) => el.style.borderLeftColor)).toEqual([
+    expect(drawn.map((el) => el.style.borderRightColor)).toEqual([
+      'rgb(34, 170, 34)', 'rgb(34, 170, 34)', 'rgb(170, 34, 34)', 'rgb(170, 34, 34)',
+    ]);
+    const headers = [...list.querySelectorAll<HTMLElement>('.launcher-tier-label')];
+    expect(headers.map((el) => el.textContent)).toEqual(['Unread', 'Idle', 'Needs you', 'Idle']);
+    expect(headers.map((el) => el.style.borderRightColor)).toEqual([
       'rgb(34, 170, 34)', 'rgb(34, 170, 34)', 'rgb(170, 34, 34)', 'rgb(170, 34, 34)',
     ]);
 

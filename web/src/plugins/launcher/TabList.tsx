@@ -65,6 +65,7 @@ function LauncherGroup({ group, displayed, summaries, selection, onFocus, now }:
           tier={tier}
           displayed={displayed}
           summaries={summaries}
+          groupColor={group.color}
           selection={selection}
           onFocus={onFocus}
           now={now}
@@ -76,17 +77,18 @@ function LauncherGroup({ group, displayed, summaries, selection, onFocus, now }:
 
 // One tier: its label, then its rows. The label is small and muted, because the rows themselves carry
 // the state — the label is a wayfinding aid rather than a second statement of it.
-function LauncherTier({ tier, displayed, summaries, selection, onFocus, now }: {
+function LauncherTier({ tier, displayed, summaries, groupColor, selection, onFocus, now }: {
   tier: Tier;
   displayed: readonly LauncherTabRow[];
   summaries: LauncherPayload['summaries'];
+  groupColor: string;
   selection: ListSelection;
   onFocus(row: LauncherTabRow): void;
   now: number;
 }) {
   return (
     <div className="launcher-tier" data-tier={tier.key}>
-      <div className="launcher-tier-label">{tier.label}</div>
+      <div className="launcher-tier-label" style={{ borderRightColor: groupColor }}>{tier.label}</div>
       {tier.rows.map((row) => (
         <LauncherTabRowView
           key={row.label}
