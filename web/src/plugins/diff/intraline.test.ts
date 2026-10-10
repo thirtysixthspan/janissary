@@ -35,6 +35,23 @@ describe('changedSpans', () => {
     expect(spansOf(lines[1].text, spans.get(lines[1]) ?? [])).toEqual([]);
   });
 
+  it('does not mark coincidental overlap between a long description and a short replacement', () => {
+    const lines = [
+      removed("Given an array, arr, containing only of the characters 'R' (red), 'W' (white), and 'B' (blue), sort the array in place so that the same colors are adjacent, with the colors in the order red, white, and blue."),
+      added('subtracted long text'),
+    ];
+    const spans = changedSpans(hunk(lines));
+    expect(spansOf(lines[0].text, spans.get(lines[0]) ?? [])).toEqual([]);
+    expect(spansOf(lines[1].text, spans.get(lines[1]) ?? [])).toEqual([]);
+  });
+
+  it('marks a short parameter-name replacement after a shared declaration prefix', () => {
+    const lines = [removed('@param {number} farm'), added('@param {number} test')];
+    const spans = changedSpans(hunk(lines));
+    expect(spansOf(lines[0].text, spans.get(lines[0]) ?? [])).toEqual(['farm']);
+    expect(spansOf(lines[1].text, spans.get(lines[1]) ?? [])).toEqual(['test']);
+  });
+
   it('answers nothing for a line past the alignment cap', () => {
     const long = 'x'.repeat(500);
     const lines = [removed(`${long}a`), added(`${long}b`)];
@@ -46,9 +63,9 @@ describe('changedSpans', () => {
     const lines = [removed('a = 1'), removed('b = 2'), added('a = 2'), added('c = 3')];
     const spans = changedSpans(hunk(lines));
     expect(spansOf(lines[0].text, spans.get(lines[0]) ?? [])).toEqual(['1']);
-    expect(spansOf(lines[1].text, spans.get(lines[1]) ?? [])).toEqual(['b', '2']);
+    expect(spansOf(lines[1].text, spans.get(lines[1]) ?? [])).toEqual([]);
     expect(spansOf(lines[2].text, spans.get(lines[2]) ?? [])).toEqual(['2']);
-    expect(spansOf(lines[3].text, spans.get(lines[3]) ?? [])).toEqual(['c', '3']);
+    expect(spansOf(lines[3].text, spans.get(lines[3]) ?? [])).toEqual([]);
   });
 
   it('leaves an added line with no removed counterpart unmarked', () => {

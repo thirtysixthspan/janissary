@@ -61,15 +61,16 @@ Removed text is not crossed out in either layout. The red background, minus sign
 Unified layout displays each unchanged line once. Within a replacement, the complete block of removed lines appears immediately before the complete block of added lines. A file's gutters keep a consistent width across all its visible original and modified line numbers, so crossing a digit boundary does not shift the markers or code. Indentation, whitespace-only lines, and empty source lines are preserved exactly.
 
 Where a line was replaced rather than added or removed whole, the characters that changed carry a
-stronger tint of the row's own color — the numerals in `timeout = 30` against `timeout = 60` — so the
-edit reads at a glance, in the unified layout and in each of the split layout's columns. A pair of lines
-too unlike each other for their alignment to mean anything carries no such mark, and neither does a
-line long enough that aligning it would take longer than reading it.
+stronger tint of the row's own color — the numerals in `timeout = 30` against `timeout = 60`, or a
+parameter name after an unchanged declaration prefix — so the edit reads at a glance in both layouts.
+The lines need a long contiguous run of unchanged text for character-level marks; unrelated long
+replacements, such as prose replaced by a short sentence, keep only their added and removed line
+colors. A line too long to align within the responsiveness limit also carries no character marks.
 
 An entry whose change left nothing of the old content — a file added, a file deleted, or a file rewritten
-line for line — opens **collapsed**, showing only its header with a note that the entry holds the whole
-file. A **double-click on the header expands it** to every line, and a further double-click collapses it
-again. A click on the file's name still opens the file, expanded or not. The keyboard walk counts such
+line for line — opens **collapsed**, showing only its header. The view-cycle button reveals its changed
+lines, and a **double-click on the header** also toggles those lines. A click on the file's name still
+opens the file, expanded or not. The keyboard walk counts such
 an entry's hunks wherever they happen to be shown, so **Return** opens the file at the walked hunk's
 first changed line either way.
 

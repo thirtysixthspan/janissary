@@ -14,6 +14,7 @@ const MAX_INLINE_CHARS = 400;
 // How much of the shorter line two lines must share before their alignment means anything. Below
 // this the pair is unrelated rather than edited, and the highlight it produced would be noise.
 const SHARED_FLOOR = 0.5;
+const SHARED_RUN_FLOOR = 0.7;
 
 // The characters of `a` that appear in `b`'s longest common subsequence, and the characters of `b`
 // that appear in `a`'s. The alignment itself is never needed — only which characters it kept.
@@ -62,6 +63,16 @@ function changedRuns(kept: boolean[]): Span[] {
   return spans;
 }
 
+function longestKeptRun(kept: boolean[]): number {
+  let longest = 0;
+  let current = 0;
+  for (const matched of kept) {
+    current = matched ? current + 1 : 0;
+    longest = Math.max(longest, current);
+  }
+  return longest;
+}
+
 // The text in the order it reads, with the changed runs marked, so the renderer wraps only those.
 export function changedSegments(text: string, spans: Span[]): Segment[] {
   const segments: Segment[] = [];
@@ -83,7 +94,8 @@ function spansFor(old: string, next: string): { old: Span[]; next: Span[] } {
   if (old.length > MAX_INLINE_CHARS || next.length > MAX_INLINE_CHARS) return empty;
   const common = commonCharacters(old, next);
   const matched = common.a.reduce((count, kept) => count + (kept ? 1 : 0), 0);
-  if (matched / Math.min(old.length, next.length) < SHARED_FLOOR) return empty;
+  const shorter = Math.min(old.length, next.length);
+  if (matched / shorter < SHARED_FLOOR || longestKeptRun(common.a) / shorter < SHARED_RUN_FLOOR) return empty;
   return { old: changedRuns(common.a), next: changedRuns(common.b) };
 }
 
