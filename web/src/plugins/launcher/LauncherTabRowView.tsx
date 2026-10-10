@@ -28,7 +28,7 @@ export function LauncherTabRowView({ row, summary, index, selection, onFocus, no
   return (
     <div
       className={`launcher-tab-row${selection.selected === index ? ' selected' : ''}`}
-      style={{ borderRightColor: row.groupColor }}
+      style={{ borderLeftColor: row.groupColor }}
       data-index={index}
       data-label={row.label}
       role="option"

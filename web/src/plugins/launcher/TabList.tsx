@@ -88,7 +88,7 @@ function LauncherTier({ tier, displayed, summaries, groupColor, selection, onFoc
 }) {
   return (
     <div className="launcher-tier" data-tier={tier.key}>
-      <div className="launcher-tier-label" style={{ borderRightColor: groupColor }}>{tier.label}</div>
+      <div className="launcher-tier-label" style={{ borderLeftColor: groupColor }}>{tier.label}</div>
       {tier.rows.map((row) => (
         <LauncherTabRowView
           key={row.label}

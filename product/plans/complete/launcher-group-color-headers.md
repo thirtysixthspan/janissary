@@ -4,17 +4,17 @@
 
 ## Goal
 
-Show each tab group's color on the right border of its launcher rows and the status headers that group those rows.
+Show each tab group's color on the left border of its launcher rows and the status headers that group those rows.
 
 ## Approach
 
-Use the existing group color carried by the launcher projection. Render a right border on each row and pass the group's color to each status header inside its group. Keep group ordering, status ordering, and selection behavior unchanged.
+Use the existing group color carried by the launcher projection. Render a left border on each row and pass the group's color to each status header inside its group. Keep group ordering, status ordering, and selection behavior unchanged.
 
 ## Implementation steps
 
-1. Render group-colored right borders on launcher rows and status headers.
+1. Render group-colored left borders on launcher rows and status headers.
 2. Extend the launcher component test to verify row and header border colors across groups.
-3. Update the launcher spec to describe the right borders on rows and grouped status headers.
+3. Update the launcher spec to describe the left borders on rows and grouped status headers.
 
 ## Tests
 
