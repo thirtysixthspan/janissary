@@ -67,6 +67,31 @@ describe('context expansion', () => {
     expect(expanded.canExpandContext).toBe(false);
   });
 
+  it.each(['top', 'between', 'bottom'] as const)('expands only the selected %s boundary', async (position) => {
+    change();
+    const initial = await file();
+    const boundary = initial.contextBoundaries?.find((item) => item.position === position);
+    expect(boundary).toBeTruthy();
+    const result = await readChangeSet(root, new Map(), new Map([['a.ts', new Set([boundary!.id])]]));
+    if (result.kind !== 'files') throw new Error('Missing expanded diff');
+    const expanded = result.files[0];
+    expect(expanded.additions).toBe(2);
+    expect(expanded.deletions).toBe(2);
+    expect(expanded.contextBoundaries?.some((item) => item.id === boundary!.id)).toBe(false);
+    if (position === 'top') {
+      expect(expanded.hunks[0].lines[0]).toMatchObject({ kind: 'context', oldNumber: 1, number: 1 });
+      expect(expanded.hunks).toHaveLength(2);
+    } else if (position === 'bottom') {
+      expect(expanded.hunks.at(-1)?.lines.at(-1)).toMatchObject({ kind: 'context', oldNumber: 80, number: 80 });
+      expect(expanded.hunks).toHaveLength(2);
+    } else {
+      expect(expanded.hunks).toHaveLength(1);
+      expect(expanded.hunks[0].lines.filter((line) => line.kind === 'context')).toHaveLength(35);
+    }
+    const refreshed = await readChangeSet(root, new Map(), new Map([['a.ts', new Set([boundary!.id])]]));
+    expect(refreshed).toEqual(result);
+  });
+
   it('uses literal pathspecs for names containing glob characters', async () => {
     change('a[1].ts');
     expect(await file(23, 'a[1].ts')).toMatchObject({ path: 'a[1].ts', contextLines: 23, additions: 2, deletions: 2 });
@@ -81,7 +106,11 @@ describe('context expansion', () => {
   it('keeps context failures recoverable instead of failing the change set', async () => {
     change();
     const initial = await file();
+    const boundary = initial.contextBoundaries?.[0];
     git('update-ref', '-d', 'HEAD');
+    const [boundaryFailure] = await expandContextFiles(root, [initial], '', new Map(),
+      new Map([['a.ts', new Set([boundary!.id])]]));
+    expect(boundaryFailure.contextBoundaries?.find((item) => item.id === boundary!.id)?.error).toBeTruthy();
     const [failed] = await expandContextFiles(root, [initial], '', new Map([['a.ts', 23]]));
     expect(failed.hunks).toEqual(initial.hunks);
     expect(failed.contextError).toBeTruthy();
@@ -90,7 +119,8 @@ describe('context expansion', () => {
 });
 
 describe('context guards', () => {
-  it.each([null, [], {}, { path: '' }, { path: 1 }, { path: 'a.ts', fullFile: 'yes' }])('rejects an invalid expansion request: %j', (value) => {
+  it.each([null, [], {}, { path: '' }, { path: 1 }, { path: 'a.ts', fullFile: 'yes' }, { path: 'a.ts', boundary: '' },
+    { path: 'a.ts', boundary: 'top:x', fullFile: true }])('rejects an invalid expansion request: %j', (value) => {
     expect(isContextIntent(value)).toBe(false);
   });
 
@@ -98,6 +128,7 @@ describe('context guards', () => {
     expect(isContextIntent({ path: 'a.ts' })).toBe(true);
     expect(isContextIntent({ path: 'a.ts', fullFile: true })).toBe(true);
     expect(isContextIntent({ path: 'a.ts', fullFile: false })).toBe(true);
+    expect(isContextIntent({ path: 'a.ts', boundary: 'between:removed:1:1:added:0:2' })).toBe(true);
     const file = { path: 'a.ts', additions: 0, deletions: 0, hunks: [], contextLines: 23, canExpandContext: true };
     const payload = { root: '', state: 'done', message: '', split: false, files: [file] };
     expect(isDiffPayload(payload)).toBe(true);
@@ -105,5 +136,6 @@ describe('context guards', () => {
       { canExpandContext: 1 }, { expandingContext: 'yes' }, { contextError: [] }]) {
       expect(isDiffPayload({ ...payload, files: [{ ...file, ...metadata }] })).toBe(false);
     }
+    expect(isDiffPayload({ ...payload, files: [{ ...file, contextBoundaries: [{ id: 'top:x', position: 'sideways' }] }] })).toBe(false);
   });
 });

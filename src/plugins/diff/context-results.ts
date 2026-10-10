@@ -4,6 +4,14 @@ export function preserveContextErrors(files: DiffFile[], previous: DiffFile[]): 
   return files.map((file) => {
     if (!file.contextError) return file;
     const shown = previous.find((candidate) => candidate.path === file.path) ?? file;
-    return { ...shown, expandingContext: false, canExpandContext: true, contextError: file.contextError };
+    const contextBoundaries = file.contextBoundaries ?? shown.contextBoundaries?.map((boundary) => boundary.expanding
+      ? { ...boundary, expanding: false, error: file.contextError } : boundary);
+    return {
+      ...shown,
+      expandingContext: false,
+      canExpandContext: true,
+      contextError: file.contextError,
+      ...(contextBoundaries && { contextBoundaries }),
+    };
   });
 }

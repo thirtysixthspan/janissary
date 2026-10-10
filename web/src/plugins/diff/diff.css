@@ -107,6 +107,16 @@
 }
 .diff-full-file-control button:disabled { opacity: 0.5; cursor: default; }
 .diff-full-file-control [role="alert"] { color: var(--error); }
+.diff-context-boundary {
+  display: flex; align-items: center; justify-content: center; min-height: 24px; gap: 8px;
+  background: color-mix(in srgb, var(--muted) 12%, transparent); border-block: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+}
+.diff-context-boundary button {
+  font: inherit; color: var(--muted); background: transparent; border: 0; cursor: pointer; padding: 2px 8px;
+}
+.diff-context-boundary button:hover, .diff-context-boundary button:focus-visible { color: var(--fg); }
+.diff-context-boundary button:disabled { opacity: 0.55; cursor: default; }
+.diff-context-boundary [role="alert"] { color: var(--error); }
 .diff-comment-add {
   align-self: flex-start; flex: none; margin-left: auto; padding: 0 2px;
   font: inherit; border: none; color: var(--muted); background: transparent; cursor: pointer; opacity: 0.4; user-select: none;

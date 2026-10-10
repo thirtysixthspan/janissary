@@ -89,6 +89,7 @@ describe('diff plugin activation', () => {
     const lines = Array.from({ length: 60 }, (_, index) => `line ${index + 1}`);
     writeFileSync(path.join(repo, 'a.txt'), `${lines.join('\n')}\n`);
     commitAll(repo);
+    lines[10] = 'changed above';
     lines[29] = 'changed';
     writeFileSync(path.join(repo, 'a.txt'), `${lines.join('\n')}\n`);
     const { capabilities, updateTab } = makeCapabilities({
@@ -106,6 +107,13 @@ describe('diff plugin activation', () => {
     activation.intent(intent(initial, 'context', { path: 'a.txt', fullFile: false }), capabilities);
     await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextLines).toBeUndefined(); });
     expect(lastPayload(updateTab).files[0].hunks[0].lines.length).toBe(initial.files[0].hunks[0].lines.length);
+    const boundary = lastPayload(updateTab).files[0].contextBoundaries?.find((item) => item.position === 'between');
+    expect(boundary).toBeTruthy();
+    activation.intent(intent(initial, 'context', { path: 'a.txt', boundary: boundary!.id }), capabilities);
+    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].hunks).toHaveLength(1); });
+    expect(lastPayload(updateTab).files[0].contextBoundaries?.some((item) => item.id === boundary!.id)).toBe(false);
+    activation.intent(intent(initial, 'refresh', {}), capabilities);
+    await vi.waitFor(() => { expect(lastPayload(updateTab).files[0].contextBoundaries?.some((item) => item.id === boundary!.id)).toBe(false); });
     expect(isJsonCompatible(lastPayload(updateTab))).toBe(true);
     activation.dispose?.();
   });

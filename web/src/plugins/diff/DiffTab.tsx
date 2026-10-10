@@ -107,6 +107,7 @@ export function DiffTab({
               fullFileScroll.current = walk.listRef.current?.scrollTop ?? 0;
               return capabilities.intent('context', { path: file.path, fullFile });
             }}
+            onExpandBoundary={(boundary) => capabilities.intent('context', { path: file.path, boundary })}
           />
         ))}
       </div>

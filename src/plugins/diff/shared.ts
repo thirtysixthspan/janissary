@@ -1,4 +1,4 @@
-export const DIFF_PAYLOAD_SCHEMA_VERSION = 5;
+export const DIFF_PAYLOAD_SCHEMA_VERSION = 6;
 
 // One line of a hunk. `kind` is which side git printed it on; `number` is the line's number on that
 // side — the old-side number for a removed line, the new-side number for an added or context one — so
@@ -24,6 +24,14 @@ export type DiffHunk = {
   lines: DiffLine[];
 };
 
+export type DiffContextBoundary = {
+  id: string;
+  position: 'top' | 'between' | 'bottom';
+  hunkIndex?: number;
+  expanding?: boolean;
+  error?: string;
+};
+
 // One changed file. `path` is project-relative and forward-slashed; `oldPath` is set only for a
 // rename; `deleted` marks a file the working tree no longer holds, so clicking its name does nothing;
 // `added` marks a file that did not exist before — git answers a record with no original side by
@@ -44,6 +52,7 @@ export type DiffFile = {
   canExpandContext?: boolean;
   expandingContext?: boolean;
   contextError?: string;
+  contextBoundaries?: DiffContextBoundary[];
 };
 
 // `loading` while a recompute runs, `done` once it settles, `not-repository` when the root is not
@@ -65,7 +74,7 @@ export type RefreshIntent = Record<string, never>;
 
 // The layout the user chose, which becomes the layout every later diff tab opens with.
 export type LayoutIntent = { split: boolean };
-export type ContextIntent = { path: string; fullFile?: boolean };
+export type ContextIntent = { path: string; fullFile?: boolean; boundary?: string };
 
 // Open a file at a line in an editor tab. `path` is project-relative; `line` is the line's payload
 // record's own `jump`.
@@ -109,8 +118,19 @@ function isDiffFile(value: unknown): value is DiffFile {
     && (value.canExpandContext === undefined || typeof value.canExpandContext === 'boolean')
     && (value.expandingContext === undefined || typeof value.expandingContext === 'boolean')
     && (value.contextError === undefined || typeof value.contextError === 'string')
+    && (value.contextBoundaries === undefined || (Array.isArray(value.contextBoundaries)
+      && value.contextBoundaries.every(isDiffContextBoundary)))
     && Array.isArray(value.hunks)
     && value.hunks.every(isDiffHunk);
+}
+
+function isDiffContextBoundary(value: unknown): value is DiffContextBoundary {
+  return isRecord(value)
+    && typeof value.id === 'string'
+    && ['top', 'between', 'bottom'].includes(value.position as string)
+    && (value.hunkIndex === undefined || (typeof value.hunkIndex === 'number' && Number.isSafeInteger(value.hunkIndex) && value.hunkIndex >= 0))
+    && (value.expanding === undefined || typeof value.expanding === 'boolean')
+    && (value.error === undefined || typeof value.error === 'string');
 }
 
 export function isDiffPayload(value: unknown): value is DiffPayload {
@@ -133,7 +153,9 @@ export function isLayoutIntent(value: unknown): value is LayoutIntent {
 
 export function isContextIntent(value: unknown): value is ContextIntent {
   return isRecord(value) && typeof value.path === 'string' && value.path.length > 0
-    && (value.fullFile === undefined || typeof value.fullFile === 'boolean');
+    && (value.fullFile === undefined || typeof value.fullFile === 'boolean')
+    && (value.boundary === undefined || (typeof value.boundary === 'string' && value.boundary.length > 0))
+    && !(value.boundary !== undefined && value.fullFile !== undefined);
 }
 
 export function isOpenIntent(value: unknown): value is OpenIntent {

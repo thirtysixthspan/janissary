@@ -12,6 +12,7 @@ import { ExpandContextControl } from './ExpandContextControl';
 import { canExpandFileContext } from './context-controls';
 import { gutterWidth } from './gutter-width';
 import { FullFileControl, isFullFileContext } from './FullFileControl';
+import { ExpandBoundaryControl } from './ExpandBoundaryControl';
 
 // One changed file: its header — the path, the rename it came from, its status, its add and delete
 // counts — and every hunk it holds. A deleted file's header is inert, because there is no file to
@@ -19,7 +20,7 @@ import { FullFileControl, isFullFileContext } from './FullFileControl';
 //
 // `offset` is how many hunks the files above this one contribute to the walk's flat list, and a hunk
 // with no lines contributes none, which is what keeps a walked index pointing at a real hunk.
-export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onExpandContext, onToggleFullFile }: {
+export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFile, onOpenLine, onOpenMedia, onExpandContext, onToggleFullFile, onExpandBoundary }: {
   file: DiffFile;
   split: boolean;
   offset: number;
@@ -30,6 +31,7 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
   onOpenMedia(): void;
   onExpandContext?(): Promise<unknown>;
   onToggleFullFile?(fullFile: boolean): Promise<unknown>;
+  onExpandBoundary?(boundary: string): Promise<unknown>;
 }) {
   let taken = 0;
   const spots = file.hunks.map((hunk) => (hunk.lines.length === 0 ? -1 : offset + taken++));
@@ -90,6 +92,9 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
             {over > 0 && <span className="diff-large-file">{`${file.additions + file.deletions} lines over the ${CHANGE_LINE_CAP}-line cap — double-click to expand`}</span>}
           </span>
         </div>
+        {!collapsed && onExpandBoundary && file.contextBoundaries?.find((boundary) => boundary.position === 'top') && (
+          <BoundaryControl boundary={file.contextBoundaries.find((item) => item.position === 'top')!} expand={onExpandBoundary} />
+        )}
         {!collapsed && file.hunks.map((hunk, index) => {
           const spot = spots[index];
           const walkedHere = spot >= 0 && walked === spot;
@@ -101,11 +106,31 @@ export function FileEntry({ file, split, offset, walked, onSelectHunk, onOpenFil
             // numbers they carry are the old file's.
             onOpenLine: file.deleted ? () => {} : (line: { number: number; jump: number }) => { onOpenLine(line); },
           };
-          return split
-            ? <SplitHunks key={index} hunk={hunk} index={spot} walked={walkedHere} {...shared} />
-            : <HunkLines key={index} hunk={hunk} index={spot} walked={walkedHere} {...shared} />;
+          return (
+            <React.Fragment key={index}>
+              {split
+                ? <SplitHunks hunk={hunk} index={spot} walked={walkedHere} {...shared} />
+                : <HunkLines hunk={hunk} index={spot} walked={walkedHere} {...shared} />}
+              {!collapsed && onExpandBoundary && file.contextBoundaries?.find((boundary) => boundary.position === 'between'
+                && boundary.hunkIndex === index) && (
+                <BoundaryControl boundary={file.contextBoundaries.find((item) => item.position === 'between'
+                  && item.hunkIndex === index)!} expand={onExpandBoundary} />
+              )}
+            </React.Fragment>
+          );
         })}
+        {!collapsed && onExpandBoundary && file.contextBoundaries?.find((boundary) => boundary.position === 'bottom') && (
+          <BoundaryControl boundary={file.contextBoundaries.find((item) => item.position === 'bottom')!} expand={onExpandBoundary} />
+        )}
       </div>
     </LineCommentsProvider>
   );
+}
+
+function BoundaryControl({ boundary, expand }: {
+  boundary: NonNullable<DiffFile['contextBoundaries']>[number];
+  expand(boundary: string): Promise<unknown>;
+}) {
+  return <ExpandBoundaryControl position={boundary.position} pending={boundary.expanding === true} error={boundary.error}
+    expand={() => expand(boundary.id)} />;
 }

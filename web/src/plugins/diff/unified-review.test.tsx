@@ -180,12 +180,27 @@ describe('unified inline comments', () => {
       { kind: 'context' as const, number: 20, oldNumber: 20, jump: 20, text: 'const near = 20;' },
       { kind: 'added' as const, number: 21, jump: 21, text: 'const extra = 21;' },
     ] };
-    const { update } = show(payload({ files: [{ ...initial, hunks: [...initial.hunks, later] }] }));
+    const { update, requests } = show(payload({ files: [{ ...initial, hunks: [...initial.hunks, later],
+      contextBoundaries: [{ id: 'between:changed:later', position: 'between', hunkIndex: 0 }] }] }));
     fireEvent.change(begin('modified', 21), { target: { value: 'Still drafting' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Show lines between changes' }));
+    expect(requests).toHaveBeenCalledWith('context', { path: 'a.ts', boundary: 'between:changed:later' });
     update(payload({ files: [{ ...initial, contextLines: 23, hunks: [{ ...initial.hunks[0],
       lines: [...initial.hunks[0].lines, ...later.lines],
     }] }] }));
     expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Still drafting');
+  });
+
+  it.each([false, true])('places compact controls at the omitted boundaries in %s layout', (split) => {
+    const contextBoundaries = [
+      { id: 'top:removed:2:2', position: 'top' as const },
+      { id: 'between:added:0:3:added:0:20', position: 'between' as const, hunkIndex: 0 },
+      { id: 'bottom:added:0:20', position: 'bottom' as const },
+    ];
+    const { requests } = show(payload({ split, files: [{ ...twoHunks(), contextBoundaries }] }));
+    const control = screen.getByRole('button', { name: 'Show lines between changes' });
+    fireEvent.click(control);
+    expect(requests).toHaveBeenCalledWith('context', { path: 'a.ts', boundary: contextBoundaries[1].id });
   });
 
   it('keeps comment editor keys and mouse events from navigating hunks or opening files', () => {

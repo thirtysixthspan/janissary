@@ -50,6 +50,7 @@ export class DiffSession {
   private inFlight = false;
   private disposed = false;
   private contexts = new Map<string, number>();
+  private expandedBoundaries = new Map<string, Set<string>>();
   private revision = 0;
 
   constructor(private capabilities: TabPluginServerCapabilities) {
@@ -68,7 +69,7 @@ export class DiffSession {
   open(root: string, origin: DiffOrigin): void {
     if (this.disposed || root === '') return;
     const rescope = root !== this.root;
-    if (rescope) { this.contexts.clear(); this.revision++; }
+    if (rescope) { this.contexts.clear(); this.expandedBoundaries.clear(); this.revision++; }
     this.root = root;
     this.payload = {
       ...this.payload,
@@ -77,6 +78,7 @@ export class DiffSession {
     };
     this.capabilities.openOrFocusTab(INSTANCE_KEY, () => {
       this.contexts.clear();
+      this.expandedBoundaries.clear();
       this.revision++;
       this.payload = { ...emptyPayload(this.split), root: this.payload.root, state: 'loading' };
       return { title: TAB_TITLE, payload: this.payload };
@@ -112,6 +114,24 @@ export class DiffSession {
     this.revision++;
     this.safely({ files: this.payload.files.map((candidate) => candidate.path === path
       ? { ...candidate, expandingContext: true, contextError: '' } : candidate) });
+    void this.recompute();
+  }
+
+  expandBoundary(path: string, boundary: string): void {
+    const file = this.payload.files.find((candidate) => candidate.path === path);
+    const target = file?.contextBoundaries?.find((candidate) => candidate.id === boundary);
+    if (!file || !target || file.binary || file.added || file.deleted || file.hunks.length === 0) {
+      this.capabilities.rejectRequest('Cannot expand this context boundary.');
+      return;
+    }
+    if (file.expandingContext || target.expanding) return;
+    const requested = this.expandedBoundaries.get(path) ?? new Set<string>();
+    requested.add(boundary);
+    this.expandedBoundaries.set(path, requested);
+    this.revision++;
+    this.safely({ files: this.payload.files.map((candidate) => candidate.path === path
+      ? { ...candidate, contextBoundaries: candidate.contextBoundaries?.map((item) => item.id === boundary
+        ? { ...item, expanding: true, error: '' } : item) } : candidate) });
     void this.recompute();
   }
 
@@ -165,7 +185,8 @@ export class DiffSession {
     const revisionAtStart = this.revision;
     const contexts = new Map(this.contexts);
     try {
-      const result = await readChangeSet(rootAtStart, contexts);
+      const expandedBoundaries = new Map([...this.expandedBoundaries].map(([file, boundaries]) => [file, new Set(boundaries)]));
+      const result = await readChangeSet(rootAtStart, contexts, expandedBoundaries);
       if (!this.disposed && this.root === rootAtStart && this.revision === revisionAtStart) this.safely(resultChanges(result, this.payload.files));
     } catch (error) {
       if (!this.disposed && this.revision === revisionAtStart) this.safely({ state: 'error', message: reasonOf(error), files: [] });
