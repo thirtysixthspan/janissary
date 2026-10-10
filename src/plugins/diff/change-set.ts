@@ -30,52 +30,56 @@ function reasonOf(error: unknown): string {
 // Whether `root` sits inside a git repository at all, answered by the prefix read itself: a
 // non-repository fails it, and so does a bare repository. Asked before anything else, because it is
 // the difference between a tab that says "not a git repository" and a tab that shows a failure.
-async function prefixIn(root: string): Promise<string | null> {
+async function prefixIn(root: string, signal?: AbortSignal): Promise<string | null> {
   try {
-    const prefix = await git(root, ['rev-parse', '--show-prefix']);
+    const prefix = await git(root, ['rev-parse', '--show-prefix'], signal);
     return prefix.trim();
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return null;
   }
 }
 
 // Whether `HEAD` resolves. A fresh `git init` repository has no commits, and there `git diff HEAD`
 // is a fatal error rather than an empty diff, so the caller takes a different route.
-async function hasHead(root: string): Promise<boolean> {
+async function hasHead(root: string, signal?: AbortSignal): Promise<boolean> {
   try {
-    await git(root, ['rev-parse', '--verify', '--quiet', 'HEAD']);
+    await git(root, ['rev-parse', '--verify', '--quiet', 'HEAD'], signal);
     return true;
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw error;
     return false;
   }
 }
 
 // The untracked files gitignore admits, root-relative. `-z` so a path with a newline in it survives.
-async function untrackedPaths(root: string): Promise<string[]> {
-  const stdout = await git(root, ['ls-files', '--others', '--exclude-standard', '-z']);
+async function untrackedPaths(root: string, signal?: AbortSignal): Promise<string[]> {
+  const stdout = await git(root, ['ls-files', '--others', '--exclude-standard', '-z'], signal);
   return stdout.split('\0').filter(Boolean);
 }
 
 // One untracked file's change set, diffed against nothing. `git diff --no-index` exits 1 when the
 // files differ, which is the only outcome worth reading here, so its stdout is read off the
 // rejection.
-async function untrackedFile(root: string, relPath: string): Promise<DiffFile | null> {
+async function untrackedFile(root: string, relPath: string, signal?: AbortSignal): Promise<DiffFile | null> {
   try {
-    const stdout = await git(root, ['diff', '--no-index', '--no-color', '--', '/dev/null', path.join(root, relPath)]);
+    const stdout = await git(root, ['diff', '--no-index', '--no-color', '--', '/dev/null', path.join(root, relPath)], signal);
     return parseDiff(stdout, { path: relPath })[0] ?? null;
   } catch (error) {
+    if (signal?.aborted) throw error;
     const stdout = (error as { stdout?: string }).stdout;
     if (typeof stdout !== 'string' || stdout === '') return null;
     return parseDiff(stdout, { path: relPath })[0] ?? null;
   }
 }
 
-async function untrackedFiles(root: string): Promise<DiffFile[]> {
-  const paths = await untrackedPaths(root);
+async function untrackedFiles(root: string, signal?: AbortSignal): Promise<DiffFile[]> {
+  const paths = await untrackedPaths(root, signal);
   const files: DiffFile[] = [];
   for (let index = 0; index < paths.length; index += UNTRACKED_CONCURRENCY) {
+    if (signal?.aborted) throw signal.reason ?? new Error('Git diff read aborted');
     const batch = await Promise.all(
-      paths.slice(index, index + UNTRACKED_CONCURRENCY).map((relPath) => untrackedFile(root, relPath)),
+      paths.slice(index, index + UNTRACKED_CONCURRENCY).map((relPath) => untrackedFile(root, relPath, signal)),
     );
     files.push(...batch.filter((file): file is DiffFile => file !== null));
   }
@@ -85,15 +89,16 @@ async function untrackedFiles(root: string): Promise<DiffFile[]> {
 // The repository-with-no-commits route: every file gitignore admits, diffed against nothing. A path
 // the index holds but the working tree no longer does becomes a deleted record with no hunks — the
 // content lived only in the index, and a diff view cannot recover it.
-async function unbornChangeSet(root: string): Promise<DiffFile[]> {
-  const listed = await git(root, ['ls-files', '--exclude-standard', '-z']);
+async function unbornChangeSet(root: string, signal?: AbortSignal): Promise<DiffFile[]> {
+  const listed = await git(root, ['ls-files', '--exclude-standard', '-z'], signal);
   const files: DiffFile[] = [];
   const indexed = listed.split('\0').filter(Boolean);
   for (const relPath of indexed) {
+    if (signal?.aborted) throw signal.reason ?? new Error('Git diff read aborted');
     if (existsSync(path.join(root, relPath))) continue;
     files.push({ path: relPath, deleted: true, additions: 0, deletions: 0, hunks: [] });
   }
-  return [...files, ...await untrackedFiles(root)];
+  return [...files, ...await untrackedFiles(root, signal)];
 }
 
 // Read the working tree's changes versus `HEAD` under `root`: tracked changes with rename detection,
@@ -102,23 +107,25 @@ async function unbornChangeSet(root: string): Promise<DiffFile[]> {
 export async function readChangeSet(
   root: string,
   fullFiles: ReadonlySet<string> = new Set(),
+  signal?: AbortSignal,
 ): Promise<ChangeSetResult> {
-  const prefix = await prefixIn(root);
+  const prefix = await prefixIn(root, signal);
   if (prefix === null) return { kind: 'not-repository' };
   try {
-    if (!await hasHead(root)) return { kind: 'files', files: await unbornChangeSet(root) };
+    if (!await hasHead(root, signal)) return { kind: 'files', files: await unbornChangeSet(root, signal) };
     const tracked = parseDiff(
       // The `-- .` pathspec scopes the diff to the root's own subtree: `git diff` without one is
       // repository-wide even when run from a subdirectory, the way `changedPaths` handles it.
-      await git(root, ['diff', 'HEAD', '-M', '--no-ext-diff', '--no-color', '--unified=3', '--', '.']),
+      await git(root, ['diff', 'HEAD', '-M', '--no-ext-diff', '--no-color', '--unified=3', '--', '.'], signal),
       { prefix },
     );
-    const untracked = await untrackedFiles(root);
-    const expanded = await expandFullFileContext(root, tracked, prefix, fullFiles);
+    const untracked = await untrackedFiles(root, signal);
+    const expanded = await expandFullFileContext(root, tracked, prefix, fullFiles, signal);
     // One list in file path order, the way GitHub's files-changed view lists files and the way the
     // keyboard walk expects them, rather than tracked files first because that is how they were read.
     return { kind: 'files', files: [...expanded, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path)) };
   } catch (error) {
+    if (signal?.aborted) throw error;
     return { kind: 'error', reason: reasonOf(error) };
   }
 }

@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 const execFileAsync = promisify(execFile);
 const MAX_BUFFER = 1024 * 1024 * 64;
 
-export async function git(root: string, args: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('git', args, { cwd: root, maxBuffer: MAX_BUFFER });
+export async function git(root: string, args: string[], signal?: AbortSignal): Promise<string> {
+  const { stdout } = await execFileAsync('git', args, { cwd: root, maxBuffer: MAX_BUFFER, signal });
   return stdout;
 }
