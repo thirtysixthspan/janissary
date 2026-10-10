@@ -32,6 +32,7 @@ function fakeSession(): FakeSession {
 
 function fixture() {
   const store = new ConversationStore({ home });
+  const reportStorageError = vi.fn();
   const tabs: Tab[] = [];
   const setCwd = vi.fn();
   const openOrRetarget = vi.fn();
@@ -46,8 +47,9 @@ function fixture() {
     store,
     sessions: new ConversationSessions(),
     now: () => ++time,
+    reportStorageError,
   });
-  return { manager, managers, openSibling, openOrRetarget, setCwd, store };
+  return { manager, managers, openSibling, openOrRetarget, reportStorageError, setCwd, store };
 }
 
 beforeEach(() => {
@@ -278,6 +280,68 @@ describe('ConversationsManager when a conversation tab closes', () => {
 });
 
 describe('ConversationsManager', () => {
+  it('rolls back a failed response startup and permits another send', () => {
+    const session = fakeSession();
+    mocks.connectAcp.mockReturnValue(session);
+    const f = fixture();
+    f.manager.create('first');
+    vi.spyOn(f.store, 'ensure').mockImplementationOnce(() => { throw new Error('disk full'); });
+
+    expect(f.manager.send('first', 'First')).toBe(false);
+    expect(f.manager.view().windows[0]).toMatchObject({ title: 'New conversation', turns: [] });
+    expect(f.reportStorageError).toHaveBeenCalledWith('first', 'Could not start the response: disk full');
+
+    expect(f.manager.send('first', 'Second')).toBe(true);
+    session.prompts[0].handlers.onEnd();
+    f.manager.dispose();
+  });
+
+  it('keeps a completed response visible when its write fails and allows a later send', () => {
+    const first = fakeSession();
+    const second = fakeSession();
+    mocks.connectAcp.mockReturnValueOnce(first).mockReturnValueOnce(second);
+    const f = fixture();
+    f.manager.create('first');
+    f.manager.send('first', 'First');
+    first.prompts[0].handlers.onChunk('Answer');
+    vi.spyOn(f.store, 'write').mockImplementationOnce(() => { throw new Error('disk full'); });
+
+    expect(() => { first.prompts[0].handlers.onEnd(); }).not.toThrow();
+    expect(f.manager.view().windows[0].turns[0]).toMatchObject({
+      response: 'Answer',
+      error: 'Response is available but could not be saved: disk full',
+    });
+    expect(f.manager.view().windows[0].turns[0]).not.toHaveProperty('streaming');
+    expect(f.reportStorageError).toHaveBeenCalledWith(
+      'first', 'Response is available but could not be saved: disk full',
+    );
+
+    expect(f.manager.send('first', 'Second')).toBe(true);
+    first.prompts[1].handlers.onEnd();
+    f.manager.dispose();
+  });
+
+  it('contains a failed write from the ACP connection error callback', () => {
+    const first = fakeSession();
+    const second = fakeSession();
+    mocks.connectAcp.mockReturnValueOnce(first).mockReturnValueOnce(second);
+    const f = fixture();
+    f.manager.create('first');
+    f.manager.send('first', 'First');
+    vi.spyOn(f.store, 'write').mockImplementationOnce(() => { throw new Error('disk full'); });
+    const options = mocks.connectAcp.mock.calls[0][0] as { onError: (message: string) => void };
+
+    expect(() => { options.onError('connection dropped'); }).not.toThrow();
+    expect(f.manager.view().windows[0].turns[0].error)
+      .toContain('Response is available but could not be saved: disk full');
+    expect(f.reportStorageError).toHaveBeenCalledWith(
+      'first', 'Response is available but could not be saved: disk full',
+    );
+    expect(f.manager.send('first', 'Second')).toBe(true);
+    second.prompts[0].handlers.onEnd();
+    f.manager.dispose();
+  });
+
   it('streams in bounded ticks and writes once when the turn completes', () => {
     vi.useFakeTimers();
     const session = fakeSession();

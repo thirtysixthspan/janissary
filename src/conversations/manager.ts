@@ -1,5 +1,6 @@
 import { messageBus, type Subscription } from '../bus.js';
 import type { Managers } from '../managers.js';
+import { notify } from '../notifications/index.js';
 import type { ConversationModelPair, ConversationsView } from '../protocol.js';
 import { ConversationResponder } from './responder.js';
 import { ConversationSessions } from './sessions.js';
@@ -21,6 +22,7 @@ type ManagerOptions = {
   store?: ConversationStore;
   sessions?: ConversationSessions;
   now?: () => number;
+  reportStorageError?: (id: string, message: string) => void;
 };
 
 export class ConversationsManager {
@@ -37,7 +39,17 @@ export class ConversationsManager {
     this.sessions = options.sessions ?? new ConversationSessions();
     this.now = options.now ?? Date.now;
     this.responder = new ConversationResponder(
-      this.store, this.sessions, this.now, () => { this.changed(); },
+      this.store,
+      this.sessions,
+      this.now,
+      () => { this.changed(); },
+      (id, message) => {
+        const report = options.reportStorageError
+          ?? ((conversationId: string, detail: string) => {
+            notify(this.managers, 'manual', 'conversations', `Conversation "${conversationId}": ${detail}`);
+          });
+        report(id, message);
+      },
     );
     this.tabRemoved = messageBus.on('transcript', 'tab:removed', () => {
       queueMicrotask(() => { this.releaseClosedConversations(); });

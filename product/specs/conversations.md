@@ -64,6 +64,8 @@ Escape cancels a streaming reply. Cancellation discards the partial turn and wri
 
 A failed query remains in the conversation with its error rendered in place. Rate-limit failures are identified explicitly. The failed session is forgotten so the next query reconnects and replays the stored context.
 
+If workspace or session setup fails after a query is submitted, the pending turn and any automatic title change are rolled back, the session is released, and a notification reports the failure. If saving a completed or failed turn fails, the terminal turn remains visible in memory with a persistence error, the response lifecycle is settled, and a notification reports the save failure. These failures do not block a later query, and storage errors are not retried automatically.
+
 ### Storage and workspace
 
 Each conversation is stored in its own directory under the user's Janissary data directory. That directory contains the conversation record, an empty private workspace, and the workspace's private temporary directory. The directory is created when the first query is sent or either workspace control is used. Using a workspace control before the first query also saves the otherwise-empty conversation, so its workspace remains available after a restart. The directory survives application restarts and project workspace sweeps and is removed only when the conversation is deleted.
