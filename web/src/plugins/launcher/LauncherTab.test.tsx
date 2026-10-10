@@ -93,6 +93,17 @@ describe('the command rail', () => {
     expect(caps.intent).toHaveBeenCalledWith('run-command', { id: 'tasks' });
   });
 
+  it('dispatches the built-in Harness command when its row is confirmed', () => {
+    const caps = capabilities();
+    launcher(payload({ commands: [command({ id: 'harness', label: 'Harness', command: 'harness' })] }), caps);
+
+    const entry = screen.getByRole('option', { name: /Harness/ });
+    fireEvent.click(entry);
+    fireEvent.click(entry);
+
+    expect(caps.intent).toHaveBeenCalledWith('run-command', { id: 'harness' });
+  });
+
   // `tasks` and `hist` — the launcher's own default rows — are the application's pickers. The client
   // classifies them, so a click on a row naming one opens the picker and sends nothing to the server,
   // The rail sends the id the host validated against launcher.json, never the command line, so the

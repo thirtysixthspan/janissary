@@ -2,7 +2,4 @@
 
 # pull-request
 
-* harness button in the launcher should launch the harness launch dialog
-
 * remove the information popup on hover over the tabs
-

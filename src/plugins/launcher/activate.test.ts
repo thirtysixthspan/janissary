@@ -452,6 +452,28 @@ describe('the launcher intents', () => {
     }
   });
 
+  it('dispatches the Harness entry as bare `harness` to open its launch dialog', () => {
+    const root = project();
+    writeFileSync(
+      path.join(root, '.janissary', 'launcher.json'),
+      `${JSON.stringify([{ id: 'harness', icon: 'faRobot', label: 'Harness', command: 'harness' }])}\n`,
+    );
+    try {
+      const { activation, entry } = intentFor('run-command', { id: 'harness' }, root);
+      activation.command?.('', entry.capabilities);
+      entry.dispatched.length = 0;
+
+      activation.intent(
+        intentRequest('run-command', { id: 'harness' }, entry.opened[0].value.payload),
+        entry.capabilities,
+      );
+
+      expect(entry.dispatched).toEqual(['harness']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('refuses an id the file does not hold, dispatching nothing', () => {
     const root = project();
     try {
