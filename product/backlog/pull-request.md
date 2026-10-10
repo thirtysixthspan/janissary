@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Preserve the host's plugin namespace when identifying the launcher's own tabs.
-
-Existing Issue: The new ownership predicate compares only `instanceKey`, while the host identifies a plugin tab by the pair of plugin id and instance key, so another plugin's valid key named `launcher` is classified as belonging to the launcher. Severity: 4/10
-
-Existing Risk: 3/10 - A plugin contribution using that key silently disappears from the rail and its summary inputs, creating a hidden naming constraint on otherwise independent plugins.
-
-Proposal Risk: 1/10 - Matching both ownership fields narrows the exclusion to the actual singleton, and cross-owner collision tests can expose any accidental exclusion of another plugin.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "identify launcher ownership by plugin id and instance key". Update `isLauncherOwn` in `src/plugins/launcher/shared.ts` to require both the launcher plugin id and `LAUNCHER_INSTANCE_KEY`, matching `pluginTabByInstanceKey` in `src/tab/lookup.ts`. Extend `src/plugins/launcher/shared.test.ts` with another plugin using the exact `launcher` instance key, and extend `src/plugins/launcher/activate.test.ts` to prove that undocked tab remains in both the payload and summary inputs. Preserve the existing exclusion of an actual launcher whose host-minted label is `launcher-2`, and align the ownership explanation in `product/plans/complete/launcher-names-its-own-tabs.md`.
-
-
 * Align the final description and summarizer documentation with the implemented lifecycle and tool policy.
 
 Existing Issue: The PR body still names `gateOpen` and a length-only cursor, the primary plan retains obsolete last-entry timestamp and ACP-permission-only enforcement claims, and the ACP spec says a typed `acp` command runs the full tool table despite the tab's sticky restriction. Severity: 4/10

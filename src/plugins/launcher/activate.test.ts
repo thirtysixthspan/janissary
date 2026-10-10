@@ -360,9 +360,8 @@ describe('the tabs topic', () => {
     expect(entry.updated).toHaveLength(0);
   });
 
-  // The launcher names its own tabs by the instance key it opened them under, because a label is the
-  // host's to mint: `uniquePluginLabel` hands the launcher `launcher-2` when anything else holds
-  // `launcher`, and a shell the user named `launcher` is not the launcher's tab at all.
+  // The launcher names its own tabs by plugin id and instance key, because a label is the host's to
+  // mint: `uniquePluginLabel` hands the launcher `launcher-2` when anything else holds `launcher`.
   it('excludes the launcher\'s own tab by ownership, so an undocked one is still excluded', () => {
     const undocked = ROWS.map((row) => (row.label === LAUNCHER_LABEL
       ? { ...row, dock: undefined, label: 'launcher-2' }
@@ -387,6 +386,32 @@ describe('the tabs topic', () => {
     const payload = entry.opened[0].value.payload;
     if (!isLauncherPayload(payload)) throw new Error('payload rejected');
     expect(payload.tabs.map((row) => row.label)).toEqual(['shell', 'agent', 'launcher']);
+  });
+
+  it('keeps another plugin tab using the launcher instance key in the payload and summary prompt', async () => {
+    const collision: TabActivityEntry = {
+      label: 'other-launcher', view: 'plugin', plugin: { id: 'other', instanceKey: 'launcher' },
+      incarnation: 'other-launcher-incarnation', dotColor: '#98c379', active: false, busy: false,
+      hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 3, revision: 0,
+    };
+    const rows = [...ROWS.map((row) => (row.label === LAUNCHER_LABEL
+      ? { ...row, dock: undefined, label: 'launcher-2' }
+      : row)), collision];
+    const entry = openLauncher(rows);
+    const activation = activate();
+    entry.answerWith('[[tab:other-launcher]] A plugin-owned tab.');
+
+    const payload = entry.opened[0].value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.tabs.map((row) => row.label)).toContain('other-launcher');
+    expect(payload.tabs.map((row) => row.label)).not.toContain('launcher-2');
+
+    await summarize(entry, activation);
+
+    const prompt = entry.prompted.at(-1) ?? '';
+    expect(prompt).toContain('[[tab:other-launcher]]');
+    expect(prompt).toContain(TRANSCRIPT);
+    expect(prompt).not.toContain('[[tab:launcher-2]]');
   });
 
   // A docked tab is never in the centre strip and never what a user is working on, so a flush does not

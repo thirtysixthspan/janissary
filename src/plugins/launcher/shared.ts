@@ -29,7 +29,7 @@ export const LAUNCHER_LABEL = 'launcher';
 // One predicate because both the pull and the push path need it: the rows a flush reads and the rows
 // the `tabs` topic delivers are the same rows, and two rules would drift.
 export function isLauncherOwn(tab: { label: string; plugin?: { id: string; instanceKey: string } }): boolean {
-  return tab.plugin?.instanceKey === LAUNCHER_INSTANCE_KEY;
+  return tab.plugin?.id === 'launcher' && tab.plugin.instanceKey === LAUNCHER_INSTANCE_KEY;
 }
 
 // How long the launcher's client waits between summarizer flushes. It lives in the shared contract

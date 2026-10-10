@@ -143,8 +143,8 @@ describe('the intent guards', () => {
   });
 });
 
-// The ownership rule both the pull and the push path read. A label is the host's to mint, so the key
-// is what it was opened under.
+// The ownership rule both the pull and the push path read. The host identifies a plugin tab by its
+// declaration id and the instance key it was opened under; a label is the host's to mint.
 describe('naming the launcher\'s own tabs', () => {
   it('recognises a tab opened under the launcher\'s own instance key', () => {
     expect(isLauncherOwn({ label: 'launcher', plugin: { id: 'launcher', instanceKey: 'launcher' } })).toBe(true);
@@ -154,14 +154,14 @@ describe('naming the launcher\'s own tabs', () => {
   it('does not recognise another plugin\'s tab, whatever it is labelled', () => {
     expect(isLauncherOwn({ label: 'launcher', plugin: { id: 'shell', instanceKey: 'shell-1' } })).toBe(false);
     expect(isLauncherOwn({ label: 'shell', plugin: { id: 'shell', instanceKey: 'shell-1' } })).toBe(false);
+    expect(isLauncherOwn({ label: 'other', plugin: { id: 'other', instanceKey: 'launcher' } })).toBe(false);
   });
 
   it('does not recognise a tab no plugin owns', () => {
     expect(isLauncherOwn({ label: 'launcher' })).toBe(false);
   });
 
-  // The rule is the instance key, and nothing else: a label is the host's to mint, and a plugin tab
-  // with the launcher's label and another owner is somebody else's row.
+  // A plugin tab with the launcher's label and another owner is somebody else's row.
   it('does not recognise a tab that merely carries the launcher\'s label', () => {
     expect(isLauncherOwn({ label: 'launcher', plugin: { id: 'shell', instanceKey: 'shell-1' } })).toBe(false);
     expect(isLauncherOwn({ label: 'launcher' })).toBe(false);
