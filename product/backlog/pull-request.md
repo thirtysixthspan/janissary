@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations.
-
-Existing Issue: Launcher state and priming survive ordinary tab closure because dispose runs only on plugin shutdown or disablement, and replies are filtered against the pre-await live snapshot rather than current tab identities. Severity: 7/10
-
-Existing Risk: 7/10 - A reopened launcher can reuse stale priming and summaries, and a late reply can describe a newly recycled label using a closed tab's output.
-
-Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work while allowing current summaries to continue normally.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
-
-
 * Repair the new review fixtures so they exercise the published types and real lifecycle contracts.
 
 Existing Issue: The new tests contain incomplete activity objects, unsupported view values, missing required prompt arguments, and simplified fakes that bypass singleton creation and ordinary tab closure. Severity: 6/10

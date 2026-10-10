@@ -18,10 +18,10 @@ import { toRows } from './payload.js';
 // because the host only produces one for a caller that asks. The launcher's own row carries its plugin
 // record, and the docked plugin row carries one too.
 const ROWS: TabActivityEntry[] = [
-  { label: 'shell', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, lastCommand: 'ls' },
-  { label: 'agent', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, lastCommand: 'npm test' },
-  { label: 'schedules', view: 'plugin', plugin: { id: 'schedules', instanceKey: 'schedules' }, dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0 },
-  { label: LAUNCHER_LABEL, view: 'plugin', plugin: { id: 'launcher', instanceKey: 'launcher' }, dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12 },
+  { label: 'shell', incarnation: 'shell-incarnation', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, lastCommand: 'ls' },
+  { label: 'agent', incarnation: 'agent-incarnation', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, lastCommand: 'npm test' },
+  { label: 'schedules', incarnation: 'schedules-incarnation', view: 'plugin', plugin: { id: 'schedules', instanceKey: 'schedules' }, dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0 },
+  { label: LAUNCHER_LABEL, incarnation: 'launcher-incarnation', view: 'plugin', plugin: { id: 'launcher', instanceKey: 'launcher' }, dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12 },
 ];
 
 // What a tail read attaches to a row that has a transcript to slice. Distinctive so a test can prove
@@ -791,6 +791,24 @@ describe('summarizing', () => {
 
     await summarize(entry, activation);
 
-    expect(entry.activityReads).toEqual([8]);
+    expect(entry.activityReads).toEqual([8, 8, 8]);
+  });
+
+  it('drops a summary when a topic update reuses its label for another tab incarnation', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Running the test suite.');
+    await summarize(entry, activation);
+    entry.updated.length = 0;
+
+    activation.notify?.({
+      topic: 'tabs',
+      data: ROWS.map((row) => (row.label === 'shell' ? { ...row, incarnation: 'replacement-shell' } : row)),
+      tabs: ['launcher'],
+    }, entry.capabilities);
+
+    const payload = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+    expect(payload.summaries.shell).toBeUndefined();
   });
 });

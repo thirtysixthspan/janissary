@@ -55,6 +55,21 @@ describe('the tabActivity reader', () => {
     expect(rows[1]?.view).toBe('harness');
   });
 
+  it('keeps an incarnation identity stable for an open tab and changes it when its label is reused', () => {
+    const original = tab({ label: 'reused' });
+    const firstHost = managers([original]).managers;
+    const firstIdentity = tabActivityRows(firstHost as unknown as Managers)[0]?.incarnation;
+    const repeatedIdentity = tabActivityRows(firstHost as unknown as Managers)[0]?.incarnation;
+    const shallowCopyIdentity = tabActivityRows(managers([{ ...original, number: 2 }]).managers as unknown as Managers)[0]?.incarnation;
+    const replacement = tab({ label: 'reused' });
+    const replacementIdentity = tabActivityRows(managers([replacement]).managers as unknown as Managers)[0]?.incarnation;
+
+    expect(firstIdentity).toBeDefined();
+    expect(repeatedIdentity).toBe(firstIdentity);
+    expect(shallowCopyIdentity).toBe(firstIdentity);
+    expect(replacementIdentity).not.toBe(firstIdentity);
+  });
+
   it('reports busy from either the runtime flag or a plugin-lit dot', () => {
     const { managers: host } = managers([
       tab({ label: 'running', runtime: { busy: true, context: [], queue: [] } }),

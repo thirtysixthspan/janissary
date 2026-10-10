@@ -31,6 +31,28 @@ import { initialState, payloadOf, configFingerprint, payloadChanged, toRows, typ
 // already been told and reset when it does.
 const state: LauncherState = initialState();
 let summarizer: SummarizerState = initialSummarizerState();
+let launcherIncarnation = 0;
+
+function resetLauncherState(): void {
+  Object.assign(state, initialState());
+  summarizer = initialSummarizerState();
+  launcherIncarnation += 1;
+}
+
+function pruneIncarnations(rows: readonly TabActivityEntry[]): boolean {
+  const current = new Map(rows.map((tab) => [tab.label, tab.incarnation]));
+  let changed = false;
+  for (const [label, incarnation] of Object.entries(state.summaryIncarnations)) {
+    if (current.get(label) === incarnation) continue;
+    delete state.summaryIncarnations[label];
+    delete state.summaries[label];
+    changed = true;
+  }
+  for (const [label, cursor] of summarizer.fed) {
+    if (current.get(label) !== cursor.incarnation) summarizer.fed.delete(label);
+  }
+  return changed;
+}
 
 // Read the effective `launcher.json`. The home file replaces the project's wholesale, which is a
 // deliberate asymmetry: a home file is the user's own preference over a project's committed rail, and a
@@ -59,8 +81,9 @@ function reportProblem(capabilities: TabPluginServerCapabilities): void {
 // command configuration the rail is drawn from. Returns whether it wrote, so the `tabs` topic's
 // handler can tell a republish from a no-op.
 function republish(capabilities: TabPluginServerCapabilities, rows: readonly TabActivityEntry[]): boolean {
+  const summariesChanged = pruneIncarnations(rows);
   const projected = toRows(rows, activeLabelOf(capabilities));
-  if (!payloadChanged(state, projected)) return false;
+  if (!summariesChanged && !payloadChanged(state, projected)) return false;
   state.rows = projected;
   state.publishedConfig = configFingerprint(state);
   capabilities.updateTab(LAUNCHER_INSTANCE_KEY, () => ({
@@ -114,10 +137,13 @@ export function activate(): TabPluginActivation {
         return;
       }
       readCommands(capabilities);
-      capabilities.openOrFocusTab(LAUNCHER_INSTANCE_KEY, () => ({
-        title: LAUNCHER_LABEL,
-        payload: payloadOf(state, state.rows ?? toRows(ownTabs(capabilities), activeLabelOf(capabilities))),
-      }));
+      capabilities.openOrFocusTab(LAUNCHER_INSTANCE_KEY, () => {
+        resetLauncherState();
+        readCommands(capabilities);
+        const rows = toRows(ownTabs(capabilities), activeLabelOf(capabilities));
+        state.rows = rows;
+        return { title: LAUNCHER_LABEL, payload: payloadOf(state, rows) };
+      });
       capabilities.dockTab(LAUNCHER_INSTANCE_KEY, dock ?? 'left');
       republish(capabilities, ownTabs(capabilities));
       reportProblem(capabilities);
@@ -184,14 +210,17 @@ export function activate(): TabPluginActivation {
       summarize: {
         payload: isEmptyIntent,
         run: async (_tab, _payload: Record<string, never>, capabilities) => {
-          const live = summarizedTabs(capabilities);
+          const incarnation = launcherIncarnation;
           try {
             const summaries = await summarizeOnce({
               capabilities,
               state: summarizer,
               personaBody: readPersonaBody(capabilities.originTab()?.root ?? process.cwd()),
-              readTabs: () => live,
+              readTabs: () => summarizedTabs(capabilities),
             });
+            if (incarnation !== launcherIncarnation) return null;
+            const live = summarizedTabs(capabilities);
+            const pruned = pruneIncarnations(live);
             // A flush asks about the tabs that moved, so the reply normally names only those. The
             // paragraphs it did not name are kept rather than replaced: dropping them would erase the
             // recap of every tab that happened to be quiet this time. Only the tabs that have closed
@@ -207,8 +236,12 @@ export function activate(): TabPluginActivation {
             // A flush that asked nothing, on a set of tabs that has not changed, still costs nothing:
             // either a reply delivered a paragraph or a closed tab took one away, and nothing else
             // moves the map.
-            if (JSON.stringify(merged) === JSON.stringify(state.summaries)) return null;
+            if (!pruned && JSON.stringify(merged) === JSON.stringify(state.summaries)) return null;
             state.summaries = merged;
+            for (const label of summaries.keys()) {
+              const tab = live.find((candidate) => candidate.label === label);
+              if (tab) state.summaryIncarnations[label] = tab.incarnation;
+            }
             const rows = state.rows;
             if (rows === null) return null;
             capabilities.updateTab(LAUNCHER_INSTANCE_KEY, () => ({
@@ -217,6 +250,7 @@ export function activate(): TabPluginActivation {
             }));
             return null;
           } catch (error) {
+            if (incarnation !== launcherIncarnation) return null;
             capabilities.notifyUser(`launcher summarizer: ${error instanceof Error ? error.message : String(error)}`);
             return null;
           }
@@ -226,8 +260,7 @@ export function activate(): TabPluginActivation {
     dispose: () => {
       // A closed launcher starts its next incarnation from nothing: the rows, the summaries, and the
       // summarizer's cursors all describe a tab that no longer exists.
-      Object.assign(state, initialState());
-      summarizer = initialSummarizerState();
+      resetLauncherState();
     },
   };
 }

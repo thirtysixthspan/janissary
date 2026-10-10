@@ -263,6 +263,9 @@ export type MonitorSuggestion = {
 export type CenterPane = 'left' | 'right';
 
 export type TabRuntime = {
+  // Host-owned id for this open tab incarnation. Unlike its label, it is never reused and survives
+  // tab-array projections that shallow-copy the record when another tab closes. In-memory only.
+  incarnation?: string;
   closing?: boolean;
   acpEntries?: WeakSet<LogEntry>;
   acpPrompt?: { finish: (result: AcpPromptResult) => void; abort: AbortController };

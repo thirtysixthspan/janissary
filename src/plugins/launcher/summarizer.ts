@@ -143,7 +143,7 @@ export type SummarizerState = {
   // A cursor holds the length as well as the revision because the revision is not the only writer the
   // host has: a tab whose log is appended outside `src/tab/transcript/events.ts` — a remote tab's
   // channel output — moves the length and nothing else.
-  fed: Map<string, { length: number; revision: number }>;
+  fed: Map<string, { incarnation: string; length: number; revision: number }>;
   primed: boolean;
   inFlight: boolean;
   // The identity of the core session this state was primed against, and the delimiter that priming
@@ -162,8 +162,12 @@ export function initialSummarizerState(): SummarizerState {
 // than by growth, because a cursor *ahead* of a tab's transcript cannot describe that tab: the
 // agent-name pool recycles a label as soon as its tab closes, and a new tab that inherits one starts
 // with a shorter log than the dead tab left behind.
-function movedPastCursor(tab: TabActivityEntry, cursor: { length: number; revision: number } | undefined): boolean {
-  return cursor === undefined || tab.logLength !== cursor.length || tab.revision !== cursor.revision;
+function movedPastCursor(
+  tab: TabActivityEntry,
+  cursor: { incarnation: string; length: number; revision: number } | undefined,
+): boolean {
+  return cursor === undefined || tab.incarnation !== cursor.incarnation
+    || tab.logLength !== cursor.length || tab.revision !== cursor.revision;
 }
 
 // One flush. Resolves with the summaries to publish, or an empty map when there was nothing to ask.
@@ -187,17 +191,15 @@ export async function summarizeOnce(input: {
   const { capabilities, state, personaBody, readTabs } = input;
   if (state.inFlight) return new Map();
   const current = readTabs();
-  const live = new Set(current.map((tab) => tab.label));
-  // Cursors for labels nothing shows are dropped rather than kept forever: a tab's label is recycled
-  // when it closes, so the set of labels ever summarised grows with the session, not with the tabs.
-  for (const label of state.fed.keys()) {
-    if (!live.has(label)) state.fed.delete(label);
+  const live = new Map(current.map((tab) => [tab.label, tab.incarnation]));
+  // A label can stay live while its tab is replaced, so cursors are owned by the incarnation too.
+  for (const [label, cursor] of state.fed) {
+    if (live.get(label) !== cursor.incarnation) state.fed.delete(label);
   }
   const tabs = current.filter((tab) => movedPastCursor(tab, state.fed.get(tab.label)));
   if (tabs.length === 0) return new Map();
   // One clock for the whole flush, so every tab's recency is measured against the same moment.
   const now = Date.now();
-  const cursors = new Map(state.fed);
   state.inFlight = true;
   try {
     const started = capabilities.startAcp({ withoutTools: true });
@@ -218,14 +220,21 @@ export async function summarizeOnce(input: {
     // A refusal is not a reply, so nothing has been fed: the cursors stay where they were and the next
     // flush asks again, rather than believing these tabs already answered.
     if (!answered.answered) throw new Error(answered.error);
-    // Cursors advance only now, so a failure above leaves them where they were.
+    // Re-read after the awaited prompt. A label can be closed and immediately reused while ACP is
+    // answering, so neither its reply nor its cursor belongs to the replacement incarnation.
+    const latest = new Map(readTabs().map((tab) => [tab.label, tab]));
+    const acceptedLabels = new Set<string>();
     for (const tab of tabs) {
-      state.fed.set(tab.label, { length: tab.logLength, revision: tab.revision });
+      const fresh = latest.get(tab.label);
+      if (!fresh || fresh.incarnation !== tab.incarnation) continue;
+      acceptedLabels.add(tab.label);
+      state.fed.set(tab.label, {
+        incarnation: tab.incarnation,
+        length: tab.logLength,
+        revision: tab.revision,
+      });
     }
-    return parseTabSummaries(answered.reply);
-  } catch (error) {
-    state.fed = new Map(cursors);
-    throw error;
+    return new Map([...parseTabSummaries(answered.reply)].filter(([label]) => acceptedLabels.has(label)));
   } finally {
     state.inFlight = false;
   }

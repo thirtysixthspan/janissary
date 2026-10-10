@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { tabRuntime } from '../tab/runtime.js';
@@ -11,6 +12,9 @@ import { tabRuntime } from '../tab/runtime.js';
 // and not a bag of payload types — a plugin reaches both from `api.js`, which re-exports this one.
 export type TabActivityEntry = {
   label: string;
+  // Host-owned identity for this open tab incarnation. Labels are immediately reusable after close,
+  // so async consumers must pair them with this value before routing work back to a tab.
+  incarnation: string;
   // The tab's display name when it has an alias, absent otherwise.
   title?: string;
   // Which plugin owns this tab, when one does: its declaration id and the instance key it was opened
@@ -60,6 +64,12 @@ export type TabActivityEntry = {
 // entries are enormous contributes those entries clipped rather than the whole of them.
 const ACTIVITY_TAIL_CHARS = 4000;
 
+function incarnationOf(tab: Tab): string {
+  const runtime = tabRuntime(tab);
+  runtime.incarnation ??= randomUUID();
+  return runtime.incarnation;
+}
+
 // One minute, in milliseconds. Last activity is reported at this resolution, which is what makes
 // the `tabs` topic deliverable on the raw state broadcast without a republish per transcript
 // append: two appends inside one minute report the same value, so the rows are unchanged and the
@@ -95,6 +105,7 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
   const pending = managers.questions.pendingFor(tab.label);
   return {
     label: tab.label,
+    incarnation: incarnationOf(tab),
     ...(tab.title !== undefined && { title: tab.title }),
     ...(tab.plugin && { plugin: { id: tab.plugin.id, instanceKey: tab.plugin.instanceKey } }),
     dotColor: tab.dotColor,
