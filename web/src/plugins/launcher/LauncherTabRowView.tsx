@@ -35,7 +35,7 @@ export function LauncherTabRowView({ row, summary, index, selection, onFocus, no
       onClick={() => { if (selection.rowClicked(index, (at) => openOnClick(at, row.active))) onFocus(row); }}
     >
       <span className="launcher-tab-primary">
-        <span className={`launcher-dot${row.busy ? ' busy' : ''}`} style={{ color: row.dotColor }}>
+        <span className="launcher-dot" style={{ color: row.dotColor }}>
           <FontAwesomeIcon icon={faCircle} />
         </span>
         <span className="launcher-tab-name">{row.title ?? row.label}</span>

@@ -434,6 +434,13 @@ describe('the tab list', () => {
     expect(container.querySelectorAll('.launcher-tab-row')).toHaveLength(1);
   });
 
+  it('keeps a busy tab dot static while placing the tab in the Working tier', () => {
+    const { container } = launcher(payload({ tabs: [row('working', { busy: true })] }));
+
+    expect(container.querySelector('.launcher-tier[data-tier="busy"]')).toBeInTheDocument();
+    expect(container.querySelector('.launcher-dot')).not.toHaveClass('busy');
+  });
+
   it.each(['__proto__', 'constructor', 'toString'])('renders label %s without an inherited summary', (label) => {
     const serialized = JSON.stringify(payload({ tabs: [row(label)] }));
     const decoded: unknown = JSON.parse(serialized);

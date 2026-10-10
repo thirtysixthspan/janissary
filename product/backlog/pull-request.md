@@ -2,6 +2,4 @@
 
 # pull-request
 
-* in the launcher, tab color dots should always be static. Tab status is indicated by section placement.
-
 * in the launcher, tab group color should be shown as a colored left hand border, just like centrer tabs. tabs will be organized by groups first, then status as a sub grouping. No title for group will be required because the group will be indicated by color.

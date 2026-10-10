@@ -42,8 +42,6 @@
    matches its tab because it is the tab's glyph in the tab's colour. Sized here so the shape has
    dimensions of its own rather than relying on the glyph's 1em. */
 .launcher-dot { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 9px; height: 9px; font-size: 9px; line-height: 1; }
-.launcher-dot.busy { animation: launcher-dot-blink 1.2s steps(2, start) infinite; }
-@keyframes launcher-dot-blink { 50% { opacity: 0.2; } }
 .launcher-tab-flag { flex: 0 0 auto; color: var(--accent); font-size: 10px; }
 .launcher-tab-time { margin-left: auto; flex: 0 0 auto; color: var(--faint); font-size: 10px; font-variant-numeric: tabular-nums; }
 
