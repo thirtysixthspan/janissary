@@ -121,6 +121,70 @@ describe('reading launcher.json', () => {
     }
   });
 
+  // An id names exactly one row: `run-command` resolves it back to the first entry holding it, and the
+  // client keys a row by it. Two rows sharing one are two rows that only look different — a click on
+  // the second runs the first's command.
+  it('keeps the first row and drops the rest when the file names one id twice', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, [
+        { id: 'shell', icon: 'faTerminal', label: 'Zsh', command: 'zsh' },
+        { id: 'shell', icon: 'faBell', label: 'Alerts', command: 'notifications left' },
+        { id: 'tasks', icon: 'faListCheck', label: 'Tasks', command: 'tasks' },
+      ]);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.commands.map((entry) => entry.command)).toEqual(['zsh', 'tasks']);
+      expect(read.problem).toContain('1 sharing an id another entry already holds');
+      expect(read.problem).toContain('holds 3 commands');
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  // The other half of the same collision: an id the file wrote by hand lands on the one an unnamed
+  // entry gets for free. The file's own naming wins, and the unnamed entry takes a free positional id
+  // rather than silently becoming a second `command-1`.
+  it('lets the id the file wrote win over the positional one it would collide with', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, [
+        { icon: 'faTerminal', label: 'One', command: 'zsh' },
+        { id: 'command-1', icon: 'faRobot', label: 'Two', command: 'harness' },
+      ]);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.commands.map((entry) => entry.id)).toEqual(['command-0', 'command-1']);
+      expect(read.problem).toBeUndefined();
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  // The one line names both reasons a row the user wrote is missing, because they read very
+  // differently: an entry that was malformed and a well-formed entry that could not hold an id of its
+  // own.
+  it('names a dropped duplicate beside an entry that was malformed', () => {
+    const directories = scratch();
+    try {
+      projectFile(directories, [
+        { id: 'tasks', icon: 'faListCheck', label: 'One', command: 'tasks' },
+        { id: 'tasks', icon: 'faBell', label: 'Two', command: 'notifications left' },
+        { icon: 'faRobot', label: 'No command' },
+      ]);
+
+      const read = readLauncherFile(directories.home, directories.project);
+
+      expect(read.commands.map((entry) => entry.command)).toEqual(['tasks']);
+      expect(read.problem).toContain('1 of 2 of them usable');
+      expect(read.problem).toContain('1 sharing an id another entry already holds');
+    } finally {
+      cleanup(directories);
+    }
+  });
+
   it('drops an entry with nothing to dispatch, keeping the rest', () => {
     const directories = scratch();
     try {

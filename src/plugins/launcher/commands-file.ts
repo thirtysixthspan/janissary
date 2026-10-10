@@ -43,26 +43,78 @@ function resolveSource(home: string, root: string): { path: string; source: Laun
   return { path: projectPath, source: 'default' };
 }
 
+// An entry as the file shaped it, before an id is decided. `id` is what the file named, if anything.
+type CommandDraft = { id?: string; icon: string; label: string; command: string };
+
 // An icon the file names that the project cannot produce is drawn with a neutral fallback glyph and
 // reported once, rather than dropping the command it belongs to. The icon names are resolved on the
 // client, which owns the registered Font Awesome set, so this reports the name and lets the client
 // decide the glyph. An entry whose `command` is missing has nothing to dispatch, so it is dropped.
-function toCommands(value: unknown): LauncherCommand[] {
+function decodeCommands(value: unknown): CommandDraft[] {
   if (!Array.isArray(value)) return [];
-  return value.flatMap((entry, index) => {
+  return value.flatMap((entry) => {
     if (typeof entry !== 'object' || entry === null) return [];
     const record = entry as Record<string, unknown>;
     const command = typeof record.command === 'string' ? record.command.trim() : '';
     const label = typeof record.label === 'string' ? record.label.trim() : '';
     const icon = typeof record.icon === 'string' ? record.icon.trim() : '';
     if (!command || !label || !icon) return [];
-    return [{
-      id: typeof record.id === 'string' && record.id.trim() ? record.id.trim() : `command-${index}`,
-      icon,
-      label,
-      command,
-    }];
+    const id = typeof record.id === 'string' ? record.id.trim() : '';
+    return [{ ...(id && { id }), icon, label, command }];
   });
+}
+
+// Every id has to name exactly one row. `run-command` resolves an id back to the first entry holding
+// it, the client keys a row by it, and two rows sharing one are two rows that only look different — a
+// click on the second runs the first's command.
+//
+// The file's own ids are claimed first, in file order, so a positional id never displaces a name the
+// user wrote; a second row naming one already claimed is dropped, because a row that cannot be
+// addressed on its own is not a row at all. A positional id then yields to anything already taken.
+// Returns how many rows were dropped for holding an id another row already held.
+function withUniqueIds(drafts: readonly CommandDraft[]): { commands: LauncherCommand[]; ambiguous: number } {
+  const taken = new Set<string>();
+  const ids: (string | undefined)[] = drafts.map((draft) => draft.id);
+  const shadowed = new Set<number>();
+  for (const [index, draft] of drafts.entries()) {
+    const id = draft.id;
+    if (id === undefined) continue;
+    // A second row naming one already claimed is dropped, because a row that cannot be addressed on
+    // its own is not a row at all: resolving its id would run the first row's command.
+    if (taken.has(id)) {
+      shadowed.add(index);
+      ids[index] = undefined;
+      continue;
+    }
+    taken.add(id);
+  }
+  for (const index of drafts.keys()) {
+    if (shadowed.has(index) || ids[index] !== undefined) continue;
+    let id = `command-${index}`;
+    for (let suffix = 2; taken.has(id); suffix += 1) id = `command-${index}-${suffix}`;
+    taken.add(id);
+    ids[index] = id;
+  }
+  return {
+    commands: drafts.flatMap((draft, index) => {
+      const id = ids[index];
+      return id === undefined ? [] : [{ ...draft, id }];
+    }),
+    ambiguous: shadowed.size,
+  };
+}
+
+// One line naming what was wrong with the file, for the caller to report exactly once. Ambiguity is
+// named on its own rather than folded into "not usable", because the reason a row the user wrote is
+// missing is otherwise invisible: every entry in the file may be well-formed and two of them still
+// cannot both hold one id.
+function fileProblem(usable: number, total: number, ambiguous: number, filePath: string): string | undefined {
+  if (usable === total) return undefined;
+  const malformed = total - ambiguous;
+  const parts = [`holds ${total} commands`];
+  if (usable !== malformed) parts.push(`${usable} of ${malformed} of them usable`);
+  if (ambiguous > 0) parts.push(`${ambiguous} sharing an id another entry already holds`);
+  return `launcher.json ${parts.join(', ')}, at ${filePath}`;
 }
 
 // Read the effective `launcher.json` against `root`, the project root `originTab` reports. An absent
@@ -100,21 +152,21 @@ export function readLauncherFile(home: string, root: string): LauncherFileRead {
       problem: `launcher.json is not a list of commands at ${filePath}`,
     };
   }
-  const commands = toCommands(parsed);
+  const { commands, ambiguous } = withUniqueIds(decodeCommands(parsed));
+  const problem = fileProblem(commands.length, parsed.length, ambiguous, filePath);
   // An empty array is no configuration at all rather than a choice to show nothing, so a project that
   // committed one by accident still gets a working rail — and still gets no complaint, because there is
-  // nothing wrong with it.
+  // nothing wrong with it. The same fallback answers a file whose every entry was dropped, whether for
+  // being malformed or for holding an id another entry already holds.
   if (commands.length === 0) {
-    const problem = parsed.length === 0 ? undefined :
-      `launcher.json holds ${parsed.length} commands, none of them usable, at ${filePath}`;
     return {
-      commands: [...DEFAULT_LAUNCHER_COMMANDS], source: 'default', filePath,
+      commands: [...DEFAULT_LAUNCHER_COMMANDS],
+      source: 'default',
+      filePath,
       ...(problem !== undefined && { problem }),
     };
   }
   // Some entries survived and some did not. The partial loss is worth one line, because the reason a row
   // the user wrote is missing is otherwise invisible.
-  const problem = commands.length === parsed.length ? undefined :
-    `launcher.json holds ${parsed.length} commands, ${commands.length} of them usable, at ${filePath}`;
   return { commands, source, filePath, ...(problem !== undefined && { problem }) };
 }

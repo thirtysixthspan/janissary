@@ -472,6 +472,41 @@ describe('the launcher intents', () => {
     }
   });
 
+  // Two rows naming one id were two rows that only looked different — a click on the second resolved
+  // back to the first's command. Only one row survives the read, so there is nothing ambiguous to click.
+  it('leaves one row to click when the file names one id twice', () => {
+    const root = mkdtempSync(path.join(process.cwd(), 'temp', 'launcher-dup-'));
+    mkdirSync(path.join(root, '.janissary'), { recursive: true });
+    writeFileSync(
+      path.join(root, '.janissary', 'launcher.json'),
+      `${JSON.stringify([
+        { id: 'tasks', icon: 'faListCheck', label: 'Tasks', command: 'tasks' },
+        { id: 'tasks', icon: 'faBell', label: 'Alerts', command: 'notifications left' },
+      ], null, 2)}\n`,
+    );
+    try {
+      const entry = fixture(ROWS, root);
+      const activation = activate();
+      activation.command?.('', entry.capabilities);
+      entry.dispatched.length = 0;
+
+      const payload = entry.opened[0].value.payload;
+      if (!isLauncherPayload(payload)) throw new Error('payload rejected');
+      expect(payload.commands.map((command) => command.command)).toEqual(['tasks']);
+      expect(entry.notified.join('\n')).toContain('sharing an id another entry already holds');
+
+      activation.intent(
+        { tabLabel: 'launcher', intent: 'run-command', payload: { id: 'tasks' }, tabPayload: payload },
+        entry.capabilities,
+      );
+
+      // The surviving row runs its own command.
+      expect(entry.dispatched).toEqual(['tasks']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('refuses an intent the table does not carry', () => {
     const root = project();
     try {
