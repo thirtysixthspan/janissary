@@ -6,16 +6,14 @@ import type { LauncherCommand, LauncherSource } from './shared.js';
 // `janus init`, or one whose file was removed. Every entry is a command the application already
 // answers to, so the rail is useful on a first run rather than empty.
 export const DEFAULT_LAUNCHER_COMMANDS: readonly LauncherCommand[] = [
-  { id: 'zsh', icon: 'faTerminal', label: 'New shell', command: 'zsh' },
-  { id: 'harness', icon: 'faRobot', label: 'New agent', command: 'harness' },
+  { id: 'zsh', icon: 'faTerminal', label: 'Shell', command: 'zsh' },
+  { id: 'harness', icon: 'faRobot', label: 'Harness', command: 'harness' },
   { id: 'files', icon: 'faFolderOpen', label: 'File navigator', command: 'files' },
-  { id: 'notifications', icon: 'faBell', label: 'Notifications', command: 'notifications' },
-  { id: 'schedules', icon: 'faClock', label: 'Schedules', command: 'schedules' },
-  { id: 'sessions', icon: 'faPlug', label: 'Sessions', command: 'sessions' },
+  { id: 'notifications', icon: 'faBell', label: 'Notifications', command: 'notifications right' },
+  { id: 'schedules', icon: 'faClock', label: 'Schedules', command: 'schedules right' },
+  { id: 'sessions', icon: 'faPlug', label: 'Sessions', command: 'sessions right' },
   { id: 'conversations', icon: 'faComments', label: 'Conversations', command: 'conversations' },
-  { id: 'search', icon: 'faMagnifyingGlass', label: 'Search tab', command: 'search' },
-  { id: 'tasks', icon: 'faListCheck', label: 'Tasks', command: 'tasks' },
-  { id: 'hist', icon: 'faClockRotateLeft', label: 'History', command: 'hist' },
+  { id: 'search', icon: 'faMagnifyingGlass', label: 'Search', command: 'search' },
 ];
 
 // The file name under both the project's `.janissary/` and the user's home `.janissary/`.

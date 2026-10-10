@@ -2,16 +2,6 @@
 
 # pull-request
 
-* update the default list to the following removing the tasks and history entries
-Shell => shell
-Harness => harness
-File navigator => navigator
-Notifications => notifications right
-Schedules => schedules right
-Sessions => sessions right
-Conversations => converations
-Search => search
- 
 * remove the acp section of the launcher tab. Add a clipboard icon in the metadata bar that opens the existing acp transcript file in an editor tab.
 
 * remove the command bar from the launcher.

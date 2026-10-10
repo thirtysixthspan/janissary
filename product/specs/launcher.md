@@ -19,6 +19,8 @@ Which commands appear is configured in `.janissary/launcher.json`, written by `j
 
 The label is the user's own wording for the command, so two projects may call the same command different things. The icon is a Font Awesome icon name, drawn as a neutral fallback glyph when it is not one the build recognises — the command it belongs to still runs.
 
+When no configuration exists, the built-in list is Shell, Harness, File navigator, Notifications, Schedules, Sessions, Conversations, and Search, in that order. Notifications, Schedules, and Sessions open docked on the right. Tasks and History are not included.
+
 An entry's `id` is how the server resolves a click back to the command line it came from, so it names exactly one row: two entries naming the same id keep the first and drop the rest, and a positional id numbered for an entry the file left unnamed yields to any id the file wrote itself. A dropped row is reported to the notifications feed with the reason, exactly as a malformed entry is.
 
 A `~/.janissary/launcher.json` in the user's home directory **replaces** the project file wholesale when it exists. An absent file, an unreadable one, one that is not valid JSON, and one whose entries are all malformed fall back to a built-in default command set; the launcher reports what was wrong to the notifications feed once, and leaves the file on disk untouched. A file with some good entries and some bad keeps the good ones and reports how many were lost. An empty array is treated as no configuration at all rather than as a choice to show nothing.

@@ -40,6 +40,19 @@ function homeFile(directories: Scratch, content: unknown | string): void {
 }
 
 describe('reading launcher.json', () => {
+  it('provides the default launcher commands in the requested order', () => {
+    expect(DEFAULT_LAUNCHER_COMMANDS).toEqual([
+      { id: 'zsh', icon: 'faTerminal', label: 'Shell', command: 'zsh' },
+      { id: 'harness', icon: 'faRobot', label: 'Harness', command: 'harness' },
+      { id: 'files', icon: 'faFolderOpen', label: 'File navigator', command: 'files' },
+      { id: 'notifications', icon: 'faBell', label: 'Notifications', command: 'notifications right' },
+      { id: 'schedules', icon: 'faClock', label: 'Schedules', command: 'schedules right' },
+      { id: 'sessions', icon: 'faPlug', label: 'Sessions', command: 'sessions right' },
+      { id: 'conversations', icon: 'faComments', label: 'Conversations', command: 'conversations' },
+      { id: 'search', icon: 'faMagnifyingGlass', label: 'Search', command: 'search' },
+    ]);
+  });
+
   it('falls back to the default set when no file exists, and names where it would be written', () => {
     const directories = scratch();
     try {
