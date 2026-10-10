@@ -88,7 +88,13 @@ export class ScheduleManager {
 
   // Replace a tab's scheduled commands.
   set(label: string, entries: ScheduleEntry[]): void {
+    const previous = this.schedules.get(label) ?? [];
+    const nextById = new Map(entries.map((entry) => [entry.id, entry]));
+    const removed = previous
+      .filter((entry) => nextById.get(entry.id) !== entry)
+      .map((entry) => this.takeHook(label, entry.id)?.removed);
     this.schedules.set(label, entries);
+    for (const callback of removed) callback?.();
     this.announceChange();
   }
 
@@ -102,9 +108,10 @@ export class ScheduleManager {
   add(label: string, entry: ScheduleEntry, hooks?: EntryHooks): void {
     const current = this.schedules.get(label) ?? [];
     const next = [...current.filter((e) => e.id !== entry.id), entry];
+    const removed = this.takeHook(label, entry.id)?.removed;
     this.schedules.set(label, next);
-    this.forgetHook(label, entry.id);
     if (hooks) this.entryHooks(label, entry.id, hooks);
+    removed?.();
     this.announceChange();
     messageBus.emit('state', { type: 'dirty' });
   }
@@ -244,10 +251,13 @@ export class ScheduleManager {
   // not outlive the entry backing it. Reported exactly once, and never for an entry that was never
   // there.
   private removedHook(label: string, id: string): void {
+    this.takeHook(label, id)?.removed?.();
+  }
+
+  private takeHook(label: string, id: string): EntryHooks | undefined {
     const hooks = this.hooks.get(label)?.get(id);
-    if (!hooks) return;
-    this.forgetHook(label, id);
-    hooks.removed?.();
+    if (hooks) this.forgetHook(label, id);
+    return hooks;
   }
 
   private forgetHook(label: string, id: string): void {

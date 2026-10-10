@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { command } from './schedule.js';
+import { ScheduleManager } from '../schedule/manager.js';
+import type { Managers } from '../managers.js';
 import type { ScheduleEntry } from '../schedule/types.js';
 import type { LogEntry } from '../tab/types.js';
 
@@ -212,5 +214,57 @@ describe('schedule command run', () => {
     run('schedule x in video every 5m echo hi');
     expect(outputs.at(-1)).toBe('Tab "video" cannot run scheduled commands.');
     expect(schedules.size).toBe(0);
+  });
+});
+
+describe('schedule command lifecycle callbacks', () => {
+  let managers: Managers;
+  let schedule: ScheduleManager;
+  let output: string[];
+
+  beforeEach(() => {
+    const tab = { label: 'janus', index: 0 };
+    output = [];
+    managers = {
+      tab: {
+        tabs: [tab],
+        byLabel: (label: string) => (label === tab.label ? tab : undefined),
+        append: (_label: string, entry: LogEntry) => { output.push(entry.output); },
+      },
+    } as unknown as Managers;
+    schedule = new ScheduleManager(managers);
+    managers.schedule = schedule;
+  });
+
+  afterEach(() => { schedule.dispose(); });
+
+  const run = (input: string) => command.run!(input, { label: 'janus', index: 0 }, managers);
+
+  it('settles an auto-resume hook when the CLI cancels its entry', () => {
+    const removed = vi.fn();
+    schedule.add('janus', {
+      id: 'auto-resume', command: 'resume', spec: 'at 3pm', nextRun: Date.now() + 60_000, recurring: false,
+    }, { removed });
+
+    run('schedule cancel auto-resume');
+
+    expect(removed).toHaveBeenCalledOnce();
+    expect(output).toEqual(['Cancelled auto-resume.']);
+  });
+
+  it('settles every auto-resume hook when the CLI clears the schedule', () => {
+    const firstRemoved = vi.fn();
+    const secondRemoved = vi.fn();
+    for (const [id, removed] of [['first', firstRemoved], ['second', secondRemoved]] as const) {
+      schedule.add('janus', {
+        id, command: 'resume', spec: 'at 3pm', nextRun: Date.now() + 60_000, recurring: false,
+      }, { removed });
+    }
+
+    run('schedule clear');
+
+    expect(firstRemoved).toHaveBeenCalledOnce();
+    expect(secondRemoved).toHaveBeenCalledOnce();
+    expect(schedule.get('janus')).toEqual([]);
   });
 });

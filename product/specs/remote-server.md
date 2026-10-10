@@ -486,9 +486,10 @@ and "Detached-session auto-accept, notifications, and captures" below); the loca
 side is a consumer of what the remote reports, live while attached and replayed on the next attach
 when it wasn't. The one thing that is **not** done far side is the resume itself: a detected limit is
 reported with the reset the harness stated, and the client turns that into a scheduled entry in its
-own scheduler, types the prompt, and acknowledges delivery — because only the client owns the clock
-the reset is stated in and the schedule the entry belongs to (see [[harness]] § Auto-resume after a
-usage limit). Asciicast recordings, by contrast, are still computed **locally** from the streamed
+own scheduler and acknowledges when the entry fires or is cancelled — because only the client owns
+the clock the reset is stated in and the schedule the entry belongs to. Only firing types the prompt;
+cancellation acknowledges removal without sending input to the harness (see [[harness]] § Auto-resume
+after a usage limit). Asciicast recordings, by contrast, are still computed **locally** from the streamed
 bytes, exactly as for a local harness — a detached remote harness produces no recording for the gap,
 since there is no local process to write one. Detaching closes the tab's recording file and stops its
 local transcript polling, and the attach that brings the tab back starts a fresh recording file
