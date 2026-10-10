@@ -62,12 +62,16 @@ function finishSave(
   // Refresh the owning tab's displayed size from the file's new on-disk size.
   const stat = statSync(targetPath);
   if (tab?.editor) {
-    tab.editor = targetPath === filePath
-      ? { ...tab.editor, size: humanSize(stat.size), newFile: false }
-      : {
-        ...tab.editor, path: targetPath, name: path.basename(targetPath),
-        url: managers.tab.registerFile(targetPath), size: humanSize(stat.size), newFile: false,
+    if (targetPath === filePath) {
+      tab.editor = { ...tab.editor, size: humanSize(stat.size), newFile: false };
+    } else {
+      const name = path.basename(targetPath);
+      tab.editor = {
+        ...tab.editor, path: targetPath, name,
+        url: managers.tab.replaceFile(tab.editor.url, targetPath), size: humanSize(stat.size), newFile: false,
       };
+      tab.title = name;
+    }
   }
   // The content is now canonical on disk, so any transient draft is superseded — drop it.
   if (tab) tab.editorDraft = undefined;

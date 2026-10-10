@@ -4,17 +4,6 @@
 
 ## development
 
-* Replace the editor's served-file reference when a first save chooses another filename.
-
-Existing Debt: The first-save collision path implements its own editor retargeting and registers a new file reference without releasing the previous one, bypassing the replacement lifecycle already used by renames. Severity: 5/10
-
-Existing Risk: 6/10 - A stale reference can still read or overwrite the original conflicting file after the editor moves to a suffixed path, and closing the editor revokes only its current reference.
-
-Proposal Risk: 2/10 - A request using the retired reference will fail and may require a retry with the updated tab state, but it cannot silently write to the file the first save avoided.
-
-Proposal: In `finishSave` in `src/editor/save.ts`, the `targetPath !== filePath` branch calls `managers.tab.registerFile(targetPath)` while leaving the original `url` in the allow-list. Use `managers.tab.replaceFile(url, targetPath)`, backed by `FileRegistry.replace` in `src/tab/file-registry.ts`, and update the tab title with the editor's name, path, and reference as one retargeting transition. Follow the ownership behavior in `src/tab/rename-editor.ts` and `src/tab/retarget-editor.ts`; the new-file branch still establishes the watcher only after the successful write. `src/tab/cleanup.ts` releases only the current editor reference, so the old reference must be revoked at retargeting time. Extend the auto-suffix cases in `src/editor/save.test.ts` to assert that the original file is preserved, the old reference is absent, the new reference resolves to the suffixed file, and a save through the old URL is refused. Add cleanup coverage in `src/tab/cleanup.test.ts` for a retargeted editor, and preserve the duplicate-open registration behavior already pinned by `src/tab/opening-state.test.ts`. No existing test asserts revocation after a first-save collision.
-
-
 * Bind editor sync completions to the owning tab and latest request.
 
 Existing Debt: Editor Git sync completions identify their owner only by a reusable tab label and carry no request generation, allowing an old operation to update a new tab or supersede a newer pending status. Severity: 5/10
