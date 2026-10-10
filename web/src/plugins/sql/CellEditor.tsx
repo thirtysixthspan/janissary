@@ -24,10 +24,11 @@ import { InlineEditInput } from '../api';
 // clears it, and what was typed is the value: the field showed nothing, so nothing is what the typed
 // text is added to. Unticking with nothing typed still restores the text the cell held.
 export function CellEditor({
-  cell, onCommit, onCancel,
+  cell, onCommit, onDraftChange, onCancel,
 }: {
   cell: { text: string; isNull: boolean } | undefined;
   onCommit(value: string | null): void;
+  onDraftChange(value: string | null): void;
   onCancel(): void;
 }) {
   const [text, setText] = React.useState(cell?.text ?? '');
@@ -40,6 +41,7 @@ export function CellEditor({
         onChange={(value) => {
           setText(value);
           if (isNull) setIsNull(false);
+          onDraftChange(value);
         }}
         onCommit={() => onCommit(isNull ? null : text)}
         onCancel={onCancel}
@@ -48,7 +50,10 @@ export function CellEditor({
         <input
           type="checkbox"
           checked={isNull}
-          onChange={(event) => setIsNull(event.target.checked)}
+          onChange={(event) => {
+            setIsNull(event.target.checked);
+            onDraftChange(event.target.checked ? null : text);
+          }}
           aria-label="Set NULL"
         />
         NULL

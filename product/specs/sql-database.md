@@ -192,7 +192,9 @@ loaded. Refresh and try again.`
 **Insert row** opens a form headed `New row in <object>`, with one input per column (a key column is
 marked `pk`), the statement the save will run shown above the controls with a `?` for each value —
 `INSERT INTO "orders" ("customer", "status") VALUES (?, ?)` — and a **Save** and a **Cancel**. Save
-sends the row and closes the form. Nothing is written until Save, and a column the user leaves alone
+sends the row and closes the form only after the server accepts the request. While acceptance is
+pending, the form fields and Save are disabled; a rejected request leaves the form available with its
+values intact. Acceptance does not prove that the database write later succeeded. Nothing is written until Save, and a column the user leaves alone
 is not named by that statement at all — so the table's own `DEFAULT` runs for it, which is what a
 column nobody filled in is asking for. A `NOT NULL` column with no default and nothing typed into it
 is the one that gets refused, by the database, naming the column. The primary key is the one column
@@ -297,7 +299,13 @@ than a bare `>`, because a chevron on its own in a tab full of grids reads as th
 command line and this one is not that. It is the only place SQL is entered: there is no second control
 for it anywhere in the tab.
 
-Enter sends what is typed, and the tab decides whether that was a read or a write by the same test
+Enter submits what is typed. The line stays in place and is not added to local history until the
+server accepts the request; a rejected request leaves it available to edit or submit again. While
+acceptance is pending, another submission is ignored. If the user types a newer line while an older
+request is pending, accepting the older request does not clear the newer line. Acceptance confirms
+only that the intent was received, not that the database operation later succeeded. The tab shows a
+dismissible local request error separately from database query errors, and never retries an ambiguous
+failure automatically. Once accepted, the tab decides whether the request was a read or a write by the same test
 `db sqlite query` uses: a statement beginning `SELECT`, `PRAGMA`, `WITH`, or `EXPLAIN` is a read and
 fills the grid, and anything else — `INSERT … RETURNING` included — is a write whose outcome is
 reported as a notification, as described below. Nothing is written under the prompt.
@@ -347,10 +355,11 @@ the one result a user did not ask for and cannot predict. It is attributed to th
 was run from. A statement typed into the console that fails is always said. Any other failure — a
 page, a write, an export — is said once and not again until something succeeds in between, so a
 **Refresh** that fails the same way twice says it once, and a failure that has gone away and come
-back says it again. The notification is the only place
-it is said: the tab shows no SQL error of its own, whether the failure was a statement typed here, a
-page the grid asked for, a write, or an export. A failed statement leaves the grid as it was, and is
-not also reported as a count.
+back says it again. The notification is the only place a database operation error is said: the tab
+shows no query error of its own, whether the failure was a statement typed here, a page the grid asked
+for, a write, or an export. A rejected client request is different: it appears as a dismissible local
+request error and does not replace the database error in the payload. A failed statement leaves the
+grid as it was, and is not also reported as a count.
 
 The tab keeps no record of the statements it has run. What ran is in the notifications feed, and the
 command bar's own `ArrowUp` walk is the way back to what was typed.

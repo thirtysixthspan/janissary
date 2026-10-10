@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { CUSTOMERS, KEYED, TestDataGrid, grid, makeCapabilities, payload } from './fixture';
 
@@ -10,6 +10,15 @@ beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
 // — so the search and the page filter fields are not distinguishable by what they hold.
 function cellInput(container: HTMLElement): HTMLInputElement {
   return container.querySelector('.sql-cell-input') as HTMLInputElement;
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: Error) => void;
+  // The web project's ES2023 library does not include Promise.withResolvers.
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers
+  const promise = new Promise<T>((accept, fail) => { resolve = accept; reject = fail; });
+  return { promise, resolve, reject };
 }
 
 describe('DataGrid headers and rows', () => {
@@ -279,6 +288,50 @@ describe('DataGrid keyboard', () => {
 
 describe('DataGrid editing', () => {
 
+  it('retains a rejected cell draft and does not duplicate a pending update', async () => {
+    const pending = deferred<unknown>();
+    const { capabilities, intent } = makeCapabilities();
+    intent.mockReturnValueOnce(pending.promise);
+    const { container } = render(<TestDataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    fireEvent.change(cellInput(container), { target: { value: 'shipped' } });
+    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
+    fireEvent.blur(cellInput(container));
+
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(cellInput(container).value).toBe('shipped');
+    await act(async () => {
+      pending.reject(new Error('connection dropped'));
+      try { await pending.promise; } catch { /* the adapter converts the rejection to false */ }
+      await Promise.resolve();
+    });
+    expect(cellInput(container).value).toBe('shipped');
+    expect(intent).toHaveBeenCalledTimes(1);
+
+    fireEvent.focus(cellInput(container));
+    fireEvent.blur(cellInput(container));
+    await waitFor(() => expect(container.querySelector('.sql-cell-input')).toBeNull());
+    expect(intent).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps newer cell typing when an older update is accepted', async () => {
+    const pending = deferred<unknown>();
+    const { capabilities, intent } = makeCapabilities();
+    intent.mockReturnValue(pending.promise);
+    const { container } = render(<TestDataGrid payload={payload()} capabilities={capabilities} />);
+    fireEvent.doubleClick(screen.getByText('paid'));
+    fireEvent.change(cellInput(container), { target: { value: 'shipped' } });
+    fireEvent.keyDown(cellInput(container), { key: 'Enter' });
+    fireEvent.change(cellInput(container), { target: { value: 'newer draft' } });
+    await act(async () => {
+      pending.resolve(null);
+      await pending.promise;
+    });
+
+    expect(cellInput(container).value).toBe('newer draft');
+    expect(intent).toHaveBeenCalledTimes(1);
+  });
+
   it('opens the editor on a double click and asks to update that cell on commit', () => {
     const { capabilities, intent } = makeCapabilities();
     render(<TestDataGrid payload={payload()} capabilities={capabilities} />);
@@ -372,7 +425,7 @@ describe('DataGrid editing', () => {
 
   // What the field showed is what is being edited: a ticked toggle showed nothing, so what is typed
   // is the value rather than an addition to the text the toggle was hiding.
-  it('commits what was typed over a cell whose toggle was ticked, and restores its text when it is only unticked', () => {
+  it('commits what was typed over a cell whose toggle was ticked, and restores its text when it is only unticked', async () => {
     const { capabilities, intent } = makeCapabilities();
     const { container, rerender } = render(<TestDataGrid payload={payload()} capabilities={capabilities} />);
     fireEvent.doubleClick(screen.getByText('paid'));
@@ -380,6 +433,7 @@ describe('DataGrid editing', () => {
     fireEvent.change(cellInput(container), { target: { value: 'x' } });
     fireEvent.keyDown(cellInput(container), { key: 'Enter' });
     expect(intent).toHaveBeenLastCalledWith('update-cell', { row: 'r1', column: 'status', value: 'x' });
+    await waitFor(() => expect(container.querySelector('.sql-cell-input')).toBeNull());
 
     rerender(<TestDataGrid payload={payload()} capabilities={capabilities} />);
     fireEvent.doubleClick(screen.getByText('paid'));

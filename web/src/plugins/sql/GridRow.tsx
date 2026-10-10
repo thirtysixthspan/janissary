@@ -28,7 +28,7 @@ function cellClass(cell: SqlCell | undefined, editing: boolean): string {
  * to be left in the list.
  */
 export function GridRow({
-  row, position, shown, object, editingColumn, deleting, selected, onSelectRow, onEdit, onCommit, onCancel, onFollow, onDelete,
+  row, position, shown, object, editingColumn, deleting, selected, onSelectRow, onEdit, onCommit, onDraftChange, onCancel, onFollow, onDelete,
 }: {
   row: SqlRow;
   position: number;
@@ -44,6 +44,7 @@ export function GridRow({
   onSelectRow(extend: boolean): void;
   onEdit(column: string): void;
   onCommit(column: string, value: string | null): void;
+  onDraftChange(column: string, value: string | null): void;
   onCancel(): void;
   onFollow(target: { object: string; column: string; value: string }): void;
   onDelete(): void;
@@ -90,6 +91,7 @@ export function GridRow({
             <CellEditor
               cell={row.cells[cell]}
               onCommit={(value) => onCommit(column, value)}
+              onDraftChange={(value) => onDraftChange(column, value)}
               onCancel={onCancel}
             />
           ) : (

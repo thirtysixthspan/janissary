@@ -4,16 +4,6 @@
 
 ## development
 
-* Handle SQL intent rejections and retain drafts until the request is accepted.
-
-Existing Debt: The SQL action adapter discards every rejecting intent promise and exposes void mutation callbacks, so input surfaces close or clear drafts before knowing whether their request was accepted. Severity: 5/10
-
-Existing Risk: 5/10 - A connection failure or server refusal can erase a SQL statement, cell edit, or insert draft and leave only an unhandled promise rejection with no actionable feedback in the tab.
-
-Proposal Risk: 3/10 - A lost acknowledgement can still leave a write's outcome unknown, so the retained draft supports manual recovery while automatic replay would risk applying a mutation twice.
-
-Proposal: `createSqlActions` in `web/src/plugins/sql/useSqlActions.ts` calls `void intent(name, payload)`, although `createPluginClientCapabilities` in `web/src/plugins/api.ts` rejects on RPC failure. Make the SQL sender catch and normalize rejections into a visible local error and return an explicit acceptance outcome for draft-producing actions. Have the console in `web/src/plugins/sql/SqlConsole.tsx` and the commit handlers in `web/src/plugins/sql/DataGrid.tsx` await acceptance before clearing the submitted line, closing the cell editor or insert form, or recording a successful local history transition; compose the console's submission handling around the existing command-bar keys so Shift+Enter and recall remain intact. Bind completion to the submitted draft so a late acknowledgement cannot erase newer typing, and prevent duplicate submissions while acceptance is pending. Expose request errors through `web/src/plugins/sql/SqlTab.tsx`, using a separate local error from the authoritative query errors already carried in the payload. An accepted intent is not proof that its later database operation succeeded, and ambiguous transport failures must never trigger automatic retries. `web/src/plugins/sql/useSqlActions.test.ts` currently checks only mappings with resolving intents; extend it with rejected intents and add delayed acceptance, rejection, and newer-draft cases to `web/src/plugins/sql/SqlConsole.test.tsx` and `web/src/plugins/sql/DataGrid.test.tsx`. Extract a focused hook if the grid's added coordination would exceed the file-size limit.
-
 ## deferred
 
 * Move the websocket client out of the app-shell root and into the shared layer it belongs to, so `web/src/shared/` stops importing from `../ws`. — deferred: complexity 8/10, 138 files import `./ws`/`../ws` and each retarget is a per-depth specifier recomputation, the cluster includes the `toasts/` directory that `clientFeatureDirectories` names in `eslint.config.mjs` — a question the entry does not settle — and the change adds a new eslint zone plus its boundary case, which is a deliberate enforcement design rather than a mechanical sweep.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SqlTab } from './SqlTab';
 import { grid, makeCapabilities, payload } from './fixture';
@@ -9,6 +9,20 @@ import { grid, makeCapabilities, payload } from './fixture';
 beforeAll(() => { Element.prototype.scrollIntoView = vi.fn(); });
 
 const highlighted = () => [...document.querySelectorAll('tr.selected')] as HTMLElement[];
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  // The web project's ES2023 library does not include Promise.withResolvers.
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers
+  const promise = new Promise<T>((accept) => { resolve = accept; });
+  return { promise, resolve };
+}
+
+async function submitBar(bar: HTMLElement, sql: string): Promise<void> {
+  fireEvent.change(bar, { target: { value: sql } });
+  fireEvent.keyDown(bar, { key: 'Enter' });
+  await waitFor(() => expect((bar as HTMLTextAreaElement).value).toBe(''));
+}
 
 describe('SqlTab layout', () => {
   // A harness tab is one metadata row across the full width and one body below it. This is the same
@@ -132,6 +146,42 @@ describe('SqlTab metadata row', () => {
   });
 });
 
+describe('SQL request acceptance', () => {
+  it('shows a dismissible request error separately from the payload query error', async () => {
+    const { capabilities } = makeCapabilities();
+    capabilities.intent = async () => { throw new Error('RPC not accepted'); };
+    render(<SqlTab payload={payload({ error: 'Database was deleted', grid: null })} capabilities={capabilities} />);
+    const bar = screen.getByLabelText('SQL');
+    fireEvent.change(bar, { target: { value: 'SELECT 1' } });
+    fireEvent.keyDown(bar, { key: 'Enter' });
+
+    expect(await screen.findByText('SQL request failed: RPC not accepted')).toBeTruthy();
+    expect(screen.getByText('Database was deleted')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText('SQL request failed: RPC not accepted')).toBeNull();
+    expect(screen.getByText('Database was deleted')).toBeTruthy();
+  });
+
+  it('keeps the insert draft open and prevents duplicate writes until acceptance', async () => {
+    const pending = deferred<unknown>();
+    const { capabilities, intent } = makeCapabilities();
+    intent.mockReturnValue(pending.promise);
+    render(<SqlTab payload={payload()} capabilities={capabilities} />);
+    fireEvent.click(screen.getByLabelText('Insert row'));
+    fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'open' } });
+    const save = screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement;
+    fireEvent.click(save);
+    fireEvent.click(save);
+
+    await waitFor(() => expect(save.disabled).toBe(true));
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect((screen.getByLabelText('New status') as HTMLInputElement).value).toBe('open');
+    pending.resolve(null);
+
+    await waitFor(() => expect(screen.queryByLabelText('New status')).toBeNull());
+  });
+});
+
 describe('SqlTab export', () => {
   const csv = () => screen.getByRole('button', { name: 'CSV' }) as HTMLButtonElement;
   const json = () => screen.getByRole('button', { name: 'JSON' }) as HTMLButtonElement;
@@ -192,28 +242,22 @@ describe('SqlTab console', () => {
   // The shared keymap steps back from the end of the list it is handed, so a list kept newest-first
   // recalled the oldest statement first — and a user reaching for what they just ran edited and
   // re-ran something from before it, which on this surface is a write.
-  it('recalls the statement typed last on one ArrowUp, and the one before it on the next', () => {
+  it('recalls the statement typed last on one ArrowUp, and the one before it on the next', async () => {
     const { capabilities } = makeCapabilities();
     render(<SqlTab payload={payload()} capabilities={capabilities} />);
     const bar = screen.getByLabelText('SQL');
-    for (const sql of ['UPDATE orders SET total = 1 WHERE id = 1', 'UPDATE orders SET total = 2 WHERE id = 2']) {
-      fireEvent.change(bar, { target: { value: sql } });
-      fireEvent.keyDown(bar, { key: 'Enter' });
-    }
+    for (const sql of ['UPDATE orders SET total = 1 WHERE id = 1', 'UPDATE orders SET total = 2 WHERE id = 2']) await submitBar(bar, sql);
     fireEvent.keyDown(bar, { key: 'ArrowUp' });
     expect((bar as HTMLTextAreaElement).value).toBe('UPDATE orders SET total = 2 WHERE id = 2');
     fireEvent.keyDown(bar, { key: 'ArrowUp' });
     expect((bar as HTMLTextAreaElement).value).toBe('UPDATE orders SET total = 1 WHERE id = 1');
   });
 
-  it('hands back the draft when the walk comes back down past the newest statement', () => {
+  it('hands back the draft when the walk comes back down past the newest statement', async () => {
     const { capabilities } = makeCapabilities();
     render(<SqlTab payload={payload()} capabilities={capabilities} />);
     const bar = screen.getByLabelText('SQL');
-    for (const sql of ['SELECT 1', 'SELECT 2']) {
-      fireEvent.change(bar, { target: { value: sql } });
-      fireEvent.keyDown(bar, { key: 'Enter' });
-    }
+    for (const sql of ['SELECT 1', 'SELECT 2']) await submitBar(bar, sql);
     fireEvent.change(bar, { target: { value: 'half typed' } });
     fireEvent.keyDown(bar, { key: 'ArrowUp' });
     expect((bar as HTMLTextAreaElement).value).toBe('SELECT 2');
@@ -223,26 +267,20 @@ describe('SqlTab console', () => {
 
   // The ghost walks the same list from its other end, so the completion offered while typing was
   // drawn from the oldest entry that matched rather than the newest.
-  it('offers the most recent statement that extends what is typed', () => {
+  it('offers the most recent statement that extends what is typed', async () => {
     const { capabilities } = makeCapabilities();
     const { container } = render(<SqlTab payload={payload()} capabilities={capabilities} />);
     const bar = screen.getByLabelText('SQL');
-    for (const sql of ['SELECT id FROM orders', 'SELECT id FROM customers']) {
-      fireEvent.change(bar, { target: { value: sql } });
-      fireEvent.keyDown(bar, { key: 'Enter' });
-    }
+    for (const sql of ['SELECT id FROM orders', 'SELECT id FROM customers']) await submitBar(bar, sql);
     fireEvent.change(bar, { target: { value: 'SELECT id FROM' } });
     expect(container.querySelector('.ghost')?.textContent).toBe('SELECT id FROM customers');
   });
 
-  it('recalls a re-sent statement as the newest, so the list is a history and not a log', () => {
+  it('recalls a re-sent statement as the newest, so the list is a history and not a log', async () => {
     const { capabilities } = makeCapabilities();
     render(<SqlTab payload={payload()} capabilities={capabilities} />);
     const bar = screen.getByLabelText('SQL');
-    for (const sql of ['SELECT 1', 'SELECT 2', 'SELECT 1']) {
-      fireEvent.change(bar, { target: { value: sql } });
-      fireEvent.keyDown(bar, { key: 'Enter' });
-    }
+    for (const sql of ['SELECT 1', 'SELECT 2', 'SELECT 1']) await submitBar(bar, sql);
     fireEvent.keyDown(bar, { key: 'ArrowUp' });
     expect((bar as HTMLTextAreaElement).value).toBe('SELECT 1');
     fireEvent.keyDown(bar, { key: 'ArrowUp' });
@@ -418,4 +456,3 @@ describe('the column chooser', () => {
     expect(glyph.dataset.icon).not.toBe('table-columns');
   });
 });
-
