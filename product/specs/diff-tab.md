@@ -78,8 +78,7 @@ without a line-count message; the view-cycle button or a double-click expands it
 change, not the file: a large file with one changed line shows that line in full.
 
 The tab recomputes on its own every second, so the change set stays live while files are edited around
-it, and the header's **Refresh** button recomputes on demand. Its light glyph remains visible against
-the dark metadata row. Re-running the command recomputes as well.
+it. Re-running the command recomputes as well.
 A whitespace-only edit appears as a change, including when it is the repository's only change.
 A recompute leaves the tab showing what it already shows until its result lands, so the refresh never
 blanks the body: on an empty change set **No changes** stays put rather than vanishing with each

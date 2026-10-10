@@ -17,12 +17,6 @@
 .diff-meta-actions button:hover { color: var(--fg); }
 .diff-view button.on { border-color: var(--border); color: var(--accent); }
 
-.diff-refresh {
-  background: transparent; border: 1px solid transparent; border-radius: 3px;
-  color: var(--fg); cursor: pointer; font: inherit; line-height: 1.4; padding: 0 6px;
-}
-.diff-refresh:hover { color: var(--fg); }
-
 .diff-body {
   flex: 1; min-height: 0; overflow-y: auto; outline: none;
   border: 1px solid var(--border); border-radius: 3px;

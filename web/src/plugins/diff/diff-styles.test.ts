@@ -37,16 +37,6 @@ describe('diff styles', () => {
     }
   });
 
-  it('keeps the refresh control light on its dark background', () => {
-    loadStyles();
-    const refresh = [...document.styleSheets[0].cssRules].find((item) => item instanceof CSSStyleRule
-      && item.selectorText === '.diff-refresh');
-    expect(refresh).toBeInstanceOf(CSSStyleRule);
-    if (!(refresh instanceof CSSStyleRule)) throw new Error('Missing refresh button rule');
-    expect(refresh.style.getPropertyValue('color')).toBe('var(--fg)');
-    expect(refresh.style.getPropertyValue('background')).toBe('transparent');
-  });
-
   it.each([
     'diff-line diff-context', 'diff-line diff-added',
     'diff-cell diff-context', 'diff-cell diff-added',

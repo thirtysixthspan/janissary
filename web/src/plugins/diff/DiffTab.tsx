@@ -25,9 +25,7 @@ export function DiffTab({
   const files = payload.files;
   const fullFileScroll = useRef<number | null>(null);
 
-  const refresh = useDiffRefresh(
-    useCallback(() => capabilities.intent('refresh', {}), [capabilities]),
-  );
+  useDiffRefresh(useCallback(() => capabilities.intent('refresh', {}), [capabilities]));
   const walk = useHunkWalk(files);
 
   const openFile = useCallback((path: string) => {
@@ -80,9 +78,6 @@ export function DiffTab({
               <FontAwesomeIcon icon={faPlusMinus} />
             </button>
           </span>
-          <button type="button" className="diff-refresh" title="Refresh" aria-label="Refresh" onClick={refresh.refresh}>
-            ⟳
-          </button>
           {capabilities.splitAction}
         </span>
       </div>

@@ -217,14 +217,12 @@ describe('DiffTab', () => {
     expect(screen.getByText('git diff failed')).toBeTruthy();
   });
 
-  it('refreshes on demand and on its interval', () => {
+  it('refreshes on its interval without a manual refresh button', () => {
     vi.useFakeTimers();
     try {
       const { intent } = renderTab();
       expect(intent).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByLabelText('Refresh'));
-      expect(intent).toHaveBeenCalledWith('refresh', {});
-      intent.mockClear();
+      expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
       act(() => { vi.advanceTimersByTime(1000); });
       expect(intent).toHaveBeenCalledWith('refresh', {});
     } finally {
