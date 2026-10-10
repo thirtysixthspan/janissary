@@ -286,6 +286,16 @@ describe('DiffTab', () => {
     expect(intent).toHaveBeenCalledWith('open', { path: 'a.txt', line: 3 });
   });
 
+  it('uses Left to collapse the selected file and Right to reveal its changes then the full file', () => {
+    const { intent, container } = renderTab();
+    fireEvent.keyDown(body(), { key: 'ArrowLeft' });
+    expect(container.querySelectorAll('.diff-line')).toHaveLength(0);
+    fireEvent.keyDown(body(), { key: 'ArrowRight' });
+    expect(container.querySelectorAll('.diff-line')).toHaveLength(3);
+    fireEvent.keyDown(body(), { key: 'ArrowRight' });
+    expect(intent).toHaveBeenCalledWith('context', { path: 'a.txt', fullFile: true });
+  });
+
   it('moves the walk to a hunk clicked with the mouse', () => {
     const { intent, container } = renderTab(payload({
       files: [file({ path: 'a.txt' }), file({ path: 'b.txt', hunks: file().hunks })],

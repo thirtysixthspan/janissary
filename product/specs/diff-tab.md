@@ -116,10 +116,11 @@ Both columns retain equal, readable widths. When the available space is too narr
 The code body is focusable for navigation. Clicking into a hunk focuses it, and while the body itself holds focus the
 **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order,
 stopping at the first and last change rather than wrapping and scrolling a file into view as the walk
-reaches it. **j and k move between files** instead, one file at a time — the next file's first hunk and
-the previous one's — stopping at the first and last file rather than wrapping. **Return** opens the file
-at the walked hunk's first changed line. A click on a hunk selects it and focuses the body, so the walk
-continues from where the mouse left off.
+reaches it. **Left collapses the file containing the walked hunk. Right expands a collapsed file to its
+changed hunks, then requests the full file on a second press.** **j and k move between files**, one file
+at a time — the next file's first hunk and the previous one's — stopping at the first and last file
+rather than wrapping. **Return** opens the file at the walked hunk's first changed line. A click on a
+hunk selects it and focuses the body, so the walk continues from where the mouse left off.
 
 Navigation shortcuts leave comment editors and buttons alone. In a comment editor, arrows move the caret, Return inserts a new line, and Escape cancels the draft.
 

@@ -2,8 +2,6 @@
 
 # pull-request
 
-* navigating the diff tab, left arrow collapses a file, right arrow expands to the changed hunk, right arrow twice expands to the entire file. 
-
 * use font awesome arrows-up-down icon for a button that toggles the view of a file between closed, compact, and expanded. remove the 'whole file — double-click to expand' button. remove the show lines above, below and between changes buttons and functionality. remove share more context button and functionality.
 
 * changes like the following should show only line highlighting

@@ -47,6 +47,11 @@ export function DiffTab({
 
   const onKeyDown = useCallback((event: React.KeyboardEvent) => {
     if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && walk.spot
+      && handleFileArrow(walk.listRef.current?.querySelectorAll('.diff-file')[walk.spot.file], event.key)) {
+      event.preventDefault();
+      return;
+    }
     if (walk.navigate(event.key)) { event.preventDefault(); return; }
     if (event.key === 'j' || event.key === 'k') {
       if (walk.moveFile(event.key === 'j')) { event.preventDefault(); }
@@ -86,7 +91,7 @@ export function DiffTab({
         ref={walk.listRef}
         tabIndex={0}
         onKeyDown={onKeyDown}
-        title="j and k move between files; the arrows walk the hunks; Return opens the walked hunk's line"
+        title="Left collapses a file; Right expands its changes, then the full file; up and down walk hunks; j and k move between files; Return opens the walked hunk's line"
       >
         {payload.state === 'not-repository' && <div className="diff-empty">This directory is not a git repository</div>}
         {payload.state === 'error' && <div className="diff-empty">{payload.message}</div>}
@@ -113,4 +118,22 @@ export function DiffTab({
       </div>
     </div>
   );
+}
+
+function handleFileArrow(entry: Element | undefined, key: 'ArrowLeft' | 'ArrowRight'): boolean {
+  if (!entry) return false;
+  const chevron = entry.querySelector<HTMLButtonElement>(':scope .diff-chevron');
+  if (key === 'ArrowLeft') {
+    if (chevron?.getAttribute('aria-expanded') !== 'true') return false;
+    chevron.click();
+    return true;
+  }
+  if (chevron?.getAttribute('aria-expanded') === 'false') {
+    chevron.click();
+    return true;
+  }
+  const fullFile = entry.querySelector<HTMLButtonElement>(':scope .diff-full-file-control button');
+  if (!fullFile?.textContent?.includes('Show full file')) return false;
+  fullFile.click();
+  return true;
 }
