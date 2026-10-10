@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Honor zero and invalid transcript-tail limits in the new activity capability.
-
-Existing Issue: The activity reader attaches a tail for every defined limit, and `slice(-0)` or `slice(-NaN)` selects the whole log rather than zero entries, contrary to the plan's positive-limit-only rule. Severity: 4/10
-
-Existing Risk: 4/10 - A metadata consumer passing zero can unexpectedly receive transcript content, while non-finite limits can make the reader assemble an unnecessarily large intermediate string before its character cap is applied.
-
-Proposal Risk: 1/10 - Existing positive integer reads remain unchanged, and explicit boundary tests can detect any unintended narrowing of the launcher's eight-entry read.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "normalize activity transcript-tail limits before reading content". Normalize or validate `tailLines` once in `src/plugins/activity.ts` before slicing any log, accepting a documented positive finite entry count and omitting transcript content for zero, negative, or non-finite values. Retain the existing character budget and the omitted-limit display behavior. Add boundary cases to `src/plugins/activity.test.ts` for zero, negative values, NaN, Infinity, and valid counts of one and eight; assert invalid or zero reads carry no tail. Align the capability description in `src/plugins/api.ts` and `documentation/developer-documentation/tab-plugins.md` with the resulting rule.
-
-
 * Keep long configured command rails scrollable alongside the tab list and command bar.
 
 Existing Issue: The command rail uses `flex: 0 0 auto` with no height bound, so it neither shrinks nor gains a constrained scrolling viewport when a user's command list exceeds the sidebar height. Severity: 4/10

@@ -98,6 +98,12 @@ function tailOf(entries: readonly Tab['log'][number][], lines: number): string {
   return kept.join('\n\n').slice(-ACTIVITY_TAIL_CHARS);
 }
 
+function normalizeTailLines(tailLines: number | undefined): number | undefined {
+  if (tailLines === undefined || !Number.isFinite(tailLines)) return undefined;
+  const wholeEntries = Math.floor(tailLines);
+  return wholeEntries > 0 ? wholeEntries : undefined;
+}
+
 // One open tab as a `TabActivityEntry`. `tailLines` is the caller's ceiling, or undefined for no
 // transcript content at all — a plugin that only lists tabs reads no other tab's output.
 function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): TabActivityEntry {
@@ -139,7 +145,8 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
 // capability's answer. One reader for both so the rows a view shows and the rows a summarizer
 // summarizes can never disagree about what a tab is doing.
 export function tabActivityRows(managers: Managers, tailLines?: number): TabActivityEntry[] {
-  return managers.tab.tabs.map((tab) => entryFor(tab, managers, tailLines));
+  const normalizedLimit = normalizeTailLines(tailLines);
+  return managers.tab.tabs.map((tab) => entryFor(tab, managers, normalizedLimit));
 }
 
 // Record whether a harness tab is currently held at a permission gate the user has to answer. A gate

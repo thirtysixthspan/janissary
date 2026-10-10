@@ -321,8 +321,9 @@ export type TabPluginServerCapabilities = {
   // Every tab the host has open, each as a `TabActivityEntry`, as of now. The pull counterpart to
   // the `tabs` topic: a plugin that must read tab state on its own schedule — a summarizer on a
   // flush timer, or a tab building its first payload — asks here, rather than being handed a copy on
-  // every application mutation. `tailLines` caps how much recent transcript each entry carries;
-  // omitted, no entry carries any, so a plugin that only lists tabs reads no other tab's output.
+  // every application mutation. A finite positive `tailLines` is rounded down to whole entries;
+  // values that round below one, and zero, negative, or non-finite values, attach no transcript tail.
+  // Omit it and no entry carries any, so a plugin that only lists tabs reads no other tab's output.
   // Unlike every topic here this is host-wide rather than one tab's, because the question it answers
   // is "what is the application doing", which no single tab can speak for.
   tabActivity(tailLines?: number): TabActivityEntry[];

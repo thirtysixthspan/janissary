@@ -140,6 +140,28 @@ describe('the tabActivity reader', () => {
     expect(rows[0]?.lastCommand).toBe('ls');
   });
 
+  it.each([0, -1, NaN, Infinity, 0.5])(
+    'omits transcript content for an unusable tail limit (%s)',
+    (limit) => {
+      const log = Array.from({ length: 10 }, (_, index) => ({ input: '', output: `entry-${index}` }));
+      const { managers: host } = managers([tab({ log })]);
+
+      const rows = tabActivityRows(host as unknown as Managers, limit);
+
+      expect(rows[0]?.tail).toBeUndefined();
+    },
+  );
+
+  it.each([1, 8])('returns the newest %s transcript entries', (limit) => {
+    const log = Array.from({ length: 10 }, (_, index) => ({ input: '', output: `entry-${index}` }));
+    const { managers: host } = managers([tab({ log })]);
+
+    const rows = tabActivityRows(host as unknown as Managers, limit);
+    const expected = Array.from({ length: limit }, (_, index) => `entry-${10 - limit + index}`).join('\n\n');
+
+    expect(rows[0]?.tail).toBe(expected);
+  });
+
   it('reports the transcript revision the host wrote, and zero for a tab with none yet', () => {
     const { managers: host } = managers([
       tab({ label: 'written', runtime: { busy: false, context: [], queue: [], transcriptRevision: 5 } }),
