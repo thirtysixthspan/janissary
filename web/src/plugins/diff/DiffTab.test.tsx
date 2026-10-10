@@ -50,7 +50,10 @@ function oversized(overrides: Partial<DiffFile> = {}): DiffFile {
 }
 
 function payload(overrides: Partial<DiffPayload> = {}): DiffPayload {
-  return { root: '$root/', state: 'done', message: '', split: false, files: [file()], ...overrides };
+  return {
+    instanceKey: 'diff', root: '$root/', state: 'done', message: '', split: false, files: [file()],
+    ...overrides,
+  };
 }
 
 function makeCapabilities() {
@@ -73,7 +76,10 @@ beforeEach(() => { scrollIntoView.mockClear(); });
 const renderTab = (value: DiffPayload = payload()) => {
   const { capabilities, intent } = makeCapabilities();
   const rendered = render(<DiffTab payload={value} capabilities={capabilities} />);
-  return { ...rendered, intent, update: (next: DiffPayload) => rendered.rerender(<DiffTab payload={next} capabilities={capabilities} />) };
+  return {
+    ...rendered, capabilities, intent,
+    update: (next: DiffPayload) => rendered.rerender(<DiffTab payload={next} capabilities={capabilities} />),
+  };
 };
 
 const body = () => document.querySelector('.diff-body') as HTMLElement;
@@ -101,6 +107,36 @@ describe('DiffTab', () => {
     expect(screen.getByTitle('a.txt').textContent).toBe('a.txt');
     expect(screen.getByTitle('b.txt').textContent).toBe('b.txt');
     expect(container.querySelector('.diff-body')?.hasAttribute('title')).toBe(false);
+  });
+
+  // A remote workspace's root is a path on the far side, so the header names the host it was read
+  // on rather than leaving the reader to wonder which machine `$workspace` belongs to.
+  it('names the host the changes were read on', () => {
+    renderTab(payload({ root: '$workspace/demir', host: 'devbox', workspace: true }));
+    expect(screen.getByText('on devbox')).toBeTruthy();
+  });
+
+  it('says nothing about a host for a local root', () => {
+    const { container } = renderTab(payload());
+    expect(container.querySelector('.diff-host')).toBeNull();
+  });
+
+  // The tab closes itself when the workspace it reads is gone: the clone was deleted or the remote
+  // session ended, and a workspace diff has nothing left to answer.
+  it('closes itself when the workspace it reads is gone', () => {
+    const { capabilities, update } = renderTab(payload({ workspace: true }));
+    expect(capabilities.close).not.toHaveBeenCalled();
+
+    update(payload({ workspace: true, state: 'not-repository' }));
+
+    expect(capabilities.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('says a non-repository directory is not one, without closing, on the project-root diff', () => {
+    const { capabilities } = renderTab(payload({ state: 'not-repository' }));
+
+    expect(capabilities.close).not.toHaveBeenCalled();
+    expect(screen.getByText('This directory is not a git repository')).toBeTruthy();
   });
 
   it('renders a rename as its old path to its new one', () => {

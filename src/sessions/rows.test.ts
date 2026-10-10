@@ -61,7 +61,7 @@ describe('composeSessionRows live channels', () => {
   // parked session's, because it is the same request, and the state is what says which wait it ends.
   it('offers attach on a reconnecting row, beside the detach and terminate controls it still has', () => {
     const [row] = composeSessionRows(snapshot({ channels: [channel({ reconnecting: true })] }));
-    expect(row.actions).toEqual(['focus', 'attach', 'detach', 'terminate']);
+    expect(row.actions).toEqual(['focus', 'attach', 'detach', 'diff', 'terminate']);
   });
 
   it('offers no attach on a row whose transport is healthy', () => {
@@ -79,7 +79,7 @@ describe('composeSessionRows live channels', () => {
         ],
       })],
     }));
-    expect(rows[1].actions).toEqual(['focus', 'close']);
+    expect(rows[1].actions).toEqual(['focus', 'close', 'diff']);
   });
 
   it('carries the full destination and workspace path for the tooltip', () => {
@@ -92,7 +92,7 @@ describe('composeSessionRows live channels', () => {
 
   it('offers focus, detach, and terminate on the launching row', () => {
     const [row] = composeSessionRows(snapshot({ channels: [channel()] }));
-    expect(row.actions).toEqual(['focus', 'detach', 'terminate']);
+    expect(row.actions).toEqual(['focus', 'detach', 'diff', 'terminate']);
     expect(row.joined).toBe(false);
   });
 
@@ -113,7 +113,7 @@ describe('composeSessionRows live channels', () => {
         ],
       })],
     }));
-    expect(rows[1].actions).toEqual(['focus', 'close']);
+    expect(rows[1].actions).toEqual(['focus', 'close', 'diff']);
     expect(rows[1].joined).toBe(true);
   });
 
@@ -127,7 +127,7 @@ describe('composeSessionRows live channels', () => {
       })],
     }));
     expect(rows[1].kind).toBe('navigator');
-    expect(rows[1].actions).toEqual(['focus', 'close']);
+    expect(rows[1].actions).toEqual(['focus', 'close', 'diff']);
   });
 });
 
@@ -143,13 +143,13 @@ describe('composeSessionRows channels without their launching member', () => {
 
   it('offers the park path on a surviving row of a launch-member-less channel', () => {
     const [row] = composeSessionRows(snapshot({ channels: [launchAbsent()] }));
-    expect(row.actions).toEqual(['focus', 'detach', 'terminate']);
+    expect(row.actions).toEqual(['focus', 'detach', 'diff', 'terminate']);
     expect(row.joined).toBe(true);
   });
 
   it('offers try-now detach on a surviving row while the channel is reconnecting', () => {
     const [row] = composeSessionRows(snapshot({ channels: [launchAbsent({ reconnecting: true })] }));
-    expect(row.actions).toEqual(['focus', 'attach', 'detach', 'terminate']);
+    expect(row.actions).toEqual(['focus', 'attach', 'detach', 'diff', 'terminate']);
   });
 
   it('keeps a channel with its launching member present at per-member actions', () => {
@@ -161,7 +161,18 @@ describe('composeSessionRows channels without their launching member', () => {
         ],
       })],
     }));
-    expect(rows[0].actions).toEqual(['focus', 'detach', 'terminate']);
+    expect(rows[0].actions).toEqual(['focus', 'detach', 'diff', 'terminate']);
+    expect(rows[1].actions).toEqual(['focus', 'close', 'diff']);
+  });
+
+  it('offers no diff on a row whose workspace has not landed', () => {
+    const rows = composeSessionRows(snapshot({
+      channels: [channel({ workspace: '', members: [
+        { label: 'claude', name: 'claude', kind: 'harness', activity: 100 },
+        { label: 'bekir', name: 'bekir', kind: 'shell', activity: 90 },
+      ] })],
+    }));
+    expect(rows[0].actions).not.toContain('diff');
     expect(rows[1].actions).toEqual(['focus', 'close']);
   });
 });

@@ -11,7 +11,7 @@
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh/terminal) |
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
 | `db` | Create, delete, query, or list SQLite databases |
-| `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that path's changes |
+| `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that path's changes; `diff on <tab name>` opens that tab's workspace diff |
 | `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image, the PDF viewer for a PDF |
 | `files` | `files [path]` opens a navigator here; `files <path> in <label>` targets another tab. Remote paths use that host's workspace. Add `with <name\|size\|modified\|permissions>` to choose a detail column |
 | `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out; `capture <name>` saves a screen |

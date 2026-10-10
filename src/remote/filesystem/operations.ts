@@ -52,6 +52,13 @@ const READ_OPERATIONS = {
   // Pulls the far side's own workspace root — no path arguments, so nothing to contain. The
   // rejection (git's own error) travels back as the request's error reply.
   'git-pull': descriptorFor<'git-pull'>()({ ...noArguments, decodeResult: resultDecoders['git-pull'], run: (context: OperationContext) => context.filesystem.pull(context.root) }),
+  'change-set': descriptorFor<'change-set'>()({
+    valid: (args) => stringArray(args.fullFiles),
+    decode: (args) => ({ fullFiles: args.fullFiles as string[] }),
+    paths: () => [],
+    decodeResult: resultDecoders['change-set'],
+    run: (context, args) => context.filesystem.changeSet(context.root, args.fullFiles),
+  }),
   search: descriptorFor<'search'>()({ ...noArguments, decodeResult: resultDecoders.search, run: (context: OperationContext) => context.filesystem.search(context.root) }),
   'read-file': descriptorFor<'read-file'>()({
     valid: (args) => stringValue(args.path),

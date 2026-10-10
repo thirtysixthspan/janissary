@@ -41,6 +41,8 @@ export const resultDecoders = {
   unwatch: decodeResult<Record<string, never>>(emptyObject),
   git: decodeResult<GitMetadata>(git),
   'git-pull': decodeResult<string>((value): value is string => typeof value === 'string'),
+  // The diff plugin validates this untrusted far-side record with its own guard after receipt.
+  'change-set': decodeResult<unknown>(() => true),
   'git-commit': decodeResult<CommitResult>((value): value is CommitResult => record(value)
     && (value.committed === false || (value.committed === true && typeof value.summary === 'string'))),
   search: decodeResult<string[]>(strings),

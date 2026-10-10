@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { tabFlagDisplay } from '../shared/tab/flag-display';
-import { openFilesIcon, newTabIcon, diffIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from '../shared/icons';
+import { openFilesIcon, newTabIcon, plusMinusIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from '../shared/icons';
 import { StatusWindowButton } from '../shared/status-windows/StatusWindowButton';
 import { SplitTabButton } from '../shared/SplitTabButton';
 import { RecordingFlag } from '../shared/RecordingFlag';
@@ -110,7 +110,7 @@ export function HarnessTabMeta({
             disabled={launchDisabled}
             onClick={onOpenDiffHere}
           >
-            <FontAwesomeIcon icon={diffIcon} />
+            <FontAwesomeIcon icon={plusMinusIcon} />
           </button>
         )}
         {onOpenTranscript && (

@@ -149,14 +149,21 @@ function awaitClone(
   );
 }
 
+// The tab whose channel a join rides: the one the request names, the answering tab when the host
+// named one, and the tab the call came from otherwise. A request naming a third tab is how a command
+// reaches a workspace belonging to a tab it was not typed in.
+function joinSource(request: TabPluginLaunchRequest, input: LaunchInput): string {
+  if (request.remote === undefined || !('join' in request.remote)) return input.origin.label;
+  return request.remote.label ?? input.answeringLabel ?? input.origin.label;
+}
+
 export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapabilities, 'launchTab'> {
   const { managers, declaration, isEnabled } = input;
   return {
     launchTab: (instanceKey, request, factory, ready) => {
       if (!isEnabled()) return;
       if (!input.deferred) throw new Error('"launchTab" is not available from a notification or host-state handler');
-      const joining = request.remote !== undefined && 'join' in request.remote;
-      const sourceLabel = joining ? input.answeringLabel ?? input.origin.label : input.origin.label;
+      const sourceLabel = joinSource(request, input);
       const origin = sourceLabel === input.origin.label ? input.origin : { ...input.origin, label: sourceLabel };
       const launchInput = origin === input.origin ? input : { ...input, origin };
       if (!origin.launch && !managers.tab.byLabel(origin.label)) return;

@@ -1,23 +1,30 @@
 import type { Managers } from '../managers.js';
-import { messageBus } from '../bus.js';
+import { getConfig } from '../config.js';
 import { notify } from '../notifications/index.js';
+import { didOsOpen } from '../openers/os-open.js';
 import {
   TAB_PLUGIN_CAPABILITY_NAMES,
   TabPluginRejection,
   type TabPluginActivation,
   type TabPluginCapabilityName,
   type TabPluginDeclaration,
+  type TabPluginNotificationTopic,
   type TabPluginServerCapabilities,
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
 import type { HandlerDeadline } from './guard.js';
+import { projectFilesFor } from '../project/files.js';
+import { isInsideRoot } from './files.js';
+import { readPluginSettings, savePluginSettings } from './settings.js';
+import { liveRecordingPaths } from './live-recordings.js';
+import { emptyTopicData, readTopicData, runTopicAction } from './topics.js';
 import { declaredResources } from './declared-resources.js';
 import { lineCapabilities } from './line-capabilities.js';
 import { acpCapabilities } from './acp-capabilities.js';
-import { fileCapabilities } from './file-capabilities.js';
 import { launchCapabilities, type DeferredPluginCall } from './launch-tab.js';
-import { armHarnessIdleEscalation, cancelHarnessIdleEscalation } from '../harness/idle-notification.js';
-import { isJsonCompatible } from './json-compatible.js';
+import { remoteCapabilities } from './remote-capabilities.js';
+import { ownTabCapabilities } from './own-tab-capabilities.js';
+import { isPluginSettings, validateTabValue } from './tab-value.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -39,16 +46,15 @@ function restrictToDeclared(
   return restricted;
 }
 
-// The checks a plugin-produced tab value must pass, shared by the creation and update paths so a
-// payload can never enter a tab through one route under weaker rules than the other. A title is
-// checked only when there is one: creation always supplies it, an update may leave it alone.
-function validateTabValue(
-  activation: TabPluginActivation,
-  value: { title?: string; payload: unknown },
+// Reading or acting on a topic the manifest never named reaches past the declaration exactly as
+// using an undeclared capability does, so it fails the same way: an ordinary error across the
+// failure boundary rather than a rejection the caller could have avoided.
+function requireDeclaredTopic(
+  declaration: TabPluginDeclaration,
+  topic: TabPluginNotificationTopic,
 ): void {
-  if (value.title !== undefined && !value.title.trim()) throw new Error('produced an empty tab title');
-  if (!activation.isPayload(value.payload) || !isJsonCompatible(value.payload)) {
-    throw new Error('produced an invalid tab payload');
+  if (!(declaration.notifications ?? []).includes(topic)) {
+    throw new Error(`used topic "${topic}" without declaring it`);
   }
 }
 
@@ -126,47 +132,54 @@ export function createPluginContext(
         return update;
       });
     },
-    setUnread: (instanceKey, unread) => {
+    ...ownTabCapabilities({ managers, declaration, isEnabled }),
+    openClaimedFiles: (target) => {
       if (!isEnabled()) return;
-      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-      if (!tab) return;
-      if (unread) {
-        if (managers.tab.markUnread(tab.label)) armHarnessIdleEscalation(managers, tab.label);
-      } else {
-        managers.tab.clearUnread(tab.label);
-        cancelHarnessIdleEscalation(managers, tab.label);
-      }
+      openRequests.push(target);
     },
-    // The dot only, on the plugin's own record: a broadcast goes out when it changes, and nothing the
-    // host routes by — the tab's runtime busy flag — moves with it.
-    setBusy: (instanceKey, busy) => {
+    // The same gitignore-aware file list the `projectFiles` RPC already serves to Quick Open, so a
+    // plugin that scans the repository cannot drift from the set Quick Open searches. The root comes
+    // back alongside the paths because a relative path is not a path a plugin can open without it.
+    projectFileList: () => {
+      if (!isEnabled()) return Promise.resolve({ root: '', paths: [] });
+      return projectFilesFor(managers);
+    },
+    // Opens a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline —
+    // so the tab is de-duplicated, the line is centered, and the file is served by the same
+    // authenticated `/open/<id>` allow-list as any other editor open. Deliberately not
+    // `openClaimedFiles`, which is pinned to the plugin's own extensions and cannot express a line.
+    //
+    // A path outside the launch directory is refused. The capability is this plugin's whole reach
+    // over the filesystem, so the boundary belongs here rather than in each plugin that asks: a
+    // plugin holding one could otherwise name any path on the machine and have it opened and served.
+    openInEditor: (absPath, line) => {
       if (!isEnabled()) return;
-      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-      if (!tab || (tab.plugin.busy ?? false) === busy) return;
-      tab.plugin.busy = busy;
-      messageBus.emit('state', { type: 'dirty' });
+      if (!isInsideRoot(managers.tab.launchDir, absPath)) return;
+      managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
     },
-    // Placement, addressed like `updateTab` so a plugin reaches only its own tab, and delegating to
-    // the same `setDock` the client's dock-cycle control uses — there is still one docking path.
-    dockTab: (instanceKey, dock) => {
-      if (!isEnabled()) return;
-      const index = managers.tab.tabs.findIndex(
-        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
-      );
-      if (index !== -1) managers.tab.setDock(index, dock);
+    topicData: (topic) => {
+      requireDeclaredTopic(declaration, topic);
+      return isEnabled() ? readTopicData(managers, topic) : emptyTopicData(topic);
     },
-    // Server-only transient state, addressed like `updateTab`. It never reaches `buildTabView`, so
-    // writing it neither marks the view dirty nor sends anything to a client.
-    snapshotTab: (instanceKey, text) => {
-      if (!isEnabled()) return;
-      const tab = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-      if (tab) tab.pageSnapshot = { text, capturedAt: Date.now() };
+    topicAction: (action) => {
+      requireDeclaredTopic(declaration, action.topic);
+      if (isEnabled()) runTopicAction(managers, action);
     },
+    configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
+    openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),
+    readSettings: () => isEnabled() ? readPluginSettings(declaration.id) : {},
+    saveSettings: (settings) => {
+      if (!isPluginSettings(settings)) throw new Error('saved settings that are not a JSON object');
+      return isEnabled() && savePluginSettings(declaration.id, settings);
+    },
+    // True only while an open tab's recorder is still writing this very file. The host owns the
+    // recorders, so the host is what answers; a plugin reaches no tab list of its own to ask.
+    isRecordingLive: (absPath) => isEnabled() && liveRecordingPaths(managers).has(absPath),
     // The four a plugin tab needs to be a place a line can be typed and a process can be checked on,
     // moved out whole because they depend on nothing here beyond what they are handed.
     ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
+    ...remoteCapabilities({ managers, originLabel: origin.label, answeringLabel, isEnabled }),
     ...acpCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
-    ...fileCapabilities({ managers, declaration, origin, isEnabled, openRequests }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },

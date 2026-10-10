@@ -33,14 +33,22 @@ export function lineCapabilities(input: {
     .filter((tab) => tab.plugin?.id === declaration.id)
     .map((tab) => tab.label);
   return {
-    originTab: () => {
+    originTab: (label?: string) => {
       if (!isEnabled()) return null;
-      const tab = managers.tab.byLabel(answeringLabel ?? origin.label);
+      // No label: the tab answering when the host named one, the tab a command came from otherwise —
+      // which is what every caller without an argument has always read. With one: that open tab,
+      // resolved the way a command naming a tab by typed name resolves it, so a plugin asks about a
+      // tab it was not invoked from without reading the host's tab list.
+      const tab = label === undefined
+        ? managers.tab.byLabel(answeringLabel ?? origin.label)
+        : managers.tab.byLabelOrAlias(label);
       // The launch shell has no tab to come from, so it starts where a new tab does: the project root.
-      if (!tab && origin.launch) {
+      if (!tab && origin.launch && label === undefined) {
         return { label: origin.label, cwd: managers.tab.launchDir, root: managers.tab.launchDir };
       }
       if (!tab) return null;
+      // A remote tab holds no local directory — the clone lives on the far side and its removal is
+      // that host's business — so the workspace the question is about is read from the session.
       const workspaceDir = tab.workspaceDir ?? (tab.remote ? managers.remote?.workspaceOf?.(tab.label) : undefined);
       return {
         label: tab.label,
