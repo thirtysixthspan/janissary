@@ -4,17 +4,6 @@
 
 ## development
 
-* Separate transcript file-link parsing from React rendering so execution helpers can depend on the parser alone.
-
-Existing Debt: The file-link parser imports React and exports `renderFileLinkSegments` beside its parsing functions, so the framework-free link dispatcher imports a rendering module to classify a path in violation of §8 (pure modules and services sit below components). Severity: 4/10
-
-Existing Risk: 3/10 - A change to link markup or event handling can add component dependencies to every parser consumer, including the execution path that opens links, making a small rendering change affect callers that never render a link.
-
-Proposal Risk: 1/10 - Parser and renderer behavior can still diverge during a future change, but the renderer consumes the parser's segment type and its component dependencies cannot flow back into parsing or dispatch.
-
-Proposal: Keep `FileLinkSegment`, `fileLineSegments`, `isFileLineLink`, and `linkifyMarkdown` in `web/src/shared/transcript/file-link.ts`, remove its React and `TranscriptIntents` imports, and move `renderFileLinkSegments` into a new `web/src/shared/transcript/file-link-render.tsx` that imports the segment type and intent type directly. Update `web/src/shared/transcript/line-text.tsx` to import parsing from the original module and rendering from the new one; do not leave a re-export in the parser. The two other direct production consumers, `web/src/shared/transcript/open-link.ts` and `web/src/shared/transcript/transcript-line.tsx`, continue importing the parser without changes; `web/src/plugins/api.ts` continues using its existing dispatcher and published plugin capabilities retain their signatures. The blast radius is the parser, one new renderer, one production import adjustment, and the renderer import in `web/src/shared/transcript/file-link.test.tsx`. That test covers paths, URLs with ports, line and column suffixes, and click routing; preserve all its assertions, along with `web/src/shared/transcript/transcript-line.test.tsx` and `web/src/shared/transcript/open-link.test.ts`. This requires a test import change and must be planned as a move of the renderer's public symbol rather than retaining a compatibility barrel.
-
-
 * Define narrow action ports for the file navigator's execution module instead of deriving its contract from seven hooks.
 
 Existing Debt: The navigator action factory imports types from seven hook modules solely to use their complete return types as its input contract, making the execution layer depend on the React adapter layer in violation of §8 (services depend on pure modules, and hooks depend on services). Severity: 5/10
