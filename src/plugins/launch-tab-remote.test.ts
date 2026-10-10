@@ -69,7 +69,7 @@ function harness(options: {
   } as unknown as Managers;
   const invoked: unknown[] = [];
   const input: LaunchInput = {
-    managers, declaration, origin: { label: 'janus', command: 'zsh' }, isEnabled: () => true,
+    managers, declaration, origin: { label: 'janus', command: 'shell' }, isEnabled: () => true,
     validate: () => {},
     deferred: {
       invoke: async (call) => {

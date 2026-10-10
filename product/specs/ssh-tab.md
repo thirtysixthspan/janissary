@@ -126,9 +126,9 @@ ssh tab already connected to the same destination before opening the new one, so
 leaves one session rather than a second live connection. Nothing else about the session is
 captured: no scrollback, and no remote state.
 
-## Regression: `shell ssh <host>`
+## Regression: `!ssh <host>`
 
-`shell ssh <host>` (an explicit `shell`-prefixed invocation) still opens an inline terminal card in
-the *current* tab's transcript instead of a dedicated tab — this plan only intercepts the bare
-`ssh …` form. `ssh` also remains listed as an interactive program for shell-pipeline detection
-(`git log | ssh …`-style heuristics), independent of the dedicated-tab path.
+`!ssh <host>` still opens an inline terminal card in the *current* tab's transcript instead of a
+dedicated tab — this plan only intercepts the bare `ssh …` form. `ssh` also remains listed as an
+interactive program for shell-pipeline detection (`git log | ssh …`-style heuristics), independent
+of the dedicated-tab path.

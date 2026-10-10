@@ -1,8 +1,8 @@
-// Everything after `zsh`, read the way `agent` reads everything after `agent`: the workspace flags
+// Everything after `shell`, read the way `agent` reads everything after `agent`: the workspace flags
 // match case-insensitively, `--no-workspace` wins over `-w`, `on <address>` is lifted out of the name,
 // and the remaining words, lowercased, are the name. Pure — the command handler acts on the result.
 
-export const SHELL_USAGE = 'Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]';
+export const SHELL_USAGE = 'Usage: shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]';
 
 export type ShellLaunchArgument = { name: string; workspace: boolean; offline: boolean; remote?: string };
 

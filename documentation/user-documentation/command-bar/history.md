@@ -26,7 +26,7 @@ Press `→` or `End` at the end of your typed text to accept the whole suggestio
 
 `↑`/`↓` move the selection, `Return` runs the selected command, `Escape` closes without running anything. A row can also be clicked. With no history yet, the window shows `(no history)`.
 
-In a [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab), `Ctrl+R` lists that shell's own history instead — the lines its command bar sent and the commands typed into its terminal — and `Return` puts the chosen line back in the bar rather than running it. The picker above is a shell tab's own list.
+In a [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab), `Ctrl+R` lists that shell's own history instead — the lines its command bar sent and the commands typed into its terminal — and `Return` puts the chosen line back in the bar rather than running it. The picker above is a shell tab's own list.
 
 ## What's kept, and where
 

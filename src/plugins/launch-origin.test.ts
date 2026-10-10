@@ -11,7 +11,7 @@ import { TabManager } from '../tab/manager.js';
 
 // The launch origin is how the application opens its launch shell before any tab exists: an origin
 // whose label names the tab to open rather than a tab to open it from.
-const launch = { label: 'janus', command: 'zsh', launch: true } as const;
+const launch = { label: 'janus', command: 'shell', launch: true } as const;
 
 const declaration: TabPluginDeclaration = {
   id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
@@ -51,7 +51,7 @@ describe('a launch origin', () => {
 
   it('still answers null for an ordinary origin whose tab is gone', () => {
     const capabilities = createPluginContext(
-      emptyManagers(), declaration, activation, { label: 'janus', command: 'zsh' }, () => true,
+      emptyManagers(), declaration, activation, { label: 'janus', command: 'shell' }, () => true,
     );
 
     expect(capabilities.originTab()).toBeNull();
@@ -66,7 +66,7 @@ describe('a launch origin', () => {
     managers.tab.cwdOf = vi.fn(() => '/remote/workspace/src');
     managers.remote = { workspaceOf: vi.fn(() => '/remote/workspace') } as never;
     const capabilities = createPluginContext(
-      managers, declaration, activation, { label: 'remote-shell', command: 'zsh' }, () => true,
+      managers, declaration, activation, { label: 'remote-shell', command: 'shell' }, () => true,
     );
 
     expect(capabilities.originTab()).toMatchObject({

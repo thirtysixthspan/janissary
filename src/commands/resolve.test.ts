@@ -10,25 +10,10 @@ describe('resolveCommand', () => {
     expect(resolveCommand(' '.repeat(3))).toEqual({ kind: 'empty' });
   });
 
-  it('classifies the `shell` keyword as a shell command, stripping the keyword', () => {
-    expect(resolveCommand('shell ls -la')).toEqual({ kind: 'shell', cmd: 'ls -la' });
-    expect(resolveCommand('SHELL git status')).toEqual({ kind: 'shell', cmd: 'git status' });
-  });
-
-  it('treats a bare `shell` as an empty shell command', () => {
-    expect(resolveCommand('shell')).toEqual({ kind: 'shell', cmd: '' });
-  });
-
-  it('treats a leading `!` as shorthand for the `shell` keyword', () => {
+  it('treats a leading `!` as a request to run a shell command', () => {
     expect(resolveCommand('!ps')).toEqual({ kind: 'shell', cmd: 'ps' });
     expect(resolveCommand('! git status')).toEqual({ kind: 'shell', cmd: 'git status' });
     expect(resolveCommand('!')).toEqual({ kind: 'shell', cmd: '' });
-  });
-
-  it('does not treat a word merely starting with "shell" as the keyword', () => {
-    const result = resolveCommand('shellcheck script.sh');
-    expect(result.kind).toBe('unknown');
-    if (result.kind === 'unknown') expect(result.output).toContain('Unknown command');
   });
 
   it('does not run a backtick-prefixed command in the shell', () => {
@@ -37,7 +22,7 @@ describe('resolveCommand', () => {
     if (result.kind === 'unknown') expect(result.output).toContain('Unknown command');
   });
 
-  it('requires the `shell` keyword: a bare command name is not auto-run', () => {
+  it('requires `!`: a bare shell command name is not auto-run', () => {
     const result = resolveCommand('ls');
     expect(result.kind).toBe('unknown');
     if (result.kind === 'unknown') expect(result.output).toContain('Unknown command');
@@ -56,6 +41,10 @@ describe('resolveCommand', () => {
   });
 
   it('classifies app/tab-management built-ins', () => {
+    expect(resolveCommand('shell')).toEqual({ kind: 'app', name: 'shell', cmd: 'shell' });
+    expect(resolveCommand('shell docs --offline')).toEqual({
+      kind: 'app', name: 'shell', cmd: 'shell docs --offline',
+    });
     expect(resolveCommand('next')).toEqual({ kind: 'app', name: 'next', cmd: 'next' });
     expect(resolveCommand('acp summarize this repo')).toEqual({ kind: 'app', name: 'acp', cmd: 'acp summarize this repo' });
     expect(resolveCommand('db sqlite query mydb SELECT 1')).toEqual({ kind: 'app', name: 'db', cmd: 'db sqlite query mydb SELECT 1' });

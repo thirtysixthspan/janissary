@@ -142,7 +142,7 @@ function metaChordOpener(e: KeyboardEvent, snap: StateSnapshot, cb: Callbacks): 
   }
   case 'newShellTab': {
     e.preventDefault();
-    cb.runCommand('zsh');
+    cb.runCommand('shell');
     return true;
   }
   // Shift+Tab belongs to `useSectionNav`, which claims it inside a dialog and not here. Saying so is the

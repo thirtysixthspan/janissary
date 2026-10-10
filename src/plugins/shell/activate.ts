@@ -18,8 +18,8 @@ import { parseShellArgument } from './parse-argument.js';
 
 let invocationCounter = 0;
 
-// One tab per `zsh`, always. The instance key is minted per invocation rather than derived from the
-// directory, so two `zsh` in the same place are two tabs — a shell is stateful, and refocusing the
+// One tab per `shell` command, always. The instance key is minted per invocation rather than derived from the
+// directory, so two `shell` commands in the same place are two tabs — a shell is stateful, and refocusing the
 // first would take the foreground program and the cwd away from the second.
 function nextInstanceKey(): string {
   invocationCounter += 1;

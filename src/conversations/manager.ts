@@ -147,7 +147,7 @@ export class ConversationsManager {
     const tab = this.managers.tab.byLabel(target.label);
     if (!tab) return false;
     tab.workspaceDir = target.workspace;
-    void this.managers.plugins.openSibling('shell', { label: target.label, command: 'zsh' });
+    void this.managers.plugins.openSibling('shell', { label: target.label, command: 'shell' });
     return true;
   }
 

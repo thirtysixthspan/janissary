@@ -61,7 +61,7 @@ function makeManagers(extra: Partial<Managers> = {}) {
 
 function contextFor(capabilities: readonly TabPluginCapabilityName[], managers: Managers) {
   return createPluginContext(
-    managers, declaration(capabilities), activationFor(), { label: 'janus', command: 'zsh' },
+    managers, declaration(capabilities), activationFor(), { label: 'janus', command: 'shell' },
     () => true, [],
   );
 }
@@ -108,7 +108,7 @@ describe('originTab', () => {
     const { byLabel, managers } = makeManagers();
     byLabel.mockReturnValue(undefined);
     const capabilities = createPluginContext(
-      managers, declaration(['originTab']), activationFor(), { label: 'ghost', command: 'zsh' },
+      managers, declaration(['originTab']), activationFor(), { label: 'ghost', command: 'shell' },
       () => true, [],
     );
 
@@ -118,7 +118,7 @@ describe('originTab', () => {
   it('answers nothing at all once the plugin has been disabled', () => {
     const { managers } = makeManagers();
     const capabilities = createPluginContext(
-      managers, declaration(['originTab']), activationFor(), { label: 'janus', command: 'zsh' },
+      managers, declaration(['originTab']), activationFor(), { label: 'janus', command: 'shell' },
       () => false, [],
     );
 
@@ -149,7 +149,7 @@ describe('dispatchLineWithOutput', () => {
     const { byLabel, managers, dispatchLineWithOutput } = withDispatcher();
     byLabel.mockReturnValue(undefined);
     const capabilities = createPluginContext(
-      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'zsh' },
+      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'shell' },
       () => true, [], 'shell1',
     );
 
@@ -170,7 +170,7 @@ describe('dispatchLineWithOutput', () => {
     const { byLabel, managers, dispatchLineWithOutput } = withDispatcher();
     byLabel.mockReturnValue({ label: 'shell1' } as never);
     const capabilities = createPluginContext(
-      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'zsh' },
+      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'shell' },
       () => true, [], 'shell1',
     );
 
@@ -183,7 +183,7 @@ describe('dispatchLineWithOutput', () => {
   it('returns no output after the plugin has been disabled', async () => {
     const { managers, dispatchLineWithOutput } = withDispatcher();
     const capabilities = createPluginContext(
-      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'zsh' },
+      managers, declaration(['dispatchLineWithOutput']), activationFor(), { label: 'janus', command: 'shell' },
       () => false, [],
     );
 
@@ -209,7 +209,7 @@ describe('spawnTerminal as a declared resource', () => {
       ...(spawnTerminal !== undefined && { spawnTerminal }),
     };
     createPluginContext(
-      managers, declared, activationFor(), { label: 'janus', command: 'zsh' }, () => true, [],
+      managers, declared, activationFor(), { label: 'janus', command: 'shell' }, () => true, [],
     ).openOrFocusTab('shell-1', (resources: TabPluginResources) => {
       seen.push(resources);
       return { title: 'shell', payload: {} };
@@ -248,7 +248,7 @@ describe('completeLine', () => {
     managers.monitor = { namesFor: vi.fn(() => []) } as unknown as Managers['monitor'];
     const capabilities = createPluginContext(
       managers, declaration(['completeLine', 'originTab']), activationFor(),
-      { label: 'janus', command: 'zsh' }, () => true, [], 'shell',
+      { label: 'janus', command: 'shell' }, () => true, [], 'shell',
     );
     capabilities.completeLine('l', 1);
     expect(completeCommandLine).toHaveBeenLastCalledWith(
@@ -260,7 +260,7 @@ describe('completeLine', () => {
   it('answers with an empty result rather than calling through once the plugin has been disabled', () => {
     const { managers } = makeManagers();
     const capabilities = createPluginContext(
-      managers, declaration(['completeLine']), activationFor(), { label: 'janus', command: 'zsh' },
+      managers, declaration(['completeLine']), activationFor(), { label: 'janus', command: 'shell' },
       () => false, [],
     );
 
@@ -321,7 +321,7 @@ describe('terminalRunning', () => {
   it('answers nothing at all once the plugin has been disabled', () => {
     const { managers } = makeManagers({ pty: { isRunningFor: vi.fn(() => true) } as never });
     const capabilities = createPluginContext(
-      managers, declaration(['terminalRunning']), activationFor(), { label: 'janus', command: 'zsh' },
+      managers, declaration(['terminalRunning']), activationFor(), { label: 'janus', command: 'shell' },
       () => false, [],
     );
 
@@ -352,7 +352,7 @@ describe('queueLine and nextQueuedLine', () => {
 
   function answeringContext(managers: Managers, isEnabled = () => true, answeringLabel: string | null = 'shell1') {
     return createPluginContext(
-      managers, declaration(['queueLine', 'nextQueuedLine']), activationFor(), { label: 'janus', command: 'zsh' },
+      managers, declaration(['queueLine', 'nextQueuedLine']), activationFor(), { label: 'janus', command: 'shell' },
       isEnabled, [], answeringLabel ?? undefined,
     );
   }
@@ -418,7 +418,7 @@ describe('recordCwd', () => {
     withOwnedTabs(byLabel);
     Object.assign(managers.tab, { setCwd });
     const capabilities = createPluginContext(
-      managers, declaration(['recordCwd']), activationFor(), { label: 'janus', command: 'zsh' },
+      managers, declaration(['recordCwd']), activationFor(), { label: 'janus', command: 'shell' },
       isEnabled, [], answeringLabel ?? undefined,
     );
     return { capabilities, setCwd };

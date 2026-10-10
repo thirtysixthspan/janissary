@@ -8,7 +8,7 @@ Every launch, `--relaunch` included, opens a single zsh shell tab (see [[shell-t
 
 ### Shell tab creation
 
-`zsh [name]` opens a shell through the bundled shell plugin. An unnamed shell draws a free name from the shared pool; a named shell applies the common launch-name checks. It joins the issuing tab's group and takes focus. Typed launches normally create a fresh workspace, while metadata-row shell buttons join the source workspace. See [[shell-tab]] and [[agents]].
+`shell [name]` opens a shell through the bundled shell plugin. An unnamed shell draws a free name from the shared pool; a named shell applies the common launch-name checks. It joins the issuing tab's group and takes focus. Typed launches normally create a fresh workspace, while metadata-row shell buttons join the source workspace. See [[shell-tab]] and [[agents]].
 
 ### Tab dot colors
 
@@ -19,7 +19,7 @@ Each tab has a colored dot drawn from a 15-color palette, cycling as tabs are ad
 Every tab belongs to a **group**, identified by a `group` number and a fixed `groupColor` (the group's bar color). A group renders as a colored top border spanning each member tab's full width, drawn at full strength on every tab in the group — active or inactive, never faded — so related tabs read as a connected band in the strip.
 
 - **Root group.** The launch shell is group 1, and its group color is its own dot color.
-- **Inheritance.** A shell created with `zsh` / `zsh <name>` joins the group of the tab it was created from (the active tab), inheriting that group's number and bar color. Because creation is transitive, a chain of shells spawned from one another all share a single group.
+- **Inheritance.** A shell created with `shell` / `shell <name>` joins the group of the tab it was created from (the active tab), inheriting that group's number and bar color. Because creation is transitive, a chain of shells spawned from one another all share a single group.
 - **Profiles form a group.** Launching a profile creates one new group (the next free group number) shared by all of that profile's tabs; the group's bar color is fixed to the first launched tab's color. See Profiles.
 - **Fixed color.** A group's bar color is set when the group is first created (the color of its first member) and stored per tab, so it never shifts when tabs are reordered or a member is closed.
 - **Contiguity.** A new tab is inserted directly after the last tab of its group (`insertTabInGroup` in `src/tab.ts`) so each group stays a single connected run in the strip. Reordering with `Ctrl+←` / `Ctrl+→` or by dragging a label may only move a tab **within the same group** (`canMoveTab`), so groups always stay contiguous and a tab can never be dragged out of its group. A tab can be temporarily absent from the strip while docked into a sidebar; see `sidebars.md`.
@@ -97,7 +97,7 @@ Dragging a tab label reorders it within its strip. In a split center area, relea
 
 Releasing the mouse elsewhere commits the previewed order even when the pointer is outside the source strip. Pressing Escape cancels instead, restores the original order, and sends no reorder or pane move. A press that stays below the movement threshold remains an ordinary click, so selecting and double-clicking to rename keep their existing behavior. After a committed drag, the dragged tab remains focused.
 
-A drag ends the same way, without reordering, if the strip changes while it is in flight — a tab arriving or being closed by something other than the drag, such as a `zsh` or `harness` launch, a schedule firing, or a monitor's reporting tab appearing. The preview unwinds, the tabs sit where they were, and the release sends neither a reorder nor a pane move. The gesture is not resumed against the new strip; the user starts it again.
+A drag ends the same way, without reordering, if the strip changes while it is in flight — a tab arriving or being closed by something other than the drag, such as a `shell` or `harness` launch, a schedule firing, or a monitor's reporting tab appearing. The preview unwinds, the tabs sit where they were, and the release sends neither a reorder nor a pane move. The gesture is not resumed against the new strip; the user starts it again.
 
 ### Metadata row
 
@@ -212,7 +212,7 @@ While a tab's workspace is still being provisioned, its metadata row shows a **p
 indicator: a spinning arrows icon placed first among the flags, right after the working directory,
 with the tooltip "Provisioning workspace". It stands in for the workspaced flag, which is hidden
 while provisioning lasts and takes the spinner's place once it ends. It covers harness tabs, local and remote alike —
-a local `zsh --workspace` or `harness -w` tab while its clone is in flight, and a remote shell or
+a local `shell --workspace` or `harness -w` tab while its clone is in flight, and a remote shell or
 harness tab until the far host reports its workspace ready. The icon keeps spinning for as long as
 provisioning lasts, then stops and disappears on the same update that makes the tab ready. A tab that
 joined a local workspace while it was still being cloned shows the indicator too, and it stops when
@@ -258,7 +258,7 @@ Closes the current tab and all of its associated connections — its shell, ACP 
 
 Besides shell and harness tabs, several **view tabs** render a non-transcript body in place of the command line: embedded web page (`open <url>`), the plain-text editor, bundled plugin views such as rendered markdown (`open <file>.md`), the image viewer (`open <image>`), and video, the file navigator (see `file-navigator-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are saved or restored on `--relaunch`.
 
-One bundled plugin view keeps the command line and replaces the transcript instead: the **shell tab** (`zsh`) is a live zsh terminal under the shell tab's metadata row and command bar, laid out like a shell tab with a terminal where the transcript would be. It is a plugin tab in every other respect — live, in-memory, dockable, splittable — and is described in [[shell-tab]].
+One bundled plugin view keeps the command line and replaces the transcript instead: the **shell tab** (`shell`) is a live zsh terminal under the shell tab's metadata row and command bar, laid out like a shell tab with a terminal where the transcript would be. It is a plugin tab in every other respect — live, in-memory, dockable, splittable — and is described in [[shell-tab]].
 
 Every v1 plugin view remains mounted while inactive, just like editor, page, and harness views, so local UI state and media playback survive tab switches. The server owns its generic plugin envelope, group, color, pane, focus, and served-file references. If a plugin becomes disabled, all of that plugin's open tabs close and their references are released; unrelated view tabs remain open. See [[tab-plugins]].
 

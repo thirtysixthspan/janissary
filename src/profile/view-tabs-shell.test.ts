@@ -36,7 +36,7 @@ function makeManagers(initial: Tab[]): Managers {
       launchDir: '/proj',
     },
     plugins: {
-      declarations: [{ id: 'shell', fileExtensions: {}, command: 'zsh', profileCommand: 'zsh --no-workspace' }],
+      declarations: [{ id: 'shell', fileExtensions: {}, command: 'shell', profileCommand: 'shell --no-workspace' }],
       runCommand,
     },
   } as unknown as Managers;
@@ -66,7 +66,7 @@ describe('openProfileViewTabs with the launch shell open', () => {
     );
 
     expect(managers.plugins.runCommand).toHaveBeenCalledWith(
-      'shell', 'zsh --no-workspace', { label: 'janus', command: 'zsh --no-workspace' },
+      'shell', 'shell --no-workspace', { label: 'janus', command: 'shell --no-workspace' },
     );
   });
 });

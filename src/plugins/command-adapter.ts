@@ -3,14 +3,6 @@ import { RESERVED_NON_COMMAND_NAMES } from '../commands/reserved.js';
 import type { TabPluginDeclaration } from './api.js';
 import { rejectContribution } from './rejections.js';
 
-// The one `shell` route still handled ahead of the registry: `shell` is stripped by
-// `resolveCommand` itself and has no registry entry. `harness` and `ssh` used to be listed here
-// too, and `schedule` (whose bare form used to be a pre-registry branch in `CommandManager.run`)
-// were before their registry migrations; they are `Command` entries now, so `coreCommands`
-// reserves them and this list no longer has to. Exported because a core route claim is refused on
-// the same terms, and one reserved-name list is better than two.
-export const ROUTE_NAMES = ['shell'];
-
 function firstToken(command: string): string {
   return command.trimStart().split(/\s/u, 1)[0].toLowerCase();
 }
@@ -46,7 +38,6 @@ export function createPluginCommands(
     ...coreCommands.map((command) => reservedName(command))
       .filter((name): name is string => name !== undefined),
     ...RESERVED_NON_COMMAND_NAMES.map((command) => command.toLowerCase()),
-    ...ROUTE_NAMES,
   ]);
   const claims = new Set<string>();
   const commands: Command[] = [];

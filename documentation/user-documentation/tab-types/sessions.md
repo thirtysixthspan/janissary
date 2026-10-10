@@ -27,7 +27,7 @@ An empty list reads `No remote sessions`, and the column headings go with the ro
 Each row shows:
 
 - **Host** — the bare hostname
-- **Type** — `harness`, `zsh`, `ssh`, or `navigator`
+- **Type** — `harness`, `shell`, `ssh`, or `navigator`
 - **Tab** — the tab's own name
 - **State** — see below
 - **Last activity** — how long ago the row last changed

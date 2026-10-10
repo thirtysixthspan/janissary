@@ -18,9 +18,8 @@ export type Resolution =
  * used when a command is typed into a tab. Pure: callers decide the side effects (a
  * foreground tab can run interactive/app commands; a remote agent refuses them).
  *
- * - `shell`: run in a shell. Explicitly requested via a leading `shell ` keyword — there
- *   is no bare auto-run, so a non-built-in typed without the keyword is unknown. A leading
- *   `!` or `!!` is shorthand for `shell` / `shell --pty` respectively.
+ * - `shell`: run in a shell. Explicitly requested with a leading `!`; there is no bare
+ *   auto-run, so a non-built-in typed without it is unknown.
  * - `app`: an application built-in that needs live state.
  * - `output`: a built-in with textual output to display (also the "unknown command" reply).
  * - `empty`: nothing to do.
@@ -29,20 +28,9 @@ export function resolveCommand(raw: string, available: (name: string) => boolean
   const trimmed = raw.trim();
   if (!trimmed) return { kind: 'empty' };
 
-  // `!!<cmd>` and `!<cmd>` are shorthand for `shell --pty <cmd>` and `shell <cmd>`. Checked
-  // before the `shell` keyword below, and `!!` before `!`, since a leading `!` alone would
-  // also match the two-character prefix.
+  // A leading `!` runs the rest of the line in the shell.
   if (trimmed.startsWith('!')) {
     return { kind: 'shell', cmd: trimmed.slice(1).replace(/^\s+/, '') };
-  }
-
-  // Shell commands are launched with the `shell` keyword, which is stripped before the
-  // command reaches the shell. A leading `--pty` flag forces the command into an interactive
-  // PTY session (see `interactive/index.ts` for the auto-detected path this bypasses); with no
-  // command after it, it opens a bare interactive shell.
-  if (/^shell\b/i.test(trimmed)) {
-    const rest = trimmed.replace(/^shell\b\s*/i, '');
-    return { kind: 'shell', cmd: rest };
   }
 
   const command = trimmed.replace(/^\//, '');
@@ -55,8 +43,8 @@ export function resolveCommand(raw: string, available: (name: string) => boolean
 
   // `getOutput` distinguishes help, empty input, and the unknown-command reply.
   const result = getOutput(command);
-  // Shell commands require the `shell` keyword (handled above); a bare non-built-in is
-  // reported as unknown rather than auto-run in the shell.
+  // Shell commands require a leading `!`; a bare non-built-in is reported as unknown
+  // rather than auto-run in the shell.
   if (result.kind === 'silent') return { kind: 'empty' };
   return { kind: result.kind, cmd: command, output: result.text };
 }

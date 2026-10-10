@@ -44,7 +44,7 @@ function shellTab(start: string): { managers: Managers; payload: ShellPayload } 
 
 function reportCwd(managers: Managers, payload: ShellPayload, cwd: string) {
   const capabilities = createPluginContext(
-    managers, shellManifest, activate(), { label: 'janus', command: 'zsh' }, () => true, [], 'shell1',
+    managers, shellManifest, activate(), { label: 'janus', command: 'shell' }, () => true, [], 'shell1',
   );
   return activate().intent({ tab: 'shell1', intent: 'cwd', payload: cwd, tabPayload: payload }, capabilities);
 }

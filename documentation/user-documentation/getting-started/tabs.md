@@ -2,7 +2,7 @@
 
 Shell tabs keep their own terminal, command history, working directory, and unfinished command line. Harness tabs keep their own live terminal. File and other view tabs retain their own content and view state while you switch tabs.
 
-A session starts with a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) named `janus`. New tabs are created on demand — shell tabs with the `zsh` command (below), harness tabs with `harness`, and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
+A session starts with a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`. New tabs are created on demand — shell tabs with the `shell` command (below), harness tabs with `harness`, and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
 
 A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, [conversation list](/user-documentation/tab-types/conversations), and [sessions](/user-documentation/tab-types/sessions) list each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`, `sessions left`) that opens or moves them straight into a sidebar. Bare `conversations` and bare `sessions` return their list to the center. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side. For a tab contributed by a bundled plugin, the kind is the plugin rather than the tab, so two image tabs displace each other while an image tab and a PDF tab sit side by side.
 
@@ -30,8 +30,8 @@ Which tab is docked where belongs to the app, so it stays the same in every wind
 ## Creating shell tabs
 
 ```
-zsh             create a tab with a random unused name
-zsh bilal     create a tab named "bilal"
+shell             create a tab with a random unused name
+shell bilal     create a tab named "bilal"
 ```
 
 The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab already has, or a live row in the [sessions](/user-documentation/tab-types/sessions) tab, is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. Random names come from a pool of 52 (see [Agents](/user-documentation/getting-started/agents)); if the pool is exhausted, the shell plugin falls back to a numbered label.
@@ -42,7 +42,7 @@ The strip tells you what every tab is doing without switching to it. Three signa
 
 - **The colored dot.** Every tab gets a dot color picked to stand apart from the colors already on screen, so adjacent tabs are easy to tell apart. The colored band along the top of a tab is its [group](/user-documentation/getting-started/groups).
 - **A blinking dot means busy.** While a tab is working — a shell command, an agent turn, anything in flight — its dot blinks on and off. It settles back to a steady fill when the work finishes.
-- **A flag icon means unread output.** When a tab that is not visible in either pane receives new content — a shell command finishing, agent output — a flag badge appears on it. A backgrounded zsh shell tab also gets a flag when its command finishes. If that badge stays unread and hidden for 30 seconds, Janissary raises an `Agent '<tab>' is waiting` notification. Selecting the tab starts a short dwell rather than clearing the flag outright: stay on the tab for a moment and the flag goes, which is how a tab you actually stopped to read is told apart from one you flicked past on the way somewhere else. The flag is never drawn on the tab you are currently on, so a dwell never shows a flag appearing on the tab under your eyes. A tab you have docked into a sidebar never badges, however much it has to say, because it is on screen. The badge lives only in the app's memory: a fresh `janus` or a `janus --relaunch` brings no flags with it.
+- **A flag icon means unread output.** When a tab that is not visible in either pane receives new content — a shell command finishing, agent output — a flag badge appears on it. A backgrounded shell tab also gets a flag when its command finishes. If that badge stays unread and hidden for 30 seconds, Janissary raises an `Agent '<tab>' is waiting` notification. Selecting the tab starts a short dwell rather than clearing the flag outright: stay on the tab for a moment and the flag goes, which is how a tab you actually stopped to read is told apart from one you flicked past on the way somewhere else. The flag is never drawn on the tab you are currently on, so a dwell never shows a flag appearing on the tab under your eyes. A tab you have docked into a sidebar never badges, however much it has to say, because it is on screen. The badge lives only in the app's memory: a fresh `janus` or a `janus --relaunch` brings no flags with it.
 
 The active tab is also highlighted: full-strength text on the content background, while inactive tabs are muted. The band along the top of a group dims uniformly while the app window itself is behind something else, and comes back when you return to it.
 

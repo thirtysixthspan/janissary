@@ -180,7 +180,7 @@ describe('useWindowKeys', () => {
     const event = new KeyboardEvent('keydown', { key: 't', metaKey: true, bubbles: true, cancelable: true });
     const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
     globalThis.dispatchEvent(event);
-    expect(runCommand).toHaveBeenCalledWith('zsh');
+    expect(runCommand).toHaveBeenCalledWith('shell');
     expect(preventDefaultSpy).toHaveBeenCalled();
   });
 
@@ -330,7 +330,7 @@ describe('useWindowKeys', () => {
     const runCommand = vi.fn();
     render(React.createElement(TestComponent, { callbacks: { runCommand } }));
     dispatchKey('t', { metaKey: true });
-    expect(runCommand).toHaveBeenCalledWith('zsh');
+    expect(runCommand).toHaveBeenCalledWith('shell');
   });
 
   it('Ctrl+T does not run the Cmd+T new-tab action', () => {
@@ -573,7 +573,7 @@ describe('useWindowKeys', () => {
       fireEvent.keyDown(tabBody, { key: 't', metaKey: true });
 
       expect(handler).not.toHaveBeenCalled();
-      expect(runCommand).toHaveBeenCalledExactlyOnceWith('zsh');
+      expect(runCommand).toHaveBeenCalledExactlyOnceWith('shell');
       tabBody.remove();
     });
 

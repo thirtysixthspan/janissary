@@ -20,7 +20,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `notify <message>` | Push a custom line into the [notifications](/user-documentation/tab-types/notifications) feed |
 | `plugins` | List the [bundled tab plugins](/user-documentation/command-bar/plugins) with their version and state |
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a conversation by its title |
-| `zsh [name] [-w\|--workspace\|--no-workspace] [--offline]` | Open a separate [zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab), in a fresh sandboxed workspace clone unless `--no-workspace` is given |
+| `shell [name] [-w\|--workspace\|--no-workspace] [--offline]` | Open a separate [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab), in a fresh sandboxed workspace clone unless `--no-workspace` is given |
 | `quit` / `/quit` | Exit the application, after confirmation |
 
 ## `help`
@@ -29,7 +29,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 `help <section>` prints one part of it. `help commands` shows the command table, `help key bindings` every key table, and `help shell` just the shell tab's keys. You can name any key table by the start of its label, like `help editor` or `help file`. Case doesn't matter. A name that matches nothing gets `No help section matches "<name>".` followed by the list of section names.
 
-If the help file can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `shell ` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
+If the help file can't be read, `help` falls back to a single summary line naming the built-in commands and reminding you that `!` runs something in the shell, `/` runs a built-in, and `Ctrl+R` or `hist` opens command history.
 
 ## `theme`
 

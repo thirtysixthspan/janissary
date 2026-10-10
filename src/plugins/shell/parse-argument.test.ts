@@ -42,6 +42,6 @@ describe('parseShellArgument', () => {
   it('refuses an unknown option with the usage line', () => {
     expect(parseShellArgument('docs --sandbox')).toEqual({ error: `Unknown option "--sandbox". ${SHELL_USAGE}` });
     expect(parseShellArgument('-x')).toEqual({ error: `Unknown option "-x". ${SHELL_USAGE}` });
-    expect(SHELL_USAGE).toBe('Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]');
+    expect(SHELL_USAGE).toBe('Usage: shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]');
   });
 });

@@ -1,6 +1,5 @@
 // Built-in names a tab plugin must not claim that have no `Command` entry of their own to reserve
-// them. Every other built-in is reserved by being in the registry, and `shell`/`schedule` are
-// reserved by `ROUTE_NAMES` in `../plugins/command-adapter.ts` as routes handled ahead of it.
+// them. Every other built-in is reserved by being in the registry.
 //
 // This module deliberately imports nothing. `../commands.ts` builds its command list from the
 // registry, and the registry's module scope builds the plugin commands — so a reserved-name list

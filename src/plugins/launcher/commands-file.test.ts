@@ -42,7 +42,7 @@ function homeFile(directories: Scratch, content: unknown | string): void {
 describe('reading launcher.json', () => {
   it('provides the default launcher commands in the requested order', () => {
     expect(DEFAULT_LAUNCHER_COMMANDS).toEqual([
-      { id: 'zsh', icon: 'faTerminal', label: 'Shell', command: 'zsh' },
+      { id: 'shell', icon: 'faTerminal', label: 'Shell', command: 'shell' },
       { id: 'harness', icon: 'faRobot', label: 'Harness', command: 'harness' },
       { id: 'files', icon: 'faFolderOpen', label: 'File navigator', command: 'files left $root' },
       { id: 'sql', icon: 'faDatabase', label: 'SQL', command: 'sql' },
@@ -71,13 +71,13 @@ describe('reading launcher.json', () => {
   it("reads the project's own file, keeping the user's label and command verbatim", () => {
     const directories = scratch();
     try {
-      projectFile(directories, [{ icon: 'faTerminal', label: 'My shell', command: 'zsh --no-workspace' }]);
+      projectFile(directories, [{ icon: 'faTerminal', label: 'My shell', command: 'shell --no-workspace' }]);
 
       const read = readLauncherFile(directories.home, directories.project);
 
       expect(read.source).toBe('project');
       expect(read.commands).toEqual([
-        { id: 'command-0', icon: 'faTerminal', label: 'My shell', command: 'zsh --no-workspace' },
+        { id: 'command-0', icon: 'faTerminal', label: 'My shell', command: 'shell --no-workspace' },
       ]);
       expect(read.problem).toBeUndefined();
     } finally {
@@ -90,7 +90,7 @@ describe('reading launcher.json', () => {
   it("replaces the project's file with the user's own when one exists", () => {
     const directories = scratch();
     try {
-      projectFile(directories, [{ icon: 'faTerminal', label: 'Project shell', command: 'zsh' }]);
+      projectFile(directories, [{ icon: 'faTerminal', label: 'Project shell', command: 'shell' }]);
       homeFile(directories, [{ icon: 'faRobot', label: 'Home agent', command: 'harness' }]);
 
       const read = readLauncherFile(directories.home, directories.project);
@@ -123,7 +123,7 @@ describe('reading launcher.json', () => {
     const directories = scratch();
     try {
       projectFile(directories, [
-        { icon: 'faTerminal', label: 'One', command: 'zsh' },
+        { icon: 'faTerminal', label: 'One', command: 'shell' },
         { icon: 'faRobot', label: 'Two', command: 'harness' },
       ]);
 
@@ -142,14 +142,14 @@ describe('reading launcher.json', () => {
     const directories = scratch();
     try {
       projectFile(directories, [
-        { id: 'shell', icon: 'faTerminal', label: 'Zsh', command: 'zsh' },
+        { id: 'shell', icon: 'faTerminal', label: 'Shell', command: 'shell' },
         { id: 'shell', icon: 'faBell', label: 'Alerts', command: 'notifications left' },
         { id: 'tasks', icon: 'faListCheck', label: 'Tasks', command: 'tasks' },
       ]);
 
       const read = readLauncherFile(directories.home, directories.project);
 
-      expect(read.commands.map((entry) => entry.command)).toEqual(['zsh', 'tasks']);
+      expect(read.commands.map((entry) => entry.command)).toEqual(['shell', 'tasks']);
       expect(read.problem).toContain('1 sharing an id another entry already holds');
       expect(read.problem).toContain('holds 3 commands');
     } finally {
@@ -164,7 +164,7 @@ describe('reading launcher.json', () => {
     const directories = scratch();
     try {
       projectFile(directories, [
-        { id: 'command-1', icon: 'faTerminal', label: 'One', command: 'zsh' },
+        { id: 'command-1', icon: 'faTerminal', label: 'One', command: 'shell' },
         { icon: 'faRobot', label: 'Two', command: 'harness' },
       ]);
 
@@ -205,7 +205,7 @@ describe('reading launcher.json', () => {
     const directories = scratch();
     try {
       projectFile(directories, [
-        { icon: 'faTerminal', label: 'Kept', command: 'zsh' },
+        { icon: 'faTerminal', label: 'Kept', command: 'shell' },
         { icon: 'faRobot', label: 'No command' },
         { icon: 'faBell', label: 'Empty command', command: ' ' },
         'not even an object',
@@ -213,7 +213,7 @@ describe('reading launcher.json', () => {
 
       const read = readLauncherFile(directories.home, directories.project);
 
-      expect(read.commands).toEqual([{ id: 'command-0', icon: 'faTerminal', label: 'Kept', command: 'zsh' }]);
+      expect(read.commands).toEqual([{ id: 'command-0', icon: 'faTerminal', label: 'Kept', command: 'shell' }]);
     } finally {
       cleanup(directories);
     }
@@ -302,7 +302,7 @@ describe('creating launcher.json for editing', () => {
 
   it('leaves an existing launcher file untouched', () => {
     const directories = scratch();
-    const content = [{ icon: 'faTerminal', label: 'My shell', command: 'zsh --login' }];
+    const content = [{ icon: 'faTerminal', label: 'My shell', command: 'shell --login' }];
     const filePath = path.join(directories.project, '.janissary', 'launcher.json');
     try {
       projectFile(directories, content);

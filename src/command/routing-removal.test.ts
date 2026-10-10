@@ -21,7 +21,7 @@ function setup() {
 
 afterEach(() => { messageBus.clear(); });
 
-describe('explicit command execution after routing removal', () => {
+describe('explicit command execution', () => {
   it.each(['ls -la', 'select 1 as n', 'why is the sky blue?'])('refuses unprefixed %s without executing it', (input) => {
     const { managers, shell, database, prompt } = setup();
     managers.command.dispatch(input);
@@ -43,9 +43,9 @@ describe('explicit command execution after routing removal', () => {
     ]);
   });
 
-  it.each(['shell echo hi', '!echo hi'])('keeps explicit %s executable', (input) => {
+  it('keeps explicit ! shell execution available', () => {
     const { managers, shell } = setup();
-    managers.command.dispatch(input);
+    managers.command.dispatch('!echo hi');
     expect(shell).toHaveBeenCalledWith('janus', 'echo hi');
   });
 

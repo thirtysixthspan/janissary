@@ -13,9 +13,9 @@ from the project directory.
 
 `janus` starts the server in the background and hands your shell prompt straight back once it's ready. The terminal you launched from doesn't need to stay open, and closing it — or pressing `Ctrl+C` in it — no longer stops the app. Use [`janus stop`](#stopping-the-app) to shut it down.
 
-Every launch opens a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) named `janus`, in the project directory. Type `zsh` in its command bar to open a shell tab. By default each launch also starts fresh, with the previous session's logs, recordings, and workspace clones cleared; `--relaunch` (below) keeps them.
+Every launch opens a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. Type `shell` in its command bar to open a shell tab. By default each launch also starts fresh, with the previous session's logs, recordings, and workspace clones cleared; `--relaunch` (below) keeps them.
 
-If zsh can't be started, the app doesn't start either: the launch fails with `could not open the launch shell` and the reason.
+If the shell can't be started, the app doesn't start either: the launch fails with `could not open the launch shell` and the reason.
 
 ## Arguments
 
@@ -102,7 +102,7 @@ Settings live in `.janissary/config.json` inside the directory you launch from; 
 | Setting | Default | What it does |
 |---|---|---|
 | `transcriptMaxLines` | `25000` | How many transcript entries each tab keeps. Past the cap, the oldest entries are dropped. |
-| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. Neither an `zsh <name>` nor a `harness claude as <label>` is capped; both are only shortened for display |
+| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. Neither a `shell <name>` nor a `harness claude as <label>` is capped; both are only shortened for display |
 | `activeTabNameMaxLength` | `50` | The longest focused tab name shown in the strip. Focusing a tab expands its name up to this limit. |
 | `theme` | `"dark"` | The application color theme. Change it at runtime with [`theme <name>`](/user-documentation/command-bar/commands#theme). |
 | `syntaxTheme` | `"github-dark"` | The syntax-highlighting theme for [editor tabs](/user-documentation/tab-types/editor). Change it at runtime with `syntax theme <name>`. |

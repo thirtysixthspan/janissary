@@ -13,8 +13,8 @@ describe('agent dispatch without a command queue', () => {
     const command = new CommandManager(managers);
     managers.tab.addBusy('worker');
 
-    command.dispatch('shell echo typed');
-    command.dispatchTo('worker', 'shell echo sent');
+    command.dispatch('!echo typed');
+    command.dispatchTo('worker', '!echo sent');
 
     expect(managers.shell.run).toHaveBeenCalledWith('worker', 'echo typed');
     expect(managers.shell.run).toHaveBeenCalledWith('worker', 'echo sent');

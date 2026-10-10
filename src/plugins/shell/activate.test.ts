@@ -111,7 +111,7 @@ function ask(
   );
 }
 
-describe('the zsh command', () => {
+describe('the shell command', () => {
   it('opens a metadata sibling in the existing workspace and cwd without provisioning another clone', () => {
     const { capabilities, launches, spawns } = fakeCapabilities({ origin: { label: 'harness', cwd: CLONE + '/src', root: '/repo', workspace: { dir: CLONE, offline: true } } });
     activate().openSibling?.(capabilities);
@@ -231,7 +231,7 @@ describe('the zsh command', () => {
     ['remote shell', { label: 'shell1', cwd: '/remote/work/src', root: '/repo', workspace: { dir: '/remote/work', offline: true }, remote: true }],
     ['remote agent', { label: 'agent1', cwd: '/remote/work/src', root: '/repo', workspace: { dir: '/remote/work', offline: true }, remote: true }],
     ['remote harness', { label: 'harness1', cwd: '/remote/work/src', root: '/repo', workspace: { dir: '/remote/work', offline: true }, remote: true }],
-  ] as const)('joins the source workspace when zsh is typed in a %s', (_kind, origin) => {
+  ] as const)('joins the source workspace when shell is typed in a %s', (_kind, origin) => {
     const { capabilities, launches, spawns, opened } = fakeCapabilities({ origin });
 
     activate().command?.('Docs -w --workspace --no-workspace --offline', capabilities);

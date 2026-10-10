@@ -1,8 +1,8 @@
 # Shell Tab
 
 A **shell tab** is a tab whose body is a live pseudo terminal running zsh: the metadata row on top, the terminal where the transcript would be, and the command line
-beneath it. Type `zsh` in any tab's command bar to open one; by default it gets a sandboxed workspace clone
-of its own (see "Where the shell starts"). `zsh <name>` names the tab. Without a name, each
+beneath it. Type `shell` in any tab's command bar to open one; by default it gets a sandboxed workspace clone
+of its own (see "Where the shell starts"). `shell <name>` names the tab. Without a name, each
 shell tab is named from the agent-name pool — a name no open tab already holds, and no harness or remote shell
 session that is provisioning, active, reconnecting, or detached still holds (see "Name clashes" in [[harness]])
 — and the tab strip shows that name, so two shells read as two distinct tabs and either can be
@@ -14,7 +14,7 @@ Every launch opens one shell tab of its own, before any other tab exists: the **
 labelled `janus` rather than given a pool name, started in the project directory with no workspace,
 in the first palette colour and group 1 (see [[tabs]]). It is an ordinary shell tab in every other
 respect — `exit` closes it, and as the last tab that quits the app — and the application opens it
-through the same plugin as `zsh`, from no tab at all.
+through the same plugin as `shell`, from no tab at all.
 
 The launch shell is the visible tab when the window first appears, and its command bar holds the
 keyboard focus, not its terminal. The first thing typed after launch goes to the `janus` command bar
@@ -22,7 +22,7 @@ without a click. A window that opens without operating-system focus keeps the co
 focused element, so the keyboard lands there as soon as the window is activated.
 
 The tab is contributed by a **bundled tab plugin** rather than by the application core (see
-[[tab-plugins]]). Nothing about it changes because of that: `zsh` is in every build, and what
+[[tab-plugins]]). Nothing about it changes because of that: `shell` is in every build, and what
 follows describes the behavior.
 
 ## Choose where keys go
@@ -144,7 +144,7 @@ The command bar's status dot uses the same color as the shell tab's dot.
 
 ## Keys
 
-`Cmd+T` opens another zsh tab beside this shell, exactly as the metadata row's **new shell here** button does. The new shell starts in the same working directory. Beside an unsandboxed shell it is unsandboxed; beside a sandboxed one it runs inside the same workspace clone with the same offline setting. A remote shell's sibling joins its existing remote channel and workspace, starts at its current directory when that directory is inside the workspace (otherwise at the workspace root), and inherits its offline setting. It never creates a workspace, which is what sets it apart from a typed `zsh`. While the source workspace is provisioning, `Cmd+T` does nothing. In other tabs, `Cmd+T` keeps opening a new shell tab.
+`Cmd+T` opens another zsh tab beside this shell, exactly as the metadata row's **new shell here** button does. The new shell starts in the same working directory. Beside an unsandboxed shell it is unsandboxed; beside a sandboxed one it runs inside the same workspace clone with the same offline setting. A remote shell's sibling joins its existing remote channel and workspace, starts at its current directory when that directory is inside the workspace (otherwise at the workspace root), and inherits its offline setting. It never creates a workspace, which is what sets it apart from a typed `shell`. While the source workspace is provisioning, `Cmd+T` does nothing. In other tabs, `Cmd+T` keeps opening a new shell tab.
 
 `Cmd+T` works the same with the terminal focused as with the command bar focused, and when the keyboard rests on the page with the shell as the current tab. It is a chord the shell plugin's declaration claims beside `Ctrl+R`, so like `Ctrl+R` it belongs to the shell only while the shell is the visible tab, or the selected entry in the sidebar it is docked to. `Cmd+T` pressed in another tab's command bar beside a docked shell still opens a new shell tab.
 
@@ -284,8 +284,8 @@ must be 32 lowercase hex characters, because it is written into the hook functio
 
 ## Where the shell starts
 
-The command is `zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]`, read the way `harness` reads
-its own. A typed `zsh` creates a new sandbox by default, wherever it is typed, a sandboxed tab included:
+The command is `shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]`, read the way `harness` reads
+its own. A typed `shell` creates a new sandbox by default, wherever it is typed, a sandboxed tab included:
 a fresh `git clone` of the project's `origin` under `.janissary/workspace/<name>/`, with zsh confined to
 it by the same Seatbelt profile and credential injection a `harness -w` gets (see [[workspaced-agent]]).
 `-w` and `--workspace` confirm the default. `--no-workspace` opts out and wins when both are given.
@@ -295,7 +295,7 @@ a workspace even when `--no-workspace` is present. Flags and `on` match case-ins
 `on <address>` clause may appear anywhere among the name and flags, and the address keeps its case
 and follows [[remote-server]]'s address grammar.
 
-The words after `zsh` that are not flags form the name, lowercased, as `harness <name>`'s do. The name is
+The words after `shell` that are not flags form the name, lowercased, as `harness <name>`'s do. The name is
 the tab's label and, for a workspaced shell, the clone's folder. A typed name is held to the shared
 launch-name rules: one that clashes with an open tab or a live session is refused, a workspaced name must
 be a single folder name, and a leftover folder under it is removed before cloning, with the
@@ -303,31 +303,31 @@ notifications-feed messages for each. Without a name the shell is named as descr
 
 An address after `on` is checked before any connection opens. A missing or invalid address reports
 the address usage or validation error. A word starting with `-` that is not one of the four flags is
-refused with `Unknown option "<word>". Usage: zsh [name] [-w|--workspace|--no-workspace] [--offline]
+refused with `Unknown option "<word>". Usage: shell [name] [-w|--workspace|--no-workspace] [--offline]
 [on <address>]` and nothing opens; such a word never becomes part of the name.
 
 A workspaced shell's tab opens at once, while the clone runs, and zsh starts confined to the clone, at
-its root, when the clone finishes. With no git repository, or no readable `origin` remote, a typed `zsh`
+its root, when the clone finishes. With no git repository, or no readable `origin` remote, a typed `shell`
 still opens a shell, unsandboxed exactly as `--no-workspace` would, and answers `Shell "<name>" has no
 workspace: <reason>.`, where the reason is `no git repository found` or `the repository has no "origin"
 remote`.
 
-An unsandboxed shell — `zsh --no-workspace`, or that fallback — never starts inside another tab's clone.
+An unsandboxed shell — `shell --no-workspace`, or that fallback — never starts inside another tab's clone.
 It starts in the issuing tab's working directory when that tab is
 local, has no workspace, and is inside the project checkout, and at the checkout root otherwise. The
 **new shell here** button and `Cmd+T` are the way to open another shell inside an existing clone.
 
 A local shell's starting directory must be inside the project root, and a local shell cannot be
 started anywhere else: a terminal only ever runs in a directory inside that root. A remote tab's
-typed `zsh` without `on` opens a sibling in that tab's remote workspace and channel. It inherits the
+typed `shell` without `on` opens a sibling in that tab's remote workspace and channel. It inherits the
 workspace offline setting; `-w`, `--workspace`, `--no-workspace`, and `--offline` do not change the
 remote workspace. A name is still honored and checked against the normal tab and session clashes.
 While the workspace provisions, it reports `The remote workspace is not ready yet.`; if the remote
 session is reconnecting or gone, it reports `The remote workspace is no longer available.`. A remote
-tab cannot start another standalone remote shell: `zsh … on <address>` answers
+tab cannot start another standalone remote shell: `shell … on <address>` answers
 `Cannot launch a remote shell from a remote tab.` and opens no tab.
 
-`zsh <name> on <address>` opens its tab immediately with the live SSH terminal attached. Password,
+`shell <name> on <address>` opens its tab immediately with the live SSH terminal attached. Password,
 passphrase, host-key, and other SSH prompts appear in that terminal and are answered by typing there.
 When the remote workspace is ready, the same tab switches to zsh at the workspace root. The shell
 has its own SSH channel and workspace; the remote host's isolation notice follows its ready line.
@@ -373,9 +373,9 @@ A line submitted in a provisioning shell's command bar joins the shell's command
 
 Completion and the metadata row's file-navigator and new-shell actions use the shell tab's recorded directory even when another tab is selected. That recorded directory follows zsh's current directory, so after a `cd` the **new shell here** button and `Cmd+T` start the new shell where this one now is, and **open file navigator here** opens the navigator on that same directory. When zsh has moved outside the project root, and outside its workspace clone when it has one, the new shell starts in the workspace clone or the project root instead, because a terminal may only start inside the project. A new shell's recorded directory is the one its terminal actually started in, fallback included, from the moment the tab opens (`openPluginTab` in `src/tab/openers.ts` takes it from the spawned terminal, not from the source tab), so completion, the metadata row and anything opened from it agree with the shell even before zsh first reports its directory, which a shell no browser has mounted never does. A new shell from **new shell here** or `Cmd+T` inherits the shell's workspace and offline mode.
 
-When docked, bare `close` and `Cmd+W` act on the shell tab whose command bar has focus. A `zsh` command uses that shell tab as its source for the new shell's working directory and group.
+When docked, bare `close` and `Cmd+W` act on the shell tab whose command bar has focus. A `shell` command uses that shell tab as its source for the new shell's working directory and group.
 
-One tab per `zsh`, always. `zsh` twice opens two tabs even in the same directory, because a shell is
+One tab per `shell` command, always. `shell` twice opens two tabs even in the same directory, because a shell is
 stateful and refocusing the first would take its foreground program and its directory away from the
 second.
 

@@ -138,7 +138,7 @@ describe('tab plugin command adapter', () => {
       ...commands
         .filter((command) => command.match(command.name))
         .map((command) => command.name),
-      'schedule', 'harness', 'ssh', 'shell',
+      'schedule', 'harness', 'ssh',
     ]);
     for (const name of reserved) {
       clearContributionRejections();
@@ -157,6 +157,13 @@ describe('tab plugin command adapter', () => {
     clearContributionRejections();
     const built = createPluginCommands([manifest('fixture', { command: 'search' })], coreCommands());
     expect(built.map((command) => command.name)).toEqual(['search']);
+    expect(contributionRejection('fixture')).toBeUndefined();
+  });
+
+  it('allows a plugin to claim shell after the shell execution route is removed', () => {
+    clearContributionRejections();
+    const built = createPluginCommands([manifest('fixture', { command: 'shell' })], coreCommands());
+    expect(built.map((command) => command.name)).toEqual(['shell']);
     expect(contributionRejection('fixture')).toBeUndefined();
   });
 

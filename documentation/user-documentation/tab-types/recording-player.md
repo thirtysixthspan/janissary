@@ -22,7 +22,7 @@ by the name of the session that wrote it whether or not that session is still ru
 the same way, with `play clip.mp4`, and a track with `play track.mp3`.
 
 Every [harness](/user-documentation/advanced-agents/harness#recordings), SSH, and
-[shell](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) tab is recorded
+[shell](/user-documentation/command-bar/shell#open-a-shell-tab) tab is recorded
 automatically, so this is the way to watch a session again: one still running, or one whose tab has
 closed and whose scrollback went with it. See
 [Playing a recording back](/user-documentation/advanced-agents/harness#playing-a-recording-back) for the

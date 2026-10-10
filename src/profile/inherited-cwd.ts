@@ -7,7 +7,7 @@ import type { Tab } from '../tab/types.js';
 // workspaced tab's clone, which is deleted under it when that tab closes, and a confined tab could
 // start outside the one directory its sandbox profile allows.
 
-// `zsh --no-workspace`: the project checkout, or a directory inside it that a local, unconfined
+// `shell --no-workspace`: the project checkout, or a directory inside it that a local, unconfined
 // source is in. A workspaced source's directory belongs to its clone and a remote source's to another
 // host, so neither is inherited.
 export function unconfinedAgentCwd(creator: Tab, cwd: string | undefined, launchDir: string): string {
