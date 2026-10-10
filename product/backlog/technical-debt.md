@@ -4,17 +4,6 @@
 
 ## development
 
-* Keep editor file watches attached after external atomic replacements.
-
-Existing Debt: Editor observation is attached to a file handle and rearmed only by application saves or explicit refreshes, leaving external replacement events without an equivalent lifecycle transition. Severity: 5/10
-
-Existing Risk: 5/10 - An external atomic replacement can orphan observation of the pathname, leaving a clean editor on stale content and hiding later changes until a manual refresh or save conflict reveals them.
-
-Proposal Risk: 2/10 - Filesystem failures or edits preserving the same modification time can still delay reloads, while the content hash check continues to guard disk saves against unseen changes.
-
-Proposal: `watch` in `src/editor/watch-manager.ts` subscribes to the file itself and ignores the event type; `check` updates its modification-time baseline but never reattaches observation after an external replacement. The existing `refresh` comment already records that replacement can make later changes invisible. Prefer watching the containing directory and filtering events for the target basename, with unnamed events triggering a pathname check, so replacing the file does not replace the watched object. Keep the existing debounce and `markSaved` baseline suppression, handle watcher errors explicitly, and ensure any bounded retry used for a missing or recreated path is owned by the watch state and cancelled by `unwatch`, `closeTab`, and `dispose`. `src/editor/watch-manager.test.ts` covers in-place external writes and rearming after application saves, while the real observation case in `src/editor/save.test.ts` exercises only the application's own replacements. Extend those cases to perform two successive external atomic replacements followed by another edit, deletion and recreation, and tab closure with a pending check. Preserve the clean-reload and dirty-conflict behavior covered by `web/src/editor/useEditorWatchReload.test.ts` and the save hash protection in `src/editor/save-conflict.test.ts`.
-
-
 * Preserve each task source's directory tree when project tasks shadow built-in files.
 
 Existing Debt: Task discovery deduplicates directory rows together with files even though the picker interprets each source as a complete tree, and client expansion state identifies directories only by their relative path. Severity: 5/10

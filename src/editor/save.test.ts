@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync, renameSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { saveFile } from './save.js';
@@ -30,7 +30,7 @@ function setup(content = 'original') {
 }
 
 describe('saveFile', () => {
-  it.skipIf(process.platform !== 'darwin')('continues observing real external edits after successive atomic saves', async () => {
+  it.skipIf(process.platform !== 'darwin')('continues observing external replacements, edits, and recreation', async () => {
     const { managers, dir, file, url } = setup();
     managers.editorWatch = new EditorWatchManager(managers);
     const tab = managers.tab.tabs.find((item) => item.editor)!;
@@ -42,12 +42,27 @@ describe('saveFile', () => {
         await new Promise((resolve) => setTimeout(resolve, 250));
         expect(tab.editor?.mtimeMs).toBe(previousMtime);
 
-        writeFileSync(file, `external edit ${attempt}`);
+        const replacement = `${file}.external`;
+        writeFileSync(replacement, `external replacement ${attempt}`);
         const later = new Date(Date.now() + attempt * 2000);
-        utimesSync(file, later, later);
+        utimesSync(replacement, later, later);
+        renameSync(replacement, file);
         const externalMtime = statSync(file).mtimeMs;
         await vi.waitFor(() => expect(tab.editor?.mtimeMs).toBe(externalMtime), { timeout: 3000 });
       }
+
+      writeFileSync(file, 'edit after replacements');
+      const editTime = new Date(Date.now() + 6000);
+      utimesSync(file, editTime, editTime);
+      const editedMtime = statSync(file).mtimeMs;
+      await vi.waitFor(() => expect(tab.editor?.mtimeMs).toBe(editedMtime), { timeout: 3000 });
+
+      rmSync(file);
+      writeFileSync(file, 'recreated after deletion');
+      const recreatedTime = new Date(Date.now() + 8000);
+      utimesSync(file, recreatedTime, recreatedTime);
+      const recreatedMtime = statSync(file).mtimeMs;
+      await vi.waitFor(() => expect(tab.editor?.mtimeMs).toBe(recreatedMtime), { timeout: 3000 });
     } finally {
       managers.editorWatch.dispose();
       rmSync(dir, { recursive: true, force: true });
