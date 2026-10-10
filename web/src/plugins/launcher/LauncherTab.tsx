@@ -97,13 +97,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
             type="button"
             title="Open launcher.json"
             aria-label="Open launcher.json"
-            onClick={() => {
-              void capabilities.intent('configure', { id: 'configure' })
-                .then((reply) => { setReply(typeof reply === 'string' ? reply : null); })
-                .catch((error: unknown) => {
-                  setReply(`Could not open launcher.json: ${error instanceof Error ? error.message : String(error)}`);
-                });
-            }}
+            onClick={() => { submit.configure(payload.filePath); }}
           >
             <FontAwesomeIcon icon={faGear} />
           </button>

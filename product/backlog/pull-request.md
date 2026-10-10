@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's visible replies for Configure results and rejected command intents.
-
-Existing Issue: Configure returns a dispatch-result object that the client discards through a string-only check, while typed-command and rail-command promise rejections clear the reply instead of displaying their error. Severity: 5/10
-
-Existing Risk: 4/10 - An edit refusal such as an oversized configuration file, or a rejected command request, leaves the launcher showing no explanation even though the host supplied one.
-
-Proposal Risk: 2/10 - Shared reply handling must continue to omit text already rendered by the core ACP response surface and respect application-handled picker commands.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "show Configure dispatch results and rejected launcher commands". Route Configure in `web/src/plugins/launcher/LauncherTab.tsx` through the same typed dispatch-result reporting used by `web/src/plugins/launcher/useLauncherSubmit.ts`, and replace both silent rejection handlers with a visible error message. Preserve `coreResponse` suppression and application interception. Extend `web/src/plugins/launcher/LauncherTab.test.tsx` with Configure returning `{ dispatched: true, output }`, Configure returning an unclaimed result, and rejected typed and rail intents. Use the oversized-file refusal from `src/openers/editor.ts` as a real host outcome the reply area must display. This completes the reporting steps promised by `product/plans/complete/launcher-rail-shares-the-bar-path.md`.
-
-
 * Complete the plan's faithful contract fixtures and command-id collision regression.
 
 Existing Issue: Activation fixtures omit required activity revisions and send `tabLabel` instead of the published intent's `tab`, the activity fake returns null for an absent question, the activation ACP start fake omits the session identity, and the positional-id collision test contains no collision. Severity: 5/10

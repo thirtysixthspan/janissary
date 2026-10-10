@@ -183,6 +183,18 @@ describe('the command rail', () => {
     expect(await screen.findByText('Opened the task list.')).toBeInTheDocument();
   });
 
+  it('shows an error when a rail command intent rejects', async () => {
+    const caps = capabilities();
+    caps.intent.mockRejectedValue(new Error('dispatch failed'));
+    launcher(payload({ commands: [command()] }), caps);
+
+    const row = screen.getByRole('option', { name: /Tasks/ });
+    fireEvent.click(row);
+    fireEvent.click(row);
+
+    expect(await screen.findByText('Could not run "tasks": dispatch failed')).toBeInTheDocument();
+  });
+
   // An id the file no longer holds answers `null` — the host's own validation. Showing it as unclaimed
   // keeps a row that stale from looking like it worked.
   it('reports a row the host no longer resolves as unclaimed', async () => {
@@ -228,6 +240,32 @@ describe('the command rail', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open launcher.json' }));
 
     expect(caps.intent).toHaveBeenCalledWith('configure', { id: 'configure' });
+  });
+
+  it('shows Configure dispatch output, including the editor size refusal', async () => {
+    const caps = capabilities();
+    caps.intent.mockResolvedValue({
+      dispatched: true,
+      output: 'edit: launcher.json is 3 MiB — too large to edit in-app (limit 2 MiB).',
+    });
+    launcher(payload(), caps);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open launcher.json' }));
+
+    expect(await screen.findByText(/too large to edit in-app/)).toBeInTheDocument();
+    expect(caps.intent).toHaveBeenCalledWith('configure', { id: 'configure' });
+  });
+
+  it('reports an unclaimed Configure dispatch', async () => {
+    const caps = capabilities();
+    caps.intent.mockResolvedValue({ dispatched: false, output: '' });
+    launcher(payload(), caps);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open launcher.json' }));
+
+    expect(await screen.findByText(
+      'No application command matches "edit /repo/.janissary/launcher.json".',
+    )).toBeInTheDocument();
   });
 
   // One bad icon name costs one glyph and one notification, not the command it belongs to — and a
@@ -588,6 +626,20 @@ describe('a line sent to the core ACP session', () => {
     fireEvent.keyDown(shell, { key: 'Enter' });
 
     expect(await screen.findByText('Opened the task list.')).toBeInTheDocument();
+  });
+});
+
+describe('a typed launcher command', () => {
+  it('shows an error when a dispatch intent rejects', async () => {
+    const caps = capabilities();
+    caps.intent.mockRejectedValue(new Error('typed dispatch failed'));
+    launcher(payload(), caps);
+    const shell = screen.getByLabelText('Launcher command');
+
+    fireEvent.change(shell, { target: { value: 'unknown' } });
+    fireEvent.keyDown(shell, { key: 'Enter' });
+
+    expect(await screen.findByText('Could not run "unknown": typed dispatch failed')).toBeInTheDocument();
   });
 });
 

@@ -14,6 +14,11 @@ function shownFor(reply: LauncherDispatchReply, line: string): string | null {
   return reply.output;
 }
 
+function rejectedFor(error: unknown, line: string): string {
+  const detail = error instanceof Error ? error.message : String(error);
+  return `Could not run "${line}": ${detail}`;
+}
+
 // Every command the launcher runs, from either of its two surfaces. A line typed into the bar and a
 // row clicked in the rail are the same event — a command the user asked for — so they take the same
 // path, in the order the shell tab's own bar takes:
@@ -37,6 +42,7 @@ export function useLauncherSubmit(input: {
 }): {
   line: (text: string) => void;
   command: (entry: LauncherCommand) => void;
+  configure: (filePath: string) => void;
 } {
   const { appBar, capabilities, onReply, clear } = input;
   // The lines this tab has sent, oldest first, so ArrowUp and ArrowDown recall them the way every other
@@ -46,9 +52,15 @@ export function useLauncherSubmit(input: {
 
   // Whatever the application answered with, put it where the user can read it — and where a rejection
   // lands too, so a failure is never the silent case.
-  const answered = (reply: unknown, line: string): void => {
-    if (reply === null || reply === undefined) onReply(`No application command matches "${line}".`);
-    else onReply(shownFor(reply as LauncherDispatchReply, line));
+  const answered = (reply: LauncherDispatchReply | null, line: string): void => {
+    if (reply === null) onReply(`No application command matches "${line}".`);
+    else onReply(shownFor(reply, line));
+  };
+
+  const request = (intent: string, payload: unknown, line: string): void => {
+    void capabilities.intent<LauncherDispatchReply | null>(intent, payload)
+      .then((reply) => { answered(reply, line); })
+      .catch((error: unknown) => { onReply(rejectedFor(error, line)); });
   };
 
   return {
@@ -60,17 +72,14 @@ export function useLauncherSubmit(input: {
       // The application answers first: a picker, the queue, a quit confirmation. Nothing reaches the
       // server, exactly as nothing would if this had been typed into a shell tab's own bar.
       if (appBar.intercept(line)) return;
-      void capabilities.intent<LauncherDispatchReply>('dispatch', { line })
-        .then((reply) => { answered(reply, line); })
-        .catch(() => { onReply(null); });
+      request('dispatch', { line }, line);
     },
     command: (entry: LauncherCommand) => {
       // The same interception, on the command the row names: `tasks` and `hist` are the application's
       // own pickers, and a click on a row saying so is a click, not a server dispatch.
       if (appBar.intercept(entry.command)) return;
-      void capabilities.intent<LauncherDispatchReply>('run-command', { id: entry.id })
-        .then((reply) => { answered(reply, entry.command); })
-        .catch(() => { onReply(null); });
+      request('run-command', { id: entry.id }, entry.command);
     },
+    configure: (filePath: string) => { request('configure', { id: 'configure' }, `edit ${filePath}`); },
   };
 }
