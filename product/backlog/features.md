@@ -4,6 +4,8 @@
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and receive the transcript as the agent works, and to recieve the response.
 
+* Write a readable, output-only terminal transcript for shell tabs alongside the existing asciicast recording, so command output remains inspectable after the tab closes. Parse the PTY stream as terminal output rather than stripping escape codes from raw bytes, and do not persist user input or its terminal echo; if the implementation cannot distinguish echoed input safely, omit it. Store the text transcript under `.janissary/shell-transcripts/`, bound its size, and clear/preserve it on the same fresh-launch and `--relaunch` lifecycle as recordings. Honor `recordShellTabs: false`. This covers transcript creation and retention only; making the transcript available to the launcher ACP summarizer is a separate feature. Complexity: medium-high.
+
 ## development
 
 ## deferred
