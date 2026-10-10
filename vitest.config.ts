@@ -74,6 +74,7 @@ export default defineConfig({
         test: {
           name: 'client',
           environment: 'jsdom',
+          pool: 'vmThreads',
           include: ['web/src/**/*.test.{ts,tsx}'],
           exclude: [
             ...configDefaults.exclude,
