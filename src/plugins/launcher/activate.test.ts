@@ -793,7 +793,7 @@ describe('summarizing', () => {
     expect(payload.summaries.shell).toBe('Second.');
   });
 
-  it('primes once and prompts once per flush, asking for nothing when no tab moved', async () => {
+  it('retries a tab omitted from the reply while keeping accepted tabs fed', async () => {
     const entry = openLauncher();
     const activation = activate();
     entry.answerWith('[[tab:shell]] First.');
@@ -801,9 +801,11 @@ describe('summarizing', () => {
     await summarize(entry, activation);
     expect(entry.prompted).toHaveLength(2);
 
-    // Nothing has moved, so the second flush asks nothing at all.
+    // The shell was accepted; the agent was omitted and remains eligible for a later flush.
     await summarize(entry, activation);
-    expect(entry.prompted).toHaveLength(2);
+    expect(entry.prompted).toHaveLength(3);
+    expect(entry.prompted.at(-1)).toContain('[[tab:agent]]');
+    expect(entry.prompted.at(-1)).not.toContain('[[tab:shell]]');
   });
 
   it('primes once across flushes when transcript changes in the same ACP session', async () => {
