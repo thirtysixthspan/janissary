@@ -4,17 +4,6 @@
 
 ## development
 
-* Define narrow action ports for the file navigator's execution module instead of deriving its contract from seven hooks.
-
-Existing Debt: The navigator action factory imports types from seven hook modules solely to use their complete return types as its input contract, making the execution layer depend on the React adapter layer in violation of §8 (services depend on pure modules, and hooks depend on services). Severity: 5/10
-
-Existing Risk: 4/10 - Changes to unrelated hook state expand the factory's required inputs, and tests bypass those requirements with assertions such as `as never`, allowing missing action callbacks to survive until a menu entry is activated.
-
-Proposal Risk: 2/10 - Incorrect selection or path routing can still produce the wrong action, but narrow typed fakes can exercise those rules directly and missing required callbacks become type errors.
-
-Proposal: Replace the seven `ReturnType<typeof use…>` fields in `Params` in `web/src/file-navigator/file/navigator-menu-actions.ts` with explicit structural ports containing only the values and callbacks the factory reads: selection cursor, selected paths and operation paths; opener `open` and `openWith`; paste `paste` and `duplicate`; deletion `request`; rename `begin`; row events `onRowDoubleClick`; and commit `request`. Preserve callback signatures from `web/src/file-navigator/useFileNavigatorOpener.ts`, `web/src/file-navigator/useFileNavigatorPaste.ts`, `web/src/file-navigator/useFileNavigatorDelete.ts`, `web/src/file-navigator/useFileNavigatorRename.ts`, `web/src/file-navigator/use-file-navigator-row-events.ts`, and `web/src/file-navigator/useFileNavigatorCommit.ts`, and remove all seven hook imports from the factory. Keep the ports in the action module or a colocated framework-free contract file, with no import back into a hook. `web/src/file-navigator/FileNavigatorTab.tsx` is the sole production caller and can continue passing structurally compatible hook results; `web/src/file-navigator/FileNavigatorOverlays.test.tsx` is the other direct consumer and should replace its asserted partial inputs with complete narrow fakes. Add a direct test beside the factory for selected-row versus clicked-row routing, multi-open, and the new-directory reply check, preserving the rendered commit-selection cases in the overlays test and the interactions in `web/src/file-navigator/FileNavigatorTab.test.tsx`. Scope this item to the factory contract and its direct tests; other navigator hooks' own type dependencies are separate work.
-
-
 * Move PDF page observation and rendering lifecycle out of the page component into a colocated hook.
 
 Existing Debt: Each PDF page component owns viewport observation, render scheduling, cancellation classification, and late-failure suppression inside its body, mixing asynchronous rendering decisions with markup in violation of §5 (components render, they do not decide). Severity: 5/10
