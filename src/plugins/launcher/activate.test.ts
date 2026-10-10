@@ -114,9 +114,9 @@ async function summarize(entry: ReturnType<typeof fixture>, activation: ReturnTy
 
 // The launcher is a singleton for the life of the server, so its state is module state — and every test
 // that touches it has to start from that state rather than from whatever the previous test left behind.
-function openLauncher(rows: TabActivityEntry[] = ROWS): ReturnType<typeof fixture> {
+function openLauncher(rows: TabActivityEntry[] = ROWS, root?: string): ReturnType<typeof fixture> {
   activate().dispose?.();
-  const entry = fixture(rows);
+  const entry = root === undefined ? fixture(rows) : fixture(rows, root);
   activate().command?.('', entry.capabilities);
   entry.updated.length = 0;
   entry.prompted.length = 0;
@@ -596,6 +596,28 @@ describe('summarizing', () => {
     activation.command?.('', entry.capabilities);
 
     expect(entry.updated).toHaveLength(0);
+  });
+
+  // A project that has run `janus init` has an `ai/personas/` directory and no persona in it, which
+  // is every ordinary project. The read used to throw before a prompt was ever sent, so no launcher
+  // outside this repository could summarise anything.
+  it('reaches ACP for a project that has no persona of its own', async () => {
+    const root = mkdtempSync(path.join(process.cwd(), 'temp', 'launcher-nopersona-'));
+    mkdirSync(path.join(root, 'ai/personas'), { recursive: true });
+    try {
+      const entry = openLauncher(ROWS, root);
+      const activation = activate();
+      entry.answerWith('[[tab:shell]] Running the test suite.');
+
+      await summarize(entry, activation);
+
+      expect(entry.notified).toEqual([]);
+      expect(entry.prompted.length).toBeGreaterThan(0);
+      // The shipped persona's body is what was primed with, not a host internal's.
+      expect(entry.prompted[0]).toContain('status line the launcher');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('reports a session it cannot start, and does not wedge', async () => {

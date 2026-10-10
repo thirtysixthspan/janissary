@@ -24,17 +24,6 @@ Proposal Risk: 2/10 - Typed faithful fixtures and focused integration cases expo
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "repair the new review fixtures so they exercise the published types and real lifecycle contracts". Repair src/plugins/launcher/summarizer.test.ts so its TabActivityEntry helper supplies dotColor and active, its view values match the contract, every buildSummarizerPrompt call supplies a delimiter, and the asserted marker text matches the actual description. Repair the moved-topic fixture in src/plugins/launcher/activate.test.ts to deliver TabActivityEntry objects rather than LauncherTabRow projections lacking logLength. Replace forced capability casts where they hide these mismatches and add host-backed singleton and close tests. Add the plan's currently absent regression assertions for janus init idempotent launcher-file seeding, timestamp writers in src/tab/transcript/events.ts, and tabs.focus on a missing label, using the existing project-init, transcript, and topic test files. Run the appropriate diff-scoped checks during the separate implementation task; this review has identified these issues by reading only.
 
 
-* Make the shipped summarizer persona available in ordinary initialized projects.
-
-Existing Issue: readPersonaBody reads only the target project's ai/personas/launcher/summarizer.md, while janus init creates an empty personas directory and never installs that new file. Severity: 7/10
-
-Existing Risk: 7/10 - The launcher in a normal project repeatedly reports a missing-file error and cannot produce any status summaries even with ACP available.
-
-Proposal Risk: 2/10 - A bundled default with an explicit project override makes first-run summarization work while preserving deliberate local customization.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "make the shipped summarizer persona available in ordinary initialized projects". In src/plugins/launcher/persona.ts, resolve a shipped default persona from the installed application when the target project has no launcher persona, or seed that persona idempotently through src/project/init.ts without overwriting user edits. Ensure the persona is included in the published package and document the override rule in product/specs/launcher.md. Extend src/plugins/launcher/activate.test.ts with an initialized scratch project outside the repository's persona tree and confirm a flush reaches ACP; add project-init or persona tests for absence and custom overrides. Existing summarize tests use process.cwd(), which happens to contain the repository's new persona and hides the missing-file path.
-
-
 * Handle core ACP command replies by rendering the host's response surface in the launcher.
 
 Existing Issue: The launcher discards dispatch results marked coreResponse but never renders useAcpResponse, so an acp command typed into its bar has no visible answer or streaming controls. Severity: 7/10
