@@ -51,7 +51,7 @@ or one over the cap — opens with the same chevron, so the header's reason note
 A double-click on the header does the same thing. Each hunk line carries its file's number on both
 sides: two narrow right-aligned gutters in the unified layout, the original number blank on an added
 line and the new number blank on a removed one, and in the split layout the original number in the left
-column with the modified one in the right. There is no cap: a change of any size is shown whole. In unified layout, a line longer than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads without a horizontal scrollbar and a wrapped line's number stays beside its first row. Split layout wraps text within each column and preserves readable column widths through horizontal scrolling in narrow panes.
+column with the modified one in the right. In unified layout, a line longer than the body's width wraps at word boundaries onto as many rows as it needs, so the whole line reads without a horizontal scrollbar and a wrapped line's number stays beside its first row. Split layout wraps text within each column and preserves readable column widths through horizontal scrolling in narrow panes.
 
 Every added line carries a **+** beside its number and every removed line a **−**, and the number itself
 takes the row's own color — a saturated green on an addition, a darker red on a removal — so a change
@@ -74,7 +74,7 @@ again. A click on the file's name still opens the file, expanded or not. The key
 an entry's hunks wherever they happen to be shown, so **Return** opens the file at the walked hunk's
 first changed line either way.
 
-An entry whose change holds **more than 400 changed lines** also opens collapsed, its header noting how
+An entry whose change holds **more than 400 added and removed lines combined** also opens collapsed, its header noting how
 many lines the change holds and what the cap is, and the same double-click expands it. The cap is on the
 change, not the file: a large file with one changed line shows that line in full.
 
@@ -106,8 +106,8 @@ The header carries a layout control:
 - **Plus-minus icon** — switches between the unified layout, with one column per line, and the split
   layout, with old and new content in separate columns and each side carrying its own line numbers.
   The button's pressed state shows whether split layout is active, and its tooltip names the layout it
-  will switch to. The layout is a standing preference: the tab opens in the layout last chosen, and
-  the choice carries to the next diff tab the session opens.
+  will switch to. The layout is saved as a plugin setting and the tab opens in the last chosen layout,
+  including after the tab is closed and reopened.
 
 Split layout shows original content on the left and modified content on the right. Unchanged lines appear on both sides, and replacements are paired row by row. When one side has fewer lines, shaded empty cells occupy the remaining rows without a number or marker. Each pair of cells has the same height even when one side wraps, keeping the columns aligned. A divider separates the old column from the new one.
 

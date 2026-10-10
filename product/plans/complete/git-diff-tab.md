@@ -32,16 +32,16 @@ The tab is a singleton. A second route — a different path argument, or another
 - A directory with no changes shows **No changes**.
 - A renamed file is one entry carrying its old and new path with only its changed hunks; a deleted file is an entry whose hunks are all removed lines, and clicking a deleted file's name does nothing because there is no file to open.
 - Double-clicking any line in a hunk — added, removed, or context — takes the user to that position in the file.
-- There is no size cap: every changed file and every hunk is shown, whatever the size of the change.
+- Whole-file changes and changes with more than 400 added and removed lines combined start collapsed; either can be expanded from its file header. Other entries start expanded.
 - A git failure that is not the not-a-repository case shows the failure's reason as one line in the tab body, the way the search tab's body shows a failed scan's reason, and the plugin keeps running.
 
 ### Naming and user-visible wording
 
 - The command token is **`diff`**, the tab's title in the strip is **diff**, and the plugin's id and label prefix are `diff`.
 - The workspace button's tooltip is **Show diff in the workspace**.
-- File entries are **all expanded** when the diff loads — no collapsed summaries.
+- Whole-file and oversized entries start collapsed; the rest start expanded. File headers identify status, counts, and the collapse reason.
 - Hunk lines **carry their file line numbers**.
-- The header carries the diffed root's path, the **Unified / Split** control, the **Hide whitespace changes** toggle, and a **refresh button**.
+- The header carries the diffed root's path, the **Unified / Split** control, and a **refresh button**. Whitespace-only changes are always shown.
 - Each file entry's header carries its add and delete counts, the way GitHub's files-changed view shows them beside the file's name.
 
 ### Added from gap research
@@ -50,9 +50,9 @@ Three gaps against the mature products that own this capability were chosen by t
 
 - **A split view.** The change set opens in the unified layout, the way GitHub's files-changed view opens, and a **Unified / Split** control in the header switches to side by side with the old content on one side and the new on the other, the way GitHub's split view, GitHub Desktop, and VS Code's diff editor all do. In the split layout each column carries its own side's line numbers, and an added or deleted file simply has one empty side.
 - **Keyboard navigation.** The body is one focusable region and the **down and up arrows walk the changed hunks**, hunk by hunk, across every file entry in file order, stopping at the first and last change and scrolling a file into view as the walk reaches it. Return opens the file at the walked hunk's first changed line, and a click on a hunk selects it and focuses the body so the walk continues from where the mouse left off. This is the difference between this tab and a picture of a diff: every other list in the application is keyboard-navigable, and this one is too.
-- **Hiding whitespace changes.** A **Hide whitespace changes** toggle, **on by default**, drops whitespace-only differences through git's own `-w`, the way GitHub's and GitHub Desktop's hide-whitespace options do, so a formatter's reindent does not bury a real change. A file whose changes are all whitespace then has no hunks and leaves the list, and a repository whose only changes are whitespace shows **No changes**.
+- **Whitespace changes remain visible.** The final tab has no whitespace filter; whitespace-only edits are included in the change set.
 
-The two toggles are **per-tab state for this session**: nothing is written to `.janissary/config.json`, and a tab opened after the previous one closed starts again unified with whitespace hidden. The search tab persists its toggles because matching modes are a standing preference; these two are how a diff is being read right now, so they travel with the tab and no further.
+The selected layout is saved through the plugin settings and is restored when another diff tab opens. Context expansion, file collapse, comments, drafts, and the keyboard walk belong to the open tab and are discarded when it closes; changing the diff root clears file-specific review state.
 
 ## Design decisions established by the feature text and existing behavior
 
@@ -93,7 +93,7 @@ Three inputs name the root, and each is resolved the same way: to an absolute di
 
 The tab never mutates the repository. That rules out `git add -N`, the usual way to make untracked files diffable, because it writes to the user's index. Instead the change set is read in one of two ways:
 
-1. **When `HEAD` resolves.** `git diff HEAD -M --no-ext-diff -w` gives the tracked changes, rename detection included, with `-w` present exactly when the hide-whitespace toggle is on. The untracked files come from `git ls-files --others --exclude-standard`, and each is diffed on its own with `git diff --no-index -- /dev/null <path>`, whose exit code 1 means "the files differ" rather than failure; `-w` is passed there too when the toggle is on.
+1. **When `HEAD` resolves.** `git diff HEAD -M --no-ext-diff` gives the tracked changes, rename detection included. The untracked files come from `git ls-files --others --exclude-standard`, and each is diffed on its own with `git diff --no-index -- /dev/null <path>`, whose exit code 1 means "the files differ" rather than failure. Whitespace-only changes remain visible.
 2. **When `HEAD` does not resolve** — a repository with no commits. Every file gitignore admits, from `git ls-files --exclude-standard` and `git ls-files --others --exclude-standard`, is diffed against `/dev/null` the same way, so a fresh `git init` project reads as all-added rather than as a failure.
 
 Both cases produce the same unified-diff grammar, so one parser serves both. **Deliberate ceiling:** one git process per untracked file. On a workspace whose untracked set is large this is the slow path; the upgrade is a temporary index copy pointed at by `GIT_INDEX_FILE` with intent-to-add applied to the copy, which never touches the user's own index. Nothing in the plan blocks it.
@@ -124,15 +124,15 @@ The `open` intent serves both kinds of jump: it names a file's project-relative 
 
 ### Header and body states
 
-The header is the plugin's own `plugin-meta` row, matching the other plugins. It carries the diffed root's path, the **Unified / Split** control, the **Hide whitespace changes** toggle, and the refresh button at its right edge beside the host's Split control. The body carries the four states: the file list, **No changes**, **This directory is not a git repository**, and a failure's reason as one line.
+The header is the plugin's own `plugin-meta` row, matching the other plugins. It carries the diffed root's path, the **Unified / Split** control, and the refresh button at its right edge beside the host's Split control. The body carries the file list, **No changes**, **This directory is not a git repository**, or a failure's reason as one line.
 
-The two toggles are client-local view state in one respect and server-carried in another, and the split matters. **Split view is purely client rendering**: the payload carries the hunks, and the client lays the same lines out in one column or two. **Hide whitespace changes is not**: it changes which lines git reports, so the current toggle state travels in every recompute intent exactly as the search tab's three mode flags travel in its search intent, and the server holds no toggle state between calls. A toggle change therefore re-runs the recompute immediately, the way editing the search tab's include field does.
+**Split view is client rendering**: the payload carries the hunks, and the client lays the same lines out in one column or two. Whitespace filtering is not part of the feature; all git-reported whitespace changes remain visible.
 
-Nothing is remembered. The search tab persists its three toggles because a user's preferred matching modes outlive a session; the diff tab has no setting to remember — its root always starts at the project root, its entries are always expanded, and its two view toggles live and die with the tab — so it declares neither `readSettings` nor `saveSettings`.
+The selected layout is persisted through `readSettings` and `saveSettings`. The root, expanded context, file collapse state, comments, and walk position remain transient.
 
 ### What is server state and what is not
 
-Every piece of diff content — the root, the files, the hunks, the lines, the states — is server state in the payload, because the client must not recompute anything the server already knows. Client-local state is only what is ephemeral and view-local: the scroll position and the walked hunk index, which `useListSelection` owns and which a recompute that changes the list re-clamps rather than preservingly names the same hunk. File entries have no collapsed state to remember, because they are all expanded.
+Git content and context-boundary state arrive in the server payload. Layout preference is persisted by the server plugin settings; file collapse, line comments and drafts, scroll position, and walked hunk are client-local. Refresh preserves the current body until replacement data arrives.
 
 ## Proposed changes
 
@@ -141,11 +141,11 @@ Every piece of diff content — the root, the files, the hunks, the lines, the s
 Server tree, no barrel file:
 
 - `src/plugins/diff/manifest.ts` — `id: 'diff'`, `version: '1.0.0'`, `apiVersion: TAB_PLUGIN_API_VERSION` (unchanged at 2), `payloadSchemaVersion` from `shared.ts`, `tabLabelPrefix: 'diff'`, `fileExtensions: {}`, `command: 'diff'`, and exactly the capabilities it uses: `openOrFocusTab`, `updateTab`, `openInEditor`, `originTab`, `dispatchLineWithOutput`, `rejectRequest`, `reportFailure`. Pure data. The `diff` claim is free: there is no core `diff` command in the registry, `diff` is not in `ROUTE_NAMES` (`['shell']`), and it is not in `RESERVED_NON_COMMAND_NAMES` (`['help']`), so `createPluginCommands` refuses nothing here.
-- `src/plugins/diff/shared.ts` — `DIFF_PAYLOAD_SCHEMA_VERSION`, the payload type, the intent payload types, and hand-written import-free guards. The payload carries the diffed root, the state (`loading`, `done`, or `error`), the state message when it is an error, and the file records. Guards reject arrays and `null` where an object is required and validate every field.
+- `src/plugins/diff/shared.ts` — schema version 6, payload and intent types, and hand-written import-free guards. File records include status, both line-number sides, context expansion metadata and hunks; intents cover refresh, layout, opening lines/media, and context requests.
 - `src/plugins/diff/parse-diff.ts` — the pure part: git's diff output and a file's relative path in, file records out, including the binary, rename, add, and delete markers and the newline-at-eof marker. A removed line carries the new-side number a double-click opens at — the next added or context line's, else the previous one's, and the line above the hunk clamped to the file's first line for one that holds neither — and a record whose path the caller supplies omits an absent `oldPath` key rather than carrying it as `undefined`, because the host refuses a published payload with a property whose value is `undefined`.
-- `src/plugins/diff/change-set.ts` — the effectful part: resolve `HEAD`, run `git diff HEAD -M --no-ext-diff`, enumerate the untracked files, run one `git diff --no-index` per untracked file, and return the file records or a reason. Resolves to a not-a-repository state rather than throwing, the way `changedPaths` does.
-- `src/plugins/diff/session.ts` — the `DiffSession`: the tab's current root and payload, open and re-scope through `openOrFocusTab` and `updateTab`, the recompute in flight per root, and `dispose`. Everything the recompute does — the git read, the publish, and the error path — sits inside one try/catch, and a publish the host refuses is swallowed, because the recompute runs outside the intent that asked for it and a throw there would be an unhandled rejection that ends the process.
-- `src/plugins/diff/activate.ts` — `activate()` returning `isPayload`, `opener: noFileOpener('diff')`, the `command` that resolves a root and opens or re-scopes the tab, the `openSibling` hook that scopes the tab to the origin tab's workspace, and `intent` via `defineIntents` for `refresh` (recompute, carrying the hide-whitespace flag so the git invocation matches what the user is reading), `open` (open a file at a line in an editor tab), and `open-media` (dispatch the application's `open` line for a binary file). The `refresh` handler starts the recompute without returning it and answers `null`: an intent's result reaches the waiting client and must be JSON-compatible, so a handler resolving to `undefined` disables the plugin, and a recompute that ran several git processes would spend the handler's whole budget. A `diff <path>` argument that is not an existing directory inside the project is refused as `no such directory` before the tab opens, keeping the not-a-repository state specific to repositories.
+- `src/plugins/diff/change-set.ts` — the effectful change reader: resolve `HEAD`, read tracked and untracked changes, and return file records or a reason. It includes mode-only and binary changes and handles repositories without commits; it does not modify the index.
+- `src/plugins/diff/session.ts` — the `DiffSession`: root and payload, singleton open and re-scope, refresh coordination, persisted layout setting, per-file context expansion, and disposal. Refresh retains the previous content while reading; root changes discard old-root results and transient file review state.
+- `src/plugins/diff/activate.ts` — activation, command and workspace routes, plus guarded refresh, layout, line/media opening, and context intents. Refresh answers with a JSON-compatible result and runs recomputation outside the guarded intent. A path outside the launch root is rejected; a valid directory outside a repository is shown as a recoverable tab state.
 
 ### The `openDiffFor` route
 
@@ -160,14 +160,14 @@ This is a core RPC, not a plugin-API change: `TAB_PLUGIN_API_VERSION` stays 2, b
 ### Client tree, one component per file
 
 - `web/src/plugins/diff/index.tsx` — default-exports the component, named-exports the payload guard.
-- `web/src/plugins/diff/DiffTab.tsx` — the tab: the metadata header with the root, the two toggles and the refresh button, and the file list. It holds no state beyond what it renders.
-- `web/src/plugins/diff/useDiffRefresh.ts` — the tab's one hook: an interval that recomputes the diff while the tab is mounted, plus the refresh button's direct call, both sending the same intent with the current toggle state. The tab is in-memory only, so unmounting stops the poll with it.
-- `web/src/plugins/diff/FileEntry.tsx` — one file's header with its path, its rename, and its add and delete counts, plus the entry's hunks. A deleted file's header and hunks answer no click or double-click, because there is no file to take the user to and the numbers its lines carry are the old file's.
-- `web/src/plugins/diff/HunkLines.tsx` — one hunk's lines in the unified layout: file line numbers, GitHub-style added and removed coloring, and the double-click that emits the open intent for the line under the pointer.
+- `web/src/plugins/diff/DiffTab.tsx` — root and persisted layout controls, refresh, file list, and states.
+- `web/src/plugins/diff/useDiffRefresh.ts` — interval and manual refresh while mounted.
+- `web/src/plugins/diff/FileEntry.tsx` — status and count header, per-file collapse, whole-file and over-400-line initial collapse, context/full-file controls, and hunks. Deleted files are inert; binary entries dispatch ordinary file opening.
+- `web/src/plugins/diff/HunkLines.tsx` — unified lines in git order, with shared syntax highlighting, side-specific gutters, intraline changes and local comment controls.
 - `web/src/plugins/diff/SplitHunks.tsx` — the same hunk in the split layout: the old side's removed and context lines beside the new side's added and context lines, aligned so a replaced pair sits on one row, each column carrying its own side's line numbers. It renders one hunk's payload, not a second payload.
 - `web/src/plugins/diff/useHunkWalk.ts` — the keyboard walk, composed on the host's `useListSelection` rather than a second arrow-key rule of its own: the hook is handed the flattened hunk list's length, and the walk's stopping at the first and last change, its clamping into a list that just changed, and its scroll-into-view are that hook's behavior. What is left here is the Return handler that opens the file at the walked hunk's first changed line, and nothing else.
 - `web/src/plugins/diff/hunk-index.ts` — the pure part of the walk: the change set's hunks as one ordered list in file order, the offset a file entry's hunks start at, and the lookup from a walked index back to its file entry, its hunk, and the line Return opens at. Pure, so the walk's order and its coordinates are testable without a render.
-- `web/src/plugins/diff/diff.css` — the plugin's own look, in its own file as the other plugins do, following the editor's green-from-`--success` and red-from-`--error` convention rather than inventing a second one.
+- `web/src/plugins/diff/diff.css` — diff rows, split alignment, review controls, hover treatment, and editor-matched typography and colors.
 
 Registration: a catalog entry in `src/plugins/catalog.ts`, a literal dynamic import in `src/plugins/loaders.ts`, and one in `web/src/plugins/registry.tsx` with the schema version as a literal.
 
@@ -197,10 +197,10 @@ The shell and harness buttons: `ShellTabMeta` gains the button beside the file-n
 
 - `src/plugins/diff/shared.test.ts` — every guard accepts a well-formed value and rejects a malformed one, arrays and `null` included.
 - `src/plugins/diff/parse-diff.test.ts` — modified, added, deleted, renamed, and binary files; a hunk at the start and at the end of a file; the no-newline-at-eof marker; a rename with its old and new paths; a mode-only change, which git names only on its `diff --git` line; the line-position arithmetic for added, removed, and context lines, including a removed line that borrows the next line, one that borrows the previous line when the hunk ends in removals, and a hunk of nothing but removals answering the line above it clamped to 1; and a record the caller named carrying no `oldPath` key at all.
-- `src/plugins/diff/change-set.test.ts` — against a temporary repository built the way `src/git/status.test.ts` builds one: modified, staged, and untracked files all appearing; a deleted file; a renamed file; a binary file; a directory outside a repository resolving to the not-a-repository state rather than throwing; a repository with no commits reading as all-added; a whitespace-only change disappearing when the hide-whitespace flag is set and appearing when it is not; and the flag leaving an all-added file visible either way.
+- `src/plugins/diff/change-set.test.ts` — modified, staged, untracked, deleted, renamed, binary and mode-only entries; whitespace-only edits; non-repository directories; and repositories without commits.
 - `src/plugins/diff/activate.test.ts` — the command opening and focusing, a path argument resolving against the origin tab's root, a path escaping the root being rejected, a path that is not a directory and one naming a file both refused before any tab opens, `openSibling` scoping to the origin tab's workspace, each intent accepting and rejecting as declared, a refresh intent answering exactly `null`, the payload the session publishes passing the host's own `isJsonCompatible` with an untracked file present, an intent settling when every publish is refused, a re-scope repainting the open tab rather than opening a second one, and `dispose` releasing.
 - `src/client-params/core.test.ts` and `src/message/handler.test.ts` and `src/controller/file/navigator-adapter.test.ts` — the `openDiffFor` route beside the `launchShellFor` cases they already carry.
-- `web/src/plugins/diff/DiffTab.test.tsx` — lazy loading through the registry, payload validation, hunks rendering with added and removed coloring and their line numbers, the add and delete counts, the `No changes` and not-a-repository states, the error line, the refresh button emitting the intent and the interval emitting it, a file click and a line double-click emitting the open intent, a binary entry emitting the media intent, a double-click inside a deleted entry emitting nothing, the **Unified / Split** control switching the layout (the split layout showing each side's own line numbers and an added file's empty old side), the **Hide whitespace changes** toggle defaulting to on and emitting a recompute when changed, and the keyboard walk — the arrows crossing file entries, stopping at the last change, scrolling the walked hunk into view, and Return opening at its first changed line.
+- `web/src/plugins/diff/DiffTab.test.tsx` and colocated tests — lazy loading and schema parity; both layouts, syntax and intraline highlighting, file status, collapse behavior, hunk navigation, hover, line comments, context expansion, pending/error states, full-file controls, refresh, no-change/error states, and line/media opening.
 - `web/src/plugins/diff/hunk-index.test.ts` — the flattened order across file entries, the line a Return opens at for a hunk that adds and for one that only removes, and the offsets a file entry's hunks start at.
 - `web/src/plugins/diff/split-rows.test.ts` — a context line on both sides, a removed run paired with the added run that follows it, a side left empty when the runs differ in length, and two separate replace runs on their own rows.
 - `web/src/plugins/registry.test.tsx` — the new entry's schema literal and catalog parity.
@@ -213,19 +213,19 @@ The shell and harness buttons: `ShellTabMeta` gains the button beside the file-n
 - Any write to the user's git index, including intent-to-add.
 - Comparing against anything other than the working tree and `HEAD`: no branch, tag, or commit refs.
 - A staged/unstaged split, offered during planning and declined: the change set is always all changes versus `HEAD` in one list.
-- Inline review comments on diff lines.
+- Sending comments to a remote service or writing them to source files; comments are local and temporary.
 - Editing the file's content from the diff tab; every write stays inside the editor tab.
 - Docking the diff tab into a sidebar: it is a full-width view and `dockTab` is not among the capabilities it declares.
-- Persisting the tab or its contents across a restart.
+- Persisting the tab contents across a restart; only the selected layout preference is saved.
 - Recovering a tab whose payload the host refused: the host has already closed it, and a plugin-shaped payload should satisfy the host's check rather than argue with it.
 
 ### Gaps researched and declined
 
 These were raised against the plan during gap research, and the user declined each. They are recorded here so that no later phase proposes them again as though they were new.
 
-- **Expanding wider context.** GitHub Desktop's arrows above and below the line numbers load the next few lines and Expand Whole File shows the entire file; GitHub's View shows the whole file with the proposed changes; VS Code expands unchanged regions. Declined: the double-click that jumps to the line already reaches the wider context in the editor tab, which owns showing a whole file.
+- **Wider context and whole-file views.** Implemented per-file widening, independent omitted-boundary expansion, and full-file/condensed controls; context remains within the diff and preserves file counts.
 - **Viewed state per file with a progress tally.** GitHub marks a file Viewed, collapses it, and unmarks it when the file changes again. Declined for this version: the tracking is review state the tab does not own, and the tab recomputes continuously enough that a viewed mark would fight the live update.
-- **Filtering the file list.** GitHub filters by file type, CODEOWNER, viewed, and deleted, and lazygit filters by status. Declined: the change set is the workspace's own current state rather than a backlog to narrow, and the plan carries no cap, so there is nothing to filter down from that a re-scope cannot do.
+- **Filtering the file list.** No file-list filter is present. Large changes instead start collapsed above the documented threshold.
 - **A total change summary.** GitHub Desktop heads its list with "3 changed files" plus counts. Declined: the per-file counts already say it, and the search tab's precedent is a header that carries no tally.
 - **A rich diff for markdown and manifest files.** GitHub renders a preview beside the source. Declined: the markdown tab and the editor tab already own those views, and a two-pane preview duplicates both.
 - **An image diff with 2-up, swipe, or onion skin.** GitHub compares changed images in place. Declined: the binary entry's media link already reaches the file in its own tab, and a comparison overlay is its own feature.
