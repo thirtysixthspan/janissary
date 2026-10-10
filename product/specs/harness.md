@@ -160,7 +160,7 @@ new one, so they keep disambiguating with `-2`, `-3`, ….
 ### Workspace default and opt-out
 
 Harnesses clone the root repository (detected from the current directory) into
-a disposable workspace named after the harness tab's unique label, identically to `zsh --workspace`:
+a disposable workspace named after the harness tab's unique label, identically to `shell --workspace`:
 
 ```
 harness claude -w    → tab "claude"   with workspace at .janissary/workspace/claude/
@@ -974,7 +974,7 @@ file naming, and the fallback when no session record can be found.
 Separately from on-demand screen capture, every named-harness session is **automatically** recorded
 to a playable asciicast file under `.janissary/recordings/` for its whole lifetime — a *recording*
 is the full timed output stream, where a *capture* is a single point-in-time screen snapshot. See
-[[harness-recording]] for the file format, scope (ssh and shell tabs included, `shell vim`-style PTYs
+[[harness-recording]] for the file format, scope (ssh and shell tabs included, `!vim`-style PTYs
 excluded), lazy creation, and playback.
 
 A recording is played back with `play <file>`, which opens an **asciicast tab** with the transport,

@@ -2,11 +2,11 @@
 
 <img class="agent-float" src="/agents/orhan-south-east.png" alt="" />
 
-Add `on <address>` to a `zsh` or `harness` command and the tab runs on another machine instead of yours:
+Add `on <address>` to a `shell` or `harness` command and the tab runs on another machine instead of yours:
 
 ```
 harness claude on devbox
-zsh bekir on admin@devbox
+shell bekir on admin@devbox
 harness claude as build on devbox with fix the tests
 ```
 
@@ -123,7 +123,7 @@ The clone uses this project's `.janissary/github-token` when the `origin` is on 
 
 The host checks the name before it clones anything, since only the host knows what is running there. A workspace of that name counts as running when a Janissary connection on that host, attached or parked, is holding it and its process is alive, or when a janissary instance running inside it holds its lock. A plain shell sitting in the folder does not count, and a name differing only by case is the same name.
 
-- **Running:** nothing is provisioned, and the placeholder tab closes at once without showing an error. A name you typed gets one line in the notifications feed: `Cannot launch "build": "build" is already running on devbox.` A default name, a bare `harness claude` or an unnamed `zsh on devbox`, is tried again over a fresh SSH connection under the next free name, silently, up to five attempts in all. Only after the fifth does anything appear, as `Cannot launch "claude": "claude" through "claude-5" are already running on devbox.` for a harness; an unnamed shell reports the pool names it tried.
+- **Running:** nothing is provisioned, and the placeholder tab closes at once without showing an error. A name you typed gets one line in the notifications feed: `Cannot launch "build": "build" is already running on devbox.` A default name, a bare `harness claude` or an unnamed `shell on devbox`, is tried again over a fresh SSH connection under the next free name, silently, up to five attempts in all. Only after the fifth does anything appear, as `Cannot launch "claude": "claude" through "claude-5" are already running on devbox.` for a harness; an unnamed shell reports the pool names it tried.
 - **Leftover:** a workspace folder of that name with nothing running in it is removed, uncommitted or unpushed work included, and the launch goes ahead. Once the workspace is ready, `Removed leftover workspace "build" on devbox ($workspace/build) before launching.` appears in the notifications feed.
 - **Leftover that can't be removed:** the placeholder closes at once and `Cannot launch "build": could not remove leftover workspace "build" on devbox ($workspace/build) — <reason>.` is posted. The folder is left in place for the next attempt.
 - **A host that can't answer:** when the connection ends before the host replies, the placeholder shows that connection's error as it always would, and `Cannot launch "claude": could not check devbox for an existing "claude" — <reason>.` is posted alongside it.
@@ -156,9 +156,9 @@ A remote tab still can't launch its own remote tab. There is no `files on <addre
 
 ## Open a standalone remote shell
 
-From a local tab, type `zsh docs on devbox` to open a shell with its own remote workspace. The shell tab appears while SSH connects, so you can answer password, passphrase, and host-key prompts there. Once the workspace is ready, the same tab switches to zsh at the remote workspace root. Lines you submit while it provisions wait for the first prompt.
+From a local tab, type `shell docs on devbox` to open a shell with its own remote workspace. The shell tab appears while SSH connects, so you can answer password, passphrase, and host-key prompts there. Once the workspace is ready, the same tab switches to zsh at the remote workspace root. Lines you submit while it provisions wait for the first prompt.
 
-The command implies a remote workspace even if you include `--no-workspace`. It has no local fallback if the remote launch fails. In a remote shell or harness, typing `zsh` without `on` opens a sibling shell in the tab's existing remote workspace and channel. It keeps a supplied name, inherits offline mode, and ignores workspace flags. It starts at the source tab's working directory when that directory is inside the workspace, otherwise at the workspace root. While the workspace provisions it reports `The remote workspace is not ready yet.`; while reconnecting or after the session is gone it reports `The remote workspace is no longer available.` The plus button on a remote harness also opens this sibling shell; on a local harness it opens a shell in the same local workspace. `zsh … on <address>` remains unavailable from a remote tab and answers `Cannot launch a remote shell from a remote tab.` See [Open a zsh shell tab](/user-documentation/command-bar/shell#open-a-zsh-shell-tab) for the full command options and lifecycle.
+The command implies a remote workspace even if you include `--no-workspace`. It has no local fallback if the remote launch fails. In a remote shell or harness, typing `shell` without `on` opens a sibling shell in the tab's existing remote workspace and channel. It keeps a supplied name, inherits offline mode, and ignores workspace flags. It starts at the source tab's working directory when that directory is inside the workspace, otherwise at the workspace root. While the workspace provisions it reports `The remote workspace is not ready yet.`; while reconnecting or after the session is gone it reports `The remote workspace is no longer available.` The plus button on a remote harness also opens this sibling shell; on a local harness it opens a shell in the same local workspace. `shell … on <address>` remains unavailable from a remote tab and answers `Cannot launch a remote shell from a remote tab.` See [Open a shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) for the full command options and lifecycle.
 
 ## Querying remote ACP
 

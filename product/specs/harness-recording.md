@@ -81,10 +81,10 @@ this setting answers. Were another bundled or third-party plugin to ask for its 
 recorded, `"recordShellTabs": false` would decline that one too — the name says what is off today
 rather than promising the gate can never widen.
 
-What is **not** recorded is a PTY opened by the `shell` command: `shell vim`, `shell htop`, and the
-other interactive programs it runs full-tab on a shell tab are not recorded and get no server-side
-screen reader either. The distinction is not the tab's body but how the PTY was started — a tab whose
-body is a terminal records; a program the `shell` command took a shell tab over to does not.
+What is **not** recorded is a PTY started with `!`: `!vim`, `!htop`, and the other interactive
+programs it runs full-tab on a shell tab are not recorded and get no server-side screen reader either.
+The distinction is not the tab's body but how the PTY was started — a tab whose body is a terminal
+records; a program the `!` command took a shell tab over to does not.
 
 ### The recording flag
 

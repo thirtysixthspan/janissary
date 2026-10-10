@@ -2,7 +2,7 @@ import { createShellMarkerNonce, type TabPluginLaunchResult, type TabPluginServe
 import type { ShellLaunchArgument } from './parse-argument.js';
 import { provisioningShell, spawnShell } from './spawn-shell.js';
 
-// A typed `zsh`: the host names the tab and, by default, provisions a fresh workspace clone for it.
+// A typed `shell`: the host names the tab and, by default, provisions a fresh workspace clone for it.
 // While the clone lands the tab holds a provisioning placeholder; the ready handler then starts zsh
 // at the clone's root, confined to it, and announces it in the notifications feed.
 export function launchShellTab(

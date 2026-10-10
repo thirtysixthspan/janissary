@@ -1,10 +1,10 @@
 # Tab names
 
-Use `zsh` to open a shell with an unused name, or supply your own:
+Use `shell` to open a shell with an unused name, or supply your own:
 
 ```
-zsh
-zsh bilal --no-workspace
+shell
+shell bilal --no-workspace
 harness claude as build
 ```
 

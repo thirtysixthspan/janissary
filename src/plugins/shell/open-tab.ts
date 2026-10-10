@@ -4,7 +4,7 @@ import { spawnShell } from './spawn-shell.js';
 
 // Opens a sibling shell beside the one ➕ or `Cmd+T` came from: unsandboxed beside an unsandboxed
 // shell, and confined to the same clone, in the same offline mode, beside a sandboxed one. A typed
-// `zsh` goes through `launch-tab.ts` instead, which provisions a clone of its own.
+// `shell` goes through `launch-tab.ts` instead, which provisions a clone of its own.
 
 export function openShellTab(capabilities: TabPluginServerCapabilities, instanceKey: string): void {
   const origin = capabilities.originTab();

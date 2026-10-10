@@ -22,7 +22,7 @@ This is the one name rule that only applies with `-w`; without a workspace the n
 
 The tab appears while its workspace is being provisioned. Shell command-bar input waits in the queue until zsh reaches its first prompt. The metadata row shows a provisioning spinner until the workspace is ready. A failed clone is reported and the tab closes shortly afterwards.
 
-The ➕ button on a shell or harness opens another shell in that same workspace and group. It retains the clone while either tab uses it. Typed `zsh` and `harness` launches create fresh workspaces instead.
+The ➕ button on a shell or harness opens another shell in that same workspace and group. It retains the clone while either tab uses it. Typed `shell` and `harness` launches create fresh workspaces instead.
 
 ## If every workspace suddenly fails to start
 

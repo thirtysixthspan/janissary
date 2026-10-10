@@ -32,7 +32,7 @@ function capabilitiesFor(answeringLabel: string) {
   return lineCapabilities({
     managers,
     declaration: { id: 'shell' } as never,
-    origin: { label: answeringLabel, command: 'zsh' },
+    origin: { label: answeringLabel, command: 'shell' },
     answeringLabel,
     isEnabled: () => true,
   });

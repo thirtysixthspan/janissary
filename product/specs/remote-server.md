@@ -9,7 +9,7 @@ monitoring behavior — except for a host chip at the left of its metadata row.
 
 ### The `on <address>` clause
 
-`harness claude on devbox`, `zsh bekir on admin@devbox`, `harness claude as build on devbox with
+`harness claude on devbox`, `shell bekir on admin@devbox`, `harness claude as build on devbox with
 fix the tests`. The clause reads like the existing `as <label>` and `with <prompt>` clauses rather
 than adding another flag, and it may appear anywhere among the other options. It is
 case-insensitive. An `on` appearing inside a `with <prompt>` clause is prompt text, never a clause,
@@ -22,7 +22,7 @@ on devbox` and `harness claude on devbox` are the same command.
 
 ### Standalone remote shell
 
-`zsh [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]` uses the same address
+`shell [name] [-w|--workspace|--no-workspace] [--offline] [on <address>]` uses the same address
 grammar and remote workspace provisioning.
 The `on <address>` clause can appear anywhere among the name and flags.
 When launched from a local tab, the shell opens its own SSH channel and workspace. A remote tab cannot

@@ -1,7 +1,7 @@
 import type { TabPluginResources } from '../api.js';
 import { SHELL_PROGRAM, type ShellProvisioningPayload, type ShellTerminalPayload } from './shared.js';
 
-// The one place a shell tab's zsh is started and its payload built, shared by a typed `zsh`, the
+// The one place a shell tab's zsh is started and its payload built, shared by a typed `shell`, the
 // ready handler that finishes a workspaced one, and a ➕ sibling.
 //
 // `spawnTerminal` is called inside a payload factory, because that factory is the only scope in which

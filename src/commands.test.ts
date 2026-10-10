@@ -99,7 +99,7 @@ describe('getOutput("help <section>")', () => {
   it('prints only the command table for help commands', () => {
     const text = sectionText('help commands');
     expect(text.startsWith('### Commands')).toBe(true);
-    expect(text).toContain('`zsh`');
+    expect(text).toContain('`shell`');
     expect(text).not.toContain('### Key Bindings');
   });
 

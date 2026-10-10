@@ -131,7 +131,7 @@ describe('createFileNavigatorControllerAdapter', () => {
     createFileNavigatorControllerAdapter(managers).launchShellFor('harness1');
 
     expect(managers.plugins.openSibling).toHaveBeenCalledWith('shell', {
-      label: 'harness1', command: 'zsh',
+      label: 'harness1', command: 'shell',
     });
   });
 

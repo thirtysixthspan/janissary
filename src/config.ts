@@ -25,7 +25,7 @@ export type Config = {
   // rather than a count of everything copied, so the popup stays a menu. Hand-edited, like
   // `transcriptMaxLines`, and read by the client — the browser has no storage of its own.
   clipboardHistoryMaxEntries: number;
-  // Isolate workspaced tabs (`zsh --workspace`, `harness --workspace`) to their workspace clone
+  // Isolate workspaced tabs (`shell --workspace`, `harness --workspace`) to their workspace clone
   // via a Seatbelt sandbox (macOS only). Default true; the escape hatch for when it causes trouble.
   sandboxWorkspaces: boolean;
   // Record shell tabs' sessions to asciicast files under `.janissary/recordings/`, as harness and ssh

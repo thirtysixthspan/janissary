@@ -163,7 +163,7 @@ describe('ConversationsManager workspace hand-off', () => {
     withTab(f, 'c1');
 
     expect(f.manager.launchShell('c1')).toBe(true);
-    expect(f.openSibling).toHaveBeenCalledExactlyOnceWith('shell', { label: 'conversations-1', command: 'zsh' });
+    expect(f.openSibling).toHaveBeenCalledExactlyOnceWith('shell', { label: 'conversations-1', command: 'shell' });
   });
 
   // An empty conversation is not on disk yet, and its directory has to exist before a file navigator
@@ -523,7 +523,7 @@ describe('ConversationsManager', () => {
     expect(openOrRetarget).toHaveBeenCalledWith('First conversation');
 
     expect(manager.launchShell('first')).toBe(true);
-    expect(openSibling).toHaveBeenCalledWith('shell', { label: 'First conversation', command: 'zsh' });
+    expect(openSibling).toHaveBeenCalledWith('shell', { label: 'First conversation', command: 'shell' });
     manager.dispose();
   });
 

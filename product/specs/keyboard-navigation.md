@@ -24,7 +24,7 @@
 | Ctrl+E | Open the command queue popup for a tab with a queue and an application command bar (see [[command-queue]]; otherwise no-op) |
 | Cmd+P | Open the Quick Open file finder from any focused tab |
 | Cmd+Shift+F | Open the project-wide search tab from any focused tab (see [[search-tab]]). Distinct from Cmd+F, which searches an editor buffer |
-| Cmd+T | Open a new workspaced shell tab (same as typing `zsh`) |
+| Cmd+T | Open a new workspaced shell tab (same as typing `shell`) |
 | Ctrl+T | Expand / collapse ACP tool steps in the current tab's response panel |
 | PageUp | Scroll transcript up by half terminal height |
 | PageDown | Scroll transcript down by half terminal height |

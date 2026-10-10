@@ -67,7 +67,7 @@ export function buildTabView(
   // `RemoteManager`, and a copy of it on the tab is a copy that can outlive the recovery.
   reconnectingOf?: (label: string) => boolean,
   // Whether a local clone into the given directory is still in flight — the only provisioning
-  // signal a local `zsh --workspace` tab has, since it carries no harness status.
+  // signal a local `shell --workspace` tab has, since it carries no harness status.
   workspaceProvisioning?: (dir: string) => boolean,
   // The plugin's declaration, for the chord ids it claimed and whether it hosts the command bar.
   // Carried with the tab rather than looked up on the client, so a client holding its own copy is

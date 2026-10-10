@@ -36,7 +36,7 @@ function readHelpMarkdown(): string | null {
 }
 
 function fallbackHelp(): string {
-  return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "shell " to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
+  return 'Built-in: ' + availableCommands.join(', ') + '. Prefix a command with "!" to run it in the shell, or / to run a built-in command. Press Ctrl+R or type hist to browse command history.';
 }
 
 // Bare `help` is the whole file; `help <section>` is one section of it. Without the file there are no

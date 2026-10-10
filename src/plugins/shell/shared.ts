@@ -3,7 +3,7 @@ import { isRecord } from '../api.js';
 export const SHELL_PAYLOAD_SCHEMA_VERSION = 4;
 
 // The zsh binary this plugin spawns, named outright rather than taken from `$SHELL`: the tab is a
-// zsh tab whatever the user's login shell happens to be, which is what makes `zsh` an honest command
+// zsh tab whatever the user's login shell happens to be, which is what makes `shell` an honest command
 // name for it. Spawned with no arguments at all, so the user's rc files load — a terminal that
 // ignored `.zshrc` would have no PATH additions, no aliases, and no prompt of the user's own.
 export const SHELL_PROGRAM = '/bin/zsh';
