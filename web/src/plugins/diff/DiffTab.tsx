@@ -91,7 +91,6 @@ export function DiffTab({
         ref={walk.listRef}
         tabIndex={0}
         onKeyDown={onKeyDown}
-        title="Left collapses a file; Right cycles its view; up and down walk hunks; j and k move between files; Return opens the walked hunk's line"
       >
         {payload.state === 'not-repository' && <div className="diff-empty">This directory is not a git repository</div>}
         {payload.state === 'error' && <div className="diff-empty">{payload.message}</div>}

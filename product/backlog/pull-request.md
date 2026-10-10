@@ -2,6 +2,4 @@
 
 # pull-request
 
-* remove the navigation tooltip
-
 * remove the refresh button in the metadata bar.

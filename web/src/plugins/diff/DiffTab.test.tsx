@@ -96,10 +96,11 @@ describe('DiffTab', () => {
   });
 
   it('renders the diffed root and one entry per changed file', () => {
-    renderTab(payload({ files: [file({ path: 'a.txt' }), file({ path: 'b.txt', hunks: [] })] }));
+    const { container } = renderTab(payload({ files: [file({ path: 'a.txt' }), file({ path: 'b.txt', hunks: [] })] }));
     expect(screen.getByText('$root/')).toBeTruthy();
     expect(screen.getByTitle('a.txt').textContent).toBe('a.txt');
     expect(screen.getByTitle('b.txt').textContent).toBe('b.txt');
+    expect(container.querySelector('.diff-body')?.hasAttribute('title')).toBe(false);
   });
 
   it('renders a rename as its old path to its new one', () => {
