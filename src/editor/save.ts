@@ -12,6 +12,7 @@ import { errorFirstLine, errorText } from '../error-text.js';
 import { writeGitFailureOutput } from '../git/failure-output.js';
 import { refuseStaleSave } from './stale-save.js';
 import { refreshSyncedTabs } from './refresh-synced.js';
+import { beginEditorSync, currentEditorForSync, type EditorSyncToken } from './sync-status.js';
 
 // Write an editor tab's buffer back to disk. `url` is the tab's `/open/<id>` ref, resolved
 // through the open-file allow-list — the client can only ever write to files the user explicitly
@@ -89,7 +90,7 @@ function finishSave(
   // slow or failing network sync never delays the save confirmation the user already saw.
   if (tab?.editor?.sync) {
     tab.editor = { ...tab.editor, sync: 'syncing' };
-    void syncAfterSave(managers, tab.label, tab.editor.path);
+    void syncAfterSave(managers, beginEditorSync(tab), tab.editor.path);
   }
   messageBus.emit('state', { type: 'dirty' });
 }
@@ -114,16 +115,16 @@ async function saveRemote(
 // The cycle's pull may have rewritten this or any other synced file, so every synced tab is
 // re-checked once it settles, whichever way it went. A failure is also a notification, which the
 // sync icon's error tooltip points the user to.
-async function syncAfterSave(managers: Managers, label: string, filePath: string): Promise<void> {
+async function syncAfterSave(managers: Managers, token: EditorSyncToken, filePath: string): Promise<void> {
   const result = await managers.gitSync.saveSync(filePath);
   refreshSyncedTabs(managers);
+  const tab = currentEditorForSync(managers, token);
+  if (!tab) return;
   if ('error' in result) {
-    notify(managers, 'file-operation', label, `Could not sync ${path.basename(filePath)}: ${errorFirstLine(result.error)}`, {
-      openFile: writeGitFailureOutput(label, Date.now(), result.error),
+    notify(managers, 'file-operation', tab.label, `Could not sync ${path.basename(filePath)}: ${errorFirstLine(result.error)}`, {
+      openFile: writeGitFailureOutput(tab.label, Date.now(), result.error),
     });
   }
-  const tab = managers.tab.editorTab(label);
-  if (!tab) return;
   tab.editor = { ...tab.editor, sync: 'error' in result ? 'error' : 'synced' };
   messageBus.emit('state', { type: 'dirty' });
 }

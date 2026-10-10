@@ -7,6 +7,8 @@ import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { EditorWatchManager } from './watch-manager.js';
 import { contentHash, SAVE_CONFLICT_ERROR } from './save-conflict.js';
+import { tabRuntime } from '../tab/runtime.js';
+import { removeTabAt } from '../tab/reorder.js';
 
 const { notify, writeGitFailureOutput } = vi.hoisted(() => ({
   notify: vi.fn(),
@@ -236,6 +238,65 @@ describe('saveFile git sync', () => {
       { openFile: '/project/.janissary/git-errors/synced.log' },
     ));
     expect(writeGitFailureOutput).toHaveBeenCalledWith(label, expect.any(Number), error);
+  });
+
+  it('lets only the latest delayed save update sync status or report its failure', async () => {
+    const first = Promise.withResolvers<{ ok: true } | { error: string }>();
+    const second = Promise.withResolvers<{ ok: true } | { error: string }>();
+    const saveSync = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const { managers, url } = setupSynced(saveSync);
+    const tab = managers.tab.tabs.find((item) => item.editor)!;
+    const refresh = vi.fn();
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh } as unknown as Managers['editorWatch'];
+    notify.mockClear();
+
+    saveFile(managers, url, 'first');
+    saveFile(managers, url, 'second');
+    first.resolve({ error: 'old failure' });
+    await first.promise;
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+
+    expect(tab.editor?.sync).toBe('syncing');
+    expect(notify).not.toHaveBeenCalled();
+
+    second.resolve({ ok: true });
+    await vi.waitFor(() => expect(tab.editor?.sync).toBe('synced'));
+  });
+
+  it('does not attribute a pending failure to a replacement editor with the same label', async () => {
+    const pending = Promise.withResolvers<{ ok: true } | { error: string }>();
+    const { managers, file, url } = setupSynced(() => pending.promise);
+    const previous = managers.tab.tabs.find((item) => item.editor)!;
+    const refresh = vi.fn();
+    managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh } as unknown as Managers['editorWatch'];
+    saveFile(managers, url, 'updated');
+    tabRuntime(previous).closing = true;
+    managers.tab.tabs = managers.tab.tabs.filter((item) => item !== previous);
+    const replacementLabel = managers.tab.openEditorTab({
+      name: 'synced.txt', path: file, size: '8 B', url: managers.tab.registerFile(file), sync: 'synced',
+    });
+    const replacement = managers.tab.editorTab(replacementLabel)!;
+    notify.mockClear();
+
+    pending.resolve({ error: 'old editor failure' });
+    await pending.promise;
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalledWith(replacementLabel));
+
+    expect(replacement.editor?.sync).toBe('synced');
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('keeps sync ownership when closing an unrelated tab copies the tab records', async () => {
+    const pending = Promise.withResolvers<{ ok: true }>();
+    const { managers, url } = setupSynced(() => pending.promise);
+    const owner = managers.tab.tabs.find((item) => item.editor)!;
+    managers.tab.openEditorTab({ name: 'other.txt', path: '/sync/other.txt', size: '1 B', url: managers.tab.registerFile('/sync/other.txt') });
+    saveFile(managers, url, 'updated');
+    managers.tab.tabs = removeTabAt(managers.tab.tabs, managers.tab.tabs.findIndex((item) => item.label === 'other.txt'));
+
+    pending.resolve({ ok: true });
+    await pending.promise;
+    await vi.waitFor(() => expect(owner.editor?.sync).toBe('synced'));
   });
 
   it('re-checks every open synced tab once the cycle\'s pull has run, but no unsynced one', async () => {

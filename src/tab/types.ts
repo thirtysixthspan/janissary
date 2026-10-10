@@ -267,6 +267,7 @@ export type TabRuntime = {
   // tab-array projections that shallow-copy the record when another tab closes. In-memory only.
   incarnation?: string;
   closing?: boolean;
+  editorSyncGeneration?: number;
   acpEntries?: WeakSet<LogEntry>;
   acpPrompt?: { finish: (result: AcpPromptResult) => void; abort: AbortController };
   // Whether this tab's core ACP session runs without a tool table, asked for by whichever consumer

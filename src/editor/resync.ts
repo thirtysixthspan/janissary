@@ -1,6 +1,7 @@
 import { messageBus } from '../bus.js';
 import type { Managers } from '../managers.js';
 import { refreshSyncedTabs } from './refresh-synced.js';
+import { beginEditorSync, currentEditorForSync } from './sync-status.js';
 
 // Manually re-run a synced editor tab's pull-only sync cycle (the `resyncEditorTab` RPC) — the
 // same `openSync` `src/open/file-manager.ts` already runs when a synced tab opens.
@@ -13,11 +14,12 @@ export async function resyncEditorTab(managers: Managers, url: string): Promise<
   const sync = tab?.editor?.sync;
   if (!tab?.editor || !sync || sync === 'provisioning' || sync === 'syncing') return;
   tab.editor = { ...tab.editor, sync: 'syncing' };
+  const token = beginEditorSync(tab);
   messageBus.emit('state', { type: 'dirty' });
   const result = await managers.gitSync.openSync();
-  const freshTab = managers.tab.editorTab(tab.label);
+  if (!('error' in result)) refreshSyncedTabs(managers);
+  const freshTab = currentEditorForSync(managers, token);
   if (!freshTab) return;
   freshTab.editor = { ...freshTab.editor, sync: 'error' in result ? 'error' : 'synced' };
-  if (!('error' in result)) refreshSyncedTabs(managers);
   messageBus.emit('state', { type: 'dirty' });
 }
