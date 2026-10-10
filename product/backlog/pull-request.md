@@ -24,17 +24,6 @@ Proposal Risk: 2/10 - Typed faithful fixtures and focused integration cases expo
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "repair the new review fixtures so they exercise the published types and real lifecycle contracts". Repair src/plugins/launcher/summarizer.test.ts so its TabActivityEntry helper supplies dotColor and active, its view values match the contract, every buildSummarizerPrompt call supplies a delimiter, and the asserted marker text matches the actual description. Repair the moved-topic fixture in src/plugins/launcher/activate.test.ts to deliver TabActivityEntry objects rather than LauncherTabRow projections lacking logLength. Replace forced capability casts where they hide these mismatches and add host-backed singleton and close tests. Add the plan's currently absent regression assertions for janus init idempotent launcher-file seeding, timestamp writers in src/tab/transcript/events.ts, and tabs.focus on a missing label, using the existing project-init, transcript, and topic test files. Run the appropriate diff-scoped checks during the separate implementation task; this review has identified these issues by reading only.
 
 
-* Correct the plan's whole-file fallback claim to match its shipped partial configuration validation.
-
-Existing Issue: The completed launcher plan says a malformed entry falls back to the default command set and declines entry-scoped validation, while the implementation, its tests, and the functional spec keep usable entries from a mixed file. Severity: 3/10
-
-Existing Risk: 4/10 - A later implementation based on the completed plan can replace valid user commands with defaults while believing it preserves the intended configuration contract.
-
-Proposal Risk: 1/10 - A consistent recorded policy removes that ambiguity, with the existing mixed-entry test exposing accidental behavior changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "align the completed launcher's malformed-entry policy with partial validation". In product/plans/complete/sidebar-launcher-tab.md, distinguish unreadable files, invalid JSON, a wrong top-level shape, and files with no usable entries from mixed arrays whose usable rows survive. Clarify the out-of-scope item so the deferred versioned and merged configuration format does not also claim the shipped partial-validation policy was declined. Use readLauncherFile in src/plugins/launcher/commands-file.ts, the mixed-entry case in src/plugins/launcher/commands-file.test.ts, and product/specs/launcher.md as the existing behavior references; preserve that behavior and make the plan's test list describe it explicitly. Check the PR description's fallback wording for the same ambiguity during this separate implementation task and update it if needed. Verify the existing decoding tests and confirm neither malformed entries nor an empty array produce clickable invalid rows.
-
-
 * Keep the new per-tab ACP tool restriction on the tab record to avoid additional lifecycle bookkeeping debt.
 
 Existing Issue: AcpManager adds a label-keyed withoutTools set and separate closeTab and closeAll cleanup solely for state that belongs to TabRuntime, contrary to the repository's per-agent ownership rule. Severity: 5/10
