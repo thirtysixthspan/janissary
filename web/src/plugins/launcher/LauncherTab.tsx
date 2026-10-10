@@ -10,6 +10,7 @@ import {
 import { LauncherCommandList } from './CommandRail';
 import { LauncherTabList } from './TabList';
 import { createLauncherActions } from './launcher-actions';
+import { useUnknownLauncherIcons } from './useUnknownLauncherIcons';
 import { useClock } from './useClock';
 
 type Properties = {
@@ -30,6 +31,11 @@ export function LauncherTab({ payload, capabilities }: Properties) {
   // The rail's own clock, so a row's age advances while the launcher is on screen even though nothing
   // has been broadcast to make it. One minute is the coarsest unit a row's age is expressed in.
   const now = useClock(capabilities.active);
+  useUnknownLauncherIcons(
+    payload.commands,
+    capabilities.active,
+    (icon) => capabilities.intent('report-icon', { icon }),
+  );
 
   useEffect(() => {
     // The command rail comes first in the launcher, so that is where keyboard focus lands when the
@@ -92,7 +98,6 @@ export function LauncherTab({ payload, capabilities }: Properties) {
           const entry = payload.commands[index];
           if (entry) actions.command(entry);
         }}
-        onUnknownIcon={(icon) => { void capabilities.intent('report-icon', { icon }).catch(() => {}); }}
       />
       <LauncherTabList
         payload={payload}

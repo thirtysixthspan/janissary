@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isLauncherPayload, type LauncherCommand, type LauncherPayload, type LauncherTabRow } from '@shared/plugins/launcher/shared';
@@ -56,6 +56,12 @@ function launcherElement(value: LauncherPayload, caps: TabPluginClientCapabiliti
 
 function launcher(value = payload(), caps = capabilities()) {
   return render(launcherElement(value, caps.value));
+}
+
+function withResolvers<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  const state = { resolve: undefined as unknown as (value: T) => void };
+  const promise = new Promise<T>((resolve) => { state.resolve = resolve; });
+  return { promise, resolve: state.resolve };
 }
 
 beforeEach(() => {
@@ -231,31 +237,76 @@ describe('the command rail', () => {
     )).toBeInTheDocument();
   });
 
-  // One bad icon name costs one glyph and one notification, not the command it belongs to — and a
-  // repaint is not a second notification.
-  it('reports an icon this build cannot draw, once per name', () => {
+  // One bad icon name costs one glyph and one notification, not the command it belongs to. The
+  // notification is acknowledged by the host before the mounted launcher remembers it.
+  it('reports each unknown icon once after the effect runs', async () => {
     const caps = capabilities();
     const { rerender } = launcher(payload({
       commands: [
         command({ id: 'tasks', icon: 'faNotAGlyph', label: 'Tasks' }),
         command({ id: 'search', icon: 'faAlsoMissing', label: 'Search' }),
+        command({ id: 'tasks-copy', icon: 'faNotAGlyph', label: 'Tasks copy' }),
       ],
     }), caps);
 
-    fireEvent.click(screen.getByRole('option', { name: /Tasks/ }));
+    const badRow = screen.getByRole('option', { name: /^Tasks$/u });
+    expect(badRow.querySelector('.launcher-command-icon')).toHaveClass('fallback');
+    fireEvent.click(badRow);
+    fireEvent.click(badRow);
+    expect(caps.intent).toHaveBeenCalledWith('run-command', { id: 'tasks' });
 
     // Each unrecognised name is reported once, and two names are two reports.
-    const reported = caps.intent.mock.calls.filter(([name]) => name === 'report-icon');
-    expect(reported).toEqual([
-      ['report-icon', { icon: 'faNotAGlyph' }],
-      ['report-icon', { icon: 'faAlsoMissing' }],
-    ]);
+    await waitFor(() => {
+      expect(caps.intent.mock.calls.filter(([name]) => name === 'report-icon')).toEqual([
+        ['report-icon', { icon: 'faNotAGlyph' }],
+        ['report-icon', { icon: 'faAlsoMissing' }],
+      ]);
+    });
+    await act(async () => { await Promise.resolve(); });
 
     // A repaint of the same rail reports nothing new.
     caps.intent.mockClear();
     rerender(<LauncherTab payload={payload({ commands: [command({ icon: 'faNotAGlyph', label: 'Tasks' })] })} capabilities={caps.value} />);
 
     expect(caps.intent.mock.calls.filter(([name]) => name === 'report-icon')).toEqual([]);
+  });
+
+  it('retries a rejected report after a later activation without a render retry loop', async () => {
+    const caps = capabilities();
+    caps.intent.mockRejectedValueOnce(new Error('report failed'));
+    const value = payload({ commands: [command({ icon: 'faNotAGlyph' })] });
+    const { rerender } = launcher(value, caps);
+
+    await waitFor(() => { expect(caps.intent).toHaveBeenCalledTimes(1); });
+    await act(async () => { await Promise.resolve(); });
+    rerender(<LauncherTab payload={value} capabilities={caps.value} />);
+    expect(caps.intent).toHaveBeenCalledTimes(1);
+
+    caps.value.active = false;
+    rerender(<LauncherTab payload={value} capabilities={caps.value} />);
+    caps.value.active = true;
+    rerender(<LauncherTab payload={value} capabilities={caps.value} />);
+
+    await waitFor(() => { expect(caps.intent).toHaveBeenCalledTimes(2); });
+    expect(caps.intent.mock.calls.filter(([name]) => name === 'report-icon')).toEqual([
+      ['report-icon', { icon: 'faNotAGlyph' }],
+      ['report-icon', { icon: 'faNotAGlyph' }],
+    ]);
+  });
+
+  it('does not accept a report completion after unmount', async () => {
+    const caps = capabilities();
+    const report = withResolvers<unknown>();
+    caps.intent.mockReturnValueOnce(report.promise);
+    const value = payload({ commands: [command({ icon: 'faNotAGlyph' })] });
+    const firstMount = launcher(value, caps);
+    await waitFor(() => { expect(caps.intent).toHaveBeenCalledTimes(1); });
+    firstMount.unmount();
+
+    await act(async () => { report.resolve(null); await report.promise; });
+    launcher(value, caps);
+
+    await waitFor(() => { expect(caps.intent).toHaveBeenCalledTimes(2); });
   });
 });
 

@@ -11,25 +11,16 @@ function openOnConfirm(index: number, confirmed: number | null): ListRowClick {
   return { selected: index, opens: confirmed === index };
 }
 
-// The icon names this build already reported, so a repaint is not a second notification for the same
-// typo — the row redraws whenever the host republishes, which is often.
-const reportedIcons = new Set<string>();
-
 // One row of the command rail. The label is the user's own wording for the command, so the row shows
 // exactly what `launcher.json` says and nothing derived from the command itself; the command line is
 // the tooltip, because it is what actually runs.
-export function LauncherCommandRow({ entry, index, selection, onOpen, onUnknownIcon }: {
+export function LauncherCommandRow({ entry, index, selection, onOpen }: {
   entry: LauncherCommand;
   index: number;
   selection: ListSelection;
   onOpen(index: number): void;
-  onUnknownIcon?(icon: string): void;
 }) {
   const { icon, known } = launchIcon(entry.icon);
-  if (!known && !reportedIcons.has(entry.icon)) {
-    reportedIcons.add(entry.icon);
-    onUnknownIcon?.(entry.icon);
-  }
   return (
     <button
       type="button"
@@ -50,12 +41,11 @@ export function LauncherCommandRow({ entry, index, selection, onOpen, onUnknownI
 
 // The command list, its selection, and the Enter key that runs the highlighted row. Kept apart from the
 // rail so the shared list-selection helper stays the one thing that answers a key.
-export function LauncherCommandList({ commands, listRef, onToggleFocus, onOpen, onUnknownIcon }: {
+export function LauncherCommandList({ commands, listRef, onToggleFocus, onOpen }: {
   commands: readonly LauncherCommand[];
   listRef: React.RefObject<HTMLDivElement | null>;
   onToggleFocus(): void;
   onOpen(index: number): void;
-  onUnknownIcon?(icon: string): void;
 }) {
   const selection = useListSelection(commands.length);
   const composed = useComposedListRef(listRef, selection.listRef);
@@ -87,7 +77,6 @@ export function LauncherCommandList({ commands, listRef, onToggleFocus, onOpen, 
           index={index}
           selection={selection}
           onOpen={onOpen}
-          onUnknownIcon={onUnknownIcon}
         />
       ))}
     </div>
