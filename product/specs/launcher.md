@@ -39,7 +39,7 @@ Keyboard navigation walks the rows in the order they are drawn, tier by tier, wi
 
 ### What each row shows
 
-Every row carries the same status chrome the tab strip gives it, plus its time: the tab's dot color (blinking while the tab is busy), its name, its unread flag, and how long ago it was last active — a relative age that coarsens from minutes to hours to days as it grows.
+Every row carries the same status chrome the tab strip gives it, plus its time: the tab's dot color (blinking while the tab is busy), its name, its unread flag, and how long ago it was last active — a relative age that coarsens from minutes to hours to days as it grows. The age advances on its own while the launcher is on screen, without anything being broadcast or prompted, and stops while it is not.
 
 ### The status summary
 

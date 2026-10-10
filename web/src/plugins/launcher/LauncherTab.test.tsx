@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LauncherCommand, LauncherPayload, LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -43,6 +43,20 @@ function payload(overrides: Partial<LauncherPayload> = {}): LauncherPayload {
   };
 }
 
+function bar(intercept: (line: string) => boolean) {
+  return {
+    intercept,
+    ghostHistory: [],
+    blockingOverlayOpen: false,
+    overlayOwnsCommandBar: false,
+    queueOpen: false,
+    queueIndex: 0,
+    queueItems: [],
+    queuedLinesOf: () => [],
+    registerCommandLineInsertion: () => () => {},
+  };
+}
+
 function launcher(value = payload(), caps = capabilities()) {
   // The launcher hosts the application's own command bar, so the bar's provider has to be above it. A
   // spy for `intercept` rather than a no-op, so a case can tell whether a line was answered by the
@@ -50,17 +64,7 @@ function launcher(value = payload(), caps = capabilities()) {
   const intercept = vi.fn<(line: string) => boolean>(() => false);
   return {
     ...render(
-      <AppCommandBarProvider bar={{
-        intercept,
-        ghostHistory: [],
-        blockingOverlayOpen: false,
-        overlayOwnsCommandBar: false,
-        queueOpen: false,
-        queueIndex: 0,
-        queueItems: [],
-        queuedLinesOf: () => [],
-        registerCommandLineInsertion: () => () => {},
-      }}>
+      <AppCommandBarProvider bar={bar(intercept)}>
         <AppCommandBarTabScope label="launcher">
           <LauncherTab payload={value} capabilities={caps.value} />
         </AppCommandBarTabScope>
@@ -393,7 +397,69 @@ describe('the tab list', () => {
   });
 });
 
-describe('the hover card', () => {
+  // A payload that has not moved is a payload that is not rebroadcast, so the age a row was drawn with
+  // is the age it would keep forever without a clock of the view's own. The rail's promise is that
+  // recency is visible, so it needs one.
+  describe('a row\'s age', () => {
+    const age = () => screen.getByText(/\d+[mhd]|now|never/).textContent;
+    const tick = (minutes: number) => { act(() => { vi.advanceTimersByTime(minutes * 60_000); }); };
+
+    it('advances on its own across the minute, hour, and day boundaries', () => {
+      vi.useFakeTimers();
+      try {
+        const started = new Date('2026-01-01T12:00:00Z');
+        vi.setSystemTime(started);
+        launcher(payload({ tabs: [row('shell', { lastActivity: started.getTime() })] }));
+        expect(age()).toBe('now');
+
+        // One minute on, with nothing republished and nothing prompted.
+        tick(1);
+        expect(age()).toBe('1m');
+
+        // Ninety minutes on, so the wording coarsens to the hour.
+        tick(89);
+        expect(age()).toBe('1h');
+
+        // And three days from the start, so it coarsens again.
+        tick(3 * 24 * 60 - 90);
+        expect(age()).toBe('3d');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    // The clock is the view's, so it costs nothing while the launcher is not on screen — and the age
+    // a returned rail shows is as of its return.
+    it('stops while the launcher is not visible, and catches up when it returns', () => {
+      vi.useFakeTimers();
+      try {
+        const started = new Date('2026-01-01T12:00:00Z');
+        vi.setSystemTime(started);
+        const caps = capabilities('left');
+        caps.value.active = false;
+        const rows = [row('shell', { lastActivity: started.getTime() })];
+        const { rerender, intercept } = launcher(payload({ tabs: rows }), caps);
+
+        tick(4);
+        expect(age()).toBe('now');
+
+        caps.value.active = true;
+        rerender(
+          <AppCommandBarProvider bar={bar(intercept)}>
+            <AppCommandBarTabScope label="launcher">
+              <LauncherTab payload={payload({ tabs: rows })} capabilities={caps.value} />
+            </AppCommandBarTabScope>
+          </AppCommandBarProvider>,
+        );
+
+        expect(age()).toBe('4m');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  describe('the hover card', () => {
   it('opens over a row the pointer enters, carrying what the row has no width for', () => {
     launcher(payload({
       tabs: [row('agent', { title: 'Release agent', cwd: '/repo/ws', remote: 'devbox', lastCommand: 'npm test' })],

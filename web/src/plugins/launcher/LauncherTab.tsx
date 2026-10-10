@@ -13,6 +13,7 @@ import {
 import { LauncherCommandList } from './CommandRail';
 import { LauncherTabList } from './TabList';
 import { useLauncherSubmit } from './useLauncherSubmit';
+import { useClock } from './useClock';
 
 type Properties = {
   payload: LauncherPayload;
@@ -36,6 +37,9 @@ export function LauncherTab({ payload, capabilities }: Properties) {
   const appBar = useAppCommandBar();
   const [draft, setDraft] = useState('');
   const [reply, setReply] = useState<string | null>(null);
+  // The rail's own clock, so a row's age advances while the launcher is on screen even though nothing
+  // has been broadcast to make it. One minute is the coarsest unit a row's age is expressed in.
+  const now = useClock(capabilities.active);
 
   useEffect(() => {
     // The command rail comes first in the launcher, so that is where keyboard focus lands when the
@@ -124,6 +128,7 @@ export function LauncherTab({ payload, capabilities }: Properties) {
         payload={payload}
         listRef={tabsRef}
         onFocus={(row) => { void capabilities.intent('focus-tab', { label: row.label }).catch(() => {}); }}
+        now={now}
       />
       {reply !== null && <div className="launcher-reply">{reply}</div>}
       <CommandBarShell

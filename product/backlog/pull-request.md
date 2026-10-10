@@ -13,17 +13,6 @@ Proposal Risk: 2/10 - Per-incarnation identity checks discard obsolete work whil
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "reset launcher summary state on tab recreation and reject replies from obsolete tab incarnations". In src/plugins/launcher/activate.ts, reset launcher and summarizer state when the singleton's creation factory actually runs, and use a generation token to reject work started by a previous launcher incarnation. Extend the host activity contract in src/plugins/activity.ts to expose a stable identity for each tab incarnation, then re-read live activity after awaited prompts before accepting summaries or cursors. Prune disappeared identities on topic delivery and exclude reused labels from old summaries. Add close-and-reopen and deferred-reply tests using the real TabPluginHost and TabManager lifecycle; the existing activation test calls dispose manually and therefore misses ordinary closure.
 
 
-* Advance displayed relative ages while the application is idle.
-
-Existing Issue: Row ages are computed with Date.now only during render and no clock tick schedules a render when the row payload stays unchanged. Severity: 5/10
-
-Existing Risk: 5/10 - A quiet tab can display 'now' or '1m' for hours even though the spec promises ages coarsen as time passes.
-
-Proposal Risk: 2/10 - A visibility-scoped minute tick updates presentation time with no server broadcasts or ACP prompts.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1627 "advance displayed relative ages while the application is idle". Add a launcher-local clock hook under web/src/plugins/launcher/ that ticks at a suitable minute cadence only while the launcher is visible, pass its current time into LauncherTabRowView, and call relativeTime with that value. Clean up the interval when hidden or unmounted. Extend web/src/plugins/launcher/LauncherTab.test.tsx with fake timers and unchanged payloads across minute, hour, and day boundaries; retain the pure conversion coverage in time-ago.test.ts.
-
-
 * Render a visible status dot for each launcher tab row.
 
 Existing Issue: LauncherTabRowView renders an empty launcher-dot span whose CSS specifies color and animation but no content, dimensions, background, or pseudo-element. Severity: 5/10

@@ -15,12 +15,15 @@ function openOnConfirm(index: number, confirmed: number | null): ListRowClick {
 // The summary is clamped by the stylesheet to three lines and expands to eight while the pointer is over
 // the row, so a long paragraph is never cut off — only held short until it is wanted. A tab with no
 // summary yet shows no line at all rather than a placeholder.
-export function LauncherTabRowView({ row, summary, index, selection, onFocus }: {
+export function LauncherTabRowView({ row, summary, index, selection, onFocus, now }: {
   row: LauncherTabRow;
   summary: string | undefined;
   index: number;
   selection: ListSelection;
   onFocus(row: LauncherTabRow): void;
+  // The moment the rail's own clock is at, rather than the moment this row happens to be drawn at —
+  // so an unchanged payload still advances its ages.
+  now: number;
 }) {
   const [hovered, setHovered] = useState(false);
   // Where the card should draw, measured from the row it describes. The row scrolls inside the list, so
@@ -49,7 +52,7 @@ export function LauncherTabRowView({ row, summary, index, selection, onFocus }: 
             <FontAwesomeIcon icon={faFlag} />
           </span>
         )}
-        <span className="launcher-tab-time">{relativeTime(row.lastActivity)}</span>
+        <span className="launcher-tab-time">{relativeTime(row.lastActivity, now)}</span>
       </span>
       {summary !== undefined && <span className="launcher-summary">{summary}</span>}
       {hovered && anchor !== null && <LauncherHoverCard row={row} anchor={anchor} />}
