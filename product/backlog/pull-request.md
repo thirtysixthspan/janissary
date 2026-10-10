@@ -3,17 +3,6 @@
 # pull-request
 
 
-* Test the remote change-set reader and its guard, which decide whether a far side's answer becomes the tab's payload.
-
-Existing Issue: The plan's Tests section calls for "the change-set read against a remote port", and `src/plugins/diff/remote-change-set.ts` — the module that turns a far side's answer into the result a recompute publishes, and refuses one that is malformed — ships with no test of its own, so `isChangeSetResult` and the unusable-answer path are unverified. Severity: 4/10
-
-Existing Risk: 5/10 - That guard is the boundary between another process's JSON and the payload the tab publishes; a guard that lets a malformed answer through publishes it as a change set, and one that rejects a good answer shows a failure where changes exist.
-
-Proposal Risk: 2/10 - Both directions are exercised against real answers, and the far-side dispatch test beside them keeps its own coverage.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1629 "test the remote change-set reader and its guard". Add `src/plugins/diff/remote-change-set.test.ts` beside the module, with a fake `TabPluginServerCapabilities` whose `readWorkspaceChangeSet` answers a well-formed `{ kind: 'files', files: [...] }`, a `{ kind: 'not-repository' }`, a `{ kind: 'error', reason }`, and each malformed shape — `null`, a missing `kind`, a `kind` outside the three, a `files` that is not an array, and a file record that fails `isDiffFile` — asserting the first three pass through as the matching `ChangeSetResult` and every malformed one answers `{ kind: 'error', reason: 'The remote host did not answer with a change set.' }`. Assert too that a capability answering `null` produces that same error result rather than a throw, and that a rejected capability promise does not escape. Cover the same three-pass-through cases for `isChangeSetResult` in `src/plugins/diff/change-set.test.ts`, beside the real-repository cases that file already carries. Add one case to the `SessionsManager offers` block of `src/sessions/manager.test.ts` asserting `offers('diff', { label })` authorises a ready live row and refuses a label no row names, so the new verb's narrowing is pinned the way the other verbs' are. Change no behavior here — this is coverage for what already shipped.
-
-
 * Restrict the `on <tab name>` clause to shell and harness tabs, as its usage line, its refusal, and the spec all promise.
 
 Existing Issue: The clause's wording in `product/specs/diff-tab.md`, the usage line, and the no-workspace refusal all name "an open shell or harness tab", but `resolveWorkspace` in `src/plugins/diff/activate.ts` accepts any open tab whose record carries a workspace, and a file navigator rooted at a workspace clone inherits its `workspaceDir` — so `diff on <a navigator's label>` opens that clone's diff. Severity: 3/10

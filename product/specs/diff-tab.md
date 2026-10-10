@@ -178,6 +178,9 @@ arrives. Added, deleted, binary, and mode-only entries have no additional full-f
 - A directory with no changes shows **No changes**.
 - A git failure shows the failure's reason as one line, and the tab keeps working — the next recompute
   runs normally.
+- A far side that does not answer with a change set, and one that fails to answer at all, shows **The
+  remote host did not answer with a change set.** — the same line whether the answer was unusable or
+  never arrived.
 
 A repository with no commits yet reads as every file added, rather than as an error.
 
