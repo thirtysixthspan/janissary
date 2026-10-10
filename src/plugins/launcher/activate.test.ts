@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import {
   TabPluginRejection,
@@ -11,6 +11,7 @@ import {
   type TabPluginTopicAction,
 } from '../api.js';
 import { activate } from './activate.js';
+import { DEFAULT_LAUNCHER_COMMANDS } from './commands-file.js';
 import { isLauncherPayload, LAUNCHER_LABEL } from './shared.js';
 import { emptyTopicData } from '../topics.js';
 
@@ -517,6 +518,33 @@ describe('the launcher intents', () => {
       activation.intent(intentRequest('configure', { id: 'configure' }, entry.opened[0].value.payload), entry.capabilities);
 
       expect(entry.dispatched).toEqual([`edit ${path.join(root, '.janissary', 'launcher.json')}`]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('creates the default project file before dispatching it to the editor', async () => {
+    mkdirSync(path.join(process.cwd(), 'temp'), { recursive: true });
+    const root = mkdtempSync(path.join(process.cwd(), 'temp', 'launcher-no-config-'));
+    const filePath = path.join(root, '.janissary', 'launcher.json');
+    const entry = openLauncher(ROWS, root);
+    try {
+      entry.capabilities.dispatchLineWithOutput = async (line) => {
+        expect(existsSync(filePath)).toBe(true);
+        expect(readFileSync(filePath, 'utf8')).toBe(`${JSON.stringify(
+          DEFAULT_LAUNCHER_COMMANDS.map(({ icon, label, command }) => ({ icon, label, command })), null, 2,
+        )}\n`);
+        entry.dispatched.push(line);
+        return { dispatched: true, output: '' };
+      };
+      const activation = activate();
+
+      await activation.intent(
+        intentRequest('configure', { id: 'configure' }, entry.opened[0].value.payload),
+        entry.capabilities,
+      );
+
+      expect(entry.dispatched).toEqual([`edit ${filePath}`]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

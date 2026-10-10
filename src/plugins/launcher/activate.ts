@@ -2,7 +2,6 @@ import { homedir } from 'node:os';
 import { defineIntents, noFileOpener, parseDockArgument } from '../api.js';
 import type { TabActivityEntry, TabPluginActivation, TabPluginNotification, TabPluginServerCapabilities } from '../api.js';
 import {
-  CONFIGURE_INTENT_ID,
   LAUNCHER_INSTANCE_KEY,
   LAUNCHER_LABEL,
   isDispatchIntent,
@@ -19,6 +18,7 @@ import {
   type LauncherRunCommandIntent,
 } from './shared.js';
 import { readLauncherFile } from './commands-file.js';
+import { configureIntent } from './configure.js';
 import { readPersonaBody } from './persona.js';
 import {
   initialSummarizerState,
@@ -182,13 +182,7 @@ export function activate(): TabPluginActivation {
       // The Configure button. It dispatches the application's own `edit` on the file in effect rather
       // than opening it through `openInEditor`, whose root boundary would refuse the home file. The
       // answer the dispatch gives comes back with it, so a failure is shown rather than swallowed.
-      configure: {
-        payload: isRunCommandIntent,
-        run: (_tab, payload: LauncherRunCommandIntent, capabilities) => {
-          if (payload.id !== CONFIGURE_INTENT_ID) return null;
-          return capabilities.dispatchLineWithOutput(`edit ${state.filePath}`);
-        },
-      },
+      configure: configureIntent(() => state.filePath),
       // A line typed into the launcher's own command bar. Answered with what the line produced, so the
       // bar can show the reply instead of running a command silently.
       dispatch: {

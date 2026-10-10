@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { LauncherCommand, LauncherSource } from './shared.js';
 
@@ -16,6 +16,21 @@ export const DEFAULT_LAUNCHER_COMMANDS: readonly LauncherCommand[] = [
   { id: 'conversations', icon: 'faComments', label: 'Conversations', command: 'conversations' },
   { id: 'search', icon: 'faMagnifyingGlass', label: 'Search', command: 'search' },
 ];
+
+// Create the file the Configure action is about to open, using the same entries `janus init` seeds.
+// Exclusive creation keeps a file written by the user between the existence check and this write.
+export function createDefaultLauncherFile(filePath: string): void {
+  if (existsSync(filePath)) return;
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  const contents = `${JSON.stringify(
+    DEFAULT_LAUNCHER_COMMANDS.map(({ icon, label, command }) => ({ icon, label, command })), null, 2,
+  )}\n`;
+  try {
+    writeFileSync(filePath, contents, { flag: 'wx' });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  }
+}
 
 // The file name under both the project's `.janissary/` and the user's home `.janissary/`.
 const FILE_NAME = 'launcher.json';

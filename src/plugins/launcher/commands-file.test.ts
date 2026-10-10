@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readLauncherFile, DEFAULT_LAUNCHER_COMMANDS } from './commands-file.js';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { readLauncherFile, createDefaultLauncherFile, DEFAULT_LAUNCHER_COMMANDS } from './commands-file.js';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 type Scratch = { project: string; home: string };
@@ -278,6 +278,38 @@ describe('reading launcher.json', () => {
 
       expect(read.source).toBe('default');
       expect(read.problem).toContain('could not be read');
+    } finally {
+      cleanup(directories);
+    }
+  });
+});
+
+describe('creating launcher.json for editing', () => {
+  it('creates the parent directory and writes the default command entries', () => {
+    const directories = scratch();
+    const filePath = path.join(directories.project, '.janissary', 'launcher.json');
+    try {
+      createDefaultLauncherFile(filePath);
+
+      expect(existsSync(filePath)).toBe(true);
+      expect(readFileSync(filePath, 'utf8')).toBe(`${JSON.stringify(
+        DEFAULT_LAUNCHER_COMMANDS.map(({ icon, label, command }) => ({ icon, label, command })), null, 2,
+      )}\n`);
+    } finally {
+      cleanup(directories);
+    }
+  });
+
+  it('leaves an existing launcher file untouched', () => {
+    const directories = scratch();
+    const content = [{ icon: 'faTerminal', label: 'My shell', command: 'zsh --login' }];
+    const filePath = path.join(directories.project, '.janissary', 'launcher.json');
+    try {
+      projectFile(directories, content);
+
+      createDefaultLauncherFile(filePath);
+
+      expect(readFileSync(filePath, 'utf8')).toBe(`${JSON.stringify(content, null, 2)}\n`);
     } finally {
       cleanup(directories);
     }

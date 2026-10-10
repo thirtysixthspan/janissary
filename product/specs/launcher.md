@@ -29,7 +29,7 @@ A `~/.janissary/launcher.json` in the user's home directory **replaces** the pro
 
 Every `launcher` invocation re-reads the file in effect, and the rail is republished from it whenever it has changed — so the labels and commands the rail shows are the ones a click will run, even when no tab row moved to make the change visible.
 
-The rail's **Configure** button opens whichever file is currently in effect — the home override when one exists, otherwise the project's — in an editor tab, so what it opens is what the launcher reads back.
+The rail's **Configure** button opens whichever file is currently in effect — the home override when one exists, otherwise the project's — in an editor tab, so what it opens is what the launcher reads back. If that file does not exist, the button first creates it with the default command entries and saves it, then opens it. Existing files are left as they are, including files that cannot be read as valid configuration.
 
 A long command list scrolls within its own bounded area, leaving the tab list available in the sidebar.
 
