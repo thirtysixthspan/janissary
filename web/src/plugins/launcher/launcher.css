@@ -32,8 +32,8 @@
 .launcher-tier[data-tier='needsInput'] .launcher-tier-label { color: var(--warn, var(--accent)); }
 .launcher-tier[data-tier='unread'] .launcher-tier-label { color: var(--accent); }
 
-.launcher-tab-row { position: relative; padding: 4px 8px; cursor: pointer; border-bottom: 1px solid var(--border); }
-.launcher-tab-row:hover, .launcher-tab-row.hovered { background: var(--border); }
+.launcher-tab-row { padding: 4px 8px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.launcher-tab-row:hover { background: var(--border); }
 .launcher-tab-row.selected { background: var(--bg-soft); }
 .launcher-tab-primary { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--fg); }
 .launcher-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -52,21 +52,7 @@
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
   margin-top: 2px; font-size: 11px; line-height: 1.35; color: var(--muted); white-space: pre-wrap;
 }
-.launcher-tab-row.hovered .launcher-summary { -webkit-line-clamp: 8; }
-
-/* The hover card: what the row has no width for. It is positioned against the sidebar's own frame rather
-   than the row, because the row sits inside `.launcher-tabs`, whose `overflow-y: auto` would clip a card
-   drawn under a row near the bottom. */
-.launcher-hover {
-  position: fixed; z-index: 20;
-  display: flex; flex-direction: column; gap: 1px; padding: 6px 8px; width: max-content; max-width: 22em;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-  font-size: 11px; color: var(--muted); box-shadow: 0 4px 12px rgb(0 0 0 / 30%);
-  pointer-events: none;
-}
-.launcher-hover-label { color: var(--fg); font-weight: 600; }
-.launcher-hover-row-label { color: var(--faint); }
-.launcher-hover-command { color: var(--faint); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.launcher-tab-row:hover .launcher-summary { -webkit-line-clamp: 8; }
 
 /* A dispatched command's answer, above the bar that asked for it. */
 .launcher-reply {

@@ -67,7 +67,7 @@ The paragraph is clamped to three lines of the row's width and expands to as man
 
 ### Hovering a row
 
-Hovering a tab row opens a small card carrying what the row has no width for: the tab's name, its label when they differ, its working directory, its remote host when it has one, and the last command it ran. It is drawn just below the row wherever the row sits, so the list's own scrolling never cuts it off. The card is hover-only — it appears on pointer-over and closes on pointer-out, and never on touch or keyboard focus alone.
+Hovering a tab row highlights it but does not open an information popup.
 
 The file executes what it names: the first click highlights a command row, and clicking that highlighted row again dispatches its command. The launcher has no text command bar. A project's committed `launcher.json` is therefore a set of commands this application will run. `~/.janissary/launcher.json` replaces the project's file rather than merging with it.
 
