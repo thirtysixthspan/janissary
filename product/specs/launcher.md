@@ -35,7 +35,7 @@ A long command list scrolls within its own bounded area, leaving the tab list av
 
 ### The tab list
 
-Below the rail is every open tab in the center strip, sorted into five tiers, each labelled. In order: **needs you**, **unread**, **active**, **working**, **idle**. Tabs keep their existing strip order inside a tier, so a row never moves within its tier. A tier no tab is in is not drawn at all.
+Below the rail is every open tab in the center strip, organized by group and then by status. Groups follow their first appearance in the center strip. Within each group, tabs are sorted into five labelled tiers, in order: **needs you**, **unread**, **active**, **working**, **idle**. Tabs keep their existing strip order inside a tier, so a row never moves within its tier. A tier no tab is in is not drawn, and groups have no heading; each row's colored left border identifies its group.
 
 A tab ranks **needs you** when it is holding something the user has to answer — a pending agent question, or a harness sitting at a permission prompt the application is not answering for it. It sits above every other tier, including unread and active, because it is the one state worth interrupting for; without the tier, a blocked tab reads as merely busy, which is the row chrome a working tab gets. A permission gate the application is clearing itself, and a tab parked on a resume it has already scheduled, are not waiting on the user and do not put a tab in this tier.
 
@@ -43,11 +43,11 @@ Docked tabs are never listed, and neither is the launcher's own tab. A docked ta
 
 Clicking a row focuses that tab in the center strip, the same way clicking it in the strip does — which starts the ordinary unread dwell, so a row read for three seconds loses its flag exactly as the strip's own. Clicking a tab that closed between the click and its answer does nothing.
 
-Keyboard navigation walks the rows in the order they are drawn, tier by tier, with Enter focusing the highlighted row and a click handing the keyboard to the list. The order the rows are drawn in is the order the keyboard walks, so a selection moved by an arrow key is the row the highlight is on — never the row the same position would have been in the host's own ordering.
+Keyboard navigation walks the rows in the order they are drawn, group by group and tier by tier, with Enter focusing the highlighted row and a click handing the keyboard to the list. The order the rows are drawn in is the order the keyboard walks, so a selection moved by an arrow key is the row the highlight is on — never the row the same position would have been in the host's own ordering.
 
 ### What each row shows
 
-Every row carries the tab's color dot, name, type, and time. Shell, harness, and SSH tabs may also show a status summary. Other tab types stay on one metadata line and never show a summary. The type identifies a regular agent, editor, monitor, file navigator, or plugin tab. The dot stays static, and the row's tier shows whether the tab needs you, has unread output, is active, is working, or is idle. The unread flag also appears when a tab has unseen output. The time says how long ago the tab was last active — a relative age that coarsens from minutes to hours to days as it grows — and stays blank for a tab that has never been active. The age advances on its own while the launcher is on screen, without anything being broadcast or prompted, and stops while it is not. The dot is the tab's own color in the same shape the tab strip draws, so a row matches the tab it names.
+Every row carries the tab's color dot, name, type, and time. Its static dot uses the tab's own color in the same shape the tab strip draws, while its left border uses the tab group's color. Shell, harness, and SSH tabs may also show a status summary. Other tab types stay on one metadata line and never show a summary. The type identifies a regular agent, editor, monitor, file navigator, or plugin tab. The row's tier shows whether the tab needs you, has unread output, is active, is working, or is idle. The unread flag also appears when a tab has unseen output. The time says how long ago the tab was last active — a relative age that coarsens from minutes to hours to days as it grows — and stays blank for a tab that has never been active. The age advances on its own while the launcher is on screen, without anything being broadcast or prompted, and stops while it is not.
 
 Labels are shown as text without interpreting their spelling, and a tab without a summary has no summary line.
 

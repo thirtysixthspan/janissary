@@ -60,6 +60,8 @@ export type LauncherCommand = {
 export type LauncherTabRow = {
   label: string;
   type: string;
+  group: number;
+  groupColor: string;
   title?: string;
   // The tab's own dot colour, so the row matches its strip entry.
   dotColor: string;
@@ -140,6 +142,8 @@ function isRow(value: unknown): value is LauncherTabRow {
   return isRecord(value)
     && typeof value.label === 'string' && value.label.length > 0
     && typeof value.type === 'string' && value.type.length > 0
+    && typeof value.group === 'number'
+    && typeof value.groupColor === 'string' && value.groupColor.length > 0
     && isOptionalString(value.title)
     && typeof value.dotColor === 'string' && value.dotColor.length > 0
     && typeof value.active === 'boolean'

@@ -19,10 +19,10 @@ import { emptyTopicData } from '../topics.js';
 // because the host only produces one for a caller that asks. The launcher's own row carries its plugin
 // record, and the docked plugin row carries one too.
 const ROWS: TabActivityEntry[] = [
-  { label: 'shell', type: 'shell', incarnation: 'shell-incarnation', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, revision: 0, lastCommand: 'ls' },
-  { label: 'agent', type: 'harness', incarnation: 'agent-incarnation', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, revision: 0, lastCommand: 'npm test' },
-  { label: 'schedules', incarnation: 'schedules-incarnation', view: 'plugin', plugin: { id: 'schedules', instanceKey: 'schedules' }, dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0, revision: 0 },
-  { label: LAUNCHER_LABEL, incarnation: 'launcher-incarnation', view: 'plugin', plugin: { id: 'launcher', instanceKey: 'launcher' }, dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12, revision: 0 },
+  { label: 'shell', type: 'shell', group: 1, groupColor: '#5b9cff', incarnation: 'shell-incarnation', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, revision: 0, lastCommand: 'ls' },
+  { label: 'agent', type: 'harness', group: 1, groupColor: '#5b9cff', incarnation: 'agent-incarnation', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, revision: 0, lastCommand: 'npm test' },
+  { label: 'schedules', group: 1, groupColor: '#5b9cff', incarnation: 'schedules-incarnation', view: 'plugin', plugin: { id: 'schedules', instanceKey: 'schedules' }, dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0, revision: 0 },
+  { label: LAUNCHER_LABEL, group: 1, groupColor: '#5b9cff', incarnation: 'launcher-incarnation', view: 'plugin', plugin: { id: 'launcher', instanceKey: 'launcher' }, dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12, revision: 0 },
 ];
 
 // What a tail read attaches to a row that has a transcript to slice. Distinctive so a test can prove

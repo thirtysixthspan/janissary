@@ -45,6 +45,8 @@ export function toRows(tabs: readonly TabActivityEntry[], activeLabel?: string):
     .map((tab) => ({
       label: tab.label,
       type: tab.type ?? tab.view ?? 'agent',
+      group: tab.group ?? 0,
+      groupColor: tab.groupColor ?? tab.dotColor,
       ...(tab.title !== undefined && { title: tab.title }),
       dotColor: tab.dotColor,
       active: activeLabel === tab.label,

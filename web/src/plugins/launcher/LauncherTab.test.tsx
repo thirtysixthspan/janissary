@@ -34,7 +34,7 @@ function command(overrides: Partial<LauncherCommand> = {}): LauncherCommand {
 
 function row(label: string, overrides: Partial<LauncherTabRow> = {}): LauncherTabRow {
   return {
-    label, type: 'shell', dotColor: '#5b9cff', active: false, busy: false, hasUnread: false, needsInput: false,
+    label, type: 'shell', group: 1, groupColor: '#5b9cff', dotColor: '#5b9cff', active: false, busy: false, hasUnread: false, needsInput: false,
     lastActivity: Date.now() - 60_000, cwd: '/repo', ...overrides,
   };
 }
@@ -373,6 +373,33 @@ describe('the tab list', () => {
 
     // Down from the unread row is the idle one, and that is the row Enter focuses.
     expect(caps.intent).toHaveBeenCalledWith('focus-tab', { label: 'quiet' });
+  });
+
+  it('renders groups in first-seen order, with status tiers and group colors inside each group', () => {
+    const caps = capabilities();
+    launcher(payload({
+      tabs: [
+        row('group two idle', { group: 2, groupColor: '#22aa22' }),
+        row('group one needs input', { group: 1, groupColor: '#aa2222', needsInput: true }),
+        row('group two unread', { group: 2, groupColor: '#22aa22', hasUnread: true }),
+        row('group one idle', { group: 1, groupColor: '#aa2222' }),
+      ],
+    }), caps);
+
+    const list = screen.getByRole('listbox', { name: 'Open tabs' });
+    const groups = [...list.querySelectorAll<HTMLElement>('.launcher-group')];
+    const drawn = [...list.querySelectorAll<HTMLElement>('.launcher-tab-row')];
+    expect(groups.map((group) => group.dataset.group)).toEqual(['2', '1']);
+    expect(drawn.map((el) => el.dataset.label)).toEqual([
+      'group two unread', 'group two idle', 'group one needs input', 'group one idle',
+    ]);
+    expect(drawn.map((el) => el.style.borderLeftColor)).toEqual([
+      'rgb(34, 170, 34)', 'rgb(34, 170, 34)', 'rgb(170, 34, 34)', 'rgb(170, 34, 34)',
+    ]);
+
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    fireEvent.keyDown(list, { key: 'Enter' });
+    expect(caps.intent).toHaveBeenCalledWith('focus-tab', { label: 'group two idle' });
   });
 
   // A click both highlights and confirms. An arrow afterwards moves on and drops the confirmation, so

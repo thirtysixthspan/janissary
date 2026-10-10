@@ -27,6 +27,8 @@ export type TabActivityEntry = {
   // The tab's own dot colour — the one its strip entry is drawn in — so a rail row can match it rather
   // than rendering an application-wide default that says nothing about which tab it stands for.
   dotColor: string;
+  group?: number;
+  groupColor?: string;
   // Body kind: undefined is a normal transcript tab, the rest are the named live views.
   view?: 'plugin' | 'harness' | 'editor' | 'monitor' | 'files' | 'notifications';
   dock?: 'left' | 'right';
@@ -149,6 +151,8 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
     type: tabTypeOf(tab),
     ...(tab.plugin && { plugin: { id: tab.plugin.id, instanceKey: tab.plugin.instanceKey } }),
     dotColor: tab.dotColor,
+    group: tab.group,
+    groupColor: tab.groupColor,
     ...(tab.view !== undefined && { view: tab.view }),
     ...(tab.dock !== undefined && { dock: tab.dock }),
     ...(tab.pane !== undefined && { pane: tab.pane }),

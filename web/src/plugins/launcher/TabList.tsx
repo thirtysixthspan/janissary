@@ -1,6 +1,6 @@
 import type { LauncherPayload, LauncherTabRow } from '@shared/plugins/launcher/shared';
 import { nextListSelection, useListSelection, type ListSelection } from '../api';
-import { launcherTiers, type Tier } from './tiers';
+import { launcherTiers, type TabGroup, type Tier } from './tiers';
 import { LauncherTabRowView } from './LauncherTabRowView';
 import { useComposedListRef } from './list-ref';
 
@@ -16,12 +16,12 @@ export function LauncherTabList({ payload, listRef, onFocus, now }: {
   // The active tier is the host's answer to which tab the user is on, carried per row, so this list
   // never derives it and never has a tier it cannot fill.
   const activeLabel = rows.find((row) => row.active)?.label;
-  const tiers = launcherTiers(rows, activeLabel);
+  const groups = launcherTiers(rows, activeLabel);
   // The rows in the order they are drawn, which is the order the keyboard walks them. The payload's
   // own order is not that order — a tier's rows are regrouped by what needs attention — so an index
   // into it would highlight the second row on screen while the first one is lit, and Enter would act
   // on the row the highlight is not on.
-  const displayed = tiers.flatMap((tier) => tier.rows);
+  const displayed = groups.flatMap((group) => group.tiers.flatMap((tier) => tier.rows));
   const selection = useListSelection(displayed.length);
   const composed = useComposedListRef(listRef, selection.listRef);
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
@@ -42,12 +42,29 @@ export function LauncherTabList({ payload, listRef, onFocus, now }: {
       onKeyDown={onKeyDown}
     >
       {displayed.length === 0 && <div className="launcher-empty">No open tabs</div>}
-      {tiers.map((tier) => (
+      {groups.map((group) => (
+        <LauncherGroup key={group.number} group={group} displayed={displayed} summaries={payload.summaries} selection={selection} onFocus={onFocus} now={now} />
+      ))}
+    </div>
+  );
+}
+
+function LauncherGroup({ group, displayed, summaries, selection, onFocus, now }: {
+  group: TabGroup;
+  displayed: readonly LauncherTabRow[];
+  summaries: LauncherPayload['summaries'];
+  selection: ListSelection;
+  onFocus(row: LauncherTabRow): void;
+  now: number;
+}) {
+  return (
+    <div className="launcher-group" data-group={group.number}>
+      {group.tiers.map((tier) => (
         <LauncherTier
           key={tier.key}
           tier={tier}
           displayed={displayed}
-          summaries={payload.summaries}
+          summaries={summaries}
           selection={selection}
           onFocus={onFocus}
           now={now}

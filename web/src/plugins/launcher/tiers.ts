@@ -11,6 +11,7 @@ import type { LauncherTabRow } from '@shared/plugins/launcher/shared';
 export type TierKey = 'needsInput' | 'unread' | 'active' | 'busy' | 'idle';
 
 export type Tier = { key: TierKey; label: string; rows: LauncherTabRow[] };
+export type TabGroup = { number: number; color: string; tiers: Tier[] };
 
 // The label each tier draws above its rows. Small and muted, because the rows themselves carry the
 // state — the label is a wayfinding aid rather than a second statement of it.
@@ -39,7 +40,7 @@ function tierOf(row: LauncherTabRow, activeLabel: string | undefined): TierKey {
 // The active tab's label is passed in rather than read from a prop, because the launcher's own tab is
 // docked and can never be the active tab — so the row to lift is the one the payload's active label
 // names, not one this view could work out for itself.
-export function launcherTiers(
+function statusTiers(
   rows: readonly LauncherTabRow[],
   activeLabel?: string,
 ): Tier[] {
@@ -55,4 +56,23 @@ export function launcherTiers(
       const grouped = buckets.get(key);
       return grouped && grouped.length > 0 ? [{ key, label: TIER_LABELS[key], rows: grouped }] : [];
     });
+}
+
+// Groups retain their first appearance in host strip order. Each group's own rows then pass through
+// the same status tiers, so status never pulls a tab ahead of another group.
+export function launcherTiers(
+  rows: readonly LauncherTabRow[],
+  activeLabel?: string,
+): TabGroup[] {
+  const groups = new Map<number, LauncherTabRow[]>();
+  for (const row of rows) {
+    const groupRows = groups.get(row.group);
+    if (groupRows) groupRows.push(row);
+    else groups.set(row.group, [row]);
+  }
+  return [...groups].map(([number, groupRows]) => ({
+    number,
+    color: groupRows[0]?.groupColor ?? '#000000',
+    tiers: statusTiers(groupRows, activeLabel),
+  }));
 }
