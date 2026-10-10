@@ -211,6 +211,10 @@ written to disk, and never persisted or restored on `--relaunch`. A successful s
 the saved file is then the current content; further editing builds a fresh draft again. If the
 connection drops, the server's copy can lag while disconnected. Reconnecting resends the current draft without requiring another edit. A draft is considered delivered only after the server acknowledges it; edits made while waiting are coalesced into the next update. Replies from an earlier connection or file reference cannot mark newer content delivered. Closing the editor stops its pending updates. This recovery replaces transient draft content only and does not repeat disk saves or other commands.
 
+If a send fails while the connection stays open, the editor retries the latest draft a limited number
+of times. A later edit starts a fresh retry budget; after retries are exhausted, another edit or
+reconnection can send the current draft again.
+
 The one consumer of this draft is a monitor watching the tab (see [[monitoring]]): it is fed the
 draft so it can see unsaved changes without a save, even though the draft is never shown back in the
 editor itself.

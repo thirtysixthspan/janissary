@@ -49,6 +49,62 @@ describe('DraftSync', () => {
     expect(send.mock.calls).toEqual([['draft'], ['draft']]);
   });
 
+  it('retries a failed send while connected and stops after acknowledgement', async () => {
+    const { sync, send } = setup();
+    send.mockResolvedValueOnce(false);
+    sync.update('draft');
+    await vi.advanceTimersByTimeAsync(500);
+    expect(send.mock.calls).toEqual([['draft']]);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(send.mock.calls).toEqual([['draft'], ['draft']]);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops retrying after the capped number of attempts', async () => {
+    const { sync, send } = setup();
+    send.mockResolvedValue(false);
+    sync.update('draft');
+    await vi.advanceTimersByTimeAsync(3500);
+    expect(send.mock.calls).toEqual([['draft'], ['draft'], ['draft'], ['draft']]);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(send).toHaveBeenCalledTimes(4);
+  });
+
+  it('sends the latest text after an edit replaces a retry during backoff', async () => {
+    const { sync, send } = setup();
+    send.mockResolvedValueOnce(false);
+    sync.update('old draft');
+    await vi.advanceTimersByTimeAsync(500);
+    sync.update('latest draft');
+    await vi.advanceTimersByTimeAsync(500);
+    expect(send.mock.calls).toEqual([['old draft'], ['latest draft']]);
+  });
+
+  it('cancels a retry timer when detached during backoff', async () => {
+    const { sync, send } = setup();
+    send.mockResolvedValueOnce(false);
+    sync.update('draft');
+    await vi.advanceTimersByTimeAsync(500);
+    expect(vi.getTimerCount()).toBe(1);
+    sync.detach();
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(send).toHaveBeenCalledOnce();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('cancels a retry during disconnection and resends on reconnection', async () => {
+    const { sync, send } = setup();
+    send.mockResolvedValueOnce(false);
+    sync.update('draft');
+    await vi.advanceTimersByTimeAsync(500);
+    sync.setConnected(false);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(send).toHaveBeenCalledOnce();
+    sync.setConnected(true);
+    expect(send.mock.calls).toEqual([['draft'], ['draft']]);
+  });
+
   it('retries a snapshot rejected while the initial socket was still opening', async () => {
     const { sync, send } = setup();
     send.mockResolvedValueOnce(false);
