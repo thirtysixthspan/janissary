@@ -583,10 +583,10 @@ flag while one is pending — see Metadata row in `tabs.md`.
 For a remote harness tab, detection runs on the far side, exactly as gate detection does, but the
 resume is scheduled and delivered by the client: the far side reports the limit and the reset it
 parsed, and the client — which owns the clock the reset is stated in and the schedule the entry
-belongs to — schedules the entry, types the prompt, and acknowledges delivery so the far side will
-report a fresh limit. A limit detected while the tab is detached queues and replays on the next
-attach like any other report, and its reset has usually passed by then, so the tab rejoins on
-reattach. See [[remote-server]].
+belongs to — schedules the entry and acknowledges when it leaves the schedule. Only a fired entry
+types the prompt; cancelling it clears the pending state without sending anything to the harness.
+A limit detected while the tab is detached queues and replays on the next attach like any other
+report, and its reset has usually passed by then, so the tab rejoins on reattach. See [[remote-server]].
 
 ## Harness tab data
 

@@ -752,6 +752,51 @@ describe('ScheduleManager clearAll', () => {
   });
 });
 
+describe('ScheduleManager lifecycle hooks', () => {
+  function entry(id: string, command = 'clear'): ScheduleEntry {
+    return { id, command, spec: 'at 3pm', nextRun: Date.now() + 60_000, recurring: false };
+  }
+
+  it('settles removed and replaced entries while keeping unchanged entry hooks', () => {
+    const { managers } = makeManagers();
+    const manager = new ScheduleManager(managers);
+    const removed = vi.fn();
+    const replaced = vi.fn();
+    const retained = vi.fn();
+    const original = entry('replace', 'old');
+    const survivor = entry('keep');
+    manager.add('janus', entry('remove'), { removed });
+    manager.add('janus', original, { removed: replaced });
+    manager.add('janus', survivor, { removed: retained });
+
+    manager.set('janus', [entry('replace', 'new'), survivor]);
+
+    expect(removed).toHaveBeenCalledOnce();
+    expect(replaced).toHaveBeenCalledOnce();
+    expect(retained).not.toHaveBeenCalled();
+    manager.cancel('janus', 'keep');
+    expect(retained).toHaveBeenCalledOnce();
+    manager.dispose();
+  });
+
+  it('settles the previous owner before registering a same-ID add replacement', () => {
+    const { managers } = makeManagers();
+    const manager = new ScheduleManager(managers);
+    const outcomes: string[] = [];
+    manager.add('janus', entry('auto-resume'), { removed: () => { outcomes.push('old removed'); } });
+
+    manager.add('janus', entry('auto-resume', 'new command'), {
+      fired: () => { outcomes.push('new fired'); },
+      removed: () => { outcomes.push('new removed'); },
+    });
+
+    expect(outcomes).toEqual(['old removed']);
+    expect(manager.cancel('janus', 'auto-resume')).toBe(true);
+    expect(outcomes).toEqual(['old removed', 'new removed']);
+    manager.dispose();
+  });
+});
+
 describe('ScheduleManager aggregatedView', () => {
   function makeMgr(labels: string[]): ScheduleManager {
     const managers = {

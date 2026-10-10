@@ -3,7 +3,7 @@ import { notify } from '../notifications/index.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
 import { applyBusyTransition } from '../harness/busy-status.js';
 import { reportAutoApproved } from '../harness/auto-approved.js';
-import { reportAutoResumeScheduled } from '../harness/auto-resume-state.js';
+import { reportAutoResumeScheduled, reportAutoResumed } from '../harness/auto-resume-state.js';
 import { resumeEntry, resumeInstant } from '../harness/auto-resume.js';
 import { fmtNextRun } from '../schedule/display.js';
 import type { PtyLaunch, PtySession } from '../pty.js';
@@ -98,7 +98,11 @@ export function createRemotePtySession(
         openFile,
         detectedAt: replayed ? new Date(capturedAt) : undefined,
       });
-      managers.schedule.add(label, resumeEntry(resumeAt), { fired: () => channel.send({ type: 'resume-ack', id }) });
+      const settleResume = () => {
+        channel.send({ type: 'resume-ack', id });
+        reportAutoResumed(managers, label);
+      };
+      managers.schedule.add(label, resumeEntry(resumeAt), { fired: settleResume, removed: settleResume });
       reportAutoResumeScheduled(managers, label);
     }),
   });

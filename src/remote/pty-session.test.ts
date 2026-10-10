@@ -232,6 +232,17 @@ describe('createRemotePtySession', () => {
       expect(sent).toContainEqual({ type: 'resume-ack', id: 'r1' });
     });
 
+    it('acknowledges a removed resume without typing its prompt', () => {
+      const { channel, sent, add, tab } = resumeTab();
+      channel.receive(`${encodeFrame({ type: 'resume-event', id: 'r1', reset, capturedAt: 1000 })}\n`);
+
+      (add.mock.calls[0][2] as { removed: () => void }).removed();
+
+      expect(sent).toContainEqual({ type: 'resume-ack', id: 'r1' });
+      expect(sent.some((frame) => frame.type === 'input')).toBe(false);
+      expect(tab.harness?.autoResumeState).toBe('resumed');
+    });
+
     // A stated clock time is only "already past" relative to the clock reading it, so this pins the
     // clock: at a real 00:30 the same 01:00 reset is an hour ahead and the assertion inverts.
     it('resumes at once for a report replayed long after its reset, rather than waiting a day', () => {

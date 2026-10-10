@@ -4,28 +4,6 @@
 
 ## development
 
-* Bound Git sync commands and cancel queued work during shutdown.
-
-Existing Debt: The shared Git sync queue serializes operations but gives its subprocesses no deadline or owned cancellation lifecycle, so one stalled command holds every subsequent cycle indefinitely. Severity: 6/10
-
-Existing Risk: 6/10 - A hanging pull, push, hook, or credential helper can keep all synced editors provisioning or syncing indefinitely and leave Git work running while shutdown removes the shared clone.
-
-Proposal Risk: 3/10 - A timed-out push can still have reached the remote before its reply was lost, so users may need to inspect the remote before retrying while local saves and commits remain available.
-
-Proposal: Introduce a focused subprocess helper for `src/git/sync.ts` that applies explicit finite deadlines, tracks the active child, and settles only after the child has stopped. Route staging, diff, commit, pull, recovery abort, and push through it; extend the branch readers in `src/git/status.ts` with optional execution bounds so `readyBranch` cannot hold the same queue indefinitely. Add an idempotent `GitSync.dispose()` that marks the service closed, cancels active work, and makes queued operations return an error without starting another subprocess. `src/managers.ts` already places `gitSync` before `workspace` in `MANAGER_DISPOSE_ORDER`; preserve that lifecycle order. Failure recovery needs its own bounded command rather than inheriting an already-aborted signal, and `commitIfChanged` must distinguish the expected diff exit indicating staged changes from timeout, cancellation, or command failure. Preserve path-scoped commits, local history on rebase failure, and synchronous local save confirmation. `src/git/sync.test.ts` already holds commands to test queue ordering and recovery; extend its child-process fake to assert timeout settlement, recovery ordering, disposal with queued cycles, and refusal to commit after a failed diff. Keep `src/editor/save-synced-stale.test.ts` as the integration coverage for preserving local and upstream content.
-
-
-* Reconcile schedule callbacks across replacement, cancellation, and remote auto-resume.
-
-Existing Debt: Schedule entries and their lifecycle callbacks have separate mutation paths, so replacing the entry list can remove work without settling its owner and remote resume callbacks omit the removal outcome. Severity: 6/10
-
-Existing Risk: 6/10 - Cancelling auto-resume through the command line can leave the local harness believing a removed timer is pending, while cancelling a remote timer can leave the far-side detector waiting for an acknowledgement that never comes.
-
-Proposal Risk: 2/10 - Transport loss can still delay a remote acknowledgement, but every local removal has a defined completion path and cannot leave a callback attached to a later entry that reuses its id.
-
-Proposal: `schedule cancel` and `schedule clear` in `src/commands/schedule.ts` replace the list through `ScheduleManager.set`, but `set` in `src/schedule/manager.ts` updates only the entries while `cancel`, `clearAll`, and `delete` also settle removal callbacks. Make list replacement reconcile callbacks for removed or replaced entries while retaining callbacks for surviving entries; replacing an entry through `add` also needs to settle the previous owner before registering its replacement. Detach callbacks before invoking them so reentrant schedule changes cannot settle an entry twice. Keep the command parser and its messages intact, with all mutation routes relying on the manager's lifecycle rule. In `src/remote/pty-session.ts`, the `onResumeEvent` registration supplies only a fired callback despite promising acknowledgement on cancellation; supply the removal callback too and settle the metadata flag through `src/harness/auto-resume-state.ts`. `src/schedule/manager.test.ts` covers direct cancel and clear hooks, and `src/commands/schedule.test.ts` uses a map-only schedule fake, so add coverage connecting CLI cancellation and clearing to a real manager. Extend `src/harness/auto-resume-wire.test.ts` and `src/remote/pty-session.test.ts` to cover removal, replacement, retained hooks, and remote acknowledgements without typing a cancelled prompt.
-
-
 * Replace the editor's served-file reference when a first save chooses another filename.
 
 Existing Debt: The first-save collision path implements its own editor retargeting and registers a new file reference without releasing the previous one, bypassing the replacement lifecycle already used by renames. Severity: 5/10
@@ -101,6 +79,16 @@ Existing Risk: 6/10 - Every one of the port's operations believes whatever the f
 Proposal Risk: 3/10 - The reply type is then derived per operation, so a far-side payload change is a compile error at both ends, but the table now carries an argument and a result decoder per operation and that mapping has to stay in step with `RemoteFilesystemOperation`.
 
 Proposal: `src/file-navigator/remote/port.ts:175` resolves each reply through `resolve(value as T)` inside `request`, and each caller, `readDirectory` among them, supplies `T` only through its own return type, while `src/file-navigator/remote/port-requests.ts:107` casts a value this codebase itself synthesized. `src/remote/filesystem/operations.ts` already holds each operation's argument `decode` and `valid`, so give each entry a result decoder beside them and expose a keyed mapping from `RemoteFilesystemOperation` to its decoded result type, which is the same unconnectedness the three `eslint-disable @typescript-eslint/no-explicit-any` suppressions at `src/remote/filesystem/operations.ts:94,213,223` are expressing on the argument side. Have `unavailableResult` at `src/file-navigator/remote/port-requests.ts:104-109` build its refusal through that decoder rather than `refusal.value as T`. `src/remote/file-navigator-refusal-contract.test.ts` runs every operation against a loopback remote and the local port and asserts the two answers match, and is the coverage that has to keep passing while the reply type stops being a cast.
+
+* Bound Git sync commands and cancel queued work during shutdown. — deferred: complexity 8/10, requires owned cancellation and finite deadlines across the complete Git subprocess sequence, including status lookup, recovery, queue shutdown, and post-timeout outcomes.
+
+Existing Debt: The shared Git sync queue serializes operations but gives its subprocesses no deadline or owned cancellation lifecycle, so one stalled command holds every subsequent cycle indefinitely. Severity: 6/10
+
+Existing Risk: 6/10 - A hanging pull, push, hook, or credential helper can keep all synced editors provisioning or syncing indefinitely and leave Git work running while shutdown removes the shared clone.
+
+Proposal Risk: 3/10 - A timed-out push can still have reached the remote before its reply was lost, so users may need to inspect the remote before retrying while local saves and commits remain available.
+
+Proposal: Introduce a focused subprocess helper for `src/git/sync.ts` that applies explicit finite deadlines, tracks the active child, and settles only after the child has stopped. Route staging, diff, commit, pull, recovery abort, and push through it; extend the branch readers in `src/git/status.ts` with optional execution bounds so `readyBranch` cannot hold the same queue indefinitely. Add an idempotent `GitSync.dispose()` that marks the service closed, cancels active work, and makes queued operations return an error without starting another subprocess. `src/managers.ts` already places `gitSync` before `workspace` in `MANAGER_DISPOSE_ORDER`; preserve that lifecycle order. Failure recovery needs its own bounded command rather than inheriting an already-aborted signal, and `commitIfChanged` must distinguish the expected diff exit indicating staged changes from timeout, cancellation, or command failure. Preserve path-scoped commits, local history on rebase failure, and synchronous local save confirmation. `src/git/sync.test.ts` already holds commands to test queue ordering and recovery; extend its child-process fake to assert timeout settlement, recovery ordering, disposal with queued cycles, and refusal to commit after a failed diff. Keep `src/editor/save-synced-stale.test.ts` as the integration coverage for preserving local and upstream content.
 
 ## declined
 
