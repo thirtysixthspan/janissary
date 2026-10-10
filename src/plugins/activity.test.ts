@@ -218,6 +218,27 @@ describe('the tabActivity reader', () => {
     expect(rows[0]?.tail).toBe(`${'a'.repeat(998)}\n\n${'b'.repeat(3000)}`);
   });
 
+  it('keeps editor contents out of display reads and fingerprints requested content', () => {
+    const editor = tab({
+      label: 'notes',
+      view: 'editor',
+      editor: { name: 'notes.md', path: '/repo/notes.md', size: '3 B', url: '/open/notes' },
+      editorDraft: { content: 'one', updatedAt: 1 },
+    });
+    const { managers: host } = managers([editor]);
+
+    const displayRow = tabActivityRows(host as unknown as Managers)[0];
+    const firstSummaryRow = tabActivityRows(host as unknown as Managers, 8)[0];
+    editor.editorDraft = { content: 'two', updatedAt: 2 };
+    const changedSummaryRow = tabActivityRows(host as unknown as Managers, 8)[0];
+
+    expect(displayRow?.tail).toBeUndefined();
+    expect(firstSummaryRow?.tail).toBe('one');
+    expect(changedSummaryRow?.tail).toBe('two');
+    expect(changedSummaryRow?.logLength).toBe(firstSummaryRow?.logLength);
+    expect(changedSummaryRow?.contentFingerprint).not.toBe(firstSummaryRow?.contentFingerprint);
+  });
+
   it('caps one tail by both entry count and characters', () => {
     const { managers: host } = managers([tab({
       label: 'shell',

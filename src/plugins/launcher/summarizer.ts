@@ -143,7 +143,7 @@ export type SummarizerState = {
   // A cursor holds the length as well as the revision because the revision is not the only writer the
   // host has: a tab whose log is appended outside `src/tab/transcript/events.ts` — a remote tab's
   // channel output — moves the length and nothing else.
-  fed: Map<string, { incarnation: string; length: number; revision: number }>;
+  fed: Map<string, { incarnation: string; length: number; revision: number; contentFingerprint?: string }>;
   primed: boolean;
   inFlight: boolean;
   // The identity of the core session this state was primed against, and the delimiter that priming
@@ -164,10 +164,11 @@ export function initialSummarizerState(): SummarizerState {
 // with a shorter log than the dead tab left behind.
 function movedPastCursor(
   tab: TabActivityEntry,
-  cursor: { incarnation: string; length: number; revision: number } | undefined,
+  cursor: { incarnation: string; length: number; revision: number; contentFingerprint?: string } | undefined,
 ): boolean {
   return cursor === undefined || tab.incarnation !== cursor.incarnation
-    || tab.logLength !== cursor.length || tab.revision !== cursor.revision;
+    || tab.logLength !== cursor.length || tab.revision !== cursor.revision
+    || tab.contentFingerprint !== cursor.contentFingerprint;
 }
 
 // One flush. Resolves with the summaries to publish, or an empty map when there was nothing to ask.
@@ -232,6 +233,7 @@ export async function summarizeOnce(input: {
         incarnation: tab.incarnation,
         length: tab.logLength,
         revision: tab.revision,
+        ...(tab.contentFingerprint !== undefined && { contentFingerprint: tab.contentFingerprint }),
       });
     }
     return new Map([...parseTabSummaries(answered.reply)].filter(([label]) => acceptedLabels.has(label)));

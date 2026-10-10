@@ -1,7 +1,8 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { tabRuntime } from '../tab/runtime.js';
+import { currentEditorContent } from '../editor/content.js';
 
 // The one open tab as the `tabActivity` capability reports it and the `tabs` topic delivers it:
 // everything a plugin needs to render a row about a tab and, when it also asks for the tail, to
@@ -58,6 +59,8 @@ export type TabActivityEntry = {
   // The tab's most recent transcript entries as text, capped by the host. Present only when the
   // caller asked for it.
   tail?: string;
+  // Fingerprint of requested editor content, including same-length edits.
+  contentFingerprint?: string;
 };
 
 // How much of one entry survives the tail cap. A ceiling rather than a target: a tab whose last few
@@ -98,6 +101,19 @@ function tailOf(entries: readonly Tab['log'][number][], lines: number): string {
   return kept.join('\n\n').slice(-ACTIVITY_TAIL_CHARS);
 }
 
+function activityTail(
+  tab: Tab,
+  editorContent: string | undefined,
+  harnessEntries: readonly string[],
+  lines: number,
+): string {
+  if (editorContent !== undefined) return editorContent.slice(0, ACTIVITY_TAIL_CHARS);
+  if (tab.view === 'harness' && harnessEntries.length > 0) {
+    return harnessEntries.slice(-lines).join('\n\n').slice(-ACTIVITY_TAIL_CHARS);
+  }
+  return tailOf(tab.log, lines);
+}
+
 function normalizeTailLines(tailLines: number | undefined): number | undefined {
   if (tailLines === undefined || !Number.isFinite(tailLines)) return undefined;
   const wholeEntries = Math.floor(tailLines);
@@ -112,7 +128,13 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
   const harnessEntries = tailLines === undefined || tab.view !== 'harness'
     ? []
     : managers.harness.transcriptTailer(tab.label)?.entriesAfter(0) ?? [];
-  const transcriptLength = tab.log.length + harnessEntries.length;
+  const editorContent = tailLines === undefined || tab.view !== 'editor' || !tab.editor
+    ? undefined
+    : currentEditorContent(managers, tab.editorDraft, tab.editor.url);
+  const contentFingerprint = editorContent === undefined
+    ? undefined
+    : createHash('sha256').update(editorContent).digest('hex');
+  const transcriptLength = editorContent?.length ?? tab.log.length + harnessEntries.length;
   return {
     label: tab.label,
     incarnation: incarnationOf(tab),
@@ -141,10 +163,9 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
     lastCommand: lastCommandOf(tab.log),
     logLength: transcriptLength,
     revision: tab.runtime?.transcriptRevision ?? 0,
+    ...(contentFingerprint !== undefined && { contentFingerprint }),
     ...(tailLines !== undefined && {
-      tail: tab.view === 'harness' && harnessEntries.length > 0
-        ? harnessEntries.slice(-tailLines).join('\n\n').slice(-ACTIVITY_TAIL_CHARS)
-        : tailOf(tab.log, tailLines),
+      tail: activityTail(tab, editorContent, harnessEntries, tailLines),
     }),
   };
 }

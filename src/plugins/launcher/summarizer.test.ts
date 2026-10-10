@@ -441,6 +441,27 @@ describe('summarizeOnce', () => {
     expect(summarizer.fed.get('shell')).toEqual({ incarnation: 'shell-incarnation', length: 4, revision: 5 });
   });
 
+  it('prompts an editor whose content changed without changing its length', async () => {
+    const editor = tab({ label: 'notes', view: 'editor', logLength: 3, revision: 0, contentFingerprint: 'old' });
+    const rows = [editor];
+    const stubs = stub(rows, '[[tab:notes]] The open file defines a helper.');
+    const summarizer = state({
+      primed: true,
+      session: 'acp-1',
+      fed: new Map([['notes', {
+        incarnation: 'notes-incarnation', length: 3, revision: 0, contentFingerprint: 'old',
+      }]]),
+    });
+    rows[0] = { ...editor, contentFingerprint: 'new' };
+
+    await summarizeOnce({ capabilities: stubs.capabilities, state: summarizer, personaBody: 'x', readTabs: () => rows });
+
+    expect(stubs.prompted).toHaveLength(1);
+    expect(summarizer.fed.get('notes')).toEqual({
+      incarnation: 'notes-incarnation', length: 3, revision: 0, contentFingerprint: 'new',
+    });
+  });
+
   // The other one: an append once the log is at its cap drops the oldest entry, so the length sits at
   // its ceiling forever and the newest output is invisible to a length-only cursor.
   it('prompts a tab whose capped log took another entry at an unchanged length', async () => {
