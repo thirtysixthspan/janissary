@@ -195,9 +195,10 @@ Beside the file-navigator button, harness tabs show a new-shell button. Its tool
 The new-shell button is drawn like the rest of that action group: a flat icon in the row's muted colour, brightening on hover. While it is disabled it is dimmed, so an unavailable button is not mistaken for a live one. The same holds for the button an ssh tab shows, since an ssh tab is a harness tab.
 
 Beside the new-shell button, harness and shell tabs with a workspace show a diff button, tooltip "Show
-diff in the workspace". It opens the diff tab on that tab's own workspace, through the same guarded
-sibling hook the new-shell button uses, so it does nothing while the workspace is still provisioning. A
-remote tab shows none: its workspace lives on the far side, where this application has no git to read.
+diff in the workspace". It is a flat, muted icon that brightens on hover and dims when disabled. It
+opens the diff tab on that tab's own workspace, through the same guarded sibling hook the new-shell
+button uses, and is disabled while the workspace is still provisioning. A remote tab shows none: its
+workspace lives on the far side, where this application has no git to read.
 See [[diff-tab]] for what the tab shows and does.
 
 Harness tabs show a clipboard-icon button, tooltip "Open transcript", but clicking it opens

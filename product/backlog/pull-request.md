@@ -2,10 +2,7 @@
 
 # pull-request
 
-* diff button in metadata tab should be light on dark.
-
 * harness button in the launcher should launch the harness launch dialog
 
 * remove the information popup on hover over the tabs
-
 

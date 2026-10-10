@@ -310,6 +310,12 @@ button.tab-recording { cursor: pointer; }
 }
 .tab-launch-shell:hover { color: var(--fg); }
 .tab-launch-shell:disabled { color: var(--muted); cursor: default; opacity: 0.45; }
+.tab-open-diff {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.tab-open-diff:hover { color: var(--fg); }
+.tab-open-diff:disabled { color: var(--muted); cursor: default; opacity: 0.45; }
 .tab-open-transcript {
   background: transparent; border: none; color: var(--muted); cursor: pointer;
   font-size: 13px; padding: 0 4px; line-height: 1;
