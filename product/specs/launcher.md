@@ -19,7 +19,7 @@ Which commands appear is configured in `.janissary/launcher.json`, written by `j
 
 The label is the user's own wording for the command, so two projects may call the same command different things. The icon is a Font Awesome icon name, drawn as a neutral fallback glyph when it is not one the build recognises — the command it belongs to still runs.
 
-When no configuration exists, the built-in list is Shell, Harness, File navigator, Notifications, Schedules, Sessions, Conversations, and Search, in that order. File navigator opens docked in the left sidebar. Notifications, Schedules, and Sessions open docked on the right. Tasks and History are not included.
+When no configuration exists, the built-in list is Shell, Harness, File navigator, SQL, Notifications, Schedules, Sessions, Conversations, and Search, in that order. File navigator opens docked in the left sidebar. The SQL entry runs `sql` (see [[sql-database]]). Notifications, Schedules, and Sessions open docked on the right. Tasks and History are not included.
 
 Confirming the built-in **Harness** entry submits the bare `harness` command and opens the New harness launch dialog (see [[harness]]).
 

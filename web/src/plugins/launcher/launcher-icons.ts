@@ -1,5 +1,5 @@
 import {
-  faBell, faBox, faClock, faClockRotateLeft, faComments, faFolderOpen, faListCheck,
+  faBell, faBox, faClock, faClockRotateLeft, faComments, faDatabase, faFolderOpen, faListCheck,
   faMagnifyingGlass, faPlug, faRobot, faTerminal, faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
@@ -25,6 +25,7 @@ const ICONS: Record<string, IconDefinition> = {
   faClockRotateLeft,
   faPlug,
   faComments,
+  faDatabase,
   faMagnifyingGlass,
   faListCheck,
   faBox,
