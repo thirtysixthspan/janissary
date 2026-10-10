@@ -53,6 +53,20 @@ function managers(
 }
 
 describe('the tabActivity reader', () => {
+  it('reports tab types for shell, harness, SSH, editor, and other views', () => {
+    const { managers: host } = managers([
+      tab({ label: 'zsh', view: 'plugin', plugin: { id: 'shell', instanceKey: 'shell', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'zsh' } }),
+      tab({ label: 'claude', view: 'harness', harness: { name: 'claude', program: 'claude', ptyId: '1', status: 'running' } }),
+      tab({ label: 'remote', view: 'harness', harness: { name: 'ssh', program: 'ssh', ptyId: '2', status: 'running' } }),
+      tab({ label: 'readme', view: 'editor' }),
+      tab({ label: 'files', view: 'files' }),
+    ]);
+
+    const rows = tabActivityRows(host as unknown as Managers);
+
+    expect(rows.map((row) => row.type)).toEqual(['shell', 'harness', 'ssh', 'editor', 'files']);
+  });
+
   it('reports every tab in strip order, with its dock, pane, and view facts', () => {
     const { managers: host } = managers([
       tab({ label: 'one', view: 'plugin', dock: 'left' }),

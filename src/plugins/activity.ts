@@ -13,6 +13,7 @@ import { currentEditorContent } from '../editor/content.js';
 // and not a bag of payload types — a plugin reaches both from `api.js`, which re-exports this one.
 export type TabActivityEntry = {
   label: string;
+  type?: string;
   // Host-owned identity for this open tab incarnation. Labels are immediately reusable after close,
   // so async consumers must pair them with this value before routing work back to a tab.
   incarnation: string;
@@ -71,6 +72,12 @@ function incarnationOf(tab: Tab): string {
   const runtime = tabRuntime(tab);
   runtime.incarnation ??= randomUUID();
   return runtime.incarnation;
+}
+
+function tabTypeOf(tab: Tab): string {
+  if (tab.view === 'harness') return tab.harness?.name === 'ssh' ? 'ssh' : 'harness';
+  if (tab.view === 'plugin') return tab.plugin?.id ?? 'plugin';
+  return tab.view ?? 'agent';
 }
 
 // One minute, in milliseconds. Last activity is reported at this resolution, which is what makes
@@ -139,6 +146,7 @@ function entryFor(tab: Tab, managers: Managers, tailLines: number | undefined): 
     label: tab.label,
     incarnation: incarnationOf(tab),
     ...(tab.title !== undefined && { title: tab.title }),
+    type: tabTypeOf(tab),
     ...(tab.plugin && { plugin: { id: tab.plugin.id, instanceKey: tab.plugin.instanceKey } }),
     dotColor: tab.dotColor,
     ...(tab.view !== undefined && { view: tab.view }),

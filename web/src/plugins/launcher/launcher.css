@@ -37,6 +37,7 @@
 .launcher-tab-row.selected { background: var(--bg-soft); }
 .launcher-tab-primary { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--fg); }
 .launcher-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.launcher-tab-type { color: var(--faint); font-size: 10px; white-space: nowrap; }
 /* The tab's own dot, the same shape the strip, the command bar, and the tab navigator draw — a row
    matches its tab because it is the tab's glyph in the tab's colour. Sized here so the shape has
    dimensions of its own rather than relying on the glyph's 1em. */

@@ -32,6 +32,12 @@ export function isLauncherOwn(tab: { label: string; plugin?: { id: string; insta
   return tab.plugin?.id === 'launcher' && tab.plugin.instanceKey === LAUNCHER_INSTANCE_KEY;
 }
 
+const SUMMARY_ELIGIBLE_TYPES = new Set(['shell', 'harness', 'ssh']);
+
+export function isSummaryEligibleType(type: string): boolean {
+  return SUMMARY_ELIGIBLE_TYPES.has(type);
+}
+
 // How long the launcher's client waits between summarizer flushes. It lives in the shared contract
 // rather than in either side's own module because the client owns the interval and the server owns the
 // prompt it paces, and the two must agree about the number. It mirrors the monitor's flush cycle: one
@@ -53,6 +59,7 @@ export type LauncherCommand = {
 // the wire. `summaries` is keyed by label and travels in the payload's own field, not per row.
 export type LauncherTabRow = {
   label: string;
+  type: string;
   title?: string;
   // The tab's own dot colour, so the row matches its strip entry.
   dotColor: string;
@@ -132,6 +139,7 @@ const DOCKS = new Set<string>(['left', 'right']);
 function isRow(value: unknown): value is LauncherTabRow {
   return isRecord(value)
     && typeof value.label === 'string' && value.label.length > 0
+    && typeof value.type === 'string' && value.type.length > 0
     && isOptionalString(value.title)
     && typeof value.dotColor === 'string' && value.dotColor.length > 0
     && typeof value.active === 'boolean'

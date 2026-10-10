@@ -21,7 +21,7 @@ function managersWithTabLifecycle(): Managers {
       promptResult: vi.fn(async (_label: string, prompt: string) => ({
         answered: true,
         reply: prompt.includes('These are the tabs currently open')
-          ? '[[tab:janus]] Running the lifecycle test.'
+          ? '[[tab:shell]] Running the lifecycle test.'
           : '',
         session: 'launcher-test-session',
       })),
@@ -40,6 +40,16 @@ function managersWithTabLifecycle(): Managers {
 describe('launcher singleton tab lifecycle', () => {
   it('clears summary state when the real tab is closed and its singleton is created again', async () => {
     const managers = managersWithTabLifecycle();
+    const rootTab = managers.tab.tabs[0];
+    if (!rootTab) throw new Error('root tab was not seeded');
+    managers.tab.tabs.push({
+      ...rootTab,
+      label: 'shell',
+      number: 2,
+      view: 'plugin',
+      title: 'shell',
+      plugin: { id: 'shell', instanceKey: 'shell', schemaVersion: 1, payload: {}, fileRefs: [], sourceLabel: 'shell' },
+    });
     const host = new TabPluginHost(managers, [launcherManifest], {
       launcher: async () => ({ activate }),
     });
@@ -51,13 +61,14 @@ describe('launcher singleton tab lifecycle', () => {
     await host.intent(launcherTab.label, 'summarize', {});
     const firstPayload = launcherTab.plugin?.payload;
     if (!isLauncherPayload(firstPayload)) throw new Error('launcher payload was rejected');
-    expect(firstPayload.summaries.janus).toBe('Running the lifecycle test.');
+    expect(firstPayload.summaries.shell).toBe('Running the lifecycle test.');
 
     const launcherIndex = managers.tab.tabs.findIndex((tab) => tab.label === launcherTab.label);
     managers.tab.setDock(launcherIndex, null);
     managers.tab.closeTab(launcherIndex);
     expect(managers.tab.tabs.map((tab) => [tab.label, tab.dock, tab.runtime?.closing])).toEqual([
       ['janus', undefined, undefined],
+      ['shell', undefined, undefined],
     ]);
     await host.runCommand('launcher', 'launcher', origin);
 

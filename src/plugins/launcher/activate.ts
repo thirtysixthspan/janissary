@@ -12,6 +12,7 @@ import {
   isLauncherPayload,
   isReportIconIntent,
   isRunCommandIntent,
+  isSummaryEligibleType,
   type LauncherDispatchIntent,
   type LauncherFocusTabIntent,
   type LauncherReportIconIntent,
@@ -40,16 +41,18 @@ function resetLauncherState(): void {
 }
 
 function pruneIncarnations(rows: readonly TabActivityEntry[]): boolean {
-  const current = new Map(rows.map((tab) => [tab.label, tab.incarnation]));
+  const current = new Map(rows.map((tab) => [tab.label, tab]));
   let changed = false;
   for (const [label, incarnation] of state.summaryIncarnations) {
-    if (current.get(label) === incarnation) continue;
+    const tab = current.get(label);
+    if (tab?.incarnation === incarnation && isSummaryEligibleType(tab.type ?? '')) continue;
     state.summaryIncarnations.delete(label);
     delete state.summaries[label];
     changed = true;
   }
   for (const [label, cursor] of summarizer.fed) {
-    if (current.get(label) !== cursor.incarnation) summarizer.fed.delete(label);
+    const tab = current.get(label);
+    if (tab?.incarnation !== cursor.incarnation || !isSummaryEligibleType(tab.type ?? '')) summarizer.fed.delete(label);
   }
   return changed;
 }
@@ -119,7 +122,7 @@ function ownTabs(capabilities: TabPluginServerCapabilities): TabActivityEntry[] 
 // than something the user is doing.
 function summarizedTabs(capabilities: TabPluginServerCapabilities): TabActivityEntry[] {
   return capabilities.tabActivity(SUMMARIZER_TAIL_ENTRIES)
-    .filter((tab) => tab.dock === undefined && !isLauncherOwn(tab));
+    .filter((tab) => tab.dock === undefined && !isLauncherOwn(tab) && isSummaryEligibleType(tab.type ?? ''));
 }
 
 export function activate(): TabPluginActivation {

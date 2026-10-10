@@ -44,6 +44,7 @@ export function toRows(tabs: readonly TabActivityEntry[], activeLabel?: string):
     .filter((tab) => tab.dock === undefined && !isLauncherOwn(tab))
     .map((tab) => ({
       label: tab.label,
+      type: tab.type ?? tab.view ?? 'agent',
       ...(tab.title !== undefined && { title: tab.title }),
       dotColor: tab.dotColor,
       active: activeLabel === tab.label,

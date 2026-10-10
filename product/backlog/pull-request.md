@@ -2,9 +2,6 @@
 
 # pull-request
 
-* in the launcher, the tab summaries should only apply to shell, harness, ssh tabs. Other tabs instead show a single line annotated with the tab color dot, tab name, tab type, and time.
-
 * in the launcher, tab color dots should always be static. Tab status is indicated by section placement.
 
 * in the launcher, tab group color should be shown as a colored left hand border, just like centrer tabs. tabs will be organized by groups first, then status as a sub grouping. No title for group will be required because the group will be indicated by color.
-

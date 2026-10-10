@@ -47,13 +47,13 @@ Keyboard navigation walks the rows in the order they are drawn, tier by tier, wi
 
 ### What each row shows
 
-Every row carries the same status chrome the tab strip gives it, plus its time: the tab's dot color (blinking while the tab is busy), its name, its unread flag, and how long ago it was last active — a relative age that coarsens from minutes to hours to days as it grows. The time value is blank for a tab that has never been active. The age advances on its own while the launcher is on screen, without anything being broadcast or prompted, and stops while it is not. The dot is the tab's own colour in the same shape the tab strip draws, so a row matches the tab it names.
+Every row carries the tab's color dot, name, type, and time. Shell, harness, and SSH tabs may also show a status summary. Other tab types stay on one metadata line and never show a summary. The type identifies a regular agent, editor, monitor, file navigator, or plugin tab. The dot blinks while the tab is busy; the unread flag appears when it has unseen output. The time says how long ago the tab was last active — a relative age that coarsens from minutes to hours to days as it grows — and stays blank for a tab that has never been active. The age advances on its own while the launcher is on screen, without anything being broadcast or prompted, and stops while it is not. The dot is the tab's own color in the same shape the tab strip draws, so a row matches the tab it names.
 
 Labels are shown as text without interpreting their spelling, and a tab without a summary has no summary line.
 
 ### The status summary
 
-Each row may carry a short paragraph saying what that tab is doing, written by an ACP session the launcher owns. While connected, the launcher checks every thirty seconds for changed center tabs and prompts only for those tabs. Docked tabs and the launcher's own tab are excluded; unchanged tabs keep their existing paragraph.
+Shell, harness, and SSH rows may carry a short paragraph saying what that tab is doing, written by an ACP session the launcher owns. While connected, the launcher checks every thirty seconds for changed center tabs of those types and prompts only for them. Docked tabs, other tab types, and the launcher's own tab are excluded; unchanged eligible tabs keep their existing paragraph.
 
 The summarizer is an ACP session the launcher's own tab runs, not a subprocess of its own, and is tool-less: it may read, and it may not act. Its persona is the project's own `ai/personas/launcher/summarizer.md` when the project has written one, and the copy the application otherwise, because `janus init` creates `ai/personas/` and writes nothing into it — so a summarizer that read only the project's tree would never find a persona in an ordinary project. Only the body is primed: a persona's directive line names a subprocess this session never spawns. It never summarizes the launcher's own tab, because that tab's transcript is where its own prompts and replies land — leaving it in would make every flush find content it had just written, and an application where nothing is happening would never be quiet.
 

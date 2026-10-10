@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFlag } from '@fortawesome/free-regular-svg-icons';
 import { faCircle } from '@fortawesome/free-solid-svg-icons';
-import type { LauncherTabRow } from '@shared/plugins/launcher/shared';
+import { isSummaryEligibleType, type LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { ListRowClick, ListSelection } from '../api';
 import { relativeTime } from './time-ago';
 
@@ -39,6 +39,7 @@ export function LauncherTabRowView({ row, summary, index, selection, onFocus, no
           <FontAwesomeIcon icon={faCircle} />
         </span>
         <span className="launcher-tab-name">{row.title ?? row.label}</span>
+        {!isSummaryEligibleType(row.type) && <span className="launcher-tab-type">{row.type}</span>}
         {row.hasUnread && (
           <span className="launcher-tab-flag" role="img" aria-label="unread">
             <FontAwesomeIcon icon={faFlag} />
@@ -46,7 +47,7 @@ export function LauncherTabRowView({ row, summary, index, selection, onFocus, no
         )}
         <span className="launcher-tab-time">{relativeTime(row.lastActivity, now)}</span>
       </span>
-      {summary !== undefined && <span className="launcher-summary">{summary}</span>}
+      {isSummaryEligibleType(row.type) && summary !== undefined && <span className="launcher-summary">{summary}</span>}
     </div>
   );
 }

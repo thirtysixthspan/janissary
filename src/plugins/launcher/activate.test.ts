@@ -19,8 +19,8 @@ import { emptyTopicData } from '../topics.js';
 // because the host only produces one for a caller that asks. The launcher's own row carries its plugin
 // record, and the docked plugin row carries one too.
 const ROWS: TabActivityEntry[] = [
-  { label: 'shell', incarnation: 'shell-incarnation', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, revision: 0, lastCommand: 'ls' },
-  { label: 'agent', incarnation: 'agent-incarnation', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, revision: 0, lastCommand: 'npm test' },
+  { label: 'shell', type: 'shell', incarnation: 'shell-incarnation', dotColor: '#5b9cff', active: true, busy: false, hasUnread: true, needsInput: false, lastActivity: 60_000, cwd: '/repo', logLength: 4, revision: 0, lastCommand: 'ls' },
+  { label: 'agent', type: 'harness', incarnation: 'agent-incarnation', title: 'Release agent', dotColor: '#c678dd', active: false, busy: true, hasUnread: false, needsInput: true, lastActivity: 120_000, cwd: '/repo/ws', logLength: 9, revision: 0, lastCommand: 'npm test' },
   { label: 'schedules', incarnation: 'schedules-incarnation', view: 'plugin', plugin: { id: 'schedules', instanceKey: 'schedules' }, dock: 'left', dotColor: '#61afef', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 0, revision: 0 },
   { label: LAUNCHER_LABEL, incarnation: 'launcher-incarnation', view: 'plugin', plugin: { id: 'launcher', instanceKey: 'launcher' }, dock: 'left', dotColor: '#8b95a5', active: false, busy: false, hasUnread: false, needsInput: false, lastActivity: 0, cwd: '/repo', logLength: 12, revision: 0 },
 ];
@@ -124,6 +124,9 @@ function fixture(initialRows: TabActivityEntry[] = ROWS, root = process.cwd()) {
     // focusing a tab that is no longer there.
     closeLauncher: () => { openKeys.clear(); },
     closeTabs: (labels: string[]) => { rows = rows.filter((tab) => !labels.includes(tab.label)); },
+    changeType: (label: string, type: string) => {
+      rows = rows.map((tab) => (tab.label === label ? { ...tab, type } : tab));
+    },
     growTab: (label: string, by: number) => {
       rows = rows.map((tab) => (tab.label === label ? { ...tab, logLength: tab.logLength + by } : tab));
     },
@@ -388,7 +391,7 @@ describe('the tabs topic', () => {
     expect(payload.tabs.map((row) => row.label)).toEqual(['shell', 'agent', 'launcher']);
   });
 
-  it('keeps another plugin tab using the launcher instance key in the payload and summary prompt', async () => {
+  it('keeps another plugin tab using the launcher instance key in the payload but not in summaries', async () => {
     const collision: TabActivityEntry = {
       label: 'other-launcher', view: 'plugin', plugin: { id: 'other', instanceKey: 'launcher' },
       incarnation: 'other-launcher-incarnation', dotColor: '#98c379', active: false, busy: false,
@@ -409,8 +412,7 @@ describe('the tabs topic', () => {
     await summarize(entry, activation);
 
     const prompt = entry.prompted.at(-1) ?? '';
-    expect(prompt).toContain('[[tab:other-launcher]]');
-    expect(prompt).toContain(TRANSCRIPT);
+    expect(prompt).not.toContain('[[tab:other-launcher]]');
     expect(prompt).not.toContain('[[tab:launcher-2]]');
   });
 
@@ -703,6 +705,42 @@ describe('summarizing', () => {
     const payload = entry.updated.at(-1)?.value.payload;
     if (!isLauncherPayload(payload)) throw new Error('payload rejected');
     expect(payload.summaries).toEqual({ shell: 'Running the test suite; four suites left.' });
+  });
+
+  it('summarizes only eligible tab types and removes a summary when its tab changes type', async () => {
+    const entry = openLauncher();
+    const activation = activate();
+    entry.answerWith('[[tab:shell]] Shell work.\n[[tab:agent]] Harness work.');
+    await summarize(entry, activation);
+
+    const initial = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(initial)) throw new Error('payload rejected');
+    expect(initial.summaries).toEqual({ shell: 'Shell work.', agent: 'Harness work.' });
+
+    entry.changeType('agent', 'editor');
+    entry.updated.length = 0;
+    await summarize(entry, activation);
+
+    const updated = entry.updated.at(-1)?.value.payload;
+    if (!isLauncherPayload(updated)) throw new Error('payload rejected');
+    expect(updated.summaries).toEqual({ shell: 'Shell work.' });
+  });
+
+  it('does not feed other plugin tab types to the summarizer', async () => {
+    const editor: TabActivityEntry = {
+      label: 'readme', type: 'editor', view: 'editor', incarnation: 'readme-incarnation',
+      dotColor: '#98c379', active: false, busy: false, hasUnread: false, needsInput: false,
+      lastActivity: 0, cwd: '/repo', logLength: 1, revision: 0,
+    };
+    const entry = openLauncher([...ROWS, editor]);
+    const activation = activate();
+
+    await summarize(entry, activation);
+
+    const prompt = entry.prompted.at(-1) ?? '';
+    expect(prompt).toContain('[[tab:shell]]');
+    expect(prompt).toContain('[[tab:agent]]');
+    expect(prompt).not.toContain('[[tab:readme]]');
   });
 
   // A closed tab's paragraph leaves with its row, and a tab that reuses a recycled label shows nothing

@@ -34,7 +34,7 @@ function command(overrides: Partial<LauncherCommand> = {}): LauncherCommand {
 
 function row(label: string, overrides: Partial<LauncherTabRow> = {}): LauncherTabRow {
   return {
-    label, dotColor: '#5b9cff', active: false, busy: false, hasUnread: false, needsInput: false,
+    label, type: 'shell', dotColor: '#5b9cff', active: false, busy: false, hasUnread: false, needsInput: false,
     lastActivity: Date.now() - 60_000, cwd: '/repo', ...overrides,
   };
 }
@@ -419,6 +419,19 @@ describe('the tab list', () => {
 
     expect(screen.getByText('Running the test suite.')).toBeInTheDocument();
     expect(screen.queryByText('', { selector: '.launcher-summary' })).not.toBeInTheDocument();
+  });
+
+  it('shows other tab types on one metadata line and ignores their summaries', () => {
+    const { container } = launcher(payload({
+      tabs: [row('readme', { type: 'editor', view: 'editor', title: 'README.md' })],
+      summaries: { readme: 'Summarize the file contents.' },
+    }));
+
+    expect(screen.getByText('README.md')).toBeInTheDocument();
+    expect(screen.getByText('editor')).toBeInTheDocument();
+    expect(screen.getByText('1m')).toBeInTheDocument();
+    expect(container.querySelector('.launcher-summary')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.launcher-tab-row')).toHaveLength(1);
   });
 
   it.each(['__proto__', 'constructor', 'toString'])('renders label %s without an inherited summary', (label) => {

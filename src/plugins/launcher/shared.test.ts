@@ -28,7 +28,7 @@ function command(overrides: Partial<LauncherCommand> = {}): LauncherCommand {
 
 function row(overrides: Partial<LauncherTabRow> = {}): LauncherTabRow {
   return {
-    label: 'shell', dotColor: '#5b9cff', active: false, busy: false, hasUnread: false,
+    label: 'shell', type: 'shell', dotColor: '#5b9cff', active: false, busy: false, hasUnread: false,
     needsInput: false, lastActivity: 60_000, cwd: '/repo', ...overrides,
   };
 }
