@@ -4,6 +4,60 @@
 
 ## development
 
+* Bound and cancel background Git reads in the diff tab so a stalled refresh cannot block later refreshes indefinitely.
+
+Existing Debt: The diff session starts asynchronous Git reads outside the plugin handler deadline, but owns neither a deadline for the read nor a cancellation handle for the child processes. Severity: 6/10
+
+Existing Risk: 5/10 - A stalled Git read keeps the session's in-flight flag set indefinitely, preventing refreshes and root changes from completing while disposal leaves the child process running.
+
+Proposal Risk: 2/10 - A large repository can still exceed the read deadline and show a recoverable error, but subsequent refreshes can run and obsolete reads release their processes.
+
+Proposal: In `src/plugins/diff/session.ts`, give each `recompute` an owned AbortController and a named read deadline, abort the previous read when `open` changes roots or `dispose` runs, and clear the deadline and controller in `finally` while retaining the existing revision checks and queued context recompute. Thread the signal through `readChangeSet` in `src/plugins/diff/change-set.ts`, `expandFullFileContext` in `src/plugins/diff/context-diff.ts`, and the `execFileAsync` options in `src/plugins/diff/git.ts`; stop starting further untracked-file batches once aborted. Cancellation and timeout must propagate through `prefixIn`, `hasHead`, `untrackedFile`, and context expansion rather than being converted to a non-repository result, an omitted file, or a context error. A deadline should publish a recoverable error for the current read, while disposal or a superseding root must publish nothing from the obsolete read. Preserve normal change detection, rename handling, bounded untracked-file concurrency, and the standing payload during refresh, covered by `src/plugins/diff/change-set.test.ts`, `src/plugins/diff/context-diff.test.ts`, `src/plugins/diff/session-context.test.ts`, and `src/plugins/diff/activate.test.ts`. The disposal test currently checks only that publication stops; add focused cases for an aborted child read, a deadline followed by a successful refresh, and root changes during a stalled read.
+
+
+* Advance launcher summary cursors only for tabs whose replies contain an accepted summary.
+
+Existing Debt: The launcher treats a completed ACP prompt as acknowledgement of every requested tab before checking which tab summaries the reply actually contains. Severity: 5/10
+
+Existing Risk: 5/10 - An empty, malformed, or partial model reply marks omitted tabs as already summarized, leaving their summaries absent or stale until their content changes again.
+
+Proposal Risk: 2/10 - A model can still repeatedly omit a tab, but its unchanged content remains eligible for a later flush instead of being silently acknowledged forever.
+
+Proposal: In `summarizeOnce` in `src/plugins/launcher/summarizer.ts`, parse `answered.reply` once before updating `state.fed`, intersect its nonempty summaries with the requested tabs and the fresh incarnation checks, and advance a cursor only when that intersection includes its label. Filter unroutable labels before forming the requested tab set so tabs deliberately excluded by `buildSummarizerPrompt` are never treated as successfully fed; return without starting ACP if that set is empty. Preserve the existing one-flush-at-a-time guard, per-session priming, original content cursor values, and close-and-reuse protection. `src/plugins/launcher/summarizer.test.ts` covers transport refusals and incarnation changes, but its priming test supplies a reply for only one of two requested tabs and currently expects both to be skipped on the next flush; update that expectation and add empty, malformed, and partial reply cases proving that omitted tabs are requested again while accepted tabs are skipped. Keep the merge of previously published summaries in `src/plugins/launcher/activate.ts` and its coverage in `src/plugins/launcher/activate.test.ts` unchanged in behavior.
+
+
+* Coalesce the tabs notification source before the plugin host reads rows and invokes subscribers.
+
+Existing Debt: The tabs topic subscribes directly to every raw state mutation and relies on the launcher to discard unchanged rows only after the host has read activity and constructed a guarded plugin call. Severity: 6/10
+
+Existing Risk: 5/10 - Bursts of shell or ACP output repeatedly scan all tabs and transcripts and create notification calls on the server's output path, increasing interaction latency as tabs and subscribers accumulate.
+
+Proposal Risk: 3/10 - A bounded notification delay can briefly postpone a focus or badge update, and each delivery still scans current activity, but one output burst no longer requires one plugin call per mutation.
+
+Proposal: Change only the `tabs` source's subscription policy in `src/plugins/topics.ts` to schedule one delivery within a named short window, retaining the latest state by calling `readTopicData` at delivery time rather than storing the first event's snapshot. Return a subscription whose `unsubscribe` both removes the bus listener and cancels the scheduled delivery, so `src/plugins/host-channels.ts` retains ownership of its lifetime. Keep subscriber and open-tab eligibility checks in `src/plugins/notifications.ts` at delivery time, and retain the launcher's value comparison in `src/plugins/launcher/activate.ts` as a second guard against unchanged payloads. This contains the work currently triggered by synchronous `messageBus.emit` in `src/bus.ts`, including `lastCommandOf` scans in `src/plugins/activity.ts` and the additional `tabActivity` read made by the launcher. Preserve the other topics' delivery policies. Add fake-timer coverage in `src/plugins/notifications.test.ts` for a burst producing one tabs delivery with the latest focus and unread state, cancellation on host disposal, and a plugin closing or becoming disabled before delivery; keep `src/plugins/topics.test.ts`, `src/plugins/activity.test.ts`, and `src/plugins/launcher/activate.test.ts` as coverage for routing and projection. The existing conversations burst test covers coalescing at its producer and does not cover the raw tabs source.
+
+
+* Move launcher icon failure reporting into an effect that records successful reports.
+
+Existing Debt: Launcher command rows issue reporting RPCs and mutate a module-wide reported-icon set during rendering, with no relationship between the cache entry and whether the host accepted the report. Severity: 4/10
+
+Existing Risk: 3/10 - An abandoned render or rejected reporting RPC can consume the one allowed report for an icon, suppressing its explanation for subsequent launcher renders and mounts.
+
+Proposal Risk: 1/10 - A disconnected client can still miss an explanation temporarily, but reporting happens after a committed render and a failed attempt cannot be mistaken for a successful notification.
+
+Proposal: Remove `reportedIcons` and the `onUnknownIcon` invocation from `LauncherCommandRow` in `web/src/plugins/launcher/CommandRail.tsx`, leaving glyph selection and markup pure. Add a colocated hook under `web/src/plugins/launcher/` that collects distinct unknown icon names from the command list using `launchIcon` in `web/src/plugins/launcher/launcher-icons.ts`, reports them from an effect, and tracks pending and successfully reported names for the mounted launcher. Wire the hook from `web/src/plugins/launcher/LauncherTab.tsx` through a callback returning the `report-icon` intent promise, so success is recorded only after acknowledgement; allow a failed name to be retried on a later activation or command-list change without starting an immediate retry loop on every render. Drop stale completion effects on unmount and keep each command runnable with its fallback glyph. Update the existing once-per-name case in `web/src/plugins/launcher/LauncherTab.test.tsx` to await effect-driven reporting, and add cases for rejected reports and duplicate names; its current synchronous render test does not cover acknowledgement or teardown.
+
+
+* Give editor draft synchronization a bounded recovery path for failed sends while the connection stays open.
+
+Existing Debt: Draft synchronization retains an unacknowledged snapshot after a failed send but schedules further work only when the text changes or another connection event occurs. Severity: 4/10
+
+Existing Risk: 4/10 - A failed final draft send on a connection that remains open leaves monitors and launcher summaries reading older editor content for an indefinite period after the user stops typing.
+
+Proposal Risk: 2/10 - Persistent transport failures can still leave the server draft stale after retries are exhausted, but a transient failure has a bounded chance to recover without another edit or reconnection.
+
+Proposal: Add a small capped retry policy to `flush` in `web/src/editor/draft-sync.ts` for an unaccepted current snapshot while the same transport remains connected, using its existing timer and pending-attempt identity to preserve one send at a time. Retry the latest desired text, reset the retry budget after acknowledgement or a new edit, and cancel retry timers on `detach` and disconnection; late acknowledgements from a replaced transport must remain ignored. Keep disk saving independent of this transient draft channel. `web/src/editor/useEditorSync.ts` is the adapter that reduces `editorSync` results to the acceptance boolean, and `src/editor/sync.ts` remains an idempotent in-memory draft update, making replay of the current snapshot safe. The stale draft is consumed by `currentEditorContent` in `src/editor/content.ts`, `src/monitor/editor-feed.ts`, and `src/plugins/activity.ts`. Extend `web/src/editor/draft-sync.test.ts` with connected failure followed by success without another edit, exhausted retries, latest-text replacement during retry, and teardown during backoff; its existing failure cases recover only after calling `setConnected`. Preserve acknowledgement, reconnection, URL replacement, and unmount behavior covered by that file and `web/src/editor/useEditorSync.test.ts`.
+
 ## deferred
 
 * Move the websocket client out of the app-shell root and into the shared layer it belongs to, so `web/src/shared/` stops importing from `../ws`. — deferred: complexity 8/10, 138 files import `./ws`/`../ws` and each retarget is a per-depth specifier recomputation, the cluster includes the `toasts/` directory that `clientFeatureDirectories` names in `eslint.config.mjs` — a question the entry does not settle — and the change adds a new eslint zone plus its boundary case, which is a deliberate enforcement design rather than a mechanical sweep.
