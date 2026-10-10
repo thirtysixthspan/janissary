@@ -1,3 +1,7 @@
+// The tab's own shapes. A leaf module on purpose: it imports nothing but this one type, which the
+// tab's in-flight ACP prompt settles with.
+import type { AcpPromptResult } from '../acp/types.js';
+
 export type LogEntry = {
   input: string;
   output: string;
@@ -247,6 +251,11 @@ export type MonitorSuggestion = {
   command?: string;
   timestamp: number;
   persona: string;
+  // Whether this tab's core ACP session runs without a tool table, asked for by whichever consumer
+  // started it with `{ withoutTools: true }`. It is the tab's own policy rather than a screen or content
+  // fact, and it is sticky: a session that dies is replaced by one held to the same rule, and only the
+  // tab's own release forgets it, so a recycled label starts on the ordinary policy. In-memory only.
+  acpWithoutTools?: boolean;
   // The tab whose activity prompted the suggestion (where "Run" executes).
   about: string;
 };
@@ -254,13 +263,39 @@ export type MonitorSuggestion = {
 export type CenterPane = 'left' | 'right';
 
 export type TabRuntime = {
+  // Host-owned id for this open tab incarnation. Unlike its label, it is never reused and survives
+  // tab-array projections that shallow-copy the record when another tab closes. In-memory only.
+  incarnation?: string;
   closing?: boolean;
   acpEntries?: WeakSet<LogEntry>;
-  acpPrompt?: { finish: (output: string) => void; abort: AbortController };
+  acpPrompt?: { finish: (result: AcpPromptResult) => void; abort: AbortController };
+  // Whether this tab's core ACP session runs without a tool table, asked for by whichever consumer
+  // started it with `{ withoutTools: true }`. It is the tab's own policy rather than a screen or content
+  // fact, and it is sticky: a session that dies is replaced by one held to the same rule, and only the
+  // tab's own release forgets it, so a recycled label starts on the ordinary policy. In-memory only.
+  acpWithoutTools?: boolean;
   cwd?: string;
   busy: boolean;
   context: string[];
   queue: string[];
+  // When content last arrived in this tab's transcript, in epoch milliseconds. A tab's activity is
+  // its own output, so this is written wherever the transcript grows rather than read from the log:
+  // a `LogEntry` carries no timestamp, and adding one would touch every producer, the wire
+  // projection, and every persisted shape for a value only a reader wants. In-memory only.
+  lastActivity?: number;
+  // How many times this tab's transcript has actually been written. A reader's cursor cannot watch
+  // the log's length instead, because two real writes leave it alone: output streamed into a running
+  // entry rewrites in place, and an append to a log already at its cap drops the oldest to make
+  // room. In-memory only, beside `lastActivity` for the same reason.
+  transcriptRevision?: number;
+  // Whether this harness tab is currently held at a permission gate the user has to answer. A screen
+  // state, so it survives only if the observation writes it down: `src/harness/busy-status.ts` records
+  // it from each capture, together with whether the application is answering the gate itself. A gate
+  // auto-approve is clearing, and a tab parked on a scheduled resume, are not waiting on anybody, so
+  // they are recorded as false — the launcher's needs-you tier reads this and must not be raised for a
+  // prompt nobody has to read. A remote harness's transition says only "idle and badged" and leaves it
+  // alone. In-memory only.
+  gateNeedsUser?: boolean;
   // A harness tab's pending idle escalation, owned by `src/harness/idle-notification.ts`.
   idleEscalation?: NodeJS.Timeout;
   // A plugin tab's last host-state delivery, fingerprinted, owned by `src/plugins/host-state.ts`.

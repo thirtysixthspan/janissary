@@ -1,5 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { LogEntry, Tab } from '../tab/types.js';
+import type { AcpPromptResult } from './types.js';
 import { flattenBuffer } from '../tab/formatting.js';
 import { messageBus } from '../bus.js';
 
@@ -22,7 +23,10 @@ export function acpResponseFor(tab: Tab) {
   };
 }
 
-export function settleAcpPrompt(managers: Managers, label: string, output: string): void {
+// Settle the prompt a tab is running with the result it produced, whether the tool loop finished, the
+// loop failed, or a reset closed the session underneath it. The caller hears which, because a refusal
+// resolves with a line of prose that looks exactly like an answer.
+export function settleAcpPrompt(managers: Managers, label: string, result: AcpPromptResult): void {
   const tab = managers.tab.byLabel(label);
   const pending = tab?.runtime?.acpPrompt;
   if (!pending || !tab?.runtime) return;
@@ -30,7 +34,7 @@ export function settleAcpPrompt(managers: Managers, label: string, output: strin
   pending.abort.abort();
   const running = tab.log?.findLast((entry) => entry.running && tab.runtime?.acpEntries?.has(entry));
   if (running) managers.tab.updateRunning(label, { markdown: true }, running.output, false);
-  pending.finish(output);
+  pending.finish(result);
   managers.tab.deleteBusy(label);
   messageBus.emit('state', { type: 'dirty' });
 }

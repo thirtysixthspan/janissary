@@ -1,6 +1,6 @@
 import type { Managers } from '../managers.js';
 import type { TabPluginActivation, TabPluginServerCapabilities } from './api.js';
-import { isJsonCompatible } from './context.js';
+import { isJsonCompatible } from './json-compatible.js';
 import { pluginFailureMessage, type PluginFailureOrigin } from './failure.js';
 import type { PluginCallOutcome } from './invoke.js';
 import type { PluginRecord } from './status.js';

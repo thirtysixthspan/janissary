@@ -8,7 +8,7 @@ import type { DiffPayload } from './shared.js';
 
 // The host's own rule for a published payload, imported rather than copied: it is what refuses a
 // tab whose payload carries a property whose value is `undefined`, which no guard notices.
-import { isJsonCompatible } from '../context.js';
+import { isJsonCompatible } from '../json-compatible.js';
 
 // The plugin under test, run against a real temporary repository: the change set it renders is
 // git's answer, and only git gives that. The capabilities are fakes, the way the search plugin's

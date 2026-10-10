@@ -2,6 +2,9 @@
 
 ## ready
 
+* in the search tab throws this error:
+Cannot find module '/Users/ashmorgan/dev/janissary/src/plugins/search/compile-matcher.js' imported from /Users/ashmorgan/dev/janissary/src/plugins/search/matcher-worker-entry.ts
+
 * Give a file navigator in the center tab strip its location button
 
 Existing Bug: The spec promises every file navigator header carries a location button that cycles the tree through left sidebar → center tab strip → right sidebar → left sidebar; observed on a tree opened with `files`: the header has no location button at all, and once docked the button only toggles left ↔ right and never returns the tree to the center strip. Severity: 3/10

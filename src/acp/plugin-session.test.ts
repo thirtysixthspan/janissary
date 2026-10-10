@@ -136,4 +136,88 @@ describe('core ACP for plugin tabs', () => {
     await expect(answering).resolves.toBe('reply');
     managers.acp.closeAll();
   });
+
+  // The summarizer's promised boundary, held by the host rather than asked of the model: a session
+  // started without tools runs the real loop with no table behind it, so a reply that names a
+  // browser, question, or database command is answered as prose and nothing is dispatched.
+  it('refuses every tool for a plugin session started without them', async () => {
+    const { managers, handlers } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+
+    expect(capabilities.startAcp({ withoutTools: true }).model).toBeDefined();
+    const answer = capabilities.promptAcp('summarize the open tabs');
+    handlers().onChunk('Reading the output now.\nbrowser open https://example.com');
+    handlers().onEnd('end_turn');
+
+    await expect(answer).resolves.toBe('Reading the output now.\nbrowser open https://example.com');
+    expect(managers.browser.run).not.toHaveBeenCalled();
+    expect(managers.questions.pendingFor('consumer')).toBeUndefined();
+  });
+
+  // The contrast that makes the case above a regression test rather than a tautology: the same reply
+  // on an ordinary session does reach the browser, so what stopped it was the session.
+  it('still runs the tools for an ordinary plugin session', async () => {
+    const { managers, handlers } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+
+    capabilities.startAcp();
+    const answer = capabilities.promptAcp('open the release page');
+    handlers().onChunk('Opening it now.\nbrowser open https://example.com');
+    handlers().onEnd('end_turn');
+    // The browser command ran, so the loop is on its follow-up turn rather than finished.
+    handlers().onChunk('Done.');
+    handlers().onEnd('end_turn');
+
+    await expect(answer).resolves.toBe('Done.');
+    expect(managers.browser.run).toHaveBeenCalledWith('consumer', 'browser open https://example.com');
+  });
+
+  // A refusal resolves with a line of prose, so the caller is told which kind of line arrived rather
+  // than left to read its text. The loop's own error path is the refusal a summarizer meets.
+  it('answers a prompt the loop failed as a refusal, with the line the user is shown', async () => {
+    const { managers, handlers } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+
+    capabilities.startAcp({ withoutTools: true });
+    const answer = capabilities.promptAcpResult('summarize the open tabs');
+    handlers().onChunk('partial');
+    handlers().onError('rate limited');
+
+    await expect(answer).resolves.toEqual({ answered: false, error: 'ACP error: rate limited' });
+  });
+
+  // A tab's session is replaced whenever the old one dies, and the successor arrives with nothing the
+  // previous one was primed with. The identity is what lets a caller see it.
+  it('reports a different session after the one it primed is replaced', async () => {
+    const { managers, handlers } = setup();
+    const declaration = managers.plugins.declarations[0];
+    const capabilities = acpCapabilities({
+      managers, declaration, origin: { label: 'agent' }, answeringLabel: 'consumer', isEnabled: () => true,
+    });
+    const first = capabilities.startAcp({ withoutTools: true });
+
+    const primed = capabilities.promptAcpResult('priming');
+    handlers().onChunk('primed');
+    handlers().onEnd('end_turn');
+    await expect(primed).resolves.toMatchObject({ answered: true, session: first.session });
+
+    managers.acp.close('consumer');
+    const second = capabilities.startAcp({ withoutTools: true });
+    expect(second.session).not.toBe(first.session);
+
+    const answered = capabilities.promptAcpResult('summarize the open tabs');
+    handlers().onChunk('[[tab:shell]] First.');
+    handlers().onEnd('end_turn');
+
+    await expect(answered).resolves.toMatchObject({ answered: true, session: second.session });
+  });
 });

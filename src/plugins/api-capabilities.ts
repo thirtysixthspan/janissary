@@ -27,6 +27,7 @@ export type TabPluginCapabilityName =
   | 'readSettings'
   | 'saveSettings'
   | 'isRecordingLive'
+  | 'tabActivity'
   | 'originTab'
   | 'dispatchLineWithOutput'
   | 'completeLine'
@@ -37,6 +38,7 @@ export type TabPluginCapabilityName =
   | 'recordGlobalHistory'
   | 'startAcp'
   | 'promptAcp'
+  | 'promptAcpResult'
   | 'resetAcp'
   | 'rejectRequest'
   | 'reportFailure';
@@ -65,6 +67,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   readSettings: true,
   saveSettings: true,
   isRecordingLive: true,
+  tabActivity: true,
   originTab: true,
   dispatchLineWithOutput: true,
   completeLine: true,
@@ -75,6 +78,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   recordGlobalHistory: true,
   startAcp: true,
   promptAcp: true,
+  promptAcpResult: true,
   resetAcp: true,
   rejectRequest: true,
   reportFailure: true,

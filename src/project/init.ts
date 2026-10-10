@@ -1,5 +1,6 @@
 import { copyFileSync, mkdirSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import { DEFAULT_LAUNCHER_COMMANDS } from '../plugins/launcher/commands-file.js';
 
 // The `ai/` and `product/` directory tree this tool's task/backlog/plan/spec workflow expects,
 // as documented in the Project Structure section of the target repo's own `AGENTS.md`.
@@ -38,10 +39,25 @@ function installConfigDirectory(source: string, destination: string): void {
   }
 }
 
+// The `.janissary/` files `janus init` scaffolds, none of them overwritten once they exist — the same
+// rule the backlog files follow, because a user's edits to either would otherwise be silently discarded
+// by a later re-init. `launcher.json`'s default rail is the launcher plugin's own, derived rather than
+// copied, so the file a project starts from and the rail shown when that file is missing cannot describe
+// different commands.
+function stateFiles(): { name: string; content: string }[] {
+  return [{
+    name: 'launcher.json',
+    content: `${JSON.stringify(
+      DEFAULT_LAUNCHER_COMMANDS.map(({ icon, label, command }) => ({ icon, label, command })), null, 2,
+    )}\n`,
+  }];
+}
+
 // `janus init [<project-dir>]`: create the standard `ai/`/`product/` scaffold recursively, seed
-// `product/backlog/` with the standard backlog files, and drop a `.gitkeep` in every directory
-// that is still empty afterward so git tracks it. Idempotent — safe to run against a directory
-// that already has some or all of the scaffold in place; never overwrites an existing backlog file.
+// `product/backlog/` with the standard backlog files, seed `.janissary/launcher.json` with the default
+// command rail, and drop a `.gitkeep` in every directory that is still empty afterward so git tracks
+// it. Idempotent — safe to run against a directory that already has some or all of the scaffold in
+// place; never overwrites an existing backlog file or launcher file.
 export function scaffoldProject(projectDir: string): string[] {
   for (const dir of SCAFFOLD_DIRS) {
     mkdirSync(path.join(projectDir, dir), { recursive: true });
@@ -51,6 +67,12 @@ export function scaffoldProject(projectDir: string): string[] {
     if (!existsSync(filePath)) {
       writeFileSync(filePath, backlogFileContent(name));
     }
+  }
+  const stateDirectory = path.join(projectDir, '.janissary');
+  mkdirSync(stateDirectory, { recursive: true });
+  for (const file of stateFiles()) {
+    const filePath = path.join(stateDirectory, file.name);
+    if (!existsSync(filePath)) writeFileSync(filePath, file.content);
   }
   for (const configDir of CONFIG_DIRS) {
     installConfigDirectory(
