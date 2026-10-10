@@ -4,17 +4,6 @@
 
 ## development
 
-* Move PDF page observation and rendering lifecycle out of the page component into a colocated hook.
-
-Existing Debt: Each PDF page component owns viewport observation, render scheduling, cancellation classification, and late-failure suppression inside its body, mixing asynchronous rendering decisions with markup in violation of §5 (components render, they do not decide). Severity: 5/10
-
-Existing Risk: 3/10 - A markup or ref change can disturb the timing that prevents offscreen rendering and ignores obsolete failures, affecting both full pages and thumbnails through the same component.
-
-Proposal Risk: 1/10 - Canvas rendering can still fail and observer timing remains browser-dependent, but the timing and failure rules have a named hook boundary independent of page markup and remain covered by the existing viewer tests.
-
-Proposal: Extract `RENDER_MARGIN`, the holder, canvas and text-layer refs, the near-viewport state, and both effects from `web/src/plugins/pdf/PdfPage.tsx` into a new `web/src/plugins/pdf/usePdfPageRender.ts`; the hook receives the page index, scale, text-layer flag, root ref, injected `renderPage` callback and optional failure callback, and returns the three element refs. Move the `isRenderCancellation` import from `web/src/plugins/pdf/pdf-document.ts` into the hook, keeping the page component responsible only for dimensions, classes, and markup. Preserve `PdfPageProperties`, the component's exported signature, the 300px observation margin, render-once visibility behavior, effect dependencies, and the late-rejection guard exactly. The two production consumers, `web/src/plugins/pdf/PdfStage.tsx` and `web/src/plugins/pdf/PdfThumbnails.tsx`, need no changes. `web/src/plugins/pdf/PdfTab.test.tsx` already drives observer callbacks and covers visible-page rendering, resize and zoom, cancellation, thumbnail failures, and late rejection after close or zoom; its existing service mock and assertions must work unchanged. Only the selected source file and the new hook are edited, and the hook uses the supplied renderer rather than loading documents or making network requests. Resolve by running the `ai/tasks/hygiene/improve-modularity.md` task against `web/src/plugins/pdf/PdfPage.tsx`.
-
-
 * Move Markdown fetching and content preparation behind a hook with separate loaded and failed states.
 
 Existing Debt: The Markdown tab component fetches files and converts both content and errors into one HTML string, including an interpolated filename in the failure markup, violating §5 (components render, they do not decide). Severity: 6/10
