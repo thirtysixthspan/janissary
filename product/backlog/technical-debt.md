@@ -4,16 +4,6 @@
 
 ## development
 
-* Move Markdown fetching and content preparation behind a hook with separate loaded and failed states.
-
-Existing Debt: The Markdown tab component fetches files and converts both content and errors into one HTML string, including an interpolated filename in the failure markup, violating §5 (components render, they do not decide). Severity: 6/10
-
-Existing Risk: 5/10 - A filename containing markup is inserted as HTML after a failed fetch, and changes to loading or cancellation must be tested through the whole tab because the component owns the fetch and display decisions together.
-
-Proposal Risk: 2/10 - Fetches can still fail and valid Markdown still depends on the published sanitizer, but failure text is rendered as text and request lifecycle behavior can be tested through a dedicated boundary.
-
-Proposal: Add a framework-free loader in a new `web/src/plugins/markdown/markdown-source.ts` that accepts the resolved resource URL, an AbortSignal and an injectable fetch function, checks response status, and returns source text; add a colocated `web/src/plugins/markdown/useMarkdownContent.ts` hook that owns request cancellation, ignores stale completions, invokes the published `renderMarkdown` function, and returns a discriminated loading, loaded-HTML, loaded-text or failed state. In `web/src/plugins/markdown/MarkdownTab.tsx`, retain metadata and existing keyboard behavior, render sanitized successful HTML through the existing HTML surface, and render the filename-bearing failure message and a parse-failure text fallback through React text nodes. Preserve the normal snapshot behavior and host `resourceUrl` resolution. The only production consumer of the tab is `web/src/plugins/markdown/index.tsx`, whose exports need no change; the work touches the tab, the new loader and hook, and focused test files. `web/src/plugins/markdown/MarkdownTab.test.tsx` covers metadata, authenticated fetch URLs, successful Markdown, failed responses, and inactive keyboard handling; its exact fetch-call assertion will need to allow the new signal options. Add hook or loader tests for abort, URL replacement and stale completion, plus a tab regression case using a markup-bearing filename on failure. This requires network lifecycle changes and test edits, so it needs a dedicated implementation plan.
-
 ## deferred
 
 * Move the websocket client out of the app-shell root and into the shared layer it belongs to, so `web/src/shared/` stops importing from `../ws`. — deferred: complexity 8/10, 138 files import `./ws`/`../ws` and each retarget is a per-depth specifier recomputation, the cluster includes the `toasts/` directory that `clientFeatureDirectories` names in `eslint.config.mjs` — a question the entry does not settle — and the change adds a new eslint zone plus its boundary case, which is a deliberate enforcement design rather than a mechanical sweep.
