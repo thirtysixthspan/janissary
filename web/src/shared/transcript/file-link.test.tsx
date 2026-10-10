@@ -3,7 +3,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import type { TranscriptIntents } from './transcript-intents';
-import { fileLineSegments, isFileLineLink, linkifyMarkdown, renderFileLinkSegments } from './file-link';
+import { fileLineSegments, isFileLineLink, linkifyMarkdown } from './file-link';
+import { renderFileLinkSegments } from './file-link-render';
 
 function fakeIntents() {
   return { onOpenFile: vi.fn(), onEditFile: vi.fn(), onFocusTab: vi.fn() } satisfies TranscriptIntents;

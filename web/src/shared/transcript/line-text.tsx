@@ -1,6 +1,7 @@
 import React from 'react';
 import { matchRange } from '@shared/search-matches';
-import { fileLineSegments, renderFileLinkSegments } from './file-link';
+import { fileLineSegments } from './file-link';
+import { renderFileLinkSegments } from './file-link-render';
 import type { TranscriptIntents } from './transcript-intents';
 import { hasAnsiCodes, parseAnsi } from './ansi';
 

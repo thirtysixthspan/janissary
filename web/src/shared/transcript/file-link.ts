@@ -1,6 +1,3 @@
-import React from 'react';
-import type { TranscriptIntents } from './transcript-intents';
-
 // Whether an already-extracted href names a file and a line (`src/foo.ts:42`), which opens in an
 // editor tab, rather than a URL or a bare path, which goes through `open`.
 const FILE_LINE_LINK = /[\\/][^:]*:\d+$/;
@@ -104,30 +101,4 @@ export function linkifyMarkdown(text: string): string {
     if (s.type === 'url') return s.fullMatch;
     return s.content;
   }).join('');
-}
-
-export function renderFileLinkSegments(
-  segments: FileLinkSegment[],
-  intents: TranscriptIntents,
-): React.ReactNode[] {
-  return segments.map((seg, i) => {
-    if (seg.type === 'text') {
-      return seg.content || null;
-    }
-    const isUrl = seg.type === 'url';
-    return React.createElement(
-      'span',
-      {
-        key: i,
-        className: 'file-link',
-        title: `${seg.fullMatch} — click to open`,
-        onClick: (e: React.MouseEvent) => {
-          e.stopPropagation();
-          if (isUrl) intents.onOpenFile(seg.url);
-          else intents.onEditFile(`${seg.path}:${seg.line}`);
-        },
-      },
-      seg.fullMatch,
-    );
-  });
 }
