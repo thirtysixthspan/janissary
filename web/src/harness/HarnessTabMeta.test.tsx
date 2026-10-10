@@ -564,4 +564,20 @@ describe('HarnessTabMeta', () => {
       await waitFor(() => { expect(getByLabelText('Attach session on devbox')).toBeEnabled(); });
     });
   });
+
+  describe('the diff button', () => {
+    it('offers the workspace diff on a workspaced tab and sends it', () => {
+      const onOpenDiffHere = vi.fn();
+      render(<HarnessTabMeta cwd="~/project" flags={['workspaced']} onOpenDiffHere={onOpenDiffHere} />);
+      const button = screen.getByRole('button', { name: 'Show diff in the workspace' });
+      expect(button).toHaveAttribute('title', 'Show diff in the workspace');
+      fireEvent.click(button);
+      expect(onOpenDiffHere).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers no diff button on a tab with no workspace', () => {
+      render(<HarnessTabMeta cwd="~/project" />);
+      expect(screen.queryByRole('button', { name: 'Show diff in the workspace' })).not.toBeInTheDocument();
+    });
+  });
 });

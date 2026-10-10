@@ -6,7 +6,7 @@ type TabMessage = Extract<ClientMessage, {
   method: 'command' | 'setActiveTab' | 'focusTab' | 'closeTab' | 'renameTab'
     | 'editQueuedCommand' | 'deleteQueuedCommand' | 'moveTab' | 'moveTabToOtherPane'
     | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'resetAcp' | 'revealNotifications'
-    | 'setDock' | 'openFileNavigatorFor' | 'launchShellFor'
+    | 'setDock' | 'openFileNavigatorFor' | 'launchShellFor' | 'openDiffFor'
     | 'openHarnessTranscriptFor' | 'openAcpTranscript' | 'openRecordingFor';
 }>;
 
@@ -59,6 +59,9 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     }
 
     case 'launchShellFor': { controller.launchShellFor(message.params.label); break;
+    }
+
+    case 'openDiffFor': { controller.openDiffFor(message.params.label); break;
     }
 
     case 'openHarnessTranscriptFor': { controller.openHarnessTranscriptFor(message.params.label); break;

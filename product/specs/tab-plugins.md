@@ -257,7 +257,6 @@ It is the first plugin with one tab per subject rather than one tab, so `sql not
 Everything it does with SQL goes through the `databases` topic, so it reaches the connection registry no other way, and the tab's appearance, docking, and failure behavior are the same as every other plugin's. See [[sql-database]], [[database]], and [[open]].
 
 ### Bundled shell plugin
-
 The shell plugin is the first one whose tab owns a process rather than a file or a record, and the only one that claims a chord. It is reached by its command alone — it claims no file extensions and both of its open presentations refuse — and it declares its tabs **agent-named**, so each shell tab takes a name from the agent-name pool that no open tab holds, shown as both its label and its title, and falls back to `shell`, `shell-2` once the pool is exhausted. The command is `zsh` rather than `shell` because `shell` is a reserved route name and a claim on it would be refused at registration.
 
 It is also the only plugin that starts a terminal, and the shape of that is deliberate: a terminal may only be started from inside the window in which a tab's payload is being built, because a tab's label is allocated only after that window closes, and the host adopts the terminal onto the label it then mints. That is what puts the terminal under the ordinary per-tab release — closing the tab takes the process with it, through the same walk every other per-tab resource uses — and what makes the terminal show up as one of the tab's own connections. A payload factory that fails after starting one kills it rather than leaving a process nothing owns.
@@ -272,10 +271,18 @@ The tab's chrome is the application's, at one remove. Its metadata row is the sa
 
 It claims `Ctrl+R` for its own history — the lines its command bar has sent — and the claim applies only while its tab is the visible one, so the application's history picker owns that chord everywhere else. It declares the two host-state slices its windows render, and it is the only plugin with a route from its client to the application's command table: a line typed into its command bar is offered to the application first, and falls through to the shell only when nothing claims it. See [[shell-tab]].
 
+### Bundled diff plugin
+
+The diff plugin shows the workspace's changes as a tab, GitHub's files-changed layout, and is reached two ways: its own `diff` command, which takes an optional path, and the **Show diff in the workspace** button in another tab's metadata row. It is the second plugin reached through `openSibling` — the host reads the origin tab's workspace directory, returns early while that workspace is still provisioning, and so never opens the tab on a clone that does not exist yet.
+
+It is also the plugin that shows what host state is not: everything it renders comes from its own git reads rather than from a declared topic, because a change set is a question asked about the working tree rather than host state that changes on its own. Its client recomputes on an interval while the tab is mounted, so the tab is live without the host pushing anything. It saves the selected unified or split layout as a plugin setting; the other temporary review state belongs to the open tab. What the tab shows and does is in [[diff-tab]].
+
+A plugin claimed only through its own command opens no file, so its opener is the shared refusal; the file it does open — a changed file at a line, through the `openInEditor` capability — goes to an editor tab, and a binary file goes to the media tab its extension already owns by offering the application's own `open` line through `dispatchLineWithOutput`, which keeps opener resolution in one place.
+
 ## Core ACP access
 
 A tab plugin requests `startAcp`, `promptAcp`, and `resetAcp` to use the core [[acp]] service on its own answering tab. No terminal is required. Core owns sessions, tool execution, streamed transcript projection, and lifecycle; provider latency is exempt from handler deadlines. The client API publishes `useAcpResponse` for the core-rendered response surface. The shell opts in; harness tabs do not.
 
 ## API version 2
 
-Agent launch actions and conversation launch-agent intents are removed. Metadata actions use `launchShellHere()` and `openSibling` to create a shell in the same directory, workspace, group, and remote channel. `onBackgroundReply` exposes only the caller’s completed background replies with stable IDs and replays retained replies on subscription. Shells display inline monitor suggestions and monitor-question replies without writing them into shell input. API v1 declarations are refused; the frozen fixture implementation remains unchanged with explicit v2 host-side round-trip tests.
+Agent launch actions and conversation launch-agent intents are removed. Metadata actions use `launchShellHere()` and `openSibling` to create a shell in the same directory, workspace, group, and remote channel. `openDiffHere()` is the third such action, opening the diff tab on the same tab's own workspace. `onBackgroundReply` exposes only the caller’s completed background replies with stable IDs and replays retained replies on subscription. Shells display inline monitor suggestions and monitor-question replies without writing them into shell input. API v1 declarations are refused; the frozen fixture implementation remains unchanged with explicit v2 host-side round-trip tests.

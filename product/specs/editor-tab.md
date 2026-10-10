@@ -283,11 +283,13 @@ A blinking vertical bar marks the cursor position — where text will be inserte
 
 The editor colors text by its syntactic role — keywords, strings, comments, and so on — for Markdown, JavaScript, TypeScript, and JSON files. The language is chosen by the file's extension (`.md`/`.markdown`, `.js`/`.mjs`/`.cjs`/`.jsx`, `.ts`/`.tsx`/`.mts`/`.cts`, `.json`); files with any other extension, or no extension, render as plain text, exactly as before.
 
+JavaScript and TypeScript symbol operators use the active theme's operator color. Symbols inside text already recognized as a string, comment, regular expression, or named identifier keep that construct's syntax color. The diff tab uses the same treatment.
+
 Highlighting recomputes immediately when a file finishes loading, and shortly after each edit (a brief pause after typing stops, so keystrokes are never slowed down by it). Highlighting is skipped — the file renders as plain text — for buffers larger than 10,000 lines or 1 MB, so opening a very large file never becomes sluggish.
 
 Each editor tab highlights independently: a tab only redraws the lines its own edit changed, and editing in one tab never costs anything in another, including when several open tabs hold files of the same language.
 
-One theme is active at a time, shared by every open editor tab. `syntax theme <name>` switches it; `syntax theme` alone opens a picker overlay listing every available theme, with the active one marked by a checkmark. Arrow keys move the selection, Return picks the highlighted theme, Escape closes the picker without changing anything, and clicking a row picks it directly. The chosen theme persists across restarts (see Application Config).
+One theme is active at a time, shared by every open editor and diff tab. `syntax theme <name>` switches it; `syntax theme` alone opens a picker overlay listing every available theme, with the active one marked by a checkmark. Arrow keys move the selection, Return picks the highlighted theme, Escape closes the picker without changing anything, and clicking a row picks it directly. The chosen theme persists across restarts (see Application Config).
 
 Right-clicking an editor selection leaves that selection unchanged and offers **Copy**, **Paste**, **Paste from clipboard…**, and **Chat about this** in the default context menu; Chat about this follows a divider after the other three (see [[context-menu]]). With no selection, right-clicking the editor still opens that menu, offering **Paste** and **Paste from clipboard…** — the editor is no longer a surface where an empty-selection right-click opens nothing. Either way, a right-click keeps the keyboard in the buffer: Paste lands in the buffer, and typing reaches the buffer again as soon as the menu closes.
 

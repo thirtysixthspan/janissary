@@ -11,6 +11,7 @@
 | `connection` | List or close open connections (sqlite/shell/acp/browser/ssh/terminal) |
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
 | `db` | Create, delete, query, or list SQLite databases |
+| `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that path's changes |
 | `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image, the PDF viewer for a PDF |
 | `files` | `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path`; `files <path> in <label>` targets another tab; remote paths resolve on that host inside its workspace; add `with <name\|size\|modified\|permissions>` to show that detail column beside each row |
 | `harness` | Open an AI coding harness in a disposable workspace with an E2E browser attached; claude, opencode, and codex auto-approve prompts by default and opencode and codex also schedule their own resume after a usage limit (`--no-workspace`, `--no-browser`, `--no-auto-approve`, and `--no-auto-resume` opt out); `harness capture <name>` snapshots a harness tab's screen into an editor tab; `on <[user@]host[:path]>` runs it on another machine |
@@ -40,7 +41,7 @@
 | `sessions` | Open the remote sessions list — every host you're connected to or parked on (`sessions left`/`right` to dock it) |
 | `sql` | `sql [<name>]` opens a database's browser tab through the bundled SQL tab plugin: filter, sort, page, edit, and export its tables, with a `SQL` console below; bare `sql` opens the database reached most recently, by `sql` or any `db` command (`sql [<name>] left`/`right` to dock it) |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
-| `syntax` | `syntax theme <name>` sets the editor tab's syntax-highlighting theme (applies to every open editor tab); `syntax theme` alone opens a theme-picker modal |
+| `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
 | `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `unmonitor` | Stop a monitor by name (`unmonitor <name>`) or all monitors started from this tab (`--all`) |

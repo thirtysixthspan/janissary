@@ -1,0 +1,115 @@
+/* The diff tab's own look: a framed, scrolling body of file entries, each a header and its hunks,
+   rendered in the monospace the editor uses so a change reads as code. A line longer than the body
+   wraps within its column; split hunks scroll horizontally when both columns cannot fit. The added and removed rows follow the editor's
+   own inline suggest diff colors — green from --success, red from --error —
+   so the two look like one application. */
+.diff-tab { gap: 6px; }
+
+.diff-root { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+
+.diff-view { display: flex; align-items: center; gap: 2px; }
+.diff-view button,
+.diff-meta-actions button {
+  background: transparent; border: 1px solid transparent; border-radius: 3px; color: var(--muted);
+  cursor: pointer; font: inherit; font-size: 12px; padding: 0 6px;
+}
+.diff-view button:hover,
+.diff-meta-actions button:hover { color: var(--fg); }
+.diff-view button.on { border-color: var(--border); color: var(--accent); }
+
+.diff-body {
+  flex: 1; min-height: 0; overflow-y: auto; outline: none;
+  border: 1px solid var(--border); border-radius: 3px;
+  font-family: var(--mono, monospace);
+}
+
+.diff-empty { padding: 8px 12px; color: var(--muted); }
+
+.diff-file + .diff-file { margin-top: 8px; border-top: 1px solid var(--border); }
+.diff-file-walked { border-left: 2px solid var(--accent); }
+
+.diff-file-header {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 4px 12px;
+  background: color-mix(in srgb, var(--muted) 8%, transparent);
+}
+.diff-file-view-control { display: inline-flex; align-items: center; flex: none; }
+.diff-view-cycle {
+  background: transparent; border: 1px solid transparent; border-radius: 3px; color: var(--muted);
+  cursor: pointer; font: inherit; padding: 1px 4px;
+}
+.diff-view-cycle:hover, .diff-view-cycle:focus-visible { color: var(--fg); border-color: var(--border); }
+.diff-view-cycle:disabled { opacity: 0.5; cursor: default; }
+.diff-file-view-control [role="alert"] { color: var(--error); }
+
+.diff-file-name {
+  background: transparent; border: none; color: var(--fg); cursor: pointer; font: inherit;
+  padding: 0; text-align: left; word-break: break-all;
+}
+.diff-file-name:hover { color: var(--accent); text-decoration: underline; }
+.diff-file-name:disabled { color: var(--muted); cursor: default; text-decoration: none; }
+
+.diff-counts { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+.diff-added-count { color: var(--success); }
+.diff-removed-count { color: var(--error); }
+.diff-status { color: var(--muted); }
+.diff-status.diff-status-added { color: var(--success); }
+.diff-status.diff-status-removed { color: var(--error); }
+
+.diff-hunk { border-left: 2px solid transparent; cursor: text; }
+.diff-hunk.diff-walked { border-left-color: var(--accent); }
+.diff-hunk + .diff-hunk { margin-top: 6px; }
+
+.diff-hunk-header { padding: 2px 12px 2px 10px; color: var(--faint); font-size: 11px; user-select: none; }
+
+.diff-line, .diff-cell {
+  display: flex; gap: 8px; padding: 0 12px 0 10px;
+}
+.diff-line:not(.diff-removed), .diff-cell:not(.diff-empty):not(.diff-removed) { cursor: pointer; }
+.diff-line:not(.diff-removed):hover, .diff-cell:not(.diff-empty):not(.diff-removed):hover {
+  box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.diff-line.diff-removed, .diff-cell.diff-removed { cursor: default; }
+.diff-line.diff-added, .diff-cell.diff-added { background: color-mix(in srgb, var(--success) 15%, transparent); }
+.diff-line.diff-removed, .diff-cell.diff-removed { background: color-mix(in srgb, var(--error) 15%, transparent); }
+
+.diff-number {
+  color: var(--faint); flex-shrink: 0; width: var(--diff-gutter-width, 3ch); min-width: var(--diff-gutter-width, 3ch);
+  text-align: right; user-select: none;
+}
+.diff-line.diff-added .diff-number, .diff-cell.diff-added .diff-number { color: color-mix(in srgb, var(--success) 55%, var(--faint)); }
+.diff-line.diff-removed .diff-number, .diff-cell.diff-removed .diff-number { color: color-mix(in srgb, var(--error) 55%, var(--faint)); }
+
+.diff-marker { flex-shrink: 0; width: 1ch; user-select: none; }
+.diff-line.diff-added .diff-marker, .diff-cell.diff-added .diff-marker { color: var(--success); }
+.diff-line.diff-removed .diff-marker, .diff-cell.diff-removed .diff-marker { color: var(--error); }
+.diff-line.diff-removed .diff-changed, .diff-cell.diff-removed .diff-changed { background: color-mix(in srgb, var(--error) 45%, transparent); }
+.diff-line.diff-added .diff-changed, .diff-cell.diff-added .diff-changed { background: color-mix(in srgb, var(--success) 45%, transparent); }
+
+.diff-text { min-width: 0; white-space: pre-wrap; overflow-wrap: break-word; }
+
+.diff-split { min-width: 0; overflow-x: auto; }
+.diff-split-row { display: flex; min-width: 96ch; align-items: stretch; }
+.diff-split-row .diff-cell { flex: 1 1 0px; min-width: 0; }
+.diff-split-row .diff-cell.diff-old { border-right: 1px solid var(--border); }
+.diff-split-row .diff-cell.diff-empty { background: color-mix(in srgb, var(--muted) 5%, transparent); }
+
+.diff-line-comment button {
+  font: inherit; color: var(--fg); background: var(--bg-soft);
+  border: 1px solid var(--border); border-radius: 3px; cursor: pointer; padding: 1px 6px;
+}
+.diff-line-comment button:disabled { opacity: 0.5; cursor: default; }
+.diff-comment-add {
+  align-self: flex-start; flex: none; margin-left: auto; padding: 0 2px;
+  font: inherit; border: none; color: var(--muted); background: transparent; cursor: pointer; opacity: 0.4; user-select: none;
+}
+.diff-comment-add:hover, .diff-comment-add:focus-visible { color: var(--accent); opacity: 1; }
+.diff-line-comment { margin: 4px 12px 8px; padding: 8px; border: 1px solid var(--border); border-radius: 3px; }
+.diff-line-comment textarea {
+  display: block; width: 100%; min-height: 4em; margin-bottom: 6px;
+  font: inherit; color: var(--fg); background: var(--bg-soft); border: 1px solid var(--border); resize: vertical;
+}
+.diff-line-comment p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 6px; }
+.diff-line-comment button + button { margin-left: 6px; }
+.diff-comment-changed { color: var(--muted); overflow-wrap: anywhere; margin-bottom: 6px; }
+.diff-comment-lifetime { color: var(--muted); }
+.diff-comment-anchor { color: var(--muted); margin-bottom: 6px; }

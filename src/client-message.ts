@@ -46,6 +46,7 @@ export const CLIENT_METHOD_CONTRACTS = {
   moveTab: 'ack',
   moveTabToOtherPane: 'ack',
   openAcpTranscript: 'ack',
+  openDiffFor: 'ack',
   openFileNavigatorFor: 'ack',
   openHarnessTranscriptFor: 'ack',
   openRecordingFor: 'ack',

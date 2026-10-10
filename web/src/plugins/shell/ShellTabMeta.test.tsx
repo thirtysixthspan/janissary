@@ -59,3 +59,20 @@ describe('ShellTabMeta remote controls', () => {
     expect(screen.getByRole('button', { name: 'Detach session on build.example' })).toBeInTheDocument();
   });
 });
+
+describe('ShellTabMeta diff button', () => {
+  it('offers the diff of this workspace and sends it through the capability', () => {
+    const openDiffHere = vi.fn();
+    const workspaced = { ...payload, workspace: true };
+    render(<ShellTabMeta payload={workspaced} capabilities={capabilities({ openDiffHere })} />);
+    const button = screen.getByRole('button', { name: 'Show diff in the workspace' });
+    expect(button).toHaveAttribute('title', 'Show diff in the workspace');
+    button.click();
+    expect(openDiffHere).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no diff button for a shell with no workspace', () => {
+    render(<ShellTabMeta payload={payload} capabilities={capabilities()} />);
+    expect(screen.queryByRole('button', { name: 'Show diff in the workspace' })).not.toBeInTheDocument();
+  });
+});

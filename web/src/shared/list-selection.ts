@@ -23,6 +23,11 @@ export type ListSelection = {
   selected: number | null;
   rowClicked(index: number, decide: (index: number, confirmed: number | null) => ListRowClick): boolean;
   navigate(key: string, step: (length: number, selected: number | null, key: string) => number | null): boolean;
+  // Move the highlight straight to a row rather than a step at a time — a list whose rows are grouped,
+  // where a key moves between the groups' first rows. Clamped into the list like every other move, and
+  // drops the confirmation for the same reason `navigate` does: the row the user confirmed is not the
+  // row they have just moved to.
+  select(index: number): boolean;
 };
 
 const NAVIGATION_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
@@ -80,5 +85,15 @@ export function useListSelection(length: number): ListSelection {
     return true;
   };
 
-  return { listRef, selected, rowClicked, navigate };
+  const select = (index: number): boolean => {
+    const at = Math.min(Math.max(index, 0), Math.max(length - 1, 0));
+    if (at === selected) return false;
+    setSelected(at);
+    setConfirmed(null);
+    return true;
+  };
+
+  return {
+    listRef, selected, rowClicked, navigate, select,
+  };
 }

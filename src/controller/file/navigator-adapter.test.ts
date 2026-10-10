@@ -135,6 +135,16 @@ describe('createFileNavigatorControllerAdapter', () => {
     });
   });
 
+  it('opens the diff plugin on the workspace of the tab whose button was pressed', () => {
+    const { managers } = makeManagers();
+
+    createFileNavigatorControllerAdapter(managers).openDiffFor('harness1');
+
+    expect(managers.plugins.openSibling).toHaveBeenCalledWith('diff', {
+      label: 'harness1', command: 'diff',
+    });
+  });
+
   // The save-time round trip: the client answers the id the request went out with, and the adapter
   // has to hand that id through untouched or the answer lands on nothing.
   it('settles the outstanding tree-selection request with the client records', async () => {

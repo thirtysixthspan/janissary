@@ -1,7 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { tabFlagDisplay } from '../shared/tab/flag-display';
-import { openFilesIcon, newTabIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from '../shared/icons';
+import { openFilesIcon, newTabIcon, diffIcon, viewCaptureIcon, connectionsWindowIcon, scheduleWindowIcon } from '../shared/icons';
 import { StatusWindowButton } from '../shared/status-windows/StatusWindowButton';
 import { SplitTabButton } from '../shared/SplitTabButton';
 import { RecordingFlag } from '../shared/RecordingFlag';
@@ -15,6 +15,9 @@ type Properties = {
   cwd?: string; cwdDisplay?: string; flags?: string[]; model?: string; effort?: string; remote?: RemoteTargetView;
   connectionInFlags?: boolean;
   onOpenFileNavigator?: () => void; onLaunchShellHere?: () => void; onOpenTranscript?: () => void;
+  // Set only on a workspaced tab: the diff button opens the diff tab on this tab's own workspace,
+  // and is absent on one with no workspace to diff.
+  onOpenDiffHere?: () => void;
   // Set for the tab kinds that record at all — a harness or an ssh tab — even before the session has
   // produced a file. An tab leaves it unset and shows no recording flag at all.
   hasRecorder?: boolean;
@@ -44,8 +47,9 @@ function MetaChip({ label, value }: { label: string; value: string }) {
 
 export function HarnessTabMeta({
   cwd, cwdDisplay, flags, model, effort, remote, connectionInFlags, onOpenFileNavigator, onLaunchShellHere, onOpenTranscript,
-  hasRecorder, onOpenRecording, connectionsButton, scheduleButton, onSplit, remoteSession,
+  onOpenDiffHere, hasRecorder, onOpenRecording,
   launchTitle, launchDisabled,
+  connectionsButton, scheduleButton, onSplit, remoteSession,
 }: Properties) {
   const workspaced = flags?.some((flag) => flag === 'workspaced' || flag === 'provisioning') ?? false;
   return (
@@ -95,6 +99,18 @@ export function HarnessTabMeta({
             onClick={onLaunchShellHere}
           >
             <FontAwesomeIcon icon={newTabIcon} />
+          </button>
+        )}
+        {onOpenDiffHere && (
+          <button
+            type="button"
+            className="tab-open-diff"
+            title="Show diff in the workspace"
+            aria-label="Show diff in the workspace"
+            disabled={launchDisabled}
+            onClick={onOpenDiffHere}
+          >
+            <FontAwesomeIcon icon={diffIcon} />
           </button>
         )}
         {onOpenTranscript && (
