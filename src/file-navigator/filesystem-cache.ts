@@ -28,18 +28,18 @@ export function listingFor(
     state.listings.set(relPath, result);
     return result;
   }
-  // A read that outlives the cache it was started for belongs to nobody: writing its entries would
-  // put pre-invalidation contents into a cache that was emptied precisely to be rid of them, and
-  // deleting its in-flight marker would take the marker of the read that replaced it.
+  // A read that outlives its cache generation or request identity belongs to nobody: it cannot
+  // restore invalidated contents or take the in-flight marker of the read that replaced it.
   const generation = state.cacheGeneration;
-  state.listingLoads.add(relPath);
+  const request = Symbol(relPath);
+  state.listingLoads.set(relPath, request);
   void result.then((entries) => {
-    if (state.cacheGeneration !== generation) return;
+    if (state.cacheGeneration !== generation || state.listingLoads.get(relPath) !== request) return;
     state.listingLoads.delete(relPath);
     state.listings.set(relPath, entries);
     onReady();
   }, () => {
-    if (state.cacheGeneration !== generation) return;
+    if (state.cacheGeneration !== generation || state.listingLoads.get(relPath) !== request) return;
     state.listingLoads.delete(relPath);
     state.listings.set(relPath, []);
     onReady();
@@ -58,19 +58,26 @@ function fillStats(state: FilesTabState, rows: FileNavigatorRow[], onReady: () =
     for (const relPath of missing) state.stats.set(relPath, result[relPath] ?? null);
     return;
   }
-  // Discarded on a generation change for the same reason a listing read is — see `listingFor`.
+  // Each row has its own request identity because a batch may span directories and only some rows
+  // may have been invalidated — see `listingFor` for the listing equivalent.
   const generation = state.cacheGeneration;
-  for (const relPath of missing) state.statLoads.add(relPath);
+  const requests = new Map(missing.map((relPath) => [relPath, Symbol(relPath)]));
+  for (const [relPath, request] of requests) state.statLoads.set(relPath, request);
   void result.then((stats) => {
     if (state.cacheGeneration !== generation) return;
+    let hasCurrentRows = false;
     for (const relPath of missing) {
+      if (state.statLoads.get(relPath) !== requests.get(relPath)) continue;
       state.statLoads.delete(relPath);
       state.stats.set(relPath, stats[relPath] ?? null);
+      hasCurrentRows = true;
     }
-    onReady();
+    if (hasCurrentRows) onReady();
   }, () => {
     if (state.cacheGeneration !== generation) return;
-    for (const relPath of missing) state.statLoads.delete(relPath);
+    for (const [relPath, request] of requests) {
+      if (state.statLoads.get(relPath) === request) state.statLoads.delete(relPath);
+    }
   });
 }
 
@@ -104,9 +111,8 @@ export function pruneCachedRows(state: FilesTabState, onReady: () => void): File
   return rows;
 }
 
-// Drop everything this tab has cached about the filesystem: both caches, both in-flight markers,
-// and — through the generation — the reads those markers stood for, so a read issued before this
-// call can neither write its contents afterwards nor take the marker of the read that replaces it.
+// Drop both caches and in-flight markers. The generation and request identities keep old reads from
+// writing their results or taking markers belonging to replacement reads.
 export function clearFilesystemCache(state: FilesTabState): void {
   state.cacheGeneration += 1;
   state.listings.clear();
@@ -117,7 +123,13 @@ export function clearFilesystemCache(state: FilesTabState): void {
 
 export function invalidateDirectory(state: FilesTabState, relPath: string): void {
   state.listings.delete(relPath);
+  state.listingLoads.delete(relPath);
   for (const key of state.stats.keys()) {
-    if (path.posix.dirname(key) === (relPath || '.')) state.stats.delete(key);
+    if (path.posix.dirname(key) !== (relPath || '.')) continue;
+    state.stats.delete(key);
+    state.statLoads.delete(key);
+  }
+  for (const key of state.statLoads.keys()) {
+    if (path.posix.dirname(key) === (relPath || '.')) state.statLoads.delete(key);
   }
 }
