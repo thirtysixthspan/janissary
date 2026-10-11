@@ -1,22 +1,20 @@
 import type { JanusClient } from '../shared/ws/ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
+import type { PluginCommandLineReplacements } from '../shared/command-bar/AppCommandBar';
 
-// Populate the command line with `text` (via the shared recall ref) without submitting it — or,
-// on a harness tab (no command line), send it straight into that harness's PTY as terminal input.
-// Used by the profile picker (a whole-line "populate, don't submit" replace).
+// Replace the recorded owner's whole command draft without submitting it — or, on a harness tab
+// (no command line), send it straight into that harness's PTY as terminal input. A missing owner
+// registration is a no-op; selection never redirects into whichever tab happens to be current.
 export function populateCommandLine(
   text: string,
   client: JanusClient,
   harnessPtyId: string | undefined,
-  recallRef: React.RefObject<((text: string) => void) | null>,
-  inputRef: React.RefObject<HTMLTextAreaElement | null>,
+  ownerLabel: string | undefined,
+  replacements: PluginCommandLineReplacements,
 ): void {
   if (harnessPtyId) {
     client.send({ method: 'ptyInput', params: { id: harnessPtyId, data: text } });
-  } else {
-    recallRef.current?.(text);
-    inputRef.current?.focus();
-  }
+  } else if (ownerLabel !== undefined) replacements.current.get(ownerLabel)?.(text);
 }
 
 // Insert `text` at the command line's current cursor (via the shared drop handle's `insertAtCaret`),

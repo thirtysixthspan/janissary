@@ -14,7 +14,7 @@ export function useApplicationBarEdits(
   const queueWasOpen = useRef(false);
   const draftReference = useRef(draft);
   draftReference.current = draft;
-  const { queueOpen, queueIndex, queueItems, registerCommandLineInsertion } = appBar;
+  const { queueOpen, queueIndex, queueItems, registerCommandLineInsertion, registerCommandLineReplacement } = appBar;
 
   useEffect(() => {
     if (queueOpen) {
@@ -32,4 +32,11 @@ export function useApplicationBarEdits(
     element.focus();
     spliceIntoTextarea(element, draftReference.current, text);
   }), [inputReference, registerCommandLineInsertion]);
+
+  useEffect(() => registerCommandLineReplacement((text) => {
+    const element = inputReference.current;
+    if (!element) return;
+    setDraft(text);
+    element.focus();
+  }), [inputReference, registerCommandLineReplacement, setDraft]);
 }

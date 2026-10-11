@@ -51,9 +51,7 @@ export function App({ client }: { client: JanusClient }) {
   const [scheduleLaunch, setScheduleLaunch] = useState<ScheduleLaunchView | null>(null);
   const inputReference = useRef<HTMLTextAreaElement>(null);
   const pluginCommandLineInsertions = useRef(new Map<string, (text: string) => void>());
-  // Assigned `CommandInput`'s `recall` (the `guardRef` pattern); shared by the queue and task
-  // pickers so a selected row's text lands in the command line without submitting.
-  const recallReference = useRef<((text: string) => void) | null>(null);
+  const pluginCommandLineReplacements = useRef(new Map<string, (text: string) => void>());
   // Assigned `CommandInput`'s insert-at-caret/highlight pair (the `guardRef` pattern) so a
   // file-navigator drag, threaded down the sidebar's own branch of the tree, can insert a dropped path
   // into whichever tab's command bar is currently rendered here.
@@ -95,16 +93,15 @@ export function App({ client }: { client: JanusClient }) {
   // of them restates the others' fields (see `pickers/usePickerOverlays`).
   const pickers = usePickerOverlays({
     client, current, sourceTab: pickerSourceTab, tabs, syntaxTheme, tasks, profiles, runCommand,
-    inputRef: inputReference, recallRef: recallReference, dropRef: dropReference, focusHarness,
-    pluginCommandLineInsertions,
+    inputRef: inputReference, dropRef: dropReference, focusHarness,
+    pluginCommandLineInsertions, pluginCommandLineReplacements,
   });
 
-  // A source is forgotten once no overlay is open, and when its tab closes under an open picker, which
-  // then draws over and acts on the current tab rather than over a tab that is no longer there.
+  // Keep a closed source label while its picker is open: profile selection must not redirect into the
+  // newly current tab. Task and queue pickers can still resolve their missing source to the current tab.
   useEffect(() => {
-    const sourceOpen = tabs.some((tab) => tab.label === pickerSourceTab);
-    if (!firstOpenOverlay(pickers.view.overlays) || !sourceOpen) setPickerSourceTab(undefined);
-  }, [pickers.view.overlays, tabs, pickerSourceTab]);
+    if (!firstOpenOverlay(pickers.view.overlays)) setPickerSourceTab(undefined);
+  }, [pickers.view.overlays]);
 
   const { quitConfirmOpen, openQuitConfirm, confirmQuit, cancelQuit } = useQuitConfirm(runCommand, inputReference);
   // Every dirty-capable tab handle, editor and plugin alike, keyed by tab label. The close guard,
@@ -183,7 +180,7 @@ export function App({ client }: { client: JanusClient }) {
   const appCommandBar = useAppCommandBarState({
     intercept: interceptCommandLine, ghostHistory: globalHistory, pickers,
     queueTab: pickerSourceTab ?? current?.label, tabs, onFocusTab: setFocusedPluginTab,
-    insertions: pluginCommandLineInsertions,
+    insertions: pluginCommandLineInsertions, replacements: pluginCommandLineReplacements,
   });
 
   if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;

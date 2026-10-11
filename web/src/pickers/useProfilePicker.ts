@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ProfileRow } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
+import type { PluginCommandLineReplacements } from '../shared/command-bar/AppCommandBar';
 import { populateCommandLine } from './populate-command-line';
 import { profilePickerRows } from './profile-picker-keys';
 import { firstSelectable, normalizeIndex } from './sectioned-rows';
@@ -11,8 +12,8 @@ import { firstSelectable, normalizeIndex } from './sectioned-rows';
 // no command line, so the text goes straight into that harness's PTY instead).
 export function useProfilePicker(
   profiles: ProfileRow[],
-  recallRef: React.RefObject<((text: string) => void) | null>,
-  inputRef: React.RefObject<HTMLTextAreaElement | null>,
+  ownerLabel: string | undefined,
+  replacements: PluginCommandLineReplacements,
   client: JanusClient,
   harnessPtyId: string | undefined,
 ) {
@@ -32,7 +33,7 @@ export function useProfilePicker(
   };
 
   const pickProfile = (name: string) => {
-    populateCommandLine(`profile launch ${name}`, client, harnessPtyId, recallRef, inputRef);
+    populateCommandLine(`profile launch ${name}`, client, harnessPtyId, ownerLabel, replacements);
     setProfilePickerOpen(false);
   };
 

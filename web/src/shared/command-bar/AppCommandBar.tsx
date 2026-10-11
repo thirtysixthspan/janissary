@@ -8,9 +8,11 @@ import {
   type AppCommandBar,
   type AppCommandBarState,
   type CommandLineInsertion,
+  type CommandLineReplacement,
 } from './app-command-bar-scope';
 
 export type PluginCommandLineInsertions = { current: Map<string, CommandLineInsertion> };
+export type PluginCommandLineReplacements = { current: Map<string, CommandLineReplacement> };
 
 const AppCommandBarContext = createContext<AppCommandBarState | null>(null);
 // The tab a plugin body renders in, and whether that body is on screen.
@@ -46,13 +48,22 @@ export function useAppCommandBar(): AppCommandBar {
   const label = tab?.label;
   const active = tab?.active ?? true;
   const register = state?.registerCommandLineInsertion;
+  const registerReplacement = state?.registerCommandLineReplacement;
   const registerHere = useCallback(
     (handler: CommandLineInsertion) => (register && label !== undefined ? register(label, handler) : NO_UNREGISTER),
     [register, label],
   );
+  const registerReplacementHere = useCallback(
+    (handler: CommandLineReplacement) => (
+      registerReplacement && label !== undefined ? registerReplacement(label, handler) : NO_UNREGISTER
+    ),
+    [registerReplacement, label],
+  );
   const scoped = useMemo(
-    () => (state !== null && label !== undefined ? scopeAppCommandBar(state, label, registerHere, active) : null),
-    [state, label, registerHere, active],
+    () => (state !== null && label !== undefined
+      ? scopeAppCommandBar(state, label, registerHere, registerReplacementHere, active)
+      : null),
+    [state, label, registerHere, registerReplacementHere, active],
   );
   if (state === null) throw new Error('no AppCommandBarProvider above this plugin tab');
   if (scoped === null) throw new Error('no AppCommandBarTabScope around this plugin tab');

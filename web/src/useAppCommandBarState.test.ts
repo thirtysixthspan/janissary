@@ -17,6 +17,7 @@ function view(queueOpen: boolean): PickerOverlayView {
 
 function build(queueTab: string | undefined) {
   const insertions = { current: new Map<string, (text: string) => void>() };
+  const replacements = { current: new Map<string, (text: string) => void>() };
   const pickers = { view: view(true), onEditQueued: vi.fn(), onDeleteQueued: vi.fn() };
   const { result } = renderHook(() => useAppCommandBarState({
     intercept: () => false,
@@ -26,8 +27,9 @@ function build(queueTab: string | undefined) {
     tabs: [tab('agent', ['first', 'second']), tab('shell1', ['!ls'])],
     onFocusTab: vi.fn(),
     insertions,
+    replacements,
   }));
-  return { state: result.current, insertions, pickers };
+  return { state: result.current, insertions, replacements, pickers };
 }
 
 describe('useAppCommandBarState', () => {
@@ -57,5 +59,15 @@ describe('useAppCommandBarState', () => {
     expect(insertions.current.get('shell1')).toBe(handler);
     unregister?.();
     expect(insertions.current.has('shell1')).toBe(false);
+  });
+
+  it('registers replacement at the requested tab and removes only the matching handler', () => {
+    const { state, replacements } = build('agent');
+    const handler = vi.fn();
+
+    const unregister = state.registerCommandLineReplacement?.('shell1', handler);
+    expect(replacements.current.get('shell1')).toBe(handler);
+    unregister?.();
+    expect(replacements.current.has('shell1')).toBe(false);
   });
 });

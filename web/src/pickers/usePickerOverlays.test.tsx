@@ -26,8 +26,9 @@ function TestComponent({ client, current, onHook }: {
     client, current, tabs: current ? [current] : [], syntaxTheme: 'monokai',
     tasks: [], profiles: [],
     runCommand: () => {},
-    inputRef: createRef(), recallRef: createRef(), dropRef: createRef(), focusHarness: () => {},
+    inputRef: createRef(), dropRef: createRef(), focusHarness: () => {},
     pluginCommandLineInsertions: { current: new Map() },
+    pluginCommandLineReplacements: { current: new Map() },
   });
   onHook(hook);
   return null;
@@ -101,10 +102,10 @@ describe('usePickerOverlays', () => {
   });
 });
 
-function dockedShell(): TabView {
+function shellTab(dock: 'left' | 'right' | undefined = 'left'): TabView {
   return {
     label: 'shell1', cwd: '/w', bufferLines: [], cmdHistory: [], commandQueue: ['make test'],
-    view: 'plugin', hasCommandQueue: true, dock: 'left', plugin: { id: 'shell', hostsCommandBar: true },
+    view: 'plugin', hasCommandQueue: true, dock, plugin: { id: 'shell', hostsCommandBar: true },
   } as unknown as TabView;
 }
 
@@ -113,21 +114,23 @@ function dockedShell(): TabView {
 function mountWithSource(sourceTab: string | undefined) {
   const client = fakeClient();
   const insertIntoShell = vi.fn();
+  const replaceShellDraft = vi.fn();
   const insertIntoAgent = vi.fn();
   const dropRef = { current: { insertAtCaret: insertIntoAgent, setDropHighlighted: vi.fn() } };
   let hook: Hook | undefined;
   function Source() {
     hook = usePickerOverlays({
-      client, current: agentTab(), sourceTab, tabs: [agentTab(), dockedShell()], syntaxTheme: 'monokai',
+      client, current: agentTab(), sourceTab, tabs: [agentTab(), shellTab()], syntaxTheme: 'monokai',
       tasks: [{ path: 'fix.md', name: 'fix', depth: 0, dir: false, source: 'project' }], profiles: [],
       runCommand: () => {},
-      inputRef: createRef(), recallRef: createRef(), dropRef, focusHarness: () => {},
+      inputRef: createRef(), dropRef, focusHarness: () => {},
       pluginCommandLineInsertions: { current: new Map([['shell1', insertIntoShell]]) },
+      pluginCommandLineReplacements: { current: new Map([['shell1', replaceShellDraft]]) },
     });
     return null;
   }
   render(<Source />);
-  return { hook: () => hook!, client, insertIntoShell, insertIntoAgent };
+  return { hook: () => hook!, client, insertIntoShell, insertIntoAgent, replaceShellDraft };
 }
 
 describe('usePickerOverlays with a picker raised from a docked shell', () => {
@@ -146,6 +149,46 @@ describe('usePickerOverlays with a picker raised from a docked shell', () => {
     act(() => hook().keys.pickTask({ path: 'fix.md', source: 'project' }));
     expect(insertIntoShell).toHaveBeenCalledWith('execute ./ai/tasks/fix.md');
     expect(insertIntoAgent).not.toHaveBeenCalled();
+  });
+
+  it('replaces the current shell bar draft when a profile is selected, without submitting', () => {
+    const client = fakeClient();
+    const replaceDraft = vi.fn();
+    let hook: Hook | undefined;
+    function CurrentShell() {
+      hook = usePickerOverlays({
+        client, current: shellTab(undefined), sourceTab: undefined, tabs: [shellTab(undefined)], syntaxTheme: 'monokai',
+        tasks: [], profiles: [{ name: 'writing', source: 'project' }], runCommand: vi.fn(),
+        inputRef: createRef(), dropRef: { current: null }, focusHarness: () => {},
+        pluginCommandLineInsertions: { current: new Map() },
+        pluginCommandLineReplacements: { current: new Map([['shell1', replaceDraft]]) },
+      });
+      return null;
+    }
+    render(<CurrentShell />);
+
+    act(() => hook!.keys.pickProfile('writing'));
+
+    expect(replaceDraft).toHaveBeenCalledWith('profile launch writing');
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('replaces the source docked shell draft when a profile is selected', () => {
+    const { hook, replaceShellDraft, client } = mountWithSource('shell1');
+
+    act(() => hook().keys.pickProfile('writing'));
+
+    expect(replaceShellDraft).toHaveBeenCalledWith('profile launch writing');
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
+  it('does not redirect profile selection to the current tab after its recorded owner closes', () => {
+    const { hook, replaceShellDraft, client } = mountWithSource('closed-shell');
+
+    act(() => hook().keys.pickProfile('writing'));
+
+    expect(replaceShellDraft).not.toHaveBeenCalled();
+    expect(client.send).not.toHaveBeenCalled();
   });
 
   it('acts on the current tab when no source is recorded, or the source is no longer open', () => {

@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { PluginCommandLineInsertions } from './shared/command-bar/AppCommandBar';
+import type { PluginCommandLineInsertions, PluginCommandLineReplacements } from './shared/command-bar/AppCommandBar';
 import {
   registerCommandLineInsertion,
+  registerCommandLineReplacement,
   type AppCommandBarState,
   type CommandLineInsertion,
 } from './shared/command-bar/app-command-bar-scope';
@@ -21,8 +22,9 @@ export function useAppCommandBarState(input: {
   tabs: TabView[];
   onFocusTab: (label: string | undefined) => void;
   insertions: PluginCommandLineInsertions;
+  replacements: PluginCommandLineReplacements;
 }): AppCommandBarState {
-  const { intercept, ghostHistory, pickers, queueTab, tabs, onFocusTab, insertions } = input;
+  const { intercept, ghostHistory, pickers, queueTab, tabs, onFocusTab, insertions, replacements } = input;
   const queuedLinesOf = useCallback(
     (label: string) => tabs.find((tab) => tab.label === label)?.commandQueue,
     [tabs],
@@ -30,6 +32,12 @@ export function useAppCommandBarState(input: {
   const register = useCallback(
     (label: string, handler: CommandLineInsertion) => registerCommandLineInsertion(insertions.current, label, handler),
     [insertions],
+  );
+  const registerReplacement = useCallback(
+    (label: string, handler: Parameters<typeof registerCommandLineReplacement>[2]) => (
+      registerCommandLineReplacement(replacements.current, label, handler)
+    ),
+    [replacements],
   );
   return {
     intercept,
@@ -45,5 +53,6 @@ export function useAppCommandBarState(input: {
     onDeleteQueued: pickers.onDeleteQueued,
     queuedLinesOf,
     registerCommandLineInsertion: register,
+    registerCommandLineReplacement: registerReplacement,
   };
 }

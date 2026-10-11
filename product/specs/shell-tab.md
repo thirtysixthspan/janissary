@@ -132,7 +132,11 @@ The shared pickers and the queue popup treat the shell this way because its decl
 
 A picker opened from a shell's bar belongs to that shell, including a shell docked in a sidebar while
 another tab is current. It appears over the shell, a task picked from `tasks` lands in the shell's
-own bar rather than the focused tab's, and `queue` lists, edits and deletes the shell's own queued lines. If the shell closes while its picker is open, the picker moves to the current tab. The queue popup closes if that tab has no queue edit surface.
+own bar rather than the focused tab's, and choosing a profile replaces the shell's draft with
+`profile launch <name>` without submitting it. `queue` lists, edits and deletes the shell's own queued
+lines. If the shell closes while a task or queue picker is open, that picker moves to the current
+tab; profile selection does not redirect into another tab. The queue popup closes if that tab has no
+queue edit surface.
 
 A shell that is not on screen opens no picker. That covers a shell hidden behind another centre tab
 and a docked shell behind another entry in its sidebar. A picker word reaching it, such as a queued
