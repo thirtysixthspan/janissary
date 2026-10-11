@@ -100,7 +100,7 @@ role exists. Deleting the last role is an ordinary edit: the list may be empty, 
 ### A refused edit
 
 Every refusal the tab can earn — a duplicate name, a role or index that is not there, an unusable
-file, a write that could not happen, a description another client changed first — is shown in the tab
+file, a write that could not happen, a description or entry list another client changed first — is shown in the tab
 as one line beneath the source line, carrying the server's own words, and the edit it refused is not
 applied. A refused edit leaves what the user typed on screen so it can be corrected. The line clears
 on the next edit the tab raises, whether that edit is accepted or refused, so a message never lingers
@@ -111,10 +111,20 @@ over a state it no longer describes.
 Every edit writes the effective file first and republishes the tab only after the write succeeds, so
 what the tab shows is always what the file holds; there is no Save button and no unsaved state. Two
 rapid edits are applied one after the other, the second reading the file the first wrote. A write
-that cannot happen — a read-only file, a directory in the file's place — is refused with
+that cannot happen — a read-only directory, a directory in the file's place — is refused with
 `Could not write roles.json at <path>.` and the tab is unchanged. A failed write or replacement
 preserves the previous file contents and removes temporary output. Successful edits retain the
 file's existing permissions.
+
+### An entry list that changed before an edit
+
+Removing, reordering, or changing an entry's effort carries the entire ordered entry list the
+user saw, including stored efforts and duplicate choices. A drag uses the list from when the
+gesture began. Each edit checks that list against the effective file after earlier queued edits
+have settled. If it changed, the current roles are shown and the request is refused with
+`The entries of role "<name>" changed elsewhere — retry the edit on the current list. Nothing was written.`
+The refused request does not write the file or change another entry. The user can retry against
+the refreshed list.
 
 ### When a file does not decode
 

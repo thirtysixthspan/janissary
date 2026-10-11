@@ -30,9 +30,10 @@ export type DescribeRoleIntent = { name: string; description: string; expected: 
 export type DeleteRoleIntent = { name: string };
 export type MoveRoleIntent = { name: string; to: number };
 export type AddEntryIntent = { role: string; entry: RoleEntry };
-export type SetEntryEffortIntent = { role: string; index: number; effort: string | null };
-export type RemoveEntryIntent = { role: string; index: number };
-export type MoveEntryIntent = { role: string; from: number; to: number };
+export type EntryPrecondition = { role: string; expected: RoleEntry[] };
+export type SetEntryEffortIntent = EntryPrecondition & { index: number; effort: string | null };
+export type RemoveEntryIntent = EntryPrecondition & { index: number };
+export type MoveEntryIntent = EntryPrecondition & { from: number; to: number };
 
 // Hand-written rather than imported, per the plugin architecture's rule that a shared contract stays
 // import-free: the client reaches this module through `@shared/plugins/roles/shared`, so any import
@@ -59,6 +60,11 @@ function isEntry(value: unknown): value is RoleEntry {
     && typeof value.harness === 'string' && value.harness.length > 0
     && typeof value.model === 'string' && value.model.length > 0
     && (value.effort === undefined || typeof value.effort === 'string');
+}
+
+function isEntryPrecondition(value: Record<string, unknown>): boolean {
+  return isName(value.role)
+    && Array.isArray(value.expected) && value.expected.every(isEntry);
 }
 
 // Every harness the tab lists must map to a list of model ids the tab can render as options. Checking
@@ -99,18 +105,17 @@ export function isAddEntryIntent(value: unknown): value is AddEntryIntent {
 }
 
 export function isSetEntryEffortIntent(value: unknown): value is SetEntryEffortIntent {
-  return isRecord(value)
-    && isName(value.role)
+  return isRecord(value) && isEntryPrecondition(value)
     && isIndex(value.index)
     && (typeof value.effort === 'string' || value.effort === null);
 }
 
 export function isRemoveEntryIntent(value: unknown): value is RemoveEntryIntent {
-  return isRecord(value) && isName(value.role) && isIndex(value.index);
+  return isRecord(value) && isEntryPrecondition(value) && isIndex(value.index);
 }
 
 export function isMoveEntryIntent(value: unknown): value is MoveEntryIntent {
-  return isRecord(value) && isName(value.role) && isIndex(value.from) && isIndex(value.to);
+  return isRecord(value) && isEntryPrecondition(value) && isIndex(value.from) && isIndex(value.to);
 }
 
 export function isRolesPayload(value: unknown): value is RolesPayload {

@@ -1,5 +1,5 @@
 import { TabPluginRejection } from '../api.js';
-import type { Role, RoleEntry } from './shared.js';
+import type { EntryPrecondition, Role, RoleEntry } from './shared.js';
 
 // The nine role-list edits, as pure functions over the decoded role list. Each answers the new list
 // or refuses a request the caller could have gotten wrong — a name already taken, a role that is
@@ -25,6 +25,16 @@ const at = (role: Role, index: number): RoleEntry => {
   }
   return entry;
 };
+
+export function matchesEntrySnapshot(roles: readonly Role[], precondition: EntryPrecondition): boolean {
+  const entries = roles.find((role) => role.name === precondition.role)?.entries;
+  return entries !== undefined && entries.length === precondition.expected.length
+    && entries.every((entry, index) => {
+      const expected = precondition.expected[index];
+      return entry.harness === expected.harness && entry.model === expected.model
+        && entry.effort === expected.effort;
+    });
+}
 
 export function addRole(roles: readonly Role[], name: string): Role[] {
   const trimmed = name.trim();

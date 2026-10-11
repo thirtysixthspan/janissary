@@ -140,7 +140,7 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
             key={`${entry.harness}:${entry.model}:${position}`}
             className="roles-entry"
             draggable
-            onDragStart={(event) => dragEntry(event, role.name, position)}
+            onDragStart={(event) => dragEntry(event, role.name, position, role.entries)}
             onDragEnd={dragEnd}
             onDragOver={(event) => allowDrop(event, (drag) => drag.kind === 'entry')}
             onDrop={(event) => {
@@ -158,6 +158,7 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
                 raise('set-entry-effort', {
                   role: role.name,
                   index: position,
+                  expected: role.entries,
                   effort: event.target.value === '' ? null : event.target.value,
                 })}
             >
@@ -169,7 +170,7 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
               type="button"
               className="roles-icon"
               title={`Remove ${entry.model}`}
-              onClick={() => raise('remove-entry', { role: role.name, index: position })}
+              onClick={() => raise('remove-entry', { role: role.name, index: position, expected: role.entries })}
             >
               <FontAwesomeIcon icon={faTrash} />
             </button>

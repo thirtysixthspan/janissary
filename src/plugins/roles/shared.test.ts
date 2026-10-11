@@ -1,9 +1,31 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { isRolesPayload, type RolesPayload } from './shared.js';
+import { isMoveEntryIntent, isRemoveEntryIntent, isRolesPayload, isSetEntryEffortIntent, type RolesPayload } from './shared.js';
 
 const CATALOG = { models: { codex: ['gpt-6-sol'], claude: ['claude-opus-5-5'] }, efforts: ['low', 'xhigh'] };
+
+const POSITIONAL_INTENTS = [
+  { name: 'remove', guard: isRemoveEntryIntent, fields: { index: 0 } },
+  { name: 'move', guard: isMoveEntryIntent, fields: { from: 0, to: 1 } },
+  { name: 'effort', guard: isSetEntryEffortIntent, fields: { index: 0, effort: null } },
+];
+
+describe('positional entry intent guards', () => {
+  it.each(POSITIONAL_INTENTS)('accepts a complete ordered snapshot for $name', ({ guard, fields }) => {
+    const entry = { harness: 'codex', model: 'same', effort: 'xhigh' };
+    expect(guard({ role: 'planning', ...fields, expected: [entry, entry] })).toBe(true);
+    expect(guard({ role: 'planning', ...fields, expected: [] })).toBe(true);
+  });
+
+  it.each(POSITIONAL_INTENTS)('refuses absent or malformed snapshots for $name', ({ guard, fields }) => {
+    const intent = { role: 'planning', ...fields };
+    expect(guard(intent)).toBe(false);
+    for (const expected of [null, {}, 'snapshot', [null], [{ model: 'same' }], [{ harness: 'codex', model: 'same', effort: 1 }]]) {
+      expect(guard({ ...intent, expected })).toBe(false);
+    }
+  });
+});
 
 function payload(catalog: unknown, roles: RolesPayload['roles'] = []): unknown {
   return { roles, source: 'home', path: '/home/me/.janissary/roles.json', catalog };

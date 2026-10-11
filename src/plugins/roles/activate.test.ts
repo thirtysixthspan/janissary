@@ -11,8 +11,8 @@ import {
   type TabPluginTabUpdate,
 } from '../api.js';
 import { activate } from './activate.js';
-import { DEFAULT_ROLES, readRolesFile } from './roles-file.js';
-import { isRolesPayload, type RolesPayload } from './shared.js';
+import { DEFAULT_ROLES, readRolesFile, writeRolesFile } from './roles-file.js';
+import { isRolesPayload, type RoleEntry, type RolesPayload } from './shared.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof FileSystem>();
@@ -72,6 +72,23 @@ function send(
   return activation.intent(request, capabilities);
 }
 
+function entriesFixture(entries: RoleEntry[]) {
+  const result = fixture();
+  writeRolesFile(rolesPath(result.home), [{ name: 'research', description: 'Research.', entries }]);
+  const activation = activate(result.home);
+  const tab = payloadFor(result.home);
+  const stored = () => readRolesFile(result.home, result.capabilities.originTab()!.root).roles[0].entries;
+  return { ...result, activation, tab, stored };
+}
+
+const CHOICES: RoleEntry[] = [
+  { harness: 'codex', model: 'first', effort: 'low' },
+  { harness: 'codex', model: 'second' },
+  { harness: 'claude', model: 'third', effort: 'xhigh' },
+];
+
+const staleMessage = 'The entries of role "research" changed elsewhere — retry the edit on the current list. Nothing was written.';
+
 describe('the roles command', () => {
   it('opens the singleton tab with the roles, the file in effect, and the catalog', () => {
     const { home, capabilities, opened } = fixture();
@@ -100,6 +117,91 @@ describe('the roles command', () => {
 });
 
 describe('editing roles through intents', () => {
+  it('rejects the second rapid removal from one snapshot, refreshes state, and permits a fresh retry', async () => {
+    const { activation, tab, home, capabilities, updated, stored } = entriesFixture(CHOICES);
+    const writes = vi.mocked(renameSync).mock.calls.length;
+    const results = await Promise.allSettled([
+      send(activation, 'remove-entry', { role: 'research', index: 0, expected: CHOICES }, capabilities, tab),
+      send(activation, 'remove-entry', { role: 'research', index: 1, expected: CHOICES }, capabilities, tab),
+    ]);
+
+    expect(results[0].status).toBe('fulfilled');
+    expect(results[1]).toMatchObject({ status: 'rejected', reason: new TabPluginRejection(staleMessage) });
+    expect(stored()).toEqual(CHOICES.slice(1));
+    expect(vi.mocked(renameSync).mock.calls.length - writes).toBe(1);
+    expect(updated).toHaveLength(2);
+    expect((updated[1].value.payload as RolesPayload).roles[0].entries).toEqual(CHOICES.slice(1));
+    const before = readFileSync(rolesPath(home), 'utf8');
+
+    await expect(send(activation, 'remove-entry', { role: 'research', index: 1, expected: CHOICES }, capabilities, tab))
+      .rejects.toThrow(staleMessage);
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(before);
+    await send(activation, 'remove-entry', { role: 'research', index: 0, expected: stored() }, capabilities, tab);
+    expect(stored()).toEqual([CHOICES[2]]);
+  });
+
+  it('rejects an effort edit queued behind a reorder from the same displayed snapshot', async () => {
+    const { activation, tab, capabilities, stored } = entriesFixture(CHOICES);
+    const results = await Promise.allSettled([
+      send(activation, 'move-entry', { role: 'research', from: 0, to: 2, expected: CHOICES }, capabilities, tab),
+      send(activation, 'set-entry-effort', { role: 'research', index: 0, effort: 'max', expected: CHOICES }, capabilities, tab),
+    ]);
+
+    expect(results.map(({ status }) => status)).toEqual(['fulfilled', 'rejected']);
+    expect(stored()).toEqual([CHOICES[1], CHOICES[2], CHOICES[0]]);
+  });
+
+  it('checks the full list when duplicate choices would make a row-only comparison ambiguous', async () => {
+    const entries = [CHOICES[0], CHOICES[0], CHOICES[2]];
+    const { activation, tab, capabilities, stored, home } = entriesFixture(entries);
+    await send(activation, 'remove-entry', { role: 'research', index: 0, expected: entries }, capabilities, tab);
+    const before = readFileSync(rolesPath(home), 'utf8');
+
+    await expect(send(activation, 'remove-entry', { role: 'research', index: 1, expected: entries }, capabilities, tab))
+      .rejects.toThrow(staleMessage);
+
+    expect(stored()).toEqual([CHOICES[0], CHOICES[2]]);
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(before);
+  });
+
+  it('rejects a stale edit when only the effort changed', async () => {
+    const { activation, tab, capabilities, stored, home } = entriesFixture(CHOICES);
+    await send(activation, 'set-entry-effort', { role: 'research', index: 0, effort: 'max', expected: CHOICES }, capabilities, tab);
+    const before = readFileSync(rolesPath(home), 'utf8');
+
+    await expect(send(activation, 'remove-entry', { role: 'research', index: 0, expected: CHOICES }, capabilities, tab))
+      .rejects.toThrow(staleMessage);
+
+    expect(stored()).toEqual([{ ...CHOICES[0], effort: 'max' }, ...CHOICES.slice(1)]);
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(before);
+  });
+
+  it('keeps duplicate models with different efforts from being reordered by a stale move', async () => {
+    const entries = [CHOICES[0], { ...CHOICES[0], effort: 'xhigh' }, CHOICES[2]];
+    const { activation, tab, capabilities, stored, home } = entriesFixture(entries);
+    await send(activation, 'move-entry', { role: 'research', from: 0, to: 1, expected: entries }, capabilities, tab);
+    const before = readFileSync(rolesPath(home), 'utf8');
+
+    await expect(send(activation, 'move-entry', { role: 'research', from: 1, to: 2, expected: entries }, capabilities, tab))
+      .rejects.toThrow(staleMessage);
+
+    expect(stored()).toEqual([entries[1], entries[0], entries[2]]);
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(before);
+  });
+
+  it('checks shared snapshots inside the queue for two distinct callers', async () => {
+    const { activation, tab, capabilities, stored, updated } = entriesFixture(CHOICES);
+    const secondCaller = { ...capabilities };
+    const results = await Promise.allSettled([
+      send(activation, 'move-entry', { role: 'research', from: 0, to: 2, expected: CHOICES }, capabilities, tab),
+      send(activation, 'move-entry', { role: 'research', from: 2, to: 0, expected: CHOICES }, secondCaller, tab),
+    ]);
+
+    expect(results.map(({ status }) => status)).toEqual(['fulfilled', 'rejected']);
+    expect(stored()).toEqual([CHOICES[1], CHOICES[2], CHOICES[0]]);
+    expect((updated.at(-1)!.value.payload as RolesPayload).roles[0].entries).toEqual(stored());
+  });
+
   it('adds __proto__ as a stored and published role', async () => {
     const { home, capabilities, updated } = fixture();
     const activation = activate(home);
@@ -203,23 +305,25 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
       const file = JSON.parse(readFileSync(rolesPath(home), 'utf8')) as Record<string, { entries: Array<{ model: string }> }>;
       return file['research'].entries.map((entry) => entry.model);
     };
+    const expected = () => readRolesFile(home, capabilities.originTab()!.root).roles
+      .find((role) => role.name === 'research')!.entries;
 
     await send(activation, 'add-entry', { role: 'research', entry: { harness: 'codex', model: 'gpt-6-sol' } }, capabilities, tab);
     await send(activation, 'add-entry', { role: 'research', entry: { harness: 'codex', model: 'second' } }, capabilities, tab);
     expect(entryModels()).toEqual(['gpt-6-sol', 'second']);
 
-    await send(activation, 'set-entry-effort', { role: 'research', index: 1, effort: 'xhigh' }, capabilities, tab);
+    await send(activation, 'set-entry-effort', { role: 'research', index: 1, effort: 'xhigh', expected: expected() }, capabilities, tab);
     let file = JSON.parse(readFileSync(rolesPath(home), 'utf8')) as Record<string, { entries: Array<{ effort?: string }> }>;
     expect(file['research'].entries[1].effort).toBe('xhigh');
 
-    await send(activation, 'set-entry-effort', { role: 'research', index: 1, effort: null }, capabilities, tab);
+    await send(activation, 'set-entry-effort', { role: 'research', index: 1, effort: null, expected: expected() }, capabilities, tab);
     file = JSON.parse(readFileSync(rolesPath(home), 'utf8')) as Record<string, { entries: Array<{ effort?: string }> }>;
     expect(file['research'].entries[1].effort).toBeUndefined();
 
-    await send(activation, 'move-entry', { role: 'research', from: 1, to: 0 }, capabilities, tab);
+    await send(activation, 'move-entry', { role: 'research', from: 1, to: 0, expected: expected() }, capabilities, tab);
     expect(entryModels()).toEqual(['second', 'gpt-6-sol']);
 
-    await send(activation, 'remove-entry', { role: 'research', index: 1 }, capabilities, tab);
+    await send(activation, 'remove-entry', { role: 'research', index: 1, expected: expected() }, capabilities, tab);
     expect(entryModels()).toEqual(['second']);
   });
 

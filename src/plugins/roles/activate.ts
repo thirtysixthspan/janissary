@@ -17,14 +17,18 @@ import {
   isRolesPayload,
   isSetEntryEffortIntent,
   type AddEntryIntent,
+  type EntryPrecondition,
   type LaunchCatalog,
   type Role,
   type RolesPayload,
+  type MoveEntryIntent,
+  type RemoveEntryIntent,
+  type SetEntryEffortIntent,
 } from './shared.js';
 import { readRolesFile, writeRolesFile, type RolesRead } from './roles-file.js';
 import {
   addEntry, addRole, deleteRole, describeRole, moveEntry, moveRole, removeEntry, renameRole,
-  setEntryEffort,
+  matchesEntrySnapshot, setEntryEffort,
 } from './role-edits.js';
 
 const INSTANCE_KEY = 'roles';
@@ -70,6 +74,7 @@ export function activate(home: string = homedir()): TabPluginActivation {
   const edit = async (
     capabilities: TabPluginServerCapabilities,
     apply: (roles: Role[]) => Role[],
+    precondition?: EntryPrecondition,
   ): Promise<null> => {
     const run = async (): Promise<null> => {
       const read = readRolesFile(home, rootOf(capabilities));
@@ -79,6 +84,10 @@ export function activate(home: string = homedir()): TabPluginActivation {
       // the damaged file is left exactly as it is until it is fixed by hand.
       if (read.source === 'default' || read.problem !== undefined) {
         return capabilities.rejectRequest(`roles.json at ${read.path} is unusable — fix the file before editing roles.`);
+      }
+      if (precondition && !matchesEntrySnapshot(read.roles, precondition)) {
+        publish(capabilities);
+        return capabilities.rejectRequest(`The entries of role "${precondition.role}" changed elsewhere — retry the edit on the current list. Nothing was written.`);
       }
       if (!writeRolesFile(read.path, apply(read.roles))) {
         return capabilities.rejectRequest(`Could not write roles.json at ${read.path}.`);
@@ -137,18 +146,18 @@ export function activate(home: string = homedir()): TabPluginActivation {
       },
       'set-entry-effort': {
         payload: isSetEntryEffortIntent,
-        run: (_tab, value: { role: string; index: number; effort: string | null }, capabilities) =>
-          edit(capabilities, (roles) => setEntryEffort(roles, value.role, value.index, value.effort)),
+        run: (_tab, value: SetEntryEffortIntent, capabilities) =>
+          edit(capabilities, (roles) => setEntryEffort(roles, value.role, value.index, value.effort), value),
       },
       'remove-entry': {
         payload: isRemoveEntryIntent,
-        run: (_tab, value: { role: string; index: number }, capabilities) =>
-          edit(capabilities, (roles) => removeEntry(roles, value.role, value.index)),
+        run: (_tab, value: RemoveEntryIntent, capabilities) =>
+          edit(capabilities, (roles) => removeEntry(roles, value.role, value.index), value),
       },
       'move-entry': {
         payload: isMoveEntryIntent,
-        run: (_tab, value: { role: string; from: number; to: number }, capabilities) =>
-          edit(capabilities, (roles) => moveEntry(roles, value.role, value.from, value.to)),
+        run: (_tab, value: MoveEntryIntent, capabilities) =>
+          edit(capabilities, (roles) => moveEntry(roles, value.role, value.from, value.to), value),
       },
     }),
   };

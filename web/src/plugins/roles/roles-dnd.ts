@@ -10,7 +10,7 @@ import type { RoleEntry } from '@shared/plugins/roles/shared';
 
 export type RolesDrag =
   | { kind: 'catalog'; harness: string; model: string }
-  | { kind: 'entry'; role: string; index: number }
+  | { kind: 'entry'; role: string; index: number; expected: RoleEntry[] }
   | { kind: 'role'; name: string };
 
 // One drag at a time belongs to one page, and the payload rides here rather than through
@@ -27,8 +27,8 @@ export function dragCatalogModel(event: DragEvent, harness: string, model: strin
   begin(event, { kind: 'catalog', harness, model }, 'copy');
 }
 
-export function dragEntry(event: DragEvent, role: string, index: number): void {
-  begin(event, { kind: 'entry', role, index }, 'move');
+export function dragEntry(event: DragEvent, role: string, index: number, entries: readonly RoleEntry[]): void {
+  begin(event, { kind: 'entry', role, index, expected: entries.map((entry) => ({ ...entry })) }, 'move');
 }
 
 export function dragRole(event: DragEvent, name: string): void {
@@ -85,7 +85,7 @@ export function dropOnEntry(
   event.preventDefault();
   event.stopPropagation();
   current = null;
-  return { intent: 'move-entry', payload: { role, from: drag.index, to: index } };
+  return { intent: 'move-entry', payload: { role, from: drag.index, to: index, expected: drag.expected } };
 }
 
 // A drop on the catalog column takes an entry out of its role.
@@ -94,7 +94,7 @@ export function dropOnCatalog(event: DragEvent): { intent: string; payload: Reco
   const drag = current;
   current = null;
   if (drag?.kind === 'entry') {
-    return { intent: 'remove-entry', payload: { role: drag.role, index: drag.index } };
+    return { intent: 'remove-entry', payload: { role: drag.role, index: drag.index, expected: drag.expected } };
   }
   return null;
 }

@@ -204,16 +204,49 @@ describe('RolesTab', () => {
     const select = screen.getByLabelText('Effort for gpt-6-sol');
 
     fireEvent.change(select, { target: { value: 'low' } });
-    expect(intent).toHaveBeenCalledWith('set-entry-effort', { role: 'planning', index: 0, effort: 'low' });
+    expect(intent).toHaveBeenCalledWith('set-entry-effort', { role: 'planning', index: 0, effort: 'low', expected: makePayload().roles[0].entries });
     fireEvent.change(select, { target: { value: '' } });
-    expect(intent).toHaveBeenCalledWith('set-entry-effort', { role: 'planning', index: 0, effort: null });
+    expect(intent).toHaveBeenCalledWith('set-entry-effort', { role: 'planning', index: 0, effort: null, expected: makePayload().roles[0].entries });
+  });
+
+  it('submits the whole displayed list for removal and effort edits on duplicate choices', () => {
+    const payload = makePayload();
+    payload.roles[0].entries = [payload.roles[0].entries[0], { ...payload.roles[0].entries[0] }];
+    const { intent } = renderTab(payload);
+
+    fireEvent.click(screen.getAllByTitle('Remove gpt-6-sol')[1]);
+    expect(intent).toHaveBeenCalledWith('remove-entry', {
+      role: 'planning', index: 1, expected: payload.roles[0].entries,
+    });
+    fireEvent.change(screen.getAllByLabelText('Effort for gpt-6-sol')[1], { target: { value: 'low' } });
+    expect(intent).toHaveBeenCalledWith('set-entry-effort', {
+      role: 'planning', index: 1, effort: 'low', expected: payload.roles[0].entries,
+    });
+  });
+
+  it('shows a stale control rejection and uses the refreshed snapshot for a retry', async () => {
+    const { intent, refuse, publish } = renderTab();
+    const message = 'The entries of role "planning" changed elsewhere — retry the edit on the current list. Nothing was written.';
+    refuse('remove-entry', message);
+    fireEvent.click(screen.getByTitle('Remove gpt-6-sol'));
+    expect(await screen.findByText(message)).toHaveClass('roles-refusal');
+
+    const next = makePayload();
+    next.roles[0].entries = [{ harness: 'codex', model: 'gpt-6-luna', effort: 'low' }];
+    publish(next);
+    fireEvent.click(screen.getByTitle('Remove gpt-6-luna'));
+
+    expect(intent).toHaveBeenLastCalledWith('remove-entry', {
+      role: 'planning', index: 0, expected: next.roles[0].entries,
+    });
+    await vi.waitFor(() => expect(screen.queryByText(message)).toBeNull());
   });
 
   it('removes an entry and deletes a role by their controls', () => {
     const { intent } = renderTab();
 
     fireEvent.click(screen.getByTitle('Remove gpt-6-sol'));
-    expect(intent).toHaveBeenCalledWith('remove-entry', { role: 'planning', index: 0 });
+    expect(intent).toHaveBeenCalledWith('remove-entry', { role: 'planning', index: 0, expected: makePayload().roles[0].entries });
 
     fireEvent.click(screen.getByTitle('Delete role research'));
     expect(intent).toHaveBeenCalledWith('delete-role', { name: 'research' });
@@ -373,7 +406,7 @@ describe('RolesTab', () => {
     expect(screen.getByRole('option', { name: 'ultra' })).toBeInTheDocument();
 
     fireEvent.change(select, { target: { value: '' } });
-    expect(intent).toHaveBeenCalledWith('set-entry-effort', { role: 'planning', index: 0, effort: null });
+    expect(intent).toHaveBeenCalledWith('set-entry-effort', { role: 'planning', index: 0, effort: null, expected: payload.roles[0].entries });
   });
 
   it('refuses an entry dropped from the catalog onto no card without raising anything', () => {
