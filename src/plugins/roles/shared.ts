@@ -28,7 +28,7 @@ export type RolesPayload = {
 
 export type AddRoleIntent = { name: string };
 export type RenameRoleIntent = { name: string; next: string };
-export type DescribeRoleIntent = { name: string; description: string };
+export type DescribeRoleIntent = { name: string; description: string; expected: string };
 export type DeleteRoleIntent = { name: string };
 export type MoveRoleIntent = { name: string; to: number };
 export type AddEntryIntent = { role: string; entry: RoleEntry };
@@ -65,7 +65,10 @@ export function isRenameRoleIntent(value: unknown): value is RenameRoleIntent {
 }
 
 export function isDescribeRoleIntent(value: unknown): value is DescribeRoleIntent {
-  return isRecord(value) && isName(value.name) && typeof value.description === 'string';
+  return isRecord(value)
+    && isName(value.name)
+    && typeof value.description === 'string'
+    && typeof value.expected === 'string';
 }
 
 export function isDeleteRoleIntent(value: unknown): value is DeleteRoleIntent {

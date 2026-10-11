@@ -3,8 +3,8 @@ import type { Role, RoleEntry } from './shared.js';
 
 // The nine role-list edits, as pure functions over the decoded role list. Each answers the new list
 // or refuses a request the caller could have gotten wrong — a name already taken, a role that is
-// not there, an index past the end — by throwing the contract's own rejection, so the activation
-// never spells the same check twice.
+// not there, an index past the end, a description written against text the file no longer holds — by
+// throwing the contract's own rejection, so the activation never spells the same check twice.
 
 const clash = (roles: readonly Role[], name: string, except?: string): boolean =>
   roles.some((role) => role.name.toLowerCase() === name.toLowerCase() && role.name !== except);
@@ -43,8 +43,16 @@ export function renameRole(roles: readonly Role[], name: string, next: string): 
   return replace(roles, name, { ...target, name: trimmed });
 }
 
-export function describeRole(roles: readonly Role[], name: string, description: string): Role[] {
+export function describeRole(
+  roles: readonly Role[], name: string, description: string, expected: string,
+): Role[] {
   const role = find(roles, name);
+  // The description carries the text it was written against. Another client's edit can land between
+  // the payload this caller last saw and this read, and overwriting it would be exactly the loss the
+  // caller cannot see, so a stale edit is refused rather than applied.
+  if (role.description !== expected) {
+    throw new TabPluginRejection(`The description of role "${name}" changed elsewhere — nothing was written.`);
+  }
   return replace(roles, name, { ...role, description });
 }
 

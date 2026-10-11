@@ -60,6 +60,18 @@ the levels above, and the entry's own stored effort as its own option when that 
 them, so a hand-written effort never reads as unset), and a remove control. **Add entry** opens a
 small picker — harness, model, and Add — so an entry can be added without a pointer.
 
+### A description the tab did not write
+
+A second window on the same file, or any other client of the tab, can change a description while this
+one is open, and the tab learns about it the moment that change is published. A field nobody has
+typed in shows the new text at once, and losing focus on it writes nothing — the file is already what
+it says. A field someone is halfway through typing in is left alone: the tab does not discard typing
+under them, and the edit that eventually commits carries the text it was written against, so a
+description that changed in the meantime is never overwritten. If the stored description does move
+under an open draft, the stored text replaces the draft and the tab says so in the one refusal line
+beneath the source line. The same line reports the server's own refusal when the change arrives too
+late to be noticed here: `The description of role "<name>" changed elsewhere — nothing was written.`
+
 ### Dragging
 
 The tab drags on the browser's own gesture. Dragging a model from the catalog onto a card appends
@@ -80,10 +92,11 @@ and the tab then reads `No roles yet.` above the add-role control.
 ### A refused edit
 
 Every refusal the tab can earn — a duplicate name, a role or index that is not there, an unusable
-file, a write that could not happen — is shown in the tab as one line beneath the source line,
-carrying the server's own words, and the edit it refused is not applied. The line clears on the next
-edit the tab raises, whether that edit is accepted or refused, so a message never lingers over a
-state it no longer describes.
+file, a write that could not happen, a description another client changed first — is shown in the tab
+as one line beneath the source line, carrying the server's own words, and the edit it refused is not
+applied. A refused edit leaves what the user typed on screen so it can be corrected. The line clears
+on the next edit the tab raises, whether that edit is accepted or refused, so a message never lingers
+over a state it no longer describes.
 
 ### Persisting
 

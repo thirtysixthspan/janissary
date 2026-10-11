@@ -117,8 +117,8 @@ export function activate(home: string = homedir()): TabPluginActivation {
       },
       'describe-role': {
         payload: isDescribeRoleIntent,
-        run: (_tab, value: { name: string; description: string }, capabilities) =>
-          edit(capabilities, (roles) => describeRole(roles, value.name, value.description)),
+        run: (_tab, value: { name: string; description: string; expected: string }, capabilities) =>
+          edit(capabilities, (roles) => describeRole(roles, value.name, value.description, value.expected)),
       },
       'delete-role': {
         payload: isDeleteRoleIntent,

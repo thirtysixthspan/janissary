@@ -15,6 +15,8 @@ import { isRolesPayload, type RolesPayload } from './shared.js';
 
 const CATALOG = { models: { codex: ['gpt-6-sol'] }, efforts: ['low', 'xhigh'] };
 
+type WrittenFile = Record<string, { description: string; entries: Array<{ model: string }> }>;
+
 function fixture(): {
   home: string;
   capabilities: TabPluginServerCapabilities;
@@ -98,7 +100,7 @@ describe('editing roles through intents', () => {
     const tab = payloadFor(home);
 
     await send(activation, 'add-role', { name: 'review' }, capabilities, tab);
-    await send(activation, 'describe-role', { name: 'review', description: 'Second pair of eyes.' }, capabilities, tab);
+    await send(activation, 'describe-role', { name: 'review', description: 'Second pair of eyes.', expected: '' }, capabilities, tab);
     await send(activation, 'delete-role', { name: 'review' }, capabilities, tab);
 
     expect(roleNames(home)).toEqual(DEFAULT_ROLES.map((role) => role.name));
@@ -174,6 +176,32 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
       .rejects.toThrow('No role named "nothing".');
   });
 
+  it('refuses a description written against text the file no longer holds, and writes nothing', async () => {
+    const { home, capabilities } = fixture();
+    const activation = activate(home);
+    await send(activation, 'add-role', { name: 'review' }, capabilities, payloadFor(home));
+    const before = readFileSync(rolesPath(home), 'utf8');
+
+    await expect(send(activation, 'describe-role', { name: 'review', description: 'Second pair of eyes.', expected: 'Another client got here first.' }, capabilities, payloadFor(home)))
+      .rejects.toThrow('The description of role "review" changed elsewhere — nothing was written.');
+
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(before);
+  });
+
+  it('writes a description written against the text the file still holds, leaving the rest alone', async () => {
+    const { home, capabilities } = fixture();
+    const activation = activate(home);
+    await send(activation, 'add-role', { name: 'review' }, capabilities, payloadFor(home));
+    await send(activation, 'add-entry', { role: 'review', entry: { harness: 'codex', model: 'gpt-6-sol' } }, capabilities, payloadFor(home));
+
+    await send(activation, 'describe-role', { name: 'review', description: 'Second pair of eyes.', expected: '' }, capabilities, payloadFor(home));
+
+    const file = JSON.parse(readFileSync(rolesPath(home), 'utf8')) as WrittenFile;
+    expect(file['review'].description).toBe('Second pair of eyes.');
+    expect(file['review'].entries.map((entry) => entry.model)).toEqual(['gpt-6-sol']);
+    expect(roleNames(home)).toContain('planning');
+  });
+
   it('refuses every edit while the file in effect is unusable, leaving the broken file alone', async () => {
     const { home, capabilities } = fixture();
     mkdirSync(path.dirname(rolesPath(home)), { recursive: true });
@@ -196,7 +224,7 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
     writeFileSync(rolesPath(home), damaged);
     const activation = activate(home);
 
-    await expect(send(activation, 'describe-role', { name: 'review', description: 'Changed.' }, capabilities, payloadFor(home)))
+    await expect(send(activation, 'describe-role', { name: 'review', description: 'Changed.', expected: 'Second pair of eyes.' }, capabilities, payloadFor(home)))
       .rejects.toThrow(`roles.json at ${rolesPath(home)} is unusable — fix the file before editing roles.`);
 
     expect(readFileSync(rolesPath(home), 'utf8')).toBe(damaged);
@@ -208,6 +236,8 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
 
     expect(() => send(activation, 'add-role', { name: '' }, capabilities, payloadFor(home)))
       .toThrow('invalid add-role payload');
+    expect(() => send(activation, 'describe-role', { name: 'review', description: 'x' }, capabilities, payloadFor(home)))
+      .toThrow('invalid describe-role payload');
     expect(() => send(activation, 'nope', {}, capabilities, payloadFor(home)))
       .toThrow('unknown roles intent "nope"');
   });

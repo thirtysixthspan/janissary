@@ -45,7 +45,19 @@ function renderTab(payload: RolesPayload = makePayload()) {
     reportFailure: vi.fn(),
   } as unknown as TabPluginClientCapabilities;
   const rendered = render(<RolesTab payload={payload} capabilities={capabilities} />);
-  return { ...rendered, intent, refuse: (name: string, message: string) => refused.set(name, message) };
+  // A republished payload reaching the same mounted tab is what another client's accepted edit looks
+  // like from here, so the helper hands one back rather than forcing a fresh render.
+  const publish = (next: RolesPayload) =>
+    rendered.rerender(<RolesTab payload={next} capabilities={capabilities} />);
+  return { ...rendered, intent, publish, refuse: (name: string, message: string) => refused.set(name, message) };
+}
+
+function withDescription(name: string, description: string): RolesPayload {
+  const payload = makePayload();
+  return {
+    ...payload,
+    roles: payload.roles.map((role) => (role.name === name ? { ...role, description } : role)),
+  };
 }
 
 describe('RolesTab', () => {
@@ -95,11 +107,77 @@ describe('RolesTab', () => {
 
     fireEvent.change(input, { target: { value: 'Deeper questions.' } });
     fireEvent.blur(input);
-    expect(intent).toHaveBeenCalledWith('describe-role', { name: 'research', description: 'Deeper questions.' });
+    expect(intent).toHaveBeenCalledWith('describe-role', {
+      name: 'research', description: 'Deeper questions.', expected: 'Research.',
+    });
 
     renderTab();
     fireEvent.blur(screen.getByDisplayValue('Research.'));
     expect(intent).toHaveBeenCalledTimes(1);
+  });
+
+  describe('a description the tab learns about from a payload update', () => {
+    it('follows the stored text and raises nothing when the field was never typed in', () => {
+      const { intent, publish } = renderTab();
+
+      publish(withDescription('research', 'Deeper questions.'));
+      const input = screen.getByLabelText('Description of role research');
+      expect(input).toHaveValue('Deeper questions.');
+
+      fireEvent.blur(input);
+      expect(intent).not.toHaveBeenCalled();
+    });
+
+    it('replaces an active draft and says why the stored text is back', async () => {
+      const { publish } = renderTab();
+      const input = screen.getByLabelText('Description of role research');
+      fireEvent.change(input, { target: { value: 'Half typed.' } });
+
+      publish(withDescription('research', 'Deeper questions.'));
+
+      expect(input).toHaveValue('Deeper questions.');
+      expect(await screen.findByText('The description of "research" changed elsewhere — showing the stored one.'))
+        .toHaveClass('roles-refusal');
+    });
+
+    it('keeps an active draft when the update changed another role, and commits the text it saw', () => {
+      const { intent, publish } = renderTab();
+      const input = screen.getByLabelText('Description of role research');
+      fireEvent.change(input, { target: { value: 'Half typed.' } });
+
+      publish(withDescription('planning', 'Plans, thoroughly.'));
+
+      expect(input).toHaveValue('Half typed.');
+      fireEvent.blur(input);
+      expect(intent).toHaveBeenCalledWith('describe-role', {
+        name: 'research', description: 'Half typed.', expected: 'Research.',
+      });
+    });
+
+    it('reverts to the stored text when Escape follows a payload update', () => {
+      const { intent, publish } = renderTab();
+      publish(withDescription('research', 'Deeper questions.'));
+      const input = screen.getByLabelText('Description of role research');
+
+      fireEvent.change(input, { target: { value: 'Half typed.' } });
+      fireEvent.keyDown(input, { key: 'Escape' });
+
+      expect(input).toHaveValue('Deeper questions.');
+      fireEvent.blur(input);
+      expect(intent).not.toHaveBeenCalled();
+    });
+
+    it('keeps a refused description on screen so it can be corrected', async () => {
+      const { refuse } = renderTab();
+      refuse('describe-role', 'The description of role "research" changed elsewhere — nothing was written.');
+      const input = screen.getByLabelText('Description of role research');
+
+      fireEvent.change(input, { target: { value: 'Half typed.' } });
+      fireEvent.blur(input);
+
+      expect(await screen.findByText(/changed elsewhere/)).toHaveClass('roles-refusal');
+      expect(input).toHaveValue('Half typed.');
+    });
   });
 
   it('reverts the name on Escape without writing', () => {

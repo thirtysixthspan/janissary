@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { Role } from '@shared/plugins/roles/shared';
@@ -6,6 +6,7 @@ import type { TabPluginClientCapabilities } from '../api';
 import {
   allowDrop, dragEnd, dragEntry, dragRole, dropOnEntry, dropOnRole,
 } from './roles-dnd';
+import { useRoleDraft } from './useRoleDraft';
 
 type Properties = {
   role: Role;
@@ -23,12 +24,23 @@ type EntryDrop = { intent: string; payload: Record<string, unknown> } | null;
 // target (a catalog model lands here as a new entry). Every edit is one intent; the card owns no
 // rule of its own.
 export function RoleCard({ role, index, efforts, models, capabilities, onRefusal }: Properties) {
-  const [name, setName] = useState(role.name);
-  const [description, setDescription] = useState(role.description);
+  const nameDraft = useRoleDraft(role.name);
+  const descriptionDraft = useRoleDraft(role.description);
   const [picker, setPicker] = useState(false);
   const [pickHarness, setPickHarness] = useState(Object.keys(models)[0] ?? '');
   const [pickModel, setPickModel] = useState('');
   const [drop, setDrop] = useState(false);
+
+  // A stored value that arrived while this card was holding a draft has already replaced that draft,
+  // so the one line the tab shows for every other refusal is also what explains this one.
+  useEffect(() => {
+    if (nameDraft.conflicted) {
+      onRefusal(`The name of "${role.name}" changed elsewhere — showing the stored one.`);
+    }
+    if (descriptionDraft.conflicted) {
+      onRefusal(`The description of "${role.name}" changed elsewhere — showing the stored one.`);
+    }
+  }, [descriptionDraft.conflicted, nameDraft.conflicted, onRefusal, role.name]);
 
   const raise = (intent: string, payload: Record<string, unknown>) => {
     onRefusal(null);
@@ -38,13 +50,19 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
   };
 
   const commitName = () => {
-    const trimmed = name.trim();
-    if (trimmed.length === 0 || trimmed === role.name) setName(role.name);
+    const change = nameDraft.commit();
+    if (change === null) return;
+    const trimmed = change.text.trim();
+    if (trimmed.length === 0 || trimmed === role.name) nameDraft.revert();
     else raise('rename-role', { name: role.name, next: trimmed });
   };
 
   const commitDescription = () => {
-    if (description !== role.description) raise('describe-role', { name: role.name, description });
+    const change = descriptionDraft.commit();
+    if (change === null) return;
+    // The stored text the edit was written against travels with it: the server refuses rather than
+    // overwrite a description another client changed while this one was in flight.
+    raise('describe-role', { name: role.name, description: change.text, expected: change.baseline });
   };
 
   const modelOptions = models[pickHarness] ?? [];
@@ -83,13 +101,13 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
         </span>
         <input
           className="roles-name"
-          value={name}
+          value={nameDraft.value}
           aria-label={`Name of role ${role.name}`}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => nameDraft.set(event.target.value)}
           onBlur={commitName}
           onKeyDown={(event) => {
             if (event.key === 'Enter') event.currentTarget.blur();
-            else if (event.key === 'Escape') setName(role.name);
+            else if (event.key === 'Escape') nameDraft.revert();
           }}
         />
         <button
@@ -103,14 +121,14 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
       </div>
       <input
         className="roles-description"
-        value={description}
+        value={descriptionDraft.value}
         placeholder="Description"
         aria-label={`Description of role ${role.name}`}
-        onChange={(event) => setDescription(event.target.value)}
+        onChange={(event) => descriptionDraft.set(event.target.value)}
         onBlur={commitDescription}
         onKeyDown={(event) => {
           if (event.key === 'Enter') event.currentTarget.blur();
-          else if (event.key === 'Escape') setDescription(role.description);
+          else if (event.key === 'Escape') descriptionDraft.revert();
         }}
       />
       <ul className="roles-entries">
