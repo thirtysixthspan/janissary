@@ -23,7 +23,7 @@ below, which would have two answers for which directory it means.
 
 **A workspace diff** is one tab per workspace, named after the tab whose workspace it is. Three routes open one: the
 **Show diff in the workspace** button in the metadata row of a shell or harness tab that has a workspace, the same
-button in the action group of a **sessions** tab row whose channel has landed its workspace, and `diff on <tab name>`
+button in the action group of every **sessions** tab row for a live channel, and `diff on <tab name>`
 typed in any tab. The name matches an open shell or harness tab by label or display alias, ignoring case. A tab with no
 workspace, and a name no open tab holds, are refused with
 `Cannot diff on <name>: no open shell or harness tab named "<name>" has a workspace.` A name whose workspace has not

@@ -6,11 +6,11 @@ The **diff tab** shows what changed in a workspace. It should also show what cha
 
 ## Product decisions
 
-A workspaced shell or harness tab carries a plus-minus button in its metadata row; pressing it opens a diff tab on that workspace, titled **diff on <tab name>**. Typing `diff on <tab name>` in any tab's command bar opens the same tab, and the sessions tab's row for a live channel carries the same button. The tab shows that workspace's changes against `HEAD`, refreshes every second, and opens the file a row or a line jump names.
+A workspaced shell or harness tab carries a plus-minus button in its metadata row; pressing it opens a diff tab on that workspace, titled **diff on <tab name>**. Typing `diff on <tab name>` in any tab's command bar opens the same tab, and every sessions row for a live channel carries the same button, disabled while its workspace is provisioning. The tab shows that workspace's changes against `HEAD`, refreshes every second, and opens the file a row or a line jump names.
 
 Each of the following was answered by the user during planning and is binding on the implementation.
 
-**The clause names a tab, and only an existing workspace.** `diff on <name>` names an open **shell or harness tab that has a workspace**, local or remote, by label, case-insensitively. Nothing is provisioned: a remote host's workspace is the one the named tab already rides, and a local one is the clone the tab already works in. A path argument and the clause are mutually exclusive — `diff [path]` scopes the project-root diff, `diff on <name>` opens a workspace diff, and a line carrying both is refused with the usage line.
+**The clause names a tab, and only an existing workspace.** `diff on <name>` names an open **shell or harness tab that has a workspace**, local or remote, by label or display alias, case-insensitively. Nothing is provisioned: a remote host's workspace is the one the named tab already rides, and a local one is the clone the tab already works in. A path argument and the clause are mutually exclusive — `diff [path]` scopes the project-root diff, `diff on <name>` opens a workspace diff, and a line carrying both is refused with the usage line. Placeholder delimiters in the usage line and refusals are shown literally in the transcript.
 
 Two refusals surface on the transcript the command was typed in:
 
@@ -21,7 +21,7 @@ Two refusals surface on the transcript the command was typed in:
 
 **Titles.** A workspace diff's tab title is **diff on <tab name>**; the project-root diff's title stays **diff**. Labels stay `diff`, `diff-2`, … as every plugin tab's do. The header inside the tab keeps showing the abbreviated root — `$workspace/<name>`, `$root`, `~` — and a remote workspace's header names its host after the root, the way a remote tab's metadata row carries a host chip.
 
-**The buttons.** The metadata row's workspace button takes a **plus-minus glyph**, drawn from the Font Awesome package the app already installs and exported from `web/src/shared/icons.ts` under its own semantic name, and is drawn for a **remote** workspace as well as a local one. Its tooltip is unchanged in both cases: **Show diff in the workspace**. The **sessions tab** gains the same plus-minus button in the action group of every **ready row of a live channel**; rows of one channel share one workspace, so they share one diff tab. The button is disabled while the channel's workspace is still provisioning, and it is absent on plain `ssh` rows and on detached and terminated rows. The diff tab's own two controls keep the arrows-up-down glyph they have, which the spec already names the plus-minus icon; the button is deliberately a different picture from them.
+**The buttons.** The metadata row's workspace button takes a **plus-minus glyph**, drawn from the Font Awesome package the app already installs and exported from `web/src/shared/icons.ts` under its own semantic name, and is drawn for a **remote** workspace as well as a local one. Its tooltip is unchanged in both cases: **Show diff in the workspace**. The **sessions tab** gains the same plus-minus button in the action group of every row of a **live channel**; rows of one channel share one workspace, so they share one diff tab. The button is disabled while the channel's workspace is still provisioning, and it is absent on plain `ssh` rows and on detached and terminated rows. The diff tab's own two controls keep the arrows-up-down glyph they have, which the spec already names the plus-minus icon; the button is deliberately a different picture from them.
 
 **A remote diff tab holds its channel.** It joins the named tab's channel exactly as a remote file navigator does and holds a reference, so the peer and its workspace survive while the diff tab is open and are released when it closes.
 
@@ -63,14 +63,14 @@ The diff command's argument, today one optional path, is read the way `parseShel
 
 The plugin cannot read the host's tab list, so two existing seams widen rather than a new capability appearing:
 
-- **`originTab()` gains an optional label.** Called with one, it answers the same record for that open tab — label, cwd, root, `remote` when it rides a channel, and `workspace` when it has one — instead of returning null. Called bare, it answers exactly what it answers today. For a remote tab the `workspace` it answers is the directory on **that host**, which is the one the diff tab has to read; the capability's contract says so, because every other consumer reads a local path. Only the shell and diff plugins call `originTab` today, and the shell's own uses either guard on `remote` first or read `root` alone, so widening it changes no existing behavior.
+- **`originTab()` gains an optional label.** Called with one, it answers the same record for that open tab — label, cwd, root, view, plugin id, `remote` when it rides a channel, `workspace` when it has one, and `provisioning` while that workspace is still landing — instead of returning null. Called bare, it answers exactly what it answers today. For a remote tab the `workspace` it answers is the directory on **that host**, which is the one the diff tab has to read; the capability's contract says so, because every other consumer reads a local path. Only the shell and diff plugins call `originTab` today, and the shell's own uses either guard on `remote` first or read `root` alone, so widening it changes no existing behavior.
 - **`launchTab`'s `join` form gains a label.** `remote: { join: true }` keeps meaning "the tab this call came from", which is what a remote tab's ➕ sibling shell uses; the label names another tab whose channel to join instead. `launchCapabilities` resolves the source from the request's label when it carries one, and `launchJoinedRemotePluginTab` checks that tab is remote rather than the originating one.
 
 Both are additive and leave the plugin API version at 2.
 
 ### One resolution, three routes
 
-The command's `on <name>` clause, the metadata row's button, and the sessions row's button all resolve through one helper in the plugin: read the tab's record with `originTab(label)`, then take one of three routes. A `remote` tab joins its channel and opens the workspace diff on the far side's directory; a tab with a local `workspace` opens the workspace diff on that clone; neither answers the no-workspace refusal. The button routes already run the plugin's own `openSibling` hook with the clicked tab as the origin, so the hook calls the same helper with the label it was given — which is what makes a remote tab's button work without the host learning anything new.
+The command's `on <name>` clause, the metadata row's button, and the sessions row's button all resolve through one helper in the plugin: read the tab's record with `originTab(label)`, then take one of three routes. Only a harness view or a plugin view whose id is `shell` is eligible. A still-provisioning record answers the provisioning refusal before any tab opens; a `remote` tab joins its channel and opens the workspace diff on the far side's directory; a tab with a local `workspace` opens the workspace diff on that clone; other tabs answer the no-workspace refusal. The button routes already run the plugin's own `openSibling` hook with the clicked tab as the origin, so the hook calls the same helper with the label it was given — which is what makes a remote tab's button work without the host learning anything new.
 
 The focus rule comes before the join. `launchTab` never focuses an existing tab, so a workspace whose diff tab is already open is opened with `openOrFocusTab` on the instance key it already holds and nothing is rebuilt. Only a workspace with no open diff tab reaches the join, and the key the join opens under is the same key the workspace directory derives, so the second route for that workspace focuses what the first one opened.
 
@@ -86,7 +86,7 @@ The far side gains one remote filesystem operation, **`change-set`**, which take
 
 On the far side the operation dispatches to the diff plugin's own `readChangeSet`, so there is one definition of what a change set is. That import is the deliberate exception the plan records: `src/remote/` is core, and core reaching a concrete plugin's module is normally forbidden — but the read is the one definition of the behavior, the far side is a separate process where lazy loading buys nothing, and the alternative is a second implementation of the same git reads. Adding the operation moves `REMOTE_PROTOCOL_VERSION` to 29, and the spec's protocol-version history gains the entry the existing ones follow: a version-28 remote refuses the operation as unknown, so a diff tab opened against one would show a failure rather than a half-working change set, which is why the handshake refuses the mismatch instead.
 
-The plugin reaches it through one new additive capability, scoped to the plugin's own answering tab the way `queueLine` is: it answers the change set of the remote workspace that tab rides, or null when the tab rides none. The host resolves the channel from that tab, sends the request, and hands back the far side's answer, which the plugin validates with its own guard before publishing. The tab's once-a-second recompute, its in-flight guard, its full-file expansion, and its refresh-keeps-the-body rule are unchanged; only the reader behind them moves.
+The plugin reaches it through one new additive capability, scoped to the plugin's own answering tab the way `queueLine` is: it answers the change set of the remote workspace that tab rides, or null when the tab rides none. The host resolves the channel from that tab, sends the request, and hands back the far side's answer, which the plugin validates with `isChangeSetResult` before publishing. A malformed answer, a missing answer, or a rejected capability promise produces **The remote host did not answer with a change set.** The tab's once-a-second recompute, its in-flight guard, its full-file expansion, and its refresh-keeps-the-body rule are unchanged; only the reader behind them moves.
 
 ### Opening a file from a remote diff
 
@@ -98,7 +98,7 @@ A workspace diff tab whose read answers `not-repository` while its root no longe
 
 ### The sessions row
 
-The sessions topic action gains `diff`, dispatched in `actOnSessions` behind the same `offers('diff', { label })` check every other session verb uses, and answered by the host calling `managers.plugins.openSibling('diff', …)`. The row's own `actions` gain `diff` where `liveActions` offers it: a live channel whose workspace is ready. The client's row action group draws the button from that action, the way it draws attach and detach, and the sessions spec and the sessions tab's shared row type gain the verb beside the others.
+The sessions topic action gains `diff`, dispatched in `actOnSessions` behind the same `offers('diff', { label })` check every other session verb uses, and answered by the host calling `managers.plugins.openSibling('diff', …)`. The row's own `actions` gain `diff` on every live channel row. The client's row action group draws the button from that action and disables it when the row state is `provisioning`; it is absent on ssh, detached, and terminated rows. The sessions spec and the sessions tab's shared row type gain the verb beside the others.
 
 ### The metadata buttons
 
@@ -120,12 +120,12 @@ The steps are ordered so each one leaves typecheck, lint, and the test suite gre
 
 ## Tests
 
-- `src/plugins/diff/` — the argument parse: a bare `on`, a name with a path (refused), `on` with no token, a case-insensitive name, and a name that is also a path-like word. The change-set read against a remote port and the session's one-tab-per-workspace keying, beside the real-repository cases `src/plugins/diff/change-set.test.ts` already carries.
+- `src/plugins/diff/parse-argument.test.ts` and `activate.test.ts` — clause parsing, literal usage and refusal text, eligible shell and harness tabs, aliases, and provisioning refusal; `remote-change-set.test.ts` and `change-set.test.ts` — valid and malformed remote answers, including a rejected capability; `session-context.test.ts` — one tab per workspace.
 - `src/remote/` — the `change-set` operation's argument validation, its reply shape, and its refusal for a malformed argument, beside the cases in `src/remote/filesystem/operations.test.ts` and `serve-file-navigator.test.ts`; and the handshake refusing a version-28 peer.
-- `src/plugins/` — the widened `originTab(label)` and `launchTab` join-with-label, with the refusals for a tab that names nothing.
-- `src/sessions/` and the sessions plugin — `offers('diff', …)` narrowing the verb, and the row action set a ready live channel carries.
+- `src/plugins/context.test.ts`, `shell-capabilities.test.ts`, `launch-tab.test.ts`, and `launch-tab-remote.test.ts` — the widened `originTab(label)` record, eligible tab metadata, provisioning state, and `launchTab` join-with-label.
+- `src/sessions/rows.test.ts` and `manager.test.ts` — the row action set on every live channel, including provisioning rows, and `offers('diff', …)` narrowing the verb; `web/src/plugins/sessions/SessionList.test.tsx` — disabled while provisioning and enabled when active.
 - `web/src/plugins/shell/ShellTabMeta.test.tsx` and `web/src/harness/HarnessTabMeta.test.tsx` — the plus-minus button rendered for a local workspace and for a remote one, absent for a tab with no workspace.
-- `web/src/plugins/sessions/` — the button drawn from the row's action and disabled while the workspace provisions.
+- `web/src/plugins/sessions/SessionList.test.tsx` and `SessionRowActions.tsx` — the button drawn from the row's action and disabled while the workspace provisions.
 
 ## Out of scope
 
@@ -147,4 +147,4 @@ Five gaps against the products that own this capability were researched and decl
 
 ## Verification
 
-`./scripts/run.mjs check-diff`, plus a manual check: a workspaced shell tab and a workspaced harness tab, local and remote, each with its plus-minus metadata button; `diff on <name>` for each of them and for a tab with no workspace; the sessions tab's button on a ready row; two tabs sharing one clone focusing one diff tab; and the project-root `diff` and `diff <path>` still behaving as one tab.
+`./scripts/run.mjs check-diff`, plus a manual check: a workspaced shell tab and a workspaced harness tab, local and remote, each with its plus-minus metadata button; `diff on <name>` for each eligible tab, an ineligible tab, and a still-provisioning workspace; literal angle-bracket placeholders in the refusal and usage transcript; the sessions tab's diff button disabled on a provisioning row and enabled when ready; two tabs sharing one clone focusing one diff tab; and the project-root `diff` and `diff <path>` still behaving as one tab.
