@@ -72,7 +72,7 @@ describe('remoteReplay', () => {
   // group crosses the mapper as the opaque step it is rather than being rewritten leg by leg.
   it('carries a paste group across unrewritten', async () => {
     const paths = pathsFor('/ws');
-    const group: HistoryStep = { mode: 'copy', pairs: [{ source: '/elsewhere/a.ts', destination: 'a.ts' }] };
+    const group: HistoryStep = { mode: 'copy', pairs: [{ from: '/elsewhere/a.ts', to: 'a.ts', identity: 'sha256:recorded' }] };
     const request = vi.fn(async () => ({ undoStack: [], redoStack: [group] }));
     const result = await remoteReplay(request, paths, '/ws/src', [group], [], 'undo', false, false);
     expect(request).toHaveBeenCalledWith('replay', expect.objectContaining({ undoStack: [group] }));

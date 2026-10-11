@@ -4,6 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { deleteMany, moveMany, pasteMany } from './batch.js';
 import type { HistoryStep } from '../moves.js';
+import { fileIdentity } from '../file-identity.js';
 
 let roots: string[] = [];
 
@@ -111,7 +112,10 @@ describe('pasteMany', () => {
     );
     expect(result).toEqual({ total: 1, failedPaths: [] });
     expect(current.undoStack).toEqual([
-      { mode: 'copy', pairs: [{ from: path.join(directory, 'a.txt'), to: path.join(directory, 'dest', 'a.txt') }] },
+      { mode: 'copy', pairs: [{
+        from: path.join(directory, 'a.txt'), to: path.join(directory, 'dest', 'a.txt'),
+        identity: fileIdentity(path.join(directory, 'dest', 'a.txt')),
+      }] },
     ]);
     expect(current.redoStack).toEqual([]);
     expect(rebuilt).toBe(1);

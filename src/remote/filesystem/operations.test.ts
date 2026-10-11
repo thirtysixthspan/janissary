@@ -40,7 +40,7 @@ const PATH_CASES: [RemoteFilesystemOperation, RemoteFilesystemArguments, string[
   ['create-directory', { destination: 'dest' }, ['dest']],
   ['replay', {
     undoStack: [{ entries: [{ from: 'a.txt', to: 'dest/a.txt' }] }],
-    redoStack: [{ mode: 'copy', pairs: [{ from: 'b.txt', to: 'dest/b.txt' }] }],
+    redoStack: [{ mode: 'copy', pairs: [{ from: 'b.txt', to: 'dest/b.txt', identity: 'sha256:recorded' }] }],
     direction: 'undo', overwrite: false, skipConflicts: false,
   }, ['a.txt', 'dest/a.txt', 'b.txt', 'dest/b.txt']],
 ];
@@ -70,6 +70,7 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['create-file', {}],
   ['create-directory', { destination: 7 }],
   ['replay', { undoStack: [], redoStack: [], direction: 'sideways', overwrite: false, skipConflicts: false }],
+  ['replay', { undoStack: [{ mode: 'copy', pairs: [{ from: 'a', to: 'b', identity: 3 }] }], redoStack: [], direction: 'undo', overwrite: false, skipConflicts: false }],
 ];
 
 const alphabetical = (names: readonly string[]) => names.toSorted((a, b) => a.localeCompare(b));
@@ -111,6 +112,13 @@ describe('FILESYSTEM_OPERATIONS', () => {
     for (const operation of ALL_OPERATIONS) {
       expect(decodeFilesystemResult(operation, VALID_RESULTS[operation])).toEqual(VALID_RESULTS[operation]);
     }
+  });
+
+  it('rejects a paste result with an invalid recorded identity', () => {
+    expect(() => decodeFilesystemResult('paste', {
+      total: 1, failedPaths: [], mutated: true,
+      pairs: [{ from: 'source', to: 'destination', identity: 7 }],
+    })).toThrow('Invalid remote filesystem operation result.');
   });
 
   it.each(ALL_OPERATIONS)('rejects a malformed %s result', (operation) => {

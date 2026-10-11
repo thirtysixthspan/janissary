@@ -30,7 +30,8 @@ function historyStep(value: unknown): boolean {
   if (!isRecord(value)) return false;
   if (Array.isArray(value.entries)) return value.entries.every((entry) => moveEntry(entry));
   return (value.mode === 'copy' || value.mode === 'cut')
-    && Array.isArray(value.pairs) && value.pairs.every((pair) => moveEntry(pair));
+    && Array.isArray(value.pairs) && value.pairs.every((pair) => moveEntry(pair)
+      && (!isRecord(pair) || pair.identity === undefined || typeof pair.identity === 'string' || pair.identity === null));
 }
 
 export function history(value: unknown): boolean {

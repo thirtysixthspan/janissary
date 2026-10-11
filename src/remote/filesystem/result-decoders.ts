@@ -22,8 +22,9 @@ const emptyObject = (value: unknown): value is Record<string, never> => record(v
 const result = (value: unknown): value is Record<string, unknown> & { ok: boolean } => record(value) && typeof value.ok === 'boolean';
 const batch = (value: unknown): value is Record<string, unknown> => record(value)
   && typeof value.total === 'number' && strings(value.failedPaths);
-const pairs = (value: unknown): value is { from: string; to: string }[] => Array.isArray(value)
-  && value.every((item: unknown) => record(item) && typeof item.from === 'string' && typeof item.to === 'string');
+const pairs = (value: unknown): value is { from: string; to: string; identity?: string | null }[] => Array.isArray(value)
+  && value.every((item: unknown) => record(item) && typeof item.from === 'string' && typeof item.to === 'string'
+    && (item.identity === undefined || typeof item.identity === 'string' || item.identity === null));
 const historySteps = (value: unknown): value is HistoryStep[] => history(value);
 const stats = (value: unknown): value is Record<string, RowStat | null> => record(value)
   && Object.values(value).every((item) => item === null || (record(item)

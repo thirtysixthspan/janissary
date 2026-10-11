@@ -10,9 +10,10 @@ import {
   SOURCE_UNAVAILABLE_REASON,
 } from './file-operation-result.js';
 import { nextFreeName } from '../editor/next-free-name.js';
+import { fileIdentity } from './file-identity.js';
 import type { BatchResult, BulkConflictPolicy } from '../protocol.js';
 
-export type PastePair = { from: string; to: string };
+export type PastePair = { from: string; to: string; identity?: string | null };
 export type PasteManyResult =
   | { conflictPaths: string[] }
   | (BatchResult & { pairs: PastePair[]; mutated: boolean });
@@ -98,7 +99,7 @@ function performPastes(
     const result = mode === 'copy'
       ? copyItem(source.abs, target, overwrite)
       : (overwrite ? moveReplacingDestination(source.abs, target) : renamePath(source.abs, target));
-    if (result.ok) pairs.push({ from: source.abs, to: target });
+    if (result.ok) pairs.push({ from: source.abs, to: target, ...(mode === 'copy' && { identity: fileIdentity(target) ?? null }) });
     else failed.set(source.abs, result.reason);
   }
   return { pairs, failed };

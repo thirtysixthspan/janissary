@@ -587,9 +587,12 @@ the host they came from. A cross-host paste is refused with a notifications-feed
 nothing, and leaves the clipboard and its visible row marks armed.
 
 A paste is one step on the tab's own undo/redo stack, so `Cmd+Z` reverses it and `Cmd+Shift+Z`
-re-applies it. Undoing a copy-paste deletes exactly the items that paste created, with no
-confirmation; undoing a cut-paste moves them back to where they came from, even when that source
-lay in a different navigator's tree entirely. Redo re-applies either.
+re-applies it. Before undo removes a copied item, it checks that the file or directory still has
+the identity and contents recorded when the copy was made. If it changed, undo opens the usual
+conflict dialog instead of deleting the newer item; **Skip conflicts** keeps it, while choosing
+**Overwrite** explicitly allows undo to remove it. A missing copy is reported as a failed item.
+Undoing a cut-paste moves items back to where they came from, even when that source lay in a
+different navigator's tree entirely. Redo re-applies either.
 
 Copy and Paste also appear in a row's context menu, alongside **Duplicate**, which performs this
 in-place copy on the right-clicked row in one step without going through the clipboard at all. Cut

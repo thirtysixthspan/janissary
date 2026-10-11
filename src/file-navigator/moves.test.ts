@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { applyStackPaste, type HistoryStep, type PasteGroup } from './moves.js';
+import { fileIdentity } from './file-identity.js';
 import type { PastePair } from './paste.js';
 
 let roots: string[] = [];
@@ -100,6 +101,7 @@ describe('applyStackPaste', () => {
     const current = pair(root, 'folder');
     mkdirSync(path.join(current.to, 'nested'), { recursive: true });
     writeFileSync(path.join(current.to, 'nested', 'file.txt'), 'copied');
+    current.identity = fileIdentity(current.to);
     const group: PasteGroup = { mode: 'copy', pairs: [current] };
     const history = stacks(group);
     const rebuild = vi.fn();
@@ -109,6 +111,113 @@ describe('applyStackPaste', () => {
     expect(existsSync(current.to)).toBe(false);
     expect(history).toEqual({ from: [], to: [group] });
     expect(rebuild).toHaveBeenCalledOnce();
+  });
+
+  it('surfaces a conflict and preserves an edited copy destination', () => {
+    const root = temporaryRoot();
+    mkdirSync(path.join(root, 'dest'));
+    const copied = pair(root, 'a.txt');
+    writeFileSync(copied.from, 'original');
+    writeFileSync(copied.to, 'original');
+    copied.identity = fileIdentity(copied.to);
+    const group: PasteGroup = { mode: 'copy', pairs: [copied] };
+    const history = stacks(group);
+    const rebuild = vi.fn();
+    writeFileSync(copied.to, 'user edit');
+
+    expect(applyStackPaste(group, 'undo', history.from, history.to, undefined, rebuild))
+      .toEqual({ total: 1, failedPaths: [], conflict: { fromRelPath: copied.from, toRelPath: copied.to } });
+    expect(readFileSync(copied.to, 'utf8')).toBe('user edit');
+    expect(history.to).toEqual([]);
+    expect(rebuild).not.toHaveBeenCalled();
+  });
+
+  it('detects edits inside copied directories', () => {
+    const root = temporaryRoot();
+    const copied = pair(root, 'folder');
+    mkdirSync(path.join(copied.from, 'nested'), { recursive: true });
+    mkdirSync(path.join(copied.to, 'nested'), { recursive: true });
+    writeFileSync(path.join(copied.from, 'nested', 'file.txt'), 'source');
+    writeFileSync(path.join(copied.to, 'nested', 'file.txt'), 'copied');
+    copied.identity = fileIdentity(copied.to);
+    const group: PasteGroup = { mode: 'copy', pairs: [copied] };
+    const history = stacks(group);
+    writeFileSync(path.join(copied.to, 'nested', 'file.txt'), 'user edit');
+
+    expect(applyStackPaste(group, 'undo', history.from, history.to, undefined, vi.fn()))
+      .toMatchObject({ conflict: { fromRelPath: copied.from, toRelPath: copied.to } });
+    expect(readFileSync(path.join(copied.to, 'nested', 'file.txt'), 'utf8')).toBe('user edit');
+  });
+
+  it('detects a replacement even when the new file has identical contents', () => {
+    const root = temporaryRoot();
+    mkdirSync(path.join(root, 'dest'));
+    const copied = pair(root, 'a.txt');
+    const replacement = path.join(root, 'replacement.txt');
+    writeFileSync(copied.from, 'source');
+    writeFileSync(copied.to, 'same bytes');
+    copied.identity = fileIdentity(copied.to);
+    writeFileSync(replacement, 'same bytes');
+    const group: PasteGroup = { mode: 'copy', pairs: [copied] };
+    const history = stacks(group);
+    rmSync(copied.to);
+    renameSync(replacement, copied.to);
+
+    expect(applyStackPaste(group, 'undo', history.from, history.to, undefined, vi.fn()))
+      .toMatchObject({ conflict: { fromRelPath: copied.from, toRelPath: copied.to } });
+    expect(readFileSync(copied.to, 'utf8')).toBe('same bytes');
+  });
+
+  it('keeps an edited copy on skip and removes it only after explicit overwrite', () => {
+    const root = temporaryRoot();
+    mkdirSync(path.join(root, 'dest'));
+    const copied = pair(root, 'a.txt');
+    writeFileSync(copied.from, 'original');
+    writeFileSync(copied.to, 'original');
+    copied.identity = fileIdentity(copied.to);
+    const group: PasteGroup = { mode: 'copy', pairs: [copied] };
+    const history = stacks(group);
+    writeFileSync(copied.to, 'newer content');
+
+    expect(applyStackPaste(group, 'undo', history.from, history.to, 'skip-conflicts', vi.fn()))
+      .toEqual({ total: 1, failedPaths: [] });
+    expect(readFileSync(copied.to, 'utf8')).toBe('newer content');
+    expect(history.from).toEqual([group]);
+
+    expect(applyStackPaste(group, 'undo', history.from, history.to, 'overwrite-all', vi.fn()))
+      .toEqual({ total: 1, failedPaths: [] });
+    expect(existsSync(copied.to)).toBe(false);
+  });
+
+  it('treats legacy copy history without an identity as a conflict when the output exists', () => {
+    const root = temporaryRoot();
+    mkdirSync(path.join(root, 'dest'));
+    const copied = pair(root, 'a.txt');
+    writeFileSync(copied.to, 'possibly edited');
+    const group: PasteGroup = { mode: 'copy', pairs: [copied] };
+    const history = stacks(group);
+
+    expect(applyStackPaste(group, 'undo', history.from, history.to, undefined, vi.fn()))
+      .toMatchObject({ conflict: { fromRelPath: copied.from, toRelPath: copied.to } });
+    expect(readFileSync(copied.to, 'utf8')).toBe('possibly edited');
+  });
+
+  it('refreshes the recorded identity when redo creates a new copy', () => {
+    const root = temporaryRoot();
+    mkdirSync(path.join(root, 'dest'));
+    const copied = pair(root, 'a.txt');
+    writeFileSync(copied.from, 'source');
+    writeFileSync(copied.to, 'old copy');
+    copied.identity = fileIdentity(copied.to);
+    const group: PasteGroup = { mode: 'copy', pairs: [copied] };
+    const history = stacks(group);
+    expect(applyStackPaste(group, 'undo', history.from, history.to, 'overwrite-all', vi.fn()))
+      .toEqual({ total: 1, failedPaths: [] });
+    expect(applyStackPaste(group, 'redo', history.to, history.from, undefined, vi.fn()))
+      .toEqual({ total: 1, failedPaths: [] });
+    expect(history.from[0]).toMatchObject({
+      mode: 'copy', pairs: [{ identity: fileIdentity(copied.to) }],
+    });
   });
 
   it('retains a failed redo pair and pushes only the successful pair', () => {
