@@ -35,17 +35,6 @@ Proposal Risk: 2/10 - A stale edit becomes a visible retry instead of changing a
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "reject stale positional roles entry mutations". Extend the index-based intent contracts and guards in src/plugins/roles/shared.ts with an expected ordered-entry snapshot or equivalent revision bound to the caller's displayed state, and populate it from web/src/plugins/roles/RoleCard.tsx and web/src/plugins/roles/roles-dnd.ts. Compare the precondition with the current roles read inside the queue in src/plugins/roles/activate.ts before remove-entry, move-entry, or set-entry-effort applies; reject mismatches with a clear retry message and republish current state without writing. Do not match only harness/model values, since a role may hold duplicate entries. Extend src/plugins/roles/activate.test.ts for two removals from one displayed snapshot, a reorder followed by an effort edit, duplicates, and two callers sharing a snapshot; verify that stale operations never mutate the wrong row. Update web/src/plugins/roles/RolesTab.test.tsx and web/src/plugins/roles/roles-dnd.test.tsx to pin the submitted preconditions and visible rejection. The existing rapid-edit test appends two named roles and therefore cannot catch shifted entry indices.
 
 
-* Remove the new shared roles contract's dependency on the server API.
-
-Existing Issue: The roles shared contract imports isRecord from the server API even though the binding plugin rules require shared contracts to be import-free, adding a client runtime dependency through the server API's Node-bearing re-exports. Severity: 4/10
-
-Existing Risk: 4/10 - A server API export or side effect can enter the browser dependency graph through the roles payload guard and break client loading despite the guard needing only a pure object check.
-
-Proposal Risk: 1/10 - An import-free contract isolates its runtime guard from host evolution, with guard semantics and plugin chunk separation still requiring explicit coverage.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "make the roles shared contract import-free". Replace the runtime import in src/plugins/roles/shared.ts with a small local object predicate and keep all of that contract's types, constants, and guards independent of imports, following ai/guidelines/plugins-tabs.md. Keep server consumers importing the roles contract directly and the client entry in web/src/plugins/roles/index.tsx importing only its own shared contract; do not change the published server API or unrelated pre-existing shared contracts in this unit. Correct the corresponding proposed-change wording in product/plans/complete/roles-tab.md that presently prescribes the server API import. Add a regression alongside src/eslint-plugin-boundaries.test.ts or an appropriate source-dependency assertion pinning the roles shared module's lack of imports, preserve its valid payload and intent guard coverage, and verify that the production roles chunk contains no server API or Node modules. The current import reaches src/plugins/api.ts, which re-exports src/database/query.ts and src/shell/zsh-startup/script.ts, so browser safety currently depends on elimination of unrelated host exports.
-
-
 * Update the launcher user reference for the new default Roles command.
 
 Existing Issue: The default launcher rail gains Roles before Search, but its existing user reference still lists the previous command set without Roles. Severity: 3/10

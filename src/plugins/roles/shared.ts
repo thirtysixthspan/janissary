@@ -1,5 +1,3 @@
-import { isRecord } from '../api.js';
-
 export const ROLES_PAYLOAD_SCHEMA_VERSION = 1;
 
 // One harness/model/effort choice inside a role. `effort` is absent for the default (no effort
@@ -35,6 +33,13 @@ export type AddEntryIntent = { role: string; entry: RoleEntry };
 export type SetEntryEffortIntent = { role: string; index: number; effort: string | null };
 export type RemoveEntryIntent = { role: string; index: number };
 export type MoveEntryIntent = { role: string; from: number; to: number };
+
+// Hand-written rather than imported, per the plugin architecture's rule that a shared contract stays
+// import-free: the client reaches this module through `@shared/plugins/roles/shared`, so any import
+// here is a runtime dependency from a browser chunk into a server module.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 function isName(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { isRolesPayload, type RolesPayload } from './shared.js';
 
@@ -36,5 +38,15 @@ describe('the roles payload guard', () => {
     }];
 
     expect(isRolesPayload(payload(CATALOG, roles))).toBe(true);
+  });
+
+  // The client reaches this module through `@shared/plugins/roles/shared`, so an import here is a
+  // runtime dependency from a browser chunk into a server module. No lint rule covers one file, and
+  // the thirteen sibling contracts that do carry the import are out of this unit's scope, so the
+  // contract asserts its own shape where a reader of these guards already is.
+  it('declares no imports of its own', () => {
+    const source = readFileSync(path.join(import.meta.dirname, 'shared.ts'), 'utf8');
+
+    expect(source).not.toMatch(/^ *(import|export) +(type )?(\*|\{|')/m);
   });
 });
