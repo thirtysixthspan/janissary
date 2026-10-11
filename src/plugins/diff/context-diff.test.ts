@@ -80,6 +80,8 @@ describe('context guards', () => {
       instanceKey: 'diff', root: '', state: 'done', message: '', split: false, files: [file],
     };
     expect(isDiffPayload(payload)).toBe(true);
+    expect(isDiffPayload({ ...payload, branch: 'feature/diff' })).toBe(true);
+    expect(isDiffPayload({ ...payload, branch: 42 })).toBe(false);
     for (const metadata of [{ contextLines: -1 }, { contextLines: 3.5 }, { contextLines: '23' }, { contextLines: 1_000_001 },
       { expandingContext: 'yes' }, { contextError: [] }]) {
       expect(isDiffPayload({ ...payload, files: [{ ...file, ...metadata }] })).toBe(false);

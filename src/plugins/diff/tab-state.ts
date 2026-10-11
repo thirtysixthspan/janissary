@@ -43,7 +43,9 @@ function resultChanges(result: ChangeSetResult, previous: DiffFile[]): Partial<D
       return { state: 'error', message: result.reason, files: [] };
     }
     default: {
-      return { state: 'done', message: '', files: preserveContextErrors(result.files, previous) };
+      return {
+        state: 'done', message: '', files: preserveContextErrors(result.files, previous), branch: result.branch,
+      };
     }
   }
 }

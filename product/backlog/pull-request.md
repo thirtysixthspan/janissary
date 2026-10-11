@@ -2,6 +2,4 @@
 
 # pull-request
 
-* diff on remote tab should have host then path then branch aligned to the left, same rendering as in the file navigator metadata bar.
-
 * the tab label for a diff tab should be 'diff: <workspace label>'

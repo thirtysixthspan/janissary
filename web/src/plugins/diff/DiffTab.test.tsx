@@ -109,11 +109,23 @@ describe('DiffTab', () => {
     expect(container.querySelector('.diff-body')?.hasAttribute('title')).toBe(false);
   });
 
-  // A remote workspace's root is a path on the far side, so the header names the host it was read
-  // on rather than leaving the reader to wonder which machine `$workspace` belongs to.
-  it('names the host the changes were read on', () => {
-    renderTab(payload({ root: '$workspace/demir', host: 'devbox', workspace: true }));
-    expect(screen.getByText('on devbox')).toBeTruthy();
+  it('renders remote host, root, and branch in the file navigator metadata order', () => {
+    const { container } = renderTab(payload({
+      root: '$workspace/demir', host: 'devbox', branch: 'feature/remote', workspace: true,
+    }));
+    const metadata = container.querySelector('.diff-meta-items');
+    const items = metadata ? [...metadata.children] : [];
+
+    expect(metadata).toHaveClass('files-meta');
+    expect(items.map((item) => item.textContent)).toEqual([
+      'devbox', '$workspace/demir', 'feature/remote',
+    ]);
+  });
+
+  it('does not show a branch on the project-root diff', () => {
+    const { container } = renderTab(payload({ branch: 'main' }));
+
+    expect(container.querySelector('.diff-branch')).toBeNull();
   });
 
   it('says nothing about a host for a local root', () => {

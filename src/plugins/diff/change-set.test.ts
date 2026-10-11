@@ -48,6 +48,15 @@ describe('readChangeSet', () => {
     expect(untracked?.deletions).toBe(0);
   });
 
+  it('includes the checked-out branch with a successful change set', async () => {
+    initRepo(root);
+    execSync('git checkout -b feature/diff', { cwd: root, stdio: 'pipe' });
+    writeFileSync(path.join(root, 'tracked.txt'), 'committed');
+    commitAll(root, 'init');
+
+    expect(await readChangeSet(root)).toMatchObject({ kind: 'files', branch: 'feature/diff' });
+  });
+
   it('reports a deleted file', async () => {
     initRepo(root);
     writeFileSync(path.join(root, 'gone.txt'), 'content');
@@ -149,6 +158,7 @@ describe('isChangeSetResult', () => {
     expect(isChangeSetResult({ kind: 'error', reason: 'git diff failed' })).toBe(true);
     expect(isChangeSetResult({ kind: 'files', files: [fileRecord] })).toBe(true);
     expect(isChangeSetResult({ kind: 'files', files: [] })).toBe(true);
+    expect(isChangeSetResult({ kind: 'files', files: [], branch: 'feature/diff' })).toBe(true);
   });
 
   it('refuses an error result whose reason is not a string', () => {
@@ -161,6 +171,7 @@ describe('isChangeSetResult', () => {
     expect(isChangeSetResult({ kind: 'files', files: 'a.txt' })).toBe(false);
     expect(isChangeSetResult({ kind: 'files', files: [{}] })).toBe(false);
     expect(isChangeSetResult({ kind: 'files', files: [{ ...fileRecord, additions: 'one' }] })).toBe(false);
+    expect(isChangeSetResult({ kind: 'files', files: [], branch: 42 })).toBe(false);
   });
 
   it('refuses a kind outside the three, and anything not an object', () => {

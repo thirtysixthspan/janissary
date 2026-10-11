@@ -71,11 +71,16 @@ export function DiffTab({
 
   return (
     <div className="plugin-tab diff-tab" data-doc-shot="diff-tab">
-      <div className="plugin-meta">
-        <span className="plugin-loc diff-root" title={payload.root}>{payload.root}</span>
-        {payload.host !== undefined && (
-          <span className="plugin-loc diff-host" title={`Read on ${payload.host}`}>on {payload.host}</span>
-        )}
+      <div className="plugin-meta diff-meta">
+        <div className="files-meta diff-meta-items">
+          {payload.host !== undefined && (
+            <span className="files-loc diff-host" aria-label="Remote host" title={`Remote: ${payload.host}`}>
+              {payload.host}
+            </span>
+          )}
+          <span className="files-loc diff-root" title={payload.root}>{payload.root}</span>
+          {payload.workspace === true && payload.branch && <span className="files-branch diff-branch">{payload.branch}</span>}
+        </div>
         <span className="plugin-actions">
           <span className="diff-view">
             <button

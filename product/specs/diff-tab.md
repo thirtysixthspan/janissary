@@ -36,8 +36,9 @@ metadata row's ➕ opens a sibling shell in the same one — share one diff tab,
 changes.
 
 The header names the directory being diffed in the application's own abbreviated form — `$root` for the
-launch directory, `$workspace/<name>` for a workspace clone, `~` for a path under home. A workspace on another host is
-named after that host, the way a remote tab's metadata row carries a host chip.
+launch directory, `$workspace/<name>` for a workspace clone, `~` for a path under home. Workspace metadata is
+aligned on the left in host, path, branch order, matching the file navigator's metadata row. A workspace on another
+host shows its host first; a workspace with a checked-out branch shows that branch last.
 
 ### A workspace on another host
 

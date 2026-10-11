@@ -50,6 +50,15 @@ async function loaded(record = file()) {
 }
 
 describe('diff full-file session', () => {
+  it('publishes the branch returned with a change set', async () => {
+    read.mockResolvedValueOnce({ ...result(), branch: 'feature/remote' });
+    const value = host();
+    value.session.open('/project/one', { root: '/project/one' });
+
+    await vi.waitFor(() => { expect(value.updates.at(-1)?.branch).toBe('feature/remote'); });
+    value.session.dispose();
+  });
+
   it.each([{ binary: true }, { added: true }, { deleted: true }, { hunks: [] }])
     ('rejects full-file view for an ineligible record: %j', async (overrides) => {
       const { session } = await loaded(file(overrides));

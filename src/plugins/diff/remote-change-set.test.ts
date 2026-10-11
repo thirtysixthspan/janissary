@@ -27,7 +27,7 @@ function capabilitiesAnswering(answer: unknown | Promise<unknown> | null) {
 
 describe('readRemoteChangeSet', () => {
   it('passes a well-formed files answer through as the change set the tab shows', async () => {
-    const answer = { kind: 'files', files: [fileRecord()] };
+    const answer = { kind: 'files', files: [fileRecord()], branch: 'feature/remote' };
     const { capabilities, readWorkspaceChangeSet } = capabilitiesAnswering(Promise.resolve(answer));
 
     expect(await readRemoteChangeSet(capabilities, new Set())).toEqual(answer);

@@ -1,4 +1,4 @@
-export const DIFF_PAYLOAD_SCHEMA_VERSION = 8;
+export const DIFF_PAYLOAD_SCHEMA_VERSION = 9;
 
 // One line of a hunk. `kind` is which side git printed it on; `number` is the line's number on that
 // side — the old-side number for a removed line, the new-side number for an added or context one — so
@@ -63,6 +63,8 @@ export type DiffPayload = {
   // The host a remote workspace's changes are read on, and the tab name that names it — both
   // server-decided display facts the client renders rather than computing.
   host?: string;
+  // The checked-out branch where the workspace change set was read. Absent when git cannot name one.
+  branch?: string;
   // Set on a workspace diff and absent on the project-root one, because the two behave differently
   // when the workspace under them disappears: the tab closes itself rather than saying a directory
   // is not a repository.
@@ -131,6 +133,7 @@ export function isDiffPayload(value: unknown): value is DiffPayload {
     && Array.isArray(value.files)
     && value.files.every(isDiffFile)
     && isOptionalString(value.host)
+    && isOptionalString(value.branch)
     && (value.workspace === undefined || typeof value.workspace === 'boolean');
 }
 
