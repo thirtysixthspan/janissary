@@ -24,7 +24,7 @@ function remoteNavigator() {
       statRows: () => Promise.resolve({}),
     },
     expanded: new Set<string>(),
-    watchers: new Map(),
+    watchers: new Map(), pendingWatchers: new Map(),
     listings: new Map<string, FileNavigatorEntry[]>(),
     listingLoads: new Map<string, symbol>(),
     statLoads: new Map<string, symbol>(),

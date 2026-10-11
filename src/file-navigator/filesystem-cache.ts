@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { buildRows, parentPath } from './index.js';
 import { markStats } from './stats.js';
+import { unwatchDir } from './watch.js';
 import type { FilesTabState } from './state.js';
 import type { FileNavigatorRow } from '../tab/types.js';
 
@@ -105,8 +106,7 @@ export function pruneCachedRows(state: FilesTabState, onReady: () => void): File
   for (const relPath of state.expanded) {
     if (directories.has(relPath) || !state.listings.has(parentPath(relPath))) continue;
     state.expanded.delete(relPath);
-    state.watchers.get(relPath)?.stop();
-    state.watchers.delete(relPath);
+    unwatchDir(state, relPath);
   }
   return rows;
 }
