@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { FileNavigatorDetail } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 
 export function useFileNavigatorIntents(client: JanusClient, index: number) {
   const sendCommand = useCallback((text: string) => {

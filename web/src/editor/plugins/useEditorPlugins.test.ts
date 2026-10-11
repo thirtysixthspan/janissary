@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../../shared/ws/ws';
 import type { KeyLike } from '../keys';
 import type { EditorState } from '../model';
 import type { EditorApi } from '../useEditor';

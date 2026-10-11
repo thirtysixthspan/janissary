@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { StateEvent } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { NativeNotifications } from './native-notifications';
 import { createAlertPlacement, type DockedAlertSelection } from './alert-placement';
 

@@ -3,7 +3,7 @@ import { act, createEvent, fireEvent, render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import type { HarnessView, RemoteTargetView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { HarnessTab } from './HarnessTab';
 import { harnessDropHandle } from '../shared/drop-registry';
 import { terminalSelectionText } from '../shared/terminal/terminal/selection';

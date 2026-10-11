@@ -1,6 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { EditorView, TabView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { useEditor } from './useEditor';
 import { useEditorFile } from './useEditorFile';
 import { useEditorLineJump } from './useEditorLineJump';

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { act, render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { Sidebar, DEFAULT_WIDTH_PX } from './Sidebar';
 
 // A drag needs the width prop to actually move the rendered flex value, so the drag-clamp tests

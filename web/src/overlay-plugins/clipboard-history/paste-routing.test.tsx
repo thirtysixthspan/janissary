@@ -7,7 +7,7 @@ import { createPasteCapability } from '../../paste-into-surface';
 import { closeContributedOverlay, isContributedOverlayOpen, openContributedOverlay, registerContributedOverlay } from '../../shared/contributed-overlays';
 import { registerEditorDrop } from '../../shared/drop-registry';
 import { registerTerminalSelection, unregisterTerminalSelection } from '../../shared/terminal/terminal/selection';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../../shared/ws/ws';
 
 // The whole route from a chosen row to the surface the user was typing in: the plugin's module, the
 // seam it registers on, and the paste capability the app shell injects, with nothing stubbed between

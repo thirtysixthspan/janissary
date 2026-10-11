@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from './ws/ws';
 import { nextDock, dockTooltip } from './dock-cycle';
 import { dockSwapIcon } from './icons';
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { useProjectTitle } from './useProjectTitle';
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { ContextMenu } from '../shared/ContextMenu';
 import { defaultMenuGroups } from './default-menu-target';
 import { pasteInto } from './clipboard-commands';

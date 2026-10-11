@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { SYNTAX_THEMES } from '@shared/syntax-themes';
 import { APP_THEMES } from '@shared/app-themes';
 import { handlePickerKey, handleTabNavKey, handleQueueKey } from './keyboard-handlers';

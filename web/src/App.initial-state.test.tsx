@@ -3,7 +3,7 @@ import { render, screen, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import type { StateEvent, TabView } from '@shared/protocol';
 import { App } from './App';
-import { JanusClient } from './ws';
+import { JanusClient } from './shared/ws/ws';
 
 vi.mock('./shared/terminal/useXterm', () => ({
   useXterm: () => ({ focus: vi.fn(), selection: { view: null, holds: () => false, text: () => '', clear: () => {} } }),

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
 import React from 'react';
-import type { JanusClient, RequestResult } from '../ws';
+import type { JanusClient, RequestResult } from '../shared/ws/ws';
 import { useQuickOpen } from './useQuickOpen';
 
 function TestComponent({ client, onHook }: { client: JanusClient; onHook: (hook: ReturnType<typeof useQuickOpen>) => void }) {

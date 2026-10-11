@@ -2,7 +2,7 @@ import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useAppWindowKeys } from './useAppWindowKeys';
 import type { StateSnapshot, Callbacks } from './useWindowKeys';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { createPluginChordRegistry } from './plugins/PluginChords';
 
 vi.mock('./useWindowKeys', () => ({

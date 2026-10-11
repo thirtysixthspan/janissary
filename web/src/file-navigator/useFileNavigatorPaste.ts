@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react';
 import type { BulkConflictPolicy, FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { newFileTargetDir } from './file/navigator-new-file';
 import { clearClipboard, getClipboardSnapshot, pendingClipboardMode, subscribeClipboard, type ClipboardMode } from './file/navigator-clipboard';
 import { basename, dirname } from '../shared/rel-path';

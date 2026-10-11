@@ -10,7 +10,7 @@ import type { useEditorPlugins } from './plugins/useEditorPlugins';
 
 type EditorPluginsModule = { useEditorPlugins: typeof useEditorPlugins };
 import type { DirtyTabHandle } from '../shared/tab/handles';
-import type { JanusClient, RequestResult } from '../ws';
+import type { JanusClient, RequestResult } from '../shared/ws/ws';
 
 // A disabled plugin stops claiming its chords (plugins/host.ts filters them out of `bindings()`),
 // which is the only way a yielded chord goes unclaimed. Flipping this flag simulates that without

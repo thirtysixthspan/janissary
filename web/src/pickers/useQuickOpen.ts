@@ -1,5 +1,5 @@
 import { useCallback, useDeferredValue, useMemo, useRef, useState } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { fuzzyMatch, type FuzzyMatchResult } from '../shared/fuzzy-match';
 
 const RESULT_CAP = 10;

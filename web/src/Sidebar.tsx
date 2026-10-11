@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { FileNavigatorTab } from './file-navigator/FileNavigatorTab';
 import { NotificationsTab } from './notifications/NotificationsTab';
 import { DockedPluginBody } from './plugins/DockedPluginBody';

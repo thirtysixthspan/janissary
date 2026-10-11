@@ -1,4 +1,4 @@
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { useToasts } from './useToasts';
 
 // The window's upper-right corner: a fixed stack of transient notification lines, shown when no

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabView } from '../shared/tab/view-guards';
 import type { HarnessTabHandle } from '../shared/tab/handles';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { HarnessTabLayer } from './HarnessTabLayer';
 
 vi.mock('./HarnessTab', () => {

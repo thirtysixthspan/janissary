@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, render } from '@testing-library/react';
 import React, { createRef } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { usePickerOverlays } from './usePickerOverlays';
 import { buildOverlayOpenState, firstOpenOverlay } from './overlay-registry';
 

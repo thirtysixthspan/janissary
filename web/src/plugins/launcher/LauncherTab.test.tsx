@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isLauncherPayload, type LauncherCommand, type LauncherPayload, type LauncherTabRow } from '@shared/plugins/launcher/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { AcpResponseScope } from '../../shared/acp/AcpResponseScope';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../../shared/ws/ws';
 import { LauncherTab } from './LauncherTab';
 
 function client(): JanusClient {

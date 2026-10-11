@@ -11,7 +11,7 @@ import type { useFileNavigatorOpener } from './useFileNavigatorOpener';
 import type { useFileNavigatorCommit } from './useFileNavigatorCommit';
 import type { FileNavigatorMenuActions } from './file/navigator-menu-items';
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { createFileNavigatorActions } from './file/navigator-menu-actions';
 import { normalizeOperationPaths } from './file/navigator-selection';
 

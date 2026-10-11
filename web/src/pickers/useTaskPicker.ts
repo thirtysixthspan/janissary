@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TaskRow } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import type { PluginCommandLineInsertions } from '../shared/command-bar/AppCommandBar';
 import { flattenVisibleTaskRows, taskRowKey, type TaskRowIdentity } from './task-picker-keys';

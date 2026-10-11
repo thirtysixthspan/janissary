@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { useFileNavigatorDrag as useFileNavigatorDragImplementation } from './useFileNavigatorDrag';
 import type { CommandInputDropHandle, EditorDropHandle, HarnessDropHandle } from '../shared/drop-handles';
 import { registerCommandBarDrop, registerEditorDrop, registerHarnessDrop } from '../shared/drop-registry';

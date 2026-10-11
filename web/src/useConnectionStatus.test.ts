@@ -1,8 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { useConnectionStatus } from './useConnectionStatus';
-import type { ConnectionPhase } from './reconnect-policy';
-import type { JanusClient } from './ws';
+import type { ConnectionPhase } from './shared/ws/reconnect-policy';
+import type { JanusClient } from './shared/ws/ws';
 
 afterEach(() => vi.useRealTimers());
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { sidebarSelectionFor } from './sidebar-selection-coordinator';
 
 type SidebarEntry = { tab: TabView; index: number };

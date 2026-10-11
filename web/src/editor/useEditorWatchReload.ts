@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { EditorApi } from './useEditor';
 
 // Live-reload from disk when another process changes the file, as long as the user hasn't

@@ -2,7 +2,7 @@ import type React from 'react';
 import { useMemo } from 'react';
 import type { ProfileRow, TabView, TaskRow } from '@shared/protocol';
 import type { PickerCommands } from '../shared/command-bar/picker-commands';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 import type { PluginCommandLineInsertions } from '../shared/command-bar/AppCommandBar';
 import { hostsCommandBar } from '../shared/command-bar/hosts-command-bar';

@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render as renderBare, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { Sidebar } from '../Sidebar';
 import { createPluginHost, PluginHostProvider, type PluginHost } from './host';
 import { clientPlugin, type ClientPluginRegistration } from './registry';

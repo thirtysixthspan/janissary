@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Terminal } from '@xterm/xterm';
 import type { HarnessView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { HarnessTab } from './harness/HarnessTab';
 import { DefaultContextMenu } from './context-menu/DefaultContextMenu';
 

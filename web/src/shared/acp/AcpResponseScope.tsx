@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../ws/ws';
 import { AcpResponsePanel } from './AcpResponsePanel';
 import { QuestionPanel } from '../questions/QuestionPanel';
 

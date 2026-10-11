@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { ScheduleDialog, resetScheduleDialogMemory } from './ScheduleDialog';
 
 const view = { targets: ['janus', 'claude'], active: 'janus' };

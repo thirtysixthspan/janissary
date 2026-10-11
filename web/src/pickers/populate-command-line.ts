@@ -1,4 +1,4 @@
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { CommandInputDropHandle } from '../shared/drop-handles';
 
 // Populate the command line with `text` (via the shared recall ref) without submitting it — or,

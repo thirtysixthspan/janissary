@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import type { TabView, HarnessLaunchView, ScheduleLaunchView, TaskRow, ProfileRow } from '@shared/protocol';
 import { closeQuitsApp } from '@shared/tab/placement';
 import { AppMain } from './AppMain';

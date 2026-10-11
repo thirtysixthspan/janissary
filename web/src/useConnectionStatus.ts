@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { JanusClient } from './ws';
-import type { ConnectionPhase } from './reconnect-policy';
+import type { JanusClient } from './shared/ws/ws';
+import type { ConnectionPhase } from './shared/ws/reconnect-policy';
 
 export type ConnectionStatus = ConnectionPhase | 'reconnected';
 

@@ -5,7 +5,7 @@ import { resourceUrl } from './session-url';
 import { SocketConnection } from './ws-connection';
 import { RpcExchange, type RequestResult } from './rpc-exchange';
 import type { ConnectionPhase } from './reconnect-policy';
-import { NotificationEventListeners, type NotificationsRevealListener, type ToastClearListener, type ToastListener } from './toasts/notification-event-listeners';
+import { NotificationEventListeners, type NotificationsRevealListener, type ToastClearListener, type ToastListener } from './notification-event-listeners';
 
 export type { RequestResult } from './rpc-exchange';
 

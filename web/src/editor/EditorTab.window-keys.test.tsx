@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent, createEvent } from '@testing-librar
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { EditorView, TabView } from '@shared/protocol';
 import { EditorTab } from './EditorTab';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 
 function makeView(): EditorView {
   return { name: 'notes.txt', path: '/home/user/notes.txt', size: '12 B', url: '/open/1' };

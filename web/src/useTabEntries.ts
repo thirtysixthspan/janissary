@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { TabView } from '@shared/protocol';
 import { isCenterActionTab, isReportingTab } from '@shared/tab/placement';
 import type { TabEntry } from './tab-entries';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 
 export function reorderTabEntries(
   client: JanusClient, entries: TabEntry[], from: number, to: number,

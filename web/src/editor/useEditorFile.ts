@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { EditorView } from '@shared/protocol';
 import { SAVE_CONFLICT_ERROR } from '@shared/editor/save-conflict';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { toText } from './model';
 import type { EditorApi } from './useEditor';
 import { useEditorWatchReload } from './useEditorWatchReload';

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { remoteSessionControl } from './remote-session-control';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from './ws/ws';
 import type { RemoteTargetView } from '@shared/protocol';
 
 // One RPC carries both verbs, so the only thing a call site can get wrong is which tab is being

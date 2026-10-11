@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { useLayoutState } from './useLayoutState';
 import { DEFAULT_WIDTH_PX } from './Sidebar';
 import { DEFAULT_PCT } from './ReportingSection';

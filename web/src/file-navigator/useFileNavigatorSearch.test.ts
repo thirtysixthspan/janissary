@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { useFileNavigatorSearch } from './useFileNavigatorSearch';
 
 function makeRows(): FileNavigatorRow[] {

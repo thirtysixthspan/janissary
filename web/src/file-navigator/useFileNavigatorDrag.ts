@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { parentPath, resolveDropTarget, type DropTarget } from './file/navigator-drag';
 import { hoveredEditor, hoveredElement, hoveredHarnessPty, hoveredRowInfo } from './drag-hover';
 import { joinCommandPaths, joinDropFileNames } from './file/navigator-relative-path';

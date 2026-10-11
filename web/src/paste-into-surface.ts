@@ -1,5 +1,5 @@
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import { editorDropHandle } from './shared/drop-registry';
 import { isTextEntryElement } from './shared/text-entry';

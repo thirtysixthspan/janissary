@@ -3,7 +3,7 @@ import { fireEvent, render } from '@testing-library/react';
 import React from 'react';
 import { AppReportingSection } from './AppReportingSection';
 import type { ReportingEntry } from './ReportingSection';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import type { TabView } from '@shared/protocol';
 
 // The reporting section's strip is a drag surface over the *reporting rows*, while the reorder RPC

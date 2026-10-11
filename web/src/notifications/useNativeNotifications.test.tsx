@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import type { NativeNotificationEvent, StateEvent } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { useNativeNotifications } from './useNativeNotifications';
 
 it('subscribes once to state and alert events and releases both on unmount', () => {

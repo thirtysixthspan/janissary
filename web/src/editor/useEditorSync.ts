@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EditorState } from './model';
 import { toText } from './model';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { DraftSync } from './draft-sync';
 
 // Longer than syntax highlighting's local recompute (100ms): a monitor observing the draft doesn't

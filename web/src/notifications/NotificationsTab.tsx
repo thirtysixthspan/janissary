@@ -1,6 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import type { BufferLine } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { Transcript } from '../shared/transcript/Transcript';
 import { DockCycleHeader } from '../shared/DockCycleHeader';
 import { onNotificationsKey } from './feed-keys';

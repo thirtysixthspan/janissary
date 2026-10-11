@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../../shared/ws/ws';
 import { createFileNavigatorActions } from './navigator-menu-actions';
 
 const rows: FileNavigatorRow[] = [

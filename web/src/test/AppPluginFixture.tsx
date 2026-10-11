@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { AppCommandBarTabScope, useAppCommandBar } from '../shared/command-bar/AppCommandBar';
 
 function FixtureBar({ client, onSplit }: { client: JanusClient; onSplit?: () => void }) {

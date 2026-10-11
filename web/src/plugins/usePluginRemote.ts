@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { RemoteTargetView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { remoteSessionControl } from '../shared/remote-session-control';
 
 // Tab views are rebuilt on each server snapshot. Keep the remote capability values stable when

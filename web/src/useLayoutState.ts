@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { DEFAULT_WIDTH_PX } from './Sidebar';
 import { DEFAULT_PCT } from './ReportingSection';
 

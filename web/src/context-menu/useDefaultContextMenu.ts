@@ -3,7 +3,7 @@ import { editorSelectionText, resolveDefaultMenuTarget, type DefaultMenuTarget }
 import { clearTerminalSelection, terminalSelectionText } from '../shared/terminal/terminal/selection';
 import { openOverlayForCommand } from '../shared/contributed-overlays';
 import type { DefaultMenuEntry } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 
 export type PendingDefaultMenu = DefaultMenuTarget & { x: number; y: number };
 

@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import type { JanusClient, StateListener } from '../ws';
+import type { JanusClient, StateListener } from '../shared/ws/ws';
 import type { StateEvent } from '@shared/protocol';
 import { subscribeBackgroundReplies } from './background-replies';
 
