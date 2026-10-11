@@ -86,9 +86,16 @@ function liveState(channel: SessionChannel): RemoteSessionView['state'] {
 // backoff is already running, so pressing it collapses the wait exactly as the system resume signal
 // does. It is the same verb as a parked session's because it is the same request — bring this back —
 // and the row's state is what says which kind of waiting it ends.
+//
+// `diff` belongs on every row of a live channel, on the same reasoning as `detach`: one channel holds
+// one workspace, so every row of it is looking at the same changes and the same diff tab. It is a
+// read, so it asks nothing of the connection — and the row's state is what says whether there is
+// anything to read yet, which the host's own `openSibling` guard answers for a request that reached
+// it anyway.
 function liveActions(launching: boolean, reconnecting: boolean, terminable: boolean): RemoteSessionAction[] {
-  if (!launching) return ['focus', 'close'];
+  if (!launching) return ['focus', 'close', 'diff'];
   const actions: RemoteSessionAction[] = reconnecting ? ['focus', 'attach', 'detach'] : ['focus', 'detach'];
+  actions.push('diff');
   if (terminable) actions.push('terminate');
   return actions;
 }

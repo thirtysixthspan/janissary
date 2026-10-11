@@ -74,6 +74,25 @@ describe('renderMarkdown', () => {
     expect(out).toContain('&lt;label&gt;');
   });
 
+  it('renders diff refusal placeholders literally in the transcript', async () => {
+    await withRealParse();
+    const { renderMarkdown } = await import('./markdown');
+    const messages = [
+      String.raw`Cannot diff on \<no-such-tab\>: no open shell or harness tab named "no-such-tab" has a workspace.`,
+      String.raw`Usage: diff [path] [on \<tab name\>]`,
+    ];
+    const visibleText = messages.map((message) => {
+      const html = renderMarkdown(message);
+      const host = document.createElement('div');
+      host.innerHTML = html ?? '';
+      return host.textContent;
+    });
+    expect(visibleText).toEqual([
+      'Cannot diff on <no-such-tab>: no open shell or harness tab named "no-such-tab" has a workspace.\n',
+      'Usage: diff [path] [on <tab name>]\n',
+    ]);
+  });
+
   it('renders a bare angle-bracket placeholder as raw HTML, dropping its text', async () => {
     const out = await sanitize('Usage: harness <claude|opencode|codex> as <label>.');
     const host = document.createElement('div');

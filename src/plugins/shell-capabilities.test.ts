@@ -90,11 +90,21 @@ describe('originTab', () => {
   });
 
   it('reports a tab whose session runs on another host as remote', () => {
-    const { byLabel, managers } = makeManagers();
+    const { byLabel, managers } = makeManagers({ remote: { workspaceOf: () => '/srv/work' } } as never);
     byLabel.mockReturnValue({ label: 'janus', remote: { address: 'box', host: 'box' } } as never);
 
     expect(contextFor(['originTab'], managers).originTab()).toEqual({
       label: 'janus', cwd: '/repo', root: '/repo', remote: true,
+      workspace: { dir: '/srv/work', offline: false },
+    });
+  });
+
+  it('reports a remote tab whose far-side workspace has not answered as provisioning', () => {
+    const { byLabel, managers } = makeManagers({ remote: { workspaceOf: vi.fn() } } as never);
+    byLabel.mockReturnValue({ label: 'janus', remote: { address: 'box', host: 'box' } } as never);
+
+    expect(contextFor(['originTab'], managers).originTab()).toEqual({
+      label: 'janus', cwd: '/repo', root: '/repo', remote: true, provisioning: true,
     });
   });
 

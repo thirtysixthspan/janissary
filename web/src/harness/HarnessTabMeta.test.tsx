@@ -579,5 +579,20 @@ describe('HarnessTabMeta', () => {
       render(<HarnessTabMeta cwd="~/project" />);
       expect(screen.queryByRole('button', { name: 'Show diff in the workspace' })).not.toBeInTheDocument();
     });
+
+    it('offers the workspace diff on a remote workspaced tab, its host chip beside it', () => {
+      const onOpenDiffHere = vi.fn();
+      render(<HarnessTabMeta
+        cwd="~/project"
+        flags={['workspaced']}
+        remote={{ address: 'ssh://devbox', host: 'devbox' }}
+        onOpenDiffHere={onOpenDiffHere}
+      />);
+      const button = screen.getByRole('button', { name: 'Show diff in the workspace' });
+      expect(button).toBeInTheDocument();
+      expect(screen.getByText('devbox')).toBeInTheDocument();
+      fireEvent.click(button);
+      expect(onOpenDiffHere).toHaveBeenCalledTimes(1);
+    });
   });
 });

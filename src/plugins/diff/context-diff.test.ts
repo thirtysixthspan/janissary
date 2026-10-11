@@ -76,8 +76,12 @@ describe('context guards', () => {
     expect(isContextIntent({ path: 'a.ts', fullFile: true })).toBe(true);
     expect(isContextIntent({ path: 'a.ts', fullFile: false })).toBe(true);
     const file = { path: 'a.ts', additions: 0, deletions: 0, hunks: [], contextLines: 1_000_000 };
-    const payload = { root: '', state: 'done', message: '', split: false, files: [file] };
+    const payload = {
+      instanceKey: 'diff', root: '', state: 'done', message: '', split: false, files: [file],
+    };
     expect(isDiffPayload(payload)).toBe(true);
+    expect(isDiffPayload({ ...payload, branch: 'feature/diff' })).toBe(true);
+    expect(isDiffPayload({ ...payload, branch: 42 })).toBe(false);
     for (const metadata of [{ contextLines: -1 }, { contextLines: 3.5 }, { contextLines: '23' }, { contextLines: 1_000_001 },
       { expandingContext: 'yes' }, { contextError: [] }]) {
       expect(isDiffPayload({ ...payload, files: [{ ...file, ...metadata }] })).toBe(false);

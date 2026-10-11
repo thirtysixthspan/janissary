@@ -20,10 +20,13 @@ export const diffManifest = {
   command: 'diff',
   capabilities: [
     'openOrFocusTab',
+    'launchTab',
     'updateTab',
     'openInEditor',
     'originTab',
     'dispatchLineWithOutput',
+    'readWorkspaceChangeSet',
+    'materializeRemoteFile',
     'readSettings',
     'saveSettings',
     'rejectRequest',

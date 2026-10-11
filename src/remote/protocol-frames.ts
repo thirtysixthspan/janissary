@@ -12,7 +12,7 @@ import type { HistoryStep } from '../file-navigator/moves.js';
 export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
   | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
-  | 'create-file' | 'create-directory' | 'replay';
+  | 'create-file' | 'create-directory' | 'replay' | 'change-set';
 
 export type RemoteFilesystemArgumentsByOperation = {
   'read-directory': { path: string };
@@ -33,6 +33,7 @@ export type RemoteFilesystemArgumentsByOperation = {
   'create-file': { destination: string };
   'create-directory': { destination: string };
   'git-commit': { message: string; paths: string[]; root?: string };
+  'change-set': { fullFiles: string[] };
   replay: {
     undoStack: HistoryStep[]; redoStack: HistoryStep[]; direction: 'undo' | 'redo';
     overwrite: boolean; skipConflicts: boolean;

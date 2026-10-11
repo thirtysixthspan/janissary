@@ -129,6 +129,23 @@ describe('SessionList buttons', () => {
     expect(screen.queryByLabelText('Terminate claude')).not.toBeInTheDocument();
   });
 
+  // The row's diff verb reads the workspace the channel already holds, so it carries the same
+  // plus-minus the metadata rows do and raises the same verb name.
+  it('raises the diff verb on a row that carries it', () => {
+    const { intent, value } = capabilities();
+    list([row({ actions: ['focus', 'close', 'diff'] })], value);
+    const button = screen.getByLabelText('Show diff in the workspace claude');
+    expect(button).toHaveAttribute('title', 'Show diff in the workspace');
+    fireEvent.click(button);
+    expect(intent).toHaveBeenCalledWith('diff', { id: 'claude' });
+  });
+
+  it('draws the plus-minus for the diff verb', () => {
+    const { container } = list([row({ actions: ['diff'] })]);
+    expect(container.querySelector<SVGElement>(':scope [data-action="diff"] svg')?.dataset.icon)
+      .toBe('plus-minus');
+  });
+
   // Attach and detach carry the connection's directional plug glyphs. The two actions that end a
   // session or close a row instead share the unmistakable closing glyph.
   it('draws directional plugs and circle-xmarks for closing actions', () => {
@@ -167,6 +184,20 @@ describe('SessionList buttons', () => {
   it('disables detach while the workspace is still provisioning', () => {
     list([row({ state: 'provisioning' })]);
     expect(screen.getByLabelText('Detach claude')).toBeDisabled();
+  });
+
+  // The button is drawn from the moment the row appears, so the control does not jump once the clone
+  // lands; the row's state is what says there is nothing to read yet.
+  it('draws the diff button on a provisioning row, unpressable, and pressable once it is active', () => {
+    const { container, unmount } = list([
+      row({ state: 'provisioning', actions: ['focus', 'detach', 'diff'] }),
+    ]);
+    expect(container.querySelector('[data-action="diff"]')).toBeInTheDocument();
+    expect(screen.getByLabelText('Show diff in the workspace claude')).toBeDisabled();
+    unmount();
+
+    list([row({ state: 'active', actions: ['focus', 'detach', 'diff'] })]);
+    expect(screen.getByLabelText('Show diff in the workspace claude')).toBeEnabled();
   });
 
   // A second End would open a second ssh connection to the same peer and leak the first, since the
@@ -370,6 +401,11 @@ describe('SessionList docked layout', () => {
   it('keeps detach disabled while provisioning', () => {
     list([row({ state: 'provisioning' })], capabilities('left').value);
     expect(screen.getByLabelText('Detach claude')).toBeDisabled();
+  });
+
+  it('keeps the diff button disabled while provisioning in the docked layout too', () => {
+    list([row({ state: 'provisioning', actions: ['focus', 'diff'] })], capabilities('left').value);
+    expect(screen.getByLabelText('Show diff in the workspace claude')).toBeDisabled();
   });
 
   it('keeps attach and terminate disabled during termination', () => {

@@ -28,6 +28,14 @@ export function DiffTab({
   useDiffRefresh(useCallback(() => capabilities.intent('refresh', {}), [capabilities]));
   const walk = useHunkWalk(files);
 
+  // A workspace diff whose workspace is gone — the clone deleted, the remote session ended — has
+  // nothing left to read, so it closes itself rather than sitting on a directory that is not there.
+  // The project-root diff says so instead: a directory that is not a repository there is an answer,
+  // not a loss.
+  React.useEffect(() => {
+    if (payload.workspace === true && payload.state === 'not-repository') capabilities.close();
+  }, [payload.workspace, payload.state, capabilities]);
+
   const openFile = useCallback((path: string) => {
     void capabilities.intent('open', { path, line: 1 });
   }, [capabilities]);
@@ -63,8 +71,16 @@ export function DiffTab({
 
   return (
     <div className="plugin-tab diff-tab" data-doc-shot="diff-tab">
-      <div className="plugin-meta">
-        <span className="plugin-loc diff-root" title={payload.root}>{payload.root}</span>
+      <div className="plugin-meta diff-meta">
+        <div className="files-meta diff-meta-items">
+          {payload.host !== undefined && (
+            <span className="files-loc diff-host" aria-label="Remote host" title={`Remote: ${payload.host}`}>
+              {payload.host}
+            </span>
+          )}
+          <span className="files-loc diff-root" title={payload.root}>{payload.root}</span>
+          {payload.workspace === true && payload.branch && <span className="files-branch diff-branch">{payload.branch}</span>}
+        </div>
         <span className="plugin-actions">
           <span className="diff-view">
             <button

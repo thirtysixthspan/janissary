@@ -21,6 +21,7 @@ import type { UndoRedoResult } from '../protocol.js';
 import type { HistoryStep } from './moves.js';
 import type { MaybePromise } from '../maybe-promise.js';
 import { replayHistory } from './manager/history.js';
+import { readChangeSet } from '../plugins/diff/change-set.js';
 
 export type WatchHandle = { stop: () => void };
 export type GitMetadata = {
@@ -74,6 +75,11 @@ export interface FileSystemPort {
   // Resolves with git's own outcome, including the nothing-to-commit case, and rejects with the git
   // error on failure, for the same reason `pull` does.
   commit(root: string, message: string, relPaths: string[]): Promise<CommitResult>;
+  // Read the working tree's changes against `HEAD`, with the named files expanded to their whole
+  // contents. Answers the same three results on either machine, so the tab that shows them renders
+  // local and remote workspaces the same way — and answers them as they arrived, because a value
+  // that crossed a channel is one the caller has to check rather than one it produced.
+  changeSet(root: string, fullFiles: readonly string[]): Promise<unknown>;
   search(root: string): Promise<string[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
   writeFile(root: string, relPath: string, content: Uint8Array): MaybePromise<FileOperationResult>;
@@ -121,6 +127,15 @@ export class LocalFileSystemPort implements FileSystemPort {
 
   gitMetadata(root: string, onResult: (metadata: GitMetadata) => void): void {
     void this.loadGitMetadata(root, onResult);
+  }
+
+  // The working tree's changes against `HEAD`, for the far side's `change-set` operation. The reader
+  // is the diff plugin's own, imported here rather than written a second time: one definition of what
+  // a change set is. `src/plugins/loaders.ts` stays the only route to a plugin's *behavior* — this is
+  // a pure reader with no activation behind it, and the far side is a separate process where lazy
+  // loading buys nothing.
+  changeSet(root: string, fullFiles: readonly string[]): Promise<unknown> {
+    return readChangeSet(root, new Set(fullFiles));
   }
 
   private async loadGitMetadata(root: string, onResult: (metadata: GitMetadata) => void): Promise<void> {

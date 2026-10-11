@@ -3,7 +3,8 @@ import { execSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { readChangeSet } from './change-set.js';
+import { isChangeSetResult, readChangeSet } from './change-set.js';
+import type { DiffFile } from './shared.js';
 
 // The repository fixtures are built the way `src/git/status.test.ts` builds them: a real temporary
 // repository, because the change set is git's answer and only git can give it.
@@ -45,6 +46,15 @@ describe('readChangeSet', () => {
     const untracked = result.kind === 'files' ? result.files.find((file) => file.path === 'untracked.txt') : undefined;
     expect(untracked?.additions).toBe(1);
     expect(untracked?.deletions).toBe(0);
+  });
+
+  it('includes the checked-out branch with a successful change set', async () => {
+    initRepo(root);
+    execSync('git checkout -b feature/diff', { cwd: root, stdio: 'pipe' });
+    writeFileSync(path.join(root, 'tracked.txt'), 'committed');
+    commitAll(root, 'init');
+
+    expect(await readChangeSet(root)).toMatchObject({ kind: 'files', branch: 'feature/diff' });
   });
 
   it('reports a deleted file', async () => {
@@ -132,5 +142,42 @@ describe('readChangeSet', () => {
 
     const result = await readChangeSet(path.join(root, 'sub'));
     expect(pathsOf(result)).toEqual(['inner.txt']);
+  });
+});
+
+// The guard that decides whether an answer from another machine becomes the tab's payload. Kept beside
+// the real-repository cases because it is the boundary the same result crosses, not a separate feature.
+describe('isChangeSetResult', () => {
+  const fileRecord: DiffFile = {
+    path: 'a.txt', additions: 1, deletions: 0,
+    hunks: [{ oldStart: 1, newStart: 1, lines: [{ kind: 'added', number: 1, jump: 1, text: 'a' }] }],
+  };
+
+  it('accepts the three results a read can produce', () => {
+    expect(isChangeSetResult({ kind: 'not-repository' })).toBe(true);
+    expect(isChangeSetResult({ kind: 'error', reason: 'git diff failed' })).toBe(true);
+    expect(isChangeSetResult({ kind: 'files', files: [fileRecord] })).toBe(true);
+    expect(isChangeSetResult({ kind: 'files', files: [] })).toBe(true);
+    expect(isChangeSetResult({ kind: 'files', files: [], branch: 'feature/diff' })).toBe(true);
+  });
+
+  it('refuses an error result whose reason is not a string', () => {
+    expect(isChangeSetResult({ kind: 'error' })).toBe(false);
+    expect(isChangeSetResult({ kind: 'error', reason: 42 })).toBe(false);
+  });
+
+  it('refuses a files result whose list is not one, or whose records are not', () => {
+    expect(isChangeSetResult({ kind: 'files' })).toBe(false);
+    expect(isChangeSetResult({ kind: 'files', files: 'a.txt' })).toBe(false);
+    expect(isChangeSetResult({ kind: 'files', files: [{}] })).toBe(false);
+    expect(isChangeSetResult({ kind: 'files', files: [{ ...fileRecord, additions: 'one' }] })).toBe(false);
+    expect(isChangeSetResult({ kind: 'files', files: [], branch: 42 })).toBe(false);
+  });
+
+  it('refuses a kind outside the three, and anything not an object', () => {
+    expect(isChangeSetResult({ kind: 'changes' })).toBe(false);
+    for (const value of [undefined, null, 0, 'files', [], true]) {
+      expect(isChangeSetResult(value)).toBe(false);
+    }
   });
 });

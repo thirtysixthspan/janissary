@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { parseDiff } from './parse-diff.js';
-import type { DiffFile } from './shared.js';
+import { isDiffFile, type DiffFile } from './shared.js';
 import { git } from './git.js';
 import { expandFullFileContext } from './context-diff.js';
 
@@ -14,9 +14,22 @@ import { expandFullFileContext } from './context-diff.js';
 const UNTRACKED_CONCURRENCY = 8;
 
 export type ChangeSetResult =
-  | { kind: 'files'; files: DiffFile[] }
+  | { kind: 'files'; files: DiffFile[]; branch?: string }
   | { kind: 'not-repository' }
   | { kind: 'error'; reason: string };
+
+// A decoded change set as it arrives from another machine. The reads run where the repository is, so
+// a remote workspace's result crosses a channel and is a value this plugin did not produce — checked
+// before it is believed, and answered as the tab's error state when it is not one of these three.
+export function isChangeSetResult(value: unknown): value is ChangeSetResult {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  if (result.kind === 'not-repository') return true;
+  if (result.kind === 'error') return typeof result.reason === 'string';
+  if (result.kind === 'files') return Array.isArray(result.files) && result.files.every(isDiffFile)
+    && (result.branch === undefined || typeof result.branch === 'string');
+  return false;
+}
 
 function firstLine(text: string): string {
   return text.split('\n').map((line) => line.trim()).find((line) => line.length > 0) ?? 'git diff failed';
@@ -49,6 +62,17 @@ async function hasHead(root: string, signal?: AbortSignal): Promise<boolean> {
   } catch (error) {
     if (signal?.aborted) throw error;
     return false;
+  }
+}
+
+async function branchName(root: string, signal?: AbortSignal): Promise<string | undefined> {
+  try {
+    const output = await git(root, ['branch', '--show-current'], signal);
+    const branch = output.trim();
+    return branch || undefined;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return undefined;
   }
 }
 
@@ -112,7 +136,11 @@ export async function readChangeSet(
   const prefix = await prefixIn(root, signal);
   if (prefix === null) return { kind: 'not-repository' };
   try {
-    if (!await hasHead(root, signal)) return { kind: 'files', files: await unbornChangeSet(root, signal) };
+    if (!await hasHead(root, signal)) {
+      const files = await unbornChangeSet(root, signal);
+      const branch = await branchName(root, signal);
+      return { kind: 'files', files, ...(branch !== undefined && { branch }) };
+    }
     const tracked = parseDiff(
       // The `-- .` pathspec scopes the diff to the root's own subtree: `git diff` without one is
       // repository-wide even when run from a subdirectory, the way `changedPaths` handles it.
@@ -121,9 +149,13 @@ export async function readChangeSet(
     );
     const untracked = await untrackedFiles(root, signal);
     const expanded = await expandFullFileContext(root, tracked, prefix, fullFiles, signal);
+    const branch = await branchName(root, signal);
     // One list in file path order, the way GitHub's files-changed view lists files and the way the
     // keyboard walk expects them, rather than tracked files first because that is how they were read.
-    return { kind: 'files', files: [...expanded, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path)) };
+    return {
+      kind: 'files', files: [...expanded, ...untracked].toSorted((a, b) => a.path.localeCompare(b.path)),
+      ...(branch !== undefined && { branch }),
+    };
   } catch (error) {
     if (signal?.aborted) throw error;
     return { kind: 'error', reason: reasonOf(error) };

@@ -5,8 +5,6 @@
    so the two look like one application. */
 .diff-tab { gap: 6px; }
 
-.diff-root { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
-
 .diff-view { display: flex; align-items: center; gap: 2px; }
 .diff-view button,
 .diff-meta-actions button {

@@ -9,6 +9,10 @@ const payload: ShellPayload = {
   instanceKey: 'shell-1', ptyId: 'pty1', cwd: '/repo', root: '/repo', workspace: false,
   cols: 80, rows: 24, connections: [], schedule: [], hookNonce: 'a'.repeat(32),
 };
+const provisioningPayload: ShellPayload = {
+  instanceKey: 'shell-1', cwd: '/repo', root: '/repo', workspace: true, provisioning: true,
+  connections: [], schedule: [], hookNonce: 'a'.repeat(32),
+};
 const remote: RemoteTargetView = { address: 'ssh://build', host: 'build.example' };
 
 function capabilities(overrides: Partial<TabPluginClientCapabilities> = {}) {
@@ -74,5 +78,22 @@ describe('ShellTabMeta diff button', () => {
   it('offers no diff button for a shell with no workspace', () => {
     render(<ShellTabMeta payload={payload} capabilities={capabilities()} />);
     expect(screen.queryByRole('button', { name: 'Show diff in the workspace' })).not.toBeInTheDocument();
+  });
+
+  // A remote workspace's changes live on the far side, and the button reads them through the tab's
+  // own channel rather than through a git on this machine.
+  it('offers the diff of a remote workspace too', () => {
+    const openDiffHere = vi.fn();
+    render(<ShellTabMeta payload={{ ...payload, workspace: true, host: 'build.example' }} capabilities={capabilities({ openDiffHere })} />);
+    const button = screen.getByRole('button', { name: 'Show diff in the workspace' });
+    expect(button).toBeInTheDocument();
+    button.click();
+    expect(openDiffHere).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves the diff button inert while the workspace is still landing', () => {
+    render(<ShellTabMeta payload={provisioningPayload} capabilities={capabilities()} />);
+    const button = screen.getByRole('button', { name: 'Show diff in the workspace' });
+    expect(button).toBeDisabled();
   });
 });
