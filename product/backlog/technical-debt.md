@@ -4,17 +4,6 @@
 
 ## development
 
-* Preserve a core recovery tab when plugin failure removes the final central tab.
-
-Existing Debt: Plugin failure cleanup uses the operation for a user closing a tab, whose policy for closing the last central tab exits the application before removing the failed tab or releasing its resources. Severity: 6/10
-
-Existing Risk: 7/10 - A failure in the launch shell or another plugin owning the last central tab can end unrelated docked tools and ongoing work by shutting down the application.
-
-Proposal Risk: 2/10 - The failed plugin still requires a restart to recover, but its tab removal leaves a valid core surface and cannot trigger application exit.
-
-Proposal: `closePluginTabs` in `src/plugins/teardown.ts` calls `TabManager.closeTab` in `src/tab/manager.ts`, which reaches `closeTabOp` in `src/tab/close.ts` through `src/tab/operations.ts`; the branch for closing the last central tab emits application exit and returns before cleanup. Before removing an already-mounted plugin's tabs, detect whether every central tab belongs to that plugin and use `openNotificationsTab` in `src/notifications/tab.ts` to create or undock the existing core notifications feed as the surviving central tab. Resolve the owned tabs' indices again after opening that surface, since insertion can shift them, then remove every owned tab through the normal resource-release path and leave focus on a surviving tab. A failure before any plugin tab mounts must retain the launch refusal in `src/launch-shell.ts`. `src/plugins/teardown.test.ts` currently seeds an unrelated core root, while the production launch root belongs to the shell plugin; add cases for the failed launch shell, multiple failed central tabs, and an unrelated docked tab, asserting no exit, complete file release, and valid focus. Preserve the intentional exit behavior when the user closes the last tab covered by `src/tab/close.test.ts`, and document the recovery surface in `product/specs/tab-plugins.md`.
-
-
 * Separate failed file detail reads from automatic redraws so remote recovery can proceed.
 
 Existing Debt: File detail load failures use the same redraw callback as successful loads while leaving their cache entries missing, so completing a failed request immediately starts its replacement. Severity: 5/10

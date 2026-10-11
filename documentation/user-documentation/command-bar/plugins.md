@@ -52,6 +52,6 @@ A plugin that fails is switched off on its own rather than taking anything else 
 Tab plugin "video" disabled: <reason>.
 ```
 
-Every tab that plugin owned closes with it, and further attempts to use it repeat the same reason instead of trying again. Every other plugin, tab, and command keeps working. Restarting the app is the only way to give a disabled plugin another chance.
+Every tab that plugin owned closes with it, and further attempts to use it repeat the same reason instead of trying again. If those tabs were the only central tabs, the notifications feed opens as a core recovery surface. Every other plugin, tab, and command keeps working. Restarting the app is the only way to give a disabled plugin another chance.
 
 A plugin refusing one bad request is a different thing and is not fatal. It reports the problem, stays on, and answers the next request normally.
