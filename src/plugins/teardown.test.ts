@@ -6,6 +6,7 @@ import { TAB_PLUGIN_API_VERSION } from './api.js';
 import { TabPluginHost } from './host.js';
 import { NotificationQueue } from '../notifications/queue.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import { messageBus } from '../bus.js';
 
 const manifest: TabPluginDeclaration = {
   id: 'fixture', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
@@ -38,8 +39,9 @@ function makeManagers(): Managers {
   return managers;
 }
 
-function openFixture(managers: Managers, key: string, file: string): void {
-  managers.tab.openPluginTab('fixture', 'fixture', key, 1, 'janus', (resources) => ({
+function openFixture(managers: Managers, key: string, file: string, pluginId = 'fixture'): void {
+  const prefix = pluginId === 'shell' ? 'janus' : pluginId;
+  managers.tab.openPluginTab(pluginId, prefix, key, 1, 'janus', (resources) => ({
     title: key,
     payload: { resource: resources.registerFile(file) },
   }));
@@ -63,6 +65,53 @@ describe('plugin teardown', () => {
     });
     await expect(host.intent(pluginTab.label, 'retry', {}))
       .rejects.toThrow('Tab plugin "fixture" disabled: client render exploded.');
+  });
+
+  it('keeps a core tab when the failed launch shell owns the final central tab', () => {
+    const managers = makeManagers();
+    const root = managers.tab.tabs[0];
+    if (!root) throw new Error('The test root tab was not created.');
+    root.dock = 'right';
+    openFixture(managers, 'launch', '/tmp/launch.fixture', 'shell');
+    const shellManifest = { ...manifest, id: 'shell', tabLabelPrefix: 'janus' };
+    const host = new TabPluginHost(managers, [shellManifest], {});
+    const emit = vi.spyOn(messageBus, 'emit');
+    const launchTab = managers.tab.tabs.find((tab) => tab.plugin?.id === 'shell');
+    if (!launchTab) throw new Error('The launch shell tab was not created.');
+
+    host.clientFailed(launchTab.label, 'launch shell crashed');
+
+    expect(managers.tab.tabs.some((tab) => tab.plugin?.id === 'shell')).toBe(false);
+    expect(managers.tab.tabs.some((tab) => tab.view === 'notifications' && !tab.dock)).toBe(true);
+    expect(managers.tab.tabs.find((tab) => tab.label === root.label)?.dock).toBe('right');
+    expect(managers.tab.cur().view).toBe('notifications');
+    expect(managers.tab.openFiles.size).toBe(0);
+    expect(emit).not.toHaveBeenCalledWith('app', { type: 'exit' });
+    emit.mockRestore();
+  });
+
+  it('removes multiple failed central tabs while preserving focus and an unrelated docked tab', () => {
+    const managers = makeManagers();
+    const root = managers.tab.tabs[0];
+    if (!root) throw new Error('The test root tab was not created.');
+    root.dock = 'left';
+    openFixture(managers, 'first-central', '/tmp/first-central.fixture');
+    openFixture(managers, 'second-central', '/tmp/second-central.fixture');
+    const first = managers.tab.tabs.find((tab) => tab.plugin?.instanceKey === 'first-central');
+    if (!first) throw new Error('The first plugin tab was not created.');
+    const host = new TabPluginHost(managers, [manifest], {});
+    const emit = vi.spyOn(messageBus, 'emit');
+
+    host.clientFailed(first.label, 'plugin crashed');
+
+    expect(managers.tab.tabs.filter((tab) => tab.plugin?.id === 'fixture')).toEqual([]);
+    expect([...managers.tab.openFiles.values()]).toEqual([]);
+    expect(managers.tab.tabs.find((tab) => tab.label === root.label)?.dock).toBe('left');
+    expect(managers.tab.cur().view).toBe('notifications');
+    expect(managers.tab.activeTab).toBeGreaterThanOrEqual(0);
+    expect(managers.tab.activeTab).toBeLessThan(managers.tab.tabs.length);
+    expect(emit).not.toHaveBeenCalledWith('app', { type: 'exit' });
+    emit.mockRestore();
   });
 
   it('opens no tab and leaks no file when payload validation fails before mount', async () => {
