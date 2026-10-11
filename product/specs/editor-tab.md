@@ -563,7 +563,7 @@ save-triggered sync, including a rejected push, is also posted to the notificati
 `Could not sync <filename>: <reason>`, where the reason is the first line of git's error. When that
 error runs longer, the whole of it is kept in a file the line links.
 
-Sync cycles from opens, saves, and manual resyncs run one at a time in request order across all synced files. A cycle finishes its failure recovery before the next begins, and a failed cycle does not prevent later requests from running. Waiting for another file's sync does not delay the local save confirmation.
+Sync cycles from opens, saves, and manual resyncs run one at a time in request order across all synced files. Each Git command, including branch discovery and failure recovery, has a 60-second deadline. A timed-out command is stopped before the cycle reports failure, and the cycle finishes its bounded recovery before the next begins. A failed cycle does not prevent later requests from running. When the application shuts down, its active Git command is cancelled and queued cycles finish without starting more commands. Waiting for another file's sync does not delay the local save confirmation.
 
 When several sync cycles overlap for one editor, only the latest cycle for that still-open tab updates its status icon or reports a save failure under that tab. Closing an editor and opening another under the same tab label does not transfer the older cycle's status to the new editor. Every completed pull still refreshes all open synced files it may have changed.
 

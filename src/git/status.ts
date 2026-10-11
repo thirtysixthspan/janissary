@@ -1,5 +1,6 @@
 import { execFile, execFileSync } from 'node:child_process';
 import { promisify } from 'node:util';
+import type { SyncCommandOptions } from './sync-command.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -78,9 +79,9 @@ export async function changedPaths(root: string): Promise<Map<string, GitFileSta
 // literal string `HEAD` for a detached checkout, matching git's own convention. Resolves to
 // `undefined` — never rejects — when `root` is not inside a git repository or the command fails
 // for any reason, so a non-git directory renders with no branch text and no error.
-export async function currentBranch(root: string): Promise<string | undefined> {
+export async function currentBranch(root: string, execution?: SyncCommandOptions): Promise<string | undefined> {
   try {
-    const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root });
+    const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: root, ...execution });
     const branch = stdout.trim();
     return branch || undefined;
   } catch {
@@ -106,9 +107,9 @@ export function currentBranchSync(root: string): string | undefined {
 // the remote's detected default branch, as `git clone` records it. A local read (`symbolic-ref`),
 // never a network call. Resolves to `undefined` — never rejects — when `root` is not inside a git
 // repository, has no `origin` remote, has no `origin/HEAD` set, or the command fails for any reason.
-export async function defaultBranch(root: string): Promise<string | undefined> {
+export async function defaultBranch(root: string, execution?: SyncCommandOptions): Promise<string | undefined> {
   try {
-    const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], { cwd: root });
+    const { stdout } = await execFileAsync('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], { cwd: root, ...execution });
     const ref = stdout.trim();
     const name = ref.startsWith('refs/remotes/origin/') ? ref.slice('refs/remotes/origin/'.length) : '';
     return name || undefined;
