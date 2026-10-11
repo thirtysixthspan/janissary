@@ -148,6 +148,21 @@ describe('RolesTab', () => {
         .toHaveClass('roles-refusal');
     });
 
+    it('raises nothing when the republished description is the text this tab just saved', () => {
+      const { intent, publish } = renderTab();
+      const input = screen.getByLabelText('Description of role research');
+
+      fireEvent.change(input, { target: { value: 'Deeper questions.' } });
+      fireEvent.blur(input);
+      publish(withDescription('research', 'Deeper questions.'));
+
+      expect(input).toHaveValue('Deeper questions.');
+      expect(screen.queryByText(/changed elsewhere/)).toBeNull();
+
+      fireEvent.blur(input);
+      expect(intent).toHaveBeenCalledTimes(1);
+    });
+
     it('keeps an active draft when the update changed another role, and commits the text it saw', () => {
       const { intent, publish } = renderTab();
       const input = screen.getByLabelText('Description of role research');

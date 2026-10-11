@@ -74,8 +74,10 @@ it says. A field someone is halfway through typing in is left alone: the tab doe
 under them, and the edit that eventually commits carries the text it was written against, so a
 description that changed in the meantime is never overwritten. If the stored description does move
 under an open draft, the stored text replaces the draft and the tab says so in the one refusal line
-beneath the source line. The same line reports the server's own refusal when the change arrives too
-late to be noticed here: `The description of role "<name>" changed elsewhere — nothing was written.`
+beneath the source line. A description this tab wrote itself is not such a move: the saved text comes
+back in the next publication, the field follows it, and no line is raised, because nothing anybody
+typed was displaced. The same line reports the server's own refusal when the change arrives too late
+to be noticed here: `The description of role "<name>" changed elsewhere — nothing was written.`
 
 ### Dragging
 
