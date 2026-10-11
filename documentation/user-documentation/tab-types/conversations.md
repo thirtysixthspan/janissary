@@ -58,6 +58,8 @@ Press `Escape` while a reply streams to discard that partial turn. It is not sav
 
 A failed query stays in the history with its error in place of the reply. Rate-limit errors begin with `Rate limited:`. Send another query when you're ready to retry; the failed session is replaced automatically.
 
+If saving a completed or failed turn does not work, the turn stays visible with `Response is available but could not be saved: <reason>`. A notification reports the failure. You can send another query, but Janissary does not retry saving the turn automatically.
+
 ## Use the private workspace
 
 <img class="agent-float" src="/agents/yusuf-south-east.png" alt="" />

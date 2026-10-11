@@ -62,7 +62,7 @@ export function DiffTab({
   }, [walk, files, openLine]);
 
   return (
-    <div className="plugin-tab diff-tab">
+    <div className="plugin-tab diff-tab" data-doc-shot="diff-tab">
       <div className="plugin-meta">
         <span className="plugin-loc diff-root" title={payload.root}>{payload.root}</span>
         <span className="plugin-actions">

@@ -4,20 +4,6 @@
 
 ## development
 
-* launcher (9/10) — There is no launcher-tab page or substantive launcher-tab coverage in `documentation/user-documentation/`; `help.md` has only a terse command row. All 18 detailed behavior groups are therefore undocumented, including how the command rail is configured and overridden, how malformed files fall back, the built-in commands, tab grouping and status tiers, summary refresh behavior, and how **Configure** opens or creates the active file. Add a focused page under `documentation/user-documentation/` and ground it in `product/specs/launcher.md`, `src/plugins/launcher/activate.ts`, `web/src/plugins/launcher/LauncherTab.tsx`, `web/src/plugins/launcher/CommandRail.tsx`, and `web/src/plugins/launcher/TabList.tsx`.
-
-* diff-tab (8/10) — 14 of 17 user-facing behavior groups are missing and none of the covered facts are wrong: the docs mention opening/scoping the `diff` tab and shared syntax colors, but do not explain file status/counts, clickable files and hunks, whole-file expansion, unified versus split layout and its saved setting, keyboard navigation, comments, or read-only/error behavior. Add a dedicated diff-tab page and link it from `documentation/user-documentation/command-bar/commands.md`; the ground truth is `product/specs/diff-tab.md`, `src/plugins/diff/activate.ts`, and `src/plugins/diff/session.ts`, with only a brief command row in `help.md` and syntax-theme mention in `documentation/user-documentation/tab-types/editor.md` today.
-
-* task-picker (8/10) — 1 of 19 behavior groups is wrong: the task-picker page says `Ctrl+A` on a shell tab always reaches the terminal, but `help.md` and the app qualify that behavior to when the shell terminal holds keyboard focus; when the command bar has focus, `Ctrl+A` opens the picker. This is a core shortcut and the contradictory page can mislead users about where to focus before opening the picker. Correct `documentation/user-documentation/command-bar/tasks.md` to state the focus condition, using `product/specs/task-picker.md`, `web/src/shared/app-chords.ts`, `web/src/shared/terminal/window-chords.ts`, and `web/src/MountedViewLayers.tsx` as ground truth.
-
-* conversations (4/10) — 1 of 32 user-facing behavior groups is missing and none are wrong: if saving a completed or failed turn fails, the turn remains visible with a persistence error, a notification reports the save failure, later queries remain available, and storage is not retried automatically. Add a short storage-failure paragraph to `documentation/user-documentation/tab-types/conversations.md`; the behavior is specified in `product/specs/conversations.md` and implemented in `src/conversations/manager.ts` and `src/conversations/responder.ts`.
-
-* sql-database (4/10) — 3 of 56 user-facing behavior groups are missing and none are wrong: a rejected grid edit or insert keeps its draft for correction, duplicate submissions are held while the request is pending, and the SQL console keeps a rejected line without clearing newer text typed while an older request is pending. The existing browser page covers database execution errors, but not these request-acceptance cases. Add the recovery details to `documentation/user-documentation/tab-types/sql-browser.md`; ground truth is `product/specs/sql-database.md`, `web/src/plugins/sql/useSqlDraftAcceptance.ts`, and `web/src/plugins/sql/SqlConsole.tsx`.
-
-* editor-tab (1/10) — 0 of 42 user-facing behavior groups are missing and none are wrong: the page already says that when a first save collides with another file, the editor chooses the next free name and updates the tab to match, covering the recent file-reference replacement behavior. No documentation change is needed; the relevant sources are `product/specs/editor-tab.md`, `documentation/user-documentation/tab-types/editor.md`, and `src/editor/save.ts`.
-
-* harness (1/10) — 0 of 38 user-facing behavior groups are missing and none are wrong: the harness page already shows the angle-bracket placeholders in the usage errors changed by the recent fix. No documentation change is needed; the relevant sources are `product/specs/harness.md`, `documentation/user-documentation/advanced-agents/harness.md`, and `src/harness/command-parse.ts`.
-
 ## deferred
 
 ## declined
@@ -211,3 +197,10 @@
 * keyboard-navigation — documented in documentation/user-documentation/getting-started/keyboard.md and help.md as part of the search-tab work, which added the `Cmd+Shift+F` row (removed 2026-09-30)
 * database — documented in documentation/user-documentation/command-bar/database.md as part of the sql-database work, which added a "Browse a database instead" section linking the SQL browser (removed 2026-09-30)
 * connection — documented in documentation/user-documentation/command-bar/connections.md; a SQL browser's database is listed as `sqlite:<name>` but never in the browser tab's own panel, and a closed one reopens when the browser next uses it (removed 2026-09-30)
+* launcher — documented in documentation/user-documentation/tab-types/launcher.md (removed 2026-10-11)
+* diff-tab — documented in documentation/user-documentation/tab-types/diff-tab.md and documentation/user-documentation/command-bar/commands.md (removed 2026-10-11)
+* task-picker — corrected in documentation/user-documentation/command-bar/tasks.md (removed 2026-10-11)
+* conversations — documented in documentation/user-documentation/tab-types/conversations.md (removed 2026-10-11)
+* sql-database — documented in documentation/user-documentation/tab-types/sql-browser.md (removed 2026-10-11)
+* editor-tab — already resolved: documentation/user-documentation/tab-types/editor.md covers the next-free-name rule after a first-save collision (removed 2026-10-11)
+* harness — already resolved: documentation/user-documentation/advanced-agents/harness.md shows angle-bracket usage placeholders (removed 2026-10-11)

@@ -22,7 +22,7 @@ Your repository's `ai/tasks/` directory holds executable task files, such as `fe
 
 Unlike the [history picker](/user-documentation/command-bar/history), `Return` here does **not** run the command immediately. It inserts the command at the cursor — leaving any text you'd already typed intact, with the cursor just after the inserted command — so you can supplement it (say, appending extra instructions) or edit it before pressing `Return` yourself to actually run it.
 
-On a shell tab, `Ctrl+A` reaches the terminal itself instead of opening the picker, since shell tabs run interactive programs that depend on receiving that keystroke. On a harness tab there is no command line to insert into, so picking a task sends the same command straight into that harness's terminal input, exactly as if it had been typed there. Wherever the window appears, it appears over the tab you opened it from, never over some other tab.
+On a shell tab, `Ctrl+A` opens the picker while the command line has focus. If the shell terminal has keyboard focus, `Ctrl+A` goes to the terminal instead, since interactive programs may use that keystroke. On a harness tab there is no command line to insert into, so picking a task sends the same command straight into that harness's terminal input, exactly as if it had been typed there. Wherever the window appears, it appears over the tab you opened it from, never over some other tab.
 
 A picker needs a screen, so a `tasks` that arrives without one does nothing at all. Another agent running `tasks`, or a [schedule](/user-documentation/automation/scheduling) firing it, gets silence rather than a window and no error either, which is worth knowing before you schedule one.
 
