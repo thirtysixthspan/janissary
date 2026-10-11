@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import path from 'node:path';
 import os from 'node:os';
 import { pasteBatch } from './paste.js';
+import { fileIdentity } from './file-identity.js';
 
 let roots: string[] = [];
 
@@ -26,7 +27,10 @@ describe('pasteBatch — copy', () => {
     expect(result).toEqual({
       total: 1,
       failedPaths: [],
-      pairs: [{ from: path.join(directory, 'a.txt'), to: path.join(directory, 'dest', 'a.txt') }],
+      pairs: [{
+        from: path.join(directory, 'a.txt'), to: path.join(directory, 'dest', 'a.txt'),
+        identity: fileIdentity(path.join(directory, 'dest', 'a.txt')),
+      }],
       mutated: true,
     });
     expect(existsSync(path.join(directory, 'a.txt'))).toBe(true);

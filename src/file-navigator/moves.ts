@@ -4,6 +4,8 @@ import { type FileOperationResult } from './file-operation-result.js';
 import { parentPath } from './index.js';
 import { applyReplayProtocol, type ReplayLeg } from './replay-protocol.js';
 import type { PastePair } from './paste.js';
+import { fileIdentity } from './file-identity.js';
+import { existsSync } from 'node:fs';
 import type { BulkConflictPolicy, UndoRedoResult } from '../protocol.js';
 
 export type MoveEntry = { from: string; to: string };
@@ -89,6 +91,9 @@ export function applyStackPaste(
 ): UndoRedoResult {
   const isUndo = direction === 'undo';
   const isCopy = group.mode === 'copy';
+  const changedCopies = isUndo && isCopy
+    ? group.pairs.filter((pair) => existsSync(pair.to) && (pair.identity === undefined || fileIdentity(pair.to) !== pair.identity))
+    : [];
   return applyReplayProtocol<PastePair, HistoryStep>({
     groupItems: group.pairs,
     replayItems: group.pairs,
@@ -98,7 +103,15 @@ export function applyStackPaste(
     rebuild,
     makeStep: (pairs) => ({ mode: group.mode, pairs }),
     leg: (pair) => pasteReplayLeg(pair, isUndo),
-    apply: (current, overwrite) => applyPasteLeg(current, isCopy, isUndo, overwrite),
+    apply: (current, overwrite) => {
+      const result = applyPasteLeg(current, isCopy, isUndo, overwrite);
+      if (result.ok && isCopy && !isUndo) current.item.identity = fileIdentity(current.destination) ?? null;
+      return result;
+    },
     preflight: !(isUndo && isCopy),
+    forcedConflicts: changedCopies.map((pair) => ({
+      item: pair,
+      conflict: { fromRelPath: pair.from, toRelPath: pair.to },
+    })),
   });
 }

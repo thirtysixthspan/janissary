@@ -21,6 +21,7 @@ type ReplayOptions<Item, Step> = {
   leg: (item: Item) => ReplayLeg<Item>;
   apply: (leg: ReplayLeg<Item>, overwrite: boolean) => FileOperationResult;
   preflight?: boolean;
+  forcedConflicts?: { item: Item; conflict: MoveConflict }[];
 };
 
 function exists(absolute: string): boolean {
@@ -46,11 +47,12 @@ function buildReplayResult<Item, Step>(options: ReplayOptions<Item, Step>, faile
 
 export function applyReplayProtocol<Item, Step>(options: ReplayOptions<Item, Step>): UndoRedoResult {
   const replay = options.replayItems.map((item) => options.leg(item));
-  const conflicts = options.preflight === false
-    ? []
-    : replay
+  const conflicts = [
+    ...(options.preflight === false ? [] : replay
       .filter(({ source, destination }) => source !== destination && exists(destination))
-      .map(({ conflict }) => conflict);
+      .map(({ conflict }) => conflict)),
+    ...(options.forcedConflicts ?? []).map(({ conflict }) => conflict),
+  ];
   if (conflicts.length > 0 && options.policy === undefined) {
     return options.groupItems.length === 1
       ? { total: 1, failedPaths: [], conflict: conflicts[0] }
