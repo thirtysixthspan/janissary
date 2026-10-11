@@ -6,7 +6,7 @@ import { nonEmptyString } from '../frame/decode-shared.js';
 import {
   refusedDeleteMany, refusedItem, refusedMoveMany, refusedPaste, refusedReplay,
 } from './refusal-shapes.js';
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../protocol-frames.js';
+import type { RemoteFilesystemOperation } from '../protocol-frames.js';
 import { descriptorFor, type OperationContext, type OperationDescriptor } from './operation-types.js';
 import type { HistoryStep } from '../../file-navigator/moves.js';
 import { resultDecoders } from './result-decoders.js';
@@ -15,45 +15,45 @@ import { resultDecoders } from './result-decoders.js';
 // module: `root` and `filesystem` are the far side's own, and the rest are bound closures over the
 // server's session bookkeeping, which stays private to it.
 const pathOnly = (args: Record<string, unknown>) => ({ path: args.path as string });
-const namedPath = (args: RemoteFilesystemArguments) => [args.path ?? ''];
+const namedPath = (args: { path?: string }) => [args.path ?? ''];
 const destinationOnly = (args: Record<string, unknown>) => ({ destination: args.destination as string });
-const namedDestination = (args: RemoteFilesystemArguments) => [args.destination ?? ''];
+const namedDestination = (args: { destination?: string }) => [args.destination ?? ''];
 const noArguments = { valid: (args: Record<string, unknown>) => Object.keys(args).length === 0, decode: () => ({}), paths: () => [] };
 
 // The operations that only read. None of them can express a refusal in its own result, so none
 // names one.
 const READ_OPERATIONS = {
-  'read-directory': descriptorFor({
+  'read-directory': descriptorFor<'read-directory'>()({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, rootDestination: true,
     decodeResult: resultDecoders['read-directory'],
     run: (context, args) => context.filesystem.readDirectory(context.root, args.path),
   }),
-  stat: descriptorFor({
+  stat: descriptorFor<'stat'>()({
     valid: (args) => stringArray(args.paths),
     decode: (args) => ({ paths: args.paths as string[] }),
     paths: (args) => args.paths,
     decodeResult: resultDecoders.stat,
     run: (context, args) => context.filesystem.statRows(context.root, args.paths),
   }),
-  watch: descriptorFor({
+  watch: descriptorFor<'watch'>()({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, rootDestination: true,
     decodeResult: resultDecoders.watch,
     run: (context, args) => context.watch(args.path),
   }),
-  unwatch: descriptorFor({
+  unwatch: descriptorFor<'unwatch'>()({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, rootDestination: true,
     decodeResult: resultDecoders.unwatch,
     run: (context, args) => context.unwatch(args.path),
   }),
-  git: descriptorFor({ ...noArguments, decodeResult: resultDecoders.git, run: (context: OperationContext) => context.git() }),
+  git: descriptorFor<'git'>()({ ...noArguments, decodeResult: resultDecoders.git, run: (context: OperationContext) => context.git() }),
   // Pulls the far side's own workspace root — no path arguments, so nothing to contain. The
   // rejection (git's own error) travels back as the request's error reply.
-  'git-pull': descriptorFor({ ...noArguments, decodeResult: resultDecoders['git-pull'], run: (context: OperationContext) => context.filesystem.pull(context.root) }),
-  search: descriptorFor({ ...noArguments, decodeResult: resultDecoders.search, run: (context: OperationContext) => context.filesystem.search(context.root) }),
-  'read-file': descriptorFor({
+  'git-pull': descriptorFor<'git-pull'>()({ ...noArguments, decodeResult: resultDecoders['git-pull'], run: (context: OperationContext) => context.filesystem.pull(context.root) }),
+  search: descriptorFor<'search'>()({ ...noArguments, decodeResult: resultDecoders.search, run: (context: OperationContext) => context.filesystem.search(context.root) }),
+  'read-file': descriptorFor<'read-file'>()({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath,
     decodeResult: resultDecoders['read-file'],
@@ -64,7 +64,7 @@ const READ_OPERATIONS = {
 
 // The operations that write. Each names the refusal shape matching its own result type.
 const MUTATION_OPERATIONS = {
-  'write-file': descriptorFor({
+  'write-file': descriptorFor<'write-file'>()({
     valid: (args) => stringValue(args.path) && stringValue(args.content),
     decode: (args) => ({ path: args.path as string, content: args.content as string }),
     paths: namedPath, refusal: refusedItem,
@@ -73,7 +73,7 @@ const MUTATION_OPERATIONS = {
       context.root, args.path, Buffer.from(args.content, 'base64'),
     ),
   }),
-  move: descriptorFor({
+  move: descriptorFor<'move'>()({
     valid: (args) => stringValue(args.from) && stringValue(args.to)
       && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),
     decode: (args) => ({
@@ -85,7 +85,7 @@ const MUTATION_OPERATIONS = {
     decodeResult: resultDecoders.move,
     run: (context, args) => context.filesystem.move(context.root, args.from, args.to, args.overwrite),
   }),
-  'move-many': descriptorFor({
+  'move-many': descriptorFor<'move-many'>()({
     valid: (args) => stringArray(args.sources) && stringValue(args.destination) && policy(args.policy),
     decode: (args) => ({
       sources: args.sources as string[], destination: args.destination as string,
@@ -98,13 +98,13 @@ const MUTATION_OPERATIONS = {
       context.root, args.sources, args.destination, args.policy,
     ),
   }),
-  delete: descriptorFor({
+  delete: descriptorFor<'delete'>()({
     valid: (args) => stringValue(args.path),
     decode: pathOnly, paths: namedPath, refusal: refusedItem,
     decodeResult: resultDecoders.delete,
     run: (context, args) => context.filesystem.delete(context.root, args.path),
   }),
-  'delete-many': descriptorFor({
+  'delete-many': descriptorFor<'delete-many'>()({
     valid: (args) => stringArray(args.paths),
     decode: (args) => ({ paths: args.paths as string[] }),
     paths: (args) => args.paths,
@@ -112,7 +112,7 @@ const MUTATION_OPERATIONS = {
     decodeResult: resultDecoders['delete-many'],
     run: (context, args) => context.filesystem.deleteMany(context.root, args.paths),
   }),
-  rename: descriptorFor({
+  rename: descriptorFor<'rename'>()({
     valid: (args) => stringValue(args.path) && nonEmptyString(args.name)
       && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),
     decode: (args) => ({
@@ -123,7 +123,7 @@ const MUTATION_OPERATIONS = {
     decodeResult: resultDecoders.rename,
     run: (context, args) => context.filesystem.rename(context.root, args.path, args.name, args.overwrite),
   }),
-  paste: descriptorFor({
+  paste: descriptorFor<'paste'>()({
     valid: (args) => stringArray(args.sources) && stringValue(args.destination)
       && (args.mode === 'copy' || args.mode === 'cut') && policy(args.policy),
     decode: (args) => ({
@@ -137,14 +137,14 @@ const MUTATION_OPERATIONS = {
       context.root, context.pasteSources(args), args.destination, args.mode, args.policy,
     ),
   }),
-  'create-file': descriptorFor({
+  'create-file': descriptorFor<'create-file'>()({
     valid: (args) => stringValue(args.destination),
     decode: destinationOnly, paths: namedDestination,
     rootDestination: true, refusal: refusedItem,
     decodeResult: resultDecoders['create-file'],
     run: (context, args) => context.filesystem.createFile(context.root, args.destination),
   }),
-  'create-directory': descriptorFor({
+  'create-directory': descriptorFor<'create-directory'>()({
     valid: (args) => stringValue(args.destination),
     decode: destinationOnly, paths: namedDestination,
     rootDestination: true, refusal: refusedItem,
@@ -158,7 +158,7 @@ const MUTATION_OPERATIONS = {
   // refusal comes back as an error instead. `rootDestination` is required, not cosmetic: a navigator
   // rooted at the workspace itself derives an *empty* prefix, and that must read as the root itself
   // rather than as an escaping path.
-  'git-commit': descriptorFor({
+  'git-commit': descriptorFor<'git-commit'>()({
     valid: (args) => nonEmptyString(args.message) && stringArray(args.paths)
       && (args.root === undefined || stringValue(args.root)),
     decode: (args) => ({
@@ -172,7 +172,7 @@ const MUTATION_OPERATIONS = {
       return context.filesystem.commit(root, args.message, args.paths);
     },
   }),
-  replay: descriptorFor({
+  replay: descriptorFor<'replay'>()({
     valid: (args) => history(args.undoStack) && history(args.redoStack)
       && (args.direction === 'undo' || args.direction === 'redo')
       && typeof args.overwrite === 'boolean' && typeof args.skipConflicts === 'boolean',

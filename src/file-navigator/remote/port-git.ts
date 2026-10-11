@@ -10,7 +10,7 @@ import type { RemoteFilesystemOperationResult } from '../../remote/filesystem/op
 // use. Each takes the port's bound request sender and its path mapper as parameters rather than
 // reaching for them, so nothing here knows about the port's session bookkeeping.
 export type RemoteRequest = <K extends RemoteFilesystemOperation>(
-  operation: K, args: RemoteFilesystemArguments,
+  operation: K, args: RemoteFilesystemArguments<K>,
 ) => Promise<RemoteFilesystemOperationResult<K>>;
 
 // The far side answers with statuses relative to its own workspace root, so they are filtered and

@@ -3,7 +3,7 @@ import {
   decodeFilesystemResult, FILESYSTEM_OPERATIONS, isFilesystemOperation, operationDescriptor,
   type RemoteFilesystemOperationResult,
 } from './operations.js';
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../protocol-frames.js';
+import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } from '../protocol-frames.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
 // the table is still caught here. Adding one to the protocol means adding it in both places.
@@ -16,7 +16,11 @@ const ALL_OPERATIONS: RemoteFilesystemOperation[] = [
 // One representative argument record per operation, and the paths that record names. This is the
 // case that pins the closed containment hole: an operation whose arguments carry paths under keys
 // no shared fall-through knows about must still surrender every one of them.
-const PATH_CASES: [RemoteFilesystemOperation, RemoteFilesystemArguments, string[]][] = [
+type PathCase = {
+  [K in RemoteFilesystemOperation]: [K, RemoteFilesystemArgumentsByOperation[K], string[]]
+}[RemoteFilesystemOperation];
+
+const PATH_CASES: PathCase[] = [
   ['read-directory', { path: 'src' }, ['src']],
   ['stat', { paths: ['a.txt', 'b.txt'] }, ['a.txt', 'b.txt']],
   ['watch', { path: 'src' }, ['src']],

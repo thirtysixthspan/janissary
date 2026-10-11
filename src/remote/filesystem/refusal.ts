@@ -2,7 +2,7 @@ import path from 'node:path';
 import { containedPath } from '../../file-navigator/batch-paths.js';
 import { OUTSIDE_ROOT_REASON } from '../../file-navigator/file-operation-result.js';
 import { operationDescriptor } from './operations.js';
-import type { ClientFrame } from '../protocol-frames.js';
+import type { ClientFrame, RemoteFilesystemOperation, RemoteFilesystemOperationRequestFor } from '../protocol-frames.js';
 import { physicallyContainedPath } from './path-containment.js';
 
 type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
@@ -34,15 +34,18 @@ export type Refusal = { classified: true; value: unknown } | { classified: false
 //
 // Both halves of the channel ask this, with the reason each of them knows: the server for a
 // containment refusal, the client for a connection that ended or an error the far side replied with.
-export function refusalValueFor(
-  operation: RequestFrame['operation'], args: RequestFrame['args'], reason: string,
+export function refusalValueFor<K extends RemoteFilesystemOperation>(
+  request: RemoteFilesystemOperationRequestFor<K>, reason: string,
 ): Refusal {
-  const descriptor = operationDescriptor(operation);
+  const descriptor = operationDescriptor(request.operation);
   if (!descriptor.refusal) return { classified: false };
-  return { classified: true, value: descriptor.refusal(args as never, descriptor.paths(args as never), reason) };
+  return {
+    classified: true,
+    value: descriptor.refusal(request.args as never, descriptor.paths(request.args as never), reason),
+  };
 }
 
 // A containment refusal: the request named a path outside the workspace root and ran nothing.
 export function refusalFor(frame: RequestFrame): Refusal {
-  return refusalValueFor(frame.operation, frame.args, OUTSIDE_ROOT_REASON);
+  return refusalValueFor(frame, OUTSIDE_ROOT_REASON);
 }

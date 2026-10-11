@@ -1,5 +1,5 @@
 import { failureReasons, failureResult } from '../../file-navigator/file-operation-result.js';
-import type { RemoteFilesystemArguments } from '../protocol-frames.js';
+import type { RemoteFilesystemArgumentsByOperation } from '../protocol-frames.js';
 
 // How a refusal is shaped for an operation whose result type can carry a reason. Each operation's
 // table entry names the one that matches its own result, so a refusal reaches the caller as the
@@ -24,24 +24,24 @@ function refusedBatch(attempted: string[], reason: string): Record<string, unkno
   };
 }
 
-export function refusedItem(_args: RemoteFilesystemArguments, _attempted: string[], reason: string): unknown {
+export function refusedItem(_args: object, _attempted: string[], reason: string): unknown {
   return failureResult(reason);
 }
 
-export function refusedMoveMany(_args: RemoteFilesystemArguments, attempted: string[], reason: string): unknown {
+export function refusedMoveMany(_args: object, attempted: string[], reason: string): unknown {
   return { ...refusedBatch(attempted, reason), moved: [] };
 }
 
-export function refusedPaste(_args: RemoteFilesystemArguments, attempted: string[], reason: string): unknown {
+export function refusedPaste(_args: object, attempted: string[], reason: string): unknown {
   return { ...refusedBatch(attempted, reason), pairs: [] };
 }
 
-export function refusedDeleteMany(_args: RemoteFilesystemArguments, attempted: string[], reason: string): unknown {
+export function refusedDeleteMany(_args: object, attempted: string[], reason: string): unknown {
   return refusedBatch(attempted, reason);
 }
 
 // The stacks come back exactly as the caller sent them: nothing was replayed, so neither moved.
-export function refusedReplay(args: RemoteFilesystemArguments, attempted: string[], reason: string): unknown {
+export function refusedReplay(args: RemoteFilesystemArgumentsByOperation['replay'], attempted: string[], reason: string): unknown {
   return {
     result: refusedBatch(attempted, reason),
     undoStack: args.undoStack ?? [],
