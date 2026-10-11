@@ -1,9 +1,17 @@
-import { describe, expect, it } from 'vitest';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type * as FileSystem from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DEFAULT_ROLES, readRolesFile, writeRolesFile } from './roles-file.js';
 import type { Role } from './shared.js';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof FileSystem>();
+  return { ...actual, writeFileSync: vi.fn(actual.writeFileSync), renameSync: vi.fn(actual.renameSync) };
+});
+
+afterEach(() => { vi.mocked(writeFileSync).mockClear(); vi.mocked(renameSync).mockClear(); });
 
 function directories(): { home: string; root: string } {
   const base = mkdtempSync(path.join(tmpdir(), 'janus-roles-file-'));
@@ -138,6 +146,46 @@ describe('reading the roles in effect', () => {
 });
 
 describe('writing the roles in effect', () => {
+  it('preserves the original and removes partial temporary output after a write failure', async () => {
+    const { home, root } = directories();
+    const file = homeFile(home);
+    writeJson(file, { review: { description: A_ROLE.description, entries: [] } });
+    const before = readFileSync(file, 'utf8');
+    const actual = await vi.importActual<typeof FileSystem>('node:fs');
+    vi.mocked(writeFileSync).mockImplementationOnce((temporary) => {
+      actual.writeFileSync(temporary, '{ partial');
+      throw new Error('Disk full');
+    });
+
+    expect(writeRolesFile(file, DEFAULT_ROLES)).toBe(false);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(readdirSync(path.dirname(file))).toEqual(['roles.json']);
+    expect(readRolesFile(home, root).roles).toEqual([A_ROLE]);
+  });
+
+  it('preserves the original and cleans temporary output after replacement fails', () => {
+    const { home, root } = directories();
+    const file = projectFile(root);
+    writeJson(file, { review: { description: A_ROLE.description, entries: [] } });
+    const before = readFileSync(file, 'utf8');
+    vi.mocked(renameSync).mockImplementationOnce(() => { throw new Error('Replacement refused'); });
+
+    expect(writeRolesFile(file, DEFAULT_ROLES)).toBe(false);
+    expect(readFileSync(file, 'utf8')).toBe(before);
+    expect(readdirSync(path.dirname(file))).toEqual(['roles.json']);
+    expect(readRolesFile(home, root).roles).toEqual([A_ROLE]);
+  });
+
+  it('preserves destination permissions on a successful replacement', () => {
+    const { root } = directories();
+    const file = projectFile(root);
+    writeJson(file, {});
+    chmodSync(file, 0o600);
+
+    expect(writeRolesFile(file, [A_ROLE])).toBe(true);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+  });
+
   it('writes the roles object keyed by name in order, with effort only when stored', () => {
     const { home, root } = directories();
     const file = projectFile(root);

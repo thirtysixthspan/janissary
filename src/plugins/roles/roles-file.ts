@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { readJsonConfigFile } from '../files.js';
+import { readJsonConfigFile, writeJsonConfigFile } from '../files.js';
 import { isRecord } from '../api.js';
 import type { Role, RoleEntry, RolesSource } from './shared.js';
 
@@ -170,7 +170,7 @@ export function writeRolesFile(filePath: string, roles: readonly Role[]): boolea
   }
   try {
     mkdirSync(path.dirname(filePath), { recursive: true });
-    writeFileSync(filePath, `${JSON.stringify(contents, undefined, 2)}\n`);
+    writeJsonConfigFile(filePath, `${JSON.stringify(contents, undefined, 2)}\n`);
     return true;
   } catch {
     return false;

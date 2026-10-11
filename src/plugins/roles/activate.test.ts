@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { describe, expect, it, vi } from 'vitest';
+import type * as FileSystem from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -10,8 +11,13 @@ import {
   type TabPluginTabUpdate,
 } from '../api.js';
 import { activate } from './activate.js';
-import { DEFAULT_ROLES } from './roles-file.js';
+import { DEFAULT_ROLES, readRolesFile } from './roles-file.js';
 import { isRolesPayload, type RolesPayload } from './shared.js';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof FileSystem>();
+  return { ...actual, renameSync: vi.fn(actual.renameSync) };
+});
 
 const CATALOG = { models: { codex: ['gpt-6-sol'] }, efforts: ['low', 'xhigh'] };
 
@@ -94,6 +100,22 @@ describe('the roles command', () => {
 });
 
 describe('editing roles through intents', () => {
+  it('rejects a failed replacement without publishing or damaging the original roles', async () => {
+    const { home, capabilities, updated } = fixture();
+    const activation = activate(home);
+    activation.command?.('', capabilities);
+    const before = readFileSync(rolesPath(home), 'utf8');
+    vi.mocked(renameSync).mockImplementationOnce(() => { throw new Error('Replacement refused'); });
+
+    await expect(send(activation, 'add-role', { name: 'review' }, capabilities, payloadFor(home)))
+      .rejects.toThrow(`Could not write roles.json at ${rolesPath(home)}.`);
+
+    expect(updated).toEqual([]);
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(before);
+    expect(readdirSync(path.dirname(rolesPath(home)))).toEqual(['roles.json']);
+    expect(readRolesFile(home, capabilities.originTab()!.root).roles).toEqual(DEFAULT_ROLES);
+  });
+
   it('adds, describes, and deletes a role, writing the file each time', async () => {
     const { home, capabilities, updated } = fixture();
     const activation = activate(home);

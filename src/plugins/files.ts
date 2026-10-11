@@ -1,5 +1,6 @@
 import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { atomicWriteFile } from '../atomic-write.js';
 import { humanSize } from '../openers/size.js';
 import type { TabPluginDeclaration, TabPluginResources, TabPluginServerCapabilities } from './api.js';
 
@@ -84,6 +85,10 @@ export function servesContentType(declaration: TabPluginDeclaration, file: strin
 // value, or one line naming the file and what was wrong with it. The three failure wording shapes
 // are the ones every such file already uses, so they are produced here once.
 export type JsonConfigResult<T> = { value: T; problem?: undefined } | { value?: undefined; problem: string };
+
+export function writeJsonConfigFile(filePath: string, content: string): void {
+  atomicWriteFile(filePath, content);
+}
 
 // The read-and-decode core every JSON config file in a plugin shares: the launcher and the roles
 // reader both read a file, guard the read and the parse into the same two canned lines, and hand the

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle failed roles writes without corrupting the last valid configuration.
-
-Existing Issue: The roles writer truncates the destination before writing and catches failures afterward, so a refused edit can leave partial JSON on disk while the tab continues showing the previous configuration. Severity: 8/10
-
-Existing Risk: 6/10 - A disk write failure or interrupted process destroys role descriptions and model choices in the shared home file or project override, requiring manual recovery.
-
-Proposal Risk: 2/10 - Replacing the destination atomically preserves its prior contents on ordinary write failures, although replacement errors and filesystem durability still require explicit failure coverage.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "preserve the existing roles configuration when a write fails". Publish a narrow atomic configuration writer through src/plugins/files.ts using the existing src/atomic-write.ts implementation, so src/plugins/roles/roles-file.ts can use it without crossing the concrete plugin import boundary. Keep writeRolesFile's boolean success contract, directory creation, destination permissions, and the activation's existing refusal wording and unchanged-payload behavior. Extend src/plugins/roles/roles-file.test.ts with a failure after partial temporary output and a failed replacement, asserting that the original destination bytes survive and temporary files are removed; its current directory-as-destination test never reaches truncation of a valid file. Extend src/plugins/roles/activate.test.ts to verify that a failed edit rejects, publishes no replacement payload, and leaves the original roles readable. Preserve existing home/project precedence, partial-damage refusal, successful round trips, and launcher reader behavior.
-
-
 * Handle accepted special and numeric role names without losing roles or changing their order during file round trips.
 
 Existing Issue: Persisting an accepted __proto__ role invokes the ordinary object's inherited setter and omits that role, while integer role names are reordered numerically by both object serialization and parsed-object enumeration. Severity: 8/10

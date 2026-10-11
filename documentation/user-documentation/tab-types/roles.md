@@ -22,7 +22,7 @@ Drag a model from the **Models** column onto a role card and it becomes that rol
 
 Without a mouse, click **Add entry** on the card, pick the harness, the model, and an effort, and press **Add**. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
 
-Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all and leaves the harness on its own default; the other levels are the same ones the **New harness** dialog offers. Change it whenever you like — the tab saves as you go, so there is nothing to confirm.
+Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all and leaves the harness on its own default; the other levels are the same ones the **New harness** dialog offers. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen.
 
 ## Reorder and remove
 

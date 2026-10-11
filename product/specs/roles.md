@@ -109,7 +109,9 @@ Every edit writes the effective file first and republishes the tab only after th
 what the tab shows is always what the file holds; there is no Save button and no unsaved state. Two
 rapid edits are applied one after the other, the second reading the file the first wrote. A write
 that cannot happen — a read-only file, a directory in the file's place — is refused with
-`Could not write roles.json at <path>.` and the tab is unchanged.
+`Could not write roles.json at <path>.` and the tab is unchanged. A failed write or replacement
+preserves the previous file contents and removes temporary output. Successful edits retain the
+file's existing permissions.
 
 ### When a file does not decode
 
