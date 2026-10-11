@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { reorderTabEntries, useTabEntries } from './useTabEntries';
 
 // Two things the strip needs from this module, and one thing it must never get wrong. Each entry

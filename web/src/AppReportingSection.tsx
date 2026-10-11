@@ -1,6 +1,6 @@
 import type { ReportingEntry } from './ReportingSection';
 import { ReportingSection } from './ReportingSection';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 
 export function AppReportingSection({
   entries, client, onClose, heightPct, onHeightPctChange,

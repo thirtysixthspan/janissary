@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { ToastQueue, type Toast } from './toast-queue';
 
 // Bridges the client's toast and clear events into React state. The queue owns every clock; this

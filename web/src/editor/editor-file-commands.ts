@@ -1,4 +1,4 @@
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 
 // The metadata row's commit-to-origin icon: the save lands first (its failure is already on
 // screen as the row's error), then the commit/push cycle arms server-side on the same file.

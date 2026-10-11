@@ -1,5 +1,5 @@
 import React, { forwardRef, useImperativeHandle, useMemo, useRef } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { HarnessView, RemoteTargetView } from '@shared/protocol';
 import { useXterm } from '../shared/terminal/useXterm';
 import { SelectionOverlay } from '../shared/terminal/SelectionOverlay';

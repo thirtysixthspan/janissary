@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ProfileRow } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { populateCommandLine } from './populate-command-line';
 import { profilePickerRows } from './profile-picker-keys';
 import { firstSelectable, normalizeIndex } from './sectioned-rows';

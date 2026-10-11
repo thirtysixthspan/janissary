@@ -3,7 +3,7 @@
 // undo step. Reports a disabled plugin to the server so the failure reaches the notifications tab.
 
 import { useEffect } from 'react';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../../shared/ws/ws';
 import type { KeyLike } from '../keys';
 import type { EditorState } from '../model';
 import { allSelections, selectionRange } from '../model';

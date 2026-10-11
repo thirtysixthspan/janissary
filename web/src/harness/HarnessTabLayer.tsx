@@ -1,7 +1,7 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabView } from '../shared/tab/view-guards';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { HarnessTab } from './HarnessTab';
 import type { HarnessTabHandle } from '../shared/tab/handles';
 import { StatusPanels } from '../shared/status-windows/StatusPanels';

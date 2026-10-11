@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { RpcCall } from '@shared/protocol';
 import { ToastStack } from './ToastStack';
 import { TOAST_FADE_MS, TOAST_VISIBLE_MS } from './toast-queue';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { BulkConflictPolicy } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { basename } from '../shared/rel-path';
 import { requestFileNavigatorMutation } from './file-navigator-request';
 

@@ -9,46 +9,7 @@ import unicorn from 'eslint-plugin-unicorn';
 import sonarjs from 'eslint-plugin-sonarjs';
 import security from 'eslint-plugin-security';
 import { pluginBoundaries } from './eslint.plugin-boundaries.mjs';
-
-const clientFeatureDirectories = [
-  'context-menu',
-  'editor',
-  'file-navigator',
-  'harness',
-  'pickers',
-  'plugins',
-  'QuitDialog',
-  'SaveChangesDialog',
-  'ScheduleLaunchDialog',
-  'toasts',
-];
-const clientFeatureZones = [
-  ...clientFeatureDirectories.flatMap((target) => clientFeatureDirectories
-    .filter((source) => source !== target)
-    .map((source) => ({
-      target: `./web/src/${target}`,
-      from: `./web/src/${source}`,
-      message: 'Features must import shared modules or coordinate through the app shell, not import a sibling feature.',
-    }))),
-  {
-    target: './web/src/shared',
-    from: clientFeatureDirectories.map((source) => `./web/src/${source}`),
-    message: 'Shared modules must not import a feature.',
-  },
-];
-
-// The overlay-plugin host and its bundled plugins sit outside the feature list on purpose: the host
-// has to reach the pickers, the command bar, and the context menu to build the one capability a plugin
-// gets, and no feature may reach back. A feature that wants an overlay plugin's chord, its command
-// word, or a way to open it goes through `shared/contributed-overlays.ts`, which is the seam that
-// exists for exactly that. These zones are what keep the direction one-way rather than a convention.
-for (const target of clientFeatureDirectories) {
-  clientFeatureZones.push({
-    target: `./web/src/${target}`,
-    from: './web/src/overlay-plugins',
-    message: 'Features must reach an overlay plugin through shared/contributed-overlays.ts, not by importing the plugin layer.',
-  });
-}
+import { clientFeatureZones } from './eslint.client-feature-zones.mjs';
 
 export default ts.config(
   js.configs.recommended,

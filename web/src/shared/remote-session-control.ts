@@ -1,5 +1,5 @@
 import type { RemoteTargetView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from './ws/ws';
 import type { RemoteSessionState } from './RemoteSessionButton';
 
 // The metadata row's detach/attach control, built once for every remote tab that renders one.

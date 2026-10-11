@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { fromText } from './model';
 import type { EditorApi } from './useEditor';
 import { useEditorWatchReload } from './useEditorWatchReload';

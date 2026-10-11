@@ -1,7 +1,7 @@
 import { subscribeBackgroundReplies } from './background-replies';
 import type { ReactNode } from 'react';
-import type { JanusClient } from '../ws';
-import { resourceUrl } from '../session-url';
+import type { JanusClient } from '../shared/ws/ws';
+import { resourceUrl } from '../shared/ws/session-url';
 import { copyText as systemCopyText } from '../shared/system-clipboard';
 import { openTranscriptLink } from '../shared/transcript/open-link';
 import { transcriptIntents } from '../shared/transcript/transcript-intents';

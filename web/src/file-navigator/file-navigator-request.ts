@@ -1,6 +1,6 @@
 import type { FileNavigatorMutationResults, FileNavigatorRpcCall } from '@shared/protocol';
-import type { RequestResult } from '../rpc-exchange';
-import type { JanusClient } from '../ws';
+import type { RequestResult } from '../shared/ws/rpc-exchange';
+import type { JanusClient } from '../shared/ws/ws';
 
 type MutationMethod = keyof FileNavigatorMutationResults;
 type MutationCall<Method extends MutationMethod> = Extract<FileNavigatorRpcCall, { method: Method }>;

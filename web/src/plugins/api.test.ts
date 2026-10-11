@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { createPluginClientCapabilities, nextListSelection, spliceIntoTextarea } from './api';
 import { nextListSelection as sharedNextListSelection } from '../shared/list-selection';
 import { spliceIntoTextarea as sharedSpliceIntoTextarea } from '../shared/command-bar/textarea-splice';

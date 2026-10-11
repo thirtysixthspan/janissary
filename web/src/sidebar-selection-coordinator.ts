@@ -1,4 +1,4 @@
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 
 type Side = 'left' | 'right';
 

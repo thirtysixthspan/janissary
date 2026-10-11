@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import type { TabView } from '@shared/protocol';
 import { errorText } from '@shared/error-text';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { SplitTabButton } from '../shared/SplitTabButton';
 import { AppCommandBarTabScope } from '../shared/command-bar/AppCommandBar';
 import { createPluginClientCapabilities, type TabDirtyHandle } from './api';

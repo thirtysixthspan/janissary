@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import type { ScheduleLaunchView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
 import { buildScheduleCommand, type ScheduleFields, type ScheduleType } from './schedule-command';
 

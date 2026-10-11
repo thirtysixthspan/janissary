@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../ws/ws';
 import { Transcript } from '../transcript/Transcript';
 import { transcriptIntents } from '../transcript/transcript-intents';
 import { ptyActions } from '../terminal/pty-actions';

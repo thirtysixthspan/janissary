@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { PendingQuestionView, TabView } from '@shared/protocol';
 import { QuestionPanel } from './shared/questions/QuestionPanel';
 import { useSectionNav } from './useSectionNav';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 
 // The section-nav chord is registered app-wide in the capture phase, so a question panel rendered on
 // its own never meets it. These cases mount both, the way App does, to pin who gets Shift+Tab.

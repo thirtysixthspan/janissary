@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { DockCycleHeader } from '../shared/DockCycleHeader';
 import { PluginBody } from './PluginBody';
 import { DockedActionsContext } from './PluginActionsHeader';

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { FileNavigatorRow } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { computeRename, hasRenameCollision, siblingNames } from './file/navigator-rename';
 import { requestFileNavigatorMutation } from './file-navigator-request';
 

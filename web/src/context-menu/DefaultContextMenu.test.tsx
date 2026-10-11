@@ -2,7 +2,7 @@ import React from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DefaultContextMenu } from './DefaultContextMenu';
-import type { RequestResult } from '../ws';
+import type { RequestResult } from '../shared/ws/ws';
 import { registerTerminalSelection, unregisterTerminalSelection } from '../shared/terminal/terminal/selection';
 
 function stubSelection(text: string) {

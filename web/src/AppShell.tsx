@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { Sidebar } from './Sidebar';
 import { DefaultContextMenu } from './context-menu/DefaultContextMenu';
 import type { CommandInputDropHandle } from './shared/drop-handles';

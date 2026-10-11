@@ -1,5 +1,5 @@
 import type { AcpRef } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 
 // Which transcript RPC the metadata row's clipboard button sends. Supplied by the caller rather
 // than decided here: tabs and harness tabs open different transcripts, and branching on that

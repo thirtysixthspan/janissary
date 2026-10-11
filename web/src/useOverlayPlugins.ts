@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import type { CommandInputDropHandle } from './shared/drop-handles';
 import type { OverlayPluginHost } from './overlay-plugins/host';
 import { createOverlayPluginHost } from './overlay-plugins/host';

@@ -5,7 +5,7 @@ import './theme.css';
 import { App } from './App';
 import { startClientPageLifecycle } from './client-page-lifecycle';
 import { createPluginHost, PluginHostProvider } from './plugins/host';
-import { JanusClient } from './ws';
+import { JanusClient } from './shared/ws/ws';
 
 const root = createRoot(document.querySelector('#root')!);
 

@@ -4,7 +4,7 @@
 // for the same reason (see product/plans/complete/editor-tab-persona-connections.md).
 
 import type { TabView, ConnectionView, AcpRef } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { statusButton, type StatusWindowButtonProps } from '../shared/status-windows/status-button';
 import { useStatusWindows } from '../shared/status-windows/useStatusWindows';
 import { isEditorTabView } from '../shared/tab/view-guards';

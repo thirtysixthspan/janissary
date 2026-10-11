@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 
 export function useFileNavigatorDelete(client: JanusClient, label: string) {
   const [pendingDelete, setPendingDelete] = useState<string[] | null>(null);

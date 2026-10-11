@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type React from 'react';
 import { useFileNavigatorOpener } from './useFileNavigatorOpener';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { FileOpenerChoice, FileOpenerResolution } from '@shared/protocol';
 
 // Every open and edit travels as the navigator-scoped RPC rather than a command, so nothing lands in

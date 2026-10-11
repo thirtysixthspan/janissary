@@ -1,5 +1,5 @@
 import type { NativeNotificationEvent } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { AlertPlacement } from './alert-placement';
 
 export class NativeNotifications {

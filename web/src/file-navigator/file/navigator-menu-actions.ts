@@ -1,5 +1,5 @@
 import type { FileNavigatorRow, FileNavigatorView } from '@shared/protocol';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../../shared/ws/ws';
 import { copyAbsolutePaths, copySelectionToClipboards } from './navigator-copy';
 import { newFileTargetDir, newDirectoryTargetPath } from './navigator-new-file';
 import { normalizeOperationPaths } from './navigator-selection';

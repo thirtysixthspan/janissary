@@ -1,4 +1,4 @@
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 
 // Read only the bound tab and replay retained replies when a renderer subscribes.
 export function subscribeBackgroundReplies(client: JanusClient, label: string, receive: (reply: { id: string; output: string }) => void): () => void {

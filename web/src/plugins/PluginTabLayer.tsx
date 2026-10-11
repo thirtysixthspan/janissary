@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { tabBodyBorder } from '../shared/tab/body-border';
 import type { TabDirtyHandle } from './api';
 import { PluginBody } from './PluginBody';

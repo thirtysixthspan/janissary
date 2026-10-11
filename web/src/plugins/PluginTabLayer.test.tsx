@@ -3,7 +3,7 @@ import { act, fireEvent, render as renderBare, screen, waitFor } from '@testing-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
 import type { ConversationTabPayload } from '@shared/plugins/conversations/shared';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { createPluginHost, PluginHostProvider, type PluginHost } from './host';
 import { PluginTabLayer } from './PluginTabLayer';
 import type * as ConversationsEntry from './conversations/index';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { EditorState } from './model';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { useEditorSync } from './useEditorSync';
 
 function makeState(text: string, cursorCol = 0): EditorState {

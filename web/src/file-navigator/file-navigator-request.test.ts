@@ -5,8 +5,8 @@ import type {
   RenameFileNavigatorResult,
   UndoRedoResult,
 } from '@shared/protocol';
-import type { RequestResult } from '../rpc-exchange';
-import type { JanusClient } from '../ws';
+import type { RequestResult } from '../shared/ws/rpc-exchange';
+import type { JanusClient } from '../shared/ws/ws';
 import { requestFileNavigatorMutation } from './file-navigator-request';
 
 describe('requestFileNavigatorMutation', () => {

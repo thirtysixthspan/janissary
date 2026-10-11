@@ -5,7 +5,7 @@ import type { StateEvent, TabView } from '@shared/protocol';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import { App } from './App';
 import { createPluginHost, PluginHostProvider } from './plugins/host';
-import { JanusClient } from './ws';
+import { JanusClient } from './shared/ws/ws';
 
 // xterm's renderer cannot run in jsdom, so the emulator the shell body opens is a stub that only
 // counts the focus calls it receives.

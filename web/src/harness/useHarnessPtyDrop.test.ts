@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { harnessDropHandle } from '../shared/drop-registry';
 import { useHarnessPtyDrop } from './useHarnessPtyDrop';
 

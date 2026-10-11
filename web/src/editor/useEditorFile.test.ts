@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { EditorView } from '@shared/protocol';
 import { contentHash, SAVE_CONFLICT_ERROR } from '@shared/editor/save-conflict';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { fromText, toText } from './model';
 import type { EditorApi } from './useEditor';
 import { useEditorFile } from './useEditorFile';

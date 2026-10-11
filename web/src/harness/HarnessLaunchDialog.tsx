@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import type { HarnessLaunchView } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
 import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-launch-command';
 

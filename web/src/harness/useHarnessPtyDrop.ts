@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { registerHarnessDrop } from '../shared/drop-registry';
 
 // A file-navigator drag released over the terminal types its paths into the harness. Focus moves

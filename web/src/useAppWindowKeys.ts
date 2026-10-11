@@ -1,4 +1,4 @@
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { useLatestRef } from './useLatestRef';
 import { useWindowKeys, type StateSnapshot, type Callbacks } from './useWindowKeys';
 import type { PluginChordRegistry } from './plugins/PluginChords';

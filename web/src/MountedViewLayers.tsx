@@ -1,6 +1,6 @@
 import React from 'react';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import type { DirtyTabHandle, HarnessTabHandle } from './shared/tab/handles';
 import { EditorTab } from './editor/EditorTab';
 import { HarnessTabLayer } from './harness/HarnessTabLayer';

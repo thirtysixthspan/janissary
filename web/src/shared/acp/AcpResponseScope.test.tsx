@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { JanusClient } from '../../ws';
+import type { JanusClient } from '../ws/ws';
 import { AcpResponseScope, useAcpResponse } from './AcpResponseScope';
 
 function Consumer() { return useAcpResponse(); }

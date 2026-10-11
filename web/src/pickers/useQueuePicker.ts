@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import type { TabView } from '@shared/protocol';
 import { hostsCommandBar } from '../shared/command-bar/hosts-command-bar';
 

@@ -3,7 +3,7 @@ import type { TabView } from '@shared/protocol';
 import { createPasteCapability } from './paste-into-surface';
 import { editorDropHandle, registerEditorDrop } from './shared/drop-registry';
 import type { CommandInputDropHandle } from './shared/drop-handles';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { openContributedOverlay, registerContributedOverlay } from './shared/contributed-overlays';
 import { registerTerminalSelection, unregisterTerminalSelection } from './shared/terminal/terminal/selection';
 

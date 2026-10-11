@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SuggestHunk } from '@shared/protocol';
 import type { EditorState } from './model';
 import { toText, clampPos } from './model';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { parseSuggestRequest } from './suggest-request';
 import { applyHunk } from './suggestDiff';
 import { applyKeyAction, type EditSurface } from './applyKeyAction';

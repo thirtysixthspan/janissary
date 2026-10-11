@@ -1,6 +1,6 @@
 import React from 'react';
 import type { HarnessLaunchView, ScheduleLaunchView, TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { AppShell } from './AppShell';
 import { AppCenterActionArea } from './AppCenterActionArea';
 import { AppReportingSection } from './AppReportingSection';

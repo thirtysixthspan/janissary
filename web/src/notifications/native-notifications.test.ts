@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NativeNotificationEvent } from '@shared/protocol';
-import type { JanusClient } from '../ws';
+import type { JanusClient } from '../shared/ws/ws';
 import { NativeNotifications } from './native-notifications';
 import type { AlertPlacement } from './alert-placement';
 

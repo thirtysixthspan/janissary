@@ -1,7 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { TabView } from '@shared/protocol';
-import type { JanusClient } from './ws';
+import type { JanusClient } from './shared/ws/ws';
 import { Sidebar } from './Sidebar';
 import { sidebarSelectionFor } from './sidebar-selection-coordinator';
 

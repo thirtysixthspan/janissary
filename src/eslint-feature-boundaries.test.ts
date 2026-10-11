@@ -100,6 +100,23 @@ describe('client feature boundaries', () => {
     expect(messages[0]?.message).toContain('Shared modules must not import a feature');
   });
 
+  it('rejects a shared module importing from the app-shell root', async () => {
+    const messages = await boundaryMessages(
+      "import { AppShell } from '../AppShell'; void AppShell;",
+      'web/src/shared/DockCycleHeader.tsx',
+    );
+    expect(messages).toHaveLength(1);
+    expect(messages[0]?.message).toContain('Shared modules must not import the app-shell root');
+  });
+
+  it('allows a shared module to import another shared module', async () => {
+    const messages = await boundaryMessages(
+      "import { openContributedOverlay } from './contributed-overlays'; void openContributedOverlay;",
+      'web/src/shared/DockCycleHeader.tsx',
+    );
+    expect(messages).toEqual([]);
+  });
+
   // The overlay-plugin host sits outside the feature list because it has to reach the pickers, the
   // command bar, and the context menu to build the one capability a plugin gets. Nothing may reach
   // back: the seam in `shared` is the only way in, and this is what keeps that direction one-way.
