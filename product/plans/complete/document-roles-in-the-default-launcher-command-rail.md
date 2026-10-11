@@ -13,7 +13,7 @@
 
 - **Amend the sentence rather than restate the list.** The page already had the sentence and already had a link to another tab's page; replacing one clause is the whole change. Restating the list as a table would be a rewrite of a page whose job is to be read, not to be enumerated twice.
 - **The link follows the page's own convention.** Notifications is linked with an absolute site path already, so Roles uses the same form, and `/user-documentation/tab-types/roles` is already in the sidebar at `documentation/.vitepress/config.mts` — no sidebar entry is added.
-- **`npm run docs:build` cannot verify it here, and that is recorded rather than papered over.** The documentation build already fails in this workspace for two reasons unrelated to this page: a markdown/Vue parse error in `documentation/user-documentation/tab-types/diff.md`, and unresolved `/agents/*.png` sprites that `scripts/docs-screenshots` generates and does not check in. Running it on a clean tree produces the identical two failures. The link is therefore verified by the sidebar entry and the file on disk, which is what VitePress would resolve it against.
+- **The link is verified by the documentation build, which a later commit on this branch repaired.** When this unit ran, `npm run docs:build` already failed in this workspace for two reasons unrelated to this page — a markdown/Vue parse error in `documentation/user-documentation/tab-types/diff.md`, and an `/agents/*.png` sprite for a character the roster does not contain — so the link was checked against the sidebar entry and the file on disk instead. Both failures are fixed since; the build renders every page and resolves this link to `roles.html`, which is the verification this bullet originally called for.
 - **No new test, deliberately.** The code side of this fact is already pinned twice: `commands-file.test.ts` asserts the default list, and the launcher spec states it in prose. What is missing is a sentence in a Markdown file, and a unit test asserting that a documentation sentence contains a word is the implementation-mirroring test this kind of entry rules out. The link is verified where links are actually verified: `npm run docs:build`, which fails on a dead internal link.
 
 ## Implementation steps
@@ -22,7 +22,7 @@
 
 ## Tests
 
-None added, for the reason recorded above. Verification is the existing `src/plugins/launcher/commands-file.test.ts` default-list assertion, a direct comparison of the page's sentence against `DEFAULT_LAUNCHER_COMMANDS` and `product/specs/launcher.md`, and the link resolving inside the existing sidebar structure — the same target the sidebar already lists at `documentation/.vitepress/config.mts`.
+None added, for the reason recorded above. Verification is the existing `src/plugins/launcher/commands-file.test.ts` default-list assertion, a direct comparison of the page's sentence against `DEFAULT_LAUNCHER_COMMANDS` and `product/specs/launcher.md`, and a documentation build that renders the page and resolves the link.
 
 ## Out of scope
 
@@ -33,5 +33,5 @@ None added, for the reason recorded above. Verification is the existing `src/plu
 ## Verification
 
 - `./scripts/run.mjs check-diff` is clean.
-- The link resolves inside the existing sidebar structure: `/user-documentation/tab-types/roles` is the sidebar entry's own link and the file exists beside the launcher's.
+- `npm run docs:build` renders every page and resolves this link to `roles.html`.
 - Read the page's sentence beside `DEFAULT_LAUNCHER_COMMANDS` and the launcher spec's paragraph: the three name the same commands in the same order.

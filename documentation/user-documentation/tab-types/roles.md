@@ -28,7 +28,7 @@ Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, 
 
 Drag an entry row onto another row in the same card to move it. Drag a role's handle onto another card — its model rows included — to move the role itself. To remove an entry, click its **×**, or drag the entry back onto the **Models** column. To remove a role, click the **×** on its card. Removing your last role is allowed; the tab then reads `No roles yet.` and keeps an **Add role** button.
 
-<img class="agent-float left" src="/agents/emrah-south-east.png" alt="" />
+<img class="agent-float left" src="/agents/mahir-south-east.png" alt="" />
 
 Renaming happens in place: click the name, type the new one, and press `Enter` or click away. `Escape` puts the old name back. The same goes for a description. Names are matched ignoring case, so two roles can never end up named `Review` and `review` — the second one is refused with `A role named "<name>" already exists.` and nothing is saved. A refused name stays in the field it was typed in, so you can fix the typo and commit again without retyping it.
 

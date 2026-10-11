@@ -10,7 +10,7 @@ diff
 
 `diff` opens the tab on the project's own changes — everything the working tree holds against `HEAD`, staged and unstaged together, untracked files included. `diff <path>` scopes it to a directory inside the project instead. Both open or focus the same one tab; a second route re-scopes it rather than opening a second one.
 
-A workspace gets a tab of its own, titled **diff: <workspace label>**. Three routes open one:
+A workspace gets a tab of its own, titled **`diff: <workspace label>`**. Three routes open one:
 
 - the plus-minus button in a shell or harness tab's metadata row, which shows that tab's own workspace;
 - the same plus-minus button on a [sessions](/user-documentation/tab-types/sessions) list row, which shows that remote session's workspace;
