@@ -120,8 +120,7 @@ describe('sandboxSpawn', () => {
     expect(result).toEqual({ command: 'bash', args: [], env: passedThrough(env) });
   });
 
-  it('wraps the command in sandbox-exec when a workspaceDir is given and sandboxing is available', () => {
-    if (!sandboxAvailable()) return; // covered by the identity-passthrough case elsewhere
+  it.skipIf(!sandboxAvailable())('wraps the command in sandbox-exec when a workspaceDir is given and sandboxing is available', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', ['-lc', 'echo hi']);
     expect(result.command).toBe('sandbox-exec');
@@ -132,8 +131,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('includes every -D param the profile references', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('includes every -D param the profile references', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const dNames = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.split('=', 1)[0]);
@@ -147,8 +145,7 @@ describe('sandboxSpawn', () => {
   // already imply: `.local/share/opencode` is a write carve-out (and so a read carve-in), and the
   // credential file inside it has to lose anyway. Both halves are asserted here — the deny reaches
   // the profile, and denying it did not deny the directory the harness writes its database to.
-  it('binds a secret-deny param to opencode\'s credential file without denying its directory', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('binds a secret-deny param to opencode\'s credential file without denying its directory', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const dValues = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.slice(v.indexOf('=') + 1));
@@ -161,8 +158,7 @@ describe('sandboxSpawn', () => {
   // the non-sandboxed opencode has already fetched. Asserted alongside the directories it must NOT
   // have widened into: carving in the cache tree itself would let a sandboxed agent read (and, if
   // it were ever also a write carve-out) forge anything else opencode caches there.
-  it('binds a read-carvein param to opencode\'s model cache without carving in its directory', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('binds a read-carvein param to opencode\'s model cache without carving in its directory', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const dValues = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.slice(v.indexOf('=') + 1));
@@ -178,8 +174,7 @@ describe('sandboxSpawn', () => {
   // workspaced harness starts with none of the user's PATH additions. zsh's are the ones that
   // matter most: `.zshrc`, where a version manager puts its PATH setup, is read only when the
   // shell is interactive.
-  it('binds read-carvein params to the shell startup files a launched shell sources', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('binds read-carvein params to the shell startup files a launched shell sources', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const carveIns = result.args
@@ -195,8 +190,7 @@ describe('sandboxSpawn', () => {
   // The task picker inserts `execute $janissary/ai/tasks/<task>.md` for a built-in task, so a
   // workspaced agent has to be able to open the file that names. An install under $HOME — a global
   // npm prefix, or a development checkout — falls under the $HOME content deny without this.
-  it('carves the install\'s ai/ directory into the read allow-list, literal and resolved', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('carves the install\'s ai/ directory into the read allow-list, literal and resolved', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const aiDir = path.join(janissaryRoot(), 'ai');
@@ -209,8 +203,7 @@ describe('sandboxSpawn', () => {
 
   // Those same task prompts tell the agent to run `$janissary/scripts/run.mjs`, so the runner and
   // the scripts it dispatches to have to be readable on the same terms the prompts are.
-  it('carves the install\'s scripts/ directory into the read allow-list, literal and resolved', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('carves the install\'s scripts/ directory into the read allow-list, literal and resolved', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const scriptsDir = path.join(janissaryRoot(), 'scripts');
@@ -223,8 +216,7 @@ describe('sandboxSpawn', () => {
 
   // Narrower than the installation: ai/ is prompts written to be read by an agent, while the rest of
   // the tree holds janissary's own dependencies and working state.
-  it('does not carve in the install root itself', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('does not carve in the install root itself', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     const dValues = result.args.filter((_, i) => result.args[i - 1] === '-D').map((v) => v.slice(v.indexOf('=') + 1));
@@ -232,8 +224,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('sets the janissary install root on a confined spawn, surviving the scrub', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('sets the janissary install root on a confined spawn, surviving the scrub', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], { PATH: '/usr/bin', NPM_TOKEN: 'ambient' });
     expect(result.env.janissary).toBe(janissaryRoot());
@@ -256,8 +247,7 @@ describe('sandboxSpawn', () => {
     expect(result.env.janissary).toBe(janissaryRoot());
   });
 
-  it('scrubs credential-shaped vars and agent-socket escape vectors, keeping provider keys', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('scrubs credential-shaped vars and agent-socket escape vectors, keeping provider keys', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = {
       PATH: '/usr/bin',
@@ -292,8 +282,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects GH_TOKEN when a github token is configured, overriding the scrub', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('injects GH_TOKEN when a github token is configured, overriding the scrub', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', GH_TOKEN: 'ambient-token' };
     const result = sandboxSpawn({ workspaceDir, tokens: { github: 'scoped-token' } }, 'bash', [], env);
@@ -301,8 +290,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('does not set GH_TOKEN when no github token is configured, even if the ambient env has one', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('does not set GH_TOKEN when no github token is configured, even if the ambient env has one', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', GH_TOKEN: 'ambient-token' };
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
@@ -310,8 +298,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects CLAUDE_CODE_OAUTH_TOKEN when a claude token is configured', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('injects CLAUDE_CODE_OAUTH_TOKEN when a claude token is configured', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir, tokens: { claude: 'subscription-token' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
@@ -321,8 +308,7 @@ describe('sandboxSpawn', () => {
   // Unlike GH_TOKEN, this one is deliberately absent from ENV_SCRUB_PATTERNS: it is an LLM provider
   // credential, and the scrub exempts those so a harness can authenticate with its own. A user who
   // exports it themselves and configures no token file keeps working exactly as before.
-  it('leaves an ambient CLAUDE_CODE_OAUTH_TOKEN in place when no claude token is configured', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('leaves an ambient CLAUDE_CODE_OAUTH_TOKEN in place when no claude token is configured', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', CLAUDE_CODE_OAUTH_TOKEN: 'ambient-token' };
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
@@ -330,8 +316,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('prefers a configured claude token over an ambient CLAUDE_CODE_OAUTH_TOKEN', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('prefers a configured claude token over an ambient CLAUDE_CODE_OAUTH_TOKEN', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', CLAUDE_CODE_OAUTH_TOKEN: 'ambient-token' };
     const result = sandboxSpawn({ workspaceDir, tokens: { claude: 'configured-token' } }, 'bash', [], env);
@@ -339,8 +324,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects OPENCODE_API_KEY when an opencode token is configured', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('injects OPENCODE_API_KEY when an opencode token is configured', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir, tokens: { opencode: 'oc_live_key' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
@@ -349,8 +333,7 @@ describe('sandboxSpawn', () => {
 
   // Off ENV_SCRUB_PATTERNS for the same reason the Claude token is: an LLM provider key, which the
   // scrub deliberately exempts so a harness can use its own.
-  it('leaves an ambient OPENCODE_API_KEY in place when no opencode token is configured', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('leaves an ambient OPENCODE_API_KEY in place when no opencode token is configured', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', OPENCODE_API_KEY: 'ambient-key' };
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
@@ -370,8 +353,7 @@ describe('sandboxSpawn', () => {
   // Both names, because opencode detects its Google provider from one and loads the key from the
   // other: with only GEMINI_API_KEY set, the provider looked configured and the first prompt failed
   // reporting GOOGLE_GENERATIVE_AI_API_KEY missing.
-  it('injects GEMINI_API_KEY and GOOGLE_GENERATIVE_AI_API_KEY when a gemini token is configured', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('injects GEMINI_API_KEY and GOOGLE_GENERATIVE_AI_API_KEY when a gemini token is configured', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir, tokens: { gemini: 'AIzaSyExample' } }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
@@ -381,8 +363,7 @@ describe('sandboxSpawn', () => {
 
   // Off ENV_SCRUB_PATTERNS like the other two provider keys, so someone who exports it themselves
   // keeps working when no token file is configured.
-  it('leaves an ambient GEMINI_API_KEY in place when no gemini token is configured', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('leaves an ambient GEMINI_API_KEY in place when no gemini token is configured', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', GEMINI_API_KEY: 'ambient-key' };
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
@@ -390,8 +371,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('leaves an ambient GOOGLE_GENERATIVE_AI_API_KEY in place when no gemini token is configured', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('leaves an ambient GOOGLE_GENERATIVE_AI_API_KEY in place when no gemini token is configured', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const env = { PATH: '/usr/bin', GOOGLE_GENERATIVE_AI_API_KEY: 'ambient-key' };
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
@@ -409,8 +389,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('injects every credential when all four tokens are given', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('injects every credential when all four tokens are given', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
     const result = sandboxSpawn(
@@ -435,16 +414,14 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('sets TMPDIR to the workspace-adjacent temp dir', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('sets TMPDIR to the workspace-adjacent temp dir', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', []);
     expect(result.env.TMPDIR).toContain(`${path.basename(workspaceDir)}.tmp`);
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it('uses the offline profile variant when offline is set', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('uses the offline profile variant when offline is set', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir, offline: true }, 'bash', []);
     expect(result.args[1]).toBe(SANDBOX_PROFILE_OFFLINE);
@@ -462,8 +439,7 @@ describe('sandboxSpawn git identity', () => {
     return () => { setGitIdentity({}); };
   });
 
-  it('injects the author and committer pair on a confined workspaced spawn', () => {
-    if (!sandboxAvailable()) return;
+  it.skipIf(!sandboxAvailable())('injects the author and committer pair on a confined workspaced spawn', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], { PATH: '/usr/bin' });
     expect(result.env.GIT_AUTHOR_NAME).toBe('Ada Lovelace');
