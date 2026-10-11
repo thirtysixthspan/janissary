@@ -2,6 +2,7 @@ import type { BulkConflictPolicy } from '../../protocol.js';
 import type { RemoteChannel } from '../../remote/channel/index.js';
 import type { NavigatorListener } from '../../remote/channel/types.js';
 import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol-frames.js';
+import { decodeFilesystemResult, type RemoteFilesystemOperationResult } from '../../remote/filesystem/operations.js';
 import type { DeleteManyResult, MoveManyResult } from '../batch.js';
 import type { FileOperationResult } from '../file-operation-result.js';
 import type { MoveOneResult } from '../filesystem.js';
@@ -98,7 +99,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   }
 
   async readFile(root: string, relPath: string): Promise<Uint8Array> {
-    const result = await this.request<{ content: string }>('read-file', { path: await this.paths.to(root, relPath) });
+    const result = await this.request('read-file', { path: await this.paths.to(root, relPath) });
     return Buffer.from(result.content, 'base64');
   }
 
@@ -163,16 +164,18 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return (operation, args) => this.request(operation, args);
   }
 
-  private async request<T>(operation: RemoteFilesystemOperation, args: RemoteFilesystemArguments): Promise<T> {
+  private async request<K extends RemoteFilesystemOperation>(operation: K, args: RemoteFilesystemArguments): Promise<RemoteFilesystemOperationResult<K>> {
     try {
       await this.opened;
     } catch {
-      return unavailableResult<T>(operation, args, CLOSED_REASON);
+      return unavailableResult(operation, args, CLOSED_REASON);
     }
-    if (this.closed) return unavailableResult<T>(operation, args, CLOSED_REASON);
+    if (this.closed) return unavailableResult(operation, args, CLOSED_REASON);
     const request = `${this.session}:${++this.requestNumber}`;
-    return new Promise<T>((resolve, reject) => {
-      this.requests.add(request, { operation, args, resolve: (value) => resolve(value as T), reject });
+    return new Promise<RemoteFilesystemOperationResult<K>>((resolve, reject) => {
+      this.requests.add(request, { operation, args, resolve: (value) => {
+        try { resolve(decodeFilesystemResult(operation, value)); } catch (error) { reject(error); }
+      }, reject });
       this.channel.send({ type: 'filesystem-request', session: this.session, request, operation, args });
     });
   }
@@ -188,9 +191,10 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
   private async createItem(
     root: string, destination: string, operation: 'create-file' | 'create-directory',
   ): Promise<FileOperationResult<{ path: string }>> {
-    const result = await this.request<FileOperationResult<{ path: string }>>(
-      operation, { destination: await this.paths.to(root, destination) },
-    );
+    const remoteDestination = await this.paths.to(root, destination);
+    const result = operation === 'create-file'
+      ? await this.request('create-file', { destination: remoteDestination })
+      : await this.request('create-directory', { destination: remoteDestination });
     if (!result.ok) return result;
     return { ok: true, value: { path: await this.paths.from(root, result.value.path) } };
   }

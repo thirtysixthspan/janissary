@@ -557,6 +557,10 @@ silently as a transport error with nothing to show. An operation that returns da
 put a reason — a listing, stats, a watch, git metadata, a pull, a search, a file read — fails
 outright instead, since there is no result for it to report into.
 
+Each operation's reply is decoded against that operation's result shape before the local navigator
+receives it. A malformed reply fails the request instead of flowing into the navigator as an
+unchecked value.
+
 A reply lost to a dropped connection is reported as failed, and nothing is retried. Whether the
 remote had already carried out the work before the connection ended cannot be known from the local
 side, and repeating a mutation that may have run would be worse than reporting one that may have

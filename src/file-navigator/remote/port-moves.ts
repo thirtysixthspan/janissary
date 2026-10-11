@@ -20,7 +20,7 @@ export async function remoteMove(
   request: RemoteRequest, paths: RemotePortPaths,
   root: string, from: string, to: string, overwrite?: boolean,
 ): Promise<MoveOneResult> {
-  const result = await request<MoveOneResult>('move', {
+  const result = await request('move', {
     from: await paths.to(root, from), to: await paths.to(root, to), ...(overwrite && { overwrite }),
   });
   if ('conflictPaths' in result) return { conflictPaths: await fromRemote(paths, root, result.conflictPaths) };
@@ -32,7 +32,7 @@ export async function remoteMoveMany(
   request: RemoteRequest, paths: RemotePortPaths,
   root: string, sources: string[], destination: string, policy?: BulkConflictPolicy,
 ): Promise<MoveManyResult> {
-  const result = await request<MoveManyResult>('move-many', {
+  const result = await request('move-many', {
     sources: await Promise.all(sources.map((item) => paths.to(root, item))),
     destination: await paths.to(root, destination), policy,
   });
