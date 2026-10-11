@@ -56,6 +56,16 @@ function isEntry(value: unknown): value is RoleEntry {
     && (value.effort === undefined || typeof value.effort === 'string');
 }
 
+// Every harness the tab lists must map to a list of model ids the tab can render as options. Checking
+// only that the field is an object would let a list of lists, a scalar, or a list holding a non-string
+// through to `Object.entries(...).map` in the catalog column and the picker, where a shape the plugin
+// declared it would never produce becomes a render failure.
+function isModelCatalog(value: unknown): value is Record<string, string[]> {
+  return isRecord(value)
+    && Object.values(value).every((models) => Array.isArray(models)
+      && models.every((model) => typeof model === 'string'));
+}
+
 export function isAddRoleIntent(value: unknown): value is AddRoleIntent {
   return isRecord(value) && isName(value.name);
 }
@@ -111,8 +121,7 @@ export function isRolesPayload(value: unknown): value is RolesPayload {
     && typeof filePath === 'string'
     && (problem === undefined || typeof problem === 'string')
     && isRecord(catalog)
-    && typeof catalog.models === 'object'
-    && catalog.models !== null
+    && isModelCatalog(catalog.models)
     && Array.isArray(catalog.efforts)
     && catalog.efforts.every((effort) => typeof effort === 'string');
 }

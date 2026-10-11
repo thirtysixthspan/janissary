@@ -35,17 +35,6 @@ Proposal Risk: 2/10 - A stale edit becomes a visible retry instead of changing a
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "reject stale positional roles entry mutations". Extend the index-based intent contracts and guards in src/plugins/roles/shared.ts with an expected ordered-entry snapshot or equivalent revision bound to the caller's displayed state, and populate it from web/src/plugins/roles/RoleCard.tsx and web/src/plugins/roles/roles-dnd.ts. Compare the precondition with the current roles read inside the queue in src/plugins/roles/activate.ts before remove-entry, move-entry, or set-entry-effort applies; reject mismatches with a clear retry message and republish current state without writing. Do not match only harness/model values, since a role may hold duplicate entries. Extend src/plugins/roles/activate.test.ts for two removals from one displayed snapshot, a reorder followed by an effort edit, duplicates, and two callers sharing a snapshot; verify that stale operations never mutate the wrong row. Update web/src/plugins/roles/RolesTab.test.tsx and web/src/plugins/roles/roles-dnd.test.tsx to pin the submitted preconditions and visible rejection. The existing rapid-edit test appends two named roles and therefore cannot catch shifted entry indices.
 
 
-* Close the new payload guard's model-catalog type boundary before client rendering.
-
-Existing Issue: The roles payload predicate accepts any non-null object as the model catalog, including arrays and non-array or non-string model lists, while claiming those values are a record of string arrays. Severity: 4/10
-
-Existing Risk: 3/10 - A malformed produced catalog crosses both payload checks and reaches client map calls or React children, turning a boundary validation error into a render failure that disables the plugin.
-
-Proposal Risk: 1/10 - Complete nested validation rejects malformed catalogs before rendering, with valid empty catalogs and hand-written out-of-catalog role entries remaining covered separately.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "validate every harness model list in the roles payload guard". Strengthen isRolesPayload in src/plugins/roles/shared.ts to require catalog.models to be a record rather than an array and every own harness value to be an array containing only strings, while preserving the existing effort-list and role-entry rules. Add colocated src/plugins/roles/shared.test.ts coverage for arrays, null, scalar model-list values, non-string members, and valid empty and populated catalogs. Add client registration or boundary coverage for the roles entry in web/src/plugins/registry.test.tsx so invalid payloads are refused before web/src/plugins/roles/RolesTab.tsx calls models.map. Preserve acceptance of stored roles whose harness, model, or effort is outside the current catalog, since stale-entry warnings were explicitly deferred. The host currently constructs valid catalogs, but the new predicate's asserted type and the plan's complete-field-validation promise are not enforced by the current render tests.
-
-
 * Remove the new shared roles contract's dependency on the server API.
 
 Existing Issue: The roles shared contract imports isRecord from the server API even though the binding plugin rules require shared contracts to be import-free, adding a client runtime dependency through the server API's Node-bearing re-exports. Severity: 4/10
