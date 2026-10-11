@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the functionality gap by using the installation runner when the target project has no runner of its own.
-
-Existing Issue: Step 2 of `ai/tasks/workspace/fix-build.md` invokes `./scripts/run.mjs pr-check-gate` from the target project even though the task says it can operate in other projects and those may not contain that runner. Severity: 4/10
-
-Existing Risk: 4/10 - On a project without `scripts/run.mjs`, the diagnostic gate command fails because the runner is absent and can be mistaken for evidence about the build.
-
-Proposal Risk: 2/10 - Selecting the installation runner when the project has no runner keeps this command available, while a missing project check script remains visible as an environment limitation.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1670 "use the installation runner for the local gate when the target project has no runner of its own". In `ai/tasks/workspace/fix-build.md`, update Step 2 to invoke `$janissary/scripts/run.mjs pr-check-gate`, matching the required gate in Step 5, or explicitly select `./scripts/run.mjs` only when the target project has its own runner. Keep the gate's typecheck, lint, and test behavior unchanged. Manually walk the task from both a Janissary checkout and a project without `scripts/run.mjs`; the latter should invoke the installation runner and should report unavailable project scripts as unverified rather than as a build failure.
-
-
 * Close the security gap by keeping pull-request instructions and branch content from steering the build-repair task.
 
 Existing Issue: `ai/tasks/workspace/fix-build.md` treats PR requirements as authoritative and reads the PR body, plan, and branch before repairs, but does not say that instructions embedded in those artifacts are untrusted data or require the preparation task to come from a trusted base revision. Severity: 8/10
