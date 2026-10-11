@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync, chmodSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
@@ -422,6 +422,16 @@ describe('updateConfig', () => {
     expect(updateConfig({ syntaxTheme: 'nord' })).toBe(true);
 
     expect(readdirSync(path.join(tmpDir, '.janissary'))).toEqual(['config.json']);
+  });
+
+  it('preserves restrictive permissions on an existing config file', () => {
+    loadConfig(tmpDir);
+    const configPath = path.join(tmpDir, '.janissary', 'config.json');
+    chmodSync(configPath, 0o600);
+
+    expect(updateConfig({ syntaxTheme: 'nord' })).toBe(true);
+
+    expect(statSync(configPath).mode & 0o777).toBe(0o600);
   });
 
   it('round-trips syncPaths like other settings', () => {
