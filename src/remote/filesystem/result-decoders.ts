@@ -8,6 +8,7 @@ import type { DeleteManyResult, MoveManyResult } from '../../file-navigator/batc
 import type { PasteManyResult } from '../../file-navigator/paste.js';
 import type { CommitResult } from '../../git/commit.js';
 import type { HistoryStep } from '../../file-navigator/moves.js';
+import { isChangeSetResult, type ChangeSetResult } from '../../plugins/diff/change-set.js';
 
 export const decodeResult = <R>(check: (value: unknown) => value is R) => (value: unknown): R => {
   if (!check(value)) throw new Error('Invalid remote filesystem operation result.');
@@ -41,8 +42,7 @@ export const resultDecoders = {
   unwatch: decodeResult<Record<string, never>>(emptyObject),
   git: decodeResult<GitMetadata>(git),
   'git-pull': decodeResult<string>((value): value is string => typeof value === 'string'),
-  // The diff plugin validates this untrusted far-side record with its own guard after receipt.
-  'change-set': decodeResult<unknown>(() => true),
+  'change-set': decodeResult<ChangeSetResult>(isChangeSetResult),
   'git-commit': decodeResult<CommitResult>((value): value is CommitResult => record(value)
     && (value.committed === false || (value.committed === true && typeof value.summary === 'string'))),
   search: decodeResult<string[]>(strings),

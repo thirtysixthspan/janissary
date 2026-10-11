@@ -25,6 +25,7 @@ import { launchCapabilities, type DeferredPluginCall } from './launch-tab.js';
 import { remoteCapabilities } from './remote-capabilities.js';
 import { ownTabCapabilities } from './own-tab-capabilities.js';
 import { isPluginSettings, validateTabValue } from './tab-value.js';
+import { tabActivityRows } from './activity.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -133,6 +134,7 @@ export function createPluginContext(
       });
     },
     ...ownTabCapabilities({ managers, declaration, isEnabled }),
+    tabActivity: (tailLines) => (isEnabled() ? tabActivityRows(managers, tailLines) : []),
     openClaimedFiles: (target) => {
       if (!isEnabled()) return;
       openRequests.push(target);

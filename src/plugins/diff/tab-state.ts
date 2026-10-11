@@ -5,6 +5,7 @@ import type { ChangeSetResult } from './change-set.js';
 import { displayRoot } from './display.js';
 import type { DiffFile, DiffPayload } from './shared.js';
 import { preserveContextErrors } from './context-results.js';
+import { readWithDeadline } from './read-with-deadline.js';
 
 // One diff tab: which directory it shows, which machine that directory is on, and what it currently
 // shows there. Split out of the session, which now holds one of these per open tab rather than a
@@ -23,8 +24,6 @@ export type DiffOrigin = { root: string; workspace?: { dir: string } };
 export type ChangeSetReader = (
   root: string, capabilities: TabPluginServerCapabilities, fullFiles: ReadonlySet<string>, signal?: AbortSignal,
 ) => Promise<ChangeSetResult>;
-
-const READ_DEADLINE_MS = 30_000;
 
 function emptyPayload(instanceKey: string, split = false): DiffPayload {
   return { instanceKey, root: '', state: 'done', message: '', split, files: [] };
@@ -57,7 +56,6 @@ export class DiffTab {
   private revision = 0;
   private disposed = false;
   private readController: AbortController | undefined;
-  private readDeadline: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     readonly instanceKey: string,
@@ -114,7 +112,7 @@ export class DiffTab {
       return { title: this.title, payload: this.opening() };
     });
     this.publish({});
-    this.recompute(this.capabilities);
+    void this.recompute(this.capabilities);
   }
 
   async refresh(capabilities: TabPluginServerCapabilities): Promise<void> {
@@ -138,7 +136,7 @@ export class DiffTab {
     this.revision++;
     this.publish({ files: this.payload.files.map((candidate) => candidate.path === relPath
       ? { ...candidate, expandingContext: true, contextError: '' } : candidate) });
-    this.recompute(this.capabilities);
+    void this.recompute(this.capabilities);
   }
 
   // Open a file at a line in an editor tab, through the same containment check the search tab's
@@ -186,63 +184,39 @@ export class DiffTab {
   //
   // A recompute paints the tab when its result lands, never when it starts: the payload already
   // published stands until the answer replaces it, so the once-a-second poll never blanks the body.
-  private recompute(capabilities: TabPluginServerCapabilities): void {
+  private async recompute(capabilities: TabPluginServerCapabilities): Promise<void> {
     if (this.inFlight || this.disposed) return;
     this.inFlight = true;
     const fullFiles = new Set(this.fullFiles);
     const rootAtStart = this.root;
     const revisionAtStart = this.revision;
     const controller = new AbortController();
-    const deadlineError = new Error(`Git diff read timed out after ${READ_DEADLINE_MS} ms`);
-    let timedOut = false;
     this.readController = controller;
-    const aborted = new Promise<never>((_resolve, reject) => {
-      controller.signal.addEventListener('abort', () => {
-        reject(controller.signal.reason ?? new Error('Git diff read aborted'));
-      }, { once: true });
-    });
-    const deadline = new Promise<never>((_resolve, reject) => {
-      this.readDeadline = setTimeout(() => {
-        timedOut = true;
-        controller.abort(deadlineError);
-        reject(deadlineError);
-      }, READ_DEADLINE_MS);
-    });
-    const read = Promise.resolve().then(() => this.read(rootAtStart, capabilities, fullFiles, controller.signal));
-    void this.finishRead(capabilities, controller, revisionAtStart, read, deadline, aborted, deadlineError, () => timedOut);
+    const read = (signal: AbortSignal) => this.read(rootAtStart, capabilities, fullFiles, signal);
+    await this.finishRead(capabilities, controller, revisionAtStart, read);
   }
 
   private async finishRead(
     capabilities: TabPluginServerCapabilities,
     controller: AbortController,
     revisionAtStart: number,
-    read: Promise<ChangeSetResult>,
-    deadline: Promise<never>,
-    aborted: Promise<never>,
-    deadlineError: Error,
-    timedOut: () => boolean,
+    read: (signal: AbortSignal) => Promise<ChangeSetResult>,
   ): Promise<void> {
     try {
-      const result = await Promise.race([
-        read, deadline, aborted,
-      ]);
+      const result = await readWithDeadline(read, controller);
       if (!this.disposed && this.revision === revisionAtStart) this.publish(resultChanges(result, this.payload.files));
     } catch (error) {
       if (!this.disposed && this.revision === revisionAtStart) {
-        this.publish({ state: 'error', message: reasonOf(timedOut() ? deadlineError : error), files: [] });
+        this.publish({ state: 'error', message: reasonOf(error), files: [] });
       }
     } finally {
-      if (this.readDeadline !== undefined) clearTimeout(this.readDeadline);
-      this.readDeadline = undefined;
       if (this.readController === controller) this.readController = undefined;
       this.inFlight = false;
-      if (!this.disposed && this.revision !== revisionAtStart) this.recompute(capabilities);
+      if (!this.disposed && this.revision !== revisionAtStart) await this.recompute(capabilities);
     }
   }
 
   private cancelRead(reason: Error): void {
-    if (this.readDeadline !== undefined) clearTimeout(this.readDeadline);
-    this.readDeadline = undefined;
     this.readController?.abort(reason);
   }
 

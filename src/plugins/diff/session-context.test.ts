@@ -101,14 +101,14 @@ describe('diff full-file session', () => {
   });
 
   it('aborts a stalled read when the tab changes roots and publishes only the new root', async () => {
-    const { session, updates } = await loaded();
+    const { session, updates, capabilities } = await loaded();
     let firstSignal: AbortSignal | undefined;
     read.mockImplementationOnce((_root, _files, signal) => new Promise((_resolve, reject) => {
       firstSignal = signal;
       signal?.addEventListener('abort', () => { reject(new Error('aborted child read')); }, { once: true });
     })).mockResolvedValueOnce(result(file({ path: 'b.ts' })));
 
-    const refresh = session.refresh();
+    const refresh = session.refresh(KEY, capabilities);
     await vi.waitFor(() => { expect(read).toHaveBeenCalledTimes(2); });
     session.open('/project/two', { root: '/project/two' });
     await refresh;
@@ -120,19 +120,19 @@ describe('diff full-file session', () => {
   });
 
   it('shows a deadline error and lets the next refresh succeed', async () => {
-    const { session, updates } = await loaded();
+    const { session, updates, capabilities } = await loaded();
     vi.useFakeTimers();
     try {
       read.mockImplementationOnce((_root, _files, signal) => new Promise((_resolve, reject) => {
         signal?.addEventListener('abort', () => { reject(new Error('child process aborted')); }, { once: true });
       }));
-      const refresh = session.refresh();
+      const refresh = session.refresh(KEY, capabilities);
       await vi.advanceTimersByTimeAsync(30_000);
       await refresh;
       expect(updates.at(-1)).toMatchObject({ state: 'error', message: 'Git diff read timed out after 30000 ms' });
 
       read.mockResolvedValueOnce(result(file({ path: 'recovered.ts' })));
-      await session.refresh();
+      await session.refresh(KEY, capabilities);
       expect(updates.at(-1)).toMatchObject({ state: 'done', files: [{ path: 'recovered.ts' }] });
     } finally {
       session.dispose();
@@ -141,13 +141,13 @@ describe('diff full-file session', () => {
   });
 
   it('aborts a pending read when the tab is disposed', async () => {
-    const { session, updates } = await loaded();
+    const { session, updates, capabilities } = await loaded();
     let readSignal: AbortSignal | undefined;
     read.mockImplementationOnce((_root, _files, signal) => new Promise((_resolve, reject) => {
       readSignal = signal;
       signal?.addEventListener('abort', () => { reject(new Error('aborted child read')); }, { once: true });
     }));
-    const refresh = session.refresh();
+    const refresh = session.refresh(KEY, capabilities);
     await vi.waitFor(() => { expect(read).toHaveBeenCalledTimes(2); });
     const published = updates.length;
     session.dispose();

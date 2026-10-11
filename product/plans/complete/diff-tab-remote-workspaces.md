@@ -148,3 +148,5 @@ Five gaps against the products that own this capability were researched and decl
 ## Verification
 
 `./scripts/run.mjs check-diff`, plus a manual check: a workspaced shell tab and a workspaced harness tab, local and remote, each with its plus-minus metadata button; `diff on <name>` for each eligible tab, an ineligible tab, and a still-provisioning workspace; literal angle-bracket placeholders in the refusal and usage transcript; the sessions tab's diff button disabled on a provisioning row and enabled when ready; two tabs sharing one clone focusing one diff tab; and the project-root `diff` and `diff <path>` still behaving as one tab.
+
+Master added abortable git reads with a 30-second deadline and cancellation when a project-root diff is re-scoped or closed. The per-tab `DiffTab` now carries that deadline and cancellation into its local reader, preserving the same behavior after the session moved from one root state to a map of root and workspace tabs.
