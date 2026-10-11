@@ -182,7 +182,7 @@ refused at the handshake, the same way one too old to honor the GitHub token is.
 
 ### ChatGPT OAuth for OpenCode
 
-At startup, Janissary reads the host's saved Codex ChatGPT login. A valid login supplies the access token, refresh token, account identity, and access-token expiry to OpenCode in its OAuth format. Expiry is expressed in milliseconds. Missing, unreadable, or malformed credentials are ignored; an expired access token is retained so OpenCode can refresh it.
+At startup, Janissary reads the host's saved Codex ChatGPT login. A valid login supplies the access token, refresh token, account identity, and access-token expiry to OpenCode in its OAuth format. Expiry is expressed in milliseconds. Missing, unreadable, or malformed credentials are ignored, including access tokens with empty JWT segments or characters outside the base64url alphabet; an expired access token is retained so OpenCode can refresh it.
 
 Each workspace receives its own owner-only authentication file in a newly allocated private temporary directory beside the clone, before its first process starts. Workspace processes use that private OpenCode data location, including when isolation is disabled. Credentials stay outside the git clone and are removed when the last tab using the workspace closes. Later process launches only look up the existing private authentication file, preserving any credentials OpenCode refreshed; removing the file never causes the application to re-create it. Symbolic links in the credential directory or file are refused. Credentials are never written back to Codex. API-key injection continues alongside this login.
 

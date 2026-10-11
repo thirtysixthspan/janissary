@@ -47,6 +47,19 @@ function configure(isolation: boolean): void {
 }
 
 describe('OpenCode workspace OAuth', () => {
+  const payload = Buffer.from('{"exp":1800000000}').toString('base64url');
+
+  it.each([`.${payload}.signature`, `header.${payload}.`, `header.${payload}!.signature`])('does not provision a malformed saved JWT %s', (access_token) => {
+    configure(false);
+    writeFileSync(path.join(home, '.codex', 'auth.json'), JSON.stringify({ tokens: {
+      access_token, refresh_token: 'test-refresh', account_id: 'test-account',
+    } }));
+    loadOpencodeOauth(home);
+    expect(createWorkspaceScratch(workspaceDir)).toBeUndefined();
+    expect(existsSync(file)).toBe(false);
+    expect(sandboxSpawn({ workspaceDir }, 'opencode', [], { PATH: '/usr/bin' }).env.XDG_DATA_HOME).toBeUndefined();
+  });
+
   it.each([false, true])('seeds private auth and redirects launches with isolation %s', (isolation) => {
     configure(isolation);
     createWorkspaceScratch(workspaceDir);

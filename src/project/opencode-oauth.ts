@@ -10,6 +10,7 @@ export type OpencodeOauth = {
 };
 
 let oauth: OpencodeOauth | undefined;
+const JWT_SEGMENT = /^[\w-]+$/;
 
 function record(value: unknown): Record<string, unknown> | undefined {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
@@ -27,7 +28,7 @@ export function parseCodexOauth(raw: string): OpencodeOauth | undefined {
     const { access_token: access, refresh_token: refresh, account_id: accountId } = tokens;
     if (!nonemptyString(access) || !nonemptyString(refresh) || !nonemptyString(accountId)) return undefined;
     const parts = access.split('.');
-    if (parts.length !== 3 || !parts[1]) return undefined;
+    if (parts.length !== 3 || !parts[1] || parts.some((part) => !JWT_SEGMENT.test(part))) return undefined;
     const payload: unknown = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
     const expiry = record(payload)?.exp;
     if (typeof expiry !== 'number' || !Number.isFinite(expiry) || expiry <= 0) return undefined;

@@ -23,6 +23,20 @@ afterEach(() => {
 });
 
 describe('parseCodexOauth', () => {
+  const payload = Buffer.from('{"exp":1800000000}').toString('base64url');
+
+  it.each([
+    `.${payload}.signature`, `header.${payload}.`, `bad!header.${payload}.signature`,
+    `header.${payload}!.signature`, `header.${payload}.signature!`,
+  ])('rejects malformed segment syntax %s', (access_token) => {
+    expect(parseCodexOauth(JSON.stringify({ tokens: { ...tokens, access_token } }))).toBeUndefined();
+  });
+
+  it.each(['null', '[]', 'true', '123', '"string"'])('rejects decoded payload %s', (rawPayload) => {
+    const access_token = `header.${Buffer.from(rawPayload).toString('base64url')}.signature`;
+    expect(parseCodexOauth(JSON.stringify({ tokens: { ...tokens, access_token } }))).toBeUndefined();
+  });
+
   it('converts ChatGPT tokens to the OpenCode OAuth entry with expiry in milliseconds', () => {
     expect(parseCodexOauth(JSON.stringify({ tokens }))).toEqual({
       type: 'oauth', access: tokens.access_token, refresh: tokens.refresh_token,
