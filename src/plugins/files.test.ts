@@ -6,7 +6,7 @@ import type { TabPluginServerCapabilities } from './api.js';
 import { audioManifest } from './audio/manifest.js';
 import { markdownManifest } from './markdown/manifest.js';
 import {
-  fileSize, fileTabPayload, isInsideRoot, openFileExternally, openFileInConfiguredViewer, servesContentType,
+  fileSize, fileTabPayload, isInsideRoot, openFileExternally, openFileInConfiguredViewer, readJsonConfigFile, servesContentType,
 } from './files.js';
 
 describe('isInsideRoot', () => {
@@ -164,5 +164,44 @@ describe('servesContentType', () => {
   it('matches case-insensitively, as the opener registry does', () => {
     expect(servesContentType(audioManifest, '/music/one.FLAC')).toBe(true);
     expect(servesContentType(markdownManifest, '/notes/README.MD')).toBe(true);
+  });
+});
+
+describe('readJsonConfigFile', () => {
+  function scratchFile(contents: string): string {
+    const directory = mkdtempSync(path.join(tmpdir(), 'json-config-'));
+    const file = path.join(directory, 'conf.json');
+    writeFileSync(file, contents);
+    return file;
+  }
+
+  const decodeList = (parsed: unknown) => Array.isArray(parsed) ? parsed.filter((entry) => typeof entry === 'string') : undefined;
+
+  it('answers a read that cannot happen', () => {
+    expect(readJsonConfigFile('/nowhere/conf.json', 'conf.json', decodeList, 'is not a list')).toEqual({
+      problem: 'conf.json could not be read at /nowhere/conf.json',
+    });
+  });
+
+  it('answers a file that is not valid JSON', () => {
+    const file = scratchFile('{ broken');
+
+    expect(readJsonConfigFile(file, 'conf.json', decodeList, 'is not a list')).toEqual({
+      problem: `conf.json is not valid JSON at ${file}`,
+    });
+  });
+
+  it("answers the caller's wording when the parsed value does not decode", () => {
+    const file = scratchFile('{"a":1}');
+
+    expect(readJsonConfigFile(file, 'conf.json', decodeList, 'is not a list')).toEqual({
+      problem: `conf.json is not a list at ${file}`,
+    });
+  });
+
+  it('answers the decoded value when it decodes', () => {
+    const file = scratchFile('["a","b",3]');
+
+    expect(readJsonConfigFile(file, 'conf.json', decodeList, 'is not a list')).toEqual({ value: ['a', 'b'] });
   });
 });

@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { readJsonConfigFile } from '../files.js';
 import { isRecord } from '../api.js';
 import type { Role, RoleEntry, RolesSource } from './shared.js';
 
@@ -98,23 +99,14 @@ function decodeRoles(parsed: unknown): { roles: Role[]; dropped: number } | unde
 }
 
 function readAt(filePath: string, source: 'home' | 'project'): ReadAttempt {
-  let text: string;
-  try {
-    text = readFileSync(filePath, 'utf8');
-  } catch {
-    return { ok: false, problem: `roles.json could not be read at ${filePath}` };
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return { ok: false, problem: `roles.json is not valid JSON at ${filePath}` };
-  }
-  const decoded = decodeRoles(parsed);
-  if (!decoded) {
-    return { ok: false, problem: `roles.json is not a set of roles at ${filePath}` };
-  }
-  const { roles, dropped } = decoded;
+  const read = readJsonConfigFile(
+    filePath,
+    FILE_NAME,
+    decodeRoles,
+    'is not a set of roles',
+  );
+  if (read.problem !== undefined) return { ok: false, problem: read.problem };
+  const { roles, dropped } = read.value;
   if (dropped > 0) {
     return {
       ok: true,

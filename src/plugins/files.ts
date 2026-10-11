@@ -1,4 +1,4 @@
-import { statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { humanSize } from '../openers/size.js';
 import type { TabPluginDeclaration, TabPluginResources, TabPluginServerCapabilities } from './api.js';
@@ -78,4 +78,40 @@ export function openFileInConfiguredViewer(
 // to the OS. Read from the manifest, so the two answers can never drift apart.
 export function servesContentType(declaration: TabPluginDeclaration, file: string): boolean {
   return declaration.fileExtensions[path.extname(file).toLowerCase()] !== undefined;
+}
+
+// The shape a JSON config file answers once it has been read, parsed, and decoded — the decoded
+// value, or one line naming the file and what was wrong with it. The three failure wording shapes
+// are the ones every such file already uses, so they are produced here once.
+export type JsonConfigResult<T> = { value: T; problem?: undefined } | { value?: undefined; problem: string };
+
+// The read-and-decode core every JSON config file in a plugin shares: the launcher and the roles
+// reader both read a file, guard the read and the parse into the same two canned lines, and hand the
+// parsed value to a decoder of their own. Only the decoder and the wording for "this parsed but did
+// not decode" differ, so those are the two parameters and the fallback policy — what to do when a
+// file is unusable — stays with each caller, because the two do not agree on it.
+//
+// Published here rather than in a module of its own because this is the one host file module the
+// plugin import boundary admits to a concrete plugin, alongside `../api.js`; a new host module would
+// be unreachable from a plugin without widening that boundary.
+export function readJsonConfigFile<T>(
+  filePath: string,
+  fileName: string,
+  decode: (parsed: unknown) => T | undefined,
+  unusable: string,
+): JsonConfigResult<T> {
+  let text: string;
+  try {
+    text = readFileSync(filePath, 'utf8');
+  } catch {
+    return { problem: `${fileName} could not be read at ${filePath}` };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { problem: `${fileName} is not valid JSON at ${filePath}` };
+  }
+  const value = decode(parsed);
+  return value === undefined ? { problem: `${fileName} ${unusable} at ${filePath}` } : { value };
 }

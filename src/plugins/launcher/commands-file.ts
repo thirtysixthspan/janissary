@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { readJsonConfigFile } from '../files.js';
 import type { LauncherCommand, LauncherSource } from './shared.js';
 
 // The command set the launcher shows when no `launcher.json` exists — a project that has never run
@@ -143,32 +144,19 @@ export function readLauncherFile(home: string, root: string): LauncherFileRead {
   if (source === 'default') {
     return { commands: [...DEFAULT_LAUNCHER_COMMANDS], source, filePath };
   }
-  let text: string;
-  try {
-    text = readFileSync(filePath, 'utf8');
-  } catch {
-    return {
-      commands: [...DEFAULT_LAUNCHER_COMMANDS], source: 'default', filePath,
-      problem: `launcher.json could not be read at ${filePath}`,
-    };
+  const read = readJsonConfigFile(
+    filePath,
+    'launcher.json',
+    (parsed) => Array.isArray(parsed)
+      ? { ...withUniqueIds(decodeCommands(parsed)), total: parsed.length }
+      : undefined,
+    'is not a list of commands',
+  );
+  if (read.problem !== undefined) {
+    return { commands: [...DEFAULT_LAUNCHER_COMMANDS], source: 'default', filePath, problem: read.problem };
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return {
-      commands: [...DEFAULT_LAUNCHER_COMMANDS], source: 'default', filePath,
-      problem: `launcher.json is not valid JSON at ${filePath}`,
-    };
-  }
-  if (!Array.isArray(parsed)) {
-    return {
-      commands: [...DEFAULT_LAUNCHER_COMMANDS], source: 'default', filePath,
-      problem: `launcher.json is not a list of commands at ${filePath}`,
-    };
-  }
-  const { commands, ambiguous } = withUniqueIds(decodeCommands(parsed));
-  const problem = fileProblem(commands.length, parsed.length, ambiguous, filePath);
+  const { commands, ambiguous, total } = read.value;
+  const problem = fileProblem(commands.length, total, ambiguous, filePath);
   // An empty array is no configuration at all rather than a choice to show nothing, so a project that
   // committed one by accident still gets a working rail — and still gets no complaint, because there is
   // nothing wrong with it. The same fallback answers a file whose every entry was dropped, whether for
