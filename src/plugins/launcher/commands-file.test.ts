@@ -50,6 +50,7 @@ describe('reading launcher.json', () => {
       { id: 'schedules', icon: 'faClock', label: 'Schedules', command: 'schedules right' },
       { id: 'sessions', icon: 'faPlug', label: 'Sessions', command: 'sessions right' },
       { id: 'conversations', icon: 'faComments', label: 'Conversations', command: 'conversations' },
+      { id: 'roles', icon: 'faUserTag', label: 'Roles', command: 'roles' },
       { id: 'search', icon: 'faMagnifyingGlass', label: 'Search', command: 'search' },
     ]);
   });

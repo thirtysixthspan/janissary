@@ -1,6 +1,6 @@
 import {
   faBell, faBox, faClock, faClockRotateLeft, faComments, faDatabase, faFolderOpen, faListCheck,
-  faMagnifyingGlass, faPlug, faRobot, faTerminal, faChevronRight,
+  faMagnifyingGlass, faPlug, faRobot, faTerminal, faUserTag, faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
@@ -29,6 +29,7 @@ const ICONS: Record<string, IconDefinition> = {
   faMagnifyingGlass,
   faListCheck,
   faBox,
+  faUserTag,
 };
 
 // The glyph for a name in `launcher.json`, or the neutral fallback when the name is not one this build

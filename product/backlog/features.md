@@ -2,8 +2,6 @@
 
 ## ready
 
-Add a roles command that opens a roles tab. The roles tab serves as a configuration tool for mapping models and harnesses onto named roles and role descriptions that can be used by humans and AI tasks when deciding which models to launch for which tasks. for example, the role 'planning' is assigned Codex, GPT-6.1-Sol, xhigh, and Claude Code, Opus 5.5, and xhigh, with the description 'Research and development of plans for new product features.'. Roles map to an ordered list of models/harness/effort/variant. the roles should be stored in ~/.janissary/roles.json and overriden entirely (without merging) for a project when .janissary/roles.json is present. a default roles should be created by the tab when it is not otherwise present. default roles should include planning, research, code review, implementation, and documentation. models from harness-models.json should be available in the interface to be easily added to and taken from various roles. 
-
 * Add a new `agent` command. This command starts a new ACP session, is launched with an ai task to execute and returns a task-dependant response to the caller. 
 Agents are always workspaced and sandboxed.
 Agents are given access to a subset of skills from /skills which are specified on launch. The paths of the permitted skill are passed to the agent on startup. No other skills may be run by the agent even though the agent may discover them in the workspace repository.
@@ -23,9 +21,6 @@ example commands:
 `agent on anonymouscoward@10.27.1.94:dev/janissary in group 1 using model gpt-6-luna with effort xhigh with skill ask-user execute plan-a-feature.md text parsing`
 `agent using model gpt-6-luna execute review-pull-request.md 1234`
 `agent on anonymouscoward@10.27.1.94 in group alpha in a tab execute resolve-conflicts.md`
-
-  
-
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
 

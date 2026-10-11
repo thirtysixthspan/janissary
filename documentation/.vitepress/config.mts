@@ -109,6 +109,7 @@ export default defineConfig({
             { text: "Diff", link: "/user-documentation/tab-types/diff" },
             { text: "Notifications", link: "/user-documentation/tab-types/notifications" },
             { text: "Conversations", link: "/user-documentation/tab-types/conversations" },
+            { text: "Roles", link: "/user-documentation/tab-types/roles" },
             { text: "Launcher", link: "/user-documentation/tab-types/launcher" },
             { text: "Diff tab", link: "/user-documentation/tab-types/diff-tab" },
             { text: "Sessions", link: "/user-documentation/tab-types/sessions" },

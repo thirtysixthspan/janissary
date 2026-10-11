@@ -43,4 +43,18 @@ describe('client plugin registry', () => {
       expect(module.isPayload, id).toBeTypeOf('function');
     }
   });
+
+  // The guard runs in the entry's own lazy chunk, before the component below it renders, so this asks
+  // the entry itself rather than the source module: a payload shape the tab would crash on has to be
+  // refused here, not discovered by `Object.entries(...).map` inside the rendered tree.
+  it('refuses a roles payload whose model catalog is not lists of strings', async () => {
+    const { isPayload } = await clientPluginLoaders.roles();
+    const payload = (catalog: unknown) => ({
+      roles: [], source: 'home', path: '/home/me/.janissary/roles.json', catalog,
+    });
+
+    expect(isPayload(payload({ models: { codex: ['gpt-6-sol'] }, efforts: ['low'] }))).toBe(true);
+    expect(isPayload(payload({ models: { codex: 'gpt-6-sol' }, efforts: ['low'] }))).toBe(false);
+    expect(isPayload(payload({ models: { codex: ['gpt-6-sol', 7] }, efforts: ['low'] }))).toBe(false);
+  });
 });

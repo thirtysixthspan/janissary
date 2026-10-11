@@ -15,6 +15,9 @@ import {
   type TabPluginServerCapabilities,
 } from './api.js';
 import { createPluginContext } from './context.js';
+import { HARNESS_NAMES } from '../harness/index.js';
+import { modelsFor } from '../harness/models.js';
+import { EFFORT_LEVELS } from '../harness/effort-levels.js';
 import { messageBus } from '../bus.js';
 import { TabPluginHost } from './host.js';
 
@@ -414,6 +417,26 @@ describe('capability revocation', () => {
     );
 
     expect(await capabilities.projectFileList()).toEqual({ root: '', paths: [] });
+  });
+
+  it('serves the harness launch catalog the launcher dialog reads', () => {
+    const capabilities = createPluginContext(
+      makeManagers().managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => true,
+    );
+
+    const catalog = capabilities.harnessLaunchCatalog();
+
+    expect(Object.keys(catalog.models)).toEqual(HARNESS_NAMES);
+    expect(catalog.models.claude).toEqual(modelsFor('claude'));
+    expect(catalog.efforts).toEqual([...EFFORT_LEVELS]);
+  });
+
+  it('answers an empty catalog to a revoked plugin', () => {
+    const capabilities = createPluginContext(
+      makeManagers().managers, declaration(TAB_PLUGIN_CAPABILITY_NAMES), activationFor(), origin, () => false,
+    );
+
+    expect(capabilities.harnessLaunchCatalog()).toEqual({ models: {}, efforts: [...EFFORT_LEVELS] });
   });
 
   it('reads and saves settings under the declaring plugin\'s own id', () => {

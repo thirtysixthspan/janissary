@@ -27,7 +27,7 @@ The project file `.janissary/launcher.json` holds a JSON array of command entrie
 
 The **Configure** button opens the file the launcher currently uses. If it does not exist, the button creates it with the built-in commands first. A file at `~/.janissary/launcher.json` replaces the project file. If there is no usable configuration, the launcher uses its built-in list and reports the problem in [Notifications](/user-documentation/tab-types/notifications). If some entries are invalid, it keeps the usable ones and reports how many it dropped. An unknown icon uses a fallback symbol; the command still runs.
 
-With no configuration, the rail includes Shell, Harness, File navigator, SQL, Notifications, Schedules, Sessions, Conversations, and Search. You can change the labels, icons, and commands in the JSON file. The launcher reads the active file again when you open it.
+With no configuration, the rail includes Shell, Harness, File navigator, SQL, Notifications, Schedules, Sessions, Conversations, [Roles](/user-documentation/tab-types/roles), and Search. You can change the labels, icons, and commands in the JSON file. The launcher reads the active file again when you open it.
 
 <img class="agent-float left" src="/agents/hamza-south.png" alt="" />
 

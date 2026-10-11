@@ -285,6 +285,10 @@ A plugin claimed only through its own command opens no file, so its opener is th
 
 A remote workspace's reads are the plugin's own two capabilities rather than host internals: `readWorkspaceChangeSet` answers the change set the far side computed, as it arrived, for the plugin's own guard to check, and `materializeRemoteFile` answers the local path one of that workspace's files has been materialized to, through the same cache a remote file navigator's rows open through. Both answer `null` for a tab riding no channel, so a plugin that never asks is unaffected. The tab joins that channel through `launchTab`'s `join` form naming the tab, which is what holds the session for as long as the diff tab is open. `originTab` answers the record of another open tab when it is called with a label, resolved the way every command that addresses a tab by typed name resolves one.
 
+### Bundled roles plugin
+
+The roles plugin is a configuration tool for named roles mapped to ordered harness/model/effort choices, reached only through its own `roles` command and opening in the center strip. It is the plugin that reads the harness launch vocabulary through the `harnessLaunchCatalog` capability rather than reaching the harness subsystem, because the plugin import boundary closes that route — see [[roles]] for what the tab shows and what the file holds.
+
 ## Core ACP access
 
 A tab plugin requests `startAcp`, `promptAcp`, and `resetAcp` to use the core [[acp]] service on its own answering tab. No terminal is required. Core owns sessions, tool execution, streamed transcript projection, and lifecycle; provider latency is exempt from handler deadlines. The client API publishes `useAcpResponse` for the core-rendered response surface. A plugin may instead omit that surface and use the scoped `openAcpTranscript()` client action to open its own session transcript in an editor tab. The launcher does this; the shell uses the response surface, and harness tabs do neither.
