@@ -12,11 +12,16 @@ import { orderedJsonKeys, serializeRoles } from './ordered-json.js';
 // decode, and the same one-line problem the caller reports.
 const FILE_NAME = 'roles.json';
 
+// `problem` is the one line the tab shows, and it can be about a file the tab is not reading — the
+// broken project file it fell back from the home one. `unusablePath` names the file in effect itself
+// when that one cannot back an edit, so the two are never confused: a skipped file leaves it absent
+// and the file now on screen stays editable.
 export type RolesRead = {
   roles: Role[];
   source: RolesSource;
   path: string;
   problem?: string;
+  unusablePath?: string;
 };
 
 export const DEFAULT_ROLES: readonly Role[] = [
@@ -112,7 +117,7 @@ function readAt(filePath: string, source: 'home' | 'project'): ReadAttempt {
     return {
       ok: true,
       read: {
-        roles, source, path: filePath,
+        roles, source, path: filePath, unusablePath: filePath,
         problem: `roles.json dropped ${dropped} malformed ${dropped === 1 ? 'role or entry' : 'roles or entries'} at ${filePath} — showing the rest of this file.`,
       },
     };
@@ -126,9 +131,11 @@ function createDefaultFile(homePath: string): boolean {
 
 // The roles in effect, read fresh. The project file wins when it exists, then the home file; a file
 // that exists but does not decode falls back along that chain, and the file that broke is named in
-// the problem the caller reports. When neither file exists the home file is created with the default
-// roles — the feature's "created by the tab when it is not otherwise present" — and a failed
-// creation falls back to the defaults in memory with the problem named.
+// the problem the caller reports — a problem about a skipped file, which leaves the file that took
+// its place editable. Only the file in effect sets `unusablePath`, on its own path, when it is the
+// damaged one. When neither file exists the home file is created with the default roles — the
+// feature's "created by the tab when it is not otherwise present" — and a failed creation falls back
+// to the defaults in memory with the problem named.
 export function readRolesFile(home: string, root: string): RolesRead {
   const homePath = path.join(home, '.janissary', FILE_NAME);
   const projectPath = path.join(root, '.janissary', FILE_NAME);
@@ -157,6 +164,7 @@ export function readRolesFile(home: string, root: string): RolesRead {
     roles: [...DEFAULT_ROLES],
     source: 'default',
     path: brokenPath,
+    unusablePath: brokenPath,
     problem: `${reason} — showing default roles.`,
   };
 }

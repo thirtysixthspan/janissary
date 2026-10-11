@@ -78,12 +78,14 @@ export function activate(home: string = homedir()): TabPluginActivation {
   ): Promise<null> => {
     const run = async (): Promise<null> => {
       const read = readRolesFile(home, rootOf(capabilities));
-      // A read that carries a problem line is one the file does not fully back — either nothing
-      // decoded, or some roles/entries were dropped — and writing from it would rewrite the whole
-      // file from the decoded part, silently discarding what was dropped. Refuse the edit instead so
-      // the damaged file is left exactly as it is until it is fixed by hand.
-      if (read.source === 'default' || read.problem !== undefined) {
-        return capabilities.rejectRequest(`roles.json at ${read.path} is unusable — fix the file before editing roles.`);
+      // A read whose `unusablePath` is set is one whose own file does not fully back an edit — either
+      // nothing decoded, or some roles/entries were dropped — and writing from it would rewrite the
+      // whole file from the decoded part, silently discarding what was dropped. Refuse the edit
+      // instead so the damaged file is left exactly as it is until it is fixed by hand. A problem
+      // about a file the tab fell back from is not one of these: the file in effect is whole, so it
+      // takes the edit and the skipped file stays untouched.
+      if (read.source === 'default' || read.unusablePath !== undefined) {
+        return capabilities.rejectRequest(`roles.json at ${read.unusablePath ?? read.path} is unusable — fix the file before editing roles.`);
       }
       if (precondition && !matchesEntrySnapshot(read.roles, precondition)) {
         publish(capabilities);

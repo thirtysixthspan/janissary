@@ -88,6 +88,7 @@ describe('reading the roles in effect', () => {
     expect(read.problem).toBe(
       `roles.json dropped 2 malformed roles or entries at ${homeFile(home)} — showing the rest of this file.`,
     );
+    expect(read.unusablePath).toBe(homeFile(home));
   });
 
   it('falls back along the chain and names the file that broke', () => {
@@ -106,9 +107,32 @@ describe('reading the roles in effect', () => {
     const defaults = readRolesFile(home, root);
     expect(defaults.source).toBe('default');
     expect(defaults.roles).toEqual(DEFAULT_ROLES);
+    expect(defaults.path).toBe(homeFile(home));
+    expect(defaults.unusablePath).toBe(defaults.path);
     expect(defaults.problem).toBe(
       `roles.json is not valid JSON at ${projectFile(root)} — showing default roles.`,
     );
+  });
+
+  it('leaves the file that took over editable, naming only the damaged file unusable', () => {
+    const { home, root } = directories();
+    writeJson(homeFile(home), { review: { description: 'Second pair of eyes.', entries: [] } });
+    mkdirSync(path.dirname(projectFile(root)), { recursive: true });
+    writeFileSync(projectFile(root), '{ broken', 'utf8');
+
+    const fromHome = readRolesFile(home, root);
+    expect(fromHome.source).toBe('home');
+    expect(fromHome.path).toBe(homeFile(home));
+    expect(fromHome.unusablePath).toBeUndefined();
+
+    const partlyDamaged = JSON.stringify({
+      review: { description: 'Second pair of eyes.', entries: [] },
+      broken: { description: 'No entries list.' },
+    }, undefined, 2);
+    writeFileSync(homeFile(home), partlyDamaged, 'utf8');
+    const damagedFallback = readRolesFile(home, root);
+    expect(damagedFallback.source).toBe('home');
+    expect(damagedFallback.unusablePath).toBe(homeFile(home));
   });
 
   it('leaves a broken file untouched on disk', () => {

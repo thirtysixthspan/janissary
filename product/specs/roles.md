@@ -137,7 +137,10 @@ formed are served, the damaged ones are dropped and counted, and the line says s
 `roles.json dropped 2 malformed roles or entries at <path> — showing the rest of this file.` While
 any file in effect is in that state — nothing decoded, or something dropped — every edit is refused
 with `roles.json at <path> is unusable — fix the file before editing roles.` so a fix the user has
-not made yet is never overwritten, and the file is left exactly as it is until they make it.
+not made yet is never overwritten, and the file is left exactly as it is until they make it. That
+refusal belongs to the file the tab is editing, never to the file that broke: once the tab has
+fallen back to a file that is whole, that file takes the edit and stays editable, and the broken one
+is still left exactly as it is.
 
 ## Editing by hand
 

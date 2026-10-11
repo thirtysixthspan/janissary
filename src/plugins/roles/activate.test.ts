@@ -435,6 +435,40 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
     expect(readFileSync(rolesPath(home), 'utf8')).toBe(damaged);
   });
 
+  it('edits the home file when the broken file in effect was the project one', async () => {
+    const { home, capabilities } = fixture();
+    const projectPath = path.join(capabilities.originTab()!.root, '.janissary', 'roles.json');
+    mkdirSync(path.dirname(projectPath), { recursive: true });
+    writeFileSync(projectPath, '{ broken');
+    writeRolesFile(rolesPath(home), [{ name: 'research', description: 'Research.', entries: [] }]);
+    const activation = activate(home);
+
+    await send(activation, 'rename-role', { name: 'research', next: 'r2' }, capabilities, payloadFor(home));
+
+    expect(roleNames(home)).toEqual(['r2']);
+    expect(readFileSync(projectPath, 'utf8')).toBe('{ broken');
+  });
+
+  it('refuses an edit when the home file that took over is itself partly damaged', async () => {
+    const { home, capabilities } = fixture();
+    const projectPath = path.join(capabilities.originTab()!.root, '.janissary', 'roles.json');
+    mkdirSync(path.dirname(projectPath), { recursive: true });
+    writeFileSync(projectPath, '{ broken');
+    const damaged = JSON.stringify({
+      review: { description: 'Second pair of eyes.', entries: [] },
+      broken: { description: 'No entries list.' },
+    }, undefined, 2);
+    mkdirSync(path.dirname(rolesPath(home)), { recursive: true });
+    writeFileSync(rolesPath(home), damaged);
+    const activation = activate(home);
+
+    await expect(send(activation, 'describe-role', { name: 'review', description: 'Changed.', expected: 'Second pair of eyes.' }, capabilities, payloadFor(home)))
+      .rejects.toThrow(`roles.json at ${rolesPath(home)} is unusable — fix the file before editing roles.`);
+
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(damaged);
+    expect(readFileSync(projectPath, 'utf8')).toBe('{ broken');
+  });
+
   it('refuses a malformed intent payload before it reaches the file', () => {
     const { home, capabilities } = fixture();
     const activation = activate(home);

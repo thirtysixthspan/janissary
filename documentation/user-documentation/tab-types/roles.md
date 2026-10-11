@@ -42,8 +42,8 @@ Roles you write yourself live in `~/.janissary/roles.json` and are yours everywh
 
 <img class="agent-float" src="/agents/idris-south-west.png" alt="" />
 
-If the file in effect cannot be read or is not valid JSON, the tab falls back — to your home file, and failing that to the built-in defaults — and tells you in one line which file broke and what you are looking at instead. The broken file is left exactly as it is, and the tab refuses edits until you fix it, so a fix you have not made yet is never overwritten.
+If the file in effect cannot be read or is not valid JSON, the tab falls back — to your home file, and failing that to the built-in defaults — and tells you in one line which file broke and what you are looking at instead. The broken file is left exactly as it is, and while nothing at all decodes the tab refuses edits until you fix it, so a fix you have not made yet is never overwritten. Once it has fallen back to a file that is whole, that file is the one you are editing: keep editing it, and the broken one still stays exactly as it is.
 
-If only part of a file is damaged — one role, or one model entry — the rest opens and the line says how much was dropped.
+If only part of a file is damaged — one role, or one model entry — the rest opens and the line says how much was dropped. That file is still the one being edited, so edits are refused there too until you repair it by hand.
 
 You can always open the file itself in an editor if you would rather fix it by hand. The tab reads the file again every time you open it, so hand edits and tab edits can take turns without fighting.
