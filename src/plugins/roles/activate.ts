@@ -73,7 +73,11 @@ export function activate(home: string = homedir()): TabPluginActivation {
   ): Promise<null> => {
     const run = async (): Promise<null> => {
       const read = readRolesFile(home, rootOf(capabilities));
-      if (read.source === 'default') {
+      // A read that carries a problem line is one the file does not fully back — either nothing
+      // decoded, or some roles/entries were dropped — and writing from it would rewrite the whole
+      // file from the decoded part, silently discarding what was dropped. Refuse the edit instead so
+      // the damaged file is left exactly as it is until it is fixed by hand.
+      if (read.source === 'default' || read.problem !== undefined) {
         return capabilities.rejectRequest(`roles.json at ${read.path} is unusable — fix the file before editing roles.`);
       }
       if (!writeRolesFile(read.path, apply(read.roles))) {

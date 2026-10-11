@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Refuse edits while the roles file is only partly damaged, so the next edit does not silently delete the malformed parts the tab reported as dropped.
-
-Existing Issue: A file that decodes partly is served with the roles and entries that decoded and one line counting what was dropped, but `edit()` in `src/plugins/roles/activate.ts` reads that same partly decoded list and then `writeRolesFile` in `src/plugins/roles/roles-file.ts` rewrites the whole file from it, so the first edit after the problem line appears — a description change, an added model, a reorder — permanently removes the malformed role or entry the tab had just reported, and no second line says so. Severity: 5/10
-
-Existing Risk: 5/10 - A hand-edited file with one damaged entry loses it the moment the user makes an unrelated edit, and because the tab showed the problem line earlier and then looks healthy afterwards, the loss looks like the tab fixed the file rather than as data the user never agreed to discard.
-
-Proposal Risk: 2/10 - Editing is paused only while a partly damaged file is in effect, and the existing refusal message already tells the user exactly what to do about it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "refuse edits while the roles file is partly damaged". In `src/plugins/roles/activate.ts`, `edit()` already refuses when the read answered `source: 'default'`; widen that condition to also refuse when the read carries a `problem` line, using the same wording the fully unusable case already uses (`roles.json at <path> is unusable — fix the file before editing roles.`) so one message covers both states, or add the count from the problem line when it is the partial-loss message so the reader knows how much is at stake. `RolesRead.problem` is already carried through to the payload, so no type changes are needed. In `product/specs/roles.md`, the "When a file does not decode" section currently says the well-formed parts are served and the damaged ones dropped; add that while the damage stands, edits are refused and the file is left exactly as it is. If a reviewer prefers editing to stay available, the alternative is to write back only the roles and entries the user actually touched and copy every untouched one verbatim from the raw parsed file — more code and a second decode path, which is why refusing is proposed. Cover both states in `src/plugins/roles/activate.test.ts`: a partly damaged file refuses an edit, its bytes are unchanged, and a clean file still accepts one. The existing partial-loss cases in `src/plugins/roles/roles-file.test.ts` must keep passing untouched.
-
 * Render an effort the catalog does not offer as its own option, so a hand-written entry does not look unset.
 
 Existing Issue: `decodeEntry` in `src/plugins/roles/roles-file.ts` accepts any effort string, and `product/specs/roles.md` documents that a value outside `low`, `medium`, `high`, `xhigh`, and `max` is passed through verbatim like `harness --effort`, but the entry row in `web/src/plugins/roles/RoleCard.tsx` renders a `<select>` whose options are only `default` plus the catalog's levels, so a stored effort such as `ultra` matches no option and the row shows an empty dropdown — indistinguishable from the default the user would get by clearing it. Severity: 3/10

@@ -186,6 +186,22 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
     expect(readFileSync(rolesPath(home), 'utf8')).toBe('{ broken');
   });
 
+  it('refuses an edit while the file in effect is only partly damaged, leaving it untouched', async () => {
+    const { home, capabilities } = fixture();
+    mkdirSync(path.dirname(rolesPath(home)), { recursive: true });
+    const damaged = JSON.stringify({
+      review: { description: 'Second pair of eyes.', entries: [] },
+      broken: { description: 'No entries list.' },
+    }, undefined, 2);
+    writeFileSync(rolesPath(home), damaged);
+    const activation = activate(home);
+
+    await expect(send(activation, 'describe-role', { name: 'review', description: 'Changed.' }, capabilities, payloadFor(home)))
+      .rejects.toThrow(`roles.json at ${rolesPath(home)} is unusable — fix the file before editing roles.`);
+
+    expect(readFileSync(rolesPath(home), 'utf8')).toBe(damaged);
+  });
+
   it('refuses a malformed intent payload before it reaches the file', () => {
     const { home, capabilities } = fixture();
     const activation = activate(home);

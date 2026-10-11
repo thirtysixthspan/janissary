@@ -101,8 +101,9 @@ screen — `roles.json is not valid JSON at <path> — showing default roles.` �
 left untouched on disk. A file that decodes partially is different: roles and entries that are well
 formed are served, the damaged ones are dropped and counted, and the line says so —
 `roles.json dropped 2 malformed roles or entries at <path> — showing the rest of this file.` While
-no file decodes, every edit is refused with `roles.json at <path> is unusable — fix the file before
-editing roles.` so a fix the user has not made yet is never overwritten.
+any file in effect is in that state — nothing decoded, or something dropped — every edit is refused
+with `roles.json at <path> is unusable — fix the file before editing roles.` so a fix the user has
+not made yet is never overwritten, and the file is left exactly as it is until they make it.
 
 ## Editing by hand
 
