@@ -4,11 +4,28 @@
 
 Add a roles command that opens a roles tab. The roles tab serves as a configuration tool for mapping models and harnesses onto named roles and role descriptions that can be used by humans and AI tasks when deciding which models to launch for which tasks. for example, the role 'planning' is assigned Codex, GPT-6.1-Sol, xhigh, and Claude Code, Opus 5.5, and xhigh, with the description 'Research and development of plans for new product features.'. Roles map to an ordered list of models/harness/effort/variant. the roles should be stored in ~/.janissary/roles.json and overriden entirely (without merging) for a project when .janissary/roles.json is present. a default roles should be created by the tab when it is not otherwise present. default roles should include planning, research, code review, implementation, and documentation. models from harness-models.json should be available in the interface to be easily added to and taken from various roles. 
 
-* add new agent tab. this tab is launched with a model specified, can run local or remote like shells and harnesses, creates a workspace or launches within an existing workspace, starts an ACP session, is launched with an ai task and parameters to execute, returns a summary of work. it does not have a command bar and does not accept direct input. the tab displays everything the agent does including all thinking - verbose. the agent runs completely autonomously but can ask questions via the ask-user skill. agents have access to work in the workspace but are always sandboxed. agents are given access to a subset of skills from /skills which are specified on launch and passed to the agent via context at startup. the agent launch command will be `agent` and support `on <user@host:path>`, `in group <name|id>`, `in workspace <label>`, `using model <model id>`, `with effort <level>`, `with skill ask-user`, `execute <ai task> <parameters...>`. `with skill` can be present multiple times, `execute` must be the last command. example commands would be:
+* Add a new `agent` command. This command starts a new ACP session, is launched with an ai task to execute and returns a task-dependant response to the caller. 
+Agents are always workspaced and sandboxed.
+Agents are given access to a subset of skills from /skills which are specified on launch. The paths of the permitted skill are passed to the agent on startup. No other skills may be run by the agent even though the agent may discover them in the workspace repository.
+Agents can execute janissary commands specified in a provided skill, otherwise access is blocked. Janissary will execute the janissary command and return a response to the ACP agent if one is given. The commands will be executed from the context of the caller, which may be a local or remote shell.
+Agents run completely autonomously and automatically approving any permission gates in the ACP session. Agents but can ask questions via the ask-user skill if provided. agents have access to operate in the workspace but are always sandboxed within. 
+When launched, the agent can be headed or headless. In the case of a headed run, a new agent tab will be opened. the tab does not have a command bar and does not accept direct input. the tab is for monitoring the ACP session. the tab displays everything the ACP agent does verbosely including all thinking. the tab will have a metadata bar showing the command, status flags, and a terminate button. The terminate button will provide a termination response to the caller, terminate the ACP session and close the tab. Simply closing the tab will close the tab but not stop the agent.    
+Upon completion of the task, the agent is torn down completely including any workspaces it creates, tabs it has open and returns a response to the caller.
+The agent launch command will be `agent` and support 
+remote hosts `on <user@host:path>` local by default,
+headed `in a tab` headless by default, 
+grouping when headed `in group <name|id>` the group of the caller by default, 
+selecting an existing  workspace `in workspace <label>` creating a new workspace by default,
+model and effort selection `using model <model id>` and `with effort <level>` with a default ACP model and medium effort by default,
+skill specifications `with skill <name>` can be absent or present multiple times,
+ai task selection `execute <ai task> <parameters...>` must be the last command and is manditory 
+example commands:
 `agent on anonymouscoward@10.27.1.94:dev/janissary in group 1 using model gpt-6-luna with effort xhigh with skill ask-user execute plan-a-feature.md text parsing`
 `agent using model gpt-6-luna execute review-pull-request.md 1234`
+`agent on anonymouscoward@10.27.1.94 in group alpha in a tab execute resolve-conflicts.md`
 
   
+
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
 
