@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle OAuth staging failures without preventing unrelated workspace processes from launching.
-
-Existing Issue: Directory creation and credential writes can throw through workspaceEnv into every workspace spawn when the optional OpenCode data directory is unwritable or malformed, including launches of shells and other harnesses that do not need ChatGPT OAuth. Severity: 5/10
-
-Existing Risk: 5/10 - A filesystem collision or credential-staging error turns a saved Codex login into a prerequisite for otherwise working shell, harness, or ACP launches.
-
-Proposal Risk: 2/10 - An OpenCode launch can still require the user to repair its credential directory, but an explicit credential-specific report can expose that failure without blocking other authentication routes or unrelated processes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1671 "isolate optional OpenCode OAuth staging failures from workspace launches". Add an explicit failure result for preparation in src/sandbox/opencode-data.ts and handle it at src/sandbox/environment.ts so failed staging adds no XDG_DATA_HOME override, preserves ambient data-home settings and existing API-key injection, and does not abort an unrelated process through src/sandbox/index.ts. Surface a bounded credential-specific notification through the established host notification path without including token contents, and avoid treating a partially created auth file as a successfully provisioned copy on the next launch. Keep unsafe-path rejection distinct from a successful credential lookup and coordinate this handling with the symlink containment finding. In src/sandbox/opencode-data.test.ts, add deterministic failures for an intermediate path occupied by a regular file, mkdir failure, and a write failure that leaves partial output; verify shell and non-OpenCode harness launches retain their normal command and environment, failed OAuth does not install a redirect, and a later legitimate attempt is not trapped by incomplete output. The existing tests cover absent source credentials but no destination failure. Update the affected authentication spec to state the user-visible failure behavior and run the diff-scoped checks when implementing it.
-
-
 * Deliver the plan's rejection of malformed access-token JWTs before provisioning OAuth.
 
 Existing Issue: The access-token parser checks only the segment count and payload, so tokens with an empty header or signature, or invalid base64url characters that Buffer decoding ignores, can be accepted despite the plan and spec promising to ignore malformed credentials. Severity: 4/10

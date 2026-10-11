@@ -188,6 +188,8 @@ Each workspace receives its own owner-only authentication file in a newly alloca
 
 Non-workspaced processes and browser children receive no OAuth bridge. Remote workspaces use the saved Codex login on the machine running them; the initiating machine's ChatGPT login is not forwarded.
 
+If optional credential preparation fails, the workspace still becomes ready and records `ChatGPT OAuth unavailable: could not prepare private OpenCode credentials.` as a notification. Remote launches report the same notice. Incomplete authentication files are never published, so failed preparation installs no private data-location override and preserves existing environment settings and API-key authentication. An unsafe credential destination is refused without writing through it. Allocation of the workspace's scratch directory itself remains required.
+
 ### Workspace lifecycle
 
 Workspace directories are ephemeral:

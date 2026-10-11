@@ -98,7 +98,7 @@ export async function provisionRemoteWorkspace(
     type: 'workspace-ready',
     dir: result.dir,
     home: homedir(),
-    notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwarded.github, own.github)),
+    notice: workspaceReadyNotice(sandboxNotice(), githubTokenNotice(forwarded.github, own.github), result.oauthNotice),
     ...(leftover !== undefined && { cleaned: leftover }),
     ...(cloned !== undefined && { cloned }),
   });

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
@@ -6,6 +6,8 @@ import { mkdtempSync } from 'node:fs';
 import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, trustWorkspace, untrustWorkspace } from './index.js';
 import { toHttpsUrl } from '../git/repository-url.js';
 import { loadOpencodeOauth } from '../project/opencode-oauth.js';
+import * as scratch from './scratch.js';
+import { OPENCODE_OAUTH_FAILURE_NOTICE } from '../sandbox/opencode-data.js';
 
 let tmpDir: string;
 let repoDir: string;
@@ -127,6 +129,22 @@ describe('untrustWorkspace', () => {
 });
 
 describe('createWorkspace', () => {
+  it('completes readiness with a bounded optional credential notice', async () => {
+    const prepare = vi.spyOn(scratch, 'createWorkspaceScratch').mockImplementationOnce((directory) => {
+      mkdirSync(`${directory}.tmp`);
+      return OPENCODE_OAUTH_FAILURE_NOTICE;
+    });
+    try {
+      const handle = provisionWorkspace('oauth-failed-agent', getRemoteUrl(repoDir));
+      expect(handle.oauthNotice).toBeUndefined();
+      await expect(handle.ready).resolves.toBeUndefined();
+      expect(handle.oauthNotice).toBe(OPENCODE_OAUTH_FAILURE_NOTICE);
+      removeWorkspace(handle.dir);
+    } finally {
+      prepare.mockRestore();
+    }
+  });
+
   it('creates an independent clone of the repo\'s origin remote', async () => {
     const ws = await createWorkspace('test-agent', repoDir);
     expect(existsSync(ws)).toBe(true);

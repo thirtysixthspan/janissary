@@ -4,6 +4,10 @@ import { LaunchNameRefusal, RemoteRootRefusal } from '../launch-name/refusal.js'
 import type { Managers } from '../managers.js';
 import type { RemoteAddress } from '../remote/address.js';
 import type { RemoteLaunchHandlers } from '../remote/entry-factory.js';
+import { notify } from '../notifications/index.js';
+import { OPENCODE_OAUTH_FAILURE_NOTICE } from '../sandbox/opencode-data.js';
+
+vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
 
 // The refusal arms are the only part of a remote launch that decides *how* a failure is reported,
 // and each is distinguished by its class: `failRemoteLaunch` tells a host that refused the label
@@ -51,6 +55,17 @@ function harness(): Harness {
 }
 
 describe('startRemoteLaunch refusals', () => {
+  it('reports an optional remote OAuth failure once without rejecting readiness', async () => {
+    vi.mocked(notify).mockClear();
+    const h = harness();
+    const launch = startRemoteLaunch(h.managers, 'placeholder', ADDRESS, '/local');
+    const notice = `isolated; ${OPENCODE_OAUTH_FAILURE_NOTICE}`;
+    h.handlers().onReady?.('/remote/workspace', notice);
+    h.handlers().onReady?.('/remote/workspace', notice);
+    expect(await outcome(launch.ready)).toBe(RESOLVED);
+    expect(notify).toHaveBeenCalledExactlyOnceWith(h.managers, 'manual', 'placeholder', OPENCODE_OAUTH_FAILURE_NOTICE);
+  });
+
   it('refuses a label the host already has running', async () => {
     const h = harness();
     const launch = startRemoteLaunch(h.managers, 'placeholder', ADDRESS, '/local');

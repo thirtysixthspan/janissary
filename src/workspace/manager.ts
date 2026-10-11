@@ -1,4 +1,4 @@
-import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace } from './index.js';
+import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace, type ProvisionHandle } from './index.js';
 import { errorText } from '../error-text.js';
 import { messageBus } from '../bus.js';
 
@@ -6,7 +6,7 @@ export const NO_REPO ='No git repository found. Cannot create workspace.';
 
 // A workspace clone still being provisioned: its directory is known up front, but `ready` only
 // resolves once the clone (and its follow-up git setup) finishes.
-export type ProvisioningWorkspace = { dir: string; ready: Promise<void> };
+export type ProvisioningWorkspace = { dir: string; ready: Promise<void>; readonly oauthNotice?: string };
 
 // Owns the set of workspace clones the app has created — an independent `git clone` of the repo's
 // `origin` remote, made for a shell (`shell --workspace`) or a harness tab (`harness <name>
@@ -18,7 +18,7 @@ export class WorkspaceManager {
   private pending = new Map<string, { cancel: () => void; dir: string }>();
   private projectDir: string;
 
-  constructor(projectDir?: string) {
+  constructor(projectDir?: string, private onCredentialFailure?: (label: string, message: string) => void) {
     this.projectDir = projectDir ?? process.cwd();
   }
 
@@ -34,7 +34,7 @@ export class WorkspaceManager {
     const handle = provisionWorkspace(name, origin.url, githubToken);
     this.refs.set(handle.dir, 1);
     this.pending.set(name, { cancel: handle.cancel, dir: handle.dir });
-    return { dir: handle.dir, ready: this.trackReady(name, handle.ready) };
+    return { dir: handle.dir, ready: this.trackReady(name, handle), get oauthNotice() { return handle.oauthNotice; } };
   }
 
   // The error `create` would return for want of a repo or an `origin` remote, or undefined when a
@@ -61,9 +61,12 @@ export class WorkspaceManager {
     }
   }
 
-  private async trackReady(name: string, ready: Promise<void>): Promise<void> {
+  private async trackReady(name: string, handle: ProvisionHandle): Promise<void> {
     try {
-      await ready;
+      await handle.ready;
+      if (handle.oauthNotice && this.refs.has(handle.dir)) {
+        try { this.onCredentialFailure?.(name, handle.oauthNotice); } catch { return; }
+      }
     } finally {
       this.pending.delete(name);
       messageBus.emit('state', { type: 'dirty' });
