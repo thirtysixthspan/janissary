@@ -2,7 +2,27 @@
 
 ## ready
 
-* add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and receive the transcript as the agent works, and to recieve the response.
+* Add a new `agent` command. This command starts a new ACP session, is launched with an ai task to execute and returns a task-dependant response to the caller. 
+Agents are always workspaced and sandboxed.
+Agents are given access to a subset of skills from /skills which are specified on launch. The paths of the permitted skill are passed to the agent on startup. No other skills may be run by the agent even though the agent may discover them in the workspace repository.
+Agents can execute janissary commands specified in a provided skill, otherwise access is blocked. Janissary will execute the janissary command and return a response to the ACP agent if one is given. The commands will be executed from the context of the caller, which may be a local or remote shell.
+Agents run completely autonomously and automatically approving any permission gates in the ACP session. Agents but can ask questions via the ask-user skill if provided. agents have access to operate in the workspace but are always sandboxed within. 
+When launched, the agent can be headed or headless. In the case of a headed run, a new agent tab will be opened. the tab does not have a command bar and does not accept direct input. the tab is for monitoring the ACP session. the tab displays everything the ACP agent does verbosely including all thinking. the tab will have a metadata bar showing the command, status flags, and a terminate button. The terminate button will provide a termination response to the caller, terminate the ACP session and close the tab. Simply closing the tab will close the tab but not stop the agent.    
+Upon completion of the task, the agent is torn down completely including any workspaces it creates, tabs it has open and returns a response to the caller.
+The agent launch command will be `agent` and support 
+remote hosts `on <user@host:path>` local by default,
+headed `in a tab` headless by default, 
+grouping when headed `in group <name|id>` the group of the caller by default, 
+selecting an existing  workspace `in workspace <label>` creating a new workspace by default,
+model and effort selection `using model <model id>` and `with effort <level>` with a default ACP model and medium effort by default,
+skill specifications `with skill <name>` can be absent or present multiple times,
+ai task selection `execute <ai task> <parameters...>` must be the last command and is manditory 
+example commands:
+`agent on anonymouscoward@10.27.1.94:dev/janissary in group 1 using model gpt-6-luna with effort xhigh with skill ask-user execute plan-a-feature.md text parsing`
+`agent using model gpt-6-luna execute review-pull-request.md 1234`
+`agent on anonymouscoward@10.27.1.94 in group alpha in a tab execute resolve-conflicts.md`
+
+* add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
 
 * Write a readable, output-only terminal transcript for shell tabs alongside the existing asciicast recording, so command output remains inspectable after the tab closes. Parse the PTY stream as terminal output rather than stripping escape codes from raw bytes, and do not persist user input or its terminal echo; if the implementation cannot distinguish echoed input safely, omit it. Store the text transcript under `.janissary/shell-transcripts/`, bound its size, and clear/preserve it on the same fresh-launch and `--relaunch` lifecycle as recordings. Honor `recordShellTabs: false`. This covers transcript creation and retention only; making the transcript available to the launcher ACP summarizer is a separate feature. Complexity: medium-high.
 
