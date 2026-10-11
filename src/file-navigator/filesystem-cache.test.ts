@@ -313,24 +313,30 @@ describe('buildCachedRows settling an asynchronous stat batch', () => {
     expect(onReady).toHaveBeenCalled();
   });
 
-  it('frees its markers and reports ready when the batch failed', async () => {
-    const { state, listingReads, statReads } = makeAsyncState([], 'size');
-    const onReady = vi.fn();
-    await statPass(state, listingReads, statReads, onReady);
-    // Free the parked batch's marker, then make the row missing again so a fresh read is issued.
-    statReads[0].resolve({});
-    await settle();
-    state.stats.delete('a.txt');
-    onReady.mockClear();
+  it('does not redraw after failure and retries on the next independent refresh', async () => {
+    const { state } = makeAsyncState([], 'size');
+    state.listings.set('', [{ name: 'a.txt', dir: false }]);
+    const redraw = vi.fn(() => { buildCachedRows(state, redraw); });
+    const failedRead = vi.fn(() => Promise.reject(new Error('connection lost')));
+    state.filesystem.statRows = failedRead;
 
-    // Rejected inside the call, so the handler the cache attaches lands in the same tick and the
-    // rejection is never briefly unhandled.
-    state.filesystem.statRows = () => Promise.reject(new Error('connection lost'));
-    buildCachedRows(state, onReady);
+    const initialRows = buildCachedRows(state, redraw);
+    expect(initialRows.find((row) => row.path === 'a.txt')?.size).toBeUndefined();
     await settle();
 
+    expect(failedRead).toHaveBeenCalledExactlyOnceWith('/remote/ws', ['a.txt']);
     expect(state.statLoads.size).toBe(0);
-    expect(onReady).toHaveBeenCalled();
+    expect(redraw).not.toHaveBeenCalled();
+
+    const stat = { size: 1, modified: 2, mode: 33_188 };
+    const successfulRetry = vi.fn(async () => ({ 'a.txt': stat }));
+    state.filesystem.statRows = successfulRetry;
+    buildCachedRows(state, redraw);
+    expect(successfulRetry).toHaveBeenCalledExactlyOnceWith('/remote/ws', ['a.txt']);
+    await settle();
+
+    expect(state.stats.get('a.txt')).toEqual(stat);
+    expect(redraw).toHaveBeenCalledExactlyOnceWith();
   });
 
   // A stat read is discarded on a generation change for the same reason a listing read is: writing it
@@ -352,9 +358,8 @@ describe('buildCachedRows settling an asynchronous stat batch', () => {
 });
 
 describe('a read that fails at the current generation', () => {
-  // A failure is not a reason to leave the tree blank: the listing caches as empty so the rows below
-  // it still draw, the in-flight marker is freed so a later rebuild can ask again, and ready is
-  // reported so the rebuild that triggered it actually happens.
+  // A failed listing is an empty directory for this cache generation. A failed stat leaves details
+  // missing and waits for an independent refresh, since rebuilding cannot make those details visible.
   it('caches a failed listing as empty, frees its marker, and reports ready', async () => {
     const { state } = makeAsyncState();
     const onReady = vi.fn();
