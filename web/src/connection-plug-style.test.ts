@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import theme from '../theme.css?raw';
+import theme from './theme.css?raw';
 
 // The plug's colours are what the status actually says, so they are pinned here rather than left to
 // whichever surface happens to render one. The rules live in the host theme because both surfaces —
