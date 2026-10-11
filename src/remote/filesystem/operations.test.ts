@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { FILESYSTEM_OPERATIONS, isFilesystemOperation, operationDescriptor } from './operations.js';
+import {
+  decodeFilesystemResult, FILESYSTEM_OPERATIONS, isFilesystemOperation, operationDescriptor,
+  type RemoteFilesystemOperationResult,
+} from './operations.js';
 import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../protocol-frames.js';
 
 // Written out rather than derived from the table, so an operation dropped from both the union and
@@ -71,6 +74,27 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
 
 const alphabetical = (names: readonly string[]) => names.toSorted((a, b) => a.localeCompare(b));
 
+const VALID_RESULTS: { [K in RemoteFilesystemOperation]: RemoteFilesystemOperationResult<K> } = {
+  'read-directory': [{ name: 'entry', dir: false }],
+  stat: { 'a.txt': { size: 1, modified: 2, mode: 3 } },
+  watch: {}, unwatch: {},
+  git: { statuses: [['a.txt', 'changed']] },
+  'git-pull': 'Updated branch',
+  'git-commit': { committed: false },
+  search: ['a.txt'],
+  'read-file': { content: 'YQ==' },
+  'write-file': { ok: false, reason: 'denied' },
+  move: { ok: true, value: { from: 'a.txt', to: 'dest/a.txt' } },
+  'move-many': { total: 1, failedPaths: [], moved: [{ from: 'a.txt', to: 'dest/a.txt' }], mutated: true },
+  delete: { ok: false, reason: 'denied' },
+  'delete-many': { total: 1, failedPaths: [], mutated: false },
+  rename: { conflict: true },
+  paste: { total: 1, failedPaths: [], pairs: [], mutated: false },
+  'create-file': { ok: true, value: { path: 'new.txt' } },
+  'create-directory': { ok: true, value: { path: 'new-dir' } },
+  replay: { result: {}, undoStack: [], redoStack: [], mutated: false },
+};
+
 describe('FILESYSTEM_OPERATIONS', () => {
   it('has one entry for every operation in the protocol, and no others', () => {
     expect(alphabetical(Object.keys(FILESYSTEM_OPERATIONS))).toEqual(alphabetical(ALL_OPERATIONS));
@@ -81,6 +105,16 @@ describe('FILESYSTEM_OPERATIONS', () => {
     expect(isFilesystemOperation('not-an-operation')).toBe(false);
     expect(isFilesystemOperation('toString')).toBe(false);
     expect(isFilesystemOperation(undefined)).toBe(false);
+  });
+
+  it('decodes a valid result for every operation', () => {
+    for (const operation of ALL_OPERATIONS) {
+      expect(decodeFilesystemResult(operation, VALID_RESULTS[operation])).toEqual(VALID_RESULTS[operation]);
+    }
+  });
+
+  it.each(ALL_OPERATIONS)('rejects a malformed %s result', (operation) => {
+    expect(() => decodeFilesystemResult(operation, null)).toThrow('Invalid remote filesystem operation result.');
   });
 
   it.each(PATH_CASES)('extracts every path %s names', (operation, args, expected) => {

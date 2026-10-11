@@ -2,15 +2,16 @@ import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../..
 import type { CommitResult } from '../../git/commit.js';
 import type { GitMetadata } from '../filesystem-port.js';
 import type { RemotePortPaths } from './port-paths.js';
+import type { RemoteFilesystemOperationResult } from '../../remote/filesystem/operations.js';
 
 // `RemoteFileSystemPort`'s three git operations, extracted so that file stays under the size limit —
 // the same split `port-history.ts`, `port-paths.ts`, `port-requests.ts`, and
 // `port-watchers.ts` already
 // use. Each takes the port's bound request sender and its path mapper as parameters rather than
 // reaching for them, so nothing here knows about the port's session bookkeeping.
-export type RemoteRequest = <T>(
-  operation: RemoteFilesystemOperation, args: RemoteFilesystemArguments,
-) => Promise<T>;
+export type RemoteRequest = <K extends RemoteFilesystemOperation>(
+  operation: K, args: RemoteFilesystemArguments,
+) => Promise<RemoteFilesystemOperationResult<K>>;
 
 // The far side answers with statuses relative to its own workspace root, so they are filtered and
 // re-based onto the tree's root here. A failed request is reported as "no git metadata" rather than
@@ -19,7 +20,7 @@ export function remoteGitMetadata(
   request: RemoteRequest, paths: RemotePortPaths, root: string,
   onResult: (metadata: GitMetadata) => void,
 ): void {
-  void request<GitMetadata>('git', {}).then(async (metadata) => {
+  void request('git', {}).then(async (metadata) => {
     onResult({ ...metadata, statuses: await paths.filterEntries(root, metadata.statuses) });
   }, () => onResult({ statuses: [] }));
 }

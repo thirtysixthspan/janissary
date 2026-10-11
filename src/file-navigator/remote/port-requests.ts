@@ -1,4 +1,5 @@
 import { refusalValueFor } from '../../remote/filesystem/refusal.js';
+import { decodeFilesystemResult, type RemoteFilesystemOperationResult } from '../../remote/filesystem/operations.js';
 import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol-frames.js';
 
 // One remote session's outstanding filesystem requests, and how each one is settled when no answer
@@ -99,16 +100,19 @@ export class RemotePortRequests {
 // A request that was never sent, because the session was already gone. Same rule, expressed as a
 // return value rather than a callback: a value-returning operation gets its report, and the rest
 // throw, which is what their half of the contract says.
-export function unavailableResult<T>(
-  operation: RemoteFilesystemOperation, args: RemoteFilesystemArguments, reason: string,
-): T {
+export function unavailableResult<K extends RemoteFilesystemOperation>(
+  operation: K, args: RemoteFilesystemArguments, reason: string,
+): RemoteFilesystemOperationResult<K> {
   const refusal = refusalValueFor(operation, args, reason);
   if (!refusal.classified) throw new Error(reason);
-  return refusal.value as T;
+  return decodeFilesystemResult(operation, refusal.value);
 }
 
 function settle(pending: Pending, reason: string): void {
   const refusal = refusalValueFor(pending.operation, pending.args, reason);
-  if (refusal.classified) pending.resolve(refusal.value);
+  if (refusal.classified) {
+    try { pending.resolve(decodeFilesystemResult(pending.operation, refusal.value)); }
+    catch (error) { pending.reject(error instanceof Error ? error : new Error(String(error))); }
+  }
   else pending.reject(new Error(reason));
 }

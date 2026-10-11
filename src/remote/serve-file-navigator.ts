@@ -4,11 +4,13 @@ import { errorText } from '../error-text.js';
 import {
   LocalFileSystemPort,
   type FileSystemPort,
+  type GitMetadata,
   type WatchHandle,
 } from '../file-navigator/filesystem-port.js';
 import type { MaybePromise } from '../maybe-promise.js';
 import { refusalFor, refusedPaths } from './filesystem/refusal.js';
-import { operationDescriptor, type OperationContext } from './filesystem/operations.js';
+import { operationDescriptor } from './filesystem/operations.js';
+import type { OperationContext } from './filesystem/operation-types.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
 import type { ClientFrame, RemoteFilesystemArguments, ServerFrame } from './protocol-frames.js';
 
@@ -100,7 +102,7 @@ export class RemoteFileNavigators {
     return {};
   }
 
-  private git(): Promise<unknown> {
+  private git(): Promise<GitMetadata> {
     return new Promise((resolve) => { this.filesystem.gitMetadata(this.root, resolve); });
   }
 

@@ -18,7 +18,7 @@ export async function remoteStatRows(
   request: RemoteRequest, paths: RemotePortPaths, root: string, items: string[],
 ): Promise<Record<string, RowStat | null>> {
   const remotePaths = await Promise.all(items.map((item) => paths.to(root, item)));
-  const result = await request<Record<string, RowStat | null>>('stat', { paths: remotePaths });
+  const result = await request('stat', { paths: remotePaths });
   return Object.fromEntries(items.map((item, index) => [item, result[remotePaths[index]] ?? null]));
 }
 
@@ -27,14 +27,14 @@ export async function remoteStatRows(
 export async function remoteSearch(
   request: RemoteRequest, paths: RemotePortPaths, root: string,
 ): Promise<string[]> {
-  return paths.filterMatches(root, await request<string[]>('search', {}));
+  return paths.filterMatches(root, await request('search', {}));
 }
 
 // The paths a delete-many failed on are the caller's, not the far side's.
 export async function remoteDeleteMany(
   request: RemoteRequest, paths: RemotePortPaths, root: string, items: string[],
 ): Promise<DeleteManyResult> {
-  const result = await request<DeleteManyResult>(
+  const result = await request(
     'delete-many', { paths: await Promise.all(items.map((item) => paths.to(root, item))) },
   );
   return { ...result, failedPaths: await Promise.all(result.failedPaths.map((item) => paths.from(root, item))) };
@@ -47,7 +47,7 @@ export async function remoteReplay(
   undoStack: HistoryStep[], redoStack: HistoryStep[], direction: 'undo' | 'redo',
   overwrite: boolean, skipConflicts: boolean,
 ): Promise<ReplayResult> {
-  const result = await request<ReplayResult>('replay', {
+  const result = await request('replay', {
     undoStack: await mapRemoteHistory(undoStack, (item) => paths.to(root, item)),
     redoStack: await mapRemoteHistory(redoStack, (item) => paths.to(root, item)),
     direction, overwrite, skipConflicts,

@@ -263,7 +263,7 @@ describe('RemoteFileSystemPort remaining operations', () => {
       operation: 'paste',
       args: { sources: ['/elsewhere/a.txt'], destination: 'src/dest', mode: 'cut', policy: 'skip-conflicts' },
     });
-    h.reply({ total: 1, failedPaths: [], moved: [], mutated: false });
+    h.reply({ total: 1, failedPaths: [], pairs: [], mutated: false });
     await expect(pending).resolves.toMatchObject({ total: 1 });
   });
 

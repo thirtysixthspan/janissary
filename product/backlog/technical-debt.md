@@ -6,16 +6,6 @@
 
 ## deferred
 
-* Derive the remote filesystem port's reply types from the operation table's own decoders instead of asserting each wire result into whatever the caller expected. — deferred: complexity 8/10, a keyed type mapping plus a result decoder for each of twenty operation entries, a module extraction to stay under the 200-line cap, and rewiring the remote-request surface across eight files.
-
-Existing Debt: `src/remote/filesystem/operations.ts` validates every frame's arguments at runtime but its result side is untyped from the moment the reply leaves the channel, so `RemoteFileSystemPort.request` resolves `value as T` with `T` supplied purely by the declared return type of the calling method, leaving the validated shape and the wire shape as two type universes that meet only in a cast. Severity: 6/10
-
-Existing Risk: 6/10 - Every one of the port's operations believes whatever the far side sent, so a mismatch between the reply the server builds and the reply the caller parsed is a silently mistyped object flowing into the file navigator, a `Record<string, RowStat | null>` read as something else or an `ok` flag that is not where the caller looks, with no runtime check and no compile-time link to catch it.
-
-Proposal Risk: 3/10 - The reply type is then derived per operation, so a far-side payload change is a compile error at both ends, but the table now carries an argument and a result decoder per operation and that mapping has to stay in step with `RemoteFilesystemOperation`.
-
-Proposal: `src/file-navigator/remote/port.ts:175` resolves each reply through `resolve(value as T)` inside `request`, and each caller, `readDirectory` among them, supplies `T` only through its own return type, while `src/file-navigator/remote/port-requests.ts:107` casts a value this codebase itself synthesized. `src/remote/filesystem/operations.ts` already holds each operation's argument `decode` and `valid`, so give each entry a result decoder beside them and expose a keyed mapping from `RemoteFilesystemOperation` to its decoded result type, which is the same unconnectedness the three `eslint-disable @typescript-eslint/no-explicit-any` suppressions at `src/remote/filesystem/operations.ts:94,213,223` are expressing on the argument side. Have `unavailableResult` at `src/file-navigator/remote/port-requests.ts:104-109` build its refusal through that decoder rather than `refusal.value as T`. `src/remote/file-navigator-refusal-contract.test.ts` runs every operation against a loopback remote and the local port and asserts the two answers match, and is the coverage that has to keep passing while the reply type stops being a cast.
-
 * Bound Git sync commands and cancel queued work during shutdown. — deferred: complexity 8/10, requires owned cancellation and finite deadlines across the complete Git subprocess sequence, including status lookup, recovery, queue shutdown, and post-timeout outcomes.
 
 Existing Debt: The shared Git sync queue serializes operations but gives its subprocesses no deadline or owned cancellation lifecycle, so one stalled command holds every subsequent cycle indefinitely. Severity: 6/10
