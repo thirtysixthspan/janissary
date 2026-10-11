@@ -19,8 +19,8 @@
 //   requiresBinary skip this shot (with a warning) unless the binary is on PATH; those shots
 //                  are captured manually on a machine that has it.
 //
-// Every shot starts in the reset's starting tab, a zsh shell tab shown as `janus` (see reset.mjs). A
-// setup line the application does not claim goes to that zsh, as a line typed in a shell tab does.
+// Every shot starts in the reset's starting tab, a shell tab shown as `janus` (see reset.mjs). A
+// setup line the application does not claim goes to that shell, as a line typed in a shell tab does.
 export default [
   // Getting started: the window on first launch, and the tab strip's signals.
   { name: 'app-overview', setup: [], target: 'page' },
@@ -28,7 +28,7 @@ export default [
     // Three shells: the hidden `bilal` is badged by a command finishing in it, and `janus` blinks
     // while it runs one. Each is aliased so the strip reads the same on every run.
     name: 'tabs-overview',
-    setup: ['zsh --no-workspace', 'rename bilal', 'zsh --no-workspace', 'rename cavus', 'send bilal sleep 1', 'send janus sleep 30'],
+    setup: ['shell --no-workspace', 'rename bilal', 'shell --no-workspace', 'rename cavus', 'send bilal sleep 1', 'send janus sleep 30'],
     settle: 1200,
     stabilize: 'busy-dot',
     target: 'tab-strip',
@@ -36,7 +36,7 @@ export default [
   },
   {
     name: 'tabs-groups',
-    setup: ['zsh bilal', 'profile launch demo'],
+    setup: ['shell bilal', 'profile launch demo'],
     settle: 1500,
     target: 'tab-strip',
     cropToChildren: '.tab',
