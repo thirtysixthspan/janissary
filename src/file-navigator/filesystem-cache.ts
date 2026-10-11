@@ -71,7 +71,6 @@ function fillStats(state: FilesTabState, rows: FileNavigatorRow[], onReady: () =
   }, () => {
     if (state.cacheGeneration !== generation) return;
     for (const relPath of missing) state.statLoads.delete(relPath);
-    onReady();
   });
 }
 

@@ -4,17 +4,6 @@
 
 ## development
 
-* Separate failed file detail reads from automatic redraws so remote recovery can proceed.
-
-Existing Debt: File detail load failures use the same redraw callback as successful loads while leaving their cache entries missing, so completing a failed request immediately starts its replacement. Severity: 5/10
-
-Existing Risk: 7/10 - A remote connection outage can produce an immediate rejection and redraw loop that monopolizes the server event loop and prevents reconnection timers or unrelated tab interactions from progressing.
-
-Proposal Risk: 2/10 - A row can lack details until the next independent refresh, but one failed request cannot schedule an endless chain of replacement requests.
-
-Proposal: In `src/file-navigator/filesystem-cache.ts`, make `fillStats` distinguish a successful cache update from a failed batch: release the failed batch's in-flight markers under the existing generation guard without requesting an immediate rebuild when no visible data changed, and allow the next independently requested refresh to retry the missing rows. `WatchedFilesTabs.rebuild` in `src/file-navigator/watched-tabs.ts` passes a callback that rebuilds again, and `writeRebuiltPayload` in `src/file-navigator/manager/payload.ts` reaches `fillStats` through row construction, creating the current feedback loop. During reconnection, `RemoteChannel.send` in `src/remote/channel/index.ts` answers filesystem requests immediately with an unavailable error, so this is a normal recovery path rather than just a hypothetical faulty port. `src/file-navigator/filesystem-cache.test.ts` covers rejection with inert mock callbacks but does not exercise the production callback shape; add a case whose callback rebuilds the cache, proving a rejected read settles once, and then explicitly trigger another refresh and prove a successful retry updates the row. Retain asynchronous generation protection, synchronous cache behavior, and the contract to retry on the next refresh in `product/specs/file-navigator-tab.md`.
-
-
 * Complete the profile picker's migration to command bars owned by each tab so a selection replaces the originating bar's draft.
 
 Existing Debt: The profile picker still writes through a global recall ref that no component owns after command bars moved into plugins, while task and queue selections use bridges scoped to each tab. Severity: 5/10
