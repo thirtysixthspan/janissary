@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { loadOpencodeOauth } from './opencode-oauth.js';
 
 // The credentials a project can hand its workspaced tabs, one row per file under `.janissary/` —
 // the project's own, or the user's `~/.janissary/` when the project has no file of its own.
@@ -81,6 +82,7 @@ function readToken(containingDir: string, file: string): string | undefined {
 // every project on the machine, and a project needing a different one says so with a file. `home` is
 // a parameter so a test can point it somewhere empty instead of at the machine's real credentials.
 export function loadProjectTokens(projectDir: string, home: string = homedir()): ProjectTokens {
+  loadOpencodeOauth(home);
   const loaded: ProjectTokens = {};
   for (const { name, file } of PROJECT_TOKENS) {
     const value = readToken(projectDir, file) ?? readToken(home, file);

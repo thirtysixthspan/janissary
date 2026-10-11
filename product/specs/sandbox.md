@@ -74,11 +74,11 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   `.janissary/opencode-token` (see [[workspaced-agent]]). The write deny exists for the same entry:
   with the read reporting `ENOENT`, a process that decided to write the file would see no
   credentials and overwrite the real ones on the host, so denying the write turns a silent clobber
-  into an ordinary failure. Consequence worth stating plainly: an opencode provider configured by
-  `opencode auth login` rather than by an environment variable stops working inside a workspace, and
+  into an ordinary failure. The ChatGPT OAuth bridge supplies only the host's saved Codex login through a workspace-private authentication file, without granting access to the host's OpenCode credential store. Other opencode providers configured by
+  `opencode auth login` rather than by an environment variable stop working inside a workspace, and
   `.janissary/opencode-token` does not substitute for it — that file supplies `OPENCODE_API_KEY`,
   which is what the OpenCode Zen and OpenCode Go providers read and nothing else. Every other
-  provider reads its own key from the environment, which the scrub deliberately exempts.
+  API-key provider reads its own key from the environment, which the scrub deliberately exempts.
 - **`~/Library/Keychains`** is a read carve-in, not a secret deny, despite being far more sensitive
   in principle than the other carve-ins — see [Known OS quirks](#known-os-quirks-and-their-carve-ins).
 - A harness's own executable directory (`SELF_DIR_L`/`SELF_DIR_R`, resolved from `PATH` at spawn
@@ -157,8 +157,8 @@ ever reading `~/.ssh`): `AWS_*`, `GITHUB_TOKEN`, `GH_TOKEN`, `NPM_TOKEN`, `DOCKE
 anything ending `_SECRET`/`_PASSWORD`, `SSH_AUTH_SOCK`, `GPG_AGENT_INFO`, `GNUPGHOME`,
 `GIT_ASKPASS`, `GIT_CREDENTIAL_HELPER`, `KRB5CCNAME`. LLM provider keys are deliberately **not**
 matched — the harnesses and the ACP agent need their own credentials to function, and since
-`.local/share/opencode/auth.json` became a denied secret path this is the only route a non-OpenCode
-opencode provider has into a workspace. The ones that matter are `ANTHROPIC_API_KEY`,
+`.local/share/opencode/auth.json` became a denied secret path this is the API-key route a non-OpenCode
+opencode provider has into a workspace. ChatGPT OAuth has the separate private authentication route described in [[workspaced-agent]]. The keys that matter are `ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, and for Google `GOOGLE_GENERATIVE_AI_API_KEY` — the Google spellings
 `GOOGLE_API_KEY` and `GEMINI_API_KEY` pass the scrub too, but opencode reads them only when
 recognizing the provider, never on a request, so neither works alone. A variable carrying the

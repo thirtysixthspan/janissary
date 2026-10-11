@@ -4,6 +4,7 @@ import { getGitIdentity, gitIdentityEnv } from '../git/identity.js';
 import { PROJECT_TOKENS, type ProjectTokens } from '../project/tokens.js';
 import { ENV_SCRUB_PATTERNS } from './paths.js';
 import { resolvePath } from './resolve.js';
+import { prepareOpencodeDataHome } from './opencode-data.js';
 
 // What a spawn's environment gains and loses, as opposed to the profile and its `-D` params beside
 // it in `./index.ts`. Two of these apply whether or not this machine can confine anything: a
@@ -58,7 +59,11 @@ function workspaceCredentialEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.P
 // threaded through the spawn options the way the tokens are, because unlike a token — which the
 // remote side merges per provision — it is a single process-wide fact on either machine.
 export function workspaceEnv(tmpDir: string, tokens: ProjectTokens): NodeJS.ProcessEnv {
-  return { ...gitIdentityEnv(getGitIdentity()), ...workspaceCredentialEnv(tmpDir, tokens) };
+  const dataHome = prepareOpencodeDataHome(tmpDir);
+  return {
+    ...gitIdentityEnv(getGitIdentity()), ...workspaceCredentialEnv(tmpDir, tokens),
+    ...(dataHome && { XDG_DATA_HOME: dataHome }),
+  };
 }
 
 // Handing a workspaced tab its scoped credentials is a provisioning concern, not an isolation one:

@@ -137,18 +137,18 @@ workspaced spawn, isolation-independent, off the scrub list, forwarded to a remo
 own file as the fallback. The credential itself is a static API key with no refresh and no expiry, so
 unlike the Claude token there is nothing to re-mint on a schedule.
 
-For opencode the token file is not optional inside a workspace. opencode keeps its credentials in
+OpenCode Zen and OpenCode Go need the token file or an ambient API key inside a workspace. opencode keeps its credentials in
 `~/.local/share/opencode/auth.json`, and that file is a denied secret path (see [[sandbox]]) — a
 workspaced tab cannot read it or write it, even though the directory around it stays writable for the
 session database and logs. So a workspaced opencode harness authenticates from
-`.janissary/opencode-token` or from the environment, never from the machine's own opencode login,
+`.janissary/opencode-token`, from the environment, or from the ChatGPT OAuth bridge below, never from the machine's own opencode login,
 whether the tab is local or remote. This is deliberate: the file holds every provider key opencode
 has been given, and a disposable workspace has no business reading them.
 
 The consequence is worth stating rather than discovering. `OPENCODE_API_KEY` is what the OpenCode Zen
 and OpenCode Go providers read, and nothing else. An opencode configured by `opencode auth login`
 against Anthropic, Google, or OpenAI has that key in the denied file, and the token file does not
-replace it; that provider works inside a workspace only if its own variable (`ANTHROPIC_API_KEY`,
+replace it; API-key authentication for that provider works inside a workspace only if its own variable (`ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, or for Google `GOOGLE_GENERATIVE_AI_API_KEY`) is present in the environment
 janissary was started with, which the scrub passes through untouched. For Google that variable and no
 other: `GOOGLE_API_KEY` and `GEMINI_API_KEY` are enough for opencode to recognize the provider as
@@ -179,6 +179,14 @@ itself logged out immediately rather than failing much later, and most remote la
 have no Claude token on either machine. A remote installation too old to honor the forwarded token is
 refused at the handshake, the same way one too old to honor the GitHub token is. See
 [[remote-server]].
+
+### ChatGPT OAuth for OpenCode
+
+At startup, Janissary reads the host's saved Codex ChatGPT login. A valid login supplies the access token, refresh token, account identity, and access-token expiry to OpenCode in its OAuth format. Expiry is expressed in milliseconds. Missing, unreadable, or malformed credentials are ignored; an expired access token is retained so OpenCode can refresh it.
+
+Each workspace receives its own owner-only authentication file in the private temporary directory beside the clone. Workspace processes use that private OpenCode data location, including when isolation is disabled. Credentials stay outside the git clone and are removed when the last tab using the workspace closes. Later process launches preserve the private authentication file, including any credentials OpenCode refreshed, and never write those credentials back to Codex. API-key injection continues alongside this login.
+
+Non-workspaced processes and browser children receive no OAuth bridge. Remote workspaces use the saved Codex login on the machine running them; the initiating machine's ChatGPT login is not forwarded.
 
 ### Workspace lifecycle
 

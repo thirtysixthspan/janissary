@@ -24,7 +24,12 @@ export class OpencodeTranscriptSource implements TranscriptSource {
   private sessions: string[] = [];
   private position = { time: 0, id: '' };
 
-  constructor(private cwd: string, private spawnedAt: number, private home: string = homedir()) {}
+  constructor(
+    private cwd: string,
+    private spawnedAt: number,
+    home: string = homedir(),
+    private dataHome: string = process.env.XDG_DATA_HOME || path.join(home, '.local', 'share'),
+  ) {}
 
   resolved(): boolean {
     return this.sessions.length > 0;
@@ -47,7 +52,7 @@ export class OpencodeTranscriptSource implements TranscriptSource {
   private open(): DatabaseSync | undefined {
     if (this.database) return this.database;
     try {
-      this.database = new DatabaseSync(path.join(this.home, '.local', 'share', 'opencode', 'opencode.db'), { readOnly: true });
+      this.database = new DatabaseSync(path.join(this.dataHome, 'opencode', 'opencode.db'), { readOnly: true });
     } catch {
       return undefined;
     }

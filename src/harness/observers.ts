@@ -59,7 +59,8 @@ export function harnessRuntime(options: HarnessObserverOptions): HarnessRuntime 
   const recorder = new HarnessRecorder(id, label, HARNESS_COMMANDS[name], dims.cols, dims.rows, () => {
     notify(managers, 'harness-recording-failed', label);
   }, rememberRecording(managers, label));
-  const source = channel ? managers.remote.transcriptSource(label) : createTranscriptSource(name, cwd, Date.now());
+  const workspaceDir = managers.tab.tabs.find((tab) => tab.label === label)?.workspaceDir;
+  const source = channel ? managers.remote.transcriptSource(label) : createTranscriptSource(name, cwd, Date.now(), workspaceDir);
   const tailer = source
     ? new HarnessTranscriptTailer(label, source, () => { notify(managers, 'transcript-unavailable', label); })
     : undefined;
