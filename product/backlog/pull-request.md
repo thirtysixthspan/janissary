@@ -2,16 +2,6 @@
 
 # pull-request
 
-* Render an effort the catalog does not offer as its own option, so a hand-written entry does not look unset.
-
-Existing Issue: `decodeEntry` in `src/plugins/roles/roles-file.ts` accepts any effort string, and `product/specs/roles.md` documents that a value outside `low`, `medium`, `high`, `xhigh`, and `max` is passed through verbatim like `harness --effort`, but the entry row in `web/src/plugins/roles/RoleCard.tsx` renders a `<select>` whose options are only `default` plus the catalog's levels, so a stored effort such as `ultra` matches no option and the row shows an empty dropdown — indistinguishable from the default the user would get by clearing it. Severity: 3/10
-
-Existing Risk: 3/10 - A user who hand-wrote an effort the catalog does not list opens the tab, sees an entry that looks like it has no effort, and either believes the file is wrong or clears the field and loses the value, all without being told the value is not one the tab offers.
-
-Proposal Risk: 1/10 - The fallback option is only added for the values already stored, so a value the tab never rendered cannot reach it.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "render an effort outside the catalog as its own option". In `web/src/plugins/roles/RoleCard.tsx`, the effort `<select>` maps the payload's `catalog.efforts` into options above a `default` option; when the entry's `effort` is a nonempty string that is not in that list, render one extra option carrying that exact string between `default` and the catalog levels, marked with the plain value rather than a translated label, so the stored value is visible and selecting `default` still clears it. No server change is needed — the value decoded fine and the fix is presentational. Add a case to `web/src/plugins/roles/RolesTab.test.tsx` whose payload carries `effort: 'ultra'` and assert the select's value is `ultra` and that switching it to `default` still raises `set-entry-effort` with `effort: null`. The existing effort cases in that file must keep passing untouched.
-
 * Share the home-file-over-project-file resolution, partial-loss decode, and one-line problem reporting between the launcher and roles config files instead of shipping a second copy.
 
 Existing Issue: `src/plugins/roles/roles-file.ts` repeats, almost line for line, the precedence, candidate walk, partial-loss counting, and problem-line composition that `src/plugins/launcher/commands-file.ts` already implements for `launcher.json` — including the home path join, the project-beats-home rule, the drop-and-count decode, and the `— showing …` fallback phrasing — and the two can now drift apart with nothing to notice, so a fix to how a broken config file is reported would land in one plugin and leave the other describing itself differently. Severity: 4/10

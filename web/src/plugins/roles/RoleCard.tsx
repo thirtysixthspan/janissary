@@ -114,7 +114,11 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
         }}
       />
       <ul className="roles-entries">
-        {role.entries.map((entry, position) => (
+        {role.entries.map((entry, position) => {
+          // An effort the catalog does not offer still has to be visible: the file stores any string
+          // verbatim, so a value with no option would render the row as though it held none.
+          const stored = entry.effort !== undefined && !efforts.includes(entry.effort) ? entry.effort : null;
+          return (
           <li
             key={`${entry.harness}:${entry.model}:${position}`}
             className="roles-entry"
@@ -141,6 +145,7 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
                 })}
             >
               <option value="">default</option>
+              {stored === null ? null : <option value={stored}>{stored}</option>}
               {efforts.map((effort) => <option key={effort} value={effort}>{effort}</option>)}
             </select>
             <button
@@ -152,7 +157,8 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
               <FontAwesomeIcon icon={faTrash} />
             </button>
           </li>
-        ))}
+          );
+        })}
       </ul>
       {picker ? (
         <div className="roles-picker">

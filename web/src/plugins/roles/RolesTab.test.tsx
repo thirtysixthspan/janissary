@@ -166,6 +166,22 @@ describe('RolesTab', () => {
     expect(intent).toHaveBeenCalledTimes(1);
   });
 
+  it('shows a stored effort the catalog does not offer, and still clears it back to the default', () => {
+    const payload = makePayload();
+    payload.roles[0] = {
+      ...payload.roles[0],
+      entries: [{ harness: 'codex', model: 'gpt-6-sol', effort: 'ultra' }],
+    };
+    const { intent } = renderTab(payload);
+    const select = screen.getByLabelText('Effort for gpt-6-sol');
+
+    expect(select).toHaveValue('ultra');
+    expect(screen.getByRole('option', { name: 'ultra' })).toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: '' } });
+    expect(intent).toHaveBeenCalledWith('set-entry-effort', { role: 'planning', index: 0, effort: null });
+  });
+
   it('refuses an entry dropped from the catalog onto no card without raising anything', () => {
     const { container, intent } = renderTab();
     const catalog = container.querySelector('.roles-catalog') as HTMLElement;
