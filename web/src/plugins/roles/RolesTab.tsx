@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { RolesPayload } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { RoleCard } from './RoleCard';
@@ -16,6 +16,12 @@ export function RolesTab({ payload, capabilities }: Properties) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [refusal, setRefusal] = useState<string | null>(null);
+  // What an awaited answer needs to read once the component has moved on: the name in the field now,
+  // and the one whose `add-role` answer has not arrived. Enter blurs the field, so the same draft can
+  // reach the handler twice; the guard is keyed by name rather than by a blanket busy flag so a
+  // second, different name typed meanwhile is still its own submission.
+  const typed = useRef('');
+  const inFlight = useRef<string | null>(null);
 
   const raise = (intent: string, value: Record<string, unknown>) => {
     setRefusal(null);
@@ -24,11 +30,38 @@ export function RolesTab({ payload, capabilities }: Properties) {
     });
   };
 
-  const commitNewRole = () => {
-    const trimmed = newName.trim();
+  const typeName = (next: string) => {
+    typed.current = next;
+    setNewName(next);
+  };
+
+  const closeNewRole = () => {
+    typed.current = '';
     setNewName('');
     setAdding(false);
-    if (trimmed.length > 0) raise('add-role', { name: trimmed });
+  };
+
+  // The creation field closes only once the name is accepted. A refused name stays editable so it can
+  // be corrected, and a name typed while the answer is still coming is left alone rather than wiped
+  // by a success belonging to an earlier submission.
+  const commitNewRole = async () => {
+    const trimmed = newName.trim();
+    if (trimmed.length === 0) {
+      closeNewRole();
+      return;
+    }
+    if (inFlight.current === trimmed) return;
+    inFlight.current = trimmed;
+    setRefusal(null);
+    try {
+      await capabilities.intent('add-role', { name: trimmed });
+      if (typed.current.trim() !== trimmed) return;
+      closeNewRole();
+    } catch (error) {
+      setRefusal(String(error instanceof Error ? error.message : error));
+    } finally {
+      if (inFlight.current === trimmed) inFlight.current = null;
+    }
   };
 
   return (
@@ -86,14 +119,11 @@ export function RolesTab({ payload, capabilities }: Properties) {
               value={newName}
               placeholder="Role name"
               aria-label="New role name"
-              onChange={(event) => setNewName(event.target.value)}
-              onBlur={commitNewRole}
+              onChange={(event) => typeName(event.target.value)}
+              onBlur={() => void commitNewRole()}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') event.currentTarget.blur();
-                else if (event.key === 'Escape') {
-                  setNewName('');
-                  setAdding(false);
-                }
+                else if (event.key === 'Escape') closeNewRole();
               }}
             />
           </div>

@@ -30,7 +30,7 @@ Drag an entry row onto another row in the same card to move it. Drag a role's ha
 
 <img class="agent-float left" src="/agents/emrah-south-east.png" alt="" />
 
-Renaming happens in place: click the name, type the new one, and press `Enter` or click away. `Escape` puts the old name back. The same goes for a description. Names are matched ignoring case, so two roles can never end up named `Review` and `review` — the second one is refused with `A role named "<name>" already exists.` and nothing is saved.
+Renaming happens in place: click the name, type the new one, and press `Enter` or click away. `Escape` puts the old name back. The same goes for a description. Names are matched ignoring case, so two roles can never end up named `Review` and `review` — the second one is refused with `A role named "<name>" already exists.` and nothing is saved. A refused name stays in the field it was typed in, so you can fix the typo and commit again without retyping it.
 
 ## Use your roles with a project
 

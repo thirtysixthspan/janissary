@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { RolesPayload } from '@shared/plugins/roles/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -23,10 +23,11 @@ function makePayload(overrides: Partial<RolesPayload> = {}): RolesPayload {
   };
 }
 
-function renderTab(payload: RolesPayload = makePayload()) {
+function renderTab(payload: RolesPayload = makePayload(), answer?: (name: string) => Promise<unknown>) {
   const refused = new Map<string, string>();
   const spent = new Set<string>();
   const intent = vi.fn<(name: string, value: unknown) => Promise<unknown>>(async (name) => {
+    if (answer) return answer(name);
     const refusal = refused.get(name);
     if (refusal !== undefined && !spent.has(name)) {
       spent.add(name);
@@ -58,6 +59,13 @@ function withDescription(name: string, description: string): RolesPayload {
     ...payload,
     roles: payload.roles.map((role) => (role.name === name ? { ...role, description } : role)),
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the web project's ES2023 library excludes Promise.withResolvers
+  const promise = new Promise<T>((accept) => { resolve = accept; });
+  return { promise, resolve };
 }
 
 describe('RolesTab', () => {
@@ -225,15 +233,16 @@ describe('RolesTab', () => {
     });
   });
 
-  it('adds a role from the inline name field, and Escape cancels it', () => {
+  it('adds a role from the inline name field, and Escape cancels it', async () => {
     const { intent } = renderTab();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add role' }));
-    const input = screen.getByLabelText('New role name');
-    fireEvent.change(input, { target: { value: 'review' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    const named = screen.getByLabelText('New role name');
+    fireEvent.change(named, { target: { value: 'review' } });
+    fireEvent.keyDown(named, { key: 'Enter' });
 
     expect(intent).toHaveBeenCalledWith('add-role', { name: 'review' });
+    await vi.waitFor(() => expect(screen.queryByLabelText('New role name')).toBeNull());
 
     fireEvent.click(screen.getByRole('button', { name: 'Add role' }));
     const cancelled = screen.getByLabelText('New role name');
@@ -242,6 +251,82 @@ describe('RolesTab', () => {
 
     expect(screen.queryByLabelText('New role name')).toBeNull();
     expect(intent).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the creation field on an empty blur without raising anything', () => {
+    const { intent } = renderTab();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add role' }));
+    fireEvent.blur(screen.getByLabelText('New role name'));
+
+    expect(intent).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('New role name')).toBeNull();
+  });
+
+  describe('a new role name the server refuses', () => {
+    const typeAndCommit = (name: string) => {
+      fireEvent.click(screen.getByRole('button', { name: 'Add role' }));
+      const input = screen.getByLabelText('New role name');
+      fireEvent.change(input, { target: { value: name } });
+      fireEvent.blur(input);
+    };
+
+    it('keeps the refused name editable so it can be corrected and committed', async () => {
+      const { refuse, intent } = renderTab();
+      refuse('add-role', 'A role named "planning" already exists.');
+
+      typeAndCommit('planning');
+
+      expect(await screen.findByText('A role named "planning" already exists.')).toHaveClass('roles-refusal');
+      const kept = screen.getByLabelText('New role name');
+      expect(kept).toHaveValue('planning');
+
+      fireEvent.change(kept, { target: { value: 'planning-role' } });
+      fireEvent.blur(kept);
+
+      expect(intent).toHaveBeenLastCalledWith('add-role', { name: 'planning-role' });
+      await vi.waitFor(() => expect(screen.queryByLabelText('New role name')).toBeNull());
+    });
+
+    it('keeps the name when the refusal was a write failure rather than a duplicate', async () => {
+      const { refuse } = renderTab();
+      refuse('add-role', 'Could not write roles.json at /home/me/.janissary/roles.json.');
+
+      typeAndCommit('review');
+
+      expect(await screen.findByText(/Could not write roles.json/)).toHaveClass('roles-refusal');
+      expect(screen.getByLabelText('New role name')).toHaveValue('review');
+    });
+
+    it('keeps typing made while a delayed answer is still coming', async () => {
+      const answer = deferred<unknown>();
+      const { intent } = renderTab(makePayload(), () => answer.promise);
+
+      typeAndCommit('review');
+      const input = screen.getByLabelText('New role name');
+      fireEvent.change(input, { target: { value: 'review of the migration' } });
+
+      await act(async () => { answer.resolve(null); });
+
+      expect(intent).toHaveBeenCalledTimes(1);
+      expect(screen.getByLabelText('New role name')).toHaveValue('review of the migration');
+    });
+
+    it('submits one name once when Enter is pressed again before the answer lands', async () => {
+      const answer = deferred<unknown>();
+      const { intent } = renderTab(makePayload(), () => answer.promise);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Add role' }));
+      const input = screen.getByLabelText('New role name');
+      fireEvent.change(input, { target: { value: 'review' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      input.focus();
+      fireEvent.keyDown(input, { key: 'Enter' });
+
+      await act(async () => { answer.resolve(null); });
+
+      expect(intent).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('shows a stored effort the catalog does not offer, and still clears it back to the default', () => {

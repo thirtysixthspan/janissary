@@ -87,8 +87,10 @@ writes the file before the tab redraws.
 
 A role's name is trimmed and must be nonempty, and is unique across the list ignoring case. Adding
 or renaming to a name another role already holds is refused with `A role named "<name>" already
-exists.` and nothing is written. Deleting the last role is an ordinary edit: the list may be empty,
-and the tab then reads `No roles yet.` above the add-role control.
+exists.` and nothing is written. A name typed into the creation control stays in it until the server
+accepts it, so a refused one can be corrected and committed again; the control closes as soon as the
+role exists. Deleting the last role is an ordinary edit: the list may be empty, and the tab then reads
+`No roles yet.` above the add-role control.
 
 ### A refused edit
 

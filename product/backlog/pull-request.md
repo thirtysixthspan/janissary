@@ -35,17 +35,6 @@ Proposal Risk: 2/10 - A stale edit becomes a visible retry instead of changing a
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "reject stale positional roles entry mutations". Extend the index-based intent contracts and guards in src/plugins/roles/shared.ts with an expected ordered-entry snapshot or equivalent revision bound to the caller's displayed state, and populate it from web/src/plugins/roles/RoleCard.tsx and web/src/plugins/roles/roles-dnd.ts. Compare the precondition with the current roles read inside the queue in src/plugins/roles/activate.ts before remove-entry, move-entry, or set-entry-effort applies; reject mismatches with a clear retry message and republish current state without writing. Do not match only harness/model values, since a role may hold duplicate entries. Extend src/plugins/roles/activate.test.ts for two removals from one displayed snapshot, a reorder followed by an effort edit, duplicates, and two callers sharing a snapshot; verify that stale operations never mutate the wrong row. Update web/src/plugins/roles/RolesTab.test.tsx and web/src/plugins/roles/roles-dnd.test.tsx to pin the submitted preconditions and visible rejection. The existing rapid-edit test appends two named roles and therefore cannot catch shifted entry indices.
 
 
-* Match the description's promise that a rejected new role name remains available for correction.
-
-Existing Issue: The new-role control clears its name and closes before the add-role request settles, so duplicate-name and write refusals display an error after discarding the text the description says remains in the field. Severity: 4/10
-
-Existing Risk: 4/10 - A normal refused creation forces the user to reopen the control and retype the name, unlike the recoverable rename behavior described for rejected edits.
-
-Proposal Risk: 1/10 - Retaining the draft until acceptance makes correction possible, with duplicate submission or clearing newer typing visible in deferred-response interaction tests.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "retain a rejected new role name for correction". Change commitNewRole in web/src/plugins/roles/RolesTab.tsx to await the add-role outcome and close or clear the matching draft only after success; retain the editable name and the server's refusal on failure, and guard pending submissions so blur and Enter do not submit the same draft twice. Preserve explicit Escape cancellation and the rule that the next edit clears the refusal. Extend web/src/plugins/roles/RolesTab.test.tsx to reject an add with a duplicate-name message and with a write-failure message, assert that the input and text remain, then correct and successfully commit the same draft; include a delayed response to ensure newer typing is not discarded. Existing refusal tests assert only the message and never inspect whether the creation field survives. Update the relevant behavior spec if needed so the implementation supports the existing PR description without changing that description during this review.
-
-
 * Deliver the plan's effort choice in the add-entry picker.
 
 Existing Issue: The settled design specifies a harness/model/effort picker, but the picker offers only harness and model and always adds an entry with default effort. Severity: 4/10
