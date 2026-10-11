@@ -30,7 +30,7 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function writeSession(directory: string): void {
+function writeSession(directory: string, text = 'private session'): void {
   mkdirSync(path.join(directory, 'opencode'), { recursive: true });
   const database = new DatabaseSync(path.join(directory, 'opencode', 'opencode.db'));
   database.exec('CREATE TABLE session (id TEXT, directory TEXT, time_created INTEGER, parent_id TEXT)');
@@ -38,11 +38,19 @@ function writeSession(directory: string): void {
   database.exec('CREATE TABLE part (id TEXT, message_id TEXT, type TEXT, text TEXT, tool TEXT, state TEXT)');
   database.prepare('INSERT INTO session VALUES (?, ?, ?, ?)').run('s1', cwd, spawnedAt + 1, null);
   database.prepare('INSERT INTO message VALUES (?, ?, ?, ?)').run('m1', 's1', 'user', spawnedAt + 2);
-  database.prepare('INSERT INTO part VALUES (?, ?, ?, ?, ?, ?)').run('p1', 'm1', 'text', 'private session', null, null);
+  database.prepare('INSERT INTO part VALUES (?, ?, ?, ?, ?, ?)').run('p1', 'm1', 'text', text, null, null);
   database.close();
 }
 
 describe('OpenCode transcript data location', () => {
+  it('prefers workspace-private storage over a competing ambient data home', () => {
+    const ambient = path.join(root, 'ambient');
+    vi.stubEnv('XDG_DATA_HOME', ambient);
+    writeSession(ambient, 'ambient session');
+    writeSession(dataHome, 'workspace session');
+    expect(createTranscriptSource('opencode', cwd, spawnedAt, cwd)?.poll()).toEqual(['user: workspace session']);
+  });
+
   it('reads a local workspace transcript from the OAuth data directory', () => {
     writeSession(dataHome);
     const source = createTranscriptSource('opencode', cwd, spawnedAt, cwd);

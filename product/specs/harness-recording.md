@@ -30,7 +30,7 @@ whichever applies:
 - `codex` — one rollout file per session, filed under the date the session started and identified by
   the working directory recorded in its header.
 - `opencode` — rows in its session database, where a subagent is a session whose parent is the tab's
-  own session. The database follows the launch's data location, including the private temporary data location used by a workspace with ChatGPT OAuth, for both local and remote tabs.
+  own session. The database follows the launch's data location, including the private temporary data location used by a workspace with ChatGPT OAuth, for both local and remote tabs. When private OAuth storage is available, it takes precedence over ambient data-location settings; other launches use their configured data location.
 
 A tab follows only the session belonging to its own running harness process, starting from the moment
 the tab opened: earlier sessions in the same directory are never read, and no history predating the

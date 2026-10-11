@@ -13,7 +13,10 @@ export function createTranscriptSource(
   switch (harness) {
     case 'claude': { return new ClaudeTranscriptSource(cwd, spawnedAt); }
     case 'codex': { return new CodexTranscriptSource(cwd, spawnedAt); }
-    case 'opencode': { return new OpencodeTranscriptSource(cwd, spawnedAt, undefined, workspaceOpencodeDataHome(workspaceDir)); }
+    case 'opencode': {
+      const dataHome = workspaceOpencodeDataHome(workspaceDir) ?? (process.env.XDG_DATA_HOME || undefined);
+      return new OpencodeTranscriptSource(cwd, spawnedAt, undefined, dataHome);
+    }
     default: { return undefined; }
   }
 }

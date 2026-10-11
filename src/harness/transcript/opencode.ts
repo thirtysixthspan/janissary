@@ -28,7 +28,7 @@ export class OpencodeTranscriptSource implements TranscriptSource {
     private cwd: string,
     private spawnedAt: number,
     home: string = homedir(),
-    private dataHome: string = process.env.XDG_DATA_HOME || path.join(home, '.local', 'share'),
+    private dataHome: string = path.join(home, '.local', 'share'),
   ) {}
 
   resolved(): boolean {
