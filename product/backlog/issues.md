@@ -2,6 +2,8 @@
 
 ## ready
 
+* pass token in kilo-token into sandbox environment for opencode to use to connect to the kilo gateway.
+
 * support chatgpt oauth authentication for opencode in sandbox environments by taking credentials from ~/.codex/auth.json on the application side and making them available in the auth file in a temporary directory used for launching opencode in the correct json format (requires reformating from chatgpt auth)
 jq -n \
   --slurpfile codex "$HOME/.codex/auth.json" '
