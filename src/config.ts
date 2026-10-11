@@ -1,6 +1,6 @@
-import { mkdirSync, writeFileSync, existsSync, readFileSync, renameSync, rmSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { mkdirSync, existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { atomicWriteFile } from './atomic-write.js';
 import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
 import { configRecord, decodeConfig } from './config-decode.js';
@@ -117,17 +117,6 @@ const DEFAULT_CONFIG: Config = {
 let config: Config = { ...DEFAULT_CONFIG };
 let storedConfigPath: string | null = null;
 
-function writeConfig(configPath: string, value: unknown): void {
-  const temporary = `${configPath}.${randomUUID()}.tmp`;
-  try {
-    writeFileSync(temporary, JSON.stringify(value, undefined, 2) + '\n');
-    renameSync(temporary, configPath);
-  } catch (error) {
-    try { rmSync(temporary, { force: true }); } catch { /* best-effort cleanup */ }
-    throw error;
-  }
-}
-
 export function loadConfig(projectDirectory: string): Config {
   const configDirectory = path.join(projectDirectory, '.janissary');
   const configPath = path.join(configDirectory, 'config.json');
@@ -135,7 +124,7 @@ export function loadConfig(projectDirectory: string): Config {
 
   if (!existsSync(configPath)) {
     mkdirSync(configDirectory, { recursive: true });
-    writeConfig(configPath, DEFAULT_CONFIG);
+    atomicWriteFile(configPath, JSON.stringify(DEFAULT_CONFIG, undefined, 2) + '\n');
     config = decodeConfig(DEFAULT_CONFIG, DEFAULT_CONFIG);
     return config;
   }
@@ -167,7 +156,7 @@ export function updateConfig(partial: Partial<Config>): boolean {
     if (!raw) return false;
     const merged = { ...raw, ...partial };
     const next = decodeConfig({ ...config, ...partial }, DEFAULT_CONFIG);
-    writeConfig(storedConfigPath, merged);
+    atomicWriteFile(storedConfigPath, JSON.stringify(merged, undefined, 2) + '\n');
     config = next;
     return true;
   } catch {
