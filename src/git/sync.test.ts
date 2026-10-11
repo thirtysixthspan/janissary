@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { WorkspaceManager } from '../workspace/manager.js';
 
-type Call = { args: string[]; options: { cwd?: string; env?: NodeJS.ProcessEnv } };
+type Call = { args: string[]; options: { cwd?: string; env?: NodeJS.ProcessEnv; signal?: AbortSignal; timeout?: number } };
 
 let calls: Call[] = [];
 let failPatterns: string[][] = [];
+let hardFailPatterns: string[][] = [];
 let stdoutFor: Record<string, string> = {};
 let heldCommands = new Set<string>();
 let held: ((error?: Error) => void)[] = [];
@@ -19,12 +20,22 @@ vi.mock('node:child_process', () => ({
   ) => {
     calls.push({ args, options });
     const shouldFail = failPatterns.some((pattern) => pattern.every((value, i) => args[i] === value));
+    const shouldHardFail = hardFailPatterns.some((pattern) => pattern.every((value, i) => args[i] === value));
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      callback(error ?? null, { stdout: error ? '' : stdoutFor[args.join(' ')] ?? '', stderr: '' });
+    };
     if (heldCommands.has(args[0])) {
-      held.push((error) => callback(error ?? null, { stdout: '', stderr: '' }));
+      held.push(finish);
+      options.signal?.addEventListener('abort', () => finish(new Error('aborted')), { once: true });
       return;
     }
-    if (shouldFail) callback(new Error(`git ${args.join(' ')} failed`), { stdout: '', stderr: '' });
-    else callback(null, { stdout: stdoutFor[args.join(' ')] ?? '', stderr: '' });
+    if (shouldFail || shouldHardFail) {
+      const error = Object.assign(new Error(`git ${args.join(' ')} failed`), { code: shouldFail && args[0] === 'diff' ? 1 : 2 });
+      finish(error);
+    } else finish();
   },
 }));
 
@@ -49,6 +60,7 @@ function commandLines(): string[] {
 beforeEach(() => {
   calls = [];
   failPatterns = [];
+  hardFailPatterns = [];
   stdoutFor = {};
   heldCommands = new Set();
   held = [];
@@ -85,6 +97,19 @@ describe('GitSync', () => {
     await Promise.all([first, second, opened]);
     expect(argLists().map(([command]) => command).filter((command) => !['symbolic-ref', 'rev-parse'].includes(command)))
       .toEqual(['add', 'diff', 'commit', 'pull', 'push', 'add', 'diff', 'commit', 'pull', 'push', 'pull']);
+  });
+
+  it('cancels the active command on disposal and prevents queued cycles from starting', async () => {
+    heldCommands.add('pull');
+    const sync = new GitSync(makeWorkspace());
+    const active = sync.openSync();
+    const queued = sync.openSync();
+    await vi.waitFor(() => expect(held).toHaveLength(1));
+    sync.dispose();
+    expect(await active).toEqual({ error: expect.any(String) });
+    expect(await queued).toEqual({ error: expect.any(String) });
+    expect(argLists().filter(([command]) => command === 'pull')).toHaveLength(1);
+    expect(await sync.openSync()).toEqual({ error: expect.any(String) });
   });
 
   it('finishes failed pull recovery before releasing the queue to a later save', async () => {
@@ -198,6 +223,21 @@ describe('GitSync', () => {
     const commands = argLists().map((a) => a[0]);
     expect(commands).not.toContain('commit');
     expect(commands).toContain('push');
+  });
+
+  it('does not treat a failed diff command as evidence that changes need committing', async () => {
+    hardFailPatterns = [['diff', '--cached', '--quiet']];
+    const sync = new GitSync(makeWorkspace());
+    expect(await sync.saveSync('bugs.md')).toEqual({ error: expect.stringContaining('diff') });
+    expect(argLists().map(([command]) => command)).not.toContain('commit');
+    expect(argLists().map(([command]) => command)).not.toContain('pull');
+  });
+
+  it('bounds every git command, including branch discovery and recovery', async () => {
+    failPatterns = [['diff', '--cached', '--quiet'], ['pull', '--rebase', '--autostash', 'origin', 'master']];
+    const sync = new GitSync(makeWorkspace());
+    await sync.saveSync('bugs.md');
+    expect(calls.every(({ options }) => options.timeout === 60_000)).toBe(true);
   });
 
   it('preserves the local commit and reports an error when a save pull fails', async () => {

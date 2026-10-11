@@ -1,13 +1,10 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import path from 'node:path';
 import type { WorkspaceManager } from '../workspace/manager.js';
 import { workspacePath } from '../workspace/index.js';
 import { getProjectTokens } from '../project/tokens.js';
 import { errorText } from '../error-text.js';
 import { currentBranch, defaultBranch } from './status.js';
-
-const execFileAsync = promisify(execFile);
+import { isExpectedDiffChange, SyncCommandRunner, SYNC_CANCEL_REASON, SYNC_COMMAND_TIMEOUT_MS } from './sync-command.js';
 
 // Fixed name for the one shared sync workspace clone — never a tab label, since it outlives any
 // single tab and is shared by every config-listed synced file (see the plan's Design decisions).
@@ -27,8 +24,16 @@ type SyncResult = { ok: true } | { error: string };
 export class GitSync {
   private handle: SyncWorkspace | undefined;
   private queue: Promise<void> = Promise.resolve();
+  private commands = new SyncCommandRunner();
+  private closed = false;
 
   constructor(private workspace: WorkspaceManager) {}
+
+  dispose(): void {
+    if (this.closed) return;
+    this.closed = true;
+    this.commands.dispose();
+  }
 
   // The path a project-relative synced file resolves to inside the shared workspace, computable
   // synchronously even before the workspace clone exists — used as the editor tab's placeholder
@@ -47,9 +52,9 @@ export class GitSync {
 
   private async waitForWorkspace(handle: SyncWorkspace): Promise<void> {
     try {
-      await handle.ready;
+      await waitForAbort(handle.ready, this.commands.signal);
     } catch (error) {
-      if (this.handle === handle) {
+      if (this.handle === handle && !this.closed) {
         this.handle = undefined;
         this.workspace.remove(handle.dir);
       }
@@ -60,7 +65,7 @@ export class GitSync {
   // Waits for the shared clone, then resolves (once per clone) the branch every cycle targets.
   private async readyBranch(handle: SyncWorkspace): Promise<string> {
     await this.waitForWorkspace(handle);
-    handle.branch ??= resolveSyncBranch(handle.dir);
+    handle.branch ??= resolveSyncBranch(this.commands, handle.dir);
     return handle.branch;
   }
 
@@ -79,12 +84,13 @@ export class GitSync {
   // Pull-only cycle: used when a synced tab opens (or another synced tab's save completes).
   // Nothing to commit or push — just wait for the shared workspace and pull/rebase it up to date.
   async openSync(): Promise<{ dir: string } | { error: string }> {
+    if (this.closed) return { error: SYNC_CANCEL_REASON };
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
     return this.enqueue(async () => {
       try {
         const branch = await this.readyBranch(handle);
-        await pullRebase(handle.dir, branch);
+        await pullRebase(this.commands, handle.dir, branch);
         return { dir: handle.dir };
       } catch (error) {
         return { error: errorText(error) };
@@ -95,19 +101,34 @@ export class GitSync {
   // Save-triggered cycle: commit the saved file alone as `sync: <filename>` (if it changed), then
   // the same pull-rebase step, then push. `filePath` is the saved file's path inside the clone.
   async saveSync(filePath: string): Promise<SyncResult> {
+    if (this.closed) return { error: SYNC_CANCEL_REASON };
     const handle = this.ensureWorkspace();
     if ('error' in handle) return handle;
     return this.enqueue<SyncResult>(async () => {
       try {
         const branch = await this.readyBranch(handle);
-        await commitIfChanged(handle.dir, filePath);
-        await pullRebase(handle.dir, branch);
-        await push(handle.dir, branch);
+        await commitIfChanged(this.commands, handle.dir, filePath);
+        await pullRebase(this.commands, handle.dir, branch);
+        await push(this.commands, handle.dir, branch);
         return { ok: true };
       } catch (error) {
         return { error: errorText(error) };
       }
     });
+  }
+}
+
+async function waitForAbort(promise: Promise<void>, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) throw new Error(SYNC_CANCEL_REASON);
+  let abort: (() => void) | undefined;
+  const cancelled = new Promise<never>((_resolve, reject) => {
+    abort = () => reject(new Error(SYNC_CANCEL_REASON));
+    signal.addEventListener('abort', abort, { once: true });
+  });
+  try {
+    await Promise.race([promise, cancelled]);
+  } finally {
+    if (abort) signal.removeEventListener('abort', abort);
   }
 }
 
@@ -121,10 +142,11 @@ function githubEnv(): NodeJS.ProcessEnv {
 // The branch the shared workspace syncs against: the remote's detected default branch, the same
 // one `isPrimaryBranch` admits a file to syncing against, falling back to the clone's own
 // checked-out branch, then `master` when neither can be read or the clone is detached.
-async function resolveSyncBranch(dir: string): Promise<string> {
-  const detected = await defaultBranch(dir);
+async function resolveSyncBranch(commands: SyncCommandRunner, dir: string): Promise<string> {
+  const execution = { signal: commands.signal, timeout: SYNC_COMMAND_TIMEOUT_MS };
+  const detected = await defaultBranch(dir, execution);
   if (detected) return detected;
-  const current = await currentBranch(dir);
+  const current = await currentBranch(dir, execution);
   return current && current !== 'HEAD' ? current : 'master';
 }
 
@@ -132,13 +154,14 @@ async function resolveSyncBranch(dir: string): Promise<string> {
 // `-- <path>` pathspec, the same way `commitRoot` in `commit.ts` scopes its staging: a bare `git add
 // -A` would commit whatever else happened to be changed or untracked in the clone under this file's
 // name, and `git commit` without the pathspec would take anything already staged along with it.
-async function commitIfChanged(dir: string, filePath: string): Promise<void> {
-  await execFileAsync('git', ['add', '-A', '--', filePath], { cwd: dir });
+async function commitIfChanged(commands: SyncCommandRunner, dir: string, filePath: string): Promise<void> {
+  await commands.run(['add', '-A', '--', filePath], dir);
   try {
     // Exits 0 (no staged changes) when there's nothing to commit; non-zero otherwise.
-    await execFileAsync('git', ['diff', '--cached', '--quiet', '--', filePath], { cwd: dir });
-  } catch {
-    await execFileAsync('git', ['commit', '-m', `sync: ${path.basename(filePath)}`, '--', filePath], { cwd: dir });
+    await commands.run(['diff', '--cached', '--quiet', '--', filePath], dir);
+  } catch (error) {
+    if (!isExpectedDiffChange(error)) throw error;
+    await commands.run(['commit', '-m', `sync: ${path.basename(filePath)}`, '--', filePath], dir);
   }
 }
 
@@ -147,18 +170,20 @@ async function commitIfChanged(dir: string, filePath: string): Promise<void> {
 // `--autostash` sets aside whatever the clone holds beyond its commits — another synced file whose
 // own save cycle has not committed it yet — so the pull is never refused over a change it is not
 // about, and puts it back once the rebase settles.
-async function pullRebase(dir: string, branch: string): Promise<void> {
+async function pullRebase(commands: SyncCommandRunner, dir: string, branch: string): Promise<void> {
   const env = githubEnv();
   try {
-    await execFileAsync('git', ['pull', '--rebase', '--autostash', 'origin', branch], { cwd: dir, env });
+    await commands.run(['pull', '--rebase', '--autostash', 'origin', branch], dir, env);
   } catch (error) {
     try {
-      await execFileAsync('git', ['rebase', '--abort'], { cwd: dir });
+      if (!commands.isDisposed) {
+        await commands.run(['rebase', '--abort'], dir, undefined, { signal: new AbortController().signal });
+      }
     } catch { /* no rebase was in progress to abort */ }
     throw error;
   }
 }
 
-async function push(dir: string, branch: string): Promise<void> {
-  await execFileAsync('git', ['push', 'origin', `HEAD:${branch}`], { cwd: dir, env: githubEnv() });
+async function push(commands: SyncCommandRunner, dir: string, branch: string): Promise<void> {
+  await commands.run(['push', 'origin', `HEAD:${branch}`], dir, githubEnv());
 }
