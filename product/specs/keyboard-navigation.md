@@ -89,6 +89,8 @@ A plugin-contributed overlay ranks below all eight, so a chord pressed while one
 
 A contributed overlay takes the command bar's keys while it is open, exactly as a built-in one does, and none of them disables the bar outright.
 
+If a plugin host replaces an overlay registration under the same name, cleanup from the older host leaves the replacement available. A stale teardown does not remove the overlay that currently answers for that name.
+
 The history, clipboard-history, queue, tab-navigation, Quick Open, application-theme, and syntax-theme popups render above the command bar and stay inside the tab's colored left edge. On plugin tabs, the host positions these overlays against the tab body: each popup starts immediately beside the colored edge without covering it, spans to the tab's right side, and sits directly on top of the command bar at whatever height the bar currently has, so a multi-line draft or a completion strip never leaves a gap or an overlap. This holds whether the popup belongs to the plugin or to the application, so the clipboard-history, queue, tab-navigation, Quick Open, and theme popups opened over a shell tab rest on the shell's command bar exactly as its own history popup does. A plugin tab with no command bar has its popups sit at the bottom of the tab.
 
 While an overlay is open it claims every keystroke: nothing underneath it scrolls the transcript,

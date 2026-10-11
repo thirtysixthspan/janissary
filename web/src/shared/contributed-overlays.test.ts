@@ -50,11 +50,25 @@ describe('the contributed-overlay seam', () => {
 
   it('leaves a later registration in place when an earlier one unsubscribes', () => {
     const first = registerContributedOverlay(overlay('first'));
-    registerContributedOverlay(overlay('second'));
+    const second = registerContributedOverlay(overlay('second'));
 
     first();
 
     expect(contributedOverlays().map((entry) => entry.name)).toEqual(['second']);
+    second();
+  });
+
+  it('preserves a newer registration when an older registration with the same name unsubscribes', () => {
+    const first = registerContributedOverlay(overlay('same-name'));
+    const successor = overlay('same-name');
+    const unregisterSuccessor = registerContributedOverlay(successor);
+    const beforeStaleCleanup = contributedOverlaysVersion();
+
+    first();
+
+    expect(contributedOverlays()).toEqual([successor]);
+    expect(contributedOverlaysVersion()).toBe(beforeStaleCleanup);
+    unregisterSuccessor();
   });
 
   // The order a plugin is actually reached in: a host declares how it will be opened before any chunk
