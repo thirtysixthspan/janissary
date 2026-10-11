@@ -2,7 +2,7 @@
 // lifts the token after it as the tab name the workspace belongs to, and the remaining words are
 // the path. Pure — the command handler acts on the result.
 
-export const DIFF_USAGE = 'Usage: diff [path] [on <tab name>]';
+export const DIFF_USAGE = String.raw`Usage: diff [path] [on \<tab name\>]`;
 
 export type DiffArgument = { path: string; tab?: string };
 

@@ -29,7 +29,7 @@ describe('parseDiffArgument', () => {
   });
 
   it('answers the usage line naming both forms', () => {
-    expect(parseDiffArgument('on').error).toBe('Usage: diff [path] [on <tab name>]');
+    expect(parseDiffArgument('on').error).toBe(String.raw`Usage: diff [path] [on \<tab name\>]`);
   });
 
   it('takes a tab literally named on', () => {

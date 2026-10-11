@@ -29,7 +29,9 @@ workspace, and a name no open tab holds, are refused with
 `Cannot diff on <name>: no open shell or harness tab named "<name>" has a workspace.` A name whose workspace has not
 landed yet — the clone is still running, or the far side has not answered — is refused instead with
 `Cannot diff on <name>: the workspace of "<name>" is still being prepared.` Both buttons stay inert while the
-workspace is still landing. A workspace diff is titled **diff on <tab name>**, and two tabs sharing one clone — the
+workspace is still landing. Placeholder delimiters in these refusals are shown literally in the transcript. Combining
+a path and the `on` clause is refused with `Usage: diff [path] [on <tab name>]`, whose placeholder delimiters are
+also shown literally. A workspace diff is titled **diff on <tab name>**, and two tabs sharing one clone — the
 metadata row's ➕ opens a sibling shell in the same one — share one diff tab, because they are looking at the same
 changes.
 

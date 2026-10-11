@@ -78,6 +78,10 @@ function openWorkspace(
   session.openWorkspace({ tab, ...route.origin });
 }
 
+function escapeMarkdownAngleBrackets(message: string): string {
+  return message.replaceAll('<', String.raw`\<`).replaceAll('>', String.raw`\>`);
+}
+
 export function activate(): TabPluginActivation {
   // Built on first use and closed over by every handler, so the tabs' identity, their roots, and the
   // recomputes in flight are one object with the lifetime of the plugin.
@@ -96,10 +100,12 @@ export function activate(): TabPluginActivation {
     if (trimmed === '') return origin.root;
     const resolved = path.resolve(origin.root, trimmed);
     if (!isInsideRoot(origin.root, resolved)) {
-      capabilities.rejectRequest(`Cannot diff <${trimmed}>: it is outside the project root <${origin.root}>.`);
+      capabilities.rejectRequest(escapeMarkdownAngleBrackets(
+        `Cannot diff <${trimmed}>: it is outside the project root <${origin.root}>.`,
+      ));
     }
     if (statSync(resolved, { throwIfNoEntry: false })?.isDirectory() !== true) {
-      capabilities.rejectRequest(`Cannot diff <${trimmed}>: no such directory.`);
+      capabilities.rejectRequest(escapeMarkdownAngleBrackets(`Cannot diff <${trimmed}>: no such directory.`));
     }
     return resolved;
   };
@@ -115,14 +121,14 @@ export function activate(): TabPluginActivation {
       if (parsed.tab !== undefined) {
         const route = resolveWorkspace(capabilities, parsed.tab);
         if (route.kind === 'none') {
-          return capabilities.rejectRequest(
+          return capabilities.rejectRequest(escapeMarkdownAngleBrackets(
             `Cannot diff on <${parsed.tab}>: no open shell or harness tab named "${parsed.tab}" has a workspace.`,
-          );
+          ));
         }
         if (route.kind === 'provisioning') {
-          return capabilities.rejectRequest(
+          return capabilities.rejectRequest(escapeMarkdownAngleBrackets(
             `Cannot diff on <${parsed.tab}>: the workspace of "${parsed.tab}" is still being prepared.`,
-          );
+          ));
         }
         openWorkspace(active, parsed.tab, route);
         return;

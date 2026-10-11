@@ -175,7 +175,9 @@ describe('diff plugin activation', () => {
     const { capabilities, openOrFocusTab } = makeCapabilities({
       originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
     });
-    expect(() => activate().command?.('nosuchdir', capabilities)).toThrow('no such directory');
+    expect(() => activate().command?.('<nosuchdir>', capabilities)).toThrow(
+      String.raw`Cannot diff \<\<nosuchdir\>\>: no such directory.`,
+    );
     expect(openOrFocusTab).not.toHaveBeenCalled();
   });
 
@@ -327,7 +329,7 @@ describe('diff plugin activation', () => {
       originTab: vi.fn(() => ({ label: 'shell', cwd: repo, root: repo, workspace: undefined })),
     });
     expect(() => activate().command?.('on shell', capabilities)).toThrow(
-      'Cannot diff on <shell>: no open shell or harness tab named "shell" has a workspace.',
+      String.raw`Cannot diff on \<shell\>: no open shell or harness tab named "shell" has a workspace.`,
     );
   });
 
@@ -338,7 +340,7 @@ describe('diff plugin activation', () => {
       originTab: vi.fn((name?: string) => (name === 'landing' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     expect(() => activate().command?.('on landing', capabilities)).toThrow(
-      'Cannot diff on <landing>: the workspace of "landing" is still being prepared.',
+      String.raw`Cannot diff on \<landing\>: the workspace of "landing" is still being prepared.`,
     );
     expect(openOrFocusTab).not.toHaveBeenCalled();
     expect(launchTab).not.toHaveBeenCalled();
@@ -354,7 +356,7 @@ describe('diff plugin activation', () => {
       originTab: vi.fn((name?: string) => (name === 'files-1' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     expect(() => activate().command?.('on files-1', capabilities)).toThrow(
-      'Cannot diff on <files-1>: no open shell or harness tab named "files-1" has a workspace.',
+      String.raw`Cannot diff on \<files-1\>: no open shell or harness tab named "files-1" has a workspace.`,
     );
     expect(openOrFocusTab).not.toHaveBeenCalled();
     expect(launchTab).not.toHaveBeenCalled();
@@ -366,7 +368,7 @@ describe('diff plugin activation', () => {
       originTab: vi.fn((name?: string) => (name === 'editor-1' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     expect(() => activate().command?.('on editor-1', capabilities)).toThrow(
-      'Cannot diff on <editor-1>: no open shell or harness tab named "editor-1" has a workspace.',
+      String.raw`Cannot diff on \<editor-1\>: no open shell or harness tab named "editor-1" has a workspace.`,
     );
     expect(openOrFocusTab).not.toHaveBeenCalled();
     expect(launchTab).not.toHaveBeenCalled();
@@ -378,7 +380,7 @@ describe('diff plugin activation', () => {
       originTab: vi.fn((name?: string) => (name === 'search-1' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     expect(() => activate().command?.('on search-1', capabilities)).toThrow(
-      'Cannot diff on <search-1>: no open shell or harness tab named "search-1" has a workspace.',
+      String.raw`Cannot diff on \<search-1\>: no open shell or harness tab named "search-1" has a workspace.`,
     );
     expect(openOrFocusTab).not.toHaveBeenCalled();
   });
@@ -410,7 +412,7 @@ describe('diff plugin activation', () => {
       originTab: vi.fn((name?: string) => (name === 'remote-1' ? named : shellRecord({ label: 'shell', cwd: repo, root: repo }))),
     });
     expect(() => activate().command?.('on remote-1', capabilities)).toThrow(
-      'Cannot diff on <remote-1>: the workspace of "remote-1" is still being prepared.',
+      String.raw`Cannot diff on \<remote-1\>: the workspace of "remote-1" is still being prepared.`,
     );
     expect(openOrFocusTab).not.toHaveBeenCalled();
     expect(launchTab).not.toHaveBeenCalled();
@@ -440,7 +442,17 @@ describe('diff plugin activation', () => {
       originTab: vi.fn((name?: string) => (name === undefined ? shell : null)),
     });
     expect(() => activate().command?.('on nobody', capabilities)).toThrow(
-      'Cannot diff on <nobody>: no open shell or harness tab named "nobody" has a workspace.',
+      String.raw`Cannot diff on \<nobody\>: no open shell or harness tab named "nobody" has a workspace.`,
+    );
+  });
+
+  it('escapes angle brackets in a supplied missing tab name', () => {
+    const shell = shellRecord({ label: 'shell', cwd: repo, root: repo });
+    const { capabilities } = makeCapabilities({
+      originTab: vi.fn((name?: string) => (name === undefined ? shell : null)),
+    });
+    expect(() => activate().command?.('on <missing>', capabilities)).toThrow(
+      String.raw`Cannot diff on \<\<missing\>\>: no open shell or harness tab named "\<missing\>" has a workspace.`,
     );
   });
 
@@ -448,7 +460,7 @@ describe('diff plugin activation', () => {
     const { capabilities, openOrFocusTab } = makeCapabilities({
       originTab: vi.fn(() => shellRecord({ label: 'shell', cwd: repo, root: repo, workspace: { dir: repo } })),
     });
-    expect(() => activate().command?.('src on shell', capabilities)).toThrow('Usage: diff [path] [on <tab name>]');
+    expect(() => activate().command?.('src on shell', capabilities)).toThrow(String.raw`Usage: diff [path] [on \<tab name\>]`);
     expect(openOrFocusTab).not.toHaveBeenCalled();
   });
 
