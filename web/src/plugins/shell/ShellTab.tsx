@@ -116,6 +116,13 @@ export function ShellTab({ payload, capabilities }: Properties) {
     // very lines the popup lists.
     if (historyOpen) return;
     if (handleCompletionDismissKey(event, matches.length > 1, () => { setMatches([]); })) return;
+    if (event.key === 'Escape' && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && draft) {
+      event.preventDefault();
+      event.stopPropagation();
+      setDraft('');
+      setMatches([]);
+      return;
+    }
     // The shell's own control keys, before the baseline keymap: that one returns early on any held
     // modifier, so without this they would reach the window handler and be lost.
     if (handleShellControlKey(event, inputReference.current, capabilities.copyText, write)) return;

@@ -93,7 +93,7 @@ Both `shell` and `harness` launches accept `in group <name|id>` to join an exist
 | `↑` / `↓` | Walk this tab's command history — lines the command bar sent and commands typed into the terminal |
 | `→` / `End` (at the end of input) | Accept the ghost suggestion from the global history |
 | `Tab` | Complete the line the way any application command bar does; several choices show a strip |
-| `Escape` | Close the completion strip when it is showing; otherwise return the terminal to the bottom of its scrollback |
+| `Escape` | Close a visible completion strip; otherwise clear text in the focused command line, or return the terminal to the bottom when the line is empty or the terminal has focus |
 | `Shift+↑` / `Shift+↓` / `Ctrl+↑` / `Ctrl+↓` | Scroll the terminal up / down (accelerated) |
 | `Page Up` / `Page Down` | Scroll the terminal up / down by half a screen |
 | `Ctrl+C` / `Ctrl+D` / `Ctrl+Z` | Send interrupt, end-of-input, or suspend to the shell — the characters a terminal would send. `Ctrl+C` copies the command line's own selection instead when it holds one. These apply while the command line has the focus |

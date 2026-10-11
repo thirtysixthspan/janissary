@@ -123,7 +123,9 @@ completion, and shows the same strip when there is a choice to make. The shell t
 of its own. One match completes the line, several matches show the choice strip with two spaces
 between choices, and no matches leave
 the line unchanged. When several choices are visible, `Escape` closes the strip and leaves the
-command line unchanged.
+command line unchanged. Otherwise, `Escape` with text in the focused command line clears that text
+without submitting it. With an empty command line, `Escape` returns the terminal to the bottom of
+its scrollback.
 
 `Ctrl+A` and `tasks` open the shared task picker over the shell tab. Choosing a task inserts its
 `execute …` command at the shell command bar's caret and leaves it there for you to edit or submit.
@@ -162,7 +164,9 @@ copy uses the shared clipboard writer, so the text is available from the system 
 clipboard-history popup.
 
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and
-`Page Down` move by half a terminal screen, and `Escape` returns to the bottom of the scrollback.
+`Page Down` move by half a terminal screen. `Escape` returns to the bottom of the scrollback when
+the command line is empty or the terminal has focus; with text in the focused command line, it clears
+the text instead.
 
 `Up` and `Down` walk the tab's command history. It holds the lines the command bar has sent or the application has handled, and every command
 typed directly into the terminal, in the order they ran. A line sent from the bar appears once, as it

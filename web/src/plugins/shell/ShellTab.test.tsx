@@ -608,6 +608,17 @@ describe('ShellTab', () => {
     expect(terminals.at(-1)?.bottomCalls).toBe(1);
   });
 
+  it('clears a nonempty command line on Escape without scrolling or submitting', () => {
+    const { capabilities, terminal } = renderTab();
+    fireEvent.change(bar(), { target: { value: 'git status' } });
+
+    fireEvent.keyDown(bar(), { key: 'Escape' });
+
+    expect(bar()).toHaveValue('');
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'git status');
+    expect(terminal.bottomCalls).toBe(0);
+  });
+
   it('leaves scroll keys alone while inactive or while an application overlay owns input', () => {
     renderTab({ active: false });
     fireEvent.keyDown(document.body, { key: 'PageDown' });
