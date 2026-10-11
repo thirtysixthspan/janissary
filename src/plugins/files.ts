@@ -102,7 +102,7 @@ export function writeJsonConfigFile(filePath: string, content: string): void {
 export function readJsonConfigFile<T>(
   filePath: string,
   fileName: string,
-  decode: (parsed: unknown) => T | undefined,
+  decode: (parsed: unknown, text: string) => T | undefined,
   unusable: string,
 ): JsonConfigResult<T> {
   let text: string;
@@ -117,6 +117,6 @@ export function readJsonConfigFile<T>(
   } catch {
     return { problem: `${fileName} is not valid JSON at ${filePath}` };
   }
-  const value = decode(parsed);
+  const value = decode(parsed, text);
   return value === undefined ? { problem: `${fileName} ${unusable} at ${filePath}` } : { value };
 }

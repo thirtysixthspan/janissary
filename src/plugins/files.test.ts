@@ -177,6 +177,15 @@ describe('readJsonConfigFile', () => {
 
   const decodeList = (parsed: unknown) => Array.isArray(parsed) ? parsed.filter((entry) => typeof entry === 'string') : undefined;
 
+  it('passes the original source text to the decoder alongside the parsed value', () => {
+    const text = '{ "10": [], "2": [] }\n';
+    const file = scratchFile(text);
+    const decode = vi.fn((_parsed: unknown, source: string) => source);
+
+    expect(readJsonConfigFile(file, 'conf.json', decode, 'is unusable')).toEqual({ value: text });
+    expect(decode).toHaveBeenCalledWith({ '10': [], '2': [] }, text);
+  });
+
   it('answers a read that cannot happen', () => {
     expect(readJsonConfigFile('/nowhere/conf.json', 'conf.json', decodeList, 'is not a list')).toEqual({
       problem: 'conf.json could not be read at /nowhere/conf.json',

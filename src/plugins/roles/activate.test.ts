@@ -100,6 +100,70 @@ describe('the roles command', () => {
 });
 
 describe('editing roles through intents', () => {
+  it('adds __proto__ as a stored and published role', async () => {
+    const { home, capabilities, updated } = fixture();
+    const activation = activate(home);
+    await send(activation, 'add-role', { name: '__proto__' }, capabilities, payloadFor(home));
+
+    const read = readRolesFile(home, capabilities.originTab()!.root);
+    expect(read.roles.at(-1)).toEqual({ name: '__proto__', description: '', entries: [] });
+    expect(Object.hasOwn(JSON.parse(readFileSync(rolesPath(home), 'utf8')) as object, '__proto__')).toBe(true);
+    expect((updated.at(-1)!.value.payload as RolesPayload).roles).toEqual(read.roles);
+  });
+
+  it('renames a populated role to __proto__ without losing its description or duplicate entries', async () => {
+    const { home, capabilities, updated } = fixture();
+    const activation = activate(home);
+    const tab = payloadFor(home);
+    await send(activation, 'describe-role', { name: 'research', description: 'Keep this.', expected: DEFAULT_ROLES[1].description }, capabilities, tab);
+    const entry = { harness: 'codex', model: 'same', effort: 'xhigh' };
+    await send(activation, 'add-entry', { role: 'research', entry }, capabilities, tab);
+    await send(activation, 'add-entry', { role: 'research', entry }, capabilities, tab);
+    await send(activation, 'rename-role', { name: 'research', next: '__proto__' }, capabilities, tab);
+
+    const read = readRolesFile(home, capabilities.originTab()!.root);
+    expect(read.roles[1]).toEqual({ name: '__proto__', description: 'Keep this.', entries: [entry, entry] });
+    expect((updated.at(-1)!.value.payload as RolesPayload).roles).toEqual(read.roles);
+  });
+
+  it('edits a hand-written __proto__ role and preserves its entries', async () => {
+    const { home, capabilities, updated } = fixture();
+    mkdirSync(path.dirname(rolesPath(home)), { recursive: true });
+    writeFileSync(rolesPath(home), '{"__proto__":{"description":"Hand written","entries":[{"harness":"codex","model":"same"},{"harness":"codex","model":"same"}]}}');
+    const activation = activate(home);
+
+    await send(activation, 'describe-role', { name: '__proto__', description: 'Edited', expected: 'Hand written' }, capabilities, payloadFor(home));
+
+    const read = readRolesFile(home, capabilities.originTab()!.root);
+    expect(read.roles).toEqual([{ name: '__proto__', description: 'Edited', entries: [{ harness: 'codex', model: 'same' }, { harness: 'codex', model: 'same' }] }]);
+    expect((updated.at(-1)!.value.payload as RolesPayload).roles).toEqual(read.roles);
+  });
+
+  it('adds, renames, and moves numeric roles in the requested order', async () => {
+    const { home, capabilities, updated } = fixture();
+    const activation = activate(home);
+    const tab = payloadFor(home);
+    const assertOrder = (expected: string[]) => {
+      const text = readFileSync(rolesPath(home), 'utf8');
+      const positions = expected.map((name) => text.indexOf(`${JSON.stringify(name)}:`));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual(positions.toSorted((left, right) => left - right));
+      expect(readRolesFile(home, capabilities.originTab()!.root).roles.map(({ name }) => name)).toEqual(expected);
+      expect((updated.at(-1)!.value.payload as RolesPayload).roles.map(({ name }) => name)).toEqual(expected);
+    };
+    const defaults = DEFAULT_ROLES.map(({ name }) => name);
+
+    await send(activation, 'add-role', { name: '10' }, capabilities, tab);
+    assertOrder([...defaults, '10']);
+    await send(activation, 'add-role', { name: '2' }, capabilities, tab);
+    assertOrder([...defaults, '10', '2']);
+    await send(activation, 'rename-role', { name: 'planning', next: '1' }, capabilities, tab);
+    assertOrder(['1', ...defaults.slice(1), '10', '2']);
+    expect(readRolesFile(home, capabilities.originTab()!.root).roles[0]).toEqual({ ...DEFAULT_ROLES[0], name: '1' });
+    await send(activation, 'move-role', { name: '10', to: 0 }, capabilities, tab);
+    assertOrder(['10', '1', ...defaults.slice(1), '2']);
+  });
+
   it('rejects a failed replacement without publishing or damaging the original roles', async () => {
     const { home, capabilities, updated } = fixture();
     const activation = activate(home);

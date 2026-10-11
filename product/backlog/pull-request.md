@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Handle accepted special and numeric role names without losing roles or changing their order during file round trips.
-
-Existing Issue: Persisting an accepted __proto__ role invokes the ordinary object's inherited setter and omits that role, while integer role names are reordered numerically by both object serialization and parsed-object enumeration. Severity: 8/10
-
-Existing Risk: 5/10 - Renaming a populated role to __proto__ silently deletes its stored choices, and numeric names make successful add or reorder operations publish a different order from the one requested.
-
-Proposal Risk: 2/10 - Preserving textual member order avoids ordinary-object property semantics, but JSON escaping and nested values must remain correctly decoded to prevent a new parsing error.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "preserve accepted role names and role order through JSON round trips". Replace the ordinary-object accumulation in src/plugins/roles/roles-file.ts with an ordered keyed-object serializer that JSON-encodes each role name and value independently, preserving __proto__ as an ordinary own member and retaining the supplied list order. Preserve textual top-level member order when reading as well, because Object.entries on JSON.parse's result sorts integer keys even when the file text has the intended order; add a focused pure helper under src/plugins/roles/ and, if necessary, extend readJsonConfigFile in src/plugins/files.ts to pass the already-read source text to the decoder while leaving launcher semantics unchanged. Retain the agreed object keyed by role name, unrestricted nonempty trimmed names, case-insensitive uniqueness, and partial-damage behavior. Extend src/plugins/roles/roles-file.test.ts and src/plugins/roles/activate.test.ts for adding and renaming to __proto__, editing a hand-written file containing it, and adding, renaming, and moving mixed numeric and ordinary names; assert written textual order, reread list order, published order, and preservation of descriptions and duplicate model entries. Existing round-trip tests cover only ordinary names, and a null-prototype object alone would leave numeric ordering broken.
-
-
 * Handle stale positional entry edits before they remove, reorder, or change the effort of another entry.
 
 Existing Issue: Entry mutations carry only indices from the displayed list, but queued handlers apply those indices to a newly read list after earlier mutations have shifted its positions. Severity: 8/10

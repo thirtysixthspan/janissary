@@ -3,6 +3,7 @@ import path from 'node:path';
 import { readJsonConfigFile, writeJsonConfigFile } from '../files.js';
 import { isRecord } from '../api.js';
 import type { Role, RoleEntry, RolesSource } from './shared.js';
+import { orderedJsonKeys, serializeRoles } from './ordered-json.js';
 
 // The roles files: the user's own at `~/.janissary/roles.json` and a project's at
 // `.janissary/roles.json`, which replaces the home file wholesale when it exists — including when it
@@ -84,13 +85,13 @@ function decodeRole(name: string, value: unknown, taken: Set<string>): { role?: 
 
 // The whole file object. Answers undefined only when the top level is not an object or every key was
 // damage — an empty object is a valid file holding zero roles.
-function decodeRoles(parsed: unknown): { roles: Role[]; dropped: number } | undefined {
+function decodeRoles(parsed: unknown, text: string): { roles: Role[]; dropped: number } | undefined {
   if (!isRecord(parsed)) return undefined;
   const roles: Role[] = [];
   let dropped = 0;
   const taken = new Set<string>();
-  for (const [name, value] of Object.entries(parsed)) {
-    const decoded = decodeRole(name, value, taken);
+  for (const name of orderedJsonKeys(text)) {
+    const decoded = decodeRole(name, parsed[name], taken);
     dropped += decoded.dropped;
     if (decoded.role) roles.push(decoded.role);
   }
@@ -164,13 +165,9 @@ export function readRolesFile(home: string, root: string): RolesRead {
 // key order is the role order the tab shows. Answers whether the write succeeded; a failure leaves
 // both the file and the caller's state alone.
 export function writeRolesFile(filePath: string, roles: readonly Role[]): boolean {
-  const contents: Record<string, { description: string; entries: RoleEntry[] }> = {};
-  for (const role of roles) {
-    contents[role.name] = { description: role.description, entries: role.entries };
-  }
   try {
     mkdirSync(path.dirname(filePath), { recursive: true });
-    writeJsonConfigFile(filePath, `${JSON.stringify(contents, undefined, 2)}\n`);
+    writeJsonConfigFile(filePath, serializeRoles(roles));
     return true;
   } catch {
     return false;

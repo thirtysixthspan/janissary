@@ -146,6 +146,40 @@ describe('reading the roles in effect', () => {
 });
 
 describe('writing the roles in effect', () => {
+  it('round trips special and numeric names in the supplied order with all role data intact', () => {
+    const { home, root } = directories();
+    const file = projectFile(root);
+    const roles = ['10', 'review', '__proto__', '2', 'a"b', String.raw`c\d`, '1'].map((name) => ({
+      name, description: `Description for ${name}.`,
+      entries: [{ harness: 'codex', model: 'same', effort: 'xhigh' }, { harness: 'codex', model: 'same' }],
+    }));
+
+    expect(writeRolesFile(file, roles)).toBe(true);
+    const text = readFileSync(file, 'utf8');
+    const positions = roles.map(({ name }) => text.indexOf(`${JSON.stringify(name)}:`));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual(positions.toSorted((left, right) => left - right));
+    expect(Object.hasOwn(readJson(file), '__proto__')).toBe(true);
+    expect(readRolesFile(home, root).roles).toEqual(roles);
+  });
+
+  it('reads hand-written keys in textual order and retains last-value JSON semantics', () => {
+    const { home, root } = directories();
+    writeJson(homeFile(home), String.raw`{
+      "10": {"description":"Earlier", "entries":[]},
+      "__proto__": {"description":"Nested punctuation }, \"2\": [", "entries":[{"harness":"codex","model":"same"},{"harness":"codex","model":"same"}]},
+      "\u0032": {"description":"Two", "entries":[]},
+      "10": {"description":"Later", "entries":[]}
+    }`);
+
+    const read = readRolesFile(home, root);
+    expect(read.problem).toBeUndefined();
+    expect(read.roles.map(({ name }) => name)).toEqual(['10', '__proto__', '2']);
+    expect(read.roles[0].description).toBe('Later');
+    expect(read.roles[1].description).toBe('Nested punctuation }, "2": [');
+    expect(read.roles[1].entries).toEqual([{ harness: 'codex', model: 'same' }, { harness: 'codex', model: 'same' }]);
+  });
+
   it('preserves the original and removes partial temporary output after a write failure', async () => {
     const { home, root } = directories();
     const file = homeFile(home);

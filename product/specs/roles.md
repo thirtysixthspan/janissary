@@ -30,7 +30,10 @@ and an `effort` present only when the entry stores one:
 }
 ```
 
-The key order is the role order the tab shows, so a reorder rewrites the keys in their new order.
+The textual key order is the role order the tab shows, including numeric names, so a reorder
+rewrites the keys in their new order. Numeric names are never sorted numerically during reading
+or saving. Special names such as `__proto__` retain their descriptions and entries like any other
+role, including duplicate model choices.
 The `effort` values are the same fixed levels the New harness dialog offers — `low`, `medium`,
 `high`, `xhigh`, `max` (see [[harness]]) — plus the default of storing none at all; any other string
 a hand-written file carries is passed through verbatim, exactly as `harness --effort` does.
