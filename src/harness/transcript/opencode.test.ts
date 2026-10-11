@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { OpencodeTranscriptSource } from './opencode.js';
@@ -35,7 +34,8 @@ function addTextMessage(database: DatabaseSync, id: string, sessionId: string, r
 }
 
 beforeEach(() => {
-  home = mkdtempSync(path.join(tmpdir(), 'janus-opencode-'));
+  mkdirSync('temp', { recursive: true });
+  home = mkdtempSync(path.join(process.cwd(), 'temp', 'janus-opencode-'));
 });
 
 afterEach(() => {
@@ -43,6 +43,27 @@ afterEach(() => {
 });
 
 describe('OpencodeTranscriptSource', () => {
+  it('honors an injected home over a competing ambient data home', () => {
+    const database = openWritable();
+    createSchema(database);
+    addSession(database, 'mine', cwd, spawnedAt, null);
+    addTextMessage(database, 'm1', 'mine', 'user', spawnedAt + 1, 'injected home');
+    database.close();
+    const ambient = path.join(home, 'ambient');
+    mkdirSync(path.join(ambient, 'opencode'), { recursive: true });
+    const other = new DatabaseSync(path.join(ambient, 'opencode', 'opencode.db'));
+    createSchema(other);
+    addSession(other, 'other', cwd, spawnedAt, null);
+    addTextMessage(other, 'm2', 'other', 'user', spawnedAt + 1, 'ambient home');
+    other.close();
+    vi.stubEnv('XDG_DATA_HOME', ambient);
+    try {
+      expect(new OpencodeTranscriptSource(cwd, spawnedAt, home).poll()).toEqual(['user: injected home']);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it('reports nothing and stays unresolved when the database does not exist', () => {
     const source = new OpencodeTranscriptSource(cwd, spawnedAt, home);
     expect(source.poll()).toEqual([]);

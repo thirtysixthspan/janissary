@@ -1,11 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { findRepoRoot, initWorkspaceDir, provisionWorkspace, removeWorkspace, clearWorkspaceDir, workspaceTempPath, getRemoteUrl, trustWorkspace, untrustWorkspace } from './index.js';
 import { toHttpsUrl } from '../git/repository-url.js';
+import { loadOpencodeOauth } from '../project/opencode-oauth.js';
+import * as scratch from './scratch.js';
+import { OPENCODE_OAUTH_FAILURE_NOTICE } from '../sandbox/opencode-data.js';
 
 let tmpDir: string;
 let repoDir: string;
@@ -19,7 +21,8 @@ async function createWorkspace(name: string, repoPath: string): Promise<string> 
 }
 
 beforeAll(() => {
-  tmpDir = mkdtempSync(path.join(tmpdir(), 'workspace-test-'));
+  mkdirSync('temp', { recursive: true });
+  tmpDir = mkdtempSync(path.join(process.cwd(), 'temp', 'workspace-test-'));
   const originDir = path.join(tmpDir, 'origin.git');
   mkdirSync(originDir, { recursive: true });
   execSync('git init --bare', { cwd: originDir, stdio: 'pipe' });
@@ -126,6 +129,22 @@ describe('untrustWorkspace', () => {
 });
 
 describe('createWorkspace', () => {
+  it('completes readiness with a bounded optional credential notice', async () => {
+    const prepare = vi.spyOn(scratch, 'createWorkspaceScratch').mockImplementationOnce((directory) => {
+      mkdirSync(`${directory}.tmp`);
+      return OPENCODE_OAUTH_FAILURE_NOTICE;
+    });
+    try {
+      const handle = provisionWorkspace('oauth-failed-agent', getRemoteUrl(repoDir));
+      expect(handle.oauthNotice).toBeUndefined();
+      await expect(handle.ready).resolves.toBeUndefined();
+      expect(handle.oauthNotice).toBe(OPENCODE_OAUTH_FAILURE_NOTICE);
+      removeWorkspace(handle.dir);
+    } finally {
+      prepare.mockRestore();
+    }
+  });
+
   it('creates an independent clone of the repo\'s origin remote', async () => {
     const ws = await createWorkspace('test-agent', repoDir);
     expect(existsSync(ws)).toBe(true);
@@ -138,6 +157,24 @@ describe('createWorkspace', () => {
     const ws = await createWorkspace('test-agent-tmp', repoDir);
     expect(existsSync(workspaceTempPath('test-agent-tmp'))).toBe(true);
     removeWorkspace(ws);
+  });
+
+  it('seeds OAuth before the workspace becomes ready', async () => {
+    const home = path.join(tmpDir, 'oauth-home');
+    mkdirSync(path.join(home, '.codex'), { recursive: true });
+    writeFileSync(path.join(home, '.codex', 'auth.json'), JSON.stringify({ tokens: {
+      access_token: `header.${Buffer.from('{"exp":1800000000}').toString('base64url')}.signature`,
+      refresh_token: 'test-refresh', account_id: 'test-account',
+    } }));
+    loadOpencodeOauth(home);
+    try {
+      const ws = await createWorkspace('oauth-agent', repoDir);
+      const auth = JSON.parse(readFileSync(path.join(`${ws}.tmp`, 'opencode-data', 'opencode', 'auth.json'), 'utf8'));
+      expect(auth.openai.accountId).toBe('test-account');
+      removeWorkspace(ws);
+    } finally {
+      loadOpencodeOauth(path.join(home, 'absent'));
+    }
   });
 
   it('makes gh the only credential helper git will actually consult', async () => {

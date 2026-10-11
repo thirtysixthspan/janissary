@@ -19,7 +19,7 @@ export class RemoteTranscriptFollow {
 
   follow(harness: string, dir: string | undefined): void {
     if (this.source || dir === undefined) return;
-    const source = createTranscriptSource(harness, dir, Date.now());
+    const source = createTranscriptSource(harness, dir, Date.now(), dir);
     if (!source) return;
     this.source = source;
     this.timer = setInterval(() => {

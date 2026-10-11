@@ -6,6 +6,8 @@ import type { RemoteResume } from '../remote/resume.js';
 import type { SpawnTabOptions } from './spawn-options.js';
 import { LaunchCheckUnanswered, LaunchNameRefusal, RemoteRootRefusal } from '../launch-name/refusal.js';
 import { failRemoteLaunch, reportRemoteCleanup, reportRemoteClone } from '../launch-name/fail-remote.js';
+import { notify } from '../notifications/index.js';
+import { OPENCODE_OAUTH_FAILURE_NOTICE } from '../sandbox/opencode-data.js';
 
 // The "open a channel, insert the placeholder, resolve `ready` from frames" sequence, kept out of
 // `HarnessManager` — which was already split once for size (see `command-parse.ts`) — and shared by
@@ -61,12 +63,14 @@ export function startRemoteLaunch(
   const ready = new Promise<void>((resolve, reject) => {
     const channel = managers.remote.create(label, address, cwd, {
       onReady: (remoteDir, remoteNotice, cleaned, cloned) => {
+        if (state.settled) return;
         state.dir = remoteDir;
         state.notice = remoteNotice;
         state.cleaned = cleaned;
         state.cloned = cloned;
         state.settled = true;
         resolve();
+        if (remoteNotice?.includes(OPENCODE_OAUTH_FAILURE_NOTICE)) notify(managers, 'manual', label, OPENCODE_OAUTH_FAILURE_NOTICE);
       },
       onNameRefused: (frame) => {
         if (state.settled) return;

@@ -6,6 +6,7 @@ import { execSync, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { toHttpsUrl } from '../git/repository-url.js';
 import { startGitClone } from '../git/clone.js';
+import { createWorkspaceScratch } from './scratch.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -125,6 +126,7 @@ export type ProvisionHandle = {
   ready: Promise<void>;
   // Kills the clone if it's still running. A no-op once the clone has already settled.
   cancel: () => void;
+  readonly oauthNotice?: string;
 };
 
 // Kick off a workspace clone asynchronously so it never blocks the event loop, unlike the old
@@ -142,16 +144,17 @@ export function provisionWorkspace(name: string, remoteUrl: string, githubToken?
   ensureWorkspaceDir();
   const target = workspacePath(name);
   const clone = startGitClone(remoteUrl, target, { githubToken });
+  let oauthNotice: string | undefined;
 
   async function run(): Promise<void> {
     await clone.ready;
-    await finishProvisioning(name, target, remoteUrl);
+    oauthNotice = await finishProvisioning(target, remoteUrl);
   }
 
-  return { dir: target, ready: run(), cancel: clone.cancel };
+  return { dir: target, ready: run(), cancel: clone.cancel, get oauthNotice() { return oauthNotice; } };
 }
 
-async function finishProvisioning(name: string, target: string, remoteUrl: string): Promise<void> {
+async function finishProvisioning(target: string, remoteUrl: string): Promise<string | undefined> {
   // Rewrite the clone's own origin to HTTPS: later git operations from *inside* the workspace run
   // in the Seatbelt sandbox, which denies `~/.ssh` and scrubs `SSH_AUTH_SOCK`, so SSH can't
   // authenticate there — only HTTPS + the injected `GH_TOKEN` can (see src/sandbox/index.ts).
@@ -171,7 +174,7 @@ async function finishProvisioning(name: string, target: string, remoteUrl: strin
   await execFileAsync('git', ['config', '--local', '--replace-all', 'credential.helper', ''], { cwd: target });
   await execFileAsync('git', ['config', '--local', '--add', 'credential.helper', '!gh auth git-credential'], { cwd: target });
   trustWorkspace(target, workspaceClaudeConfig);
-  mkdirSync(workspaceTempPath(name), { recursive: true });
+  return createWorkspaceScratch(target);
 }
 
 export function untrustWorkspace(

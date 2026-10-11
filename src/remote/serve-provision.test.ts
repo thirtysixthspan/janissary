@@ -6,6 +6,7 @@ import { provisionRemoteWorkspace, type ProvisionContext, type ProvisionedWorksp
 import { initWorkspaceDir, workspacePath } from '../workspace/index.js';
 import type { WorkspaceManager } from '../workspace/manager.js';
 import type { ServerFrame } from './protocol-frames.js';
+import { OPENCODE_OAUTH_FAILURE_NOTICE } from '../sandbox/opencode-data.js';
 
 // The clone itself is `WorkspaceManager`'s and is exercised against a real repository in
 // serve.test.ts. What is untested here is the sequence around it: the four points at which a
@@ -53,6 +54,16 @@ afterEach(() => {
 });
 
 describe('provisionRemoteWorkspace', () => {
+  it('completes provisioning while carrying an optional OAuth failure notice', async () => {
+    const { context, frames, provisioned } = harness({ workspaces: {
+      create: () => ({ dir: path.join(root, 'alpha'), ready: Promise.resolve(), oauthNotice: OPENCODE_OAUTH_FAILURE_NOTICE }),
+    } });
+    await provisionRemoteWorkspace(context, 'alpha', {}, {});
+    expect(provisioned).toHaveBeenCalledOnce();
+    expect(frames).toContainEqual(expect.objectContaining({ type: 'workspace-ready', notice: expect.stringContaining(OPENCODE_OAUTH_FAILURE_NOTICE) }));
+    expect(frames.some((frame) => frame.type === 'workspace-failed')).toBe(false);
+  });
+
   it('sends the remote home with workspace-ready', async () => {
     const { context, frames } = harness();
 

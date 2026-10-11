@@ -53,7 +53,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.conversations = new ConversationsManager(managers);
   managers.sessions = new SessionsManager(managers);
   managers.plugins = new TabPluginHost(managers);
-  managers.workspace = new WorkspaceManager(projectDir);
+  managers.workspace = new WorkspaceManager(projectDir, (label, message) => { notify(managers, 'manual', label, message); });
   managers.gitSync = new GitSync(managers.workspace);
   void refreshLaunchDirBranch(managers.tab.launchDir);
   managers.browser = new BrowserManager(managers);

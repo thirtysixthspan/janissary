@@ -73,6 +73,42 @@ describe('WorkspaceManager', () => {
   });
 
   describe('create', () => {
+    it('does not reject readiness when optional notice delivery fails', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      provisionWorkspaceMock.mockReturnValue({ ...handle('/repo/workspace'), oauthNotice: 'OAuth unavailable' });
+      const result = new WorkspaceManager('/repo', () => { throw new Error('notification unavailable'); }).create('agent');
+      if ('ready' in result) await expect(result.ready).resolves.toBeUndefined();
+    });
+
+    it('reports an optional OAuth notice after readiness without rejecting it', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const ready = Promise.withResolvers<void>();
+      provisionWorkspaceMock.mockReturnValue({ ...handle('/repo/workspace'), ready: ready.promise, oauthNotice: 'OAuth unavailable' });
+      const report = vi.fn();
+      const result = new WorkspaceManager('/repo', report).create('agent');
+      expect(report).not.toHaveBeenCalled();
+      ready.resolve();
+      if ('ready' in result) await expect(result.ready).resolves.toBeUndefined();
+      expect(report).toHaveBeenCalledExactlyOnceWith('agent', 'OAuth unavailable');
+      expect(result).toMatchObject({ oauthNotice: 'OAuth unavailable' });
+    });
+
+    it('does not report a credential notice for a workspace already released', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const ready = Promise.withResolvers<void>();
+      provisionWorkspaceMock.mockReturnValue({ ...handle('/repo/workspace'), ready: ready.promise, oauthNotice: 'OAuth unavailable' });
+      const report = vi.fn();
+      const manager = new WorkspaceManager('/repo', report);
+      const result = manager.create('agent');
+      manager.release('/repo/workspace');
+      ready.resolve();
+      if ('ready' in result) await result.ready;
+      expect(report).not.toHaveBeenCalled();
+    });
+
     it('returns an error when no repo is found', () => {
       findRepoRootMock.mockReturnValue(undefined);
       const manager = new WorkspaceManager();

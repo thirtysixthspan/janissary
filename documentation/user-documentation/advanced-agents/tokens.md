@@ -6,7 +6,7 @@ Janissary reads four optional token files from a `.janissary/` directory. Each i
 | --- | --- | --- |
 | `github-token` | working `git push` and `gh` | you want to push or open pull requests from inside a workspace |
 | `claude-token` | a signed-in `claude` harness | the machine running the tab has no usable keychain |
-| `opencode-token` | a signed-in `opencode` harness | the machine running the tab has never run `opencode auth login` |
+| `opencode-token` | access to OpenCode Zen and OpenCode Go | your harness uses either of those providers |
 | `gemini-token` | a working Google provider | your harness talks to Gemini |
 
 None of them is required. Without them, workspaces still clone, run, commit, fetch, and pull.
@@ -57,7 +57,7 @@ The token goes to every workspaced tab, not only harness tabs, so an agent whose
 
 Sign in at OpenCode, copy your API key, and save it to `.janissary/opencode-token`. It's a static key, so there's nothing to refresh and no expiry to plan around.
 
-A workspaced `opencode` harness needs this file. It can't read the credentials `opencode auth login` saved on your machine, because a workspace is blocked from that file on purpose — it holds every provider key opencode has, and a disposable clone has no business reading them. That applies on your own laptop, not just on a remote host.
+A workspaced `opencode` harness uses this file for OpenCode Zen and OpenCode Go. It can't read the credentials `opencode auth login` saved on your machine, because a workspace is blocked from that file on purpose. That applies on your own laptop, not just on a remote host.
 
 The key covers the OpenCode Zen and OpenCode Go providers only.
 
@@ -69,13 +69,17 @@ You need this for the same reason as the OpenCode key: a workspace can't read th
 
 ## Other providers
 
-Anthropic and OpenAI have no token file. Set the provider's own variable in the environment you start Janissary from and it reaches the workspace untouched:
+Anthropic and OpenAI API keys have no token file. Set the provider's own variable in the environment you start Janissary from and it reaches the workspace untouched:
 
 | Provider | Variable |
 | --- | --- |
 | Anthropic | `ANTHROPIC_API_KEY` |
 | OpenAI | `OPENAI_API_KEY` |
 | Google | `.janissary/gemini-token`, or `GOOGLE_GENERATIVE_AI_API_KEY` |
+
+For ChatGPT subscription authentication, sign in with Codex on the machine running Janissary before starting the app. Janissary reads that saved login at startup and gives each workspace a private OpenCode OAuth copy outside the git clone before its first process starts. OpenCode can refresh its copy, which lasts until the workspace closes; your saved Codex login is never overwritten. Later launches preserve the copy and do not re-create it if you remove it. Missing or invalid saved credentials leave API-key authentication unchanged. Remote workspaces use the remote machine's saved Codex login; your local ChatGPT login is not forwarded.
+
+If that private copy cannot be prepared, the workspace still starts and reports `ChatGPT OAuth unavailable: could not prepare private OpenCode credentials.`. Existing environment settings and API keys keep working; the failed copy is not used for authentication.
 
 Google is the one to watch if you export the key yourself: `GOOGLE_API_KEY` and `GEMINI_API_KEY` are enough for opencode to list the provider as configured, but a request reads `GOOGLE_GENERATIVE_AI_API_KEY` and fails saying it's missing. Export that one, or use the token file, which sets both.
 

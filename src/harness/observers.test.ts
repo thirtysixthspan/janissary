@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { harnessRuntime } from './observers.js';
 import { HarnessScreenReader } from './screen.js';
 import { captureWiring } from './capture/wire.js';
+import { createTranscriptSource } from './transcript/sources.js';
 import type { Managers } from '../managers.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 
@@ -35,6 +36,7 @@ vi.mock('./transcript/tailer.js', () => ({
 
 function makeManagers(transcriptSource?: unknown): Managers {
   return {
+    tab: { tabs: [] },
     pty: { spawnDimensions: () => ({ cols: 80, rows: 24 }), input: vi.fn() },
     remote: { transcriptSource: vi.fn(() => transcriptSource) },
   } as unknown as Managers;
@@ -75,6 +77,18 @@ describe('harnessRuntime', () => {
       expect(recorderMock.instances).toHaveLength(1);
       expect(tailerMock.instances).toHaveLength(1);
       expect(managers.remote.transcriptSource).toHaveBeenCalledWith('claude');
+    } finally { runtime.dispose(); }
+  });
+
+  it('passes the owning workspace to the local transcript reader', () => {
+    const managers = makeManagers();
+    managers.tab.tabs = [{ label: 'opencode', workspaceDir: '/repo/workspace' }] as Managers['tab']['tabs'];
+    const runtime = harnessRuntime({
+      managers, name: 'opencode', label: 'opencode', id: 'pty-1', cwd: '/repo/workspace/subdir',
+      autoApprove: false, autoResume: false, channel: undefined,
+    });
+    try {
+      expect(createTranscriptSource).toHaveBeenCalledWith('opencode', '/repo/workspace/subdir', expect.any(Number), '/repo/workspace');
     } finally { runtime.dispose(); }
   });
 
