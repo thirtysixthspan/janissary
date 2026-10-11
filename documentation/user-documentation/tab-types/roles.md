@@ -18,7 +18,7 @@ The first time you open the tab it writes five roles for you: **planning**, **re
 
 ## Add a model to a role
 
-Drag a model from the **Models** column onto a role card and it becomes that role's next choice. Drop it anywhere on the card. Every drop adds, so if you drop the wrong one, remove it and drag the right one in.
+Drag a model from the **Models** column onto a role card and it becomes that role's next choice. Drop it anywhere on the card — on one of its existing model rows, or on the controls there, as much as on the empty space around them. Every drop adds, so if you drop the wrong one, remove it and drag the right one in.
 
 Without a mouse, click **Add entry** on the card, pick the harness and model, and press **Add**.
 
@@ -26,7 +26,7 @@ Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, 
 
 ## Reorder and remove
 
-Drag an entry row onto another row in the same card to move it. Drag a role's handle onto another card to move the role itself. To remove an entry, click its **×**, or drag the entry back onto the **Models** column. To remove a role, click the **×** on its card. Removing your last role is allowed; the tab then reads `No roles yet.` and keeps an **Add role** button.
+Drag an entry row onto another row in the same card to move it. Drag a role's handle onto another card — its model rows included — to move the role itself. To remove an entry, click its **×**, or drag the entry back onto the **Models** column. To remove a role, click the **×** on its card. Removing your last role is allowed; the tab then reads `No roles yet.` and keeps an **Add role** button.
 
 <img class="agent-float left" src="/agents/emrah-south-east.png" alt="" />
 

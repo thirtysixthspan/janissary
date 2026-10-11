@@ -73,17 +73,19 @@ export function dropOnRole(
   return null;
 }
 
-// A drop on an entry row: a sibling entry moves onto this position.
+// A drop on an entry row: a sibling entry moves onto this position. The row is nested inside its
+// role card, and a drag it does not handle belongs to that card — a catalog model or a role grip
+// dropped here still lands on the card — so it answers null without ending the gesture. Only the
+// reorder it owns consumes the event, so the card behind it raises nothing a second time.
 export function dropOnEntry(
   event: DragEvent, role: string, index: number,
 ): { intent: string; payload: Record<string, unknown> } | null {
-  event.preventDefault();
   const drag = current;
+  if (drag?.kind !== 'entry' || drag.role !== role || drag.index === index) return null;
+  event.preventDefault();
+  event.stopPropagation();
   current = null;
-  if (drag?.kind === 'entry' && drag.role === role && drag.index !== index) {
-    return { intent: 'move-entry', payload: { role, from: drag.index, to: index } };
-  }
-  return null;
+  return { intent: 'move-entry', payload: { role, from: drag.index, to: index } };
 }
 
 // A drop on the catalog column takes an entry out of its role.

@@ -35,17 +35,6 @@ Proposal Risk: 2/10 - A stale edit becomes a visible retry instead of changing a
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "reject stale positional roles entry mutations". Extend the index-based intent contracts and guards in src/plugins/roles/shared.ts with an expected ordered-entry snapshot or equivalent revision bound to the caller's displayed state, and populate it from web/src/plugins/roles/RoleCard.tsx and web/src/plugins/roles/roles-dnd.ts. Compare the precondition with the current roles read inside the queue in src/plugins/roles/activate.ts before remove-entry, move-entry, or set-entry-effort applies; reject mismatches with a clear retry message and republish current state without writing. Do not match only harness/model values, since a role may hold duplicate entries. Extend src/plugins/roles/activate.test.ts for two removals from one displayed snapshot, a reorder followed by an effort edit, duplicates, and two callers sharing a snapshot; verify that stale operations never mutate the wrong row. Update web/src/plugins/roles/RolesTab.test.tsx and web/src/plugins/roles/roles-dnd.test.tsx to pin the submitted preconditions and visible rejection. The existing rapid-edit test appends two named roles and therefore cannot catch shifted entry indices.
 
 
-* Deliver the plan's catalog drops anywhere on a role card, including its existing entry rows.
-
-Existing Issue: A nested entry-row drop handler clears the remembered drag even when it is a catalog model, so the parent card receives the bubbled drop with no drag left and appends nothing. Severity: 5/10
-
-Existing Risk: 5/10 - Dropping a model onto a populated card's entry area silently fails despite the drop highlight and documented anywhere-on-card gesture, making additions depend on hitting unused card space.
-
-Proposal Risk: 2/10 - Compatible nested drops reach the correct handler, but event propagation must still prevent one completed gesture from raising duplicate intents.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "allow catalog model drops onto existing roles entry rows". Adjust dropOnEntry in web/src/plugins/roles/roles-dnd.ts and the nested handlers in web/src/plugins/roles/RoleCard.tsx so a row consumes only a compatible entry reorder and leaves catalog and role drags intact for the parent card. Consume and stop propagation for handled row reorders, retain no-op behavior for an entry dropped on itself or on another role's entry, and clear the remembered drag once the responsible handler finishes. Extend web/src/plugins/roles/roles-dnd.test.tsx with catalog drops onto existing rows and their child controls, role drags onto nested rows, sibling entry reorders, and assertions that exactly one appropriate intent is emitted. Its current catalog test drops onto an empty card and bypasses the failing nested handler; revise the test that currently expects a role drop onto a nested row to do nothing to match the plan's card-level reorder gesture. Keep product/specs/roles.md and documentation/user-documentation/tab-types/roles.md aligned with the promised anywhere-on-card behavior.
-
-
 * Match the description's promise that a rejected new role name remains available for correction.
 
 Existing Issue: The new-role control clears its name and closes before the add-role request settles, so duplicate-name and write refusals display an error after discarding the text the description says remains in the field. Severity: 4/10

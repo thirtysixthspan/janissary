@@ -15,7 +15,11 @@ function payload(): RolesPayload {
         description: 'Plans.',
         entries: [{ harness: 'codex', model: 'gpt-6-sol' }, { harness: 'codex', model: 'gpt-6-luna' }],
       },
-      { name: 'research', description: 'Research.', entries: [] },
+      {
+        name: 'research',
+        description: 'Research.',
+        entries: [{ harness: 'codex', model: 'gpt-6-mini' }],
+      },
     ],
     source: 'home',
     path: '/home/me/.janissary/roles.json',
@@ -49,6 +53,12 @@ function catalogModel(model: string): HTMLElement {
   return [...catalog.querySelectorAll('li')].find((item) => item.textContent === model) as HTMLElement;
 }
 
+function entryRow(model: string): HTMLElement {
+  const list = document.querySelector('.roles-list') as HTMLElement;
+  return [...list.querySelectorAll('.roles-entry')]
+    .find((row) => row.querySelector('.roles-entry-model')?.textContent === model) as HTMLElement;
+}
+
 describe('dragging between the catalog and the roles', () => {
   it('adds a dragged catalog model as a new entry on the card it lands on', () => {
     const { intent, container, dataTransfer } = renderTab();
@@ -67,6 +77,35 @@ describe('dragging between the catalog and the roles', () => {
     expect(container.querySelector('.roles-catalog')).not.toBeNull();
   });
 
+  it('adds a dragged catalog model dropped on an existing entry row', () => {
+    const { intent, dataTransfer } = renderTab();
+    const model = catalogModel('gpt-6-luna');
+
+    fireEvent.dragStart(model, { dataTransfer: dataTransfer() });
+    fireEvent.drop(entryRow('gpt-6-sol'), { dataTransfer: dataTransfer() });
+
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('add-entry', {
+      role: 'planning', entry: { harness: 'codex', model: 'gpt-6-luna' },
+    });
+  });
+
+  it('adds a dragged catalog model dropped on a control inside an entry row', () => {
+    const { intent, dataTransfer } = renderTab();
+    const model = catalogModel('gpt-6-luna');
+    const controls = [screen.getByLabelText('Effort for gpt-6-sol'), screen.getByTitle('Remove gpt-6-sol')];
+
+    for (const control of controls) {
+      fireEvent.dragStart(model, { dataTransfer: dataTransfer() });
+      fireEvent.drop(control, { dataTransfer: dataTransfer() });
+    }
+
+    expect(intent).toHaveBeenCalledTimes(2);
+    expect(intent).toHaveBeenLastCalledWith('add-entry', {
+      role: 'planning', entry: { harness: 'codex', model: 'gpt-6-luna' },
+    });
+  });
+
   it('takes an entry out of its role when it is dropped on the catalog column', () => {
     const { intent, container, dataTransfer } = renderTab();
     const entry = container.querySelector('.roles-entry') as HTMLElement;
@@ -77,14 +116,26 @@ describe('dragging between the catalog and the roles', () => {
     expect(intent).toHaveBeenCalledWith('remove-entry', { role: 'planning', index: 0 });
   });
 
-  it('moves an entry onto the sibling entry it is dropped on', () => {
-    const { intent, container, dataTransfer } = renderTab();
-    const entries = container.querySelectorAll('.roles-entry');
+  it('moves an entry onto the sibling entry it is dropped on, and raises it once', () => {
+    const { intent, dataTransfer } = renderTab();
 
-    fireEvent.dragStart(entries[0] as HTMLElement, { dataTransfer: dataTransfer() });
-    fireEvent.drop(entries[1] as HTMLElement, { dataTransfer: dataTransfer() });
+    fireEvent.dragStart(entryRow('gpt-6-sol'), { dataTransfer: dataTransfer() });
+    fireEvent.drop(entryRow('gpt-6-luna'), { dataTransfer: dataTransfer() });
 
+    expect(intent).toHaveBeenCalledTimes(1);
     expect(intent).toHaveBeenCalledWith('move-entry', { role: 'planning', from: 0, to: 1 });
+  });
+
+  it('raises nothing when an entry is dropped on itself or on another role\'s entry', () => {
+    const { intent, dataTransfer } = renderTab();
+    const row = entryRow('gpt-6-sol');
+
+    fireEvent.dragStart(row, { dataTransfer: dataTransfer() });
+    fireEvent.drop(row, { dataTransfer: dataTransfer() });
+    fireEvent.dragStart(row, { dataTransfer: dataTransfer() });
+    fireEvent.drop(entryRow('gpt-6-mini'), { dataTransfer: dataTransfer() });
+
+    expect(intent).not.toHaveBeenCalled();
   });
 
   it('moves a role onto the position of the card it is dropped on', () => {
@@ -115,12 +166,21 @@ describe('dragging between the catalog and the roles', () => {
     expect(card('research').className).not.toContain('roles-drop');
   });
 
-  it('does not allow a role drag over an entry row', () => {
-    const { intent, container, dataTransfer } = renderTab();
-    const entry = container.querySelector('.roles-entry') as HTMLElement;
+  it('moves a role onto the position of the card whose entry row it lands on', () => {
+    const { intent, dataTransfer } = renderTab();
 
     fireEvent.dragStart(card('planning').querySelector('.roles-grip') as HTMLElement, { dataTransfer: dataTransfer() });
-    fireEvent.drop(entry, { dataTransfer: dataTransfer() });
+    fireEvent.drop(entryRow('gpt-6-mini'), { dataTransfer: dataTransfer() });
+
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('move-role', { name: 'planning', to: 1 });
+  });
+
+  it('raises nothing when a role is dropped on an entry row of its own card', () => {
+    const { intent, dataTransfer } = renderTab();
+
+    fireEvent.dragStart(card('planning').querySelector('.roles-grip') as HTMLElement, { dataTransfer: dataTransfer() });
+    fireEvent.drop(entryRow('gpt-6-sol'), { dataTransfer: dataTransfer() });
 
     expect(intent).not.toHaveBeenCalled();
   });

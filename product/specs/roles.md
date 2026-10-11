@@ -75,12 +75,13 @@ late to be noticed here: `The description of role "<name>" changed elsewhere —
 ### Dragging
 
 The tab drags on the browser's own gesture. Dragging a model from the catalog onto a card appends
-it as that role's next entry; the drop lands anywhere on the card, and every drop appends — nothing
-is replaced in place, so changing a model is a remove plus an add. Dragging an entry row onto a
-sibling row moves it to that position, and dragging a role's grip onto another card moves the role
-to that card's position. A card outlines itself while a compatible drag is over it. Dragging an
-entry back onto the catalog column removes it from its role. Every completed drop writes the file
-before the tab redraws.
+it as that role's next entry; the drop lands anywhere on the card — its entry rows and the controls
+on them included — and every drop appends, nothing is replaced in place, so changing a model is a
+remove plus an add. Dragging an entry row onto a sibling row moves it to that position, and dragging
+a role's grip onto another card moves the role to that card's position, whether the grip lands on the
+card's own space or on one of its entry rows. A card outlines itself while a compatible drag is over
+it. Dragging an entry back onto the catalog column removes it from its role. Every completed drop
+writes the file before the tab redraws.
 
 ### Names
 
