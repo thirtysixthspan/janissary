@@ -16,7 +16,7 @@ import { DiffTab, type ChangeSetReader, type DiffOrigin } from './tab-state.js';
 const ROOT_KEY = 'diff';
 const WORKSPACE_KEY_PREFIX = 'workspace:';
 const ROOT_TITLE = 'diff';
-const TAB_TITLE_PREFIX = 'diff on ';
+const TAB_TITLE_PREFIX = 'diff: ';
 
 // The instance key a workspace diff is addressed by: the directory rather than the tab that opened
 // it, so a second tab sharing the clone finds the diff tab that is already showing it.

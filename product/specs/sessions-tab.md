@@ -73,7 +73,7 @@ The diff action carries the same plus-minus glyph the metadata rows use, because
 
 **Diff** applies to every row of a live channel, and only those: one channel holds one workspace, so
 every row of it is looking at the same changes and the same diff tab. It opens a
-diff tab on that workspace — titled **diff on <tab name>** and shared with the tab's own metadata-row
+diff tab on that workspace — titled **diff: <workspace label>** and shared with the tab's own metadata-row
 button — and holds the channel open for as long as that tab is. It asks nothing of the connection, so
 it is offered rather than refused while the transport is being retried, and it is drawn unpressable
 on a channel still provisioning rather than absent, the way a detach button is on the same row. It is

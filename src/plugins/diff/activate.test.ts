@@ -281,6 +281,35 @@ describe('diff plugin activation', () => {
     expect(openOrFocusTab).not.toHaveBeenCalled();
   });
 
+  it('titles local and remote workspace diff tabs with the workspace label', () => {
+    const localWorkspace = path.join(root, 'local-workspace');
+    const remoteWorkspace = '/srv/project/.janissary/workspace/remote-workspace';
+    const local = makeCapabilities({
+      originTab: vi.fn(() => ({
+        label: 'local-workspace', cwd: localWorkspace, root: repo,
+        ...shellRecord({ workspace: { dir: localWorkspace } }),
+      })),
+    });
+    const remote = makeCapabilities({
+      originTab: vi.fn(() => ({
+        label: 'remote-workspace', cwd: '/srv/project', root: repo, remote: true as const,
+        workspace: { dir: remoteWorkspace }, ...shellRecord(),
+      })),
+    });
+
+    activate().command?.('on local-workspace', local.capabilities);
+    const localFactory = local.openOrFocusTab.mock.calls[0]?.[1] as ((resources: never) => { title: string }) | undefined;
+    expect(localFactory?.(undefined as never).title).toBe('diff: local-workspace');
+
+    activate().command?.('on remote-workspace', remote.capabilities);
+    const remoteFactory = remote.launchTab.mock.calls[0]?.[2] as (
+      (resources: never, start: { label: string; cwd: string; workspaceDir: string; host: string }) => { title: string }
+    ) | undefined;
+    expect(remoteFactory?.(undefined as never, {
+      label: 'remote-workspace', cwd: '/srv/project', workspaceDir: remoteWorkspace, host: 'devbox',
+    }).title).toBe('diff: remote-workspace');
+  });
+
   it('focuses the workspace diff a second route already opened, rather than joining again', async () => {
     const workspace = path.join(root, '.janissary', 'workspace', 'kamil');
     mkdirSync(workspace, { recursive: true });
