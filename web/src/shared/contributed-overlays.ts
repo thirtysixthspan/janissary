@@ -84,11 +84,16 @@ export function declareOverlayClaims(name: string, claims: OverlayClaims): () =>
 }
 
 export function registerContributedOverlay(overlay: ContributedOverlay): () => void {
-  registrations.set(overlay.name, { overlay, open: false, anchor: null, focusOrigin: null });
+  const registration = { overlay, open: false, anchor: null, focusOrigin: null };
+  registrations.set(overlay.name, registration);
   notify();
   // The removal leaves a later registration under the same name in place, so a remount's cleanup
   // ordering cannot drop a successor's.
-  return () => { registrations.delete(overlay.name); notify(); };
+  return () => {
+    if (registrations.get(overlay.name) !== registration) return;
+    registrations.delete(overlay.name);
+    notify();
+  };
 }
 
 // The host installs this once: it is what loads a plugin's chunk and then opens it. Keeping it here

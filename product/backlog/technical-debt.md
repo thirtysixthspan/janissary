@@ -4,16 +4,6 @@
 
 ## development
 
-* Make contributed-overlay cleanup preserve a newer registration under the same name.
-
-Existing Debt: The overlay registry replaces registrations by name, but its cleanup closure unconditionally deletes that name, so an older registration's teardown can remove the successor that now occupies the slot. Severity: 5/10
-
-Existing Risk: 5/10 - When plugin hosts overlap during teardown and activation, a stale cleanup can silently unregister the live overlay while its command and chord claims still point to it, leaving the feature unreachable until another activation.
-
-Proposal Risk: 2/10 - Guarding cleanup by registration identity preserves the latest overlay, though the registry still intentionally allows a later registration to replace an earlier one with the same name.
-
-Proposal: In `web/src/shared/contributed-overlays.ts`, retain the exact `Registration` object created by `registerContributedOverlay` and let its cleanup delete and notify only if `registrations.get(overlay.name)` is still that object. This should mirror the identity check already used by `declareOverlayClaims` in the same module and keep stale teardown from removing a successor. Add a same-name replacement case to `web/src/shared/contributed-overlays.test.ts`: register an overlay, register a different overlay with the same name, invoke the first cleanup, and verify that the second overlay remains available. The existing `leaves a later registration in place when an earlier one unsubscribes` case currently uses different names, so it does not cover the replacement path. `disposePlugin` in `web/src/overlay-plugins/host.ts` owns and invokes the returned cleanup and is the lifecycle call site this registry behavior protects.
-
 ## deferred
 
 * Move the websocket client out of the app-shell root and into the shared layer it belongs to, so `web/src/shared/` stops importing from `../ws`. — deferred: complexity 8/10, 138 files import `./ws`/`../ws` and each retarget is a per-depth specifier recomputation, the cluster includes the `toasts/` directory that `clientFeatureDirectories` names in `eslint.config.mjs` — a question the entry does not settle — and the change adds a new eslint zone plus its boundary case, which is a deliberate enforcement design rather than a mechanical sweep.
