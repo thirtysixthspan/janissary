@@ -1,0 +1,47 @@
+# Roles
+
+Name what kind of work you are about to do once, and keep the model choices that suit it beside the name.
+
+```
+roles
+```
+
+## Set up your roles
+
+<img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
+
+The tab opens in the center strip with two columns. **Models** on the left lists every harness you can launch and the models each one knows. Your roles sit on the right, and the line above them names the file you are editing — `~/.janissary/roles.json`, or your project's own file when it has one.
+
+A role has a name, a description, and an ordered list of choices. The description is plain text: write what the role is for, so you or an agent can tell `planning` from `research` at a glance.
+
+The first time you open the tab it writes five roles for you: **planning**, **research**, **code review**, **implementation**, and **documentation**. Each one starts with a description and no model choices, except **planning**, which comes with two. Edit them freely — nothing depends on the defaults after that.
+
+## Add a model to a role
+
+Drag a model from the **Models** column onto a role card and it becomes that role's next choice. Drop it anywhere on the card. Every drop adds, so if you drop the wrong one, remove it and drag the right one in.
+
+Without a mouse, click **Add entry** on the card, pick the harness and model, and press **Add**.
+
+Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all and leaves the harness on its own default; the other levels are the same ones the **New harness** dialog offers. Change it whenever you like — the tab saves as you go, so there is nothing to confirm.
+
+## Reorder and remove
+
+Drag an entry row onto another row in the same card to move it. Drag a role's handle onto another card to move the role itself. To remove an entry, click its **×**, or drag the entry back onto the **Models** column. To remove a role, click the **×** on its card. Removing your last role is allowed; the tab then reads `No roles yet.` and keeps an **Add role** button.
+
+<img class="agent-float left" src="/agents/emrah-south-east.png" alt="" />
+
+Renaming happens in place: click the name, type the new one, and press `Enter` or click away. `Escape` puts the old name back. The same goes for a description. Names are matched ignoring case, so two roles can never end up named `Review` and `review` — the second one is refused with `A role named "<name>" already exists.` and nothing is saved.
+
+## Use your roles with a project
+
+Roles you write yourself live in `~/.janissary/roles.json` and are yours everywhere. Drop a `.janissary/roles.json` into a project and it **replaces** your home roles for that project entirely — nothing is merged, so a project either shows your project's roles or your home ones, never a mixture. The line above the cards always tells you which file you are looking at.
+
+## When something goes wrong
+
+<img class="agent-float" src="/agents/idris-south-west.png" alt="" />
+
+If the file in effect cannot be read or is not valid JSON, the tab falls back — to your home file, and failing that to the built-in defaults — and tells you in one line which file broke and what you are looking at instead. The broken file is left exactly as it is, and the tab refuses edits until you fix it, so a fix you have not made yet is never overwritten.
+
+If only part of a file is damaged — one role, or one model entry — the rest opens and the line says how much was dropped.
+
+You can always open the file itself in an editor if you would rather fix it by hand. The tab reads the file again every time you open it, so hand edits and tab edits can take turns without fighting.

@@ -8,6 +8,9 @@ import {
 } from './api.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { projectFilesFor } from '../project/files.js';
+import { HARNESS_NAMES } from '../harness/index.js';
+import { modelsFor } from '../harness/models.js';
+import { EFFORT_LEVELS } from '../harness/effort-levels.js';
 import { isInsideRoot } from './files.js';
 import { readPluginSettings, savePluginSettings } from './settings.js';
 import { liveRecordingPaths } from './live-recordings.js';
@@ -30,6 +33,7 @@ export function fileCapabilities(input: {
 }): Pick<
   TabPluginServerCapabilities,
   'topicData' | 'tabActivity' | 'topicAction' | 'openClaimedFiles' | 'projectFileList'
+  | 'harnessLaunchCatalog'
   | 'openInEditor' | 'configuredViewer' | 'openExternally' | 'readSettings' | 'saveSettings'
   | 'isRecordingLive'
 > {
@@ -63,6 +67,16 @@ export function fileCapabilities(input: {
       if (!isEnabled()) return Promise.resolve({ root: '', paths: [] });
       return projectFilesFor(managers);
     },
+    // The harness launch vocabulary: the model catalog the launcher dialog reads, plus the effort
+    // levels. Built fresh per call from the already-loaded catalog (a project's
+    // `.janissary/harness-models.json` override is reflected), and empty while the plugin is
+    // disabled, the way `projectFileList` answers its empty values.
+    harnessLaunchCatalog: () => ({
+      models: isEnabled()
+        ? Object.fromEntries(HARNESS_NAMES.map((name) => [name, modelsFor(name)]))
+        : {},
+      efforts: [...EFFORT_LEVELS],
+    }),
     // Opens a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline —
     // so the tab is de-duplicated, the line is centered, and the file is served by the same
     // authenticated `/open/<id>` allow-list as any other editor open. Deliberately not

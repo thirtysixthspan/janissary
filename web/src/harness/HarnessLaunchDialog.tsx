@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import type { HarnessLaunchView } from '@shared/protocol';
+import { EFFORT_LEVELS } from '@shared/harness/effort-levels';
 import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
 import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-launch-command';
@@ -14,8 +15,6 @@ function initialFields(view: HarnessLaunchView): HarnessLaunchFields {
     model: '', effort: '',
   };
 }
-
-const EFFORT_LEVELS = ['low', 'medium', 'high', 'xhigh', 'max'];
 
 // Whether `name` accepts auto-approve (`-y`), read from the catalog the server delivers so the
 // dialog only ever builds a command the command parser will accept.

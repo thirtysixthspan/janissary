@@ -1,0 +1,60 @@
+/* Roles tab: the model catalog on the left, the role cards on the right. Both columns scroll on
+   their own; a card that can take a drop is outlined while a compatible drag hangs over it. */
+.roles-tab { flex: 1; min-height: 0; display: flex; outline: none; }
+.roles-tab button { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px; }
+.roles-tab button:hover { color: var(--fg); }
+
+.roles-catalog {
+  width: 220px; flex-shrink: 0; min-height: 0; overflow-y: auto;
+  border-right: 1px solid var(--border); padding: 8px 0;
+}
+.roles-column-title {
+  padding: 0 12px 6px; color: var(--muted); font-size: 12px;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.roles-catalog-group { margin-bottom: 8px; }
+.roles-catalog-harness { padding: 2px 12px; color: var(--fg); font-size: 12px; font-weight: 600; }
+.roles-catalog ul { list-style: none; margin: 0; padding: 0; }
+.roles-catalog li {
+  padding: 2px 12px; color: var(--muted); font-size: 12px; cursor: grab;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.roles-catalog li:hover { color: var(--fg); background: var(--faint); }
+
+.roles-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px; }
+.roles-source { color: var(--muted); font-size: 12px; padding-bottom: 6px; }
+.roles-problem { color: var(--warning, var(--muted)); font-size: 12px; padding-bottom: 8px; }
+.roles-empty { color: var(--muted); font-size: 12px; padding: 12px 0; }
+
+.roles-card { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; padding: 6px 8px; }
+.roles-drop { border-color: var(--fg); }
+.roles-card-head { display: flex; align-items: center; gap: 6px; }
+.roles-grip { color: var(--muted); cursor: grab; font-size: 11px; letter-spacing: -2px; user-select: none; }
+.roles-name, .roles-description {
+  background: transparent; border: none; color: var(--fg); font-size: 13px;
+  padding: 2px 4px; width: 100%;
+}
+.roles-name { font-weight: 600; }
+.roles-description { color: var(--muted); font-size: 12px; }
+.roles-name:focus, .roles-description:focus { outline: 1px solid var(--border); border-radius: 3px; }
+.roles-icon { flex-shrink: 0; padding: 0 4px; font-size: 12px; }
+
+.roles-entries { list-style: none; margin: 4px 0; padding: 0; }
+.roles-entry {
+  display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: 12px;
+  border-top: 1px solid var(--border);
+}
+.roles-entry-model { color: var(--fg); }
+.roles-entry-harness { color: var(--muted); }
+.roles-effort {
+  margin-left: auto; background: transparent; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 3px; font-size: 12px;
+}
+
+.roles-picker { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
+.roles-picker select {
+  background: transparent; color: var(--fg); border: 1px solid var(--border);
+  border-radius: 3px; font-size: 12px;
+}
+.roles-add-entry { font-size: 12px; padding: 2px 0; }
+.roles-add-role { display: block; margin: 4px auto; }

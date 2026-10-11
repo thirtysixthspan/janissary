@@ -21,7 +21,7 @@ The label is the user's own wording for the command, so two projects may call th
 
 An unrecognised icon is reported to the notifications feed after the launcher renders it. The launcher treats the report as handled only after the host accepts it; if reporting fails, it may try again when the launcher is activated later or its command list changes.
 
-When no configuration exists, the built-in list is Shell, Harness, File navigator, SQL, Notifications, Schedules, Sessions, Conversations, and Search, in that order. File navigator opens docked in the left sidebar at the project root. The SQL entry runs `sql` (see [[sql-database]]). Notifications, Schedules, and Sessions open docked on the right. Tasks and History are not included.
+When no configuration exists, the built-in list is Shell, Harness, File navigator, SQL, Notifications, Schedules, Sessions, Conversations, Roles, and Search, in that order. File navigator opens docked in the left sidebar at the project root. The SQL entry runs `sql` (see [[sql-database]]). Notifications, Schedules, and Sessions open docked on the right. Roles opens the roles tab in the center strip (see [[roles]]). Tasks and History are not included.
 
 Confirming the built-in **Harness** entry submits the bare `harness` command and opens the New harness launch dialog (see [[harness]]).
 

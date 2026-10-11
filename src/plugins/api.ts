@@ -300,6 +300,13 @@ export type TabPluginServerCapabilities = {
   // plugin scanning the repository and a user picking a file see the same set. The root is returned
   // because a relative path cannot be opened without it.
   projectFileList(): Promise<{ root: string; paths: string[] }>;
+  // The launch vocabulary a harness tab is opened with: every harness name mapped to its known
+  // model ids, and the effort levels any surface may offer. The models are the same catalog the
+  // New harness dialog reads and `harness --model` validates against, loaded once at startup, so a
+  // plugin configuring a launch sees exactly the set a launch would accept. A plugin reaches no
+  // harness subsystem of its own — the plugin import boundary closes that route — so a plugin that
+  // must show or validate harness/model choices asks here.
+  harnessLaunchCatalog(): { models: Record<string, string[]>; efforts: string[] };
   // Open a file in an editor tab with the cursor on `line`, through the ordinary `edit` pipeline: an
   // already-open file is focused rather than duplicated, the line is centered, and the file is
   // served by the authenticated `/open/<id>` allow-list like any other editor open. This is the

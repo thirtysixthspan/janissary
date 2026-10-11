@@ -35,6 +35,7 @@
 | `queue` | Queue a command for a shell or another tab supporting queues (`queue <tab> <command>`); bare `queue` opens the interactive queue picker (Ctrl+E) |
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
+| `roles` | Open the roles tab, where named roles map to an ordered list of harness/model/effort choices in `roles.json`; bare `roles` only |
 | `schedule` | Run a command later — once or on a recurring schedule |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
 | `search` | `search` opens project search; `search <phrase>` searches for a phrase. Use `search transcript <pattern>` to search this tab's transcript with a case-insensitive regex |

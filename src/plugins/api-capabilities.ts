@@ -19,6 +19,7 @@ export type TabPluginCapabilityName =
   | 'snapshotTab'
   | 'openClaimedFiles'
   | 'projectFileList'
+  | 'harnessLaunchCatalog'
   | 'openInEditor'
   | 'topicData'
   | 'topicAction'
@@ -61,6 +62,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   snapshotTab: true,
   openClaimedFiles: true,
   projectFileList: true,
+  harnessLaunchCatalog: true,
   openInEditor: true,
   topicData: true,
   topicAction: true,
