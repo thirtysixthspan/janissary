@@ -7,7 +7,10 @@ import type { TabView } from '@shared/protocol';
 import type { PluginTerminal, TabPluginClientCapabilities } from '../api';
 import { PluginChordProvider, createPluginChordRegistry, type PluginChordRegistry } from '../PluginChords';
 import { AppCommandBarProvider, AppCommandBarTabScope, useAppCommandLine } from '../../shared/command-bar/AppCommandBar';
-import { registerCommandLineInsertion, type CommandLineInsertion } from '../../shared/command-bar/app-command-bar-scope';
+import {
+  registerCommandLineInsertion, registerCommandLineReplacement,
+  type CommandLineInsertion, type CommandLineReplacement,
+} from '../../shared/command-bar/app-command-bar-scope';
 import { ShellTab } from './ShellTab';
 import { useSectionNav } from '../../useSectionNav';
 
@@ -194,6 +197,7 @@ type AppBarOptions = {
   onDeleteQueued?: () => void;
   queuedLines?: Record<string, string[]>;
   insertions?: Map<string, CommandLineInsertion>;
+  replacements?: Map<string, CommandLineReplacement>;
   onFocusTab?: (label: string | undefined) => void;
 };
 
@@ -240,6 +244,8 @@ function AppBar({ chords, label, options, openQuitConfirm, openers, children }: 
         queuedLinesOf: (tabLabel) => options.queuedLines?.[tabLabel],
         registerCommandLineInsertion: (tabLabel, handler) =>
           registerCommandLineInsertion(options.insertions ?? new Map(), tabLabel, handler),
+        registerCommandLineReplacement: (tabLabel, handler) =>
+          registerCommandLineReplacement(options.replacements ?? new Map(), tabLabel, handler),
       }}>
         <AppCommandBarTabScope label={label}>{children}</AppCommandBarTabScope>
       </AppCommandBarProvider>
@@ -288,6 +294,22 @@ function bar(): HTMLTextAreaElement {
 }
 
 describe('ShellTab', () => {
+  it('replaces its draft, focuses the bar, unregisters, and does not submit', () => {
+    const replacements = new Map<string, CommandLineReplacement>();
+    const { capabilities, unmount } = renderTab({ replacements });
+    const replacement = replacements.get('shell1');
+    expect(replacement).toBeDefined();
+
+    act(() => replacement?.('profile launch writing'));
+
+    expect(bar().value).toBe('profile launch writing');
+    expect(document.activeElement).toBe(bar());
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch', 'profile launch writing');
+
+    unmount();
+    expect(replacements.has('shell1')).toBe(false);
+  });
+
   it('reports its focused command bar to the application', () => {
     const onFocusTab = vi.fn();
     renderTab({ onFocusTab });

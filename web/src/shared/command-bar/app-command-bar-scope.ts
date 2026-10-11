@@ -1,5 +1,6 @@
 // A handler that splices picked text, such as a task, into one tab's command bar at its caret.
 export type CommandLineInsertion = (text: string) => void;
+export type CommandLineReplacement = (text: string) => void;
 
 // What the app shell provides once for every plugin body below it. It holds the application-wide
 // answers — which tab the queue popup is open over, each tab's own command queue — and is never handed
@@ -20,6 +21,7 @@ export type AppCommandBarState = {
   onDeleteQueued?: () => void;
   queuedLinesOf?: (label: string) => readonly string[] | undefined;
   registerCommandLineInsertion?: (label: string, handler: CommandLineInsertion) => () => void;
+  registerCommandLineReplacement?: (label: string, handler: CommandLineReplacement) => () => void;
 };
 
 // The one question a plugin tab's command bar asks the application before it offers a line onward:
@@ -45,6 +47,7 @@ export type AppCommandBar = {
   queuedLines: readonly string[];
   // Registers where a picked line lands in this tab's bar. Returns the matching unregister.
   registerCommandLineInsertion(handler: CommandLineInsertion): () => void;
+  registerCommandLineReplacement(handler: CommandLineReplacement): () => void;
 };
 
 const NO_LINES: readonly string[] = [];
@@ -59,6 +62,7 @@ export function scopeAppCommandBar(
   state: AppCommandBarState,
   label: string,
   registerCommandLineInsertion: AppCommandBar['registerCommandLineInsertion'],
+  registerCommandLineReplacement: AppCommandBar['registerCommandLineReplacement'],
   active = true,
 ): AppCommandBar {
   const ownsQueue = state.queueTab === label;
@@ -75,6 +79,20 @@ export function scopeAppCommandBar(
     onDeleteQueued: ownsQueue ? state.onDeleteQueued : undefined,
     queuedLines: state.queuedLinesOf?.(label) ?? NO_LINES,
     registerCommandLineInsertion,
+    registerCommandLineReplacement,
+  };
+}
+
+// Adds a whole-line replacement handler for one tab. Cleanup cannot unregister a newer handler
+// installed for the same label after this registration.
+export function registerCommandLineReplacement(
+  replacements: Map<string, CommandLineReplacement>,
+  label: string,
+  handler: CommandLineReplacement,
+): () => void {
+  replacements.set(label, handler);
+  return () => {
+    if (replacements.get(label) === handler) replacements.delete(label);
   };
 }
 

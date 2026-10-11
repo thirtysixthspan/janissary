@@ -4,17 +4,6 @@
 
 ## development
 
-* Complete the profile picker's migration to command bars owned by each tab so a selection replaces the originating bar's draft.
-
-Existing Debt: The profile picker still writes through a global recall ref that no component owns after command bars moved into plugins, while task and queue selections use bridges scoped to each tab. Severity: 5/10
-
-Existing Risk: 5/10 - Choosing a profile from a shell closes the picker without entering the launch command, forcing the user to type it manually and leaving future picker changes dependent on an obsolete ownership path.
-
-Proposal Risk: 2/10 - A command bar can disappear before selection, but its missing registration cannot redirect the chosen command into another tab.
-
-Proposal: Add a replacement registration scoped to each tab alongside caret insertion in `web/src/shared/command-bar/app-command-bar-scope.ts` and expose it additively through `web/src/shared/command-bar/AppCommandBar.tsx`. Own the replacement registry in `web/src/App.tsx`, assemble its registration callback in `web/src/useAppCommandBarState.ts`, and register a shell replacement handler in `web/src/plugins/shell/useApplicationBarEdits.ts` that replaces the draft and focuses that shell's input without submitting, using the existing handler identity cleanup protection. Pass the recorded picker owner through `web/src/pickers/usePickerOverlays.ts` and `web/src/pickers/usePopulatePickers.ts` to `web/src/pickers/useProfilePicker.ts`, and replace the unowned recall ref path in `web/src/pickers/populate-command-line.ts` while preserving harness PTY delivery; if an explicitly recorded owner has closed, do not fall back to the current tab. Remove the unused recall ref and its picker arguments. `web/src/pickers/useProfilePicker.test.ts` supplies an artificial recall callback, and `web/src/pickers/usePickerOverlays.test.tsx` covers task and queue ownership but not profile selection into a real bar; add cases for a current shell, a docked shell, and a closed owner, and extend `web/src/shared/command-bar/app-command-bar-scope.test.ts` and `web/src/plugins/shell/ShellTab.test.tsx` to cover replacement, focus, registration cleanup, and absence of submission. Preserve the selection behavior in `product/specs/profiles.md` and `product/specs/shell-tab.md`.
-
-
 * Invalidate pending directory reads when a watcher reports a change so older results cannot restore stale rows or details.
 
 Existing Debt: Directory watch invalidation clears completed cache entries without revoking the listing and stat reads already in flight for that directory. Severity: 5/10
