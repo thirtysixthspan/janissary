@@ -56,8 +56,9 @@ are not what the file literally holds.
 Each card carries the role's name, its description, and its entries in order. The name and
 description edit in place: the change is written when the field loses focus, Enter commits, and
 Escape reverts. Every entry row shows the model, the harness, an effort dropdown (`default` plus
-the levels above), and a remove control. **Add entry** opens a small picker — harness, model, and
-Add — so an entry can be added without a pointer.
+the levels above, and the entry's own stored effort as its own option when that value is outside
+them, so a hand-written effort never reads as unset), and a remove control. **Add entry** opens a
+small picker — harness, model, and Add — so an entry can be added without a pointer.
 
 ### Dragging
 
