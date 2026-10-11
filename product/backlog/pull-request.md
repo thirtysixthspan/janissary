@@ -35,17 +35,6 @@ Proposal Risk: 2/10 - A stale edit becomes a visible retry instead of changing a
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "reject stale positional roles entry mutations". Extend the index-based intent contracts and guards in src/plugins/roles/shared.ts with an expected ordered-entry snapshot or equivalent revision bound to the caller's displayed state, and populate it from web/src/plugins/roles/RoleCard.tsx and web/src/plugins/roles/roles-dnd.ts. Compare the precondition with the current roles read inside the queue in src/plugins/roles/activate.ts before remove-entry, move-entry, or set-entry-effort applies; reject mismatches with a clear retry message and republish current state without writing. Do not match only harness/model values, since a role may hold duplicate entries. Extend src/plugins/roles/activate.test.ts for two removals from one displayed snapshot, a reorder followed by an effort edit, duplicates, and two callers sharing a snapshot; verify that stale operations never mutate the wrong row. Update web/src/plugins/roles/RolesTab.test.tsx and web/src/plugins/roles/roles-dnd.test.tsx to pin the submitted preconditions and visible rejection. The existing rapid-edit test appends two named roles and therefore cannot catch shifted entry indices.
 
 
-* Deliver the plan's effort choice in the add-entry picker.
-
-Existing Issue: The settled design specifies a harness/model/effort picker, but the picker offers only harness and model and always adds an entry with default effort. Severity: 4/10
-
-Existing Risk: 3/10 - Adding a choice with its intended effort requires a second persisted edit after creation, leaving the keyboard workflow short of the agreed one-step configuration.
-
-Proposal Risk: 1/10 - The picker uses the existing effort vocabulary, with default omission and selected-value persistence directly visible in intent and round-trip tests.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1668 "add the planned effort choice to the roles entry picker". Add a picker effort field in web/src/plugins/roles/RoleCard.tsx using the efforts already supplied by the authoritative catalog, with a default option that omits effort and the fixed levels as explicit choices. Include a selected non-default effort in addPicked's add-entry payload, define its reset behavior when the picker opens or a harness changes, and retain the existing per-entry effort control. Extend web/src/plugins/roles/RolesTab.test.tsx for default and selected-effort submissions and src/plugins/roles/activate.test.ts for persistence through the existing add-entry handler. Update product/specs/roles.md and documentation/user-documentation/tab-types/roles.md to describe the completed picker, bringing their narrowed harness/model wording into agreement with the settled harness/model/effort decision in product/plans/complete/roles-tab.md.
-
-
 * Close the new payload guard's model-catalog type boundary before client rendering.
 
 Existing Issue: The roles payload predicate accepts any non-null object as the model catalog, including arrays and non-array or non-string model lists, while claiming those values are a record of string arrays. Severity: 4/10

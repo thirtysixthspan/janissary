@@ -58,7 +58,9 @@ description edit in place: the change is written when the field loses focus, Ent
 Escape reverts. Every entry row shows the model, the harness, an effort dropdown (`default` plus
 the levels above, and the entry's own stored effort as its own option when that value is outside
 them, so a hand-written effort never reads as unset), and a remove control. **Add entry** opens a
-small picker — harness, model, and Add — so an entry can be added without a pointer.
+small picker — harness, model, effort, and Add — so an entry can be added without a pointer, and the
+picker starts on `default` and returns there when the harness changes or the picker is reopened, so
+no entry carries an effort nobody chose for it.
 
 ### A description the tab did not write
 

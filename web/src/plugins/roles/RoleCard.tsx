@@ -7,6 +7,7 @@ import {
   allowDrop, dragEnd, dragEntry, dragRole, dropOnEntry, dropOnRole,
 } from './roles-dnd';
 import { useRoleDraft } from './useRoleDraft';
+import { EntryPicker } from './EntryPicker';
 
 type Properties = {
   role: Role;
@@ -27,8 +28,6 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
   const nameDraft = useRoleDraft(role.name);
   const descriptionDraft = useRoleDraft(role.description);
   const [picker, setPicker] = useState(false);
-  const [pickHarness, setPickHarness] = useState(Object.keys(models)[0] ?? '');
-  const [pickModel, setPickModel] = useState('');
   const [drop, setDrop] = useState(false);
 
   // A stored value that arrived while this card was holding a draft has already replaced that draft,
@@ -65,11 +64,11 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
     raise('describe-role', { name: role.name, description: change.text, expected: change.baseline });
   };
 
-  const modelOptions = models[pickHarness] ?? [];
-
-  const addPicked = () => {
-    if (!pickHarness || !pickModel) return;
-    raise('add-entry', { role: role.name, entry: { harness: pickHarness, model: pickModel } });
+  // The file stores no effort at all at the default, which is what an omitted key means in the format,
+  // so the field is absent rather than empty. A model-less selection never reaches here: the picker's
+  // own Add is disabled until one is chosen.
+  const addPicked = (harness: string, model: string, effort: string) => {
+    raise('add-entry', { role: role.name, entry: { harness, model, ...(effort && { effort }) } });
     setPicker(false);
   };
 
@@ -179,28 +178,13 @@ export function RoleCard({ role, index, efforts, models, capabilities, onRefusal
         })}
       </ul>
       {picker ? (
-        <div className="roles-picker">
-          <select
-            value={pickHarness}
-            aria-label="Harness for the new entry"
-            onChange={(event) => {
-              setPickHarness(event.target.value);
-              setPickModel('');
-            }}
-          >
-            {Object.keys(models).map((harness) => <option key={harness} value={harness}>{harness}</option>)}
-          </select>
-          <select
-            value={pickModel}
-            aria-label="Model for the new entry"
-            onChange={(event) => setPickModel(event.target.value)}
-          >
-            <option value="">model…</option>
-            {modelOptions.map((model) => <option key={model} value={model}>{model}</option>)}
-          </select>
-          <button type="button" onClick={addPicked} disabled={!pickModel}>Add</button>
-          <button type="button" onClick={() => setPicker(false)}>Cancel</button>
-        </div>
+        <EntryPicker
+          harnesses={Object.keys(models)}
+          models={models}
+          efforts={efforts}
+          onAdd={addPicked}
+          onCancel={() => setPicker(false)}
+        />
       ) : (
         <button type="button" className="roles-add-entry" onClick={() => setPicker(true)}>
           <FontAwesomeIcon icon={faPlus} /> Add entry

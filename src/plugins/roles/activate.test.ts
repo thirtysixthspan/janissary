@@ -137,6 +137,21 @@ it('adds an entry, sets and clears its effort, then moves and removes it', async
     expect(entryModels()).toEqual(['second']);
   });
 
+  it('stores the effort an entry was added with, and no effort key for one added at the default', async () => {
+    const { home, capabilities } = fixture();
+    const activation = activate(home);
+    const tab = payloadFor(home);
+    const stored = (): WrittenFile => JSON.parse(readFileSync(rolesPath(home), 'utf8')) as WrittenFile;
+
+    await send(activation, 'add-entry', { role: 'research', entry: { harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' } }, capabilities, tab);
+    await send(activation, 'add-entry', { role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna' } }, capabilities, tab);
+
+    expect(stored()['research'].entries).toStrictEqual([
+      { harness: 'codex', model: 'gpt-6-sol', effort: 'xhigh' },
+      { harness: 'codex', model: 'gpt-6-luna' },
+    ]);
+  });
+
   it('moves a role to a position and renames it in place', async () => {
     const { home, capabilities } = fixture();
     const activation = activate(home);

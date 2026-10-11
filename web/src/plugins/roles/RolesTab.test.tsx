@@ -219,7 +219,7 @@ describe('RolesTab', () => {
     expect(intent).toHaveBeenCalledWith('delete-role', { name: 'research' });
   });
 
-  it('adds an entry through the picker without a pointer drag', () => {
+  it('adds an entry through the picker without a pointer drag, at the default effort', () => {
     const { intent } = renderTab();
     const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
 
@@ -231,6 +231,37 @@ describe('RolesTab', () => {
     expect(intent).toHaveBeenCalledWith('add-entry', {
       role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna' },
     });
+  });
+
+  it('adds an entry through the picker with the effort it chose', () => {
+    const { intent } = renderTab();
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+
+    fireEvent.click(card.querySelector('.roles-add-entry') as HTMLElement);
+    fireEvent.change(screen.getByLabelText('Harness for the new entry'), { target: { value: 'codex' } });
+    fireEvent.change(screen.getByLabelText('Model for the new entry'), { target: { value: 'gpt-6-luna' } });
+    fireEvent.change(screen.getByLabelText('Effort for the new entry'), { target: { value: 'xhigh' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+
+    expect(intent).toHaveBeenCalledWith('add-entry', {
+      role: 'research', entry: { harness: 'codex', model: 'gpt-6-luna', effort: 'xhigh' },
+    });
+  });
+
+  it('returns the picker effort to the default on another harness and on a reopen', () => {
+    renderTab();
+    const card = screen.getByDisplayValue('research').closest('.roles-card') as HTMLElement;
+    const open = () => fireEvent.click(card.querySelector('.roles-add-entry') as HTMLElement);
+
+    open();
+    fireEvent.change(screen.getByLabelText('Effort for the new entry'), { target: { value: 'xhigh' } });
+    fireEvent.change(screen.getByLabelText('Harness for the new entry'), { target: { value: 'claude' } });
+    expect(screen.getByLabelText('Effort for the new entry')).toHaveValue('');
+
+    fireEvent.change(screen.getByLabelText('Model for the new entry'), { target: { value: 'claude-opus-5-5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    open();
+    expect(screen.getByLabelText('Effort for the new entry')).toHaveValue('');
   });
 
   it('adds a role from the inline name field, and Escape cancels it', async () => {
