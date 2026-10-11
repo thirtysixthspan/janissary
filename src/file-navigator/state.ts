@@ -21,7 +21,7 @@ export function freshFileNavigatorState(
 ): FilesTabState {
   return {
     root, filesystem, remote, ownerLabel,
-    expanded: new Set(), watchers: new Map(),
+    expanded: new Set(), watchers: new Map(), pendingWatchers: new Map(),
     listings: new Map(), listingLoads: new Map(), statLoads: new Map(), cacheGeneration: 0,
     undoStack: [], redoStack: [], gitStatuses: new Map(),
     details, stats: new Map(),
@@ -40,6 +40,7 @@ export type FilesTabState = {
   ownerLabel?: string;
   expanded: Set<string>;
   watchers: Map<string, WatchHandle>;
+  pendingWatchers: Map<string, symbol>;
   listings: Map<string, FileNavigatorEntry[]>;
   // Request identities let directory invalidation revoke one listing or stat row without changing
   // unrelated reads in flight. A completion may write or release a marker only while it owns it.

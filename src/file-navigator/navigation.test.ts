@@ -8,7 +8,7 @@ function remoteState(root: string): FilesTabState {
     remoteRoot: '/remote/workspace',
     filesystem: { readDirectory: () => [] } as unknown as FilesTabState['filesystem'],
     expanded: new Set(),
-    watchers: new Map(),
+    watchers: new Map(), pendingWatchers: new Map(),
     listings: new Map(),
     listingLoads: new Map(),
     statLoads: new Map(),

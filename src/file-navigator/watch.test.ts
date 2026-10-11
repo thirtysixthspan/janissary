@@ -1,11 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { unwatchDir, watchDir } from './watch.js';
+import { unwatchAllDirs, unwatchDir, watchDir } from './watch.js';
 import type { WatchHandle } from './filesystem-port.js';
 
 const handle = (): WatchHandle => ({ stop: vi.fn() });
 
 function stateFor(watch: ReturnType<typeof vi.fn>) {
-  return { root: '/ws', filesystem: { watch }, watchers: new Map<string, WatchHandle>() };
+  return {
+    root: '/ws', filesystem: { watch }, watchers: new Map<string, WatchHandle>(),
+    pendingWatchers: new Map<string, symbol>(),
+  };
 }
 
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); };
@@ -40,6 +43,19 @@ describe('watchDir', () => {
     expect(watch).toHaveBeenCalledOnce();
   });
 
+  it('deduplicates a pending acquisition for the same path', () => {
+    const { promise } = Promise.withResolvers<WatchHandle>();
+    const watch = vi.fn(() => promise);
+    const state = stateFor(watch);
+    const states = new Map([['files-1', state]]);
+
+    watchDir(states, 'files-1', '/ws/src', 'src', vi.fn());
+    watchDir(states, 'files-1', '/ws/src', 'src', vi.fn());
+
+    expect(watch).toHaveBeenCalledOnce();
+    expect(state.pendingWatchers.has('src')).toBe(true);
+  });
+
   // A remote watch resolves late, and the tab it was for may be gone by then: the handle belongs to
   // the state that is still there, or to nobody, in which case it is stopped rather than leaked.
   it('records a late handle against the state still holding the label', async () => {
@@ -69,6 +85,55 @@ describe('watchDir', () => {
     await flush();
 
     expect(late.stop).toHaveBeenCalledOnce();
+  });
+
+  it('stops a late handle after collapse revokes its pending acquisition', async () => {
+    const late = handle();
+    const { promise, resolve: land } = Promise.withResolvers<WatchHandle>();
+    const state = stateFor(vi.fn(() => promise));
+    const states = new Map([['files-1', state]]);
+    watchDir(states, 'files-1', '/ws/src', 'src', vi.fn());
+
+    unwatchDir(state, 'src');
+    land(late);
+    await flush();
+
+    expect(state.watchers.has('src')).toBe(false);
+    expect(state.pendingWatchers.has('src')).toBe(false);
+    expect(late.stop).toHaveBeenCalledOnce();
+  });
+
+  it.each(['old-first', 'new-first'])('keeps the new-root watcher when old and new requests settle %s', async (order) => {
+    const oldHandle = handle();
+    const newHandle = handle();
+    const oldRequest = Promise.withResolvers<WatchHandle>();
+    const newRequest = Promise.withResolvers<WatchHandle>();
+    const watch = vi.fn()
+      .mockReturnValueOnce(oldRequest.promise)
+      .mockReturnValueOnce(newRequest.promise);
+    const state = stateFor(watch);
+    const states = new Map([['files-1', state]]);
+
+    watchDir(states, 'files-1', '/ws', '', vi.fn());
+    unwatchDir(state, '');
+    state.root = '/new-root';
+    watchDir(states, 'files-1', '/new-root', '', vi.fn());
+
+    if (order === 'old-first') {
+      oldRequest.resolve(oldHandle);
+      await flush();
+      expect(state.pendingWatchers.has('')).toBe(true);
+      newRequest.resolve(newHandle);
+    } else {
+      newRequest.resolve(newHandle);
+      await flush();
+      oldRequest.resolve(oldHandle);
+    }
+    await flush();
+
+    expect(state.watchers.get('')).toBe(newHandle);
+    expect(oldHandle.stop).toHaveBeenCalledOnce();
+    expect(newHandle.stop).not.toHaveBeenCalled();
   });
 
   it('stops a late handle whose path was already claimed', async () => {
@@ -118,5 +183,20 @@ describe('unwatchDir', () => {
     const state = stateFor(vi.fn(() => handle()));
     expect(() => { unwatchDir(state, 'src'); }).not.toThrow();
     expect(state.watchers.size).toBe(0);
+  });
+});
+
+describe('unwatchAllDirs', () => {
+  it('revokes pending acquisitions and stops every resolved watcher', () => {
+    const started = handle();
+    const state = stateFor(vi.fn());
+    state.watchers.set('src', started);
+    state.pendingWatchers.set('docs', Symbol('docs'));
+
+    unwatchAllDirs(state);
+
+    expect(started.stop).toHaveBeenCalledOnce();
+    expect(state.watchers.size).toBe(0);
+    expect(state.pendingWatchers.size).toBe(0);
   });
 });

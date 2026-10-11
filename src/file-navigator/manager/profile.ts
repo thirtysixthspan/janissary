@@ -1,6 +1,7 @@
 import { stopPolling } from '../poll.js';
 import { clearFlashTimers } from './flash.js';
 import { forgetRemoteFilesOf } from '../remote/file-cache.js';
+import { unwatchAllDirs } from '../watch.js';
 import type { FileNavigatorDetail } from '../../tab/types.js';
 import type { FilesTabState } from '../state.js';
 
@@ -17,7 +18,7 @@ export function closeTabState(tabs: Map<string, FilesTabState>, label: string): 
   if (state.debounce) clearTimeout(state.debounce);
   clearFlashTimers(state);
   stopPolling(state);
-  for (const watcher of state.watchers.values()) watcher.stop();
+  unwatchAllDirs(state);
   forgetRemoteFilesOf(state.filesystem);
   state.filesystem.dispose();
   tabs.delete(label);

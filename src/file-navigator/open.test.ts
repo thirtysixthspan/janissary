@@ -129,7 +129,7 @@ describe('openOrRetarget', () => {
     const target = managers.tab.cwdOf('shell');
     tabs.push({ label: 'files-1' });
     port.states.set('files-1', {
-      root: '/old', expanded: new Set(), watchers: new Map(), listings: new Map(),
+      root: '/old', expanded: new Set(), watchers: new Map(), pendingWatchers: new Map(), listings: new Map(),
       listingLoads: new Map(), statLoads: new Map(), cacheGeneration: 0, undoStack: [], redoStack: [],
       details: 'name', stats: new Map(), filesystem: { dispose: vi.fn() },
     } as unknown as FilesTabState);
@@ -225,7 +225,7 @@ describe('openOrRetarget', () => {
     const remote = { host: 'devbox', address: 'devbox' };
     const { port, attach, release } = makeManagers({ source: { label: 'shell', remote }, existing: 'files-1' });
     port.states.set('files-1', {
-      root: '/old', ownerLabel: 'other', expanded: new Set(), watchers: new Map(), listings: new Map(),
+      root: '/old', ownerLabel: 'other', expanded: new Set(), watchers: new Map(), pendingWatchers: new Map(), listings: new Map(),
       listingLoads: new Map(), statLoads: new Map(), cacheGeneration: 0, undoStack: [], redoStack: [],
       details: 'name', stats: new Map(), remote: { host: 'other', address: 'other' },
       filesystem: { dispose: vi.fn() },
@@ -245,7 +245,7 @@ describe('openOrRetarget', () => {
     const remote = { host: 'devbox', address: 'devbox' };
     const { port, attach } = makeManagers({ source: { label: 'shell', remote }, existing: 'files-1', attach: false });
     port.states.set('files-1', {
-      root: '/kept', ownerLabel: 'other', expanded: new Set(), watchers: new Map(), listings: new Map(),
+      root: '/kept', ownerLabel: 'other', expanded: new Set(), watchers: new Map(), pendingWatchers: new Map(), listings: new Map(),
       listingLoads: new Map(), statLoads: new Map(), cacheGeneration: 0, undoStack: [], redoStack: [],
       details: 'name', stats: new Map(), remote: { host: 'other', address: 'other' },
       filesystem: { dispose: vi.fn() },

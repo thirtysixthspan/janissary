@@ -10,7 +10,7 @@ afterEach(() => {
 function stateFor(overrides: Partial<FilesTabState> = {}): FilesTabState {
   return {
     root: '/ws',
-    watchers: new Map(),
+    watchers: new Map(), pendingWatchers: new Map(),
     filesystem: { dispose: vi.fn() },
     ...overrides,
   } as unknown as FilesTabState;
