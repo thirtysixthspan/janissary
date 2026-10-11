@@ -538,6 +538,9 @@ path is resolved within that workspace; an escaping path is refused, including a
 a symlink outside the workspace. Remote file content travels to the local cache for ordinary
 openers, and editor saves travel back over the same channel.
 
+Each remote filesystem request must include the arguments required by its selected operation. A
+request with missing or malformed arguments is rejected before the operation accesses the workspace.
+
 Bare `files` from a remote shell or harness uses its remote cwd when that directory is inside the
 workspace, and the workspace root otherwise. During provisioning it reports
 `The remote workspace is not ready yet.` and opens nothing. Relative paths resolve against that

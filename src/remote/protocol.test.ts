@@ -3,13 +3,28 @@ import {
   REMOTE_PROTOCOL_VERSION, HANDSHAKE_SENTINEL, encodeFrame, decodeFrame, encodeHandshake,
   parseHandshake, heldBackLength,
 } from './protocol.js';
-import { CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES, type RemoteFrame } from './protocol-frames.js';
+import { CLIENT_FRAME_TYPES, SERVER_FRAME_TYPES, type ClientFrame, type RemoteFrame } from './protocol-frames.js';
 
 function roundTrip(frame: RemoteFrame): RemoteFrame | { error: string } {
   return decodeFrame(encodeFrame(frame));
 }
 
 describe('frame codec', () => {
+  it('ties filesystem request arguments to their operation', () => {
+    const request: ClientFrame = {
+      type: 'filesystem-request', session: 'files1', request: 'q1',
+      operation: 'read-directory', args: { path: 'src' },
+    };
+    expect(roundTrip(request)).toEqual(request);
+
+    // @ts-expect-error `read-directory` requires `path`; `paths` belongs to `stat`.
+    const mismatched: ClientFrame = {
+      type: 'filesystem-request', session: 'files1', request: 'q2',
+      operation: 'read-directory', args: { paths: ['src'] },
+    };
+    void mismatched;
+  });
+
   it.each([
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc' },
     { type: 'attach', session: '12345678-1234-1234-1234-123456789abc', restore: true },

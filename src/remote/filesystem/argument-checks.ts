@@ -1,4 +1,4 @@
-import type { RemoteFilesystemArguments } from '../protocol-frames.js';
+import type { RemoteFilesystemArgumentsByOperation } from '../protocol-frames.js';
 import type { HistoryStep } from '../../file-navigator/moves.js';
 
 // The value-shape predicates every filesystem operation's argument validator is built from, and the
@@ -48,11 +48,11 @@ export function historyPaths(steps: HistoryStep[]): string[] {
 
 // A conflict policy is optional on the wire, so it is spread in only when the client sent one —
 // writing `policy: undefined` would put a key on the decoded arguments the operation never carried.
-export function optionalPolicy(value: unknown): Pick<RemoteFilesystemArguments, 'policy'> {
-  return value === undefined ? {} : { policy: value as RemoteFilesystemArguments['policy'] };
+export function optionalPolicy(value: unknown): Pick<RemoteFilesystemArgumentsByOperation['paste'], 'policy'> {
+  return value === undefined ? {} : { policy: value as RemoteFilesystemArgumentsByOperation['paste']['policy'] };
 }
 
 // `git-commit`'s whole-tree-form root marker, optional for the same reason a conflict policy is.
-export function optionalRoot(value: unknown): Pick<RemoteFilesystemArguments, 'root'> {
-  return value === undefined ? {} : { root: value as RemoteFilesystemArguments['root'] };
+export function optionalRoot(value: unknown): Pick<RemoteFilesystemArgumentsByOperation['git-commit'], 'root'> {
+  return value === undefined ? {} : { root: value as RemoteFilesystemArgumentsByOperation['git-commit']['root'] };
 }

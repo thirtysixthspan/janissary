@@ -1,7 +1,7 @@
 import type { BulkConflictPolicy } from '../../protocol.js';
 import type { RemoteChannel } from '../../remote/channel/index.js';
 import type { NavigatorListener } from '../../remote/channel/types.js';
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol-frames.js';
+import type { RemoteFilesystemArguments, RemoteFilesystemOperation, RemoteFilesystemRequest } from '../../remote/protocol-frames.js';
 import { decodeFilesystemResult, type RemoteFilesystemOperationResult } from '../../remote/filesystem/operations.js';
 import type { DeleteManyResult, MoveManyResult } from '../batch.js';
 import type { FileOperationResult } from '../file-operation-result.js';
@@ -164,7 +164,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return (operation, args) => this.request(operation, args);
   }
 
-  private async request<K extends RemoteFilesystemOperation>(operation: K, args: RemoteFilesystemArguments): Promise<RemoteFilesystemOperationResult<K>> {
+  private async request<K extends RemoteFilesystemOperation>(operation: K, args: RemoteFilesystemArguments<K>): Promise<RemoteFilesystemOperationResult<K>> {
     try {
       await this.opened;
     } catch {
@@ -176,7 +176,7 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
       this.requests.add(request, { operation, args, resolve: (value) => {
         try { resolve(decodeFilesystemResult(operation, value)); } catch (error) { reject(error); }
       }, reject });
-      this.channel.send({ type: 'filesystem-request', session: this.session, request, operation, args });
+      this.channel.send({ type: 'filesystem-request', session: this.session, request, operation, args } as RemoteFilesystemRequest);
     });
   }
 

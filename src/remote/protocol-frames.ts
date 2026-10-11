@@ -2,6 +2,7 @@ import type { ProjectTokens } from '../project/tokens.js';
 import type { GitIdentity } from '../git/identity.js';
 import type { RootRefusal } from './root-refusal.js';
 import type { ResumeReset } from '../harness/auto-resume.js';
+import type { HistoryStep } from '../file-navigator/moves.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
 // wire *grammar* are two files: this one says what a frame may carry, `protocol.ts` says how one is
@@ -13,35 +14,54 @@ export type RemoteFilesystemOperation =
   | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay';
 
-export type RemoteFilesystemArguments = {
-  path?: string;
-  paths?: string[];
-  content?: string;
-  from?: string;
-  to?: string;
-  sources?: string[];
-  destination?: string;
-  policy?: 'overwrite-all' | 'skip-conflicts';
-  name?: string;
-  // The commit message the user approved in the navigator's own field, carried with `git-commit` so
-  // the far side never has to prompt for one mid-operation.
-  message?: string;
-  // `git-commit`'s whole-tree form (an empty `paths`) names the navigator root's workspace-relative
-  // prefix here, since the far side's single shared workspace root cannot otherwise tell one
-  // navigator's root from another's.
-  root?: string;
-  mode?: 'copy' | 'cut';
-  undoStack?: unknown[];
-  redoStack?: unknown[];
-  direction?: 'undo' | 'redo';
-  overwrite?: boolean;
-  skipConflicts?: boolean;
+export type RemoteFilesystemArgumentsByOperation = {
+  'read-directory': { path: string };
+  stat: { paths: string[] };
+  watch: { path: string };
+  unwatch: { path: string };
+  git: Record<string, never>;
+  'git-pull': Record<string, never>;
+  search: Record<string, never>;
+  'read-file': { path: string };
+  'write-file': { path: string; content: string };
+  move: { from: string; to: string; overwrite?: boolean };
+  'move-many': { sources: string[]; destination: string; policy?: 'overwrite-all' | 'skip-conflicts' };
+  delete: { path: string };
+  'delete-many': { paths: string[] };
+  rename: { path: string; name: string; overwrite?: boolean };
+  paste: { sources: string[]; destination: string; mode: 'copy' | 'cut'; policy?: 'overwrite-all' | 'skip-conflicts' };
+  'create-file': { destination: string };
+  'create-directory': { destination: string };
+  'git-commit': { message: string; paths: string[]; root?: string };
+  replay: {
+    undoStack: HistoryStep[]; redoStack: HistoryStep[]; direction: 'undo' | 'redo';
+    overwrite: boolean; skipConflicts: boolean;
+  };
 };
+
+export type RemoteFilesystemArguments<K extends RemoteFilesystemOperation = RemoteFilesystemOperation> =
+  RemoteFilesystemArgumentsByOperation[K];
+
+export type RemoteFilesystemOperationRequestFor<K extends RemoteFilesystemOperation> = {
+  operation: K; args: RemoteFilesystemArguments<K>;
+};
+
+export type RemoteFilesystemOperationRequest = {
+  [K in RemoteFilesystemOperation]: RemoteFilesystemOperationRequestFor<K>
+}[RemoteFilesystemOperation];
+
+export type RemoteFilesystemRequest<K extends RemoteFilesystemOperation = RemoteFilesystemOperation> = {
+  [P in K]: {
+    type: 'filesystem-request'; session: string; request: string;
+    operation: P; args: RemoteFilesystemArguments<P>;
+  }
+}[K];
 
 // Local → remote. One process family (spawn/input/resize/kill) backs remote harness tabs, remote
 // tabs' persistent shells, PTY takeover, and inline terminal cards alike; `provision` is the
 // only other thing the local side ever asks for.
 export type ClientFrame =
+  | RemoteFilesystemRequest
   // Ask to take over a session that outlived its transport. `session` is the id the handshake
   // announced when the peer was first created, and it is the only credential the far side checks:
   // `relayPeer` refuses any `attach` whose id does not match the peer it found. `origin` is the
@@ -110,10 +130,6 @@ export type ClientFrame =
   | { type: 'capture-request'; session: string; id: string; request: string; origin?: string }
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
-  | {
-    type: 'filesystem-request'; session: string; request: string;
-    operation: RemoteFilesystemOperation; args: RemoteFilesystemArguments;
-  }
   // The ACP family: a remote tab's ACP client is hosted by the far side, so what crosses here
   // is prompts and reply text, never JSON-RPC. The local side still chooses which agent and model
   // run, which is why the open frame names the command rather than the remote deciding for itself.

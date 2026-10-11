@@ -1,5 +1,6 @@
 import { isRecord, stringValue } from '../filesystem/argument-checks.js';
 import { isFilesystemOperation, operationDescriptor } from '../filesystem/operations.js';
+import type { RemoteFilesystemRequest } from '../protocol-frames.js';
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
 
 function decodeRequest(record: Record<string, unknown>): DecodeResult {
@@ -11,7 +12,7 @@ function decodeRequest(record: Record<string, unknown>): DecodeResult {
   return {
     type: 'filesystem-request', session: record.session, request: record.request, operation,
     args: descriptor.decode(record.args),
-  };
+  } as RemoteFilesystemRequest;
 }
 
 function decodeReply(record: Record<string, unknown>): DecodeResult {

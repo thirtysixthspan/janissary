@@ -1,6 +1,6 @@
 import type { FileSystemPort, GitMetadata } from '../../file-navigator/filesystem-port.js';
 import type { MaybePromise } from '../../maybe-promise.js';
-import type { RemoteFilesystemArguments } from '../protocol-frames.js';
+import type { RemoteFilesystemArgumentsByOperation, RemoteFilesystemOperation } from '../protocol-frames.js';
 
 export type OperationContext = {
   root: string;
@@ -9,10 +9,10 @@ export type OperationContext = {
   unwatch: (relPath: string) => Record<string, never>;
   git: () => Promise<GitMetadata>;
   readFile: (relPath: string) => Promise<{ content: string }>;
-  pasteSources: (args: RemoteFilesystemArguments) => string[];
+  pasteSources: (args: RemoteFilesystemArgumentsByOperation['paste']) => string[];
 };
 
-export type OperationDescriptor<A = RemoteFilesystemArguments, R = unknown> = {
+export type OperationDescriptor<A = RemoteFilesystemArgumentsByOperation[RemoteFilesystemOperation], R = unknown> = {
   valid: (args: Record<string, unknown>) => boolean;
   decode: (args: Record<string, unknown>) => A;
   paths: (args: A) => string[];
@@ -22,6 +22,10 @@ export type OperationDescriptor<A = RemoteFilesystemArguments, R = unknown> = {
   run: (context: OperationContext, args: A) => MaybePromise<R>;
 };
 
-export function descriptorFor<A, R>(descriptor: OperationDescriptor<A, R>): OperationDescriptor<A, R> {
-  return descriptor;
+export function descriptorFor<K extends RemoteFilesystemOperation>() {
+  return function <R>(
+    descriptor: OperationDescriptor<RemoteFilesystemArgumentsByOperation[K], R>,
+  ): OperationDescriptor<RemoteFilesystemArgumentsByOperation[K], R> {
+    return descriptor;
+  };
 }

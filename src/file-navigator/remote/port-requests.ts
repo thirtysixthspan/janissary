@@ -1,6 +1,9 @@
 import { refusalValueFor } from '../../remote/filesystem/refusal.js';
 import { decodeFilesystemResult, type RemoteFilesystemOperationResult } from '../../remote/filesystem/operations.js';
-import type { RemoteFilesystemArguments, RemoteFilesystemOperation } from '../../remote/protocol-frames.js';
+import type {
+  RemoteFilesystemArguments, RemoteFilesystemOperation, RemoteFilesystemOperationRequest,
+  RemoteFilesystemOperationRequestFor,
+} from '../../remote/protocol-frames.js';
 
 // One remote session's outstanding filesystem requests, and how each one is settled when no answer
 // is coming. Split out of `RemoteFileSystemPort` to keep it under the file-size limit — see
@@ -42,9 +45,12 @@ export function requestDeadline(operation: RemoteFilesystemOperation): number {
 
 // The operation and arguments travel with the callbacks because that is what naming a failure shape
 // requires; the request id alone cannot say which shape an unanswered request needs.
-type Pending = {
-  operation: RemoteFilesystemOperation;
-  args: RemoteFilesystemArguments;
+type Pending = RemoteFilesystemOperationRequest & {
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+};
+
+type PendingFor<K extends RemoteFilesystemOperation> = RemoteFilesystemOperationRequestFor<K> & {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
 };
@@ -56,10 +62,10 @@ export class RemotePortRequests {
 
   constructor(private deadline: (operation: RemoteFilesystemOperation) => number = requestDeadline) {}
 
-  add(request: string, pending: Pending): void {
+  add<K extends RemoteFilesystemOperation>(request: string, pending: PendingFor<K>): void {
     const timer = setTimeout(() => { this.expire(request); }, this.deadline(pending.operation));
     timer.unref?.();
-    this.waiting.set(request, { pending, timer });
+    this.waiting.set(request, { pending: pending as Pending, timer });
   }
 
   // A reply arrived. `undefined` error means success; anything else is a far-side failure, which for
@@ -101,15 +107,15 @@ export class RemotePortRequests {
 // return value rather than a callback: a value-returning operation gets its report, and the rest
 // throw, which is what their half of the contract says.
 export function unavailableResult<K extends RemoteFilesystemOperation>(
-  operation: K, args: RemoteFilesystemArguments, reason: string,
+  operation: K, args: RemoteFilesystemArguments<K>, reason: string,
 ): RemoteFilesystemOperationResult<K> {
-  const refusal = refusalValueFor(operation, args, reason);
+  const refusal = refusalValueFor({ operation, args }, reason);
   if (!refusal.classified) throw new Error(reason);
   return decodeFilesystemResult(operation, refusal.value);
 }
 
 function settle(pending: Pending, reason: string): void {
-  const refusal = refusalValueFor(pending.operation, pending.args, reason);
+  const refusal = refusalValueFor(pending, reason);
   if (refusal.classified) {
     try { pending.resolve(decodeFilesystemResult(pending.operation, refusal.value)); }
     catch (error) { pending.reject(error instanceof Error ? error : new Error(String(error))); }

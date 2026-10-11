@@ -12,7 +12,7 @@ import { refusalFor, refusedPaths } from './filesystem/refusal.js';
 import { operationDescriptor } from './filesystem/operations.js';
 import type { OperationContext } from './filesystem/operation-types.js';
 import { OUTSIDE_ROOT_REASON } from '../file-navigator/file-operation-result.js';
-import type { ClientFrame, RemoteFilesystemArguments, ServerFrame } from './protocol-frames.js';
+import type { ClientFrame, RemoteFilesystemArgumentsByOperation, ServerFrame } from './protocol-frames.js';
 
 type RequestFrame = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -111,7 +111,7 @@ export class RemoteFileNavigators {
     return { content: Buffer.from(content).toString('base64') };
   }
 
-  private pasteSources(args: RemoteFilesystemArguments): string[] {
+  private pasteSources(args: RemoteFilesystemArgumentsByOperation['paste']): string[] {
     return (args.sources ?? []).map((source) => {
       const relative = path.isAbsolute(source) ? path.relative(this.root, source) : source;
       const absolute = containedPath(this.root, relative);
