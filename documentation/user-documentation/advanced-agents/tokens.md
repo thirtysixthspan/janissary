@@ -77,7 +77,7 @@ Anthropic and OpenAI API keys have no token file. Set the provider's own variabl
 | OpenAI | `OPENAI_API_KEY` |
 | Google | `.janissary/gemini-token`, or `GOOGLE_GENERATIVE_AI_API_KEY` |
 
-For ChatGPT subscription authentication, sign in with Codex on the machine running Janissary before starting the app. Janissary reads that saved login at startup and gives each workspace a private OpenCode OAuth copy outside the git clone. OpenCode can refresh its copy, which lasts until the workspace closes; your saved Codex login is never overwritten. Missing or invalid saved credentials leave API-key authentication unchanged. Remote workspaces use the remote machine's saved Codex login; your local ChatGPT login is not forwarded.
+For ChatGPT subscription authentication, sign in with Codex on the machine running Janissary before starting the app. Janissary reads that saved login at startup and gives each workspace a private OpenCode OAuth copy outside the git clone before its first process starts. OpenCode can refresh its copy, which lasts until the workspace closes; your saved Codex login is never overwritten. Later launches preserve the copy and do not re-create it if you remove it. Missing or invalid saved credentials leave API-key authentication unchanged. Remote workspaces use the remote machine's saved Codex login; your local ChatGPT login is not forwarded.
 
 Google is the one to watch if you export the key yourself: `GOOGLE_API_KEY` and `GEMINI_API_KEY` are enough for opencode to list the provider as configured, but a request reads `GOOGLE_GENERATIVE_AI_API_KEY` and fails saying it's missing. Export that one, or use the token file, which sets both.
 

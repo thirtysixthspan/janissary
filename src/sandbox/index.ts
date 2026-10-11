@@ -203,7 +203,7 @@ export function sandboxSpawn(
 
   scrubbed.JANISSARY_NODE = process.execPath;
   scrubbed[JANISSARY_HOME_ENV] = janissaryRoot();
-  Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}));
+  Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}, dir));
 
   const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [

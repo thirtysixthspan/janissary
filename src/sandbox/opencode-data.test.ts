@@ -5,6 +5,7 @@ import { loadConfig } from '../config.js';
 import { getOpencodeOauth, loadOpencodeOauth } from '../project/opencode-oauth.js';
 import { loadProjectTokens } from '../project/tokens.js';
 import { initWorkspaceDir, removeWorkspace } from '../workspace/index.js';
+import { createWorkspaceScratch } from '../workspace/scratch.js';
 import { sandboxAvailable, sandboxSpawn } from './index.js';
 import { prepareOpencodeDataHome, workspaceOpencodeDataHome } from './opencode-data.js';
 
@@ -48,6 +49,7 @@ function configure(isolation: boolean): void {
 describe('OpenCode workspace OAuth', () => {
   it.each([false, true])('seeds private auth and redirects launches with isolation %s', (isolation) => {
     configure(isolation);
+    createWorkspaceScratch(workspaceDir);
     const result = sandboxSpawn({ workspaceDir, tokens: { opencode: 'test-key' } }, 'opencode', [], { PATH: '/usr/bin' });
     expect(result.command).toBe(isolation && sandboxAvailable() ? 'sandbox-exec' : 'opencode');
     expect(result.env.XDG_DATA_HOME).toBe(dataHome);
@@ -61,6 +63,7 @@ describe('OpenCode workspace OAuth', () => {
 
   it('preserves refreshed private credentials across later launches and credential reloads', () => {
     configure(false);
+    createWorkspaceScratch(workspaceDir);
     sandboxSpawn({ workspaceDir }, 'opencode', []);
     const refreshed = JSON.stringify({ openai: { ...getOpencodeOauth(), refresh: 'refreshed-token' } });
     writeFileSync(file, refreshed);
@@ -94,14 +97,15 @@ describe('OpenCode workspace OAuth', () => {
   });
 
   it('gives separate workspaces separate credential copies', () => {
-    prepareOpencodeDataHome(`${workspaceDir}.tmp`);
+    createWorkspaceScratch(workspaceDir);
+    mkdirSync(path.join(root, 'second.tmp'));
     const second = prepareOpencodeDataHome(path.join(root, 'second.tmp'));
     expect(second).not.toBe(dataHome);
     expect(JSON.parse(readFileSync(path.join(second!, 'opencode', 'auth.json'), 'utf8'))).toEqual({ openai: getOpencodeOauth() });
   });
 
   it('removes the private credentials with the workspace temporary directory', () => {
-    prepareOpencodeDataHome(`${workspaceDir}.tmp`);
+    createWorkspaceScratch(workspaceDir);
     initWorkspaceDir(root, path.join(home, '.claude.json'));
     removeWorkspace(workspaceDir);
     expect(existsSync(file)).toBe(false);

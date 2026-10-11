@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close the security gap that lets workspace-controlled symlinks redirect application-side OAuth writes outside the scratch directory.
-
-Existing Issue: OAuth provisioning follows intermediate directory symlinks in the workspace-writable temporary tree, so a running workspace can remove its private auth file, replace its OpenCode directory with a symlink to a sandbox-denied host directory, and cause the application's next workspace spawn to create an auth file there. Severity: 8/10
-
-Existing Risk: 8/10 - A confined process uses the unconfined application's cached credentials and filesystem authority to create an OAuth file outside its allowed workspace and scratch paths.
-
-Proposal Risk: 3/10 - Initial credential provisioning still writes a secret to disk, and a missed ancestor swap would reopen the write boundary, so containment and lifecycle tests must cover the trusted root as well as the final file.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1671 "prevent workspace symlinks from redirecting privileged OAuth provisioning". In src/sandbox/opencode-data.ts, src/sandbox/environment.ts, and src/sandbox/index.ts, retain the intended workspace scratch path rather than treating a symlink's resolved target as a newly trusted root; reject symlinked roots, intermediate credential directories, and existing auth files that resolve outside that root. Exclusive creation with flag wx protects the final filename but does not protect intermediate directories. Establish and record the initial seed through the workspace owner before untrusted children run, using src/workspace/index.ts and src/workspace/manager.ts as the lifecycle boundary, so later spawns preserve refreshed credentials without re-seeding after a child deletes or redirects the file. Ensure the write strategy cannot follow a substituted ancestor between validation and creation, and make workspaceOpencodeDataHome refuse unsafe redirected paths too. Add regression fixtures wholly inside the project that represent a workspace scratch tree and a separate host directory, replace each credential-path component with a symlink, and verify neither seeding nor a later spawn creates or modifies a file in the separate directory. Retain the existing refreshed-token, separate-workspace, browser-exclusion, and cleanup cases in src/sandbox/opencode-data.test.ts; ordinary credential tests do not currently cover this boundary. Verify through the diff-scoped checks when implementing the finding without widening sandbox permissions.
-
-
 * Handle OAuth staging failures without preventing unrelated workspace processes from launching.
 
 Existing Issue: Directory creation and credential writes can throw through workspaceEnv into every workspace spawn when the optional OpenCode data directory is unwritable or malformed, including launches of shells and other harnesses that do not need ChatGPT OAuth. Severity: 5/10

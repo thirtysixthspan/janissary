@@ -74,7 +74,7 @@ carve-in allows → secret denies last (so a secret path stays denied even insid
   `.janissary/opencode-token` (see [[workspaced-agent]]). The write deny exists for the same entry:
   with the read reporting `ENOENT`, a process that decided to write the file would see no
   credentials and overwrite the real ones on the host, so denying the write turns a silent clobber
-  into an ordinary failure. The ChatGPT OAuth bridge supplies only the host's saved Codex login through a workspace-private authentication file, without granting access to the host's OpenCode credential store. Other opencode providers configured by
+  into an ordinary failure. The ChatGPT OAuth bridge supplies only the host's saved Codex login through a workspace-private authentication file, without granting access to the host's OpenCode credential store. The copy is created before workspace processes start; later launches perform read-only lookup and reject symbolic links rather than copying credentials again. Other opencode providers configured by
   `opencode auth login` rather than by an environment variable stop working inside a workspace, and
   `.janissary/opencode-token` does not substitute for it — that file supplies `OPENCODE_API_KEY`,
   which is what the OpenCode Zen and OpenCode Go providers read and nothing else. Every other
