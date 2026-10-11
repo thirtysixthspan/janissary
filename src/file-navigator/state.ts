@@ -22,7 +22,7 @@ export function freshFileNavigatorState(
   return {
     root, filesystem, remote, ownerLabel,
     expanded: new Set(), watchers: new Map(),
-    listings: new Map(), listingLoads: new Set(), statLoads: new Set(), cacheGeneration: 0,
+    listings: new Map(), listingLoads: new Map(), statLoads: new Map(), cacheGeneration: 0,
     undoStack: [], redoStack: [], gitStatuses: new Map(),
     details, stats: new Map(),
   };
@@ -41,8 +41,10 @@ export type FilesTabState = {
   expanded: Set<string>;
   watchers: Map<string, WatchHandle>;
   listings: Map<string, FileNavigatorEntry[]>;
-  listingLoads: Set<string>;
-  statLoads: Set<string>;
+  // Request identities let directory invalidation revoke one listing or stat row without changing
+  // unrelated reads in flight. A completion may write or release a marker only while it owns it.
+  listingLoads: Map<string, symbol>;
+  statLoads: Map<string, symbol>;
   // Bumped every time the whole cache is dropped — a pull, a reroot, a retarget. An asynchronous
   // read captures it before it starts, so on resolution it can tell whether the cache it was
   // started for is still the current one; a read from an earlier generation is discarded rather

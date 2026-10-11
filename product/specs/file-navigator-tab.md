@@ -236,7 +236,10 @@ is renamed — the tree updates within about a second (changes are debounced so 
 filesystem activity, like a `git checkout`, coalesces into a single refresh). If an expanded
 directory is deleted, it collapses automatically and its watcher stops; a tree with a broken
 watcher (permission denied, exotic filesystem, file-descriptor limits) keeps working — it simply
-stops refreshing automatically and can be refreshed manually by collapsing and re-expanding.
+stops refreshing automatically and can be refreshed manually by collapsing and re-expanding. A
+watcher event invalidates reads already in flight for that directory, so an older listing or detail
+result cannot restore stale rows after the refresh begins; results for unchanged directories remain
+usable.
 
 ### Mouse interactions
 

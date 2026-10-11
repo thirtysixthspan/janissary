@@ -8,8 +8,15 @@ import type { RowStat } from './stats.js';
 // resolver here, so a case can settle one at the exact moment it wants to. This is the shape a
 // remote tree has — the local port answers synchronously and can never be caught mid-read.
 
-type ParkedListing = { relPath: string; resolve: (entries: FileNavigatorEntry[]) => void };
-type ParkedStats = { resolve: (stats: Record<string, RowStat | null>) => void };
+type ParkedListing = {
+  relPath: string;
+  resolve: (entries: FileNavigatorEntry[]) => void;
+  reject: (error: Error) => void;
+};
+type ParkedStats = {
+  paths: string[];
+  resolve: (stats: Record<string, RowStat | null>) => void;
+};
 
 function makeAsyncState(expanded: string[] = ['sub'], details: 'name' | 'size' = 'name'): {
   state: FilesTabState; listingReads: ParkedListing[]; statReads: ParkedStats[];
@@ -20,15 +27,15 @@ function makeAsyncState(expanded: string[] = ['sub'], details: 'name' | 'size' =
     root: '/remote/ws',
     filesystem: {
       readDirectory: (_root: string, relPath: string) =>
-        new Promise<FileNavigatorEntry[]>((resolve) => { listingReads.push({ relPath, resolve }); }),
-      statRows: () =>
-        new Promise<Record<string, RowStat | null>>((resolve) => { statReads.push({ resolve }); }),
+        new Promise<FileNavigatorEntry[]>((resolve, reject) => { listingReads.push({ relPath, resolve, reject }); }),
+      statRows: (_root: string, paths: string[]) =>
+        new Promise<Record<string, RowStat | null>>((resolve) => { statReads.push({ paths, resolve }); }),
     },
     expanded: new Set<string>(expanded),
     watchers: new Map(),
     listings: new Map<string, FileNavigatorEntry[]>(),
-    listingLoads: new Set<string>(),
-    statLoads: new Set<string>(),
+    listingLoads: new Map<string, symbol>(),
+    statLoads: new Map<string, symbol>(),
     cacheGeneration: 0,
     undoStack: [],
     redoStack: [],
@@ -49,8 +56,8 @@ describe('clearFilesystemCache', () => {
     const { state } = makeAsyncState();
     state.listings.set('', [{ name: 'sub', dir: true }]);
     state.stats.set('sub', null);
-    state.listingLoads.add('sub');
-    state.statLoads.add('sub');
+    state.listingLoads.set('sub', Symbol('sub'));
+    state.statLoads.set('sub', Symbol('sub'));
 
     clearFilesystemCache(state);
 
@@ -176,8 +183,8 @@ function makeSyncState(entries: FileNavigatorEntry[], stats: Record<string, RowS
     expanded: new Set<string>(),
     watchers: new Map(),
     listings: new Map<string, FileNavigatorEntry[]>(),
-    listingLoads: new Set<string>(),
-    statLoads: new Set<string>(),
+    listingLoads: new Map<string, symbol>(),
+    statLoads: new Map<string, symbol>(),
     cacheGeneration: 0,
     undoStack: [],
     redoStack: [],
@@ -277,7 +284,8 @@ describe('buildCachedRows reading in flight', () => {
     expect(state.stats.has('a.txt')).toBe(false);
     await settle();
 
-    const retried = vi.fn(() => new Promise<Record<string, RowStat | null>>((resolve) => { statReads.push({ resolve }); }));
+    const retried = vi.fn((_root: string, paths: string[]) =>
+      new Promise<Record<string, RowStat | null>>((resolve) => { statReads.push({ paths, resolve }); }));
     state.filesystem.statRows = retried;
     buildCachedRows(state, onReady);
     expect(retried).toHaveBeenCalledWith('/remote/ws', ['a.txt']);
@@ -378,6 +386,89 @@ describe('a read that fails at the current generation', () => {
 describe('invalidateDirectory', () => {
   const stat = { size: 1, modified: 2, mode: 33_188 };
 
+  it.each(['old-first', 'new-first'])('keeps the replacement listing when reads settle %s', async (order) => {
+    const { state, listingReads } = makeAsyncState([]);
+    const onReady = vi.fn();
+    buildCachedRows(state, onReady);
+    invalidateDirectory(state, '');
+    buildCachedRows(state, onReady);
+    expect(listingReads).toHaveLength(2);
+
+    const oldEntries = [{ name: 'old.txt', dir: false }];
+    const newEntries = [{ name: 'new.txt', dir: false }];
+    if (order === 'old-first') {
+      listingReads[0].resolve(oldEntries);
+      await settle();
+      expect(state.listingLoads.get('')).toBeDefined();
+      listingReads[1].resolve(newEntries);
+    } else {
+      listingReads[1].resolve(newEntries);
+      await settle();
+      listingReads[0].resolve(oldEntries);
+    }
+    await settle();
+
+    expect(state.listings.get('')).toEqual(newEntries);
+    expect(state.listingLoads.has('')).toBe(false);
+  });
+
+  it('does not let an invalidated listing rejection remove the replacement marker', async () => {
+    const { state, listingReads } = makeAsyncState([]);
+    const onReady = vi.fn();
+    buildCachedRows(state, onReady);
+    invalidateDirectory(state, '');
+    buildCachedRows(state, onReady);
+
+    listingReads[0].reject(new Error('old request failed'));
+    await settle();
+    expect(state.listingLoads.has('')).toBe(true);
+
+    const fresh = [{ name: 'fresh.txt', dir: false }];
+    listingReads[1].resolve(fresh);
+    await settle();
+    expect(state.listings.get('')).toEqual(fresh);
+  });
+
+  it.each(['old-first', 'new-first'])('keeps current rows from a cross-directory stat batch when reads settle %s', async (order) => {
+    const { state, statReads, listingReads } = makeAsyncState(['src', 'docs'], 'size');
+    state.listings.set('', [{ name: 'src', dir: true }, { name: 'docs', dir: true }]);
+    state.listings.set('src', [{ name: 'a.ts', dir: false }]);
+    state.listings.set('docs', [{ name: 'b.md', dir: false }]);
+    const onReady = vi.fn();
+    buildCachedRows(state, onReady);
+    expect(statReads[0].paths).toEqual(['src', 'src/a.ts', 'docs', 'docs/b.md']);
+
+    invalidateDirectory(state, 'src');
+    buildCachedRows(state, onReady);
+    expect(listingReads).toHaveLength(1);
+    listingReads[0].resolve([{ name: 'a.ts', dir: false }]);
+    await settle();
+    buildCachedRows(state, onReady);
+    expect(statReads).toHaveLength(2);
+    expect(statReads[1].paths).toEqual(['src/a.ts']);
+
+    const oldStats = {
+      'src/a.ts': { size: 1, modified: 1, mode: 33_188 },
+      'docs/b.md': { size: 2, modified: 2, mode: 33_188 },
+    };
+    const freshStats = { 'src/a.ts': { size: 3, modified: 3, mode: 33_188 } };
+    if (order === 'old-first') {
+      statReads[0].resolve(oldStats);
+      await settle();
+      expect(state.stats.get('docs/b.md')).toEqual(oldStats['docs/b.md']);
+      expect(state.stats.has('src/a.ts')).toBe(false);
+      statReads[1].resolve(freshStats);
+    } else {
+      statReads[1].resolve(freshStats);
+      await settle();
+      statReads[0].resolve(oldStats);
+    }
+    await settle();
+
+    expect(state.stats.get('src/a.ts')).toEqual(freshStats['src/a.ts']);
+    expect(state.stats.get('docs/b.md')).toEqual(oldStats['docs/b.md']);
+  });
+
   it('drops the directory listing and the stats of the rows directly inside it', () => {
     const { state } = makeAsyncState();
     state.listings.set('src', [{ name: 'a.ts', dir: false }]);
@@ -393,6 +484,25 @@ describe('invalidateDirectory', () => {
     // the nested one has its own.
     expect(state.stats.has('src/deep/b.ts')).toBe(true);
     expect(state.stats.has('docs/c.md')).toBe(true);
+  });
+
+  it('revokes only the changed directory listing and direct-child stat requests', () => {
+    const { state } = makeAsyncState();
+    const sourceListing = Symbol('src listing');
+    const docsListing = Symbol('docs listing');
+    const sourceStat = Symbol('src stat');
+    const docsStat = Symbol('docs stat');
+    state.listingLoads.set('src', sourceListing);
+    state.listingLoads.set('docs', docsListing);
+    state.statLoads.set('src/a.ts', sourceStat);
+    state.statLoads.set('docs/b.md', docsStat);
+
+    invalidateDirectory(state, 'src');
+
+    expect(state.listingLoads.has('src')).toBe(false);
+    expect(state.listingLoads.get('docs')).toBe(docsListing);
+    expect(state.statLoads.has('src/a.ts')).toBe(false);
+    expect(state.statLoads.get('docs/b.md')).toBe(docsStat);
   });
 
   it('treats the tree root as the directory holding every top-level row', () => {

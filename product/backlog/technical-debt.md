@@ -4,17 +4,6 @@
 
 ## development
 
-* Invalidate pending directory reads when a watcher reports a change so older results cannot restore stale rows or details.
-
-Existing Debt: Directory watch invalidation clears completed cache entries without revoking the listing and stat reads already in flight for that directory. Severity: 5/10
-
-Existing Risk: 5/10 - A watch event during a remote read can be overwritten by that read's older result, leaving file names or details stale until another filesystem event or full refresh.
-
-Proposal Risk: 2/10 - Filesystem watchers can still miss events, but reads started before an observed change cannot repopulate the invalidated directory's cache.
-
-Proposal: In `src/file-navigator/filesystem-cache.ts`, extend the validity checks used by `listingFor` and `fillStats` to include a directory revision or request identity that `invalidateDirectory` changes, rather than relying only on the global `cacheGeneration` bumped by `clearFilesystemCache`. Store the necessary state for each directory or request in `src/file-navigator/state.ts` and initialize it in `freshFileNavigatorState`. Invalidation must release the affected pending markers so a fresh read can start, and an older completion must neither cache its result nor remove the replacement read's marker; for stat batches spanning directories, check validity per row so unrelated results remain usable. `WatchedFilesTabs.scheduleRebuild` in `src/file-navigator/watched-tabs.ts` is the watcher caller and should continue invalidating only the changed directory. `src/file-navigator/filesystem-cache.test.ts` covers pending reads across full-cache clears, but directory invalidation cases only use completed data; add deferred listing and cases for stat batches spanning directories where invalidation happens before completion, including both completion orders and rejected older reads. Preserve unrelated directory caches, expanded-state pruning, and the full refresh behavior exercised by `src/file-navigator/pull-refresh.test.ts`.
-
-
 * Track pending file navigator watches as revocable acquisitions so collapse and root changes cannot install obsolete watchers.
 
 Existing Debt: File navigator watcher ownership begins only after its handle resolves, so an unwatch operation cannot revoke a pending acquisition and the guard for late results does not distinguish roots on the same state object. Severity: 5/10
