@@ -24,7 +24,16 @@ function makePayload(overrides: Partial<RolesPayload> = {}): RolesPayload {
 }
 
 function renderTab(payload: RolesPayload = makePayload()) {
-  const intent = vi.fn<(name: string, value: unknown) => Promise<unknown>>(async () => null);
+  const refused = new Map<string, string>();
+  const spent = new Set<string>();
+  const intent = vi.fn<(name: string, value: unknown) => Promise<unknown>>(async (name) => {
+    const refusal = refused.get(name);
+    if (refusal !== undefined && !spent.has(name)) {
+      spent.add(name);
+      throw new Error(refusal);
+    }
+    return null;
+  });
   const capabilities = {
     resourceUrl: (reference: string) => reference,
     intent: async <Result,>(name: string, value: unknown) => intent(name, value) as Promise<Result>,
@@ -36,7 +45,7 @@ function renderTab(payload: RolesPayload = makePayload()) {
     reportFailure: vi.fn(),
   } as unknown as TabPluginClientCapabilities;
   const rendered = render(<RolesTab payload={payload} capabilities={capabilities} />);
-  return { ...rendered, intent };
+  return { ...rendered, intent, refuse: (name: string, message: string) => refused.set(name, message) };
 }
 
 describe('RolesTab', () => {
@@ -164,5 +173,58 @@ describe('RolesTab', () => {
     fireEvent.drop(catalog, { dataTransfer: { effectAllowed: '', dropEffect: '' } });
 
     expect(intent).not.toHaveBeenCalled();
+  });
+
+  describe('showing a refusal', () => {
+    it('renders the message a rejected rename, add, and write each carry', async () => {
+      const { refuse } = renderTab();
+      refuse('rename-role', 'A role named "code review" already exists.');
+      const name = screen.getByDisplayValue('research');
+
+      fireEvent.change(name, { target: { value: 'code review' } });
+      fireEvent.blur(name);
+
+      expect(await screen.findByText('A role named "code review" already exists.')).toHaveClass('roles-refusal');
+
+      refuse('add-role', 'No role named "review".');
+      fireEvent.click(screen.getByRole('button', { name: 'Add role' }));
+      const added = screen.getByLabelText('New role name');
+      fireEvent.change(added, { target: { value: 'review' } });
+      fireEvent.blur(added);
+
+      expect(await screen.findByText('No role named "review".')).toHaveClass('roles-refusal');
+
+      refuse('remove-entry', 'Could not write roles.json at /home/me/.janissary/roles.json.');
+      fireEvent.click(screen.getByTitle('Remove gpt-6-sol'));
+
+      expect(await screen.findByText(/Could not write roles.json/)).toHaveClass('roles-refusal');
+    });
+
+    it('clears the refusal once an edit succeeds', async () => {
+      const { refuse } = renderTab();
+      refuse('rename-role', 'A role named "code review" already exists.');
+      const name = screen.getByDisplayValue('research');
+      fireEvent.change(name, { target: { value: 'code review' } });
+      fireEvent.blur(name);
+      expect(await screen.findByText(/already exists\./)).toBeInTheDocument();
+
+      const next = screen.getByDisplayValue('code review');
+      fireEvent.change(next, { target: { value: 'review' } });
+      fireEvent.blur(next);
+
+      await vi.waitFor(() => expect(document.querySelector('.roles-refusal')).toBeNull());
+    });
+
+    it('keeps the payload problem line and a refusal as separate lines', async () => {
+      const { refuse } = renderTab(makePayload({
+        problem: 'roles.json dropped 1 malformed role or entry at /home/me/.janissary/roles.json — showing the rest of this file.',
+      }));
+      refuse('delete-role', 'No role named "research".');
+
+      fireEvent.click(screen.getByTitle('Delete role research'));
+
+      expect(await screen.findByText('No role named "research".')).toHaveClass('roles-refusal');
+      expect(screen.getByText(/showing the rest of this file\./)).toHaveClass('roles-problem');
+    });
   });
 });

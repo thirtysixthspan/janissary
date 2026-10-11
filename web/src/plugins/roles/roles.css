@@ -24,6 +24,7 @@
 .roles-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px; }
 .roles-source { color: var(--muted); font-size: 12px; padding-bottom: 6px; }
 .roles-problem { color: var(--warning, var(--muted)); font-size: 12px; padding-bottom: 8px; }
+.roles-refusal { color: var(--warning, var(--muted)); font-size: 12px; padding-bottom: 8px; }
 .roles-empty { color: var(--muted); font-size: 12px; padding: 12px 0; }
 
 .roles-card { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; padding: 6px 8px; }

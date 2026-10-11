@@ -76,6 +76,14 @@ or renaming to a name another role already holds is refused with `A role named "
 exists.` and nothing is written. Deleting the last role is an ordinary edit: the list may be empty,
 and the tab then reads `No roles yet.` above the add-role control.
 
+### A refused edit
+
+Every refusal the tab can earn — a duplicate name, a role or index that is not there, an unusable
+file, a write that could not happen — is shown in the tab as one line beneath the source line,
+carrying the server's own words, and the edit it refused is not applied. The line clears on the next
+edit the tab raises, whether that edit is accepted or refused, so a message never lingers over a
+state it no longer describes.
+
 ### Persisting
 
 Every edit writes the effective file first and republishes the tab only after the write succeeds, so

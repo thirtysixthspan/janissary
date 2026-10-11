@@ -13,6 +13,7 @@ type Properties = {
   efforts: readonly string[];
   models: Record<string, string[]>;
   capabilities: TabPluginClientCapabilities;
+  onRefusal: (message: string | null) => void;
 };
 
 type EntryDrop = { intent: string; payload: Record<string, unknown> } | null;
@@ -21,7 +22,7 @@ type EntryDrop = { intent: string; payload: Record<string, unknown> } | null;
 // remove control, and the card itself is both a drag source (the grip moves the role) and a drop
 // target (a catalog model lands here as a new entry). Every edit is one intent; the card owns no
 // rule of its own.
-export function RoleCard({ role, index, efforts, models, capabilities }: Properties) {
+export function RoleCard({ role, index, efforts, models, capabilities, onRefusal }: Properties) {
   const [name, setName] = useState(role.name);
   const [description, setDescription] = useState(role.description);
   const [picker, setPicker] = useState(false);
@@ -30,7 +31,10 @@ export function RoleCard({ role, index, efforts, models, capabilities }: Propert
   const [drop, setDrop] = useState(false);
 
   const raise = (intent: string, payload: Record<string, unknown>) => {
-    void capabilities.intent(intent, payload);
+    onRefusal(null);
+    void capabilities.intent(intent, payload).catch((error: unknown) => {
+      onRefusal(String(error instanceof Error ? error.message : error));
+    });
   };
 
   const commitName = () => {

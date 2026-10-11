@@ -15,9 +15,13 @@ export function RolesTab({ payload, capabilities }: Properties) {
   const { roles, source, path, problem, catalog } = payload;
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   const raise = (intent: string, value: Record<string, unknown>) => {
-    void capabilities.intent(intent, value);
+    setRefusal(null);
+    void capabilities.intent(intent, value).catch((error: unknown) => {
+      setRefusal(String(error instanceof Error ? error.message : error));
+    });
   };
 
   const commitNewRole = () => {
@@ -62,6 +66,7 @@ export function RolesTab({ payload, capabilities }: Properties) {
           {source === 'default' ? 'No roles file in effect' : `Editing ${path}`}
         </div>
         {problem ? <div className="roles-problem">{problem}</div> : null}
+        {refusal ? <div className="roles-refusal">{refusal}</div> : null}
         {roles.length === 0 && !adding ? <div className="roles-empty">No roles yet.</div> : null}
         {roles.map((role, index) => (
           <RoleCard
@@ -71,6 +76,7 @@ export function RolesTab({ payload, capabilities }: Properties) {
             efforts={catalog.efforts}
             models={catalog.models}
             capabilities={capabilities}
+            onRefusal={setRefusal}
           />
         ))}
         {adding ? (
