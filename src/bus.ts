@@ -42,6 +42,13 @@ export class MessageBus<C extends ChannelMap> {
     return `${String(channel)}:${type}`;
   }
 
+  private removeListener(registry: Map<string, Set<AnyListener>>, key: string, listener: AnyListener): void {
+    const set = registry.get(key);
+    if (!set) return;
+    set.delete(listener);
+    if (set.size === 0) registry.delete(key);
+  }
+
   on<K extends keyof C>(
     channel: K,
     types: C[K]['type'] | Array<C[K]['type']>,
@@ -57,7 +64,10 @@ export class MessageBus<C extends ChannelMap> {
     return {
       unsubscribe: () => {
         for (const type of typeArr) {
-          this.listeners.get(this.key(channel, type))?.delete(listener as unknown as AnyListener);
+          const key = this.key(channel, type);
+          const registered = listener as unknown as AnyListener;
+          this.removeListener(this.listeners, key, registered);
+          this.removeListener(this.reported, key, registered);
         }
       },
     };
@@ -85,15 +95,19 @@ export class MessageBus<C extends ChannelMap> {
     for (const fn of snapshot) {
       try {
         fn(event);
-        this.reported.get(k)?.delete(fn);
+        this.removeListener(this.reported, k, fn);
       } catch (error) {
         // Isolate subscriber errors so a throwing listener cannot break the emit path, but do not
         // discard them where nothing can see them: report through the sink, deduplicated per
         // listener until a subsequent successful call clears it.
-        const seen = this.reported.get(k) ?? new Set<AnyListener>();
-        if (!seen.has(fn)) {
-          seen.add(fn);
-          this.reported.set(k, seen);
+        const active = this.listeners.get(k)?.has(fn) ?? false;
+        const reported = this.reported.get(k);
+        if (!reported?.has(fn)) {
+          if (active) {
+            const seen = reported ?? new Set<AnyListener>();
+            seen.add(fn);
+            this.reported.set(k, seen);
+          }
           try {
             this.onListenerError(String(channel), event.type, error);
           } catch {
@@ -106,6 +120,7 @@ export class MessageBus<C extends ChannelMap> {
 
   clear(): void {
     this.listeners.clear();
+    this.reported.clear();
   }
 }
 

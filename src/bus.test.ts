@@ -119,6 +119,46 @@ describe('EventBus', () => {
     expect(sink).toHaveBeenCalledTimes(2);
   });
 
+  it('reports a listener failure again after unsubscribe and resubscribe', () => {
+    const sink = vi.fn();
+    const b = new MessageBus<TestChannels>(sink);
+    const listener = () => { throw new Error('boom'); };
+    const first = b.on('test', 'ping', listener);
+    b.emit('test', ping());
+    first.unsubscribe();
+
+    b.on('test', 'ping', listener);
+    b.emit('test', ping());
+    expect(sink).toHaveBeenCalledTimes(2);
+  });
+
+  it('forgets reported listener failures when the bus is cleared', () => {
+    const sink = vi.fn();
+    const b = new MessageBus<TestChannels>(sink);
+    const listener = () => { throw new Error('boom'); };
+    b.on('test', 'ping', listener);
+    b.emit('test', ping());
+    b.clear();
+
+    b.on('test', 'ping', listener);
+    b.emit('test', ping());
+    expect(sink).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retain a listener removed during dispatch after it throws', () => {
+    const sink = vi.fn();
+    const b = new MessageBus<TestChannels>(sink);
+    const listener = () => { throw new Error('boom'); };
+    let victim = { unsubscribe: () => {} };
+    b.on('test', 'ping', () => victim.unsubscribe());
+    victim = b.on('test', 'ping', listener);
+
+    b.emit('test', ping());
+    b.on('test', 'ping', listener);
+    b.emit('test', ping());
+    expect(sink).toHaveBeenCalledTimes(2);
+  });
+
   it('copy-on-iterate: a listener removed mid-dispatch by an earlier listener still fires', () => {
     const b = bus();
     const victim = vi.fn();

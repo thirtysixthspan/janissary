@@ -4,16 +4,6 @@
 
 ## development
 
-* Release failed message-bus listeners when subscriptions end or the bus is cleared.
-
-Existing Debt: `MessageBus` removes subscriptions from its dispatch map but keeps failed listener functions in the error-report deduplication map after unsubscribe and `clear()`, so its lifecycle cleanup does not release everything it owns. Severity: 4/10
-
-Existing Risk: 4/10 - A listener that fails and is later disposed remains strongly reachable for the lifetime of the shared bus, so repeated setup and teardown can retain obsolete service and callback state.
-
-Proposal Risk: 1/10 - Removing a listener from both registries during unsubscribe and clearing both registries in `clear()` releases the references while preserving per-listener error deduplication for active subscriptions.
-
-Proposal: In `src/bus.ts`, update the `Subscription.unsubscribe` closure in `MessageBus.on` to delete the listener from the matching `reported` set as well as the `listeners` set, deleting either map entry when its set becomes empty. Update `MessageBus.clear()` to clear `reported` along with `listeners`. Preserve `emit`'s current behavior of suppressing repeat reports until a listener succeeds, and ensure a listener that is unsubscribed and subscribed again can report its next failure. Add focused cases to `src/bus.test.ts` for unsubscribe followed by resubscription and for clear followed by a failing subscription; both should verify the error sink reports the new failure, while the existing repeated-failure test continues to verify deduplication for a live subscription. Controller shutdown calls `messageBus.clear()` in `src/controller.ts`, so this also covers the shared bus lifecycle boundary.
-
 ## deferred
 
 * Move the websocket client out of the app-shell root and into the shared layer it belongs to, so `web/src/shared/` stops importing from `../ws`. — deferred: complexity 8/10, 138 files import `./ws`/`../ws` and each retarget is a per-depth specifier recomputation, the cluster includes the `toasts/` directory that `clientFeatureDirectories` names in `eslint.config.mjs` — a question the entry does not settle — and the change adds a new eslint zone plus its boundary case, which is a deliberate enforcement design rather than a mechanical sweep.
