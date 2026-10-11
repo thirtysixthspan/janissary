@@ -54,7 +54,11 @@ Pages hold 50, 100, or 500 rows, and 100 is the default. The pager below the gri
 
 Double-click a cell to edit it. `Return` or clicking away saves the change, and `Escape` leaves it unchanged. A null value shows as a muted `NULL`, so it never looks like an empty string. The editor has a **NULL** checkbox for writing a real null. A cell that holds null opens with the box checked, and typing clears it. There is no undo.
 
+While a cell save is pending, the editor is disabled and another save is ignored. If Janissary rejects the request, the editor stays open with your value so you can correct it or try again. After the request is accepted, a database error is reported in [Notifications](/user-documentation/tab-types/notifications).
+
 **Insert row** opens a form headed `New row in <table>` with one field per column, the primary key marked `pk`. It shows the `INSERT` statement that **Save** will run. A column you leave empty is left out of that statement, so the table's own default applies. Each field has a **NULL** checkbox too, and the primary key's starts checked. A `NOT NULL` column with no default and nothing typed in it is refused by the database.
+
+While **Save** is pending, the form is disabled and another submission is ignored. If Janissary rejects the request, the form stays open with its values so you can try again.
 
 Each row has a **Delete row** button in its first column. It asks `Delete row from "<table>"?` before it deletes anything.
 
@@ -79,6 +83,8 @@ The command line at the bottom of the tab is a SQL console, with the prompt `SQL
 A statement starting with `SELECT`, `PRAGMA`, `WITH`, or `EXPLAIN` is a read. Its result fills the grid, up to the first 200 rows, and the header reads `Read-only: this is a statement's result, not a table.` Changing a filter or the sort goes back to the selected table. Anything else is a write. When it succeeds, the tab reads itself again, so a `CREATE TABLE` or `ALTER TABLE` shows up in the table dropdown right away.
 
 The console never prints results under the prompt. Instead, every statement reports to the [notifications](/user-documentation/tab-types/notifications) feed under the database's name. A write reports `OK.` A read reports `Query returned 12 rows.`, `Query returned 1 row.`, or `Query returned no rows.`, and the line carries a file icon that opens the whole result in an editor tab. A failed statement reports the SQLite error. A failure from the grid itself, like a failed page load or edit, is reported there once, not again until something succeeds.
+
+If Janissary rejects a console request, the line stays in place so you can edit it or send it again. While a request is pending, another submission is ignored. If you type a newer line while an older request is pending, the older request being accepted does not clear your newer text.
 
 `↑` and `↓` in the console walk back through the last 50 statements you sent from this tab, and a statement that starts with what you've typed appears ghosted after the cursor. `Tab` moves focus between the console and the rows.
 

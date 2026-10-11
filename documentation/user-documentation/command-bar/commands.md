@@ -7,6 +7,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 | Command | What it does |
 |---|---|
 | `help [<section>]` | List the available commands and key bindings, or just one section of them |
+| `diff [path]` | Open the [diff tab](/user-documentation/tab-types/diff-tab) on the project's changes, optionally scoped to a directory |
 | `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `open [external] [page] <target>` | Open a file, a web page, or an external application; see [Opening files and pages](/user-documentation/tab-types/opening-files) |
