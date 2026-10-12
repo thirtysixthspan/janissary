@@ -25,6 +25,17 @@ describe('agent command tools', () => {
     expect(extractAgentCommand('question ask "no skill"', false)).toBeNull();
   });
 
+  it('ignores tilde-fenced commands until a matching fence closes', () => {
+    expect(extractAgentCommand('~~~text\njanissary question ask "hidden"\n~~~', true)).toBeNull();
+    expect(extractAgentCommand('~~~\nquestion ask "hidden"\n~~~', true)).toBeNull();
+    expect(extractAgentCommand('~~~\nquestion ask "hidden"\n```\nquestion ask "still hidden"\n~~~\nDone.', true)).toBeNull();
+    expect(extractAgentCommand(
+      '~~~~ ts\njanissary question ask "hidden"\n~~~\njanissary question ask "still hidden"\n~~~~\njanissary question ask "real"',
+      true,
+    )).toBe('question ask "real"');
+    expect(extractAgentCommand('~~~\nquestion ask "hidden"\n~~~\nquestion ask "real"', true)).toBe('question ask "real"');
+  });
+
   it('denies ungranted commands before invoking the canonical dispatcher', async () => {
     const dispatch = vi.fn();
     const managers = { command: { dispatchLineInInvocation: dispatch } } as unknown as Managers;

@@ -66,6 +66,8 @@ When workspace confinement is active, support files beneath each selected instal
 
 Autonomous provider tool permissions select the least expansive available approval option. Janissary commands use a separate whole-command grant check: only an exact canonical command name declared by a selected skill's sidecar may run. The agent requests a Janissary command on its final nonempty reply line as `janissary <command>`. A question request is available only when the `ask-user` skill is selected and grants `question`; the run waits for the answer or receives `Question cancelled.`. A denial is returned to the agent as tool output and does not authorize a different command.
 
+A final command line inside a Markdown fenced code block is treated as an example, not a request. This applies to fences opened with either backticks or tildes.
+
 Each run owns a new ACP process and returns only after it has completed cleanup. Closing the originating caller terminates the run and returns `Agent terminated.`. A provider failure or empty final answer produces a failed result. The structured result has `status`, `response`, and `cleanupWarnings`; the caller transcript shows `Status: <completed|failed|terminated>`, the response, and one `Cleanup warning: <reason>` line per cleanup issue. Cleanup warnings do not replace the task status or response.
 
 ### Remote task execution
