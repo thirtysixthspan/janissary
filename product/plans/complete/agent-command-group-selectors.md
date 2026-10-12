@@ -18,10 +18,7 @@ Resolve explicit selectors against currently open tabs using case-insensitive gr
 
 ## Tests
 
-- Verify named selectors resolve without regard to case and numeric selectors resolve by group ID.
-- Verify unknown names, unknown positive IDs, zero, and unsafe numeric IDs fail before run creation for headed and headless invocations.
-- Verify a headed monitor joins the selected group and an unselected monitor joins the caller's group.
-- Run `./scripts/run.mjs check-diff` after each implementation step.
+- Expected coverage: case-insensitive named selectors and numeric group IDs; unknown names, unknown positive IDs, zero, and unsafe numeric IDs rejected before run creation for headed and headless invocations; headed monitor placement in the selected group; and caller-group defaulting when no selector is supplied.
 
 ## Out of scope
 
