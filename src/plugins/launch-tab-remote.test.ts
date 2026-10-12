@@ -82,6 +82,34 @@ function harness(options: {
   return { channels, opened, tabs, managers, input, invoked };
 }
 
+function ownRemoteLaunches(h: ReturnType<typeof harness>) {
+  let live = true;
+  const allocations = new Set<Promise<void>>();
+  const owned = new Set<string>();
+  h.managers.agent = {
+    isAgentRun: () => true,
+    isLive: () => live,
+    beginAllocation: () => {
+      if (!live) return;
+      const { promise: allocation, resolve: release } = Promise.withResolvers<void>();
+      allocations.add(allocation);
+      return () => { allocations.delete(allocation); release(); };
+    },
+    trackCreatedTab: (_runId: string, label: string) => { owned.add(label); },
+  } as unknown as Managers['agent'];
+  return {
+    owned,
+    terminate: async () => {
+      live = false;
+      await Promise.all(allocations);
+      for (const label of owned) {
+        const index = h.managers.tab.tabs.findIndex((tab: { label: string }) => tab.label === label);
+        if (index !== -1) await h.managers.tab.closeTab(index);
+      }
+    },
+  };
+}
+
 const factory = (_resources: object, start: { label: string; cwd: string; connectPtyId?: string; host?: string }) => ({
   title: 'shell', payload: { provisioning: true, connectPtyId: start.connectPtyId, host: start.host },
 });
@@ -274,6 +302,60 @@ describe('launchRemotePluginTab', () => {
 
     expect(h.channels[1]?.label).not.toBe(first);
     expect(h.tabs.some((tab) => tab.label === first)).toBe(false);
+  });
+
+  it('does not retry a run-owned remote launch after its run has ended', async () => {
+    const h = harness();
+    const run = ownRemoteLaunches(h);
+    h.input.origin = { ...h.input.origin, runId: 'run-1' };
+    launchCapabilities(h.input).launchTab('shell-1', { remote: { address: 'devbox' } }, factory, ready);
+    expect(run.owned).toContain(h.channels[0]?.label);
+    await run.terminate();
+
+    h.channels[0]?.handlers.onNameRefused?.({ type: 'name-in-use', label: h.channels[0]?.label ?? '' });
+
+    expect(h.channels).toHaveLength(1);
+    expect(h.tabs.some((tab) => tab.plugin?.instanceKey === 'shell-1')).toBe(false);
+  });
+
+  it('waits for an admitted retry and closes its replacement during run cleanup', async () => {
+    const h = harness();
+    const run = ownRemoteLaunches(h);
+    h.input.origin = { ...h.input.origin, runId: 'run-1' };
+    launchCapabilities(h.input).launchTab('shell-1', { remote: { address: 'devbox' } }, factory, ready);
+    let cleanup: Promise<void> | undefined;
+    const create = vi.mocked(h.managers.remote.create);
+    const createRemote = create.getMockImplementation();
+    const closeTab = h.managers.tab.closeTab;
+    const { promise: closeStarted, resolve: signalClose } = Promise.withResolvers<void>();
+    const { promise: releaseClose, resolve: allowClose } = Promise.withResolvers<void>();
+    h.managers.tab.closeTab = async (index: number) => {
+      if (h.managers.tab.tabs[index]?.label === h.channels[1]?.label) {
+        signalClose();
+        await releaseClose;
+      }
+      closeTab(index);
+    };
+    create.mockImplementation((...args) => {
+      if (!createRemote) throw new Error('remote create implementation is missing');
+      const channel = createRemote(...args);
+      if (h.channels.length === 2) cleanup = run.terminate();
+      return channel;
+    });
+
+    h.channels[0]?.handlers.onNameRefused?.({ type: 'name-in-use', label: h.channels[0]?.label ?? '' });
+
+    await vi.waitFor(() => expect(h.channels).toHaveLength(2));
+    expect(run.owned).toContain(h.channels[1]?.label);
+    await closeStarted;
+    expect(h.tabs.some((tab) => tab.label === h.channels[1]?.label)).toBe(true);
+    let finished = false;
+    void cleanup?.then(() => { finished = true; });
+    await Promise.resolve();
+    expect(finished).toBe(false);
+    allowClose();
+    await cleanup;
+    expect(h.tabs.some((tab) => tab.label === h.channels[1]?.label)).toBe(false);
   });
 
   it('releases the SSH channel if the tab factory fails to open', () => {

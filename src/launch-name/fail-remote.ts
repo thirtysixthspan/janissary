@@ -2,6 +2,8 @@ import type { Managers } from '../managers.js';
 import { notify } from '../notifications/index.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import { LaunchCheckUnanswered, LaunchNameRefusal, RemoteRootRefusal } from './refusal.js';
+import type { RegisterRunTab } from '../plugins/run-allocation.js';
+import { withRunAllocationAsync } from '../plugins/run-allocation.js';
 import {
   checkUnansweredRefusal, cleanedNotice, clonedNotice, harnessRetriesRefusal, poolRetriesRefusal, remoteRunningRefusal,
   removalFailedRefusal, rootRefusalMessage,
@@ -21,11 +23,12 @@ export type RemoteNameRetry = {
   // The tab the command was typed in, or a profile launch's issuing tab: every notification this
   // launch posts is attributed to it.
   creator: string;
+  runId?: string;
   explicit: boolean;
   // Every label this launch has tried, oldest first, ending with this attempt's.
   tried: readonly string[];
   // Reopen the launch under the next free name, passing over every label in `tried`.
-  relaunch: (tried: readonly string[]) => void;
+  relaunch: (tried: readonly string[], registerTab: RegisterRunTab) => void | Promise<void>;
 };
 
 export type RemoteLaunchFailure = {
@@ -62,7 +65,14 @@ function refuse(managers: Managers, failure: RemoteLaunchFailure, refusal: Launc
     return;
   }
   if (retry.tried.length < MAX_REMOTE_NAME_ATTEMPTS) {
-    retry.relaunch(retry.tried);
+    if (retry.runId !== undefined && managers.agent?.isAgentRun(retry.runId)) {
+      if (!managers.agent.isLive(retry.runId)) return;
+      void withRunAllocationAsync(managers, retry.runId, async (registerTab) => {
+        await retry.relaunch(retry.tried, registerTab);
+      });
+      return;
+    }
+    retry.relaunch(retry.tried, () => {});
     return;
   }
   notify(managers, 'launch-refused', retry.creator, retriesExhausted(failure.kind, retry.tried, host));

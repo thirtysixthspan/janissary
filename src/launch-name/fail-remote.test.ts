@@ -52,7 +52,7 @@ describe('failRemoteLaunch', () => {
     });
 
     expect(labels).toEqual(['janus']);
-    expect(nameRetry.relaunch).toHaveBeenCalledWith(['claude', 'claude-2']);
+    expect(nameRetry.relaunch).toHaveBeenCalledWith(['claude', 'claude-2'], expect.any(Function));
     expect(notify).not.toHaveBeenCalled();
   });
 
