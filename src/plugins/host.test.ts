@@ -131,6 +131,21 @@ describe('TabPluginHost commands', () => {
     expect(trackCreatedTab).toHaveBeenCalledWith('run-1', 'fixture-1');
   });
 
+  it('tracks a new plugin tab even when its run-owned handler fails', async () => {
+    const { managers, trackCreatedTab } = makeManagers();
+    const inline = vi.fn((_file: string, capabilities: TabPluginServerCapabilities) => {
+      managers.tab.tabs.push({ label: 'fixture-1' } as Tab);
+      capabilities.reportFailure('handler failed');
+    });
+    const host = new TabPluginHost(
+      managers, [declaration()], { fixture: loader(activation({ opener: { inline, external: () => {} } })) },
+    );
+
+    await host.runOpener('fixture', 'inline', '/tmp/item.fixture', { ...origin, runId: 'run-1' });
+
+    expect(trackCreatedTab).toHaveBeenCalledWith('run-1', 'fixture-1');
+  });
+
   it('reports a rejection to the transcript and leaves the plugin enabled', async () => {
     const { append, managers, runAs } = makeManagers();
     const command = (_argument: string, capabilities: TabPluginServerCapabilities) =>

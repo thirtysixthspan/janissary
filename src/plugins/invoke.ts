@@ -68,15 +68,16 @@ export async function invokePlugin<Result>(
   } catch (error) {
     if (error instanceof TabPluginRejection) return { status: 'rejected', reason: error.message };
     return { status: 'failed', error };
+  } finally {
+    if (origin.runId) {
+      for (const tab of managers.tab.tabs) {
+        if (!existingTabs.has(tab.label)) managers.agent.trackCreatedTab(origin.runId, tab.label);
+      }
+    }
   }
 
   // Deliberately outside the guarded call: the host owns glob expansion and per-file dispatch, so
   // that work must not count against the plugin's own budget or be attributed to it on timeout.
-  if (origin.runId) {
-    for (const tab of managers.tab.tabs) {
-      if (!existingTabs.has(tab.label)) managers.agent.trackCreatedTab(origin.runId, tab.label);
-    }
-  }
   if (isEnabled()) await runOpenRequests(managers, declaration, origin, openRequests);
   return { status: 'ok', value };
 }
