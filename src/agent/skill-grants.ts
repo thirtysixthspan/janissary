@@ -1,23 +1,41 @@
-import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { AgentResolutionOptions, AgentSnapshot } from './types.js';
 
 type Skill = Readonly<{ name: string; path: string; instructions: string }>;
+type ResolvedSkill = Readonly<{ skill: Skill; directory: string }>;
 
 function contained(root: string, target: string): boolean {
   const relative = path.relative(root, target);
   return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
 }
 
-function resolveSkill(name: string, options: AgentResolutionOptions): Skill {
+function isMissingPath(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+}
+
+function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSkill {
   for (const root of [path.join(options.workspaceDir, 'skills'), path.join(options.installationDir, 'skills')]) {
     const candidate = path.join(root, name, 'SKILL.md');
-    if (!existsSync(candidate)) continue;
+    try {
+      lstatSync(candidate);
+    } catch (error) {
+      if (isMissingPath(error)) continue;
+      throw new Error(`Agent: invalid skill path "${name}".`, { cause: error });
+    }
+    const directory = path.dirname(candidate);
     try {
       const realRoot = realpathSync(root);
+      const realDirectory = realpathSync(directory);
+      if (realDirectory !== path.resolve(realRoot, name) || !contained(realRoot, realDirectory) || !statSync(realDirectory).isDirectory()) {
+        throw new Error('invalid skill directory');
+      }
       const realFile = realpathSync(candidate);
-      if (!contained(realRoot, realFile) || !statSync(realFile).isFile()) throw new Error('outside skill root');
-      return Object.freeze({ name, path: realFile, instructions: readFileSync(realFile, 'utf8') });
+      if (!contained(realDirectory, realFile) || !statSync(realFile).isFile()) throw new Error('outside skill directory');
+      return Object.freeze({
+        skill: Object.freeze({ name, path: realFile, instructions: readFileSync(realFile, 'utf8') }),
+        directory: realDirectory,
+      });
     } catch {
       throw new Error(`Agent: invalid skill path "${name}".`);
     }
@@ -25,11 +43,24 @@ function resolveSkill(name: string, options: AgentResolutionOptions): Skill {
   throw new Error(`Agent: unknown skill "${name}".`);
 }
 
-function readGrants(skill: Skill, knownCommands: ReadonlySet<string>): string[] {
+function readGrants(resolved: ResolvedSkill, knownCommands: ReadonlySet<string>): string[] {
+  const { skill, directory } = resolved;
   const sidecar = path.join(path.dirname(skill.path), 'janissary.json');
-  if (!existsSync(sidecar)) return [];
+  try {
+    lstatSync(sidecar);
+  } catch (error) {
+    if (isMissingPath(error)) return [];
+    throw new Error(`Agent: invalid skill path "${skill.name}".`, { cause: error });
+  }
+  let realSidecar: string;
+  try {
+    realSidecar = realpathSync(sidecar);
+    if (!contained(directory, realSidecar) || !statSync(realSidecar).isFile()) throw new Error('outside skill directory');
+  } catch {
+    throw new Error(`Agent: invalid skill path "${skill.name}".`);
+  }
   let declaration: unknown;
-  try { declaration = JSON.parse(readFileSync(sidecar, 'utf8')) as unknown; } catch { throw new Error(`Agent: malformed skill grants "${skill.name}".`); }
+  try { declaration = JSON.parse(readFileSync(realSidecar, 'utf8')) as unknown; } catch { throw new Error(`Agent: malformed skill grants "${skill.name}".`); }
   if (!declaration || typeof declaration !== 'object' || Array.isArray(declaration)) throw new Error(`Agent: malformed skill grants "${skill.name}".`);
   const record = declaration as { version?: unknown; commands?: unknown };
   if (record.version !== 1 || !Array.isArray(record.commands) || record.commands.some((item) => typeof item !== 'string')) {
@@ -54,7 +85,7 @@ export function resolveAgentSkills(
   canonicalCommands: readonly string[],
 ): Pick<AgentSnapshot, 'skills' | 'grants'> {
   const knownCommands = new Set(canonicalCommands.map((name) => name.toLowerCase()));
-  const selected = [...new Set(names)].map((name) => resolveSkill(name, options));
-  const grants = [...new Set(selected.flatMap((skill) => readGrants(skill, knownCommands)))].toSorted((left, right) => left.localeCompare(right));
-  return Object.freeze({ skills: Object.freeze(selected), grants: Object.freeze(grants) });
+  const resolved = [...new Set(names)].map((name) => resolveSkill(name, options));
+  const grants = [...new Set(resolved.flatMap((skill) => readGrants(skill, knownCommands)))].toSorted((left, right) => left.localeCompare(right));
+  return Object.freeze({ skills: Object.freeze(resolved.map(({ skill }) => skill)), grants: Object.freeze(grants) });
 }

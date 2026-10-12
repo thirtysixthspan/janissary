@@ -109,6 +109,28 @@ describe('resolveAgentSkills', () => {
     });
   });
 
+  it('rejects skill instructions linked to a sibling skill before reading them', () => {
+    writeSkill(workspace, 'selected', 'selected instructions');
+    writeSkill(workspace, 'sibling', 'sibling instructions');
+    const selectedFile = path.join(workspace, 'skills', 'selected', 'SKILL.md');
+    rmSync(selectedFile);
+    symlinkSync(path.join(workspace, 'skills', 'sibling', 'SKILL.md'), selectedFile);
+
+    expect(() => resolveAgentSkills(['selected'], options(), ['question'])).toThrow('Agent: invalid skill path "selected".');
+  });
+
+  it.each([
+    ['sibling', () => path.join(workspace, 'skills', 'sibling', 'janissary.json')],
+    ['outside', () => path.join(outside, 'grants.json')],
+  ])('rejects a %s grant sidecar symlink before reading it', (_target, targetPath) => {
+    writeSkill(workspace, 'selected', 'selected instructions');
+    writeSkill(workspace, 'sibling', 'sibling instructions', '{"version":1,"commands":["question"]}');
+    writeFileSync(targetPath(), '{"version":1,"commands":["question"]}');
+    symlinkSync(targetPath(), path.join(workspace, 'skills', 'selected', 'janissary.json'));
+
+    expect(() => resolveAgentSkills(['selected'], options(), ['question'])).toThrow('Agent: invalid skill path "selected".');
+  });
+
   it('rejects malformed declarations and command prefixes not present in the registry', () => {
     writeSkill(installation, 'bad', 'bad', '{"version":2,"commands":[]}');
     expect(() => resolveAgentSkills(['bad'], options(), ['question'])).toThrow('Agent: malformed skill grants "bad".');
