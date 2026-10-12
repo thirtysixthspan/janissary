@@ -33,3 +33,14 @@ Existing Risk: 7/10 - A future reviewer or agent following this branch-supplied 
 Proposal Risk: 2/10 - Replacing those operational directions with a factual account of the completed description correction removes the execution prompt while preserving the documented scope and outcome.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove operational directions from the completed changed-files description plan". In `product/plans/complete/correct-agent-command-changed-files-description.md`, replace the implementation step directing checks, commit, push, and PR-body editing with a factual summary of the changed-files section correction, and replace the Tests-section `check-diff` instruction with a description of the planned coverage or a statement that no application tests applied. Preserve the claim that the examples represent the first resolution slice and the stated aggregate PR scope. Re-read the full plan to ensure it records completed work rather than directing future commands or publication actions; do not edit the PR description as part of this work item.
+
+
+* Complete the remote-server spec's coverage of remote agent host selection and protocol version 31.
+
+Existing Issue: `product/specs/remote-server.md` documents remote agent protocol changes through version 30 and describes agent execution only on an established remote workspace, while this pull request adds task-resolution frames and allows local callers to provision distinct remote hosts under protocol version 31. Severity: 5/10
+
+Existing Risk: 5/10 - Contributors relying on the remote protocol spec can miss the version-31 wire contract or incorrectly assume remote agents require an already-established workspace when changing remote execution behavior.
+
+Proposal Risk: 2/10 - Recording the new version rationale and the host-override request/response behavior in the remote-server spec leaves little ambiguity about the remote protocol and supported execution paths.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "document remote agent host overrides and protocol version 31". In `product/specs/remote-server.md`, add the version-31 history entry explaining the `agent-resolve` and `agent-resolve-result` frames and why older peers must refuse the protocol, then update the remote autonomous-agent section to cover local callers, matching established workspaces, run-only connections to distinct hosts, execution-host task and skill resolution, and the absence of local fallback. Keep its caller-context command policy and shared-channel lease behavior aligned with `product/specs/agent-command.md`, and state any relevant bounded resolution wait. Verify the complete remote-agent section and protocol history agree with `src/remote/protocol.ts`, `src/remote/protocol-frames.ts`, and the two specs; this is a documentation-only change, so no application tests are needed.
