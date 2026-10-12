@@ -99,3 +99,14 @@ Existing Risk: 5/10 - A monitor for a remote run presents the local machine and 
 Proposal Risk: 2/10 - Supplying the resolved execution host and workspace when constructing the run makes the displayed location accurate, while remote execution and its cleanup behavior remain unchanged.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "show the actual remote execution location in agent monitors". Extend `AgentRunOptions` and the run metadata construction in `src/agent/run.ts` and `src/agent/manager.ts` to accept the execution host and workspace explicitly. In `src/commands/agent.ts`, pass `remoteAddress.host` and `remoteWorkspace` for remote runs, and the caller's local execution directory for local runs. Keep those values in the server-owned `AgentRunView` projection consumed by `web/src/plugins/agent-monitor/view.tsx`. Add command/run-view coverage in `src/commands/agent.test.ts` asserting that a remote host and remote workspace are shown for a remote run and local details remain shown for local runs; the existing `web/src/plugins/agent-monitor/view.test.tsx` covers rendering the supplied metadata but does not test which execution location the server supplies.
+
+
+* Remove the security issue in the completed plan's instructions to run checks, publish changes, and edit the pull request body.
+
+Existing Issue: `product/plans/complete/correct-agent-command-pull-request-description.md` directs readers to run verification commands, commit and push, and edit the pull request body, despite being a completed plan supplied as reviewed content. Severity: 7/10
+
+Existing Risk: 7/10 - A reviewer or later agent following the plan can execute branch-controlled tooling and mutate or publish the pull request during review without authorization.
+
+Proposal Risk: 2/10 - Replacing these directives with a factual record of the completed description correction removes the operational prompt while leaving the review task's own backlog-only output boundary clear.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove operational directives from the completed PR-description plan". In `product/plans/complete/correct-agent-command-pull-request-description.md`, replace the implementation-step instruction to run checks, commit, push, and change the PR body with a factual summary of the correction already completed. Review the rest of that plan for any other commands or mutation instructions addressed to a future reader, while preserving its stated goal, evidence, and scope. Read the completed plan back to verify it contains no operational directives; no application tests cover this documentation-only change.
