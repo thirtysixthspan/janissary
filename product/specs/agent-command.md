@@ -4,7 +4,19 @@
 
 The command accepts launch clauses in any order, followed by `execute <ai task> <parameters...>`. Usage is `Usage: agent [launch options] execute <ai task> [parameters...].` Supported clauses are `on <host>`, `in a tab`, `in group <name|id>`, `in workspace <label>`, repeated `with skill <name>`, `using model <model id>`, and `with effort <level>`. Quoted values may contain spaces. Singleton clauses cannot repeat; skill clauses may repeat and resolve once. Group-only selection is valid for a headless launch.
 
-The task path ends the launch header. Everything after it is the task parameter tail, including text that looks like another launch clause. The parser rejects an unterminated quote, an unknown clause, a missing clause value, or an invocation without a task after `execute`. It reports duplicate singleton clauses as `Agent: duplicate clause "<clause>".` Selector existence checks for groups, workspaces, models, and effort values belong to their execution owners.
+The task path ends the launch header. Everything after it is the task parameter tail, including text that looks like another launch clause. `parseAgentCommand` reports parser failures with these exact messages:
+
+- An unterminated quoted value: `Agent: malformed quoted value.`
+- A missing value after a named clause: `Agent: missing value for on.`, `Agent: missing value for with.`, `Agent: missing value for using.`, `Agent: missing value for with <clause>.`, or `Agent: missing value for using <clause>.` The clause name is the lowercased token following `with` or `using`; `with skill` is the supported skill form.
+- A missing value after `in`: `Agent: missing value for in <clause>.`, where `<clause>` is the lowercased token after `in`, or empty when it is absent (yielding `Agent: missing value for in .`).
+- An unsupported named clause: `Agent: unknown clause "with <clause>".` or `Agent: unknown clause "using <clause>".` An empty quoted clause produces `Agent: unknown clause "with ".` or `Agent: unknown clause "using ".`
+- An unsupported location clause: `Agent: unknown clause "in <clause>".` The clause is the lowercased token after `in`; an empty quoted clause produces `Agent: unknown clause "in ".`
+- A repeated singleton clause: `Agent: duplicate clause "on".`, `Agent: duplicate clause "in a tab".`, `Agent: duplicate clause "in group".`, `Agent: duplicate clause "in workspace".`, `Agent: duplicate clause "using model".`, or `Agent: duplicate clause "with effort".` Repeated `with skill` clauses are allowed.
+- A token that is not a launch clause before `execute`: `Agent: expected launch clause or final execute, got "<token>".` The token is shown without its surrounding quotes.
+- An invocation without `execute`: `Agent: missing execute clause.`
+- An invocation without a nonempty task after `execute`: `Agent: missing task after execute.`
+
+Selector existence checks for groups, workspaces, models, and effort values belong to their execution owners.
 
 ### Task resolution
 

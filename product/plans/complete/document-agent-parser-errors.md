@@ -1,0 +1,32 @@
+# Document exact agent parser errors
+
+Complexity: 2/10
+
+## Goal
+
+Make the agent-command behavior spec state every parser error emitted by `parseAgentCommand`, with exact assertions covering the documented messages.
+
+## Approach
+
+Keep launch parsing and grammar unchanged. Document the parser's existing messages and their token substitutions in `product/specs/agent-command.md`, and add focused table-driven assertions to `src/agent/command-parser.test.ts` for parser error branches not currently pinned exactly.
+
+## Implementation steps
+
+1. Expand the parser error section of `product/specs/agent-command.md` to list malformed quotes, missing clause values, unknown clauses, duplicate clauses, unexpected launch tokens, missing `execute`, and missing tasks. State how input tokens appear in variable message portions.
+2. Add exact-message parser tests for named and location clause errors, unknown clauses, unexpected launch tokens, and duplicate singleton clauses while retaining existing successful grammar coverage.
+
+## Tests
+
+- Assert exact error strings for malformed quoted values, each missing-value clause form, unknown named and location clauses, each singleton duplicate form, unexpected launch tokens, missing `execute`, and missing tasks.
+- Retain the existing valid launch grammar, quote handling, and untouched parameter-tail assertions.
+- Run `./scripts/run.mjs check-diff` after each implementation step and after the spec update.
+
+## Spec
+
+- Update `product/specs/agent-command.md` with exact parser error behavior.
+
+## Out of scope
+
+- Changing parser behavior or launch grammar.
+- Changing task resolution, launch execution, help text, or user documentation.
+- Editing other pull-request backlog entries.

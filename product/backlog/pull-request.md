@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan-fidelity requirement for exact parser-error wording in the behavior spec.
-
-Existing Issue: The completed subplan requires exact errors in the behavior spec, but `product/specs/agent-command.md` only describes parser errors generally while `src/agent/command-parser.ts` emits distinct strings for malformed quotes, unknown clauses, and unexpected launch tokens. Severity: 4/10
-
-Existing Risk: 4/10 - Callers and maintainers can rely on different error wording because the spec does not state the messages the parser actually returns.
-
-Proposal Risk: 2/10 - Documenting the parser's exact errors would align the behavior contract with the implementation, though later parser changes could still create drift.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "document the exact agent parser errors". Update `product/specs/agent-command.md` with the literal errors returned by `parseAgentCommand` in `src/agent/command-parser.ts`, including malformed quoted values, unknown clauses, missing clause values, unexpected launch tokens, missing `execute`, and missing task. Keep the documented wording synchronized with parser behavior and add or retain assertions in `src/agent/command-parser.test.ts` for each documented message. Verify every parser error path has an exact spec entry and that unrelated launch grammar remains unchanged.
-
-
 * Fix the functionality gap where an unreadable installed task tree blocks a project match.
 
 Existing Issue: `findBareTask` calls strict `listTasks` for both roots before applying project-first precedence, so an error walking installed `ai/tasks/` prevents resolution even when the requested task already exists in the execution workspace. Severity: 5/10

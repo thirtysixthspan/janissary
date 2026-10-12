@@ -46,4 +46,38 @@ describe('parseAgentCommand', () => {
       expect(parseAgentCommand(invocation)).toHaveProperty('error', expect.stringContaining('duplicate clause'));
     }
   });
+
+  it('reports the exact parser error for every invalid launch-clause form', () => {
+    for (const [invocation, error] of [
+      ['on execute task.md', 'Agent: missing value for on.'],
+      ['with', 'Agent: missing value for with.'],
+      ['using', 'Agent: missing value for using.'],
+      ['with skill execute task.md', 'Agent: missing value for with skill.'],
+      ['with effort execute task.md', 'Agent: missing value for with effort.'],
+      ['using model execute task.md', 'Agent: missing value for using model.'],
+      ['in', 'Agent: missing value for in .'],
+      ['in a execute task.md', 'Agent: missing value for in a.'],
+      ['in group execute task.md', 'Agent: missing value for in group.'],
+      ['with color red execute task.md', 'Agent: unknown clause "with color".'],
+      ['with "" color execute task.md', 'Agent: unknown clause "with ".'],
+      ['using color red execute task.md', 'Agent: unknown clause "using color".'],
+      ['using "" color execute task.md', 'Agent: unknown clause "using ".'],
+      ['in room lounge execute task.md', 'Agent: unknown clause "in room".'],
+      ['in "" room execute task.md', 'Agent: unknown clause "in ".'],
+      ['in execute task.md', 'Agent: unknown clause "in execute".'],
+      ['on first on second execute task.md', 'Agent: duplicate clause "on".'],
+      ['in a tab in a tab execute task.md', 'Agent: duplicate clause "in a tab".'],
+      ['in group first in group second execute task.md', 'Agent: duplicate clause "in group".'],
+      ['in workspace first in workspace second execute task.md', 'Agent: duplicate clause "in workspace".'],
+      ['using model first using model second execute task.md', 'Agent: duplicate clause "using model".'],
+      ['with effort low with effort high execute task.md', 'Agent: duplicate clause "with effort".'],
+      ['launch execute task.md', 'Agent: expected launch clause or final execute, got "launch".'],
+      ['"" execute task.md', 'Agent: expected launch clause or final execute, got "".'],
+      ['in a tab', 'Agent: missing execute clause.'],
+      ['execute', 'Agent: missing task after execute.'],
+      ['execute ""', 'Agent: missing task after execute.'],
+    ] as const) {
+      expect(parseAgentCommand(invocation)).toEqual({ error });
+    }
+  });
 });
