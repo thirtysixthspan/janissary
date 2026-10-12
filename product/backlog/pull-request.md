@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Make the pull request's changed-files section reflect the full implementation rather than only the initial resolution slice.
-
-Existing Issue: The PR description labels a short list of parser, resolver, packaging, and first-plan files as “Files changed,” while the aggregate diff contains 202 files spanning run ownership, ACP, remote execution, plugins, client UI, documentation, specs, and later plans. Severity: 4/10
-
-Existing Risk: 4/10 - Reviewers using the description to orient themselves can miss major parts of the implementation and overlook whether those integrations were actually reviewed.
-
-Proposal Risk: 2/10 - Marking the section as representative or replacing it with an aggregate-accurate summary makes its scope clear without changing the implementation.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "clarify the PR description's changed-files section". Update the “Files changed” section of PR #1672 to either identify its bullets as representative files from the first resolution slice or summarize the aggregate implementation across `src/agent/`, `src/acp/`, `src/remote/`, `src/plugins/agent-monitor/`, `web/src/plugins/agent-monitor/`, `product/specs/`, `product/plans/`, and the user documentation. Keep the listed examples accurate against the aggregate diff and preserve the description's existing behavior and verification summaries.
-
-
 * Remove the remaining completed-plan directions that ask reviewers to execute branch verification tooling.
 
 Existing Issue: Three completed plans still direct readers to run verification tooling: `product/plans/complete/await-remote-acp-process-teardown.md`, `product/plans/complete/agent-monitor-execution-location.md`, and `product/plans/complete/confine-selected-installed-skill-support-files.md`. Severity: 6/10
