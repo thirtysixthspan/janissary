@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Allow confined runs to read support files belonging to selected installed skills.
-
-Existing Issue: `src/agent/execute.ts` starts ACP with the workspace directory but does not pass selected installed-skill directories, and `AcpOptions` has no such field even though `sandboxSpawn` supports `installedSkillDirs`. Severity: 5/10
-
-Existing Risk: 5/10 - When workspace confinement is active, an installed skill that references a companion file cannot read that file and may fail or follow incomplete instructions despite being selected.
-
-Proposal Risk: 2/10 - Passing only canonical selected installed-skill directories through the existing sandbox read parameters restores the promised support-file access without exposing the installation's other contents.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "confine reads to selected installed skill support files". Extend `AcpOptions` in `src/acp/types.ts` and the `connectAcp` call in `src/agent/execute.ts` to carry only the selected skills whose resolved paths are under the installed skills root. Forward those directories to `sandboxSpawn`'s existing `installedSkillDirs` option in `src/acp/index.ts`; preserve the existing literal/real-path containment checks and secret-deny ordering in `src/sandbox/index.ts` and `src/sandbox/install-reads.ts`. Add focused tests in `src/acp/index.test.ts` and `src/sandbox/index.test.ts` proving selected installed skill support paths are readable while unselected skills and unrelated installation paths remain denied. No current test covers this autonomous-session integration.
-
-
 * Close only tabs newly created by an agent run when its owned resources are cleaned up.
 
 Existing Issue: Granted commands execute with invocation context, but tab-opening paths do not record run ownership and `AgentRun.cleanup()` has no created-tab release step, so tabs opened by an agent remain after the run ends. Severity: 6/10

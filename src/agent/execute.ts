@@ -1,3 +1,5 @@
+import { realpathSync } from 'node:fs';
+import path from 'node:path';
 import { acpLaunchFor, MARKDOWN_INSTRUCTION } from '../acp/launch.js';
 import { connectAcp } from '../acp/index.js';
 import { createRemoteAcpSession } from '../remote/acp-session.js';
@@ -7,6 +9,7 @@ import { modelsFor } from '../harness/models.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import { errorText } from '../error-text.js';
+import { janissaryRoot } from '../janissary-root.js';
 import { isRecord } from '../value-guards.js';
 import { agentPrimer, extractAgentCommand, runGrantedAgentCommand } from './command-tools.js';
 import type { AgentRun } from './run.js';
@@ -28,6 +31,19 @@ function selectedModel(model: string | undefined): string {
 
 function taskPrompt(task: string, parameters: string): string {
   return [task, parameters].filter(Boolean).join('\n');
+}
+
+function selectedInstalledSkillDirs(run: AgentRun): string[] {
+  const installedSkillsRoot = realpathSync(path.join(janissaryRoot(), 'skills'));
+  return [...new Set(run.snapshot.skills.flatMap((skill) => {
+    if (skill.source !== 'janissary') return [];
+    const resolvedFile = realpathSync(skill.path);
+    const directory = path.dirname(resolvedFile);
+    const relative = path.relative(installedSkillsRoot, directory);
+    return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative)
+      ? [directory]
+      : [];
+  }))];
 }
 
 export async function executeAgentRun(
@@ -65,6 +81,7 @@ export async function executeAgentRun(
       args: launch.args,
       cwd: run.executionDir,
       workspaceDir: run.executionDir,
+      installedSkillDirs: selectedInstalledSkillDirs(run),
       env,
       autonomous: true,
       effort: { level: effort ?? 'medium', model: selected },

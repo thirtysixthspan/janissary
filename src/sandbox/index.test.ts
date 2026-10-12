@@ -214,17 +214,19 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it.skipIf(!sandboxAvailable())('permits only selected installed skill files and their support files', () => {
+  it.skipIf(!sandboxAvailable())('permits selected installed skill support files but not unrelated install paths', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     const selectedDir = path.join(janissaryRoot(), 'skills', 'ask-user');
-    const spawn = sandboxSpawn({ workspaceDir, installedSkillDirs: [selectedDir, '/unrelated/skill'] }, 'bash', []);
+    const unrelatedInstallDir = path.join(janissaryRoot(), 'node_modules');
+    const spawn = sandboxSpawn({ workspaceDir, installedSkillDirs: [selectedDir, unrelatedInstallDir] }, 'bash', []);
     const profile = spawn.args[1] ?? '';
     expect(profile).toContain('(subpath (param "JANISSARY_SKILL_0_L"))');
     expect(profile).toContain('(subpath (param "JANISSARY_SKILL_0_R"))');
     expect(profile).not.toContain('JANISSARY_SKILL_1');
     expect(profile.lastIndexOf('(with errno ENOENT)')).toBeGreaterThan(profile.indexOf('JANISSARY_SKILL_0_L'));
     expect(spawn.args).toContain(`JANISSARY_SKILL_0_L=${selectedDir}`);
-    expect(spawn.args).not.toContain('JANISSARY_SKILL_1_L=/unrelated/skill');
+    expect(spawn.args).not.toContain(`JANISSARY_SKILL_1_L=${unrelatedInstallDir}`);
+    expect(profile.lastIndexOf('(with errno ENOENT)')).toBeGreaterThan(profile.indexOf('(subpath (param "JANISSARY_SKILL_0_L"))'));
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 

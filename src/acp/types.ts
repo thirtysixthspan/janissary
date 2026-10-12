@@ -38,6 +38,7 @@ export type AcpOptions = {
   // When the session belongs to a workspaced tab, confines the ACP subprocess to that workspace
   // via a Seatbelt sandbox (see src/sandbox/index.ts). Monitor sessions never set this.
   workspaceDir?: string;
+  installedSkillDirs?: string[];
   offline?: boolean;
   // The credentials to inject; defaults to this project's own. The remote server supplies the
   // forwarded-over-own map it already computed, so a credential forwarded from the local machine is

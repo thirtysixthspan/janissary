@@ -161,6 +161,7 @@ function connect(
   autonomous?: true,
   effort?: { level: string; model: string },
   onActivity?: (update: unknown) => void,
+  installedSkillDirs?: string[],
 ): Connected {
   const errors: string[] = [];
   const connected = Promise.withResolvers<AcpInfo>();
@@ -173,6 +174,7 @@ function connect(
     allowedTools,
     autonomous,
     effort,
+    installedSkillDirs,
     onActivity,
   });
   sessions.push(session);
@@ -351,5 +353,14 @@ describe('connectAcp — credentials', () => {
     connectWorkspaced();
 
     expect(sandboxCalls.options.at(-1)?.tokens).toEqual(getProjectTokens());
+  });
+
+  it('forwards selected installed skill directories to sandboxSpawn', () => {
+    sandboxCalls.options.length = 0;
+    const installedSkillDirs = [path.join(os.tmpdir(), 'janissary', 'skills', 'ask-user')];
+
+    connect('basic', undefined, true, undefined, undefined, installedSkillDirs);
+
+    expect(sandboxCalls.options.at(-1)?.installedSkillDirs).toEqual(installedSkillDirs);
   });
 });

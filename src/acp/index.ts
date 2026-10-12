@@ -34,6 +34,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
   const { command, args, env } = sandboxSpawn(
     {
       workspaceDir: options.workspaceDir,
+      installedSkillDirs: options.installedSkillDirs,
       offline: options.offline,
       tokens: options.workspaceDir ? (options.tokens ?? getProjectTokens()) : undefined,
     },
