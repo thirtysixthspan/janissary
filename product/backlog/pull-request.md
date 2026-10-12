@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that the full command will become available in later subplans, since this diff already registers and executes local tasks.
-
-Existing Issue: The pull request body says the first implementation only adds parser and resolver groundwork and that the full command becomes available as later subplans land, while this aggregate diff registers `agent` and executes headless local ACP tasks. Severity: 4/10
-
-Existing Risk: 4/10 - Reviewers and users relying on the pull request summary can miss the executable behavior and its limits, including that workspace, remote-host, and monitoring selectors are rejected.
-
-Proposal Risk: 2/10 - A summary aligned with the shipped local execution path and its unsupported selectors would make the implemented surface and remaining work clear, though the command's actual behavior would be unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "correct the description of the implemented local agent command". Update only the description's “What” and behavior summary to state that the diff includes the canonical headless local `agent` command, awaited results and cleanup, and the currently unsupported remote-host, named-workspace, and tab-monitoring selectors. Keep its parser, resolver, skill-grant, and test details, but remove the claim that command execution will arrive only in later subplans. Verify the revised description against `src/commands/agent.ts`, `src/agent/execute.ts`, and `documentation/user-documentation/advanced-agents/agent-command.md` without changing implementation or plan files.
-
-
 * Deliver the original plan's fresh-workspace isolation for local agent runs instead of executing against the caller's source directory.
 
 Existing Issue: The original feature plan requires a fresh workspace by default and task/skill resolution from that provisioned workspace, but `src/commands/agent.ts` resolves from the caller's cwd and `src/agent/execute.ts` launches ACP in that same directory; the current spec and user guide also codify caller-directory execution. Severity: 8/10
