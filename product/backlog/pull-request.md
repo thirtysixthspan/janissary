@@ -88,3 +88,14 @@ Existing Risk: 7/10 - A reviewer or later agent following the plan can execute b
 Proposal Risk: 2/10 - Replacing these directives with a factual record of the completed description correction removes the operational prompt while leaving the review task's own backlog-only output boundary clear.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove operational directives from the completed PR-description plan". In `product/plans/complete/correct-agent-command-pull-request-description.md`, replace the implementation-step instruction to run checks, commit, push, and change the PR body with a factual summary of the correction already completed. Review the rest of that plan for any other commands or mutation instructions addressed to a future reader, while preserving its stated goal, evidence, and scope. Read the completed plan back to verify it contains no operational directives; no application tests cover this documentation-only change.
+
+
+* Await local ACP process exit before releasing the agent workspace and settling its result.
+
+Existing Issue: Local agent cleanup calls `AcpSession.kill()` and immediately continues to workspace release, while `connectAcp` only signals the child process and does not await its exit or terminate its descendants. Severity: 7/10
+
+Existing Risk: 7/10 - A completed or terminated run can report cleanup complete and release or delete its workspace while the ACP process or a subprocess it started is still running against that workspace.
+
+Proposal Risk: 3/10 - Awaiting bounded process-tree teardown before workspace release makes cleanup completion meaningful, though a process that cannot be confirmed stopped must still be reported as an uncertainty.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "await local ACP process-tree teardown before releasing agent resources". Extend the ACP session lifecycle in `src/acp/types.ts` and `src/acp/index.ts` with an awaitable shutdown that signals the owned process and resolves only after its exit is observed; ensure owned descendants are terminated as well. In `src/agent/execute.ts`, register that awaited shutdown as the run's ACP cleanup so `AgentRun.cleanup()` in `src/agent/run.ts` cannot proceed to workspace release until process teardown settles. Bound the wait and surface timeout or process errors as cleanup warnings without replacing the task outcome. Add focused coverage in `src/acp/index.test.ts` proving shutdown waits for exit and handles descendants or timeout, plus agent lifecycle coverage proving workspace release follows ACP teardown and a timeout is retained as a warning. Existing ACP consumers must keep their current prompt and permission behavior.
