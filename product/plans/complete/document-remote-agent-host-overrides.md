@@ -19,7 +19,7 @@ Document the new `agent-resolve` / `agent-resolve-result` task-snapshot exchange
 
 ## Tests
 
-No application tests are needed for this documentation-only change. Verify the complete remote-agent section and protocol history against `src/remote/protocol.ts`, `src/remote/protocol-frames.ts`, and `product/specs/agent-command.md`, inspect the focused diff, and run `./scripts/run.mjs check-diff` after each change.
+No application tests were needed for this documentation-only change. The recorded review scope is comparison of the complete remote-agent section and protocol history against `src/remote/protocol.ts`, `src/remote/protocol-frames.ts`, and `product/specs/agent-command.md`, plus focused-diff inspection. No diff-check result is recorded here.
 
 ## Out of scope
 

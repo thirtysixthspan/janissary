@@ -18,7 +18,7 @@ Pass the parsed full SSH destination to established-workspace lookup. Keep the e
 
 ## Tests
 
-Verify that `host` does not match `admin@host`, `admin@host` does not match `host`, and identical full destinations borrow the existing channel and workspace. Verify `admin@host:/project` provisions a run-only target despite a matching established destination. Run `./scripts/run.mjs check-diff` after each implementation step.
+The command coverage distinguishes `host` from `admin@host` in both directions, confirms identical full destinations borrow the existing channel and workspace, and confirms `admin@host:/project` provisions a run-only target despite a matching established destination.
 
 ## Out of scope
 

@@ -19,8 +19,7 @@ Keep the existing remote channel and tab harness, but attach a real `AgentRunMan
 
 ## Tests
 
-- `src/plugins/launch-tab-remote.test.ts`: production lifecycle coverage for late refusal and admitted retry cleanup, plus the existing unowned retry regression.
-- Run `./scripts/run.mjs check-diff` after each change and after the final test edit.
+- `src/plugins/launch-tab-remote.test.ts`: production lifecycle coverage for refusal after termination and cleanup of an admitted replacement tab, plus the existing unowned-retry regression.
 
 ## Specs and documentation
 

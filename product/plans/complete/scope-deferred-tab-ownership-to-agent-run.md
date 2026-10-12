@@ -19,8 +19,7 @@ Retain run allocation admission and completion tracking, but replace whole-tab-l
 
 ## Tests
 
-- Extend `src/plugins/launch-tab.test.ts` with the unrelated-tab overlap race and retain the existing late-callback, admitted-allocation, recycled-tab, and existing-tab assertions.
-- Run `./scripts/run.mjs check-diff` after each implementation step.
+- `src/plugins/launch-tab.test.ts`: coverage includes unrelated-tab overlap during a paused callback, late-callback refusal, admitted-allocation completion, recycled-tab handling, and existing-tab preservation.
 
 ## Out of scope
 
