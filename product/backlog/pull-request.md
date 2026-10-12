@@ -88,3 +88,25 @@ Existing Risk: 6/10 - A reviewer or later agent following either completed plan 
 Proposal Risk: 2/10 - Replacing the imperative commands with descriptive coverage records removes the execution prompt while preserving the plans' test expectations.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove executable verification directions from the local execution and monitoring plans". In `product/plans/complete/agent-canonical-local-execution.md` and `product/plans/complete/agent-monitoring-plugin.md`, replace the `check-diff` instructions in their Tests sections with factual descriptions of the coverage present or expected, without claiming a verification run unless the branch records evidence for it. Review both full plans for any additional direct tool-execution instructions and keep their implementation scope and test cases intact. Verify by reading the plans and focused diff only; no application behavior or automated tests are involved.
+
+
+* Deliver the planned sandbox-disabled notice for local and remote agent runs.
+
+Existing Issue: Agent execution starts ACP with workspace confinement parameters but never reports when `sandboxWorkspaces` is disabled or confinement is unavailable, despite the feature plan requiring `Agent: sandboxing is disabled.` in the notifications feed for headed and headless runs. Severity: 6/10
+
+Existing Risk: 6/10 - A run can execute without OS confinement while the caller receives no agent-specific indication, making it easy to mistake command-grant restrictions for filesystem isolation.
+
+Proposal Risk: 2/10 - Reporting the actual execution host's confinement state before the task starts makes the limitation visible while leaving the existing command grants and execution behavior intact.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "report when agent execution is not sandboxed". In `src/agent/execute.ts`, determine whether the local ACP process will be confined using the same configuration and availability conditions as `sandboxSpawn` in `src/sandbox/index.ts`, and emit the exact `Agent: sandboxing is disabled.` line to the notifications feed only, for both headed and headless runs. For remote runs, have the remote ACP readiness response from `src/remote/serve-acp.ts` report its confinement state and let `src/remote/acp-session.ts` deliver the same notice locally; do not infer the remote host's state from the local machine. Keep the notice out of caller output and monitor activity. Add focused tests for enabled, disabled, and unavailable confinement on both execution hosts, asserting one notifications-feed entry and no transcript or monitor duplicate; no current agent execution test covers this notice.
+
+
+* Wait for remote ACP process teardown before acknowledging agent resource release.
+
+Existing Issue: `RemoteAcp.close` in `src/remote/serve-acp.ts` calls the synchronous `AcpSession.kill()` and immediately replies with `released: true`, while `connectAcp` in `src/acp/index.ts` only signals the child and does not await its exit. The local run therefore treats a kill request as confirmed resource cleanup. Severity: 7/10
+
+Existing Risk: 7/10 - The structured result can settle while the remote ACP process or its descendants are still terminating, and a subsequent workspace shutdown may race resources the close acknowledgment claimed were already released.
+
+Proposal Risk: 3/10 - A bounded wait for observed process exit before a positive acknowledgment, with a negative acknowledgment on timeout, makes successful cleanup meaningful while still allowing the local run to report uncertainty.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "await remote ACP process teardown before acknowledging release". Extend the ACP session lifecycle in `src/acp/types.ts` and `src/acp/index.ts` with an awaitable close operation that resolves when the child process exits, and have `RemoteAcp.close` in `src/remote/serve-acp.ts` await it before sending `acp-closed` with `released: true`; send a negative acknowledgment when bounded teardown cannot be confirmed. Preserve idempotent close behavior and ensure remote shutdown does not remove the workspace before owned ACP children have exited. Update `src/remote/serve-acp.test.ts` and `src/remote/acp-session.test.ts` to assert that the acknowledgment follows process exit, timeout produces the existing cleanup warning path, and concurrent close requests do not double-release resources. No current remote cleanup test proves that a positive acknowledgment follows actual child exit.
