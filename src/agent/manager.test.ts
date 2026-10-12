@@ -65,6 +65,44 @@ describe('AgentRunManager', () => {
     await manager.finish(run.id, 'completed');
   });
 
+  it('retains the final run projection until its monitor detaches', async () => {
+    const { manager, captured } = setup();
+    const run = manager.create({ caller: captured, snapshot });
+    manager.attachMonitor(run.id, 'monitor-1');
+    run.reportActivity('message', 'Done.');
+    run.setStatus('Cleaning up', 'Done.');
+
+    await manager.finish(run.id, 'completed');
+    expect(manager.runs.get(run.id)?.view()).toMatchObject({
+      status: 'Completed', response: 'Done.', activity: [{ text: 'Done.' }],
+    });
+
+    manager.closeMonitor('monitor-1');
+    expect(manager.runs.has(run.id)).toBe(false);
+  });
+
+  it('publishes an ordered run-scoped projection with increasing revisions', async () => {
+    const { manager, captured } = setup();
+    const run = manager.create({ caller: captured, snapshot, command: 'agent in a tab execute task.md', model: 'openai/test', effort: 'high' });
+    const updates: number[] = [];
+    run.subscribe((view) => { updates.push(view.revision); });
+
+    run.reportActivity('thinking', 'Considering the task.');
+    run.reportActivity('tool', 'read_file: task.md');
+    run.setStatus('Cleaning up', 'Finished.');
+
+    expect(run.view()).toMatchObject({
+      task: 'task.md', command: 'agent in a tab execute task.md', model: 'openai/test', effort: 'high',
+      status: 'Cleaning up', response: 'Finished.',
+      activity: [
+        { id: 1, kind: 'thinking', text: 'Considering the task.' },
+        { id: 2, kind: 'tool', text: 'read_file: task.md' },
+      ],
+    });
+    expect(updates).toEqual([1, 2, 3]);
+    await manager.finish(run.id, 'completed');
+  });
+
   it('rejects stale or recycled caller incarnations before starting a run', () => {
     const { manager, captured, caller } = setup();
     tabRuntime(caller).incarnation = 'recycled-incarnation';

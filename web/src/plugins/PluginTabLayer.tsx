@@ -46,6 +46,7 @@ export function PluginTabLayer({
           plugin={tab.plugin} label={tab.label} client={client}
           dotColor={tab.dotColor} remote={tab.remote}
           acpResponse={tab.acpResponse}
+          agentRun={tab.agentRun}
           pendingQuestion={tab.pendingQuestion}
           active={tab.label === current.label} onClose={onClose} onSplit={onSplit}
           onDirtyHandle={onDirtyHandle}

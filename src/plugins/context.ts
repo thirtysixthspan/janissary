@@ -200,6 +200,14 @@ export function createPluginContext(
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
     },
+    terminateAgentRun: async () => {
+      if (!isEnabled()) return;
+      const tab = answeringLabel ? managers.tab.byLabel(answeringLabel) : undefined;
+      const runId = declaration.agentMonitor === true && tab?.plugin?.id === declaration.id
+        ? tab.plugin.agentRunId : undefined;
+      if (!runId || !managers.agent.runs.has(runId)) throw new TabPluginRejection('agent run is no longer available');
+      await managers.agent.finish(runId, 'terminated');
+    },
     reportFailure: (reason) => {
       throw reason instanceof Error ? reason : new Error(String(reason));
     },

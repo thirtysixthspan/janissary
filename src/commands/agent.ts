@@ -47,10 +47,6 @@ async function runAgent(
   if (launch.host || launch.workspace) {
     return { status: 'failed', response: 'Agent: remote hosts and named workspaces are not supported by local task execution.', cleanupWarnings: [] };
   }
-  if (launch.inTab) {
-    return { status: 'failed', response: 'Agent: tab monitoring is not supported by local task execution.', cleanupWarnings: [] };
-  }
-
   try {
     const caller = invocationFor(label, managers, invocation);
     if (caller.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
@@ -66,7 +62,29 @@ async function runAgent(
         incarnation: caller.caller.incarnation ?? randomUUID(),
       },
       snapshot,
+      command: commandText,
+      model: launch.model,
+      effort: launch.effort,
     });
+    if (launch.inTab) {
+      try {
+        const monitorPlugin = managers.plugins.declarations.find((declaration) => declaration.agentMonitor === true);
+        if (!monitorPlugin) throw new Error('Agent: no monitoring plugin is available.');
+        const taskName = snapshot.taskPath.split('/').at(-1) ?? snapshot.taskPath;
+        managers.tab.openPluginTab(monitorPlugin.id, monitorPlugin.tabLabelPrefix, run.id,
+          monitorPlugin.payloadSchemaVersion, label, () => ({
+          title: `Agent: ${taskName}`,
+          payload: { runId: run.id },
+        }));
+        const monitor = managers.tab.pluginTabByInstanceKey(monitorPlugin.id, run.id);
+        if (!monitor) throw new Error('Agent: could not open monitoring tab.');
+        monitor.plugin.agentRunId = run.id;
+        managers.agent.attachMonitor(run.id, monitor.label);
+      } catch (error) {
+        await Promise.allSettled([managers.agent.finish(run.id, 'failed')]);
+        throw error;
+      }
+    }
     const runInvocation: CommandInvocationContext = Object.freeze({
       ...caller,
       runId: run.id,
@@ -83,6 +101,7 @@ async function runAgent(
     }
 
     const cleanupWarnings: string[] = [];
+    run.setStatus('Cleaning up', result.response);
     try {
       if (managers.agent.runs.has(run.id)) await managers.agent.finish(run.id, result.status);
       else await run.finish(run.outcome ?? result.status);

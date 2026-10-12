@@ -3,6 +3,7 @@ import type { TaskRow } from '../tab/types.js';
 import type { ProfileRow } from '../profile/types.js';
 import type { TabView, HarnessLaunchView } from './tab.js';
 import type { ScheduleLaunchView } from './schedule.js';
+import type { AgentRunView } from '../agent/types.js';
 
 export type StateEvent = {
   t: 'state'; tabs: TabView[]; activeTab: number; secondaryTab?: number;
@@ -58,6 +59,7 @@ export type NativeNotificationEvent = {
   t: 'native-notification'; tab: string; from: string; message: string;
   category: 'success' | 'warning' | 'error'; desktop: boolean; volume: number;
 };
+export type AgentRunUpdatedEvent = { t: 'agent-run-updated'; tab: string; view: AgentRunView };
 export type ServerEvent =
   StateEvent | PtyDataEvent | PtyExitEvent | RpcReply | ByeEvent | LayoutEvent | CollectTreeStateEvent
-  | ToastEvent | ToastClearEvent | NotificationsRevealEvent | NativeNotificationEvent;
+  | ToastEvent | ToastClearEvent | NotificationsRevealEvent | NativeNotificationEvent | AgentRunUpdatedEvent;

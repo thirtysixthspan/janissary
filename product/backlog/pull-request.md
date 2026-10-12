@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Add the planned lazy monitoring plugin and tab-scoped run projection so a headed agent run can be observed and terminated without owning execution.
-
-Existing Issue: The source plan calls for an `agent-monitor` server and client plugin with activity projection, metadata, and run-scoped termination, but the aggregate diff adds no monitor contribution, wire projection, loader, or client implementation. Severity: 8/10
-
-Existing Risk: 7/10 - Even after task execution is connected, callers requesting `in a tab` will have no planned read-only activity view or in-tab termination control, and no client boundary will enforce run scoping.
-
-Proposal Risk: 3/10 - A lazy plugin bound by the server to its owning run would expose only that run's projection and termination capability, though plugin activation and streamed update races would still need coverage.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "implement the scoped lazy agent monitoring plugin". Add the `agentMonitor` contribution and tab-scoped `agentRun` projection in the existing plugin and protocol modules, with literal server and client loader entries and a lazy client implementation under `web/src/plugins/agent-monitor/`. Bind the monitor to its run on the server; have the host derive run identity from the owning tab rather than accepting a client-selected run ID. Render the planned launch metadata, status, reported activity, and terminate action through existing transcript surfaces, and ensure monitor close or plugin failure only detaches monitoring. Update the behavior spec and add server/client coverage for lazy loading, targeted revisions, access isolation, termination, failure, and monitor closure while the run continues.
-
-
 * Implement remote agent execution and acknowledged teardown so remote runs do not depend on an unmodified tab-owned session lifecycle.
 
 Existing Issue: The source plan requires remote ACP policy, activity and close acknowledgments, ephemeral run leases, and transport-loss cleanup, but no remote protocol, channel, or manager file is changed in the aggregate diff. Severity: 8/10

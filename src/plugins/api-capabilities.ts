@@ -44,6 +44,7 @@ export type TabPluginCapabilityName =
   | 'promptAcpResult'
   | 'resetAcp'
   | 'rejectRequest'
+  | 'terminateAgentRun'
   | 'reportFailure';
 
 // The v2 capability set as data. Keyed by the union rather than written out as an array, so adding
@@ -87,6 +88,7 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   promptAcpResult: true,
   resetAcp: true,
   rejectRequest: true,
+  terminateAgentRun: true,
   reportFailure: true,
 };
 

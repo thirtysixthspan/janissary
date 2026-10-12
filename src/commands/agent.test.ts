@@ -88,10 +88,24 @@ describe('agent command', () => {
     expect(cleanupError).toHaveBeenCalledOnce();
   });
 
-  it('rejects monitor and remote selectors in this local-only execution path', async () => {
-    await expect(run('agent in a tab execute task.md')).resolves.toMatchObject({
-      status: 'failed', response: 'Agent: tab monitoring is not supported by local task execution.',
-    });
+  it('opens a run-bound monitor for headed local runs and detaches it when closed', async () => {
+    const gate = Promise.withResolvers<AgentResult>();
+    execute.mockReturnValue(gate.promise);
+    const pending = run('agent in a tab execute task.md');
+    await Promise.resolve();
+    const monitor = managers.tab.tabs.find((tab) => tab.plugin?.id === 'agent-monitor');
+    expect(monitor).toBeDefined();
+    expect(monitor?.title).toBe('Agent: task.md');
+    const runId = monitor?.plugin?.agentRunId;
+    expect(runId).toBeDefined();
+    managers.tab.closeTab(managers.tab.tabs.indexOf(monitor!));
+    expect(managers.agent.runs.has(runId!)).toBe(true);
+    gate.resolve({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
+    await expect(pending).resolves.toMatchObject({ status: 'completed' });
+    expect(managers.tab.tabs.some((tab) => tab.plugin?.id === 'agent-monitor')).toBe(false);
+  });
+
+  it('rejects unsupported remote selectors in local execution', async () => {
     await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({
       status: 'failed', response: 'Agent: remote hosts and named workspaces are not supported by local task execution.',
     });

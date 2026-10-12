@@ -63,6 +63,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
   const client: Client = {
     async sessionUpdate(parameters) {
       const update = parameters.update;
+      options.onActivity?.(update);
       if (update.sessionUpdate === 'agent_message_chunk' && update.content.type === 'text') {
         current?.onChunk(update.content.text);
       }
@@ -75,6 +76,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
         const outcome: RequestPermissionOutcome = approval
           ? { outcome: 'selected', optionId: approval.optionId }
           : { outcome: 'cancelled' };
+        options.onActivity?.({ sessionUpdate: 'permission_decision', toolCall: params.toolCall, outcome });
         return { outcome };
       }
       return { outcome: decidePermission(options.allowedTools, params.toolCall, params.options) };

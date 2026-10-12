@@ -17,6 +17,20 @@ export type AgentSnapshot = Readonly<{
   grants: readonly string[];
 }>;
 
+export type AgentRunView = Readonly<{
+  id: string;
+  revision: number;
+  task: string;
+  command: string;
+  model: string;
+  effort: string;
+  host: 'Local';
+  workspace: string;
+  status: 'Provisioning' | 'Running' | 'Waiting for answer' | 'Cleaning up' | 'Completed' | 'Failed' | 'Terminated';
+  activity: readonly Readonly<{ id: number; kind: string; text: string }>[];
+  response?: string;
+}>;
+
 export type AgentResolutionOptions = Readonly<{
   workspaceDir: string;
   installationDir: string;

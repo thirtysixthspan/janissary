@@ -155,7 +155,13 @@ function agentScript(): string {
 
 type Connected = { session: AcpSession; info: Promise<AcpInfo>; errors: string[] };
 
-function connect(mode: string, allowedTools?: string[], autonomous?: true, effort?: { level: string; model: string }): Connected {
+function connect(
+  mode: string,
+  allowedTools?: string[],
+  autonomous?: true,
+  effort?: { level: string; model: string },
+  onActivity?: (update: unknown) => void,
+): Connected {
   const errors: string[] = [];
   const connected = Promise.withResolvers<AcpInfo>();
   const session = connectAcp({
@@ -167,6 +173,7 @@ function connect(mode: string, allowedTools?: string[], autonomous?: true, effor
     allowedTools,
     autonomous,
     effort,
+    onActivity,
   });
   sessions.push(session);
   return { session, info: connected.promise, errors };
@@ -217,6 +224,20 @@ describe('connectAcp', () => {
 
     expect(reply.text).toBe('protocol=1 sessions=1 hello');
     expect(errors).toEqual([]);
+  });
+
+  it('offers typed session updates to an opted-in activity observer', async () => {
+    const activity: unknown[] = [];
+    const { session } = connect('other-updates', undefined, undefined, undefined, (update) => { activity.push(update); });
+
+    await prompt(session, 'hi');
+
+    expect(activity).toEqual([
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'image', data: 'AA==', mimeType: 'image/png' } },
+      { sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'thinking' } },
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'protocol=1 sessions=1 ' } },
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'hello' } },
+    ]);
   });
 
   it('reuses one session across prompts', async () => {

@@ -95,6 +95,8 @@ export type TabPluginDeclaration = {
   // named slice only when it differs from what it last pushed to that tab, so this is a change
   // signal rather than a subscription to every state broadcast.
   hostState?: readonly TabPluginHostStateSlice[];
+  // Declares that this tab observes and may terminate the AgentRun bound to its server-side tab record.
+  agentMonitor?: true;
   // Chords this plugin claims while one of its tabs is the visible one — canonical ids in the shape
   // the application's own chord table uses. A claimed chord runs the handler the mounted body
   // registers rather than the application's action, and reverts to the application the moment
@@ -395,6 +397,7 @@ export type TabPluginServerCapabilities = {
   // blank.
   recordGlobalHistory(line: string): void;
   rejectRequest(reason: string): never;
+  terminateAgentRun(): Promise<void>;
   reportFailure(reason: unknown): never;
 };
 

@@ -5,6 +5,7 @@ import { modelsFor } from '../harness/models.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import { errorText } from '../error-text.js';
+import { isRecord } from '../value-guards.js';
 import { agentPrimer, extractAgentCommand, runGrantedAgentCommand } from './command-tools.js';
 import type { AgentRun } from './run.js';
 
@@ -62,6 +63,17 @@ export async function executeAgentRun(
       env,
       autonomous: true,
       effort: { level: effort ?? 'medium', model: selected },
+      onActivity: (update) => {
+        if (!isRecord(update) || typeof update.sessionUpdate !== 'string') return;
+        const kind = update.sessionUpdate;
+        const content = update.content;
+        if (kind === 'agent_message_chunk' && isRecord(content) && content.type === 'text'
+          && typeof content.text === 'string') {
+          run.reportActivity('message', content.text);
+        } else {
+          run.reportActivity(kind, JSON.stringify(content ?? update) ?? String(content ?? update));
+        }
+      },
       onError: (message) => connectionFailure?.(message),
     });
     run.addResource(`acp:${run.id}`, () => session.kill());
@@ -71,7 +83,15 @@ export async function executeAgentRun(
       primer: MARKDOWN_INSTRUCTION,
       maxSteps: Infinity,
       extractCommand: (text) => extractAgentCommand(text, run.snapshot.skills.some(({ name }) => name === 'ask-user')),
-      runCommand: (command) => runGrantedAgentCommand(command, run.snapshot, managers, invocation),
+      runCommand: async (command) => {
+        const isQuestion = command.startsWith('question ');
+        if (isQuestion) run.setStatus('Waiting for answer');
+        try {
+          return await runGrantedAgentCommand(command, run.snapshot, managers, invocation);
+        } finally {
+          if (isQuestion && !run.abortController.signal.aborted) run.setStatus('Running');
+        }
+      },
     }, {
       startTurn: () => {},
       chunk: () => {},

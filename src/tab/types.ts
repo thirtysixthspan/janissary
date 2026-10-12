@@ -1,6 +1,7 @@
 // The tab's own shapes. A leaf module on purpose: it imports nothing but this one type, which the
 // tab's in-flight ACP prompt settles with.
 import type { AcpPromptResult } from '../acp/types.js';
+import type { AgentRunView } from '../agent/types.js';
 
 export type LogEntry = {
   input: string;
@@ -116,6 +117,7 @@ export type PluginTabRecord = {
   // Set by the plugin's `setBusy` capability and folded into the view's `busy` dot. Kept here rather
   // than on `runtime.busy`, which tracks the host's own commands in flight.
   busy?: boolean;
+  agentRunId?: string;
 };
 
 // Plain-text editor view (opened via `open <file>` for text extensions, or `edit <file>` for any
@@ -317,6 +319,7 @@ export type Tab = {
   title?: string;
   // The bundled-plugin payload and server-only ownership record, present only for plugin tabs.
   plugin?: PluginTabRecord;
+  agentRun?: AgentRunView;
   // The harness-view payload, present only when `view === 'harness'`.
   harness?: HarnessView;
   // The absolute path of this tab's asciicast recording, once its recorder has opened a file — which

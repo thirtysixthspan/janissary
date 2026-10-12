@@ -54,12 +54,14 @@ function PluginContent({
   id,
   registration,
   payload,
+  agentRun,
   capabilities,
   onFailure,
 }: {
   id: string;
   registration: ClientPluginRegistration;
   payload: unknown;
+  agentRun?: TabView['agentRun'];
   capabilities: ReturnType<typeof createPluginClientCapabilities>;
   onFailure(error: unknown): void;
 }) {
@@ -81,7 +83,7 @@ function PluginContent({
   return (
     <PluginErrorBoundary onFailure={onFailure}>
       <Suspense fallback={<div className="plugin-loading">Loading {id}…</div>}>
-        <Plugin payload={payload} capabilities={capabilities} onMounted={onMounted} />
+        <Plugin payload={payload} capabilities={capabilities} agentRun={agentRun} onMounted={onMounted} />
       </Suspense>
     </PluginErrorBoundary>
   );
@@ -89,6 +91,7 @@ function PluginContent({
 
 function contentForPlugin(
   plugin: NonNullable<TabView['plugin']>,
+  agentRun: TabView['agentRun'],
   registration: ClientPluginRegistration | undefined,
   capabilities: ReturnType<typeof createPluginClientCapabilities>,
   fail: (error: unknown) => void,
@@ -107,6 +110,7 @@ function contentForPlugin(
       id={plugin.id}
       registration={registration}
       payload={plugin.payload}
+      agentRun={agentRun}
       capabilities={capabilities}
       onFailure={fail}
     />
@@ -124,6 +128,7 @@ export function PluginBody({
   dock = null,
   remote,
   acpResponse,
+  agentRun,
   pendingQuestion,
   dotColor,
   onClose,
@@ -137,6 +142,7 @@ export function PluginBody({
   dock?: 'left' | 'right' | null;
   remote?: TabView['remote'];
   acpResponse?: TabView['acpResponse'];
+  agentRun?: TabView['agentRun'];
   pendingQuestion?: TabView['pendingQuestion'];
   dotColor?: string;
   onClose: () => void;
@@ -208,7 +214,7 @@ export function PluginBody({
   return (
     <AppCommandBarTabScope label={label} active={active}>
       <AcpResponseScope response={acpResponse} question={dock !== null && active ? pendingQuestion : undefined} label={label} client={client}>
-        {contentForPlugin(plugin, host.registry.get(pluginId), capabilities, fail)}
+        {contentForPlugin(plugin, agentRun, host.registry.get(pluginId), capabilities, fail)}
       </AcpResponseScope>
     </AppCommandBarTabScope>
   );

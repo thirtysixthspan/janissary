@@ -15,6 +15,7 @@ import type { PluginRpcCall } from './protocol/plugin.js';
 import type { RemoteSessionRpcCall } from './protocol/sessions.js';
 
 export type { BufferLine, HarnessView, EditorView, RemoteTarget, TerminalEntry, FileNavigatorView, FileNavigatorDetail, FileNavigatorPullStatus, FileNavigatorCommitStatus, FileNavigatorRow, TaskRow } from './tab/types.js';
+export type { AgentRunView } from './agent/types.js';
 export type { ProfileRow } from './profile/types.js';
 
 export type ConversationHarness = 'claude' | 'opencode';
@@ -113,6 +114,7 @@ export type {
   LayoutEvent,
   LayoutUpdate,
   NativeNotificationEvent,
+  AgentRunUpdatedEvent,
   ServerEvent,
 } from './protocol/events.js';
 

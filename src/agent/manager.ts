@@ -2,11 +2,15 @@ import { randomUUID } from 'node:crypto';
 import type { Tab } from '../tab/types.js';
 import { tabRuntime } from '../tab/runtime.js';
 import type { Managers } from '../managers.js';
+import { messageBus } from '../bus.js';
 import { AgentRun, copyAgentCaller, type AgentOutcome, type AgentRunOptions } from './run.js';
+import type { AgentRunView } from './types.js';
 
 export class AgentRunManager {
   readonly runs = new Map<string, AgentRun>();
   private disposed = false;
+  private pendingViews = new Map<string, AgentRunView>();
+  private flushScheduled = false;
 
   constructor(private managers: Managers) {}
 
@@ -31,8 +35,26 @@ export class AgentRunManager {
     const releaseWorkspace = options.workspaceDir === undefined
       ? undefined
       : this.managers.workspace.acquireAgentLease(options.workspaceDir);
-    const run = new AgentRun(copyAgentCaller(options.caller), options.snapshot, releaseWorkspace);
+    const run = new AgentRun(copyAgentCaller(options.caller), options.snapshot, releaseWorkspace, {
+      command: options.command ?? `agent execute ${options.snapshot.taskPath.split('/').at(-1) ?? options.snapshot.taskPath}`,
+      model: options.model ?? '',
+      effort: options.effort ?? 'medium',
+      host: 'Local',
+      workspace: options.caller.cwd,
+    });
     this.runs.set(run.id, run);
+    run.subscribe((view) => {
+      for (const label of run.monitorIds) this.pendingViews.set(label, view);
+      if (this.flushScheduled) return;
+      this.flushScheduled = true;
+      queueMicrotask(() => {
+        this.flushScheduled = false;
+        for (const [label, latest] of this.pendingViews) {
+          messageBus.emit('agent', { type: 'run-updated', tab: label, view: latest });
+        }
+        this.pendingViews.clear();
+      });
+    });
     return run;
   }
 
@@ -48,10 +70,14 @@ export class AgentRunManager {
 
   attachMonitor(runId: string, monitorId: string): void {
     this.requireRun(runId).attachMonitor(monitorId);
+    messageBus.emit('state', { type: 'dirty' });
   }
 
   closeMonitor(monitorId: string): void {
-    for (const run of this.runs.values()) run.detachMonitor(monitorId);
+    for (const [id, run] of this.runs) {
+      run.detachMonitor(monitorId);
+      if (run.outcome && run.monitorIds.size === 0) this.runs.delete(id);
+    }
   }
 
   async finish(runId: string, outcome: AgentOutcome): Promise<void> {
@@ -59,7 +85,7 @@ export class AgentRunManager {
     try {
       await run.finish(outcome);
     } finally {
-      if (this.runs.get(runId) === run) this.runs.delete(runId);
+      if (this.runs.get(runId) === run && run.monitorIds.size === 0) this.runs.delete(runId);
     }
   }
 
@@ -70,6 +96,7 @@ export class AgentRunManager {
     return (async () => {
       const results = await Promise.allSettled([...this.runs.keys()].map((id) => this.finish(id, 'terminated')));
       const failures = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected');
+      this.runs.clear();
       if (failures.length > 0) throw new AggregateError(failures.map((failure) => failure.reason), 'Agent run shutdown failed.');
     })();
   }

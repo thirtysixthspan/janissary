@@ -32,6 +32,7 @@ export type AcpOptions = {
   onError: (message: string) => void;
   // Called once the session handshake completes, with the agent's reported identity.
   onConnect?: (info: AcpInfo) => void;
+  onActivity?: (update: unknown) => void;
   // Extra environment variables to pass to the subprocess.
   env?: Record<string, string>;
   // When the session belongs to a workspaced tab, confines the ACP subprocess to that workspace

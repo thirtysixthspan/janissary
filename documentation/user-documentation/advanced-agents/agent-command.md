@@ -18,4 +18,8 @@ Select a skill with `with skill <name>`. Its instructions are included with the 
 
 Only listed canonical command names are allowed. The agent asks to run one by ending a reply with `janissary <command>`. Questions require the `ask-user` skill and its `question` grant; the task waits until you answer or cancel.
 
-The command returns `Status: completed`, `failed`, or `terminated`, followed by the task response. Cleanup issues appear on separate `Cleanup warning:` lines. Closing the caller tab terminates its run. Local execution currently does not support `on <host>`, `in workspace <label>`, or `in a tab` monitoring.
+The command returns `Status: completed`, `failed`, or `terminated`, followed by the task response. Cleanup issues appear on separate `Cleanup warning:` lines. Closing the caller tab terminates its run.
+
+Add `in a tab` to open a read-only monitor while the task runs. It shows the launch command, model and effort, local workspace, status, and reported activity. Select **Terminate** to stop that run. Closing the monitor only closes the view; the task continues, and you can still collect its result in the caller tab.
+
+Local execution does not support `on <host>` or `in workspace <label>`.

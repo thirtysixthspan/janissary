@@ -11,6 +11,8 @@ import type { AcpRef, RemoteTargetView } from '@shared/protocol';
 import type { RemoteSessionState } from '../shared/RemoteSessionButton';
 
 export { renderMarkdown } from '../shared/transcript/markdown';
+export { ReadOnlyTranscript } from './ReadOnlyTranscript';
+export type { AgentRunView } from '@shared/protocol';
 
 // Filename detection, token scopes, and size limits are shared by editor and plugin code views.
 export { createFileTokenizer } from '../shared/syntax-highlight/file-tokenize';

@@ -365,6 +365,30 @@ describe('JanusClient', () => {
     expect(listener).toHaveBeenCalledWith({ from: 'janus', message: 'one', color: '#abc' });
   });
 
+  it('applies only newer run updates bound to the matching monitor tab', () => {
+    const client = new JanusClient();
+    const listener = vi.fn();
+    client.onState(listener);
+    const tab = {
+      label: 'monitor', plugin: { id: 'agent-monitor', schemaVersion: 1, payload: { runId: 'run-a' } },
+    };
+    messageHandler!({ data: JSON.stringify({
+      t: 'state', tabs: [tab], activeTab: 0, tabNameMaxLength: 20, globalHistory: [],
+      syntaxTheme: 'monokai', theme: 'dark', tasks: [], profiles: [], projectDir: '/tmp', version: '1.2.3',
+    }) });
+    const projection = { id: 'run-a', revision: 3, task: 'task.md', status: 'Running', activity: [] };
+    messageHandler!({ data: JSON.stringify({ t: 'agent-run-updated', tab: 'monitor', view: projection }) });
+    messageHandler!({ data: JSON.stringify({
+      t: 'agent-run-updated', tab: 'monitor', view: { ...projection, revision: 2, task: 'stale.md' },
+    }) });
+    messageHandler!({ data: JSON.stringify({
+      t: 'agent-run-updated', tab: 'monitor', view: { ...projection, id: 'run-b', revision: 9 },
+    }) });
+
+    expect(listener.mock.calls.at(-1)?.[0].tabs[0]?.agentRun).toMatchObject({ id: 'run-a', revision: 3, task: 'task.md' });
+    client.dispose();
+  });
+
   it('delivers a toast-clear event to registered listeners', () => {
     const client = new JanusClient();
     const listener = vi.fn();
