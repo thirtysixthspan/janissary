@@ -44,4 +44,6 @@ This stage emits the approved errors `Agent: unknown <kind> "<value>".` and `Age
 
 Each run has an independent identity and lifecycle. Closing the caller tab terminates its active runs, including when closing that tab exits the application. Closing a monitoring tab only detaches monitoring and leaves execution running. A caller identity includes the tab incarnation captured at launch, so a later tab reusing the same label cannot become the original caller.
 
+A resource registered after its run has ended is disposed once and rejected with `Agent run has already ended.`. A failure from that late disposer is contained and does not change the run's settled cleanup result.
+
 A borrowed workspace must already be tracked by Janissary. The run retains one reference and releases only that reference during cleanup; other tabs and runs keep their references. Cleanup is idempotent and attempts every owned release even if one fails. Shutdown awaits active-run cleanup before disposing the services those runs use, and concurrent shutdown requests share the same completion.

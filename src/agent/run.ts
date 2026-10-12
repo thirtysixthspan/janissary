@@ -26,7 +26,16 @@ export class AgentRun {
   constructor(readonly caller: AgentCaller, readonly snapshot: AgentSnapshot, private releaseWorkspace?: () => Promise<void>) {}
 
   addResource(id: string, cleanup: () => void | Promise<void>): void {
-    if (this.outcome) throw new Error('Agent run has already ended.');
+    if (this.outcome) {
+      let cleanupResult: void | Promise<void>;
+      try {
+        cleanupResult = cleanup();
+      } catch {
+        cleanupResult = Promise.resolve();
+      }
+      void Promise.resolve(cleanupResult).catch(() => {});
+      throw new Error('Agent run has already ended.');
+    }
     this.childIds.add(id);
     this.cleanups.push(cleanup);
   }

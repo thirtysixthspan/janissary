@@ -73,19 +73,27 @@ describe('AgentRunManager', () => {
     expect(manager.runs.size).toBe(0);
   });
 
-  it('rejects late resources after caller closure and cleans every resource after a failure', async () => {
-    const { manager, captured, caller } = setup();
+  it('disposes and rejects late resources while containing async disposer failures', async () => {
+    const { manager, captured } = setup();
     const run = manager.create({ caller: captured, snapshot });
     const firstCleanup = vi.fn(() => { throw new Error('cleanup failed'); });
     const secondCleanup = vi.fn();
     run.addResource('first', firstCleanup);
     run.addResource('second', secondCleanup);
-    manager.closeCaller(caller);
+    await expect(manager.finish(run.id, 'terminated')).rejects.toThrow('Agent run');
 
-    expect(() => run.addResource('late', vi.fn())).toThrow('Agent run has already ended.');
-    await expect(run.finish('terminated')).rejects.toThrow('Agent run');
+    const lateCleanup = vi.fn(async () => { throw new Error('late cleanup failed'); });
+    expect(() => run.addResource('late', lateCleanup)).toThrow('Agent run has already ended.');
+    await Promise.resolve();
+
     expect(firstCleanup).toHaveBeenCalledOnce();
     expect(secondCleanup).toHaveBeenCalledOnce();
+    expect(lateCleanup).toHaveBeenCalledOnce();
+    await expect(run.finish('failed')).rejects.toMatchObject({
+      errors: [expect.objectContaining({ message: 'cleanup failed' })],
+    });
+    expect(run.outcome).toBe('terminated');
+    expect(manager.runs.has(run.id)).toBe(false);
   });
 
   it('acquires only tracked borrowed workspaces and releases its own lease', async () => {
