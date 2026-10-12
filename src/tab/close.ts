@@ -27,6 +27,8 @@ export function closeTabOp(
 ): void {
   const tab = tabs[index];
   if (!tab || tab.runtime?.closing) return;
+  managers.agent?.closeCaller(tab);
+  if (tab.view === 'monitor') managers.agent?.closeMonitor(tab.label);
   if (closeQuitsApp(tabs, index)) {
     messageBus.emit('app', { type: 'exit' });
     return;

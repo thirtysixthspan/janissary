@@ -27,6 +27,7 @@ import { TabPluginHost } from '../plugins/host.js';
 import { ConversationsManager } from '../conversations/manager.js';
 import { SessionsManager } from '../sessions/manager.js';
 import { NotificationQueue } from '../notifications/queue.js';
+import { AgentRunManager } from '../agent/manager.js';
 
 // Populates every manager onto an already-allocated (empty) `Managers` object, in construction
 // order (later managers may reference earlier ones via `this.managers` at call time, not
@@ -39,6 +40,7 @@ import { NotificationQueue } from '../notifications/queue.js';
 // reordering two lines here silently reordered dispose. Teardown is stated by
 // `MANAGER_DISPOSE_ORDER` in `../managers.ts`; change that when a teardown dependency changes.
 export function createManagers(managers: Managers, projectDir?: string): void {
+  managers.agent = new AgentRunManager(managers);
   // First: it takes no other manager, and `TabManager` below can already reach it when a feed is
   // opened.
   managers.notifications = new NotificationQueue();

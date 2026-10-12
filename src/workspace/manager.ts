@@ -1,4 +1,4 @@
-import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace, type ProvisionHandle } from './index.js';
+import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace, removeWorkspaceStrict, type ProvisionHandle } from './index.js';
 import { errorText } from '../error-text.js';
 import { messageBus } from '../bus.js';
 
@@ -93,6 +93,24 @@ export class WorkspaceManager {
   retain(dir: string): void {
     const count = this.refs.get(dir);
     if (count !== undefined) this.refs.set(dir, count + 1);
+  }
+
+  acquireAgentLease(dir: string): () => Promise<void> {
+    if (!this.refs.has(dir)) throw new Error(`Cannot borrow untracked workspace: ${dir}`);
+    this.retain(dir);
+    let released = false;
+    return async () => {
+      if (released) return;
+      released = true;
+      const count = this.refs.get(dir);
+      if (count === undefined) throw new Error(`Workspace lease is no longer tracked: ${dir}`);
+      if (count > 1) {
+        this.refs.set(dir, count - 1);
+        return;
+      }
+      this.refs.delete(dir);
+      removeWorkspaceStrict(dir);
+    };
   }
 
   release(dir: string): void {

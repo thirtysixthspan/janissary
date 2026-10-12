@@ -5,6 +5,7 @@ const findRepoRootMock = vi.fn();
 const getRemoteUrlMock = vi.fn();
 const provisionWorkspaceMock = vi.fn();
 const removeWorkspaceMock = vi.fn();
+const removeWorkspaceStrictMock = vi.fn();
 
 vi.mock('./index.js', async (importOriginal) => {
   const actual = await importOriginal<typeof Workspace>();
@@ -14,6 +15,7 @@ vi.mock('./index.js', async (importOriginal) => {
     getRemoteUrl: (...args: unknown[]) => getRemoteUrlMock(...args),
     provisionWorkspace: (...args: unknown[]) => provisionWorkspaceMock(...args),
     removeWorkspace: (...args: unknown[]) => removeWorkspaceMock(...args),
+    removeWorkspaceStrict: (...args: unknown[]) => removeWorkspaceStrictMock(...args),
   };
 });
 
@@ -30,6 +32,7 @@ describe('WorkspaceManager', () => {
     getRemoteUrlMock.mockReset();
     provisionWorkspaceMock.mockReset();
     removeWorkspaceMock.mockReset();
+    removeWorkspaceStrictMock.mockReset();
   });
 
   describe('preflight', () => {
@@ -241,6 +244,42 @@ describe('WorkspaceManager', () => {
   });
 
   describe('references', () => {
+    it('acquires and releases a tracked headless workspace reference once', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const dir = '/repo/.janissary/workspace/agent-1';
+      provisionWorkspaceMock.mockReturnValue(handle(dir));
+      const manager = new WorkspaceManager();
+      manager.create('agent-1');
+
+      const release = manager.acquireAgentLease(dir);
+      manager.release(dir);
+      await release();
+      await release();
+
+      expect(removeWorkspaceStrictMock).toHaveBeenCalledWith(dir);
+      expect(removeWorkspaceStrictMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects an untracked headless workspace without acquiring it', () => {
+      const manager = new WorkspaceManager();
+      expect(() => manager.acquireAgentLease('/untracked')).toThrow('Cannot borrow untracked workspace: /untracked');
+    });
+
+    it('reports final headless workspace removal errors', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const dir = '/repo/.janissary/workspace/agent-1';
+      provisionWorkspaceMock.mockReturnValue(handle(dir));
+      const manager = new WorkspaceManager();
+      manager.create('agent-1');
+      const release = manager.acquireAgentLease(dir);
+      manager.release(dir);
+      removeWorkspaceStrictMock.mockImplementation(() => { throw new Error('remove failed'); });
+
+      await expect(release()).rejects.toThrow('remove failed');
+    });
+
     it('keeps a retained workspace until the last release', () => {
       findRepoRootMock.mockReturnValue('/repo');
       getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
