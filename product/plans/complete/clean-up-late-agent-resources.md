@@ -22,7 +22,7 @@ Keep `addResource`'s existing ended-run error. Before throwing it, invoke the su
 - The late disposer runs exactly once, including when it returns a rejecting promise.
 - A late disposer rejection is contained and does not change the already-settled finish result.
 - Existing cleanup-failure coverage continues to prove every registered resource is attempted and failures are reported.
-- Run `./scripts/run.mjs check-diff` after each implementation, test, spec, and backlog change.
+- The `AgentRunManager` tests cover rejected late registration, one-time disposal, contained asynchronous disposer failures, and preservation of the settled run outcome.
 
 ## Out of scope
 

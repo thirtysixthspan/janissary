@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove the executable verification command from the completed late-resource plan, which still directs readers to run repository tooling.
-
-Existing Issue: `product/plans/complete/clean-up-late-agent-resources.md` tells readers to run `./scripts/run.mjs check-diff` after implementation and documentation changes, leaving an operational command in reviewed branch content. Severity: 5/10
-
-Existing Risk: 7/10 - A reviewer or agent following the completed plan can execute branch-supplied tooling despite the review's command-containment rule, invoking code that has not been independently trusted.
-
-Proposal Risk: 2/10 - Replacing the imperative with a descriptive verification record removes this execution prompt while retaining the late-disposal coverage and stated outcome.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove the executable verification directive from the late-resource plan". In `product/plans/complete/clean-up-late-agent-resources.md`, replace the `check-diff` instruction in the Tests section with a factual description of the late-resource behavior coverage, without claiming a verification run unless the branch records evidence for it. Review the completed plan for further direct tool-execution instructions and keep its implementation scope and late-disposer requirements intact. Verify by reading the plan and its focused diff; no application behavior or automated tests are involved.
-
-
 * Correct the pull request description's claim that the full command will become available in later subplans, since this diff already registers and executes local tasks.
 
 Existing Issue: The pull request body says the first implementation only adds parser and resolver groundwork and that the full command becomes available as later subplans land, while this aggregate diff registers `agent` and executes headless local ACP tasks. Severity: 4/10
