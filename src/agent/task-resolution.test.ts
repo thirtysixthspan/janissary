@@ -70,6 +70,41 @@ describe('resolveAgentTask', () => {
     expect(() => resolveAgentTask('build.md', options())).toThrow('Agent: ambiguous task "build.md": one/build.md, two/build.md.');
   });
 
+  it('rejects a project task root symlinked outside the workspace before discovery', () => {
+    writeTask(outside, 'external.md', 'external task');
+    rmSync(path.join(workspace, 'ai', 'tasks'), { recursive: true });
+    symlinkSync(path.join(outside, 'ai', 'tasks'), path.join(workspace, 'ai', 'tasks'));
+
+    expect(() => resolveAgentTask('external.md', options()))
+      .toThrow('Agent: task root outside allowed roots "project".');
+  });
+
+  it('does not disclose duplicate task paths from an outside project task root', () => {
+    writeTask(outside, 'one/build.md', 'one');
+    writeTask(outside, 'two/build.md', 'two');
+    rmSync(path.join(workspace, 'ai', 'tasks'), { recursive: true });
+    symlinkSync(path.join(outside, 'ai', 'tasks'), path.join(workspace, 'ai', 'tasks'));
+
+    let message = '';
+    try {
+      resolveAgentTask('build.md', options());
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toBe('Agent: task root outside allowed roots "project".');
+    expect(message).not.toContain(outside);
+    expect(message).not.toContain('ambiguous task');
+  });
+
+  it('rejects an installed task root symlinked outside the installation before discovery', () => {
+    writeTask(outside, 'installed.md', 'external task');
+    rmSync(path.join(installation, 'ai', 'tasks'), { recursive: true });
+    symlinkSync(path.join(outside, 'ai', 'tasks'), path.join(installation, 'ai', 'tasks'));
+
+    expect(() => resolveAgentTask('installed.md', options()))
+      .toThrow('Agent: task root outside allowed roots "janissary".');
+  });
+
   it('falls back to the installed task and accepts explicit paths only within allowed roots', () => {
     const installed = writeTask(installation, 'deep/installed.md', 'installed task');
     writeTask(workspace, 'deep/project.md', 'project task');
