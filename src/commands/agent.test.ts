@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { AgentResult } from '../agent/execute.js';
+import type { AgentSnapshot } from '../agent/types.js';
 import type { Managers } from '../managers.js';
 import { createController } from '../controller.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
@@ -17,9 +18,10 @@ const execute = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<AgentResu
 vi.mock('../agent/execute.js', () => {
   return {
     executeAgentRun: execute,
-    agentFailure: (error: unknown) => ({
-      status: 'failed', response: `Agent: ${error instanceof Error ? error.message : String(error)}`, cleanupWarnings: [],
-    }),
+    agentFailure: (error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      return { status: 'failed', response: message.startsWith('Agent:') ? message : `Agent: ${message}`, cleanupWarnings: [] };
+    },
   };
 });
 
@@ -66,8 +68,13 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-async function run(line = 'agent execute task.md'): Promise<AgentResult> {
-  return await command.run(line, { label: 'janus', index: 0 }, managers, invocation) as AgentResult;
+async function run(line = 'agent execute task.md', context = invocation): Promise<AgentResult> {
+  return await command.run(line, { label: 'janus', index: 0 }, managers, context) as AgentResult;
+}
+
+function nestedContext(snapshot: AgentSnapshot): CommandInvocationContext {
+  const parent = managers.agent.create({ caller: invocation.caller, snapshot });
+  return { ...invocation, runId: parent.id, signal: parent.abortController.signal };
 }
 
 describe('agent command', () => {
@@ -229,5 +236,75 @@ describe('agent command', () => {
     await expect(run('agent worker')).resolves.toEqual({
       status: 'failed', response: 'Agent: expected launch clause or final execute, got "worker".', cleanupWarnings: [],
     });
+  });
+
+  it.each([
+    ['unselected', { source: 'project', name: 'other', instructions: 'same instructions' }],
+    ['different source', { source: 'janissary', name: 'allowed', instructions: 'same instructions' }],
+    ['changed instructions', { source: 'project', name: 'allowed', instructions: 'changed instructions' }],
+  ] as const)('rejects a nested skill that is %s', async (_reason, selected) => {
+    const skillsDir = path.join(cloneWorkspace, 'skills', 'allowed');
+    mkdirSync(skillsDir, { recursive: true });
+    writeFileSync(path.join(skillsDir, 'SKILL.md'), 'same instructions');
+    const context = nestedContext({
+      taskPath: '/parent.md', taskText: 'parent',
+      skills: [{ source: selected.source, name: selected.name, path: '/parent/SKILL.md', instructions: selected.instructions }],
+      grants: ['agent'],
+    });
+
+    await expect(run('agent with skill allowed execute task.md', context)).resolves.toMatchObject({
+      status: 'failed', response: 'Agent: nested skill "allowed" is outside the parent policy.',
+    });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('intersects nested skill grants with the parent effective grants', async () => {
+    const skillsDir = path.join(cloneWorkspace, 'skills', 'allowed');
+    mkdirSync(skillsDir, { recursive: true });
+    writeFileSync(path.join(skillsDir, 'SKILL.md'), 'same instructions');
+    writeFileSync(path.join(skillsDir, 'janissary.json'), '{"version":1,"commands":["agent","question"]}');
+    const context = nestedContext({
+      taskPath: '/parent.md', taskText: 'parent',
+      skills: [{ source: 'project', name: 'allowed', path: '/parent/SKILL.md', instructions: 'same instructions' }],
+      grants: ['agent'],
+    });
+    execute.mockImplementation(async (agentRun) => {
+      expect(agentRun).toMatchObject({ snapshot: { grants: ['agent'] } });
+      return { status: 'completed', response: 'Child done.', cleanupWarnings: [] };
+    });
+
+    await expect(run('agent with skill allowed execute task.md', context)).resolves.toMatchObject({ status: 'completed' });
+    expect(execute).toHaveBeenCalledOnce();
+  });
+
+  it('does not trust a live run id with an unrelated abort signal', async () => {
+    const skillsDir = path.join(cloneWorkspace, 'skills', 'added');
+    mkdirSync(skillsDir, { recursive: true });
+    writeFileSync(path.join(skillsDir, 'SKILL.md'), 'unselected instructions');
+    const context = nestedContext({ taskPath: '/parent.md', taskText: 'parent', skills: [], grants: [] });
+    const untrusted = { ...context, signal: new AbortController().signal };
+    execute.mockResolvedValue({ status: 'completed', response: 'Ran without parent identity.', cleanupWarnings: [] });
+
+    await expect(run('agent with skill added execute task.md', untrusted)).resolves.toMatchObject({ status: 'completed' });
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({ snapshot: { skills: [{ name: 'added' }] } });
+  });
+
+  it('parent termination aborts and awaits nested execution cleanup', async () => {
+    const context = nestedContext({ taskPath: '/parent.md', taskText: 'parent', skills: [], grants: ['agent'] });
+    const parent = managers.agent.runs.get(context.runId);
+    if (!parent) throw new Error('Parent run not found.');
+    execute.mockImplementation(async (agentRun) => new Promise((resolve) => {
+      const child = agentRun as { abortController: AbortController };
+      child.abortController.signal.addEventListener('abort', () => {
+        resolve({ status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] });
+      }, { once: true });
+    }));
+
+    const child = run('agent execute task.md', context);
+    await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce());
+    const cleanup = managers.agent.finish(parent.id, 'terminated');
+    await expect(cleanup).resolves.toBeUndefined();
+    await expect(child).resolves.toMatchObject({ status: 'terminated' });
+    expect(managers.agent.runs.size).toBe(0);
   });
 });

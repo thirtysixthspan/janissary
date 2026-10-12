@@ -152,6 +152,7 @@ describe('resolveAgentSkills', () => {
     writeSkill(installation, 'ask-user', 'Question instructions', '{"version":1,"commands":["Question","question"]}');
     const resolved = resolveAgentSkills(['ask-user', 'ask-user'], options(), ['question', 'browser']);
     expect(resolved.skills).toHaveLength(1);
+    expect(resolved.skills[0]?.source).toBe('janissary');
     expect(resolved.grants).toEqual(['question']);
     writeFileSync(path.join(installation, 'skills', 'ask-user', 'SKILL.md'), 'edited later');
     expect(resolved.skills[0]?.instructions).toBe('Question instructions');
@@ -177,7 +178,7 @@ describe('resolveAgentSkills', () => {
     writeSkill(workspace, 'local', 'local instructions');
     writeSkill(installation, 'local', 'installed instructions', '{"version":1,"commands":["browser"]}');
     expect(resolveAgentSkills(['local'], options(), ['browser'])).toEqual({
-      skills: [{ name: 'local', path: expect.stringContaining(workspace), instructions: 'local instructions' }],
+      skills: [{ source: 'project', name: 'local', path: expect.stringContaining(workspace), instructions: 'local instructions' }],
       grants: [],
     });
   });

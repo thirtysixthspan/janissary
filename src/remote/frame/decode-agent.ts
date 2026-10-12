@@ -13,11 +13,17 @@ function decodeSnapshot(value: unknown): AgentSnapshot | undefined {
   const skills = snapshot.skills.filter((skill): skill is Record<string, unknown> =>
     typeof skill === 'object' && skill !== null && !Array.isArray(skill));
   if (skills.length !== snapshot.skills.length || skills.some((skill) =>
-    !nonEmptyString(skill.name) || !nonEmptyString(skill.path) || typeof skill.instructions !== 'string')) return undefined;
+    (skill.source !== 'project' && skill.source !== 'janissary')
+    || !nonEmptyString(skill.name) || !nonEmptyString(skill.path) || typeof skill.instructions !== 'string')) return undefined;
   return {
     taskPath: snapshot.taskPath,
     taskText: snapshot.taskText,
-    skills: skills.map((skill) => ({ name: skill.name as string, path: skill.path as string, instructions: skill.instructions as string })),
+    skills: skills.map((skill) => ({
+      source: skill.source as 'project' | 'janissary',
+      name: skill.name as string,
+      path: skill.path as string,
+      instructions: skill.instructions as string,
+    })),
     grants: snapshot.grants,
   };
 }

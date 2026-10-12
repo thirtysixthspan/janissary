@@ -36,6 +36,8 @@ An optional `janissary.json` beside the selected skill declares command grants. 
 
 Task text, skill instructions, and effective grants are captured as an immutable launch snapshot. Later edits to any task, skill, or sidecar cannot widen an existing snapshot.
 
+When an agent launches a nested agent through its granted `agent` command, every child-selected skill must match a skill in the parent's captured snapshot by source category, name, and instruction contents. A missing or changed skill fails with `Agent: nested skill "<name>" is outside the parent policy.` Child command grants are the intersection of the child's resolved grants and the parent's effective grants, so nested runs cannot expand the authority inherited from their parent.
+
 ### Resolution errors in this stage
 
 This stage emits the approved errors `Agent: unknown <kind> "<value>".` and `Agent: ambiguous <kind> "<value>": <matching paths>.` for task and skill resolution, with the exact task-path confinement error stated above. Malformed grants report `Agent: malformed skill grants "<name>".`; an undeclared command reports `Agent: unknown command grant "<command>" in skill "<name>".` Parser errors identify malformed or missing launch syntax. Validation that a well-formed group, workspace, model, or effort exists is performed by later launch stages.
@@ -45,6 +47,8 @@ This stage emits the approved errors `Agent: unknown <kind> "<value>".` and `Age
 Each run has an independent identity and lifecycle. Closing the caller tab terminates its active runs, including when closing that tab exits the application. Closing a monitoring tab only detaches monitoring and leaves execution running. A caller identity includes the tab incarnation captured at launch, so a later tab reusing the same label cannot become the original caller.
 
 A resource registered after its run has ended is disposed once and rejected with `Agent run has already ended.`. A failure from that late disposer is contained and does not change the run's settled cleanup result.
+
+A parent run owns nested agent runs started through its trusted command invocation. Parent termination aborts its active child runs and waits for their execution and cleanup to settle before the parent's cleanup completes. A child that already settled needs no second cleanup.
 
 A borrowed workspace must already be tracked by Janissary. The run retains one reference and releases only that reference during cleanup; other tabs and runs keep their references. Cleanup is idempotent and attempts every owned release even if one fails. Shutdown awaits active-run cleanup before disposing the services those runs use, and concurrent shutdown requests share the same completion.
 

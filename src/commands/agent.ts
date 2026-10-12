@@ -12,14 +12,9 @@ import { notify } from '../notifications/index.js';
 import { getConfig } from '../config.js';
 import { sandboxAvailable } from '../sandbox/index.js';
 import type { AgentSnapshot } from '../agent/types.js';
-
-function formatResult(result: AgentResult): string {
-  return [
-    `Status: ${result.status}`,
-    result.response,
-    ...result.cleanupWarnings.map((warning) => `Cleanup warning: ${warning}`),
-  ].join('\n');
-}
+import { applyNestedAgentPolicy } from '../agent/nested-policy.js';
+import { createRunCompletion, trackChildRun, trustedParentRun } from '../agent/nested-run.js';
+import { formatAgentResult } from '../agent/format-result.js';
 
 async function runAgent(
   commandText: string,
@@ -27,6 +22,7 @@ async function runAgent(
   managers: CommandManagers,
   invocation?: CommandInvocationContext,
 ): Promise<AgentResult> {
+  const completion = createRunCompletion();
   const launch = parseAgentCommand(commandText);
   if ('error' in launch) return { status: 'failed', response: launch.error, cleanupWarnings: [] };
   let run: ReturnType<CommandManagers['agent']['create']> | undefined;
@@ -35,6 +31,7 @@ async function runAgent(
   try {
     caller = invocationFor(label, managers, invocation);
     if (caller.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
+    const parent = trustedParentRun(caller, managers);
     const sourceLabel = launch.workspace ?? label;
     const sourceTab = managers.tab.byLabel(sourceLabel);
     const remoteAddress = managers.remote.addressOf(sourceLabel);
@@ -75,6 +72,7 @@ async function runAgent(
         await releaseWorkspace();
         throw error;
       }
+      if (parent) trackChildRun(parent, run, managers, completion.promise);
       abortRun = () => { void managers.agent.finish(run!.id, 'terminated').catch(() => {}); };
       caller.signal.addEventListener('abort', abortRun, { once: true });
       snapshot = remoteChannel
@@ -83,10 +81,12 @@ async function runAgent(
           workspaceDir: executionDir,
           installationDir: janissaryRoot(),
         }, commands.map(({ name }) => name));
+      if (parent) snapshot = applyNestedAgentPolicy(snapshot, parent.snapshot);
       run.setSnapshot(snapshot);
     } else {
       const local = await startLocalAgentRun(managers, capturedCaller, commandText, launch.model, launch.effort);
       run = local.run;
+      if (parent) trackChildRun(parent, run, managers, completion.promise);
       executionDir = local.workspace.dir;
       abortRun = () => { void managers.agent.finish(run!.id, 'terminated').catch(() => {}); };
       caller.signal.addEventListener('abort', abortRun, { once: true });
@@ -104,6 +104,7 @@ async function runAgent(
         workspaceDir: executionDir,
         installationDir: janissaryRoot(),
       }, commands.map(({ name }) => name));
+      if (parent) snapshot = applyNestedAgentPolicy(snapshot, parent.snapshot);
       run.setSnapshot(snapshot);
       if (!getConfig().sandboxWorkspaces || !sandboxAvailable()) notify(managers, 'manual', label, 'Agent: sandboxing is disabled.');
     }
@@ -177,6 +178,7 @@ async function runAgent(
     return agentFailure(error);
   } finally {
     if (caller && abortRun) caller.signal.removeEventListener('abort', abortRun);
+    completion.resolve();
   }
 }
 
@@ -190,7 +192,7 @@ export const command: Command = {
     const result = await runAgent(commandText, tab.label, managers, caller);
     const current = managers.tab.byLabel(tab.label);
     if (current?.runtime?.incarnation === caller.caller.incarnation) {
-      appendCommandOutput(managers, tab.label, { input: commandText, output: formatResult(result) }, caller);
+      appendCommandOutput(managers, tab.label, { input: commandText, output: formatAgentResult(result) }, caller);
     }
     return result;
   },

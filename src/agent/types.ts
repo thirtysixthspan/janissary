@@ -13,7 +13,7 @@ export type AgentLaunch = Readonly<{
 export type AgentSnapshot = Readonly<{
   taskPath: string;
   taskText: string;
-  skills: readonly Readonly<{ name: string; path: string; instructions: string }>[];
+  skills: readonly Readonly<{ source: 'project' | 'janissary'; name: string; path: string; instructions: string }>[];
   grants: readonly string[];
 }>;
 

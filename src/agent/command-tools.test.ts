@@ -47,6 +47,7 @@ describe('agent command tools', () => {
 
     expect(answers).toEqual(['first:question ask "first"', 'second:question ask "second"']);
     expect(dispatch.mock.calls.map((call) => call[2].runId)).toEqual(['first', 'second']);
+    expect(dispatch.mock.calls.every((call) => call[2].awaitResult === true)).toBe(true);
   });
 
   it('requires the selected ask-user skill as well as the question grant', async () => {

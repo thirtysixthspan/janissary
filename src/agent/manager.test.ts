@@ -3,6 +3,7 @@ import { createController } from '../controller.js';
 import { tabRuntime } from '../tab/runtime.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import type { AgentSnapshot } from './types.js';
+import { createRunCompletion, trackChildRun } from './nested-run.js';
 
 const snapshot: AgentSnapshot = Object.freeze({ taskPath: '/task.md', taskText: 'captured task', skills: [], grants: [] });
 
@@ -20,7 +21,9 @@ describe('AgentRunManager', () => {
     const second = manager.create({ caller: captured, snapshot });
 
     expect(first.id).not.toBe(second.id);
-    expect(first.snapshot).toBe(snapshot);
+    expect(first.snapshot).toEqual(snapshot);
+    expect(first.snapshot).not.toBe(snapshot);
+    expect(Object.isFrozen(first.snapshot)).toBe(true);
     expect(first.abortController).not.toBe(second.abortController);
     expect(manager.runs.size).toBe(2);
   });
@@ -51,6 +54,28 @@ describe('AgentRunManager', () => {
     expect(run.abortController.signal.aborted).toBe(true);
     expect(released).toHaveBeenCalledOnce();
     controller.shutdown();
+  });
+
+  it('aborts child runs and awaits their operation cleanup before finishing the parent', async () => {
+    const { manager, captured } = setup();
+    const parent = manager.create({ caller: captured, snapshot });
+    const child = manager.create({ caller: captured, snapshot });
+    const completion = createRunCompletion();
+    trackChildRun(parent, child, manager['managers'], completion.promise);
+    let settled = false;
+
+    const cleanup = (async () => {
+      await manager.finish(parent.id, 'terminated');
+      settled = true;
+    })();
+    await Promise.resolve();
+    expect(child.abortController.signal.aborted).toBe(true);
+    expect(settled).toBe(false);
+
+    completion.resolve();
+    await cleanup;
+    expect(settled).toBe(true);
+    expect(manager.runs.has(child.id)).toBe(false);
   });
 
   it('does not terminate a run when its monitor detaches', async () => {

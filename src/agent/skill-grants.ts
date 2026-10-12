@@ -2,7 +2,7 @@ import { lstatSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
 import type { AgentResolutionOptions, AgentSnapshot } from './types.js';
 
-type Skill = Readonly<{ name: string; path: string; instructions: string }>;
+type Skill = Readonly<{ source: 'project' | 'janissary'; name: string; path: string; instructions: string }>;
 type ResolvedSkill = Readonly<{ skill: Skill; directory: string }>;
 
 function contained(root: string, target: string): boolean {
@@ -15,7 +15,11 @@ function isMissingPath(error: unknown): boolean {
 }
 
 function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSkill {
-  for (const sourceRoot of [options.workspaceDir, options.installationDir]) {
+  const roots = [
+    { source: 'project', path: options.workspaceDir },
+    { source: 'janissary', path: options.installationDir },
+  ] as const;
+  for (const { source, path: sourceRoot } of roots) {
     const root = path.join(sourceRoot, 'skills');
     let realRoot: string;
     try {
@@ -44,7 +48,7 @@ function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSk
       const realFile = realpathSync(candidate);
       if (!contained(realDirectory, realFile) || !statSync(realFile).isFile()) throw new Error('outside skill directory');
       return Object.freeze({
-        skill: Object.freeze({ name, path: realFile, instructions: readFileSync(realFile, 'utf8') }),
+        skill: Object.freeze({ source, name, path: realFile, instructions: readFileSync(realFile, 'utf8') }),
         directory: realDirectory,
       });
     } catch {

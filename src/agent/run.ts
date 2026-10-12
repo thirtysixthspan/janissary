@@ -20,6 +20,14 @@ export type AgentRunOptions = Readonly<{
   effort?: string;
 }>;
 
+function immutableSnapshot(snapshot: AgentSnapshot): AgentSnapshot {
+  return Object.freeze({
+    ...snapshot,
+    skills: Object.freeze(snapshot.skills.map((skill) => Object.freeze({ ...skill }))),
+    grants: Object.freeze([...snapshot.grants]),
+  });
+}
+
 export class AgentRun {
   readonly id = randomUUID();
   readonly abortController = new AbortController();
@@ -45,7 +53,7 @@ export class AgentRun {
     },
     readonly executionDir: string = caller.cwd,
   ) {
-    this.currentSnapshot = snapshot;
+    this.currentSnapshot = immutableSnapshot(snapshot);
   }
 
   get snapshot(): AgentSnapshot {
@@ -54,7 +62,7 @@ export class AgentRun {
 
   setSnapshot(snapshot: AgentSnapshot): void {
     if (this.outcome) throw new Error('Agent run has already ended.');
-    this.currentSnapshot = snapshot;
+    this.currentSnapshot = immutableSnapshot(snapshot);
   }
 
   get currentStatus(): AgentRunView['status'] {
