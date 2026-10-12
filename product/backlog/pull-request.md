@@ -44,3 +44,14 @@ Existing Risk: 7/10 - A workspace-backed plugin callback that resumes after task
 Proposal Risk: 3/10 - Rejecting run-scoped allocations once their owner is ending prevents post-cleanup resources from escaping, though allocation and run termination still need a serialized or revalidated boundary to avoid races.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "revalidate deferred plugin allocations against agent run ownership". In `src/plugins/launch-tab.ts`, `runReady` and its deferred launch path, and `src/plugins/context.ts` host allocation capabilities, check that `origin.runId` still identifies a live run before invoking a ready callback or accepting a run-owned tab/editor allocation. In `src/plugins/invoke.ts` and `src/agent/manager.ts`, make late ownership registration fail closed and ensure any allocation that races with run termination is disposed with its resource-release completion accounted for before cleanup settles. Keep run IDs internal to the host and preserve ordinary plugin launches without run ownership. Extend `src/plugins/launch-tab.test.ts` and the relevant plugin host tests with a deferred workspace-ready callback that resumes after run termination and a callback paused across termination; assert no run-created tab or resource survives and the run result does not settle before raced cleanup completes. Update `product/specs/agent-command.md` to state the resulting late-allocation behavior.
+
+
+* Remove the security risk of a completed plan directing reviewers to run branch-controlled verification commands.
+
+Existing Issue: `product/plans/complete/propagate-agent-run-ownership-through-deferred-plugin-launches.md` directs readers to run diff-scoped lint, typecheck, and server tests from the reviewed branch. Severity: 6/10
+
+Existing Risk: 7/10 - A reviewer or later agent following the completed plan can execute branch-controlled tooling despite the review boundary, allowing untrusted pull-request content to choose the commands that run.
+
+Proposal Risk: 2/10 - Replacing the imperative with a factual description of the coverage recorded in the plan removes the execution prompt while preserving its test expectations.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove the completed plan's verification command". In `product/plans/complete/propagate-agent-run-ownership-through-deferred-plugin-launches.md`, replace the imperative in the Tests section with a descriptive summary of the adapter and deferred-launch coverage already listed there. Preserve the trusted run-identity, awaited cleanup, and pre-existing/recycled-tab assertions, and do not claim checks ran unless the plan records that result.
