@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { janissaryRoot } from './janissary-root.js';
 import type { TaskRow } from './tab/types.js';
@@ -35,8 +35,16 @@ function walk(dir: string, relativeDir: string, depth: number, source: TaskRow['
 // The `ai/tasks` rows under one root, or `[]` when the directory is absent.
 function listOne(root: string, source: TaskRow['source'], strict: boolean): TaskRow[] {
   const tasksDir = path.join(root, 'ai', 'tasks');
+  if (strict) {
+    try {
+      statSync(tasksDir);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return [];
+      throw error;
+    }
+    return walk(tasksDir, '', 0, source);
+  }
   if (!existsSync(tasksDir)) return [];
-  if (strict) return walk(tasksDir, '', 0, source);
   try {
     return walk(tasksDir, '', 0, source);
   } catch {

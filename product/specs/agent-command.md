@@ -24,7 +24,7 @@ A bare task filename is matched recursively by basename under the execution work
 
 An explicit path is resolved relative to the execution workspace unless it begins with `$janissary/`, which expands against the execution host's installation root. After resolving symlinks, the file must remain inside the execution workspace or the installed `ai/tasks/` directory. An outside path reports `Agent: task path outside allowed roots "<value>".` and is not read.
 
-Task discovery is strict for each source when agent execution searches it: an unreadable project tree fails before installed fallback, and an unreadable installed tree fails when project lookup found no match and installation must be searched. A source that is not needed is not walked. The task picker remains tolerant of unreadable or absent roots. The task's text is captured when resolution completes; later edits do not change that result.
+Task discovery is strict for each source when agent execution searches it. An absent `ai/tasks/` root has no matches, but another filesystem error fails resolution: an unreadable project tree fails before installed fallback, and an unreadable installed tree fails when project lookup found no match and installation must be searched. A source that is not needed is not walked. The task picker remains tolerant of unreadable or absent roots. The task's text is captured when resolution completes; later edits do not change that result.
 
 ### Skills and command grants
 

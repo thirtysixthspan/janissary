@@ -55,6 +55,14 @@ describe('resolveAgentTask', () => {
     expect(resolveAgentTask('task.md', options()).text).toBe('workspace task');
   });
 
+  it('does not fall back to an installed match when the project task root is inaccessible', () => {
+    writeTask(installation, 'task.md', 'installed task');
+    rmSync(path.join(workspace, 'ai'), { recursive: true, force: true });
+    writeFileSync(path.join(workspace, 'ai'), 'not a directory');
+
+    expect(() => resolveAgentTask('task.md', options())).toThrow();
+  });
+
   it('reports ambiguity in the project source without falling back to installation', () => {
     writeTask(workspace, 'one/build.md', 'one');
     writeTask(workspace, 'two/build.md', 'two');
