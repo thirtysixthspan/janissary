@@ -12,13 +12,13 @@ Change only the heading and explanatory text in the PR body's changed-files sect
 
 ## Implementation steps
 
-1. Mark the existing changed-files examples as representative of the first resolution slice and state that the aggregate diff includes subsequent agent lifecycle, ACP, remote execution, plugin, client, spec, plan, and documentation work.
-2. Promote this plan to complete and remove only its selected entry from the branch backlog.
-3. Run the diff-scoped checks, commit, push to the existing PR branch, then update only the changed-files section of the open PR description while preserving its other content.
+1. The changed-files section identifies its examples as representative of the first resolution slice and states that the aggregate diff includes subsequent agent lifecycle, ACP, remote execution, plugin, client, spec, plan, and documentation work.
+2. This plan is complete, and its selected entry was removed from the branch backlog.
+3. The PR description's changed-files section was updated with this clarification; its other sections were preserved.
 
 ## Tests
 
-None — no application behavior, source, or test files change. Run `./scripts/run.mjs check-diff` to verify the repository checks for the documentation and backlog changes.
+None — no application behavior, source, or test files changed, so no application tests applied.
 
 ## Out of scope
 

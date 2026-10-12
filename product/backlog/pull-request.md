@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove operational directions from the completed changed-files description plan.
-
-Existing Issue: `product/plans/complete/correct-agent-command-changed-files-description.md` tells readers to run branch verification, commit and push changes, and edit the open pull request description, including a direct `check-diff` command. Severity: 7/10
-
-Existing Risk: 7/10 - A future reviewer or agent following this branch-supplied plan can execute repository-controlled tooling and mutate or publish changes to the pull request outside the review task's authorized output.
-
-Proposal Risk: 2/10 - Replacing those operational directions with a factual account of the completed description correction removes the execution prompt while preserving the documented scope and outcome.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove operational directions from the completed changed-files description plan". In `product/plans/complete/correct-agent-command-changed-files-description.md`, replace the implementation step directing checks, commit, push, and PR-body editing with a factual summary of the changed-files section correction, and replace the Tests-section `check-diff` instruction with a description of the planned coverage or a statement that no application tests applied. Preserve the claim that the examples represent the first resolution slice and the stated aggregate PR scope. Re-read the full plan to ensure it records completed work rather than directing future commands or publication actions; do not edit the PR description as part of this work item.
-
-
 * Complete the remote-server spec's coverage of remote agent host selection and protocol version 31.
 
 Existing Issue: `product/specs/remote-server.md` documents remote agent protocol changes through version 30 and describes agent execution only on an established remote workspace, while this pull request adds task-resolution frames and allows local callers to provision distinct remote hosts under protocol version 31. Severity: 5/10
