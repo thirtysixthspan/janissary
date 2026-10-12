@@ -39,8 +39,8 @@ export class AgentRunManager {
       command: options.command ?? `agent execute ${options.snapshot.taskPath.split('/').at(-1) ?? options.snapshot.taskPath}`,
       model: options.model ?? '',
       effort: options.effort ?? 'medium',
-      host: 'Local',
-      workspace: options.executionDir ?? options.caller.cwd,
+      host: options.executionHost ?? 'Local',
+      workspace: options.executionWorkspace ?? options.executionDir ?? options.caller.cwd,
     }, options.executionDir ?? options.caller.cwd);
     this.runs.set(run.id, run);
     run.subscribe((view) => {

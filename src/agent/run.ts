@@ -14,6 +14,8 @@ export type AgentRunOptions = Readonly<{
   snapshot: AgentSnapshot;
   workspaceDir?: string;
   executionDir?: string;
+  executionHost?: string;
+  executionWorkspace?: string;
   releaseWorkspace?: () => Promise<void>;
   command?: string;
   model?: string;
@@ -48,7 +50,7 @@ export class AgentRun {
     readonly caller: AgentCaller,
     snapshot: AgentSnapshot,
     private releaseWorkspace?: () => Promise<void>,
-    private readonly metadata: { command: string; model: string; effort: string; host: 'Local'; workspace: string } = {
+    private readonly metadata: { command: string; model: string; effort: string; host: string; workspace: string } = {
       command: `agent execute ${snapshot.taskPath.split('/').at(-1) ?? snapshot.taskPath}`,
       model: '', effort: 'medium', host: 'Local', workspace: caller.cwd,
     },

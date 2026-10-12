@@ -24,7 +24,7 @@ export type AgentRunView = Readonly<{
   command: string;
   model: string;
   effort: string;
-  host: 'Local';
+  host: string;
   workspace: string;
   status: 'Provisioning' | 'Running' | 'Waiting for answer' | 'Cleaning up' | 'Completed' | 'Failed' | 'Terminated';
   activity: readonly Readonly<{ id: number; kind: string; text: string }>[];

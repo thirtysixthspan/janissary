@@ -21,6 +21,7 @@ describe('agent monitor view', () => {
     render(<AgentMonitor run={run} capabilities={capabilities(intent)} />);
 
     expect(screen.getByText('agent in a tab execute task.md')).toBeTruthy();
+    expect(screen.getByText('Local · /work')).toBeTruthy();
     expect(screen.getByText((text) => text.includes('agent_thought_chunk') && text.includes('Planning.'))).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Terminate' }));
     expect(intent).toHaveBeenCalledWith('terminate', {});

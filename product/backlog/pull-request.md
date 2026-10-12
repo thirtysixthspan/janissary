@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's remote execution host and workspace metadata in the agent monitor instead of the local caller's details.
-
-Existing Issue: `AgentRunManager.create` in `src/agent/manager.ts` always records `host: 'Local'` and `workspace: options.caller.cwd`, while `src/commands/agent.ts` creates remote runs without passing their resolved remote host or workspace. Severity: 5/10
-
-Existing Risk: 5/10 - A monitor for a remote run presents the local machine and caller directory as its execution location, misleading users about which host and files the agent can access.
-
-Proposal Risk: 2/10 - Supplying the resolved execution host and workspace when constructing the run makes the displayed location accurate, while remote execution and its cleanup behavior remain unchanged.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "show the actual remote execution location in agent monitors". Extend `AgentRunOptions` and the run metadata construction in `src/agent/run.ts` and `src/agent/manager.ts` to accept the execution host and workspace explicitly. In `src/commands/agent.ts`, pass `remoteAddress.host` and `remoteWorkspace` for remote runs, and the caller's local execution directory for local runs. Keep those values in the server-owned `AgentRunView` projection consumed by `web/src/plugins/agent-monitor/view.tsx`. Add command/run-view coverage in `src/commands/agent.test.ts` asserting that a remote host and remote workspace are shown for a remote run and local details remain shown for local runs; the existing `web/src/plugins/agent-monitor/view.test.tsx` covers rendering the supplied metadata but does not test which execution location the server supplies.
-
-
 * Remove the security issue in the completed plan's instructions to run checks, publish changes, and edit the pull request body.
 
 Existing Issue: `product/plans/complete/correct-agent-command-pull-request-description.md` directs readers to run verification commands, commit and push, and edit the pull request body, despite being a completed plan supplied as reviewed content. Severity: 7/10

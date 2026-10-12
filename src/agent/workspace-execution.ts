@@ -41,6 +41,7 @@ export async function startLocalAgentRun(
       caller,
       snapshot: placeholder,
       executionDir: workspace.dir,
+      executionWorkspace: workspace.dir,
       releaseWorkspace: workspace.release,
       command,
       model,

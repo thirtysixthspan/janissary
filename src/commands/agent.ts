@@ -62,6 +62,8 @@ async function runAgent(
           caller: capturedCaller,
           snapshot: placeholder,
           executionDir,
+          executionHost: remoteAddress?.host ?? 'Local',
+          executionWorkspace: remoteWorkspace,
           command: commandText,
           model: launch.model,
           effort: launch.effort,

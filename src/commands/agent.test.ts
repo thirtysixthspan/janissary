@@ -177,6 +177,7 @@ describe('agent command', () => {
     expect(monitor?.title).toBe('Agent: task.md');
     const runId = monitor?.plugin?.agentRunId;
     expect(runId).toBeDefined();
+    expect(managers.agent.runs.get(runId!)?.view()).toMatchObject({ host: 'Local', workspace: cloneWorkspace });
     managers.tab.closeTab(managers.tab.tabs.indexOf(monitor!));
     expect(managers.agent.runs.has(runId!)).toBe(true);
     gate.resolve({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
@@ -242,6 +243,9 @@ describe('agent command', () => {
     vi.spyOn(managers.remote, 'workspaceOf').mockReturnValue('/remote/workspace');
     vi.spyOn(managers.remote, 'acquireAgentLease').mockReturnValue(release);
     execute.mockImplementation(async (agentRun) => {
+      const activeRun = [...managers.agent.runs.values()][0];
+      expect(activeRun?.view()).toMatchObject({ host: 'devbox', workspace: '/remote/workspace' });
+      expect(agentRun).toMatchObject({ executionDir: workspace });
       (agentRun as { addResource: (id: string, cleanup: () => Promise<void>) => void }).addResource(
         'remote-close', async () => { throw new Error('Remote agent close was not acknowledged.'); },
       );
