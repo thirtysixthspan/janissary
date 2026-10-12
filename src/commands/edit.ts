@@ -14,6 +14,6 @@ export const command: Command = {
     const path = lineMatch ? lineMatch[1] : target;
     const line = lineMatch ? Number(lineMatch[2]) : undefined;
     appendCommandOutput(managers, tab.label, { input: command, output: '' }, invocation);
-    managers.openFile.edit(command, path, tab.label, line);
+    return managers.openFile.editForCommand(command, path, tab.label, line, invocation?.runId);
   },
 };

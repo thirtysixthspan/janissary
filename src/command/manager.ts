@@ -136,12 +136,23 @@ export class CommandManager {
       this.run(command, label, index);
       return;
     }
+    const existingTabs = new Set(this.managers.tab.tabs.map((tab) => tab.label));
     try {
-      return await cmd.run(command, { label, index }, this.managers, invocation);
+      const result = await cmd.run(command, { label, index }, this.managers, invocation);
+      this.trackRunTabs(invocation.runId, existingTabs);
+      return result;
     } catch (error) {
+      this.trackRunTabs(invocation.runId, existingTabs);
       const output = errorText(error);
       this.managers.tab.appendForInvocation(label, { input: command, output }, invocation.invocationId);
       return undefined;
+    }
+  }
+
+  private trackRunTabs(runId: string, existingTabs: ReadonlySet<string>): void {
+    if (!this.managers.agent?.runs.has(runId)) return;
+    for (const tab of this.managers.tab.tabs) {
+      if (!existingTabs.has(tab.label)) this.managers.agent.trackCreatedTab(runId, tab.label);
     }
   }
 

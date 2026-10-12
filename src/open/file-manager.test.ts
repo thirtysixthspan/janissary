@@ -26,6 +26,34 @@ vi.mock('./launch-dir-branch.js', () => ({
 }));
 
 describe('OpenFileManager.edit', () => {
+  it('tracks only editor tabs newly allocated by an agent command', () => {
+    const tabs: { label: string; editor?: { path: string } }[] = [{ label: 'janus' }];
+    const trackCreatedTab = vi.fn();
+    const managers = {
+      tab: {
+        tabs,
+        cwdOf: () => '/working',
+        launchDir: '/working',
+        append: vi.fn(),
+        registerFile: (file: string) => `/open/${file.length}`,
+        openEditorTab: (view: { path: string }) => {
+          const existing = tabs.find((tab) => tab.editor?.path === view.path);
+          if (existing) return existing.label;
+          tabs.push({ label: 'editor', editor: { path: view.path } });
+          return 'editor';
+        },
+      },
+      agent: { trackCreatedTab },
+    } as unknown as Managers;
+    const manager = new OpenFileManager(managers);
+
+    manager.edit('edit first.txt', 'first.txt', 'janus', undefined, 'run-1');
+    manager.edit('edit first.txt', 'first.txt', 'janus', undefined, 'run-1');
+
+    expect(trackCreatedTab).toHaveBeenCalledOnce();
+    expect(trackCreatedTab).toHaveBeenCalledWith('run-1', 'editor');
+  });
+
   it('opens the editor for a new file that does not exist on disk', () => {
     const appended: string[] = [];
     const opened: string[] = [];

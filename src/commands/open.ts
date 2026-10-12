@@ -51,5 +51,5 @@ export const command: Command = {
   name: 'open',
   match: (command_) => /^open\b/i.test(command_),
   samples: ['open', 'open notes.txt'],
-  run: (command, tab, managers) => managers.openFile.run(command, tab.label),
+  run: (command, tab, managers, invocation) => managers.openFile.run(command, tab.label, invocation?.runId),
 };

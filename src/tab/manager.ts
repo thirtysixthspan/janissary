@@ -168,7 +168,7 @@ export class TabManager extends TabTranscriptState {
 
   reorderTabTo(from: number, to: number): void { tabOperations.reorderTabTo(this, from, to); }
 
-  closeTab(index: number): void { tabOperations.closeTab(this, index); }
+  closeTab(index: number): Promise<void> | undefined { return tabOperations.closeTab(this, index); }
 
   renameTab(index: number, title: string): void { tabOperations.renameTab(this, index, title); }
 

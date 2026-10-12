@@ -3,6 +3,7 @@ import { CommandManager } from './manager.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import { makeTab } from '../tab/index.js';
 import { commands } from '../commands/index.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 
@@ -29,6 +30,30 @@ function makeManagers(): { managers: Managers; recorder: string[] } {
 }
 
 describe('CommandManager async commands', () => {
+  it('records new tab allocations from a run-owned granted command', async () => {
+    const { managers } = makeManagers();
+    const trackCreatedTab = vi.fn();
+    managers.agent = { runs: new Map([['run-1', {}]]), trackCreatedTab } as unknown as Managers['agent'];
+    const command = {
+      name: 'fixture-tab-allocation', match: (input: string) => input === 'fixture-tab-allocation',
+      samples: ['fixture-tab-allocation'],
+      run: (_input: string, _tab: unknown, services: Managers) => {
+        services.tab.tabs.push(makeTab('created-by-command', '#ccc', 2));
+      },
+    };
+    commands.push(command);
+    try {
+      await managers.command.dispatchLineInInvocation('janus', 'fixture-tab-allocation', {
+        runId: 'run-1', invocationId: 'invocation-1',
+        caller: { label: 'janus', cwd: '/repo', context: [] }, signal: new AbortController().signal,
+      });
+
+      expect(trackCreatedTab).toHaveBeenCalledWith('run-1', 'created-by-command');
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+    }
+  });
+
   it('awaits a successful plugin command', async () => {
     const { managers } = makeManagers();
     const deferred = Promise.withResolvers<void>();

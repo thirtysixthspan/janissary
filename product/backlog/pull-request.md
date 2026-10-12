@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Close only tabs newly created by an agent run when its owned resources are cleaned up.
-
-Existing Issue: Granted commands execute with invocation context, but tab-opening paths do not record run ownership and `AgentRun.cleanup()` has no created-tab release step, so tabs opened by an agent remain after the run ends. Severity: 6/10
-
-Existing Risk: 5/10 - Completed or terminated runs can leave tabs and their associated processes or references behind, while later cleanup has no reliable way to distinguish those allocations from tabs that existed before the run.
-
-Proposal Risk: 2/10 - Explicitly tracking only new allocations on the owning run lets cleanup release its own tabs without adopting focused or pre-existing tabs.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "track and release tabs created by agent commands". Carry the trusted run identity from `CommandInvocationContext` through the command dispatch and tab-allocation entry points used by granted commands, including open, edit, and plugin/deferred allocation paths. In `src/agent/run.ts` and `src/agent/manager.ts`, record identities only when a new tab or resource is allocated under that run, then close and await releases for those identities during cleanup; focusing or updating an existing tab must never transfer ownership. Add tests in the affected command/allocation suites and `src/agent/manager.test.ts` proving newly created tabs are closed after completion, failure, and termination, while existing or focused tabs remain open and their resources remain usable. The current run cleanup tests do not exercise command-created tabs.
-
-
 * Remove executable verification directions from the completed local-execution and monitoring plans.
 
 Existing Issue: `product/plans/complete/agent-canonical-local-execution.md` and `product/plans/complete/agent-monitoring-plugin.md` still tell readers to run `./scripts/run.mjs check-diff`, making branch-supplied tooling an operational instruction in reviewed content. Severity: 5/10

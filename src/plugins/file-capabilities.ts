@@ -74,7 +74,8 @@ export function fileCapabilities(input: {
     openInEditor: (absPath, line) => {
       if (!isEnabled()) return;
       if (!isInsideRoot(managers.tab.launchDir, absPath)) return;
-      managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
+      if (origin.runId) managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId);
+      else managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
     },
     configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
     openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),

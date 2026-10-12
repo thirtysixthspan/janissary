@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createController } from '../controller.js';
 import { tabRuntime } from '../tab/runtime.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import { makeTab } from '../tab/index.js';
 import type { AgentSnapshot } from './types.js';
 import { createRunCompletion, trackChildRun } from './nested-run.js';
 
@@ -41,6 +42,73 @@ describe('AgentRunManager', () => {
     expect(run.outcome).toBe('completed');
     expect(cleanup).toHaveBeenCalledOnce();
     expect(manager.runs).toHaveProperty('size', 0);
+  });
+
+  it.each(['completed', 'failed', 'terminated'] as const)('closes only run-created tabs after %s', async (outcome) => {
+    const { manager, caller, controller } = setup();
+    const run = manager.create({ caller: manager.captureCaller(caller), snapshot });
+    const created = makeTab(`created-${outcome}`, '#ccc', 2);
+    controller.managers.tab.insertTabInGroup(created);
+    manager.trackCreatedTab(run.id, created.label);
+
+    await manager.finish(run.id, outcome);
+
+    expect(controller.managers.tab.byLabel(created.label)).toBeUndefined();
+    expect(controller.managers.tab.byLabel(caller.label)?.label).toBe(caller.label);
+  });
+
+  it('leaves an existing tab and its runtime usable after the run ends', async () => {
+    const { manager, caller, controller } = setup();
+    const run = manager.create({ caller: manager.captureCaller(caller), snapshot });
+    const existing = makeTab('existing-tab', '#bbb', 2);
+    controller.managers.tab.tabs.push(existing);
+
+    await manager.finish(run.id, 'completed');
+
+    expect(controller.managers.tab.byLabel(existing.label)?.runtime?.closing).toBeUndefined();
+    expect(controller.managers.tab.byLabel(caller.label)?.label).toBe(caller.label);
+  });
+
+  it('does not close a later tab that reuses an owned tab label', async () => {
+    const { manager, caller, controller } = setup();
+    const run = manager.create({ caller: manager.captureCaller(caller), snapshot });
+    const created = makeTab('reused-label', '#ccc', 2);
+    controller.managers.tab.tabs.push(created);
+    manager.trackCreatedTab(run.id, created.label);
+    const createdIndex = controller.managers.tab.tabs.findIndex((tab) => tab.label === created.label);
+    controller.managers.tab.tabs.splice(createdIndex, 1);
+    const replacement = makeTab(created.label, '#bbb', 2);
+    controller.managers.tab.tabs.push(replacement);
+
+    await manager.finish(run.id, 'completed');
+
+    expect(controller.managers.tab.byLabel(created.label)?.runtime).toBe(replacement.runtime);
+  });
+
+  it('waits for an owned tab workspace release before run cleanup settles', async () => {
+    const { manager, caller, controller } = setup();
+    const run = manager.create({ caller: manager.captureCaller(caller), snapshot });
+    const created = makeTab('owned-workspace', '#ccc', 2, [], [], '/repo/clone');
+    controller.managers.tab.tabs.push(created);
+    manager.trackCreatedTab(run.id, created.label);
+    const release = Promise.withResolvers<void>();
+    const releaseWorkspace = vi.fn(() => release.promise);
+    Object.assign(controller.managers.workspace, { release: releaseWorkspace });
+    const finishing = manager.finish(run.id, 'completed');
+    let settled = false;
+    const observeSettlement = async () => {
+      await finishing;
+      settled = true;
+    };
+    const observed = observeSettlement();
+
+    await vi.waitFor(() => expect(controller.managers.tab.byLabel(created.label)).toBeUndefined());
+    await vi.waitFor(() => expect(releaseWorkspace).toHaveBeenCalledWith('/repo/clone'));
+    expect(settled).toBe(false);
+
+    release.resolve();
+    await observed;
+    expect(settled).toBe(true);
   });
 
   it('terminates runs when their captured caller closes, including the last tab', async () => {

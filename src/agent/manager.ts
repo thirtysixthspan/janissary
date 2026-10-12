@@ -89,6 +89,20 @@ export class AgentRunManager {
     }
   }
 
+  trackCreatedTab(runId: string, label: string): void {
+    const run = this.runs.get(runId);
+    const tab = this.managers.tab.byLabel(label);
+    if (!run || !tab) return;
+    const runtime = tabRuntime(tab);
+    runtime.incarnation ??= randomUUID();
+    const incarnation = runtime.incarnation;
+    run.addCreatedTab(label, async () => {
+      const index = this.managers.tab.findIndex(label);
+      if (index === -1 || this.managers.tab.tabs[index]?.runtime?.incarnation !== incarnation) return;
+      await this.managers.tab.closeTab(index);
+    });
+  }
+
   dispose(): void | Promise<void> {
     if (this.disposed) return;
     this.disposed = true;

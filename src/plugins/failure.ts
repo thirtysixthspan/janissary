@@ -4,7 +4,13 @@ import { errorFirstLine } from '../error-text.js';
 
 // `launch` marks the one origin that is not an open tab: the application opening its launch shell
 // before any tab exists. `label` is then the label the opened tab takes, not a tab to look up.
-export type PluginFailureOrigin = { label: string; command: string; launch?: true; invocationId?: string };
+export type PluginFailureOrigin = {
+  label: string;
+  command: string;
+  launch?: true;
+  invocationId?: string;
+  runId?: string;
+};
 
 export function pluginFailureMessage(id: string, error: unknown): string {
   return `Tab plugin "${id}" disabled: ${errorFirstLine(error)}.`;

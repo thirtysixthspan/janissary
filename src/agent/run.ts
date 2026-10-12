@@ -33,6 +33,7 @@ export class AgentRun {
   readonly abortController = new AbortController();
   readonly childIds = new Set<string>();
   readonly monitorIds = new Set<string>();
+  readonly createdTabs = new Set<string>();
   outcome?: AgentOutcome;
   private revision = 0;
   private status: AgentRunView['status'] = 'Running';
@@ -121,6 +122,12 @@ export class AgentRun {
     this.cleanups.push(cleanup);
   }
 
+  addCreatedTab(label: string, cleanup: () => void | Promise<void>): void {
+    if (this.createdTabs.has(label)) return;
+    this.createdTabs.add(label);
+    this.addResource(`tab:${label}`, cleanup);
+  }
+
   attachMonitor(id: string): void {
     if (this.outcome) throw new Error('Agent run has already ended.');
     this.monitorIds.add(id);
@@ -150,6 +157,7 @@ export class AgentRun {
       try { await this.releaseWorkspace(); } catch (error) { failures.push(error); }
     }
     this.childIds.clear();
+    this.createdTabs.clear();
     this.listeners.clear();
     if (failures.length > 0) throw new AggregateError(failures, `Agent run ${this.id} cleanup failed.`);
   }

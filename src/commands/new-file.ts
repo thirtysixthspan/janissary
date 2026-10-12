@@ -12,6 +12,6 @@ export const command: Command = {
     const target = command.replace(/^newfile\b\s*/i, '').trim();
     if (!target) { appendCommandOutput(managers, tab.label, { input: command, output: 'Usage: newfile <file>' }, invocation); return; }
     appendCommandOutput(managers, tab.label, { input: command, output: '' }, invocation);
-    managers.openFile.newFile(command, target, tab.label);
+    managers.openFile.newFile(command, target, tab.label, invocation?.runId);
   },
 };

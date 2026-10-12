@@ -46,14 +46,16 @@ function makeManagers() {
   const append = vi.fn();
   const closeTab = vi.fn();
   const openPluginTab = vi.fn();
+  const trackCreatedTab = vi.fn();
   const runAs = vi.fn(async () => {});
   const tabs = [{ label: 'janus', dotColor: '#fff', log: [] }];
   const managers = {
     tab: { tabs, append, closeTab, openPluginTab, cur: () => tabs[0], ...fakeNotificationsHost(tabs) },
     openFile: { runAs },
+    agent: { trackCreatedTab },
     notifications: new NotificationQueue(),
   } as unknown as Managers;
-  return { append, closeTab, managers, openPluginTab, runAs };
+  return { append, closeTab, managers, openPluginTab, runAs, trackCreatedTab };
 }
 
 describe('tab plugin discovery', () => {
@@ -99,7 +101,7 @@ describe('TabPluginHost commands', () => {
     );
 
     await host.runCommand('fixture', 'fixture  ~/clips/*.fixture', {
-      label: 'janus', command: 'fixture  ~/clips/*.fixture', invocationId: 'private-invocation',
+      label: 'janus', command: 'fixture  ~/clips/*.fixture', invocationId: 'private-invocation', runId: 'run-1',
     });
 
     expect(command).toHaveBeenCalledWith('~/clips/*.fixture', expect.any(Object));
@@ -107,9 +109,26 @@ describe('TabPluginHost commands', () => {
     expect(Object.keys(capabilities ?? {})).not.toContain('invocationId');
     expect(Object.keys(capabilities ?? {})).not.toContain('runId');
     expect(runAs).toHaveBeenCalledWith(
-      'open ~/clips/*.fixture', 'fixture  ~/clips/*.fixture', 'janus', 'fixture',
+      'open ~/clips/*.fixture', 'fixture  ~/clips/*.fixture', 'janus', 'fixture', 'run-1',
     );
     expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+
+  it('tracks only plugin tabs newly allocated by a run-owned opener', async () => {
+    const { managers, openPluginTab, trackCreatedTab } = makeManagers();
+    openPluginTab.mockImplementation((
+      _id: string, _prefix: string, _key: string, _schema: number, _source: string,
+    ) => { managers.tab.tabs.push({ label: 'fixture-1' } as Tab); });
+    const opener = vi.fn((_file: string, capabilities: TabPluginServerCapabilities) => {
+      capabilities.openOrFocusTab('one', () => ({ title: 'Fixture', payload: {} }));
+    });
+    const host = new TabPluginHost(
+      managers, [declaration()], { fixture: loader(activation({ opener: { inline: opener, external: () => {} } })) },
+    );
+
+    await host.runOpener('fixture', 'inline', '/tmp/item.fixture', { ...origin, runId: 'run-1' });
+
+    expect(trackCreatedTab).toHaveBeenCalledWith('run-1', 'fixture-1');
   });
 
   it('reports a rejection to the transcript and leaves the plugin enabled', async () => {

@@ -172,7 +172,11 @@ export function createPluginContext(
     openInEditor: (absPath, line) => {
       if (!isEnabled()) return;
       if (!isInsideRoot(managers.tab.launchDir, absPath)) return;
-      managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
+      if (origin.runId) {
+        managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId);
+      } else {
+        managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
+      }
     },
     topicData: (topic) => {
       requireDeclaredTopic(declaration, topic);
