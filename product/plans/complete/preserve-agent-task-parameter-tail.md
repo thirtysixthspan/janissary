@@ -18,7 +18,7 @@ Keep the existing launch-clause tokenizer and validation through `execute`, then
 
 ## Tests
 
-Run `./scripts/run.mjs check-diff` after each implementation step. The parser tests must prove raw parameter preservation and retain existing launch syntax errors and ordinary-tail behavior.
+Expected parser-test coverage: unmatched quotes in parameters, exact leading whitespace preservation, ordinary tails, and malformed launch/task-path quotes, while retaining existing launch syntax errors.
 
 ## Out of scope
 
