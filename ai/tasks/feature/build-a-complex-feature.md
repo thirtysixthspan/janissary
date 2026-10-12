@@ -1,6 +1,6 @@
 # Build a Complex Feature
 
-Take one supplied high-complexity plan, decompose it into ordered subplans each rated below 7/10, and deliver the complete feature on one open pull request. Publish all subplans before implementation. Immediately before each subplan is implemented, improve it and publish the improved plan; then publish its implementation as a separate commit, review that commit against the subplan, and clear its review backlog before proceeding. After all subplans are complete, update the canonical plan and pull request, then review the full pull request and resolve findings until a full review adds none.
+Take one supplied high-complexity plan, decompose it into ordered subplans each rated below 7/10, and deliver the complete feature on one open pull request. Publish all subplans before implementation. Immediately before each subplan is implemented, improve it and publish the improved plan; then publish its implementation as a separate commit, review that commit against the subplan, and clear its review backlog before proceeding. After all subplans are complete, update the canonical plan and pull request, then review the full pull request and resolve findings until a full review adds none. Finish with a pull request update.
 
 Invocation: `execute ./ai/tasks/feature/build-a-complex-feature.md <plan name or path>`.
 
@@ -92,13 +92,7 @@ After the final subplan's focused review cycle is complete, verify the requireme
 
 Once every requirement is delivered and all focused review backlogs are empty, move the original source plan from `ready/` to `complete/` and commit and push that plan move to the existing PR branch. This original plan is the canonical record of the full feature; keep its original complexity rating and incorporate the completed subplans' final outcomes during the update step.
 
-## Step 8 — Update the pull request
-
-Delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the recorded PR number before the full-PR review. Override its Step 2 plan discovery and Step 3 selection: do not identify the canonical plan from the first commit. Use the original source plan recorded in Step 0, now moved from `ready/` to `complete/`, as the canonical plan; fold every completed subplan plan into it and remove those subplan files from `product/plans/complete/`. The source plan's original complexity rating remains unchanged. The subagent updates the PR description, canonical plan, specs, and `help.md` to match the final code, then commits and pushes on the same branch. Preserve the update task's prohibition on source changes, its clean-tree and target checks, and its no-merge rule. If this update surfaces work requiring a code repair, resolve it before beginning the full-PR review.
-
-If the update cannot publish its changes or the PR description edit fails, preserve the work, report the blocker, and do not claim completion.
-
-## Step 9 — Review and resolve the full pull request
+## Step 8 — Review and resolve the full pull request
 
 After the canonical plan and PR description match the completed feature:
 
@@ -108,6 +102,12 @@ After the canonical plan and PR description match the completed feature:
 4. Confirm all commits are pushed, the PR is still open on the recorded branch, and the working tree is clean.
 
 If a review or repair is blocked, preserve the PR and outstanding backlog, report the blocker, and do not claim completion.
+
+## Step 9 — Update the pull request
+
+Delegate `ai/tasks/feature/update-pull-request.md` to a fresh subagent with the recorded PR number before the full-PR review. Override its Step 2 plan discovery and Step 3 selection: do not identify the canonical plan from the first commit. Use the original source plan recorded in Step 0, now moved from `ready/` to `complete/`, as the canonical plan; fold every completed subplan plan into it and remove those subplan files from `product/plans/complete/`. The source plan's original complexity rating remains unchanged. The subagent updates the PR description, canonical plan, specs, and `help.md` to match the final code, then commits and pushes on the same branch. Preserve the update task's prohibition on source changes, its clean-tree and target checks, and its no-merge rule. If this update surfaces work requiring a code repair, resolve it before beginning the full-PR review.
+
+If the update cannot publish its changes or the PR description edit fails, preserve the work, report the blocker, and do not claim completion.
 
 ## Step 10 — Final verification and report
 
