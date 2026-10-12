@@ -12,9 +12,9 @@ Before strict discovery walks either source, canonicalize its `ai/tasks` root an
 
 ## Implementation steps
 
-1. Update `src/agent/task-resolution.ts` to validate each source's canonical task root before calling `listTasksFromRoot`, rejecting an escaping root without including external paths in the error.
-2. Add project-root symlink-escape tests to `src/agent/task-resolution.test.ts`, including an outside tree with duplicate task basenames, and verify discovery rejects before reporting external paths. Also verify an installed task-root escape is rejected before discovery.
-3. Update `product/specs/agent-command.md` with the task-root confinement error and retain the documented strict discovery behavior.
+1. `src/agent/task-resolution.ts` validates each source's canonical task root before calling `listTasksFromRoot` and rejects escaping roots without including external paths in the error.
+2. `src/agent/task-resolution.test.ts` covers project-root symlink escapes, including an outside tree with duplicate task basenames, and rejects installed task-root escapes before discovery.
+3. `product/specs/agent-command.md` documents the task-root confinement error and strict discovery behavior.
 
 ## Tests
 
@@ -22,7 +22,7 @@ Before strict discovery walks either source, canonicalize its `ai/tasks` root an
 - An installed `ai/tasks` symlink escaping the installation is rejected before traversal.
 - Project-first resolution and installed fallback remain unchanged for valid task roots.
 - Missing roots remain empty, and inaccessible roots continue to fail strict discovery.
-- Diff-scoped lint, typecheck, and tests pass after each implementation change.
+- Diff-scoped lint, typecheck, and tests passed after implementation.
 
 ## Out of scope
 

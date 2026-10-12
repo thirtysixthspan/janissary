@@ -12,9 +12,9 @@ Keep the existing launch-clause tokenizer and validation through `execute`, then
 
 ## Implementation steps
 
-1. Update `src/agent/command-parser.ts` to stop tokenizing at `execute`, validate the next token as the task path, and return the untouched suffix after that token.
-2. Extend `src/agent/command-parser.test.ts` to cover unmatched quotes in parameters, exact leading whitespace preservation, ordinary tails, and malformed launch/task-path quotes.
-3. Update `product/specs/agent-command.md` to state that parameter bytes after the task path are opaque and preserved, including unmatched quotes and whitespace.
+1. `src/agent/command-parser.ts` stops tokenizing at `execute`, validates the next token as the task path, and returns the untouched suffix after that token.
+2. `src/agent/command-parser.test.ts` covers unmatched quotes in parameters, exact leading-whitespace preservation, ordinary tails, and malformed launch/task-path quotes.
+3. `product/specs/agent-command.md` states that parameter bytes after the task path are opaque and preserved, including unmatched quotes and whitespace.
 
 ## Tests
 

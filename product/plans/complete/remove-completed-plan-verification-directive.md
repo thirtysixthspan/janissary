@@ -12,14 +12,14 @@ Replace the imperative verification command with a description of expected parse
 
 ## Implementation steps
 
-1. Replace the verification command in `product/plans/complete/preserve-agent-task-parameter-tail.md` with a descriptive statement of the parser tests' expected coverage.
-2. Review the completed plan for other direct tool-execution instructions and confirm its goal, implementation scope, and out-of-scope statements remain intact.
-3. Remove only the matching entry from `product/backlog/pull-request.md`.
+1. `product/plans/complete/preserve-agent-task-parameter-tail.md` describes the parser tests' expected coverage without a verification command.
+2. The completed plan retains its goal, implementation scope, and out-of-scope statements without other direct tool-execution instructions.
+3. Only the matching entry was removed from `product/backlog/pull-request.md`.
 
 ## Tests
 
-- Manually inspect the named plan to confirm it contains no direct tool-execution instructions and its test coverage remains descriptive.
-- Confirm the unrelated plan content and the other pull-request backlog entry are preserved.
+- The named plan was reviewed for direct tool-execution instructions, and its test coverage remains descriptive.
+- Unrelated plan content and the other pull-request backlog entry were preserved.
 - No automated tests apply to this documentation-only change.
 
 ## Spec

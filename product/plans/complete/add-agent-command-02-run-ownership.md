@@ -38,7 +38,7 @@ Add colocated tests under `src/agent/*.test.ts` for headless runs without tabs, 
 
 ## Verification
 
-Diff-scoped lint, typecheck, and server tests passed after the implementation changes. Focused tests cover owner creation, caller abort, last-tab caller closure, borrowed-reference release, cleanup failure continuation, shutdown ordering, and listener closure waiting for cleanup. Manual run-level verification is deferred to the final integration subplan, which wires the command and ACP execution.
+Diff-scoped lint, typecheck, and server tests passed after implementation. Focused tests cover owner creation, caller abort, last-tab caller closure, borrowed-reference release, cleanup failure continuation, shutdown ordering, and listener closure waiting for cleanup. Run-level verification is covered by the final integration subplan, which wires the command and ACP execution.
 
 ## Out of scope
 

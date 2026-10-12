@@ -12,14 +12,14 @@ Replace imperative verification instructions in the five affected completed plan
 
 ## Implementation steps
 
-1. Update the verification sections of the five named completed plans, preserving all unrelated text.
-2. Review the five plans to confirm their verification sections contain no executable directions and their test cases remain descriptive.
-3. Remove the resolved entry from the pull-request backlog.
+1. The verification sections of the five named completed plans now record completed checks or descriptive coverage, with unrelated text preserved.
+2. The five plans' verification sections contain no executable directions, and their test cases remain descriptive.
+3. The resolved entry was removed from the pull-request backlog.
 
 ## Tests
 
-- Manually inspect all five plans for imperative verification commands and remaining direct tool-execution instructions.
-- Confirm test coverage descriptions remain as expected-behavior statements.
+- The five plans were reviewed for imperative verification commands and direct tool-execution instructions.
+- Test coverage descriptions remain expected-behavior statements.
 - No automated tests apply to this documentation-only change.
 
 ## Spec

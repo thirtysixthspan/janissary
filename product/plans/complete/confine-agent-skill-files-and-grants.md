@@ -12,9 +12,9 @@ Resolve the selected skill directory and canonicalize it before reading content.
 
 ## Implementation steps
 
-1. Update `src/agent/skill-grants.ts` to validate the selected directory and canonical paths for both files before reading either.
-2. Add tests in `src/agent/task-resolution.test.ts` for a skill-file symlink into a sibling skill and sidecar symlinks into sibling and outside files. Keep existing precedence, fallback, snapshot, and missing-sidecar coverage.
-3. Update `product/specs/agent-command.md` to describe per-skill path confinement and the invalid skill path error.
+1. `src/agent/skill-grants.ts` validates the selected directory and canonical paths for both files before reading either.
+2. `src/agent/task-resolution.test.ts` covers a skill-file symlink into a sibling skill and sidecar symlinks into sibling and outside files, alongside precedence, fallback, snapshot, and missing-sidecar cases.
+3. `product/specs/agent-command.md` describes per-skill path confinement and the invalid skill path error.
 
 ## Tests
 

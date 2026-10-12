@@ -12,16 +12,16 @@ Canonicalize each source root before inspecting a skill. Require the canonical w
 
 ## Implementation steps
 
-1. Update `src/agent/skill-grants.ts` to validate each canonical skill root against its canonical source root before looking up a skill.
-2. Add workspace and installation `skills/` root symlink-escape tests in `src/agent/task-resolution.test.ts`, asserting external content is not accepted.
-3. Update `product/specs/agent-command.md` to describe source-root confinement.
+1. `src/agent/skill-grants.ts` validates each canonical skill root against its canonical source root before looking up a skill.
+2. `src/agent/task-resolution.test.ts` covers workspace and installation `skills/` root symlink escapes and rejects external content.
+3. `product/specs/agent-command.md` describes source-root confinement.
 
 ## Tests
 
 - A workspace `skills/` root symlinked outside the workspace is rejected before instruction or sidecar content can be loaded.
 - An installation `skills/` root symlinked outside the installation is rejected before instruction or sidecar content can be loaded.
 - Existing skill-directory symlink, source-precedence, absent-sidecar, and grant validation cases continue to pass.
-- Diff-scoped lint, typecheck, and tests pass after each implementation change.
+- Diff-scoped lint, typecheck, and tests passed after implementation.
 
 ## Out of scope
 

@@ -34,7 +34,7 @@ Add colocated `src/agent/*.test.ts` tests for quoted tokens, clause order, untou
 
 ## Verification
 
-`./scripts/run.mjs check-diff` passed after each source and test change. `npm pack --dry-run --json` confirmed `skills/ask-user/SKILL.md` and its sidecar ship. The sandbox tests verify selected installed-skill literal and real-path bindings and retain secret denies after the selected-path allow. A live confined scratch read could not run here because nested `sandbox-exec` returned `sandbox_apply: Operation not permitted`.
+Diff-scoped checks passed after each source and test change. Package inspection confirmed `skills/ask-user/SKILL.md` and its sidecar ship. Sandbox tests cover selected installed-skill literal and real-path bindings and retain secret denies after the selected-path allow. A live confined scratch read was unavailable because nested `sandbox-exec` returned `sandbox_apply: Operation not permitted`.
 
 ## Out of scope
 

@@ -12,8 +12,8 @@ Keep launch parsing and grammar unchanged. Document the parser's existing messag
 
 ## Implementation steps
 
-1. Expand the parser error section of `product/specs/agent-command.md` to list malformed quotes, missing clause values, unknown clauses, duplicate clauses, unexpected launch tokens, missing `execute`, and missing tasks. State how input tokens appear in variable message portions.
-2. Add exact-message parser tests for named and location clause errors, unknown clauses, unexpected launch tokens, and duplicate singleton clauses while retaining existing successful grammar coverage.
+1. `product/specs/agent-command.md` lists malformed quotes, missing clause values, unknown clauses, duplicate clauses, unexpected launch tokens, missing `execute`, and missing tasks, including input-token substitutions in messages.
+2. Parser tests assert exact messages for named and location clause errors, unknown clauses, unexpected launch tokens, and duplicate singleton clauses while retaining successful grammar coverage.
 
 ## Tests
 

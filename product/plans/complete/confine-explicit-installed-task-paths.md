@@ -12,15 +12,15 @@ Before an installed task root can authorize an explicit path, resolve both the i
 
 ## Implementation steps
 
-1. Validate the installed task root against the canonical installation root when constructing allowed roots for explicit task resolution.
-2. Add regression cases for `$janissary/ai/tasks/...` and a direct explicit path under a redirected installed task root, ensuring neither returns the target contents.
-3. Update the agent-command spec to state that explicit installed paths must remain inside the canonical installation as well as its task directory.
-4. Remove this item from the PR backlog, promote this plan to complete, run `check-diff`, and publish a separate commit to PR #1672.
+1. Explicit task resolution validates the installed task root against the canonical installation root when constructing allowed roots.
+2. Regression cases cover `$janissary/ai/tasks/...` and direct explicit paths under a redirected installed task root; neither returns the target contents.
+3. The agent-command spec states that explicit installed paths must remain inside the canonical installation as well as its task directory.
 
 ## Tests
 
 - An installed `ai/tasks` symlink to an outside directory rejects both the `$janissary/ai/tasks/...` form and an explicit file path below the redirected root.
 - Existing explicit workspace and valid installed paths, discovery-root escape, and outside-path tests continue to pass.
+- Diff-scoped lint, typecheck, and tests passed after implementation and spec updates.
 
 ## Out of scope
 

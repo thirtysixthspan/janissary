@@ -12,9 +12,9 @@ Expose strict discovery for one task root while retaining `listTasks` as the tol
 
 ## Implementation steps
 
-1. Add a source-specific task-listing function in `src/tasks.ts` and use it in `src/agent/task-resolution.ts` so each strict walk happens only when that source is selected.
-2. Add behavior tests proving that a project match succeeds despite an invalid installed task root, and that installed fallback reports an invalid installed root. Keep the existing recursive, ambiguity, and fallback cases passing.
-3. Update `product/specs/agent-command.md` to specify that project discovery runs first and installed discovery is strict only when fallback is needed.
+1. `src/tasks.ts` provides source-specific task listing, and `src/agent/task-resolution.ts` performs each strict walk only when that source is selected.
+2. Behavior tests cover project matches despite an invalid installed task root and invalid-root reporting during installed fallback, alongside recursive, ambiguity, and fallback cases.
+3. `product/specs/agent-command.md` specifies project-first discovery and strict installed discovery only when fallback is needed.
 
 ## Tests
 

@@ -12,13 +12,13 @@ Replace imperative verification steps with descriptive coverage expectations. Pr
 
 ## Implementation steps
 
-1. Revise the PR description's “How to verify” section to describe the named verification coverage without instructing readers to execute branch tooling or scenarios.
-2. Remove this resolved entry from `product/backlog/pull-request.md`, preserving the empty comment-and-heading structure.
+1. The PR description's “How to verify” section describes the named verification coverage without instructing readers to execute branch tooling or scenarios.
+2. This resolved entry was removed from `product/backlog/pull-request.md`, preserving the comment-and-heading structure.
 
 ## Tests
 
-- Manually inspect the corrected section to confirm it retains the behavioral cases and contains no directions to execute branch-supplied commands.
-- Confirm all PR-description content outside the named section is unchanged.
+- The corrected section retains the behavioral cases and contains no directions to execute branch-supplied commands.
+- PR-description content outside the named section is unchanged.
 - No automated tests apply to this wording-only change.
 
 ## Spec

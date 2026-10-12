@@ -12,9 +12,9 @@ Keep tolerant task-picker discovery unchanged. In strict discovery, distinguish 
 
 ## Implementation steps
 
-1. Update `src/tasks.ts` so strict root probing returns no rows only when the root is absent; keep tolerant `listTasks` behavior unchanged.
-2. Add coverage in `src/tasks.test.ts` for a project task root made inaccessible by an invalid parent path, asserting strict discovery throws while tolerant discovery remains empty. Add a resolution test in `src/agent/task-resolution.test.ts` proving a matching installed task is not used after project-root discovery fails, while preserving the existing test that a valid project match avoids walking an invalid installed root.
-3. Clarify `product/specs/agent-command.md` that an absent root has no matches, while errors reading a strict source fail resolution before fallback.
+1. `src/tasks.ts` strict root probing returns no rows only when the root is absent; tolerant `listTasks` behavior remains unchanged.
+2. `src/tasks.test.ts` covers an inaccessible project task root, with strict discovery throwing and tolerant discovery remaining empty. `src/agent/task-resolution.test.ts` covers suppression of installed fallback after project-root discovery fails and confirms a valid project match avoids walking an invalid installed root.
+3. `product/specs/agent-command.md` clarifies that an absent root has no matches, while errors reading a strict source fail resolution before fallback.
 
 ## Tests
 
