@@ -80,6 +80,8 @@ A run holds an ephemeral reference to the shared remote channel and workspace. R
 
 With `in a tab`, the server opens a lazy `agent-monitor` tab titled `Agent: <task filename>` and binds it to the newly created run. The monitor shows the complete launch command, selected model and effort, execution workspace, status, provider-reported activity, and final response. It has no terminal, command bar, or prompt input. Activity includes reported message, thought, tool, plan, and permission updates, in the order received; message text also remains the source for command extraction and the final answer.
 
+If the monitor cannot be opened, the run fails before task execution. The failed result retains the monitor creation error as its response and includes any run cleanup failures in `cleanupWarnings`.
+
 The monitor's location identifies where execution runs: local runs show `Local` and the actual execution workspace, while remote runs show the established remote host and remote workspace. The caller's local directory is not shown as the execution location for a remote run.
 
 `in group <name|id>` selects an existing group by case-insensitive name or numeric ID for a headed monitor. The selector is checked before any run is created, including for headless launches. An unknown or invalid selector fails with `Agent: group "<selector>" does not exist.` Without the clause, a headed monitor joins the caller's group.

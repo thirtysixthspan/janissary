@@ -213,6 +213,22 @@ describe('agent command', () => {
     expect(managers.tab.tabs.some((tab) => tab.plugin?.id === 'agent-monitor')).toBe(false);
   });
 
+  it('preserves workspace cleanup warnings when headed monitor creation fails', async () => {
+    workspaceRelease.mockRejectedValueOnce(new Error('workspace removal failed'));
+    vi.spyOn(managers.tab, 'openPluginTab').mockImplementation(() => {
+      throw new Error('monitor allocation failed');
+    });
+
+    await expect(run('agent in a tab execute task.md')).resolves.toEqual({
+      status: 'failed',
+      response: 'Agent: monitor allocation failed',
+      cleanupWarnings: ['workspace removal failed'],
+    });
+    expect(workspaceRelease).toHaveBeenCalledOnce();
+    expect(managers.agent.runs.size).toBe(0);
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['Review', 4],
     ['4', 4],

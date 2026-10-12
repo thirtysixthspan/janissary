@@ -113,8 +113,14 @@ async function runAgent(
         monitor.plugin.agentRunId = activeRun.id;
         managers.agent.attachMonitor(activeRun.id, monitor.label);
       } catch (error) {
-        await Promise.allSettled([managers.agent.finish(activeRun.id, 'failed')]);
-        throw error;
+        const cleanupWarnings: string[] = [];
+        try { await managers.agent.finish(activeRun.id, 'failed'); }
+        catch (cleanupError) {
+          const errors = cleanupError instanceof AggregateError ? cleanupError.errors : [cleanupError];
+          cleanupWarnings.push(...errors.map((failure) => failure instanceof Error ? failure.message : String(failure)));
+        }
+        const result = agentFailure(error);
+        return { ...result, cleanupWarnings: [...result.cleanupWarnings, ...cleanupWarnings] };
       }
     }
     const runInvocation: CommandInvocationContext = Object.freeze({
