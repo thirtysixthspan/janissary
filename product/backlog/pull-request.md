@@ -55,3 +55,14 @@ Existing Risk: 7/10 - A reviewer or later agent can follow these instructions an
 Proposal Risk: 2/10 - Replacing the remaining execution directions with descriptive coverage records removes the prompt to run branch tooling while retaining the cases each plan says it covers.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove remaining completed-plan verification commands". In `product/plans/complete/await-remote-acp-process-teardown.md`, `product/plans/complete/agent-monitor-execution-location.md`, and `product/plans/complete/confine-selected-installed-skill-support-files.md`, replace directions to run `check-diff` or diff-scoped checks with descriptive summaries of the planned or recorded coverage, without claiming unrecorded verification. Preserve each plan's implementation scope and test cases, and re-read those plans alongside `product/plans/complete/remove-operational-directives-from-reviewed-plans.md` to ensure its inspection summary matches the reviewed set. No application tests are needed for this documentation-only correction.
+
+
+* Remove executable verification directions from the newly added ACP teardown plans.
+
+Existing Issue: The completed local ACP teardown and process-group plans instruct readers to run `./scripts/run.mjs check-diff`, leaving branch-supplied tooling commands in reviewed content. Severity: 6/10
+
+Existing Risk: 7/10 - A reviewer or later agent following either completed plan can execute branch-controlled lint, typecheck, and test tooling despite the review's explicit command boundary.
+
+Proposal Risk: 2/10 - Replacing these commands with factual coverage descriptions removes the execution prompt while preserving the teardown and EPERM test expectations.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove ACP teardown plan verification commands". In `product/plans/complete/await-local-acp-process-tree-teardown.md` and `product/plans/complete/report-unqueryable-acp-process-groups.md`, replace the imperative `check-diff` directions with descriptive summaries of the coverage already recorded in each plan, without claiming verification that the branch does not establish. Preserve the assertions for awaited local process-tree shutdown, timeout escalation, EPERM probe behavior, ESRCH absence, and ACP spec updates. Re-read both plans and `product/plans/complete/remove-operational-directives-from-reviewed-plans.md` to keep their inspection scope accurate; no application checks are needed for this documentation-only correction.
