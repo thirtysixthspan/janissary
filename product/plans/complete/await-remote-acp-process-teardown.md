@@ -24,7 +24,7 @@ Extend `AcpSession` with an idempotent awaitable shutdown that signals the child
 - `src/remote/serve-acp.test.ts` proves no positive acknowledgment precedes shutdown completion, timeout is negative, and concurrent close requests share one teardown.
 - `src/remote/acp-session.test.ts` proves concurrent release waits for the acknowledgment and timeout produces `false`.
 - Remote server shutdown tests prove workspace removal follows ACP teardown.
-- Run `./scripts/run.mjs check-diff` after each implementation step and after specs are updated.
+- The test scope above covers shutdown after child exit, idempotency, acknowledgment ordering, timeout and negative acknowledgment, shared concurrent teardown, release waiting, and workspace cleanup ordering.
 
 ## Specs / docs
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove the remaining completed-plan directions that ask reviewers to execute branch verification tooling.
-
-Existing Issue: Three completed plans still direct readers to run verification tooling: `product/plans/complete/await-remote-acp-process-teardown.md`, `product/plans/complete/agent-monitor-execution-location.md`, and `product/plans/complete/confine-selected-installed-skill-support-files.md`. Severity: 6/10
-
-Existing Risk: 7/10 - A reviewer or later agent can follow these instructions and execute branch-controlled checks despite the review boundary; their presence also contradicts the completed plan that says the branch's completed plans were inspected and cleared of operational verification directives.
-
-Proposal Risk: 2/10 - Replacing the remaining execution directions with descriptive coverage records removes the prompt to run branch tooling while retaining the cases each plan says it covers.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove remaining completed-plan verification commands". In `product/plans/complete/await-remote-acp-process-teardown.md`, `product/plans/complete/agent-monitor-execution-location.md`, and `product/plans/complete/confine-selected-installed-skill-support-files.md`, replace directions to run `check-diff` or diff-scoped checks with descriptive summaries of the planned or recorded coverage, without claiming unrecorded verification. Preserve each plan's implementation scope and test cases, and re-read those plans alongside `product/plans/complete/remove-operational-directives-from-reviewed-plans.md` to ensure its inspection summary matches the reviewed set. No application tests are needed for this documentation-only correction.
-
-
 * Remove executable verification directions from the newly added ACP teardown plans.
 
 Existing Issue: The completed local ACP teardown and process-group plans instruct readers to run `./scripts/run.mjs check-diff`, leaving branch-supplied tooling commands in reviewed content. Severity: 6/10

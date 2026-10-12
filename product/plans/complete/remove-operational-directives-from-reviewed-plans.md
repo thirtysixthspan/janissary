@@ -18,7 +18,7 @@ Review `product/plans/ready/add-a-new-agent-command.md` and all completed plans 
 
 ## Tests
 
-- The source ready plan and each completed plan introduced by PR #1672 were manually inspected for operational command, execution, mutation, commit, and push directions.
+- The initial manual inspection covered the source ready plan and each completed plan introduced by PR #1672, but missed remaining verification commands in three completed plans. This follow-up reinspection covered those three plans and replaced their executable directions with descriptions of the documented coverage.
 - Diff review confirmed changes are limited to operational wording and the selected backlog entry, preserving feature behavior, planned scope, and test coverage.
 - The diff-scoped verification workflow completed successfully; no application behavior or test code changed.
 

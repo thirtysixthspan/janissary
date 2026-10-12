@@ -19,7 +19,7 @@ Add optional execution host and workspace values to `AgentRunOptions`, and use t
 
 ## Tests
 
-Cover local monitor metadata using the local execution directory and remote monitor metadata using the established remote host and workspace. Run the diff-scoped lint, typecheck, and related server and web tests.
+The test scope covers local monitor metadata using the local execution directory and remote monitor metadata using the established remote host and workspace.
 
 ## Out of scope
 

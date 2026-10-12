@@ -19,7 +19,7 @@ Add an optional installed-skill directory list to ACP options. Derive it from th
 
 ## Tests
 
-Assert that local autonomous ACP supplies only selected installed skill directories, that `sandboxSpawn` accepts only directories under the installed skills root, and that the generated read carve-in remains before the secret deny while unrelated install paths remain absent. Run the diff-scoped checks.
+The documented coverage covers local autonomous ACP supplying only selected installed skill directories, `sandboxSpawn` accepting only directories under the installed skills root, the generated read carve-in remaining before the secret deny, and unrelated install paths remaining absent.
 
 ## Out of scope
 
