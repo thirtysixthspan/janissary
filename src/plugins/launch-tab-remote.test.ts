@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Managers } from '../managers.js';
+import { AgentRunManager } from '../agent/manager.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
 import type { RemoteLaunchHandlers } from '../remote/manager.js';
 import type { TabPluginDeclaration, TabPluginLaunchRequest, TabPluginLaunchStart } from './api.js';
@@ -80,6 +81,17 @@ function harness(options: {
     },
   };
   return { channels, opened, tabs, managers, input, invoked };
+}
+
+function productionRun(h: ReturnType<typeof harness>) {
+  const manager = new AgentRunManager(h.managers);
+  h.managers.agent = manager;
+  const caller = manager.captureCaller(h.managers.tab.byLabel('janus')!);
+  const run = manager.create({
+    caller, snapshot: { taskPath: '/task.md', taskText: '', skills: [], grants: [] },
+  });
+  h.input.origin = { ...h.input.origin, runId: run.id };
+  return { manager, run };
 }
 
 const factory = (_resources: object, start: { label: string; cwd: string; connectPtyId?: string; host?: string }) => ({
@@ -274,6 +286,67 @@ describe('launchRemotePluginTab', () => {
 
     expect(h.channels[1]?.label).not.toBe(first);
     expect(h.tabs.some((tab) => tab.label === first)).toBe(false);
+  });
+
+  it('does not retry a run-owned remote launch after its run has ended', async () => {
+    const h = harness();
+    const { manager, run } = productionRun(h);
+    launchCapabilities(h.input).launchTab('shell-1', { remote: { address: 'devbox' } }, factory, ready);
+    const first = h.channels[0]?.label;
+    await manager.finish(run.id, 'terminated');
+
+    h.channels[0]?.handlers.onNameRefused?.({ type: 'name-in-use', label: first ?? '' });
+
+    expect(h.channels).toHaveLength(1);
+    expect(h.tabs.some((tab) => tab.label !== 'janus')).toBe(false);
+    expect(h.tabs.some((tab) => tab.plugin?.instanceKey === 'shell-1')).toBe(false);
+  });
+
+  it('waits for an admitted retry and closes its replacement during run cleanup', async () => {
+    const h = harness();
+    const { manager, run } = productionRun(h);
+    launchCapabilities(h.input).launchTab('shell-1', { remote: { address: 'devbox' } }, factory, ready);
+    let cleanup: Promise<void> | undefined;
+    const openPluginTab = h.managers.tab.openPluginTab;
+    let registeredDuringCleanup = false;
+    h.managers.tab.openPluginTab = (...args) => {
+      const result = openPluginTab(...args);
+      if (h.channels.length === 2) {
+        const replacement = h.channels[1]?.label;
+        registeredDuringCleanup = replacement !== undefined && run.createdTabs.has(replacement);
+        cleanup = manager.finish(run.id, 'terminated');
+      }
+      return result;
+    };
+    const closeTab = h.managers.tab.closeTab;
+    const { promise: closeStarted, resolve: signalClose } = Promise.withResolvers<void>();
+    const { promise: releaseClose, resolve: allowClose } = Promise.withResolvers<void>();
+    let registeredBeforeClose = false;
+    h.managers.tab.closeTab = async (index: number) => {
+      if (h.managers.tab.tabs[index]?.label === h.channels[1]?.label) {
+        registeredBeforeClose = run.createdTabs.has(h.channels[1]?.label ?? '');
+        signalClose();
+        await releaseClose;
+      }
+      closeTab(index);
+    };
+
+    h.channels[0]?.handlers.onNameRefused?.({ type: 'name-in-use', label: h.channels[0]?.label ?? '' });
+
+    await vi.waitFor(() => expect(h.channels).toHaveLength(2));
+    expect(registeredDuringCleanup).toBe(false);
+    expect(cleanup).toBeDefined();
+    await closeStarted;
+    expect(registeredBeforeClose).toBe(true);
+    expect(h.tabs.some((tab) => tab.label === h.channels[1]?.label)).toBe(true);
+    let finished = false;
+    void cleanup?.then(() => { finished = true; });
+    await Promise.resolve();
+    expect(finished).toBe(false);
+    allowClose();
+    await cleanup;
+    expect(run.createdTabs.size).toBe(0);
+    expect(h.tabs.some((tab) => tab.label === h.channels[1]?.label)).toBe(false);
   });
 
   it('releases the SSH channel if the tab factory fails to open', () => {

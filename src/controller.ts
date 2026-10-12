@@ -17,6 +17,7 @@ import { createControllerAdapters, type ControllerMembers } from './controller/c
 // rather than declared here, and `Controller` is the composition of the two.
 export class ControllerCore {
   managers: Managers = {} as Managers;
+  private shutdownPromise?: Promise<void>;
 
   get rootDir(): string { return this.projectDir ?? process.cwd(); }
 
@@ -83,9 +84,33 @@ export class ControllerCore {
     return completeCommand(this.managers, text, cursor);
   }
 
-  shutdown(): void {
-    for (const name of MANAGER_DISPOSE_ORDER) this.managers[name].dispose?.();
-    messageBus.clear();
+  shutdown(): Promise<void> {
+    if (this.shutdownPromise) return this.shutdownPromise;
+    const failures: unknown[] = [];
+    const disposeFrom = (start: number): void | Promise<void> => {
+      for (let index = start; index < MANAGER_DISPOSE_ORDER.length; index += 1) {
+        let result: void | Promise<void>;
+        try { result = this.managers[MANAGER_DISPOSE_ORDER[index]].dispose?.(); } catch (error) {
+          failures.push(error);
+          continue;
+        }
+        if (result && typeof result.then === 'function') {
+          return (async () => {
+            try { await result; } catch (error) { failures.push(error); }
+            await disposeFrom(index + 1);
+          })();
+        }
+      }
+      messageBus.clear();
+      if (failures.length > 0) throw new AggregateError(failures, 'Controller shutdown failed.');
+    };
+    try {
+      const result = disposeFrom(0);
+      this.shutdownPromise = result ? Promise.resolve(result) : Promise.resolve();
+    } catch (error) {
+      this.shutdownPromise = Promise.reject(error);
+    }
+    return this.shutdownPromise;
   }
 }
 

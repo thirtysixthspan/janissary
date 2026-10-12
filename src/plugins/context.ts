@@ -29,6 +29,7 @@ import { remoteCapabilities } from './remote-capabilities.js';
 import { ownTabCapabilities } from './own-tab-capabilities.js';
 import { isPluginSettings, validateTabValue } from './tab-value.js';
 import { tabActivityRows } from './activity.js';
+import { withRunAllocation, withRunAllocationAsync } from './run-allocation.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -84,7 +85,9 @@ export function createPluginContext(
     note: (text) => {
       if (!isEnabled()) return;
       if (managers.tab.tabs.some((tab) => tab.label === origin.label)) {
-        managers.tab.append(origin.label, { input: origin.command, output: text });
+        if (origin.invocationId) {
+          managers.tab.appendForInvocation(origin.label, { input: origin.command, output: text }, origin.invocationId);
+        } else managers.tab.append(origin.label, { input: origin.command, output: text });
       }
     },
     // The plugin's own line into the notifications feed, kept distinct from the host's failure path
@@ -103,10 +106,13 @@ export function createPluginContext(
     },
     // A launch origin is the one origin with no tab behind it, and the tab it opens takes its label.
     // The source is the tab `originTab` reports: the answering tab when one asked, the origin otherwise.
-    openOrFocusTab: (instanceKey, factory) => {
+    openOrFocusTab: (instanceKey, factory) => withRunAllocation(managers, origin.runId, (registerTab) => {
       if (!isEnabled()) return;
       const answering = answeringLabel !== undefined && managers.tab.byLabel(answeringLabel) ? answeringLabel : undefined;
       if (!answering && !origin.launch && managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
+      const existed = managers.tab.tabs.some(
+        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
+      );
       managers.tab.openPluginTab(
         declaration.id,
         declaration.tabLabelPrefix,
@@ -120,7 +126,13 @@ export function createPluginContext(
         },
         origin.launch ? { label: origin.label } : declaration.agentNamedTabs === true,
       );
-    },
+      if (!existed) {
+        const created = managers.tab.tabs.find(
+          (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
+        );
+        if (created) registerTab(created.label);
+      }
+    }),
     ...launchCapabilities({
       managers, declaration, origin, answeringLabel, isEnabled, deferred,
       validate: (value) => { validateTabValue(activation, value); },
@@ -168,9 +180,25 @@ export function createPluginContext(
     // over the filesystem, so the boundary belongs here rather than in each plugin that asks: a
     // plugin holding one could otherwise name any path on the machine and have it opened and served.
     openInEditor: (absPath, line) => {
-      if (!isEnabled()) return;
-      if (!isInsideRoot(managers.tab.launchDir, absPath)) return;
-      managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
+      if (!isEnabled() || !isInsideRoot(managers.tab.launchDir, absPath)) return;
+      if (origin.runId && managers.agent.isAgentRun(origin.runId)) {
+        void withRunAllocationAsync(managers, origin.runId, async (registerTab) => {
+          if (!isEnabled()) return;
+          await managers.openFile.editForCommand(
+            `${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId, registerTab,
+          );
+        });
+        return;
+      }
+      withRunAllocation(managers, origin.runId, (registerTab) => {
+        if (origin.runId) {
+          managers.openFile.edit(
+            `${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId, registerTab,
+          );
+        } else {
+          managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
+        }
+      });
     },
     topicData: (topic) => {
       requireDeclaredTopic(declaration, topic);
@@ -197,6 +225,16 @@ export function createPluginContext(
     ...acpCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     rejectRequest: (reason) => {
       throw new TabPluginRejection(reason);
+    },
+    terminateAgentRun: async () => {
+      if (!isEnabled()) return;
+      const tab = answeringLabel ? managers.tab.byLabel(answeringLabel) : undefined;
+      const runId = declaration.agentMonitor === true && tab?.plugin?.id === declaration.id
+        ? tab.plugin.agentRunId : undefined;
+      if (!runId || !managers.agent.runs.has(runId)) throw new TabPluginRejection('agent run is no longer available');
+      await (deadline
+        ? deadline.exempt(() => managers.agent.finish(runId, 'terminated'))
+        : managers.agent.finish(runId, 'terminated'));
     },
     reportFailure: (reason) => {
       throw reason instanceof Error ? reason : new Error(String(reason));

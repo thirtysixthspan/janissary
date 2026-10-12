@@ -90,13 +90,13 @@ export function reorderTabTo(port: TabOperationsPort, from: number, to: number):
   reorderTabToOp(port.tabs, port.activeTab, from, to, (tabs, activeTab) => { port.tabs = tabs; port.activeTab = activeTab; }, () => port.tabs);
 }
 
-export function closeTab(port: TabOperationsPort, index: number): void {
+export function closeTab(port: TabOperationsPort, index: number): Promise<void> | undefined {
   const closing = port.tabs[index];
   if (!closing) return;
   const closingPane = centerPane(closing);
   const wasActive = index === port.activeTab;
   const wasSecondary = closing.label === port.secondaryTabLabel;
-  closeTabOp(port.tabs, port.activeTab, index, port.managerServices, port.openFiles, (label) => {
+  return closeTabOp(port.tabs, port.activeTab, index, port.managerServices, port.openFiles, (label) => {
     port.focusHistory = port.focusHistory.filter((entry) => entry !== label);
   }, () => port.popFocusHistory((tab) => isCenterActionTab(tab) && centerPane(tab) === closingPane && tab.label !== closing.label), (tabs, activeTab) => {
     port.tabs = tabs;

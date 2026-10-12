@@ -1,0 +1,8 @@
+.agent-monitor { display: flex; flex: 1; min-height: 0; flex-direction: column; color: var(--text); }
+.agent-monitor header { display: flex; justify-content: space-between; gap: 1rem; padding: 0.75rem; border-bottom: 1px solid var(--border); }
+.agent-monitor header div { display: flex; flex-direction: column; gap: 0.25rem; }
+.agent-monitor header span { color: var(--text-muted); font-size: 0.85rem; }
+.agent-monitor button { align-self: flex-end; }
+.agent-monitor-activity { flex: 1; overflow: auto; padding: 0.75rem; }
+.agent-monitor article, .agent-monitor footer { border-bottom: 1px solid var(--border); padding: 0.5rem 0; }
+.agent-monitor pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0.35rem 0; font: inherit; }

@@ -13,6 +13,11 @@ export type StateListener = (snapshot: StateEvent) => void;
 type ExitListener = (id: string, exitCode: number) => void;
 export type LayoutListener = (event: LayoutUpdate) => void;
 const layoutUpdateOf = ({ t: _t, ...update }: LayoutEvent): LayoutUpdate => update;
+function monitorOwnsRun(tab: StateEvent['tabs'][number], runId: string): boolean {
+  const payload = tab.plugin?.payload;
+  return tab.plugin?.id === 'agent-monitor' && typeof payload === 'object' && payload !== null
+    && 'runId' in payload && typeof payload.runId === 'string' && payload.runId === runId;
+}
 // One notification to show in the corner, and the signal that empties the corner at once.
 
 // How long a wake's liveness probe waits for `init`'s reply before treating an `OPEN`-but-silent
@@ -89,6 +94,18 @@ export class JanusClient {
       for (const listener of this.stateListeners) listener(snapshot);
     
     break;
+    }
+    case 'agent-run-updated': {
+      const current = this.latestState;
+      if (!current) break;
+      const tabs = current.tabs.map((tab) => {
+        if (tab.label !== event.tab || !monitorOwnsRun(tab, event.view.id)
+          || (tab.agentRun?.id === event.view.id && tab.agentRun.revision >= event.view.revision)) return tab;
+        return { ...tab, agentRun: event.view };
+      });
+      this.latestState = { ...current, tabs };
+      for (const listener of this.stateListeners) listener(this.latestState);
+      break;
     }
     case 'pty': {
       const h = this.ptyHandlers.get(event.id);

@@ -13,6 +13,7 @@ import type { Socket } from 'node:net';
 import { relayPeer, type DetachedPeer } from './serve-detach.js';
 import { answerCaptureRequest } from './serve-detach-query.js';
 import { RemoteTranscriptFollow } from './serve-transcript.js';
+import { resolveRemoteAgentRequest } from './serve-agent-resolution.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
@@ -80,8 +81,8 @@ export class RemoteServer {
   // Kill every process this server started and remove its workspace clone, then exit. A pending
   // clone offer goes first: an unanswered prompt is declined, and a running root clone is killed and
   // its partial folder removed.
-  shutdown(code: number): void {
-    if (this.stopping) return;
+  shutdown(code: number): Promise<void> {
+    if (this.stopping) return Promise.resolve();
     this.stopping = true;
     this.offer?.cancel();
     this.peer?.dispose();
@@ -89,10 +90,17 @@ export class RemoteServer {
     this.transcripts.dispose();
     this.files?.dispose();
     this.processes?.killAll();
+    const finish = (released: boolean) => {
+      if (released) this.workspaces?.removeAll();
+      this.exit(code);
+    };
     // Before the clone goes, so it is never removed out from under a live agent.
-    this.acp?.dispose();
-    this.workspaces?.removeAll();
-    this.exit(code);
+    const disposed = this.acp?.dispose() ?? true;
+    if (typeof disposed === 'boolean') {
+      finish(disposed);
+      return Promise.resolve();
+    }
+    return (async () => { finish(await disposed); })();
   }
 
   // Every way this server can refuse or fail reaches the local side the same way: the placeholder
@@ -132,6 +140,10 @@ export class RemoteServer {
     case 'filesystem-request': {
       if (!this.files) { this.refuse('No remote workspace has been provisioned.'); return; }
       this.files.request(frame);
+      return;
+    }
+    case 'agent-resolve': {
+      if (this.requireWorkspace() && this.workspaceDir) resolveRemoteAgentRequest(frame, this.workspaceDir, this.emit);
       return;
     }
     case 'acp-open': { if (this.requireWorkspace()) this.acp?.open(frame); return; }
@@ -224,6 +236,7 @@ export class RemoteServer {
   detach(): void {
     if (this.relay || this.root === undefined) { this.shutdown(0); return; }
     this.buffer = '';
+    this.acp?.detachRuns();
     this.peer?.detach();
   }
 

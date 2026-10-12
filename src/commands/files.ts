@@ -1,4 +1,5 @@
 import type { Command } from './types.js';
+import { appendCommandOutput } from '../command/append.js';
 
 // `files [path]` opens a file navigator tab rooted at the issuing tab's cwd, or at `path` when given.
 // `files left [path]` / `files right [path]` dock the tree into that sidebar instead of the
@@ -9,8 +10,8 @@ export const command: Command = {
   name: 'files',
   match: (command_) => /^files\b/i.test(command_),
   samples: ['files', 'files .'],
-  run: (command_, tab, managers) => {
-    managers.tab.append(tab.label, { input: command_, output: '' });
+  run: (command_, tab, managers, invocation) => {
+    appendCommandOutput(managers, tab.label, { input: command_, output: '' }, invocation);
     managers.fileNavigator.open(command_, tab.label);
   },
 };

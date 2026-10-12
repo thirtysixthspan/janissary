@@ -24,14 +24,16 @@ export function closeTabOp(
   popFocusHistory: () => number | undefined,
   applyResult: (tabs: Tab[], activeTab: number) => void,
   resolveTabs?: () => Tab[],
-): void {
+): Promise<void> | undefined {
   const tab = tabs[index];
   if (!tab || tab.runtime?.closing) return;
+  managers.agent?.closeCaller(tab);
+  if (tab.view === 'monitor' || tab.plugin?.id === 'agent-monitor') managers.agent?.closeMonitor(tab.label);
   if (closeQuitsApp(tabs, index)) {
     messageBus.emit('app', { type: 'exit' });
     return;
   }
-  closeTabResources(tab, managers, openFiles);
+  const resourcesReleased = closeTabResources(tab, managers, openFiles);
   const wasActive = index === activeTab;
   discardFocusHistoryLabel(tab.label);
   const nextTabs = removeTabAt(tabs, index);
@@ -51,4 +53,5 @@ export function closeTabOp(
   // composed synchronously off this signal from `tabs` itself: the walk still runs with the closing
   // tab in the array, so a signal from there would recompose the very row it is meant to remove.
   if (isSshTab(tab)) messageBus.emit('sessions', { type: 'changed' });
+  return resourcesReleased;
 }

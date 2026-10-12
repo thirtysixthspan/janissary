@@ -3,6 +3,9 @@ import { CommandManager } from './manager.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import { makeTab } from '../tab/index.js';
+import { commands } from '../commands/index.js';
+import type { CommandInvocationContext } from '../commands/types.js';
 
 function makeManagers(): { managers: Managers; recorder: string[] } {
   const recorder: string[] = [];
@@ -27,6 +30,30 @@ function makeManagers(): { managers: Managers; recorder: string[] } {
 }
 
 describe('CommandManager async commands', () => {
+  it('records new tab allocations from a run-owned granted command', async () => {
+    const { managers } = makeManagers();
+    const trackCreatedTab = vi.fn();
+    managers.agent = { runs: new Map([['run-1', {}]]), trackCreatedTab } as unknown as Managers['agent'];
+    const command = {
+      name: 'fixture-tab-allocation', match: (input: string) => input === 'fixture-tab-allocation',
+      samples: ['fixture-tab-allocation'],
+      run: (_input: string, _tab: unknown, services: Managers) => {
+        services.tab.tabs.push(makeTab('created-by-command', '#ccc', 2));
+      },
+    };
+    commands.push(command);
+    try {
+      await managers.command.dispatchLineInInvocation('janus', 'fixture-tab-allocation', {
+        runId: 'run-1', invocationId: 'invocation-1',
+        caller: { label: 'janus', cwd: '/repo', context: [] }, signal: new AbortController().signal,
+      });
+
+      expect(trackCreatedTab).toHaveBeenCalledWith('run-1', 'created-by-command');
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+    }
+  });
+
   it('awaits a successful plugin command', async () => {
     const { managers } = makeManagers();
     const deferred = Promise.withResolvers<void>();
@@ -34,9 +61,9 @@ describe('CommandManager async commands', () => {
     managers.plugins = { runCommand } as unknown as Managers['plugins'];
 
     const completed = managers.command.executeCommand('video', 'video clip.mp4', 'janus', 0);
-    expect(runCommand).toHaveBeenCalledWith(
-      'video', 'video clip.mp4', { label: 'janus', command: 'video clip.mp4' },
-    );
+    expect(runCommand).toHaveBeenCalledWith('video', 'video clip.mp4', {
+      label: 'janus', command: 'video clip.mp4', invocationId: expect.any(String), runId: expect.any(String),
+    });
     deferred.resolve();
     await completed;
   });
@@ -64,7 +91,9 @@ describe('CommandManager async commands', () => {
     managers.plugins = { runCommand } as unknown as Managers['plugins'];
 
     await managers.command.executeCommand('search', 'search', 'janus', 0);
-    expect(runCommand).toHaveBeenCalledWith('search', 'search', { label: 'janus', command: 'search' });
+    expect(runCommand).toHaveBeenCalledWith('search', 'search', {
+      label: 'janus', command: 'search', invocationId: expect.any(String), runId: expect.any(String),
+    });
 
     runCommand.mockClear();
     await managers.command.executeCommand('search', 'search transcript fox', 'janus', 0);
@@ -87,9 +116,10 @@ describe('CommandManager dispatchLineWithOutput', () => {
 
   it('captures output appended by the existing async command executor', async () => {
     const { managers } = makeManagers();
-    vi.spyOn(managers.command, 'executeCommand').mockImplementation(async (_name, command, label) => {
+    vi.spyOn(managers.command as unknown as { executeCommandWithContext: (...args: unknown[]) => Promise<unknown> }, 'executeCommandWithContext')
+      .mockImplementation(async (_name, command, label, _index, invocation) => {
       await Promise.resolve();
-      managers.tab.append(label, { input: command, output: 'async response' });
+      managers.tab.appendForInvocation(label, { input: command, output: 'async response' }, invocation.invocationId);
     });
 
     await expect(managers.command.dispatchLineWithOutput('janus', 'theme dark')).resolves.toEqual({
@@ -110,10 +140,11 @@ describe('CommandManager dispatchLineWithOutput', () => {
   it('answers with the output so far when a command outlives the capture limit', async () => {
     const { managers } = makeManagers();
     const late = Promise.withResolvers<void>();
-    vi.spyOn(managers.command, 'executeCommand').mockImplementation(async (_name, command, label) => {
-      managers.tab.append(label, { input: command, output: 'started' });
+    vi.spyOn(managers.command as unknown as { executeCommandWithContext: (...args: unknown[]) => Promise<unknown> }, 'executeCommandWithContext')
+      .mockImplementation(async (_name, command, label, _index, invocation) => {
+      managers.tab.appendForInvocation(label, { input: command, output: 'started' }, invocation.invocationId);
       await late.promise;
-      managers.tab.append(label, { input: command, output: 'finished' });
+      managers.tab.appendForInvocation(label, { input: command, output: 'finished' }, invocation.invocationId);
     });
 
     await expect(managers.command.dispatchLineWithOutput('janus', 'theme dark', 10)).resolves.toEqual({
@@ -121,6 +152,156 @@ describe('CommandManager dispatchLineWithOutput', () => {
     });
     late.resolve();
     await vi.waitFor(() => { expect(managers.tab.cur().log.at(-1)?.output).toBe('finished'); });
+  });
+});
+
+describe('CommandManager structured results', () => {
+  it('returns a structured result together with the output it appended', async () => {
+    const { managers } = makeManagers();
+    const command = {
+      name: 'fixture-result', match: (input: string) => input === 'fixture-result',
+      samples: ['fixture-result'], structuredResult: true as const,
+      run: async (_input: string, tab: { label: string }, services: Managers, invocation: CommandInvocationContext) => {
+        services.tab.appendForInvocation(tab.label, { input: 'fixture-result', output: 'displayed once' }, invocation.invocationId);
+        return { status: 'completed', response: 'result value' };
+      },
+    };
+    commands.push(command);
+    try {
+      await expect(managers.command.dispatchLineWithOutput('janus', 'fixture-result')).resolves.toEqual({
+        dispatched: true, output: 'displayed once', result: { status: 'completed', response: 'result value' },
+      });
+      expect(managers.tab.cur().log.at(-1)?.output).toBe('displayed once');
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+    }
+  });
+
+  it('keeps output appended after the legacy 30-second deadline', async () => {
+    vi.useFakeTimers();
+    const { managers } = makeManagers();
+    const command = {
+      name: 'fixture-late-result', match: (input: string) => input === 'fixture-late-result',
+      samples: ['fixture-late-result'], structuredResult: true as const,
+      run: async (_input: string, tab: { label: string }, services: Managers, invocation: CommandInvocationContext) => {
+        await new Promise((resolve) => { setTimeout(resolve, 30_001); });
+        services.tab.appendForInvocation(tab.label, { input: 'fixture-late-result', output: 'late reply' }, invocation.invocationId);
+        return { status: 'completed', response: 'late result' };
+      },
+    };
+    commands.push(command);
+    try {
+      const reply = managers.command.dispatchLineWithOutput('janus', 'fixture-late-result');
+      await vi.advanceTimersByTimeAsync(30_001);
+      await expect(reply).resolves.toEqual({
+        dispatched: true, output: 'late reply', result: { status: 'completed', response: 'late result' },
+      });
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps core-response no-capture behavior while returning a structured result', async () => {
+    const { managers } = makeManagers();
+    const command = {
+      name: 'fixture-core-result', match: (input: string) => input === 'fixture-core-result',
+      samples: ['fixture-core-result'], structuredResult: true as const, coreResponse: true,
+      run: () => ({ response: 'core result' }),
+    };
+    commands.push(command);
+    try {
+      await expect(managers.command.dispatchLineWithOutput('janus', 'fixture-core-result')).resolves.toEqual({
+        dispatched: true, output: '', coreResponse: true, result: { response: 'core result' },
+      });
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+    }
+  });
+
+  it('does not settle a structured result at the legacy 30-second capture deadline', async () => {
+    vi.useFakeTimers();
+    const { managers } = makeManagers();
+    const completion = Promise.withResolvers<{ status: string }>();
+    const command = {
+      name: 'fixture-slow-result', match: (input: string) => input === 'fixture-slow-result',
+      samples: ['fixture-slow-result'], structuredResult: true as const,
+      run: () => completion.promise,
+    };
+    commands.push(command);
+    try {
+      let settled = false;
+      const result = (async () => {
+        const reply = await managers.command.dispatchLineWithOutput('janus', 'fixture-slow-result');
+        settled = true;
+        return reply;
+      })();
+      await vi.advanceTimersByTimeAsync(30_001);
+      expect(settled).toBe(false);
+      completion.resolve({ status: 'completed' });
+      await expect(result).resolves.toEqual({
+        dispatched: true, output: '', result: { status: 'completed' },
+      });
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+      vi.useRealTimers();
+    }
+  });
+
+  it('delivers nested results directly while retaining run ownership', async () => {
+    const { managers } = makeManagers();
+    let parentInvocation: CommandInvocationContext | undefined;
+    let childInvocation: CommandInvocationContext | undefined;
+    const child = {
+      name: 'fixture-child-result', match: (input: string) => input === 'fixture-child-result',
+      samples: ['fixture-child-result'], structuredResult: true as const,
+      run: (_input: string, _tab: unknown, _services: Managers, invocation: CommandInvocationContext) => {
+        childInvocation = invocation;
+        return { response: 'nested answer' };
+      },
+    };
+    const parent = {
+      name: 'fixture-parent-result', match: (input: string) => input === 'fixture-parent-result',
+      samples: ['fixture-parent-result'], structuredResult: true as const,
+      run: async (_input: string, _tab: unknown, services: Managers, invocation: CommandInvocationContext) => {
+        parentInvocation = invocation;
+        return services.command.dispatchLineInInvocation('janus', 'fixture-child-result', invocation);
+      },
+    };
+    commands.push(child, parent);
+    try {
+      await expect(managers.command.dispatchLineWithOutput('janus', 'fixture-parent-result')).resolves.toMatchObject({
+        dispatched: true, result: { dispatched: true, result: { response: 'nested answer' } },
+      });
+      expect(childInvocation?.runId).toBe(parentInvocation?.runId);
+      expect(childInvocation?.invocationId).not.toBe(parentInvocation?.invocationId);
+      expect(childInvocation?.caller).toEqual(parentInvocation?.caller);
+    } finally {
+      commands.splice(commands.indexOf(child), 1);
+      commands.splice(commands.indexOf(parent), 1);
+    }
+  });
+
+  it('creates invocation ownership internally for ordinary dispatch', async () => {
+    const { managers } = makeManagers();
+    const runCommand = vi.fn();
+    managers.plugins = { runCommand } as unknown as Managers['plugins'];
+
+    const forged = {
+      runId: 'caller-controlled-run', invocationId: 'caller-controlled-invocation',
+      caller: { label: 'elsewhere', cwd: '/elsewhere', context: ['forged'] }, signal: new AbortController().signal,
+    };
+    Reflect.apply(managers.command.executeCommand, managers.command, [
+      'video', 'video clip.mp4', 'janus', 0, forged,
+    ]);
+    await vi.waitFor(() => { expect(runCommand).toHaveBeenCalledOnce(); });
+
+    const [pluginId, , origin] = runCommand.mock.calls[0] as unknown as [string, string, Record<string, unknown>];
+    expect(pluginId).toBe('video');
+    expect(origin.invocationId).toEqual(expect.any(String));
+    expect(origin.invocationId).not.toBe(forged.invocationId);
+    expect(origin.runId).toEqual(expect.any(String));
+    expect(origin.runId).not.toBe(forged.runId);
   });
 });
 

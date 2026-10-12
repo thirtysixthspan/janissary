@@ -2,6 +2,7 @@ import type { Command } from './types.js';
 import { command as next } from './next.js';
 import { command as acp } from './acp.js';
 import { command as acpReset } from './acp-reset.js';
+import { command as agent } from './agent.js';
 import { command as database } from './db.js';
 import { command as browser } from './browser.js';
 import { command as connection } from './connection.js';
@@ -38,6 +39,7 @@ import { createPluginCommands } from '../plugins/command-adapter.js';
 const coreCommands: Command[] = [
   next,
   acpReset,
+  agent,
   acp,
   database,
   browser,

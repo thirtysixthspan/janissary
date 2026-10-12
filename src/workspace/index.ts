@@ -197,6 +197,12 @@ export function removeWorkspace(directory: string): void {
   try { rmSync(`${directory}.tmp`, { recursive: true, force: true }); } catch { /* ignore */ }
 }
 
+export function removeWorkspaceStrict(directory: string): void {
+  untrustWorkspace(directory, workspaceClaudeConfigPath());
+  rmSync(directory, { recursive: true, force: true });
+  rmSync(`${directory}.tmp`, { recursive: true, force: true });
+}
+
 export function clearWorkspaceDir(): void {
   if (!workspaceBaseDir) return;
   try {

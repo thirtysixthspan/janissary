@@ -1,4 +1,5 @@
-import type { CommandManagers } from './types.js';
+import type { CommandInvocationContext, CommandManagers } from './types.js';
+import { appendCommandOutput } from '../command/append.js';
 
 // `harness` and `ssh` both hand their whole input to a manager that answers with an error string or
 // nothing at all, and both record the input in the transcript before delegating so the line is
@@ -9,8 +10,9 @@ export function runDelegated(
   label: string,
   managers: CommandManagers,
   delegate: (input: string) => string | undefined,
+  invocation?: CommandInvocationContext,
 ): void {
-  managers.tab.append(label, { input, output: '' });
+  appendCommandOutput(managers, label, { input, output: '' }, invocation);
   const error = delegate(input);
-  if (error) managers.tab.append(label, { input: '', output: error });
+  if (error) appendCommandOutput(managers, label, { input: '', output: error }, invocation);
 }

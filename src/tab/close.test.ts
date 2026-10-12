@@ -7,6 +7,7 @@ import { MANAGER_TAB_RELEASE, type Managers } from '../managers.js';
 
 function makeManagers(): Managers {
   const managers: Record<string, unknown> = {
+    agent: { closeCaller: vi.fn(), closeMonitor: vi.fn() },
     workspace: { release: vi.fn(), cancel: vi.fn() },
     tab: { deleteBusy: vi.fn() },
   };
@@ -41,6 +42,7 @@ describe('closeTabOp', () => {
 
     const { applied } = close([makeTab('main', 'red')], 0, managers);
 
+    expect(managers.agent.closeCaller).toHaveBeenCalledWith(expect.objectContaining({ label: 'main' }));
     expect(emit).toHaveBeenCalledWith('app', { type: 'exit' });
     expect(applied).toBe(false);
     for (const name of MANAGER_TAB_RELEASE) expect(managers[name].closeTab).not.toHaveBeenCalled();
@@ -54,6 +56,16 @@ describe('closeTabOp', () => {
     expect(emit).not.toHaveBeenCalledWith('app', { type: 'exit' });
     expect(applied).toBe(true);
     expect(managers.shell.closeTab).toHaveBeenCalledWith('bob');
+  });
+
+  it('detaches a closing monitor without terminating its owning run', () => {
+    const managers = makeManagers();
+    const monitor: Tab = { ...makeTab('agent-monitor', 'blue'), view: 'monitor' };
+
+    close([makeTab('main', 'red'), monitor], 1, managers);
+
+    expect(managers.agent.closeMonitor).toHaveBeenCalledWith('agent-monitor');
+    expect(managers.agent.closeCaller).toHaveBeenCalledWith(monitor);
   });
 
   // A docked tab never counts toward the last-tab rule, so one center tab remaining is no reason to

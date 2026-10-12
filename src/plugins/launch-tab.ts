@@ -14,6 +14,7 @@ import { declaredResources } from './declared-resources.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { resolveLaunchLabel } from './launch-tab-label.js';
 import { launchRemotePluginTab } from './launch-tab-remote.js';
+import { withRunAllocation } from './run-allocation.js';
 
 // The `launchTab` capability: the host names a plugin tab, starts its workspace clone when one was
 // asked for, places it at once, and runs the plugin's ready handler once the clone lands. Workspace
@@ -86,10 +87,14 @@ async function runReady(
   ready: TabPluginLaunchReadyHandler,
 ): Promise<void> {
   const { managers, declaration, deferred } = input;
+  if (input.origin.runId && managers.agent.isAgentRun(input.origin.runId)
+    && !managers.agent.isLive(input.origin.runId)) return;
   const tab = launchedTab(managers, declaration.id, instanceKey);
   if (tab) tab.plugin.busy = false;
   messageBus.emit('state', { type: 'dirty' });
-  if (!deferred || !input.isEnabled()) return;
+  if (!deferred || !input.isEnabled()
+    || (input.origin.runId !== undefined && managers.agent.isAgentRun(input.origin.runId)
+      && !managers.agent.isLive(input.origin.runId))) return;
   const notice = sandboxNotice();
   const outcome = await deferred.invoke((capabilities) => ready({
     instanceKey,
@@ -160,7 +165,8 @@ function joinSource(request: TabPluginLaunchRequest, input: LaunchInput): string
 export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapabilities, 'launchTab'> {
   const { managers, declaration, isEnabled } = input;
   return {
-    launchTab: (instanceKey, request, factory, ready) => {
+    launchTab: (instanceKey, request, factory, ready) => withRunAllocation(
+      managers, input.origin.runId, (registerTab) => {
       if (!isEnabled()) return;
       if (!input.deferred) throw new Error('"launchTab" is not available from a notification or host-state handler');
       const sourceLabel = joinSource(request, input);
@@ -170,13 +176,22 @@ export function launchCapabilities(input: LaunchInput): Pick<TabPluginServerCapa
       if (request.remote && 'adopt' in request.remote && request.remote.adopt.ptyId !== input.adoptPtyId) {
         throw new Error('remote process adoption must match the reattach record');
       }
-      if (request.remote !== undefined) return launchRemotePluginTab(launchInput, instanceKey, request, factory, ready);
+      const existed = managers.tab.tabs.some(
+        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
+      );
+      if (request.remote !== undefined) {
+        const launched = launchRemotePluginTab(launchInput, instanceKey, request, factory, ready);
+        if (launched && !existed) registerTab(launched.label);
+        return launched;
+      }
       const label = resolveLaunchLabel(managers, declaration, origin, request);
       if (label === undefined) return;
       const { clone, fallbackReason } = startClone(managers, label, request);
       if (!openLaunched(input, label, instanceKey, request, factory, clone)) return;
+      if (!existed) registerTab(label);
       if (clone) awaitClone(input, label, instanceKey, clone, ready);
       return { label, ...(fallbackReason && { fallbackReason }) };
-    },
+      },
+    ),
   };
 }

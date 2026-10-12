@@ -10,6 +10,7 @@ export type AcpSession = {
   // Send a prompt and stream the agent's text reply through `handlers`.
   prompt: (text: string, handlers: PromptHandlers) => void;
   kill: () => void;
+  shutdown: () => Promise<void>;
 };
 
 export type AcpInfo = { provider?: string; model?: string };
@@ -32,11 +33,13 @@ export type AcpOptions = {
   onError: (message: string) => void;
   // Called once the session handshake completes, with the agent's reported identity.
   onConnect?: (info: AcpInfo) => void;
+  onActivity?: (update: unknown) => void;
   // Extra environment variables to pass to the subprocess.
   env?: Record<string, string>;
   // When the session belongs to a workspaced tab, confines the ACP subprocess to that workspace
   // via a Seatbelt sandbox (see src/sandbox/index.ts). Monitor sessions never set this.
   workspaceDir?: string;
+  installedSkillDirs?: string[];
   offline?: boolean;
   // The credentials to inject; defaults to this project's own. The remote server supplies the
   // forwarded-over-own map it already computed, so a credential forwarded from the local machine is
@@ -45,6 +48,9 @@ export type AcpOptions = {
   // Tool ids the connection's permission handler may approve (see acp-tools.ts). Undefined/empty
   // (every non-monitor caller and every tool-less persona) means deny every tool request.
   allowedTools?: string[];
+  // Autonomous tasks explicitly opt into approving provider tool requests; ordinary ACP stays denied.
+  autonomous?: true;
+  effort?: Readonly<{ level: string; model: string }>;
 };
 
 export type AcpPromptHandlers = {

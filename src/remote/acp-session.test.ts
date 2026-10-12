@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { createRemoteAcpSession } from './acp-session.js';
 import type { AcpSessionListener } from './channel/acp.js';
 import type { RemoteChannel } from './channel/index.js';
@@ -36,6 +36,8 @@ function makeSession(hooks?: { onError?: ReturnType<typeof vi.fn>; onConnect?: R
 }
 
 describe('createRemoteAcpSession — opening', () => {
+  afterEach(() => vi.useRealTimers());
+
   it('attaches a listener for its id and sends the open frame', () => {
     const s = makeSession();
 
@@ -49,9 +51,72 @@ describe('createRemoteAcpSession — opening', () => {
   it('invokes the connect hook when the remote reports its handshake done', () => {
     const s = makeSession();
 
-    s.listener().onReady();
+    s.listener().onReady(false);
 
-    expect(s.onConnect).toHaveBeenCalledOnce();
+    expect(s.onConnect).toHaveBeenCalledWith(false);
+  });
+
+  it('settles readiness and forwards typed activity', async () => {
+    const onActivity = vi.fn();
+    const fake = fakeChannel();
+    const session = createRemoteAcpSession(fake.channel, { ...OPTIONS, autonomous: true, effort: { level: 'high', model: 'model-x' } }, {
+      onError: vi.fn(), onConnect: vi.fn(), onActivity,
+    });
+    fake.listeners.get('racp1')?.onReady(false);
+    fake.listeners.get('racp1')?.onActivity('thought', 'planning');
+
+    await expect(session.ready).resolves.toBe(false);
+    expect(fake.sent[0]).toMatchObject({ autonomous: true, effort: { level: 'high', model: 'model-x' } });
+    expect(onActivity).toHaveBeenCalledWith('thought', 'planning');
+  });
+
+  it('fails readiness and notifies the owner when the transport is lost', async () => {
+    const onTransportLost = vi.fn();
+    const fake = fakeChannel();
+    const session = createRemoteAcpSession(fake.channel, OPTIONS, {
+      onError: vi.fn(), onConnect: vi.fn(), onTransportLost,
+    });
+
+    fake.listeners.get('racp1')?.onTransportLost?.();
+
+    await expect(session.ready).rejects.toThrow('Remote connection lost before agent readiness.');
+    expect(onTransportLost).toHaveBeenCalledOnce();
+    expect(fake.detached).toEqual(['racp1']);
+  });
+
+  it('waits for the remote release acknowledgment', async () => {
+    const s = makeSession();
+    const release = s.session.release();
+    let settled = false;
+    void release.then(() => { settled = true; });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    s.listener().onClosed(true);
+
+    await expect(release).resolves.toBe(true);
+    expect(s.detached).toEqual(['racp1']);
+  });
+
+  it('shares one acknowledgment wait across concurrent release calls', async () => {
+    const s = makeSession();
+    const first = s.session.release();
+    const second = s.session.release();
+
+    expect(second).toBe(first);
+    expect(s.sent.filter((frame) => frame.type === 'acp-close')).toHaveLength(1);
+    s.listener().onClosed(true);
+    await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+  });
+
+  it('bounds an unacknowledged close and reports uncertain release', async () => {
+    vi.useFakeTimers();
+    const s = makeSession();
+    const release = s.session.release();
+    const expectation = expect(release).resolves.toBe(false);
+    await vi.advanceTimersByTimeAsync(5000);
+    await expectation;
+    expect(s.detached).toEqual(['racp1']);
   });
 });
 
@@ -141,6 +206,8 @@ describe('createRemoteAcpSession — killing', () => {
     s.session.kill();
 
     expect(s.sent.at(-1)).toEqual({ type: 'acp-close', id: 'racp1' });
+    expect(s.detached).toEqual([]);
+    s.listener().onClosed(true);
     expect(s.detached).toEqual(['racp1']);
   });
 
@@ -151,6 +218,7 @@ describe('createRemoteAcpSession — killing', () => {
     s.session.kill();
 
     expect(s.sent.filter((f) => f.type === 'acp-close')).toHaveLength(1);
+    s.listener().onClosed(true);
     expect(s.detached).toEqual(['racp1']);
   });
 
@@ -162,6 +230,7 @@ describe('createRemoteAcpSession — killing', () => {
     const listener = s.listener();
 
     s.session.kill();
+    s.listener().onClosed(true);
     listener.onChunk('stale');
 
     expect(s.handlers.onChunk).not.toHaveBeenCalled();

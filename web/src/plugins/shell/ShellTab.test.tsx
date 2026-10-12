@@ -847,6 +847,21 @@ describe('ShellTab', () => {
     expect(terminal.written).toContain('\r\u{1B}[2K\u{1B}[1m> help\u{1B}[22m\r\nfirst line\r\nsecond line\r\n\u{1B}[1m>\u{1B}[22m ');
   });
 
+  it('displays an agent run\'s status reply beneath its line', async () => {
+    const { releaseDispatch, terminal, written } = renderTab({
+      dispatched: true, output: 'Status: failed\nAgent: missing task after execute.',
+    });
+
+    fireEvent.change(bar(), { target: { value: 'agent execute' } });
+    fireEvent.keyDown(bar(), { key: 'Enter' });
+    await act(async () => { releaseDispatch(); });
+
+    expect(written).toEqual([]);
+    expect(terminal.written.at(-1)).toContain('> agent execute');
+    expect(terminal.written.at(-1)).toContain('Status: failed');
+    expect(terminal.written.at(-1)).toContain('Agent: missing task after execute.');
+  });
+
   it('renders a claimed command\'s markdown reply as styled terminal text rather than raw markup', async () => {
     const escape = String.fromCodePoint(0x1B);
     const { releaseDispatch, terminal } = renderTab({ dispatched: true, output: '## Usage\n\nRun **zsh**' });

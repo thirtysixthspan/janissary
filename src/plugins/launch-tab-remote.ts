@@ -54,8 +54,13 @@ export function launchRemotePluginTab(
   if (label === undefined) return undefined;
 
   const retry: RemoteNameRetry = {
-    creator: input.origin.label, explicit, tried: [...tried, label],
-    relaunch: (next) => { launchRemotePluginTab(input, instanceKey, request, factory, ready, next); },
+    creator: input.origin.label,
+    ...(input.origin.runId !== undefined && { runId: input.origin.runId }),
+    explicit, tried: [...tried, label],
+    relaunch: (next, registerTab) => {
+      const relaunched = launchRemotePluginTab(input, instanceKey, request, factory, ready, next);
+      if (relaunched) registerTab(relaunched.label);
+    },
   };
   const remote = startRemoteLaunch(input.managers, label, parsed, launchCwd(input));
   try {
@@ -88,8 +93,12 @@ export function launchRemotePluginTab(
   const { managers, declaration, deferred } = input;
   const closeRetry = retry;
   const onReady = async () => {
+    if (input.origin.runId && managers.agent.isAgentRun(input.origin.runId)
+      && !managers.agent.isLive(input.origin.runId)) return;
     const live = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-    if (!live || !deferred || !input.isEnabled()) return;
+    if (!live || !deferred || !input.isEnabled()
+      || (input.origin.runId !== undefined && managers.agent.isAgentRun(input.origin.runId)
+        && !managers.agent.isLive(input.origin.runId))) return;
     live.plugin.busy = false;
     const workspace = remote.cwd();
     managers.tab.setCwd(label, workspace);

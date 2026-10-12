@@ -34,6 +34,7 @@ export type RemoteLaunchHandlers = {
 // label releases it. Separate launches to the same host deliberately remain separate entries.
 export class RemoteManager {
   private entries = new Map<string, Entry>();
+  private runEntries = new Set<Entry>();
   private resume = messageBus.on('system', 'resumed', () => {
     const entries = new Set(this.entries.values());
     for (const entry of entries) resumeRemote(entry);
@@ -51,10 +52,10 @@ export class RemoteManager {
   // launches and attaches alike.
   create(
     label: string, address: RemoteAddress, cwd: string, handlers: RemoteLaunchHandlers,
-    resume?: RemoteResume,
+    resume?: RemoteResume, options?: { nonInteractive?: boolean },
   ): RemoteChannel {
     const entry = createRemoteEntry({
-      managers: this.managers, label, address, cwd, handlers, resume,
+      managers: this.managers, label, address, cwd, handlers, resume, nonInteractive: options?.nonInteractive,
       channelClosed: (closed) => this.channelClosed(closed),
       sessionsChanged: () => this.sessionsChanged(),
     });
@@ -95,6 +96,24 @@ export class RemoteManager {
   homeOf(label: string): string | undefined { return this.entries.get(label)?.home; }
 
   workspaceLabelOf(label: string): string | undefined { return this.entries.get(label)?.workspaceLabel; }
+
+  acquireAgentLease(label: string, runId: string): () => Promise<void> {
+    const entry = this.entries.get(label);
+    if (!entry || entry.closed || !entry.channel.attached || !entry.workspaceDir) {
+      throw new Error('Agent: remote workspace is not ready.');
+    }
+    if (entry.runRefs.has(runId)) throw new Error(`Remote agent run already owns a lease: ${runId}`);
+    entry.runRefs.add(runId);
+    this.runEntries.add(entry);
+    let released = false;
+    return async () => {
+      if (released) return;
+      released = true;
+      entry.runRefs.delete(runId);
+      if (entry.runRefs.size === 0) this.runEntries.delete(entry);
+      if (entry.labels.size === 0 && entry.runRefs.size === 0) this.finishUnreferencedEntry(entry);
+    };
+  }
 
   // The remote workspace keeps its original identity for cached files, while the tab that owns its
   // session can change when a temporary attach prompt is replaced by the restored shell.
@@ -155,7 +174,7 @@ export class RemoteManager {
     entry.handlers.delete(label);
     const survivor = entry.labels.values().next().value;
     if (survivor) this.managers.pty.reassignTransports(label, survivor);
-    else {
+    else if (entry.runRefs.size === 0) {
       // Captured before `finish()`, which forgets the channel's session id as part of closing.
       const session = entry.channel.sessionId;
       entry.channel.finish();
@@ -168,9 +187,10 @@ export class RemoteManager {
   }
 
   closeAll(): void {
-    const entries = new Set(this.entries.values());
+    const entries = new Set([...this.entries.values(), ...this.runEntries]);
     for (const entry of entries) { markEntryEnded(entry); entry.channel.finish(); entry.channel.closeAfterShutdown(); }
     this.entries.clear();
+    this.runEntries.clear();
   }
 
   closeTab(label: string): void { this.release(label); }
@@ -192,6 +212,15 @@ export class RemoteManager {
   private channelClosed(entry: Entry, ending = false): void {
     remoteChannelClosed(this.managers, this.entries, entry, ending);
     this.sessionsChanged();
+  }
+
+  private finishUnreferencedEntry(entry: Entry): void {
+    if (entry.closed) return;
+    const session = entry.channel.sessionId;
+    entry.channel.finish();
+    this.channelClosed(entry, true);
+    entry.channel.closeAfterShutdown();
+    dropTerminatedSessionRecord(this.managers, session);
   }
 
   // The live set moved: a channel opened, joined, spawned, released, parked, or lost its transport.

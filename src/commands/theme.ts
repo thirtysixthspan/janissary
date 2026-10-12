@@ -2,6 +2,7 @@ import type { Command } from './types.js';
 import { getConfig, updateConfig } from '../config.js';
 import { APP_THEMES } from '../app-themes.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';
+import { appendCommandOutput } from '../command/append.js';
 
 function listThemes(): string {
   const active = getConfig().theme;
@@ -33,13 +34,13 @@ export const command: Command = {
   name: 'theme',
   match: (command_) => /^theme\b/i.test(command_),
   samples: ['theme', 'theme dark'],
-  run: (command_, tab, managers) => {
+  run: (command_, tab, managers, invocation) => {
     const rest = command_.replace(/^theme\b\s*/i, '').trim();
     if (!rest) {
-      managers.tab.append(tab.label, { input: command_, output: `Available themes:\n${listThemes()}` });
+      appendCommandOutput(managers, tab.label, { input: command_, output: `Available themes:\n${listThemes()}` }, invocation);
       return;
     }
     const output = /^sync$/i.test(rest) ? syncSyntaxTheme() : setTheme(rest);
-    managers.tab.append(tab.label, { input: command_, output });
+    appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
   },
 };

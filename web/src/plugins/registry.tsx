@@ -3,7 +3,7 @@ import React, { useLayoutEffect } from 'react';
 // make a client entry that is missing, misspelled, or left behind a compile error rather than a
 // runtime "unknown client plugin" the first time somebody opens that plugin's tab.
 import type { ProductionTabPluginId } from '@shared/plugins/catalog';
-import type { TabPluginClientCapabilities } from './api';
+import type { AgentRunView, TabPluginClientCapabilities } from './api';
 
 // `Payload` is the plugin's own payload type. A plugin entry states it once, through the return type
 // of its `isPayload` guard, and gets a component typed in its own terms rather than one taking
@@ -12,6 +12,7 @@ import type { TabPluginClientCapabilities } from './api';
 export type ClientPluginProperties<Payload = unknown> = {
   payload: Payload;
   capabilities: TabPluginClientCapabilities;
+  agentRun?: AgentRunView;
 };
 
 export type ClientPluginModule<Payload> = {
@@ -30,6 +31,7 @@ export type ClientPluginLoader<Payload = unknown> = () => Promise<ClientPluginMo
 // Checked only for catalog parity, not payload type: a loader map entry is a bare import, and the
 // payload each one resolves to is deliberately different per plugin.
 export const clientPluginLoaders = {
+  'agent-monitor': () => import('./agent-monitor/index'),
   asciicast: () => import('./asciicast/index'),
   audio: () => import('./audio/index'),
   conversations: () => import('./conversations/index'),
@@ -58,10 +60,10 @@ export function clientPlugin<Payload>(
   const Component = React.lazy(async () => {
     const module = await loader();
     const Plugin = module.default;
-    const ValidatedPlugin = ({ payload, capabilities, onMounted }: MountedProperties) => {
+    const ValidatedPlugin = ({ payload, capabilities, agentRun, onMounted }: MountedProperties) => {
       useLayoutEffect(onMounted, [onMounted]);
       if (!module.isPayload(payload)) throw new Error('invalid plugin payload');
-      return <Plugin payload={payload} capabilities={capabilities} />;
+      return <Plugin payload={payload} capabilities={capabilities} agentRun={agentRun} />;
     };
     return { default: ValidatedPlugin };
   });
@@ -79,6 +81,7 @@ export function createClientPluginRegistry(
 // to avoid — because this module is reachable from the entry. `registry.test.tsx` pins every literal
 // against its plugin's own constant, so the duplication cannot drift silently.
 export const clientPluginRegistry = createClientPluginRegistry({
+  'agent-monitor': clientPlugin(1, clientPluginLoaders['agent-monitor']),
   asciicast: clientPlugin(1, clientPluginLoaders.asciicast),
   audio: clientPlugin(1, clientPluginLoaders.audio),
   conversations: clientPlugin(1, clientPluginLoaders.conversations),

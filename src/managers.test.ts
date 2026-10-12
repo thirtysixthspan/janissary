@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createController } from './controller.js';
 import {
   MANAGER_DISPOSE_ORDER,
@@ -36,6 +36,30 @@ describe('MANAGER_DISPOSE_ORDER', () => {
 
   it('disposes the state the others read while tearing down last', () => {
     expect(MANAGER_DISPOSE_ORDER.slice(-3)).toEqual(['questions', 'tab', 'database']);
+  });
+
+  it('awaits agent cleanup before its dependencies and shares concurrent shutdown', async () => {
+    const controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
+    const gate = Promise.withResolvers<void>();
+    const calls: string[] = [];
+    for (const name of MANAGER_DISPOSE_ORDER) {
+      Object.assign(controller.managers[name], {
+        dispose: vi.fn(async () => {
+          calls.push(name);
+          if (name === 'agent') await gate.promise;
+        }),
+      });
+    }
+
+    const firstShutdown = controller.shutdown();
+    const secondShutdown = controller.shutdown();
+    expect(secondShutdown).toBe(firstShutdown);
+    await Promise.resolve();
+    expect(calls).toEqual(['agent']);
+
+    gate.resolve();
+    await firstShutdown;
+    expect(calls).toEqual(MANAGER_DISPOSE_ORDER);
   });
 });
 

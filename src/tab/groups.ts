@@ -16,6 +16,17 @@ export function isValidGroupSelector(selector: string): boolean {
   return Number.isSafeInteger(id) && id > 0;
 }
 
+export function findExistingTabGroup(tabs: readonly Tab[], selector: string): TabGroup | undefined {
+  if (!isValidGroupSelector(selector)) return undefined;
+  const numericId = /^\d+$/u.test(selector) ? Number(selector) : undefined;
+  const existing = numericId === undefined
+    ? tabs.find((tab) => tabGroupName(tab).toLocaleLowerCase() === selector.toLocaleLowerCase())
+    : tabs.find((tab) => tab.group === numericId);
+  return existing
+    ? { id: existing.group, name: tabGroupName(existing), color: existing.groupColor }
+    : undefined;
+}
+
 export function resolveTabGroup(
   tabs: readonly Tab[], selector: string | undefined, creator: Tab | undefined, fallbackColor: string,
 ): TabGroup {

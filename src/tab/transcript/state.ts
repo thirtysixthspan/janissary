@@ -41,6 +41,14 @@ export abstract class TabTranscriptState extends TabOpeningState {
     appendTab(this.tabs, label, entry, cap, (target) => markUnreadTab(this.tabs, target, activeLabel, this.secondaryTabLabel));
   }
 
+  appendForInvocation(label: string, entry: LogEntry, invocationId: string): void {
+    const activeLabel = this.tabs[this.activeTab]?.label;
+    appendTab(
+      this.tabs, label, entry, (log) => this.capToConfiguredMax(log),
+      (target) => markUnreadTab(this.tabs, target, activeLabel, this.secondaryTabLabel), invocationId,
+    );
+  }
+
   clearTranscript(label: string): void {
     clearTranscriptTab(this.tabs, label);
   }

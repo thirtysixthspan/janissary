@@ -7,6 +7,7 @@ import { getProjectTokens } from '../project/tokens.js';
 import type * as SandboxModule from '../sandbox/index.js';
 import type { SandboxOptions } from '../sandbox/index.js';
 import type { AcpInfo, AcpSession } from './types.js';
+import { shutdownProcessTree } from './process-tree.js';
 
 // The sandbox is left real — these tests drive actual subprocesses — but every call's options are
 // recorded, so what `connectAcp` decides to inject can be asserted without mocking the spawn itself.
@@ -32,6 +33,7 @@ let buffer = '';
 let sessions = 0;
 let negotiated = null;
 let promptId = null;
+let configuredEffort = false;
 
 function write(message) {
   const line = JSON.stringify(message) + '\n';
@@ -61,6 +63,15 @@ function handle(message) {
     write({ jsonrpc: '2.0', id: promptId, result: { stopReason: 'end_turn' } });
     return;
   }
+  if (message.method === 'session/set_config_option') {
+    configuredEffort = message.params.value === 'high';
+    write({
+      jsonrpc: '2.0',
+      id: message.id,
+      result: { configOptions: [] },
+    });
+    return;
+  }
   if (message.method === 'initialize') {
     negotiated = message.params.protocolVersion;
     write({
@@ -78,6 +89,12 @@ function handle(message) {
       result: {
         sessionId,
         modes: { currentModeId: 'fast', availableModes: [{ id: 'fast', name: 'Fast mode' }] },
+        ...(mode === 'effort' && {
+          configOptions: [{
+            id: 'reasoning', name: 'Effort', category: 'thought_level', type: 'select', currentValue: 'medium',
+            options: [{ value: 'medium', name: 'Medium' }, { value: 'high', name: 'High' }],
+          }],
+        }),
       },
     });
     return;
@@ -102,7 +119,7 @@ function handle(message) {
     update({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'thinking' } });
     update({ sessionUpdate: 'future_variant_from_a_newer_schema', payload: { anything: true } });
   }
-  chunk('protocol=' + negotiated + ' sessions=' + sessions + ' ');
+  chunk('protocol=' + negotiated + ' sessions=' + sessions + (mode === 'effort' ? ' configured=' + configuredEffort : '') + ' ');
   chunk(mode === 'split' ? 'héllo wörld 🌍' : 'hello');
   write({ jsonrpc: '2.0', id: message.id, result: { stopReason: 'end_turn' } });
   // Walks off after answering, standing in for an agent that crashes mid-session.
@@ -139,7 +156,14 @@ function agentScript(): string {
 
 type Connected = { session: AcpSession; info: Promise<AcpInfo>; errors: string[] };
 
-function connect(mode: string, allowedTools?: string[]): Connected {
+function connect(
+  mode: string,
+  allowedTools?: string[],
+  autonomous?: true,
+  effort?: { level: string; model: string },
+  onActivity?: (update: unknown) => void,
+  installedSkillDirs?: string[],
+): Connected {
   const errors: string[] = [];
   const connected = Promise.withResolvers<AcpInfo>();
   const session = connectAcp({
@@ -149,6 +173,10 @@ function connect(mode: string, allowedTools?: string[]): Connected {
     onError: (message) => { errors.push(message); },
     onConnect: connected.resolve,
     allowedTools,
+    autonomous,
+    effort,
+    installedSkillDirs,
+    onActivity,
   });
   sessions.push(session);
   return { session, info: connected.promise, errors };
@@ -201,6 +229,20 @@ describe('connectAcp', () => {
     expect(errors).toEqual([]);
   });
 
+  it('offers typed session updates to an opted-in activity observer', async () => {
+    const activity: unknown[] = [];
+    const { session } = connect('other-updates', undefined, undefined, undefined, (update) => { activity.push(update); });
+
+    await prompt(session, 'hi');
+
+    expect(activity).toEqual([
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'image', data: 'AA==', mimeType: 'image/png' } },
+      { sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'thinking' } },
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'protocol=1 sessions=1 ' } },
+      { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'hello' } },
+    ]);
+  });
+
   it('reuses one session across prompts', async () => {
     const { session } = connect('basic');
 
@@ -225,6 +267,22 @@ describe('connectAcp', () => {
 
     expect(reply.text).toBe('outcome={"outcome":"selected","optionId":"once"}');
   });
+
+  it('approves provider permissions only for an explicitly autonomous connection', async () => {
+    const { session } = connect('permission', undefined, true);
+
+    const reply = await prompt(session, 'run task tools');
+
+    expect(reply.text).toBe('outcome={"outcome":"selected","optionId":"once"}');
+  });
+
+  it('sets the advertised effort configuration before the first prompt', async () => {
+    const { session } = connect('effort', undefined, undefined, { level: 'high', model: 'provider/model' });
+
+    const reply = await prompt(session, 'run task tools');
+
+    expect(reply.text).toBe('protocol=1 sessions=1 configured=true hello');
+  });
 });
 
 // A crashed agent used to leave a session whose next prompt wrote into a closed stdin and never
@@ -248,6 +306,64 @@ describe('connectAcp — the agent process ending', () => {
     await new Promise((r) => setTimeout(r, 150));
 
     expect(errors).toEqual([]);
+  });
+
+  it('awaits the observed child exit and shares concurrent shutdown calls', async () => {
+    const { session, errors } = connect('basic');
+    await prompt(session, 'hi');
+
+    const shutdown = session.shutdown();
+
+    expect(session.shutdown()).toBe(shutdown);
+    await expect(shutdown).resolves.toBeUndefined();
+    expect(errors).toEqual([]);
+  });
+
+  it('escalates and rejects when owned process-tree shutdown cannot be confirmed', async () => {
+    const process = { pid: 42 } as NodeJS.ChildProcess;
+    const signals: NodeJS.Signals[] = [];
+
+    await expect(shutdownProcessTree(process, Promise.resolve(), 20, 40, {
+      isRunning: () => true,
+      signal: (_proc, signal) => { signals.push(signal); },
+    })).rejects.toThrow('ACP process tree shutdown timed out.');
+
+    expect(signals).toEqual(['SIGTERM', 'SIGKILL']);
+  });
+
+  it('rejects when process-group existence cannot be queried', async () => {
+    const child = { pid: 42 } as NodeJS.ChildProcess;
+    const signals: (NodeJS.Signals | number | undefined)[] = [];
+    const kill = vi.spyOn(process, 'kill').mockImplementation((_pid, signal) => {
+      signals.push(signal);
+      if (signal === 0) throw Object.assign(new Error('permission denied'), { code: 'EPERM' });
+      return true;
+    });
+
+    try {
+      await expect(shutdownProcessTree(child, Promise.resolve(), 20, 40)).rejects.toThrow(
+        'ACP process tree shutdown timed out.',
+      );
+      expect(signals).toEqual(['SIGTERM', 0, 0, 'SIGKILL', 0, 0]);
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it('treats ESRCH from the process-group probe as absence', async () => {
+    const child = { pid: 42 } as NodeJS.ChildProcess;
+    const signals: (NodeJS.Signals | number | undefined)[] = [];
+    const kill = vi.spyOn(process, 'kill').mockImplementation((_pid, signal) => {
+      signals.push(signal);
+      throw Object.assign(new Error('no such process'), { code: 'ESRCH' });
+    });
+
+    try {
+      await expect(shutdownProcessTree(child, Promise.resolve())).resolves.toBeUndefined();
+      expect(signals).toEqual(['SIGTERM', 0]);
+    } finally {
+      kill.mockRestore();
+    }
   });
 
   // The agent's stdout is the ACP transport, so stderr is the only place it can say why it went.
@@ -296,5 +412,14 @@ describe('connectAcp — credentials', () => {
     connectWorkspaced();
 
     expect(sandboxCalls.options.at(-1)?.tokens).toEqual(getProjectTokens());
+  });
+
+  it('forwards selected installed skill directories to sandboxSpawn', () => {
+    sandboxCalls.options.length = 0;
+    const installedSkillDirs = [path.join(os.tmpdir(), 'janissary', 'skills', 'ask-user')];
+
+    connect('basic', undefined, true, undefined, undefined, installedSkillDirs);
+
+    expect(sandboxCalls.options.at(-1)?.installedSkillDirs).toEqual(installedSkillDirs);
   });
 });

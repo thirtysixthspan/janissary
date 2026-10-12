@@ -5,7 +5,8 @@ import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { setGitIdentity } from '../git/identity.js';
 import { janissaryRoot } from '../janissary-root.js';
-import { sandboxAvailable, sandboxSpawn } from './index.js';
+import { sandboxSpawn } from './index.js';
+import { sandboxAvailable, shouldConfineWorkspace } from './confinement.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 
 // A project whose config turns workspace isolation off — the same unconfined path a non-darwin
@@ -211,6 +212,22 @@ describe('sandboxSpawn', () => {
     expect(result.args).toContain(`JANISSARY_SCRIPTS_R=${realpathSync(scriptsDir)}`);
     expect(SANDBOX_PROFILE).toContain('(subpath (param "JANISSARY_SCRIPTS_L"))');
     expect(SANDBOX_PROFILE).toContain('(subpath (param "JANISSARY_SCRIPTS_R"))');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it.skipIf(!sandboxAvailable())('permits selected installed skill support files but not unrelated install paths', () => {
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const selectedDir = path.join(janissaryRoot(), 'skills', 'ask-user');
+    const unrelatedInstallDir = path.join(janissaryRoot(), 'node_modules');
+    const spawn = sandboxSpawn({ workspaceDir, installedSkillDirs: [selectedDir, unrelatedInstallDir] }, 'bash', []);
+    const profile = spawn.args[1] ?? '';
+    expect(profile).toContain('(subpath (param "JANISSARY_SKILL_0_L"))');
+    expect(profile).toContain('(subpath (param "JANISSARY_SKILL_0_R"))');
+    expect(profile).not.toContain('JANISSARY_SKILL_1');
+    expect(profile.lastIndexOf('(with errno ENOENT)')).toBeGreaterThan(profile.indexOf('JANISSARY_SKILL_0_L'));
+    expect(spawn.args).toContain(`JANISSARY_SKILL_0_L=${selectedDir}`);
+    expect(spawn.args).not.toContain(`JANISSARY_SKILL_1_L=${unrelatedInstallDir}`);
+    expect(profile.lastIndexOf('(with errno ENOENT)')).toBeGreaterThan(profile.indexOf('(subpath (param "JANISSARY_SKILL_0_L"))'));
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
@@ -426,6 +443,22 @@ describe('sandboxSpawn', () => {
     const result = sandboxSpawn({ workspaceDir, offline: true }, 'bash', []);
     expect(result.args[1]).toBe(SANDBOX_PROFILE_OFFLINE);
     rmSync(workspaceDir, { recursive: true, force: true });
+  });
+});
+
+describe('workspace confinement decision', () => {
+  it.each([
+    { state: 'enabled and available', workspace: true, enabled: true, available: true, expected: true },
+    { state: 'disabled by config', workspace: true, enabled: false, available: true, expected: false },
+    { state: 'unavailable on host', workspace: true, enabled: true, available: false, expected: false },
+    { state: 'missing workspace', workspace: false, enabled: true, available: true, expected: false },
+  ])('reports confinement when $state', ({ workspace, enabled, available, expected }) => {
+    expect(shouldConfineWorkspace(workspace, enabled, available)).toBe(expected);
+  });
+
+  it('reports the same decision sandboxSpawn uses for a local workspace', () => {
+    loadConfig(mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-')));
+    expect(shouldConfineWorkspace(true, true, sandboxAvailable())).toBe(sandboxAvailable());
   });
 });
 

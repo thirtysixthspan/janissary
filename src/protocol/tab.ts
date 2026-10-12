@@ -3,6 +3,7 @@ import type { BufferLine, HarnessView, EditorView, FileNavigatorView, RemoteTarg
 import type { PluginTabView } from './plugin.js';
 import type { ScheduleView } from './schedule.js';
 import type { SuggestionView } from './monitor.js';
+import type { AgentRunView } from '../agent/types.js';
 
 // Identifies the ACP session behind a connections-panel row, for the `openAcpTranscript` RPC to
 // route on: the tab's own agent, a monitor session, or an editor-persona session.
@@ -95,6 +96,9 @@ export type TabView = {
   title?: string;
   // Bundled-plugin envelope, present only when `view === 'plugin'`.
   plugin?: PluginTabView;
+  // Typed projection for the run attached to an agent-monitor tab. The run id is not taken from the
+  // plugin payload or any client request.
+  agentRun?: AgentRunView;
   // Harness-view payload, present only when `view === 'harness'`.
   harness?: HarnessView;
   // Editor-view payload, present only when `view === 'editor'`.

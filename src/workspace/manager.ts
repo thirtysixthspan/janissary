@@ -1,4 +1,4 @@
-import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace, type ProvisionHandle } from './index.js';
+import { findRepoRoot, getRemoteUrl, provisionWorkspace, removeWorkspace, removeWorkspaceStrict, type ProvisionHandle } from './index.js';
 import { errorText } from '../error-text.js';
 import { messageBus } from '../bus.js';
 
@@ -15,7 +15,8 @@ export type ProvisioningWorkspace = { dir: string; ready: Promise<void>; readonl
 // them — the owning tab's label) so one can be cancelled if its tab closes before it finishes.
 export class WorkspaceManager {
   private refs = new Map<string, number>();
-  private pending = new Map<string, { cancel: () => void; dir: string }>();
+  private names = new Map<string, string>();
+  private pending = new Map<string, { cancel: () => void; dir: string; ready: Promise<void> }>();
   private projectDir: string;
 
   constructor(projectDir?: string, private onCredentialFailure?: (label: string, message: string) => void) {
@@ -33,8 +34,10 @@ export class WorkspaceManager {
     if ('error' in origin) return origin;
     const handle = provisionWorkspace(name, origin.url, githubToken);
     this.refs.set(handle.dir, 1);
-    this.pending.set(name, { cancel: handle.cancel, dir: handle.dir });
-    return { dir: handle.dir, ready: this.trackReady(name, handle), get oauthNotice() { return handle.oauthNotice; } };
+    this.names.set(name, handle.dir);
+    const ready = this.trackReady(name, handle);
+    this.pending.set(name, { cancel: handle.cancel, dir: handle.dir, ready });
+    return { dir: handle.dir, ready, get oauthNotice() { return handle.oauthNotice; } };
   }
 
   // The error `create` would return for want of a repo or an `origin` remote, or undefined when a
@@ -95,6 +98,43 @@ export class WorkspaceManager {
     if (count !== undefined) this.refs.set(dir, count + 1);
   }
 
+  acquireAgentWorkspace(name: string): { dir: string; ready: Promise<void>; release: () => Promise<void> } | undefined {
+    const dir = this.names.get(name);
+    if (dir === undefined || !this.refs.has(dir)) return undefined;
+    const pending = this.pending.get(name);
+    return {
+      dir,
+      ready: pending?.dir === dir ? pending.ready : Promise.resolve(),
+      release: this.acquireAgentLease(dir),
+    };
+  }
+
+  acquireAgentLease(dir: string): () => Promise<void> {
+    if (!this.refs.has(dir)) throw new Error(`Cannot borrow untracked workspace: ${dir}`);
+    this.retain(dir);
+    let released = false;
+    return async () => {
+      if (released) return;
+      const count = this.refs.get(dir);
+      if (count === undefined) throw new Error(`Workspace lease is no longer tracked: ${dir}`);
+      if (count > 1) {
+        this.refs.set(dir, count - 1);
+        released = true;
+        return;
+      }
+      removeWorkspaceStrict(dir);
+      this.refs.delete(dir);
+      this.forgetName(dir);
+      released = true;
+    };
+  }
+
+  private forgetName(dir: string): void {
+    for (const [name, workspaceDir] of this.names) {
+      if (workspaceDir === dir) this.names.delete(name);
+    }
+  }
+
   release(dir: string): void {
     const count = this.refs.get(dir);
     if (count === undefined) return;
@@ -103,6 +143,7 @@ export class WorkspaceManager {
       return;
     }
     this.refs.delete(dir);
+    this.forgetName(dir);
     removeWorkspace(dir);
   }
 
@@ -116,6 +157,7 @@ export class WorkspaceManager {
     this.pending.clear();
     for (const dir of this.refs.keys()) removeWorkspace(dir);
     this.refs.clear();
+    this.names.clear();
   }
 
   dispose(): void {

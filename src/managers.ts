@@ -23,12 +23,14 @@ import type { TabPluginHost } from './plugins/host.js';
 import type { ConversationsManager } from './conversations/manager.js';
 import type { SessionsManager } from './sessions/manager.js';
 import type { NotificationQueue } from './notifications/queue.js';
+import type { AgentRunManager } from './agent/manager.js';
 
 export type ManagerLifecycle = {
-  dispose?(): void;
+  dispose?(): void | Promise<void>;
 };
 
 type ManagerRegistry = {
+  agent: AgentRunManager;
   tab: TabManager;
   shell: ShellManager;
   acp: AcpManager;
@@ -77,6 +79,7 @@ export type Managers = {
 // 3. `questions`, `tab`, and `database` last: they hold the state the managers above read while
 //    tearing down.
 export const MANAGER_DISPOSE_ORDER = [
+  'agent',
   'monitor',
   'command',
   'connection',

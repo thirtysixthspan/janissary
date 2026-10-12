@@ -10,6 +10,7 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
   messageBus.on('state', 'dirty', () => sinks.emitState());
   messageBus.on('app', 'exit', () => sinks.exit?.());
   messageBus.on('layout', 'update', ({ type: _type, ...update }) => sinks.sendLayout?.(update));
+  messageBus.on('agent', 'run-updated', ({ type: _type, ...update }) => sinks.sendAgentRun?.(update));
   messageBus.on('fileNavigator', 'collect', (event) => sinks.sendCollectTreeState?.({ id: event.id }));
   messageBus.on('notifications', ['toast', 'clear', 'reveal', 'native-notification'], (event) => {
     if (event.type === 'clear') { sinks.sendToastClear?.(); return; }

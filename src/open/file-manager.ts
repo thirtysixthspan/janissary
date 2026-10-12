@@ -24,19 +24,20 @@ export type EditResult = { label: string };
 export class OpenFileManager {
   constructor(private managers: Managers) {}
 
-  run(command: string, label: string): Promise<void> {
-    return this.runAs(command, command, label);
+  run(command: string, label: string, runId?: string): Promise<void> {
+    return this.runAs(command, command, label, undefined, runId);
   }
 
   // `requireOpener` pins dispatch to one opener by name. A tab plugin's declared command uses it so
   // `video notes.txt` reports a non-video file instead of quietly opening the text editor — the
   // command is a second route into that plugin's own opener, not a second route into the registry.
   runAs(
-    parsedCommand: string, displayCommand: string, label: string, requireOpener?: string,
+    parsedCommand: string, displayCommand: string, label: string, requireOpener?: string, runId?: string,
+    registerTab?: (label: string) => void,
   ): Promise<void> {
     return Promise.resolve(runOpenCommand(
       this.managers, parsedCommand, displayCommand, label,
-      (c, l) => this.buildContext(c, l), (p, cwd) => expandGlob(p, cwd),
+      (c, l) => this.buildContext(c, l, runId, registerTab), (p, cwd) => expandGlob(p, cwd),
       (c, l, f, ext, ctx) => this.openOne(c, l, f, ext, ctx, requireOpener),
       requireOpener,
     ));
@@ -50,29 +51,56 @@ export class OpenFileManager {
   // the image plugin's own editing presentation. Resolution reads the registry only, so a plugin is
   // never activated just to find out whether it owns the verb. A `:line` suffix still parses, and
   // the presentation simply has no use for it — an image has no lines.
-  edit(command: string, target: string, label: string, line?: number): EditResult | undefined {
+  edit(
+    command: string, target: string, label: string, line?: number, runId?: string,
+    registerTab?: (label: string) => void,
+  ): EditResult | undefined {
+    const result = this.editResolved(command, target, label, line, runId, registerTab);
+    if (result instanceof Promise) {
+      void result;
+      return undefined;
+    }
+    return result;
+  }
+
+  async editForCommand(
+    command: string, target: string, label: string, line?: number, runId?: string,
+    registerTab?: (label: string) => void,
+  ): Promise<EditResult | undefined> {
+    return await this.editResolved(command, target, label, line, runId, registerTab);
+  }
+
+  private editResolved(
+    command: string, target: string, label: string, line?: number, runId?: string,
+    registerTab?: (label: string) => void,
+  ): EditResult | undefined | Promise<EditResult | undefined> {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
     const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
-    const context = this.buildContext(command, label);
+    const context = this.buildContext(command, label, runId, registerTab);
     const opener = openerForExtension(path.extname(file));
-    if (opener?.editsOwnFiles) { void context.runPluginOpener(opener.name, 'edit', file); return undefined; }
+    if (opener?.editsOwnFiles) return this.openPluginEdit(opener.name, file, context);
     if (this.isSyncPath(file, label)) return this.openSynced(file, context, line);
     const editorLabel = openInEditor(file, context, line);
     return editorLabel === undefined ? undefined : { label: editorLabel };
+  }
+
+  private async openPluginEdit(pluginId: string, file: string, context: OpenContext): Promise<undefined> {
+    await context.runPluginOpener(pluginId, 'edit', file);
+    return undefined;
   }
 
   // The file navigator's "New file" button / Cmd+N: like `edit`, but resolves to the next free
   // `<base>-N<ext>` name first, so creating a second new file in a directory that already has
   // `untitled.md` opens `untitled-2.md` instead of reopening the existing one. `newfile <file>`
   // names its file, so the view is marked `named` and the tab opens in its buffer, not a rename.
-  newFile(command: string, target: string, label: string): void {
+  newFile(command: string, target: string, label: string, runId?: string): void {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
     const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
     const dir = path.dirname(file);
     const resolved = path.join(dir, nextFreeName(dir, path.basename(file)));
-    const context = this.buildContext(command, label);
+    const context = this.buildContext(command, label, runId);
     openInEditor(resolved, { ...context, openEditorTab: (view) => context.openEditorTab({ ...view, named: true }) });
   }
 
@@ -85,17 +113,20 @@ export class OpenFileManager {
     mkdirSync(resolved);
   }
 
-  private buildContext(command: string, label: string): OpenContext {
+  private buildContext(command: string, label: string, runId?: string, registerTab?: (label: string) => void): OpenContext {
+    const onTabCreated = registerTab ?? (runId
+      ? (createdLabel: string) => this.managers.agent.trackCreatedTab(runId, createdLabel)
+      : undefined);
     return {
       note: (text) => this.managers.tab.append(label, { input: command, output: text }),
-      openEditorTab: (view) => this.managers.tab.openEditorTab(view),
+      openEditorTab: (view) => this.managers.tab.openEditorTab(view, onTabCreated),
       registerFile: (absPath) => this.managers.tab.registerFile(absPath),
       openExternally: (absPath) => didOsOpen(absPath),
       runPluginOpener: (pluginId, presentation, file) => this.managers.plugins.runOpener(
         pluginId,
         presentation,
         file,
-        { label, command },
+        { label, command, ...(runId && { runId }) },
       ),
     };
   }

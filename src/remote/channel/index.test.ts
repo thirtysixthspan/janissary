@@ -293,7 +293,9 @@ describe('RemoteChannel — ACP session routing', () => {
   function acpHarness() {
     const h = harness();
     h.channel.receive(`${encodeHandshake()}\n`);
-    const listener = { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    const listener = {
+      onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+    };
     return { ...h, listener };
   }
 
@@ -301,13 +303,25 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = acpHarness();
     h.channel.attachAcp('racp1', h.listener);
 
-    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1', sandboxed: true })}\n`);
     h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp1', text: 'partial' })}\n`);
     h.channel.receive(`${encodeFrame({ type: 'acp-end', id: 'racp1', stopReason: 'end_turn' })}\n`);
 
     expect(h.listener.onReady).toHaveBeenCalledTimes(1);
     expect(h.listener.onChunk).toHaveBeenCalledWith('partial');
     expect(h.listener.onEnd).toHaveBeenCalledWith('end_turn');
+    expect(h.frames).toEqual([]);
+  });
+
+  it('routes activity and release acknowledgments to the owning ACP session', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-activity', id: 'racp1', kind: 'thought', text: 'planning' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-closed', id: 'racp1', released: true })}\n`);
+
+    expect(h.listener.onActivity).toHaveBeenCalledWith('thought', 'planning');
+    expect(h.listener.onClosed).toHaveBeenCalledWith(true);
     expect(h.frames).toEqual([]);
   });
 
@@ -363,6 +377,21 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = acpHarness();
     h.channel.receive(`${encodeFrame({ type: 'acp-close', id: 'racp1' })}\n`);
     expect(h.errors[0]).toContain('Unexpected remote frame "acp-close"');
+  });
+});
+
+describe('RemoteChannel — agent snapshot resolution', () => {
+  it('sends task and skill lookup to the attached execution host', async () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake()}\n`);
+    const pending = h.channel.resolveAgentSnapshot('ai/tasks/fix.md', ['review']);
+    const request = JSON.parse(h.written[0] ?? '{}') as { type: string; id: string; task: string; skills: string[] };
+    expect(request).toMatchObject({ type: 'agent-resolve', task: 'ai/tasks/fix.md', skills: ['review'] });
+
+    const snapshot = { taskPath: '/remote/project/ai/tasks/fix.md', taskText: 'Fix it.', skills: [], grants: [] };
+    h.channel.receive(`${encodeFrame({ type: 'agent-resolve-result', id: request.id, snapshot })}\n`);
+
+    await expect(pending).resolves.toEqual(snapshot);
   });
 });
 

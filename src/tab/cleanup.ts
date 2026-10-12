@@ -10,12 +10,13 @@ import { releaseFileReference } from './file-registry.js';
 // explicitly around it instead. SQLite connections are global, not per-tab: they close at shutdown,
 // which is also how closing the last non-docked tab closes them, since that close exits instead of
 // reaching this walk.
-export function closeTabResources(
+export async function closeTabResources(
   tab: Tab,
   managers: Managers,
   openFiles: Map<string, string>,
-): void {
+): Promise<void> {
   const label = tab.label;
+  const releases: Promise<void>[] = [];
   tabRuntime(tab).closing = true;
   // Release the workspace clone in the background: its final release recursively removes a full git clone,
   // slow enough to freeze the UI if run inline (the tab can't visibly close until it finishes).
@@ -27,7 +28,11 @@ export function closeTabResources(
     // immediately — a no-op once nothing is pending for this label — so the tab closes right away
     // instead of leaving an orphaned `git clone` running for a tab that no longer exists.
     managers.workspace.cancel(label);
-    setTimeout(() => managers.workspace.release(workspaceDir), 0);
+    releases.push(new Promise((resolve, reject) => {
+      setTimeout(() => {
+        try { resolve(managers.workspace.release(workspaceDir)); } catch (error) { reject(error); }
+      }, 0);
+    }));
   }
   for (const name of MANAGER_TAB_RELEASE) {
     if (name === 'remote' && !tab.remote) continue;
@@ -39,4 +44,5 @@ export function closeTabResources(
     for (const id of tab.plugin.fileRefs) openFiles.delete(id);
   }
   if (tab.editor) releaseFileReference(openFiles, tab.editor.url);
+  await Promise.all(releases);
 }

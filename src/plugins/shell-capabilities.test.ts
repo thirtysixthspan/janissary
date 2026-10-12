@@ -137,9 +137,9 @@ describe('originTab', () => {
 });
 
 describe('dispatchLineWithOutput', () => {
-  function withDispatcher(dispatched = true) {
+  function withDispatcher(dispatched = true, result?: unknown) {
     const dispatchLineWithOutput = vi.fn(async () => (dispatched
-      ? { dispatched: true, output: 'response' }
+      ? { dispatched: true, output: 'response', ...(result !== undefined && { result }) }
       : { dispatched: false, output: '' }));
     const { byLabel, managers } = makeManagers({ command: { dispatchLineWithOutput } as never });
     return { byLabel, managers, dispatchLineWithOutput };
@@ -188,6 +188,18 @@ describe('dispatchLineWithOutput', () => {
       dispatched: true, output: 'response',
     });
     expect(dispatchLineWithOutput).toHaveBeenCalledWith('shell1', 'help');
+  });
+
+  it('forwards a structured command result without adding invocation ownership to the plugin API', async () => {
+    const structuredResult = { status: 'completed', response: 'done', cleanupWarnings: [] };
+    const { managers } = withDispatcher(true, structuredResult);
+    const capabilities = contextFor(['dispatchLineWithOutput'], managers);
+
+    await expect(capabilities.dispatchLineWithOutput('agent execute task.md')).resolves.toEqual({
+      dispatched: true, output: 'response', result: structuredResult,
+    });
+    expect(Object.keys(capabilities)).not.toContain('invocationId');
+    expect(Object.keys(capabilities)).not.toContain('runId');
   });
 
   it('returns no output after the plugin has been disabled', async () => {

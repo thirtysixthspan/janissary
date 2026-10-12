@@ -63,6 +63,22 @@ describe('question command', () => {
     expect(log(managers, 'janus').some((e) => e.output === 'Yes')).toBe(true);
   });
 
+  it('awaits an answer and resolves cancellation for an invocation-scoped question', async () => {
+    const controller = new AbortController();
+    const pendingAnswer = command.run('question ask "What next?"', { label: 'janus', index: 0 }, managers, {
+      runId: 'run', invocationId: 'invocation', caller: { label: 'janus', cwd: process.cwd(), context: [] }, signal: controller.signal, awaitResult: true,
+    });
+    const pending = managers.questions.pendingFor('janus')!;
+    expect(managers.questions.answer('janus', pending.id, 'Continue')).toBe(true);
+    await expect(pendingAnswer).resolves.toBe('Continue');
+
+    const cancelled = command.run('question ask "Stop?"', { label: 'janus', index: 0 }, managers, {
+      runId: 'run-2', invocationId: 'invocation-2', caller: { label: 'janus', cwd: process.cwd(), context: [] }, signal: controller.signal, awaitResult: true,
+    });
+    controller.abort();
+    await expect(cancelled).resolves.toBe('Question cancelled.');
+  });
+
   it('appends usage text for a malformed command without registering a question or running', () => {
     command.run('question ask', { label: 'janus', index: 0 }, managers);
 

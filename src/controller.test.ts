@@ -125,8 +125,8 @@ describe('Controller', () => {
     try {
       loadConfig(root);
       const { c } = makeController();
-      // Each `agent <name>` is dispatched from janus so the transcript entry goes to janus.
-      for (let index = 0; index < 6; index++) { c.dispatch(`agent foo${index}`); c.setActiveTab(0); }
+      // Each unclaimed command is dispatched from janus so the transcript entry goes to janus.
+      for (let index = 0; index < 6; index++) { c.dispatch(`unknown-app-command foo${index}`); c.setActiveTab(0); }
       const janus = c.view().find((t) => t.label === 'janus')!;
       const buffer = janus.bufferLines.map((l) => l.text).join('\n');
       expect(buffer).not.toContain('foo0'); // oldest entries dropped beyond the 3-entry cap

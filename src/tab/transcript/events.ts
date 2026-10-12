@@ -149,12 +149,16 @@ export function appendTab(
   tabs: Tab[], label: string, entry: LogEntry,
   capLog: (log: LogEntry[]) => LogEntry[],
   markUnread: (label: string) => void,
+  invocationId?: string,
 ): void {
   const tab = tabs.find((t) => t.label === label);
   if (!tab) return;
   const trimmed = appendEntry(tab, entry, capLog);
   if (trimmed > 0) messageBus.emit('transcript', { type: 'entries:trimmed', tabLabel: label, count: trimmed });
-  messageBus.emit('transcript', { type: 'entry:appended', tabLabel: label, entry, tab });
+  messageBus.emit('transcript', {
+    type: 'entry:appended', tabLabel: label, entry, tab,
+    ...(invocationId !== undefined && { invocationId }),
+  });
   markActive(tabs, label);
   // Every append writes, whether it grew the log or displaced its oldest entry at the cap.
   markRevised(tab);

@@ -2,7 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { listTasks } from './tasks.js';
+import { listTasks, listTasksFromRoot } from './tasks.js';
 
 let root: string;
 let janissary: string;
@@ -88,7 +88,16 @@ describe('listTasks', () => {
   });
 
   it('returns an empty list when neither ai directory exists', () => {
-    expect(listTasks(path.join(root, 'missing'), path.join(janissary, 'missing'))).toEqual([]);
+    const missingRoot = path.join(root, 'missing');
+    expect(listTasks(missingRoot, path.join(janissary, 'missing'))).toEqual([]);
+    expect(listTasksFromRoot(missingRoot, 'project', true)).toEqual([]);
+  });
+
+  it('keeps tolerant picker discovery while strict discovery surfaces inaccessible task roots', () => {
+    rmSync(path.join(root, 'ai'), { recursive: true, force: true });
+    writeFileSync(path.join(root, 'ai'), 'not a directory');
+    expect(listTasks(root, janissary)).toEqual([]);
+    expect(() => listTasksFromRoot(root, 'project', true)).toThrow();
   });
 
   it('returns an empty list when the ai directory has no markdown files', () => {

@@ -1,6 +1,7 @@
 import type { Command } from './types.js';
 import { getConfig, updateConfig } from '../config.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';
+import { appendCommandOutput } from '../command/append.js';
 
 const USAGE = 'Usage: syntax theme [name]';
 
@@ -13,29 +14,29 @@ export const command: Command = {
   name: 'syntax',
   match: (command_) => /^syntax\b/i.test(command_),
   samples: ['syntax', 'syntax github-dark'],
-  run: (command_, tab, managers) => {
+  run: (command_, tab, managers, invocation) => {
     const rest = command_.replace(/^syntax\b\s*/i, '').trim();
     if (!/^theme\b/i.test(rest)) {
-      managers.tab.append(tab.label, { input: command_, output: USAGE });
+      appendCommandOutput(managers, tab.label, { input: command_, output: USAGE }, invocation);
       return;
     }
     const name = rest.replace(/^theme\b\s*/i, '').trim();
     if (!name) {
-      managers.tab.append(tab.label, { input: command_, output: `Available themes:\n${listThemes()}` });
+      appendCommandOutput(managers, tab.label, { input: command_, output: `Available themes:\n${listThemes()}` }, invocation);
       return;
     }
     const canonical = SYNTAX_THEMES.find((theme) => theme.toLowerCase() === name.toLowerCase());
     if (!canonical) {
-      managers.tab.append(tab.label, {
+      appendCommandOutput(managers, tab.label, {
         input: command_,
         output: `Unknown theme "${name}". Available themes:\n${listThemes()}`,
-      });
+      }, invocation);
       return;
     }
     const persisted = updateConfig({ syntaxTheme: canonical });
     const output = persisted
       ? `Syntax theme set to "${canonical}".`
       : `Could not save syntax theme "${canonical}" to .janissary/config.json — syntax theme unchanged.`;
-    managers.tab.append(tab.label, { input: command_, output });
+    appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
   },
 };

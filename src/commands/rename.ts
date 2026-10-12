@@ -1,15 +1,16 @@
 import type { Command } from './types.js';
+import { appendCommandOutput } from '../command/append.js';
 
 export const command: Command = {
   name: 'rename',
   match: (command_) => /^rename\b/i.test(command_),
   samples: ['rename', 'rename notes'],
-  run: (command_, tab, managers) => {
+  run: (command_, tab, managers, invocation) => {
     const rest = command_.replace(/^rename\b\s*/i, '').trim();
     managers.tab.renameTab(tab.index, rest);
     const output = rest
       ? `Tab "${tab.label}" now displays as "${rest}" (routing still uses "${tab.label}").`
       : `Tab "${tab.label}" alias cleared.`;
-    managers.tab.append(tab.label, { input: command_, output });
+    appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
   },
 };

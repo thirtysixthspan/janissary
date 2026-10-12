@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AcpOptions, PromptHandlers } from '../acp/types.js';
 import type { ServerFrame } from './protocol-frames.js';
+import * as confinement from '../sandbox/confinement.js';
 
 // `connectAcp` is faked at the module boundary: what this class owns is the frame translation, not
 // the ACP client itself (that is exercised end to end in `src/acp/index.test.ts`).
@@ -8,11 +9,12 @@ const acpMock = vi.hoisted(() => ({
   options: [] as AcpOptions[],
   prompt: vi.fn(),
   kill: vi.fn(),
+  shutdown: vi.fn(),
 }));
 vi.mock('../acp/index.js', () => ({
   connectAcp: vi.fn((options: AcpOptions) => {
     acpMock.options.push(options);
-    return { prompt: acpMock.prompt, kill: acpMock.kill };
+    return { prompt: acpMock.prompt, kill: acpMock.kill, shutdown: acpMock.shutdown };
   }),
 }));
 
@@ -37,10 +39,14 @@ function lastHandlers(): PromptHandlers {
 }
 
 beforeEach(() => {
+  vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(true);
   acpMock.options.length = 0;
   acpMock.prompt.mockReset();
   acpMock.kill.mockReset();
+  acpMock.shutdown.mockReset().mockResolvedValue(undefined);
 });
+
+afterEach(() => vi.useRealTimers());
 
 describe('RemoteAcp — opening a session', () => {
   it('emits a ready frame once the handshake completes', () => {
@@ -49,7 +55,31 @@ describe('RemoteAcp — opening a session', () => {
     acp.open(OPEN);
     acpMock.options[0].onConnect?.({ provider: 'opencode', model: 'Build' });
 
-    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1' }]);
+    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1', sandboxed: true }]);
+  });
+
+  it.each([false, true])('reports the remote host confinement result: %s', (sandboxed) => {
+    vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(sandboxed);
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acpMock.options[0].onConnect?.({ provider: 'opencode', model: 'Build' });
+
+    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1', sandboxed }]);
+    expect(confinement.sandboxWillConfine).toHaveBeenCalledWith(WORKSPACE);
+  });
+
+  it('applies autonomous policy and forwards typed activity to the run id', () => {
+    const { acp, frames } = makeAcp();
+    const options = {
+      ...OPEN, autonomous: true as const, effort: { level: 'high', model: 'google/gemini-3.1-flash-lite' },
+    };
+    acp.open(options);
+    const acpOptions = acpMock.options[0];
+    acpOptions.onActivity?.({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'Planning.' } });
+
+    expect(acpOptions).toMatchObject({ autonomous: true, effort: options.effort });
+    expect(frames).toEqual([{ type: 'acp-activity', id: 'racp1', kind: 'thought', text: 'Planning.' }]);
   });
 
   // Both, so the agent sees the files the tab is working on and is confined to the clone exactly as
@@ -99,7 +129,7 @@ describe('RemoteAcp — opening a session', () => {
     acpMock.options[1].onConnect?.({ provider: 'opencode', model: 'Build' });
 
     expect(acpMock.options).toHaveLength(2);
-    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp2' }]);
+    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp2', sandboxed: true }]);
   });
 });
 
@@ -174,15 +204,69 @@ describe('RemoteAcp — prompting', () => {
 });
 
 describe('RemoteAcp — closing', () => {
-  it('kills the subprocess once and is safe to call twice', () => {
+  it('awaits shutdown once and is safe to call twice', async () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
 
-    acp.close('racp1');
-    acp.close('racp1');
+    await acp.close('racp1');
+    await acp.close('racp1');
 
-    expect(acpMock.kill).toHaveBeenCalledTimes(1);
+    expect(acpMock.shutdown).toHaveBeenCalledTimes(1);
+    expect(frames).toEqual([
+      { type: 'acp-closed', id: 'racp1', released: true },
+      { type: 'acp-closed', id: 'racp1', released: true },
+    ]);
+  });
+
+  it('acknowledges release only after process shutdown has settled', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    const shutdown = Promise.withResolvers<void>();
+    acpMock.shutdown.mockImplementation(() => shutdown.promise);
+
+    const closing = acp.close('racp1');
+    await Promise.resolve();
+
     expect(frames).toEqual([]);
+    shutdown.resolve();
+    await closing;
+
+    expect(frames).toEqual([{ type: 'acp-closed', id: 'racp1', released: true }]);
+  });
+
+  it('sends a negative acknowledgment when process shutdown times out', async () => {
+    vi.useFakeTimers();
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    acpMock.shutdown.mockReturnValue(new Promise<void>(() => {}));
+
+    const closing = acp.close('racp1');
+    await vi.advanceTimersByTimeAsync(5000);
+    await closing;
+
+    expect(frames).toEqual([{ type: 'acp-closed', id: 'racp1', released: false }]);
+    await acp.close('racp1');
+    expect(frames.at(-1)).toEqual({ type: 'acp-closed', id: 'racp1', released: false });
+  });
+
+  it('shares one in-flight shutdown across concurrent close requests', async () => {
+    const { acp, frames } = makeAcp();
+    acp.open(OPEN);
+    const shutdown = Promise.withResolvers<void>();
+    acpMock.shutdown.mockImplementation(() => shutdown.promise);
+
+    const first = acp.close('racp1');
+    const second = acp.close('racp1');
+    await Promise.resolve();
+    expect(acpMock.shutdown).toHaveBeenCalledOnce();
+    expect(frames).toEqual([]);
+    shutdown.resolve();
+    await Promise.all([first, second]);
+
+    expect(frames).toEqual([
+      { type: 'acp-closed', id: 'racp1', released: true },
+      { type: 'acp-closed', id: 'racp1', released: true },
+    ]);
   });
 
   it('leaves another session\'s id alone', () => {
@@ -194,35 +278,48 @@ describe('RemoteAcp — closing', () => {
     expect(acpMock.kill).not.toHaveBeenCalled();
   });
 
-  it('disposes the live session once and is safe to call twice', () => {
+  it('disposes the live session once and is safe to call twice', async () => {
     const { acp, frames } = makeAcp();
     acp.open(OPEN);
 
-    acp.dispose();
-    acp.dispose();
+    await acp.dispose();
+    await acp.dispose();
 
-    expect(acpMock.kill).toHaveBeenCalledTimes(1);
+    expect(acpMock.shutdown).toHaveBeenCalledTimes(1);
     expect(frames).toEqual([]);
   });
 
   // Shutdown takes every tab's agent with it, not only the first one opened.
-  it('disposes every live session', () => {
+  it('disposes every live session', async () => {
     const { acp } = makeAcp();
     acp.open(OPEN);
     acp.open({ ...OPEN, id: 'racp2' });
 
-    acp.dispose();
+    await acp.dispose();
 
-    expect(acpMock.kill).toHaveBeenCalledTimes(2);
+    expect(acpMock.shutdown).toHaveBeenCalledTimes(2);
   });
 
-  it('accepts a fresh open after the previous session was closed', () => {
+  it('accepts a fresh open after the previous session was closed', async () => {
     const { acp } = makeAcp();
     acp.open(OPEN);
-    acp.close('racp1');
+    await acp.close('racp1');
 
     acp.open({ ...OPEN, id: 'racp2' });
 
     expect(acpMock.options).toHaveLength(2);
+  });
+
+  it('ends autonomous run-only sessions on transport detach but preserves ordinary ACP sessions', () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'run-1', autonomous: true });
+
+    acp.detachRuns();
+
+    expect(acpMock.shutdown).toHaveBeenCalledOnce();
+    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'still live' });
+    acp.prompt({ type: 'acp-prompt', id: 'run-1', text: 'ended' });
+    expect(acpMock.prompt).toHaveBeenCalledOnce();
   });
 });

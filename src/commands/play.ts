@@ -16,7 +16,7 @@ export const command: Command = {
   name: 'play',
   match: (command_) => /^play\b/iu.test(command_),
   samples: ['play', 'play devbox.cast'],
-  run: (command_, tab, managers) => {
-    runDelegated(command_, tab.label, managers, (input) => runPlay(managers, input, tab.label));
+  run: (command_, tab, managers, invocation) => {
+    runDelegated(command_, tab.label, managers, (input) => runPlay(managers, input, tab.label), invocation);
   },
 };

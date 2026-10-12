@@ -14,6 +14,7 @@ export type RemoteEntry = {
   transcript: RemoteTranscriptSource;
   address: RemoteAddress;
   labels: Set<string>;
+  runRefs: Set<string>;
   handlers: Map<string, RemoteLaunchHandlers>;
   ready: Promise<string>;
   resolveReady: (dir: string) => void;

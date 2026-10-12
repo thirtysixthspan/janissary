@@ -1,6 +1,7 @@
 import type { Command } from './types.js';
 import { resolveTarget } from './resolve-target.js';
 import { supportsCommandQueue } from '../command-queue/support.js';
+import { appendCommandOutput } from '../command/append.js';
 
 /** Parse a `queue <shell-tab> <command...>` command (the leading `queue` is optional). */
 export function parseQueueCommand(input: string): { label: string; text: string } | { error: string } {
@@ -16,12 +17,12 @@ export const command: Command = {
   name: 'queue',
   match: (command_) => /^queue\b/i.test(command_),
   samples: ['queue', 'queue list'],
-  run: (command_, tab, managers) => {
+  run: (command_, tab, managers, invocation) => {
     // Bare `queue` is the interactive picker (Ctrl+E), handled client-side; reaching the server
     // non-interactively (e.g. via a scheduled dispatch) is a no-op.
     if (/^queue\s*$/i.test(command_.trim())) return;
 
-    const append = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
+    const append = (text: string) => appendCommandOutput(managers, tab.label, { input: command_, output: text }, invocation);
     const parsed = parseQueueCommand(command_);
     if ('error' in parsed) { append(parsed.error); return; }
     const target = resolveTarget(parsed.label, managers, append);

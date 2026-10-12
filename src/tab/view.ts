@@ -18,21 +18,25 @@ export function buildTabViews(
   scheduleView: (label: string) => ScheduleView[],
   shorten: (path: string) => string,
 ): TabView[] {
-  return tabs.map((tab) => buildTabView(
-    tab,
-    tab.runtime?.busy ?? false,
-    tab.runtime?.cwd ?? process.cwd(),
-    acpLabel(tab.label),
-    connectionsFor(tab.label),
-    scheduleView(tab.label),
-    tab.runtime?.queue ?? [],
-    shorten,
-    managers.questions.pendingFor(tab.label),
-    (label) => managers.remote.workspaceOf(label),
-    (label) => managers.remote.reconnectingOf(label),
-    (dir) => managers.workspace.provisioning(dir),
-    (pluginId) => managers.plugins.declarations.find((declaration) => declaration.id === pluginId),
-  ));
+  return tabs.map((tab) => {
+    const view = buildTabView(
+      tab,
+      tab.runtime?.busy ?? false,
+      tab.runtime?.cwd ?? process.cwd(),
+      acpLabel(tab.label),
+      connectionsFor(tab.label),
+      scheduleView(tab.label),
+      tab.runtime?.queue ?? [],
+      shorten,
+      managers.questions.pendingFor(tab.label),
+      (label) => managers.remote.workspaceOf(label),
+      (label) => managers.remote.reconnectingOf(label),
+      (dir) => managers.workspace.provisioning(dir),
+      (pluginId) => managers.plugins.declarations.find((declaration) => declaration.id === pluginId),
+    );
+    const run = tab.plugin?.agentRunId ? managers.agent.runs.get(tab.plugin.agentRunId) : undefined;
+    return { ...view, ...(run && { agentRun: run.view() }) };
+  });
 }
 
 type DeclaredViewFields = Partial<Pick<TabPluginDeclaration, 'chords' | 'hostsCommandBar' | 'capabilities'>>;

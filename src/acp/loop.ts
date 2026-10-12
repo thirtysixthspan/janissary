@@ -51,8 +51,14 @@ export function runAcpToolLoop(
           // Only await when the command is actually async (e.g. browser); a sync command
           // (db) must complete in the same tick so callers/tests observing synchronously
           // see the full loop.
-          const returnValue = dependencies.runCommand(command);
-          const result = returnValue instanceof Promise ? await returnValue : returnValue;
+          let result: string;
+          try {
+            const returnValue = dependencies.runCommand(command);
+            result = returnValue instanceof Promise ? await returnValue : returnValue;
+          } catch (error) {
+            h.error(error instanceof Error ? error.message : String(error));
+            return;
+          }
           if (dependencies.signal?.aborted) return;
           h.ranCommand(command, result);
           const followUp =

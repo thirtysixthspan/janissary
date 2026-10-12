@@ -37,6 +37,7 @@ export function DockedPluginBody({
           plugin={tab.plugin} label={tab.label} client={client} active={visible} dock={tab.dock ?? null}
           onClose={onClose} remote={tab.remote}
           acpResponse={tab.acpResponse}
+          agentRun={tab.agentRun}
           pendingQuestion={tab.pendingQuestion}
         />
       </DockedActionsContext.Provider>

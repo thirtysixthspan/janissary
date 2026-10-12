@@ -28,7 +28,7 @@ The session's configured provider/model appears in its connection row after the 
 
 ## Connection lifecycle
 
-`AcpSessionManager` in `src/acp/session-manager.ts` owns one connection per tab, starts it on demand, reuses it across prompts, and closes it on reset, tab closure, plugin failure, and shutdown. A local subprocess starts in the tab's working directory at connection creation; a workspaced tab passes its workspace and offline confinement to the existing sandbox. A changed directory does not replace an already-open conversation. See [[sandbox]].
+`AcpSessionManager` in `src/acp/session-manager.ts` owns one connection per tab, starts it on demand, reuses it across prompts, and closes it on reset, tab closure, plugin failure, and shutdown. A local subprocess starts in the tab's working directory at connection creation; a workspaced tab passes its workspace and offline confinement to the existing sandbox. A changed directory does not replace an already-open conversation. See [[sandbox]]. Local agent cleanup sends a graceful termination signal to its owned ACP process group and awaits exit before releasing the execution workspace. If the process tree does not exit within one second, cleanup escalates to a forceful signal; if exit still cannot be confirmed within five seconds, cleanup reports a warning and continues releasing resources without replacing the task outcome. A process-group existence probe that fails with a permission error is treated as present, not as confirmed exit, so it follows the same bounded shutdown and warning path.
 
 `AcpManager` in `src/acp/manager.ts` owns prompt orchestration. An overlapping prompt is refused with `ACP: a prompt is already running.`, without cancelling the existing one. A reset or close settles a pending call with `ACP session closed.`. A fatal connection error is shown and the session is forgotten; the next prompt starts fresh. A prompt-level error leaves a viable session intact, including rate limits. Every one of those settles with a result saying which kind of line it is, so a caller that acts on what it is handed can tell a refusal from an answer.
 
@@ -63,6 +63,8 @@ Tool results are recorded as ACP steps and collapse through the existing transcr
 A remote shell or other remote plugin tab uses its existing channel and workspace for the ACP agent. The local side chooses the model and sends the launch request; the remote hosts the ACP client, so prompts and chunks cross SSH instead of JSON-RPC. Tabs sharing one channel still have independent ACP session ids.
 
 Before the channel is attached, the operation refuses with `ACP: the remote session is still connecting.`. A dropped channel tears down its tab and connection. Late chunks from a reset or closed session cannot update its replacement. The existing remote platform confinement rules remain unchanged. Remote shell tabs offer ACP through their command bar; harness tabs remain terminal surfaces. See [[remote-server]].
+
+Closing a remote ACP session waits for the remote child process to exit before reporting it released. If exit is not observed within five seconds, release is reported as uncertain and an owning agent run records a cleanup warning. Repeated and concurrent closes share one shutdown attempt.
 
 ## Errors and notifications
 

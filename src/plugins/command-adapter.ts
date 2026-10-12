@@ -63,10 +63,17 @@ export function createPluginCommands(
       match: (command) => firstToken(command) === name
         && shadowed.every((core) => !core.match(command)),
       samples: [name],
-      run: (command, tab, managers) => managers.plugins.runCommand(
+      run: (command, tab, managers, invocation) => managers.plugins.runCommand(
         declaration.id,
         command,
-        { label: tab.label, command },
+        {
+          label: tab.label,
+          command,
+          ...(invocation && {
+            invocationId: invocation.invocationId,
+            runId: invocation.runId,
+          }),
+        },
       ),
     });
   }

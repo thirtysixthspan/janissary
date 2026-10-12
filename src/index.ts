@@ -30,7 +30,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     exitTimer = setTimeout(() => {
       if (resumeWatch.check()) return;
       exitTimer = undefined;
-      void close().then(() => process.exit(0));
+      void close().then(() => process.exit(0), () => process.exit(1));
     }, CLIENT_RECONNECT_GRACE_MS);
   };
   const resumeSubscription = messageBus.on('system', 'resumed', () => {
@@ -56,13 +56,15 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     sendToastClear: () => broadcast({ t: 'toast-clear' }),
     sendNotificationsReveal: (dock) => broadcast({ t: 'notifications-reveal', dock }),
     sendNativeNotification: (event) => broadcast({ t: 'native-notification', ...event }),
+    sendAgentRun: (event) => broadcast({ t: 'agent-run-updated', ...event }),
   }, options.projectDir);
   try {
     await openLaunchShell(controller.managers);
   } catch (error) {
-    controller.shutdown();
-    resumeWatch.stop();
-    resumeSubscription.unsubscribe();
+    try { await controller.shutdown(); } finally {
+      resumeWatch.stop();
+      resumeSubscription.unsubscribe();
+    }
     throw error;
   }
   if (options.relaunch) controller.reattachSessions();
@@ -109,27 +111,44 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     });
   });
 
-  const port = await new Promise<number>((resolve, reject) => {
-    http.on('error', reject);
-    http.listen(options.port ?? 0, host, () => {
-      const addr = http.address();
-      resolve(typeof addr === 'object' && addr ? addr.port : 0);
-    });
-  });
-
-  const close = (): Promise<void> => new Promise((resolve) => {
+  let closePromise: Promise<void> | undefined;
+  const close = (): Promise<void> => {
+    if (closePromise) return closePromise;
     closed = true;
     resumeWatch.stop();
     resumeSubscription.unsubscribe();
     if (exitTimer) clearTimeout(exitTimer);
-    controller.shutdown();
-    for (const c of clients) c.close();
-    wss.close(() => http.close(() => resolve()));
-  });
+    closePromise = (async () => {
+      let shutdownError: unknown;
+      try { await controller.shutdown(); } catch (error) { shutdownError = error; }
+      for (const c of clients) c.close();
+      await new Promise<void>((resolve) => wss.close(() => http.close(() => resolve())));
+      if (shutdownError !== undefined) throw shutdownError;
+    })();
+    return closePromise;
+  };
+  let port: number;
+  try {
+    port = await new Promise<number>((resolve, reject) => {
+      http.on('error', reject);
+      http.listen(options.port ?? 0, host, () => {
+        const addr = http.address();
+        resolve(typeof addr === 'object' && addr ? addr.port : 0);
+      });
+    });
+  } catch (error) {
+    closed = true;
+    resumeWatch.stop();
+    resumeSubscription.unsubscribe();
+    try { await controller.shutdown(); } finally {
+      await new Promise<void>((resolve) => http.close(() => resolve()));
+    }
+    throw error;
+  }
   requestExit = () => {
     // Ask connected windows to close themselves, then stop the server and process.
     broadcast({ t: 'bye' });
-    setTimeout(() => { void close().then(() => process.exit(0)); }, 100);
+    setTimeout(() => { void close().then(() => process.exit(0), () => process.exit(1)); }, 100);
   };
 
   return { url: `http://${host}:${port}/?token=${token}`, port, token, close, shutdown: () => requestExit() };

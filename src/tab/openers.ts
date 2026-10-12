@@ -1,13 +1,12 @@
-import type { Tab, EditorView, FileNavigatorView } from './types.js';
+import type { Tab, FileNavigatorView } from './types.js';
 import type {
   TabPluginPayload, TabPluginResources, TabPluginTabUpdate,
   TabPluginTerminal, TabPluginTerminalOptions,
 } from '../plugins/api.js';
 import { messageBus } from '../bus.js';
 import {
-  addPluginTab, addEditorTab, addFilesTab, addNotificationsTab,
+  addPluginTab, addFilesTab, addNotificationsTab,
 } from './creators.js';
-import { releaseFileReference } from './file-registry.js';
 import { tabRuntime } from './runtime.js';
 import type { LaunchNameRow } from '../launch-name/check.js';
 import { terminalConfinement, type TabClone } from './terminal-workspace.js';
@@ -16,7 +15,7 @@ import { requestedTabGroup } from './group-placement.js';
 // What a host-owned launch fixes about a plugin tab before its factory runs: the label, the
 // directory it starts in, and the workspace clone it owns from the first moment.
 export type PluginTabPreset = {
-  label: string;
+  label?: string;
   cwd?: string;
   workspace?: { dir: string; offline: boolean };
   remote?: { address: string; host: string };
@@ -217,31 +216,6 @@ export function updatePluginTab(
   for (const ptyId of terminalIds) target.recordTerminal(ptyId, tab.label, pluginId);
   if (update.title !== undefined) tab.title = update.title;
   messageBus.emit('state', { type: 'dirty' });
-}
-
-export function openEditorTab(
-  target: OpenTarget, view: EditorView, watch: (label: string, path: string) => void,
-): string {
-  // Matched on the payload rather than the view discriminant, exactly as before — the predicate is
-  // typed only so the payload stays narrowed for the line assignment below.
-  const existing = view.newFile ? undefined : target.tabs.find(
-    (t): t is Tab & { editor: EditorView } => t.editor?.path === view.path,
-  );
-  if (existing) {
-    releaseFileReference(target.openFiles, view.url);
-    if (view.line !== undefined) {
-      existing.editor.line = view.line;
-      existing.editor.lineRequest = (existing.editor.lineRequest ?? 0) + 1;
-    }
-    target.setActiveTab(target.tabs.indexOf(existing));
-    messageBus.emit('state', { type: 'dirty' });
-    return existing.label;
-  }
-  const result = addEditorTab(target.tabs, target.activeTab, view);
-  target.applyOpenResult(result);
-  watch(result.tabs[result.activeTab].label, view.path);
-  messageBus.emit('state', { type: 'dirty' });
-  return result.tabs[result.activeTab].label;
 }
 
 export function openFilesTab(target: OpenTarget, view: FileNavigatorView): void {

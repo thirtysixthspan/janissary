@@ -130,7 +130,7 @@ describe('frame codec', () => {
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
       { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'aMOpbGxvCndvcmxk' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
-      { type: 'acp-ready', id: 'racp1' },
+      { type: 'acp-ready', id: 'racp1', sandboxed: true },
       { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
       { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
       { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
@@ -286,12 +286,17 @@ describe('frame codec', () => {
     ['acp-prompt without string text', { type: 'acp-prompt', id: 'racp1', text: 7 }],
     ['acp-close without an id', { type: 'acp-close' }],
     ['acp-ready without an id', { type: 'acp-ready' }],
+    ['acp-ready without sandbox state', { type: 'acp-ready', id: 'racp1' }],
     ['acp-chunk without string text', { type: 'acp-chunk', id: 'racp1', text: null }],
     ['acp-end without a stop reason', { type: 'acp-end', id: 'racp1' }],
     ['acp-end with an empty stop reason', { type: 'acp-end', id: 'racp1', stopReason: '' }],
     ['acp-error without a message', { type: 'acp-error', id: 'racp1', fatal: true }],
     ['acp-error without a fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone' }],
     ['acp-error with a non-boolean fatal flag', { type: 'acp-error', id: 'racp1', message: 'gone', fatal: 'yes' }],
+    ['acp-open with an unsupported autonomous policy', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], autonomous: false }],
+    ['acp-open with malformed effort', { type: 'acp-open', id: 'racp1', command: 'opencode', args: [], effort: { level: '', model: 'x' } }],
+    ['acp-activity with an unknown kind', { type: 'acp-activity', id: 'racp1', kind: 'unknown', text: 'aGk=' }],
+    ['acp-closed without a release result', { type: 'acp-closed', id: 'racp1' }],
   ])('rejects %s', (_case, frame) => {
     expect(decodeFrame(JSON.stringify(frame))).toEqual({
       error: expect.stringContaining(`Malformed remote frame "${String(frame.type)}"`),
@@ -495,12 +500,14 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   },
   'filesystem-open': { type: 'filesystem-open', session: 'files1' },
   'filesystem-close': { type: 'filesystem-close', session: 'files1' },
+  'agent-resolve': { type: 'agent-resolve', id: 'run1', task: 'fix.md', skills: ['review'] },
   'filesystem-request': {
     type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'write-file',
     args: { path: 'notes.txt', content: 'aMOpbGxvCndvcmxk' },
   },
   'acp-open': {
     type: 'acp-open', id: 'racp1', command: 'opencode', args: ['acp'], env: { A: '1' }, offline: true,
+    autonomous: true, effort: { level: 'high', model: 'google/gemini-3.1-flash-lite' },
   },
   'acp-prompt': { type: 'acp-prompt', id: 'racp1', text: 'summarize this project' },
   'acp-close': { type: 'acp-close', id: 'racp1' },
@@ -531,10 +538,16 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
   'capture-reply': { type: 'capture-reply', id: 'r1', request: 'q1', text: 'screen', capturedAt: 1_700_000_000_000 },
   'filesystem-reply': { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { content: 'aMOpbGxv' } },
   'filesystem-event': { type: 'filesystem-event', session: 'files1', path: 'src' },
-  'acp-ready': { type: 'acp-ready', id: 'racp1' },
+  'agent-resolve-result': {
+    type: 'agent-resolve-result', id: 'run1',
+    snapshot: { taskPath: '/remote/ai/tasks/fix.md', taskText: 'Fix the issue.', skills: [], grants: [] },
+  },
+  'acp-ready': { type: 'acp-ready', id: 'racp1', sandboxed: true },
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
   'acp-end': { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
   'acp-error': { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
+  'acp-activity': { type: 'acp-activity', id: 'racp1', kind: 'thought', text: 'considering 🧭' },
+  'acp-closed': { type: 'acp-closed', id: 'racp1', released: true },
 };
 
 describe('optional frame fields', () => {
@@ -646,8 +659,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 29', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(29);
+  it('is 31', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(31);
   });
 });
 
@@ -657,7 +670,7 @@ describe('protocol version', () => {
 describe('admitted frame types', () => {
   it('admits exactly the declared client frame types', () => {
     expect(Object.keys(CLIENT_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-close', 'acp-open', 'acp-prompt', 'attach', 'capture-request', 'clone-answer',
+      'acp-close', 'acp-open', 'acp-prompt', 'agent-resolve', 'attach', 'capture-request', 'clone-answer',
       'filesystem-close', 'filesystem-open', 'filesystem-request',
       'input', 'kill', 'provision', 'resize', 'resume-ack', 'session-state', 'shutdown', 'spawn',
     ]);
@@ -665,7 +678,7 @@ describe('admitted frame types', () => {
 
   it('admits exactly the declared server frame types', () => {
     expect(Object.keys(SERVER_FRAME_TYPES).toSorted((a, b) => a.localeCompare(b))).toEqual([
-      'acp-chunk', 'acp-end', 'acp-error', 'acp-ready', 'attach-result', 'browser-exited', 'browser-started',
+      'acp-activity', 'acp-chunk', 'acp-closed', 'acp-end', 'acp-error', 'acp-ready', 'agent-resolve-result', 'attach-result', 'browser-exited', 'browser-started',
       'busy-transition', 'capture-reply', 'clone-offer', 'exit', 'filesystem-event', 'filesystem-reply', 'gate-event', 'name-in-use',
       'output', 'resume-event', 'root-refused', 'session-state-result', 'shell-history', 'transcript', 'workspace-failed',
       'workspace-ready',
@@ -727,12 +740,15 @@ describe('handshake', () => {
   // Version 10 answers a `git-pull` with no result. Version 11 ignores `spawn`'s `browser` flag: a
   // `-b` tab on that host comes up looking healthy with no browser variables set at all, so every
   // `chromium.connect` inside it fails with nothing to point at. Version 12 does not know the
-  // `git-commit` filesystem operation, so the navigator's commit button would fail there.
-  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])('rejects a remote speaking older protocol version %i', (version) => {
+  // `git-commit` filesystem operation, so the navigator's commit button would fail there. Version
+  // 29 cannot resolve autonomous tasks on the execution host or acknowledge ACP release.
+  it.each(Array.from({ length: REMOTE_PROTOCOL_VERSION - 1 }, (_unused, index) => index + 1))(
+    'rejects a remote speaking older protocol version %i', (version) => {
     const parsed = parseHandshake(`${HANDSHAKE_SENTINEL} ${JSON.stringify({ version, root: '/srv/proj' })}`);
     expect(parsed).toEqual({ error: expect.stringContaining('Update janissary') });
     expect('error' in parsed && parsed.error).toContain(String(REMOTE_PROTOCOL_VERSION));
-  });
+    },
+  );
 
   it('rejects a malformed handshake payload', () => {
     expect(parseHandshake(`${HANDSHAKE_SENTINEL} {oops`)).toEqual({

@@ -5,6 +5,7 @@
 import { errorText } from './error-text.js';
 import type { LogEntry, Tab } from './tab/types.js';
 import type { LayoutUpdate, NativeNotificationEvent } from './protocol/events.js';
+import type { AgentRunView } from './agent/types.js';
 
 export type Subscription = { unsubscribe: () => void };
 export type Listener<E> = (event: E) => void;
@@ -125,7 +126,7 @@ export class MessageBus<C extends ChannelMap> {
 }
 
 export type BusEvent =
-  | { type: 'entry:appended'; tabLabel: string; entry: LogEntry; tab: Readonly<Tab> }
+  | { type: 'entry:appended'; tabLabel: string; entry: LogEntry; tab: Readonly<Tab>; invocationId?: string }
   | { type: 'entry:updated'; tabLabel: string; tab: Readonly<Tab> }
   | { type: 'entries:trimmed'; tabLabel: string; count: number }
   | { type: 'tab:cleared'; tabLabel: string }
@@ -169,6 +170,7 @@ type DatabasesEvent = { type: 'changed' };
 // treat it as "this tab was badged and no longer is" — which is what lets the harness's idle
 // escalation cancel on the badge's real lifetime rather than on every request to clear it.
 type TabsEvent = { type: 'unread-cleared'; label: string };
+type AgentEvent = { type: 'run-updated'; tab: string; view: AgentRunView };
 // What the notification path asks the client to show in the corner. `toast` is one notification
 // with no feed on screen to carry it; `clear` empties the corner at once, which is what escalation
 // and a toast click both do once the feed becomes visible and starts showing those same lines.
@@ -184,5 +186,6 @@ export type BusChannels = {
   fileNavigator: FileNavigatorEvent; schedules: ScheduleEvent; conversations: ConversationsEvent;
   sessions: SessionsEvent; notifications: NotificationsEvent; databases: DatabasesEvent;
   tabs: TabsEvent;
+  agent: AgentEvent;
 };
 export const messageBus = new MessageBus<BusChannels>();

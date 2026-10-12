@@ -34,7 +34,7 @@ describe('edit command run', () => {
         },
       },
       openFile: {
-        edit: (command_: string, target: string, label: string, line?: number) => {
+        editForCommand: (command_: string, target: string, label: string, line?: number) => {
           editCalls.push({ command: command_, target, label, line });
         },
       },
@@ -59,7 +59,7 @@ describe('edit command run', () => {
         append: () => { callOrder.push('append'); },
       },
       openFile: {
-        edit: () => { callOrder.push('edit'); },
+        editForCommand: () => { callOrder.push('edit'); },
       },
     };
 

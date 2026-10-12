@@ -5,6 +5,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { WebSocket } from 'ws';
 import { startServer, type RunningServer } from './index.js';
+import { AgentRunManager } from './agent/manager.js';
 import { staticFileServer } from './serve-static.js';
 import { saveImageEdit } from './plugins/image/edit.js';
 import { guardRequest } from './request-boundary.js';
@@ -142,6 +143,56 @@ describe('the static file server', () => {
 });
 
 describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
+  it('waits for controller cleanup before closing its listeners', async () => {
+    const gate = Promise.withResolvers<void>();
+    const shutdown = vi.spyOn(AgentRunManager.prototype, 'dispose').mockImplementation(() => gate.promise);
+    server = await startServer({ webDir });
+
+    try {
+      let settled = false;
+      const closing = server.close();
+      void (async () => { await closing; settled = true; })();
+      await Promise.resolve();
+      expect(shutdown).toHaveBeenCalledOnce();
+      expect(settled).toBe(false);
+
+      gate.resolve();
+      await closing;
+      server = null;
+    } finally {
+      gate.resolve();
+      shutdown.mockRestore();
+    }
+  });
+
+  it('waits for controller cleanup when the requested port cannot bind', async () => {
+    const blocker = http.createServer();
+    await new Promise<void>((resolve) => blocker.listen(0, '127.0.0.1', resolve));
+    const address = blocker.address();
+    if (!address || typeof address === 'string') throw new Error('expected a TCP listener');
+
+    const gate = Promise.withResolvers<void>();
+    const shutdown = vi.spyOn(AgentRunManager.prototype, 'dispose').mockImplementation(() => gate.promise);
+    const starting = startServer({ webDir, port: address.port });
+
+    try {
+      await waitFor(() => shutdown.mock.calls.length === 1);
+      let settled = false;
+      void (async () => {
+        try { await starting; } catch { settled = true; }
+      })();
+      await Promise.resolve();
+      expect(settled).toBe(false);
+      gate.resolve();
+      await expect(starting).rejects.toThrow();
+      expect(settled).toBe(true);
+    } finally {
+      gate.resolve();
+      shutdown.mockRestore();
+      await new Promise<void>((resolve) => blocker.close(() => resolve()));
+    }
+  });
+
   it.each(['resume', 'wall-clock jump', 'idle'] as const)('applies the disconnect grace after %s', async (mode) => {
     server = await startServer({ webDir });
     const ws = new WebSocket(`ws://127.0.0.1:${server.port}/?token=${server.token}`);

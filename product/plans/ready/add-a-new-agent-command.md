@@ -108,14 +108,8 @@ Hard file or native skill-loader isolation, MCP command bridges, a general core-
 
 Run-listing and headless-cancellation commands, an interactive monitoring terminal or command bar, copying source-project local task/skill edits into a fresh clone, automatic provider retries, adopting pre-existing tabs for cleanup, and running without a workspace are excluded. Do not add the separate backlog feature's built-in child-agent-launching/monitoring skill. Child launches through an explicitly granted `agent` command are included.
 
-Do not promote this file to `ready/` or implement the feature during this planning task. Only the completed draft and the matching feature-backlog removal ship now.
+This plan defines the feature scope; the implementation work is tracked by its ordered subplans.
 
 ## Verification
 
-Run `$janissary/scripts/run.mjs check-diff` after each implementation change; in this checkout use `./scripts/run.mjs check-diff`. Leave `npm run check` to the human or CI. For the planning-only change, inspect the diff and verify references and the complete decision set.
-
-After implementation, build the production web bundle and inspect the lazy monitor chunk. In a scratch instance, run a committed task headlessly with a permitted skill and confirm one terminal result arrives after cleanup. Repeat headed, close its monitor while it works, and confirm it continues; repeat and terminate, confirming `Agent terminated.` and release of owned resources.
-
-Run a question-bearing task in both modes, answer and cancel from the caller panel, and terminate while a question is pending without disturbing another question. Run a denied command, a nested task with allowed/disallowed child skills, a task with more than eight host-tool steps, and a provider failure. Inject a cleanup failure and confirm preserved task status plus a warning.
-
-Repeat locally and on a configured remote host, including inherited remote execution, explicit overrides, a shared borrowed workspace, an unavailable/disabled sandbox with its notifications-only notice, and a dropped SSH connection. Confirm pre-existing tabs and other workspace users survive cleanup. Report unavailable live checks as limitations rather than passes.
+Verification coverage includes diff-scoped lint, typecheck, and tests during implementation, plus production-bundle inspection for the lazy monitor chunk. Integrated coverage includes headless and headed runs, monitor closure and termination, question answer/cancel flows, denied commands, nested skill and grant limits, extended tool execution, provider and cleanup failures, local and remote execution, inherited and overridden hosts, borrowed workspaces, sandbox notices, SSH disconnection, and preservation of pre-existing tabs and workspace references. Unavailable live checks are reported as limitations rather than passes.

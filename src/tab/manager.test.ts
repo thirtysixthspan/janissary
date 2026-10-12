@@ -543,6 +543,34 @@ describe('TabManager queue', () => {
   });
 });
 
+describe('TabManager close completion', () => {
+  it('removes a tab immediately and resolves after its workspace release', async () => {
+    vi.useFakeTimers();
+    try {
+      const { tm, managers } = makeTabManagerWithManagers();
+      tm.tabs.push(makeTab('keeper', '#bbb', 2));
+      const tab = { ...makeTab('workspace-tab', '#ccc', 2), workspaceDir: '/repo/clone', dock: 'left' as const };
+      tm.tabs.push(tab);
+      const release = Promise.withResolvers<void>();
+      vi.mocked(managers.workspace.release).mockImplementation(() => release.promise);
+
+      const index = tm.tabs.findIndex((candidate) => candidate.label === tab.label);
+      expect(index).toBeGreaterThanOrEqual(0);
+      const closing = tm.closeTab(index);
+      expect(closing).toBeDefined();
+      expect(tm.byLabel(tab.label)).toBeUndefined();
+      vi.runOnlyPendingTimers();
+      await Promise.resolve();
+      expect(managers.workspace.release).toHaveBeenCalledWith('/repo/clone');
+
+      release.resolve();
+      await closing;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('TabManager markUnread', () => {
   it('keeps both pane selections read while hidden tabs become unread', () => {
     const tm = makeTabManager();

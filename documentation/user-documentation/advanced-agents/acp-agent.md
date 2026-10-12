@@ -8,6 +8,8 @@ acp summarize the open TODO comments in this project
 
 The reply streams as formatted Markdown in the **ACP** panel above the command bar. Headings, lists, tables, and code blocks render while the answer arrives. The agent uses the Agent Client Protocol (ACP), and the app manages its connection for you.
 
+For an autonomous task that runs until completion and may use skill-granted Janissary commands, see [Run an autonomous task](/user-documentation/advanced-agents/agent-command). It uses a separate local session; `acp` remains a conversational query in the current shell's ACP panel.
+
 <img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
 
 ## Before the first prompt
