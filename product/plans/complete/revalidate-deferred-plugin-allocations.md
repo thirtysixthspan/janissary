@@ -19,8 +19,7 @@ Check run liveness before dispatching a ready callback and at each run-owned all
 
 ## Tests
 
-- Extend `src/plugins/launch-tab.test.ts` for callbacks resuming after run termination and allocations paused across termination.
-- Run `$janissary/scripts/run.mjs check-diff` after each implementation step.
+- `src/plugins/launch-tab.test.ts` verifies that a ready callback resuming after run termination cannot allocate a tab, and that cleanup waits for an admitted claimed-file allocation before removing its owned tab.
 
 ## Out of scope
 
