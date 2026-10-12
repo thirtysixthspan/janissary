@@ -34,7 +34,7 @@ Extend `src/command/manager.test.ts` for structured-result return, void compatib
 
 ## Verification
 
-Run `$janissary/scripts/run.mjs check-diff` during implementation. Manually dispatch a structured command through a plugin tab, confirm its result returns once after more than 30 seconds without unrelated same-tab output, then dispatch a void command and confirm its printed output still returns once. Existing shell, command capture, plugin deadline, and ACP command dispatch behavior must remain green.
+Branch tests cover structured-result delivery, the legacy capture deadline, invocation-specific output filtering, plugin result forwarding, and host-wait deadline behavior. This coverage preserves void-command capture and result delivery without mixing unrelated same-tab output.
 
 ## Out of scope
 
