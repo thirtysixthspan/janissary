@@ -68,7 +68,7 @@ Autonomous provider tool permissions select the least expansive available approv
 
 A final command line inside a Markdown fenced code block is treated as an example, not a request. This applies to fences opened with either backticks or tildes.
 
-Each run owns a new ACP process and returns only after it has completed cleanup. Closing the originating caller terminates the run and returns `Agent terminated.`. A provider failure or empty final answer produces a failed result. The structured result has `status`, `response`, and `cleanupWarnings`; the caller transcript shows `Status: <completed|failed|terminated>`, the response, and one `Cleanup warning: <reason>` line per cleanup issue. Cleanup warnings do not replace the task status or response.
+Each run owns a new ACP process and returns only after it has completed cleanup. Closing the originating caller terminates the run and returns `Agent terminated.`. A provider failure or empty final answer produces a failed result. The structured result has `status`, `response`, and `cleanupWarnings`; the caller transcript shows `Status: <completed|failed|terminated>`, the response, and one `Cleanup warning: <reason>` line per cleanup issue. Cleanup warnings do not replace the task status or response. When the command is run from a shell tab's command bar, the same status, response, and warning lines are shown beneath the command line as its reply.
 
 ### Remote task execution
 

@@ -2,7 +2,7 @@
 
 ### Structured command replies
 
-When a command is dispatched from a plugin tab, the reply preserves `dispatched`, `output`, and `coreResponse` and may also include the command's structured `result`. A structured result is returned directly and is not duplicated in captured transcript output. Commands that return no result keep the existing printed-output reply; only output produced by that invocation is included, and capture stops after 30 seconds while later output remains in the transcript.
+When a command is dispatched from a plugin tab, the reply preserves `dispatched`, `output`, and `coreResponse` and may also include the command's structured `result`. A structured command's reply carries the output it appended during its invocation together with its `result`, and the reply is complete once the command finishes, however long that takes. Commands that return no result keep the existing printed-output reply; only output produced by that invocation is included, and capture stops after 30 seconds while later output remains in the transcript.
 
 ### `help`
 

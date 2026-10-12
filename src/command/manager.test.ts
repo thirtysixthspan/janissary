@@ -156,24 +156,49 @@ describe('CommandManager dispatchLineWithOutput', () => {
 });
 
 describe('CommandManager structured results', () => {
-  it('returns structured results without also capturing their transcript output', async () => {
+  it('returns a structured result together with the output it appended', async () => {
     const { managers } = makeManagers();
     const command = {
       name: 'fixture-result', match: (input: string) => input === 'fixture-result',
       samples: ['fixture-result'], structuredResult: true as const,
-      run: async (_input: string, tab: { label: string }, services: Managers) => {
-        services.tab.append(tab.label, { input: 'fixture-result', output: 'displayed once' });
+      run: async (_input: string, tab: { label: string }, services: Managers, invocation: CommandInvocationContext) => {
+        services.tab.appendForInvocation(tab.label, { input: 'fixture-result', output: 'displayed once' }, invocation.invocationId);
         return { status: 'completed', response: 'result value' };
       },
     };
     commands.push(command);
     try {
       await expect(managers.command.dispatchLineWithOutput('janus', 'fixture-result')).resolves.toEqual({
-        dispatched: true, output: '', result: { status: 'completed', response: 'result value' },
+        dispatched: true, output: 'displayed once', result: { status: 'completed', response: 'result value' },
       });
       expect(managers.tab.cur().log.at(-1)?.output).toBe('displayed once');
     } finally {
       commands.splice(commands.indexOf(command), 1);
+    }
+  });
+
+  it('keeps output appended after the legacy 30-second deadline', async () => {
+    vi.useFakeTimers();
+    const { managers } = makeManagers();
+    const command = {
+      name: 'fixture-late-result', match: (input: string) => input === 'fixture-late-result',
+      samples: ['fixture-late-result'], structuredResult: true as const,
+      run: async (_input: string, tab: { label: string }, services: Managers, invocation: CommandInvocationContext) => {
+        await new Promise((resolve) => { setTimeout(resolve, 30_001); });
+        services.tab.appendForInvocation(tab.label, { input: 'fixture-late-result', output: 'late reply' }, invocation.invocationId);
+        return { status: 'completed', response: 'late result' };
+      },
+    };
+    commands.push(command);
+    try {
+      const reply = managers.command.dispatchLineWithOutput('janus', 'fixture-late-result');
+      await vi.advanceTimersByTimeAsync(30_001);
+      await expect(reply).resolves.toEqual({
+        dispatched: true, output: 'late reply', result: { status: 'completed', response: 'late result' },
+      });
+    } finally {
+      commands.splice(commands.indexOf(command), 1);
+      vi.useRealTimers();
     }
   });
 

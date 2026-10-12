@@ -101,11 +101,9 @@ export class CommandManager {
           resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label), invocation,
         );
         await execution;
-      }, captureLimitMs, invocation.invocationId);
+      }, undefined, invocation.invocationId);
       const result = await execution;
-      return result === undefined
-        ? { dispatched: true, output: output.join('\n') }
-        : { dispatched: true, output: '', result };
+      return { dispatched: true, output: output.join('\n'), ...(result !== undefined && { result }) };
     }
 
     let result: unknown;
