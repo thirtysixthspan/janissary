@@ -21,7 +21,7 @@ Resolve the selected skill directory and canonicalize it before reading content.
 - A selected skill whose `SKILL.md` points to a sibling skill is rejected.
 - A selected skill whose `janissary.json` points to a sibling or outside file is rejected before its contents are used.
 - Existing workspace-first resolution, installed fallback, absent-sidecar grants, and grant validation tests continue to pass.
-- Run `./scripts/run.mjs check-diff` after each implementation step and after spec updates.
+- Diff-scoped lint, typecheck, and tests passed after implementation and spec updates.
 
 ## Out of scope
 

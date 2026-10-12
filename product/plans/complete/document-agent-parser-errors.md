@@ -19,7 +19,7 @@ Keep launch parsing and grammar unchanged. Document the parser's existing messag
 
 - Assert exact error strings for malformed quoted values, each missing-value clause form, unknown named and location clauses, each singleton duplicate form, unexpected launch tokens, missing `execute`, and missing tasks.
 - Retain the existing valid launch grammar, quote handling, and untouched parameter-tail assertions.
-- Run `./scripts/run.mjs check-diff` after each implementation step and after the spec update.
+- Diff-scoped lint, typecheck, and tests passed after the implementation and spec update.
 
 ## Spec
 
