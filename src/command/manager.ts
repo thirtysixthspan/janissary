@@ -167,6 +167,7 @@ export class CommandManager {
       invocationId: randomUUID(),
       caller: parent.caller,
       signal: parent.signal,
+      ...(parent.awaitResult && { awaitResult: true }),
     });
   }
 }

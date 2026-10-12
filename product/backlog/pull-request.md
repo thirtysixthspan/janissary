@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver autonomous agent task execution through the canonical command path, rather than leaving the launch parser and dispatch groundwork without an executable command.
-
-Existing Issue: The branch adds parsing, task and skill resolution, run bookkeeping, and structured dispatch support, but registers no `agent` command and starts no ACP task session, leaving the source plan's core task-execution behavior unavailable. Severity: 9/10
-
-Existing Risk: 8/10 - Users cannot execute the feature the source plan defines, while the partial run and invocation abstractions can be mistaken for a working launch path and delay finding the missing integration.
-
-Proposal Risk: 4/10 - A canonical command and run-to-ACP path would make headless execution and its result real, but its asynchronous ownership and cleanup still need to be verified across cancellation and provider failures.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "implement the canonical agent command and autonomous task execution". Add the `agent` command under `src/commands/` and register it through the existing command registry, using `src/agent/command-parser.ts`, `src/agent/task-resolution.ts`, `src/agent/skill-grants.ts`, and `src/agent/manager.ts` rather than introducing parallel parsing, grant, or ownership paths. Connect execution to the existing ACP session and loop so task text, parameters, selected skills, model, effort, and whole-command grants are applied before prompting; return the specified status, response, and cleanup warnings only after owned resources are released. Carry the run's caller context and abort signal through command invocation and resource allocation, await `question` answers for granted requests, and ensure late command, provisioning, and tab-allocation results cannot outlive the run. Update `product/specs/agent-command.md`, application-command help and user documentation for observable behavior. Add colocated tests for headless success, denial, question answer/cancel, provider failure, caller termination, and cleanup errors, including overlap with another caller's dispatch output.
-
-
 * Add the planned lazy monitoring plugin and tab-scoped run projection so a headed agent run can be observed and terminated without owning execution.
 
 Existing Issue: The source plan calls for an `agent-monitor` server and client plugin with activity projection, metadata, and run-scoped termination, but the aggregate diff adds no monitor contribution, wire projection, loader, or client implementation. Severity: 8/10

@@ -12,6 +12,7 @@ export type CommandInvocationContext = Readonly<{
     context: readonly string[];
   }>;
   signal: AbortSignal;
+  awaitResult?: true;
 }>;
 
 export interface Command {

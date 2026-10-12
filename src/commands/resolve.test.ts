@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveCommand } from '../resolve.js';
 
 describe('resolveCommand', () => {
-  it.each(['agent', 'agent worker', 'msg worker info hello', 'broadcast all info hello'])('does not register removed command %s', (line) => {
+  it.each(['msg worker info hello', 'broadcast all info hello'])('does not register removed command %s', (line) => {
     expect(resolveCommand(line).kind).toBe('unknown');
   });
   it('treats empty/whitespace input as empty', () => {
@@ -46,6 +46,7 @@ describe('resolveCommand', () => {
       kind: 'app', name: 'shell', cmd: 'shell docs --offline',
     });
     expect(resolveCommand('next')).toEqual({ kind: 'app', name: 'next', cmd: 'next' });
+    expect(resolveCommand('agent execute task.md')).toEqual({ kind: 'app', name: 'agent', cmd: 'agent execute task.md' });
     expect(resolveCommand('acp summarize this repo')).toEqual({ kind: 'app', name: 'acp', cmd: 'acp summarize this repo' });
     expect(resolveCommand('db sqlite query mydb SELECT 1')).toEqual({ kind: 'app', name: 'db', cmd: 'db sqlite query mydb SELECT 1' });
     expect(resolveCommand('browser goto https://example.com')).toEqual({ kind: 'app', name: 'browser', cmd: 'browser goto https://example.com' });

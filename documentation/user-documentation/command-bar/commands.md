@@ -6,6 +6,7 @@ These commands manage the app itself — the current tab's transcript and name, 
 
 | Command | What it does |
 |---|---|
+| `agent [launch options] execute <task> [parameters...]` | Run a task autonomously in a new local ACP session; see [Autonomous task execution](/user-documentation/advanced-agents/agent-command) |
 | `help [<section>]` | List the available commands and key bindings, or just one section of them |
 | `diff [path]` | Open the [diff tab](/user-documentation/tab-types/diff-tab) on the project's changes, optionally scoped to a directory |
 | `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |

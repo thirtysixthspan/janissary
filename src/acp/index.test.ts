@@ -32,6 +32,7 @@ let buffer = '';
 let sessions = 0;
 let negotiated = null;
 let promptId = null;
+let configuredEffort = false;
 
 function write(message) {
   const line = JSON.stringify(message) + '\n';
@@ -61,6 +62,15 @@ function handle(message) {
     write({ jsonrpc: '2.0', id: promptId, result: { stopReason: 'end_turn' } });
     return;
   }
+  if (message.method === 'session/set_config_option') {
+    configuredEffort = message.params.value === 'high';
+    write({
+      jsonrpc: '2.0',
+      id: message.id,
+      result: { configOptions: [] },
+    });
+    return;
+  }
   if (message.method === 'initialize') {
     negotiated = message.params.protocolVersion;
     write({
@@ -78,6 +88,12 @@ function handle(message) {
       result: {
         sessionId,
         modes: { currentModeId: 'fast', availableModes: [{ id: 'fast', name: 'Fast mode' }] },
+        ...(mode === 'effort' && {
+          configOptions: [{
+            id: 'reasoning', name: 'Effort', category: 'thought_level', type: 'select', currentValue: 'medium',
+            options: [{ value: 'medium', name: 'Medium' }, { value: 'high', name: 'High' }],
+          }],
+        }),
       },
     });
     return;
@@ -102,7 +118,7 @@ function handle(message) {
     update({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'thinking' } });
     update({ sessionUpdate: 'future_variant_from_a_newer_schema', payload: { anything: true } });
   }
-  chunk('protocol=' + negotiated + ' sessions=' + sessions + ' ');
+  chunk('protocol=' + negotiated + ' sessions=' + sessions + (mode === 'effort' ? ' configured=' + configuredEffort : '') + ' ');
   chunk(mode === 'split' ? 'héllo wörld 🌍' : 'hello');
   write({ jsonrpc: '2.0', id: message.id, result: { stopReason: 'end_turn' } });
   // Walks off after answering, standing in for an agent that crashes mid-session.
@@ -139,7 +155,7 @@ function agentScript(): string {
 
 type Connected = { session: AcpSession; info: Promise<AcpInfo>; errors: string[] };
 
-function connect(mode: string, allowedTools?: string[]): Connected {
+function connect(mode: string, allowedTools?: string[], autonomous?: true, effort?: { level: string; model: string }): Connected {
   const errors: string[] = [];
   const connected = Promise.withResolvers<AcpInfo>();
   const session = connectAcp({
@@ -149,6 +165,8 @@ function connect(mode: string, allowedTools?: string[]): Connected {
     onError: (message) => { errors.push(message); },
     onConnect: connected.resolve,
     allowedTools,
+    autonomous,
+    effort,
   });
   sessions.push(session);
   return { session, info: connected.promise, errors };
@@ -224,6 +242,22 @@ describe('connectAcp', () => {
     const reply = await prompt(session, 'fetch something');
 
     expect(reply.text).toBe('outcome={"outcome":"selected","optionId":"once"}');
+  });
+
+  it('approves provider permissions only for an explicitly autonomous connection', async () => {
+    const { session } = connect('permission', undefined, true);
+
+    const reply = await prompt(session, 'run task tools');
+
+    expect(reply.text).toBe('outcome={"outcome":"selected","optionId":"once"}');
+  });
+
+  it('sets the advertised effort configuration before the first prompt', async () => {
+    const { session } = connect('effort', undefined, undefined, { level: 'high', model: 'provider/model' });
+
+    const reply = await prompt(session, 'run task tools');
+
+    expect(reply.text).toBe('protocol=1 sessions=1 configured=true hello');
   });
 });
 

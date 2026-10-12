@@ -45,6 +45,9 @@ export type AcpOptions = {
   // Tool ids the connection's permission handler may approve (see acp-tools.ts). Undefined/empty
   // (every non-monitor caller and every tool-less persona) means deny every tool request.
   allowedTools?: string[];
+  // Autonomous tasks explicitly opt into approving provider tool requests; ordinary ACP stays denied.
+  autonomous?: true;
+  effort?: Readonly<{ level: string; model: string }>;
 };
 
 export type AcpPromptHandlers = {

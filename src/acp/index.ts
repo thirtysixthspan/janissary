@@ -5,6 +5,8 @@ import {
   ndJsonStream,
   PROTOCOL_VERSION,
   type Client,
+  type RequestPermissionOutcome,
+  type RequestPermissionResponse,
 } from '@agentclientprotocol/sdk';
 import type { PromptHandlers, AcpSession, AcpOptions } from './types.js';
 import { sandboxSpawn } from '../sandbox/index.js';
@@ -12,6 +14,7 @@ import { getProjectTokens } from '../project/tokens.js';
 import { decidePermission } from './tools.js';
 import { errorText } from '../error-text.js';
 import { childOutputTail, withChildOutput } from '../child-output.js';
+import { selectAcpEffort } from './effort.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
@@ -65,7 +68,15 @@ export function connectAcp(options: AcpOptions): AcpSession {
       }
     },
     // Deny every tool request unless the persona's allowlist opts a classified web tool in.
-    async requestPermission(params) {
+    async requestPermission(params): Promise<RequestPermissionResponse> {
+      if (options.autonomous === true) {
+        const approval = params.options.find((option) => option.kind === 'allow_once')
+          ?? params.options.find((option) => option.kind === 'allow_always');
+        const outcome: RequestPermissionOutcome = approval
+          ? { outcome: 'selected', optionId: approval.optionId }
+          : { outcome: 'cancelled' };
+        return { outcome };
+      }
       return { outcome: decidePermission(options.allowedTools, params.toolCall, params.options) };
     },
   };
@@ -81,6 +92,11 @@ export function connectAcp(options: AcpOptions): AcpSession {
       const init = await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
       const response = await conn.newSession({ cwd: options.cwd, mcpServers: [] });
       sessionId = response.sessionId;
+      if (options.effort) {
+        const selection = selectAcpEffort(response.configOptions, options.effort.level, options.effort.model);
+        if ('error' in selection) throw new Error(selection.error);
+        await conn.setSessionConfigOption({ sessionId, configId: selection.configId, value: selection.value });
+      }
       // Provider from the agent's reported name (fallback: the command basename);
       // model is best-effort from the session's current mode (ACP has no model field).
       const provider = init.agentInfo?.name ?? options.command.replace(/^.*[\\/]/, '');
