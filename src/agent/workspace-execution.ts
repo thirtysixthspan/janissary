@@ -11,7 +11,13 @@ export type AgentWorkspace = Readonly<{
   release(): Promise<void>;
 }>;
 
-export function prepareAgentWorkspace(workspace: WorkspaceManager, callerDir: string): AgentWorkspace {
+export function prepareAgentWorkspace(workspace: WorkspaceManager, callerDir: string, workspaceName?: string): AgentWorkspace {
+  if (workspaceName !== undefined) {
+    const selected = workspace.acquireAgentWorkspace(workspaceName);
+    if (!selected) throw new Error(`Agent: unknown workspace "${workspaceName}".`);
+    return { dir: selected.dir, ready: selected.ready, cancel: () => {}, release: selected.release };
+  }
+
   try {
     const release = workspace.acquireAgentLease(callerDir);
     return { dir: callerDir, ready: Promise.resolve(), cancel: () => {}, release };
@@ -33,8 +39,9 @@ export async function startLocalAgentRun(
   command: string,
   model: string | undefined,
   effort: string | undefined,
+  workspaceName?: string,
 ): Promise<{ run: AgentRun; workspace: AgentWorkspace }> {
-  const workspace = prepareAgentWorkspace(managers.workspace, caller.cwd);
+  const workspace = prepareAgentWorkspace(managers.workspace, caller.cwd, workspaceName);
   const placeholder: AgentSnapshot = { taskPath: '', taskText: '', skills: [], grants: [] };
   try {
     const run = managers.agent.create({

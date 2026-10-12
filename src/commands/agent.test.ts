@@ -134,6 +134,67 @@ describe('agent command', () => {
     expect(borrowedRelease).toHaveBeenCalledOnce();
   });
 
+  it('borrows the explicitly named local workspace instead of cloning or using the caller directory', async () => {
+    const namedRelease = vi.fn(async () => {});
+    vi.spyOn(managers.workspace, 'acquireAgentWorkspace').mockReturnValue({
+      dir: cloneWorkspace, ready: Promise.resolve(), release: namedRelease,
+    });
+    execute.mockResolvedValue({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
+
+    await expect(run('agent in workspace docs execute task.md')).resolves.toMatchObject({ status: 'completed' });
+
+    expect(managers.workspace.acquireAgentWorkspace).toHaveBeenCalledWith('docs');
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({
+      executionDir: cloneWorkspace,
+      snapshot: { taskText: 'Cloned task.' },
+    });
+    expect(namedRelease).toHaveBeenCalledOnce();
+  });
+
+  it('rejects an unknown named local workspace without cloning a fallback', async () => {
+    vi.spyOn(managers.workspace, 'acquireAgentWorkspace').mockReturnValue(undefined);
+
+    await expect(run('agent in workspace missing execute task.md')).resolves.toEqual({
+      status: 'failed', response: 'Agent: unknown workspace "missing".', cleanupWarnings: [],
+    });
+
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('releases the explicitly borrowed local workspace after provider failure', async () => {
+    const namedRelease = vi.fn(async () => {});
+    vi.spyOn(managers.workspace, 'acquireAgentWorkspace').mockReturnValue({
+      dir: cloneWorkspace, ready: Promise.resolve(), release: namedRelease,
+    });
+    execute.mockRejectedValue(new Error('provider failed'));
+
+    await expect(run('agent in workspace docs execute task.md')).resolves.toMatchObject({
+      status: 'failed', response: 'Agent: provider failed',
+    });
+    expect(namedRelease).toHaveBeenCalledOnce();
+  });
+
+  it('releases the explicitly borrowed local workspace when the caller terminates', async () => {
+    const namedRelease = vi.fn(async () => {});
+    vi.spyOn(managers.workspace, 'acquireAgentWorkspace').mockReturnValue({
+      dir: cloneWorkspace, ready: Promise.resolve(), release: namedRelease,
+    });
+    execute.mockImplementation(async (_agentRun, context) => await new Promise<AgentResult>((resolve) => {
+      (context as CommandInvocationContext).signal.addEventListener('abort', () => {
+        resolve({ status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] });
+      }, { once: true });
+    }));
+
+    const pending = run('agent in workspace docs execute task.md');
+    await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce());
+    callerAbort.abort();
+
+    await expect(pending).resolves.toMatchObject({ status: 'terminated' });
+    expect(namedRelease).toHaveBeenCalledOnce();
+  });
+
   it('releases a failed provisioning workspace and preserves cleanup warnings', async () => {
     vi.mocked(managers.workspace.create).mockReturnValue({
       dir: cloneWorkspace,

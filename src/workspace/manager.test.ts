@@ -244,6 +244,51 @@ describe('WorkspaceManager', () => {
   });
 
   describe('references', () => {
+    it('borrows a named tracked workspace without releasing its other holder', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const dir = '/repo/.janissary/workspace/docs';
+      provisionWorkspaceMock.mockReturnValue(handle(dir));
+      const manager = new WorkspaceManager('/repo');
+      manager.create('docs');
+
+      const borrowed = manager.acquireAgentWorkspace('docs');
+      expect(borrowed).toMatchObject({ dir });
+      if (!borrowed) throw new Error('named workspace was not available');
+      await borrowed.release();
+
+      expect(removeWorkspaceStrictMock).not.toHaveBeenCalled();
+      expect(manager.acquireAgentWorkspace('missing')).toBeUndefined();
+      manager.release(dir);
+      expect(removeWorkspaceMock).toHaveBeenCalledWith(dir);
+    });
+
+    it('waits for a named workspace provision and keeps it alive when its original holder closes', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const dir = '/repo/.janissary/workspace/docs';
+      const ready = Promise.withResolvers<void>();
+      const cancel = vi.fn(() => ready.resolve());
+      provisionWorkspaceMock.mockReturnValue({ ...handle(dir, cancel), ready: ready.promise });
+      const manager = new WorkspaceManager('/repo');
+      const created = manager.create('docs');
+      const borrowed = manager.acquireAgentWorkspace('docs');
+      if (!borrowed) throw new Error('named workspace was not available');
+
+      manager.cancel('docs');
+      manager.release(dir);
+      expect(cancel).not.toHaveBeenCalled();
+      expect(removeWorkspaceStrictMock).not.toHaveBeenCalled();
+
+      ready.resolve();
+      await borrowed.ready;
+      await borrowed.release();
+
+      expect(cancel).not.toHaveBeenCalled();
+      expect(removeWorkspaceStrictMock).toHaveBeenCalledWith(dir);
+      if ('ready' in created) await created.ready;
+    });
+
     it('cancels an agent clone and removes it after its retained run reference is released', async () => {
       findRepoRootMock.mockReturnValue('/repo');
       getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');

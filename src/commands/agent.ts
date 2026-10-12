@@ -37,12 +37,16 @@ async function runAgent(
     if (!callerTab) throw new Error(`Agent caller not found: ${label}`);
     const sourceTab = managers.tab.byLabel(sourceLabel);
     const remoteAddress = managers.remote.addressOf(sourceLabel);
-    if (launch.workspace && (!sourceTab || !remoteAddress)) {
+    const localWorkspaceName = launch.workspace && !launch.host
+      && !managers.remote.addressOf(label) && !remoteAddress
+      ? launch.workspace
+      : undefined;
+    if (launch.workspace && !localWorkspaceName && (!sourceTab || !remoteAddress)) {
       throw new Error(`remote workspace "${launch.workspace}" is not available.`);
     }
     let remoteTarget: RemoteAgentTarget | undefined;
     if (launch.host) remoteTarget = await resolveRemoteAgentTarget(managers, launch.host, sourceLabel, caller.caller.cwd, caller.signal);
-    else if (launch.workspace || remoteAddress) remoteTarget = await inheritRemoteAgentTarget(managers, sourceLabel);
+    else if (!localWorkspaceName && (launch.workspace || remoteAddress)) remoteTarget = await inheritRemoteAgentTarget(managers, sourceLabel);
     const capturedCaller = {
       ...caller.caller,
       incarnation: caller.caller.incarnation ?? randomUUID(),
@@ -73,7 +77,9 @@ async function runAgent(
       caller.signal.addEventListener('abort', abortRun, { once: true });
       snapshot = await remoteTarget.channel.resolveAgentSnapshot(launch.task, [...launch.skills]);
     } else {
-      const local = await startLocalAgentRun(managers, capturedCaller, commandText, launch.model, launch.effort);
+      const local = await startLocalAgentRun(
+        managers, capturedCaller, commandText, launch.model, launch.effort, localWorkspaceName,
+      );
       run = local.run;
       if (parent) trackChildRun(parent, run, managers, completion.promise);
       executionDir = local.workspace.dir;
