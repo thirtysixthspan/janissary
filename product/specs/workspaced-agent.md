@@ -203,7 +203,8 @@ Workspace directories are ephemeral:
 - **Last tab close**: Each tab close releases one reference. The clone is removed in the background
   only when the last referencing tab closes, so deleting a large workspace never freezes the UI. If
   the app exits before a background deletion finishes, that clone is still cleaned up as part of
-  shutdown.
+  shutdown. If removing a borrowed workspace fails, it remains tracked for a later release attempt
+  or shutdown cleanup rather than becoming an untracked leftover.
 - **Leftover folders**: Before a `-w` launch clones, it checks the workspace folder its name would
   use. If a live janissary owner still holds it — an open tab using it, or a janus instance running
   inside it — the launch is refused for a typed name, or moves on to the next free name for a

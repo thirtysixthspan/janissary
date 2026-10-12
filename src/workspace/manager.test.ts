@@ -280,6 +280,26 @@ describe('WorkspaceManager', () => {
       await expect(release()).rejects.toThrow('remove failed');
     });
 
+    it('keeps a failed final lease tracked until a retry removes it', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const dir = '/repo/.janissary/workspace/agent-1';
+      provisionWorkspaceMock.mockReturnValue(handle(dir));
+      const manager = new WorkspaceManager();
+      manager.create('agent-1');
+      const release = manager.acquireAgentLease(dir);
+      manager.release(dir);
+      removeWorkspaceStrictMock.mockImplementationOnce(() => { throw new Error('remove failed'); });
+
+      await expect(release()).rejects.toThrow('remove failed');
+      const retainedRelease = manager.acquireAgentLease(dir);
+      await retainedRelease();
+      await release();
+      await release();
+
+      expect(removeWorkspaceStrictMock).toHaveBeenCalledTimes(2);
+    });
+
     it('keeps a retained workspace until the last release', () => {
       findRepoRootMock.mockReturnValue('/repo');
       getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');

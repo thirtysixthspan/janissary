@@ -101,15 +101,16 @@ export class WorkspaceManager {
     let released = false;
     return async () => {
       if (released) return;
-      released = true;
       const count = this.refs.get(dir);
       if (count === undefined) throw new Error(`Workspace lease is no longer tracked: ${dir}`);
       if (count > 1) {
         this.refs.set(dir, count - 1);
+        released = true;
         return;
       }
-      this.refs.delete(dir);
       removeWorkspaceStrict(dir);
+      this.refs.delete(dir);
+      released = true;
     };
   }
 
