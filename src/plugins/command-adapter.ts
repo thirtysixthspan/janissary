@@ -66,7 +66,14 @@ export function createPluginCommands(
       run: (command, tab, managers, invocation) => managers.plugins.runCommand(
         declaration.id,
         command,
-        { label: tab.label, command, ...(invocation && { invocationId: invocation.invocationId }) },
+        {
+          label: tab.label,
+          command,
+          ...(invocation && {
+            invocationId: invocation.invocationId,
+            runId: invocation.runId,
+          }),
+        },
       ),
     });
   }

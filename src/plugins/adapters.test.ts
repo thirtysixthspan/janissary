@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { commands } from '../commands/index.js';
 import { RESERVED_NON_COMMAND_NAMES } from '../commands/reserved.js';
 import { openers } from '../openers/index.js';
@@ -209,6 +209,23 @@ describe('tab plugin command adapter', () => {
     ], []);
     expect(built.map((command) => command.name)).toEqual(['fixture']);
     expect(contributionRejection('opener-only')).toBeUndefined();
+  });
+
+  it('passes trusted invocation ownership to the plugin host', async () => {
+    const [command] = createPluginCommands([manifest('fixture', { command: 'fixture' })], []);
+    const runCommand = vi.fn();
+    const managers = { plugins: { runCommand } } as never;
+    const invocation = {
+      runId: 'trusted-run', invocationId: 'private-invocation', caller: {
+        label: 'janus', cwd: '/repo', context: [],
+      }, signal: new AbortController().signal,
+    };
+
+    await command.run('fixture item', { label: 'janus', index: 0 }, managers, invocation);
+
+    expect(runCommand).toHaveBeenCalledWith('fixture', 'fixture item', {
+      label: 'janus', command: 'fixture item', invocationId: 'private-invocation', runId: 'trusted-run',
+    });
   });
 });
 

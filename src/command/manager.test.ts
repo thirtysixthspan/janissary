@@ -62,7 +62,7 @@ describe('CommandManager async commands', () => {
 
     const completed = managers.command.executeCommand('video', 'video clip.mp4', 'janus', 0);
     expect(runCommand).toHaveBeenCalledWith('video', 'video clip.mp4', {
-      label: 'janus', command: 'video clip.mp4', invocationId: expect.any(String),
+      label: 'janus', command: 'video clip.mp4', invocationId: expect.any(String), runId: expect.any(String),
     });
     deferred.resolve();
     await completed;
@@ -92,7 +92,7 @@ describe('CommandManager async commands', () => {
 
     await managers.command.executeCommand('search', 'search', 'janus', 0);
     expect(runCommand).toHaveBeenCalledWith('search', 'search', {
-      label: 'janus', command: 'search', invocationId: expect.any(String),
+      label: 'janus', command: 'search', invocationId: expect.any(String), runId: expect.any(String),
     });
 
     runCommand.mockClear();
@@ -275,7 +275,8 @@ describe('CommandManager structured results', () => {
     expect(pluginId).toBe('video');
     expect(origin.invocationId).toEqual(expect.any(String));
     expect(origin.invocationId).not.toBe(forged.invocationId);
-    expect(origin).not.toHaveProperty('runId');
+    expect(origin.runId).toEqual(expect.any(String));
+    expect(origin.runId).not.toBe(forged.runId);
   });
 });
 
