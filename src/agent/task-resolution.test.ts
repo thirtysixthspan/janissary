@@ -105,6 +105,17 @@ describe('resolveAgentTask', () => {
       .toThrow('Agent: task root outside allowed roots "janissary".');
   });
 
+  it('rejects explicit installed paths when the installed task root is symlinked outside', () => {
+    const externalTask = writeTask(outside, 'explicit.md', 'external task contents');
+    rmSync(path.join(installation, 'ai', 'tasks'), { recursive: true });
+    symlinkSync(path.join(outside, 'ai', 'tasks'), path.join(installation, 'ai', 'tasks'));
+
+    expect(() => resolveAgentTask('$janissary/ai/tasks/explicit.md', options()))
+      .toThrow('Agent: task path outside allowed roots');
+    expect(() => resolveAgentTask(externalTask, options()))
+      .toThrow('Agent: task path outside allowed roots');
+  });
+
   it('falls back to the installed task and accepts explicit paths only within allowed roots', () => {
     const installed = writeTask(installation, 'deep/installed.md', 'installed task');
     writeTask(workspace, 'deep/project.md', 'project task');

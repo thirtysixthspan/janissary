@@ -13,12 +13,23 @@ function taskError(message: string): Error {
   return new Error(`Agent: ${message}.`);
 }
 
+function installedTaskRoot(installation: string): string | undefined {
+  try {
+    const realInstallation = realpathSync(installation);
+    const realTaskRoot = realpathSync(path.join(installation, 'ai', 'tasks'));
+    return within(realInstallation, realTaskRoot) ? realTaskRoot : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function canonicalPath(input: string, options: AgentResolutionOptions): { target: string; allowedRoots: string[] } {
   const installation = path.resolve(options.installationDir);
   const workspace = path.resolve(options.workspaceDir);
   const expanded = input.startsWith('$janissary/') ? path.join(installation, input.slice('$janissary/'.length)) : input;
   const target = path.resolve(workspace, expanded);
-  return { target, allowedRoots: [workspace, path.join(installation, 'ai', 'tasks')] };
+  const installedRoot = installedTaskRoot(installation);
+  return { target, allowedRoots: [workspace, ...(installedRoot ? [installedRoot] : [])] };
 }
 
 function resolveTaskPath(request: string, options: AgentResolutionOptions): string {
