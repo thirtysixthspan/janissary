@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove the security risk of a completed plan directing reviewers to run branch-controlled verification commands.
-
-Existing Issue: `product/plans/complete/propagate-agent-run-ownership-through-deferred-plugin-launches.md` directs readers to run diff-scoped lint, typecheck, and server tests from the reviewed branch. Severity: 6/10
-
-Existing Risk: 7/10 - A reviewer or later agent following the completed plan can execute branch-controlled tooling despite the review boundary, allowing untrusted pull-request content to choose the commands that run.
-
-Proposal Risk: 2/10 - Replacing the imperative with a factual description of the coverage recorded in the plan removes the execution prompt while preserving its test expectations.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove the completed plan's verification command". In `product/plans/complete/propagate-agent-run-ownership-through-deferred-plugin-launches.md`, replace the imperative in the Tests section with a descriptive summary of the adapter and deferred-launch coverage already listed there. Preserve the trusted run-identity, awaited cleanup, and pre-existing/recycled-tab assertions, and do not claim checks ran unless the plan records that result.
-
-
 * Remove operational directions from the completed changed-files description plan.
 
 Existing Issue: `product/plans/complete/correct-agent-command-changed-files-description.md` tells readers to run branch verification, commit and push changes, and edit the open pull request description, including a direct `check-diff` command. Severity: 7/10

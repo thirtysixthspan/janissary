@@ -20,7 +20,7 @@ Carry `CommandInvocationContext.runId` into the internal `PluginFailureOrigin` b
 
 - Extend `src/plugins/adapters.test.ts` to assert generated plugin commands forward the trusted invocation identity to `runCommand`.
 - Extend plugin launch tests with a granted command and a deferred ready callback that opens a second host-owned tab after initial dispatch. Finish the owning run and assert both run-created tabs close, cleanup waits for their asynchronous releases, and pre-existing/recycled tabs remain.
-- Run the diff-scoped lint, typecheck, and related server tests after each implementation step.
+- Coverage includes adapter assertions that trusted invocation identity reaches the host without entering plugin capabilities, plus deferred-launch lifecycle assertions that run-created tabs close, asynchronous releases are awaited, and pre-existing or recycled tabs remain open.
 
 ## Out of scope
 
