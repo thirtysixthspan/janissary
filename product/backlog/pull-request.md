@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Fix the functionality gap where an unreadable installed task tree blocks a project match.
-
-Existing Issue: `findBareTask` calls strict `listTasks` for both roots before applying project-first precedence, so an error walking installed `ai/tasks/` prevents resolution even when the requested task already exists in the execution workspace. Severity: 5/10
-
-Existing Risk: 5/10 - A damaged or unreadable installation task directory can make valid project tasks unlaunchable despite the documented rule that installation lookup occurs only when the project has no match.
-
-Proposal Risk: 2/10 - Searching the project source first and consulting the installed source only on a miss restores the stated precedence, while strict errors still fail a lookup when an unreadable source is actually needed.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "preserve project-first agent task lookup". In `src/agent/task-resolution.ts`, resolve bare task names from the execution workspace first and only enumerate the installed task root when the project has no matching filename; preserve ambiguity errors within the selected source. Adjust `src/tasks.ts` strict discovery only as needed to retain tolerant task-picker behavior and surface errors for a source that is searched. Add tests in `src/agent/task-resolution.test.ts` proving a project match succeeds when installed task discovery fails, while an installed fallback still reports an unreadable installed root. Existing recursive lookup, ambiguity, and fallback assertions must continue to pass.
-
-
 * Close the security gap that lets a selected skill consume instructions or grants from another directory.
 
 Existing Issue: `resolveSkill` confines the resolved `SKILL.md` only to the shared `skills` root, and `readGrants` follows `janissary.json` without checking its real path, allowing one selected skill to consume another skill's file or sidecar through a symlink. Severity: 7/10

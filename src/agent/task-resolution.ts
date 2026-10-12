@@ -1,6 +1,6 @@
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { listTasks } from '../tasks.js';
+import { listTasksFromRoot } from '../tasks.js';
 import { resolveAgentSkills } from './skill-grants.js';
 import type { AgentResolutionOptions, AgentSnapshot } from './types.js';
 
@@ -38,15 +38,17 @@ function resolveTaskPath(request: string, options: AgentResolutionOptions): stri
 }
 
 function findBareTask(filename: string, options: AgentResolutionOptions): string {
-  const rows = listTasks(options.workspaceDir, options.installationDir, true);
   for (const source of ['project', 'janissary'] as const) {
+    const root = source === 'project' ? options.workspaceDir : options.installationDir;
+    const rows = listTasksFromRoot(root, source, true);
     const matches = rows.filter((row) => !row.dir && row.source === source && row.name === filename);
     if (matches.length === 0) continue;
     const paths = matches.map((row) => row.path).toSorted((left, right) => left.localeCompare(right));
     if (paths.length > 1) throw taskError(`ambiguous task "${filename}": ${paths.join(', ')}`);
-    const root = source === 'project' ? options.workspaceDir : path.join(options.installationDir, 'ai', 'tasks');
-    const taskPath = source === 'project' ? path.join(root, 'ai', 'tasks', paths[0] ?? '') : path.join(root, paths[0] ?? '');
-    return resolveTaskPath(source === 'project' ? taskPath : `$janissary/ai/tasks/${paths[0] ?? ''}`, options);
+    const taskPath = source === 'project'
+      ? path.join(root, 'ai', 'tasks', paths[0] ?? '')
+      : `$janissary/ai/tasks/${paths[0] ?? ''}`;
+    return resolveTaskPath(taskPath, options);
   }
   throw taskError(`unknown task "${filename}"`);
 }

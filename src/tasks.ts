@@ -44,6 +44,10 @@ function listOne(root: string, source: TaskRow['source'], strict: boolean): Task
   }
 }
 
+export function listTasksFromRoot(root: string, source: TaskRow['source'], strict = false): TaskRow[] {
+  return listOne(root, source, strict);
+}
+
 // Executable task prompts: markdown files under `ai/tasks/` (`feature/build-a-feature.md`,
 // `fix-a-small-issue.md`, …), recursed into any subdirectory. The `.md` extension is kept in
 // `path`. Tasks are drawn from two roots — the project working directory and the Janissary install

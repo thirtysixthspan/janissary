@@ -47,6 +47,14 @@ describe('resolveAgentTask', () => {
     expect(snapshot.text).toBe('workspace version');
   });
 
+  it('resolves a project task without walking an unreadable installed task root', () => {
+    writeTask(workspace, 'local/task.md', 'workspace task');
+    rmSync(path.join(installation, 'ai', 'tasks'), { recursive: true });
+    writeFileSync(path.join(installation, 'ai', 'tasks'), 'not a directory');
+
+    expect(resolveAgentTask('task.md', options()).text).toBe('workspace task');
+  });
+
   it('reports ambiguity in the project source without falling back to installation', () => {
     writeTask(workspace, 'one/build.md', 'one');
     writeTask(workspace, 'two/build.md', 'two');
@@ -63,6 +71,14 @@ describe('resolveAgentTask', () => {
       path: path.join(workspace, 'ai', 'tasks', 'deep', 'project.md'),
       text: 'project task',
     });
+  });
+
+  it('reports an unreadable installed task root when fallback is needed', () => {
+    writeTask(workspace, 'project-only.md', 'workspace task');
+    rmSync(path.join(installation, 'ai', 'tasks'), { recursive: true });
+    writeFileSync(path.join(installation, 'ai', 'tasks'), 'not a directory');
+
+    expect(() => resolveAgentTask('missing.md', options())).toThrow();
   });
 
   it('rejects symlink escapes and rejects outside paths before reading', () => {

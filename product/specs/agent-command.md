@@ -20,11 +20,11 @@ Selector existence checks for groups, workspaces, models, and effort values belo
 
 ### Task resolution
 
-A bare task filename is matched recursively by basename under the execution workspace's `ai/tasks/` first. If it has no match there, the execution host's installed `ai/tasks/` is searched. Multiple matches in the selected source stop resolution with `Agent: ambiguous task "<value>": <matching paths>.`; ambiguity does not fall through to the installed source. No match reports `Agent: unknown task "<value>".`
+A bare task filename is matched recursively by basename under the execution workspace's `ai/tasks/` first. If it has no match there, the execution host's installed `ai/tasks/` is searched. Only the source needed at each stage is walked, so an installed task-tree error cannot prevent a project match from resolving. Multiple matches in the selected source stop resolution with `Agent: ambiguous task "<value>": <matching paths>.`; ambiguity does not fall through to the installed source. No match reports `Agent: unknown task "<value>".`
 
 An explicit path is resolved relative to the execution workspace unless it begins with `$janissary/`, which expands against the execution host's installation root. After resolving symlinks, the file must remain inside the execution workspace or the installed `ai/tasks/` directory. An outside path reports `Agent: task path outside allowed roots "<value>".` and is not read.
 
-Task discovery is strict for agent execution: an unreadable task tree fails resolution instead of being treated as empty. The task picker remains tolerant of unreadable or absent roots. The task's text is captured when resolution completes; later edits do not change that result.
+Task discovery is strict for each source when agent execution searches it: an unreadable project tree fails before installed fallback, and an unreadable installed tree fails when project lookup found no match and installation must be searched. A source that is not needed is not walked. The task picker remains tolerant of unreadable or absent roots. The task's text is captured when resolution completes; later edits do not change that result.
 
 ### Skills and command grants
 
