@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Managers } from '../managers.js';
@@ -8,6 +8,8 @@ import { makeTab } from '../tab/index.js';
 import { tabRuntime } from '../tab/runtime.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import { agentNames } from '../agent/names.js';
+import { AgentRunManager } from '../agent/manager.js';
+import { OpenFileManager } from '../open/file-manager.js';
 import { initWorkspaceDir } from '../workspace/index.js';
 import { NO_REPO } from '../workspace/manager.js';
 import { PROVISION_FAILURE_CLOSE_DELAY_MS } from '../workspace/provision-wire.js';
@@ -35,7 +37,7 @@ const manifest: TabPluginDeclaration = {
   payloadSchemaVersion: 1, tabLabelPrefix: 'shell', fileExtensions: {},
   command: 'ltfixture',
   spawnTerminal: true,
-  capabilities: ['launchTab', 'updateTab', 'rejectRequest'],
+  capabilities: ['launchTab', 'updateTab', 'rejectRequest', 'openInEditor'],
 };
 
 type Clone = { resolve: () => void; reject: (error: Error) => void };
@@ -123,9 +125,12 @@ function hostFor(
   return { host, results };
 }
 
-function launch(host: TabPluginHost, managers: Managers, argument = ''): Promise<void> {
+function launch(
+  host: TabPluginHost, managers: Managers, argument = '',
+  origin?: { label: string; command: string; runId?: string },
+): Promise<void> {
   const label = managers.tab.tabs[0]?.label ?? 'janus';
-  return host.runCommand('lt', `ltfixture ${argument}`, { label, command: `ltfixture ${argument}` });
+  return host.runCommand('lt', `ltfixture ${argument}`, origin ?? { label, command: `ltfixture ${argument}` });
 }
 
 const pluginTabs = (managers: Managers) => managers.tab.tabs.filter((tab) => tab.plugin?.id === 'lt');
@@ -146,6 +151,78 @@ afterEach(() => {
 });
 
 describe('launchTab with a workspace', () => {
+  it('tracks deferred launch and editor tabs to the trusted run and awaits cleanup without adopting recycled tabs', async () => {
+    const managers = makeManagers();
+    managers.agent = new AgentRunManager(managers);
+    managers.openFile = new OpenFileManager(managers);
+    managers.editorWatch = { watch: vi.fn() } as never;
+    const caller = managers.agent.captureCaller(managers.tab.tabs[0]!);
+    const run = managers.agent.create({
+      caller, snapshot: { taskPath: 'task.md', taskText: '', skills: [], grants: [] },
+    });
+    managers.tab.openPluginTab('lt', 'shell', 'existing', 1, 'janus', () => ({
+      title: 'existing', payload: {},
+    }));
+    const existing = managers.tab.pluginTabByInstanceKey('lt', 'existing')!;
+    const file = path.join(root, 'late.ts');
+    writeFileSync(file, 'export {}');
+    let exposedRunId = false;
+    const ready = (_event: Parameters<TabPluginLaunchReadyHandler>[0], capabilities: TabPluginServerCapabilities) => {
+      exposedRunId = 'runId' in capabilities;
+      capabilities.openInEditor(file, 7);
+    };
+    const { host } = hostFor(managers, { name: 'docs', workspace: { offline: true } }, ready);
+
+    await launch(host, managers, 'docs', { label: caller.label, command: 'ltfixture docs', runId: run.id });
+    clones.get('docs')?.resolve();
+    await settle();
+
+    expect(host.statusFor('lt')).toMatchObject({ state: 'active' });
+    expect(exposedRunId).toBe(false);
+    const editor = managers.tab.tabs.find((tab) => tab.editor?.path === file);
+    expect(pluginTabs(managers).map((tab) => tab.label)).toContain('docs');
+    expect(editor).toBeDefined();
+    expect(managers.agent.runs.get(run.id)?.createdTabs).toEqual(new Set(['docs', editor?.label]));
+    expect(managers.tab.byLabel(existing.label)).toBeDefined();
+
+    const originalDocs = managers.tab.byLabel('docs')!;
+    const docsIncarnation = originalDocs.runtime?.incarnation;
+    managers.tab.closeTab = vi.fn(async (index: number) => {
+      managers.tab.tabs.splice(index, 1);
+      await Promise.resolve();
+    });
+    await managers.tab.closeTab(managers.tab.findIndex('docs'));
+    const recycled = makeTab('docs', '#abc', 100);
+    tabRuntime(recycled).incarnation = 'recycled-incarnation';
+    managers.tab.tabs.push(recycled);
+    expect(docsIncarnation).not.toBe(recycled.runtime?.incarnation);
+
+    const { promise: editorClose, resolve: releaseEditor } = Promise.withResolvers<void>();
+    managers.tab.closeTab = vi.fn(async (index: number) => {
+      const label = managers.tab.tabs[index]?.label;
+      if (label === editor?.label) await editorClose;
+      managers.tab.tabs.splice(index, 1);
+    });
+    let finished = false;
+    const finishing = (async () => {
+      await managers.agent.finish(run.id, 'completed');
+      finished = true;
+    })();
+
+    await Promise.resolve();
+    expect(finished).toBe(false);
+    expect(managers.tab.byLabel(editor?.label ?? '')).toBeDefined();
+    expect(managers.tab.byLabel('docs')).toBe(recycled);
+    expect(managers.tab.byLabel(existing.label)).toBeDefined();
+    releaseEditor();
+    await finishing;
+
+    expect(managers.tab.byLabel(editor?.label ?? '')).toBeUndefined();
+    expect(managers.tab.byLabel('docs')).toBe(recycled);
+    expect(managers.tab.byLabel(existing.label)).toBeDefined();
+    host.dispose();
+  });
+
   it('places a busy tab owning its clone before the clone lands, starting nothing', async () => {
     const managers = makeManagers();
     const { host, results } = hostFor(managers, { name: 'docs', workspace: { offline: true } });

@@ -52,7 +52,7 @@ A parent run owns nested agent runs started through its trusted command invocati
 
 A borrowed workspace must already be tracked by Janissary. The run retains one reference and releases only that reference during cleanup; other tabs and runs keep their references. Cleanup is idempotent and attempts every owned release even if one fails. Shutdown awaits active-run cleanup before disposing the services those runs use, and concurrent shutdown requests share the same completion.
 
-Tabs newly created by a granted command belong to that run and close during its cleanup; cleanup waits for their workspace and tab resources to release. A command that focuses or updates a tab that was already open does not take ownership of it, and that tab remains open after the run ends. Plugin tabs opened by a granted command, including files dispatched after a plugin handler returns, follow the same ownership rule.
+Tabs newly created by a granted command belong to that run and close during its cleanup; cleanup waits for their workspace and tab resources to release. A command that focuses or updates a tab that was already open does not take ownership of it, and that tab remains open after the run ends. Plugin tabs opened by a granted command, including tabs created by a workspace-backed launch-ready handler after the command returns and files that handler opens, follow the same ownership rule. Reusing a label after its original tab closes does not make the replacement run-owned.
 
 ### Local task execution
 
