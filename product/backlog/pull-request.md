@@ -55,14 +55,3 @@ Existing Risk: 7/10 - A reviewer or later agent can follow these instructions an
 Proposal Risk: 2/10 - Replacing the remaining execution directions with descriptive coverage records removes the prompt to run branch tooling while retaining the cases each plan says it covers.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove remaining completed-plan verification commands". In `product/plans/complete/await-remote-acp-process-teardown.md`, `product/plans/complete/agent-monitor-execution-location.md`, and `product/plans/complete/confine-selected-installed-skill-support-files.md`, replace directions to run `check-diff` or diff-scoped checks with descriptive summaries of the planned or recorded coverage, without claiming unrecorded verification. Preserve each plan's implementation scope and test cases, and re-read those plans alongside `product/plans/complete/remove-operational-directives-from-reviewed-plans.md` to ensure its inspection summary matches the reviewed set. No application tests are needed for this documentation-only correction.
-
-
-* Treat an inaccessible ACP process group as still running until teardown can report its uncertainty.
-
-Existing Issue: `processGroupExists` in `src/acp/process-tree.ts` returns `false` for `EPERM`, although that error means the process group exists but cannot be queried by this process. Severity: 7/10
-
-Existing Risk: 6/10 - When an owned descendant has different signal permissions, shutdown can mistake the still-existing group for an exited tree and release the execution workspace without recording the incomplete teardown.
-
-Proposal Risk: 3/10 - Treating `EPERM` as present (or propagating it as uncertainty) keeps the bounded escalation path from claiming success; when signaling remains unavailable, cleanup can still proceed after a warning, so the process may outlive the workspace lease.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "report ACP process groups that cannot be queried". In `src/acp/process-tree.ts`, change `processGroupExists` so `ESRCH` means the group is absent while `EPERM` does not return `false`; either report the group as present so bounded SIGTERM/SIGKILL waiting ends in the existing timeout error, or propagate the permission error so cleanup records uncertainty. Add focused coverage for both the permission-denied existence probe and normal `ESRCH` absence, asserting that an inaccessible group cannot make `shutdownProcessTree` resolve successfully. Keep the 1-second grace, 5-second deadline, synchronous `kill()` compatibility, and cleanup-warning behavior. `src/acp/index.test.ts` already covers an observed local leader exit and injected timeout escalation, while `src/agent/execute.test.ts` covers awaiting teardown before workspace release; extend those focused tests only where needed to pin the permission-denied case.

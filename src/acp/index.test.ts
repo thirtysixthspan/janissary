@@ -331,6 +331,41 @@ describe('connectAcp — the agent process ending', () => {
     expect(signals).toEqual(['SIGTERM', 'SIGKILL']);
   });
 
+  it('rejects when process-group existence cannot be queried', async () => {
+    const child = { pid: 42 } as NodeJS.ChildProcess;
+    const signals: (NodeJS.Signals | number | undefined)[] = [];
+    const kill = vi.spyOn(process, 'kill').mockImplementation((_pid, signal) => {
+      signals.push(signal);
+      if (signal === 0) throw Object.assign(new Error('permission denied'), { code: 'EPERM' });
+      return true;
+    });
+
+    try {
+      await expect(shutdownProcessTree(child, Promise.resolve(), 20, 40)).rejects.toThrow(
+        'ACP process tree shutdown timed out.',
+      );
+      expect(signals).toEqual(['SIGTERM', 0, 0, 'SIGKILL', 0, 0]);
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it('treats ESRCH from the process-group probe as absence', async () => {
+    const child = { pid: 42 } as NodeJS.ChildProcess;
+    const signals: (NodeJS.Signals | number | undefined)[] = [];
+    const kill = vi.spyOn(process, 'kill').mockImplementation((_pid, signal) => {
+      signals.push(signal);
+      throw Object.assign(new Error('no such process'), { code: 'ESRCH' });
+    });
+
+    try {
+      await expect(shutdownProcessTree(child, Promise.resolve())).resolves.toBeUndefined();
+      expect(signals).toEqual(['SIGTERM', 0]);
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
   // The agent's stdout is the ACP transport, so stderr is the only place it can say why it went.
   // Nobody read it before, which left the tab holding "ACP agent exited." and nothing else — and
   // the useful half is exactly the part that says what to do next.

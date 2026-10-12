@@ -14,7 +14,7 @@ function processGroupExists(pid: number): boolean {
     return true;
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ESRCH') return false;
-    if (error instanceof Error && 'code' in error && error.code === 'EPERM') return false;
+    if (error instanceof Error && 'code' in error && error.code === 'EPERM') return true;
     throw error;
   }
 }
