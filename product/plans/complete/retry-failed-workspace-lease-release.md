@@ -19,7 +19,6 @@ A failed strict removal of a borrowed workspace must leave the lease and directo
 
 - In `src/workspace/manager.test.ts`, simulate a strict removal that throws once and then succeeds. Assert the failed attempt rejects, another lease can still be acquired for the tracked directory, a retry of the original callback removes it, and later calls do not remove it again.
 - Verify the acquired additional lease retains the workspace until it is released, preserving borrowed-reference behavior.
-- Run `./scripts/run.mjs check-diff` after the implementation and tests, and after the spec update.
 
 ## Spec updates
 
