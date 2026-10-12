@@ -48,7 +48,7 @@ export async function resolveRemoteAgentTarget(
   const existingLabel = parsed.path === undefined
     ? sourceAddress?.destination.toLowerCase() === parsed.destination.toLowerCase() && sourceChannel?.attached && sourceWorkspace
       ? sourceLabel
-      : establishedLabel(managers, parsed.host)
+      : establishedLabel(managers, parsed.destination)
     : undefined;
   if (existingLabel) {
     const channel = managers.remote.get(existingLabel);
