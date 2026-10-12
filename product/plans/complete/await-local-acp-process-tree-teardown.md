@@ -21,7 +21,7 @@ Make `connectAcp` spawn its owned local process in an isolated process group whe
 
 - `src/acp/index.test.ts` proves shutdown waits for observed child exit, shares concurrent calls, escalates from graceful to forceful termination, and rejects when process-tree exit cannot be confirmed before the deadline.
 - `src/agent/execute.test.ts` proves workspace release follows awaited ACP teardown; `src/commands/agent.test.ts` proves teardown failure is retained as a warning without replacing the requested outcome.
-- Run `./scripts/run.mjs check-diff` after each implementation step and after the spec update.
+- The listed ACP and agent lifecycle tests cover observed process-tree exit, concurrent shutdown, bounded escalation, timeout rejection, cleanup ordering, and warning retention.
 
 ## Specs / docs
 

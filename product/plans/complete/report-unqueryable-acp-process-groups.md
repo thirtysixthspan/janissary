@@ -19,7 +19,7 @@ Treat `EPERM` from the process-group existence probe as evidence that the group 
 ## Tests
 
 - `src/acp/index.test.ts` proves `EPERM` cannot make shutdown resolve successfully and that `ESRCH` still reports an absent process group.
-- Run `./scripts/run.mjs check-diff` after each implementation step and after the spec update.
+- The listed shutdown tests cover `EPERM` as an unconfirmed process group and `ESRCH` as an absent process group.
 
 ## Specs / docs
 

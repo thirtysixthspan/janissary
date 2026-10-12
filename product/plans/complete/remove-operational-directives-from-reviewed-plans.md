@@ -18,9 +18,9 @@ Review `product/plans/ready/add-a-new-agent-command.md` and all completed plans 
 
 ## Tests
 
-- The initial manual inspection covered the source ready plan and each completed plan introduced by PR #1672, but missed remaining verification commands in three completed plans. This follow-up reinspection covered those three plans and replaced their executable directions with descriptions of the documented coverage.
+- The initial manual inspection covered the source ready plan and each completed plan introduced by PR #1672, but missed remaining verification commands in three completed plans. That follow-up reinspection covered those three plans and replaced their executable directions with descriptions of the documented coverage. A later inspection also found executable `check-diff` directions in `await-local-acp-process-tree-teardown.md` and `report-unqueryable-acp-process-groups.md`; those directions were replaced with summaries of the coverage recorded in each plan.
 - Diff review confirmed changes are limited to operational wording and the selected backlog entry, preserving feature behavior, planned scope, and test coverage.
-- The diff-scoped verification workflow completed successfully; no application behavior or test code changed.
+- The earlier diff-scoped verification workflow completed successfully for the prior cleanup. No application checks were needed for this documentation-only correction, and no application behavior or test code changed.
 
 ## Spec
 

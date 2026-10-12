@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove executable verification directions from the newly added ACP teardown plans.
-
-Existing Issue: The completed local ACP teardown and process-group plans instruct readers to run `./scripts/run.mjs check-diff`, leaving branch-supplied tooling commands in reviewed content. Severity: 6/10
-
-Existing Risk: 7/10 - A reviewer or later agent following either completed plan can execute branch-controlled lint, typecheck, and test tooling despite the review's explicit command boundary.
-
-Proposal Risk: 2/10 - Replacing these commands with factual coverage descriptions removes the execution prompt while preserving the teardown and EPERM test expectations.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove ACP teardown plan verification commands". In `product/plans/complete/await-local-acp-process-tree-teardown.md` and `product/plans/complete/report-unqueryable-acp-process-groups.md`, replace the imperative `check-diff` directions with descriptive summaries of the coverage already recorded in each plan, without claiming verification that the branch does not establish. Preserve the assertions for awaited local process-tree shutdown, timeout escalation, EPERM probe behavior, ESRCH absence, and ACP spec updates. Re-read both plans and `product/plans/complete/remove-operational-directives-from-reviewed-plans.md` to keep their inspection scope accurate; no application checks are needed for this documentation-only correction.
-
-
 * Deliver the planned remote host override for local agent callers.
 
 Existing Issue: The ready feature plan says `on <host>` overrides a remote shell's execution host and project, but the implementation requires the selected host to already match an attached remote workspace, so a local caller cannot use the selector and a remote caller cannot switch hosts. Severity: 7/10
