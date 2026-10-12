@@ -32,9 +32,9 @@ export class AgentRunManager {
     if (!callerTab || callerTab.runtime?.incarnation !== options.caller.incarnation || callerTab.runtime.closing) {
       throw new Error(`Agent caller is stale: ${options.caller.label}`);
     }
-    const releaseWorkspace = options.workspaceDir === undefined
+    const releaseWorkspace = options.releaseWorkspace ?? (options.workspaceDir === undefined
       ? undefined
-      : this.managers.workspace.acquireAgentLease(options.workspaceDir);
+      : this.managers.workspace.acquireAgentLease(options.workspaceDir));
     const run = new AgentRun(copyAgentCaller(options.caller), options.snapshot, releaseWorkspace, {
       command: options.command ?? `agent execute ${options.snapshot.taskPath.split('/').at(-1) ?? options.snapshot.taskPath}`,
       model: options.model ?? '',

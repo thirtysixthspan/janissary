@@ -164,7 +164,7 @@ export function createRemoteEntry({
       });
   };
   const entry: RemoteEntry = {
-    channel, transcript, address, labels: new Set([label]), handlers: new Map([[label, handlers]]),
+    channel, transcript, address, labels: new Set([label]), runRefs: new Set(), handlers: new Map([[label, handlers]]),
     ready, resolveReady, rejectReady, settled: false, closed: false,
     launchLabel: label, workspaceLabel: resume?.workspaceLabel ?? label,
     attach: new Attach(connect, () => channel.close()),

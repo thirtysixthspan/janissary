@@ -13,6 +13,7 @@ export type AgentRunOptions = Readonly<{
   caller: AgentCaller;
   snapshot: AgentSnapshot;
   workspaceDir?: string;
+  releaseWorkspace?: () => Promise<void>;
   command?: string;
   model?: string;
   effort?: string;

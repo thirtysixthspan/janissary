@@ -293,7 +293,9 @@ describe('RemoteChannel — ACP session routing', () => {
   function acpHarness() {
     const h = harness();
     h.channel.receive(`${encodeHandshake()}\n`);
-    const listener = { onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onError: vi.fn() };
+    const listener = {
+      onReady: vi.fn(), onChunk: vi.fn(), onEnd: vi.fn(), onActivity: vi.fn(), onClosed: vi.fn(), onError: vi.fn(),
+    };
     return { ...h, listener };
   }
 
@@ -308,6 +310,18 @@ describe('RemoteChannel — ACP session routing', () => {
     expect(h.listener.onReady).toHaveBeenCalledTimes(1);
     expect(h.listener.onChunk).toHaveBeenCalledWith('partial');
     expect(h.listener.onEnd).toHaveBeenCalledWith('end_turn');
+    expect(h.frames).toEqual([]);
+  });
+
+  it('routes activity and release acknowledgments to the owning ACP session', () => {
+    const h = acpHarness();
+    h.channel.attachAcp('racp1', h.listener);
+
+    h.channel.receive(`${encodeFrame({ type: 'acp-activity', id: 'racp1', kind: 'thought', text: 'planning' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-closed', id: 'racp1', released: true })}\n`);
+
+    expect(h.listener.onActivity).toHaveBeenCalledWith('thought', 'planning');
+    expect(h.listener.onClosed).toHaveBeenCalledWith(true);
     expect(h.frames).toEqual([]);
   });
 

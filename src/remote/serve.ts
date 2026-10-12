@@ -13,6 +13,7 @@ import type { Socket } from 'node:net';
 import { relayPeer, type DetachedPeer } from './serve-detach.js';
 import { answerCaptureRequest } from './serve-detach-query.js';
 import { RemoteTranscriptFollow } from './serve-transcript.js';
+import { resolveRemoteAgentRequest } from './serve-agent-resolution.js';
 
 // `janus remote-serve [<project-dir>]`: the far end of a remote janissary session. It runs attached
 // inside an ordinary ssh session, takes no instance lock, starts no HTTP server, opens no window,
@@ -134,6 +135,10 @@ export class RemoteServer {
       this.files.request(frame);
       return;
     }
+    case 'agent-resolve': {
+      if (this.requireWorkspace() && this.workspaceDir) resolveRemoteAgentRequest(frame, this.workspaceDir, this.emit);
+      return;
+    }
     case 'acp-open': { if (this.requireWorkspace()) this.acp?.open(frame); return; }
     case 'acp-prompt': { if (this.requireWorkspace()) this.acp?.prompt(frame); return; }
     case 'acp-close': { this.acp?.close(frame.id); return; }
@@ -224,6 +229,7 @@ export class RemoteServer {
   detach(): void {
     if (this.relay || this.root === undefined) { this.shutdown(0); return; }
     this.buffer = '';
+    this.acp?.detachRuns();
     this.peer?.detach();
   }
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Implement remote agent execution and acknowledged teardown so remote runs do not depend on an unmodified tab-owned session lifecycle.
-
-Existing Issue: The source plan requires remote ACP policy, activity and close acknowledgments, ephemeral run leases, and transport-loss cleanup, but no remote protocol, channel, or manager file is changed in the aggregate diff. Severity: 8/10
-
-Existing Risk: 7/10 - An `on <host>` launch cannot meet the planned execution-host semantics or report whether remote processes and workspace references were released, risking orphaned work after transport loss.
-
-Proposal Risk: 4/10 - Versioned remote requests and bounded teardown acknowledgments would make uncertainty visible and contain orphan risk, but cleanup still depends on an unavailable peer being handled as an explicit warning.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "add remote agent execution and acknowledged cleanup". Extend the existing remote ACP request and readiness flow to carry autonomous permission policy, session configuration, and execution-host task/skill resolution; add typed activity and close/release acknowledgments to the existing ACP frame family and bump its protocol version so older peers refuse unsupported policy. Track agent-only remote references as ephemeral, abort runs on caller or transport loss, close autonomous sessions and release run-owned references without disrupting shared users, and bound acknowledgment waits while preserving cleanup warnings. Update the remote workspace and agent specifications, and add frame, channel, manager, and lifecycle tests for version mismatch, headless launches, shared borrowed workspaces, transport loss, and timeout reporting.
-
-
 * Remove the executable verification command from the completed late-resource plan, which still directs readers to run repository tooling.
 
 Existing Issue: `product/plans/complete/clean-up-late-agent-resources.md` tells readers to run `./scripts/run.mjs check-diff` after implementation and documentation changes, leaving an operational command in reviewed branch content. Severity: 5/10

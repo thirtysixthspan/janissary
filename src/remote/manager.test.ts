@@ -110,6 +110,27 @@ describe('RemoteManager shared channels', () => {
     h.remote.dispose();
   });
 
+  it('keeps an ephemeral agent reference after the last tab releases its shared workspace', async () => {
+    const h = managerHarness();
+    const release = h.remote.acquireAgentLease('creator', 'run-1');
+
+    h.remote.release('creator');
+
+    expect(h.write.mock.calls.join('')).not.toContain('"type":"shutdown"');
+    await release();
+    expect(h.write.mock.calls.join('')).toContain('"type":"shutdown"');
+  });
+
+  it('closes an orphaned run-only channel during manager disposal', () => {
+    const h = managerHarness();
+    h.remote.acquireAgentLease('creator', 'run-1');
+    h.remote.release('creator');
+
+    h.remote.dispose();
+
+    expect(h.write.mock.calls.join('')).toContain('"type":"shutdown"');
+  });
+
   it('retains joined tabs and cached files when an established peer transport drops', () => {
     vi.useFakeTimers();
     const h = managerHarness(true, '12345678-1234-1234-1234-123456789abc');

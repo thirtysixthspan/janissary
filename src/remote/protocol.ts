@@ -173,7 +173,11 @@
 // on the far side so a diff tab can show a remote workspace. A version-28 peer refuses it as unknown,
 // so a remote diff against one would report a failure rather than a half-working change set — which
 // is why the handshake refuses the mismatch instead.
-export const REMOTE_PROTOCOL_VERSION = 29;
+// Version 30 resolves autonomous tasks and skills on the execution host, scopes ACP configuration
+// and typed activity to a run, and acknowledges remote session release. A version-29 peer could
+// accept a request without honoring its policy or confirming cleanup, so exact-version handshake
+// refusal prevents silent execution and orphaned resources.
+export const REMOTE_PROTOCOL_VERSION = 30;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.
@@ -206,6 +210,7 @@ function toWire(frame: RemoteFrame): Record<string, unknown> {
     return { ...frame, runs: frame.runs.map((run) => ({ ...run, text: encodeText(run.text) })) };
   }
   if (frame.type === 'acp-prompt' || frame.type === 'acp-chunk') return { ...frame, text: encodeText(frame.text) };
+  if (frame.type === 'acp-activity') return { ...frame, text: encodeText(frame.text) };
   if (frame.type === 'gate-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
   if (frame.type === 'resume-event' && frame.capture !== undefined) return { ...frame, capture: encodeText(frame.capture) };
   if (frame.type === 'capture-reply' && frame.text !== undefined) return { ...frame, text: encodeText(frame.text) };

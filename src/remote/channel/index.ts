@@ -6,6 +6,8 @@ import { dispatchAcp, type AcpSessionListener } from './acp.js';
 import { dispatchSessionFrame } from './dispatch.js';
 import { CaptureRequestTracker, type CaptureResult } from './capture.js';
 import { ShutdownDrain } from '../shutdown-drain.js';
+import { RemoteAgentRequests } from './agent-requests.js';
+import type { AgentSnapshot } from '../../agent/types.js';
 import { isChannelFrame, type ChannelTransport, type NavigatorListener, type RemoteChannelHandlers } from './types.js';
 
 type ChannelState = 'authenticating' | 'attached' | 'closed' | 'reconnecting' | 'attaching';
@@ -20,6 +22,7 @@ export class RemoteChannel {
   sessionId: string | undefined;
   private router: SessionRouter;
   private captures = new CaptureRequestTracker();
+  private agentRequests = new RemoteAgentRequests();
 
   constructor(private transport: ChannelTransport, private handlers: RemoteChannelHandlers) {
     this.router = new SessionRouter({
@@ -68,6 +71,11 @@ export class RemoteChannel {
     return this.captures.request(id, session, (frame) => this.send(frame), origin);
   }
 
+  resolveAgentSnapshot(task: string, skills: string[]): Promise<AgentSnapshot> {
+    if (!this.attached) return Promise.reject(new Error('Remote connection unavailable.'));
+    return this.agentRequests.request(task, skills, (frame) => this.send(frame));
+  }
+
   send(frame: ClientFrame): void {
     if (this.state !== 'attached' && !(this.state === 'attaching' && frame.type === 'attach')) {
       switch (frame.type) {
@@ -105,6 +113,8 @@ export class RemoteChannel {
 
   disconnect(): void {
     this.state = 'closed';
+    for (const listener of this.acpSessions.values()) listener.onTransportLost?.();
+    this.agentRequests.failAll('Remote session detached.');
     this.transport.kill();
   }
 
@@ -128,6 +138,7 @@ export class RemoteChannel {
     for (const listener of this.acpSessions.values()) listener.onError('Remote session ended.', true);
     this.acpSessions.clear();
     this.captures.settleAll();
+    this.agentRequests.failAll('Remote session ended.');
   }
 
   // A PTY kill can discard bytes that have been written but not yet delivered to ssh. Leave the
@@ -154,8 +165,10 @@ export class RemoteChannel {
     this.shutdownDrain.cancel();
     if (this.sessionId) {
       this.captures.settleAll();
+      this.agentRequests.failAll('Remote connection lost.');
       this.state = 'reconnecting';
       this.buffer = '';
+      for (const listener of this.acpSessions.values()) listener.onTransportLost?.();
       this.handlers.onClose();
       return;
     }
@@ -165,6 +178,7 @@ export class RemoteChannel {
     this.navigators.clear();
     this.acpSessions.clear();
     this.captures.settleAll();
+    this.agentRequests.failAll('Remote connection lost.');
     this.handlers.onClose();
   }
 
@@ -224,6 +238,7 @@ export class RemoteChannel {
       this.navigators.get(frame.session)?.onEvent(frame.path);
       return;
     }
+    if (frame.type === 'agent-resolve-result') { this.agentRequests.resolve(frame); return; }
     if (dispatchAcp(this.acpSessions, frame)) return;
     if (isChannelFrame(frame)) { this.handlers.onFrame(frame); return; }
     this.fail(`Unexpected remote frame "${frame.type}".`);

@@ -56,10 +56,18 @@ Autonomous provider tool permissions select the least expansive available approv
 
 Each run owns a new ACP process and returns only after it has completed cleanup. Closing the originating caller terminates the run and returns `Agent terminated.`. A provider failure or empty final answer produces a failed result. The structured result has `status`, `response`, and `cleanupWarnings`; the caller transcript shows `Status: <completed|failed|terminated>`, the response, and one `Cleanup warning: <reason>` line per cleanup issue. Cleanup warnings do not replace the task status or response.
 
+### Remote task execution
+
+`on <host>` runs an agent remotely only when the caller is already attached to an established remote workspace on that host. `in workspace <label>` selects another tab's established remote workspace. A missing, connecting, or mismatched target fails with `Agent: remote workspace is not ready.` or `Agent: requested remote host must match an established remote workspace.`; execution never falls back to the local machine or provisions a second workspace.
+
+The remote host resolves the task and selected skills from its workspace and installed Janissary tasks/skills, then returns the captured snapshot before the run starts. Canonical command grants are still enforced locally. The remote hosts the autonomous ACP process with the selected model and effort, while the command loop and granted Janissary commands remain local. Remote activity is delivered to that run only.
+
+A run holds an ephemeral reference to the shared remote channel and workspace. Releasing it does not close resources held by other tabs. Closing the caller, detaching the remote session, or losing transport aborts the run. Readiness waits at most 15 seconds; remote ACP release waits at most 5 seconds. A close without a positive acknowledgment adds `Cleanup warning: Remote agent close was not acknowledged.` to the result.
+
 ### Run monitoring
 
-With `in a tab`, the server opens a lazy `agent-monitor` tab titled `Agent: <task filename>` and binds it to the newly created local run. The monitor shows the complete launch command, selected model and effort, local workspace, status, provider-reported activity, and final response. It has no terminal, command bar, or prompt input. Activity includes reported message, thought, tool, plan, and permission updates, in the order received; message text also remains the source for command extraction and the final answer.
+With `in a tab`, the server opens a lazy `agent-monitor` tab titled `Agent: <task filename>` and binds it to the newly created run. The monitor shows the complete launch command, selected model and effort, execution workspace, status, provider-reported activity, and final response. It has no terminal, command bar, or prompt input. Activity includes reported message, thought, tool, plan, and permission updates, in the order received; message text also remains the source for command extraction and the final answer.
 
 The server owns one run projection and revision. Monitor updates are coalesced and sent only to the monitor tab; its latest projection is also included in the initial state after reconnect. Older revisions for the same run are ignored. The projection and termination operation are scoped to the run bound to that monitor tab. Requests carry no run id, and a monitor cannot select or inspect another run.
 
-`Terminate` ends only the bound run. It is disabled after cleanup begins. Closing the monitor tab or disabling the monitor plugin detaches observation and does not terminate execution. Closing the originating caller still terminates the run. `on <host>` and `in workspace <label>` fail with `Agent: remote hosts and named workspaces are not supported by local task execution.`.
+`Terminate` ends only the bound run. It is disabled after cleanup begins. Closing the monitor tab or disabling the monitor plugin detaches observation and does not terminate execution. Closing the originating caller still terminates the run.

@@ -50,7 +50,10 @@ repository's `origin` transport. The credentials are the exception: this project
 forwarded on the provisioning frame, each falling back to the remote project's own file when nothing
 is sent. A remote tab records
 no local workspace directory, so closing it deletes nothing locally; the remote server removes the
-clone when its ssh session ends. See [[remote-server]].
+clone when its ssh session ends. An autonomous agent run borrowing this workspace holds a separate,
+ephemeral run reference. Releasing that reference does not disturb other tabs using the clone; when
+the run is its last user, the shared remote channel shuts down after the agent's close acknowledgment
+or its bounded cleanup warning. See [[remote-server]] and [[agent-command]].
 
 ### Isolation
 

@@ -11,6 +11,8 @@ export type RemoteAcpOptions = {
   args: string[];
   env?: Record<string, string>;
   offline?: boolean;
+  autonomous?: true;
+  effort?: { level: string; model: string };
 };
 
 // Hooks the owner supplies, matching `AcpManager`'s own `ConnectHooks`: `onError` is the
@@ -19,6 +21,13 @@ export type RemoteAcpOptions = {
 export type RemoteAcpHooks = {
   onError: (message: string) => void;
   onConnect: () => void;
+  onActivity?: (kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission', text: string) => void;
+  onTransportLost?: () => void;
+};
+
+export type RemoteAcpSession = AcpSession & {
+  ready: Promise<void>;
+  release: () => Promise<boolean>;
 };
 
 /**
@@ -35,15 +44,37 @@ export function createRemoteAcpSession(
   channel: RemoteChannel,
   options: RemoteAcpOptions,
   hooks: RemoteAcpHooks,
-): AcpSession {
-  const { id, command, args, env, offline } = options;
+): RemoteAcpSession {
+  const { id, command, args, env, offline, autonomous, effort } = options;
   // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
   let current: PromptHandlers | undefined;
   let live = true;
+  let resolveReady = () => {};
+  let rejectReady = (_error: Error) => {};
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
+  const readiness = new Promise<void>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+  const ready = readiness;
+  void ready.catch(() => {});
+  let resolveRelease: (released: boolean) => void = () => {};
+  let releasePromise: Promise<boolean> | undefined;
+  let releaseTimer: ReturnType<typeof setTimeout> | undefined;
 
   channel.attachAcp(id, {
-    onReady: () => hooks.onConnect(),
+    onReady: () => { resolveReady(); hooks.onConnect(); },
     onChunk: (text) => current?.onChunk(text),
+    onActivity: (kind, text) => hooks.onActivity?.(kind, text),
+    onClosed: (released) => {
+      if (releaseTimer) clearTimeout(releaseTimer);
+      channel.detachAcp(id);
+      resolveRelease(released);
+    },
+    onTransportLost: () => {
+      rejectReady(new Error('Remote connection lost before agent readiness.'));
+      if (releaseTimer) clearTimeout(releaseTimer);
+      if (releasePromise) resolveRelease(false);
+      channel.detachAcp(id);
+      hooks.onTransportLost?.();
+    },
     onEnd: (stopReason) => {
       const handlers = current;
       current = undefined;
@@ -56,23 +87,40 @@ export function createRemoteAcpSession(
     onError: (message, fatal) => {
       const handlers = current;
       if (fatal) current = undefined;
+      if (fatal) rejectReady(new Error(message));
       handlers?.onError(message);
       if (fatal) hooks.onError(message);
     },
   });
-  channel.send({ type: 'acp-open', id, command, args, env, offline });
+  channel.send({
+    type: 'acp-open', id, command, args,
+    ...(env !== undefined && { env }), ...(offline !== undefined && { offline }),
+    ...(autonomous !== undefined && { autonomous }), ...(effort !== undefined && { effort }),
+  });
+
+  const release = (): Promise<boolean> => {
+    if (releasePromise) return releasePromise;
+    if (!live) return Promise.resolve(false);
+    live = false;
+    current = undefined;
+    // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
+    const pending = new Promise<boolean>((resolve) => { resolveRelease = resolve; });
+    releasePromise = pending;
+    releaseTimer = setTimeout(() => {
+      channel.detachAcp(id);
+      resolveRelease(false);
+    }, 5000);
+    channel.send({ type: 'acp-close', id });
+    return pending;
+  };
 
   return {
+    ready,
+    release,
     prompt: (text, handlers) => {
       current = handlers;
       channel.send({ type: 'acp-prompt', id, text });
     },
-    kill: () => {
-      if (!live) return;
-      live = false;
-      current = undefined;
-      channel.send({ type: 'acp-close', id });
-      channel.detachAcp(id);
-    },
+    kill: () => { void release(); },
   };
 }

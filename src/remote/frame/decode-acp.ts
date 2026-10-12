@@ -1,4 +1,5 @@
 import { malformed, nonEmptyString, type DecodeResult } from './decode-shared.js';
+import type { RemoteAcpActivityKind } from '../protocol-frames.js';
 
 // The ACP family's decoders, in their own module for the same reason `decode-history.ts` has
 // one: `decode.ts` is the dispatcher, and six frame shapes are more validation than a
@@ -19,15 +20,21 @@ function decodeEnv(value: unknown): Record<string, string> | undefined | 'invali
 }
 
 export function decodeAcpOpen(record: Record<string, unknown>): DecodeResult {
-  const { id, command, args, offline } = record;
+  const { id, command, args, offline, autonomous, effort } = record;
   const env = decodeEnv(record.env);
   if (!nonEmptyString(id) || !nonEmptyString(command) || env === 'invalid'
     || !Array.isArray(args) || args.some((argument) => typeof argument !== 'string')
-    || !(offline === undefined || typeof offline === 'boolean')) return malformed('acp-open');
+    || !(offline === undefined || typeof offline === 'boolean')
+    || !(autonomous === undefined || autonomous === true)
+    || !(effort === undefined || (typeof effort === 'object' && effort !== null && !Array.isArray(effort)
+      && nonEmptyString((effort as Record<string, unknown>).level)
+      && nonEmptyString((effort as Record<string, unknown>).model)))) return malformed('acp-open');
   return {
     type: 'acp-open', id, command, args: args as string[],
     ...(env !== undefined && { env }),
     ...(offline !== undefined && { offline }),
+    ...(autonomous === true && { autonomous }),
+    ...(effort !== undefined && { effort: effort as { level: string; model: string } }),
   };
 }
 
@@ -53,4 +60,17 @@ export function decodeAcpError(record: Record<string, unknown>): DecodeResult {
   const { id, message, fatal } = record;
   if (!nonEmptyString(id) || !nonEmptyString(message) || typeof fatal !== 'boolean') return malformed('acp-error');
   return { type: 'acp-error', id, message, fatal };
+}
+
+export function decodeAcpActivity(record: Record<string, unknown>): DecodeResult {
+  const { id, kind, text } = record;
+  if (!nonEmptyString(id) || !['message', 'thought', 'tool', 'plan', 'permission'].includes(String(kind))
+    || typeof text !== 'string') return malformed('acp-activity');
+  return { type: 'acp-activity', id, kind: kind as RemoteAcpActivityKind, text: Buffer.from(text, 'base64').toString('utf8') };
+}
+
+export function decodeAcpClosed(record: Record<string, unknown>): DecodeResult {
+  return nonEmptyString(record.id) && typeof record.released === 'boolean'
+    ? { type: 'acp-closed', id: record.id, released: record.released }
+    : malformed('acp-closed');
 }

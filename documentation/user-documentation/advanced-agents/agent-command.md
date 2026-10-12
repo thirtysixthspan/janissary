@@ -1,6 +1,6 @@
 # Run an autonomous task
 
-Use `agent` to run an AI task in a new local ACP session and wait for its final result:
+Use `agent` to run an AI task and wait for its final result:
 
 ```text
 agent with skill ask-user using model google/gemini-3.1-flash-lite with effort medium execute research/find-bugs.md --area "command dispatch"
@@ -20,6 +20,6 @@ Only listed canonical command names are allowed. The agent asks to run one by en
 
 The command returns `Status: completed`, `failed`, or `terminated`, followed by the task response. Cleanup issues appear on separate `Cleanup warning:` lines. Closing the caller tab terminates its run.
 
-Add `in a tab` to open a read-only monitor while the task runs. It shows the launch command, model and effort, local workspace, status, and reported activity. Select **Terminate** to stop that run. Closing the monitor only closes the view; the task continues, and you can still collect its result in the caller tab.
+Use `on <host>` from a tab already connected to that remote host, or `in workspace <label>` to borrow another established remote workspace. The task and selected skills are resolved on that host. Janissary keeps command grants and tool commands on the local server. If the remote does not answer readiness or confirm close, the run fails or reports a cleanup warning rather than waiting indefinitely.
 
-Local execution does not support `on <host>` or `in workspace <label>`.
+Add `in a tab` to open a read-only monitor while the task runs. It shows the launch command, model and effort, execution workspace, status, and reported activity. Select **Terminate** to stop that run. Closing the monitor only closes the view; the task continues, and you can still collect its result in the caller tab.

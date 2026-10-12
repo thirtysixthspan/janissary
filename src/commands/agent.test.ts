@@ -7,6 +7,8 @@ import type { Managers } from '../managers.js';
 import { createController } from '../controller.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 import type { CommandInvocationContext } from './types.js';
+import { parseRemoteAddress } from '../remote/address.js';
+import type { RemoteChannel } from '../remote/channel/index.js';
 import { command } from './agent.js';
 
 const execute = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<AgentResult>>());
@@ -105,11 +107,38 @@ describe('agent command', () => {
     expect(managers.tab.tabs.some((tab) => tab.plugin?.id === 'agent-monitor')).toBe(false);
   });
 
-  it('rejects unsupported remote selectors in local execution', async () => {
+  it('refuses remote execution unless the host has an established workspace', async () => {
     await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({
-      status: 'failed', response: 'Agent: remote hosts and named workspaces are not supported by local task execution.',
+      status: 'failed', response: 'Agent: requested remote host must match an established remote workspace.',
     });
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('resolves remote task snapshots and holds a run-only workspace reference through cleanup', async () => {
+    const parsed = parseRemoteAddress('devbox');
+    if ('error' in parsed) throw new Error(parsed.error);
+    const snapshot = { taskPath: '/remote/ai/tasks/task.md', taskText: 'Remote task.', skills: [], grants: [] };
+    const channel = { attached: true, resolveAgentSnapshot: vi.fn(async () => snapshot) } as unknown as RemoteChannel;
+    const release = vi.fn(async () => {});
+    vi.spyOn(managers.remote, 'addressOf').mockReturnValue(parsed);
+    vi.spyOn(managers.remote, 'get').mockReturnValue(channel);
+    vi.spyOn(managers.remote, 'workspaceOf').mockReturnValue('/remote/workspace');
+    vi.spyOn(managers.remote, 'acquireAgentLease').mockReturnValue(release);
+    execute.mockImplementation(async (agentRun) => {
+      (agentRun as { addResource: (id: string, cleanup: () => Promise<void>) => void }).addResource(
+        'remote-close', async () => { throw new Error('Remote agent close was not acknowledged.'); },
+      );
+      return { status: 'completed', response: 'Remote done.', cleanupWarnings: [] };
+    });
+
+    await expect(run('agent on devbox execute task.md')).resolves.toMatchObject({
+      status: 'completed', cleanupWarnings: ['Remote agent close was not acknowledged.'],
+    });
+
+    expect(channel.resolveAgentSnapshot).toHaveBeenCalledWith('task.md', []);
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({ snapshot });
+    expect(execute.mock.calls[0]?.[6]).toEqual({ channel, offline: undefined });
+    expect(release).toHaveBeenCalledOnce();
   });
 
   it('routes malformed agent syntax to the launch parser', async () => {

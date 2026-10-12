@@ -1,6 +1,7 @@
 import type { RemoteFrame } from '../protocol-frames.js';
 import { malformed, type DecodeResult } from './decode-shared.js';
 import { decodeFilesystemFrame } from './decode-filesystem.js';
+import { decodeAgentResolve, decodeAgentResolveResult } from './decode-agent.js';
 import { decodeSessionStateResult } from './decode-sessions.js';
 import { decodeShellHistory } from './decode-history.js';
 import {
@@ -10,7 +11,7 @@ import {
   decodeCaptureRequest, decodeCaptureReply, decodeGateEvent, decodeBusyTransition, decodeResumeEvent, decodeResumeAck,
 } from './decode-detect.js';
 import {
-  decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError,
+  decodeAcpOpen, decodeAcpText, decodeAcpAddressed, decodeAcpEnd, decodeAcpError, decodeAcpActivity, decodeAcpClosed,
 } from './decode-acp.js';
 import { decodeProvision } from './decode-provision.js';
 import {
@@ -70,6 +71,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'filesystem-request':
   case 'filesystem-reply':
   case 'filesystem-event': { return decodeFilesystemFrame(type, record); }
+  case 'agent-resolve': { return decodeAgentResolve(record); }
+  case 'agent-resolve-result': { return decodeAgentResolveResult(record); }
   case 'acp-open': { return decodeAcpOpen(record); }
   case 'acp-prompt':
   case 'acp-chunk': { return decodeAcpText(type, record); }
@@ -77,6 +80,8 @@ export function decodeKnownFrame(type: RemoteFrame['type'], record: Record<strin
   case 'acp-ready': { return decodeAcpAddressed(type, record); }
   case 'acp-end': { return decodeAcpEnd(record); }
   case 'acp-error': { return decodeAcpError(record); }
+  case 'acp-activity': { return decodeAcpActivity(record); }
+  case 'acp-closed': { return decodeAcpClosed(record); }
   default: { return unhandledRemoteFrame(type); }
   }
 }

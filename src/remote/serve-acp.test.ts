@@ -52,6 +52,19 @@ describe('RemoteAcp — opening a session', () => {
     expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1' }]);
   });
 
+  it('applies autonomous policy and forwards typed activity to the run id', () => {
+    const { acp, frames } = makeAcp();
+    const options = {
+      ...OPEN, autonomous: true as const, effort: { level: 'high', model: 'google/gemini-3.1-flash-lite' },
+    };
+    acp.open(options);
+    const acpOptions = acpMock.options[0];
+    acpOptions.onActivity?.({ sessionUpdate: 'agent_thought_chunk', content: { type: 'text', text: 'Planning.' } });
+
+    expect(acpOptions).toMatchObject({ autonomous: true, effort: options.effort });
+    expect(frames).toEqual([{ type: 'acp-activity', id: 'racp1', kind: 'thought', text: 'Planning.' }]);
+  });
+
   // Both, so the agent sees the files the tab is working on and is confined to the clone exactly as
   // this server's other workspaced processes are.
   it('runs the agent in the provisioned workspace as both cwd and sandbox root', () => {
@@ -182,7 +195,10 @@ describe('RemoteAcp — closing', () => {
     acp.close('racp1');
 
     expect(acpMock.kill).toHaveBeenCalledTimes(1);
-    expect(frames).toEqual([]);
+    expect(frames).toEqual([
+      { type: 'acp-closed', id: 'racp1', released: true },
+      { type: 'acp-closed', id: 'racp1', released: true },
+    ]);
   });
 
   it('leaves another session\'s id alone', () => {
@@ -224,5 +240,18 @@ describe('RemoteAcp — closing', () => {
     acp.open({ ...OPEN, id: 'racp2' });
 
     expect(acpMock.options).toHaveLength(2);
+  });
+
+  it('ends autonomous run-only sessions on transport detach but preserves ordinary ACP sessions', () => {
+    const { acp } = makeAcp();
+    acp.open(OPEN);
+    acp.open({ ...OPEN, id: 'run-1', autonomous: true });
+
+    acp.detachRuns();
+
+    expect(acpMock.kill).toHaveBeenCalledOnce();
+    acp.prompt({ type: 'acp-prompt', id: 'racp1', text: 'still live' });
+    acp.prompt({ type: 'acp-prompt', id: 'run-1', text: 'ended' });
+    expect(acpMock.prompt).toHaveBeenCalledOnce();
   });
 });

@@ -3,6 +3,7 @@ import type { GitIdentity } from '../git/identity.js';
 import type { RootRefusal } from './root-refusal.js';
 import type { ResumeReset } from '../harness/auto-resume.js';
 import type { HistoryStep } from '../file-navigator/moves.js';
+import type { AgentSnapshot } from '../agent/types.js';
 
 // The frame shapes of the remote protocol, split out of `protocol.ts` so the wire *codec* and the
 // wire *grammar* are two files: this one says what a frame may carry, `protocol.ts` says how one is
@@ -13,6 +14,8 @@ export type RemoteFilesystemOperation =
   | 'read-directory' | 'stat' | 'watch' | 'unwatch' | 'git' | 'git-pull' | 'git-commit' | 'search'
   | 'read-file' | 'write-file' | 'move' | 'move-many' | 'delete' | 'delete-many' | 'rename' | 'paste'
   | 'create-file' | 'create-directory' | 'replay' | 'change-set';
+
+export type RemoteAcpActivityKind = 'message' | 'thought' | 'tool' | 'plan' | 'permission';
 
 export type RemoteFilesystemArgumentsByOperation = {
   'read-directory': { path: string };
@@ -131,12 +134,14 @@ export type ClientFrame =
   | { type: 'capture-request'; session: string; id: string; request: string; origin?: string }
   | { type: 'filesystem-open'; session: string }
   | { type: 'filesystem-close'; session: string }
+  | { type: 'agent-resolve'; id: string; task: string; skills: string[] }
   // The ACP family: a remote tab's ACP client is hosted by the far side, so what crosses here
   // is prompts and reply text, never JSON-RPC. The local side still chooses which agent and model
   // run, which is why the open frame names the command rather than the remote deciding for itself.
   | {
     type: 'acp-open'; id: string; command: string; args: string[];
     env?: Record<string, string>; offline?: boolean;
+    autonomous?: true; effort?: { level: string; model: string };
   }
   | { type: 'acp-prompt'; id: string; text: string }
   | { type: 'acp-close'; id: string };
@@ -222,12 +227,15 @@ export type ServerFrame =
   | { type: 'capture-reply'; id: string; request: string; text?: string; capturedAt?: number }
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
+  | { type: 'agent-resolve-result'; id: string; snapshot?: AgentSnapshot; error?: string }
   // `acp-ready` carries the id alone: its only job is to say the handshake completed. What the agent
   // reports as its "model" is really the session's current mode name, and the local side already
   // knows the model it asked for, so there is nothing else worth sending back.
   | { type: 'acp-ready'; id: string }
   | { type: 'acp-chunk'; id: string; text: string }
   | { type: 'acp-end'; id: string; stopReason: string }
+  | { type: 'acp-activity'; id: string; kind: RemoteAcpActivityKind; text: string }
+  | { type: 'acp-closed'; id: string; released: boolean }
   // `fatal` distinguishes a session that no longer exists (a failed spawn, a dead agent) from a
   // prompt that merely failed (a rate limit). Only the remote can tell which, and the two must not
   // be collapsed: dropping a live session throws away its conversation, and keeping a dead one
@@ -266,6 +274,7 @@ export const CLIENT_FRAME_TYPES: Record<ClientFrame['type'], true> = {
   attach: true, 'session-state': true, shutdown: true,
   provision: true, 'clone-answer': true, spawn: true, input: true, resize: true, kill: true, 'capture-request': true, 'resume-ack': true,
   'filesystem-open': true, 'filesystem-close': true, 'filesystem-request': true,
+  'agent-resolve': true,
   'acp-open': true, 'acp-prompt': true, 'acp-close': true,
 };
 export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
@@ -273,5 +282,6 @@ export const SERVER_FRAME_TYPES: Record<ServerFrame['type'], true> = {
   'workspace-ready': true, 'workspace-failed': true, 'name-in-use': true, output: true, exit: true, transcript: true,
   'shell-history': true, 'browser-exited': true, 'browser-started': true, 'gate-event': true, 'busy-transition': true, 'capture-reply': true, 'resume-event': true,
   'filesystem-reply': true, 'filesystem-event': true,
-  'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-error': true,
+  'agent-resolve-result': true,
+  'acp-ready': true, 'acp-chunk': true, 'acp-end': true, 'acp-activity': true, 'acp-closed': true, 'acp-error': true,
 };

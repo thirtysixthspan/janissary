@@ -585,6 +585,8 @@ describe('AcpManager — remote tabs', () => {
     expect(acp.close('tab1')).toBe(true);
 
     expect(channel.send).toHaveBeenCalledWith({ type: 'acp-close', id: 'racp1' });
+    expect(channel.detachAcp).not.toHaveBeenCalled();
+    acpListener(channel).onClosed(true);
     expect(channel.detachAcp).toHaveBeenCalledWith('racp1');
   });
 });

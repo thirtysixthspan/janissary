@@ -235,6 +235,12 @@ would report a failure rather than a half-working change set — which is what t
 request carries the set of files to expand to their whole contents and nothing else, because a peer has one workspace
 and there is no path to contain.
 
+Remote autonomous agent runs move the protocol to 30. A request resolves task and skill snapshots on
+the remote execution host, and the ACP open frame carries the autonomous policy and selected effort.
+Typed activity frames are scoped to the run id, and closing the ACP session returns an explicit release
+acknowledgment. A version-29 peer would run without the new policy or activity contract and cannot
+confirm release, so the handshake refuses it before the agent request can begin.
+
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
 whatever is installed on that host now — not the version of the peer waiting behind it. A session
@@ -595,6 +601,14 @@ than JSON-RPC. The **autonomous tool loop** stays local — a remote agent's `db
 browser, not the remote workspace's. And **which agent and model run** is decided locally and sent
 across on the frame that opens the session, so one definition holds and the two installations cannot
 silently disagree about the model. See [[acp]].
+
+An autonomous `agent` command can also use an established remote workspace. The remote resolves the
+task and selected skills there before ACP starts; the local side keeps command authorization and tool
+execution. Its run-scoped reference keeps a shared channel alive only while the run owns it. Readiness
+and close acknowledgment waits are bounded, and a missing close acknowledgment is returned as a
+cleanup warning rather than reported as a successful release. Detaching or losing the transport
+aborts the run; the far side stops autonomous run-only sessions on detach, while the local result
+reports release as uncertain if the acknowledgment could not cross the lost transport.
 
 Isolation is the remote's own. `remote-serve` applies the same workspace sandbox
 policy the local server applies, which means isolation is active when the remote is macOS and
