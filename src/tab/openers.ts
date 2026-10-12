@@ -16,7 +16,7 @@ import { requestedTabGroup } from './group-placement.js';
 // What a host-owned launch fixes about a plugin tab before its factory runs: the label, the
 // directory it starts in, and the workspace clone it owns from the first moment.
 export type PluginTabPreset = {
-  label: string;
+  label?: string;
   cwd?: string;
   workspace?: { dir: string; offline: boolean };
   remote?: { address: string; host: string };

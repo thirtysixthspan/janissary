@@ -15,6 +15,7 @@ import type { AgentSnapshot } from '../agent/types.js';
 import { applyNestedAgentPolicy } from '../agent/nested-policy.js';
 import { createRunCompletion, trackChildRun, trustedParentRun } from '../agent/nested-run.js';
 import { formatAgentResult } from '../agent/format-result.js';
+import { resolveAgentGroup } from '../agent/group-selector.js';
 
 async function runAgent(
   commandText: string,
@@ -31,6 +32,7 @@ async function runAgent(
   try {
     caller = invocationFor(label, managers, invocation);
     if (caller.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
+    const selectedGroup = resolveAgentGroup(managers.tab.tabs, launch.group);
     const parent = trustedParentRun(caller, managers);
     const sourceLabel = launch.workspace ?? label;
     const sourceTab = managers.tab.byLabel(sourceLabel);
@@ -119,7 +121,7 @@ async function runAgent(
           monitorPlugin.payloadSchemaVersion, label, () => ({
           title: `Agent: ${taskName}`,
           payload: { runId: activeRun.id },
-        }));
+        }), selectedGroup ? { group: selectedGroup.name } : undefined);
         const monitor = managers.tab.pluginTabByInstanceKey(monitorPlugin.id, activeRun.id);
         if (!monitor) throw new Error('Agent: could not open monitoring tab.');
         monitor.plugin.agentRunId = activeRun.id;

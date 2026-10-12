@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Apply and validate the requested monitoring group instead of silently ignoring `in group`.
-
-Existing Issue: `parseAgentCommand` returns the requested group, but `src/commands/agent.ts` never reads it, so headed runs open in the caller's group and headless runs accept nonexistent group selectors without error. Severity: 6/10
-
-Existing Risk: 5/10 - Runs can appear in the wrong tab group and misspelled or stale selectors silently start work instead of reporting the invalid launch.
-
-Proposal Risk: 2/10 - Resolving a supplied selector before run creation and assigning valid selections to the monitor makes group placement predictable while headless launches remain headless.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "honor and validate agent group selectors". In `src/commands/agent.ts`, validate `launch.group` against the existing tab groups before creating a run, including for headless launches, and return the approved invalid-group error without starting ACP when it does not resolve. For `in a tab`, pass the resolved group to the monitor-tab opening path so its new tab lands in that group; when no group is supplied, retain the caller-group default. Extend `src/commands/agent.test.ts` and the relevant tab-opening tests to cover named and numeric group resolution, invalid group rejection for both headed and headless runs, and caller-group defaulting. No current agent-command test checks that the parsed group affects launch behavior.
-
-
 * Allow confined runs to read support files belonging to selected installed skills.
 
 Existing Issue: `src/agent/execute.ts` starts ACP with the workspace directory but does not pass selected installed-skill directories, and `AcpOptions` has no such field even though `sandboxSpawn` supports `installedSkillDirs`. Severity: 5/10

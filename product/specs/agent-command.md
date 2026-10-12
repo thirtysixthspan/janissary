@@ -72,6 +72,8 @@ A run holds an ephemeral reference to the shared remote channel and workspace. R
 
 With `in a tab`, the server opens a lazy `agent-monitor` tab titled `Agent: <task filename>` and binds it to the newly created run. The monitor shows the complete launch command, selected model and effort, execution workspace, status, provider-reported activity, and final response. It has no terminal, command bar, or prompt input. Activity includes reported message, thought, tool, plan, and permission updates, in the order received; message text also remains the source for command extraction and the final answer.
 
+`in group <name|id>` selects an existing group by case-insensitive name or numeric ID for a headed monitor. The selector is checked before any run is created, including for headless launches. An unknown or invalid selector fails with `Agent: group "<selector>" does not exist.` Without the clause, a headed monitor joins the caller's group.
+
 The server owns one run projection and revision. Monitor updates are coalesced and sent only to the monitor tab; its latest projection is also included in the initial state after reconnect. Older revisions for the same run are ignored. The projection and termination operation are scoped to the run bound to that monitor tab. Requests carry no run id, and a monitor cannot select or inspect another run.
 
 `Terminate` ends only the bound run. It is disabled after cleanup begins. Closing the monitor tab or disabling the monitor plugin detaches observation and does not terminate execution. Closing the originating caller still terminates the run.

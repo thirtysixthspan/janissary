@@ -11,6 +11,7 @@ import type { CommandInvocationContext } from './types.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { command } from './agent.js';
+import { makeTab } from '../tab/index.js';
 import * as config from '../config.js';
 import * as sandbox from '../sandbox/index.js';
 
@@ -196,6 +197,46 @@ describe('agent command', () => {
     gate.resolve({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
     await expect(pending).resolves.toMatchObject({ status: 'completed' });
     expect(managers.tab.tabs.some((tab) => tab.plugin?.id === 'agent-monitor')).toBe(false);
+  });
+
+  it.each([
+    ['Review', 4],
+    ['4', 4],
+  ])('places a headed monitor in existing group selector %s', async (selector, groupId) => {
+    managers.tab.tabs.push(makeTab('review-member', '#444', 2, [], [], undefined, groupId, '#444', 'Review'));
+    execute.mockResolvedValue({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
+
+    await expect(run(`agent in a tab in group "${selector}" execute task.md`)).resolves.toMatchObject({ status: 'completed' });
+
+    expect(managers.tab.tabs.find((tab) => tab.plugin?.id === 'agent-monitor')).toMatchObject({
+      group: groupId, groupName: 'Review',
+    });
+  });
+
+  it.each(['missing', '0', '9007199254740992'])('rejects invalid group %s before creating headed or headless runs', async (selector) => {
+    for (const launch of [`agent in group "${selector}" execute task.md`, `agent in a tab in group "${selector}" execute task.md`]) {
+      await expect(run(launch)).resolves.toMatchObject({
+        status: 'failed', response: `Agent: group "${selector}" does not exist.`,
+      });
+    }
+
+    expect(managers.agent.runs.size).toBe(0);
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('defaults a headed monitor to the caller group when no group is selected', async () => {
+    const callerTab = managers.tab.byLabel('janus');
+    if (!callerTab) throw new Error('Caller tab not found.');
+    callerTab.group = 4;
+    callerTab.groupName = 'Review';
+    execute.mockResolvedValue({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
+
+    await expect(run('agent in a tab execute task.md')).resolves.toMatchObject({ status: 'completed' });
+
+    expect(managers.tab.tabs.find((tab) => tab.plugin?.id === 'agent-monitor')).toMatchObject({
+      group: 4, groupName: 'Review',
+    });
   });
 
   it('refuses remote execution unless the host has an established workspace', async () => {
