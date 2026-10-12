@@ -108,6 +108,22 @@ describe('resolveAgentSkills', () => {
     expect(resolved.skills[0]?.instructions).toBe('Question instructions');
   });
 
+  it('rejects a workspace skills root symlinked outside the workspace before loading content', () => {
+    writeSkill(outside, 'external', 'external instructions', '{"version":1,"commands":["question"]}');
+    symlinkSync(path.join(outside, 'skills'), path.join(workspace, 'skills'));
+
+    expect(() => resolveAgentSkills(['external'], options(), ['question']))
+      .toThrow('Agent: invalid skill path "external".');
+  });
+
+  it('rejects an installed skills root symlinked outside the installation before loading content', () => {
+    writeSkill(outside, 'external', 'external instructions', '{"version":1,"commands":["question"]}');
+    symlinkSync(path.join(outside, 'skills'), path.join(installation, 'skills'));
+
+    expect(() => resolveAgentSkills(['external'], options(), ['question']))
+      .toThrow('Agent: invalid skill path "external".');
+  });
+
   it('uses workspace skills first and treats a missing sidecar as no grants', () => {
     writeSkill(workspace, 'local', 'local instructions');
     writeSkill(installation, 'local', 'installed instructions', '{"version":1,"commands":["browser"]}');

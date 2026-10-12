@@ -15,7 +15,19 @@ function isMissingPath(error: unknown): boolean {
 }
 
 function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSkill {
-  for (const root of [path.join(options.workspaceDir, 'skills'), path.join(options.installationDir, 'skills')]) {
+  for (const sourceRoot of [options.workspaceDir, options.installationDir]) {
+    const root = path.join(sourceRoot, 'skills');
+    let realRoot: string;
+    try {
+      const realSourceRoot = realpathSync(sourceRoot);
+      realRoot = realpathSync(root);
+      if (!contained(realSourceRoot, realRoot) || !statSync(realRoot).isDirectory()) {
+        throw new Error('invalid skill root');
+      }
+    } catch (error) {
+      if (isMissingPath(error)) continue;
+      throw new Error(`Agent: invalid skill path "${name}".`, { cause: error });
+    }
     const candidate = path.join(root, name, 'SKILL.md');
     try {
       lstatSync(candidate);
@@ -25,7 +37,6 @@ function resolveSkill(name: string, options: AgentResolutionOptions): ResolvedSk
     }
     const directory = path.dirname(candidate);
     try {
-      const realRoot = realpathSync(root);
       const realDirectory = realpathSync(directory);
       if (realDirectory !== path.resolve(realRoot, name) || !contained(realRoot, realDirectory) || !statSync(realDirectory).isDirectory()) {
         throw new Error('invalid skill directory');

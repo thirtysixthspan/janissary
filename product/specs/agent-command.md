@@ -28,7 +28,7 @@ Task discovery is strict for each source when agent execution searches it. An ab
 
 ### Skills and command grants
 
-Each requested `skills/<name>/SKILL.md` is resolved from the execution workspace first, then the execution host's installed skills. After resolving symlinks, the skill directory, its `SKILL.md`, and any grant sidecar must remain within the selected skill directory; an escaping path reports `Agent: invalid skill path "<name>".` A missing skill reports `Agent: unknown skill "<name>".` Repeated names are deduplicated. A skill does not implicitly load other skills mentioned in its instructions.
+Each requested `skills/<name>/SKILL.md` is resolved from the execution workspace first, then the execution host's installed skills. The canonical `skills/` root must remain within its corresponding execution workspace or installation root. After resolving symlinks, the skill directory, its `SKILL.md`, and any grant sidecar must remain within the selected skill directory; an escaping root or path reports `Agent: invalid skill path "<name>".` before its contents are read. A missing skill reports `Agent: unknown skill "<name>".` Repeated names are deduplicated. A skill does not implicitly load other skills mentioned in its instructions.
 
 An optional `janissary.json` beside the selected skill declares command grants. Version 1 has the shape `{"version":1,"commands":["question"]}`. The command list contains whole canonical Janissary command names; names are normalized to lowercase and duplicate grants are removed. Prefixes, unknown names, malformed JSON, unsupported versions, and malformed command lists fail resolution. A skill without a sidecar grants no commands.
 
