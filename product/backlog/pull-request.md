@@ -55,3 +55,47 @@ Existing Risk: 8/10 - A task with only the `agent` grant can launch a child that
 Proposal Risk: 3/10 - Propagating trusted parent identity and immutable policy through invocation context, then checking child skill source/name/instruction equality and intersecting grants, prevents nested runs from widening the authority tree; filesystem and provider tools remain governed by the existing run policy.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "cap nested agent skills and command grants". Extend the server-owned invocation context in `src/commands/types.ts` and `src/command/manager.ts` with parent run identity, and have `src/agent/command-tools.ts` propagate it only through canonical nested dispatch. In `src/commands/agent.ts`, resolve each child skill and compare its source category, name, and captured instruction contents with the parent's immutable snapshot before prompting; reject unmatched skills and intersect the child's sidecar grants with the parent's effective grants. Track child ownership in `src/agent/run.ts` and `src/agent/manager.ts` so parent termination aborts and awaits its children. Update `product/specs/agent-command.md` and add tests in `src/agent/command-tools.test.ts`, `src/commands/agent.test.ts`, and `src/agent/manager.test.ts` proving an agent grant cannot add a skill or command, matching skills cannot broaden grants, and parent termination cleans up child runs; these nested-policy paths currently have no coverage.
+
+
+* Apply and validate the requested monitoring group instead of silently ignoring `in group`.
+
+Existing Issue: `parseAgentCommand` returns the requested group, but `src/commands/agent.ts` never reads it, so headed runs open in the caller's group and headless runs accept nonexistent group selectors without error. Severity: 6/10
+
+Existing Risk: 5/10 - Runs can appear in the wrong tab group and misspelled or stale selectors silently start work instead of reporting the invalid launch.
+
+Proposal Risk: 2/10 - Resolving a supplied selector before run creation and assigning valid selections to the monitor makes group placement predictable while headless launches remain headless.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "honor and validate agent group selectors". In `src/commands/agent.ts`, validate `launch.group` against the existing tab groups before creating a run, including for headless launches, and return the approved invalid-group error without starting ACP when it does not resolve. For `in a tab`, pass the resolved group to the monitor-tab opening path so its new tab lands in that group; when no group is supplied, retain the caller-group default. Extend `src/commands/agent.test.ts` and the relevant tab-opening tests to cover named and numeric group resolution, invalid group rejection for both headed and headless runs, and caller-group defaulting. No current agent-command test checks that the parsed group affects launch behavior.
+
+
+* Allow confined runs to read support files belonging to selected installed skills.
+
+Existing Issue: `src/agent/execute.ts` starts ACP with the workspace directory but does not pass selected installed-skill directories, and `AcpOptions` has no such field even though `sandboxSpawn` supports `installedSkillDirs`. Severity: 5/10
+
+Existing Risk: 5/10 - When workspace confinement is active, an installed skill that references a companion file cannot read that file and may fail or follow incomplete instructions despite being selected.
+
+Proposal Risk: 2/10 - Passing only canonical selected installed-skill directories through the existing sandbox read parameters restores the promised support-file access without exposing the installation's other contents.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "confine reads to selected installed skill support files". Extend `AcpOptions` in `src/acp/types.ts` and the `connectAcp` call in `src/agent/execute.ts` to carry only the selected skills whose resolved paths are under the installed skills root. Forward those directories to `sandboxSpawn`'s existing `installedSkillDirs` option in `src/acp/index.ts`; preserve the existing literal/real-path containment checks and secret-deny ordering in `src/sandbox/index.ts` and `src/sandbox/install-reads.ts`. Add focused tests in `src/acp/index.test.ts` and `src/sandbox/index.test.ts` proving selected installed skill support paths are readable while unselected skills and unrelated installation paths remain denied. No current test covers this autonomous-session integration.
+
+
+* Close only tabs newly created by an agent run when its owned resources are cleaned up.
+
+Existing Issue: Granted commands execute with invocation context, but tab-opening paths do not record run ownership and `AgentRun.cleanup()` has no created-tab release step, so tabs opened by an agent remain after the run ends. Severity: 6/10
+
+Existing Risk: 5/10 - Completed or terminated runs can leave tabs and their associated processes or references behind, while later cleanup has no reliable way to distinguish those allocations from tabs that existed before the run.
+
+Proposal Risk: 2/10 - Explicitly tracking only new allocations on the owning run lets cleanup release its own tabs without adopting focused or pre-existing tabs.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "track and release tabs created by agent commands". Carry the trusted run identity from `CommandInvocationContext` through the command dispatch and tab-allocation entry points used by granted commands, including open, edit, and plugin/deferred allocation paths. In `src/agent/run.ts` and `src/agent/manager.ts`, record identities only when a new tab or resource is allocated under that run, then close and await releases for those identities during cleanup; focusing or updating an existing tab must never transfer ownership. Add tests in the affected command/allocation suites and `src/agent/manager.test.ts` proving newly created tabs are closed after completion, failure, and termination, while existing or focused tabs remain open and their resources remain usable. The current run cleanup tests do not exercise command-created tabs.
+
+
+* Remove executable verification directions from the completed local-execution and monitoring plans.
+
+Existing Issue: `product/plans/complete/agent-canonical-local-execution.md` and `product/plans/complete/agent-monitoring-plugin.md` still tell readers to run `./scripts/run.mjs check-diff`, making branch-supplied tooling an operational instruction in reviewed content. Severity: 5/10
+
+Existing Risk: 6/10 - A reviewer or later agent following either completed plan may execute branch-provided verification scripts, despite those plans being untrusted review material.
+
+Proposal Risk: 2/10 - Replacing the imperative commands with descriptive coverage records removes the execution prompt while preserving the plans' test expectations.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove executable verification directions from the local execution and monitoring plans". In `product/plans/complete/agent-canonical-local-execution.md` and `product/plans/complete/agent-monitoring-plugin.md`, replace the `check-diff` instructions in their Tests sections with factual descriptions of the coverage present or expected, without claiming a verification run unless the branch records evidence for it. Review both full plans for any additional direct tool-execution instructions and keep their implementation scope and test cases intact. Verify by reading the plans and focused diff only; no application behavior or automated tests are involved.
