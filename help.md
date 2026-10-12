@@ -3,7 +3,7 @@
 | Command | Description |
 | ------- | ----------- |
 | `acp` | Query a core OpenCode ACP connection from a shell or another supported plugin tab; replies stream in the ACP panel (`acp reset` starts a fresh session) |
-| `agent` | Runs an AI task; add `in workspace <label>` to borrow a tracked workspace, `in a tab` for a run-scoped monitor, or choose a group, skill, model, and effort (default `medium`) |
+| `agent` | Run an AI task: optional `on <host>`, `in a tab`, `in group <name|id>`, `in workspace <label>`, `with skill <name>`, `using model <id>`, `with effort <level>`; then `execute <task> [parameters...]` (effort defaults to `medium`) |
 | `audio` | `audio <path>` queues audio into the single audio tab through the bundled audio plugin; accepts the same paths and wildcards as `open` |
 | `browser` | Drive a headless/headed web browser (open, goto, content, eval, shot) |
 | `clear` | Clear the tab's output log; in a shell tab, bare `clear` is sent to zsh so it clears the terminal instead (use `/clear` to clear the output log) |
