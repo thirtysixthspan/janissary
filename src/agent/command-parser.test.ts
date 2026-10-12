@@ -13,7 +13,7 @@ describe('parseAgentCommand', () => {
         effort: 'high',
         skills: ['ask user'],
         task: 'tasks/run.md',
-        parameters: '--flag "some text"',
+        parameters: ' --flag "some text"',
       });
   });
 
@@ -25,7 +25,14 @@ describe('parseAgentCommand', () => {
   it('requires execute as the final launch clause and a task', () => {
     expect(parseAgentCommand('in a tab')).toEqual({ error: 'Agent: missing execute clause.' });
     expect(parseAgentCommand('execute')).toEqual({ error: 'Agent: missing task after execute.' });
-    expect(parseAgentCommand('execute task.md in a tab')).toMatchObject({ task: 'task.md', parameters: 'in a tab' });
+    expect(parseAgentCommand('execute task.md in a tab')).toMatchObject({ task: 'task.md', parameters: ' in a tab' });
+  });
+
+  it('preserves unmatched quotes and significant whitespace in the task parameter tail', () => {
+    expect(parseAgentCommand('execute task.md   --value  "unfinished'))
+      .toMatchObject({ task: 'task.md', parameters: '   --value  "unfinished' });
+    expect(parseAgentCommand('execute task.md "unfinished'))
+      .toMatchObject({ task: 'task.md', parameters: ' "unfinished' });
   });
 
   it('rejects duplicate singleton clauses and malformed or missing values', () => {

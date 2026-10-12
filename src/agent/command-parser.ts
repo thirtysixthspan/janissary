@@ -43,6 +43,16 @@ function tokenize(input: string): Token[] | undefined {
     if (!token) return undefined;
     tokens.push(token);
     index = token.end;
+    const previous = tokens.at(-2)?.value.toLowerCase();
+    const beforePrevious = tokens.at(-3)?.value.toLowerCase();
+    const executeContinuesHeader = ['in', 'with', 'using'].includes(previous ?? '')
+      || previous === 'on'
+      || (previous === 'a' && beforePrevious === 'in')
+      || (previous === 'skill' && beforePrevious === 'with')
+      || (previous === 'effort' && beforePrevious === 'with')
+      || (previous === 'model' && beforePrevious === 'using')
+      || (['group', 'workspace'].includes(previous ?? '') && beforePrevious === 'in');
+    if (token.value.toLowerCase() === 'execute' && !executeContinuesHeader) break;
   }
   return tokens;
 }
@@ -116,8 +126,10 @@ export function parseAgentCommand(input: string): AgentLaunch | { error: string 
     index = step.next;
   }
   if (words[index]?.toLowerCase() !== 'execute') return parseError('missing execute clause');
-  const taskToken = tokens[index + 1];
-  if (!taskToken?.value) return parseError('missing task after execute');
-  const parameters = input.slice(taskToken.end).trimStart();
+  const taskStart = skipSpaces(input, tokens[index]?.end ?? input.length);
+  const taskToken = readToken(input, taskStart);
+  if (!taskToken) return parseError('malformed quoted value');
+  if (!taskToken.value) return parseError('missing task after execute');
+  const parameters = input.slice(taskToken.end);
   return Object.freeze({ ...fields, skills: Object.freeze([...new Set(fields.skills)]), task: taskToken.value, parameters });
 }
