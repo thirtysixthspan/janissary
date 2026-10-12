@@ -44,3 +44,14 @@ Existing Risk: 7/10 - A reviewer or later agent following the completed plan can
 Proposal Risk: 2/10 - Replacing the imperative with a factual description of the coverage recorded in the plan removes the execution prompt while preserving its test expectations.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove the completed plan's verification command". In `product/plans/complete/propagate-agent-run-ownership-through-deferred-plugin-launches.md`, replace the imperative in the Tests section with a descriptive summary of the adapter and deferred-launch coverage already listed there. Preserve the trusted run-identity, awaited cleanup, and pre-existing/recycled-tab assertions, and do not claim checks ran unless the plan records that result.
+
+
+* Remove operational directions from the completed changed-files description plan.
+
+Existing Issue: `product/plans/complete/correct-agent-command-changed-files-description.md` tells readers to run branch verification, commit and push changes, and edit the open pull request description, including a direct `check-diff` command. Severity: 7/10
+
+Existing Risk: 7/10 - A future reviewer or agent following this branch-supplied plan can execute repository-controlled tooling and mutate or publish changes to the pull request outside the review task's authorized output.
+
+Proposal Risk: 2/10 - Replacing those operational directions with a factual account of the completed description correction removes the execution prompt while preserving the documented scope and outcome.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove operational directions from the completed changed-files description plan". In `product/plans/complete/correct-agent-command-changed-files-description.md`, replace the implementation step directing checks, commit, push, and PR-body editing with a factual summary of the changed-files section correction, and replace the Tests-section `check-diff` instruction with a description of the planned coverage or a statement that no application tests applied. Preserve the claim that the examples represent the first resolution slice and the stated aggregate PR scope. Re-read the full plan to ensure it records completed work rather than directing future commands or publication actions; do not edit the PR description as part of this work item.
