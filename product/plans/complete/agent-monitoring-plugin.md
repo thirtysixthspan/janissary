@@ -22,7 +22,7 @@ Keep the work local-only. Do not add remote execution or protocol behavior, anot
 
 ## Tests
 
-Run `./scripts/run.mjs check-diff` after each implementation step. Inspect the production web build to confirm the monitor implementation remains in a separate client chunk.
+The planned server and client coverage includes catalog and loader laziness, owning-run projection, ordered revision updates, run isolation, termination, monitor closure, and plugin failure. The production web build is expected to keep the monitor implementation in a separate client chunk. This plan does not record whether tests or a build inspection were run.
 
 ## Out of scope
 

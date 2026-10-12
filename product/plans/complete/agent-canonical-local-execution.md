@@ -22,7 +22,7 @@ The run owns its ACP process and ends on caller termination, normal completion, 
 
 ## Tests
 
-Add colocated tests for the registered command's structured result and lifecycle, command extraction and exact canonical-name authorization, awaited question outcomes, provider errors, abort races, cleanup warnings, and invocation-isolated nested output. Run `./scripts/run.mjs check-diff` after each implementation step.
+The planned colocated coverage includes the registered command's structured result and lifecycle, command extraction and exact canonical-name authorization, awaited question outcomes, provider errors, abort races, cleanup warnings, and invocation-isolated nested output. This plan does not record whether those tests were run.
 
 ## Out of scope
 

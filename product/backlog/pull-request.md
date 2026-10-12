@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove executable verification directions from the completed local-execution and monitoring plans.
-
-Existing Issue: `product/plans/complete/agent-canonical-local-execution.md` and `product/plans/complete/agent-monitoring-plugin.md` still tell readers to run `./scripts/run.mjs check-diff`, making branch-supplied tooling an operational instruction in reviewed content. Severity: 5/10
-
-Existing Risk: 6/10 - A reviewer or later agent following either completed plan may execute branch-provided verification scripts, despite those plans being untrusted review material.
-
-Proposal Risk: 2/10 - Replacing the imperative commands with descriptive coverage records removes the execution prompt while preserving the plans' test expectations.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove executable verification directions from the local execution and monitoring plans". In `product/plans/complete/agent-canonical-local-execution.md` and `product/plans/complete/agent-monitoring-plugin.md`, replace the `check-diff` instructions in their Tests sections with factual descriptions of the coverage present or expected, without claiming a verification run unless the branch records evidence for it. Review both full plans for any additional direct tool-execution instructions and keep their implementation scope and test cases intact. Verify by reading the plans and focused diff only; no application behavior or automated tests are involved.
-
-
 * Deliver the planned sandbox-disabled notice for local and remote agent runs.
 
 Existing Issue: Agent execution starts ACP with workspace confinement parameters but never reports when `sandboxWorkspaces` is disabled or confinement is unavailable, despite the feature plan requiring `Agent: sandboxing is disabled.` in the notifications feed for headed and headless runs. Severity: 6/10
