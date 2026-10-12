@@ -16,6 +16,7 @@ const declaration: TabPluginDeclaration = {
 
 const HANDLER_TIMEOUT_MS = 20;
 const SLOW_COMMAND_MS = 100;
+const SLOW_TERMINATION_CLEANUP_MS = 5100;
 
 function setup(intent: TabPluginActivation['intent']) {
   const plugin = {
@@ -93,5 +94,67 @@ describe('dispatching an application command from a plugin intent', () => {
 
     expect(fixture.dispatchLineWithOutput).toHaveBeenCalledOnce();
     expect(fixture.host.statusFor('shell')).toMatchObject({ state: 'disabled' });
+  });
+});
+
+function setupMonitorTermination(cleanupDelayMs: number, runAvailable = true) {
+  const plugin = {
+    id: 'agent-monitor', instanceKey: 'monitor-run-1', schemaVersion: 1,
+    payload: {}, fileRefs: [], sourceLabel: 'agent1', agentRunId: 'run-1',
+  };
+  const tabs = [
+    { label: 'agent1', dotColor: '#fff', log: [] },
+    { label: 'agent-monitor', dotColor: '#123', log: [], plugin },
+  ];
+  const closeTab = vi.fn();
+  const finish = vi.fn(async () => new Promise<void>((resolve) => {
+    setTimeout(resolve, cleanupDelayMs);
+  }));
+  const runs = new Map(runAvailable ? [['run-1', {}]] : []);
+  const managers = {
+    tab: { tabs, append: vi.fn(), closeTab, cur: () => tabs[0], ...fakeNotificationsHost(tabs) },
+    agent: { runs, finish },
+    notifications: new NotificationQueue(),
+  } as unknown as Managers;
+  const declaration: TabPluginDeclaration = {
+    id: 'agent-monitor', version: '1.0.0', apiVersion: TAB_PLUGIN_API_VERSION,
+    payloadSchemaVersion: 1, tabLabelPrefix: 'agent-monitor', fileExtensions: {},
+    agentMonitor: true, capabilities: ['terminateAgentRun'],
+  };
+  const activation: TabPluginActivation = {
+    isPayload: () => true,
+    opener: { inline: () => {}, external: () => {} },
+    intent: async (_request, capabilities) => {
+      await capabilities.terminateAgentRun();
+      return null;
+    },
+  };
+  const host = new TabPluginHost(
+    managers, [declaration], { 'agent-monitor': async () => ({ activate: () => activation }) },
+    { handlerTimeoutMs: HANDLER_TIMEOUT_MS },
+  );
+  return { closeTab, finish, host };
+}
+
+describe('terminating an agent run from its monitor', () => {
+  it('does not charge slow host cleanup to the plugin or close its monitor', async () => {
+    const fixture = setupMonitorTermination(SLOW_TERMINATION_CLEANUP_MS);
+
+    await expect(fixture.host.intent('agent-monitor', 'terminate', null)).resolves.toBeNull();
+
+    expect(fixture.finish).toHaveBeenCalledWith('run-1', 'terminated');
+    expect(fixture.host.statusFor('agent-monitor')).toMatchObject({ state: 'active' });
+    expect(fixture.closeTab).not.toHaveBeenCalled();
+  }, 10_000);
+
+  it('rejects termination when the monitor has no available bound run', async () => {
+    const fixture = setupMonitorTermination(0, false);
+
+    await expect(fixture.host.intent('agent-monitor', 'terminate', null))
+      .rejects.toThrow('agent run is no longer available');
+
+    expect(fixture.finish).not.toHaveBeenCalled();
+    expect(fixture.host.statusFor('agent-monitor')).toMatchObject({ state: 'active' });
+    expect(fixture.closeTab).not.toHaveBeenCalled();
   });
 });

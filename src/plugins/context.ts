@@ -232,7 +232,9 @@ export function createPluginContext(
       const runId = declaration.agentMonitor === true && tab?.plugin?.id === declaration.id
         ? tab.plugin.agentRunId : undefined;
       if (!runId || !managers.agent.runs.has(runId)) throw new TabPluginRejection('agent run is no longer available');
-      await managers.agent.finish(runId, 'terminated');
+      await (deadline
+        ? deadline.exempt(() => managers.agent.finish(runId, 'terminated'))
+        : managers.agent.finish(runId, 'terminated'));
     },
     reportFailure: (reason) => {
       throw reason instanceof Error ? reason : new Error(String(reason));
