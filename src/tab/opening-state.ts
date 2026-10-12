@@ -6,6 +6,7 @@ import type {
 import type { Managers } from '../managers.js';
 import { TabQueueState } from './queue-state.js';
 import * as tabOpeners from './openers.js';
+import { openEditorTab } from './open-editor-tab.js';
 
 export abstract class TabOpeningState extends TabQueueState {
   abstract tabs: Tab[];
@@ -52,8 +53,10 @@ abstract recordTerminal(ptyId: string, label: string, pluginId: string): void;
     tabOpeners.updatePluginTab(this, pluginId, instanceKey, factory);
   }
 
-  openEditorTab(view: EditorView): string {
-    return tabOpeners.openEditorTab(this, view, (label, path) => this.managers.editorWatch.watch(label, path));
+  openEditorTab(view: EditorView, onCreated?: (label: string) => void): string {
+    return openEditorTab(
+      this, view, (label, path) => this.managers.editorWatch.watch(label, path), onCreated,
+    );
   }
 
   openFilesTab(view: FileNavigatorView): void {

@@ -106,10 +106,13 @@ export function createPluginContext(
     },
     // A launch origin is the one origin with no tab behind it, and the tab it opens takes its label.
     // The source is the tab `originTab` reports: the answering tab when one asked, the origin otherwise.
-    openOrFocusTab: (instanceKey, factory) => withRunAllocation(managers, origin.runId, () => {
+    openOrFocusTab: (instanceKey, factory) => withRunAllocation(managers, origin.runId, (registerTab) => {
       if (!isEnabled()) return;
       const answering = answeringLabel !== undefined && managers.tab.byLabel(answeringLabel) ? answeringLabel : undefined;
       if (!answering && !origin.launch && managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
+      const existed = managers.tab.tabs.some(
+        (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
+      );
       managers.tab.openPluginTab(
         declaration.id,
         declaration.tabLabelPrefix,
@@ -123,6 +126,12 @@ export function createPluginContext(
         },
         origin.launch ? { label: origin.label } : declaration.agentNamedTabs === true,
       );
+      if (!existed) {
+        const created = managers.tab.tabs.find(
+          (tab) => tab.plugin?.id === declaration.id && tab.plugin.instanceKey === instanceKey,
+        );
+        if (created) registerTab(created.label);
+      }
     }),
     ...launchCapabilities({
       managers, declaration, origin, answeringLabel, isEnabled, deferred,
@@ -173,17 +182,19 @@ export function createPluginContext(
     openInEditor: (absPath, line) => {
       if (!isEnabled() || !isInsideRoot(managers.tab.launchDir, absPath)) return;
       if (origin.runId && managers.agent.isAgentRun(origin.runId)) {
-        void withRunAllocationAsync(managers, origin.runId, async () => {
+        void withRunAllocationAsync(managers, origin.runId, async (registerTab) => {
           if (!isEnabled()) return;
           await managers.openFile.editForCommand(
-            `${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId,
+            `${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId, registerTab,
           );
         });
         return;
       }
-      withRunAllocation(managers, origin.runId, () => {
+      withRunAllocation(managers, origin.runId, (registerTab) => {
         if (origin.runId) {
-          managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId);
+          managers.openFile.edit(
+            `${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId, registerTab,
+          );
         } else {
           managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
         }

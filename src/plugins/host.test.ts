@@ -52,7 +52,11 @@ function makeManagers() {
   const managers = {
     tab: { tabs, append, closeTab, openPluginTab, cur: () => tabs[0], ...fakeNotificationsHost(tabs) },
     openFile: { runAs },
-    agent: { trackCreatedTab },
+    agent: {
+      trackCreatedTab,
+      isAgentRun: () => true,
+      beginAllocation: () => () => {},
+    },
     notifications: new NotificationQueue(),
   } as unknown as Managers;
   return { append, closeTab, managers, openPluginTab, runAs, trackCreatedTab };
@@ -109,7 +113,7 @@ describe('TabPluginHost commands', () => {
     expect(Object.keys(capabilities ?? {})).not.toContain('invocationId');
     expect(Object.keys(capabilities ?? {})).not.toContain('runId');
     expect(runAs).toHaveBeenCalledWith(
-      'open ~/clips/*.fixture', 'fixture  ~/clips/*.fixture', 'janus', 'fixture', 'run-1',
+      'open ~/clips/*.fixture', 'fixture  ~/clips/*.fixture', 'janus', 'fixture', 'run-1', expect.any(Function),
     );
     expect(host.statusFor('fixture')?.state).toBe('active');
   });
@@ -118,7 +122,9 @@ describe('TabPluginHost commands', () => {
     const { managers, openPluginTab, trackCreatedTab } = makeManagers();
     openPluginTab.mockImplementation((
       _id: string, _prefix: string, _key: string, _schema: number, _source: string,
-    ) => { managers.tab.tabs.push({ label: 'fixture-1' } as Tab); });
+    ) => {
+      managers.tab.tabs.push({ label: 'fixture-1', plugin: { id: 'fixture', instanceKey: 'one' } } as Tab);
+    });
     const opener = vi.fn((_file: string, capabilities: TabPluginServerCapabilities) => {
       capabilities.openOrFocusTab('one', () => ({ title: 'Fixture', payload: {} }));
     });
@@ -132,9 +138,12 @@ describe('TabPluginHost commands', () => {
   });
 
   it('tracks a new plugin tab even when its run-owned handler fails', async () => {
-    const { managers, trackCreatedTab } = makeManagers();
+    const { managers, openPluginTab, trackCreatedTab } = makeManagers();
+    openPluginTab.mockImplementation((
+      _id: string, _prefix: string, _key: string, _schema: number, _source: string,
+    ) => { managers.tab.tabs.push({ label: 'fixture-1', plugin: { id: 'fixture', instanceKey: 'one' } } as Tab); });
     const inline = vi.fn((_file: string, capabilities: TabPluginServerCapabilities) => {
-      managers.tab.tabs.push({ label: 'fixture-1' } as Tab);
+      capabilities.openOrFocusTab('one', () => ({ title: 'Fixture', payload: {} }));
       capabilities.reportFailure('handler failed');
     });
     const host = new TabPluginHost(

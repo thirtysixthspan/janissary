@@ -190,7 +190,7 @@ describe('launchTab with a workspace', () => {
     host.dispose();
   });
 
-  it('waits for an admitted claimed-file allocation and disposes its tab before run cleanup settles', async () => {
+  it('keeps an unrelated tab out of paused claimed-file ownership and waits for its release', async () => {
     const managers = makeManagers();
     managers.agent = new AgentRunManager(managers);
     managers.openFile = new OpenFileManager(managers);
@@ -201,11 +201,12 @@ describe('launchTab with a workspace', () => {
     let allocationHasStarted = false;
     const { promise: allocationStarted, resolve: signalStarted } = Promise.withResolvers<void>();
     const { promise: resume, resolve: resumeAllocation } = Promise.withResolvers<void>();
-    vi.spyOn(managers.openFile, 'runAs').mockImplementation(async () => {
+    vi.spyOn(managers.openFile, 'runAs').mockImplementation(async (...args) => {
       allocationHasStarted = true;
       signalStarted();
       await resume;
       managers.tab.tabs.push(makeTab('raced-editor', '#abc', 2));
+      args[5]?.('raced-editor');
     });
     const ready: TabPluginLaunchReadyHandler = (_event, capabilities) => {
       capabilities.openClaimedFiles('late.fixture');
@@ -225,10 +226,12 @@ describe('launchTab with a workspace', () => {
     })();
     await Promise.resolve();
     expect(finished).toBe(false);
+    managers.tab.tabs.push(makeTab('unrelated', '#def', 3));
     resumeAllocation();
     await finishing;
 
     expect(managers.tab.byLabel('raced-editor')).toBeUndefined();
+    expect(managers.tab.byLabel('unrelated')).toBeDefined();
     expect(pluginTabs(managers)).toHaveLength(0);
     host.dispose();
   });

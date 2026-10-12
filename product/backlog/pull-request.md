@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Keep unrelated tabs out of agent-run ownership when deferred allocations overlap.
-
-Existing Issue: `withRunAllocationAsync` in `src/plugins/run-allocation.ts` and `invokePlugin` in `src/plugins/invoke.ts` infer ownership by comparing all tab labels before and after asynchronous work, so tabs created by unrelated concurrent user actions can be recorded as agent-owned. Severity: 7/10
-
-Existing Risk: 7/10 - When the run finishes, its cleanup can close an unrelated tab opened during the awaited plugin callback or claimed-file allocation, potentially discarding that tab's active work.
-
-Proposal Risk: 2/10 - Recording ownership at the actual run-scoped allocation boundary prevents unrelated concurrent tabs from entering cleanup while preserving awaited release of tabs the run created.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "scope deferred tab ownership to the allocating agent run". Replace global before/after tab-label snapshots in `src/plugins/run-allocation.ts` and `src/plugins/invoke.ts` with ownership registration tied to the specific run-scoped allocation at the point a tab is created, preserving tab incarnation checks so a closed and recycled label is never adopted. Review the run-owned plugin launch, `openClaimedFiles`, `openInEditor`, and deferred plugin callback paths to ensure every admitted allocation registers its own tab before its completion signal is released, and unrelated calls remain unowned. Extend `src/plugins/launch-tab.test.ts` with a deferred callback or claimed-file allocation paused while an unrelated tab is created; finishing the run must close its own allocated tab, await its release, and leave the unrelated tab open. Keep the existing late-callback refusal, admitted-allocation wait, recycled-tab, and existing-tab preservation cases passing; no test currently covers this concurrent unrelated-tab race.
-
-
 * Remove the completed deferred-allocation plan's executable verification directive.
 
 Existing Issue: `product/plans/complete/revalidate-deferred-plugin-allocations.md` still directs readers to execute `check-diff` after each implementation step, despite recording completed work. Severity: 5/10

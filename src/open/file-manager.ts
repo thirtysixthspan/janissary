@@ -33,10 +33,11 @@ export class OpenFileManager {
   // command is a second route into that plugin's own opener, not a second route into the registry.
   runAs(
     parsedCommand: string, displayCommand: string, label: string, requireOpener?: string, runId?: string,
+    registerTab?: (label: string) => void,
   ): Promise<void> {
     return Promise.resolve(runOpenCommand(
       this.managers, parsedCommand, displayCommand, label,
-      (c, l) => this.buildContext(c, l, runId), (p, cwd) => expandGlob(p, cwd),
+      (c, l) => this.buildContext(c, l, runId, registerTab), (p, cwd) => expandGlob(p, cwd),
       (c, l, f, ext, ctx) => this.openOne(c, l, f, ext, ctx, requireOpener),
       requireOpener,
     ));
@@ -52,8 +53,9 @@ export class OpenFileManager {
   // the presentation simply has no use for it — an image has no lines.
   edit(
     command: string, target: string, label: string, line?: number, runId?: string,
+    registerTab?: (label: string) => void,
   ): EditResult | undefined {
-    const result = this.editResolved(command, target, label, line, runId);
+    const result = this.editResolved(command, target, label, line, runId, registerTab);
     if (result instanceof Promise) {
       void result;
       return undefined;
@@ -63,17 +65,19 @@ export class OpenFileManager {
 
   async editForCommand(
     command: string, target: string, label: string, line?: number, runId?: string,
+    registerTab?: (label: string) => void,
   ): Promise<EditResult | undefined> {
-    return await this.editResolved(command, target, label, line, runId);
+    return await this.editResolved(command, target, label, line, runId, registerTab);
   }
 
   private editResolved(
     command: string, target: string, label: string, line?: number, runId?: string,
+    registerTab?: (label: string) => void,
   ): EditResult | undefined | Promise<EditResult | undefined> {
     const cwd = this.managers.tab.cwdOf(label) ?? process.cwd();
     const expanded = expandUserPath(target, { root: this.managers.tab.launchDir });
     const file = path.isAbsolute(expanded) ? expanded : path.resolve(cwd, expanded);
-    const context = this.buildContext(command, label, runId);
+    const context = this.buildContext(command, label, runId, registerTab);
     const opener = openerForExtension(path.extname(file));
     if (opener?.editsOwnFiles) return this.openPluginEdit(opener.name, file, context);
     if (this.isSyncPath(file, label)) return this.openSynced(file, context, line);
@@ -109,18 +113,13 @@ export class OpenFileManager {
     mkdirSync(resolved);
   }
 
-  private buildContext(command: string, label: string, runId?: string): OpenContext {
-    const trackCreatedTab = (createdLabel: string) => {
-      if (runId && createdLabel !== label) this.managers.agent.trackCreatedTab(runId, createdLabel);
-    };
+  private buildContext(command: string, label: string, runId?: string, registerTab?: (label: string) => void): OpenContext {
+    const onTabCreated = registerTab ?? (runId
+      ? (createdLabel: string) => this.managers.agent.trackCreatedTab(runId, createdLabel)
+      : undefined);
     return {
       note: (text) => this.managers.tab.append(label, { input: command, output: text }),
-      openEditorTab: (view) => {
-        const before = new Set((this.managers.tab.tabs ?? []).map((tab) => tab.label));
-        const createdLabel = this.managers.tab.openEditorTab(view);
-        if (!before.has(createdLabel)) trackCreatedTab(createdLabel);
-        return createdLabel;
-      },
+      openEditorTab: (view) => this.managers.tab.openEditorTab(view, onTabCreated),
       registerFile: (absPath) => this.managers.tab.registerFile(absPath),
       openExternally: (absPath) => didOsOpen(absPath),
       runPluginOpener: (pluginId, presentation, file) => this.managers.plugins.runOpener(

@@ -28,9 +28,11 @@ async function runOpenRequests(
   targets: readonly string[],
 ): Promise<void> {
   for (const target of targets) {
-    await withRunAllocationAsync(managers, origin.runId, async () => {
+    await withRunAllocationAsync(managers, origin.runId, async (registerTab) => {
       if (origin.runId) {
-        await managers.openFile.runAs(`open ${target}`, origin.command, origin.label, declaration.id, origin.runId);
+        await managers.openFile.runAs(
+          `open ${target}`, origin.command, origin.label, declaration.id, origin.runId, registerTab,
+        );
       } else {
         await managers.openFile.runAs(`open ${target}`, origin.command, origin.label, declaration.id);
       }
@@ -53,7 +55,6 @@ export async function invokePlugin<Result>(
   adoptPtyId?: string,
 ): Promise<PluginCallOutcome<Result>> {
   const openRequests: string[] = [];
-  const existingTabs = new Set((managers.tab.tabs ?? []).map((tab) => tab.label));
   const deferred: DeferredPluginCall | undefined = disable && {
     invoke: (later, laterAnswering) => invokePlugin(
       managers, declaration, activation, origin, isEnabled, timeoutMs, later, laterAnswering, disable, adoptPtyId,
@@ -71,12 +72,6 @@ export async function invokePlugin<Result>(
   } catch (error) {
     if (error instanceof TabPluginRejection) return { status: 'rejected', reason: error.message };
     return { status: 'failed', error };
-  } finally {
-    if (origin.runId) {
-      for (const tab of managers.tab.tabs) {
-        if (!existingTabs.has(tab.label)) managers.agent.trackCreatedTab(origin.runId, tab.label);
-      }
-    }
   }
 
   // Deliberately outside the guarded call: the host owns glob expansion and per-file dispatch, so

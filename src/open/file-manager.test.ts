@@ -36,10 +36,11 @@ describe('OpenFileManager.edit', () => {
         launchDir: '/working',
         append: vi.fn(),
         registerFile: (file: string) => `/open/${file.length}`,
-        openEditorTab: (view: { path: string }) => {
+        openEditorTab: (view: { path: string }, onCreated?: (label: string) => void) => {
           const existing = tabs.find((tab) => tab.editor?.path === view.path);
           if (existing) return existing.label;
           tabs.push({ label: 'editor', editor: { path: view.path } });
+          onCreated?.('editor');
           return 'editor';
         },
       },

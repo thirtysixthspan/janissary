@@ -1,45 +1,39 @@
 import type { Managers } from '../managers.js';
 
+export type RegisterRunTab = (label: string) => void;
+
 export function withRunAllocation<Result>(
-  managers: Managers, runId: string | undefined, allocate: () => Result,
+  managers: Managers, runId: string | undefined, allocate: (registerTab: RegisterRunTab) => Result,
 ): Result | undefined {
-  if (!runId) return allocate();
+  const ignoreTab: RegisterRunTab = () => {};
+  if (!runId) return allocate(ignoreTab);
   const isAgentRun = managers.agent?.isAgentRun;
-  if (!isAgentRun?.call(managers.agent, runId)) return allocate();
+  if (!isAgentRun?.call(managers.agent, runId)) return allocate(ignoreTab);
   const begin = managers.agent?.beginAllocation;
-  if (!begin) return allocate();
+  if (!begin) return allocate(ignoreTab);
   const complete = begin.call(managers.agent, runId);
   if (!complete) return undefined;
-  const existing = new Set(managers.tab.tabs.map((tab) => tab.label));
   try {
-    return allocate();
+    return allocate((label) => managers.agent.trackCreatedTab(runId, label));
   } finally {
-    trackNewTabs(managers, runId, existing);
     complete();
   }
 }
 
 export async function withRunAllocationAsync(
-  managers: Managers, runId: string | undefined, allocate: () => Promise<void>,
+  managers: Managers, runId: string | undefined, allocate: (registerTab: RegisterRunTab) => Promise<void>,
 ): Promise<void> {
-  if (!runId) return allocate();
+  const ignoreTab: RegisterRunTab = () => {};
+  if (!runId) return allocate(ignoreTab);
   const isAgentRun = managers.agent?.isAgentRun;
-  if (!isAgentRun?.call(managers.agent, runId)) return allocate();
+  if (!isAgentRun?.call(managers.agent, runId)) return allocate(ignoreTab);
   const begin = managers.agent?.beginAllocation;
-  if (!begin) return allocate();
+  if (!begin) return allocate(ignoreTab);
   const complete = begin.call(managers.agent, runId);
   if (!complete) return;
-  const existing = new Set(managers.tab.tabs.map((tab) => tab.label));
   try {
-    await allocate();
+    await allocate((label) => managers.agent.trackCreatedTab(runId, label));
   } finally {
-    trackNewTabs(managers, runId, existing);
     complete();
-  }
-}
-
-function trackNewTabs(managers: Managers, runId: string, existing: ReadonlySet<string>): void {
-  for (const tab of managers.tab.tabs) {
-    if (!existing.has(tab.label)) managers.agent.trackCreatedTab(runId, tab.label);
   }
 }
