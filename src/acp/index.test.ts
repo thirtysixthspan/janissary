@@ -7,6 +7,7 @@ import { getProjectTokens } from '../project/tokens.js';
 import type * as SandboxModule from '../sandbox/index.js';
 import type { SandboxOptions } from '../sandbox/index.js';
 import type { AcpInfo, AcpSession } from './types.js';
+import { shutdownProcessTree } from './process-tree.js';
 
 // The sandbox is left real — these tests drive actual subprocesses — but every call's options are
 // recorded, so what `connectAcp` decides to inject can be asserted without mocking the spawn itself.
@@ -316,6 +317,18 @@ describe('connectAcp — the agent process ending', () => {
     expect(session.shutdown()).toBe(shutdown);
     await expect(shutdown).resolves.toBeUndefined();
     expect(errors).toEqual([]);
+  });
+
+  it('escalates and rejects when owned process-tree shutdown cannot be confirmed', async () => {
+    const process = { pid: 42 } as NodeJS.ChildProcess;
+    const signals: NodeJS.Signals[] = [];
+
+    await expect(shutdownProcessTree(process, Promise.resolve(), 20, 40, {
+      isRunning: () => true,
+      signal: (_proc, signal) => { signals.push(signal); },
+    })).rejects.toThrow('ACP process tree shutdown timed out.');
+
+    expect(signals).toEqual(['SIGTERM', 'SIGKILL']);
   });
 
   // The agent's stdout is the ACP transport, so stderr is the only place it can say why it went.

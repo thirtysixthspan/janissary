@@ -167,6 +167,24 @@ describe('agent command', () => {
     expect(cleanupError).toHaveBeenCalledOnce();
   });
 
+  it('retains a completed result and reports bounded ACP shutdown failure as a cleanup warning', async () => {
+    let runRecord: { addResource: (id: string, cleanup: () => Promise<void>) => void } | undefined;
+    execute.mockImplementation(async (agentRun) => {
+      runRecord = agentRun as typeof runRecord;
+      runRecord.addResource('acp:timeout', async () => { throw new Error('ACP process tree shutdown timed out.'); });
+      return { status: 'completed', response: 'Finished.', cleanupWarnings: [] };
+    });
+
+    await expect(run()).resolves.toEqual({
+      status: 'completed',
+      response: 'Finished.',
+      cleanupWarnings: ['ACP process tree shutdown timed out.'],
+    });
+    expect(runRecord).toBeDefined();
+    expect(workspaceRelease).toHaveBeenCalledOnce();
+    expect(managers.agent.runs.size).toBe(0);
+  });
+
   it('opens a run-bound monitor for headed local runs and detaches it when closed', async () => {
     const gate = Promise.withResolvers<AgentResult>();
     execute.mockReturnValue(gate.promise);

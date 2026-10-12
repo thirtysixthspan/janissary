@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Await local ACP process exit before releasing the agent workspace and settling its result.
-
-Existing Issue: Local agent cleanup calls `AcpSession.kill()` and immediately continues to workspace release, while `connectAcp` only signals the child process and does not await its exit or terminate its descendants. Severity: 7/10
-
-Existing Risk: 7/10 - A completed or terminated run can report cleanup complete and release or delete its workspace while the ACP process or a subprocess it started is still running against that workspace.
-
-Proposal Risk: 3/10 - Awaiting bounded process-tree teardown before workspace release makes cleanup completion meaningful, though a process that cannot be confirmed stopped must still be reported as an uncertainty.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "await local ACP process-tree teardown before releasing agent resources". Extend the ACP session lifecycle in `src/acp/types.ts` and `src/acp/index.ts` with an awaitable shutdown that signals the owned process and resolves only after its exit is observed; ensure owned descendants are terminated as well. In `src/agent/execute.ts`, register that awaited shutdown as the run's ACP cleanup so `AgentRun.cleanup()` in `src/agent/run.ts` cannot proceed to workspace release until process teardown settles. Bound the wait and surface timeout or process errors as cleanup warnings without replacing the task outcome. Add focused coverage in `src/acp/index.test.ts` proving shutdown waits for exit and handles descendants or timeout, plus agent lifecycle coverage proving workspace release follows ACP teardown and a timeout is retained as a warning. Existing ACP consumers must keep their current prompt and permission behavior.
-
-
 * Correct the pull request description's claim that local task and skill files resolve from the caller's current directory.
 
 Existing Issue: The PR description says local task and selected skill files resolve from the caller's current working directory, but local runs provision a fresh workspace by default and resolve those files there, borrowing the caller directory only when it is already a tracked workspace. Severity: 7/10

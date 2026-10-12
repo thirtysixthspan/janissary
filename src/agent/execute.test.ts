@@ -40,7 +40,7 @@ describe('executeAgentRun', () => {
   it.each([false, true])('reports the local confinement result: %s', async (sandboxed) => {
     sandboxWillConfine.mockReturnValue(sandboxed);
     const { managers, callerTab, feed } = notificationManagers();
-    connectAcp.mockReturnValue({ prompt: vi.fn(), kill: vi.fn() });
+    connectAcp.mockReturnValue({ prompt: vi.fn(), kill: vi.fn(), shutdown: vi.fn(async () => {}) });
     runAcpToolLoop.mockImplementation((_session, _prompt, _dependencies, handlers) => {
       handlers.endTurn('Finished.');
       handlers.finished('answered', Infinity);
@@ -107,8 +107,8 @@ describe('executeAgentRun', () => {
   });
 
   it('starts local ACP in the execution workspace while retaining caller context', async () => {
-    const kill = vi.fn();
-    connectAcp.mockReturnValue({ prompt: vi.fn(), kill });
+    const shutdown = vi.fn(async () => {});
+    connectAcp.mockReturnValue({ prompt: vi.fn(), kill: vi.fn(), shutdown });
     runAcpToolLoop.mockImplementation((_session, _prompt, _dependencies, handlers) => {
       handlers.endTurn('Finished.');
       handlers.finished('answered', Infinity);
@@ -131,12 +131,12 @@ describe('executeAgentRun', () => {
     } satisfies Partial<AcpOptions>));
     expect(run.caller.cwd).toBe('/source');
     await run.finish('completed');
-    expect(kill).toHaveBeenCalledOnce();
+    expect(shutdown).toHaveBeenCalledOnce();
   });
 
   it('passes only selected installed skill directories to local ACP', async () => {
     const skillFile = path.join(janissaryRoot(), 'skills', 'ask-user', 'SKILL.md');
-    connectAcp.mockReturnValue({ prompt: vi.fn(), kill: vi.fn() });
+    connectAcp.mockReturnValue({ prompt: vi.fn(), kill: vi.fn(), shutdown: vi.fn(async () => {}) });
     runAcpToolLoop.mockImplementation((_session, _prompt, _dependencies, handlers) => {
       handlers.endTurn('Finished.');
       handlers.finished('answered', Infinity);
@@ -165,5 +165,40 @@ describe('executeAgentRun', () => {
       installedSkillDirs: [path.dirname(skillFile)],
     } satisfies Partial<AcpOptions>));
     await run.finish('completed');
+  });
+
+  it('waits for local ACP shutdown before releasing the run workspace', async () => {
+    const shutdown = Promise.withResolvers<void>();
+    const shutdownStarted = Promise.withResolvers<void>();
+    const releaseWorkspace = vi.fn(async () => {});
+    connectAcp.mockReturnValue({
+      prompt: vi.fn(),
+      kill: vi.fn(),
+      shutdown: vi.fn(() => {
+        shutdownStarted.resolve();
+        return shutdown.promise;
+      }),
+    });
+    runAcpToolLoop.mockImplementation((_session, _prompt, _dependencies, handlers) => {
+      handlers.endTurn('Finished.');
+      handlers.finished('answered', Infinity);
+    });
+    const model = modelsFor('opencode')[0];
+    if (!model) throw new Error('No OpenCode model is available for this test.');
+    const caller = { label: 'janus', incarnation: 'caller-1', cwd: '/source', context: [] };
+    const run = new AgentRun(caller, { taskPath: '/clone/task.md', taskText: 'Task', skills: [], grants: [] },
+      releaseWorkspace, undefined, '/clone');
+    const invocation: CommandInvocationContext = {
+      runId: run.id, invocationId: 'invocation-1', caller, signal: run.abortController.signal,
+    };
+    await executeAgentRun(run, invocation, model, undefined, '', {} as never);
+
+    const finishing = run.finish('completed');
+    await shutdownStarted.promise;
+    expect(releaseWorkspace).not.toHaveBeenCalled();
+
+    shutdown.resolve();
+    await finishing;
+    expect(releaseWorkspace).toHaveBeenCalledOnce();
   });
 });

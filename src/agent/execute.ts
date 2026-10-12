@@ -100,13 +100,14 @@ export async function executeAgentRun(
       },
       onError: reportConnectionFailure,
     });
+  const localSession = remoteSession ? undefined : session;
   if (!remote && !sandboxWillConfine(run.executionDir)) {
     notify(managers, 'manual', run.caller.label, 'Agent: sandboxing is disabled.');
   }
   run.addResource(`acp:${run.id}`, async () => {
     if (remoteSession) {
       if (!await remoteSession.release()) throw new Error('Remote agent close was not acknowledged.');
-    } else session.kill();
+    } else if (localSession) await localSession.shutdown();
   });
   if (remoteSession) {
     let timeout: ReturnType<typeof setTimeout> | undefined;

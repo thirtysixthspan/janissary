@@ -15,6 +15,7 @@ import { decidePermission } from './tools.js';
 import { errorText } from '../error-text.js';
 import { childOutputTail, withChildOutput } from '../child-output.js';
 import { selectAcpEffort } from './effort.js';
+import { shutdownProcessTree } from './process-tree.js';
 
 /**
  * Connect to an arbitrary ACP agent launched as a subprocess and drive it as an ACP
@@ -44,9 +45,13 @@ export function connectAcp(options: AcpOptions): AcpSession {
     cwd: options.cwd,
     stdio: ['pipe', 'pipe', 'pipe'],
     env,
+    detached: process.platform !== 'win32',
   });
-  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-  const exited = new Promise<void>((resolve) => { proc.once('exit', resolve); });
+  const exited = new Promise<void>((resolve) => {
+    proc.once('exit', resolve);
+    proc.once('error', resolve);
+  });
+  let spawnError: Error | undefined;
   // Set by `kill()` before the subprocess is signalled, so a deliberate close reports nothing.
   let killed = false;
   // The agent's stdout is the ACP transport, so stderr is where it says anything a human needs —
@@ -54,7 +59,10 @@ export function connectAcp(options: AcpOptions): AcpSession {
   // read it before, so all of that was discarded and the tab was told only that the agent had gone.
   const stderr = childOutputTail();
   stderr.watch(proc.stderr);
-  proc.on('error', (error) => options.onError(withChildOutput(`failed to start ACP agent: ${error.message}`, stderr.text())));
+  proc.on('error', (error) => {
+    spawnError = error;
+    options.onError(withChildOutput(`failed to start ACP agent: ${error.message}`, stderr.text()));
+  });
   // Without this, an agent that dies after a successful spawn leaves a session whose next prompt
   // writes into a closed stdin and never returns. The connection-level channel already means "this
   // session is gone", so the caller can drop it and start a fresh one.
@@ -139,8 +147,8 @@ export function connectAcp(options: AcpOptions): AcpSession {
     shutdown: () => {
       shutdownPromise ??= (async () => {
         killed = true;
-        try { proc.kill(); } catch { /* already gone */ }
-        await exited;
+        if (spawnError) throw spawnError;
+        await shutdownProcessTree(proc, exited);
       })();
       return shutdownPromise;
     },
