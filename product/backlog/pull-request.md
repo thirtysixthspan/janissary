@@ -33,3 +33,36 @@ Existing Risk: 7/10 - A reviewer or agent following the completed plan can execu
 Proposal Risk: 2/10 - Replacing the imperative with a descriptive verification record removes this execution prompt while retaining the late-disposal coverage and stated outcome.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove the executable verification directive from the late-resource plan". In `product/plans/complete/clean-up-late-agent-resources.md`, replace the `check-diff` instruction in the Tests section with a factual description of the late-resource behavior coverage, without claiming a verification run unless the branch records evidence for it. Review the completed plan for further direct tool-execution instructions and keep its implementation scope and late-disposer requirements intact. Verify by reading the plan and its focused diff; no application behavior or automated tests are involved.
+
+
+* Correct the pull request description's claim that the full command will become available in later subplans, since this diff already registers and executes local tasks.
+
+Existing Issue: The pull request body says the first implementation only adds parser and resolver groundwork and that the full command becomes available as later subplans land, while this aggregate diff registers `agent` and executes headless local ACP tasks. Severity: 4/10
+
+Existing Risk: 4/10 - Reviewers and users relying on the pull request summary can miss the executable behavior and its limits, including that workspace, remote-host, and monitoring selectors are rejected.
+
+Proposal Risk: 2/10 - A summary aligned with the shipped local execution path and its unsupported selectors would make the implemented surface and remaining work clear, though the command's actual behavior would be unchanged.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "correct the description of the implemented local agent command". Update only the description's “What” and behavior summary to state that the diff includes the canonical headless local `agent` command, awaited results and cleanup, and the currently unsupported remote-host, named-workspace, and tab-monitoring selectors. Keep its parser, resolver, skill-grant, and test details, but remove the claim that command execution will arrive only in later subplans. Verify the revised description against `src/commands/agent.ts`, `src/agent/execute.ts`, and `documentation/user-documentation/advanced-agents/agent-command.md` without changing implementation or plan files.
+
+
+* Deliver the original plan's fresh-workspace isolation for local agent runs instead of executing against the caller's source directory.
+
+Existing Issue: The original feature plan requires a fresh workspace by default and task/skill resolution from that provisioned workspace, but `src/commands/agent.ts` resolves from the caller's cwd and `src/agent/execute.ts` launches ACP in that same directory; the current spec and user guide also codify caller-directory execution. Severity: 8/10
+
+Existing Risk: 8/10 - An autonomous run can modify or delete the caller's working tree and consume uncommitted task or skill files, while its sandbox only confines writes to that same source directory rather than an isolated clone.
+
+Proposal Risk: 3/10 - Provisioning a disposable clone before resolution and running ACP inside it protects source files and makes task snapshots match the planned execution workspace, while sandbox configuration and provider behavior still govern activity within the clone.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "run local agent tasks in an isolated workspace". In `src/commands/agent.ts`, provision a fresh workspace by default through `WorkspaceManager.create`, await readiness before resolving task and skill files, and honor the planned borrowed-workspace selection only when its reference is tracked. Resolve snapshots against that execution workspace, pass its directory as both `cwd` and `workspaceDir` to `connectAcp` in `src/agent/execute.ts`, and register provisioning cancellation and workspace release with the run so failures and caller termination release resources before settling the result. Emit the specified sandbox-disabled notice to notifications when the isolated workspace cannot be confined. Update `product/specs/agent-command.md` and the agent command user guide to distinguish execution workspace from caller context. Extend `src/commands/agent.test.ts`, `src/agent/task-resolution.test.ts`, and workspace lifecycle tests to prove source edits are not used, task lookup uses the clone, and provisioning/cancellation/cleanup failures preserve the result and release references; no current test covers these integrated side effects.
+
+
+* Restrict nested agent runs to their parent's selected skills and effective command grants.
+
+Existing Issue: `src/agent/command-tools.ts` permits a run granted the canonical `agent` command to dispatch another agent without carrying parent-run policy, and `src/commands/agent.ts` resolves the child's requested skills and grants independently from the parent's snapshot. Severity: 8/10
+
+Existing Risk: 8/10 - A task with only the `agent` grant can launch a child that selects another installed or project skill and gains commands such as `question` that the parent was never authorized to use.
+
+Proposal Risk: 3/10 - Propagating trusted parent identity and immutable policy through invocation context, then checking child skill source/name/instruction equality and intersecting grants, prevents nested runs from widening the authority tree; filesystem and provider tools remain governed by the existing run policy.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "cap nested agent skills and command grants". Extend the server-owned invocation context in `src/commands/types.ts` and `src/command/manager.ts` with parent run identity, and have `src/agent/command-tools.ts` propagate it only through canonical nested dispatch. In `src/commands/agent.ts`, resolve each child skill and compare its source category, name, and captured instruction contents with the parent's immutable snapshot before prompting; reject unmatched skills and intersect the child's sidecar grants with the parent's effective grants. Track child ownership in `src/agent/run.ts` and `src/agent/manager.ts` so parent termination aborts and awaits its children. Update `product/specs/agent-command.md` and add tests in `src/agent/command-tools.test.ts`, `src/commands/agent.test.ts`, and `src/agent/manager.test.ts` proving an agent grant cannot add a skill or command, matching skills cannot broaden grants, and parent termination cleans up child runs; these nested-policy paths currently have no coverage.
