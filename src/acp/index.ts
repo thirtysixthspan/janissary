@@ -45,6 +45,8 @@ export function connectAcp(options: AcpOptions): AcpSession {
     stdio: ['pipe', 'pipe', 'pipe'],
     env,
   });
+  // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
+  const exited = new Promise<void>((resolve) => { proc.once('exit', resolve); });
   // Set by `kill()` before the subprocess is signalled, so a deliberate close reports nothing.
   let killed = false;
   // The agent's stdout is the ACP transport, so stderr is where it says anything a human needs —
@@ -90,6 +92,7 @@ export function connectAcp(options: AcpOptions): AcpSession {
 
   let sessionId: string | undefined;
   let ready: Promise<void> | undefined;
+  let shutdownPromise: Promise<void> | undefined;
   const ensureSession = (): Promise<void> => {
     ready ??= (async () => {
       const init = await conn.initialize({ protocolVersion: PROTOCOL_VERSION, clientCapabilities: {} });
@@ -132,6 +135,14 @@ export function connectAcp(options: AcpOptions): AcpSession {
     kill: () => {
       killed = true;
       try { proc.kill(); } catch { /* already gone */ }
+    },
+    shutdown: () => {
+      shutdownPromise ??= (async () => {
+        killed = true;
+        try { proc.kill(); } catch { /* already gone */ }
+        await exited;
+      })();
+      return shutdownPromise;
     },
   };
 }

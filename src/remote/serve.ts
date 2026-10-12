@@ -81,8 +81,8 @@ export class RemoteServer {
   // Kill every process this server started and remove its workspace clone, then exit. A pending
   // clone offer goes first: an unanswered prompt is declined, and a running root clone is killed and
   // its partial folder removed.
-  shutdown(code: number): void {
-    if (this.stopping) return;
+  shutdown(code: number): Promise<void> {
+    if (this.stopping) return Promise.resolve();
     this.stopping = true;
     this.offer?.cancel();
     this.peer?.dispose();
@@ -90,10 +90,17 @@ export class RemoteServer {
     this.transcripts.dispose();
     this.files?.dispose();
     this.processes?.killAll();
+    const finish = (released: boolean) => {
+      if (released) this.workspaces?.removeAll();
+      this.exit(code);
+    };
     // Before the clone goes, so it is never removed out from under a live agent.
-    this.acp?.dispose();
-    this.workspaces?.removeAll();
-    this.exit(code);
+    const disposed = this.acp?.dispose() ?? true;
+    if (typeof disposed === 'boolean') {
+      finish(disposed);
+      return Promise.resolve();
+    }
+    return (async () => { finish(await disposed); })();
   }
 
   // Every way this server can refuse or fail reaches the local side the same way: the placeholder

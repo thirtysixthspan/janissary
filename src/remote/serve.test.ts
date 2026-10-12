@@ -30,6 +30,7 @@ const acpMock = vi.hoisted(() => ({
   options: [] as { cwd: string; workspaceDir?: string }[],
   prompt: vi.fn(),
   kill: vi.fn(),
+  shutdown: vi.fn(),
   killedBeforeCloneRemoved: false,
 }));
 vi.mock('../acp/index.js', () => ({
@@ -40,6 +41,11 @@ vi.mock('../acp/index.js', () => ({
       kill: () => {
         acpMock.killedBeforeCloneRemoved = existsSync(options.cwd);
         acpMock.kill();
+      },
+      shutdown: () => {
+        acpMock.killedBeforeCloneRemoved = existsSync(options.cwd);
+        acpMock.kill();
+        return acpMock.shutdown();
       },
     };
   }),
@@ -141,6 +147,7 @@ describe('RemoteServer', () => {
     acpMock.options.length = 0;
     acpMock.prompt.mockReset();
     acpMock.kill.mockReset();
+    acpMock.shutdown.mockReset().mockResolvedValue(undefined);
     acpMock.killedBeforeCloneRemoved = false;
   });
 
@@ -298,12 +305,37 @@ describe('RemoteServer', () => {
     const dir = frames.find((f) => f.type === 'workspace-ready')!.dir;
     server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
 
-    server.shutdown(0);
+    const shutdown = Promise.withResolvers<void>();
+    acpMock.shutdown.mockImplementation(() => shutdown.promise);
+    const stopping = server.shutdown(0);
 
-    // Ordered: the clone must never be removed out from under a live agent.
+    // The clone remains while shutdown is pending, then is removed after the exit is observed.
     expect(acpMock.killedBeforeCloneRemoved).toBe(true);
+    expect(existsSync(dir)).toBe(true);
+    expect(exit).not.toHaveBeenCalled();
+    shutdown.resolve();
+    await stopping;
     expect(existsSync(dir)).toBe(false);
     expect(exit).toHaveBeenCalledWith(0);
+  });
+
+  it('keeps the clone when bounded ACP teardown cannot confirm process exit', async () => {
+    const { server, frames, exit } = makeServer();
+    server.receive(`${encodeFrame({ type: 'provision', label: 'claude-unconfirmed-cleanup' })}\n`);
+    await vi.waitFor(() => expect(frames.some((f) => f.type === 'workspace-ready')).toBe(true));
+    const dir = frames.find((f) => f.type === 'workspace-ready')!.dir;
+    server.receive(`${encodeFrame(ACP_OPEN_FRAME)}\n`);
+    acpMock.shutdown.mockImplementation(() => new Promise<void>(() => {}));
+    vi.useFakeTimers();
+
+    const stopping = server.shutdown(0);
+    expect(existsSync(dir)).toBe(true);
+    await vi.advanceTimersByTimeAsync(5000);
+    await stopping;
+
+    expect(existsSync(dir)).toBe(true);
+    expect(exit).toHaveBeenCalledWith(0);
+    vi.useRealTimers();
   });
 
   it('refuses an ACP frame that arrives before a workspace exists', () => {

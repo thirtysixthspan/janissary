@@ -117,6 +117,9 @@ export function createRemoteAcpSession(
   return {
     ready,
     release,
+    shutdown: async () => {
+      if (!await release()) throw new Error('Remote agent close was not acknowledged.');
+    },
     prompt: (text, handlers) => {
       current = handlers;
       channel.send({ type: 'acp-prompt', id, text });

@@ -610,6 +610,12 @@ cleanup warning rather than reported as a successful release. Detaching or losin
 aborts the run; the far side stops autonomous run-only sessions on detach, while the local result
 reports release as uncertain if the acknowledgment could not cross the lost transport.
 
+A positive ACP close acknowledgment means the remote child process's exit was observed. The remote
+waits up to five seconds for that exit; a timeout or shutdown error returns `released: false`, which
+the local agent run records through its existing cleanup-warning path. During remote-server shutdown,
+the workspace is removed only after all owned ACP children have exited. If bounded teardown cannot
+confirm exit, the server leaves the workspace in place rather than removing it underneath a process.
+
 Isolation is the remote's own. `remote-serve` applies the same workspace sandbox
 policy the local server applies, which means isolation is active when the remote is macOS and
 inactive otherwise; the remote's own isolation notice — not this machine's — is what appears in the

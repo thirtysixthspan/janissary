@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Wait for remote ACP process teardown before acknowledging agent resource release.
-
-Existing Issue: `RemoteAcp.close` in `src/remote/serve-acp.ts` calls the synchronous `AcpSession.kill()` and immediately replies with `released: true`, while `connectAcp` in `src/acp/index.ts` only signals the child and does not await its exit. The local run therefore treats a kill request as confirmed resource cleanup. Severity: 7/10
-
-Existing Risk: 7/10 - The structured result can settle while the remote ACP process or its descendants are still terminating, and a subsequent workspace shutdown may race resources the close acknowledgment claimed were already released.
-
-Proposal Risk: 3/10 - A bounded wait for observed process exit before a positive acknowledgment, with a negative acknowledgment on timeout, makes successful cleanup meaningful while still allowing the local run to report uncertainty.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "await remote ACP process teardown before acknowledging release". Extend the ACP session lifecycle in `src/acp/types.ts` and `src/acp/index.ts` with an awaitable close operation that resolves when the child process exits, and have `RemoteAcp.close` in `src/remote/serve-acp.ts` await it before sending `acp-closed` with `released: true`; send a negative acknowledgment when bounded teardown cannot be confirmed. Preserve idempotent close behavior and ensure remote shutdown does not remove the workspace before owned ACP children have exited. Update `src/remote/serve-acp.test.ts` and `src/remote/acp-session.test.ts` to assert that the acknowledgment follows process exit, timeout produces the existing cleanup warning path, and concurrent close requests do not double-release resources. No current remote cleanup test proves that a positive acknowledgment follows actual child exit.
-
-
 * Deliver the plan's remote execution host and workspace metadata in the agent monitor instead of the local caller's details.
 
 Existing Issue: `AgentRunManager.create` in `src/agent/manager.ts` always records `host: 'Local'` and `workspace: options.caller.cwd`, while `src/commands/agent.ts` creates remote runs without passing their resolved remote host or workspace. Severity: 5/10

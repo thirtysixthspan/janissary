@@ -64,6 +64,8 @@ A remote shell or other remote plugin tab uses its existing channel and workspac
 
 Before the channel is attached, the operation refuses with `ACP: the remote session is still connecting.`. A dropped channel tears down its tab and connection. Late chunks from a reset or closed session cannot update its replacement. The existing remote platform confinement rules remain unchanged. Remote shell tabs offer ACP through their command bar; harness tabs remain terminal surfaces. See [[remote-server]].
 
+Closing a remote ACP session waits for the remote child process to exit before reporting it released. If exit is not observed within five seconds, release is reported as uncertain and an owning agent run records a cleanup warning. Repeated and concurrent closes share one shutdown attempt.
+
 ## Errors and notifications
 
 Fatal errors are shown as `ACP: <message>` and forget the connection. Existing bounded stderr details remain available: the last 2000 characters, restricted to the last ten lines. Prompt errors appear as `ACP error: <message>` in the response entry. Existing start, state-change, and rate-limit notification events remain in use.

@@ -4,6 +4,28 @@ import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
 import { sandboxWillConfine } from '../sandbox/confinement.js';
 
+const ACP_SHUTDOWN_TIMEOUT_MS = 5000;
+
+async function stopSession(session: AcpSession): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<false>((resolve) => {
+    timer = setTimeout(() => { resolve(false); }, ACP_SHUTDOWN_TIMEOUT_MS);
+  });
+  const stopped = (async () => {
+    try {
+      await session.shutdown();
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  try {
+    return await Promise.race([stopped, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 // The remote server's ACP holder: one live agent session per session id, driven by the ACP frames.
 // The JSON-RPC never leaves this machine — the local side sends prompts and gets reply text back —
 // so nothing `opencode` writes to stderr can land mid-frame in a stream that must be strictly
@@ -18,6 +40,9 @@ import { sandboxWillConfine } from '../sandbox/confinement.js';
 // what it is told, in the workspace it was provisioned with, exactly as `RemoteProcesses` does.
 export class RemoteAcp {
   private sessions = new Map<string, { session: AcpSession; runOnly: boolean }>();
+  private closing = new Map<string, { session: AcpSession; pending: Promise<boolean> }>();
+  private closed = new Map<string, boolean>();
+  private unreleased = new Map<string, AcpSession>();
 
   constructor(
     private send: (frame: ServerFrame) => void,
@@ -27,7 +52,8 @@ export class RemoteAcp {
 
   open(frame: Extract<ClientFrame, { type: 'acp-open' }>): void {
     const id = frame.id;
-    if (this.sessions.has(id)) return;
+    if (this.sessions.has(id) || this.closing.has(id) || this.unreleased.has(id)) return;
+    this.closed.delete(id);
     const sandboxed = sandboxWillConfine(this.workspaceDir);
     const session = connectAcp({
       command: frame.command,
@@ -76,19 +102,26 @@ export class RemoteAcp {
     });
   }
 
-  close(id: string): void {
+  async close(id: string): Promise<void> {
+    let closing = this.closing.get(id);
     const entry = this.sessions.get(id);
-    let released = true;
-    try { entry?.session.kill(); } catch { released = false; }
-    this.sessions.delete(id);
+    if (!closing && entry) {
+      this.sessions.delete(id);
+      closing = this.trackShutdown(id, entry.session);
+    }
+    const previous = this.closed.get(id);
+    const released = closing ? await closing.pending : previous ?? true;
+    this.closed.set(id, released);
+    if (released) this.unreleased.delete(id);
+    else if (closing) this.unreleased.set(id, closing.session);
     this.send({ type: 'acp-closed', id, released });
   }
 
   detachRuns(): void {
     for (const [id, entry] of this.sessions) {
       if (!entry.runOnly) continue;
-      entry.session.kill();
       this.sessions.delete(id);
+      this.trackShutdown(id, entry.session);
     }
   }
 
@@ -102,11 +135,39 @@ export class RemoteAcp {
     return undefined;
   }
 
-  // Every session this server holds, for shutdown. `connectAcp`'s `kill()` suppresses its own exit
+  // Every session this server holds, for shutdown. `connectAcp`'s `shutdown()` suppresses its own exit
   // reporting, so neither path produces a spurious fatal error frame for a session that was closed
   // deliberately.
-  dispose(): void {
-    for (const { session } of this.sessions.values()) session.kill();
+  dispose(): boolean | Promise<boolean> {
+    const pending: { id: string; session: AcpSession; result: Promise<boolean> }[] = [];
+    for (const [id, closing] of this.closing) pending.push({ id, ...closing, result: closing.pending });
+    for (const [id, entry] of this.sessions) pending.push({ id, session: entry.session, result: stopSession(entry.session) });
+    for (const [id, session] of this.unreleased) {
+      if (!this.closing.has(id)) pending.push({ id, session, result: stopSession(session) });
+    }
     this.sessions.clear();
+    if (pending.length === 0) return true;
+    return this.disposalResult(pending);
+  }
+
+  private async disposalResult(pending: { id: string; session: AcpSession; result: Promise<boolean> }[]): Promise<boolean> {
+    const outcomes = await Promise.all(pending.map(async ({ id, session, result }) => {
+      const released = await result;
+      if (released) this.unreleased.delete(id);
+      else this.unreleased.set(id, session);
+      return released;
+    }));
+    return outcomes.every(Boolean);
+  }
+
+  private trackShutdown(id: string, session: AcpSession): { session: AcpSession; pending: Promise<boolean> } {
+    const closing = { session, pending: stopSession(session) };
+    this.closing.set(id, closing);
+    this.unreleased.set(id, session);
+    void closing.pending.then((released) => {
+      if (this.closing.get(id) === closing) this.closing.delete(id);
+      if (released) this.unreleased.delete(id);
+    });
+    return closing;
   }
 }

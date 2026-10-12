@@ -98,6 +98,17 @@ describe('createRemoteAcpSession — opening', () => {
     expect(s.detached).toEqual(['racp1']);
   });
 
+  it('shares one acknowledgment wait across concurrent release calls', async () => {
+    const s = makeSession();
+    const first = s.session.release();
+    const second = s.session.release();
+
+    expect(second).toBe(first);
+    expect(s.sent.filter((frame) => frame.type === 'acp-close')).toHaveLength(1);
+    s.listener().onClosed(true);
+    await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+  });
+
   it('bounds an unacknowledged close and reports uncertain release', async () => {
     vi.useFakeTimers();
     const s = makeSession();

@@ -307,6 +307,17 @@ describe('connectAcp — the agent process ending', () => {
     expect(errors).toEqual([]);
   });
 
+  it('awaits the observed child exit and shares concurrent shutdown calls', async () => {
+    const { session, errors } = connect('basic');
+    await prompt(session, 'hi');
+
+    const shutdown = session.shutdown();
+
+    expect(session.shutdown()).toBe(shutdown);
+    await expect(shutdown).resolves.toBeUndefined();
+    expect(errors).toEqual([]);
+  });
+
   // The agent's stdout is the ACP transport, so stderr is the only place it can say why it went.
   // Nobody read it before, which left the tab holding "ACP agent exited." and nothing else — and
   // the useful half is exactly the part that says what to do next.
