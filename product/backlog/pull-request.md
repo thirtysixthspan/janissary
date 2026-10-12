@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Revalidate run ownership before deferred plugin launches can allocate tabs.
-
-Existing Issue: The plugin command adapter preserves the trusted run ID through deferred launch-ready callbacks, but those callbacks and their host allocation capabilities can still create tabs after the run has ended, when `AgentRunManager.trackCreatedTab` can no longer attach the tabs to cleanup. Severity: 7/10
-
-Existing Risk: 7/10 - A workspace-backed plugin callback that resumes after task completion can leave a tab and its resources alive beyond the agent run that created the launch, violating the run's cleanup boundary.
-
-Proposal Risk: 3/10 - Rejecting run-scoped allocations once their owner is ending prevents post-cleanup resources from escaping, though allocation and run termination still need a serialized or revalidated boundary to avoid races.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "revalidate deferred plugin allocations against agent run ownership". In `src/plugins/launch-tab.ts`, `runReady` and its deferred launch path, and `src/plugins/context.ts` host allocation capabilities, check that `origin.runId` still identifies a live run before invoking a ready callback or accepting a run-owned tab/editor allocation. In `src/plugins/invoke.ts` and `src/agent/manager.ts`, make late ownership registration fail closed and ensure any allocation that races with run termination is disposed with its resource-release completion accounted for before cleanup settles. Keep run IDs internal to the host and preserve ordinary plugin launches without run ownership. Extend `src/plugins/launch-tab.test.ts` and the relevant plugin host tests with a deferred workspace-ready callback that resumes after run termination and a callback paused across termination; assert no run-created tab or resource survives and the run result does not settle before raced cleanup completes. Update `product/specs/agent-command.md` to state the resulting late-allocation behavior.
-
-
 * Remove the security risk of a completed plan directing reviewers to run branch-controlled verification commands.
 
 Existing Issue: `product/plans/complete/propagate-agent-run-ownership-through-deferred-plugin-launches.md` directs readers to run diff-scoped lint, typecheck, and server tests from the reviewed branch. Severity: 6/10

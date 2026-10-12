@@ -88,8 +88,12 @@ export function launchRemotePluginTab(
   const { managers, declaration, deferred } = input;
   const closeRetry = retry;
   const onReady = async () => {
+    if (input.origin.runId && managers.agent.isAgentRun(input.origin.runId)
+      && !managers.agent.isLive(input.origin.runId)) return;
     const live = managers.tab.pluginTabByInstanceKey(declaration.id, instanceKey);
-    if (!live || !deferred || !input.isEnabled()) return;
+    if (!live || !deferred || !input.isEnabled()
+      || (input.origin.runId !== undefined && managers.agent.isAgentRun(input.origin.runId)
+        && !managers.agent.isLive(input.origin.runId))) return;
     live.plugin.busy = false;
     const workspace = remote.cwd();
     managers.tab.setCwd(label, workspace);

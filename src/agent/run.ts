@@ -44,6 +44,7 @@ export class AgentRun {
   private listeners = new Set<(view: AgentRunView) => void>();
   private cleanupPromise?: Promise<void>;
   private cleanups: (() => void | Promise<void>)[] = [];
+  private allocations = new Set<Promise<void>>();
   private currentSnapshot: AgentSnapshot;
 
   constructor(
@@ -110,7 +111,7 @@ export class AgentRun {
   }
 
   addResource(id: string, cleanup: () => void | Promise<void>): void {
-    if (this.outcome) {
+    if (this.outcome && this.allocations.size === 0) {
       let cleanupResult: void | Promise<void>;
       try {
         cleanupResult = cleanup();
@@ -122,6 +123,17 @@ export class AgentRun {
     }
     this.childIds.add(id);
     this.cleanups.push(cleanup);
+  }
+
+  beginAllocation(): (() => void) | undefined {
+    if (this.outcome) return undefined;
+    const resolver: { resolve: () => void } = { resolve: () => {} };
+    const pending = new Promise<void>((resolve) => { resolver.resolve = resolve; });
+    this.allocations.add(pending);
+    return () => {
+      if (!this.allocations.delete(pending)) return;
+      resolver.resolve();
+    };
   }
 
   addCreatedTab(label: string, cleanup: () => void | Promise<void>): void {
@@ -150,6 +162,7 @@ export class AgentRun {
 
   private async cleanup(): Promise<void> {
     const failures: unknown[] = [];
+    await Promise.all(this.allocations);
     const cleanups = this.cleanups;
     this.cleanups = [];
     for (const cleanup of cleanups) {

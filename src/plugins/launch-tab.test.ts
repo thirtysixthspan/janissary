@@ -37,7 +37,7 @@ const manifest: TabPluginDeclaration = {
   payloadSchemaVersion: 1, tabLabelPrefix: 'shell', fileExtensions: {},
   command: 'ltfixture',
   spawnTerminal: true,
-  capabilities: ['launchTab', 'updateTab', 'rejectRequest', 'openInEditor'],
+  capabilities: ['launchTab', 'updateTab', 'rejectRequest', 'openInEditor', 'openOrFocusTab', 'openClaimedFiles'],
 };
 
 type Clone = { resolve: () => void; reject: (error: Error) => void };
@@ -135,6 +135,12 @@ function launch(
 
 const pluginTabs = (managers: Managers) => managers.tab.tabs.filter((tab) => tab.plugin?.id === 'lt');
 const settle = () => vi.advanceTimersByTimeAsync(0);
+const flushMicrotasks = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
+};
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -151,6 +157,82 @@ afterEach(() => {
 });
 
 describe('launchTab with a workspace', () => {
+  it('refuses a ready callback allocation when the callback resumes after run termination', async () => {
+    const managers = makeManagers();
+    managers.agent = new AgentRunManager(managers);
+    const caller = managers.agent.captureCaller(managers.tab.tabs[0]!);
+    const run = managers.agent.create({
+      caller, snapshot: { taskPath: 'task.md', taskText: '', skills: [], grants: [] },
+    });
+    let readyHasStarted = false;
+    const { promise: readyStarted, resolve: signalReady } = Promise.withResolvers<void>();
+    const { promise: resume, resolve: resumeReady } = Promise.withResolvers<void>();
+    const ready: TabPluginLaunchReadyHandler = async (_event, capabilities) => {
+      readyHasStarted = true;
+      signalReady();
+      await resume;
+      capabilities.openOrFocusTab('late', () => ({ title: 'late', payload: {} }));
+    };
+    const { host } = hostFor(managers, { name: 'docs', workspace: { offline: true } }, ready);
+    managers.tab.closeTab = vi.fn(async (index: number) => { managers.tab.tabs.splice(index, 1); });
+
+    await launch(host, managers, 'docs', { label: caller.label, command: 'ltfixture docs', runId: run.id });
+    clones.get('docs')?.resolve();
+    await flushMicrotasks();
+    expect(readyHasStarted).toBe(true);
+    await readyStarted;
+    await managers.agent.finish(run.id, 'completed');
+    resumeReady();
+    await flushMicrotasks();
+
+    expect(pluginTabs(managers)).toHaveLength(0);
+    expect(managers.tab.tabs.some((tab) => tab.label === 'late')).toBe(false);
+    host.dispose();
+  });
+
+  it('waits for an admitted claimed-file allocation and disposes its tab before run cleanup settles', async () => {
+    const managers = makeManagers();
+    managers.agent = new AgentRunManager(managers);
+    managers.openFile = new OpenFileManager(managers);
+    const caller = managers.agent.captureCaller(managers.tab.tabs[0]!);
+    const run = managers.agent.create({
+      caller, snapshot: { taskPath: 'task.md', taskText: '', skills: [], grants: [] },
+    });
+    let allocationHasStarted = false;
+    const { promise: allocationStarted, resolve: signalStarted } = Promise.withResolvers<void>();
+    const { promise: resume, resolve: resumeAllocation } = Promise.withResolvers<void>();
+    vi.spyOn(managers.openFile, 'runAs').mockImplementation(async () => {
+      allocationHasStarted = true;
+      signalStarted();
+      await resume;
+      managers.tab.tabs.push(makeTab('raced-editor', '#abc', 2));
+    });
+    const ready: TabPluginLaunchReadyHandler = (_event, capabilities) => {
+      capabilities.openClaimedFiles('late.fixture');
+    };
+    const { host } = hostFor(managers, { name: 'docs', workspace: { offline: true } }, ready);
+    managers.tab.closeTab = vi.fn(async (index: number) => { managers.tab.tabs.splice(index, 1); });
+
+    await launch(host, managers, 'docs', { label: caller.label, command: 'ltfixture docs', runId: run.id });
+    clones.get('docs')?.resolve();
+    await flushMicrotasks();
+    expect(allocationHasStarted).toBe(true);
+    await allocationStarted;
+    let finished = false;
+    const finishing = (async () => {
+      await managers.agent.finish(run.id, 'completed');
+      finished = true;
+    })();
+    await Promise.resolve();
+    expect(finished).toBe(false);
+    resumeAllocation();
+    await finishing;
+
+    expect(managers.tab.byLabel('raced-editor')).toBeUndefined();
+    expect(pluginTabs(managers)).toHaveLength(0);
+    host.dispose();
+  });
+
   it('tracks deferred launch and editor tabs to the trusted run and awaits cleanup without adopting recycled tabs', async () => {
     const managers = makeManagers();
     managers.agent = new AgentRunManager(managers);

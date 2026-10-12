@@ -9,6 +9,7 @@ import { createPluginContext } from './context.js';
 import type { PluginFailureOrigin } from './failure.js';
 import { guardPluginCall } from './guard.js';
 import type { DeferredPluginCall } from './launch-tab.js';
+import { withRunAllocationAsync } from './run-allocation.js';
 
 // What one guarded host-to-plugin call produced. `rejected` is the plugin answering a bad request
 // and staying enabled; `failed` is the plugin itself breaking and crossing the failure boundary.
@@ -27,11 +28,13 @@ async function runOpenRequests(
   targets: readonly string[],
 ): Promise<void> {
   for (const target of targets) {
-    if (origin.runId) {
-      await managers.openFile.runAs(`open ${target}`, origin.command, origin.label, declaration.id, origin.runId);
-    } else {
-      await managers.openFile.runAs(`open ${target}`, origin.command, origin.label, declaration.id);
-    }
+    await withRunAllocationAsync(managers, origin.runId, async () => {
+      if (origin.runId) {
+        await managers.openFile.runAs(`open ${target}`, origin.command, origin.label, declaration.id, origin.runId);
+      } else {
+        await managers.openFile.runAs(`open ${target}`, origin.command, origin.label, declaration.id);
+      }
+    });
   }
 }
 

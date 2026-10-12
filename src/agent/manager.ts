@@ -8,6 +8,7 @@ import type { AgentRunView } from './types.js';
 
 export class AgentRunManager {
   readonly runs = new Map<string, AgentRun>();
+  private knownRunIds = new Set<string>();
   private disposed = false;
   private pendingViews = new Map<string, AgentRunView>();
   private flushScheduled = false;
@@ -43,6 +44,7 @@ export class AgentRunManager {
       workspace: options.executionWorkspace ?? options.executionDir ?? options.caller.cwd,
     }, options.executionDir ?? options.caller.cwd);
     this.runs.set(run.id, run);
+    this.knownRunIds.add(run.id);
     run.subscribe((view) => {
       for (const label of run.monitorIds) this.pendingViews.set(label, view);
       if (this.flushScheduled) return;
@@ -101,6 +103,19 @@ export class AgentRunManager {
       if (index === -1 || this.managers.tab.tabs[index]?.runtime?.incarnation !== incarnation) return;
       await this.managers.tab.closeTab(index);
     });
+  }
+
+  beginAllocation(runId: string): (() => void) | undefined {
+    return this.runs.get(runId)?.beginAllocation();
+  }
+
+  isLive(runId: string): boolean {
+    const run = this.runs.get(runId);
+    return run !== undefined && run.outcome === undefined;
+  }
+
+  isAgentRun(runId: string): boolean {
+    return this.knownRunIds.has(runId);
   }
 
   dispose(): void | Promise<void> {

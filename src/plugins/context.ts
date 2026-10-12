@@ -29,6 +29,7 @@ import { remoteCapabilities } from './remote-capabilities.js';
 import { ownTabCapabilities } from './own-tab-capabilities.js';
 import { isPluginSettings, validateTabValue } from './tab-value.js';
 import { tabActivityRows } from './activity.js';
+import { withRunAllocation, withRunAllocationAsync } from './run-allocation.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -105,7 +106,7 @@ export function createPluginContext(
     },
     // A launch origin is the one origin with no tab behind it, and the tab it opens takes its label.
     // The source is the tab `originTab` reports: the answering tab when one asked, the origin otherwise.
-    openOrFocusTab: (instanceKey, factory) => {
+    openOrFocusTab: (instanceKey, factory) => withRunAllocation(managers, origin.runId, () => {
       if (!isEnabled()) return;
       const answering = answeringLabel !== undefined && managers.tab.byLabel(answeringLabel) ? answeringLabel : undefined;
       if (!answering && !origin.launch && managers.tab.tabs.every((tab) => tab.label !== origin.label)) return;
@@ -122,7 +123,7 @@ export function createPluginContext(
         },
         origin.launch ? { label: origin.label } : declaration.agentNamedTabs === true,
       );
-    },
+    }),
     ...launchCapabilities({
       managers, declaration, origin, answeringLabel, isEnabled, deferred,
       validate: (value) => { validateTabValue(activation, value); },
@@ -170,13 +171,23 @@ export function createPluginContext(
     // over the filesystem, so the boundary belongs here rather than in each plugin that asks: a
     // plugin holding one could otherwise name any path on the machine and have it opened and served.
     openInEditor: (absPath, line) => {
-      if (!isEnabled()) return;
-      if (!isInsideRoot(managers.tab.launchDir, absPath)) return;
-      if (origin.runId) {
-        managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId);
-      } else {
-        managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
+      if (!isEnabled() || !isInsideRoot(managers.tab.launchDir, absPath)) return;
+      if (origin.runId && managers.agent.isAgentRun(origin.runId)) {
+        void withRunAllocationAsync(managers, origin.runId, async () => {
+          if (!isEnabled()) return;
+          await managers.openFile.editForCommand(
+            `${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId,
+          );
+        });
+        return;
       }
+      withRunAllocation(managers, origin.runId, () => {
+        if (origin.runId) {
+          managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line, origin.runId);
+        } else {
+          managers.openFile.edit(`${declaration.id} ${absPath}:${line}`, absPath, origin.label, line);
+        }
+      });
     },
     topicData: (topic) => {
       requireDeclaredTopic(declaration, topic);
