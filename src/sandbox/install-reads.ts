@@ -11,7 +11,9 @@
 // no `deny` between them, so splitting it out changes nothing about what is permitted — the secret
 // denies still come after both. The params it names are bound in `index.ts` alongside the rest.
 
-export const INSTALL_READ_RULE = `; A process reading its own executable (and the directory it lives in) is always safe to allow —
+export function installReadRule(skillCount: number): string {
+  const skillReads = Array.from({ length: skillCount }, (_, index) => `  (subpath (param "JANISSARY_SKILL_${index}_L"))\n  (subpath (param "JANISSARY_SKILL_${index}_R"))`).join('\n');
+  return `; A process reading its own executable (and the directory it lives in) is always safe to allow —
 ; frameworks the process links against may reopen its own binary for introspection (e.g. Keychain's
 ; SecItemCopyMatching calls CFBundleGetMainBundle, which does exactly this to determine code identity
 ; for ACL matching). Harness binaries installed under $HOME (nvm, ~/.opencode/bin, …) would otherwise
@@ -57,4 +59,6 @@ export const INSTALL_READ_RULE = `; A process reading its own executable (and th
   (subpath (param "JANISSARY_AI_L"))
   (subpath (param "JANISSARY_AI_R"))
   (subpath (param "JANISSARY_SCRIPTS_L"))
-  (subpath (param "JANISSARY_SCRIPTS_R")))`;
+  (subpath (param "JANISSARY_SCRIPTS_R"))
+${skillReads})`;
+}

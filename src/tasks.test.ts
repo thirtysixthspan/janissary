@@ -91,6 +91,13 @@ describe('listTasks', () => {
     expect(listTasks(path.join(root, 'missing'), path.join(janissary, 'missing'))).toEqual([]);
   });
 
+  it('keeps tolerant picker discovery while strict discovery surfaces unreadable task roots', () => {
+    rmSync(path.join(root, 'ai', 'tasks'), { recursive: true, force: true });
+    writeFileSync(path.join(root, 'ai', 'tasks'), 'not a directory');
+    expect(listTasks(root, janissary)).toEqual([]);
+    expect(() => listTasks(root, janissary, true)).toThrow();
+  });
+
   it('returns an empty list when the ai directory has no markdown files', () => {
     writeTask(root, 'notes.txt');
     expect(listTasks(root, janissary)).toEqual([]);

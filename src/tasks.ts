@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { janissaryRoot } from './janissary-root.js';
 import type { TaskRow } from './tab/types.js';
@@ -33,9 +33,12 @@ function walk(dir: string, relativeDir: string, depth: number, source: TaskRow['
 }
 
 // The `ai/tasks` rows under one root, or `[]` when the directory is absent.
-function listOne(root: string, source: TaskRow['source']): TaskRow[] {
+function listOne(root: string, source: TaskRow['source'], strict: boolean): TaskRow[] {
+  const tasksDir = path.join(root, 'ai', 'tasks');
+  if (!existsSync(tasksDir)) return [];
+  if (strict) return walk(tasksDir, '', 0, source);
   try {
-    return walk(path.join(root, 'ai', 'tasks'), '', 0, source);
+    return walk(tasksDir, '', 0, source);
   } catch {
     return [];
   }
@@ -46,10 +49,10 @@ function listOne(root: string, source: TaskRow['source']): TaskRow[] {
 // `path`. Tasks are drawn from two roots — the project working directory and the Janissary install
 // — tagged with their `source`. When the same relative `path` exists in both, the project copy
 // wins and the built-in copy is dropped; project rows are listed before Janissary rows.
-export function listTasks(projectDir: string = process.cwd(), janissaryDir: string = janissaryRoot()): TaskRow[] {
-  const project = listOne(projectDir, 'project');
+export function listTasks(projectDir: string = process.cwd(), janissaryDir: string = janissaryRoot(), strict = false): TaskRow[] {
+  const project = listOne(projectDir, 'project', strict);
   const projectFiles = new Set(project.filter((row) => !row.dir).map((row) => row.path));
-  const builtInRows = listOne(janissaryDir, 'janissary');
+  const builtInRows = listOne(janissaryDir, 'janissary', strict);
   const janissaryFiles = builtInRows.filter((row) => !row.dir && !projectFiles.has(row.path));
   const janissaryPaths = new Set<string>();
   for (const file of janissaryFiles) {

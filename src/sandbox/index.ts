@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { resolvePath, dualPath, darwinUserCacheDir } from './resolve.js';
-import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
+import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE, sandboxProfile } from './profile.js';
 import { browserSpawn, type BrowserSpawnOptions } from './browser/spawn.js';
 import { playwrightPackagePaths } from '../browser/playwright-paths.js';
 import {
@@ -18,6 +18,7 @@ export type SandboxOptions = {
   // Undefined for a non-workspaced tab — callers pass it through unconditionally and
   // `sandboxSpawn` returns the input unchanged rather than requiring a branch at every call site.
   workspaceDir?: string;
+  installedSkillDirs?: string[];
   offline?: boolean;
   // The actual program that ends up running, when `command` is a shell wrapping it (e.g. PTY
   // callers spawn `bash -lc '<command>'`, so `command` is always `bash` — the shell itself, never
@@ -200,12 +201,20 @@ export function sandboxSpawn(
   const playwright = playwrightPackagePaths();
   const janissaryAi = dualPath(janissaryAiDir());
   const janissaryScripts = dualPath(janissaryScriptsDir());
+  const installedSkillsRoot = path.join(janissaryRoot(), 'skills');
+  const installedSkillsRealRoot = resolvePath(installedSkillsRoot);
+  const skillDirs = (options.installedSkillDirs ?? []).filter((skillDir) => {
+    const relative = path.relative(installedSkillsRealRoot, resolvePath(skillDir));
+    return relative !== '' && relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+  });
 
   scrubbed.JANISSARY_NODE = process.execPath;
   scrubbed[JANISSARY_HOME_ENV] = janissaryRoot();
   Object.assign(scrubbed, workspaceEnv(tmpDir, options.tokens ?? {}, dir));
 
-  const profile = options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
+  const profile = skillDirs.length > 0
+    ? sandboxProfile(Boolean(options.offline), skillDirs.length)
+    : options.offline ? SANDBOX_PROFILE_OFFLINE : SANDBOX_PROFILE;
   const dParams = [
     '-D', `WORKSPACE=${workspaceDir}`,
     '-D', `TMPDIR=${tmpDir}`,
@@ -223,6 +232,10 @@ export function sandboxSpawn(
     '-D', `JANISSARY_AI_R=${janissaryAi.real}`,
     '-D', `JANISSARY_SCRIPTS_L=${janissaryScripts.literal}`,
     '-D', `JANISSARY_SCRIPTS_R=${janissaryScripts.real}`,
+    ...skillDirs.flatMap((skillDir, index) => {
+      const dual = dualPath(skillDir);
+      return ['-D', `JANISSARY_SKILL_${index}_L=${dual.literal}`, '-D', `JANISSARY_SKILL_${index}_R=${dual.real}`];
+    }),
     ...homeDParams(home, HOME_WRITE_CARVEOUTS, WRITE_CARVEOUT_PARAMS),
     ...homeDParams(home, HOME_READ_CARVEINS, READ_CARVEIN_PARAMS),
     ...homeDParams(home, SECRET_DENY_PATHS, SECRET_DENY_PARAMS),

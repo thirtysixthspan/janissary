@@ -41,6 +41,7 @@ describe('chrome-extension', () => {
   it('package.json ships the extension directory', () => {
     const pkg = JSON.parse(readFileSync(path.join(extensionDir, '..', 'package.json'), 'utf8')) as { files: string[] };
     expect(pkg.files).toContain('chrome-extension');
+    expect(pkg.files).toContain('skills');
   });
 
   it('manifest.json declares a content script matching every URL, in every frame', () => {

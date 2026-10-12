@@ -214,6 +214,20 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  it.skipIf(!sandboxAvailable())('permits only selected installed skill files and their support files', () => {
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const selectedDir = path.join(janissaryRoot(), 'skills', 'ask-user');
+    const spawn = sandboxSpawn({ workspaceDir, installedSkillDirs: [selectedDir, '/unrelated/skill'] }, 'bash', []);
+    const profile = spawn.args[1] ?? '';
+    expect(profile).toContain('(subpath (param "JANISSARY_SKILL_0_L"))');
+    expect(profile).toContain('(subpath (param "JANISSARY_SKILL_0_R"))');
+    expect(profile).not.toContain('JANISSARY_SKILL_1');
+    expect(profile.lastIndexOf('(with errno ENOENT)')).toBeGreaterThan(profile.indexOf('JANISSARY_SKILL_0_L'));
+    expect(spawn.args).toContain(`JANISSARY_SKILL_0_L=${selectedDir}`);
+    expect(spawn.args).not.toContain('JANISSARY_SKILL_1_L=/unrelated/skill');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
   // Narrower than the installation: ai/ is prompts written to be read by an agent, while the rest of
   // the tree holds janissary's own dependencies and working state.
   it.skipIf(!sandboxAvailable())('does not carve in the install root itself', () => {
