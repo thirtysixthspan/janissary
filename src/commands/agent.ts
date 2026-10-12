@@ -138,7 +138,7 @@ async function runAgent(
     }
 
     const cleanupWarnings: string[] = [];
-    activeRun.setStatus('Cleaning up', result.response);
+    if (activeRun.outcome === undefined) activeRun.setStatus('Cleaning up', result.response);
     try {
       if (managers.agent.runs.has(activeRun.id)) await managers.agent.finish(activeRun.id, result.status);
       else await activeRun.finish(activeRun.outcome ?? result.status);

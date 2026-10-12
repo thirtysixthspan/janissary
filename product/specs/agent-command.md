@@ -88,4 +88,4 @@ The monitor's location identifies where execution runs: local runs show `Local` 
 
 The server owns one run projection and revision. Monitor updates are coalesced and sent only to the monitor tab; its latest projection is also included in the initial state after reconnect. Older revisions for the same run are ignored. The projection and termination operation are scoped to the run bound to that monitor tab. Requests carry no run id, and a monitor cannot select or inspect another run.
 
-`Terminate` ends only the bound run. It is disabled after cleanup begins. Closing the monitor tab or disabling the monitor plugin detaches observation and does not terminate execution. Closing the originating caller still terminates the run.
+`Terminate` ends only the bound run. It is disabled after cleanup begins. Once termination is accepted, the monitor remains `Terminated` through cleanup and in its final projection; a later execution result cannot replace that outcome. Closing the monitor tab or disabling the monitor plugin detaches observation and does not terminate execution. Closing the originating caller still terminates the run.

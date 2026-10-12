@@ -213,6 +213,28 @@ describe('agent command', () => {
     expect(managers.tab.tabs.some((tab) => tab.plugin?.id === 'agent-monitor')).toBe(false);
   });
 
+  it('keeps monitor termination visible after pending execution and cleanup settle', async () => {
+    execute.mockImplementation((agentRun) => new Promise((resolve) => {
+      const activeRun = agentRun as { abortController: AbortController };
+      activeRun.abortController.signal.addEventListener('abort', () => {
+        resolve({ status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] });
+      }, { once: true });
+    }));
+    const pending = run('agent in a tab execute task.md');
+    await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce());
+    const monitor = managers.tab.tabs.find((tab) => tab.plugin?.id === 'agent-monitor');
+    if (!monitor?.plugin?.agentRunId) throw new Error('Monitor run binding missing.');
+    const runId = monitor.plugin.agentRunId;
+
+    await managers.plugins.intent(monitor.label, 'terminate', null);
+    await expect(pending).resolves.toEqual({
+      status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [],
+    });
+
+    expect(workspaceRelease).toHaveBeenCalledOnce();
+    expect(managers.agent.runs.get(runId)?.view().status).toBe('Terminated');
+  });
+
   it('preserves workspace cleanup warnings when headed monitor creation fails', async () => {
     workspaceRelease.mockRejectedValueOnce(new Error('workspace removal failed'));
     vi.spyOn(managers.tab, 'openPluginTab').mockImplementation(() => {

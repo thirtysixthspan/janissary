@@ -91,6 +91,10 @@ export class AgentRun {
   }
 
   setStatus(status: AgentRunView['status'], response?: string): void {
+    const terminalStatus = this.outcome === 'completed' ? 'Completed'
+      : this.outcome === 'failed' ? 'Failed'
+        : this.outcome === 'terminated' ? 'Terminated' : undefined;
+    if (terminalStatus && status !== terminalStatus) return;
     if (this.status === status && (response === undefined || this.response === response)) return;
     this.status = status;
     if (response !== undefined) this.response = response;
