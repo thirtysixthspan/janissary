@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the original plan's fresh-workspace isolation for local agent runs instead of executing against the caller's source directory.
-
-Existing Issue: The original feature plan requires a fresh workspace by default and task/skill resolution from that provisioned workspace, but `src/commands/agent.ts` resolves from the caller's cwd and `src/agent/execute.ts` launches ACP in that same directory; the current spec and user guide also codify caller-directory execution. Severity: 8/10
-
-Existing Risk: 8/10 - An autonomous run can modify or delete the caller's working tree and consume uncommitted task or skill files, while its sandbox only confines writes to that same source directory rather than an isolated clone.
-
-Proposal Risk: 3/10 - Provisioning a disposable clone before resolution and running ACP inside it protects source files and makes task snapshots match the planned execution workspace, while sandbox configuration and provider behavior still govern activity within the clone.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "run local agent tasks in an isolated workspace". In `src/commands/agent.ts`, provision a fresh workspace by default through `WorkspaceManager.create`, await readiness before resolving task and skill files, and honor the planned borrowed-workspace selection only when its reference is tracked. Resolve snapshots against that execution workspace, pass its directory as both `cwd` and `workspaceDir` to `connectAcp` in `src/agent/execute.ts`, and register provisioning cancellation and workspace release with the run so failures and caller termination release resources before settling the result. Emit the specified sandbox-disabled notice to notifications when the isolated workspace cannot be confined. Update `product/specs/agent-command.md` and the agent command user guide to distinguish execution workspace from caller context. Extend `src/commands/agent.test.ts`, `src/agent/task-resolution.test.ts`, and workspace lifecycle tests to prove source edits are not used, task lookup uses the clone, and provisioning/cancellation/cleanup failures preserve the result and release references; no current test covers these integrated side effects.
-
-
 * Restrict nested agent runs to their parent's selected skills and effective command grants.
 
 Existing Issue: `src/agent/command-tools.ts` permits a run granted the canonical `agent` command to dispatch another agent without carrying parent-run policy, and `src/commands/agent.ts` resolves the child's requested skills and grants independently from the parent's snapshot. Severity: 8/10

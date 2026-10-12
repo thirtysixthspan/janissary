@@ -63,8 +63,8 @@ export async function executeAgentRun(
   const session = remoteSession ?? connectAcp({
       command: launch.command,
       args: launch.args,
-      cwd: run.caller.cwd,
-      workspaceDir: run.caller.cwd,
+      cwd: run.executionDir,
+      workspaceDir: run.executionDir,
       env,
       autonomous: true,
       effort: { level: effort ?? 'medium', model: selected },

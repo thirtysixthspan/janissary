@@ -6,7 +6,7 @@ Use `agent` to run an AI task and wait for its final result:
 agent with skill ask-user using model google/gemini-3.1-flash-lite with effort medium execute research/find-bugs.md --area "command dispatch"
 ```
 
-Launch options can appear in any order before `execute`. The task file comes from the current working directory's `ai/tasks/` first, then Janissary's installed tasks. Text after the task filename is passed to the task unchanged. The default model is the OpenCode model from the harness catalog, and the default effort is `medium`. The selected model must advertise the requested effort or the run reports `Agent: unsupported effort "<level>" for model "<model>".`.
+Launch options can appear in any order before `execute`. A local run creates a fresh workspace clone and looks for its task and selected skills there before falling back to Janissary's installed files. Files in your current directory are not copied into the new workspace or used for lookup. If you are already running in a Janissary-tracked workspace, the run uses that workspace and releases its own reference when it ends. Text after the task filename is passed to the task unchanged. The default model is the OpenCode model from the harness catalog, and the default effort is `medium`. The selected model must advertise the requested effort or the run reports `Agent: unsupported effort "<level>" for model "<model>".`.
 
 <img class="agent-float" src="/agents/selim-south.png" alt="" />
 
@@ -19,6 +19,8 @@ Select a skill with `with skill <name>`. Its instructions are included with the 
 Only listed canonical command names are allowed. The agent asks to run one by ending a reply with `janissary <command>`. Questions require the `ask-user` skill and its `question` grant; the task waits until you answer or cancel.
 
 The command returns `Status: completed`, `failed`, or `terminated`, followed by the task response. Cleanup issues appear on separate `Cleanup warning:` lines. Closing the caller tab terminates its run.
+
+Your caller tab stays in its original directory; the agent's files and ACP session use the execution workspace. When local sandbox confinement is disabled or unavailable, the notifications feed shows `Agent: sandboxing is disabled.`.
 
 Use `on <host>` from a tab already connected to that remote host, or `in workspace <label>` to borrow another established remote workspace. The task and selected skills are resolved on that host. Janissary keeps command grants and tool commands on the local server. If the remote does not answer readiness or confirm close, the run fails or reports a cleanup warning rather than waiting indefinitely.
 

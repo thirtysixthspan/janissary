@@ -6,6 +6,12 @@ import { resolveAgentSnapshot } from '../agent/task-resolution.js';
 import { janissaryRoot } from '../janissary-root.js';
 import { agentFailure, executeAgentRun, type AgentResult } from '../agent/execute.js';
 import { appendCommandOutput } from '../command/append.js';
+import { startLocalAgentRun } from '../agent/workspace-execution.js';
+import { invocationFor } from './agent-invocation.js';
+import { notify } from '../notifications/index.js';
+import { getConfig } from '../config.js';
+import { sandboxAvailable } from '../sandbox/index.js';
+import type { AgentSnapshot } from '../agent/types.js';
 
 function formatResult(result: AgentResult): string {
   return [
@@ -13,27 +19,6 @@ function formatResult(result: AgentResult): string {
     result.response,
     ...result.cleanupWarnings.map((warning) => `Cleanup warning: ${warning}`),
   ].join('\n');
-}
-
-function invocationFor(label: string, managers: CommandManagers, invocation?: CommandInvocationContext): CommandInvocationContext {
-  const tab = managers.tab.byLabel(label);
-  if (!tab) throw new Error(`Agent caller not found: ${label}`);
-  const captured = managers.agent.captureCaller(tab);
-  if (invocation?.caller.incarnation && invocation.caller.incarnation !== captured.incarnation) {
-    throw new Error(`Agent caller is stale: ${label}`);
-  }
-  if (invocation) {
-    return Object.freeze({
-      ...invocation,
-      caller: Object.freeze({ ...captured, cwd: invocation.caller.cwd, context: invocation.caller.context }),
-    });
-  }
-  return Object.freeze({
-    runId: randomUUID(),
-    invocationId: randomUUID(),
-    caller: { ...captured, incarnation: captured.incarnation ?? randomUUID() },
-    signal: new AbortController().signal,
-  });
 }
 
 async function runAgent(
@@ -44,8 +29,11 @@ async function runAgent(
 ): Promise<AgentResult> {
   const launch = parseAgentCommand(commandText);
   if ('error' in launch) return { status: 'failed', response: launch.error, cleanupWarnings: [] };
+  let run: ReturnType<CommandManagers['agent']['create']> | undefined;
+  let caller: CommandInvocationContext | undefined;
+  let abortRun: (() => void) | undefined;
   try {
-    const caller = invocationFor(label, managers, invocation);
+    caller = invocationFor(label, managers, invocation);
     if (caller.signal.aborted) return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
     const sourceLabel = launch.workspace ?? label;
     const sourceTab = managers.tab.byLabel(sourceLabel);
@@ -62,83 +50,133 @@ async function runAgent(
     if (useRemote && (!remoteChannel?.attached || !remoteWorkspace)) {
       throw new Error('remote workspace is not ready.');
     }
-    const snapshot = useRemote && remoteChannel
-      ? await remoteChannel.resolveAgentSnapshot(launch.task, [...launch.skills])
-      : resolveAgentSnapshot(launch.task, launch.skills, {
-        workspaceDir: caller.caller.cwd,
+    const capturedCaller = {
+      ...caller.caller,
+      incarnation: caller.caller.incarnation ?? randomUUID(),
+    };
+    let snapshot: AgentSnapshot;
+    let executionDir = caller.caller.cwd;
+    if (useRemote) {
+      const releaseWorkspace = managers.remote.acquireAgentLease(sourceLabel, `agent:${randomUUID()}`);
+      const placeholder: AgentSnapshot = { taskPath: launch.task, taskText: '', skills: [], grants: [] };
+      const callerTab = managers.tab.byLabel(label);
+      if (!callerTab) throw new Error(`Agent caller not found: ${label}`);
+      try {
+        run = managers.agent.create({
+          caller: capturedCaller,
+          snapshot: placeholder,
+          executionDir,
+          command: commandText,
+          model: launch.model,
+          effort: launch.effort,
+          releaseWorkspace,
+        });
+      } catch (error) {
+        await releaseWorkspace();
+        throw error;
+      }
+      abortRun = () => { void managers.agent.finish(run!.id, 'terminated').catch(() => {}); };
+      caller.signal.addEventListener('abort', abortRun, { once: true });
+      snapshot = remoteChannel
+        ? await remoteChannel.resolveAgentSnapshot(launch.task, [...launch.skills])
+        : resolveAgentSnapshot(launch.task, launch.skills, {
+          workspaceDir: executionDir,
+          installationDir: janissaryRoot(),
+        }, commands.map(({ name }) => name));
+      run.setSnapshot(snapshot);
+    } else {
+      const local = await startLocalAgentRun(managers, capturedCaller, commandText, launch.model, launch.effort);
+      run = local.run;
+      executionDir = local.workspace.dir;
+      abortRun = () => { void managers.agent.finish(run!.id, 'terminated').catch(() => {}); };
+      caller.signal.addEventListener('abort', abortRun, { once: true });
+      await local.workspace.ready;
+      if (run.abortController.signal.aborted) {
+        const cleanupWarnings: string[] = [];
+        try { await managers.agent.finish(run.id, 'terminated'); }
+        catch (error) {
+          const failures = error instanceof AggregateError ? error.errors : [error];
+          cleanupWarnings.push(...failures.map((failure) => failure instanceof Error ? failure.message : String(failure)));
+        }
+        return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings };
+      }
+      snapshot = resolveAgentSnapshot(launch.task, launch.skills, {
+        workspaceDir: executionDir,
         installationDir: janissaryRoot(),
       }, commands.map(({ name }) => name));
-    const releaseWorkspace = useRemote ? managers.remote.acquireAgentLease(sourceLabel, `agent:${randomUUID()}`) : undefined;
-    const callerTab = managers.tab.byLabel(label);
-    if (!callerTab) throw new Error(`Agent caller not found: ${label}`);
-    let run;
-    try {
-      run = managers.agent.create({
-      caller: {
-        ...caller.caller,
-        incarnation: caller.caller.incarnation ?? randomUUID(),
-      },
-      snapshot,
-      command: commandText,
-      model: launch.model,
-      effort: launch.effort,
-      ...(releaseWorkspace !== undefined && { releaseWorkspace }),
-      });
-    } catch (error) {
-      await releaseWorkspace?.();
-      throw error;
+      run.setSnapshot(snapshot);
+      if (!getConfig().sandboxWorkspaces || !sandboxAvailable()) notify(managers, 'manual', label, 'Agent: sandboxing is disabled.');
     }
+    if (!run) throw new Error('Agent run was not created.');
+    const activeRun = run;
     if (launch.inTab) {
       try {
         const monitorPlugin = managers.plugins.declarations.find((declaration) => declaration.agentMonitor === true);
         if (!monitorPlugin) throw new Error('Agent: no monitoring plugin is available.');
         const taskName = snapshot.taskPath.split('/').at(-1) ?? snapshot.taskPath;
-        managers.tab.openPluginTab(monitorPlugin.id, monitorPlugin.tabLabelPrefix, run.id,
+        managers.tab.openPluginTab(monitorPlugin.id, monitorPlugin.tabLabelPrefix, activeRun.id,
           monitorPlugin.payloadSchemaVersion, label, () => ({
           title: `Agent: ${taskName}`,
-          payload: { runId: run.id },
+          payload: { runId: activeRun.id },
         }));
-        const monitor = managers.tab.pluginTabByInstanceKey(monitorPlugin.id, run.id);
+        const monitor = managers.tab.pluginTabByInstanceKey(monitorPlugin.id, activeRun.id);
         if (!monitor) throw new Error('Agent: could not open monitoring tab.');
-        monitor.plugin.agentRunId = run.id;
-        managers.agent.attachMonitor(run.id, monitor.label);
+        monitor.plugin.agentRunId = activeRun.id;
+        managers.agent.attachMonitor(activeRun.id, monitor.label);
       } catch (error) {
-        await Promise.allSettled([managers.agent.finish(run.id, 'failed')]);
+        await Promise.allSettled([managers.agent.finish(activeRun.id, 'failed')]);
         throw error;
       }
     }
     const runInvocation: CommandInvocationContext = Object.freeze({
       ...caller,
-      runId: run.id,
-      caller: run.caller,
-      signal: run.abortController.signal,
+      runId: activeRun.id,
+      caller: activeRun.caller,
+      signal: activeRun.abortController.signal,
     });
-    const abortRun = () => { void managers.agent.finish(run.id, 'terminated').catch(() => {}); };
-    caller.signal.addEventListener('abort', abortRun, { once: true });
     let result: AgentResult;
     try {
-      result = await executeAgentRun(run, runInvocation, launch.model, launch.effort, launch.parameters, managers,
+      result = await executeAgentRun(activeRun, runInvocation, launch.model, launch.effort, launch.parameters, managers,
         useRemote && remoteChannel ? { channel: remoteChannel, offline: sourceTab?.offline } : undefined);
     } catch (error) {
       result = agentFailure(error);
     }
 
     const cleanupWarnings: string[] = [];
-    run.setStatus('Cleaning up', result.response);
+    activeRun.setStatus('Cleaning up', result.response);
     try {
-      if (managers.agent.runs.has(run.id)) await managers.agent.finish(run.id, result.status);
-      else await run.finish(run.outcome ?? result.status);
+      if (managers.agent.runs.has(activeRun.id)) await managers.agent.finish(activeRun.id, result.status);
+      else await activeRun.finish(activeRun.outcome ?? result.status);
     } catch (error) {
       const errors = error instanceof AggregateError ? error.errors : [error];
       cleanupWarnings.push(...errors.map((failure) => failure instanceof Error ? failure.message : String(failure)));
     }
-    if (run.outcome === 'terminated') {
+    if (activeRun.outcome === 'terminated') {
       result = { ...result, status: 'terminated', response: 'Agent terminated.' };
     }
-    caller.signal.removeEventListener('abort', abortRun);
     return { ...result, cleanupWarnings: [...result.cleanupWarnings, ...cleanupWarnings] };
   } catch (error) {
+    const cleanupWarnings: string[] = [];
+    if (run && managers.agent.runs.has(run.id)) {
+      try { await managers.agent.finish(run.id, run.abortController.signal.aborted ? 'terminated' : 'failed'); }
+      catch (cleanupError) {
+        const errors = cleanupError instanceof AggregateError ? cleanupError.errors : [cleanupError];
+        cleanupWarnings.push(...errors.map((failure) => failure instanceof Error ? failure.message : String(failure)));
+      }
+    }
+    if (run) {
+      try { await run.finish(run.outcome ?? 'failed'); } catch { /* cleanup warnings were collected above */ }
+    }
+    if (cleanupWarnings.length > 0) {
+      const result = run?.outcome === 'terminated'
+        ? { status: 'terminated' as const, response: 'Agent terminated.', cleanupWarnings: [] }
+        : agentFailure(error);
+      return { ...result, cleanupWarnings };
+    }
+    if (run?.outcome === 'terminated') return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
     return agentFailure(error);
+  } finally {
+    if (caller && abortRun) caller.signal.removeEventListener('abort', abortRun);
   }
 }
 

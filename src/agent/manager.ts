@@ -40,8 +40,8 @@ export class AgentRunManager {
       model: options.model ?? '',
       effort: options.effort ?? 'medium',
       host: 'Local',
-      workspace: options.caller.cwd,
-    });
+      workspace: options.executionDir ?? options.caller.cwd,
+    }, options.executionDir ?? options.caller.cwd);
     this.runs.set(run.id, run);
     run.subscribe((view) => {
       for (const label of run.monitorIds) this.pendingViews.set(label, view);

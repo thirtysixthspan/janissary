@@ -10,6 +10,8 @@ import type { CommandInvocationContext } from './types.js';
 import { parseRemoteAddress } from '../remote/address.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { command } from './agent.js';
+import * as config from '../config.js';
+import * as sandbox from '../sandbox/index.js';
 
 const execute = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<AgentResult>>());
 vi.mock('../agent/execute.js', () => {
@@ -23,22 +25,36 @@ vi.mock('../agent/execute.js', () => {
 
 let controller: ReturnType<typeof createController>;
 let workspace: string;
+let cloneWorkspace: string;
 let invocation: CommandInvocationContext;
 let managers: Managers;
+let callerAbort: AbortController;
+let workspaceRelease: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   workspace = mkdtempSync(path.join(os.tmpdir(), 'janissary-agent-command-'));
+  cloneWorkspace = mkdtempSync(path.join(os.tmpdir(), 'janissary-agent-clone-'));
   mkdirSync(path.join(workspace, 'ai', 'tasks'), { recursive: true });
   writeFileSync(path.join(workspace, 'ai', 'tasks', 'task.md'), 'Do the work.');
+  mkdirSync(path.join(cloneWorkspace, 'ai', 'tasks'), { recursive: true });
+  writeFileSync(path.join(cloneWorkspace, 'ai', 'tasks', 'task.md'), 'Cloned task.');
   controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} });
   const tab = seedRootTab(controller.managers.tab);
   tab.runtime!.cwd = workspace;
   managers = controller.managers;
+  workspaceRelease = vi.fn(async () => {});
+  vi.spyOn(managers.workspace, 'acquireAgentLease').mockImplementation((dir) => {
+    if (dir === cloneWorkspace) return workspaceRelease;
+    throw new Error(`Cannot borrow untracked workspace: ${dir}`);
+  });
+  vi.spyOn(managers.workspace, 'create').mockReturnValue({ dir: cloneWorkspace, ready: Promise.resolve() });
+  vi.spyOn(managers.workspace, 'release').mockImplementation(() => {});
+  callerAbort = new AbortController();
   invocation = {
     runId: 'outer-run',
     invocationId: 'outer-invocation',
     caller: managers.agent.captureCaller(tab),
-    signal: new AbortController().signal,
+    signal: callerAbort.signal,
   };
   execute.mockReset();
 });
@@ -46,6 +62,8 @@ beforeEach(() => {
 afterEach(async () => {
   await controller.shutdown();
   rmSync(workspace, { recursive: true, force: true });
+  rmSync(cloneWorkspace, { recursive: true, force: true });
+  vi.restoreAllMocks();
 });
 
 async function run(line = 'agent execute task.md'): Promise<AgentResult> {
@@ -54,13 +72,79 @@ async function run(line = 'agent execute task.md'): Promise<AgentResult> {
 
 describe('agent command', () => {
   it('runs headlessly and returns the structured result after cleanup', async () => {
-    execute.mockImplementation(async (_agentRun) => ({ status: 'completed', response: 'Finished.', cleanupWarnings: [] }));
+    execute.mockImplementation(async (agentRun) => {
+      expect(agentRun).toMatchObject({ executionDir: cloneWorkspace, snapshot: { taskText: 'Cloned task.' } });
+      return { status: 'completed', response: 'Finished.', cleanupWarnings: [] };
+    });
 
     await expect(run()).resolves.toEqual({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
     expect(managers.tab.tabs).toHaveLength(1);
     expect(managers.agent.runs.size).toBe(0);
     expect(execute.mock.calls[0]?.[1]).toMatchObject({ runId: expect.any(String), caller: invocation.caller });
     expect(execute.mock.calls[0]?.[1]).toHaveProperty('signal', expect.any(AbortSignal));
+    expect(execute.mock.calls[0]?.[1]).toMatchObject({ caller: { cwd: workspace } });
+    expect(managers.workspace.create).toHaveBeenCalledOnce();
+    expect(workspaceRelease).toHaveBeenCalledOnce();
+  });
+
+  it('cancels provisioning and releases its workspace before a terminated result settles', async () => {
+    const ready = Promise.withResolvers<void>();
+    const cancel = vi.fn(() => ready.resolve());
+    vi.mocked(managers.workspace.create).mockReturnValue({ dir: cloneWorkspace, ready: ready.promise, cancel });
+    vi.spyOn(managers.workspace, 'cancel').mockImplementation(() => { cancel(); });
+    execute.mockResolvedValue({ status: 'completed', response: 'unexpected', cleanupWarnings: [] });
+
+    const pending = run();
+    await Promise.resolve();
+    callerAbort.abort();
+    await expect(pending).resolves.toMatchObject({ status: 'terminated', response: 'Agent terminated.' });
+
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(execute).not.toHaveBeenCalled();
+    expect(workspaceRelease).toHaveBeenCalledOnce();
+  });
+
+  it('uses a tracked caller workspace and releases only the borrowed reference', async () => {
+    const borrowedRelease = vi.fn(async () => {});
+    vi.mocked(managers.workspace.acquireAgentLease).mockImplementation((dir) => {
+      if (dir === workspace) return borrowedRelease;
+      return workspaceRelease;
+    });
+    execute.mockResolvedValue({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
+
+    await expect(run()).resolves.toMatchObject({ status: 'completed' });
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({ executionDir: workspace });
+    expect(borrowedRelease).toHaveBeenCalledOnce();
+  });
+
+  it('reports disabled sandboxing in notifications without adding caller output', async () => {
+    vi.spyOn(config, 'getConfig').mockReturnValue({ ...config.getConfig(), sandboxWorkspaces: false });
+    vi.spyOn(sandbox, 'sandboxAvailable').mockReturnValue(true);
+    execute.mockResolvedValue({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
+
+    await expect(run()).resolves.toMatchObject({ status: 'completed' });
+
+    const notices = managers.notifications.all.filter(({ message }) => message === 'Agent: sandboxing is disabled.');
+    expect(notices).toHaveLength(1);
+    expect(notices[0]?.event).toBe('manual');
+    expect(managers.tab.tabs[0]?.log.map(({ output }) => output).join('\n')).not.toContain('sandboxing is disabled');
+  });
+
+  it('releases a failed provisioning workspace and preserves cleanup warnings', async () => {
+    vi.mocked(managers.workspace.create).mockReturnValue({
+      dir: cloneWorkspace,
+      ready: Promise.reject(new Error('clone failed')),
+    });
+    workspaceRelease.mockRejectedValueOnce(new Error('workspace removal failed'));
+
+    await expect(run()).resolves.toMatchObject({
+      status: 'failed',
+      response: 'Agent: clone failed',
+      cleanupWarnings: ['workspace removal failed'],
+    });
+    expect(workspaceRelease).toHaveBeenCalledOnce();
+    expect(execute).not.toHaveBeenCalled();
   });
 
   it('turns provider failures into failed results and still releases run resources', async () => {
@@ -94,7 +178,7 @@ describe('agent command', () => {
     const gate = Promise.withResolvers<AgentResult>();
     execute.mockReturnValue(gate.promise);
     const pending = run('agent in a tab execute task.md');
-    await Promise.resolve();
+    await vi.waitFor(() => expect(execute).toHaveBeenCalled());
     const monitor = managers.tab.tabs.find((tab) => tab.plugin?.id === 'agent-monitor');
     expect(monitor).toBeDefined();
     expect(monitor?.title).toBe('Agent: task.md');

@@ -6,6 +6,7 @@ import { resolveAgentSnapshot, resolveAgentTask } from './task-resolution.js';
 import { resolveAgentSkills } from './skill-grants.js';
 
 let workspace: string;
+let executionWorkspace: string;
 let installation: string;
 let outside: string;
 const options = (): { workspaceDir: string; installationDir: string } => ({ workspaceDir: workspace, installationDir: installation });
@@ -26,6 +27,7 @@ function writeSkill(root: string, name: string, skill: string, sidecar?: string)
 
 beforeEach(() => {
   workspace = mkdtempSync(path.join(tmpdir(), 'agent-workspace-'));
+  executionWorkspace = mkdtempSync(path.join(tmpdir(), 'agent-execution-workspace-'));
   installation = mkdtempSync(path.join(tmpdir(), 'agent-install-'));
   outside = mkdtempSync(path.join(tmpdir(), 'agent-outside-'));
   mkdirSync(path.join(workspace, 'ai', 'tasks'), { recursive: true });
@@ -34,6 +36,7 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(workspace, { recursive: true, force: true });
+  rmSync(executionWorkspace, { recursive: true, force: true });
   rmSync(installation, { recursive: true, force: true });
   rmSync(outside, { recursive: true, force: true });
 });
@@ -210,6 +213,22 @@ describe('resolveAgentSkills', () => {
 });
 
 describe('resolveAgentSnapshot', () => {
+  it('resolves task and skill files from the execution workspace instead of caller files', () => {
+    writeTask(workspace, 'task.md', 'caller task');
+    writeTask(executionWorkspace, 'task.md', 'execution task');
+    writeSkill(workspace, 'selected', 'caller skill');
+    writeSkill(executionWorkspace, 'selected', 'execution skill');
+
+    const snapshot = resolveAgentSnapshot('task.md', ['selected'], {
+      workspaceDir: executionWorkspace,
+      installationDir: installation,
+    }, ['question']);
+
+    expect(snapshot.taskText).toBe('execution task');
+    expect(snapshot.taskPath).toContain(executionWorkspace);
+    expect(snapshot.skills[0]?.instructions).toBe('execution skill');
+  });
+
   it('freezes task text, skill instructions, and grants before later file edits', () => {
     const task = writeTask(workspace, 'snapshot.md', 'task at launch');
     writeSkill(workspace, 'selected', 'skill at launch', '{"version":1,"commands":["question"]}');

@@ -244,6 +244,27 @@ describe('WorkspaceManager', () => {
   });
 
   describe('references', () => {
+    it('cancels an agent clone and removes it after its retained run reference is released', async () => {
+      findRepoRootMock.mockReturnValue('/repo');
+      getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+      const ready = Promise.withResolvers<void>();
+      const dir = '/repo/.janissary/workspace/agent-run';
+      const cancel = vi.fn(() => ready.resolve());
+      provisionWorkspaceMock.mockReturnValue({ ...handle(dir, cancel), ready: ready.promise });
+      const manager = new WorkspaceManager();
+      const created = manager.create('agent-run');
+      if (!('ready' in created)) throw new Error('workspace was not created');
+      const release = manager.acquireAgentLease(dir);
+      manager.release(dir);
+
+      manager.cancel('agent-run');
+      await created.ready;
+      await release();
+
+      expect(cancel).toHaveBeenCalledOnce();
+      expect(removeWorkspaceStrictMock).toHaveBeenCalledWith(dir);
+    });
+
     it('acquires and releases a tracked headless workspace reference once', async () => {
       findRepoRootMock.mockReturnValue('/repo');
       getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');

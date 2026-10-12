@@ -13,6 +13,7 @@ export type AgentRunOptions = Readonly<{
   caller: AgentCaller;
   snapshot: AgentSnapshot;
   workspaceDir?: string;
+  executionDir?: string;
   releaseWorkspace?: () => Promise<void>;
   command?: string;
   model?: string;
@@ -32,16 +33,29 @@ export class AgentRun {
   private listeners = new Set<(view: AgentRunView) => void>();
   private cleanupPromise?: Promise<void>;
   private cleanups: (() => void | Promise<void>)[] = [];
+  private currentSnapshot: AgentSnapshot;
 
   constructor(
     readonly caller: AgentCaller,
-    readonly snapshot: AgentSnapshot,
+    snapshot: AgentSnapshot,
     private releaseWorkspace?: () => Promise<void>,
     private readonly metadata: { command: string; model: string; effort: string; host: 'Local'; workspace: string } = {
       command: `agent execute ${snapshot.taskPath.split('/').at(-1) ?? snapshot.taskPath}`,
       model: '', effort: 'medium', host: 'Local', workspace: caller.cwd,
     },
-  ) {}
+    readonly executionDir: string = caller.cwd,
+  ) {
+    this.currentSnapshot = snapshot;
+  }
+
+  get snapshot(): AgentSnapshot {
+    return this.currentSnapshot;
+  }
+
+  setSnapshot(snapshot: AgentSnapshot): void {
+    if (this.outcome) throw new Error('Agent run has already ended.');
+    this.currentSnapshot = snapshot;
+  }
 
   get currentStatus(): AgentRunView['status'] {
     return this.status;
