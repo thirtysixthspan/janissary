@@ -46,7 +46,13 @@ export function decodeAcpText(type: 'acp-prompt' | 'acp-chunk', record: Record<s
 }
 
 export function decodeAcpAddressed(type: 'acp-close' | 'acp-ready', record: Record<string, unknown>): DecodeResult {
-  return nonEmptyString(record.id) ? { type, id: record.id } : malformed(type);
+  if (!nonEmptyString(record.id)) return malformed(type);
+  if (type === 'acp-ready') {
+    return typeof record.sandboxed === 'boolean'
+      ? { type, id: record.id, sandboxed: record.sandboxed }
+      : malformed(type);
+  }
+  return { type, id: record.id };
 }
 
 export function decodeAcpEnd(record: Record<string, unknown>): DecodeResult {

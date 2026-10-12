@@ -228,10 +228,9 @@ export type ServerFrame =
   | { type: 'filesystem-reply'; session: string; request: string; result?: unknown; error?: string }
   | { type: 'filesystem-event'; session: string; path: string }
   | { type: 'agent-resolve-result'; id: string; snapshot?: AgentSnapshot; error?: string }
-  // `acp-ready` carries the id alone: its only job is to say the handshake completed. What the agent
-  // reports as its "model" is really the session's current mode name, and the local side already
-  // knows the model it asked for, so there is nothing else worth sending back.
-  | { type: 'acp-ready'; id: string }
+  // Readiness includes the confinement result because only the host that spawned the ACP process
+  // knows whether its workspace was actually confined.
+  | { type: 'acp-ready'; id: string; sandboxed: boolean }
   | { type: 'acp-chunk'; id: string; text: string }
   | { type: 'acp-end'; id: string; stopReason: string }
   | { type: 'acp-activity'; id: string; kind: RemoteAcpActivityKind; text: string }

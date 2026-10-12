@@ -130,7 +130,7 @@ describe('frame codec', () => {
       { type: 'filesystem-reply', session: 'files1', request: 'q1', result: { entries: [] } },
       { type: 'filesystem-reply', session: 'files1', request: 'q2', result: { content: 'aMOpbGxvCndvcmxk' } },
       { type: 'filesystem-event', session: 'files1', path: 'src' },
-      { type: 'acp-ready', id: 'racp1' },
+      { type: 'acp-ready', id: 'racp1', sandboxed: true },
       { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
       { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
       { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
@@ -286,6 +286,7 @@ describe('frame codec', () => {
     ['acp-prompt without string text', { type: 'acp-prompt', id: 'racp1', text: 7 }],
     ['acp-close without an id', { type: 'acp-close' }],
     ['acp-ready without an id', { type: 'acp-ready' }],
+    ['acp-ready without sandbox state', { type: 'acp-ready', id: 'racp1' }],
     ['acp-chunk without string text', { type: 'acp-chunk', id: 'racp1', text: null }],
     ['acp-end without a stop reason', { type: 'acp-end', id: 'racp1' }],
     ['acp-end with an empty stop reason', { type: 'acp-end', id: 'racp1', stopReason: '' }],
@@ -541,7 +542,7 @@ const FULLY_POPULATED_FRAMES: { [K in RemoteFrame['type']]: Extract<RemoteFrame,
     type: 'agent-resolve-result', id: 'run1',
     snapshot: { taskPath: '/remote/ai/tasks/fix.md', taskText: 'Fix the issue.', skills: [], grants: [] },
   },
-  'acp-ready': { type: 'acp-ready', id: 'racp1' },
+  'acp-ready': { type: 'acp-ready', id: 'racp1', sandboxed: true },
   'acp-chunk': { type: 'acp-chunk', id: 'racp1', text: 'partial reply' },
   'acp-end': { type: 'acp-end', id: 'racp1', stopReason: 'end_turn' },
   'acp-error': { type: 'acp-error', id: 'racp1', message: 'rate limited', fatal: false },
@@ -658,8 +659,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 30', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(30);
+  it('is 31', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(31);
   });
 });
 

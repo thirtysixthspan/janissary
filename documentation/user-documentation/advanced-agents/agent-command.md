@@ -20,7 +20,7 @@ Only listed canonical command names are allowed. The agent asks to run one by en
 
 The command returns `Status: completed`, `failed`, or `terminated`, followed by the task response. Cleanup issues appear on separate `Cleanup warning:` lines. Closing the caller tab terminates its run.
 
-Your caller tab stays in its original directory; the agent's files and ACP session use the execution workspace. When local sandbox confinement is disabled or unavailable, the notifications feed shows `Agent: sandboxing is disabled.`.
+Your caller tab stays in its original directory; the agent's files and ACP session use the execution workspace. If the execution host cannot confine the agent because workspace sandboxing is disabled or unavailable, the notifications feed shows `Agent: sandboxing is disabled.`. For a remote run, this reflects the remote host's confinement state.
 
 Use `on <host>` from a tab already connected to that remote host, or `in workspace <label>` to borrow another established remote workspace. The task and selected skills are resolved on that host. Janissary keeps command grants and tool commands on the local server. If the remote does not answer readiness or confirm close, the run fails or reports a cleanup warning rather than waiting indefinitely.
 

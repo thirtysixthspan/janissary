@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the planned sandbox-disabled notice for local and remote agent runs.
-
-Existing Issue: Agent execution starts ACP with workspace confinement parameters but never reports when `sandboxWorkspaces` is disabled or confinement is unavailable, despite the feature plan requiring `Agent: sandboxing is disabled.` in the notifications feed for headed and headless runs. Severity: 6/10
-
-Existing Risk: 6/10 - A run can execute without OS confinement while the caller receives no agent-specific indication, making it easy to mistake command-grant restrictions for filesystem isolation.
-
-Proposal Risk: 2/10 - Reporting the actual execution host's confinement state before the task starts makes the limitation visible while leaving the existing command grants and execution behavior intact.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "report when agent execution is not sandboxed". In `src/agent/execute.ts`, determine whether the local ACP process will be confined using the same configuration and availability conditions as `sandboxSpawn` in `src/sandbox/index.ts`, and emit the exact `Agent: sandboxing is disabled.` line to the notifications feed only, for both headed and headless runs. For remote runs, have the remote ACP readiness response from `src/remote/serve-acp.ts` report its confinement state and let `src/remote/acp-session.ts` deliver the same notice locally; do not infer the remote host's state from the local machine. Keep the notice out of caller output and monitor activity. Add focused tests for enabled, disabled, and unavailable confinement on both execution hosts, asserting one notifications-feed entry and no transcript or monitor duplicate; no current agent execution test covers this notice.
-
-
 * Wait for remote ACP process teardown before acknowledging agent resource release.
 
 Existing Issue: `RemoteAcp.close` in `src/remote/serve-acp.ts` calls the synchronous `AcpSession.kill()` and immediately replies with `released: true`, while `connectAcp` in `src/acp/index.ts` only signals the child and does not await its exit. The local run therefore treats a kill request as confirmed resource cleanup. Severity: 7/10

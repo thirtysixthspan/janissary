@@ -20,13 +20,13 @@ export type RemoteAcpOptions = {
 // remote's handshake lands.
 export type RemoteAcpHooks = {
   onError: (message: string) => void;
-  onConnect: () => void;
+  onConnect: (sandboxed: boolean) => void;
   onActivity?: (kind: 'message' | 'thought' | 'tool' | 'plan' | 'permission', text: string) => void;
   onTransportLost?: () => void;
 };
 
 export type RemoteAcpSession = AcpSession & {
-  ready: Promise<void>;
+  ready: Promise<boolean>;
   release: () => Promise<boolean>;
 };
 
@@ -49,10 +49,10 @@ export function createRemoteAcpSession(
   // The one in-flight prompt, matching the discipline `connectAcp` keeps with its own `current`.
   let current: PromptHandlers | undefined;
   let live = true;
-  let resolveReady = () => {};
+  let resolveReady = (_sandboxed: boolean) => {};
   let rejectReady = (_error: Error) => {};
   // eslint-disable-next-line unicorn/prefer-promise-with-resolvers -- the project targets ES2023
-  const readiness = new Promise<void>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+  const readiness = new Promise<boolean>((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
   const ready = readiness;
   void ready.catch(() => {});
   let resolveRelease: (released: boolean) => void = () => {};
@@ -60,7 +60,7 @@ export function createRemoteAcpSession(
   let releaseTimer: ReturnType<typeof setTimeout> | undefined;
 
   channel.attachAcp(id, {
-    onReady: () => { resolveReady(); hooks.onConnect(); },
+    onReady: (sandboxed) => { resolveReady(sandboxed); hooks.onConnect(sandboxed); },
     onChunk: (text) => current?.onChunk(text),
     onActivity: (kind, text) => hooks.onActivity?.(kind, text),
     onClosed: (released) => {

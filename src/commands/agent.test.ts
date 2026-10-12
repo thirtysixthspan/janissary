@@ -12,8 +12,6 @@ import { parseRemoteAddress } from '../remote/address.js';
 import type { RemoteChannel } from '../remote/channel/index.js';
 import { command } from './agent.js';
 import { makeTab } from '../tab/index.js';
-import * as config from '../config.js';
-import * as sandbox from '../sandbox/index.js';
 
 const execute = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<AgentResult>>());
 vi.mock('../agent/execute.js', () => {
@@ -124,19 +122,6 @@ describe('agent command', () => {
     expect(managers.workspace.create).not.toHaveBeenCalled();
     expect(execute.mock.calls[0]?.[0]).toMatchObject({ executionDir: workspace });
     expect(borrowedRelease).toHaveBeenCalledOnce();
-  });
-
-  it('reports disabled sandboxing in notifications without adding caller output', async () => {
-    vi.spyOn(config, 'getConfig').mockReturnValue({ ...config.getConfig(), sandboxWorkspaces: false });
-    vi.spyOn(sandbox, 'sandboxAvailable').mockReturnValue(true);
-    execute.mockResolvedValue({ status: 'completed', response: 'Finished.', cleanupWarnings: [] });
-
-    await expect(run()).resolves.toMatchObject({ status: 'completed' });
-
-    const notices = managers.notifications.all.filter(({ message }) => message === 'Agent: sandboxing is disabled.');
-    expect(notices).toHaveLength(1);
-    expect(notices[0]?.event).toBe('manual');
-    expect(managers.tab.tabs[0]?.log.map(({ output }) => output).join('\n')).not.toContain('sandboxing is disabled');
   });
 
   it('releases a failed provisioning workspace and preserves cleanup warnings', async () => {

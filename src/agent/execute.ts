@@ -9,6 +9,8 @@ import { modelsFor } from '../harness/models.js';
 import type { CommandInvocationContext } from '../commands/types.js';
 import type { Managers } from '../managers.js';
 import { errorText } from '../error-text.js';
+import { notify } from '../notifications/index.js';
+import { sandboxWillConfine } from '../sandbox/confinement.js';
 import { janissaryRoot } from '../janissary-root.js';
 import { isRecord } from '../value-guards.js';
 import { agentPrimer, extractAgentCommand, runGrantedAgentCommand } from './command-tools.js';
@@ -98,6 +100,9 @@ export async function executeAgentRun(
       },
       onError: reportConnectionFailure,
     });
+  if (!remote && !sandboxWillConfine(run.executionDir)) {
+    notify(managers, 'manual', run.caller.label, 'Agent: sandboxing is disabled.');
+  }
   run.addResource(`acp:${run.id}`, async () => {
     if (remoteSession) {
       if (!await remoteSession.release()) throw new Error('Remote agent close was not acknowledged.');
@@ -111,13 +116,14 @@ export async function executeAgentRun(
     const onAbort = () => rejectAbort(new Error('Agent terminated.'));
     run.abortController.signal.addEventListener('abort', onAbort, { once: true });
     try {
-      await Promise.race([
+      const sandboxed = await Promise.race([
         remoteSession.ready,
         new Promise<never>((_resolve, reject) => {
           timeout = setTimeout(() => reject(new Error('Agent: remote agent readiness timed out.')), 15_000);
         }),
         abortPromise,
       ]);
+      if (!sandboxed) notify(managers, 'manual', run.caller.label, 'Agent: sandboxing is disabled.');
     } finally {
       if (timeout) clearTimeout(timeout);
       run.abortController.signal.removeEventListener('abort', onAbort);

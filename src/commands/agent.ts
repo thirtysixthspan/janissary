@@ -8,9 +8,6 @@ import { agentFailure, executeAgentRun, type AgentResult } from '../agent/execut
 import { appendCommandOutput } from '../command/append.js';
 import { startLocalAgentRun } from '../agent/workspace-execution.js';
 import { invocationFor } from './agent-invocation.js';
-import { notify } from '../notifications/index.js';
-import { getConfig } from '../config.js';
-import { sandboxAvailable } from '../sandbox/index.js';
 import type { AgentSnapshot } from '../agent/types.js';
 import { applyNestedAgentPolicy } from '../agent/nested-policy.js';
 import { createRunCompletion, trackChildRun, trustedParentRun } from '../agent/nested-run.js';
@@ -83,8 +80,6 @@ async function runAgent(
           workspaceDir: executionDir,
           installationDir: janissaryRoot(),
         }, commands.map(({ name }) => name));
-      if (parent) snapshot = applyNestedAgentPolicy(snapshot, parent.snapshot);
-      run.setSnapshot(snapshot);
     } else {
       const local = await startLocalAgentRun(managers, capturedCaller, commandText, launch.model, launch.effort);
       run = local.run;
@@ -106,11 +101,10 @@ async function runAgent(
         workspaceDir: executionDir,
         installationDir: janissaryRoot(),
       }, commands.map(({ name }) => name));
-      if (parent) snapshot = applyNestedAgentPolicy(snapshot, parent.snapshot);
-      run.setSnapshot(snapshot);
-      if (!getConfig().sandboxWorkspaces || !sandboxAvailable()) notify(managers, 'manual', label, 'Agent: sandboxing is disabled.');
     }
     if (!run) throw new Error('Agent run was not created.');
+    if (parent) snapshot = applyNestedAgentPolicy(snapshot, parent.snapshot);
+    run.setSnapshot(snapshot);
     const activeRun = run;
     if (launch.inTab) {
       try {

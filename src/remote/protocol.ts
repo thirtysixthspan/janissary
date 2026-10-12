@@ -177,7 +177,10 @@
 // and typed activity to a run, and acknowledges remote session release. A version-29 peer could
 // accept a request without honoring its policy or confirming cleanup, so exact-version handshake
 // refusal prevents silent execution and orphaned resources.
-export const REMOTE_PROTOCOL_VERSION = 30;
+// Version 31 includes the far side's actual ACP sandbox state in `acp-ready`; a version-30 peer
+// cannot report whether the remote process was confined, so exact-version refusal avoids a false
+// assurance on remote agent runs.
+export const REMOTE_PROTOCOL_VERSION = 31;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

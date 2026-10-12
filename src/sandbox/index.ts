@@ -10,6 +10,7 @@ import {
   WRITE_CARVEOUT_PARAMS, READ_CARVEIN_PARAMS, SECRET_DENY_PARAMS, LISTING_DIR_PARAMS, WRITE_PREFIX_PARAMS,
 } from './paths.js';
 import { getConfig } from '../config.js';
+import { sandboxAvailable as isSandboxAvailable, sandboxWillConfine } from './confinement.js';
 import { janissaryRoot, janissaryAiDir, janissaryScriptsDir, JANISSARY_HOME_ENV } from '../janissary-root.js';
 import { scrubEnv, withJanissaryHome, withWorkspaceCredentials, workspaceEnv } from './environment.js';
 import type { ProjectTokens } from '../project/tokens.js';
@@ -47,13 +48,8 @@ export type SandboxResult = {
   env: NodeJS.ProcessEnv;
 };
 
-let cachedAvailable: boolean | undefined;
-
-// Whether Seatbelt sandboxing can be applied on this machine: darwin, with `sandbox-exec` on
-// `PATH`. Cached after the first check.
 export function sandboxAvailable(): boolean {
-  cachedAvailable ??= process.platform === 'darwin' && existsSync('/usr/bin/sandbox-exec');
-  return cachedAvailable;
+  return isSandboxAvailable();
 }
 
 // A one-line notice to append to a newly created workspaced tab's transcript when its processes
@@ -177,7 +173,7 @@ export function sandboxSpawn(
   env: NodeJS.ProcessEnv = process.env,
 ): SandboxResult {
   const dir = options.workspaceDir;
-  const confinable = Boolean(dir) && getConfig().sandboxWorkspaces && sandboxAvailable();
+  const confinable = sandboxWillConfine(dir);
   // Answered before the confinement test, not inside it. What environment the browser gets follows
   // from what the browser is; the host only decides whether there is a profile around it. Deciding
   // it the other way round handed the whole server environment to a browser on precisely the hosts

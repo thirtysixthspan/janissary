@@ -5,7 +5,8 @@ import path from 'node:path';
 import { loadConfig } from '../config.js';
 import { setGitIdentity } from '../git/identity.js';
 import { janissaryRoot } from '../janissary-root.js';
-import { sandboxAvailable, sandboxSpawn } from './index.js';
+import { sandboxSpawn } from './index.js';
+import { sandboxAvailable, shouldConfineWorkspace } from './confinement.js';
 import { SANDBOX_PROFILE, SANDBOX_PROFILE_OFFLINE } from './profile.js';
 
 // A project whose config turns workspace isolation off — the same unconfined path a non-darwin
@@ -442,6 +443,22 @@ describe('sandboxSpawn', () => {
     const result = sandboxSpawn({ workspaceDir, offline: true }, 'bash', []);
     expect(result.args[1]).toBe(SANDBOX_PROFILE_OFFLINE);
     rmSync(workspaceDir, { recursive: true, force: true });
+  });
+});
+
+describe('workspace confinement decision', () => {
+  it.each([
+    { state: 'enabled and available', workspace: true, enabled: true, available: true, expected: true },
+    { state: 'disabled by config', workspace: true, enabled: false, available: true, expected: false },
+    { state: 'unavailable on host', workspace: true, enabled: true, available: false, expected: false },
+    { state: 'missing workspace', workspace: false, enabled: true, available: true, expected: false },
+  ])('reports confinement when $state', ({ workspace, enabled, available, expected }) => {
+    expect(shouldConfineWorkspace(workspace, enabled, available)).toBe(expected);
+  });
+
+  it('reports the same decision sandboxSpawn uses for a local workspace', () => {
+    loadConfig(mkdtempSync(path.join(tmpdir(), 'sandbox-cfg-')));
+    expect(shouldConfineWorkspace(true, true, sandboxAvailable())).toBe(sandboxAvailable());
   });
 });
 

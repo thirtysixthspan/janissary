@@ -303,7 +303,7 @@ describe('RemoteChannel — ACP session routing', () => {
     const h = acpHarness();
     h.channel.attachAcp('racp1', h.listener);
 
-    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1' })}\n`);
+    h.channel.receive(`${encodeFrame({ type: 'acp-ready', id: 'racp1', sandboxed: true })}\n`);
     h.channel.receive(`${encodeFrame({ type: 'acp-chunk', id: 'racp1', text: 'partial' })}\n`);
     h.channel.receive(`${encodeFrame({ type: 'acp-end', id: 'racp1', stopReason: 'end_turn' })}\n`);
 

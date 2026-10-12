@@ -2,6 +2,7 @@ import { connectAcp } from '../acp/index.js';
 import type { AcpSession } from '../acp/types.js';
 import type { ProjectTokens } from '../project/tokens.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
+import { sandboxWillConfine } from '../sandbox/confinement.js';
 
 // The remote server's ACP holder: one live agent session per session id, driven by the ACP frames.
 // The JSON-RPC never leaves this machine — the local side sends prompts and gets reply text back —
@@ -27,6 +28,7 @@ export class RemoteAcp {
   open(frame: Extract<ClientFrame, { type: 'acp-open' }>): void {
     const id = frame.id;
     if (this.sessions.has(id)) return;
+    const sandboxed = sandboxWillConfine(this.workspaceDir);
     const session = connectAcp({
       command: frame.command,
       args: frame.args,
@@ -53,7 +55,7 @@ export class RemoteAcp {
       // The connection-level channel: a failed spawn or a dead agent means the session no longer
       // exists, so it travels as fatal and the local side drops its record of it.
       onError: (message) => { this.send({ type: 'acp-error', id, message, fatal: true }); },
-      onConnect: () => { this.send({ type: 'acp-ready', id }); },
+      onConnect: () => { this.send({ type: 'acp-ready', id, sandboxed }); },
     });
     this.sessions.set(id, { session, runOnly: frame.autonomous === true });
   }

@@ -51,9 +51,9 @@ describe('createRemoteAcpSession — opening', () => {
   it('invokes the connect hook when the remote reports its handshake done', () => {
     const s = makeSession();
 
-    s.listener().onReady();
+    s.listener().onReady(false);
 
-    expect(s.onConnect).toHaveBeenCalledOnce();
+    expect(s.onConnect).toHaveBeenCalledWith(false);
   });
 
   it('settles readiness and forwards typed activity', async () => {
@@ -62,10 +62,10 @@ describe('createRemoteAcpSession — opening', () => {
     const session = createRemoteAcpSession(fake.channel, { ...OPTIONS, autonomous: true, effort: { level: 'high', model: 'model-x' } }, {
       onError: vi.fn(), onConnect: vi.fn(), onActivity,
     });
-    fake.listeners.get('racp1')?.onReady();
+    fake.listeners.get('racp1')?.onReady(false);
     fake.listeners.get('racp1')?.onActivity('thought', 'planning');
 
-    await expect(session.ready).resolves.toBeUndefined();
+    await expect(session.ready).resolves.toBe(false);
     expect(fake.sent[0]).toMatchObject({ autonomous: true, effort: { level: 'high', model: 'model-x' } });
     expect(onActivity).toHaveBeenCalledWith('thought', 'planning');
   });

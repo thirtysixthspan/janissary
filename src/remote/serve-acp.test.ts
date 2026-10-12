@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AcpOptions, PromptHandlers } from '../acp/types.js';
 import type { ServerFrame } from './protocol-frames.js';
+import * as confinement from '../sandbox/confinement.js';
 
 // `connectAcp` is faked at the module boundary: what this class owns is the frame translation, not
 // the ACP client itself (that is exercised end to end in `src/acp/index.test.ts`).
@@ -37,6 +38,7 @@ function lastHandlers(): PromptHandlers {
 }
 
 beforeEach(() => {
+  vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(true);
   acpMock.options.length = 0;
   acpMock.prompt.mockReset();
   acpMock.kill.mockReset();
@@ -49,7 +51,18 @@ describe('RemoteAcp — opening a session', () => {
     acp.open(OPEN);
     acpMock.options[0].onConnect?.({ provider: 'opencode', model: 'Build' });
 
-    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1' }]);
+    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1', sandboxed: true }]);
+  });
+
+  it.each([false, true])('reports the remote host confinement result: %s', (sandboxed) => {
+    vi.spyOn(confinement, 'sandboxWillConfine').mockReturnValue(sandboxed);
+    const { acp, frames } = makeAcp();
+
+    acp.open(OPEN);
+    acpMock.options[0].onConnect?.({ provider: 'opencode', model: 'Build' });
+
+    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp1', sandboxed }]);
+    expect(confinement.sandboxWillConfine).toHaveBeenCalledWith(WORKSPACE);
   });
 
   it('applies autonomous policy and forwards typed activity to the run id', () => {
@@ -112,7 +125,7 @@ describe('RemoteAcp — opening a session', () => {
     acpMock.options[1].onConnect?.({ provider: 'opencode', model: 'Build' });
 
     expect(acpMock.options).toHaveLength(2);
-    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp2' }]);
+    expect(frames).toEqual([{ type: 'acp-ready', id: 'racp2', sandboxed: true }]);
   });
 });
 
