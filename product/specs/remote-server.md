@@ -235,11 +235,19 @@ would report a failure rather than a half-working change set — which is what t
 request carries the set of files to expand to their whole contents and nothing else, because a peer has one workspace
 and there is no path to contain.
 
-Remote autonomous agent runs move the protocol to 30. A request resolves task and skill snapshots on
-the remote execution host, and the ACP open frame carries the autonomous policy and selected effort.
-Typed activity frames are scoped to the run id, and closing the ACP session returns an explicit release
-acknowledgment. A version-29 peer would run without the new policy or activity contract and cannot
-confirm release, so the handshake refuses it before the agent request can begin.
+Remote autonomous agent runs move the protocol to 30. `agent-resolve` asks the execution host to
+resolve the task and selected skills, and `agent-resolve-result` returns their captured snapshot or a
+resolution error under the same request id. The ACP open frame carries the autonomous policy and
+selected effort, typed activity frames are scoped to the run id, and closing the ACP session returns
+an explicit release acknowledgment. A version-29 peer would not resolve inputs on the execution host,
+honor the new policy or activity contract, or confirm release, so the handshake refuses it before the
+agent request can begin.
+
+Protocol version 31 adds `sandboxed` to `acp-ready`, reporting whether the remote host actually
+confined the ACP process. Only that host knows the result; local confinement settings cannot establish
+it. A version-30 peer cannot report this fact, so an agent run could otherwise appear ready without
+disclosing that its process was not confined. Exact-version handshake refusal prevents that false
+assurance.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
@@ -602,13 +610,34 @@ browser, not the remote workspace's. And **which agent and model run** is decide
 across on the frame that opens the session, so one definition holds and the two installations cannot
 silently disagree about the model. See [[acp]].
 
-An autonomous `agent` command can also use an established remote workspace. The remote resolves the
-task and selected skills there before ACP starts; the local side keeps command authorization and tool
-execution. Its run-scoped reference keeps a shared channel alive only while the run owns it. Readiness
-and close acknowledgment waits are bounded, and a missing close acknowledgment is returned as a
-cleanup warning rather than reported as a successful release. Detaching or losing the transport
-aborts the run; the far side stops autonomous run-only sessions on detach, while the local result
-reports release as uncertain if the acknowledgment could not cross the lost transport.
+An autonomous `agent` command can select a remote execution host with `on <[user@]host[:path]>`,
+whether its caller is local or already remote. With a pathless host matching an established remote
+workspace, the run borrows that workspace and channel. Otherwise, including a target with an explicit
+path or a different host, Janissary opens a run-only SSH connection and provisions the requested
+project using the remote server's existing project-root lookup. A pathless target looks for the
+caller's project from the remote SSH login directory. These connections use non-interactive SSH
+authentication because a headless run has no prompt tab. A missing, unreachable, refused, or
+protocol-incompatible target fails the run; remote selection never falls back to local execution.
+Without `on`, a remote caller's run uses its established remote workspace. `in workspace <label>`
+without `on` selects another established remote workspace.
+
+The selected execution host resolves the task and requested skills from its workspace and its
+installed Janissary tasks and skills, then returns an immutable snapshot before ACP starts. The
+`agent-resolve` request carries a correlation id, task and skill names; its `agent-resolve-result`
+reply carries that id and either the snapshot or an error. Resolution waits at most 15 seconds and
+fails if the connection is lost before the reply arrives. The ACP process runs on the execution host
+with the selected model and effort, and `acp-ready` reports that host's confinement result. The
+autonomous tool loop and granted Janissary command execution remain local. Command authorization,
+output, questions, and other invocation context stay bound to the original caller even when execution
+moves to another host. Remote activity is routed only to its run.
+
+The run owns an ephemeral reference to its remote channel and workspace. Releasing it leaves resources
+held by other tabs and runs alive; a run-only connection closes when its run releases the final
+reference. Readiness is bounded to 15 seconds and remote ACP release to 5 seconds. A close without a
+positive acknowledgment adds `Cleanup warning: Remote agent close was not acknowledged.` to the result.
+Closing the caller, detaching the remote session, or losing transport aborts the run. The far side
+stops autonomous run-only sessions on detach, while a release acknowledgment lost with transport is
+reported as uncertain rather than successful.
 
 A positive ACP close acknowledgment means the remote child process's exit was observed. The remote
 waits up to five seconds for that exit; a timeout or shutdown error returns `released: false`, which

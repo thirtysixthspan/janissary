@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Complete the remote-server spec's coverage of remote agent host selection and protocol version 31.
-
-Existing Issue: `product/specs/remote-server.md` documents remote agent protocol changes through version 30 and describes agent execution only on an established remote workspace, while this pull request adds task-resolution frames and allows local callers to provision distinct remote hosts under protocol version 31. Severity: 5/10
-
-Existing Risk: 5/10 - Contributors relying on the remote protocol spec can miss the version-31 wire contract or incorrectly assume remote agents require an already-established workspace when changing remote execution behavior.
-
-Proposal Risk: 2/10 - Recording the new version rationale and the host-override request/response behavior in the remote-server spec leaves little ambiguity about the remote protocol and supported execution paths.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "document remote agent host overrides and protocol version 31". In `product/specs/remote-server.md`, add the version-31 history entry explaining the `agent-resolve` and `agent-resolve-result` frames and why older peers must refuse the protocol, then update the remote autonomous-agent section to cover local callers, matching established workspaces, run-only connections to distinct hosts, execution-host task and skill resolution, and the absence of local fallback. Keep its caller-context command policy and shared-channel lease behavior aligned with `product/specs/agent-command.md`, and state any relevant bounded resolution wait. Verify the complete remote-agent section and protocol history agree with `src/remote/protocol.ts`, `src/remote/protocol-frames.ts`, and the two specs; this is a documentation-only change, so no application tests are needed.
-
-
 * Keep unrelated tabs out of agent-run ownership when deferred allocations overlap.
 
 Existing Issue: `withRunAllocationAsync` in `src/plugins/run-allocation.ts` and `invokePlugin` in `src/plugins/invoke.ts` infer ownership by comparing all tab labels before and after asynchronous work, so tabs created by unrelated concurrent user actions can be recorded as agent-owned. Severity: 7/10
