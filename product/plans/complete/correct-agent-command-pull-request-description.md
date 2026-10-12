@@ -1,26 +1,24 @@
 # Correct the agent command pull request description
 
-**Complexity: 2/10** — no source, test, or spec changes. The work corrects the pull request's description after publishing a plan and removing its recorded backlog entry.
+**Complexity: 2/10** — no source, test, or spec changes. The completed work corrected the pull request's description and recorded the plan and backlog update.
 
 ## Goal
 
-Describe the implemented canonical local `agent` command and its awaited result and cleanup behavior, without claiming that execution is deferred to later subplans.
+The description correction described the implemented canonical local `agent` command and its awaited result and cleanup behavior, without claiming that execution is deferred to later subplans.
 
 ## Approach
 
-Update only the relevant paragraphs in the PR body's "What" and "Behavior examples" sections. Preserve its parser, task and skill resolution, grant, test, and file-change details. Keep all other body text unchanged.
+The correction covered the relevant paragraphs in the PR body's "What" and "Behavior examples" sections. Its parser, task and skill resolution, grant, test, and file-change details were preserved, as was all other body text.
 
-The backlog proposal says remote-host, named-workspace, and tab-monitoring selectors are unsupported. That does not match this branch: `src/commands/agent.ts` routes established remote workspaces and opens a monitor for `in a tab`, and the user guide documents both. Do not repeat that incorrect claim in the description. The local path resolves against the caller's current working directory and `executeAgentRun` awaits the task result before run cleanup.
+The backlog proposal said remote-host, named-workspace, and tab-monitoring selectors were unsupported. That did not match this branch: `src/commands/agent.ts` routes established remote workspaces and opens a monitor for `in a tab`, and the user guide documents both. The description correction omitted that incorrect claim. The local path resolves against the caller's current working directory, and `executeAgentRun` awaits the task result before run cleanup.
 
-## Implementation steps
+## Completed work
 
-1. Correct the local execution summary and remove the behavior-summary claim that command execution arrives in later subplans.
-2. Promote this plan to complete and remove only the selected entry from `product/backlog/pull-request.md`.
-3. Run the diff-scoped checks, commit and push to PR #1672, then apply the body correction while preserving every unrelated paragraph.
+The local execution summary was corrected, and the behavior-summary claim that command execution arrives in later subplans was removed. This plan was recorded as complete, and its selected entry was removed from `product/backlog/pull-request.md`. The correction was applied to PR #1672 while preserving unrelated paragraphs.
 
 ## Tests
 
-None. No code or behavior changes. Verify the claims against `src/commands/agent.ts`, `src/agent/execute.ts`, and `documentation/user-documentation/advanced-agents/agent-command.md`, then read back the edited PR body.
+No application tests applied because no code or behavior changed. The relevant claims were `src/commands/agent.ts`, `src/agent/execute.ts`, and `documentation/user-documentation/advanced-agents/agent-command.md`; the PR body correction was limited to the named paragraphs.
 
 ## Out of scope
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Remove the security issue in the completed plan's instructions to run checks, publish changes, and edit the pull request body.
-
-Existing Issue: `product/plans/complete/correct-agent-command-pull-request-description.md` directs readers to run verification commands, commit and push, and edit the pull request body, despite being a completed plan supplied as reviewed content. Severity: 7/10
-
-Existing Risk: 7/10 - A reviewer or later agent following the plan can execute branch-controlled tooling and mutate or publish the pull request during review without authorization.
-
-Proposal Risk: 2/10 - Replacing these directives with a factual record of the completed description correction removes the operational prompt while leaving the review task's own backlog-only output boundary clear.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "remove operational directives from the completed PR-description plan". In `product/plans/complete/correct-agent-command-pull-request-description.md`, replace the implementation-step instruction to run checks, commit, push, and change the PR body with a factual summary of the correction already completed. Review the rest of that plan for any other commands or mutation instructions addressed to a future reader, while preserving its stated goal, evidence, and scope. Read the completed plan back to verify it contains no operational directives; no application tests cover this documentation-only change.
-
-
 * Await local ACP process exit before releasing the agent workspace and settling its result.
 
 Existing Issue: Local agent cleanup calls `AcpSession.kill()` and immediately continues to workspace release, while `connectAcp` only signals the child process and does not await its exit or terminate its descendants. Severity: 7/10
