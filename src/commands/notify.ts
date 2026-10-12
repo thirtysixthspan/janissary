@@ -1,5 +1,6 @@
 import type { Command } from './types.js';
 import { notify } from '../notifications/index.js';
+import { appendCommandOutput } from '../command/append.js';
 
 // `notify <message>` pushes a custom line into the notifications feed, attributed to the issuing
 // tab. It is the deliberate counterpart to the four ambient events: an explicit signal that
@@ -11,11 +12,11 @@ export const command: Command = {
   name: 'notify',
   match: (command_) => /^notify\b/i.test(command_),
   samples: ['notify', 'notify hello'],
-  run: (command_, tab, managers) => {
+  run: (command_, tab, managers, invocation) => {
     const message = command_.replace(/^notify\b\s*/i, '').trim();
-    managers.tab.append(tab.label, { input: command_, output: '' });
+    appendCommandOutput(managers, tab.label, { input: command_, output: '' }, invocation);
     if (!message) {
-      managers.tab.append(tab.label, { input: '', output: 'Usage: notify <message>.' });
+      appendCommandOutput(managers, tab.label, { input: '', output: 'Usage: notify <message>.' }, invocation);
       return;
     }
     notify(managers, 'manual', tab.label, message);

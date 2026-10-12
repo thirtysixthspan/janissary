@@ -3,9 +3,10 @@ import { executeAndCapture } from './execute-and-capture.js';
 import { messageBus } from '../bus.js';
 import { makeTab } from '../tab/index.js';
 
-function append(label: string, output: string): void {
+function append(label: string, output: string, invocationId?: string): void {
   messageBus.emit('transcript', {
     type: 'entry:appended', tabLabel: label, entry: { input: 'cmd', output }, tab: makeTab(label, '#fff'),
+    ...(invocationId !== undefined && { invocationId }),
   });
 }
 
@@ -33,6 +34,26 @@ describe('executeAndCapture', () => {
     expect(outputs).toEqual(['here']);
   });
 
+  it('filters overlapping same-tab output by invocation identity', async () => {
+    const first = Promise.withResolvers<void>();
+    const second = Promise.withResolvers<void>();
+    const firstCapture = executeAndCapture('janus', async () => {
+      await first.promise;
+      append('janus', 'first result', 'first');
+    }, undefined, 'first');
+    const secondCapture = executeAndCapture('janus', async () => {
+      await second.promise;
+      append('janus', 'second result', 'second');
+    }, undefined, 'second');
+
+    append('janus', 'unrelated');
+    second.resolve();
+    first.resolve();
+
+    await expect(firstCapture).resolves.toEqual(['first result']);
+    await expect(secondCapture).resolves.toEqual(['second result']);
+  });
+
   it('stops listening once the run finishes', async () => {
     const outputs = await executeAndCapture('janus', async () => {
       append('janus', 'during');
@@ -55,6 +76,21 @@ describe('executeAndCapture', () => {
     late.resolve();
 
     await expect(captured).resolves.toEqual(['started']);
+  });
+
+  it('does not include a late same-invocation append after capture settles', async () => {
+    vi.useFakeTimers();
+    const late = Promise.withResolvers<void>();
+    const captured = executeAndCapture('janus', async () => {
+      append('janus', 'started', 'invocation');
+      await late.promise;
+      append('janus', 'finished', 'invocation');
+    }, 10, 'invocation');
+
+    await vi.advanceTimersByTimeAsync(10);
+    await expect(captured).resolves.toEqual(['started']);
+    late.resolve();
+    await Promise.resolve();
   });
 
   it('stops listening even when the run rejects', async () => {

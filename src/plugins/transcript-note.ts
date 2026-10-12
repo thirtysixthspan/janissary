@@ -12,6 +12,7 @@ export function noteInOriginTab(
   managers: Managers, origin: PluginFailureOrigin, output: string,
 ): void {
   if (managers.tab.tabs.some((tab) => tab.label === origin.label)) {
-    managers.tab.append(origin.label, { input: origin.command, output });
+    if (origin.invocationId) managers.tab.appendForInvocation(origin.label, { input: origin.command, output }, origin.invocationId);
+    else managers.tab.append(origin.label, { input: origin.command, output });
   }
 }

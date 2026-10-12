@@ -99,10 +99,13 @@ describe('TabPluginHost commands', () => {
     );
 
     await host.runCommand('fixture', 'fixture  ~/clips/*.fixture', {
-      label: 'janus', command: 'fixture  ~/clips/*.fixture',
+      label: 'janus', command: 'fixture  ~/clips/*.fixture', invocationId: 'private-invocation',
     });
 
     expect(command).toHaveBeenCalledWith('~/clips/*.fixture', expect.any(Object));
+    const capabilities = command.mock.calls[0]?.[1];
+    expect(Object.keys(capabilities ?? {})).not.toContain('invocationId');
+    expect(Object.keys(capabilities ?? {})).not.toContain('runId');
     expect(runAs).toHaveBeenCalledWith(
       'open ~/clips/*.fixture', 'fixture  ~/clips/*.fixture', 'janus', 'fixture',
     );

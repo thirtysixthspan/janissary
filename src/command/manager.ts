@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Resolution } from '../resolve.js';
 import { resolveInTab } from './resolve-in-tab.js';
 import { findCommand } from '../commands/index.js';
@@ -5,6 +6,8 @@ import { recordGlobalHistory } from '../global-history.js';
 import type { Managers } from '../managers.js';
 import { errorText } from '../error-text.js';
 import { executeAndCapture } from '../capture/execute-and-capture.js';
+import type { CommandInvocationContext } from '../commands/types.js';
+import { tabRuntime } from '../tab/runtime.js';
 
 const DISPATCH_CAPTURE_LIMIT_MS = 30_000;
 
@@ -58,7 +61,25 @@ export class CommandManager {
     label: string,
     input: string,
     captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
-  ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean }> {
+  ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
+    return this.dispatchLine(label, input, captureLimitMs, this.createInvocationContext(label));
+  }
+
+  async dispatchLineInInvocation(
+    label: string,
+    input: string,
+    parent: CommandInvocationContext,
+    captureLimitMs = DISPATCH_CAPTURE_LIMIT_MS,
+  ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
+    return this.dispatchLine(label, input, captureLimitMs, this.childInvocationContext(parent));
+  }
+
+  private async dispatchLine(
+    label: string,
+    input: string,
+    captureLimitMs: number,
+    invocation: CommandInvocationContext,
+  ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
     const resolution = resolveInTab(input, label, this.managers);
     if (resolution.kind === 'output') {
       this.managers.tab.append(label, { input, output: resolution.output, markdown: true });
@@ -66,31 +87,86 @@ export class CommandManager {
     }
     if (resolution.kind !== 'app') return { dispatched: false, output: '' };
 
-    if (findCommand(resolution.name, resolution.cmd)?.coreResponse) {
-      await this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label));
-      return { dispatched: true, output: '', coreResponse: true };
+    const command = findCommand(resolution.name, resolution.cmd);
+    if (command?.coreResponse) {
+      const result = await this.executeCommandWithContext(
+        resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label), invocation,
+      );
+      return { dispatched: true, output: '', coreResponse: true, ...(result !== undefined && { result }) };
+    }
+    if (command?.structuredResult) {
+      let execution: Promise<unknown> | undefined;
+      const output = await executeAndCapture(label, async () => {
+        execution = this.executeCommandWithContext(
+          resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label), invocation,
+        );
+        await execution;
+      }, captureLimitMs, invocation.invocationId);
+      const result = await execution;
+      return result === undefined
+        ? { dispatched: true, output: output.join('\n') }
+        : { dispatched: true, output: '', result };
     }
 
-    const output = await executeAndCapture(
-      label,
-      () => this.executeCommand(resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label)),
-      captureLimitMs,
-    );
-    return { dispatched: true, output: output.join('\n') };
+    let result: unknown;
+    const output = await executeAndCapture(label, async () => {
+      result = await this.executeCommandWithContext(
+        resolution.name, resolution.cmd, label, this.managers.tab.findIndex(label), invocation,
+      );
+    }, captureLimitMs, invocation.invocationId);
+    return result === undefined
+      ? { dispatched: true, output: output.join('\n') }
+      : { dispatched: true, output: '', result };
   }
 
-  async executeCommand(name: string, command: string, label: string, index: number): Promise<void> {
+  async executeCommand(name: string, command: string, label: string, index: number): Promise<unknown> {
+    return this.executeCommandWithContext(name, command, label, index, this.createInvocationContext(label));
+  }
+
+  private async executeCommandWithContext(
+    name: string,
+    command: string,
+    label: string,
+    index: number,
+    invocation: CommandInvocationContext,
+  ): Promise<unknown> {
     const cmd = findCommand(name, command);
-    if (!cmd) return;
+    if (!cmd) return undefined;
     if (cmd.available?.(label, this.managers) === false) {
       this.run(command, label, index);
       return;
     }
     try {
-      await cmd.run(command, { label, index }, this.managers);
+      return await cmd.run(command, { label, index }, this.managers, invocation);
     } catch (error) {
       const output = errorText(error);
-      this.managers.tab.append(label, { input: command, output });
+      this.managers.tab.appendForInvocation(label, { input: command, output }, invocation.invocationId);
+      return undefined;
     }
+  }
+
+  private createInvocationContext(label: string): CommandInvocationContext {
+    const tab = this.managers.tab.byLabel(label);
+    const runtime = tab ? tabRuntime(tab) : undefined;
+    return Object.freeze({
+      runId: randomUUID(),
+      invocationId: randomUUID(),
+      caller: Object.freeze({
+        label,
+        ...(runtime?.incarnation && { incarnation: runtime.incarnation }),
+        cwd: runtime?.cwd ?? this.managers.tab.launchDir,
+        context: Object.freeze([...(runtime?.context ?? [])]),
+      }),
+      signal: new AbortController().signal,
+    });
+  }
+
+  private childInvocationContext(parent: CommandInvocationContext): CommandInvocationContext {
+    return Object.freeze({
+      runId: parent.runId,
+      invocationId: randomUUID(),
+      caller: parent.caller,
+      signal: parent.signal,
+    });
   }
 }

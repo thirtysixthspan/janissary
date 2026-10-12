@@ -110,7 +110,7 @@ export type LauncherRunCommandIntent = { id: string };
 // pair `dispatchLineWithOutput` gives — so the rail can show the answer rather than leaving the bar
 // silent about what ran.
 export type LauncherDispatchIntent = { line: string };
-export type LauncherDispatchReply = { dispatched: boolean; output: string; coreResponse?: boolean };
+export type LauncherDispatchReply = { dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown };
 
 // The Configure button's click. Answered as a run-command intent carrying this one id, so the client
 // has no second intent shape to remember.

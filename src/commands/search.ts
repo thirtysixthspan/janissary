@@ -1,6 +1,7 @@
 import type { Command } from './types.js';
 import { flattenBuffer } from '../tab/formatting.js';
 import { compilePattern, findMatches } from '../search-matches.js';
+import { appendCommandOutput } from '../command/append.js';
 
 export const SEARCH_USAGE = 'Usage: search transcript <pattern>';
 
@@ -11,9 +12,9 @@ export const command: Command = {
   name: 'search',
   match: (command_) => /^search\s+transcript\b/i.test(command_),
   samples: ['search transcript hello'],
-  run: (command_, tab, managers) => {
+  run: (command_, tab, managers, invocation) => {
     const pattern = command_.replace(/^search\s+transcript\b\s*/i, '').trim();
-    const append = (output: string) => managers.tab.append(tab.label, { input: command_, output });
+    const append = (output: string) => appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
     if (!pattern || !compilePattern(pattern)) { append(SEARCH_USAGE); return; }
     const target = managers.tab.byLabel(tab.label);
     const lines = flattenBuffer(target?.log ?? []);

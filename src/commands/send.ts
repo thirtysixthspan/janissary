@@ -4,6 +4,7 @@ import type { CommandManagers } from './types.js';
 import { resolveTarget } from './resolve-target.js';
 import { typeIntoHarness } from '../harness/input.js';
 import { awaitsTerminal, ownsTerminal } from '../tab/plugin-terminals.js';
+import { appendCommandOutput } from '../command/append.js';
 
 /** Parse a `send <label> <text...>` command (the leading `send` is optional). */
 export function parseSendCommand(input: string): { label: string; text: string } | { error: string } {
@@ -33,8 +34,8 @@ export const command: Command = {
   name: 'send',
   match: (command_) => /^send\b/i.test(command_),
   samples: ['send', 'send hello'],
-  run: (command_, tab, managers) => {
-    const append = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
+  run: (command_, tab, managers, invocation) => {
+    const append = (text: string) => appendCommandOutput(managers, tab.label, { input: command_, output: text }, invocation);
     const parsed = parseSendCommand(command_);
     if ('error' in parsed) { append(parsed.error); return; }
     const target = resolveTarget(parsed.label, managers, append);

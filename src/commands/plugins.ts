@@ -1,6 +1,7 @@
 import type { Command } from './types.js';
 import type { TabPluginDeclaration } from '../plugins/api.js';
 import type { TabPluginStatus } from '../plugins/status.js';
+import { appendCommandOutput } from '../command/append.js';
 
 function statusLine(
   declaration: TabPluginDeclaration,
@@ -21,17 +22,17 @@ export const command: Command = {
   name: 'plugins',
   match: (input) => /^plugins\b/iu.test(input),
   samples: ['plugins', 'plugins list'],
-  run: (input, tab, managers) => {
+  run: (input, tab, managers, invocation) => {
     const argument = input.replace(/^plugins\b\s*/iu, '').trim();
     if (argument) {
-      managers.tab.append(tab.label, { input, output: 'Usage: plugins' });
+      appendCommandOutput(managers, tab.label, { input, output: 'Usage: plugins' }, invocation);
       return;
     }
     // Read the host's own declaration list rather than importing the catalog, so the printed rows
     // can never disagree with the plugins the running host actually knows about.
     for (const declaration of managers.plugins.declarations) {
       const status = managers.plugins.statusFor(declaration.id) ?? { state: 'declared' };
-      managers.tab.append(tab.label, { input, output: statusLine(declaration, status) });
+      appendCommandOutput(managers, tab.label, { input, output: statusLine(declaration, status) }, invocation);
     }
   },
 };

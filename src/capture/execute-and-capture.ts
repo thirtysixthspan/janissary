@@ -12,10 +12,14 @@ export async function executeAndCapture(
   label: string,
   run: () => Promise<void>,
   limitMs?: number,
+  invocationId?: string,
 ): Promise<string[]> {
   const outputs: string[] = [];
   const subscription = messageBus.on('transcript', 'entry:appended', (event) => {
-    if (event.type === 'entry:appended' && event.tabLabel === label) outputs.push(event.entry.output);
+    if (event.type === 'entry:appended' && event.tabLabel === label
+      && (invocationId === undefined || event.invocationId === invocationId)) {
+      outputs.push(event.entry.output);
+    }
   });
   let limit: ReturnType<typeof setTimeout> | undefined;
   try {

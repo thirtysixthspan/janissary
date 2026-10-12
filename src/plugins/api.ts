@@ -369,7 +369,7 @@ export type TabPluginServerCapabilities = {
   // handle. Deliberately one call rather than a resolve-then-decide pair: the application's command
   // table is consulted once, in the one place that owns it, and is never copied into a plugin where a
   // newly added command would be invisible.
-  dispatchLineWithOutput(line: string): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean }>;
+  dispatchLineWithOutput(line: string): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }>;
   // The completion the application's command bar shows for a line, for a plugin whose tab has one.
   completeLine(line: string, cursor: number): CompletionResult;
   // Whether a terminal this plugin spawned is still running. A client that reconnects learns nothing

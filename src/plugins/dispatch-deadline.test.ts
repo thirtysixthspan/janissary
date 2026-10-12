@@ -60,6 +60,17 @@ describe('dispatching an application command from a plugin intent', () => {
     expect(fixture.closeTab).not.toHaveBeenCalled();
   });
 
+  it('forwards a structured result after slow host work without charging it to the plugin', async () => {
+    const fixture = setup((_request, capabilities) => capabilities.dispatchLineWithOutput('agent execute task.md'));
+    fixture.dispatchLineWithOutput.mockImplementation(async () => new Promise((resolve) => {
+      setTimeout(() => { resolve({ dispatched: true, output: '', result: { status: 'completed' } }); }, SLOW_COMMAND_MS);
+    }));
+
+    await expect(fixture.host.intent('shell', 'dispatch', 'slow-agent'))
+      .resolves.toEqual({ dispatched: true, output: '', result: { status: 'completed' } });
+    expect(fixture.host.statusFor('shell')).toMatchObject({ state: 'active' });
+  });
+
   it('still disables a plugin whose own handler hangs', async () => {
     const fixture = setup(() => new Promise(() => {}));
 

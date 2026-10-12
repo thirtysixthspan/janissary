@@ -1,4 +1,5 @@
 import type { Command } from './types.js';
+import { appendCommandOutput } from '../command/append.js';
 
 // `newfile <file>` — internal command the file navigator's "New file" button and Cmd+N send.
 // Distinct from `edit`: it always resolves to a name that isn't taken yet, opening `untitled-2.md`
@@ -7,10 +8,10 @@ export const command: Command = {
   name: 'newfile',
   match: (command_) => /^newfile\b/i.test(command_),
   samples: ['newfile', 'newfile notes.txt'],
-  run: (command, tab, managers) => {
+  run: (command, tab, managers, invocation) => {
     const target = command.replace(/^newfile\b\s*/i, '').trim();
-    if (!target) { managers.tab.append(tab.label, { input: command, output: 'Usage: newfile <file>' }); return; }
-    managers.tab.append(tab.label, { input: command, output: '' });
+    if (!target) { appendCommandOutput(managers, tab.label, { input: command, output: 'Usage: newfile <file>' }, invocation); return; }
+    appendCommandOutput(managers, tab.label, { input: command, output: '' }, invocation);
     managers.openFile.newFile(command, target, tab.label);
   },
 };

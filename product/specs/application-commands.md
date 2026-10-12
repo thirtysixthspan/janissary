@@ -1,5 +1,9 @@
 ## Application Commands
 
+### Structured command replies
+
+When a command is dispatched from a plugin tab, the reply preserves `dispatched`, `output`, and `coreResponse` and may also include the command's structured `result`. A structured result is returned directly and is not duplicated in captured transcript output. Commands that return no result keep the existing printed-output reply; only output produced by that invocation is included, and capture stops after 30 seconds while later output remains in the transcript.
+
 ### `help`
 
 Returns the contents of `help.md` at the repo root (read and cached on first use). Its command table lists the commands in alphabetical order by name, with each description limited to 200 characters. If that file cannot be read, it falls back to a generated summary listing the built-in commands and the `!` / `/` prefixes and `Ctrl+R` history shortcut.

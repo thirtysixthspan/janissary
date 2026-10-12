@@ -1,5 +1,6 @@
 import type { Command } from './types.js';
 import { parseMonitorCommand, parseUnmonitorCommand } from '../monitor/parsing.js';
+import { appendCommandOutput } from '../command/append.js';
 
 // `monitor <persona> [target...]` — start a persona-driven AI monitor. No targets:
 // inline mode, watching the current tab and reporting into its transcript. With targets
@@ -10,8 +11,8 @@ export const monitor: Command = {
   name: 'monitor',
   match: (command_) => /^monitor(\s|$)/i.test(command_),
   samples: ['monitor', 'monitor build'],
-  run: (command_, tab, managers) => {
-    const out = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
+  run: (command_, tab, managers, invocation) => {
+    const out = (text: string) => appendCommandOutput(managers, tab.label, { input: command_, output: text }, invocation);
     const parsed = parseMonitorCommand(command_);
     if ('error' in parsed) { out(parsed.error); return; }
     if ('ask' in parsed) {
@@ -36,8 +37,8 @@ export const unmonitor: Command = {
   name: 'unmonitor',
   match: (command_) => /^unmonitor(\s|$)/i.test(command_),
   samples: ['unmonitor', 'unmonitor build'],
-  run: (command_, tab, managers) => {
-    const out = (text: string) => managers.tab.append(tab.label, { input: command_, output: text });
+  run: (command_, tab, managers, invocation) => {
+    const out = (text: string) => appendCommandOutput(managers, tab.label, { input: command_, output: text }, invocation);
     const parsed = parseUnmonitorCommand(command_);
     if ('error' in parsed) { out(parsed.error); return; }
     if ('all' in parsed) {
@@ -55,8 +56,8 @@ export const monitors: Command = {
   name: 'monitors',
   match: (command_) => /^monitors$/i.test(command_),
   samples: ['monitors'],
-  run: (command_, tab, managers) => {
+  run: (command_, tab, managers, invocation) => {
     const lines = managers.monitor.list();
-    managers.tab.append(tab.label, { input: command_, output: lines.length > 0 ? lines.join('\n') : 'No active monitors.' });
+    appendCommandOutput(managers, tab.label, { input: command_, output: lines.length > 0 ? lines.join('\n') : 'No active monitors.' }, invocation);
   },
 };

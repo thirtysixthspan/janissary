@@ -84,7 +84,9 @@ export function createPluginContext(
     note: (text) => {
       if (!isEnabled()) return;
       if (managers.tab.tabs.some((tab) => tab.label === origin.label)) {
-        managers.tab.append(origin.label, { input: origin.command, output: text });
+        if (origin.invocationId) {
+          managers.tab.appendForInvocation(origin.label, { input: origin.command, output: text }, origin.invocationId);
+        } else managers.tab.append(origin.label, { input: origin.command, output: text });
       }
     },
     // The plugin's own line into the notifications feed, kept distinct from the host's failure path
