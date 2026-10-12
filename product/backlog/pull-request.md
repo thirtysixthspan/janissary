@@ -99,3 +99,14 @@ Existing Risk: 7/10 - The structured result can settle while the remote ACP proc
 Proposal Risk: 3/10 - A bounded wait for observed process exit before a positive acknowledgment, with a negative acknowledgment on timeout, makes successful cleanup meaningful while still allowing the local run to report uncertainty.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "await remote ACP process teardown before acknowledging release". Extend the ACP session lifecycle in `src/acp/types.ts` and `src/acp/index.ts` with an awaitable close operation that resolves when the child process exits, and have `RemoteAcp.close` in `src/remote/serve-acp.ts` await it before sending `acp-closed` with `released: true`; send a negative acknowledgment when bounded teardown cannot be confirmed. Preserve idempotent close behavior and ensure remote shutdown does not remove the workspace before owned ACP children have exited. Update `src/remote/serve-acp.test.ts` and `src/remote/acp-session.test.ts` to assert that the acknowledgment follows process exit, timeout produces the existing cleanup warning path, and concurrent close requests do not double-release resources. No current remote cleanup test proves that a positive acknowledgment follows actual child exit.
+
+
+* Deliver the plan's remote execution host and workspace metadata in the agent monitor instead of the local caller's details.
+
+Existing Issue: `AgentRunManager.create` in `src/agent/manager.ts` always records `host: 'Local'` and `workspace: options.caller.cwd`, while `src/commands/agent.ts` creates remote runs without passing their resolved remote host or workspace. Severity: 5/10
+
+Existing Risk: 5/10 - A monitor for a remote run presents the local machine and caller directory as its execution location, misleading users about which host and files the agent can access.
+
+Proposal Risk: 2/10 - Supplying the resolved execution host and workspace when constructing the run makes the displayed location accurate, while remote execution and its cleanup behavior remain unchanged.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "show the actual remote execution location in agent monitors". Extend `AgentRunOptions` and the run metadata construction in `src/agent/run.ts` and `src/agent/manager.ts` to accept the execution host and workspace explicitly. In `src/commands/agent.ts`, pass `remoteAddress.host` and `remoteWorkspace` for remote runs, and the caller's local execution directory for local runs. Keep those values in the server-owned `AgentRunView` projection consumed by `web/src/plugins/agent-monitor/view.tsx`. Add command/run-view coverage in `src/commands/agent.test.ts` asserting that a remote host and remote workspace are shown for a remote run and local details remain shown for local runs; the existing `web/src/plugins/agent-monitor/view.test.tsx` covers rendering the supplied metadata but does not test which execution location the server supplies.
