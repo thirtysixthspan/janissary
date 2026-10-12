@@ -380,6 +380,21 @@ describe('RemoteChannel — ACP session routing', () => {
   });
 });
 
+describe('RemoteChannel — agent snapshot resolution', () => {
+  it('sends task and skill lookup to the attached execution host', async () => {
+    const h = harness();
+    h.channel.receive(`${encodeHandshake()}\n`);
+    const pending = h.channel.resolveAgentSnapshot('ai/tasks/fix.md', ['review']);
+    const request = JSON.parse(h.written[0] ?? '{}') as { type: string; id: string; task: string; skills: string[] };
+    expect(request).toMatchObject({ type: 'agent-resolve', task: 'ai/tasks/fix.md', skills: ['review'] });
+
+    const snapshot = { taskPath: '/remote/project/ai/tasks/fix.md', taskText: 'Fix it.', skills: [], grants: [] };
+    h.channel.receive(`${encodeFrame({ type: 'agent-resolve-result', id: request.id, snapshot })}\n`);
+
+    await expect(pending).resolves.toEqual(snapshot);
+  });
+});
+
 describe('RemoteChannel — closing', () => {
   it('notifies and clears attached navigators', () => {
     const h = harness();

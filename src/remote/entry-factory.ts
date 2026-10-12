@@ -26,6 +26,7 @@ export type RemoteEntryFactoryOptions = {
   cwd: string;
   handlers: RemoteLaunchHandlers;
   resume?: RemoteResume;
+  nonInteractive?: boolean;
   channelClosed: (entry: RemoteEntry) => void;
   sessionsChanged: () => void;
 };
@@ -56,7 +57,7 @@ export function provisionOrigin(managers: Managers): { origin?: string } {
 }
 
 export function createRemoteEntry({
-  managers, label, address, cwd, handlers, resume, channelClosed, sessionsChanged,
+  managers, label, address, cwd, handlers, resume, nonInteractive, channelClosed, sessionsChanged,
 }: RemoteEntryFactoryOptions): RemoteEntry {
   const state = { resuming: resume !== undefined };
   const transcript = createRemoteTranscriptSource();
@@ -157,7 +158,7 @@ export function createRemoteEntry({
       write: (data) => deferred.session?.write(data), kill: () => deferred.session?.kill(),
     });
     deferred.session = managers.pty.spawnTransport(entry.labels.values().next().value ?? label,
-      'ssh', remoteServeCommand(address), resume ? process.cwd() : cwd, {
+      'ssh', nonInteractive ? remoteCaptureCommand(address) : remoteServeCommand(address), resume ? process.cwd() : cwd, {
         onData: (data) => { if (current === generation) channel.receive(data); },
         onExit: () => { if (current === generation) channel.closed(); },
         onInput,

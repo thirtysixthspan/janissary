@@ -54,21 +54,27 @@ describe('remoteCaptureCommand', () => {
     expect(remoteCaptureCommand(address('devbox:/srv/proj')))
       .toBe(`ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0 -o ConnectTimeout=10 -t devbox '$SHELL -ic "janus remote-serve /srv/proj"'`);
   });
+
+  it('uses the remote login-directory project lookup for a pathless agent target', () => {
+    expect(remoteCaptureCommand(address('build-box')))
+      .toBe(`ssh -o BatchMode=yes -o NumberOfPasswordPrompts=0 -o ConnectTimeout=10 -t build-box '$SHELL -ic "janus remote-serve"'`);
+  });
 });
 
-function managerHarness(ready = true, session?: string) {
+function managerHarness(ready = true, session?: string, nonInteractive = false) {
   let transport: { onData: (data: string) => void; onExit: () => void } | undefined;
   const kill = vi.fn();
   const write = vi.fn();
   const reassignTransports = vi.fn();
   const closeTab = vi.fn();
   const dropSession = vi.fn();
+  const spawnTransport = vi.fn((_label, _program, _command, _cwd, handlers) => {
+    transport = handlers;
+    return { id: 'ssh1', program: 'ssh', write, resize: vi.fn(), kill };
+  });
   const managers = {
     pty: {
-      spawnTransport: vi.fn((_label, _program, _command, _cwd, handlers) => {
-        transport = handlers;
-        return { id: 'ssh1', program: 'ssh', write, resize: vi.fn(), kill };
-      }),
+      spawnTransport,
       reassignTransports,
     },
     sessions: { dropSession },
@@ -82,10 +88,10 @@ function managerHarness(ready = true, session?: string) {
   } as unknown as Managers;
   const remote = new RemoteManager(managers);
   const handlers: RemoteLaunchHandlers = { onReady: vi.fn(), onFailed: vi.fn(), onClosed: vi.fn(), onNameRefused: vi.fn() };
-  remote.create('creator', address('devbox'), '/local', handlers);
+  remote.create('creator', address('devbox'), '/local', handlers, undefined, { nonInteractive });
   transport?.onData(`${encodeHandshake(session)}\n`);
   if (ready) transport?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws' })}\n`);
-  return { remote, handlers, kill, write, reassignTransports, closeTab, dropSession, transport: () => transport };
+  return { remote, handlers, kill, write, reassignTransports, closeTab, dropSession, spawnTransport, transport: () => transport };
 }
 
 describe('RemoteManager shared channels', () => {
@@ -96,6 +102,14 @@ describe('RemoteManager shared channels', () => {
     const h = managerHarness();
     h.transport()?.onData(`${encodeFrame({ type: 'workspace-ready', dir: '/remote/ws', home: '/home/remote' })}\n`);
     expect(h.remote.homeOf('creator')).toBe('/home/remote');
+    h.remote.dispose();
+  });
+
+  it('uses batch-mode SSH for run-owned host overrides without changing shell launches', () => {
+    const h = managerHarness(false, undefined, true);
+    expect(h.spawnTransport).toHaveBeenCalledWith(
+      'creator', 'ssh', expect.stringContaining('BatchMode=yes'), '/local', expect.any(Object),
+    );
     h.remote.dispose();
   });
 

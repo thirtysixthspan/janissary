@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the planned remote host override for local agent callers.
-
-Existing Issue: The ready feature plan says `on <host>` overrides a remote shell's execution host and project, but the implementation requires the selected host to already match an attached remote workspace, so a local caller cannot use the selector and a remote caller cannot switch hosts. Severity: 7/10
-
-Existing Risk: 6/10 - Users cannot target a distinct remote execution host as the finalized launch design promises, and the redundant selector gives a narrower capability than the command grammar suggests.
-
-Proposal Risk: 3/10 - Resolving the override through the existing remote connection and workspace mechanisms, with explicit refusal when connection or project resolution fails, makes host selection usable without silently falling back to local execution.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1672 "deliver the planned remote host override for agent runs". Implement the `on <host>` behavior stated in `product/plans/ready/add-a-new-agent-command.md` so it can select an execution host distinct from the local caller or its current remote host, and resolve a pathless target using the established SSH login-directory project lookup. Trace the selected target through parsing and validation in `src/agent/command-parser.ts` and `src/commands/agent.ts`, remote session/channel setup in `src/remote/manager.ts` and `src/remote/channel/index.ts`, and task/skill snapshot resolution on the execution host. Keep granted Janissary commands bound to the original caller context and preserve no-local-fallback behavior. Update `product/specs/agent-command.md`, the remote execution plan's stated scope, and the user guide to match the supported selector semantics. Extend `src/commands/agent.test.ts` and focused remote manager/channel tests for local-to-remote selection, switching from one established remote host to another, pathless project resolution, and unavailable-target failure; preserve the existing established-workspace sharing and cleanup cases.
-
-
 * Revalidate run ownership before deferred plugin launches can allocate tabs.
 
 Existing Issue: The plugin command adapter preserves the trusted run ID through deferred launch-ready callbacks, but those callbacks and their host allocation capabilities can still create tabs after the run has ended, when `AgentRunManager.trackCreatedTab` can no longer attach the tabs to cleanup. Severity: 7/10

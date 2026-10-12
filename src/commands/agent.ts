@@ -13,6 +13,7 @@ import { applyNestedAgentPolicy } from '../agent/nested-policy.js';
 import { createRunCompletion, trackChildRun, trustedParentRun } from '../agent/nested-run.js';
 import { formatAgentResult } from '../agent/format-result.js';
 import { resolveAgentGroup } from '../agent/group-selector.js';
+import { inheritRemoteAgentTarget, resolveRemoteAgentTarget, type RemoteAgentTarget } from '../agent/remote-target.js';
 
 async function runAgent(
   commandText: string,
@@ -32,38 +33,32 @@ async function runAgent(
     const selectedGroup = resolveAgentGroup(managers.tab.tabs, launch.group);
     const parent = trustedParentRun(caller, managers);
     const sourceLabel = launch.workspace ?? label;
+    const callerTab = managers.tab.byLabel(label);
+    if (!callerTab) throw new Error(`Agent caller not found: ${label}`);
     const sourceTab = managers.tab.byLabel(sourceLabel);
     const remoteAddress = managers.remote.addressOf(sourceLabel);
-    if (launch.host && (!remoteAddress || remoteAddress.host.toLowerCase() !== launch.host.toLowerCase())) {
-      throw new Error('requested remote host must match an established remote workspace.');
-    }
     if (launch.workspace && (!sourceTab || !remoteAddress)) {
       throw new Error(`remote workspace "${launch.workspace}" is not available.`);
     }
-    const remoteChannel = managers.remote.get(sourceLabel);
-    const remoteWorkspace = managers.remote.workspaceOf(sourceLabel);
-    const useRemote = Boolean(launch.host || launch.workspace || remoteAddress);
-    if (useRemote && (!remoteChannel?.attached || !remoteWorkspace)) {
-      throw new Error('remote workspace is not ready.');
-    }
+    let remoteTarget: RemoteAgentTarget | undefined;
+    if (launch.host) remoteTarget = await resolveRemoteAgentTarget(managers, launch.host, sourceLabel, caller.caller.cwd, caller.signal);
+    else if (launch.workspace || remoteAddress) remoteTarget = await inheritRemoteAgentTarget(managers, sourceLabel);
     const capturedCaller = {
       ...caller.caller,
       incarnation: caller.caller.incarnation ?? randomUUID(),
     };
     let snapshot: AgentSnapshot;
     let executionDir = caller.caller.cwd;
-    if (useRemote) {
-      const releaseWorkspace = managers.remote.acquireAgentLease(sourceLabel, `agent:${randomUUID()}`);
+    if (remoteTarget) {
+      const releaseWorkspace = remoteTarget.release;
       const placeholder: AgentSnapshot = { taskPath: launch.task, taskText: '', skills: [], grants: [] };
-      const callerTab = managers.tab.byLabel(label);
-      if (!callerTab) throw new Error(`Agent caller not found: ${label}`);
       try {
         run = managers.agent.create({
           caller: capturedCaller,
           snapshot: placeholder,
           executionDir,
-          executionHost: remoteAddress?.host ?? 'Local',
-          executionWorkspace: remoteWorkspace,
+          executionHost: remoteTarget.host,
+          executionWorkspace: remoteTarget.workspace,
           command: commandText,
           model: launch.model,
           effort: launch.effort,
@@ -76,12 +71,7 @@ async function runAgent(
       if (parent) trackChildRun(parent, run, managers, completion.promise);
       abortRun = () => { void managers.agent.finish(run!.id, 'terminated').catch(() => {}); };
       caller.signal.addEventListener('abort', abortRun, { once: true });
-      snapshot = remoteChannel
-        ? await remoteChannel.resolveAgentSnapshot(launch.task, [...launch.skills])
-        : resolveAgentSnapshot(launch.task, launch.skills, {
-          workspaceDir: executionDir,
-          installationDir: janissaryRoot(),
-        }, commands.map(({ name }) => name));
+      snapshot = await remoteTarget.channel.resolveAgentSnapshot(launch.task, [...launch.skills]);
     } else {
       const local = await startLocalAgentRun(managers, capturedCaller, commandText, launch.model, launch.effort);
       run = local.run;
@@ -136,7 +126,7 @@ async function runAgent(
     let result: AgentResult;
     try {
       result = await executeAgentRun(activeRun, runInvocation, launch.model, launch.effort, launch.parameters, managers,
-        useRemote && remoteChannel ? { channel: remoteChannel, offline: sourceTab?.offline } : undefined);
+        remoteTarget ? { channel: remoteTarget.channel, offline: sourceTab?.offline } : undefined);
     } catch (error) {
       result = agentFailure(error);
     }

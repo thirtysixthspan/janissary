@@ -243,10 +243,94 @@ describe('agent command', () => {
     });
   });
 
-  it('refuses remote execution unless the host has an established workspace', async () => {
-    await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({
-      status: 'failed', response: 'Agent: requested remote host must match an established remote workspace.',
+  it('opens a run-only remote target for a local caller and keeps Janissary commands in caller context', async () => {
+    const parsed = parseRemoteAddress('build-box');
+    if ('error' in parsed) throw new Error(parsed.error);
+    const snapshot = { taskPath: '/remote/project/ai/tasks/task.md', taskText: 'Remote task.', skills: [], grants: [] };
+    const channel = { attached: true, resolveAgentSnapshot: vi.fn(async () => snapshot) } as unknown as RemoteChannel;
+    const release = vi.fn(async () => {});
+    vi.spyOn(managers.remote, 'create').mockReturnValue(channel);
+    vi.spyOn(managers.remote, 'readyOf').mockReturnValue(Promise.resolve('/remote/project'));
+    vi.spyOn(managers.remote, 'acquireAgentLease').mockReturnValue(release);
+    vi.spyOn(managers.remote, 'release').mockReturnValue(true);
+    execute.mockImplementation(async (_run, context) => {
+      expect(context).toMatchObject({ caller: invocation.caller });
+      return { status: 'completed', response: 'Remote done.', cleanupWarnings: [] };
     });
+
+    await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({ status: 'completed' });
+
+    expect(managers.remote.create).toHaveBeenCalledWith(
+      expect.stringMatching(/^agent-/), parsed, workspace, expect.any(Object), undefined, { nonInteractive: true },
+    );
+    expect(channel.resolveAgentSnapshot).toHaveBeenCalledWith('task.md', []);
+    expect(execute.mock.calls[0]?.[0]).toMatchObject({ snapshot });
+    expect(execute.mock.calls[0]?.[1]).toMatchObject({ caller: invocation.caller });
+    expect(release).toHaveBeenCalledOnce();
+  });
+
+  it('switches from an established remote caller to a distinct requested host', async () => {
+    const original = parseRemoteAddress('devbox');
+    const target = parseRemoteAddress('build-box');
+    if ('error' in original || 'error' in target) throw new Error('Invalid test remote host.');
+    const currentChannel = { attached: true } as RemoteChannel;
+    const targetChannel = { attached: true, resolveAgentSnapshot: vi.fn(async () => ({
+      taskPath: '/build/project/task.md', taskText: 'Target task.', skills: [], grants: [],
+    })) } as unknown as RemoteChannel;
+    vi.spyOn(managers.remote, 'addressOf').mockReturnValue(original);
+    vi.spyOn(managers.remote, 'get').mockReturnValue(currentChannel);
+    vi.spyOn(managers.remote, 'workspaceOf').mockReturnValue('/dev/project');
+    vi.spyOn(managers.remote, 'create').mockReturnValue(targetChannel);
+    vi.spyOn(managers.remote, 'readyOf').mockReturnValue(Promise.resolve('/build/project'));
+    vi.spyOn(managers.remote, 'acquireAgentLease').mockReturnValue(vi.fn(async () => {}));
+    vi.spyOn(managers.remote, 'release').mockReturnValue(true);
+    execute.mockResolvedValue({ status: 'completed', response: 'Done.', cleanupWarnings: [] });
+
+    await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({ status: 'completed' });
+
+    expect(managers.remote.create).toHaveBeenCalledWith(
+      expect.stringMatching(/^agent-/), target, workspace, expect.any(Object), undefined, { nonInteractive: true },
+    );
+    expect(targetChannel.resolveAgentSnapshot).toHaveBeenCalledOnce();
+  });
+
+  it('does not borrow a matching host reached through a different SSH user', async () => {
+    const established = parseRemoteAddress('admin@build-box');
+    const requested = parseRemoteAddress('build-box');
+    if ('error' in established || 'error' in requested) throw new Error('Invalid test remote host.');
+    const currentChannel = { attached: true } as RemoteChannel;
+    const targetChannel = { attached: true, resolveAgentSnapshot: vi.fn(async () => ({
+      taskPath: '/build/project/task.md', taskText: 'Target task.', skills: [], grants: [],
+    })) } as unknown as RemoteChannel;
+    vi.spyOn(managers.remote, 'addressOf').mockReturnValue(established);
+    vi.spyOn(managers.remote, 'get').mockReturnValue(currentChannel);
+    vi.spyOn(managers.remote, 'workspaceOf').mockReturnValue('/build/project');
+    vi.spyOn(managers.remote, 'create').mockReturnValue(targetChannel);
+    vi.spyOn(managers.remote, 'readyOf').mockReturnValue(Promise.resolve('/build/project'));
+    vi.spyOn(managers.remote, 'acquireAgentLease').mockReturnValue(vi.fn(async () => {}));
+    vi.spyOn(managers.remote, 'release').mockReturnValue(true);
+    execute.mockResolvedValue({ status: 'completed', response: 'Done.', cleanupWarnings: [] });
+
+    await expect(run('agent on build-box execute task.md')).resolves.toMatchObject({ status: 'completed' });
+
+    expect(managers.remote.create).toHaveBeenCalledWith(
+      expect.stringMatching(/^agent-/), requested, workspace, expect.any(Object), undefined, { nonInteractive: true },
+    );
+    expect(currentChannel.resolveAgentSnapshot).toBeUndefined();
+  });
+
+  it('fails an unavailable remote target without falling back to local execution', async () => {
+    const channel = { attached: false } as RemoteChannel;
+    vi.spyOn(managers.remote, 'create').mockReturnValue(channel);
+    vi.spyOn(managers.remote, 'readyOf').mockReturnValue(Promise.reject(new Error('SSH target unavailable.')));
+    const release = vi.spyOn(managers.remote, 'release').mockReturnValue(true);
+
+    await expect(run('agent on missing-host execute task.md')).resolves.toMatchObject({
+      status: 'failed', response: 'Agent: SSH target unavailable.',
+    });
+
+    expect(release).toHaveBeenCalledOnce();
+    expect(managers.workspace.create).not.toHaveBeenCalled();
     expect(execute).not.toHaveBeenCalled();
   });
 
