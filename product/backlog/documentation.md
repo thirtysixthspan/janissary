@@ -2,8 +2,6 @@
 
 ## ready
 
-## development
-
 * agent-command (5/10) — The existing page at `documentation/user-documentation/advanced-agents/agent-command.md` covers the primary launch flow, workspace selection, skill grants, local and remote runs, monitoring, and results, but 3 of 12 user-facing facts are missing and none are wrong. It does not show the parser's common failure messages (`Agent: missing execute clause.`, `Agent: missing task after execute.`, or the launch-clause usage), explain that an ambiguous project task match stops lookup before the installed task tree is checked or give the `Agent: unknown task "<value>".` response, or say that the run fails if its requested monitor cannot open. Add a short error-recovery section to the existing page with these cases; the ground truth is `product/specs/agent-command.md`, `src/agent/command-parser.ts`, `src/agent/task-resolution.ts`, and `src/commands/agent.ts`.
 
 * roles (4/10) — `documentation/user-documentation/tab-types/roles.md` covers the role editor, storage precedence, defaults, edits, file failures, and drag actions, but 2 of 14 facts are missing and none are wrong. It omits the exact `Usage: roles` response when an argument is supplied and what happens when another window changes a description while it is being edited, including the refusal line `The description of role "<name>" changed elsewhere — nothing was written.` Add those cases to the existing page's editing and error guidance; the ground truth is `product/specs/roles.md` and `src/plugins/roles/activate.ts`.
@@ -11,6 +9,8 @@
 * shell-tab (4/10) — `documentation/user-documentation/command-bar/shell.md` now documents the plain-text transcript, including its path, contents, save/rename restrictions while the shell is running, failure notice, and opt-out, but 2 of 14 facts are missing and none are wrong. It does not say that remote shell transcripts are written locally, or that closing the shell flushes its unfinished prompt row; add these details to the existing transcript section. The ground truth is `product/specs/shell-tab.md`, `src/shell/transcript/writer.ts`, and `src/shell/transcript/transcript-file.ts`.
 
 * diff-tab (1/10) — The recent workspace-diff changes have no remaining user-documentation gap: all 14 user-facing facts are covered without a mismatch across `documentation/user-documentation/tab-types/diff-tab.md`, `documentation/user-documentation/tab-types/sessions.md`, and `help.md`. In particular, `help.md` gives `diff on <tab name>`, the sessions page explains the live-row **Show diff in the workspace** action, and the diff page covers the view itself, so no edit is needed. The behavior is specified in `product/specs/diff-tab.md` and implemented in `src/plugins/diff/activate.ts`.
+
+## development
 
 ## deferred
 
