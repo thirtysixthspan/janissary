@@ -48,7 +48,7 @@ With the terminal focused, press `Ctrl+Shift+C` to copy its selection. On macOS,
 
 ## Read a shell session's transcript
 
-Press the 📋 **Open transcript** button in the shell tab's metadata row. It opens everything the shell has shown so far in an editor tab named after the file, such as `tx-2026-10-13T03-42-46-527Z.txt`, where `Cmd+F` searches it. The button appears as the shell starts.
+Press the 📋 **Open transcript** button in the shell tab's metadata row. It opens everything the shell has shown so far in an editor tab named after the file, such as `tx-2026-10-13T03-42-46-527Z.txt`, where `Cmd+F` searches it. The button appears as the shell starts. You can't save over the transcript while its shell is running; to keep notes on it, copy it to another file first.
 
 The file lives at `.janissary/shell-transcripts/<name>-<timestamp>.txt`. The tab's recording, named the same way, sits in `.janissary/recordings/`. The transcript is plain text: the prompts, the commands you typed and their output, with no colors. A full-screen program such as `vim` or `less` isn't in it, though what the shell printed before and after is. Replies to app commands such as `help` aren't in it either. Each line is saved once, when the cursor moves past it, so a later `clear` doesn't erase anything already saved.
 

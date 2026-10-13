@@ -481,6 +481,14 @@ launch. `"recordShellTabs": false` is the opt-out.
 progress bar — is written as it stands, then the file closes. At application shutdown the app waits up
 to one second for every open transcript to write its final row and close.
 
+**Saving from the editor.** **Open transcript** shows the file in an ordinary editor tab, but while its
+shell is still running a save of that tab is refused, whether or not new rows have arrived since it
+opened and including the overwrite prompt's save: the file is left exactly as written, the editor
+reports the save as failed, and the notifications feed shows `This shell transcript is still being
+written; copy it to another file to edit it.` for the editor tab. Replacing the file would cut every
+later row of the session off from it. Once the shell has exited or its tab has closed, the transcript
+saves like any other file.
+
 **Size and failure.** The file has no size cap. The transcript stops for the rest of the session, after
 the rows already finished, in three cases: its directory cannot be written (the file never opens),
 more than 4 MiB is waiting to reach disk, or output arrives faster than it can be transcribed (more

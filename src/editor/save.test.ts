@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { chmodSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync, renameSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { saveFile } from './save.js';
+import { saveFile, LIVE_SHELL_TRANSCRIPT_SAVE_REASON } from './save.js';
 import { TabManager } from '../tab/manager.js';
 import type { Managers } from '../managers.js';
 import { EditorWatchManager } from './watch-manager.js';
@@ -17,8 +17,11 @@ const { notify, writeGitFailureOutput } = vi.hoisted(() => ({
 vi.mock('../notifications/index.js', () => ({ notify }));
 vi.mock('../git/failure-output.js', () => ({ writeGitFailureOutput }));
 
+const notWriting = { isWriting: () => false } as unknown as Managers['shellTranscript'];
+
 function setup(content = 'original') {
   const managers = {} as Managers;
+  managers.shellTranscript = notWriting;
   managers.tab = new TabManager(managers);
   managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
   const dir = mkdtempSync(path.join(tmpdir(), 'janus-save-'));
@@ -110,6 +113,7 @@ describe('saveFile', () => {
 
   it('leaves a draft intact when the save fails', () => {
     const managers = {} as Managers;
+    managers.shellTranscript = notWriting;
     managers.tab = new TabManager(managers);
     managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     const url = managers.tab.registerFile('/no/such/dir/notes.txt');
@@ -128,6 +132,7 @@ describe('saveFile', () => {
 
   it('surfaces write errors', () => {
     const managers = {} as Managers;
+    managers.shellTranscript = notWriting;
     managers.tab = new TabManager(managers);
     const url = managers.tab.registerFile('/no/such/dir/notes.txt');
     expect(() => saveFile(managers, url, 'x')).toThrow();
@@ -175,9 +180,50 @@ describe('saveFile stale-buffer guard', () => {
   });
 });
 
+describe('saveFile live shell transcript guard', () => {
+  function liveTranscript() {
+    const opened = setup('% ls\nnotes.txt\n% ');
+    const isWriting = vi.fn((filePath: string) => filePath === opened.file);
+    opened.managers.shellTranscript = { isWriting } as unknown as Managers['shellTranscript'];
+    notify.mockClear();
+    return { ...opened, isWriting, label: opened.managers.tab.tabs.find((t) => t.editor)?.label };
+  }
+
+  it('refuses a save over a transcript still being written, notifying the tab and leaving its bytes untouched', () => {
+    const { managers, file, url, isWriting, label } = liveTranscript();
+
+    expect(() => saveFile(managers, url, 'tidied', contentHash('% ls\nnotes.txt\n% '))).toThrow(LIVE_SHELL_TRANSCRIPT_SAVE_REASON);
+
+    expect(isWriting).toHaveBeenCalledWith(file);
+    expect(readFileSync(file, 'utf8')).toBe('% ls\nnotes.txt\n% ');
+    expect(notify).toHaveBeenCalledWith(managers, 'file-operation', label, LIVE_SHELL_TRANSCRIPT_SAVE_REASON);
+  });
+
+  it('refuses the overwrite prompt\'s save, which sends no expected hash, too', () => {
+    const { managers, file, url } = liveTranscript();
+    expect(() => saveFile(managers, url, 'tidied')).toThrow(LIVE_SHELL_TRANSCRIPT_SAVE_REASON);
+    expect(readFileSync(file, 'utf8')).toBe('% ls\nnotes.txt\n% ');
+  });
+
+  it('refuses with its own reason rather than the stale-save conflict when new rows have landed', () => {
+    const { managers, file, url } = liveTranscript();
+    writeFileSync(file, '% ls\nnotes.txt\n% pwd\n');
+    expect(() => saveFile(managers, url, 'tidied', contentHash('% ls\nnotes.txt\n% '))).toThrow(LIVE_SHELL_TRANSCRIPT_SAVE_REASON);
+    expect(readFileSync(file, 'utf8')).toBe('% ls\nnotes.txt\n% pwd\n');
+  });
+
+  it('saves a transcript once nothing is writing it any more', () => {
+    const { managers, file, url, isWriting } = liveTranscript();
+    isWriting.mockReturnValue(false);
+    saveFile(managers, url, 'tidied');
+    expect(readFileSync(file, 'utf8')).toBe('tidied');
+  });
+});
+
 describe('saveFile git sync', () => {
   function setupSynced(saveSync: (filename: string) => Promise<{ ok: true } | { error: string }>) {
     const managers = {} as Managers;
+    managers.shellTranscript = notWriting;
     managers.tab = new TabManager(managers);
     managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     managers.gitSync = { saveSync } as unknown as Managers['gitSync'];
@@ -336,6 +382,7 @@ describe('saveFile git sync', () => {
   it('does not start a sync cycle for a tab with no sync field', () => {
     const saveSync = vi.fn();
     const managers = {} as Managers;
+    managers.shellTranscript = notWriting;
     managers.tab = new TabManager(managers);
     managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     managers.gitSync = { saveSync } as unknown as Managers['gitSync'];
@@ -354,6 +401,7 @@ describe('saveFile git sync', () => {
 describe('saveFile new-file auto-suffix', () => {
   function setupNewFile(dir: string, name = 'untitled.md') {
     const managers = {} as Managers;
+    managers.shellTranscript = notWriting;
     managers.tab = new TabManager(managers);
     managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     const file = path.join(dir, name);
@@ -395,6 +443,7 @@ describe('saveFile new-file auto-suffix', () => {
     const file = path.join(dir, 'existing.txt');
     writeFileSync(file, 'original');
     const managers = {} as Managers;
+    managers.shellTranscript = notWriting;
     managers.tab = new TabManager(managers);
     managers.editorWatch = { watch: () => {}, markSaved: () => {}, refresh: () => {} } as unknown as Managers['editorWatch'];
     const url = managers.tab.registerFile(file);

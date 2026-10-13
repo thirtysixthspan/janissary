@@ -117,6 +117,35 @@ describe('ShellTranscriptManager', () => {
     expect(transcriptFiles()).toHaveLength(1);
   });
 
+  it('reports a transcript as being written only once output has opened it, and only for its own path', () => {
+    const tab = addTab('shell');
+    manager.install('pty-1', 'shell');
+    expect(transcriptFiles()).toEqual([]);
+    expect(manager.isWriting(path.join(transcriptsDir, 'anything.txt'))).toBe(false);
+
+    data('pty-1', '% ');
+    const file = tab.transcript ?? '';
+    expect(manager.isWriting(file)).toBe(true);
+    expect(manager.isWriting(path.join(transcriptsDir, '.', path.basename(file)))).toBe(true);
+    expect(manager.isWriting(`${file}.bak`)).toBe(false);
+  });
+
+  it('stops reporting a transcript as being written once its PTY exits', () => {
+    const tab = addTab('shell');
+    manager.install('pty-1', 'shell');
+    data('pty-1', '% ');
+    emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+    expect(manager.isWriting(tab.transcript ?? '')).toBe(false);
+  });
+
+  it('stops reporting a transcript as being written once its tab closes', () => {
+    const tab = addTab('shell');
+    manager.install('pty-1', 'shell');
+    data('pty-1', '% ');
+    manager.closeTab('shell');
+    expect(manager.isWriting(tab.transcript ?? '')).toBe(false);
+  });
+
   it('finishes only the closed tab\'s writers', async () => {
     const first = addTab('first');
     const second = addTab('second');

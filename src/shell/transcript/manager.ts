@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { messageBus, type Subscription } from '../../bus.js';
 import { notify } from '../../notifications/index.js';
 import { ShellTranscriptWriter } from './writer.js';
@@ -56,6 +57,19 @@ export class ShellTranscriptManager {
       messageBus.emit('state', { type: 'dirty' });
     });
     this.entries.set(ptyId, { label, writer });
+  }
+
+  // Whether a writer still holds `filePath` open for appending, so the editor can refuse a save that
+  // would replace it and leave every later row in the orphaned file. A deliberate exception to the
+  // manager exposing no path lookup: the tab's remembered transcript path outlives its writer, so it
+  // cannot say whether the file is still being written.
+  isWriting(filePath: string): boolean {
+    const target = path.resolve(filePath);
+    for (const { writer } of this.entries.values()) {
+      const writing = writer.writingPath();
+      if (writing !== undefined && path.resolve(writing) === target) return true;
+    }
+    return false;
   }
 
   closeTab(label: string): void {

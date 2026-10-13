@@ -76,6 +76,12 @@ export class ShellTranscriptWriter {
     return this.finishing;
   }
 
+  // The transcript's path while its file is open for appending: undefined before the first output,
+  // after a failure abandoned the file, and once the finishing path has closed it.
+  writingPath(): string | undefined {
+    return this.file.isOpen() ? this.file.openedPath() : undefined;
+  }
+
   // Opening the file on the first output, before any row is finished, is what lets the transcript
   // be named as soon as the shell starts: a first prompt has no line feed to flush it.
   private onData(data: string): void {
