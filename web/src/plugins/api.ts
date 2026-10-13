@@ -5,6 +5,7 @@ import { resourceUrl } from '../shared/ws/session-url';
 import { copyText as systemCopyText } from '../shared/system-clipboard';
 import { openTranscriptLink } from '../shared/transcript/open-link';
 import { transcriptIntents } from '../shared/transcript/transcript-intents';
+export { isProgrammaticScroll, isWithinBottomFollowThreshold } from '../shared/scroll-follow';
 import type { TerminalColors } from '../shared/terminal/colors';
 import type { PluginHost } from './host';
 import type { AcpRef, RemoteTargetView } from '@shared/protocol';

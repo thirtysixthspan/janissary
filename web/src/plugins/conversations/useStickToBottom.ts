@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
+import { isProgrammaticScroll, isWithinBottomFollowThreshold } from '../api';
 
 // Stick-to-bottom pinning for a scrolling transcript. Owns the `stick` and `lastTop` refs and the
 // 1px-versus-40px threshold arithmetic so the rules live in a module instead of a component body;
@@ -28,9 +29,9 @@ export function useStickToBottom(
   useEffect(() => { pin(); }, [pin, rePinKey]);
 
   const onScroll = useCallback((element: HTMLDivElement) => {
-    if (Math.abs(element.scrollTop - lastTop.current) < 1) return;
+    if (isProgrammaticScroll(element.scrollTop, lastTop.current)) return;
     lastTop.current = element.scrollTop;
-    stick.current = element.scrollHeight - element.scrollTop - element.clientHeight < 40;
+    stick.current = isWithinBottomFollowThreshold(element.scrollHeight, element.scrollTop, element.clientHeight);
   }, []);
 
   return { pin, onScroll };
