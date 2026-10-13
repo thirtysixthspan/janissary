@@ -6,24 +6,21 @@
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
 
-
 ## deferred
 
 * Bundle janissary as a mac application that can be dowloaded and installed into /Applications and launched from an icon in the toolbar.
 
 * integrate https://github.com/nolabs-ai/nono to replace ai and browser sandboxes.
 
-* long term durable transcripts - send trascripts off to seperate github repo? other durable storage options? 
-
 * centralized model selection and usage statistics
 
 * Durable flows across relaunch - capture exit information from a harness and be able to use it to restart a session. a relaunch harness picker. workspace dir would need saved and re-created.
 
-* An OS-level notification, and a terminal bell, when a tab needs the user or finishes, the way Claude Code fires a `Notification` hook with the types `permission_prompt`, `idle_prompt`, `agent_needs_input`, and `agent_completed` and offers `preferredNotifChannel: "terminal_bell"` for terminals that cannot raise a banner — documented explicitly so that "you can switch to other work while a long task runs" — and the widely used `claude-code-hooks` setup goes further, posting a desktop banner and focusing the exact terminal tab on click, suppressed when that tab is already the focused one. `notifications.md` § Delivery model states plainly that there is "still no sound and no OS-level notification": the only surfaces are an in-window toast and the notifications feed, both invisible the moment the window is behind another application, which is exactly when a fleet of background agents is finishing. Raising a native notification for the events Janissary already detects, suppressed when the owning tab is the app's focused tab, would close this. Complexity: low-medium.
-
 * Searching what every tab said, the way iTerm2's Find Globally searches the scrollback of all open tabs at once and Exposé Tabs (`Cmd+Opt+E`) tiles every tab so a search can highlight the one holding the match, and the tmux plugins built on the same idea — `tmux-search-panes` full-text searches the live contents of every pane in every window of every session and jumps to the hit, and `tmux-omni-search` wraps that in an fzf preview with the matching line highlighted. Janissary's search is scoped to the tab issuing it: `Cmd+F` and `search transcript <pattern>` search the current tab's transcript, the `hist` picker walks one tab's last hundred commands with no filtering at all (`history.md` § History picker), and the tab navigator lists displayed names and numbers and nothing else (`tab-navigator.md`). With a dozen agents running, the question a user actually has is "which tab said that", and answering it means scanning the strip for a stopped blink or a flag. A search overlay spanning every open tab's transcript and command history, listing hits with the tab they came from and jumping to the tab and line on Return, would close it. Complexity: medium.
 
 ## declined
+
+* long term durable transcripts - send trascripts off to seperate github repo? other durable storage options? 
 
 * Rate-limit awareness for harness tabs — a recognized rate-limit screen, the reset time it states, and a fleet-wide summary of how many tabs are parked and until when — the way amux detects Claude Code's rate-limit prompt across every registered session, records the reset time, badges each blocked session `Rate-limited until HH:MM`, shows a header pill reading `N of M rate-limited, reset HH:MM`, and steers a resume message to each still-parked session once the reset passes. Janissary's `rate-limited` notification event covers ACP queries only, on a best-effort text match, is off by default, and records no reset time (`notifications.md`); a rate-limited harness tab just stops blinking and badges unread, indistinguishable from one that finished its work. Adopting this would mean reading the rate-limit screen out of the captures `harness.md` already takes, parsing the reset time, and showing it on the tab's metadata row and in a summary. Complexity: medium. Decision: harnesses already support auto resume.
 
