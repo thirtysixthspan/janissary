@@ -51,10 +51,10 @@ export type CoreRpcCall =
   // button in a shell or harness tab's metadata row. No-ops when the tab has no workspace, which is
   // the same thing the button's disabled state says on screen. `label` is the requesting tab's own.
   | { method: 'openDiffFor'; params: { label: string } }
-  // Open the named harness tab's session transcript file (the same file `harness transcript`
-  // opens) in an editor tab, triggered by the clipboard button in a harness tab's metadata row.
-  // No-ops when the tab has no transcript tailer or no transcript file yet. `label` is the
-  // requesting harness tab's own label.
+  // Open the named tab's transcript file in an editor tab: a harness tab's session transcript from
+  // its tailer (the same file `harness transcript` opens), otherwise a shell tab's text transcript
+  // from its tab record. Triggered by the clipboard button in a harness or shell tab's metadata row.
+  // No-ops when neither exists. `label` is the requesting tab's own label.
   | { method: 'openTranscriptFileFor'; params: { label: string } }
   // Open the named tab's asciicast recording in the tab that plays it, triggered by the recording
   // flag in a harness, ssh, or shell tab's metadata row. No-ops when the tab has no recording, which

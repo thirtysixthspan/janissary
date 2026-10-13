@@ -205,7 +205,9 @@ See [[diff-tab]] for what the tab shows and does.
 Harness tabs show a clipboard-icon button, tooltip "Open transcript", but clicking it opens
 the harness's **session transcript** file instead (the same file `harness transcript` opens — see
 [[harness]] § Session transcript), since a harness tab has no command-bar transcript of its own. The
-button is a no-op when the harness has no session transcript available yet.
+button is a no-op when the harness has no session transcript available yet. Shell tabs show the same
+button once the shell's text transcript file has opened, and it opens that file in an editor tab (see
+[[shell-tab]] § Text transcript).
 
 ### Provisioning indicator
 

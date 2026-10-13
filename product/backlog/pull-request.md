@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Update the two contract statements that still say only a harness tab has a transcript button, now that the shell tab draws one and the renamed RPC serves it.
-
-Existing Issue: `product/specs/tab-plugins.md` still says the shell plugin's metadata row "omits the transcript control, because the terminal replaced the transcript", and the comment above `openTranscriptFileFor` in `src/protocol/core-rpc.ts` still describes it as opening a harness tab's session transcript from the harness metadata row and no-opping when the tab has no transcript tailer, though the shell tab now sends it and it resolves the shell tab's `transcript` path as well. Severity: 2/10
-
-Existing Risk: 2/10 - A reader of the plugin spec or the wire contract concludes the shell tab has no transcript button or that the RPC no-ops for every shell tab, and removes the shell branch of `openTranscriptFileFor` as dead code or rejects the button as contrary to the spec.
-
-Proposal Risk: 1/10 - Prose and a comment only, so the residual risk is wording that drifts from `openTranscriptFileFor`'s resolution order, which `src/controller/transcript.test.ts` pins.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1675 "update the plugin spec and the wire-contract comment that still say only harness tabs have a transcript button". In `product/specs/tab-plugins.md`, in the shell plugin's paragraph that begins "The tab's chrome is the application's", replace the sentence "What it omits is the transcript control, because the terminal replaced the transcript." with one saying the row also draws an **Open transcript** button once the host supplies the transcript path, opening the shell's plain-text transcript (see [[shell-tab]] § Text transcript), and in the paragraph on recorded terminals add that a recorded terminal also gets that text transcript under the same gate. In `src/protocol/core-rpc.ts`, rewrite the comment above the `openTranscriptFileFor` member to say it opens the named tab's transcript file in an editor tab, a harness tab's session transcript from its tailer and otherwise a shell tab's text transcript from its tab record, triggered by the clipboard button in a harness or shell tab's metadata row, and that it no-ops when neither exists. No behavior change; `src/controller/transcript.test.ts`, `src/client-message.test.ts` and `src/message/handler-exhaustive.test.ts` stay green unchanged.
