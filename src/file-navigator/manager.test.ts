@@ -60,8 +60,10 @@ describe('FileNavigatorManager', () => {
   let managers: unknown;
   let closeFns: (() => void)[];
   let retargetEditorTabMock: ReturnType<typeof vi.fn>;
+  let writingTranscripts: Set<string>;
 
   beforeEach(() => {
+    writingTranscripts = new Set();
     root = mkdtempSync(path.join(tmpdir(), 'file-navigator-mgr-'));
     otherRoot = mkdtempSync(path.join(tmpdir(), 'file-navigator-mgr-other-'));
     outputs = [];
@@ -133,6 +135,7 @@ describe('FileNavigatorManager', () => {
       },
       remote: { workspaceOf: () => undefined as string | undefined },
       notifications: new NotificationQueue(),
+      shellTranscript: { isWriting: (filePath: string) => writingTranscripts.has(filePath) },
     };
   });
 
@@ -679,6 +682,51 @@ describe('FileNavigatorManager', () => {
     const tab = tabs.find((t) => t.label === label)!;
     expect(tab.files!.rows.some((r) => r.path === 'lib')).toBe(true);
     expect(existsSync(path.join(root, 'src'))).toBe(false);
+  });
+
+  describe('a shell transcript that is still being written', () => {
+    const LIVE = 'A running shell is still writing this transcript; rename or move it after the shell exits';
+
+    function openOnLiveTranscript() {
+      mkdirSync(path.join(root, 'dest'));
+      writeFileSync(path.join(root, 'session.txt'), 'rows');
+      writingTranscripts.add(path.join(root, 'session.txt'));
+      const manager = run();
+      manager.open('files', 'janus');
+      const label = tabs.find((t) => t.label.startsWith('navigator'))!.label;
+      return { manager, label };
+    }
+
+    it('refuses a move and leaves the file in place', () => {
+      const { manager, label } = openOnLiveTranscript();
+
+      expect(manager.move(label, 'session.txt', 'dest')).toEqual({
+        total: 1, failedPaths: ['session.txt'], failureReasons: { 'session.txt': LIVE },
+      });
+      expect(readFileSync(path.join(root, 'session.txt'), 'utf8')).toBe('rows');
+      expect(existsSync(path.join(root, 'dest', 'session.txt'))).toBe(false);
+      expect(manager.undo(label)).toEqual({});
+    });
+
+    it('refuses a rename, leaves the file in place, and retargets no editor', () => {
+      const { manager, label } = openOnLiveTranscript();
+
+      expect(manager.rename(label, 'session.txt', 'renamed.txt')).toEqual({
+        total: 1, failedPaths: ['session.txt'], failureReasons: { 'session.txt': LIVE },
+      });
+      expect(readFileSync(path.join(root, 'session.txt'), 'utf8')).toBe('rows');
+      expect(existsSync(path.join(root, 'renamed.txt'))).toBe(false);
+      expect(retargetEditorTabMock).not.toHaveBeenCalled();
+    });
+
+    it('moves and renames the same file once its writer has let it go', () => {
+      const { manager, label } = openOnLiveTranscript();
+      writingTranscripts.clear();
+
+      expect(manager.rename(label, 'session.txt', 'renamed.txt')).toEqual({ total: 1, failedPaths: [] });
+      expect(manager.move(label, 'renamed.txt', 'dest')).toEqual({ total: 1, failedPaths: [] });
+      expect(readFileSync(path.join(root, 'dest', 'renamed.txt'), 'utf8')).toBe('rows');
+    });
   });
 
   it('rename is a silent no-op when the source is missing', () => {

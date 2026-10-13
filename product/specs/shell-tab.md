@@ -486,8 +486,12 @@ shell is still running a save of that tab is refused, whether or not new rows ha
 opened and including the overwrite prompt's save: the file is left exactly as written, the editor
 reports the save as failed, and the notifications feed shows `This shell transcript is still being
 written; copy it to another file to edit it.` for the editor tab. Replacing the file would cut every
-later row of the session off from it. Once the shell has exited or its tab has closed, the transcript
-saves like any other file.
+later row of the session off from it. Renaming the transcript's editor tab, or renaming the file or
+dragging it on its own to another folder in a file navigator, is refused the same way while the shell runs, because the button and the
+save refusal would go on naming the old path: the file stays where it is and the notifications feed
+shows the rename or move as failed with `A running shell is still writing this transcript; rename or
+move it after the shell exits.` Deleting it from a file navigator is not refused. Once the shell has
+exited or its tab has closed, the transcript saves, renames and moves like any other file.
 
 **Size and failure.** The file has no size cap. The transcript stops for the rest of the session, after
 the rows already finished, in three cases: its directory cannot be written (the file never opens),

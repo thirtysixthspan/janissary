@@ -1,7 +1,9 @@
 import { isSameOrDescendantPath } from '../index.js';
+import { containedPath } from '../batch-paths.js';
 import {
   DESCENDANT_DESTINATION_REASON,
   failureReasons,
+  LIVE_SHELL_TRANSCRIPT_REASON,
   SOURCE_UNAVAILABLE_REASON,
 } from '../file-operation-result.js';
 import type { FilesTabState } from '../state.js';
@@ -11,6 +13,18 @@ import { mapMaybe, type MaybePromise } from '../../maybe-promise.js';
 
 function failedOperation(path: string, reason: string): BatchResult {
   return { total: 1, failedPaths: [path], ...failureReasons(new Map([[path, reason]])) };
+}
+
+// A shell transcript's writer keeps appending to the file it opened, so moving or renaming it would
+// leave the shell tab's button and the live-transcript save refusal naming a path that is gone.
+// Answers the refusal for a local source a writer still holds, and undefined otherwise.
+export function liveTranscriptRefusal(
+  managers: Managers, state: FilesTabState, relPath: string,
+): BatchResult | undefined {
+  if (state.remote) return undefined;
+  const absolute = containedPath(state.root, relPath);
+  if (!absolute || !managers.shellTranscript.isWriting(absolute)) return undefined;
+  return failedOperation(relPath, LIVE_SHELL_TRANSCRIPT_REASON);
 }
 
 // A conflict answer passes straight through: nothing moved, so there is no history entry to record

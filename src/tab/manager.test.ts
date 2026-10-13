@@ -51,7 +51,7 @@ function makeManagers(): Managers {
       isRunning: vi.fn(() => true),
     },
     harness: { closeTab: vi.fn(), registerShellObservers: vi.fn() },
-    shellTranscript: { install: vi.fn(), closeTab: vi.fn() },
+    shellTranscript: { install: vi.fn(), closeTab: vi.fn(), isWriting: vi.fn(() => false) },
     // Which plugins asked for their terminals to be recorded. Empty, so the cases below that assert
     // on adoption and on a refused spawn are asserting about those and not about recording; the
     // recording cases declare it themselves.

@@ -13,11 +13,12 @@ export function renameTabOp(
   maxLength: number,
   replaceFile: (reference: string, absPath: string) => string,
   watchEditor: (label: string, filePath: string) => void,
+  isWriting: (filePath: string) => boolean,
 ): string | undefined {
   const tab = tabs[index];
   if (!tab) return undefined;
   if (tab.editor) {
-    const refusal = renameEditorTab(tab, title, maxLength, replaceFile, watchEditor);
+    const refusal = renameEditorTab(tab, title, maxLength, replaceFile, watchEditor, isWriting);
     messageBus.emit('state', { type: 'dirty' });
     return refusal;
   }

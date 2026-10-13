@@ -21,6 +21,7 @@ export const DUPLICATE_NAME_REASON = 'Another selected item has the same name; m
 export const DESCENDANT_DESTINATION_REASON = 'A folder cannot be moved inside itself; choose another destination';
 export const INVALID_NAME_REASON = 'The name contains a path separator; enter a name without folders';
 export const NAME_TAKEN_REASON = 'The destination already exists; choose another name';
+export const LIVE_SHELL_TRANSCRIPT_REASON = 'A running shell is still writing this transcript; rename or move it after the shell exits';
 
 export function fileOperationReason(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string') {
