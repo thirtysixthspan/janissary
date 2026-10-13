@@ -1,8 +1,23 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type * as NodeFs from 'node:fs';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import * as fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { copyItem, deleteItem, moveItem, moveReplacingDestination, renameItem } from './filesystem.js';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const original = await importOriginal<NodeFs>();
+  return {
+    ...original,
+    cpSync: vi.fn(original.cpSync),
+    renameSync: vi.fn(original.renameSync),
+  };
+});
+
+const defaultCopy = vi.mocked(fs.cpSync).getMockImplementation();
+const defaultRename = vi.mocked(fs.renameSync).getMockImplementation();
+if (!defaultCopy || !defaultRename) throw new Error('filesystem operation mocks are not initialized');
 
 let roots: string[] = [];
 
@@ -13,6 +28,9 @@ function root(): string {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
+  vi.mocked(fs.cpSync).mockReset().mockImplementation(defaultCopy);
+  vi.mocked(fs.renameSync).mockReset().mockImplementation(defaultRename);
   for (const directory of roots) rmSync(directory, { recursive: true, force: true });
   roots = [];
 });
@@ -96,6 +114,71 @@ describe('copyItem', () => {
     writeFileSync(destination, 'old');
     expect(copyItem(source, destination, true)).toMatchObject({ ok: true });
     expect(readFileSync(destination, 'utf8')).toBe('new');
+  });
+
+  it.each(['file', 'directory'] as const)('preserves an occupied destination after a partial %s copy fails', (kind) => {
+    const directory = root();
+    const source = path.join(directory, 'source');
+    const destination = path.join(directory, 'destination');
+    if (kind === 'directory') {
+      mkdirSync(source);
+      writeFileSync(path.join(source, 'new.txt'), 'new');
+      mkdirSync(destination);
+      writeFileSync(path.join(destination, 'old.txt'), 'old');
+    } else {
+      writeFileSync(source, 'new');
+      writeFileSync(destination, 'old');
+    }
+    vi.mocked(fs.cpSync).mockImplementationOnce((_source, stage) => {
+      const stagePath = String(stage);
+      if (kind === 'directory') mkdirSync(stagePath);
+      else writeFileSync(stagePath, 'partial');
+      throw new Error('copy failed');
+    });
+
+    expect(copyItem(source, destination, true)).toMatchObject({ ok: false });
+    if (kind === 'directory') {
+      expect(readFileSync(path.join(destination, 'old.txt'), 'utf8')).toBe('old');
+    } else {
+      expect(readFileSync(destination, 'utf8')).toBe('old');
+    }
+    expect(readdirSync(directory).filter((name) => name.includes('.stage'))).toEqual([]);
+  });
+
+  it('restores the destination when installing a completed stage fails', () => {
+    const directory = root();
+    const source = path.join(directory, 'source.txt');
+    const destination = path.join(directory, 'destination.txt');
+    writeFileSync(source, 'new');
+    writeFileSync(destination, 'old');
+    vi.mocked(fs.renameSync)
+      .mockImplementationOnce((from, to) => defaultRename(from, to))
+      .mockImplementationOnce(() => { throw new Error('install failed'); })
+      .mockImplementationOnce((from, to) => defaultRename(from, to));
+
+    expect(copyItem(source, destination, true)).toMatchObject({ ok: false });
+    expect(readFileSync(destination, 'utf8')).toBe('old');
+    expect(readdirSync(directory).filter((name) => name.endsWith('.backup'))).toEqual([]);
+    expect(readdirSync(directory).filter((name) => name.endsWith('.stage'))).toEqual([]);
+  });
+
+  it('reports the backup path when installation and restoration both fail', () => {
+    const directory = root();
+    const source = path.join(directory, 'source.txt');
+    const destination = path.join(directory, 'destination.txt');
+    writeFileSync(source, 'new');
+    writeFileSync(destination, 'old');
+    vi.mocked(fs.renameSync)
+      .mockImplementationOnce((from, to) => defaultRename(from, to))
+      .mockImplementationOnce(() => { throw new Error('install failed'); })
+      .mockImplementationOnce(() => { throw new Error('restore failed'); });
+
+    const result = copyItem(source, destination, true);
+    expect(result).toMatchObject({ ok: false, reason: expect.stringContaining('preserved at') });
+    if (result.ok) throw new Error('expected copy failure');
+    const backup = result.reason.split('preserved at ', 2)[1];
+    expect(readFileSync(backup, 'utf8')).toBe('old');
+    expect(existsSync(destination)).toBe(false);
   });
 });
 

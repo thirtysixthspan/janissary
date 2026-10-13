@@ -1,4 +1,4 @@
-import { cpSync, lstatSync, renameSync, rmSync } from 'node:fs';
+import * as fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { containedPath } from './batch-paths.js';
@@ -12,7 +12,7 @@ import {
 
 function exists(absolute: string): boolean {
   try {
-    lstatSync(absolute);
+    fs.lstatSync(absolute);
     return true;
   } catch {
     return false;
@@ -20,11 +20,11 @@ function exists(absolute: string): boolean {
 }
 
 export function renamePath(source: string, destination: string): FileOperationResult {
-  return runFileOperation(() => renameSync(source, destination));
+  return runFileOperation(() => fs.renameSync(source, destination));
 }
 
 export function removePath(absolute: string): FileOperationResult {
-  return runFileOperation(() => rmSync(absolute, { recursive: true }));
+  return runFileOperation(() => fs.rmSync(absolute, { recursive: true }));
 }
 
 export function moveReplacingDestination(source: string, destination: string): FileOperationResult {
@@ -43,18 +43,61 @@ export function moveReplacingDestination(source: string, destination: string): F
   return sourceMove;
 }
 
-// Copies `source` to `destination`, recursively for a directory. `errorOnExist` guards the
-// non-overwrite case since `cpSync`'s own `force` merges directories rather than replacing them;
-// an overwrite instead removes the destination first, then copies fresh. Deliberately does not
-// stage a backup the way `moveReplacingDestination` does — a mid-overwrite failure here leaves the
-// destination gone, which is acceptable because the source (unlike a move) still exists.
-export function copyItem(source: string, destination: string, overwrite: boolean): FileOperationResult {
-  if (overwrite && exists(destination)) {
-    const removal = removePath(destination);
-    if (!removal.ok) return removal;
+function removeStagingPath(staging: string): void {
+  try {
+    fs.rmSync(staging, { recursive: true, force: true });
+  } catch { /* preserve the original copy or install failure */ }
+}
+
+function copyWithOverwrite(source: string, destination: string): FileOperationResult {
+  const suffix = `janissary-${randomUUID()}`;
+  const staging = `${destination}.${suffix}.stage`;
+  const backup = `${destination}.${suffix}.backup`;
+  const copied = runFileOperation(() => fs.cpSync(source, staging, {
+    recursive: true,
+    errorOnExist: true,
+    force: false,
+  }));
+  if (!copied.ok) {
+    removeStagingPath(staging);
+    return copied;
   }
-  return runFileOperation(() =>
-    cpSync(source, destination, { recursive: true, errorOnExist: !overwrite, force: false }));
+
+  const hadDestination = exists(destination);
+  if (hadDestination) {
+    const backedUp = renamePath(destination, backup);
+    if (!backedUp.ok) {
+      removeStagingPath(staging);
+      return backedUp;
+    }
+  }
+
+  const installed = renamePath(staging, destination);
+  if (!installed.ok) {
+    if (hadDestination) {
+      const restored = renamePath(backup, destination);
+      if (!restored.ok) {
+        removeStagingPath(staging);
+        return failureResult(`${installed.reason}; previous destination is preserved at ${backup}`);
+      }
+    }
+    removeStagingPath(staging);
+    return installed;
+  }
+
+  if (hadDestination) removePath(backup);
+  return installed;
+}
+
+// Copies `source` to `destination`, recursively for a directory. `errorOnExist` guards the
+// non-overwrite case since `cpSync`'s own `force` merges directories rather than replacing them.
+export function copyItem(source: string, destination: string, overwrite: boolean): FileOperationResult {
+  if (overwrite) return copyWithOverwrite(source, destination);
+  return runFileOperation(() => fs.cpSync(source, destination, {
+    recursive: true,
+    errorOnExist: true,
+    force: false,
+  }));
 }
 
 // What a single-item move answers: the move itself, or — when something already occupies the
@@ -104,7 +147,7 @@ export function renameItem(
   if (exists(newAbsolute) && !caseOnlyRename) {
     let sameEntry = false;
     try {
-      const [sourceStat, destinationStat] = [lstatSync(oldAbsolute), lstatSync(newAbsolute)];
+      const [sourceStat, destinationStat] = [fs.lstatSync(oldAbsolute), fs.lstatSync(newAbsolute)];
       sameEntry = sourceStat.dev === destinationStat.dev && sourceStat.ino === destinationStat.ino;
     } catch { /* checked by rename */ }
     if (!sameEntry && !overwrite) return { conflict: true };
