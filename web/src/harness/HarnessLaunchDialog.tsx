@@ -3,7 +3,8 @@ import type { HarnessLaunchView } from '@shared/protocol';
 import { EFFORT_LEVELS } from '@shared/harness/effort-levels';
 import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
-import { buildHarnessLaunchCommand, type HarnessLaunchFields } from './harness-launch-command';
+import type { HarnessLaunchFields } from './harness-launch-command';
+import { useHarnessLaunchActions } from './useHarnessLaunchActions';
 
 type Properties = { view: HarnessLaunchView; client: JanusClient };
 
@@ -61,9 +62,8 @@ export function HarnessLaunchDialog({ view, client }: Properties) {
     });
   }, [view]);
 
-  const { dialogRef, submitButtonRef, cancel, create } = useLaunchDialog(
-    client, 'closeHarnessLaunch', fields, buildHarnessLaunchCommand, hadRemembered,
-  );
+  const { cancel, create } = useHarnessLaunchActions(client, fields);
+  const { dialogRef, submitButtonRef } = useLaunchDialog(cancel, create, true, hadRemembered);
 
   return (
     <div className="modal-backdrop">
