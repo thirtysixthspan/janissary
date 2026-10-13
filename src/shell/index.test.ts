@@ -40,6 +40,7 @@ vi.mock('./sandbox/index.js', () => ({
 import { spawnShell, executeShellCmd, killShellGroup, queryShellPwd, SHELL_EXITED_NOTE } from './index.js';
 import { shellCommandInput } from './command-input.js';
 import { shellStartupArgs } from './startup.js';
+import { MAX_SHELL_OUTPUT_CHARS, SHELL_OUTPUT_TRUNCATION_NOTE } from './bounded-output.js';
 
 beforeEach(() => {
   mockSpawn.mockReset();
@@ -89,6 +90,12 @@ describe('spawnShell', () => {
   it('gives the shell a process group of its own when asked to detach', () => {
     spawnShell(0, undefined, undefined, { detached: true });
     expect(mockSpawn.mock.calls[0][2].detached).toBe(true);
+  });
+
+  it('passes a working directory to the process without interpreting it as shell input', () => {
+    const cwd = '/tmp/$literal`quote"and\nnewline';
+    spawnShell(0, undefined, undefined, { cwd });
+    expect(mockSpawn.mock.calls[0][2].cwd).toBe(cwd);
   });
 });
 
@@ -211,6 +218,63 @@ describe('executeShellCmd', () => {
     expect(onProgress).toHaveBeenCalledTimes(2);
   });
 
+  it('bounds an oversized output chunk and reports the truncation to progress and completion', () => {
+    const shell = mockChildProcess();
+    const onProgress = vi.fn();
+    const onComplete = vi.fn();
+    vi.spyOn(Date, 'now').mockReturnValue(2100);
+    executeShellCmd(shell, 'flood', 3, onProgress, onComplete);
+
+    shell.stdout.emit('data', 'x'.repeat(MAX_SHELL_OUTPUT_CHARS + 100));
+    expect(onProgress.mock.lastCall?.[0]).toHaveLength(MAX_SHELL_OUTPUT_CHARS + 1 + SHELL_OUTPUT_TRUNCATION_NOTE.length);
+    expect(onProgress.mock.lastCall?.[0]).toContain(SHELL_OUTPUT_TRUNCATION_NOTE);
+    shell.stderr.emit('data', '__JS_END_3_2100__');
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(
+      `${'x'.repeat(MAX_SHELL_OUTPUT_CHARS)}\n${SHELL_OUTPUT_TRUNCATION_NOTE}`,
+    );
+  });
+
+  it('recognizes a sentinel split across streams after output retention is full', () => {
+    const shell = mockChildProcess();
+    const onComplete = vi.fn();
+    vi.spyOn(Date, 'now').mockReturnValue(2200);
+    executeShellCmd(shell, 'flood', 4, vi.fn(), onComplete);
+    shell.stdout.emit('data', 'y'.repeat(MAX_SHELL_OUTPUT_CHARS + 20));
+    shell.stderr.emit('data', '__JS_END_4_');
+    shell.stdout.emit('data', '2200__');
+    shell.stdout.emit('data', 'ignored after completion');
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(
+      `${'y'.repeat(MAX_SHELL_OUTPUT_CHARS)}\n${SHELL_OUTPUT_TRUNCATION_NOTE}`,
+    );
+  });
+
+  it('keeps stderr output bounded while continuing to read the command sentinel', () => {
+    const shell = mockChildProcess();
+    const onComplete = vi.fn();
+    vi.spyOn(Date, 'now').mockReturnValue(2300);
+    executeShellCmd(shell, 'flood stderr', 5, vi.fn(), onComplete);
+    shell.stderr.emit('data', 'e'.repeat(MAX_SHELL_OUTPUT_CHARS + 10));
+    shell.stdout.emit('data', '__JS_END_5_2300__');
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(
+      `${'e'.repeat(MAX_SHELL_OUTPUT_CHARS)}\n${SHELL_OUTPUT_TRUNCATION_NOTE}`,
+    );
+  });
+
+  it('keeps exit-before-sentinel output bounded and retains the shell-exited note', () => {
+    const shell = mockChildProcess();
+    const onComplete = vi.fn();
+    executeShellCmd(shell, 'flood then exit', 6, vi.fn(), onComplete);
+    shell.stdout.emit('data', 'q'.repeat(MAX_SHELL_OUTPUT_CHARS + 1));
+    shell.stdout.emit('end');
+
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith(
+      `${'q'.repeat(MAX_SHELL_OUTPUT_CHARS)}\n${SHELL_OUTPUT_TRUNCATION_NOTE}\n${SHELL_EXITED_NOTE}`,
+    );
+  });
+
   // A shell that exits mid-command never prints the sentinel; the end of its output is the only
   // signal left, and without it the tab's command queue would wait forever.
   it('completes with the partial output and an exit note when the shell\'s output ends', () => {
@@ -292,6 +356,17 @@ describe('queryShellPwd', () => {
       '\u{1B}[1m\u{1B}[7m%\u{1B}[27m\u{1B}[1m\u{1B}[0m          \r \r\u{1B}[?2004h\u{1B}[Ke\recho "__PWD_4_3000__',
     ].join(''));
     expect(onResult).toHaveBeenCalledExactlyOnceWith('/home/user/my project');
+  });
+
+  it('keeps the last path answer after unrelated output exceeds the retention budget', () => {
+    const shell = mockChildProcess();
+    const onResult = vi.fn();
+    vi.spyOn(Date, 'now').mockReturnValue(3100);
+    queryShellPwd(shell, 8, onResult);
+    shell.stdout.emit('data', 'z'.repeat(MAX_SHELL_OUTPUT_CHARS + 100));
+    shell.stderr.emit('data', '\n/remote/workspace/src\n__PWD_8_3100__');
+
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('/remote/workspace/src');
   });
 
   it('reports nothing when no path precedes the marker', () => {

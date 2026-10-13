@@ -4,28 +4,6 @@
 
 ## development
 
-* Pass a local captured shell's initial working directory as process data instead of interpolated shell input.
-
-Existing Debt: The local persistent-shell launch translates a filesystem path into a double-quoted cd command, so valid path characters are interpreted as shell syntax before the first requested command runs. Severity: 5/10
-
-Existing Risk: 7/10 - A directory containing dollar expansion, command substitution, backticks, or a quote can launch the shell in the wrong directory or execute unintended input with that shell's permissions.
-
-Proposal Risk: 2/10 - A directory removed between validation and process creation can still prevent launch, but its spelling no longer becomes executable shell input.
-
-Proposal: Add an optional `cwd` to `ShellSpawnOptions` in `src/shell/index.ts` and pass it to `spawn` alongside the existing detached option. In `ShellManager.spawnFor` in `src/shell/manager.ts`, pass the already-validated `localCwd` through that option and remove the initial stdin write of `cd "${localCwd}"`; retain the fallback to the launch directory for a missing cwd and preserve shell startup flags, sandbox options, environment, and the separate remote-channel path. Keep callers that omit cwd behaving as before, including the detached remote pipe-shell call in `src/remote/serve-processes.ts`. `src/shell/manager.test.ts` currently pins a literal cd write for the fallback case, and `src/shell/index.test.ts` pins spawn and detached options; update those expectations and add paths containing quotes, dollar signs, backticks, and newlines to prove the cwd reaches process options unchanged and produces no generated stdin command. The real-shell working-directory coverage in `src/shell/unsandboxed.test.ts` does not exercise manager startup, so add a focused real-spawn startup case there and update `product/specs/shell.md` to describe the launch behavior.
-
-
-* Bound captured shell output while continuing to recognize completion markers after the retention limit.
-
-Existing Debt: Captured shell execution accumulates and repeatedly scans the entire command output in one string, while the transcript's entry-count limit cannot bound the size of that single running entry. Severity: 6/10
-
-Existing Risk: 8/10 - One verbose or indefinitely streaming captured command can exhaust server memory and repeatedly rebuild oversized state snapshots, disrupting every tab in the session.
-
-Proposal Risk: 3/10 - A continuously noisy process still consumes I/O and processing time, and output beyond the retained limit is intentionally unavailable, but its retained output and marker-search memory remain bounded.
-
-Proposal: Extract a bounded output-and-marker accumulator beside `src/shell/index.ts` and use it in `executeShellCmd` instead of `outputBuffer += chunk` plus a whole-buffer `indexOf` on every chunk. Set a concrete per-command retention budget, expose a clear truncation note to progress and completion callbacks, and keep a small rolling suffix for delimiter recognition so a marker split across chunks or arriving long after the cap still completes exactly once. Continue draining stdout and stderr after retention stops; do not detach early or return an apparently complete command while it is still running. Apply the same bounded-marker approach to `queryShellPwd` with a retained last-path answer so unrelated background output cannot grow its buffer without limit. Preserve ordinary trimming, `SHELL_EXITED_NOTE`, listener cleanup, and the serialized command-then-pwd sequence in `src/shell/manager.ts`. `src/shell/index.test.ts` covers accumulated small output, normal sentinels, and shell exit, and `src/shell/manager.test.ts` covers serialization and transcript updates; add oversized chunks, split sentinels after truncation, stderr overflow, and exit-before-sentinel cases, and check that the bounded final output still reaches consumers covered by `src/capture/execute-and-capture.test.ts`. Document the truncation boundary in `product/specs/shell.md` and `product/specs/transcript.md`.
-
-
 * Give editor save and draft-sync requests bounded waits through the shared RPC exchange.
 
 Existing Debt: Pending browser RPCs have no request deadline or cancellation ownership and settle only on a reply, a send exception, or connection teardown, while editor recovery assumes each send eventually reports success or failure. Severity: 5/10

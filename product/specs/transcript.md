@@ -21,6 +21,11 @@ entry it opened. When two runs are in flight on the same tab, whichever finishes
 overwrite the first one's entry with its own output — the interleaved command's entry keeps its own
 output and finishes on its own terms.
 
+Captured shell command entries retain at most 1 Mi characters of output. When a command produces
+more, its progress and final output include `(output truncated after 1 MiB)`; the command stays active
+until its completion marker arrives, and the retained result remains in its own transcript entry.
+See [[shell]] for the captured-shell lifecycle.
+
 ### Auto-scroll on output
 
 New output resets scroll offset to 0 (bottom), showing the latest lines.
