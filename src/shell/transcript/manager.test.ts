@@ -6,6 +6,7 @@ vi.mock('../../notifications/index.js', () => ({ notify: mocks.notify }));
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { BoundedAppendFile } from '../../bounded-append-file.js';
 import { messageBus } from '../../bus.js';
 import { initShellTranscriptDirectory } from './transcript-file.js';
 import { ShellTranscriptManager, SHELL_TRANSCRIPT_SHUTDOWN_WAIT_MS } from './manager.js';
@@ -39,6 +40,11 @@ function makeManager(): ShellTranscriptManager {
 function transcriptFiles(): string[] {
   if (!existsSync(transcriptsDir)) return [];
   return readdirSync(transcriptsDir).filter((f) => f.endsWith('.txt'));
+}
+
+// The stream failing once its close has begun, as a full disk can on `end()`.
+function abandon(file: unknown): void {
+  (file as { abandon: () => void }).abandon();
 }
 
 function lockTranscriptDirectory(): void {
@@ -165,6 +171,43 @@ describe('ShellTranscriptManager', () => {
     lockTranscriptDirectory();
     manager.install('pty-2', 'shell');
     data('pty-2', 'two\r\n');
+    expect(mocks.notify).toHaveBeenCalledOnce();
+    expect(mocks.notify).toHaveBeenCalledWith(expect.anything(), 'shell-transcript-failed', 'shell');
+  });
+
+  it('ignores a late failure from a writer whose PTY exited before its tab closed, so a later tab with that label still notifies once', async () => {
+    addTab('shell');
+    manager.install('pty-1', 'shell');
+    data('pty-1', 'one');
+    const writerDispose = vi.spyOn(ShellTranscriptWriter.prototype, 'dispose');
+    const fileDispose = vi.spyOn(BoundedAppendFile.prototype, 'dispose');
+
+    emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+    manager.closeTab('shell');
+    await vi.waitFor(() => { expect(fileDispose).toHaveBeenCalledOnce(); });
+    await (fileDispose.mock.results[0]?.value as Promise<void>);
+    expect(writerDispose).not.toHaveBeenCalled();
+    abandon(fileDispose.mock.contexts[0]);
+    expect(mocks.notify).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+    lockTranscriptDirectory();
+    manager.install('pty-2', 'shell');
+    data('pty-2', 'two\r\n');
+    expect(mocks.notify).toHaveBeenCalledOnce();
+    expect(mocks.notify).toHaveBeenCalledWith(expect.anything(), 'shell-transcript-failed', 'shell');
+  });
+
+  it('notifies a failure from a writer whose PTY exited while its tab is still open', async () => {
+    addTab('shell');
+    manager.install('pty-1', 'shell');
+    data('pty-1', 'one');
+    const fileDispose = vi.spyOn(BoundedAppendFile.prototype, 'dispose');
+
+    emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+    await vi.waitFor(() => { expect(fileDispose).toHaveBeenCalledOnce(); });
+    await (fileDispose.mock.results[0]?.value as Promise<void>);
+    abandon(fileDispose.mock.contexts[0]);
     expect(mocks.notify).toHaveBeenCalledOnce();
     expect(mocks.notify).toHaveBeenCalledWith(expect.anything(), 'shell-transcript-failed', 'shell');
   });

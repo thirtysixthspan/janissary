@@ -10,6 +10,10 @@ export const SHELL_TRANSCRIPT_SHUTDOWN_WAIT_MS = 1000;
 
 type Entry = { label: string; writer: ShellTranscriptWriter };
 
+// Whether an open tab has already been told its transcript failed. Each writer keeps the state of the
+// tab it was installed under, and closing the tab discards that state.
+type TabFailureState = { notified: boolean };
+
 // The shell tabs' text-transcript writers, one per recorded PTY, each kept beside the label of the
 // tab that owns it. A writer is released on whichever comes first: its PTY exiting, its tab closing,
 // another writer being installed under the same id, or shutdown — which, alone of these, waits for
@@ -17,12 +21,14 @@ type Entry = { label: string; writer: ShellTranscriptWriter };
 //
 // A failure is reported once per tab: one tab can hold several writers (a factory that starts more
 // than one terminal, or a reinstall under a reattached id), and one notice says all there is to say.
-// A writer released by its tab closing or by a reinstall reports nothing afterwards: its finishing
-// path can still fail, but its tab is gone or speaks through the newer writer, and reporting it would
-// re-mark the label as notified with nothing left to clear it for a later tab reusing that label.
+// The once-per-tab state belongs to the open tab rather than to its label, so a writer of a tab that
+// has since closed reports nothing, whether its shell exited before the close or the close released
+// it: its finishing path can still fail, but the tab is gone, and a later tab reusing the label starts
+// with fresh state. A writer released by a reinstall reports nothing either, since its tab speaks
+// through the newer writer.
 export class ShellTranscriptManager {
   private entries = new Map<string, Entry>();
-  private notified = new Set<string>();
+  private tabs = new Map<string, TabFailureState>();
   private released = new WeakSet<ShellTranscriptWriter>();
   private subscription: Subscription;
 
@@ -39,9 +45,10 @@ export class ShellTranscriptManager {
   // writer held under it is released first, or every row would be written into two files.
   install(ptyId: string, label: string): void {
     this.release(ptyId);
+    const state = this.tabState(label);
     const { cols, rows } = this.managers.pty.spawnDimensions();
     const writer = new ShellTranscriptWriter(ptyId, label, cols, rows, () => {
-      if (!this.released.has(writer)) this.reportFailure(label);
+      if (!this.released.has(writer) && this.tabs.get(label) === state) this.reportFailure(state, label);
     }, (path) => {
       const tab = this.managers.tab.byLabel(label);
       if (tab) tab.transcript = path;
@@ -53,7 +60,7 @@ export class ShellTranscriptManager {
     for (const [id, entry] of this.entries) {
       if (entry.label === label) this.release(id);
     }
-    this.notified.delete(label);
+    this.tabs.delete(label);
   }
 
   dispose(): void | Promise<void> {
@@ -71,9 +78,18 @@ export class ShellTranscriptManager {
     });
   }
 
-  private reportFailure(label: string): void {
-    if (this.notified.has(label)) return;
-    this.notified.add(label);
+  private tabState(label: string): TabFailureState {
+    let state = this.tabs.get(label);
+    if (!state) {
+      state = { notified: false };
+      this.tabs.set(label, state);
+    }
+    return state;
+  }
+
+  private reportFailure(state: TabFailureState, label: string): void {
+    if (state.notified) return;
+    state.notified = true;
     notify(this.managers, 'shell-transcript-failed', label);
   }
 
