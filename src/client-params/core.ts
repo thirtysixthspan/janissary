@@ -50,7 +50,7 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   setDock: (p) => isInteger(p.index) && isOneOf(p.dock, DOCKS),
   launchShellFor: (p) => isString(p.label),
   openDiffFor: (p) => isString(p.label),
-  openHarnessTranscriptFor: (p) => isString(p.label),
+  openTranscriptFileFor: (p) => isString(p.label),
   openRecordingFor: (p) => isString(p.label),
   openAcpTranscript: (p) => isAcpRef(p.acpRef),
   projectFiles: noParams,

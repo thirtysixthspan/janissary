@@ -8,7 +8,7 @@ import type { TabView } from './protocol.js';
 import { MANAGER_DISPOSE_ORDER, type Managers } from './managers.js';
 import type { AcpRef } from './protocol.js';
 import { buildStateEvent } from './state/event.js';
-import { openHarnessTranscriptFor, openAcpTranscript } from './controller/transcript.js';
+import { openTranscriptFileFor, openAcpTranscript } from './controller/transcript.js';
 import { openRecordingFor } from './controller/recording.js';
 import { setClientLayout } from './client-layout.js';
 import { createControllerAdapters, type ControllerMembers } from './controller/create-adapters.js';
@@ -72,7 +72,7 @@ export class ControllerCore {
     return this.managers.tab.openFilePath(id);
   }
 
-  openHarnessTranscriptFor(label: string): void { openHarnessTranscriptFor(this.managers, label); }
+  openTranscriptFileFor(label: string): void { openTranscriptFileFor(this.managers, label); }
   openAcpTranscript(acpRef: AcpRef): void { openAcpTranscript(this.managers, acpRef); }
   openRecordingFor(label: string): void { openRecordingFor(this.managers, label); }
   reportLayout(layout: { sidebarLeft: number; sidebarRight: number; tabAreaPct: number }): void { setClientLayout(layout); }

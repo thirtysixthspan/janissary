@@ -4,7 +4,7 @@ import type { JanusClient } from '../shared/ws/ws';
 // Which transcript RPC the metadata row's clipboard button sends. Supplied by the caller rather
 // than decided here: tabs and harness tabs open different transcripts, and branching on that
 // would give this module knowledge of the tabs that use it.
-export type TranscriptMethod = 'openHarnessTranscriptFor';
+export type TranscriptMethod = 'openTranscriptFileFor';
 
 export type AgentTabIntents = {
   onOpenFileNavigator: () => void;

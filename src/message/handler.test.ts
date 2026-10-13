@@ -70,7 +70,7 @@ const makeController = () =>
     revealFileNavigatorItem: vi.fn(),
     fileNavigatorOpeners: vi.fn(() => ({ choices: [] })),
     reportFileNavigatorSelection: vi.fn(),
-    openHarnessTranscriptFor: vi.fn(),
+    openTranscriptFileFor: vi.fn(),
     openAcpTranscript: vi.fn(),
     reportLayout: vi.fn(),
     projectFiles: vi.fn(async () => ({ root: '/proj', paths: [] })),
@@ -500,10 +500,10 @@ describe('handle', () => {
     expect(controller.answerQuestion).toHaveBeenCalledWith('janus', 'question-1', 'Yes');
   });
 
-  it('routes openHarnessTranscriptFor through the controller façade', () => {
+  it('routes openTranscriptFileFor through the controller façade', () => {
     const controller = makeController();
-    dispatchCall(controller, 30, { method: 'openHarnessTranscriptFor', params: { label: 'claude' } });
-    expect(controller.openHarnessTranscriptFor).toHaveBeenCalledWith('claude');
+    dispatchCall(controller, 30, { method: 'openTranscriptFileFor', params: { label: 'claude' } });
+    expect(controller.openTranscriptFileFor).toHaveBeenCalledWith('claude');
   });
 
   it('routes openAcpTranscript through the controller façade', () => {

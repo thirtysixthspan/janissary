@@ -61,7 +61,7 @@ export const HarnessTab = forwardRef<HarnessTabHandle, Properties>(function Harn
   // Every harness and ssh tab records, so the flag is drawn from the moment the tab opens — a `-w`
   // tab still provisioning included, which is when it is drawn but not yet pressable.
   const intents = harnessTabIntents(
-    client, label, 'openHarnessTranscriptFor', harness.recording, workspacedTab,
+    client, label, 'openTranscriptFileFor', harness.recording, workspacedTab,
   );
   const isExited = harness.status === 'exited';
   return (

@@ -41,7 +41,7 @@ function dispatch(controller: Controller, message: ClientMessage, send: Reply): 
     case 'openFileNavigatorFor':
     case 'launchShellFor':
     case 'openDiffFor':
-    case 'openHarnessTranscriptFor':
+    case 'openTranscriptFileFor':
     case 'openRecordingFor':
     case 'openAcpTranscript': {
       return dispatchTabMessage(controller, message);

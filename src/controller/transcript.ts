@@ -7,7 +7,7 @@ import { transcriptText } from '../tab/transcript/text.js';
 // button on a harness tab (see HarnessTabMeta.tsx), mirroring `harness transcript` (see
 // harness/subcommands.ts) but silently no-opping instead of returning an error string, since a
 // harness tab has no transcript of its own to print one into.
-export function openHarnessTranscriptFor(managers: Managers, label: string): void {
+export function openTranscriptFileFor(managers: Managers, label: string): void {
   const file = managers.harness.transcriptTailer(label)?.transcriptFile();
   if (!file) return;
   managers.openFile.edit(`transcript ${label}`, file, label);

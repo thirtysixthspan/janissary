@@ -1640,10 +1640,10 @@ describe('Controller transcript buttons', () => {
 
   // A harness tab has no transcript of its own to print one into, so this is a silent no-op rather
   // than an error string: there is nothing to report when there was never a question asked.
-  it('openHarnessTranscriptFor is a silent no-op for a harness with no session record', () => {
+  it('openTranscriptFileFor is a silent no-op for a harness with no session record', () => {
     const { c } = makeCapturing();
     const before = editorTabs(c);
-    expect(() => { c.openHarnessTranscriptFor('janus'); }).not.toThrow();
+    expect(() => { c.openTranscriptFileFor('janus'); }).not.toThrow();
     expect(editorTabs(c)).toBe(before);
   });
 

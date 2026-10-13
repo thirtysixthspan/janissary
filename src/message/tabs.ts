@@ -7,7 +7,7 @@ type TabMessage = Extract<ClientMessage, {
     | 'editQueuedCommand' | 'deleteQueuedCommand' | 'moveTab' | 'moveTabToOtherPane'
     | 'reorderTab' | 'reorderTabTo' | 'toggleCollapse' | 'resetAcp' | 'revealNotifications'
     | 'setDock' | 'openFileNavigatorFor' | 'launchShellFor' | 'openDiffFor'
-    | 'openHarnessTranscriptFor' | 'openAcpTranscript' | 'openRecordingFor';
+    | 'openTranscriptFileFor' | 'openAcpTranscript' | 'openRecordingFor';
 }>;
 
 // The tab-tree RPC cases, split out of the main dispatcher to keep both files focused: these act on
@@ -64,7 +64,7 @@ export function dispatchTabMessage(controller: Controller, message: TabMessage):
     case 'openDiffFor': { controller.openDiffFor(message.params.label); break;
     }
 
-    case 'openHarnessTranscriptFor': { controller.openHarnessTranscriptFor(message.params.label); break;
+    case 'openTranscriptFileFor': { controller.openTranscriptFileFor(message.params.label); break;
     }
     case 'openAcpTranscript': { controller.openAcpTranscript(message.params.acpRef); break;
     }

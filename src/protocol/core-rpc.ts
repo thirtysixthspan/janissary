@@ -55,7 +55,7 @@ export type CoreRpcCall =
   // opens) in an editor tab, triggered by the clipboard button in a harness tab's metadata row.
   // No-ops when the tab has no transcript tailer or no transcript file yet. `label` is the
   // requesting harness tab's own label.
-  | { method: 'openHarnessTranscriptFor'; params: { label: string } }
+  | { method: 'openTranscriptFileFor'; params: { label: string } }
   // Open the named tab's asciicast recording in the tab that plays it, triggered by the recording
   // flag in a harness, ssh, or shell tab's metadata row. No-ops when the tab has no recording, which
   // is the same thing the flag's disabled state says on screen. `label` is the requesting tab's own.
