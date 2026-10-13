@@ -27,7 +27,8 @@ export async function closeTabResources(
     // If the clone is still being provisioned (the tab was closed before it finished), cancel it
     // immediately — a no-op once nothing is pending for this label — so the tab closes right away
     // instead of leaving an orphaned `git clone` running for a tab that no longer exists.
-    managers.workspace.cancel(label);
+    if (tab.workspaceCancel) tab.workspaceCancel();
+    else managers.workspace.cancel(label);
     releases.push(new Promise((resolve, reject) => {
       setTimeout(() => {
         try { resolve(managers.workspace.release(workspaceDir)); } catch (error) { reject(error); }

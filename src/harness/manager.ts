@@ -162,12 +162,12 @@ export class HarnessManager extends HarnessTabSpawn {
 
     const dir = resolveLaunchDir(this.managers, workspace && !remote, label, fallbackCwd);
     if (typeof dir === 'string') return dir;
-    const { cwd, workspaceDir, ready } = dir;
+    const { cwd, workspaceDir, workspaceCancel, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor));
     const group = resolveTabGroup(this.managers.tab.tabs, launch.group, creator, dotColor);
     this.spawnTab({
       name, label, cwd, workspaceDir, offline, group: group.id, groupName: group.name, groupColor: group.color,
-      dotColor, autoApprove, autoResume, browser, model, effort, ready, remote,
+      dotColor, autoApprove, autoResume, browser, model, effort, ready, workspaceCancel, remote,
       ...(nameRetry && { nameRetry }),
     });
     if (prompt) this.managers.schedule.set(label, [oneShotRunEntry('run-1', prompt)]);
@@ -192,14 +192,14 @@ export class HarnessManager extends HarnessTabSpawn {
     if (unique === undefined) return LAUNCH_REFUSED;
     const dir = resolveLaunchDir(this.managers, (entry.workspace ?? true) && !remote, unique, entry.cwd ?? process.cwd());
     if (typeof dir === 'string') return dir;
-    const { cwd, workspaceDir, ready } = dir;
+    const { cwd, workspaceDir, workspaceCancel, ready } = dir;
     const dotColor = distinctColor(this.managers.tab.tabs.map((t) => t.dotColor), entry.dotColor);
     this.spawnTab({
       name: entry.tool, label: unique, cwd, workspaceDir, offline: entry.offline ?? false,
       group, groupName: groupName ?? this.managers.tab.tabs.find((tab) => tab.group === group)?.groupName,
       groupColor, dotColor, autoApprove: entry.autoApprove ?? supportsHarnessAutoApprove(entry.tool),
       autoResume: supportsHarnessAutoResume(entry.tool),
-      browser: entry.browser ?? true, model: entry.model, effort: entry.effort, ready, remote,
+      browser: entry.browser ?? true, model: entry.model, effort: entry.effort, ready, workspaceCancel, remote,
       ...(remote && { nameRetry: { creator, explicit: true, tried: [unique], relaunch: () => {} } }),
     });
     return undefined;

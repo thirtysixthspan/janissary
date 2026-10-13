@@ -366,6 +366,8 @@ export type Tab = {
   scrollOffset: number;
   runtime?: TabRuntime;
   workspaceDir?: string;
+  // Cancels only this tab's clone attempt; a later launch may reuse the same label.
+  workspaceCancel?: () => void;
   // Set when this tab's process runs on another host. Its workspace clone lives on that host and is
   // removed by the remote server, so `workspaceDir` deliberately stays undefined — `src/tab/cleanup.ts`
   // reads that field to schedule a recursive delete against the **local** filesystem.

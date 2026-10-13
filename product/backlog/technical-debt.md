@@ -4,17 +4,6 @@
 
 ## development
 
-* Bind workspace provisioning completion to its own attempt rather than to a reusable launch name.
-
-Existing Debt: Workspace provisioning is tracked by name alone, and an earlier attempt's completion unconditionally deletes that name's pending record while credential-notice ownership is inferred only from the directory remaining referenced. Severity: 5/10
-
-Existing Risk: 6/10 - Closing a provisioning tab and launching another under the same name can let the old promise erase the new attempt's cancellation and readiness tracking or attribute an old credential notice to the replacement tab.
-
-Proposal Risk: 3/10 - Cancelling the clone still does not cancel every post-clone provisioning side effect, but late completion can no longer replace the newer attempt's bookkeeping or answer on its behalf.
-
-Proposal: Give each pending provisioning record in `src/workspace/manager.ts` an attempt identity shared by `create`, `trackReady`, and `cancel`. In `trackReady`, deliver `onCredentialFailure` and delete the pending entry only if the current entry is still that attempt, rather than accepting `refs.has(handle.dir)` or deleting by name unconditionally; keep state-dirty emission after settlement and preserve retained-workspace behavior. `acquireAgentWorkspace` must continue returning the current attempt's actual readiness promise after an older attempt settles. `src/workspace/manager.test.ts` covers single-attempt readiness, cancellation, notice suppression after release, and borrowed-workspace lifetimes, but not replacement attempts under one name. Add controlled old and new promises, cancel and release the first attempt, recreate the same name, and settle the old promise both successfully and unsuccessfully before the new one; assert that the replacement remains provisioning, can still be cancelled, retains its real readiness promise, and receives no notice from the old attempt.
-
-
 * Pass a local captured shell's initial working directory as process data instead of interpolated shell input.
 
 Existing Debt: The local persistent-shell launch translates a filesystem path into a double-quoted cd command, so valid path characters are interpreted as shell syntax before the first requested command runs. Severity: 5/10

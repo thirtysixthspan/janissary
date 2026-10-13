@@ -112,6 +112,51 @@ describe('WorkspaceManager', () => {
       expect(report).not.toHaveBeenCalled();
     });
 
+    it.each(['resolve', 'reject'] as const)(
+      'does not let an older attempt erase or cancel its replacement after it %ss', async (outcome) => {
+        findRepoRootMock.mockReturnValue('/repo');
+        getRemoteUrlMock.mockReturnValue('https://example.com/repo.git');
+        const oldReady = Promise.withResolvers<void>();
+        const newReady = Promise.withResolvers<void>();
+        const oldCancel = vi.fn();
+        const newCancel = vi.fn();
+        const dir = '/repo/.janissary/workspace/agent';
+        provisionWorkspaceMock
+          .mockReturnValueOnce({ ...handle(dir, oldCancel), ready: oldReady.promise, oauthNotice: 'old notice' })
+          .mockReturnValueOnce({ ...handle(dir, newCancel), ready: newReady.promise, oauthNotice: 'new notice' });
+        const report = vi.fn();
+        const manager = new WorkspaceManager('/repo', report);
+        const oldAttempt = manager.create('agent');
+        if (!('ready' in oldAttempt)) throw new Error('old attempt did not start');
+
+        oldAttempt.cancel?.();
+        manager.release(dir);
+        const newAttempt = manager.create('agent');
+        if (!('ready' in newAttempt)) throw new Error('new attempt did not start');
+        oldAttempt.cancel?.();
+        expect(newCancel).not.toHaveBeenCalled();
+
+        if (outcome === 'resolve') {
+          oldReady.resolve();
+          await expect(oldAttempt.ready).resolves.toBeUndefined();
+        } else {
+          oldReady.reject(new Error('old clone failed'));
+          await expect(oldAttempt.ready).rejects.toThrow('old clone failed');
+        }
+
+        expect(manager.provisioning(dir)).toBe(true);
+        const borrowed = manager.acquireAgentWorkspace('agent');
+        expect(borrowed?.ready).toBe(newAttempt.ready);
+        await borrowed?.release();
+        expect(report).not.toHaveBeenCalled();
+        newAttempt.cancel?.();
+        expect(newCancel).toHaveBeenCalledOnce();
+        newReady.resolve();
+        await newAttempt.ready;
+        expect(report).not.toHaveBeenCalled();
+      },
+    );
+
     it('returns an error when no repo is found', () => {
       findRepoRootMock.mockReturnValue(undefined);
       const manager = new WorkspaceManager();

@@ -6,7 +6,11 @@ export const NO_REPO ='No git repository found. Cannot create workspace.';
 
 // A workspace clone still being provisioned: its directory is known up front, but `ready` only
 // resolves once the clone (and its follow-up git setup) finishes.
-export type ProvisioningWorkspace = { dir: string; ready: Promise<void>; readonly oauthNotice?: string };
+export type ProvisioningWorkspace = {
+  dir: string; ready: Promise<void>; cancel?: () => void; readonly oauthNotice?: string;
+};
+
+type PendingWorkspace = { cancel: () => void; dir: string; ready: Promise<void> };
 
 // Owns the set of workspace clones the app has created — an independent `git clone` of the repo's
 // `origin` remote, made for a shell (`shell --workspace`) or a harness tab (`harness <name>
@@ -16,7 +20,7 @@ export type ProvisioningWorkspace = { dir: string; ready: Promise<void>; readonl
 export class WorkspaceManager {
   private refs = new Map<string, number>();
   private names = new Map<string, string>();
-  private pending = new Map<string, { cancel: () => void; dir: string; ready: Promise<void> }>();
+  private pending = new Map<string, PendingWorkspace>();
   private projectDir: string;
 
   constructor(projectDir?: string, private onCredentialFailure?: (label: string, message: string) => void) {
@@ -35,9 +39,13 @@ export class WorkspaceManager {
     const handle = provisionWorkspace(name, origin.url, githubToken);
     this.refs.set(handle.dir, 1);
     this.names.set(name, handle.dir);
-    const ready = this.trackReady(name, handle);
-    this.pending.set(name, { cancel: handle.cancel, dir: handle.dir, ready });
-    return { dir: handle.dir, ready, get oauthNotice() { return handle.oauthNotice; } };
+    const pending: PendingWorkspace = { cancel: handle.cancel, dir: handle.dir, ready: Promise.resolve() };
+    pending.ready = this.trackReady(name, handle, pending);
+    this.pending.set(name, pending);
+    return {
+      dir: handle.dir, ready: pending.ready, cancel: () => this.cancelAttempt(name, pending),
+      get oauthNotice() { return handle.oauthNotice; },
+    };
   }
 
   // The error `create` would return for want of a repo or an `origin` remote, or undefined when a
@@ -64,14 +72,14 @@ export class WorkspaceManager {
     }
   }
 
-  private async trackReady(name: string, handle: ProvisionHandle): Promise<void> {
+  private async trackReady(name: string, handle: ProvisionHandle, pending: PendingWorkspace): Promise<void> {
     try {
       await handle.ready;
-      if (handle.oauthNotice && this.refs.has(handle.dir)) {
+      if (this.pending.get(name) === pending && this.refs.has(handle.dir) && handle.oauthNotice) {
         try { this.onCredentialFailure?.(name, handle.oauthNotice); } catch { return; }
       }
     } finally {
-      this.pending.delete(name);
+      if (this.pending.get(name) === pending) this.pending.delete(name);
       messageBus.emit('state', { type: 'dirty' });
     }
   }
@@ -88,9 +96,13 @@ export class WorkspaceManager {
   // latter case the clone must finish for the surviving tab even if its creator closes first.
   cancel(name: string): void {
     const pending = this.pending.get(name);
-    if (!pending || (this.refs.get(pending.dir) ?? 0) > 1) return;
-    pending.cancel();
-    this.pending.delete(name);
+    if (pending) this.cancelAttempt(name, pending);
+  }
+
+  private cancelAttempt(name: string, attempt: PendingWorkspace): void {
+    if (this.pending.get(name) !== attempt || (this.refs.get(attempt.dir) ?? 0) > 1) return;
+    attempt.cancel();
+    if (this.pending.get(name) === attempt) this.pending.delete(name);
   }
 
   retain(dir: string): void {
