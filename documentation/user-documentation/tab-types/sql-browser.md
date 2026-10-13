@@ -54,6 +54,8 @@ Pages hold 50, 100, or 500 rows, and 100 is the default. The pager below the gri
 
 Double-click a cell to edit it. `Return` or clicking away saves the change, and `Escape` leaves it unchanged. A null value shows as a muted `NULL`, so it never looks like an empty string. The editor has a **NULL** checkbox for writing a real null. A cell that holds null opens with the box checked, and typing clears it. There is no undo.
 
+The editor opens with the value for that cell's named column, even if columns are hidden or reordered. A missing cell starts as empty text; a null cell starts as null.
+
 While a cell save is pending, the editor is disabled and another save is ignored. If Janissary rejects the request, the editor stays open with your value so you can correct it or try again. After the request is accepted, a database error is reported in [Notifications](/user-documentation/tab-types/notifications).
 
 **Insert row** opens a form headed `New row in <table>` with one field per column, the primary key marked `pk`. It shows the `INSERT` statement that **Save** will run. A column you leave empty is left out of that statement, so the table's own default applies. Each field has a **NULL** checkbox too, and the primary key's starts checked. A `NOT NULL` column with no default and nothing typed in it is refused by the database.

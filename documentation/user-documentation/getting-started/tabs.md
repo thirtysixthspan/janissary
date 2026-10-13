@@ -167,6 +167,8 @@ titlebar is the one exception to display shortening. It reads `Janissary (<versi
 
 Shell commands keep their output in the terminal’s scrollback. Application replies appear there as rendered Markdown; ACP replies stream in the panel above the command bar. Paths in supported rendered replies open an editor at the referenced line.
 
+While the transcript is pinned at the bottom, it follows incoming output. Scrolling away pauses following so you can read earlier lines. Scroll back near the bottom or press `Escape` to resume following and return to the latest output.
+
 ## Agent tool steps fold up
 
 The ACP response panel collapses consecutive tool steps into a summary. Click it or press `Ctrl+T` to expand the steps for that shell’s ACP response. Harness session transcripts remain available from the harness metadata button.

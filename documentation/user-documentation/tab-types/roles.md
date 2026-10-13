@@ -28,6 +28,8 @@ Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, 
 
 Drag an entry row onto another row in the same card to move it. Drag a role's handle onto another card — its model rows included — to move the role itself. To remove an entry, click its **×**, or drag the entry back onto the **Models** column. To remove a role, click the **×** on its card. Removing your last role is allowed; the tab then reads `No roles yet.` and keeps an **Add role** button.
 
+When adding a role, pressing `Enter` and then clicking away while the same name is still pending sends it only once. You can enter and submit a different name while that request is pending; it may be added independently. If the earlier request succeeds after you have typed a newer name, your newer draft and the **Add role** control stay in place.
+
 If another edit changes the entry list before your removal, reorder, or effort change arrives, the tab shows the current choices and says `The entries of role "<name>" changed elsewhere — retry the edit on the current list. Nothing was written.` Retry using the refreshed list; the refused edit leaves the file untouched.
 
 <img class="agent-float left" src="/agents/mahir-south-east.png" alt="" />

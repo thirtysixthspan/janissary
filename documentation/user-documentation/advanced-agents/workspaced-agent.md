@@ -3,8 +3,8 @@
 Shells and harnesses use disposable clones by default:
 
 ```
-zsh emrah
-zsh emrah --no-workspace
+shell emrah
+shell emrah --no-workspace
 harness claude
 ```
 

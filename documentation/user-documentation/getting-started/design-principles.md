@@ -6,17 +6,17 @@ Janissary is built around a small set of tenets. They explain why the app looks 
 
 ## Workflow support
 
-Janissary supports the work you're already doing rather than prescribing a workflow of its own. A tab can be a shell, an [agent](/user-documentation/getting-started/agents), an [editor](/user-documentation/tab-types/editor), or a [harness](/user-documentation/advanced-agents/harness) — mix and match freely, whether you're developing code, writing, or managing something else entirely. [Profiles](/user-documentation/automation/profiles) let you capture whatever multi-tab setup fits your work and recreate it with one command.
+Janissary supports the work you're already doing rather than prescribing a workflow of its own. A tab can be a [shell](/user-documentation/command-bar/shell#open-a-shell-tab), an [editor](/user-documentation/tab-types/editor), or a [harness](/user-documentation/advanced-agents/harness). An autonomous `agent` task runs from a command bar and returns a result there; add `in a tab` if you want a monitor tab to follow its activity. Mix these tools freely, whether you're developing code, writing, or managing something else entirely. [Profiles](/user-documentation/automation/profiles) let you capture a multi-tab setup and recreate it with one command.
 
 ## Integrated agents
 
 <img class="agent-float left" src="/agents/bilal-south-east.png" alt="" />
 
-Agents aren't a separate mode bolted onto a terminal — they're tabs like any other, sharing the same command bar, [tab-completion](/user-documentation/command-bar/tab-completion), and [history](/user-documentation/command-bar/history) as your shell tabs. You work alongside them in the same interface you already use.
+You can launch an autonomous task from a shell tab's command bar without giving up the shell. The task runs independently and returns its status and response there. Add `in a tab` to open a monitor for its activity; the monitor has no command bar or terminal. A harness tab works differently: its full-terminal view takes the place of the app command bar and transcript, so you type directly into the harness. Shell tabs keep both a terminal and their own command bar. By default they also save terminal text to a separate transcript file; a project's `recordShellTabs` setting turns off both recordings and transcripts.
 
 ## Agent orchestration
 
-Beyond working *with* an agent, Janissary lets you direct many of them at once: run multiple agents in parallel across tabs, have them message each other to coordinate (see [Harness tabs](/user-documentation/advanced-agents/harness)), and use [scheduling](/user-documentation/automation/scheduling) to run agents automatically without you present.
+You can run autonomous tasks from different command bars and follow the ones you choose in monitor tabs. For interactive work, open multiple [harness tabs](/user-documentation/advanced-agents/harness) and coordinate through the tools available in those harnesses. [Scheduling](/user-documentation/automation/scheduling) runs commands in eligible tabs later.
 
 ## This is an application, not a platform
 
@@ -24,7 +24,7 @@ Janissary is a user interface that runs on one system and controls work done on 
 
 ## Keyboard first, mouse augmented
 
-Every core action — opening tabs, running commands, switching between them — is reachable from the [command bar](/user-documentation/command-bar/commands) and [keyboard shortcuts](/user-documentation/getting-started/keyboard). The mouse is welcome, but nothing important requires it.
+Opening tabs and running app commands are available from a shell tab's [command bar](/user-documentation/command-bar/commands); harness tabs take input in their terminal instead. [Keyboard shortcuts](/user-documentation/getting-started/keyboard) and the tab strip let you switch between tabs without reaching for the mouse.
 
 ## Identical control of local and remote resources
 
@@ -36,4 +36,4 @@ Janissary doesn't invent its own versioning scheme. It leans on the tools that a
 
 ## Traceability of work
 
-Complex systems fail in complex ways, and Janissary doesn't pretend otherwise. Every tab keeps its own transcript, the connections panel (see [Harness tabs](/user-documentation/advanced-agents/harness)) shows what's running underneath it, and [command history](/user-documentation/command-bar/history) records what was run and when — so when something goes sideways, you can unravel it.
+Complex systems fail in complex ways, and Janissary doesn't pretend otherwise. Shell tabs keep a separate text-transcript file, and harness sessions can be reviewed through their session transcript. The connections panel (see [Harness tabs](/user-documentation/advanced-agents/harness)) shows what's running underneath a terminal tab, while [command history](/user-documentation/command-bar/history) helps you find commands you ran from a command bar.
