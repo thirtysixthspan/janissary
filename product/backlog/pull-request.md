@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description so it states the editor-save refusal over a live shell transcript, which the branch now ships and the description never mentions.
-
-Existing Issue: The branch refuses an editor save over a shell transcript that is still being written, with a user-visible message and a `file-operation` notification, yet the description's What, Behavior examples, How to verify and Files changed sections say nothing of it and omit `src/editor/save.ts`, `src/editor/save.test.ts`, `src/editor/save-synced-stale.test.ts` and `src/editor/watch-manager.test.ts`, along with the new `writingPath()` and `isWriting()` on the writer and manager. Severity: 3/10
-
-Existing Risk: 3/10 - A reviewer reading the description approves the pull request without knowing the editor's save path gained a new refusal, so the one change outside the transcript feature's own modules, and the one most likely to surprise someone editing files under `.janissary/`, goes unreviewed.
-
-Proposal Risk: 1/10 - Only the description changes, so a remaining slip would be a wording mismatch that a reader can check against the `saveFile live shell transcript guard` cases that pin the behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1675 "describe the live shell transcript save refusal in the pull request description". Edit the pull request body, preserving every other paragraph. In What, add a short paragraph saying that Open transcript shows the file in an ordinary editor tab, that while the shell is still running a save of that tab, including the overwrite prompt's save, is refused with `This shell transcript is still being written; copy it to another file to edit it.` and leaves the file untouched, because replacing the file by rename would cut every later row off from it, and that once the shell exits or its tab closes the file saves normally. In How to verify, add a bullet: open the transcript, type in the editor and save, confirm the refusal and that the file still grows with the next command, then close the shell tab and confirm the same save succeeds. In Files changed, add `src/editor/save.ts` (`refuseLiveShellTranscriptSave` and `LIVE_SHELL_TRANSCRIPT_SAVE_REASON`), extend the `src/shell/transcript/writer.ts` and `src/shell/transcript/manager.ts` entries with `writingPath()` and `isWriting()`, and list `src/editor/save.test.ts` with the two fixtures (`src/editor/save-synced-stale.test.ts`, `src/editor/watch-manager.test.ts`) that gained a `shellTranscript` stub. Leave the Plan entry and the "folded into the one plan" sentence to the step that folds the fix plans into `product/plans/complete/shell-tab-text-transcript.md`, and have that step make them name what the branch then carries. No code, test or spec changes; this is a description edit made by the worker of this entry, not by the review.
-
-
 * Update the two contract statements that still say only a harness tab has a transcript button, now that the shell tab draws one and the renamed RPC serves it.
 
 Existing Issue: `product/specs/tab-plugins.md` still says the shell plugin's metadata row "omits the transcript control, because the terminal replaced the transcript", and the comment above `openTranscriptFileFor` in `src/protocol/core-rpc.ts` still describes it as opening a harness tab's session transcript from the harness metadata row and no-opping when the tab has no transcript tailer, though the shell tab now sends it and it resolves the shell tab's `transcript` path as well. Severity: 2/10
