@@ -54,7 +54,7 @@ A conversation runs one agent session at a time. Restarting the app, cancelling 
 
 ## Cancel or retry a reply
 
-Press `Escape` while a reply streams to discard that partial turn. It is not saved. Closing the tab mid-reply does the same. If that query supplied the initial title, cancellation restores `New conversation`, unless you renamed it while the reply was streaming.
+While the conversation tab is active, press `Escape` during a reply to discard that partial turn. It is not saved. A hidden conversation tab does not handle `Escape`. Closing the tab mid-reply does the same. If that query supplied the initial title, cancellation restores `New conversation`, unless you renamed it while the reply was streaming.
 
 A failed query stays in the history with its error in place of the reply. Rate-limit errors begin with `Rate limited:`. Send another query when you're ready to retry; the failed session is replaced automatically.
 

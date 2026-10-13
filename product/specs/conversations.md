@@ -34,7 +34,7 @@ The metadata row includes a folder button and a new-shell button. The folder ope
 
 The turn list is inset from the metadata row above it and the message input below it by more than either row insets itself, so the conversation reads as its own region instead of crowding them. It stays aligned with the title and the command line on the left.
 
-The tab opens with the most recent 20 turns and the newest turn visible. An active tab follows each newly rendered query and streamed response to the bottom. Following stops only when the user scrolls away from the bottom themselves; output growing beneath the view is never mistaken for that. Scrolling back to within a line or two of the bottom resumes following. Reaching the top loads 20 older turns at a time until the full history is visible; prepending that history preserves the current viewport instead of returning to the newest turn. Each turn shows the query, a sanitized Markdown response, and the harness/model pair that answered it. Responses appear progressively while the model is replying.
+The tab opens with the most recent 20 turns and the newest turn visible. An active tab follows each newly rendered query and streamed response to the bottom. Following stops only when the user scrolls away from the bottom themselves; output growing beneath the view is never mistaken for that. Scrolling back to within a line or two of the bottom resumes following. Reaching the top requests 20 older turns only while older turns remain; prepending that history preserves the current viewport instead of returning to the newest turn. Each turn shows the query, a sanitized Markdown response, and the harness/model pair that answered it. Responses appear progressively while the model is replying.
 
 The model selector sits with the metadata row's right-aligned controls, ahead of the folder, new-shell, and split buttons rather than beside the title. It offers every model catalogued for the `claude` and `opencode` harnesses, grouped by harness. The selected pair applies to the next query. Changing it starts a fresh agent session; earlier turns keep the pair that produced them. If a saved pair is no longer catalogued, the next query uses the first available pair.
 
@@ -60,7 +60,7 @@ The input takes focus when a conversation tab opens on screen. A conversation ta
 
 Each conversation has one live ACP agent session at a time. A restarted app, cancelled reply, changed model, failed connection, or closed conversation tab ends that session. The next query starts another session and replays the 20 most recent completed turns before sending the new query.
 
-Escape cancels a streaming reply. Cancellation discards the partial turn and writes nothing from it. A second query is refused while one is already in flight.
+Escape cancels a streaming reply while its conversation tab is active. A hidden conversation tab does not handle Escape. Cancellation discards the partial turn and writes nothing from it. A second query is refused while one is already in flight.
 
 A failed query remains in the conversation with its error rendered in place. Rate-limit failures are identified explicitly. The failed session is forgotten so the next query reconnects and replays the stored context.
 
