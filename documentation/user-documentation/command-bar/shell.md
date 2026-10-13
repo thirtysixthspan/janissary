@@ -6,6 +6,8 @@ Type `shell` to open a separate tab with a live zsh terminal. Application comman
 
 Every launch opens one of these for you: the `janus` tab you start in is a zsh shell tab in the project directory. Type `shell` in its command bar when you want another shell tab. Typing `exit` in it closes it like any shell tab, and as the last tab that quits the app.
 
+<img class="agent-float" src="/agents/fariz-south-east.png" alt="" />
+
 The command bar starts focused. Double-click the terminal or press `Shift+Tab` to type directly into zsh; double-clicking clears any terminal selection made by the gesture. A single click on the terminal returns focus to the command bar. Press `Shift+Tab` again to return to the command bar. When you use the bar, each line goes to Janissary first. A recognized application command runs there and never reaches zsh; text replies such as `help` appear below the command as rendered markdown, with bold headings, colored code, bulleted lists, and lined-up tables. Long replies take the space they need in the terminal scrollback, without an internal scrollbar. As you scroll through a reply, the visible portion stays rendered even after its first row moves above the viewport. If a full-screen program is using the terminal or the reply cannot be measured or placed, it appears as styled terminal text instead. An unclaimed line goes to zsh. Prefix a line with `!` to send it straight to zsh, even when it matches an application command. While zsh is running a command, the command line reads `queue >` and anything you submit waits in the tab's command queue; the queued lines run one at a time as zsh returns to its prompt, and `Ctrl+E` shows them. With text in the focused command line, `Escape` clears the draft without running it; if completion choices are showing, the first `Escape` closes that strip and leaves the draft alone. With an empty line, `Escape` returns the terminal to the bottom of its scrollback.
 
 A multi-line command stays editable in the bar until you submit it. If it goes to zsh, its lines are pasted together and submitted as one command.
@@ -48,9 +50,11 @@ With the terminal focused, press `Ctrl+Shift+C` to copy its selection. On macOS,
 
 ## Read a shell session's transcript
 
+<img class="agent-float left" src="/agents/bilal-south.png" alt="" />
+
 Press the 📋 **Open transcript** button in the shell tab's metadata row. It opens everything the shell has shown so far in an editor tab named after the file, such as `tx-2026-10-13T03-42-46-527Z.txt`, where `Cmd+F` searches it. The button appears as the shell starts. You can't save over the transcript while its shell is running or while its final lines are being written after the shell exits; to keep notes on it, copy it to another file first. You can't rename or move it during that same period, from its editor tab or a file navigator.
 
-The file lives at `.janissary/shell-transcripts/<name>-<timestamp>.txt`. The tab's recording, named the same way, sits in `.janissary/recordings/`. The transcript is plain text: the prompts, the commands you typed and their output, with no colors. A full-screen program such as `vim` or `less` isn't in it, though what the shell printed before and after is. Replies to app commands such as `help` aren't in it either. Each line is saved once, when the cursor moves past it, so a later `clear` doesn't erase anything already saved.
+The file lives at `.janissary/shell-transcripts/<name>-<timestamp>.txt` on the machine running Janissary, even when the shell itself is remote. The tab's recording, named the same way, sits in `.janissary/recordings/`. The transcript is plain text: the prompts, the commands you typed and their output, with no colors. A full-screen program such as `vim` or `less` isn't in it, though what the shell printed before and after is. Replies to app commands such as `help` aren't in it either. Each line is saved once, when the cursor moves past it, so a later `clear` doesn't erase anything already saved. When the shell closes or exits, its unfinished prompt or progress row is saved as it stands.
 
 Be careful with secrets. A secret you type on a command line, such as `export TOKEN=…`, ends up in the file. A password typed at a prompt that hides your typing, like `sudo` or `ssh`, doesn't. The file never leaves your machine.
 
@@ -63,5 +67,7 @@ If the transcript can't be written, the notifications feed shows `shell transcri
 Use `acp <prompt>` in the shell command bar to query OpenCode. Replies stream as Markdown in the ACP panel above the bar, with tool steps and a responding status. **Reset ACP** stops the current connection immediately, including while a reply is in progress. The panel and its controls belong to that shell when it is docked too. See [ACP agents](/user-documentation/advanced-agents/acp-agent) for setup, tools, and remote connections.
 
 ## Inline monitors
+
+<img class="agent-float" src="/agents/hakim-south-west.png" alt="" />
 
 `monitor <persona>` watches this tab. Its suggestions and `monitor ask` replies appear in the shell’s visible output and remain in the shared activity log. Reporting monitors with explicit targets keep their own reporting tab.
