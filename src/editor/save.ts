@@ -39,7 +39,7 @@ export function saveFile(managers: Managers, url: string, content: string, expec
   if (expectedHash !== undefined && !wasNewFile && !remote) refuseStaleSave(managers, tab?.label, filePath, expectedHash);
   // A remote file's cached copy is written only once the remote has the content, so a write the
   // remote refuses — or never answers — leaves the two copies agreeing rather than diverged.
-  if (remote) return saveRemote(managers, remote, content, () => {
+  if (remote) return saveRemote(managers, remote, content, wasNewFile ? undefined : expectedHash, () => {
     atomicWriteFile(targetPath, content);
     finishSave(managers, url, targetPath, filePath, wasNewFile);
   });
@@ -111,10 +111,13 @@ async function saveRemote(
   managers: Managers,
   remote: NonNullable<ReturnType<typeof remoteFileFor>>,
   content: string,
+  expectedHash: string | undefined,
   finish: () => void,
 ): Promise<void> {
   try {
-    const result = await remote.filesystem.writeFile(remote.root, remote.relPath, Buffer.from(content));
+    const result = expectedHash === undefined
+      ? await remote.filesystem.writeFile(remote.root, remote.relPath, Buffer.from(content))
+      : await remote.filesystem.writeFile(remote.root, remote.relPath, Buffer.from(content), expectedHash);
     if (!result.ok) throw new Error(result.reason);
   } catch (error) {
     const reason = errorText(error);

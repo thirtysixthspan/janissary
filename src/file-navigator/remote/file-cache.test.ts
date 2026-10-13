@@ -14,6 +14,7 @@ import { openNavigatorFile } from '../manager/files.js';
 import type { FilesTabState } from '../state.js';
 import { notificationsTab, openNotificationsTab } from '../../notifications/tab.js';
 import { NotificationQueue } from '../../notifications/queue.js';
+import { contentHash, SAVE_CONFLICT_ERROR } from '../../editor/save-conflict.js';
 
 function setup(writeFile: FileSystemPort['writeFile']) {
   const project = mkdtempSync(path.join(tmpdir(), 'janus-remote-cache-'));
@@ -136,6 +137,35 @@ describe('remote file cache', () => {
     const { managers, file, url } = setup(vi.fn().mockResolvedValue({ ok: false, reason: 'read only' }));
     await expect(saveFile(managers, url, 'changed')).rejects.toThrow('read only');
     expect(readFileSync(file, 'utf8')).toBe('remote');
+  });
+
+  it('preserves a changed remote file, cache, and draft until the user confirms overwrite', async () => {
+    let remoteContent = 'remote';
+    const writeFile = vi.fn(async (_root: string, _relPath: string, content: Uint8Array, expectedHash?: string) => {
+      if (expectedHash !== undefined && contentHash(remoteContent) !== expectedHash) {
+        return { ok: false as const, reason: SAVE_CONFLICT_ERROR };
+      }
+      remoteContent = Buffer.from(content).toString('utf8');
+      return { ok: true as const };
+    });
+    const { managers, file, url } = setup(writeFile);
+    const tab = managers.tab.tabs.find((candidate) => candidate.editor)!;
+    tab.editorDraft = { content: 'editor draft', updatedAt: Date.now() };
+    remoteContent = 'changed remotely';
+
+    await expect(saveFile(managers, url, 'editor draft', contentHash('remote'))).rejects.toThrow(SAVE_CONFLICT_ERROR);
+
+    expect(remoteContent).toBe('changed remotely');
+    expect(readFileSync(file, 'utf8')).toBe('remote');
+    expect(tab.editorDraft?.content).toBe('editor draft');
+    expect(writeFile).toHaveBeenLastCalledWith('/remote/ws', 'src/notes.txt', Buffer.from('editor draft'), contentHash('remote'));
+
+    await saveFile(managers, url, 'editor draft');
+
+    expect(remoteContent).toBe('editor draft');
+    expect(readFileSync(file, 'utf8')).toBe('editor draft');
+    expect(tab.editorDraft).toBeUndefined();
+    expect(writeFile).toHaveBeenLastCalledWith('/remote/ws', 'src/notes.txt', Buffer.from('editor draft'));
   });
 
   it('forgets the files that wrote back through a disposed port, and only those', () => {

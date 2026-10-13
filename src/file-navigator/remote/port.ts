@@ -110,9 +110,12 @@ export class RemoteFileSystemPort implements FileSystemPort, NavigatorListener {
     return Buffer.from(result.content, 'base64');
   }
 
-  async writeFile(root: string, relPath: string, content: Uint8Array): Promise<FileOperationResult> {
+  async writeFile(
+    root: string, relPath: string, content: Uint8Array, expectedHash?: string,
+  ): Promise<FileOperationResult> {
     return this.request('write-file', {
       path: await this.paths.to(root, relPath), content: Buffer.from(content).toString('base64'),
+      ...(expectedHash !== undefined && { expectedHash }),
     });
   }
 

@@ -51,6 +51,11 @@ A recognized method whose `params` fail the field checks above is answered rathe
 
 If dispatching an accepted envelope fails, the server sends an `rpc-reply` with the request's `id` and the error message. This applies to synchronous failures and rejected deferred work.
 
+If an editor's file has changed since its buffer last matched the file, a save replies with
+`This file changed on disk since it was loaded`. This check also applies to remote files. A refusal
+leaves the remote content, local cached copy, and editor draft unchanged while the editor waits for
+overwrite confirmation. Confirming overwrite allows the save to replace the changed content.
+
 A recognized method that reaches the dispatcher with no handler behind it is reported the same way — an error naming the method — rather than being answered with a successful acknowledgement for an action that never ran. A client is never told a request succeeded unless it did.
 
 ### Tab-plugin methods

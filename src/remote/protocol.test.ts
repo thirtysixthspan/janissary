@@ -78,7 +78,7 @@ describe('frame codec', () => {
       { type: 'filesystem-open', session: 'files1' },
       { type: 'filesystem-close', session: 'files1' },
       { type: 'filesystem-request', session: 'files1', request: 'q1', operation: 'read-directory', args: { path: 'src' } },
-      { type: 'filesystem-request', session: 'files1', request: 'q2', operation: 'write-file', args: { path: 'notes.txt', content: 'aMOpbGxvCndvcmxk' } },
+      { type: 'filesystem-request', session: 'files1', request: 'q2', operation: 'write-file', args: { path: 'notes.txt', content: 'aMOpbGxvCndvcmxk', expectedHash: 'baseline' } },
       {
         type: 'filesystem-request', session: 'files1', request: 'q3', operation: 'replay',
         args: {
@@ -273,6 +273,7 @@ describe('frame codec', () => {
     ['filesystem request with an unknown operation', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'unknown', args: {} }],
     ['filesystem request without a request id', { type: 'filesystem-request', session: 'f1', operation: 'search', args: {} }],
     ['filesystem request with malformed arguments', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'rename', args: { path: 'a' } }],
+    ['filesystem request with malformed write precondition', { type: 'filesystem-request', session: 'f1', request: 'q1', operation: 'write-file', args: { path: 'a', content: '', expectedHash: null } }],
     ['acp-open without an id', { type: 'acp-open', command: 'opencode', args: [] }],
     ['acp-open with an empty id', { type: 'acp-open', id: '', command: 'opencode', args: [] }],
     ['acp-open with an empty command', { type: 'acp-open', id: 'racp1', command: '', args: [] }],
@@ -659,8 +660,8 @@ describe('file contents on the wire', () => {
 describe('protocol version', () => {
   // Pinned as a literal so a frame added without its bump is a failing test rather than two hosts
   // agreeing on a version number while disagreeing about what it covers.
-  it('is 31', () => {
-    expect(REMOTE_PROTOCOL_VERSION).toBe(31);
+  it('is 32', () => {
+    expect(REMOTE_PROTOCOL_VERSION).toBe(32);
   });
 });
 

@@ -4,17 +4,6 @@
 
 ## development
 
-* Carry the editor's stale-content precondition through remote file saves to the host that owns the file.
-
-Existing Debt: The editor computes a baseline hash for every queued save, but the server drops it on remote saves because the filesystem port and remote write contract have no conditional-write field. Severity: 6/10
-
-Existing Risk: 8/10 - Saving an old remote buffer can silently overwrite changes made by another editor or a remote agent because the authoritative file is never compared with the buffer's baseline.
-
-Proposal Risk: 3/10 - An external process can still race the final comparison and atomic replacement, since the conditional save does not introduce filesystem-wide locking.
-
-Proposal: Keep `SaveCoordinator` in `web/src/editor/save-coordinator.ts` and the overwrite prompt in `web/src/editor/useEditorFile.ts` as the client contract, and pass `expectedHash` from `saveFile` through `saveRemote` in `src/editor/save.ts` rather than checking the local cache. Add an optional precondition to `FileSystemPort.writeFile` and its local implementation in `src/file-navigator/filesystem-port.ts`, forward it in `src/file-navigator/remote/port.ts`, and extend the write-file arguments in `src/remote/protocol-frames.ts` and their validation, decoding, and dispatch in `src/remote/filesystem/operations.ts`. Compare the authoritative target's text immediately before `atomicWriteFile`, using `contentHash` and `SAVE_CONFLICT_ERROR` from `src/editor/save-conflict.ts` with the same leading-BOM handling and missing-file behavior as `src/editor/stale-save.ts`; return the conflict through the existing failure-result shape so the browser opens its current overwrite prompt and neither the cache nor the draft advances. An explicit overwrite continues to omit the precondition. Increment and document `REMOTE_PROTOCOL_VERSION` in `src/remote/protocol.ts`, because an older remote must not silently ignore this guarantee, and remove the remote-host exception in `product/specs/editor-tab.md`. Existing coverage lives in `src/editor/save.test.ts`, `src/file-navigator/remote/file-cache.test.ts`, `src/file-navigator/remote/port.test.ts`, `src/file-navigator/filesystem-port.test.ts`, `src/remote/filesystem/operations.test.ts`, and `src/remote/serve-file-navigator.test.ts`; add a remote-file-changed-after-load case that proves the original remote bytes and local draft survive, then a confirmed-overwrite case and malformed-precondition cases.
-
-
 * Keep closing shell transcript writers owned and protected until their final writes have settled.
 
 Existing Debt: The shell transcript manager equates a writer leaving its active PTY map with releasing its file, even though terminal parsing, the final row, and stream closure continue asynchronously afterward. Severity: 6/10

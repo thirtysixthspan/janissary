@@ -10,6 +10,7 @@ import type { RemoteFilesystemOperation } from '../protocol-frames.js';
 import { descriptorFor, type OperationContext, type OperationDescriptor } from './operation-types.js';
 import type { HistoryStep } from '../../file-navigator/moves.js';
 import { resultDecoders } from './result-decoders.js';
+import { writeFileOperation } from './write-file-operation.js';
 
 // What an operation's `run` reaches, handed over as one value so the table stays a plain data
 // module: `root` and `filesystem` are the far side's own, and the rest are bound closures over the
@@ -71,15 +72,7 @@ const READ_OPERATIONS = {
 
 // The operations that write. Each names the refusal shape matching its own result type.
 const MUTATION_OPERATIONS = {
-  'write-file': descriptorFor<'write-file'>()({
-    valid: (args) => stringValue(args.path) && stringValue(args.content),
-    decode: (args) => ({ path: args.path as string, content: args.content as string }),
-    paths: namedPath, refusal: refusedItem,
-    decodeResult: resultDecoders['write-file'],
-    run: (context, args) => context.filesystem.writeFile(
-      context.root, args.path, Buffer.from(args.content, 'base64'),
-    ),
-  }),
+  'write-file': writeFileOperation,
   move: descriptorFor<'move'>()({
     valid: (args) => stringValue(args.from) && stringValue(args.to)
       && (args.overwrite === undefined || typeof args.overwrite === 'boolean'),

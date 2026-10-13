@@ -26,7 +26,7 @@ export type RemoteFilesystemArgumentsByOperation = {
   'git-pull': Record<string, never>;
   search: Record<string, never>;
   'read-file': { path: string };
-  'write-file': { path: string; content: string };
+  'write-file': { path: string; content: string; expectedHash?: string };
   move: { from: string; to: string; overwrite?: boolean };
   'move-many': { sources: string[]; destination: string; policy?: 'overwrite-all' | 'skip-conflicts' };
   delete: { path: string };

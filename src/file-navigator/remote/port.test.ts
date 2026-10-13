@@ -47,6 +47,23 @@ describe('RemoteFileSystemPort', () => {
     await expect(write).resolves.toEqual({ ok: true });
   });
 
+  it('forwards the optional expected hash and omits it for unconditional writes', async () => {
+    const h = harness();
+    const conditional = h.port.writeFile('/remote/ws', 'notes.txt', Buffer.from('new'), 'baseline');
+    await vi.waitFor(() => expect(h.sent.some((frame) => frame.type === 'filesystem-request')).toBe(true));
+    expect(h.sent.findLast((frame) => frame.type === 'filesystem-request'))
+      .toMatchObject({ operation: 'write-file', args: { expectedHash: 'baseline' } });
+    h.reply({ ok: true });
+    await conditional;
+
+    const overwrite = h.port.writeFile('/remote/ws', 'notes.txt', Buffer.from('overwrite'));
+    await vi.waitFor(() => expect(h.sent.filter((frame) => frame.type === 'filesystem-request')).toHaveLength(2));
+    const request = h.sent.findLast((frame) => frame.type === 'filesystem-request');
+    expect(request?.type === 'filesystem-request' && Object.hasOwn(request.args, 'expectedHash')).toBe(false);
+    h.reply({ ok: true });
+    await overwrite;
+  });
+
   it('routes watch events and unwatches when the handle stops', async () => {
     const h = harness();
     const changed = vi.fn();

@@ -180,7 +180,9 @@
 // Version 31 includes the far side's actual ACP sandbox state in `acp-ready`; a version-30 peer
 // cannot report whether the remote process was confined, so exact-version refusal avoids a false
 // assurance on remote agent runs.
-export const REMOTE_PROTOCOL_VERSION = 31;
+// Version 32 carries an optional `expectedHash` on `write-file`. A version-31 remote would ignore
+// it and overwrite changed remote content while both hosts appeared to complete the save normally.
+export const REMOTE_PROTOCOL_VERSION = 32;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

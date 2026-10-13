@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { LocalFileSystemPort } from './filesystem-port.js';
 import { OUTSIDE_ROOT_REASON } from './file-operation-result.js';
+import { contentHash, SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
 
 let roots: string[] = [];
 
@@ -93,6 +94,32 @@ describe('LocalFileSystemPort reading a real tree', () => {
     expect(port.writeFile(root, 'alias.txt', Buffer.from('updated'))).toEqual({ ok: true });
     expect(lstatSync(path.join(root, 'alias.txt')).isSymbolicLink()).toBe(true);
     expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('updated');
+  });
+
+  it('refuses a conditional write when the file changed after it was read', () => {
+    const root = tree();
+    writeFileSync(path.join(root, 'notes.txt'), 'changed elsewhere');
+
+    expect(port.writeFile(root, 'notes.txt', Buffer.from('editor draft'), contentHash('notes')))
+      .toEqual({ ok: false, reason: SAVE_CONFLICT_ERROR });
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('changed elsewhere');
+  });
+
+  it('accepts a matching conditional write after dropping a leading byte-order mark', () => {
+    const root = tree();
+    writeFileSync(path.join(root, 'notes.txt'), '\u{FEFF}notes');
+
+    expect(port.writeFile(root, 'notes.txt', Buffer.from('updated'), contentHash('notes')))
+      .toEqual({ ok: true });
+    expect(readFileSync(path.join(root, 'notes.txt'), 'utf8')).toBe('updated');
+  });
+
+  it('creates a missing file even when a conditional hash was supplied', () => {
+    const root = tree();
+
+    expect(port.writeFile(root, 'new.txt', Buffer.from('created'), contentHash('empty')))
+      .toEqual({ ok: true });
+    expect(readFileSync(path.join(root, 'new.txt'), 'utf8')).toBe('created');
   });
 
   it('reports a row that is not there as a null stat rather than a miss', () => {
