@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { RemoteTargetView } from '@shared/protocol';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -21,6 +21,33 @@ function capabilities(overrides: Partial<TabPluginClientCapabilities> = {}) {
     ...overrides,
   } as unknown as TabPluginClientCapabilities;
 }
+
+describe('ShellTabMeta transcript button', () => {
+  it('draws the Open transcript button when the host supplies the opener, and opens it on click', () => {
+    const openTranscript = vi.fn();
+    render(<ShellTabMeta payload={payload} capabilities={capabilities({ openTranscript })} />);
+
+    const button = screen.getByRole('button', { name: 'Open transcript' });
+    expect(button).toHaveAttribute('title', 'Open transcript');
+    expect(button).toHaveClass('tab-open-transcript');
+    fireEvent.click(button);
+    expect(openTranscript).toHaveBeenCalledOnce();
+  });
+
+  it('draws no Open transcript button when the host supplies no opener', () => {
+    render(<ShellTabMeta payload={payload} capabilities={capabilities()} />);
+
+    expect(screen.queryByRole('button', { name: 'Open transcript' })).toBeNull();
+  });
+
+  it('places the button after the diff button and before the connections button', () => {
+    render(<ShellTabMeta payload={{ ...payload, workspace: true }} capabilities={capabilities({ openTranscript: vi.fn() })} />);
+
+    const button = screen.getByRole('button', { name: 'Open transcript' });
+    expect(button.previousElementSibling).toHaveClass('tab-open-diff');
+    expect(button.nextElementSibling).toHaveClass('tab-connections');
+  });
+});
 
 describe('ShellTabMeta remote controls', () => {
   it('shows the host as ordinary text and the detach control for a healthy remote shell', () => {

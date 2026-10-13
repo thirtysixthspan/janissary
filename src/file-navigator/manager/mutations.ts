@@ -2,7 +2,7 @@ import { clearFilesystemCache } from '../filesystem-cache.js';
 import { deleteMany, moveMany, pasteMany } from './batch.js';
 import { createNavigatorDirectory } from './files.js';
 import { replayHistory } from './history.js';
-import { deleteOne, moveOne, renameOne, unavailable } from './item-operations.js';
+import { deleteOne, liveTranscriptRefusal, moveOne, renameOne, unavailable } from './item-operations.js';
 import { withFilesState } from './state.js';
 import type { FilesTabState } from '../state.js';
 import type { MaybePromise } from '../../maybe-promise.js';
@@ -34,8 +34,9 @@ function afterMutation(context: MutationContext, label: string, state: FilesTabS
 export function moveItem(
   context: MutationContext, label: string, fromRelPath: string, toRelPath: string, overwrite?: boolean,
 ): MaybePromise<BulkMoveResult> {
-  return withFilesState(context.tabs, label, unavailable(fromRelPath), (state) => moveOne(
-    state, fromRelPath, toRelPath, afterMutation(context, label, state), overwrite,
+  return withFilesState(context.tabs, label, unavailable(fromRelPath), (state) => (
+    liveTranscriptRefusal(context.managers, state, fromRelPath)
+    ?? moveOne(state, fromRelPath, toRelPath, afterMutation(context, label, state), overwrite)
   ));
 }
 
@@ -88,8 +89,9 @@ export function replayMutation(
 export function renameItem(
   context: MutationContext, label: string, relPath: string, newName: string, overwrite?: boolean,
 ): MaybePromise<BatchResult | { conflict: true }> {
-  return withFilesState(context.tabs, label, unavailable(relPath), (state) => renameOne(
-    context.managers, state, relPath, newName, afterMutation(context, label, state), overwrite,
+  return withFilesState(context.tabs, label, unavailable(relPath), (state) => (
+    liveTranscriptRefusal(context.managers, state, relPath)
+    ?? renameOne(context.managers, state, relPath, newName, afterMutation(context, label, state), overwrite)
   ));
 }
 

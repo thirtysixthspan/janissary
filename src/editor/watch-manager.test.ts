@@ -79,7 +79,7 @@ describe('EditorWatchManager', () => {
           byLabel: (label: string) => tabs.find((t) => t.label === label),
           editorTabByUrl: (url: string) => tabs.find((t) => t.editor?.url === url),
           openFilePath: () => file,
-        }, editorWatch: manager,
+        }, editorWatch: manager, shellTranscript: { isWriting: () => false },
       } as unknown as Managers;
 
       saveFile(saveManagers, '/open/1', 'saved atomically');

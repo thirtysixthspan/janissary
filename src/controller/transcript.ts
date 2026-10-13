@@ -3,12 +3,14 @@ import type { AcpRef } from '../protocol.js';
 import { writeCaptureFile } from '../harness/capture/file.js';
 import { transcriptText } from '../tab/transcript/text.js';
 
-// Open the named harness tab's session transcript file as it stands — the clipboard metadata-row
-// button on a harness tab (see HarnessTabMeta.tsx), mirroring `harness transcript` (see
-// harness/subcommands.ts) but silently no-opping instead of returning an error string, since a
-// harness tab has no transcript of its own to print one into.
-export function openHarnessTranscriptFor(managers: Managers, label: string): void {
-  const file = managers.harness.transcriptTailer(label)?.transcriptFile();
+// Open the named tab's transcript file as it stands — the clipboard metadata-row button on a harness
+// tab (see HarnessTabMeta.tsx) and on a shell tab. A harness tab's file comes from its transcript
+// tailer, mirroring `harness transcript` (see harness/subcommands.ts); a shell tab's is the path its
+// transcript writer remembered on the tab. Silently no-ops when neither exists, since neither caller
+// has a transcript to print an error into.
+export function openTranscriptFileFor(managers: Managers, label: string): void {
+  const file = managers.harness.transcriptTailer(label)?.transcriptFile()
+    ?? managers.tab.byLabel(label)?.transcript;
   if (!file) return;
   managers.openFile.edit(`transcript ${label}`, file, label);
 }

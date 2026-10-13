@@ -12,7 +12,8 @@ import { deliverNotification } from './deliver.js';
 // `transcript-unavailable` reports that a harness tab's session record could not be found, so the
 // tab is limited to screen snapshots, `ssh-recording-failed`, `harness-recording-failed` and `shell-recording-failed` report
 // that an ssh tab's, a harness tab's, or a shell tab's session recording was abandoned, so nothing more of that
-// session lands on disk, and `file-operation`
+// session lands on disk, `shell-transcript-failed` reports that a shell tab's text transcript was
+// abandoned, so nothing more of that session's text lands on disk, and `file-operation`
 // reports a failed file-navigator copy, paste, move, delete, or undo/redo replay.
 // `open-unsupported` reports that `open` found no opener for a file's extension — a deliberate
 // action's answer, and the one dispatcher error a file navigator activation can produce, where the
@@ -64,6 +65,7 @@ export type NotificationEventType =
   | 'ssh-recording-failed'
   | 'harness-recording-failed'
   | 'shell-recording-failed'
+  | 'shell-transcript-failed'
   | 'e2e-browser-gone'
   | 'file-operation'
   | 'open-unsupported'
@@ -121,6 +123,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'ssh-recording-failed': true,
   'harness-recording-failed': true,
   'shell-recording-failed': true,
+  'shell-transcript-failed': true,
   'e2e-browser-gone': true,
   'file-operation': true,
   'open-unsupported': true,

@@ -77,6 +77,7 @@ function makeManagers(seed = true): Managers {
     },
     plugins: { declarations: [] },
     harness: { closeTab: vi.fn(), registerShellObservers: vi.fn() },
+    shellTranscript: { install: vi.fn(), closeTab: vi.fn() },
     shell: { closeTab: vi.fn() }, schedule: { closeTab: vi.fn() }, editorAcp: { closeTab: vi.fn() },
     editorWatch: { closeTab: vi.fn() }, fileNavigator: { closeTab: vi.fn() }, acp: { closeTab: vi.fn() },
     browser: { closeTab: vi.fn() }, questions: { closeTab: vi.fn() }, remote: { closeTab: vi.fn() },

@@ -1,6 +1,7 @@
 import { initHarnessCaptureDirectory, clearCaptureDirectory } from '../harness/capture/file.js';
 import { initHarnessRecordingDirectory, clearHarnessRecordingDirectory } from '../harness/recording-file.js';
 import { initHarnessTranscriptDirectory, clearHarnessTranscriptDirectory } from '../harness/transcript-file.js';
+import { initShellTranscriptDirectory, clearShellTranscriptDirectory } from '../shell/transcript/transcript-file.js';
 import { initBrowserLogDirectory, clearBrowserLogDirectory } from '../browser/browser-log.js';
 import { initGitFailureDirectory, clearGitFailureDirectory } from '../git/failure-output.js';
 import { initGlobalHistory } from '../global-history.js';
@@ -40,6 +41,12 @@ export const STATE_DIRECTORY_ENTRIES = [
     name: 'harnessTranscript',
     init: (projectDir: string): void => { initHarnessTranscriptDirectory(projectDir); },
     clear: (): void => { clearHarnessTranscriptDirectory(); },
+    always: false,
+  },
+  {
+    name: 'shellTranscript',
+    init: (projectDir: string): void => { initShellTranscriptDirectory(projectDir); },
+    clear: (): void => { clearShellTranscriptDirectory(); },
     always: false,
   },
   {
@@ -108,7 +115,7 @@ export const STATE_DIRECTORY_ENTRIES = [
 // completeness assignment below, and a key whose entry has been dropped fails symmetrically —
 // the compiler names both.
 export const KNOWN_STATE_DIRECTORY_KEYS = [
-  'harnessCapture', 'harnessRecording', 'harnessTranscript',
+  'harnessCapture', 'harnessRecording', 'harnessTranscript', 'shellTranscript',
   'browserLog', 'gitFailureOutput', 'globalHistory', 'connections', 'profiles', 'workspace',
   'remoteFileCache', 'remoteSessions', 'notificationRecord', 'transcriptLog',
 ] as const;

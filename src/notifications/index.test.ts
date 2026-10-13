@@ -219,6 +219,22 @@ describe('shouldNotify — shell-recording-failed event', () => {
   });
 });
 
+describe('shouldNotify — shell-transcript-failed event', () => {
+  it('fires regardless of the per-event toggles, like the other explicit events', () => {
+    expect(shouldNotify(allOff, 'shell-transcript-failed', 'devbox', 'janus')).toBe(true);
+    expect(shouldNotify(undefined, 'shell-transcript-failed', 'devbox', 'janus')).toBe(true);
+  });
+
+  it('fires even when the shell tab is the active one', () => {
+    // The failing shell tab is often the watched one, so focus suppression must not hide it.
+    expect(shouldNotify(allOn, 'shell-transcript-failed', 'devbox', 'devbox')).toBe(true);
+  });
+
+  it('renders the fixed body, with the label supplied by the line header', () => {
+    expect(notificationText('shell-transcript-failed', 'devbox')).toBe('shell transcript failed');
+  });
+});
+
 describe('shouldNotify — e2e-browser-gone event', () => {
   it('fires regardless of the per-event toggles, like the other explicit events', () => {
     expect(shouldNotify(allOff, 'e2e-browser-gone', 'claude', 'janus')).toBe(true);

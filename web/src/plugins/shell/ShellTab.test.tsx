@@ -720,7 +720,7 @@ describe('ShellTab', () => {
     }
   });
 
-  it('renders no transcript control, because the terminal replaced the transcript', () => {
+  it('renders no transcript control while the host has supplied no transcript', () => {
     renderTab();
 
     expect(document.querySelector('.tab-open-transcript')).toBeNull();

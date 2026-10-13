@@ -54,6 +54,7 @@ beforeEach(() => {
   commitAndPush(upstream, BASE, 'seed');
   cloneInto(origin, shared);
   managers = {} as Managers;
+  managers.shellTranscript = { isWriting: () => false } as unknown as Managers['shellTranscript'];
   managers.tab = new TabManager(managers);
   managers.editorWatch = new EditorWatchManager(managers);
   const workspace = { create: () => ({ dir: shared, ready: Promise.resolve() }), remove: vi.fn() };

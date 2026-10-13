@@ -76,7 +76,7 @@ Harness and shell tabs show a small metadata row above their body: the tab's wor
 Harness tabs also carry a ➕ button. It opens a shell in that tab's directory and workspace. On a remote harness it reuses the same SSH connection; while the workspace provisions it is disabled with "Waiting for the workspace". Shell tabs have their own sibling-shell button.
 
 
-Harness tabs carry the same 📋 button, but clicking it opens the harness's session transcript instead — the same file `harness transcript` opens (see [Harness](/user-documentation/advanced-agents/harness)) — since a harness tab has no command transcript of its own. It's a no-op when the harness has no session transcript available yet.
+Harness tabs carry the same 📋 button, but clicking it opens the harness's session transcript instead — the same file `harness transcript` opens (see [Harness](/user-documentation/advanced-agents/harness)) — since a harness tab has no command transcript of its own. It's a no-op when the harness has no session transcript available yet. Shell tabs carry the 📋 button too. On a shell tab it opens the shell's [text transcript](/user-documentation/command-bar/shell#read-a-shell-session-s-transcript), everything the shell has shown so far, in an editor tab.
 
 Text in metadata rows and headers can be selected with the mouse and copied, including paths and other details shown by shell, harness, file, editor, image, Markdown, page, and monitor tabs.
 

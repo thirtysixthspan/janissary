@@ -11,7 +11,7 @@ import { playablePluginForExtension } from '../openers/index.js';
 // recording is finished. A file whose type nothing claims playable is simply not opened — which is
 // what makes the flag's disabled state a real one rather than a click that fails.
 //
-// Silently no-ops like its sibling `openHarnessTranscriptFor`: a button in a row has no transcript
+// Silently no-ops like its sibling `openTranscriptFileFor`: a button in a row has no transcript
 // to answer a refusal into, and the tab it would have named has no recording to show.
 export function openRecordingFor(managers: Managers, label: string): void {
   const file = managers.harness.recordingPathOf(label);

@@ -502,14 +502,14 @@ describe('HarnessTab', () => {
     expect(mockClient.send).not.toHaveBeenCalledWith({ method: 'launchShellFor', params: { label: 'claude' } });
   });
 
-  it('dispatches openHarnessTranscriptFor with the tab label when the transcript button is clicked', () => {
+  it('dispatches openTranscriptFileFor with the tab label when the transcript button is clicked', () => {
     const { getByTitle } = render(
       <HarnessTab harness={makeHarness()} client={mockClient} label="claude" />,
     );
     vi.mocked(mockClient.send as ReturnType<typeof vi.fn>).mockClear();
     getByTitle('Open transcript').click();
     expect(vi.mocked(mockClient.send as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith({
-      method: 'openHarnessTranscriptFor',
+      method: 'openTranscriptFileFor',
       params: { label: 'claude' },
     });
   });

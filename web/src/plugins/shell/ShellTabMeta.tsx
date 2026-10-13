@@ -2,7 +2,7 @@ import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   ConnectionPlug, RecordingFlag, RemoteSessionButton, StatusPanels, StatusWindowButton,
-  connectionsWindowIcon, newTabIcon, openFilesIcon, plusMinusIcon, scheduleWindowIcon, statusButton, syncIcon, useStatusWindows, workspacedIcon,
+  connectionsWindowIcon, newTabIcon, openFilesIcon, plusMinusIcon, scheduleWindowIcon, statusButton, syncIcon, useStatusWindows, viewCaptureIcon, workspacedIcon,
   type TabPluginClientCapabilities,
 } from '../api';
 import type { ShellPayload } from '@shared/plugins/shell/shared';
@@ -18,9 +18,9 @@ function siblingTitle(payload: ShellPayload): string {
 //
 // Written here rather than imported from the host's `HarnessTabMeta`, which is the self-contained choice
 // this plugin was built for: the same structure and the same class names, so it looks identical, with
-// the actions supplied by declared capabilities rather than borrowed markup. The control it omits is
-// **Open transcript**, which would open nothing — the terminal replaced the transcript, so there is no
-// longer one to open.
+// the actions supplied by declared capabilities rather than borrowed markup. The **Open transcript**
+// button is drawn only once the host supplies `openTranscript`, which is once the shell's text
+// transcript file exists.
 export function ShellTabMeta({ payload, capabilities }: {
   payload: ShellPayload;
   capabilities: TabPluginClientCapabilities;
@@ -86,6 +86,17 @@ export function ShellTabMeta({ payload, capabilities }: {
               onClick={() => capabilities.openDiffHere?.()}
             >
               <FontAwesomeIcon icon={plusMinusIcon} />
+            </button>
+          )}
+          {capabilities.openTranscript && (
+            <button
+              type="button"
+              className="tab-open-transcript"
+              title="Open transcript"
+              aria-label="Open transcript"
+              onClick={capabilities.openTranscript}
+            >
+              <FontAwesomeIcon icon={viewCaptureIcon} />
             </button>
           )}
           {/* The two status windows, and the buttons that open them. Rendering the panels without these

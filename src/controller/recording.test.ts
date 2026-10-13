@@ -49,7 +49,7 @@ describe('openRecordingFor', () => {
   });
 
   it('reports no refusal of its own, because a row button has no transcript to answer one into', () => {
-    // The same reason `openHarnessTranscriptFor` no-ops silently rather than returning a string.
+    // The same reason `openTranscriptFileFor` no-ops silently rather than returning a string.
     const { managers } = makeManagers(undefined);
 
     expect(openRecordingFor(managers, 'devbox')).toBeUndefined();

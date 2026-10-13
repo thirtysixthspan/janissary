@@ -42,6 +42,7 @@ function registerCountingPlugin(id: string, mounts: () => void) {
     capabilities: {
       active: boolean; dock: 'left' | 'right' | null;
       recording?: string; openRecording?: () => void;
+      transcript?: string; openTranscript?: () => void;
     };
   }) => {
     React.useEffect(() => { mounts(); }, []);
@@ -52,6 +53,8 @@ function registerCountingPlugin(id: string, mounts: () => void) {
         data-dock={String(capabilities.dock)}
         data-recording={capabilities.recording ?? ''}
         data-can-open-recording={String(capabilities.openRecording !== undefined)}
+        data-transcript={capabilities.transcript ?? ''}
+        data-can-open-transcript={String(capabilities.openTranscript !== undefined)}
       >
         {(payload as { text: string }).text}
       </div>
@@ -204,6 +207,21 @@ describe('a plugin tab docked into a sidebar', () => {
     expect(body).toHaveAttribute('data-can-open-recording', 'true');
   });
 
+  // The same envelope read is what lets a docked shell's Open transcript button open its transcript.
+  it('hands a docked plugin the transcript its envelope carries', async () => {
+    registerCountingPlugin('fixture', () => {});
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const tab = pluginTab('devbox', 'fixture');
+    tab.plugin!.transcript = '/tmp/.janissary/transcripts/devbox-2026.txt';
+
+    render(<Sidebar side="left" tabs={[tab]} client={client} />);
+
+    await waitFor(() => { expect(screen.getByTestId('fixture-body')).toBeInTheDocument(); });
+    const body = screen.getByTestId('fixture-body');
+    expect(body).toHaveAttribute('data-transcript', '/tmp/.janissary/transcripts/devbox-2026.txt');
+    expect(body).toHaveAttribute('data-can-open-transcript', 'true');
+  });
+
   it('hands a docked plugin neither when its envelope carries no recording', async () => {
     registerCountingPlugin('fixture', () => {});
     const client = { send: vi.fn() } as unknown as JanusClient;
@@ -214,5 +232,7 @@ describe('a plugin tab docked into a sidebar', () => {
     const body = screen.getByTestId('fixture-body');
     expect(body).toHaveAttribute('data-recording', '');
     expect(body).toHaveAttribute('data-can-open-recording', 'false');
+    expect(body).toHaveAttribute('data-transcript', '');
+    expect(body).toHaveAttribute('data-can-open-transcript', 'false');
   });
 });

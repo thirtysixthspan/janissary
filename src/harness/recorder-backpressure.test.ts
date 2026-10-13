@@ -1,7 +1,8 @@
 import { Writable } from 'node:stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messageBus } from '../bus.js';
-import { HarnessRecorder, MAX_PENDING_RECORDING_BYTES } from './recorder.js';
+import { MAX_PENDING_APPEND_BYTES } from '../bounded-append-file.js';
+import { HarnessRecorder } from './recorder.js';
 
 let stream: Writable;
 let pending: (() => void)[];
@@ -40,8 +41,8 @@ describe('HarnessRecorder pending byte budget', () => {
     messageBus.on('pty', 'data', other);
 
     for (let n = 0; n < 8; n++) {
-      emit('x'.repeat(MAX_PENDING_RECORDING_BYTES / 4));
-      expect(stream.writableLength).toBeLessThanOrEqual(MAX_PENDING_RECORDING_BYTES);
+      emit('x'.repeat(MAX_PENDING_APPEND_BYTES / 4));
+      expect(stream.writableLength).toBeLessThanOrEqual(MAX_PENDING_APPEND_BYTES);
     }
     const accepted = write.mock.calls.length;
     messageBus.emit('pty', { type: 'resize', id: 'pty-1', cols: 100, rows: 40 });
@@ -63,7 +64,7 @@ describe('HarnessRecorder pending byte budget', () => {
     const failure = vi.fn();
     recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, failure);
     const write = vi.spyOn(stream, 'write');
-    emit('é'.repeat(MAX_PENDING_RECORDING_BYTES / 2));
+    emit('é'.repeat(MAX_PENDING_APPEND_BYTES / 2));
     expect(write).toHaveBeenCalledOnce();
     expect(failure).toHaveBeenCalledOnce();
     expect(stream.destroyed).toBe(true);
@@ -71,7 +72,7 @@ describe('HarnessRecorder pending byte budget', () => {
 
   it('applies the same budget to the recording header', () => {
     const failure = vi.fn();
-    recorder = new HarnessRecorder('pty-1', 'devbox', 'x'.repeat(MAX_PENDING_RECORDING_BYTES), 80, 24, failure);
+    recorder = new HarnessRecorder('pty-1', 'devbox', 'x'.repeat(MAX_PENDING_APPEND_BYTES), 80, 24, failure);
     const write = vi.spyOn(stream, 'write');
     emit('hello');
     expect(write).not.toHaveBeenCalled();
@@ -83,13 +84,13 @@ describe('HarnessRecorder pending byte budget', () => {
     const failure = vi.fn();
     recorder = new HarnessRecorder('pty-1', 'claude', 'claude', 80, 24, failure);
     const write = vi.spyOn(stream, 'write');
-    emit('a'.repeat(MAX_PENDING_RECORDING_BYTES / 2));
+    emit('a'.repeat(MAX_PENDING_APPEND_BYTES / 2));
     expect(write.mock.results.at(-1)?.value).toBe(false);
     while (pending.length > 0) pending.shift()!();
     expect(stream.writableLength).toBe(0);
-    emit('b'.repeat(MAX_PENDING_RECORDING_BYTES / 2));
+    emit('b'.repeat(MAX_PENDING_APPEND_BYTES / 2));
     expect(write).toHaveBeenCalledTimes(3);
-    expect(stream.writableLength).toBeLessThan(MAX_PENDING_RECORDING_BYTES);
+    expect(stream.writableLength).toBeLessThan(MAX_PENDING_APPEND_BYTES);
     expect(failure).not.toHaveBeenCalled();
     expect(stream.destroyed).toBe(false);
     while (pending.length > 0) pending.shift()!();

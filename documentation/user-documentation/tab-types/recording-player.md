@@ -93,4 +93,4 @@ in its `.janissary/config.json`:
 
 No shell file is written and no shell tab draws the flag. Named `harness` and `ssh` tabs are unaffected —
 they have no echo of their own, so they are recorded whatever this says. The setting is on unless a
-project turns it off.
+project turns it off. It also turns off the shell tab's [text transcript](/user-documentation/command-bar/shell#read-a-shell-session-s-transcript).

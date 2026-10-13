@@ -103,7 +103,7 @@ Both `shell` and `harness` launches accept `in group <name|id>` to join an exist
 | `Ctrl+E` / `queue` | Open the queue popup: the selected queued line appears in the command line, typing edits it, Backspace or Delete on an empty line removes it, Escape closes it and clears the line |
 | `Ctrl+Shift+C` / `Cmd+C` on macOS (terminal focused) | Copy the terminal selection to the clipboard and clipboard history |
 | `Cmd+T` | Open another shell in the same directory, workspace, and offline mode |
-| `Cmd+F` | Does nothing — a shell tab has no transcript to search |
+| `Cmd+F` | Does nothing — the terminal has no in-tab transcript to search. **Open transcript** in the metadata row opens the session's text transcript in an editor tab, where `Cmd+F` searches it |
 
 **Image tab controls** (active only while an image tab is focused):
 

@@ -46,6 +46,18 @@ With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is
 
 With the terminal focused, press `Ctrl+Shift+C` to copy its selection. On macOS, press `Cmd+C`. The copied text is available from your system clipboard and the clipboard-history popup.
 
+## Read a shell session's transcript
+
+Press the 📋 **Open transcript** button in the shell tab's metadata row. It opens everything the shell has shown so far in an editor tab named after the file, such as `tx-2026-10-13T03-42-46-527Z.txt`, where `Cmd+F` searches it. The button appears as the shell starts. You can't save over the transcript while its shell is running; to keep notes on it, copy it to another file first. You can't rename or move it while the shell is running either, from its editor tab or a file navigator.
+
+The file lives at `.janissary/shell-transcripts/<name>-<timestamp>.txt`. The tab's recording, named the same way, sits in `.janissary/recordings/`. The transcript is plain text: the prompts, the commands you typed and their output, with no colors. A full-screen program such as `vim` or `less` isn't in it, though what the shell printed before and after is. Replies to app commands such as `help` aren't in it either. Each line is saved once, when the cursor moves past it, so a later `clear` doesn't erase anything already saved.
+
+Be careful with secrets. A secret you type on a command line, such as `export TOKEN=…`, ends up in the file. A password typed at a prompt that hides your typing, like `sudo` or `ssh`, doesn't. The file never leaves your machine.
+
+Transcripts are kept across `janus --relaunch` and cleared at a normal launch. To turn them off, set `"recordShellTabs": false` in `.janissary/config.json` and restart. That turns off the shell recording too.
+
+If the transcript can't be written, the notifications feed shows `shell transcript failed` and the shell keeps running. The button still opens whatever was saved before the failure.
+
 ## Query ACP from a shell
 
 Use `acp <prompt>` in the shell command bar to query OpenCode. Replies stream as Markdown in the ACP panel above the bar, with tool steps and a responding status. **Reset ACP** stops the current connection immediately, including while a reply is in progress. The panel and its controls belong to that shell when it is docked too. See [ACP agents](/user-documentation/advanced-agents/acp-agent) for setup, tools, and remote connections.

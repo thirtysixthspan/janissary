@@ -590,6 +590,34 @@ describe('buildTabViews', () => {
       .toBe('/project/.janissary/recordings/devbox-2026.cast');
   });
 
+  it('carries a plugin tab\'s transcript on its envelope', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.view = 'plugin';
+    tab.plugin = { id: 'shell', instanceKey: 'k', schemaVersion: 2, payload: {}, fileRefs: [] };
+    tab.transcript = '/project/.janissary/shell-transcripts/shell-2026.txt';
+
+    expect(build([tab], remoteManagers())[0]!.plugin?.transcript)
+      .toBe('/project/.janissary/shell-transcripts/shell-2026.txt');
+  });
+
+  it('omits the transcript key from a plugin tab whose transcript has not opened', () => {
+    const tab = makeTab('shell', '#fff');
+    tab.view = 'plugin';
+    tab.plugin = { id: 'shell', instanceKey: 'k', schemaVersion: 2, payload: {}, fileRefs: [] };
+    const plugin = build([tab], remoteManagers())[0]!.plugin;
+
+    expect(plugin).toBeDefined();
+    expect('transcript' in (plugin ?? {})).toBe(false);
+  });
+
+  it('never mirrors a transcript onto a harness tab\'s payload', () => {
+    const tab = remoteTab('a', { transcript: '/project/.janissary/shell-transcripts/a-2026.txt' });
+    const harness = build([tab], remoteManagers())[0]!.harness;
+
+    expect(harness).toBeDefined();
+    expect('transcript' in (harness ?? {})).toBe(false);
+  });
+
   it('leaves an existing harness payload otherwise untouched', () => {
     const tab = remoteTab('a');
     const views = build([tab], remoteManagers());

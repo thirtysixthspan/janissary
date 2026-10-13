@@ -34,6 +34,7 @@ function makeManagers(spawn: (cwd: string) => string): Managers {
     // anyway — for every terminal a factory adopted, recorded or not — so it has to be answerable.
     plugins: { declarations: [] as { id: string; recordsTerminal?: boolean }[] },
     harness: { registerShellObservers: vi.fn() },
+    shellTranscript: { install: vi.fn(), closeTab: vi.fn() },
   } as unknown as Managers);
   return managers;
 }

@@ -35,6 +35,7 @@ export function saveFile(managers: Managers, url: string, content: string, expec
   const isFirstNewFileSave = wasNewFile && existsSync(filePath) && !remote;
   const targetPath = isFirstNewFileSave ? path.join(path.dirname(filePath), nextFreeName(path.dirname(filePath), path.basename(filePath))) : filePath;
 
+  if (!remote && managers.shellTranscript.isWriting(filePath)) refuseLiveShellTranscriptSave(managers, tab?.label);
   if (expectedHash !== undefined && !wasNewFile && !remote) refuseStaleSave(managers, tab?.label, filePath, expectedHash);
   // A remote file's cached copy is written only once the remote has the content, so a write the
   // remote refuses — or never answers — leaves the two copies agreeing rather than diverged.
@@ -54,6 +55,17 @@ export const ORPHANED_REMOTE_SAVE_REASON =
 function refuseOrphanedRemoteSave(managers: Managers, label: string | undefined): never {
   if (label) notify(managers, 'file-operation', label, ORPHANED_REMOTE_SAVE_REASON);
   throw new Error(ORPHANED_REMOTE_SAVE_REASON);
+}
+
+export const LIVE_SHELL_TRANSCRIPT_SAVE_REASON =
+  'This shell transcript is still being written; copy it to another file to edit it.';
+
+// A shell transcript's writer appends through a stream it opened once, so replacing the file would
+// leave every later row in the orphaned file. Refused whether or not the buffer is stale, so the
+// overwrite prompt's own write is refused too.
+function refuseLiveShellTranscriptSave(managers: Managers, label: string | undefined): never {
+  if (label) notify(managers, 'file-operation', label, LIVE_SHELL_TRANSCRIPT_SAVE_REASON);
+  throw new Error(LIVE_SHELL_TRANSCRIPT_SAVE_REASON);
 }
 
 function finishSave(

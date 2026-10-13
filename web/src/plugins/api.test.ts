@@ -187,6 +187,27 @@ describe('createPluginClientCapabilities', () => {
     expect(createPluginClientCapabilities(host, 'video', 'video', client, true, null, vi.fn(), action).splitAction)
       .toBe(action);
   });
+
+  it('supplies the transcript path and opens it by this tab\'s label', () => {
+    const { client, send } = makeClient();
+    const capabilities = createPluginClientCapabilities(
+      host, 'shell', 'shell-1', client, true, null, vi.fn(),
+      undefined, undefined, undefined, undefined, undefined, '/repo/.janissary/transcripts/shell-1.txt',
+    );
+    expect(capabilities.transcript).toBe('/repo/.janissary/transcripts/shell-1.txt');
+    capabilities.openTranscript?.();
+    expect(send).toHaveBeenCalledWith({ method: 'openTranscriptFileFor', params: { label: 'shell-1' } });
+  });
+
+  it('supplies neither the transcript nor its opener when there is no transcript path', () => {
+    const { client } = makeClient();
+    const capabilities = createPluginClientCapabilities(
+      host, 'shell', 'shell-1', client, true, null, vi.fn(),
+      undefined, undefined, undefined, undefined, undefined, undefined,
+    );
+    expect(capabilities.transcript).toBeUndefined();
+    expect(capabilities.openTranscript).toBeUndefined();
+  });
 });
 
 // Every plugin record list reaches its Arrow/Home/End rule through this surface, so it must be the

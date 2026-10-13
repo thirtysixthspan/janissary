@@ -16,6 +16,7 @@ export function renameEditorFile(managers: Managers, url: string, name: string):
     tab, name, TAB_RENAME_MAX_LENGTH,
     (reference, absPath) => managers.tab.replaceFile(reference, absPath),
     (label, filePath) => managers.editorWatch.watch(label, filePath),
+    (filePath) => managers.shellTranscript.isWriting(filePath),
   );
   if (refusal) notify(managers, 'file-operation', tab.label, refusal);
   messageBus.emit('state', { type: 'dirty' });

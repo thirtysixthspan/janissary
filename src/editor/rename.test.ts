@@ -15,6 +15,10 @@ function setup({ content = 'content', newFile = false } = {}) {
   const watched: Array<{ label: string; filePath: string }> = [];
   managers.editorWatch = { watch: (label: string, filePath: string) => { watched.push({ label, filePath }); } } as unknown as Managers['editorWatch'];
   managers.schedule = { get: vi.fn() } as unknown as Managers['schedule'];
+  const writing = new Set<string>();
+  managers.shellTranscript = {
+    isWriting: (filePath: string) => writing.has(filePath),
+  } as unknown as Managers['shellTranscript'];
   const dir = mkdtempSync(path.join(tmpdir(), 'janus-rename-editor-'));
   if (!newFile) writeFileSync(path.join(dir, 'untitled.md'), content);
   const url = managers.tab.registerFile(path.join(dir, 'untitled.md'));
@@ -22,7 +26,7 @@ function setup({ content = 'content', newFile = false } = {}) {
     name: 'untitled.md', path: path.join(dir, 'untitled.md'),
     size: `${content.length} B`, url, newFile,
   });
-  return { managers, dir, url, watched, tab: () => managers.tab.tabs.find((item) => item.editor)! };
+  return { managers, dir, url, watched, writing, tab: () => managers.tab.tabs.find((item) => item.editor)! };
 }
 
 describe('renameEditorFile', () => {
@@ -80,6 +84,21 @@ describe('renameEditorFile', () => {
     );
     expect(readFileSync(path.join(dir, 'README.md'), 'utf8')).toBe('readme');
     expect(readFileSync(path.join(dir, 'untitled.md'), 'utf8')).toBe('content');
+    expect(tab().editor?.name).toBe('untitled.md');
+  });
+
+  it('refuses to rename a shell transcript that is still being written and posts a file-operation notification', () => {
+    const { managers, dir, url, writing, tab } = setup();
+    writing.add(path.join(dir, 'untitled.md'));
+
+    renameEditorFile(managers, url, 'final.md');
+
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'file-operation', tab().label,
+      'Could not rename untitled.md to final.md. A running shell is still writing this transcript; rename or move it after the shell exits.',
+    );
+    expect(readFileSync(path.join(dir, 'untitled.md'), 'utf8')).toBe('content');
+    expect(existsSync(path.join(dir, 'final.md'))).toBe(false);
     expect(tab().editor?.name).toBe('untitled.md');
   });
 

@@ -15,6 +15,10 @@ export type PluginTabView = {
   // plugin whose declaration asked for `recordsTerminal`, and only once the tab's terminal has
   // produced output — a recording exists from the first byte, not from the spawn.
   recording?: string;
+  // This tab's plain-text transcript, mirrored from the server's own record of it. Present only for a
+  // plugin whose declaration asked for `recordsTerminal` while `recordShellTabs` is on, and only once
+  // the transcript file has opened on the terminal's first output.
+  transcript?: string;
 };
 
 export type PluginIntentRequest = { tab: string; intent: string; payload: unknown };
