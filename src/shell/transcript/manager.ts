@@ -10,6 +10,7 @@ import type { Managers } from '../../managers.js';
 export const SHELL_TRANSCRIPT_SHUTDOWN_WAIT_MS = 1000;
 
 type Entry = { label: string; writer: ShellTranscriptWriter };
+type ClosingWriter = { path: string | undefined; finishing: Promise<void> };
 
 // Whether an open tab has already been told its transcript failed. Each writer keeps the state of the
 // tab it was installed under, and closing the tab discards that state.
@@ -29,16 +30,14 @@ type TabFailureState = { notified: boolean };
 // through the newer writer.
 export class ShellTranscriptManager {
   private entries = new Map<string, Entry>();
+  private closing = new Map<ShellTranscriptWriter, ClosingWriter>();
   private tabs = new Map<string, TabFailureState>();
   private released = new WeakSet<ShellTranscriptWriter>();
   private subscription: Subscription;
 
   constructor(private readonly managers: Managers) {
-    // The writer's own exit listener runs its finishing path, so the entry is only dropped here. The
-    // drop is synchronous, unlike the harness runtimes' release, because no transcript writes an exit
-    // status that a release mid-dispatch could cut off.
     this.subscription = messageBus.on('pty', 'exit', (event) => {
-      if (event.type === 'exit') this.entries.delete(event.id);
+      if (event.type === 'exit') this.finishEntry(event.id);
     });
   }
 
@@ -69,6 +68,9 @@ export class ShellTranscriptManager {
       const writing = writer.writingPath();
       if (writing !== undefined && path.resolve(writing) === target) return true;
     }
+    for (const writer of this.closing.values()) {
+      if (writer.path !== undefined && path.resolve(writer.path) === target) return true;
+    }
     return false;
   }
 
@@ -81,10 +83,10 @@ export class ShellTranscriptManager {
 
   dispose(): void | Promise<void> {
     this.subscription.unsubscribe();
-    const writers = [...this.entries.values()].map((entry) => entry.writer);
-    this.entries.clear();
+    for (const id of this.entries.keys()) this.finishEntry(id);
+    const writers = [...this.closing.values()].map(({ finishing }) => finishing);
     if (writers.length === 0) return;
-    const finished = Promise.allSettled(writers.map((writer) => writer.dispose()));
+    const finished = Promise.allSettled(writers);
     return new Promise((resolve) => {
       const timer = setTimeout(resolve, SHELL_TRANSCRIPT_SHUTDOWN_WAIT_MS);
       void finished.then(() => {
@@ -113,7 +115,18 @@ export class ShellTranscriptManager {
     const writer = this.entries.get(id)?.writer;
     if (!writer) return;
     this.released.add(writer);
-    void writer.dispose();
+    this.finishEntry(id);
+  }
+
+  private finishEntry(id: string): void {
+    const entry = this.entries.get(id);
+    if (!entry) return;
     this.entries.delete(id);
+    const writer = entry.writer;
+    const closing = { path: writer.writingPath(), finishing: writer.dispose() };
+    this.closing.set(writer, closing);
+    void closing.finishing.then(() => {
+      if (this.closing.get(writer) === closing) this.closing.delete(writer);
+    });
   }
 }

@@ -130,19 +130,23 @@ describe('ShellTranscriptManager', () => {
     expect(manager.isWriting(`${file}.bak`)).toBe(false);
   });
 
-  it('stops reporting a transcript as being written once its PTY exits', () => {
+  it('keeps a transcript protected after PTY exit until finalization settles', async () => {
     const tab = addTab('shell');
     manager.install('pty-1', 'shell');
     data('pty-1', '% ');
     emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+    expect(manager.isWriting(tab.transcript ?? '')).toBe(true);
+    await vi.waitFor(() => expect(manager.isWriting(tab.transcript ?? '')).toBe(false));
     expect(manager.isWriting(tab.transcript ?? '')).toBe(false);
   });
 
-  it('stops reporting a transcript as being written once its tab closes', () => {
+  it('keeps a transcript protected after its tab closes until finalization settles', async () => {
     const tab = addTab('shell');
     manager.install('pty-1', 'shell');
     data('pty-1', '% ');
     manager.closeTab('shell');
+    expect(manager.isWriting(tab.transcript ?? '')).toBe(true);
+    await vi.waitFor(() => expect(manager.isWriting(tab.transcript ?? '')).toBe(false));
     expect(manager.isWriting(tab.transcript ?? '')).toBe(false);
   });
 
@@ -166,14 +170,15 @@ describe('ShellTranscriptManager', () => {
     expect(readFileSync(second.transcript ?? '', 'utf8')).toBe('b\nmore\n');
   });
 
-  it('drops a writer whose PTY exited without disposing it again on tab close', () => {
+  it('starts finishing a writer on PTY exit and does not dispose it again on tab close', async () => {
     addTab('shell');
     manager.install('pty-1', 'shell');
     data('pty-1', '% ');
     const dispose = vi.spyOn(ShellTranscriptWriter.prototype, 'dispose');
     emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
     manager.closeTab('shell');
-    expect(dispose).not.toHaveBeenCalled();
+    expect(dispose).toHaveBeenCalledOnce();
+    await (dispose.mock.results[0]?.value as Promise<void>);
   });
 
   it('disposes the earlier writer when an id is installed again, so later rows reach one file', async () => {
@@ -243,7 +248,7 @@ describe('ShellTranscriptManager', () => {
     manager.closeTab('shell');
     await vi.waitFor(() => { expect(fileDispose).toHaveBeenCalledOnce(); });
     await (fileDispose.mock.results[0]?.value as Promise<void>);
-    expect(writerDispose).not.toHaveBeenCalled();
+    expect(writerDispose).toHaveBeenCalledOnce();
     abandon(fileDispose.mock.contexts[0]);
     expect(mocks.notify).not.toHaveBeenCalled();
 
@@ -266,7 +271,7 @@ describe('ShellTranscriptManager', () => {
     manager.closeTab('shell');
     await vi.waitFor(() => { expect(fileDispose).toHaveBeenCalledOnce(); });
     await (fileDispose.mock.results[0]?.value as Promise<void>);
-    expect(writerDispose).not.toHaveBeenCalled();
+    expect(writerDispose).toHaveBeenCalledOnce();
 
     manager.install('pty-2', 'shell');
     data('pty-2', 'two');
@@ -323,5 +328,27 @@ describe('ShellTranscriptManager', () => {
       vi.restoreAllMocks();
       emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
     }
+  });
+
+  it('waits for an already-closing writer when manager disposal follows immediately', async () => {
+    const tab = addTab('shell');
+    manager.install('pty-1', 'shell');
+    data('pty-1', '% ');
+    const pending = Promise.withResolvers<void>();
+    vi.spyOn(ShellTranscriptWriter.prototype, 'dispose').mockReturnValue(pending.promise);
+
+    manager.closeTab('shell');
+    expect(manager.isWriting(tab.transcript ?? '')).toBe(true);
+    let shutdownFinished = false;
+    const shutdown = manager.dispose();
+    void shutdown?.then(() => { shutdownFinished = true; });
+    await Promise.resolve();
+    expect(shutdownFinished).toBe(false);
+
+    pending.resolve();
+    await shutdown;
+    expect(shutdownFinished).toBe(true);
+    expect(manager.isWriting(tab.transcript ?? '')).toBe(false);
+    emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
   });
 });

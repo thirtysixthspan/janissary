@@ -478,8 +478,10 @@ handed to a client except when the user presses **Open transcript**, and cleared
 launch. `"recordShellTabs": false` is the opt-out.
 
 **End of session.** When the tab closes or zsh exits, the cursor's unfinished row — a waiting prompt, a
-progress bar — is written as it stands, then the file closes. At application shutdown the app waits up
-to one second for every open transcript to write its final row and close.
+progress bar — is written as it stands, then the file closes. The transcript remains protected from
+save, rename, or move during this short draining period, until its final writes have settled. At
+application shutdown the app waits up to one second for every open or closing transcript to write its
+final row and close.
 
 **Saving from the editor.** **Open transcript** shows the file in an ordinary editor tab, but while its
 shell is still running a save of that tab is refused, whether or not new rows have arrived since it
@@ -490,8 +492,9 @@ later row of the session off from it. Renaming the transcript's editor tab, or r
 dragging it on its own to another folder in a file navigator, is refused the same way while the shell runs, because the button and the
 save refusal would go on naming the old path: the file stays where it is and the notifications feed
 shows the rename or move as failed with `A running shell is still writing this transcript; rename or
-move it after the shell exits.` Deleting it from a file navigator is not refused. Once the shell has
-exited or its tab has closed, the transcript saves, renames and moves like any other file.
+move it after the shell exits.` Deleting it from a file navigator is not refused. Once the final writes
+have settled after the shell exits or its tab closes, the transcript saves, renames and moves like any
+other file.
 
 **Size and failure.** The file has no size cap. The transcript stops for the rest of the session, after
 the rows already finished, in three cases: its directory cannot be written (the file never opens),
