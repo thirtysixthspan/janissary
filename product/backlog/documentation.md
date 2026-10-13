@@ -4,6 +4,10 @@
 
 ## development
 
+* workspaced-agent (7/10) — 1 of 20 user-visible facts is wrong, and it is the core shell-launch example: `zsh emrah` and `zsh emrah --no-workspace` use a command that the app no longer accepts; the shipped command is `shell`, as confirmed by `help.md` and `src/plugins/shell/manifest.ts`. Replace both examples with `shell` forms and retain the documented workspace behavior. The relevant files are `product/specs/workspaced-agent.md`, `documentation/user-documentation/advanced-agents/workspaced-agent.md`, `help.md`, and `src/plugins/shell/manifest.ts`.
+
+* shell (3/10) — 1 of 10 captured-shell facts is missing, with none wrong: captured output is limited to 1 Mi characters and longer output ends with `(output truncated after 1 MiB)` while the command continues draining to completion. Add this behavior to the existing shell command guide so users know why a very large command reply ends early. The ground truth is `product/specs/shell.md`, `src/shell/index.ts`, and `src/command/manager.ts`; update `documentation/user-documentation/command-bar/shell.md`.
+
 ## deferred
 
 ## declined
