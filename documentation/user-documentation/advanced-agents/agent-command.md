@@ -39,3 +39,15 @@ If you leave out `execute`, Janissary reports `Agent: missing execute clause.` I
 When a bare task filename matches multiple files in your project's `ai/tasks/` folder, Janissary reports `Agent: ambiguous task "<value>": <matching paths>.` Rename or remove the duplicate project task. Janissary stops at that ambiguity instead of looking for the task in its installed task folder. If no task matches, it reports `Agent: unknown task "<value>".`
 
 If you add `in a tab` but Janissary can't open the monitor, the run fails before it starts and reports `Agent: could not open monitoring tab.` Remove `in a tab` to run without a monitor, or retry after the monitor is available.
+
+### Check launch syntax and paths
+
+You can repeat `with skill <name>` to select more than one skill. Other launch clauses are single-use: `on`, `in a tab`, `in group`, `in workspace`, `using model`, and `with effort`. Repeating one reports an error such as `Agent: duplicate clause "using model".` Put quotes around a launch value that contains spaces, such as `in workspace "my project"`. An unmatched quote reports `Agent: malformed quoted value.`
+
+Each clause needs its value. For example, `on execute` reports `Agent: missing value for on.`, and `in group execute` reports `Agent: missing value for in group.` An unsupported option such as `with format fast` reports `Agent: unknown clause "with format".` Use the documented forms, such as `with skill`, `using model`, and `in workspace`. Text after the task name is task input, so launch-looking words there are not parsed as options.
+
+For an explicit task path, use a file inside the execution workspace, or a path under `$janissary/ai/tasks/`. A path outside those locations, including one that resolves outside through a link, reports `Agent: task path outside allowed roots "<value>".`
+
+If a selected skill can't be used, `Agent: unknown skill "<name>".` means it wasn't found; `Agent: invalid skill path "<name>".` means its path isn't valid. Repeating a skill name has no effect, and mentioning another skill in a skill's instructions does not select it. A malformed `janissary.json` grant file reports `Agent: malformed skill grants "<name>".` An unrecognized command in that file reports `Agent: unknown command grant "<command>" in skill "<name>".`
+
+If an agent's final command-looking line appears inside a Markdown code fence, Janissary treats it as an example rather than a request to run the command. This applies to fences made with backticks or tildes.

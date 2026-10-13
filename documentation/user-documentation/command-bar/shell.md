@@ -4,6 +4,8 @@
 
 Type `shell` to open a separate tab with a live zsh terminal. Application commands run in the command bar; unclaimed input runs directly in zsh. To run a shell command from another tab's command bar, prefix it with `!`.
 
+When you run a shell command this way, Janissary captures at most 1 Mi characters for the reply. If the command produces more, the captured output ends with `(output truncated after 1 MiB)`, but the command keeps running until it finishes. This limit applies to the captured reply, not to the interactive zsh terminal's own scrollback.
+
 Every launch opens one of these for you: the `janus` tab you start in is a zsh shell tab in the project directory. Type `shell` in its command bar when you want another shell tab. Typing `exit` in it closes it like any shell tab, and as the last tab that quits the app.
 
 <img class="agent-float" src="/agents/fariz-south-east.png" alt="" />

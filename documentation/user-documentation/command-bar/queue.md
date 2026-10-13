@@ -18,7 +18,7 @@ Queued lines run one at a time when zsh returns to its prompt. A command answere
 
 [`send`](/user-documentation/command-bar/send) to a shell joins the same queue. This works when the shell is current, docked in a sidebar, or hidden behind another tab. Keys typed directly into the terminal bypass the queue.
 
-Shell and harness tabs have no command queue. Their commands dispatch immediately even while busy, and `Ctrl+E` or bare `queue` does nothing there. Other tab types offer a queue only when they support it.
+Shell tabs have a command queue; harness tabs do not. In a shell tab, `Ctrl+E` or bare `queue` opens the popup described below. Those inputs do nothing on a harness tab or any tab without both a queue and a command bar. Other tab types can offer a queue when they support it.
 
 ## Edit queued commands
 
