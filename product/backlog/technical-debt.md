@@ -4,8 +4,6 @@
 
 ## development
 
-* Move role creation's duplicate-submit and late-reply rules into a dedicated hook for the roles tab.
-
 Existing Debt: In violation of §5 (components render, they do not decide), `RolesTab` owns the name-keyed in-flight guard, empty-name handling, request refusal handling, and comparison between a submitted name and the currently typed name before an accepted reply can close the field. Severity: 6/10
 
 Existing Risk: 5/10 - A change to the creation field's Enter, blur, or close wiring can duplicate an add-role request or let an older acceptance erase newer typing because the asynchronous ownership rules are intertwined with the rendered form.
