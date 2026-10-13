@@ -33,7 +33,11 @@ An action that throws or a deferred action that rejects replies with the request
 
 A request still waiting for its reply when the connection ends is answered as a connection failure rather than left waiting. A closed socket delivers nothing further, and work built on a reply — a save the user is watching, a plugin action holding a busy indicator — has to be able to finish. Whatever a caller shows for an unavailable answer is what it shows here.
 
+Editor save and draft-sync requests also have request-specific deadlines while the socket remains open. When a deadline expires, the request resolves with `request timed out` and is removed from the pending requests. This deadline is not applied to unrelated RPC methods.
+
 Nothing is resent. A lost reply does not establish that the server never carried the request out, so replaying a mutating call could apply it twice. A reply that arrives after a connection has been given up on is ignored, exactly as a reply for an unrecognized request id is.
+
+The same rule applies after a request deadline: late replies are ignored and the client never replays the request. In particular, a timed-out save has an unknown outcome because the server may have written the file before its reply was lost.
 
 An unavailable answer is also what a caller gets when the socket was never open, and when the server replies with an error the reply's result cannot carry. The three are indistinguishable to the caller and are handled the same way, each surface deciding for itself:
 

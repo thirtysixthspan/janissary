@@ -293,6 +293,39 @@ describe('useEditorFile overlapping saves', () => {
     expect(h.result.current.dirty).toBe(false);
   });
 
+  it('keeps the buffer and baseline after a timed-out save and releases queued saves', async () => {
+    const api = makeApi();
+    const saveFile = vi.fn(() => new Promise<string | undefined>((resolve) => {
+      setTimeout(() => resolve('request timed out'), 30_000);
+    }));
+    const client = makeClient({ saveFile });
+    const { result } = renderHook(() => useEditorFile(client, makeView(), api));
+    await waitFor(() => expect(api.load).toHaveBeenCalled());
+    vi.useFakeTimers();
+
+    api.stateRef.current = fromText('first');
+    let outcomes!: Promise<PromiseSettledResult<void>[]>;
+    act(() => {
+      const first = result.current.save();
+      api.stateRef.current = fromText('second');
+      outcomes = Promise.allSettled([first, result.current.save()]);
+    });
+    expect(saveFile).toHaveBeenCalledOnce();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(30_000); await outcomes; });
+
+    const settled = await outcomes;
+    expect(settled.map((value) => value.status)).toEqual(['rejected', 'rejected']);
+    expect(result.current.saveError).toBe('request timed out');
+    expect(result.current.dirty).toBe(true);
+    expect(saveFile).toHaveBeenCalledOnce();
+
+    saveFile.mockResolvedValue(undefined);
+    await act(async () => { await result.current.save(); });
+    expect(saveFile).toHaveBeenLastCalledWith('/open/1', 'second', contentHash('line one\nline two'));
+    vi.useRealTimers();
+  });
+
   it('rejects queued callers on conflict and recovers through explicit overwrite', async () => {
     const h = await setupPending();
     let outcomes!: Promise<PromiseSettledResult<void>[]>;

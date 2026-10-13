@@ -3,11 +3,11 @@ import type { ClientStateCollectors } from './client-state-collectors';
 import { PtyOutputBuffer, type PtyOutputBufferOptions } from './pty-output-buffer';
 import { resourceUrl } from './session-url';
 import { SocketConnection } from './ws-connection';
-import { RpcExchange, type RequestResult } from './rpc-exchange';
+import { RpcExchange, type RequestOptions, type RequestResult } from './rpc-exchange';
 import type { ConnectionPhase } from './reconnect-policy';
 import { NotificationEventListeners, type NotificationsRevealListener, type ToastClearListener, type ToastListener } from './notification-event-listeners';
 
-export type { RequestResult } from './rpc-exchange';
+export type { RequestOptions, RequestResult } from './rpc-exchange';
 
 export type StateListener = (snapshot: StateEvent) => void;
 type ExitListener = (id: string, exitCode: number) => void;
@@ -24,6 +24,8 @@ function monitorOwnsRun(tab: StateEvent['tabs'][number], runId: string): boolean
 // socket as dead. Generous enough that a server answering slowly under load is not mistaken for a
 // half-open connection, short enough that a genuine wake still recovers promptly.
 const LIVENESS_TIMEOUT_MS = 4000;
+const EDITOR_SYNC_TIMEOUT_MS = 10_000;
+const SAVE_FILE_TIMEOUT_MS = 30_000;
 
 // Thin WebSocket client. State snapshots fan out to subscribers; PTY output is routed per-id to
 // the terminal card that attached (with early bytes buffered so nothing is lost before mount).
@@ -173,7 +175,9 @@ export class JanusClient {
 
   send(call: RpcCall): void { this.rpc.send(call); }
 
-  request<T>(call: RpcCall): Promise<RequestResult<T>> { return this.rpc.request<T>(call); }
+  request<T>(call: RpcCall, options?: RequestOptions): Promise<RequestResult<T>> {
+    return this.rpc.request<T>(call, options);
+  }
 
   renameTab(index: number, title: string): void { this.send({ method: 'renameTab', params: { index, title } }); }
 
@@ -189,7 +193,7 @@ export class JanusClient {
 
   // Acknowledge transient draft updates so their owner can recover a lost snapshot after reconnect.
   editorSync(url: string, content: string): Promise<RequestResult<unknown>> {
-    return this.request({ method: 'editorSync', params: { url, content } });
+    return this.request({ method: 'editorSync', params: { url, content } }, { timeoutMs: EDITOR_SYNC_TIMEOUT_MS });
   }
 
   // Report the current sidebar/tab-area sizes after a manual resize completes. Fire-and-forget,
@@ -207,7 +211,10 @@ export class JanusClient {
   // on success (including when the socket is down, which surfaces as a generic failure).
   // `expectedHash` makes the write conditional on the file still holding that content.
   async saveFile(url: string, content: string, expectedHash?: string): Promise<string | undefined> {
-    const result = await this.request<unknown>({ method: 'saveFile', params: { url, content, expectedHash } });
+    const result = await this.request<unknown>(
+      { method: 'saveFile', params: { url, content, expectedHash } },
+      { timeoutMs: SAVE_FILE_TIMEOUT_MS },
+    );
     return result.ok ? undefined : (result.error ?? 'not connected');
   }
 
