@@ -17,9 +17,13 @@ type Entry = { label: string; writer: ShellTranscriptWriter };
 //
 // A failure is reported once per tab: one tab can hold several writers (a factory that starts more
 // than one terminal, or a reinstall under a reattached id), and one notice says all there is to say.
+// A writer released by its tab closing or by a reinstall reports nothing afterwards: its finishing
+// path can still fail, but its tab is gone or speaks through the newer writer, and reporting it would
+// re-mark the label as notified with nothing left to clear it for a later tab reusing that label.
 export class ShellTranscriptManager {
   private entries = new Map<string, Entry>();
   private notified = new Set<string>();
+  private released = new WeakSet<ShellTranscriptWriter>();
   private subscription: Subscription;
 
   constructor(private readonly managers: Managers) {
@@ -37,7 +41,7 @@ export class ShellTranscriptManager {
     this.release(ptyId);
     const { cols, rows } = this.managers.pty.spawnDimensions();
     const writer = new ShellTranscriptWriter(ptyId, label, cols, rows, () => {
-      this.reportFailure(label);
+      if (!this.released.has(writer)) this.reportFailure(label);
     }, (path) => {
       const tab = this.managers.tab.byLabel(label);
       if (tab) tab.transcript = path;
@@ -74,7 +78,10 @@ export class ShellTranscriptManager {
   }
 
   private release(id: string): void {
-    void this.entries.get(id)?.writer.dispose();
+    const writer = this.entries.get(id)?.writer;
+    if (!writer) return;
+    this.released.add(writer);
+    void writer.dispose();
     this.entries.delete(id);
   }
 }

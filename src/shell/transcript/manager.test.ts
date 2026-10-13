@@ -148,6 +148,27 @@ describe('ShellTranscriptManager', () => {
     expect(mocks.notify).toHaveBeenCalledTimes(2);
   });
 
+  it('ignores a failure from a writer its closed tab released, so a later tab with that label still notifies once', async () => {
+    addTab('shell');
+    manager.install('pty-1', 'shell');
+    data('pty-1', 'one');
+    const dispose = vi.spyOn(ShellTranscriptWriter.prototype, 'dispose');
+
+    manager.closeTab('shell');
+    await Promise.all(dispose.mock.results.map((result) => result.value as Promise<void>));
+    // The stream failing once its close has begun, as a full disk can on `end()`.
+    const released = dispose.mock.contexts[0] as unknown as { file: { abandon: () => void } };
+    released.file.abandon();
+    expect(mocks.notify).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+    lockTranscriptDirectory();
+    manager.install('pty-2', 'shell');
+    data('pty-2', 'two\r\n');
+    expect(mocks.notify).toHaveBeenCalledOnce();
+    expect(mocks.notify).toHaveBeenCalledWith(expect.anything(), 'shell-transcript-failed', 'shell');
+  });
+
   it('returns nothing from dispose when it holds no writers', () => {
     expect(manager.dispose()).toBeUndefined();
   });
