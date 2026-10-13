@@ -42,6 +42,8 @@ The core response panel sits above the shell command bar. It shows streamed, san
 
 The panel's **Reset ACP** control acts immediately on its owning tab, including while a shell-bar submission is still awaiting completion. Tool-step expansion uses the same server-owned collapse state, with an explicit tab label so a docked panel never changes another tab. File-link actions likewise run in the source tab. A plugin renders the core surface through the scoped client hook rather than implementing another response renderer.
 
+Reset, collapse, and command actions from a docked response panel remain bound to its owning tab. Other transcript actions keep their original parameters and targets.
+
 Questions use the existing core question panel and answer protocol. A centre tab's question is shown when that tab is current. A selected docked shell also exposes its question through its scoped ACP surface; a hidden docked body does not raise one. The question's tab/id determine where the answer goes. See [[agent-questions]].
 
 Reset or close aborts the current ACP request's question, whether active or queued, and preserves unrelated questions. An aborted loop does not issue another provider prompt after a tool returns. Calls without an abort signal retain the existing question lifecycle.

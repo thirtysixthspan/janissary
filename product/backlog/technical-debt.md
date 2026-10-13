@@ -4,17 +4,6 @@
 
 ## development
 
-* Put the shared ACP response panel's tab-scoped protocol actions behind a hook and a framework-free adapter.
-
-Existing Debt: In violation of §8 (the four layers and downward-only dependencies), `AcpResponsePanel` calls `client.send` for reset and collapse, rewrites command parameters to its owning tab inside the component, and constructs transcript and PTY transport adapters while rendering. Severity: 8/10
-
-Existing Risk: 6/10 - A change to transcript command routing can reset, collapse, or run a command against the active tab instead of the docked panel's owner because the ownership rule is embedded in markup and is not directly exercised by an adapter test.
-
-Proposal Risk: 3/10 - Explicit owner-bound actions and focused routing tests reduce accidental retargeting, but fire-and-forget transport calls still cannot tell the panel whether the server accepted an action.
-
-Proposal: Extract the transport work from `web/src/shared/acp/AcpResponsePanel.tsx` into a new framework-free `web/src/shared/acp/acp-panel-actions.ts` factory taking a narrow send/PTY-attachment port and the owning label, and expose its result through a new `web/src/shared/acp/useAcpPanelActions.ts` hook keyed by the client and label. The factory must return reset and collapse callbacks, transcript intents that add `tab: label` only to command calls, and the PTY actions currently constructed in the component; preserve every non-command call's parameters. Have the component consume that hook and retain only markup, keyboard event forwarding, scroll refs, and focus restoration after collapse. Its public props stay intact, so its one production importer, `web/src/shared/acp/AcpResponseScope.tsx`, needs no change and the published plugin response surface stays the same. `web/src/shared/acp/AcpResponseScope.test.tsx` pins docked-owner reset, question routing, Ctrl+T collapse, and focus; retain those assertions and add direct factory tests plus a hook rerender case for a changed owner label, including command retargeting and untouched non-command intents. This is confined to the shared ACP response surface and its new adapter/hook tests.
-
-
 * Move role creation's duplicate-submit and late-reply rules into a dedicated hook for the roles tab.
 
 Existing Debt: In violation of §5 (components render, they do not decide), `RolesTab` owns the name-keyed in-flight guard, empty-name handling, request refusal handling, and comparison between a submitted name and the currently typed name before an accepted reply can close the field. Severity: 6/10
