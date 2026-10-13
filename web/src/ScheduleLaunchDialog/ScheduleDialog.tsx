@@ -2,7 +2,8 @@ import React, { useCallback, useState } from 'react';
 import type { ScheduleLaunchView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
-import { buildScheduleCommand, type ScheduleFields, type ScheduleType } from './schedule-command';
+import type { ScheduleFields, ScheduleType } from './schedule-command';
+import { useScheduleLaunchActions } from './useScheduleLaunchActions';
 
 type Properties = { view: ScheduleLaunchView; client: JanusClient };
 
@@ -31,22 +32,6 @@ export function resetScheduleDialogMemory(): void {
   remembered = null;
 }
 
-function isValid(fields: ScheduleFields): boolean {
-  if (!fields.name.trim() || !fields.command.trim()) return false;
-  switch (fields.type) {
-    case 'at': { return fields.time.trim() !== '';
-    }
-    case 'on': { return fields.date.trim() !== '';
-    }
-    case 'every': { return fields.interval.trim() !== '';
-    }
-    case 'everyDay': { return fields.time.trim() !== '';
-    }
-    case 'everyWeekday': { return fields.time.trim() !== '';
-    }
-  }
-}
-
 // The "New schedule" dialog (opened by typing bare `schedule`). A small form over the five
 // schedule forms: it assembles the equivalent `schedule …` string and submits it through the
 // normal command path, so the server's existing parsing/validation/firing runs unchanged.
@@ -62,9 +47,8 @@ export function ScheduleDialog({ view, client }: Properties) {
     });
   }, []);
 
-  const { dialogRef, submitButtonRef, cancel, create } = useLaunchDialog(
-    client, 'closeScheduleLaunch', fields, buildScheduleCommand, hadRemembered, isValid,
-  );
+  const { cancel, create, canSubmit } = useScheduleLaunchActions(client, fields);
+  const { dialogRef, submitButtonRef } = useLaunchDialog(cancel, create, canSubmit, hadRemembered);
 
   return (
     <div className="modal-backdrop">
@@ -111,7 +95,7 @@ export function ScheduleDialog({ view, client }: Properties) {
           </label>
         </div>
         <div className="modal-actions">
-          <button ref={submitButtonRef} className="modal-button" disabled={!isValid(fields)} onClick={create}>Schedule</button>
+          <button ref={submitButtonRef} className="modal-button" disabled={!canSubmit} onClick={create}>Schedule</button>
           <button className="modal-button" onClick={cancel}>Cancel</button>
         </div>
       </div>
