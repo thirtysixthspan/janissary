@@ -91,7 +91,7 @@ export { isTextEntryElement } from '../shared/text-entry';
 // no glyph and no size, which is invisible rather than obviously broken. `openFilesIcon` and
 // `newTabIcon` are here for that reason: a metadata row of a plugin's own cannot draw its buttons.
 export { ConnectionPlug,  } from '../shared/ConnectionPlug';
-export { detachSessionIcon, attachSessionIcon,  workspacedIcon, syncIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon, diffIcon, plusMinusIcon } from '../shared/icons';
+export { detachSessionIcon, attachSessionIcon,  workspacedIcon, syncIcon, connectionsWindowIcon, scheduleWindowIcon, openFilesIcon, newTabIcon, diffIcon, plusMinusIcon, viewCaptureIcon } from '../shared/icons';
 
 // The host's own floating status panels and the visibility hook that drives them, published for the
 // same reason and on the same terms: a plugin whose tab offers the connections and schedule buttons
@@ -269,6 +269,12 @@ export type TabPluginClientCapabilities = {
   // Open this tab's recording in the tab that plays it. Supplied together with `recording` and
   // absent without it, for the same reason: an inert flag is a flag with no button behind it.
   openRecording?(): void;
+  // This tab's plain-text transcript, or absent before the transcript file has opened — and always
+  // absent under `recordShellTabs: false`, because the server never sets it then.
+  transcript?: string;
+  // Open this tab's transcript in an editor tab. Supplied together with `transcript` and absent
+  // without it, for the same reason as `openRecording`.
+  openTranscript?(): void;
   // Report the colors this plugin's own terminal resolved, so its session's recording carries the
   // foreground, background and 16 ANSI colors it ran under rather than whatever theme is active when
   // it is replayed. The same report the host's own terminal surfaces make through the same RPC; the
@@ -296,6 +302,7 @@ export function createPluginClientCapabilities(
   claimedChords: readonly string[] = [],
   dotColor?: string,
   recording?: string,
+  transcript?: string,
   remoteCapabilities?: {
     remote?: RemoteTargetView;
     remoteSession?: TabPluginClientCapabilities['remoteSession'];
@@ -349,12 +356,16 @@ export function createPluginClientCapabilities(
     openFileNavigator: () => { client.send({ method: 'openFileNavigatorFor', params: { label } }); },
     launchShellHere: () => { client.send({ method: 'launchShellFor', params: { label } }); },
     openDiffHere: () => { client.send({ method: 'openDiffFor', params: { label } }); },
-    // The two are supplied together or not at all: a plugin drawing the recording flag needs one
-    // answer to "does this tab have a recording", and a handler with no path behind it would be a
-    // button that opens nothing.
+    // Each path and its opener are supplied together or not at all: a plugin drawing the recording
+    // flag or the transcript button needs one answer to "does this tab have one", and a handler with
+    // no path behind it would be a button that opens nothing.
     ...(recording !== undefined && {
       recording,
       openRecording: () => { client.send({ method: 'openRecordingFor', params: { label } }); },
+    }),
+    ...(transcript !== undefined && {
+      transcript,
+      openTranscript: () => { client.send({ method: 'openTranscriptFileFor', params: { label } }); },
     }),
     openLink: (href) => { openTranscriptLink(href, transcriptIntents((call) => client.send(call))); },
     reportTerminalColors: (id, colors) => {
