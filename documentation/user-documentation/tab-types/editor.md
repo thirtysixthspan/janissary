@@ -137,6 +137,8 @@ write leaves the previous on-disk file and your unsaved editor state intact.
 
 If you save again while a save is still running, unchanged text waits for that same write. If you have edited more, the newer save runs after it. Choosing Save in the close dialog also waits for the requested content to reach disk. A failed save leaves the tab open so you can address the error and retry.
 
+If a save receives no answer before its wait expires, the editor shows `request timed out` and keeps your buffer unsaved. The file may still have been written, so Janissary won't repeat the save automatically; you can save again when you're ready.
+
 If the path didn't exist when you ran `edit`, the file shows a size of "unknown" and isn't created until your first save. Opening that same not-yet-existing path again doesn't focus the first tab the way opening an existing file would; each open gets its own independent, unsaved tab, since none of them has a real file to converge on yet. If you save one of those tabs without renaming it, and another tab already saved a file under that name in the meantime, your save doesn't overwrite it: it picks the next free name in the same folder instead, such as `untitled.md` becoming `untitled-2.md`, and updates the tab to match.
 
 Beside the save button, the **Commit to origin** icon saves the file and then commits exactly that one file and pushes it to your current branch — the same commit-and-push cycle the [file navigator's](/user-documentation/tab-types/file-navigator) commit uses, with a generated `sync: <filename>` message. The icon spins while the commit runs, turns green on success and red on failure, and each outcome also lands as one line in the [notifications](/user-documentation/tab-types/notifications) tab. Hovering names the branch the push will go to (`Commit to origin (branch <name>)`) plus its current state, the same as the file navigator's own commit button — or just `Commit to origin` when the branch can't be determined. Files on a remote host commit from their navigator instead. Clicking it while a commit is already running does nothing, so a second click can't collide with the first.
@@ -175,7 +177,7 @@ As you type, the editor also keeps a transient, unsaved copy of your buffer sync
 
 If the connection drops, a monitor may temporarily see an older draft. Once reconnected, the current draft is sent again automatically, even if you have stopped typing.
 
-If a draft send fails while the connection stays open, the editor retries a few times. A later edit starts fresh retries; if they are exhausted, the current draft will be sent again after another edit or reconnection.
+If a draft send fails or receives no answer before its wait expires while the connection stays open, the editor retries a few times. A later edit starts fresh retries; if they are exhausted, the current draft will be sent again after another edit or reconnection.
 
 ## Syntax highlighting
 

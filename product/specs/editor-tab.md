@@ -195,6 +195,8 @@ message is shown and the save button remains enabled.
 
 Saves from the button, keyboard shortcut, overwrite confirmation, commit action, and close dialog share one ordered sequence per editor. Repeating a pending save of the same text waits for that write. Saving changed text while a write is pending waits its turn and checks against the preceding successful save, so the editor's own earlier write does not raise an overwrite conflict. A failed write rejects the saves waiting behind it; the user can retry afterward. Edits made after the last requested snapshot remain unsaved.
 
+An editor save that receives no reply within its deadline reports `request timed out`, keeps the buffer dirty, and rejects saves queued behind it. The server may still have completed the write, so the editor does not replay it automatically; a later user save retries against the last confirmed file contents.
+
 Saving a file opened from a remote navigator uses the same guarantee on the remote host: its
 existing bytes and permission bits remain in place if the replacement fails, and the local cache,
 draft, and saved indicator advance only after the remote write succeeds.
@@ -216,6 +218,8 @@ connection drops, the server's copy can lag while disconnected. Reconnecting res
 If a send fails while the connection stays open, the editor retries the latest draft a limited number
 of times. A later edit starts a fresh retry budget; after retries are exhausted, another edit or
 reconnection can send the current draft again.
+
+An unanswered draft update has a bounded wait. Its timeout is treated like a transient send failure and uses the same limited retry policy; it never causes a disk save to be repeated.
 
 The one consumer of this draft is a monitor watching the tab (see [[monitoring]]): it is fed the
 draft so it can see unsaved changes without a save, even though the draft is never shown back in the

@@ -3,19 +3,25 @@ import type { RpcCall } from '@shared/protocol';
 // What a request is answered with when its connection ends before the reply does. Nonempty, because
 // `saveFile`'s caller displays it and an empty string reads there as success.
 const CONNECTION_ENDED = 'connection closed';
+const REQUEST_TIMED_OUT = 'request timed out';
 
 // What `request` resolves with: the server's value, or why there isn't one. `error` is absent only
 // for a socket that was never open — every other failure (a connection that ended, a server refusal)
 // carries the text, so a caller with somewhere to show it can tell those apart from the silence a
 // closed socket has always resolved as.
 export type RequestResult<T> = { ok: true; value: T } | { ok: false; error?: string };
+export type RequestOptions = { timeoutMs?: number };
+type PendingRequest = {
+  settle: (result: unknown, error?: string) => void;
+  timer?: ReturnType<typeof setTimeout>;
+};
 
 // The request half of the socket client: the id counter, the map of replies still owed, and every way
 // a request can end. The socket is read through a function rather than captured, so a reconnect that
 // swaps it is seen by the next call.
 export class RpcExchange {
   private nextId = 1;
-  private pending = new Map<number, (result: unknown, error?: string) => void>();
+  private pending = new Map<number, PendingRequest>();
 
   constructor(private socket: () => WebSocket) {}
 
@@ -23,10 +29,11 @@ export class RpcExchange {
   // reply, the connection ending, a send that threw — goes through here, so an id is answered at
   // most once and a late reply for an already-settled id finds nothing and is dropped.
   settle(id: number, result: unknown, error?: string): void {
-    const callback = this.pending.get(id);
-    if (!callback) return;
+    const request = this.pending.get(id);
+    if (!request) return;
     this.pending.delete(id);
-    callback(result, error);
+    if (request.timer !== undefined) clearTimeout(request.timer);
+    request.settle(result, error);
   }
 
   // Answer everything still waiting with a connection failure. A closed socket will never deliver
@@ -40,7 +47,10 @@ export class RpcExchange {
   drain(): void {
     const outstanding = this.pending;
     this.pending = new Map();
-    for (const callback of outstanding.values()) callback(undefined, CONNECTION_ENDED);
+    for (const request of outstanding.values()) {
+      if (request.timer !== undefined) clearTimeout(request.timer);
+      request.settle(undefined, CONNECTION_ENDED);
+    }
   }
 
   // Hand a registered request to the socket. A `send` that throws settles it here rather than
@@ -63,11 +73,17 @@ export class RpcExchange {
   // failed request is each surface's own decision, not this method's — and on whether `error` is
   // present when it is not: absent means the socket was never open, present means the connection
   // ended before the reply arrived or the server refused the request.
-  request<T>(call: RpcCall): Promise<RequestResult<T>> {
+  request<T>(call: RpcCall, options?: RequestOptions): Promise<RequestResult<T>> {
     const id = this.nextId++;
     return new Promise<RequestResult<T>>((resolve) => {
       if (this.socket().readyState !== WebSocket.OPEN) { resolve({ ok: false }); return; }
-      this.pending.set(id, (r, error) => resolve(error === undefined ? { ok: true, value: r as T } : { ok: false, error }));
+      const request: PendingRequest = {
+        settle: (result, error) => resolve(error === undefined ? { ok: true, value: result as T } : { ok: false, error }),
+      };
+      this.pending.set(id, request);
+      if (options?.timeoutMs !== undefined) {
+        request.timer = setTimeout(() => this.settle(id, undefined, REQUEST_TIMED_OUT), options.timeoutMs);
+      }
       this.dispatch(id, JSON.stringify({ t: 'rpc', id, ...call }));
     });
   }

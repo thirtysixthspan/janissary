@@ -4,17 +4,6 @@
 
 ## development
 
-* Give editor save and draft-sync requests bounded waits through the shared RPC exchange.
-
-Existing Debt: Pending browser RPCs have no request deadline or cancellation ownership and settle only on a reply, a send exception, or connection teardown, while editor recovery assumes each send eventually reports success or failure. Severity: 5/10
-
-Existing Risk: 6/10 - A request whose handler never answers while the socket remains open can indefinitely block the editor's save queue or draft-sync pending flag, leaving later saves or monitor-visible edits waiting without feedback.
-
-Proposal Risk: 3/10 - A timed-out disk save may still complete on the server, so the editor must report an unknown outcome and preserve its buffer rather than assume the write did not occur.
-
-Proposal: Add an optional per-request deadline to `RpcExchange.request` in `web/src/shared/ws/rpc-exchange.ts`, store its timer with the pending callback, and clear it on every `settle` and `drain` path before invoking callbacks. Forward the option through `JanusClient.request` in `web/src/shared/ws/ws.ts` and use explicit bounded policies in its `saveFile` and `editorSync` wrappers, keeping unrelated long-running RPCs outside this first increment. A deadline must settle once with a nonempty error and remove the callback; a late reply must be ignored, and a timed-out mutation must never be automatically replayed. Keep the failure visible through `web/src/editor/useEditorFile.ts`, and let `DraftSync` in `web/src/editor/draft-sync.ts` apply its existing bounded retry policy only to transient draft replacement. Existing disconnect, disposal, late-reply, and wake-probe behavior is covered by `web/src/shared/ws/ws.test.ts`, and editor retry and ordered-save behavior by `web/src/editor/draft-sync.test.ts`, `web/src/editor/save-coordinator.test.ts`, and `web/src/editor/useEditorFile.test.ts`; add fake-timer coverage for an open socket that never replies, deadline cleanup, a reply racing expiration, and a later queued save being released by the timeout. Update `product/specs/editor-tab.md` and `product/specs/websocket-rpc.md` with the unknown-save-outcome behavior.
-
-
 * Put the shared ACP response panel's tab-scoped protocol actions behind a hook and a framework-free adapter.
 
 Existing Debt: In violation of §8 (the four layers and downward-only dependencies), `AcpResponsePanel` calls `client.send` for reset and collapse, rewrites command parameters to its owning tab inside the component, and constructs transcript and PTY transport adapters while rendering. Severity: 8/10

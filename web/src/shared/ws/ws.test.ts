@@ -86,6 +86,43 @@ describe('JanusClient', () => {
     await expect(promise).resolves.toEqual({ ok: true, value: 'bar' });
   });
 
+  it('settles a silent request at its deadline and ignores a late reply', async () => {
+    const client = new JanusClient();
+    const timersBeforeRequest = vi.getTimerCount();
+    const promise = client.request<string>({ method: 'toggleCollapse', params: {} }, { timeoutMs: 100 });
+
+    await vi.advanceTimersByTimeAsync(100);
+
+    await expect(promise).resolves.toEqual({ ok: false, error: 'request timed out' });
+    expect(() => messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, result: 'late' }) })).not.toThrow();
+    expect(vi.getTimerCount()).toBe(timersBeforeRequest);
+  });
+
+  it('clears a request deadline when its reply arrives first', async () => {
+    const client = new JanusClient();
+    const timersBeforeRequest = vi.getTimerCount();
+    const promise = client.request<string>({ method: 'toggleCollapse', params: {} }, { timeoutMs: 100 });
+
+    await vi.advanceTimersByTimeAsync(99);
+
+    messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, result: 'bar' }) });
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(promise).resolves.toEqual({ ok: true, value: 'bar' });
+    expect(vi.getTimerCount()).toBe(timersBeforeRequest);
+  });
+
+  it('clears a request deadline when the connection ends first', async () => {
+    const client = new JanusClient();
+    const timersBeforeRequest = vi.getTimerCount();
+    const promise = client.request<string>({ method: 'toggleCollapse', params: {} }, { timeoutMs: 100 });
+
+    closeHandler!();
+
+    await expect(promise).resolves.toEqual({ ok: false, error: 'connection closed' });
+    expect(vi.getTimerCount()).toBe(timersBeforeRequest);
+  });
+
   it('request resolves with a failed result and no error when socket is closed', async () => {
     inst.readyState = 3;
     const client = new JanusClient();
@@ -285,6 +322,25 @@ describe('JanusClient', () => {
     const pending = client.editorSync('/open/1', 'draft');
     closeHandler!();
     await expect(pending).resolves.toEqual({ ok: false, error: 'connection closed' });
+  });
+
+  it('editorSync times out while the socket remains open', async () => {
+    const client = new JanusClient();
+    const pending = client.editorSync('/open/1', 'draft');
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    await expect(pending).resolves.toEqual({ ok: false, error: 'request timed out' });
+  });
+
+  it('saveFile times out without treating a possibly completed write as successful', async () => {
+    const client = new JanusClient();
+    const pending = client.saveFile('/file.txt', 'content');
+
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    await expect(pending).resolves.toBe('request timed out');
+    expect(() => messageHandler!({ data: JSON.stringify({ t: 'rpc-reply', id: 1, result: 'late' }) })).not.toThrow();
   });
 
   it('editorSync reports a closed socket as unacknowledged', async () => {
