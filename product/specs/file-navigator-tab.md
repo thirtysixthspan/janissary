@@ -576,6 +576,10 @@ lies inside the very directory being copied, counts as a failure the same way a 
 failure does — reported through the notifications feed with its cause and recovery action, never a
 dialog.
 
+An overwrite copy is prepared before the existing destination is moved aside. If copying or
+installing the replacement fails, the previous destination is restored. If restoration also fails,
+the previous destination remains under a backup name, and the failure reason names that path.
+
 A copy also places the same rows on the **system clipboard**, as text, so the selection can be
 pasted straight into an editor tab, a command bar, or any other field that takes text — through that
 surface's own `Cmd+V` or its right-click **Paste** (see [[context-menu]]). The text takes each path

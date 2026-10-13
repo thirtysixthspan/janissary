@@ -4,17 +4,6 @@
 
 ## development
 
-* Preserve the existing destination until an overwrite-copy has a complete replacement ready to install.
-
-Existing Debt: The copy-overwrite path treats survival of the source as sufficient recovery and deletes the destination before copying, although the destination can contain unrelated data that exists nowhere else. Severity: 6/10
-
-Existing Risk: 8/10 - A disk-full, permission, or disappearing-source failure during a confirmed overwrite can destroy the previous destination and leave a partial copy while the batch reports no successful mutation.
-
-Proposal Risk: 3/10 - A process crash or failed rollback can still leave staging or backup files requiring recovery, but the previous destination remains recoverable instead of being deleted before copying starts.
-
-Proposal: In `src/file-navigator/filesystem.ts`, replace `copyItem`'s remove-then-copy overwrite branch with a staged replacement: copy into a unique sibling of the destination first, preserve an occupied destination under a backup name, install the completed staging entry by rename, and remove the backup only after installation succeeds. Restore the backup if installation fails, retain it and name it in the failure reason if restoration fails, and clean up incomplete staging entries without masking the original error. Keep non-overwrite conflicts and whole-directory replacement semantics intact for `performPastes` in `src/file-navigator/paste.ts`; a failed staged copy must leave the original destination unchanged so its `mutated: false` result remains truthful. `src/file-navigator/filesystem.test.ts` covers successful copies, conflicts, and overwrite success, while `src/file-navigator/paste.test.ts` covers overwrite-all and skip-conflicts behavior; neither covers a copy failure after an occupied destination has been selected. Add failure-injection cases for file and directory copies, installation failure, and failed restoration, and document the recovery guarantee in `product/specs/file-navigator-tab.md`.
-
-
 * Carry the editor's stale-content precondition through remote file saves to the host that owns the file.
 
 Existing Debt: The editor computes a baseline hash for every queued save, but the server drops it on remote saves because the filesystem port and remote write contract have no conditional-write field. Severity: 6/10
