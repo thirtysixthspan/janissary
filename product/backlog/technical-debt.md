@@ -4,17 +4,6 @@
 
 ## development
 
-* Extract transcript follow-scroll behavior into a dedicated hook and share its pure threshold policy with the conversation surface.
-
-Existing Debt: In violation of §5 (components render, they do not decide) and §6 (hooks are the reactive seam), `Transcript` owns programmatic-versus-user scroll detection, bottom-follow thresholds, ResizeObserver lifecycle, and search-hit positioning, while the conversation follow-scroll hook independently repeats the same one-pixel and forty-pixel rules. Severity: 5/10
-
-Existing Risk: 5/10 - A correction to delayed scroll-event handling or the bottom-follow threshold can land in only one transcript surface, causing streamed output to stop following unexpectedly or pull a reader away from older content.
-
-Proposal Risk: 2/10 - Shared numeric decisions and separate lifecycle tests reduce policy drift, but real browser resize and scroll-event ordering can still differ from the simulated geometry in render tests.
-
-Proposal: Add `web/src/shared/scroll-follow.ts` with framework-free functions for recognizing a programmatic scroll from the last written top and for deciding whether a viewport is within the existing bottom-follow threshold; retain the exact strict comparisons and numeric thresholds. Extract `stick`, `lastTop`, content observation, pinning, search-hit scrolling, and the scroll handler from `web/src/shared/transcript/Transcript.tsx` into `web/src/shared/transcript/useTranscriptPin.ts`, taking the existing scroll ref, lines, highlight, and pin-to-bottom flag and returning the content ref and handler needed by the markup. Have that hook and `web/src/plugins/conversations/useStickToBottom.ts` import the shared pure policy directly, while retaining the conversation hook's active gate and latest-turn repin key and the transcript hook's search-highlight suppression and two-line search-hit offset. Keep the existing public APIs intact: the three production consumers of `Transcript`, `web/src/shared/acp/AcpResponsePanel.tsx`, `web/src/notifications/NotificationsTab.tsx`, and `web/src/plugins/ReadOnlyTranscript.tsx`, and the conversation hook's one consumer need no call-site edits. `web/src/shared/transcript/Transcript.pin.test.tsx` pins the delayed programmatic-scroll race, user scrolling away/back, content resizing, and disabled pinning; `web/src/shared/transcript/Transcript.test.tsx` pins rendering and terminal-card wiring, and `web/src/plugins/conversations/ConversationTab.test.tsx` pins stream following and older-turn viewport preservation. Retain those tests and add direct policy boundary tests plus focused hook coverage for observer teardown and search-hit pin suppression. This is confined to the two scroll implementations and their shared policy, with no transport or terminal behavior change.
-
-
 * Remove feature-specific RPC choices from the shared launch-dialog hook and bind them in the two owning features.
 
 Existing Debt: In violation of §2 (shared code must remain feature-independent), `useLaunchDialog` accepts the feature-specific `closeHarnessLaunch`/`closeScheduleLaunch` union and sends command and close RPCs itself, so adding or changing a launch flow requires editing the shared keyboard/focus hook. Severity: 4/10

@@ -32,7 +32,7 @@ New output resets scroll offset to 0 (bottom), showing the latest lines.
 
 Starting a command resets it too. The command's running entry is appended through `TabManager.startRunning`, the same path every long-running producer uses — shell commands, browser and connection commands, questions, and monitor asks — so a transcript scrolled up into history returns to the bottom as soon as any command starts, not only once its output arrives.
 
-The transcript follows output for as long as it keeps arriving: a command that prints hundreds of lines leaves the view resting on the last line of that output, not partway through it. Following stops only when the user scrolls away from the bottom themselves; output growing beneath the view is never mistaken for that. Scrolling back to within a line or two of the bottom resumes following, as does jumping to the bottom with `Escape`.
+The transcript follows output for as long as it keeps arriving: a command that prints hundreds of lines leaves the view resting on the last line of that output, not partway through it. Following stops only when the user scrolls away from the bottom themselves; output growing beneath the view and delayed events from a pin are never mistaken for that. Scrolling back to less than 40 pixels from the bottom resumes following, as does jumping to the bottom with `Escape`.
 
 ### Scroll up
 
