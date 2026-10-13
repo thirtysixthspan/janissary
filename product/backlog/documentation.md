@@ -2,8 +2,6 @@
 
 ## ready
 
-* diff-tab (1/10) — The recent workspace-diff changes have no remaining user-documentation gap: all 14 user-facing facts are covered without a mismatch across `documentation/user-documentation/tab-types/diff-tab.md`, `documentation/user-documentation/tab-types/sessions.md`, and `help.md`. In particular, `help.md` gives `diff on <tab name>`, the sessions page explains the live-row **Show diff in the workspace** action, and the diff page covers the view itself, so no edit is needed. The behavior is specified in `product/specs/diff-tab.md` and implemented in `src/plugins/diff/activate.ts`.
-
 ## development
 
 ## deferred
@@ -209,3 +207,4 @@
 * agent-command — documented in documentation/user-documentation/advanced-agents/agent-command.md (removed 2026-10-13)
 * roles — documented in documentation/user-documentation/tab-types/roles.md (removed 2026-10-13)
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-10-13)
+* diff-tab — already resolved: documentation/user-documentation/tab-types/diff-tab.md, documentation/user-documentation/tab-types/sessions.md, help.md (removed 2026-10-13)
