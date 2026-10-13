@@ -198,6 +198,31 @@ describe('ShellTranscriptManager', () => {
     expect(mocks.notify).toHaveBeenCalledWith(expect.anything(), 'shell-transcript-failed', 'shell');
   });
 
+  it('ignores a closed tab\'s late failure that arrives after a new tab reused its label, so the new tab still notifies once', async () => {
+    addTab('shell');
+    manager.install('pty-1', 'shell');
+    data('pty-1', 'one');
+    const writerDispose = vi.spyOn(ShellTranscriptWriter.prototype, 'dispose');
+    const fileDispose = vi.spyOn(BoundedAppendFile.prototype, 'dispose');
+
+    emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+    manager.closeTab('shell');
+    await vi.waitFor(() => { expect(fileDispose).toHaveBeenCalledOnce(); });
+    await (fileDispose.mock.results[0]?.value as Promise<void>);
+    expect(writerDispose).not.toHaveBeenCalled();
+
+    manager.install('pty-2', 'shell');
+    data('pty-2', 'two');
+    abandon(fileDispose.mock.contexts[0]);
+    expect(mocks.notify).not.toHaveBeenCalled();
+
+    lockTranscriptDirectory();
+    manager.install('pty-3', 'shell');
+    data('pty-3', 'three\r\n');
+    expect(mocks.notify).toHaveBeenCalledOnce();
+    expect(mocks.notify).toHaveBeenCalledWith(expect.anything(), 'shell-transcript-failed', 'shell');
+  });
+
   it('notifies a failure from a writer whose PTY exited while its tab is still open', async () => {
     addTab('shell');
     manager.install('pty-1', 'shell');
