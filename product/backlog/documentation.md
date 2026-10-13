@@ -2,8 +2,6 @@
 
 ## ready
 
-* shell-tab (4/10) — `documentation/user-documentation/command-bar/shell.md` now documents the plain-text transcript, including its path, contents, save/rename restrictions while the shell is running, failure notice, and opt-out, but 2 of 14 facts are missing and none are wrong. It does not say that remote shell transcripts are written locally, or that closing the shell flushes its unfinished prompt row; add these details to the existing transcript section. The ground truth is `product/specs/shell-tab.md`, `src/shell/transcript/writer.ts`, and `src/shell/transcript/transcript-file.ts`.
-
 * diff-tab (1/10) — The recent workspace-diff changes have no remaining user-documentation gap: all 14 user-facing facts are covered without a mismatch across `documentation/user-documentation/tab-types/diff-tab.md`, `documentation/user-documentation/tab-types/sessions.md`, and `help.md`. In particular, `help.md` gives `diff on <tab name>`, the sessions page explains the live-row **Show diff in the workspace** action, and the diff page covers the view itself, so no edit is needed. The behavior is specified in `product/specs/diff-tab.md` and implemented in `src/plugins/diff/activate.ts`.
 
 ## development
@@ -210,3 +208,4 @@
 * harness — already resolved: documentation/user-documentation/advanced-agents/harness.md shows angle-bracket usage placeholders (removed 2026-10-11)
 * agent-command — documented in documentation/user-documentation/advanced-agents/agent-command.md (removed 2026-10-13)
 * roles — documented in documentation/user-documentation/tab-types/roles.md (removed 2026-10-13)
+* shell-tab — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-10-13)
