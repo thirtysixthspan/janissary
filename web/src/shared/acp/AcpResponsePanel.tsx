@@ -2,8 +2,7 @@ import { useRef } from 'react';
 import type { TabView } from '@shared/protocol';
 import type { JanusClient } from '../ws/ws';
 import { Transcript } from '../transcript/Transcript';
-import { transcriptIntents } from '../transcript/transcript-intents';
-import { ptyActions } from '../terminal/pty-actions';
+import { useAcpPanelActions } from './useAcpPanelActions';
 import './acp-response.css';
 
 export function AcpResponsePanel({ response, label, client }: {
@@ -13,12 +12,10 @@ export function AcpResponsePanel({ response, label, client }: {
 }) {
   const scrollReference = useRef<HTMLDivElement>(null);
   const panelReference = useRef<HTMLElement>(null);
+  const actions = useAcpPanelActions(client, label);
   const toggle = () => {
-    client.send({ method: 'toggleCollapse', params: { tab: label } });
+    actions.toggleCollapse();
     panelReference.current?.focus();
-  };
-  const send: JanusClient['send'] = (call) => {
-    client.send(call.method === 'command' ? { ...call, params: { ...call.params, tab: label } } : call);
   };
   return (
     <section className="acp-response" aria-label="ACP responses" ref={panelReference} tabIndex={0}
@@ -31,14 +28,14 @@ export function AcpResponsePanel({ response, label, client }: {
       <div className="acp-response-header">
         <strong>ACP</strong>
         {response.running && <span role="status">Responding…</span>}
-        <button type="button" onClick={() => client.send({ method: 'resetAcp', params: { tab: label } })}>
+        <button type="button" onClick={actions.reset}>
           Reset ACP
         </button>
       </div>
       <Transcript
         lines={response.lines}
-        intents={transcriptIntents(send)}
-        ptyActions={ptyActions(client)}
+        intents={actions.intents}
+        ptyActions={actions.ptyActions}
         onToggleCollapse={toggle}
         onPromptClick={() => {}}
         scrollRef={scrollReference}
