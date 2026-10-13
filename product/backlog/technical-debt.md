@@ -4,17 +4,6 @@
 
 ## development
 
-* Keep closing shell transcript writers owned and protected until their final writes have settled.
-
-Existing Debt: The shell transcript manager equates a writer leaving its active PTY map with releasing its file, even though terminal parsing, the final row, and stream closure continue asynchronously afterward. Severity: 6/10
-
-Existing Risk: 7/10 - An editor can replace a transcript while its final rows are still being appended to the old inode, and immediate application shutdown can skip waiting for an already-exited or released writer and lose the session's tail.
-
-Proposal Risk: 3/10 - The existing one-second shutdown deadline can still cut off a stalled writer, but ordinary PTY exit and tab closure no longer make pending final writes invisible to their owner.
-
-Proposal: In `src/shell/transcript/manager.ts`, retain a closing-writer record and its finishing promise when the PTY exit subscription, `release`, or a reinstall removes an entry from the active map. Use the idempotent `dispose` contract in `src/shell/transcript/writer.ts` to obtain the same completion promise on every path, retain the writer's opened path independently of the active entry until that promise settles, and have `isWriting` protect both active and closing files. Include closing promises in the bounded shutdown wait even when the active map is empty; keep the existing released-writer and per-tab failure-notification ownership checks. `src/editor/save.ts` and `src/editor/rename.ts` already consult `isWriting`, so they should gain the correct boundary without new save or rename logic. `src/shell/transcript/manager.test.ts` currently expects the guard to disappear synchronously on exit or close and tests shutdown only with active writers; update those assertions to distinguish exit from completed closure and add a held-finalization case followed immediately by manager disposal. Preserve the final-row and once-only finishing coverage in `src/shell/transcript/writer.test.ts` and the save-refusal coverage in `src/editor/save.test.ts`, and clarify the short draining period in `product/specs/shell-tab.md`.
-
-
 * Bind workspace provisioning completion to its own attempt rather than to a reusable launch name.
 
 Existing Debt: Workspace provisioning is tracked by name alone, and an earlier attempt's completion unconditionally deletes that name's pending record while credential-notice ownership is inferred only from the directory remaining referenced. Severity: 5/10
