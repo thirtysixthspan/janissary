@@ -46,4 +46,8 @@ If the file in effect cannot be read or is not valid JSON, the tab falls back �
 
 If only part of a file is damaged — one role, or one model entry — the rest opens and the line says how much was dropped. That file is still the one being edited, so edits are refused there too until you repair it by hand.
 
+If you type a description while another window changes it, the newer saved description replaces your draft when the change reaches this tab. The tab reports `The description of role "<name>" changed elsewhere — nothing was written.` Review the saved text, then enter your change again.
+
 You can always open the file itself in an editor if you would rather fix it by hand. The tab reads the file again every time you open it, so hand edits and tab edits can take turns without fighting.
+
+If you add an argument to `roles`, such as `roles left`, the command reports `Usage: roles`. Run `roles` without an argument to open the tab.
