@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Correct the plan's and the pull request description's claim that the waiting prompt reaches the transcript as `>`, when the implementation and its own test keep the trailing space.
-
-Existing Issue: The plan says rows are right-trimmed so a waiting `> ` prompt "arrives as `>`", and the pull request description's `cat` example ends with a bare `>`, but `translateToString(true)` only trims never-written cells, and the pull request's own `src/shell/transcript/manager.test.ts` asserts the final row is written as `> ` with its trailing space. Severity: 2/10
-
-Existing Risk: 2/10 - A later reader trusts the plan over the test, "fixes" the test to expect `>` or adds a trim that also strips meaningful trailing whitespace from command output, and the transcript's contract drifts without anyone deciding it should.
-
-Proposal Risk: 1/10 - Only prose changes, so the residual risk is a wording slip in the corrected sentences, which a reader would notice against the test that pins the behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1675 "correct the plan's and description's claim that the waiting prompt is written as a bare >". In `product/plans/complete/shell-tab-text-transcript.md`, reword decision 1's "right-trimmed" to say that only cells the program never wrote are trimmed, so spaces a program printed, including the space after the `> ` prompt, are kept, and replace the "so a waiting `> ` prompt arrives as `>`" sentence in the writer-and-row-tracker section with "so a waiting `> ` prompt is written as `> `". Edit the `cat` example in the pull request description's Behavior examples section so its final line is shown as the prompt with its trailing space, or is replaced by a note that the last line is the prompt that was waiting for input; this is a description edit made by the worker of this entry, not by the review. Do not change `TranscriptRowTracker` (`src/shell/transcript/row-tracker.ts`) or the `has written the unfinished row once dispose resolves` case in `src/shell/transcript/manager.test.ts`, which already pins the real behavior; confirm `product/specs/shell-tab.md` § Text transcript makes no trimming claim and leave it as is.
