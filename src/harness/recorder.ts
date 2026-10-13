@@ -1,17 +1,15 @@
-import { createWriteStream, type WriteStream } from 'node:fs';
+import { BoundedAppendFile, MAX_PENDING_APPEND_BYTES } from '../bounded-append-file.js';
 import { messageBus, type Subscription } from '../bus.js';
 import { ensureRecordingDirectory, harnessRecordingPath } from './recording-file.js';
 import { IntervalClock } from './cast-interval-clock.js';
 import { castHeader } from './cast-header.js';
 import type { TerminalColors } from './terminal-colors.js';
 
-export const MAX_PENDING_RECORDING_BYTES = 4 * 1024 * 1024;
-
 // Records one harness PTY's byte stream to a replayable asciicast v3 `.cast` file. It observes the
 // same `pty` bus events as `HarnessScreenReader` (its sibling observer of the same bytes) and, like
 // it, is owned/disposed by `HarnessManager`. The file is created lazily on the first `data` event —
-// a harness that exits before producing output leaves no empty file. Uses a single long-lived append
-// stream (not per-event `appendFileSync`) so a burst of PTY output never blocks `bus.emit`.
+// a harness that exits before producing output leaves no empty file. The writing itself, including
+// its pending-byte limit and its handling of open and stream errors, is `BoundedAppendFile`'s.
 //
 // `command` is what the asciicast header reports the session ran: a bare program name (`claude`) for a
 // named harness, the whole verbatim `ssh …` invocation for an ssh tab, the shell's own path for a
@@ -24,13 +22,11 @@ export const MAX_PENDING_RECORDING_BYTES = 4 * 1024 * 1024;
 // released when the PTY exits while the tab, and the file, both outlive the process.
 export class HarnessRecorder {
   private subscription: Subscription;
-  private stream: WriteStream | undefined;
-  private path: string | undefined;
+  private readonly file: BoundedAppendFile;
   private readonly clock = new IntervalClock();
   private colors: TerminalColors | undefined;
   private readonly startedAt = Date.now();
   private disposed = false;
-  private failed = false;
 
   constructor(
     private id: string,
@@ -41,6 +37,14 @@ export class HarnessRecorder {
     private onFailure: () => void,
     private onOpened?: (path: string) => void,
   ) {
+    this.file = new BoundedAppendFile(
+      () => {
+        ensureRecordingDirectory();
+        return harnessRecordingPath(this.label, this.startedAt);
+      },
+      MAX_PENDING_APPEND_BYTES,
+      () => { this.abandon(); },
+    );
     this.subscription = messageBus.on('pty', ['data', 'exit', 'resize'], (event) => {
       if (event.id !== this.id) return;
       if (event.type === 'data') this.onData(event.data);
@@ -53,15 +57,14 @@ export class HarnessRecorder {
   // A tab that has produced nothing has no recording to name, and a tab that has closed has released
   // its runtime along with the path, so this is the only honest answer either can give.
   recordingPath(): string | undefined {
-    return this.path;
+    return this.file.openedPath();
   }
 
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
     this.subscription.unsubscribe();
-    this.stream?.end();
-    this.stream = undefined;
+    this.file.dispose();
   }
 
   // The colors the client reported for this PTY's terminal. A surface that mounts before the session
@@ -72,8 +75,8 @@ export class HarnessRecorder {
   }
 
   private onData(data: string): void {
-    if (this.disposed || this.failed) return;
-    if (!this.stream) this.open();
+    if (this.disposed) return;
+    if (!this.file.isOpen()) this.open();
     this.writeEvent('o', data);
   }
 
@@ -82,7 +85,6 @@ export class HarnessRecorder {
   private onResize(cols: number, rows: number): void {
     this.cols = cols;
     this.rows = rows;
-    if (this.disposed || this.failed || !this.stream) return;
     this.writeEvent('r', `${cols}x${rows}`);
   }
 
@@ -95,27 +97,13 @@ export class HarnessRecorder {
     this.dispose();
   }
 
-  // Lazily open the append stream and write the asciicast header line. A synchronous throw here
-  // (an `EACCES` on the project directory, say) would otherwise be swallowed by the bus's
-  // per-listener try/catch, leaving the recorder to retry the open on every subsequent chunk for the
-  // life of the session while never writing anything — so it disables the recorder instead.
+  // Writing the asciicast header line is what lazily opens the file. The path is announced only
+  // after it, so a listener that opens the file to read it finds a complete header rather than an
+  // empty file with a header still to come.
   private open(): void {
-    try {
-      ensureRecordingDirectory();
-      this.path = harnessRecordingPath(this.label, this.startedAt);
-      const stream = createWriteStream(this.path, { flags: 'a' });
-      // A Node stream's async `'error'` event escapes the bus's per-listener try/catch and would
-      // crash the process if unhandled — disable the recorder instead.
-      stream.on('error', () => { this.abandon(); });
-      this.stream = stream;
-      // After the header is written, so a listener that opens the file to read it finds a complete
-      // one rather than an empty file with a header still to come.
-      this.writeLine(JSON.stringify(this.header()) + '\n');
-      this.onOpened?.(this.path);
-    } catch {
-      this.path = undefined;
-      this.abandon();
-    }
+    this.file.write(JSON.stringify(this.header()) + '\n');
+    const path = this.file.openedPath();
+    if (path !== undefined) this.onOpened?.(path);
   }
 
   private header(): Record<string, unknown> {
@@ -129,30 +117,19 @@ export class HarnessRecorder {
     });
   }
 
-  // Open errors, stream errors, and excessive pending output all stop recording and release its
-  // resources before reporting once, so none can interrupt the PTY's own lifecycle.
+  // Open errors, stream errors, and excessive pending output all stop recording — `BoundedAppendFile`
+  // has already released the stream — and report once, so none can interrupt the PTY's own lifecycle.
   private abandon(): void {
-    if (this.failed) return;
-    this.failed = true;
     this.disposed = true;
     this.subscription.unsubscribe();
-    this.stream?.destroy();
-    this.stream = undefined;
     this.onFailure();
   }
 
-  private writeLine(line: string): void {
-    if (this.failed || !this.stream) return;
-    if (this.stream.writableLength + Buffer.byteLength(line) > MAX_PENDING_RECORDING_BYTES) {
-      this.abandon();
-      return;
-    }
-    this.stream.write(line);
-  }
-
+  // Never reaches `file.write` before the header has opened the file: `write` opens lazily, so a
+  // resize or exit arriving before the first output would otherwise create a file with no header.
   private writeEvent(code: 'o' | 'r' | 'x', data: string): void {
-    if (this.failed || !this.stream) return;
+    if (!this.file.isOpen()) return;
     const elapsed = (Date.now() - this.startedAt) / 1000;
-    this.writeLine(JSON.stringify([this.clock.interval(elapsed), code, data]) + '\n');
+    this.file.write(JSON.stringify([this.clock.interval(elapsed), code, data]) + '\n');
   }
 }
