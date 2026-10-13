@@ -15,6 +15,11 @@ import { formatAgentResult } from '../agent/format-result.js';
 import { resolveAgentGroup } from '../agent/group-selector.js';
 import { inheritRemoteAgentTarget, resolveRemoteAgentTarget, type RemoteAgentTarget } from '../agent/remote-target.js';
 
+function cleanupErrorMessages(error: unknown): string[] {
+  const failures = error instanceof AggregateError ? error.errors : [error];
+  return failures.map((failure) => failure instanceof Error ? failure.message : String(failure));
+}
+
 async function runAgent(
   commandText: string,
   label: string,
@@ -89,10 +94,7 @@ async function runAgent(
       if (run.abortController.signal.aborted) {
         const cleanupWarnings: string[] = [];
         try { await managers.agent.finish(run.id, 'terminated'); }
-        catch (error) {
-          const failures = error instanceof AggregateError ? error.errors : [error];
-          cleanupWarnings.push(...failures.map((failure) => failure instanceof Error ? failure.message : String(failure)));
-        }
+        catch (error) { cleanupWarnings.push(...cleanupErrorMessages(error)); }
         return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings };
       }
       snapshot = resolveAgentSnapshot(launch.task, launch.skills, {
@@ -121,10 +123,7 @@ async function runAgent(
       } catch (error) {
         const cleanupWarnings: string[] = [];
         try { await managers.agent.finish(activeRun.id, 'failed'); }
-        catch (cleanupError) {
-          const errors = cleanupError instanceof AggregateError ? cleanupError.errors : [cleanupError];
-          cleanupWarnings.push(...errors.map((failure) => failure instanceof Error ? failure.message : String(failure)));
-        }
+        catch (cleanupError) { cleanupWarnings.push(...cleanupErrorMessages(cleanupError)); }
         const result = agentFailure(error);
         return { ...result, cleanupWarnings: [...result.cleanupWarnings, ...cleanupWarnings] };
       }
@@ -148,10 +147,7 @@ async function runAgent(
     try {
       if (managers.agent.runs.has(activeRun.id)) await managers.agent.finish(activeRun.id, result.status);
       else await activeRun.finish(activeRun.outcome ?? result.status);
-    } catch (error) {
-      const errors = error instanceof AggregateError ? error.errors : [error];
-      cleanupWarnings.push(...errors.map((failure) => failure instanceof Error ? failure.message : String(failure)));
-    }
+    } catch (error) { cleanupWarnings.push(...cleanupErrorMessages(error)); }
     if (activeRun.outcome === 'terminated') {
       result = { ...result, status: 'terminated', response: 'Agent terminated.' };
     }
@@ -160,10 +156,7 @@ async function runAgent(
     const cleanupWarnings: string[] = [];
     if (run && managers.agent.runs.has(run.id)) {
       try { await managers.agent.finish(run.id, run.abortController.signal.aborted ? 'terminated' : 'failed'); }
-      catch (cleanupError) {
-        const errors = cleanupError instanceof AggregateError ? cleanupError.errors : [cleanupError];
-        cleanupWarnings.push(...errors.map((failure) => failure instanceof Error ? failure.message : String(failure)));
-      }
+      catch (cleanupError) { cleanupWarnings.push(...cleanupErrorMessages(cleanupError)); }
     }
     if (run) {
       try { await run.finish(run.outcome ?? 'failed'); } catch { /* cleanup warnings were collected above */ }
