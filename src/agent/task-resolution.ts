@@ -48,27 +48,29 @@ function resolveTaskPath(request: string, options: AgentResolutionOptions): stri
   return realTarget;
 }
 
+function validateTaskRoot(root: string, source: 'project' | 'janissary'): void {
+  const taskRoot = path.join(root, 'ai', 'tasks');
+  try {
+    statSync(taskRoot);
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return;
+    throw error;
+  }
+
+  const realTaskRoot = realpathSync(taskRoot);
+  const realSourceRoot = realpathSync(root);
+  const realAllowedRoot = source === 'project'
+    ? realSourceRoot
+    : path.join(realSourceRoot, 'ai', 'tasks');
+  if (!within(realAllowedRoot, realTaskRoot)) {
+    throw taskError(`task root outside allowed roots "${source}"`);
+  }
+}
+
 function findBareTask(filename: string, options: AgentResolutionOptions): string {
   for (const source of ['project', 'janissary'] as const) {
     const root = source === 'project' ? options.workspaceDir : options.installationDir;
-    const taskRoot = path.join(root, 'ai', 'tasks');
-    let rootExists = true;
-    try {
-      statSync(taskRoot);
-    } catch (error) {
-      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') rootExists = false;
-      else throw error;
-    }
-    if (rootExists) {
-      const realTaskRoot = realpathSync(taskRoot);
-      const realSourceRoot = realpathSync(root);
-      const realAllowedRoot = source === 'project'
-        ? realSourceRoot
-        : path.join(realSourceRoot, 'ai', 'tasks');
-      if (!within(realAllowedRoot, realTaskRoot)) {
-        throw taskError(`task root outside allowed roots "${source}"`);
-      }
-    }
+    validateTaskRoot(root, source);
     const rows = listTasksFromRoot(root, source, true);
     const matches = rows.filter((row) => !row.dir && row.source === source && row.name === filename);
     if (matches.length === 0) continue;
