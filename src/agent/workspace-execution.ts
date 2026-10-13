@@ -30,7 +30,11 @@ export function prepareAgentWorkspace(workspace: WorkspaceManager, callerDir: st
   if ('error' in created) throw new Error(created.error);
   const release = workspace.acquireAgentLease(created.dir);
   workspace.release(created.dir);
-  return { dir: created.dir, ready: created.ready, cancel: () => workspace.cancel(name), release };
+  return {
+    dir: created.dir, ready: created.ready,
+    cancel: () => { if (created.cancel) created.cancel(); else workspace.cancel(name); },
+    release,
+  };
 }
 
 export async function startLocalAgentRun(

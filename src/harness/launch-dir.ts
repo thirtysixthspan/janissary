@@ -8,6 +8,7 @@ import type { ProvisioningWorkspace } from '../workspace/manager.js';
 export type LaunchDir = {
   cwd: string;
   workspaceDir: string | undefined;
+  workspaceCancel: (() => void) | undefined;
   // Only set for a workspace clone still in flight. Its `cwd` is already the clone's target
   // directory (known synchronously, see `WorkspaceManager.create`), so the tab and its cwd can be
   // set up immediately without waiting for this to resolve.
@@ -33,6 +34,7 @@ export function resolveLaunchDir(
   return {
     cwd: typeof resolved === 'string' ? resolved : resolved.dir,
     workspaceDir: typeof resolved === 'string' ? undefined : resolved.dir,
+    workspaceCancel: typeof resolved === 'string' ? undefined : resolved.cancel,
     ready: typeof resolved === 'string' ? undefined : resolved.ready,
   };
 }

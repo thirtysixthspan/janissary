@@ -11,6 +11,7 @@ export interface SpawnTabOptions {
   label: string;
   cwd: string;
   workspaceDir: string | undefined;
+  workspaceCancel?: () => void;
   offline: boolean;
   group: number;
   groupName?: string;

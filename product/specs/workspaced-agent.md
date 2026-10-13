@@ -199,7 +199,9 @@ Workspace directories are ephemeral:
 - **Normal launch**: `.janissary/workspace/` is cleared before rendering.
 - **Tab creation**: The tab (agent or harness) appears immediately; the clone runs in the
   background and never blocks the rest of the app. Closing the tab before the clone finishes
-  cancels it right away, the same as any other close.
+  cancels that tab's clone right away, the same as any other close. If another launch reuses its
+  name before the earlier clone settles, the earlier attempt cannot clear or cancel the new tab's
+  provisioning state or report its credential notice on the new tab's behalf.
 - **Shared references**: A clone starts with one reference. Each agent joined through the source
   tab's ➕ button retains another reference, locally or remotely. Closing the tab that originally
   created the clone does not cancel or remove a workspace another tab is already using.

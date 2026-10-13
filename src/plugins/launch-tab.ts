@@ -69,7 +69,8 @@ function launchedTab(managers: Managers, pluginId: string, instanceKey: string) 
 }
 
 function releaseClone(managers: Managers, label: string, clone: ProvisioningWorkspace): void {
-  managers.workspace.cancel(label);
+  if (clone.cancel) clone.cancel();
+  else managers.workspace.cancel(label);
   managers.workspace.release(clone.dir);
 }
 
@@ -117,7 +118,9 @@ function openLaunched(
 ): boolean {
   const { managers, declaration, origin } = input;
   const cwd = startDirectory(managers, origin, clone);
-  const workspace = clone && { dir: clone.dir, offline: request.workspace?.offline ?? false };
+  const workspace = clone && {
+    dir: clone.dir, offline: request.workspace?.offline ?? false, cancel: clone.cancel,
+  };
   try {
     managers.tab.openPluginTab(
       declaration.id, declaration.tabLabelPrefix, instanceKey, declaration.payloadSchemaVersion, origin.label,

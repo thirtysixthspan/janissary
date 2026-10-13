@@ -17,7 +17,7 @@ import { requestedTabGroup } from './group-placement.js';
 export type PluginTabPreset = {
   label?: string;
   cwd?: string;
-  workspace?: { dir: string; offline: boolean };
+  workspace?: { dir: string; offline: boolean; cancel?: () => void };
   remote?: { address: string; host: string };
   recordedPtyId?: string;
   group?: string;
@@ -164,6 +164,7 @@ export function openPluginTab(
       if (own) {
         minted.workspaceDir = own.workspaceDir;
         minted.offline = own.offline;
+        minted.workspaceCancel = preset?.workspace?.cancel;
       } else if (confinedToSource && source?.workspaceDir) {
         minted.workspaceDir = source.workspaceDir;
         minted.offline = source.offline;
