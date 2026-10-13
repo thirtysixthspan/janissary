@@ -10,6 +10,7 @@ import { makeTab } from '../tab/index.js';
 import type { Tab } from '../tab/types.js';
 import type { Managers } from '../managers.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import { executeAndCapture } from '../capture/execute-and-capture.js';
 
 const executeShellCmdMock = vi.fn();
 const queryShellPwdMock = vi.fn();
@@ -120,7 +121,7 @@ describe('ShellManager — which shell a tab gets', () => {
     expect(spawnTransportMock).not.toHaveBeenCalled();
   });
 
-  it('cds a piped shell into the project directory when the tab\'s cwd is not a directory', async () => {
+  it('passes the project directory as cwd when the tab\'s cwd is not a directory', async () => {
     writeFileSync(path.join(tmpDir, '.janissary', 'config.json'), JSON.stringify({ interactiveShellDetection: false }));
     loadConfig(tmpDir);
     const managers = makeManagers();
@@ -130,8 +131,25 @@ describe('ShellManager — which shell a tab gets', () => {
     new ShellManager(managers).run('janus', 'ls');
 
     await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+    expect(spawnShellMock).toHaveBeenCalledWith(0, { JANUS_AGENT_NAME: 'janus' }, expect.anything(), { cwd: tmpDir });
     const shell = spawnShellMock.mock.results[0].value as { stdin: { write: ReturnType<typeof vi.fn> } };
-    expect(shell.stdin.write).toHaveBeenCalledExactlyOnceWith(`cd "${tmpDir}"\n`);
+    expect(shell.stdin.write).not.toHaveBeenCalled();
+  });
+
+  it('passes shell-sensitive directory names as process data without generating stdin input', async () => {
+    const cwd = path.join(tmpDir, '$dollar`tick"quote\nnewline');
+    mkdirSync(cwd);
+    const managers = makeManagers();
+    managers.tab = new TabManager(managers, tmpDir);
+    seedRootTab(managers.tab);
+    managers.tab.setCwd('janus', cwd);
+    new ShellManager(managers).run('janus', 'pwd');
+
+    await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledTimes(1); });
+
+    expect(spawnShellMock).toHaveBeenCalledWith(0, { JANUS_AGENT_NAME: 'janus' }, expect.anything(), { cwd });
+    const shell = spawnShellMock.mock.results[0].value as { stdin: { write: ReturnType<typeof vi.fn> } };
+    expect(shell.stdin.write).not.toHaveBeenCalled();
   });
 
   it('leaves a remote tab on its channel shell whatever the setting says', async () => {
@@ -194,6 +212,18 @@ describe('ShellManager — transcript events', () => {
     ]);
     expect(tab().log.at(-1)).toEqual({ input: 'ls', output: 'file-a', running: false, cwd: '/work' });
     expect(managers.tab.isBusy(label)).toBe(false);
+  });
+
+  it('delivers the bounded-output note through the transcript capture path', async () => {
+    const result = `retained output\n(output truncated after 1 MiB)`;
+    const captured = executeAndCapture(label, async () => {
+      shellManager.run(label, 'flood');
+      await vi.waitFor(() => { expect(executeShellCmdMock).toHaveBeenCalledOnce(); });
+      completeCommand(result);
+    });
+
+    await expect(captured).resolves.toEqual(['', result]);
+    expect(tab().log.at(-1)?.output).toBe(result);
   });
 
   it('returns a scrolled-up transcript to the bottom when a command starts', () => {

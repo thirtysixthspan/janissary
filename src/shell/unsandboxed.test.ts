@@ -5,11 +5,15 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { shellStartupArgs } from './startup.js';
 import { executeShellCmd } from './index.js';
+import { ShellManager } from './manager.js';
+import { TabManager } from '../tab/manager.js';
+import { seedRootTab } from '../tab/root-tab-test-fixture.js';
+import type { Managers } from '../managers.js';
 
 // Drives the real `executeShellCmd` rather than re-implementing what it writes, so the format the
 // shell actually receives is the one under test.
@@ -67,6 +71,28 @@ describe('persistent shell', () => {
       expect(await pending).toBe('read=[typed by the user]');
     } finally {
       shell.kill();
+    }
+  }, 15_000);
+
+  it('starts a captured shell in a path with shell syntax as literal directory data', async () => {
+    const cwd = path.join(tmpDir, '$dollar`tick"quote\nnewline');
+    mkdirSync(cwd);
+    const managers = {} as Managers;
+    managers.tab = new TabManager(managers, tmpDir);
+    seedRootTab(managers.tab);
+    managers.tab.setCwd('janus', cwd);
+    const shellManager = new ShellManager(managers);
+
+    try {
+      const output = await new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Timed out')), 10_000);
+        shellManager.run('janus', 'pwd', {
+          onComplete: (result) => { clearTimeout(timeout); resolve(result); },
+        });
+      });
+      expect(output).toBe(cwd);
+    } finally {
+      shellManager.closeAll();
     }
   }, 15_000);
 });

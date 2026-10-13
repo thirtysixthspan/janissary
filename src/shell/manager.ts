@@ -70,9 +70,9 @@ export class ShellManager {
   }
 
   // The tab's persistent shell, spawned on first use and respawned if the previous one died (its
-  // stdin no longer writable). A freshly spawned shell is `cd`'d into `cwd` so it starts in the tab's
-  // working directory — the workspace clone for a workspaced agent. A nullish `cwd` leaves the shell
-  // in its default directory.
+  // stdin no longer writable). A local shell starts directly in the tab's validated working
+  // directory — the workspace clone for a workspaced agent. A nullish `cwd` leaves it in its default
+  // directory.
   private getShell(label: string, cwd: string | undefined): ShellProcess {
     const existing = this.shells.get(label);
     if (existing?.stdin?.writable) return existing;
@@ -100,9 +100,7 @@ export class ShellManager {
       tokens: tab?.workspaceDir ? getProjectTokens() : undefined,
     };
     const localCwd = cwd ? existingDirectory(cwd) ?? existingDirectory(this.managers.tab.launchDir) : undefined;
-    const shell = spawnShell(0, { JANUS_AGENT_NAME: label }, sandbox);
-    if (localCwd) shell.stdin?.write(`cd "${localCwd}"\n`);
-    return shell;
+    return spawnShell(0, { JANUS_AGENT_NAME: label }, sandbox, { cwd: localCwd });
   }
 
   // Run a command with transcript streaming, busy state, and persistence. This is the high-level
