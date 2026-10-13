@@ -29,3 +29,13 @@ Use `on <[user@]host[:path]>` to run remotely from either a local or remote call
 Add `in a tab` to open a read-only monitor while the task runs. It shows the launch command, model and effort, execution host and workspace, status, and reported activity. Local runs show `Local` and their execution workspace; remote runs show the remote host and workspace. Select **Terminate** to stop that run. Closing the monitor only closes the view; the task continues, and you can still collect its result in the caller tab.
 
 Add `in group <name|id>` to place that monitor in an existing tab group. Names match without regard to case; numeric IDs select a group by number. A group that isn't open, or an invalid ID, fails before the task starts with `Agent: group "<selector>" does not exist.` This check also applies when the run is headless. Without a group selector, the monitor joins the caller's group.
+
+## Fix a failed launch
+
+<img class="agent-float left" src="/agents/hamza-south-east.png" alt="" />
+
+If you leave out `execute`, Janissary reports `Agent: missing execute clause.` If you add `execute` without a task name, it reports `Agent: missing task after execute.` Add the missing part before trying again.
+
+When a bare task filename matches multiple files in your project's `ai/tasks/` folder, Janissary reports `Agent: ambiguous task "<value>": <matching paths>.` Rename or remove the duplicate project task. Janissary stops at that ambiguity instead of looking for the task in its installed task folder. If no task matches, it reports `Agent: unknown task "<value>".`
+
+If you add `in a tab` but Janissary can't open the monitor, the run fails before it starts and reports `Agent: could not open monitoring tab.` Remove `in a tab` to run without a monitor, or retry after the monitor is available.
