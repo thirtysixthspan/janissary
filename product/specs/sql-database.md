@@ -183,6 +183,9 @@ the editor with the toggle on, and typing takes the cell out of null: the toggle
 keystroke and what was typed is the value, so filling in a missing one is not the same act as typing
 into a cell that has it.
 
+The editor starts with the value from the column named by the cell, even when columns are hidden or
+shown in a different order. A missing cell starts as empty text; a null cell starts as null.
+
 A write addresses one row by an identity the server issued when it returned the page. A client cannot
 name a row it was not handed, and cannot write its own `WHERE`. An identity stays good for the last
 eight pages read from that database and always names the same primary key, so it can never reach a
@@ -246,6 +249,9 @@ at all, and pressing a cell does nothing rather than writing. It can be read and
 filter, the search term, the order, or the columns reads the selected table again in its place, and
 the header keeps naming that table; an export exports the selected table's query, not the result. The
 console still writes to the database.
+
+The selected object's write availability and the statement-result marker apply together: a statement
+result stays read-only even when it has no rows and the selected object is a writable table.
 
 ### Statement history
 

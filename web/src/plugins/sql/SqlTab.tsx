@@ -8,7 +8,7 @@ import { DataGrid } from './DataGrid';
 import { DatabaseSwitcher } from './DatabaseSwitcher';
 import { ExportButtons } from './ExportButtons';
 import { SqlConsole } from './SqlConsole';
-import { statementResult } from './grid-view';
+import { projectGridWriteState } from './grid-state';
 import { TableSwitcher } from './TableSwitcher';
 import { useSqlActions } from './useSqlActions';
 
@@ -47,11 +47,7 @@ export function SqlTab({
   // than a walk out of the tab. Focus follows the same path a user pressing it twice would take.
   const toGrid = () => { gridRef.current?.focus(); };
   const toConsole = () => { consoleRef.current?.focus(); };
-  const object = payload.objects.find((entry) => entry.name === payload.object);
-  // A statement's result is read-only the way a view is — there is no row identity in it to write to
-  // — so the insert control goes with the rest of the write controls rather than offering a form
-  // about a table the grid is not showing.
-  const writable = object?.writable === true && !statementResult(payload.grid);
+  const { object, writable } = projectGridWriteState(payload);
 
 
   return (

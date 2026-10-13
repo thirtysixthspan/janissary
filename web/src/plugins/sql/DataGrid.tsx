@@ -3,7 +3,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faFilter as faFilterIcon } from '@fortawesome/free-solid-svg-icons';
 import type { SqlPayload, SqlRow } from '@shared/plugins/sql/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { countLabel, readOnlyReason, statementResult, toggleColumn, visibleColumns } from './grid-view';
+import { countLabel, toggleColumn, visibleColumns } from './grid-view';
+import { cellDraftValue, projectGridWriteState } from './grid-state';
 import { GridRow } from './GridRow';
 import { InsertForm } from './InsertForm';
 import { ColumnChooser } from './ColumnChooser';
@@ -48,17 +49,11 @@ export function DataGrid({
   /** Hand focus back to the command bar: a bare `Tab` in the grid returns to the other pane. */
   onEnter?(): void;
 }) {
-  const object = payload.objects.find((entry) => entry.name === payload.object);
+  const { object, writable, readOnly } = projectGridWriteState(payload);
   const [deleting, setDeleting] = useState<SqlRow | null>(null);
   const [filtering, setFiltering] = useState<string | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
   const grid = payload.grid;
-  // A statement's result carries no row identity, so the grid is read-only the way a view is and
-  // offers no write control at all. One flag decides it, so the reason, the delete affordance, and
-  // both routes to an editor cannot disagree about whether this grid can be written to.
-  const statement = statementResult(grid);
-  const readOnly = readOnlyReason(object, statement);
-  const writable = object?.writable === true && !statement;
   const ordered = payload.order[0];
   // The declared order, minus what the chooser has put away. A hidden column keeps its place in the
   // row, so what is rendered is a list of names and the position each one holds in the cells.
@@ -184,8 +179,7 @@ export function DataGrid({
                 onSelectRow={(extend) => selection.selectRow(index, extend)}
                 onEdit={(column) => {
                   if (!writable) return;
-                  const cell = row.cells[grid?.columns.indexOf(column) ?? -1];
-                  draft.beginCellEdit(row.key, column, cell?.isNull ? null : cell?.text ?? '');
+                  draft.beginCellEdit(row.key, column, cellDraftValue(grid, row, column));
                 }}
                 onCommit={(column, value) => draft.commitCell(row.key, column, value)}
                 onDraftChange={(column, value) => draft.updateCellDraft(row.key, column, value)}
