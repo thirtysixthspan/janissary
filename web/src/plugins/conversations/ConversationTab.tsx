@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFolder, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { ConversationTabPayload, ConversationTurn } from '@shared/plugins/conversations/shared';
@@ -6,6 +6,7 @@ import { renderMarkdown, type TabPluginClientCapabilities } from '../api';
 import { ConversationComposer } from './ConversationComposer';
 import { ConversationTitle } from './ConversationTitle';
 import { modelGroups, pairValue } from './model-pairs';
+import { useConversationController } from './useConversationController';
 import { useStickToBottom } from './useStickToBottom';
 
 export function ConversationTab({
@@ -17,6 +18,7 @@ export function ConversationTab({
 }) {
   const { conversation, models } = payload;
   const streaming = conversation.turns.some((turn) => turn.streaming === true);
+  const controller = useConversationController(payload, capabilities);
   const turnsRef = useRef<HTMLDivElement>(null);
   const latestTurn = conversation.turns.at(-1);
   const latestQuery = latestTurn?.query;
@@ -31,17 +33,6 @@ export function ConversationTab({
   );
   const { onScroll: onTurnsScroll } = useStickToBottom(turnsRef, capabilities.active, rePinKey);
 
-  useEffect(() => {
-    if (!capabilities.active || !streaming) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      void capabilities.intent('cancel', {});
-    };
-    globalThis.addEventListener('keydown', onKeyDown);
-    return () => { globalThis.removeEventListener('keydown', onKeyDown); };
-  }, [capabilities, streaming]);
-
   // The selection a conversation opened with — `Chat about this`. It renders as a user turn the
   // model never answered, and stays in the conversation after queries are sent; the first send
   // carries it to the model as context, and closing or reopening its tab loses it.
@@ -55,19 +46,14 @@ export function ConversationTab({
         <ConversationTitle
           title={conversation.title}
           deleted={conversation.deleted === true}
-          onRename={(title) => { void capabilities.intent('rename', { title }); }}
+          onRename={(title) => { void controller.rename(title); }}
         />
         <span className="plugin-actions">
           <select
             aria-label="Model"
             value={pairValue(conversation.pair.harness, conversation.pair.model)}
             disabled={streaming || conversation.deleted}
-            onChange={(event) => {
-              const separator = event.target.value.indexOf(':');
-              const harness = event.target.value.slice(0, separator) as 'claude' | 'opencode';
-              const model = event.target.value.slice(separator + 1);
-              void capabilities.intent('select-model', { harness, model });
-            }}
+            onChange={(event) => { void controller.selectModel(event.target.value); }}
           >
             {groups.map((group) => (
               <optgroup key={group.harness} label={group.harness}>
@@ -83,7 +69,7 @@ export function ConversationTab({
             type="button"
             title="Open file navigator in this workspace"
             disabled={conversation.deleted}
-            onClick={() => { void capabilities.intent('open-files', {}); }}
+            onClick={() => { void controller.openFiles(); }}
           >
             <FontAwesomeIcon icon={faFolder} />
           </button>
@@ -91,7 +77,7 @@ export function ConversationTab({
             type="button"
             title="New shell in this workspace"
             disabled={conversation.deleted}
-            onClick={() => { void capabilities.intent('launch-shell', {}); }}
+            onClick={() => { void controller.launchShell(); }}
           >
             <FontAwesomeIcon icon={faPlus} />
           </button>
@@ -103,9 +89,7 @@ export function ConversationTab({
         ref={turnsRef}
         onScroll={(event) => {
           onTurnsScroll(event.currentTarget);
-          if (event.currentTarget.scrollTop === 0 && conversation.hasOlder) {
-            void capabilities.intent('load-older', {});
-          }
+          if (event.currentTarget.scrollTop === 0) controller.loadOlder();
         }}
       >
         {draft !== undefined && (
@@ -131,7 +115,7 @@ export function ConversationTab({
         streaming={streaming}
         deleted={conversation.deleted === true}
         active={capabilities.active}
-        onSend={(query) => { void capabilities.intent('send', { query }); }}
+        onSend={(query) => { void controller.send(query); }}
       />
     </div>
   );

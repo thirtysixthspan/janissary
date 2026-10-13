@@ -4,26 +4,6 @@
 
 ## development
 
-Existing Debt: In violation of §5 (components render, they do not decide), `RolesTab` owns the name-keyed in-flight guard, empty-name handling, request refusal handling, and comparison between a submitted name and the currently typed name before an accepted reply can close the field. Severity: 6/10
-
-Existing Risk: 5/10 - A change to the creation field's Enter, blur, or close wiring can duplicate an add-role request or let an older acceptance erase newer typing because the asynchronous ownership rules are intertwined with the rendered form.
-
-Proposal Risk: 2/10 - Focused hook tests can pin duplicate submission and delayed acceptance independently of the role cards, although overlapping requests still depend on preserving the current name-keyed guard rather than replacing it with a blanket busy flag.
-
-Proposal: Extract the creation state and handlers from `web/src/plugins/roles/RolesTab.tsx` into a new `web/src/plugins/roles/useRoleCreation.ts` hook that receives the plugin's intent function and refusal callback and returns the adding flag, displayed name, and open/type/cancel/commit handlers. Move `typed`, `inFlight`, `typeName`, `closeNewRole`, and `commitNewRole` together so empty blur, trim-before-submit, same-name deduplication, refusal retention, and the latest-typed-name comparison keep their current ordering. Let `RolesTab` render those values and forward its input events; keep other role mutations and drag/drop behavior outside this extraction. The component's public props and export stay intact, so its one production consumer, `web/src/plugins/roles/index.tsx`, is unaffected. `web/src/plugins/roles/RolesTab.test.tsx` already pins empty blur, repeated Enter, refused names, and typing during a delayed answer, while `web/src/plugins/roles/roles-dnd.test.tsx` pins the surrounding drag/drop behavior; both must keep passing without weakening assertions. Add hook-level deferred-reply tests for those creation rules and for two different names submitted before either answer arrives. The work touches one existing source file and a new hook and its tests, with no plugin contract or server change.
-
-
-* Move conversation intents and active-stream cancellation into a feature controller hook beneath the conversation tab.
-
-Existing Debt: In violation of §5 (components render, they do not decide), `ConversationTab` parses a model-pair string in JSX, sends rename/send/workspace/paging intents from render callbacks, and owns the active-stream Escape listener and its cancellation request. Severity: 6/10
-
-Existing Risk: 5/10 - Changing the model selector or streaming view can alter request payloads, leave a hidden conversation handling Escape, or request older turns after paging is exhausted because transport rules and listener eligibility are embedded in the component.
-
-Proposal Risk: 3/10 - A controller hook can test payload shaping, current visibility, and listener cleanup separately, but asynchronous intent rejection and repeated top-of-list scroll events retain their existing transport behavior.
-
-Proposal: Add a framework-free `web/src/plugins/conversations/conversation-actions.ts` adapter receiving only the plugin intent function and exposing named rename, send, select-model, cancel, open-files, launch-shell, and load-older actions. Put the inverse of `pairValue` in `web/src/plugins/conversations/model-pairs.ts`, preserving the first-colon split so colons inside a model id remain part of that id. Add `web/src/plugins/conversations/useConversationController.ts` to bind the adapter to the current payload/capabilities, own the Escape listener only while active and streaming, and expose an older-turn handler gated by the current `hasOlder` value. Replace the protocol calls and parsing in `web/src/plugins/conversations/ConversationTab.tsx` with controller callbacks while preserving its public props, title/composer wiring, server-provided turns, and existing scroll-pinning hook contract. Its one production importer, `web/src/plugins/conversations/index.tsx`, is unaffected. `web/src/plugins/conversations/ConversationTab.test.tsx` pins model selection, workspace tools, rename, send, Escape cancellation, paging eligibility, streaming follow-scroll, and viewport preservation; retain it along with `web/src/plugins/conversations/ConversationComposer.test.tsx` and `web/src/plugins/conversations/ConversationTitle.test.tsx`. Add adapter and hook tests for model ids containing colons, inactive-stream Escape suppression, active-to-inactive cleanup, unmount cleanup, and a payload update that removes older-turn eligibility. The source edits stay in the tab and its existing model-pair module, plus the new adapter and hook.
-
-
 * Extract transcript follow-scroll behavior into a dedicated hook and share its pure threshold policy with the conversation surface.
 
 Existing Debt: In violation of §5 (components render, they do not decide) and §6 (hooks are the reactive seam), `Transcript` owns programmatic-versus-user scroll detection, bottom-follow thresholds, ResizeObserver lifecycle, and search-hit positioning, while the conversation follow-scroll hook independently repeats the same one-pixel and forty-pixel rules. Severity: 5/10
