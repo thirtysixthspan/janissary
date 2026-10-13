@@ -186,8 +186,9 @@ another tab delivers with `send` or `queue`, do not.
 Every other chord belongs to the application, unchanged: `Ctrl+A` opens the task picker, `Ctrl+G` the
 tab navigator, `Cmd+P` quick open and `Cmd+Shift+F` the project search, all with the cursor in the
 command bar. `Ctrl+E` opens the queue popup over the shell tab, as
-described above. `Cmd+F` does nothing here — a plugin tab has no transcript to search — which is the
-same in every plugin tab.
+described above. `Cmd+F` does nothing here — the terminal is not a searchable in-tab transcript — which
+is the same in every plugin tab. The session's text transcript, once opened with **Open transcript**
+(see § Text transcript), is searched with `Cmd+F` in its editor tab.
 
 `Ctrl+R` opens this tab's own history while it is the visible one, and a bare `hist` submitted from the
 command bar opens the same list rather than the application's history picker, which a shell tab's
@@ -227,6 +228,14 @@ and inert until the shell has printed something, green and pressable from that m
 green and pressable once the recording has stopped, so a partial recording is still reachable. See
 [[harness-recording]] § The recording flag.
 
+It also draws an **Open transcript** button — the clipboard icon, with the tooltip and accessible name
+`Open transcript` — once the shell's text transcript file has opened, which in practice is as the
+shell starts. It sits among the row's actions after the **Show diff in the workspace** button (drawn
+only on a workspaced shell) and before the connections window button. Pressing it opens the file as it
+stands in an editor tab named after the file, `<label>-<timestamp>.txt`. Once drawn it stays after the transcript has
+failed and opens whatever was written. A docked shell's button works the same way. Under
+`"recordShellTabs": false` it is never drawn. See § Text transcript.
+
 A remote shell also shows the remote host as ordinary text matching the working-directory text, with
 the full destination in its tooltip. Its connection status plug sits in the flag group beside the
 recording and workspace marks. It shows provisioning until the remote workspace is ready, connected
@@ -261,8 +270,8 @@ started, because a schedule types into a terminal that must already exist. A plu
 refuses `schedule … in <label>` with `Tab "<label>" cannot run scheduled commands.`, and is not
 offered as a target in the "New schedule" dialog.
 
-There is no **open transcript** control, because there is no transcript: the terminal replaced it. The
-working directory shown follows the shell's current directory. It updates after a `cd` and when zsh
+The terminal takes the place of an in-tab transcript; the session's text is kept in a file opened with
+**Open transcript** (see § Text transcript). The working directory shown follows the shell's current directory. It updates after a `cd` and when zsh
 returns to its prompt after a command. A reported directory is recorded only when it is an absolute
 path in normal form, with no `.` or `..` segment, no doubled slash, and no trailing slash beyond the
 root. zsh always reports its directory that way, so any other report is refused and the recorded
@@ -413,7 +422,9 @@ tab's recording flag. See [[harness-recording]].
 **What is written is what the terminal printed, and — because zsh echoes it — what was typed.** No
 input is recorded deliberately: no keystroke event is written, and nothing is read from what you type.
 But a shell echoes each character back to the terminal as it is entered, and that echo is part of the
-same output stream, so a password typed at a `sudo` or `psql` prompt reaches the recording. This is a
+same output stream, so a command line typed at the prompt, or text an interactive program echoes, reaches
+the recording — a secret typed as `export TOKEN=…` included. A password typed at a prompt that turns
+echo off (`sudo`, `ssh`, `psql`) prints nothing, so nothing of it is recorded. This is a
 real difference from a harness or ssh tab, where nothing you type is echoed. The mitigations are the
 ones every recording here has: the file is written under the project's own `.janissary/recordings/`,
 never served over the network or handed to a browser client, and cleared at the next fresh launch.
@@ -421,6 +432,64 @@ never served over the network or handed to a browser client, and cleared at the 
 If the recording cannot be written — an unwritable directory, say — the shell is unaffected, recording
 simply stops, and a single `shell recording failed` line appears in the notifications feed for that
 tab. The flag stays and still opens whatever was written.
+
+## Text transcript
+
+Beside its recording, every shell tab keeps a plain-text transcript of its session: the rows the
+terminal displayed, as text, in a file under `.janissary/shell-transcripts/`. It is a separate file
+from the recording above and from the harness session transcript under `.janissary/harness-transcripts/`
+(see [[harness-recording]]); either the recording or the text transcript can fail without stopping the
+other. It is opened from the metadata row's **Open transcript** button (see § The metadata row).
+
+**Which shells keep one.** Exactly the shells that are recorded: the launch `janus` shell, every
+`shell` tab, remote shells and their siblings. A PTY started with `!` from another tab keeps none, as it
+has no recording (see [[harness-recording]] § What is **not** recorded). A project that sets
+`"recordShellTabs": false` turns off the text transcript along with the recording.
+
+**The file.** It is named `<label>-<timestamp>.txt`: the tab's label, sanitized for a filename, and the
+ISO time it started with `:` and `.` replaced by `-`. A tab's `.txt` and its `.cast` recording are named
+alike, but their timestamps are taken separately and may differ by a few milliseconds. The file is
+created lazily, on the shell's first output; zsh's first prompt provides that at once, and a shell that
+finished before printing anything leaves no file. It is cleared at a fresh launch and preserved across
+`--relaunch`.
+
+**What it holds.** Every normal-screen row as displayed: prompts, the command lines typed, their output,
+background-job output and startup-file output, as plain text with no escape sequence or colour, and
+with no separators, timestamps or annotations added. Nothing is written while a full-screen program
+such as `vim`, `less` or `top` holds the alternate screen; the normal-screen output before and after it
+is. An application command's reply, such as `help`'s, and its echoed command line are drawn by the
+browser and never pass through the shell, so they never reach the file.
+
+**When a row is written.** A row is written once, the first time the cursor moves below it, at the
+width the terminal had then, and is never revisited: a later redraw keeps its first form, and `clear`
+removes nothing already written. A row redrawn by carriage returns before the cursor leaves it, such
+as a progress line, is written once in its final form. Three imperfections are accepted. After a
+program erases the screen below rows already written — zsh does this when it clears a completion
+list — the row above the cursor can be written a second time in its current form. Rows that
+auto-wrapped between such an erase and the next line feed keep only their last row. And a single
+unbroken line longer than 1000 terminal rows keeps only the row it ends on.
+
+**Input exposure.** Input is kept as the terminal echoed it, on the same terms as the recording (see
+§ Session recording): a secret on a command line (`export TOKEN=…`) or echoed by an interactive program
+(a python REPL, `read`) lands in the file, while a password typed at a prompt that turns echo off
+(`sudo`, `ssh`, `psql`) prints nothing, so nothing of it reaches the file. The mitigations are the
+recording's: the file is under the project's own `.janissary/`, never served over the network or
+handed to a client except when the user presses **Open transcript**, and cleared at the next fresh
+launch. `"recordShellTabs": false` is the opt-out.
+
+**End of session.** When the tab closes or zsh exits, the cursor's unfinished row — a waiting prompt, a
+progress bar — is written as it stands, then the file closes. At application shutdown the app waits up
+to one second for every open transcript to write its final row and close.
+
+**Size and failure.** The file has no size cap. The transcript stops for the rest of the session, after
+the rows already finished, in three cases: its directory cannot be written (the file never opens),
+more than 4 MiB is waiting to reach disk, or output arrives faster than it can be transcribed (more
+than 4 Mi characters waiting to be parsed). After a failure the cursor's unfinished row is not written.
+The shell and its recording are unaffected. A single `shell transcript failed` line appears in the
+notifications feed for that tab (see [[notifications]]): at most one per open tab however many times
+its transcript fails, nothing for a failure that surfaces only after the tab has closed, and a later
+tab reusing the label is reported afresh. The **Open transcript** button stays and opens whatever was
+written.
 
 ## Everything else
 

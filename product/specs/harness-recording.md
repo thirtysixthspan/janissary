@@ -71,7 +71,9 @@ lazy creation, and the same notification on failure.
 Shell recording can be declined. A project whose `.janissary/config.json` sets `"recordShellTabs":
 false` records no shell tab: no file is written and the tab draws no recording flag, which is the
 state a shell tab is already in. It defaults to on, so a project that has not expressed a preference
-records shell tabs the same way it records the other two.
+records shell tabs the same way it records the other two. The same setting also turns off the shell
+tab's plain-text transcript under `.janissary/shell-transcripts/` (see [[shell-tab]] § Text transcript),
+which is neither a recording nor the harness session transcript this spec describes.
 
 The setting gates **every plugin terminal that asked to be recorded** — any plugin whose declaration
 carries `recordsTerminal` — because that is the one place the decision is made, and the shell plugin is

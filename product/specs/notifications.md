@@ -172,6 +172,13 @@ These event types can produce a notification line:
   is recorded once per tab and never repeated, fires even while that tab is the active one, and leaves
   the shell running. The shell tab's recording flag stays and still opens whatever was written, so a
   failed recording is a shorter file rather than a lost one (see [[shell-tab]]).
+- **`shell-transcript-failed`** — a shell tab's plain-text transcript could not be written, so it has
+  stopped for the rest of the session: the line reads `shell transcript failed`. It is recorded at most
+  once per open tab however many times that tab's transcript fails, nothing is recorded for a failure
+  that surfaces only after the tab has closed, and a later tab reusing the label is reported afresh.
+  Like the explicit events it fires even while that tab is the active one, and it leaves the shell and
+  its recording running. The tab's **Open transcript** button, when drawn, still opens what was
+  written (see [[shell-tab]] § Text transcript).
 - **`e2e-browser-gone`** — a `-b` tab's browser is no longer there: a launch that failed, a browser
   that exited, or a guard that died (see `harness.md`). The line names the tab it belonged to and
   carries the browser's own last words beneath the message. When the browser said anything at all,
@@ -331,7 +338,7 @@ on reconnect.
 
 A live, explicit notification also asks each connected browser window to show a desktop alert and
 play a short sound. This includes `question`, `harness-idle`, `manual`, `auto-approve`, `auto-approve-no-workspace`, `auto-resume`,
-`editor-suggest`, `transcript-unavailable`, the three recording-failed events,
+`editor-suggest`, `transcript-unavailable`, the three recording-failed events, `shell-transcript-failed`,
 `e2e-browser-gone`, `file-operation`, `open-unsupported`, `plugin-note`, `plugin-failure`,
 `schedule-late`, the two remote-session events, the three launch events, and `remote-refused`.
 The four optional ambient events (`state-change`, `schedule-fire`,
