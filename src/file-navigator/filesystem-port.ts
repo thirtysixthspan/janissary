@@ -16,6 +16,7 @@ import { readRowStat, type RowStat } from './stats.js';
 import { pasteBatch, type PasteManyResult } from './paste.js';
 import { failureResult, OUTSIDE_ROOT_REASON, runFileOperation, type FileOperationResult } from './file-operation-result.js';
 import { atomicWriteFile } from '../atomic-write.js';
+import { contentHash, SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
 import type { BulkConflictPolicy } from '../protocol.js';
 import type { UndoRedoResult } from '../protocol.js';
 import type { HistoryStep } from './moves.js';
@@ -82,7 +83,7 @@ export interface FileSystemPort {
   changeSet(root: string, fullFiles: readonly string[]): Promise<unknown>;
   search(root: string): Promise<string[]>;
   readFile(root: string, relPath: string): Promise<Uint8Array>;
-  writeFile(root: string, relPath: string, content: Uint8Array): MaybePromise<FileOperationResult>;
+  writeFile(root: string, relPath: string, content: Uint8Array, expectedHash?: string): MaybePromise<FileOperationResult>;
   // Refuses to replace an existing destination unless `overwrite` is set, answering the conflict as
   // `{ conflictPaths }` instead — the same contract `moveMany` keeps for an unset policy.
   move(root: string, fromRelPath: string, toRelPath: string, overwrite?: boolean): MaybePromise<MoveOneResult>;
@@ -171,9 +172,16 @@ export class LocalFileSystemPort implements FileSystemPort {
     return readFileSync(absolute);
   }
 
-  writeFile(root: string, relPath: string, content: Uint8Array): FileOperationResult {
+  writeFile(root: string, relPath: string, content: Uint8Array, expectedHash?: string): FileOperationResult {
     const absolute = containedPath(root, relPath);
     if (!absolute) return failureResult(OUTSIDE_ROOT_REASON);
+    if (expectedHash !== undefined) {
+      try {
+        const onDisk = readFileSync(absolute, 'utf8');
+        const text = onDisk.startsWith('\u{FEFF}') ? onDisk.slice(1) : onDisk;
+        if (contentHash(text) !== expectedHash) return failureResult(SAVE_CONFLICT_ERROR);
+      } catch { /* a target that no longer exists is still safe to create */ }
+    }
     return runFileOperation(() => {
       let target = path.join(realpathSync(path.dirname(absolute)), path.basename(absolute));
       try {

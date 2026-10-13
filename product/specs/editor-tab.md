@@ -265,8 +265,9 @@ reload can update a clean buffer.
 A save never writes over content the buffer has not seen. Each save is checked against the file as
 it is on disk at that moment: if the file no longer holds what the buffer was last loaded, reloaded,
 or saved as, nothing is written and the same overwrite prompt appears, even when the change was
-never detected while it happened. This check does not apply to a new file's first save or to a file
-on a remote host.
+never detected while it happened. The same check runs on the host that owns a remote file, so the
+remote file and its local cached copy both stay unchanged while the prompt is open. This check does
+not apply to a new file's first save or to an explicitly confirmed overwrite.
 
 - **Overwrite (y):** writes the buffer to disk, replacing the external change.
 - **Cancel (Esc):** dismisses the dialog and leaves the buffer as-is, still unsaved. The next save

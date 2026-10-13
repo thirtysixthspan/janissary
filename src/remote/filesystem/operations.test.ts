@@ -34,7 +34,7 @@ const PATH_CASES: PathCase[] = [
   ['git-commit', { message: 'commit: 2 files', paths: [], root: 'src' }, ['src']],
   ['search', {}, []],
   ['read-file', { path: 'a.txt' }, ['a.txt']],
-  ['write-file', { path: 'a.txt', content: '' }, ['a.txt']],
+  ['write-file', { path: 'a.txt', content: '', expectedHash: 'baseline' }, ['a.txt']],
   ['move', { from: 'a.txt', to: 'dest' }, ['a.txt', 'dest']],
   ['move', { from: 'a.txt', to: 'dest', overwrite: true }, ['a.txt', 'dest']],
   ['move-many', { sources: ['a.txt', 'b.txt'], destination: 'dest' }, ['a.txt', 'b.txt', 'dest']],
@@ -68,6 +68,8 @@ const INVALID_CASES: [RemoteFilesystemOperation, Record<string, unknown>][] = [
   ['search', { path: 'src' }],
   ['read-file', {}],
   ['write-file', { path: 'a.txt' }],
+  ['write-file', { path: 'a.txt', content: '', expectedHash: null }],
+  ['write-file', { path: 'a.txt', content: '', expectedHash: 7 }],
   ['move', { from: 'a.txt' }],
   ['move', { from: 'a.txt', to: 'dest', overwrite: 'yes' }],
   ['move-many', { sources: ['a.txt'], destination: 'dest', policy: 'nonsense' }],
@@ -177,6 +179,13 @@ describe('FILESYSTEM_OPERATIONS', () => {
     expect(Object.hasOwn(operationDescriptor('rename').decode({ path: 'a.txt', name: 'b.txt' }), 'overwrite')).toBe(false);
     expect(operationDescriptor('rename').decode({ path: 'a.txt', name: 'b.txt', overwrite: true }))
       .toEqual({ path: 'a.txt', name: 'b.txt', overwrite: true });
+  });
+
+  it('omits an absent write precondition and decodes a supplied hash', () => {
+    expect(Object.hasOwn(operationDescriptor('write-file').decode({ path: 'a.txt', content: '' }), 'expectedHash'))
+      .toBe(false);
+    expect(operationDescriptor('write-file').decode({ path: 'a.txt', content: '', expectedHash: 'baseline' }))
+      .toEqual({ path: 'a.txt', content: '', expectedHash: 'baseline' });
   });
 
   it('names a refusal shape for exactly the operations whose result can carry one', () => {

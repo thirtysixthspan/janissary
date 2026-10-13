@@ -5,6 +5,7 @@ import path from 'node:path';
 import { RemoteFileNavigators } from './serve-file-navigator.js';
 import type { FileSystemPort, WatchHandle } from '../file-navigator/filesystem-port.js';
 import type { ClientFrame, ServerFrame } from './protocol-frames.js';
+import { contentHash, SAVE_CONFLICT_ERROR } from '../editor/save-conflict.js';
 
 type Request = Extract<ClientFrame, { type: 'filesystem-request' }>;
 
@@ -47,6 +48,27 @@ describe('RemoteFileNavigators', () => {
     await request('move', { from: 'src/b.txt', to: '' });
     await request('delete', { path: 'b.txt' });
     expect(statSync(path.join(root, 'src', 'untitled')).isDirectory()).toBe(true);
+  });
+
+  it('checks a remote file precondition and leaves a stale write untouched', async () => {
+    const target = path.join(root, 'notes.txt');
+    writeFileSync(target, 'original');
+    writeFileSync(target, 'changed remotely');
+
+    const stale = await request('write-file', {
+      path: 'notes.txt', content: Buffer.from('editor draft').toString('base64'),
+      expectedHash: contentHash('original'),
+    });
+
+    expect(stale).toMatchObject({ result: { ok: false, reason: SAVE_CONFLICT_ERROR } });
+    expect(readFileSync(target, 'utf8')).toBe('changed remotely');
+
+    const overwrite = await request('write-file', {
+      path: 'notes.txt', content: Buffer.from('editor draft').toString('base64'),
+    });
+
+    expect(overwrite).toMatchObject({ result: { ok: true } });
+    expect(readFileSync(target, 'utf8')).toBe('editor draft');
   });
 
   it('refuses a directory symlink that resolves outside the workspace', async () => {
