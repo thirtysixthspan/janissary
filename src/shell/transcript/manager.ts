@@ -51,7 +51,9 @@ export class ShellTranscriptManager {
       if (!this.released.has(writer) && this.tabs.get(label) === state) this.reportFailure(state, label);
     }, (path) => {
       const tab = this.managers.tab.byLabel(label);
-      if (tab) tab.transcript = path;
+      if (!tab) return;
+      tab.transcript = path;
+      messageBus.emit('state', { type: 'dirty' });
     });
     this.entries.set(ptyId, { label, writer });
   }

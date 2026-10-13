@@ -82,6 +82,34 @@ describe('ShellTranscriptManager', () => {
     expect(tab.transcript?.endsWith('.txt')).toBe(true);
   });
 
+  it('broadcasts the state once when the transcript opens on an existing tab', () => {
+    addTab('shell');
+    const states: unknown[] = [];
+    const subscription = messageBus.on('state', 'dirty', (event) => { states.push(event); });
+    try {
+      manager.install('pty-1', 'shell');
+      data('pty-1', '% ');
+      data('pty-1', 'more');
+    } finally {
+      subscription.unsubscribe();
+    }
+    expect(states).toEqual([{ type: 'dirty' }]);
+  });
+
+  it('broadcasts nothing when the tab with that label is gone by the time the file opens', () => {
+    addTab('shell');
+    const states: unknown[] = [];
+    const subscription = messageBus.on('state', 'dirty', (event) => { states.push(event); });
+    try {
+      manager.install('pty-1', 'shell');
+      tabs.delete('shell');
+      data('pty-1', '% ');
+    } finally {
+      subscription.unsubscribe();
+    }
+    expect(states).toEqual([]);
+  });
+
   it('opens the transcript without throwing when no tab has that label', async () => {
     manager.install('pty-1', 'gone');
     expect(() => { data('pty-1', '% '); }).not.toThrow();

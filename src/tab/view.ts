@@ -87,6 +87,9 @@ export function buildTabView(
   // up from the recorder: that is released when the PTY exits, and the tab — and the file — outlive
   // it. Absent until the session has produced its first output.
   const recording = tab.recording;
+  // Likewise read from the tab rather than the transcript writer, which is released when the PTY
+  // exits while the tab and its file outlive it.
+  const transcript = tab.transcript;
   const queue = queueProjection(tab, declarationOf?.(tab.plugin?.id ?? ''), commandQueue);
   return {
     label: tab.label,
@@ -143,6 +146,7 @@ export function buildTabView(
       schemaVersion: tab.plugin.schemaVersion,
       payload: tab.plugin.payload,
       ...(recording !== undefined && { recording }),
+      ...(transcript !== undefined && { transcript }),
       ...declaredFields(declarationOf?.(tab.plugin.id)),
     } : undefined,
     // The harness-view payload is the tab's own, spread rather than rebuilt, so this one field is
