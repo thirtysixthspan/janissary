@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import xterm from '@xterm/headless';
 import { messageBus } from '../../bus.js';
 import { initShellTranscriptDirectory } from './transcript-file.js';
 import { ShellTranscriptWriter } from './writer.js';
@@ -193,6 +194,77 @@ describe('ShellTranscriptWriter', () => {
     expect(await waitForSentinel()).toEqual(['a', 'END']);
     await new Promise((r) => setTimeout(r, 25));
     expect(await waitForSentinel()).toEqual(['a', 'END']);
+  });
+
+  it('stops at the unparsed-output cap with one failure and only the rows accepted before it', async () => {
+    const onFailure = vi.fn();
+    writer = new ShellTranscriptWriter('pty-1', 'shell', 80, 24, onFailure, vi.fn(), 20);
+    // xterm parses on a later macrotask, so these back-to-back events all queue before any parse.
+    expect(() => {
+      data('a\r\nb\r\n');
+      data('c\r\n');
+      data('x'.repeat(20));
+      data('more\r\n');
+      emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+    }).not.toThrow();
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    expect(() => writer?.dispose()).not.toThrow();
+    await waitFor(() => transcriptFiles().length === 1
+      && readFileSync(path.join(transcriptsDir, transcriptFiles()[0]), 'utf8') === 'a\nb\nc\n');
+    await new Promise((r) => setTimeout(r, 25));
+    expect(readFileSync(path.join(transcriptsDir, transcriptFiles()[0]), 'utf8')).toBe('a\nb\nc\n');
+    expect(onFailure).toHaveBeenCalledTimes(1);
+  });
+
+  it('releases the unparsed-output count as each chunk is parsed', async () => {
+    const onFailure = vi.fn();
+    writer = new ShellTranscriptWriter('pty-1', 'shell', 80, 24, onFailure, vi.fn(), 20);
+    data('0123456789\r\n');
+    await waitFor(() => transcriptFiles().length === 1
+      && readFileSync(path.join(transcriptsDir, transcriptFiles()[0]), 'utf8') === '0123456789\n');
+    data('abcdefghij\r\n');
+    data('END');
+    emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+    expect(await waitForSentinel()).toEqual(['0123456789', 'abcdefghij', 'END']);
+    expect(onFailure).not.toHaveBeenCalled();
+  });
+
+  it('reports a write xterm refuses once and never throws from events or dispose', async () => {
+    const onFailure = vi.fn();
+    start(80, 24, onFailure);
+    data('a\r\n');
+    await waitFor(() => transcriptFiles().length === 1
+      && readFileSync(path.join(transcriptsDir, transcriptFiles()[0]), 'utf8') === 'a\n');
+    const refuse = vi.spyOn(xterm.Terminal.prototype, 'write').mockImplementation(() => {
+      throw new Error('write data discarded, use flow control to avoid losing data');
+    });
+    try {
+      expect(() => {
+        data('b\r\n');
+        data('c\r\n');
+        emit({ type: 'resize', id: 'pty-1', cols: 100, rows: 40 });
+        emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+      }).not.toThrow();
+      expect(() => writer?.dispose()).not.toThrow();
+    } finally {
+      refuse.mockRestore();
+    }
+    expect(onFailure).toHaveBeenCalledTimes(1);
+    expect(readFileSync(path.join(transcriptsDir, transcriptFiles()[0]), 'utf8')).toBe('a\n');
+  });
+
+  it('closes without throwing when xterm refuses the drain write on dispose', () => {
+    const onFailure = vi.fn();
+    start(80, 24, onFailure);
+    const refuse = vi.spyOn(xterm.Terminal.prototype, 'write').mockImplementation(() => {
+      throw new Error('write data discarded, use flow control to avoid losing data');
+    });
+    try {
+      expect(() => writer?.dispose()).not.toThrow();
+    } finally {
+      refuse.mockRestore();
+    }
+    expect(onFailure).not.toHaveBeenCalled();
   });
 
   it('runs the finishing path once for a repeated dispose', async () => {
