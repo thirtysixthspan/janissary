@@ -25,6 +25,7 @@ const CATEGORIES: Record<ExplicitNotificationEvent, SoundCategory> = {
   'ssh-recording-failed': 'error',
   'harness-recording-failed': 'error',
   'shell-recording-failed': 'error',
+  'shell-transcript-failed': 'error',
   'editor-suggest': 'error',
 };
 
