@@ -96,8 +96,12 @@ A role's name is trimmed and must be nonempty, and is unique across the list ign
 or renaming to a name another role already holds is refused with `A role named "<name>" already
 exists.` and nothing is written. A name typed into the creation control stays in it until the server
 accepts it, so a refused one can be corrected and committed again; the control closes as soon as the
-role exists. Deleting the last role is an ordinary edit: the list may be empty, and the tab then reads
-`No roles yet.` above the add-role control.
+role exists. Enter and blur may both submit the same draft, but while that name's request is pending
+the tab sends it only once. A different name typed while the request is pending can be submitted
+independently. If an earlier request is accepted after the user has typed a different name, that
+acceptance leaves the newer draft and creation control untouched. Deleting the last role is an
+ordinary edit: the list may be empty, and the tab then reads `No roles yet.` above the add-role
+control.
 
 ### A refused edit
 
