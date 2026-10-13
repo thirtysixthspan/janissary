@@ -17,6 +17,7 @@ export class BoundedAppendFile {
   private path: string | undefined;
   private failed = false;
   private disposed = false;
+  private closed: Promise<void> | undefined;
 
   constructor(
     private readonly resolvePath: () => string,
@@ -45,11 +46,20 @@ export class BoundedAppendFile {
     return this.path;
   }
 
-  dispose(): void {
-    if (this.disposed) return;
+  // Resolves once the stream has closed — after its last bytes are flushed, or after a destroy on
+  // error — and at once when no stream is open. Never rejects; a second call returns the same promise.
+  dispose(): Promise<void> {
+    if (this.closed) return this.closed;
     this.disposed = true;
-    this.stream?.end();
+    const stream = this.stream;
     this.stream = undefined;
+    this.closed = stream
+      ? new Promise((resolve) => {
+        stream.once('close', () => { resolve(); });
+        stream.end();
+      })
+      : Promise.resolve();
+    return this.closed;
   }
 
   // A synchronous throw here (an `EACCES` on the target directory, say) inside a bus listener would

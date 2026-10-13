@@ -328,6 +328,11 @@ export type Tab = {
   // is released when the PTY exits, and the file outlives it: the tab stays open after its process
   // ends, and its recording is still worth replaying. Written once, by the observer that opened it.
   recording?: string;
+  // The absolute path of this tab's text transcript, set by the writer that opened it on the shell's
+  // first output. Remembered on the tab for the same reason as `recording`: the writer is released
+  // when the PTY exits, while the tab and the file outlive it. A reinstall under a reattached id
+  // overwrites it with the newer file.
+  transcript?: string;
   // The editor-view payload, present only when `view === 'editor'`.
   editor?: EditorView;
   // Transient, unsaved buffer content synced from the client shortly after typing pauses

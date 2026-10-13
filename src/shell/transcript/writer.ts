@@ -26,7 +26,8 @@ export const MAX_UNPARSED_CHARS = 4 * 1024 * 1024;
 //
 // Exit, `dispose()` and failure share one finishing path: it waits for xterm's asynchronous parse to
 // drain, writes the cursor's unfinished row (not after a failure, when that row may be cut short),
-// then closes the file. `dispose()` therefore returns before that final row reaches the stream.
+// then closes the file. `dispose()` returns that path's promise, which settles once the final row has
+// reached the file and the file has closed; it never rejects.
 export class ShellTranscriptWriter {
   private readonly term: Terminal;
   private readonly file: BoundedAppendFile;
@@ -34,6 +35,7 @@ export class ShellTranscriptWriter {
   private readonly subscription: Subscription;
   private readonly startedAt = Date.now();
   private finished = false;
+  private finishing: Promise<void> = Promise.resolve();
   private failed = false;
   private unparsed = 0;
 
@@ -69,8 +71,9 @@ export class ShellTranscriptWriter {
     });
   }
 
-  dispose(): void {
+  dispose(): Promise<void> {
     this.finish();
+    return this.finishing;
   }
 
   // Opening the file on the first output, before any row is finished, is what lets the transcript
@@ -127,12 +130,16 @@ export class ShellTranscriptWriter {
     if (this.finished) return;
     this.finished = true;
     this.subscription.unsubscribe();
-    if (!this.queue('', () => { this.close(!this.failed); })) this.close(false);
+    this.finishing = new Promise((resolve) => {
+      const close = (flush: boolean): void => { void this.close(flush).then(resolve); };
+      if (!this.queue('', () => { close(!this.failed); })) close(false);
+    });
   }
 
-  private close(flush: boolean): void {
+  private close(flush: boolean): Promise<void> {
     if (flush) this.tracker.finish();
-    this.file.dispose();
+    const closed = this.file.dispose();
     this.term.dispose();
+    return closed;
   }
 }

@@ -3,6 +3,7 @@ import type { ShellManager } from './shell/manager.js';
 import type { AcpManager } from './acp/manager.js';
 import type { DatabaseManager } from './database/manager.js';
 import type { HarnessManager } from './harness/manager.js';
+import type { ShellTranscriptManager } from './shell/transcript/manager.js';
 import type { SshManager } from './ssh-manager.js';
 import type { RemoteManager } from './remote/manager.js';
 import type { ScheduleManager } from './schedule/manager.js';
@@ -36,6 +37,7 @@ type ManagerRegistry = {
   acp: AcpManager;
   database: DatabaseManager;
   harness: HarnessManager;
+  shellTranscript: ShellTranscriptManager;
   ssh: SshManager;
   remote: RemoteManager;
   schedule: ScheduleManager;
@@ -70,7 +72,9 @@ export type Managers = {
 // Three groups, and the reason each sits where it does:
 //
 // 1. Session and process owners, first: they kill what they started while everything they need to
-//    do so is still up.
+//    do so is still up. `shellTranscript` owns open file handles and must flush its final rows while
+//    the shells it mirrors are still alive, so it sits before `shell` and `pty`, and its disposal is
+//    awaited before the next manager's begins.
 // 2. `remote`, after every one of them. A remote PTY's `kill`, a remote ACP session's `acp-close`,
 //    and a remote navigator port's session close are all `channel.send(...)`, and `RemoteChannel.send`
 //    drops a frame silently once the channel is no longer attached — so closing the channels first
@@ -86,6 +90,7 @@ export const MANAGER_DISPOSE_ORDER = [
   'profile',
   'ssh',
   'harness',
+  'shellTranscript',
   'shell',
   'schedule',
   'pty',
@@ -134,6 +139,7 @@ export const MANAGER_TAB_RELEASE = [
   'schedule',
   'pty',
   'harness',
+  'shellTranscript',
   'editorAcp',
   'editorWatch',
   'fileNavigator',

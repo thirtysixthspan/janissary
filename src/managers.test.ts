@@ -34,6 +34,12 @@ describe('MANAGER_DISPOSE_ORDER', () => {
     expect(positionOf(name)).toBeLessThan(positionOf('remote'));
   });
 
+  // The transcripts flush their final rows at shutdown, which needs the shells they mirror alive.
+  it('disposes the shell transcripts before the shells and their PTYs', () => {
+    expect(positionOf('shellTranscript')).toBeLessThan(positionOf('pty'));
+    expect(positionOf('shellTranscript')).toBeLessThan(positionOf('shell'));
+  });
+
   it('disposes the state the others read while tearing down last', () => {
     expect(MANAGER_DISPOSE_ORDER.slice(-3)).toEqual(['questions', 'tab', 'database']);
   });

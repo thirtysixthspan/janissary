@@ -267,6 +267,36 @@ describe('ShellTranscriptWriter', () => {
     expect(onFailure).not.toHaveBeenCalled();
   });
 
+  it('has the unfinished cursor row in the file once dispose resolves', async () => {
+    start();
+    data('one\r\n> END');
+    await writer?.dispose();
+    const [file] = transcriptFiles();
+    expect(readFileSync(path.join(transcriptsDir, file), 'utf8')).toBe('one\n> END\n');
+  });
+
+  it('has the unfinished cursor row in the file once dispose resolves after an exit', async () => {
+    start();
+    data('one\r\n> END');
+    emit({ type: 'exit', id: 'pty-1', exitCode: 0 });
+    await writer?.dispose();
+    const [file] = transcriptFiles();
+    expect(readFileSync(path.join(transcriptsDir, file), 'utf8')).toBe('one\n> END\n');
+  });
+
+  it('resolves dispose after the file failed', async () => {
+    const lockedParent = path.join(projectDir, 'locked');
+    mkdirSync(lockedParent);
+    chmodSync(lockedParent, 0o500);
+    locked.push(lockedParent);
+    initShellTranscriptDirectory(path.join(lockedParent, 'project'));
+    const onFailure = vi.fn();
+    start(80, 24, onFailure);
+    data('first\r\n');
+    expect(onFailure).toHaveBeenCalledOnce();
+    await expect(writer?.dispose()).resolves.toBeUndefined();
+  });
+
   it('runs the finishing path once for a repeated dispose', async () => {
     start();
     data('a\r\nEND');

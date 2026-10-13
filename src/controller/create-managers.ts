@@ -1,4 +1,5 @@
 import { HarnessManager } from '../harness/manager.js';
+import { ShellTranscriptManager } from '../shell/transcript/manager.js';
 import { SshManager } from '../ssh-manager.js';
 import { RemoteManager } from '../remote/manager.js';
 import { DatabaseManager } from '../database/manager.js';
@@ -68,6 +69,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.schedule = new ScheduleManager(managers);
   managers.shell = new ShellManager(managers);
   managers.harness = new HarnessManager(managers);
+  managers.shellTranscript = new ShellTranscriptManager(managers);
   managers.ssh = new SshManager(managers);
   managers.remote = new RemoteManager(managers);
   managers.profile = new ProfileManager(managers);

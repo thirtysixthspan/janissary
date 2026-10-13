@@ -124,4 +124,37 @@ describe('BoundedAppendFile', () => {
     expect(file.isOpen()).toBe(false);
     expect(failure).not.toHaveBeenCalled();
   });
+
+  it('has every written byte on disk once dispose resolves', async () => {
+    const target = path.join(dir, 'out.txt');
+    file = new BoundedAppendFile(() => target, 1024 * 1024, vi.fn());
+    const lines = Array.from({ length: 500 }, (_, i) => `line ${i}\n`);
+    for (const line of lines) file.write(line);
+    await file.dispose();
+    expect(readFileSync(target, 'utf8')).toBe(lines.join(''));
+  });
+
+  it('resolves dispose at once when nothing was ever written', async () => {
+    file = new BoundedAppendFile(() => path.join(dir, 'out.txt'), 1024, vi.fn());
+    await expect(file.dispose()).resolves.toBeUndefined();
+  });
+
+  it('resolves dispose after the file was abandoned', async () => {
+    const failure = vi.fn();
+    file = new BoundedAppendFile(() => path.join(dir, 'out.txt'), 20, failure);
+    file.write('x'.repeat(21));
+    expect(failure).toHaveBeenCalledOnce();
+    await expect(file.dispose()).resolves.toBeUndefined();
+  });
+
+  it('resolves a second dispose as well', async () => {
+    const target = path.join(dir, 'out.txt');
+    file = new BoundedAppendFile(() => target, 1024, vi.fn());
+    file.write('one\n');
+    const first = file.dispose();
+    const second = file.dispose();
+    await expect(first).resolves.toBeUndefined();
+    await expect(second).resolves.toBeUndefined();
+    expect(readFileSync(target, 'utf8')).toBe('one\n');
+  });
 });

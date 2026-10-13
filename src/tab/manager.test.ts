@@ -51,6 +51,7 @@ function makeManagers(): Managers {
       isRunning: vi.fn(() => true),
     },
     harness: { closeTab: vi.fn(), registerShellObservers: vi.fn() },
+    shellTranscript: { install: vi.fn(), closeTab: vi.fn() },
     // Which plugins asked for their terminals to be recorded. Empty, so the cases below that assert
     // on adoption and on a refused spawn are asserting about those and not about recording; the
     // recording cases declare it themselves.
@@ -216,6 +217,7 @@ describe('TabManager queue', () => {
     // named for the tab, and the tab-close release matches on that same label.
     const tab = tm.tabs.find((candidate) => candidate.plugin?.instanceKey === 'shell-1')!;
     expect(managers.harness.registerShellObservers).toHaveBeenCalledWith('pty1', tab.label);
+    expect(managers.shellTranscript.install).toHaveBeenCalledWith('pty1', tab.label);
   });
 
   it('records nothing for a plugin whose declaration did not ask for it', () => {
@@ -229,6 +231,7 @@ describe('TabManager queue', () => {
     // The claim is read from the declaration rather than from a list of plugin names here, so a
     // third-party plugin cannot quietly have its terminal's output written to disk.
     expect(managers.harness.registerShellObservers).not.toHaveBeenCalled();
+    expect(managers.shellTranscript.install).not.toHaveBeenCalled();
   });
 
   // A shell echoes what is typed back into the terminal, so its recording is the one recorded kind
@@ -257,6 +260,7 @@ describe('TabManager queue', () => {
     });
 
     expect(managers.harness.registerShellObservers).not.toHaveBeenCalled();
+    expect(managers.shellTranscript.install).not.toHaveBeenCalled();
   });
 
   it('records every terminal one factory started, not only the first', () => {
@@ -270,6 +274,7 @@ describe('TabManager queue', () => {
     });
 
     expect(managers.harness.registerShellObservers).toHaveBeenCalledTimes(2);
+    expect(managers.shellTranscript.install).toHaveBeenCalledTimes(2);
   });
 
   it('retains the source workspace through shell and nested-shell lifetimes', () => {
