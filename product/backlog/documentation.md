@@ -3,8 +3,6 @@
 ## ready
 
 
-* sidebars (7/10) — The tabs guide says sidebar width and dock placement are never persisted, but profiles can save and restore sidebar widths, docked tabs, and selected docked entries. Reconcile the persistence explanation in `documentation/user-documentation/getting-started/tabs.md` with `documentation/user-documentation/automation/profiles.md`. Ground truth: `product/specs/sidebars.md`, `src/tab/place-profile-tabs.ts`, and `web/src/useLayoutState.ts`.
-
 * browser (7/10) — The browser reference calls `content` rendered page text, but the shipped command reads `document.body.textContent`; it also does not explain that the optional `browser open <name>` argument currently has no effect. Align `documentation/user-documentation/command-bar/browser.md` and `help.md` with the actual command behavior. Ground truth: `product/specs/browser.md`, `src/browser/index.ts`, `src/browser/command.ts`, and `src/browser/tab.ts`.
 
 * monitoring (7/10) — The monitoring guide omits the `unmonitor <name> <target>` form for removing one target while leaving the monitor running, and its suggested-command paragraph says delivery queues behind existing work although the spec describes immediate dispatch when busy. Verify the current dispatch path, then correct `documentation/user-documentation/automation/monitoring.md`. Ground truth: `product/specs/monitoring.md`, `src/monitor/parsing.ts`, `src/monitor/stop.ts`, and the suggested-command execution path.
@@ -24,6 +22,8 @@
 ## declined
 
 ## resolved
+
+* sidebars — documented in documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/automation/profiles.md (removed 2026-10-14)
 
 * history — documented in documentation/user-documentation/command-bar/history.md (removed 2026-10-14)
 

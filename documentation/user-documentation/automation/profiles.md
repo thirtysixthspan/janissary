@@ -78,7 +78,7 @@ Two profile-level keys sit outside `tabs`, because neither is a tab: `monitors` 
 
 `persona` is required. `targets` is a list of tab labels or `group:<number>` targets from the [`monitor` command](/user-documentation/automation/monitoring); an empty list creates an inline monitor. `name` is optional and defaults to `persona`. Monitors start after every profile tab is open, owned by the tab that issued `profile launch`, so closing the profile tabs does not stop them. Relaunching first stops an existing monitor with the same owner and name, then starts its replacement. The launch report includes the result for each monitor.
 
-The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`. It applies on every launch, including a relaunch, and always wins over anything you resized by hand: any dimension the key doesn't mention resets to the app's own default rather than staying at whatever it currently is. When Janissary starts with `--no-open`, the window size is ignored, while the sidebar widths and tab-area split still apply to a connected browser.
+The `layout` key groups the sidebar widths under a nested `sidebar` object, e.g. `"layout": { "sidebar": { "left": 300, "right": 280 }, "tabAreaPct": 75, "window": { "width": 1280, "height": 800 } }`. It applies on every launch, including a relaunch, and always wins over anything you resized by hand: any dimension the key doesn't mention resets to the app's own default rather than staying at whatever it currently is. When Janissary starts with `--no-open`, the window size is ignored, while the sidebar widths and tab-area split still apply to a connected browser. `profile save` captures the current sidebar widths and tab-area split in this key.
 
 Use an `editor` entry to open a file directly in the in-app editor when the profile launches:
 
@@ -102,7 +102,7 @@ A `plugin` entry names the [bundled plugin](/user-documentation/command-bar/plug
 
 None of these needs a `name` — the label is derived the same way typing `open` or `ssh` derives it. Relaunching closes a page or ssh tab already showing the same url or destination before reopening it, so you end up with one of each rather than a duplicate; an already-open image, markdown, or video tab is simply reused.
 
-A notifications entry opens the singleton feed. Add `dock` to put it in a sidebar, and use `focus: true` with `dock` when the feed should be the visible docked tab even if the profile also docks another view on that side:
+A notifications entry opens the singleton feed. Add `dock` to put it in a sidebar, and use `focus: true` with `dock` when the feed should be the visible docked tab even if the profile also docks another view on that side. `profile save` preserves dock placement, but it does not record which docked tab was selected; this `focus` option is the way to choose the notifications tab on launch:
 
 ```json
 { "type": "notifications", "dock": "right", "focus": true }
