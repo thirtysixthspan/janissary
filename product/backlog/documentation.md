@@ -3,8 +3,6 @@
 ## ready
 
 
-* tab-plugins (4/10) — The user-facing plugin overview omits the bundled agent-monitor tab and its entry point. Add it to `documentation/user-documentation/command-bar/plugins.md` and link to its user guide if one exists; ground truth: `product/specs/tab-plugins.md`, `src/plugins/catalog.ts`, and the agent-monitor plugin manifest and activation.
-
 * shell (7/10) — Five of nine audited captured-shell behavior groups are missing from user documentation, including persistence per tab, working-directory fallback, serialization, and process lifecycle. Expand `documentation/user-documentation/command-bar/shell.md` to distinguish captured command execution from the interactive zsh terminal. Ground truth: `product/specs/shell.md`, `src/shell/manager.ts`, and `src/shell/index.ts`.
 
 ## development
@@ -14,6 +12,8 @@
 ## declined
 
 ## resolved
+
+* tab-plugins — documented in documentation/user-documentation/command-bar/plugins.md (removed 2026-10-14)
 
 * scheduling — documented in documentation/user-documentation/automation/scheduling.md (removed 2026-10-14)
 
