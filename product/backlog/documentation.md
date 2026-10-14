@@ -3,8 +3,6 @@
 ## ready
 
 
-* browser (7/10) — The browser reference calls `content` rendered page text, but the shipped command reads `document.body.textContent`; it also does not explain that the optional `browser open <name>` argument currently has no effect. Align `documentation/user-documentation/command-bar/browser.md` and `help.md` with the actual command behavior. Ground truth: `product/specs/browser.md`, `src/browser/index.ts`, `src/browser/command.ts`, and `src/browser/tab.ts`.
-
 * monitoring (7/10) — The monitoring guide omits the `unmonitor <name> <target>` form for removing one target while leaving the monitor running, and its suggested-command paragraph says delivery queues behind existing work although the spec describes immediate dispatch when busy. Verify the current dispatch path, then correct `documentation/user-documentation/automation/monitoring.md`. Ground truth: `product/specs/monitoring.md`, `src/monitor/parsing.ts`, `src/monitor/stop.ts`, and the suggested-command execution path.
 
 * scheduling (4/10) — The guide omits that `in <tab>` resolves labels and aliases case-insensitively and that clicking outside the New schedule dialog leaves it open. Add these details to `documentation/user-documentation/automation/scheduling.md`. Ground truth: `product/specs/scheduling.md`, `src/commands/schedule.ts`, `src/tab/lookup.ts`, and `web/src/ScheduleLaunchDialog/`.
@@ -259,6 +257,8 @@
 * image-tab — documented in documentation/user-documentation/tab-types/image-viewer.md (removed 2026-10-14)
 
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-10-14)
+
+* browser — documented in documentation/user-documentation/command-bar/browser.md (removed 2026-10-14)
 
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md; clarified restored harness output and transcript history, and restored shell commands with their output (removed 2026-10-14)
 
