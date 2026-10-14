@@ -68,7 +68,7 @@ New activity from every target is buffered and sent to the monitor's session as 
 
 A monitor's reply is parsed for two possible marker lines: `[SUMMARY]:` recaps activity with no action attached, and `[SUGGESTION]:` offers something actionable, optionally paired with a `[COMMAND]:` line. Marker text can continue across multiple lines. If a reply includes both markers, the suggestion is delivered and the summary is ignored. A reply with neither marker (like a bare `OK`) delivers nothing.
 
-In a reporting tab, a suggestion that carries a command shows it as a clickable line: clicking runs it in the tab the suggestion is about, queuing behind anything already queued there. Each suggestion also carries thumbs-up / thumbs-down buttons; either one removes the suggestion from the feed. What one monitor reports never lands in another monitor's feed.
+In a reporting tab, a suggestion that carries a command shows it as a clickable line: clicking dispatches it immediately to the tab the suggestion is about, even while that tab is busy. It does not wait behind that tab's queued work. Each suggestion also carries thumbs-up / thumbs-down buttons; either one removes the suggestion from the feed. What one monitor reports never lands in another monitor's feed.
 
 ## Asking a monitor directly
 
@@ -91,11 +91,12 @@ These are the only two tools a persona can ever request this way. No filesystem 
 
 ```
 unmonitor security          stop the monitor named "security" started from this tab
+unmonitor security bilal    stop watching bilal but keep security watching its other targets
 unmonitor --all             stop every monitor started from this tab
 monitors                    list active monitors with their targets and suggestion counts
 ```
 
-A monitor's session also ends on its own when its owner tab closes or every one of its tab targets has been removed. A reporting tab stays open as long as at least one monitor still feeds it, and closes once the last one stops.
+Use `unmonitor <name> <target>` to remove one tab or group from an external monitor. It keeps running if other targets remain; removing its final target stops it. A target can be a tab label, display alias, or `group:<n>`. If the target does not match one the monitor watches, the monitor stays unchanged. A monitor's session also ends on its own when its owner tab closes. A reporting tab stays open as long as at least one monitor still feeds it, and closes once the last one stops.
 
 None of this survives a `janus --relaunch`: a monitor's session is a live process, and its reporting tab is a live view, so both are gone after a restart. Start them again from the tab that owned them, or from a [profile](/user-documentation/automation/profiles) that carries a `monitors` entry.
 
