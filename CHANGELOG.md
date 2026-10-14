@@ -2,6 +2,718 @@
 
 All notable changes to this project are documented here.
 
+## [0.20.0] - 2026-10-14
+
+### ⚠ Breaking Changes
+
+- feat(tasks)!: split PR issue work and group feature tasks (#1605)
+- feat(tabs)!: remove agent tabs (#1600)
+- feat(commands)!: remove command routing (#1599)
+- feat(acp)!: remove ACP support from agent tabs (#1598)
+- feat(command-queue)!: remove command queues from agent tabs (#1596)
+- feat(tooling)!: remove stylelint CSS linting (#1565)
+- feat(tabs)!: remove launch agent tabs (#1541)
+- feat(profiles)!: remove profile agent entries (#1540)
+- perf(remote)!: encode navigator file contents once on the wire (#1212)
+
+### Features
+
+- write a plain-text transcript of shell tabs (#1675)
+- add agent command resolution (#1672)
+- add a roles tab mapping named roles to harness and model choices (#1668)
+- add failing build repair task (#1670)
+- diff tab reads remote workspaces (#1629)
+- launch shells and harnesses into named groups (#1640)
+- rename tab command from zsh to shell (#1639)
+- add the sidebar launcher tab (#1627)
+- add the diff tab (#1621)
+- split PR issue work and group feature tasks (#1605)
+- remove agent tabs (#1600)
+- remove command routing (#1599)
+- remove ACP support from agent tabs (#1598)
+- remove command queues from agent tabs (#1596)
+- restore remote shell sessions (#1582)
+- open sibling shells in remote workspaces (#1581)
+- show remote session controls in shell metadata (#1580)
+- support standalone remote shells (#1579)
+- route plugin terminals to remote workspaces (#1578)
+- alert for background tab attention (#1575)
+- support interactive zsh spawns (#1577)
+- resolve remote paths within workspaces (#1576)
+- give a typed zsh its own sandboxed workspace (#1569)
+- remove stylelint CSS linting (#1565)
+- record shell tab sessions and flag every recorded tab (#1549)
+- hide the terminal prompt and cursor while the command bar has focus (#1547)
+- set the shell prompt and command lines in bold (#1546)
+- light a focus line beside the shell terminal (#1545)
+- print a single section with help <section> (#1543)
+- remove launch agent tabs (#1541)
+- remove profile agent entries (#1540)
+- add the remove-an-existing-feature task (#1539)
+- add a shell tab plugin running a live zsh terminal (#1526)
+- support auto-resume in opencode (#1533)
+- auto-resume a codex tab parked on a usage limit (#1525)
+- play a harness or ssh session's own recording in a tab (#1515)
+- show an animated provisioning indicator in the tab metadata row (#1516)
+- escalate a still-badged harness tab to a notification (#1500)
+- add a clipboard-history popup as an overlay plugin (#1499)
+- auto-approve opencode permission prompts (#1496)
+- a dockable SQLite schema browser and table data view (#1467)
+- add an update-pull-request task and run it at the end of auto-build (#1488)
+- add a project-wide search tab (#1481)
+- cap test-pull-request extra cases at five and add them to the PR description (#1482)
+- review feature gaps with the user before building in auto-build
+- plan interactively and test the PR until passing in auto-build
+- highlight the e2e browser flag green while a browser is in use (#1479)
+- add a test-pull-request task that runs a PR's testing steps (#1477)
+- start the e2e browser by default, add --no-browser (#1463)
+- collapse sequential repeats into one feed line (#1462)
+- auto-build
+- add an e2e driver for driving the app in a real browser
+- add spec-based bug discovery playbook (#1327)
+- start a -b tab's e2e browser on the AI's first connect (#1201)
+- offer to clone a missing project root on the remote host (#1200)
+- refuse duplicate harness/agent launch names in the notifications feed (#1175)
+- stack docked session rows for narrow sidebars (#1171)
+- show toasts when the notifications feed is closed (#1169)
+- auto-accept, notifications, and captures for detached harnesses (#1161)
+
+### Bug Fixes
+
+- bound save and draft RPC waits (#1685)
+- bound captured output and pass startup cwd safely (#1684)
+- bind provisioning to launch attempts (#1683)
+- retain closing transcript writers (#1680)
+- guard remote saves against stale content (#1678)
+- preserve overwrite destination on copy failure (#1676)
+- stage complex feature pull request reviews (#1673)
+- bridge ChatGPT OAuth into workspaces (#1671)
+- clear command line on Escape (#1667)
+- keep theme style test in app layer (#1665)
+- revoke pending directory watches (#1663)
+- revoke invalidated directory reads (#1662)
+- replace the profile owner's command draft (#1661)
+- avoid immediate retries after detail read failures (#1660)
+- preserve a core tab after final-tab failure (#1659)
+- protect changed copy-paste undo destinations (#1657)
+- bound git sync commands and shutdown (#1656)
+- preserve replacement overlay registrations (#1652)
+- release failed listeners on teardown (#1651)
+- retain drafts until intent acceptance (#1650)
+- keep task picker source as text (#1649)
+- preserve source trees in task picker (#1648)
+- keep watches across atomic replacements (#1647)
+- bind sync status to current tab request (#1646)
+- replace file reference after first-save collision (#1645)
+- settle callbacks when entries change (#1644)
+- preserve saved history during replies (#1643)
+- contain storage failures (#1642)
+- keep command descriptions under 200 characters (#1641)
+- render load failures as text (#1638)
+- retry failed draft syncs (#1634)
+- report unknown icons after acknowledgement (#1633)
+- advance only accepted summary cursors (#1631)
+- bound and cancel background Git reads (#1630)
+- show angle-bracket placeholders in usage errors (#1625)
+- report the no-workspace auto-approve warning as a notification (#1624)
+- one owner for the re-root sequence (#1622)
+- answer a line capability aimed at a foreign tab (#1617)
+- read the dock side through the published parser (#1614)
+- preserve Janissary browser environment
+- read a codex usage-limit banner above its composer (#1603)
+- draw the harness and ssh new-shell icon light on dark (#1602)
+- abbreviate the paths a notification shows as $workspace or $root (#1597)
+- preserve Homebrew and nvm shell environment
+- keep shell tabs alive after remote close (#1592)
+- hold pending usage-limit retry (#1591)
+- prefer workspace shortcut for remote root (#1589)
+- report denied file navigator navigation (#1588)
+- join sibling shells from the answering remote tab (#1586)
+- show remote connection status (#1585)
+- align remote metadata host and status (#1584)
+- abbreviate remote file navigator paths (#1583)
+- keep a single terminal click from focusing the terminal (#1570)
+- restore single-click command-bar focus (#1567)
+- distinguish quarantined installs from updates
+- require contiguous find matches (#1564)
+- jump to first fuzzy-find match on Enter (#1563)
+- position fuzzy-find matches near the top (#1562)
+- install the zsh status hooks from startup files instead of typing them (#1556)
+- isolate regex matching in a terminable worker (#1555)
+- require a complete tab-release list (#1550)
+- shell styling
+- paint the terminal's padding in the theme background (#1548)
+- use stopwatch for auto-resume flag (#1537)
+- recognize opencode's permission panel beside its own sidebar (#1532)
+- recover draft snapshots after reconnection (#1528)
+- serialize overlapping save requests (#1527)
+- guard navigator renames and atomically write remote files (#1522)
+- bound pending writes per session (#1521)
+- serialize and cancel recording reads (#1520)
+- serialize shared workspace sync cycles (#1519)
+- preserve cached file identity across navigator roots (#1518)
+- remove ignored sandbox_permissions setting (#1517)
+- allow Codex managed preferences to synchronize (#1514)
+- return keyboard focus to the harness after a pick (#1512)
+- answer a messaged question with the human's answer (#1511)
+- guard every host call into a contributed overlay (#1510)
+- answer SQLite read failures in the browser instead of disabling the sql plugin (#1509)
+- write a remote file's cached copy only after the remote accepts it (#1508)
+- read row stats and restored views only through the tab's port (#1507)
+- settle an unanswered remote request at a deadline (#1506)
+- end an idle conversation's session when its tab closes (#1505)
+- confirm a typed close <name> that would quit the app (#1504)
+- exit like quit when the last non-docked tab closes, keeping its saved state (#1503)
+- finish the running command when connection close shell kills its shell (#1502)
+- open a newfile-named tab with focus in the buffer (#1501)
+- wrap the file navigator header buttons when it is narrow (#1498)
+- report git failures by their first line and link the full output (#1486)
+- remove the spacing between a notification's clipboard icons (#1485)
+- return the browser flag to plain when the e2e browser exits (#1484)
+- keep every file link on a folded notification line (#1478)
+- prepare test-pull-request on master and update only the branch's packages
+- make janus --relaunch wait for the server it just started (#1475)
+- create the profiles directory on the first profile save (#1474)
+- reject a non-http scheme as an invalid address (#1473)
+- disable the command line while the route chooser is open (#1472)
+- report a mistyped project directory as a usage error (#1471)
+- move a question panel's Tab from the focused button (#1470)
+- clear a harness tab's unread badge when it resumes work (#1469)
+- report the real commit subject in a dry run (#1468)
+- blink the dot for claude 2.1.282 and settle it when claude goes quiet (#1466)
+- end a harness's whole process group with its tab (#1465)
+- keep Shift+Tab inside a pending question panel (#1464)
+- let window shortcuts through while the buffer has focus (#1425)
+- accept only a positive pid and take the lock exclusively (#1424)
+- keep the whole name typed for agent <name> (#1421)
+- complete the token on a continuation line (#1420)
+- complete a bare ~ into the home directory (#1419)
+- record a zsh tab's cwd as a path and survive a stale one (#1418)
+- leave the existing untitled row alone when New directory collides (#1417)
+- keep the launch state snapshot for a late subscriber (#1413)
+- let Shift+Tab outdent in an editor tab's buffer (#1400)
+- return a blank line to blank when Cmd+/ uncomments an indented block (#1394)
+- keep the keyboard in the buffer on a right-click so the menu offers Paste (#1393)
+- return focus to the buffer after answering the overwrite prompt (#1392)
+- move the cursor when an open editor tab is re-opened with a line (#1386)
+- make back and forward work on a cross-origin page tab (#1375)
+- say the theme is unchanged when its config write fails (#1369)
+- refuse a save that would overwrite content the buffer never saw (#1367)
+- serve an image saved from the editor as the PNG it now holds (#1365)
+- ask before close <name> discards unsaved edits (#1362)
+- name the tab a closeTab RPC closes by its label (#1357)
+- allow a -b tab to restart its e2e browser 100 times (#1356)
+- count a messaged command's appended entries from the transcript bus (#1321)
+- decode the agent-name and harness-model override files on load (#1319)
+- give in-place transcript rewrites their own entry:updated bus event (#1314)
+- await the page open in a profile launch (#1308)
+- resolve close <name> through the shared label-or-alias lookup (#1243)
+- keep the detached peer's socket path inside the sockaddr_un limit
+- pull and push the repository's default branch instead of master (#1235)
+- resolve every user-typed tab name through one label-or-alias lookup (#1234)
+- release a harness tab's runtime when the tab closes (#1230)
+- keep the task and profile picker selection on a real row when the list changes (#1229)
+- scope the pending route chooser to the tab that raised it (#1228)
+- forget a persona's ACP session when its agent dies (#1227)
+- run the command on the reply's last command line, whichever tool owns it (#1226)
+- merge global history with the file on disk and never overwrite an unreadable one (#1225)
+- untrust a workspace through the validated, atomic Claude config path (#1222)
+- refuse a tab rename that would replace a file or leave its folder (#1220)
+- answer malformed HTTP requests with 400 instead of crashing (#1219)
+- share and release a tab's page-browser launch while in flight (#1214)
+- validate every field a profile agent entry can carry (#1213)
+- resolve keyboard activation through the opener registry (#1209)
+- route a file-navigator drop to the editor under the pointer (#1207)
+- address undo, redo and create requests by label (#1206)
+- persist only agent tabs, decided at the single save path (#1204)
+- launch codex without its shared background server (#1202)
+- address destructive requests by navigator label (#1197)
+- keep autoApprove when decoding a session-state answer (#1195)
+- record an accepted suggestion as its own undo step (#1194)
+- keep Cmd+W and Shift+Tab from acting behind an open modal dialog (#1192)
+- release a tab's message queue when the tab closes (#1190)
+- ignore prompt callbacks from a stopped or replaced session (#1189)
+- report a refusal after the workspace is ready instead of closing the tab (#1188)
+- contain a failed process spawn inside the remote server (#1187)
+- recover a tab whose shell exits on its own (#1186)
+- refuse to overwrite on a single-item move unless confirmed (#1185)
+- carry a tab's schedule on every persisted-state write (#1184)
+- auto-approve claude's four-option permission gate (#1178)
+- keep Return on a new file's name out of the buffer (#1177)
+- close the find overlay on Escape from the buffer (#1176)
+- launch PTY programs through an interactive, non-login shell (#1173)
+- launch PTY programs through an interactive login shell (#1172)
+- persist agent state for names with dots (#1165)
+- skip the navigator commit-message field on a tree with no changes (#1162)
+
+### Documentation
+
+- document captured shell behavior (#1726)
+- document agent monitor plugin (#1725)
+- clarify tab strip name (#1724)
+- clarify tab targeting and dialog dismissal (#1723)
+- document target removal and dispatch (#1722)
+- correct browser command reference (#1721)
+- clarify sidebar profile persistence (#1720)
+- correct activity log field name (#1719)
+- clarify decode notification delivery (#1718)
+- document multiline picker rows (#1717)
+- clarify remote workspace OAuth credentials (#1716)
+- clarify files retained on relaunch (#1715)
+- clarify remote session relaunch outcomes (#1714)
+- expand open and play guidance (#1713)
+- correct editor guidance (#1712)
+- explain restored remote history (#1711)
+- complete shell tab user guide (#1710)
+- complete image tab user guidance (#1709)
+- cover autonomous runs and detached sessions (#1708)
+- clarify desktop alerts and bell sounds (#1707)
+- explain database open failures (#1706)
+- clarify right-click menu behavior (#1705)
+- document task resolution and cleanup (#1704)
+- add application configuration reference (#1703)
+- clarify launcher command and tab behavior (#1702)
+- clarify defaults and custom effort (#1701)
+- enforce clipboard page sprite count (#1700)
+- clarify clipboard history behavior (#1699)
+- expand diff tab guidance (#1698)
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- delegate documentation gap evaluations
+- prevent early completion of documentation audits
+- enforce complete documentation gap audits
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- close backlog gaps (#1697)
+- refresh documentation gap candidates
+- require comprehensive documentation audits
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- resolve covered diff documentation item (#1682)
+- clarify shell transcript behavior (#1681)
+- clarify role command errors (#1679)
+- explain agent launch errors (#1677)
+- refresh documentation gap candidates
+- draft shell tab text transcript plan (#1674)
+- add complex feature build task
+- add plan
+- plan specification-driven build repair task (#1669)
+- close user documentation gaps (#1666)
+- refresh documentation gap candidates
+- record overlay registration cleanup debt
+- add output-only shell transcript feature
+- give every stranded article and fixture label a tab kind that exists (#1623)
+- clarify resume and browser recovery behavior (#1607)
+- clarify remote navigation and undo behavior (#1606)
+- refresh documentation gap candidates
+- plan PR issue task split and feature task organization (#1604)
+- clarify fatal failure notifications (#1590)
+- promote remote shell plans to ready (#1573)
+- split remote shell plan into eight ordered plans (#1572)
+- rebase remote shell navigation plan onto workspaced zsh (#1571)
+- plan remote file navigation from shell tabs (#1568)
+- plan workspace support for shell tabs (#1566)
+- resolve covered database candidate (#1561)
+- resolve covered conversations candidate (#1560)
+- clarify new file focus (#1559)
+- explain file request timeouts (#1558)
+- explain matching timeouts (#1557)
+- refresh documentation gap candidates
+- list help commands in alphabetical order (#1544)
+- draft the remove-an-existing-feature task plan (#1538)
+- record agent-tab recording as a deferred feature
+- refresh launch dialog screenshot for opencode auto-approve (#1497)
+- cover the SQL browser's databases and clear the doc backlog (#1495)
+- note the first save creates profiles/ and the write failure line (#1494)
+- document process-group teardown and dot settle timing (#1493)
+- describe feed line links and folded file icons (#1492)
+- list all eleven bundled plugins (#1491)
+- document the SQL database browser tab (#1490)
+- document the project-wide search tab (#1489)
+- promote documentation gaps to ready
+- refresh documentation gap candidates
+- draft the update-pull-request task plan (#1487)
+- plan a test-pull-request task that runs a PR's testing steps (#1476)
+- file the janus --relaunch stale-address bug
+- the arrow key's real target and remembered subdirectories (#1461)
+- the fields the state file actually holds (#1460)
+- where the transcript comes from, and what a relaunch drops (#1459)
+- the monitor tab is dropped silently, and name the browser key (#1458)
+- add the error reference and fix what broadcast reaches (#1457)
+- name the third auto-ran tool and the real collapsed summary line (#1456)
+- the chooser never refuses, and db needs its engine (#1455)
+- name the one theme-driven part of a terminal (#1454)
+- drop the help menu and scope the quit confirmation (#1453)
+- qualify the leftover removal and the push credential (#1452)
+- cover the shell metadata row, the alias rules and first-match close (#1451)
+- correct the engine-word exception and the chooser with no database (#1450)
+- correct the model memory, the replay window and the agent's reach (#1449)
+- correct the list format and the close replies (#1448)
+- say what the root path is and who writes the ready line (#1447)
+- add Ctrl+O and drop the input Ctrl+B/Ctrl+F rows (#1446)
+- describe a disabled plugin's entry as the silence it is (#1445)
+- cover a plugin renaming its own tab and a pinned command refusing a URL (#1444)
+- correct the error strings and add the external page form (#1443)
+- add the tree's Escape rule and the files echo (#1442)
+- record what a log line does not name (#1441)
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- say an inline terminal card cannot be sent to (#1436)
+- fill in the sessions list's own chrome (#1435)
+- say what a toast shows and when the corner empties (#1434)
+- refresh documentation gap candidates
+- define autonomous auto-build workflow (#1433)
+- cover completion on a continuation line and a bare tilde (#1431)
+- say what a tab's shell does when its directory is gone (#1430)
+- say the image header's size follows a save (#1429)
+- state where a -b tab stops being given a browser (#1428)
+- explain what a damaged instance lock does at startup (#1427)
+- document window shortcuts and pickers inside an editor's buffer (#1426)
+- refresh documentation gap candidates
+- verify bug fixes with a live end-to-end app run
+- add a dropped-snapshot hypothesis to the launch focus bug
+- file spec-testing bugs in the structured backlog entry format (#1397)
+- repoint source comments at the files namespacing moved (#1359)
+- give the start and stop tasks janissary specifics
+- promote the find-bugs task plan to ready
+- draft plan for a find-bugs research task (#1322)
+- correct seven wrong user-documentation facts in never-verified areas (#1280)
+- refresh documentation gap candidates (#1275)
+- generalize namespacing task across source trees
+- generalize modularity task across source trees
+- correct eleven wrong user-documentation facts across a full area survey (#1260)
+- refresh documentation gap candidates
+- correct eleven wrong user-documentation facts and add thirty-one missing ones (#1240)
+- score the deferred documentation gap candidates
+- refresh documentation gap candidates
+- refresh documentation gap candidates
+- correct the tab navigator's scope and close the session and conversation gaps (#1224)
+- refresh documentation gap candidates
+- correct the navigator strip label and close the last view-tab gaps (#1223)
+- refresh documentation gap candidates
+- close the view-tab and picker documentation gaps (#1221)
+- refresh documentation gap candidates
+- clear the user-documentation backlog's ready section (#1218)
+- promote scored documentation candidates to ready
+- refresh documentation gap candidates
+- document launch-name refusals, dialog keys, and editor chords (#1208)
+- refresh documentation gap candidates
+- clone on the remote with the forwarded GitHub token
+- plan a clone offer when a remote path is not a clone of the project (#1199)
+- plan refusing duplicate harness/agent launch names (#1174)
+- plan a separate narrow-sidebar layout for the sessions tab (#1170)
+- draft notification toasts when the notifications tab is closed (#1168)
+- add auto-accept for detached remote harnesses plan (#1160)
+- consolidate repository guidance (#1159)
+
+### Refactoring
+
+- extract task-root validation helper (#1693)
+- extract cleanup error normalization (#1692)
+- move RPC actions into owning features (#1691)
+- extract follow-scroll hook and policy (#1690)
+- move intents into feature controller (#1689)
+- unify grid write-state projection (#1688)
+- extract role creation hook (#1687)
+- isolate response panel actions (#1686)
+- use the shared atomic file writer (#1664)
+- tie filesystem requests to operation arguments (#1658)
+- type remote filesystem replies by operation (#1655)
+- move websocket client into shared layer (#1654)
+- move page render lifecycle to hook (#1637)
+- define narrow action ports (#1636)
+- separate file-link rendering (#1635)
+- move the state layer into src/state (#1626)
+- remove the architecture and deployment diagram tasks (#1618)
+- build the editor plugin host at the edge that owns the editor tabs (#1620)
+- share the guarded background-delivery skeleton (#1619)
+- dispatch conversations intents through the shared helper (#1616)
+- read isRecord from the published plugin contract (#1615)
+- give the path-containment test one owner (#1613)
+- rename useRankedOverlayKeys to rankedOverlayKeys (#1612)
+- move the notifications feed into web/src/notifications (#1611)
+- colocate the harness tab modules in web/src/harness (#1610)
+- extract the editor row plan from EditorLines into editor-rows (#1609)
+- move the question panel into web/src/shared/questions (#1608)
+- move zsh startup hooks to the host (#1574)
+- isolate plugin store instances (#1553)
+- route tab controls through typed actions (#1551)
+- bind mutation replies to RPC methods (#1531)
+- move picker keyboard handling to shared (#1530)
+- inject transcript and terminal actions (#1529)
+- extract search and SQL draft logic (#1524)
+- separate selection rules from hook (#1523)
+- deliver auto-approve support on the launch dialog's catalog (#1423)
+- declare the profile layout update once and pass it through whole (#1422)
+- pass notify's link targets and detection time by name (#1316)
+- parse the command-line cursor once into a named record (#1312)
+- move web file navigator helpers into a web/src/file-navigator/file namespace (#1309)
+- retire the remaining re-exports and lint against new ones (#1307)
+- move file navigator manager collaborators into a src/file-navigator/manager namespace (#1305)
+- move remote frame decoders into a src/remote/frame namespace (#1304)
+- move file navigator remote port files into a src/file-navigator/remote namespace (#1303)
+- retire re-exports in the tab, schedule, notifications, and recognizer modules (#1302)
+- move terminal helpers into a web/src/shared/terminal/terminal namespace (#1301)
+- move harness capture files into a src/harness/capture namespace (#1300)
+- share one opens-no-files opener across the command-only list plugins (#1299)
+- move the static file server out of the boot sequence (#1298)
+- move sandbox browser files into a src/sandbox/browser namespace (#1297)
+- define the window tab-switch and picker chords once (#1296)
+- split a spawn's environment out of the profile builder (#1295)
+- give the client's request exchange its own module (#1294)
+- move controller file-navigator RPC files into a src/controller/file namespace (#1293)
+- split a line's text rendering out of the line renderer (#1292)
+- move shared tab surface files into a web/src/shared/tab namespace (#1291)
+- move profile save files into a src/profile/save namespace (#1290)
+- share errorFirstLine() with the web editor plugin host (#1289)
+- move remote channel files into a src/remote/channel namespace (#1287)
+- give the Chrome app window its own module (#1286)
+- move picker overlay files into a web/src/pickers/picker namespace (#1285)
+- share guardPluginCall() with the web editor plugin host (#1284)
+- move the path-mapping port operations out of the remote port (#1283)
+- move remote filesystem files into a src/remote/filesystem namespace (#1282)
+- extract deferredChannelTransport() to cut a duplicated channel transport (#1281)
+- give the transcript poll its own collaborator (#1279)
+- extract drainFrames() to share the newline-delimited frame reader (#1278)
+- move tab transcript files into a src/tab/transcript namespace (#1277)
+- split the reply delivery out of the client dispatcher (#1276)
+- extract spawnFrameState() to cut a duplicated spawn-frame descriptor (#1274)
+- move the transcript operations out of the tab manager (#1273)
+- name the rehydrate collaborators RehydrateSource (#1272)
+- split the frame shapes out of the wire codec (#1271)
+- re-export the transcript operations instead of wrapping them (#1270)
+- move the live monitors and their sessions into their own class (#1269)
+- give dockable list plugins one command and notify pair (#1268)
+- move tab creation and PTY wiring into its own class (#1267)
+- dispatch the editor RPC arms from their own module (#1266)
+- split the per-tab-kind schema checks into their own module (#1265)
+- name isRecord and isModelPair once (#1264)
+- give the tab watch lifecycle its own class (#1263)
+- give plugin record lists one selection hook (#1262)
+- split the capability contract out of the v1 plugin api (#1261)
+- dispatch the tab-tree RPC arms from their own module (#1259)
+- move the session lifecycle decoders into their own module (#1258)
+- split the topic contract out of the v1 plugin api (#1257)
+- extract the provision frame decoder into its own module (#1256)
+- share the command bar's completion request (#1255)
+- share dropExpandedWatchers() (#1254)
+- share the ranked overlay's key contract (#1253)
+- share the sectioned pickers' key prelude (#1252)
+- share the clientless plugin entry pipeline (#1251)
+- name the intercepted-picker shape once in shared (#1250)
+- share noteInOriginTab() for clientless plugin lines (#1249)
+- publish selectionAfterLineEdits() for whole-line transforms (#1248)
+- have ConfirmDialog render ConfirmDialogShell (#1247)
+- drop the conversations copy of parseDock (#1244)
+- publish parseDockArgument() for the dockTab command grammar (#1242)
+- move the page, markdown, schedules, and sessions plugins onto the declared intent table (#1241)
+- merge gutter and triple-click line-drag guards (#1239)
+- move the pdf, video, and audio plugins onto the declared intent table (#1238)
+- promote tab-chrome helpers to shared and zone plugins, toasts, and context-menu (#1237)
+- start and finish shell entries through the shared running-entry path (#1236)
+- build a tab's connections from one catalog every surface reads (#1233)
+- import the schedule-body parser helpers directly and share one usage string (#1232)
+- route payload-less intents through one lookup table (#1216)
+- add entry lookups and one established predicate (#1215)
+- give the detached peer's record one owning module (#1211)
+- end a remote entry through one idempotent routine (#1205)
+- share tab-placement rules between server and client (#1196)
+- resolve agent-message commands with the command bar's resolver (#1193)
+- share one list-selection clamp across the plugin lists (#1183)
+- move launch and confirm dialog keyboard hooks into shared (#1182)
+- move drag-into-terminal PTY write into a hook (#1181)
+- extract editor tab commit, rename, and resync intents (#1180)
+- namespace feed modules (#1167)
+- namespace command classifiers (#1164)
+- namespace RPC dispatch modules (#1163)
+
+### Chores
+
+- move blocked items to deferred (#1696)
+- defer complexity refactors blocked by quality (#1695)
+- defer shell parser complexity refactor (#1694)
+- log complexity hotspots
+- log react organization debt
+- log seven technical debt findings
+- record lifecycle and persistence debt
+- log remote filesystem typing debt
+- log message bus listener cleanup debt
+- record nine technical debt findings
+- log react organization debt
+- log five technical debt findings
+- log bugs found by spec testing
+- log namespacing opportunities
+- log complexity hotspots
+- log three more technical debt findings
+- log new technical debt findings
+- log react organization debt
+- record test-suite technical debt
+- clean up unused exports and findings
+- log SQL component organization debt
+- guard tab-close release completeness
+- record navigator RPC reply contract debt
+- log react organization debt
+- record search and editor lifecycle debt
+- log react organization debt
+- record rename and remote save debt
+- record cache, sync, and recording debt
+- log new technical debt findings
+- log new product gap findings
+- log new product gap findings
+- log new product gap findings
+- rename pull-request-review task to review-pull-request (#1480)
+- record the three stale specs as technical debt
+- close the quick open documentation item (#1439)
+- close the command history documentation item (#1438)
+- close the agent command queue documentation item (#1437)
+- close the release documentation item (#1432)
+- log react organization debt
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log bugs found by spec testing
+- drop the narrow-tree filename truncation bug
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log bugs found by spec testing
+- log new technical debt findings
+- log the test suite's unstated time budgets and flakiness
+- log the sync data loss and the theme write-failure claim (#1288)
+- require the docs update alongside the page-tab nav fix (#1246)
+- log the inert page-tab back and forward buttons (#1245)
+- log new technical debt findings
+- log new technical debt findings
+- log new technical debt findings
+- log complexity hotspots
+- log new technical debt findings
+- add September 2026 models to the bundled catalog (#1198)
+- log three more technical debt findings
+- log new technical debt findings
+- log flaky harness-roundtrip test
+
+### Other
+
+- test: report unavailable sandbox cases as skipped (#1653)
+- perf(plugins): coalesce tabs notifications (#1632)
+- perf(test): reuse jsdom environment across client test files (#1628)
+- test: lint a real shared module in the boundary test
+- test(harness): cover linked Codex usage-limit banner (#1601)
+- test: capture expected fixture diagnostics (#1595)
+- test(shell): isolate learned command persistence fixtures (#1594)
+- test(transcript): isolate logger test subscriptions (#1593)
+- style(harness): move remote connection icon into flags (#1587)
+- build(deps): pin knip to 6.40.0
+- build(docs): upgrade VitePress to 2 alpha
+- build: align Vite range with resolved version (#1554)
+- build: update Vite to 8.3.3 (#1552)
+- test(shell): pin launch focus on the janus shell command bar (#1542)
+- test: backfill coverage for uncovered server and web paths (#1535)
+- style(web): give the auto-resume flag its own icon (#1534)
+- build(deps): update dompurify to 3.4.16 (#1483)
+- test: cover the paste conflict dialog's titles and cancel (#1416)
+- test: cover the focused pane's split chord in AppMain (#1415)
+- test: cover useTabEntries and the strip's reorder mapping (#1414)
+- test: cover App's close button route and the unsaved-quit guard (#1412)
+- test: cover the shell tab layer's split chord (#1411)
+- test: cover the commit popup's two ways out (#1410)
+- test: cover the toast stack's keyboard hold (#1409)
+- test: cover the transcript's promote-to-terminal intent (#1408)
+- test: cover the editor connections hook's guard and acp transcript (#1407)
+- test: cover the image editor's crop toggle (#1406)
+- test: cover the conversation composer's Escape handling (#1405)
+- test: cover the file navigator header's GitHub button (#1404)
+- test: cover the docked plugin body's empty-envelope guard (#1403)
+- test: cover tab label truncation's budget (#1402)
+- test: cover the reporting section's reorder index mapping (#1401)
+- test: cover the delete-schedule dialog's keyboard and click capture (#1399)
+- test: cover the image edit toolbar's crop gesture (#1398)
+- test: cover the split chord and dirty handle every mounted layer gets (#1396)
+- test: cover the file navigator's opener hook and its chooser (#1395)
+- test: cover every overlay PickerOverlays dispatches to (#1391)
+- test: cover the metadata row's detach/attach control (#1390)
+- test: cover the transcript normalizers' unrendered shapes (#1389)
+- test: cover the open command's usage answer (#1388)
+- test: cover profile launch's per-entry openers (#1387)
+- test: cover the sessions snapshot's row and record projections (#1385)
+- test: cover the transcript logger's unconfigured guard (#1384)
+- test: cover the e2e-browser subcommand's argument hand-off (#1383)
+- test: cover the controller's bus-to-client projections (#1382)
+- test: cover the conversations payload validator's record guards (#1381)
+- test: cover defineDockableList's two guards (#1380)
+- test: cover the pdf opener's content-type guard (#1379)
+- test: cover ProfileManager's remote-join and usage edges (#1378)
+- test: cover a remote launch's refusal arms (#1377)
+- test: cover the profile validator's shape guards (#1376)
+- test: cover buildTabViews, the wrapper every state event goes through (#1374)
+- test: cover the tab focus history directly (#1373)
+- test: cover the recording sweep's uninitialized guard (#1372)
+- test: cover profile save's per-tab routing decisions (#1371)
+- test: cover the browser log's uninitialized guards (#1370)
+- test: cover the files command's remote tree and re-rooting (#1368)
+- test: cover the four points a remote provision stops at (#1366)
+- test: cover the remote transcript follower's poll loop (#1364)
+- test: cover the remote file navigator's session, watch, and error paths (#1363)
+- test: cover the remote root settle and startup setup (#1361)
+- test: cover the remote serve entry point's signal wiring and handshake (#1360)
+- test: remove loopback dependency from the network suites (#1358)
+- test: cover the conversations manager's records and refusals (#1355)
+- test: cover the session attach failure outcomes (#1354)
+- test: cover the clientless selection action path (#1353)
+- test: cover the deferred channel transport and frame set (#1352)
+- test: cover the tab operations guards and split cascades (#1351)
+- test: cover the file navigator manager's row-level delegations (#1350)
+- test: cover the local file system port's containment paths (#1349)
+- test: cover the tab runtime accessors (#1348)
+- test: cover the JSONL transcript tail (#1347)
+- test: cover the file navigator cache's stat and failure paths (#1346)
+- test: cover the open glob matcher refusals (#1345)
+- test: cover the plugin message dispatch cases (#1344)
+- test: cover the remaining remote file system port operations (#1343)
+- test: cover the remaining file navigator dispatch cases (#1342)
+- test: cover the remaining controller bindings (#1341)
+- test: cover the remote git metadata and commit mapping (#1340)
+- test: cover the tab adapter focus and notification bindings (#1339)
+- test: cover the editor rename and commit param decoders (#1338)
+- test: cover the RPC reply settle shape (#1337)
+- test: cover the file navigator open and retarget rules (#1336)
+- test: cover the profile harness schedule build (#1335)
+- test: cover the harness transcript record narrowing (#1334)
+- test: cover the opener presentation lookup (#1333)
+- test: cover the split pane focus repair and recent-label pick (#1332)
+- test: cover the broadcast command's run path (#1331)
+- test: cover the remote file cache guards and full clear (#1330)
+- test: cover the file navigator watch lifecycle (#1329)
+- test: cover the plugin RPC param guards (#1328)
+- test: cover the remote multi-item move mapping (#1326)
+- test: cover the remote port path mapping (#1325)
+- test: cover the file navigator close and cascade (#1324)
+- test: cover the editor controller adapter wiring (#1323)
+- test: cover the harness transcript directory clear (#1320)
+- test: cover the file navigator's open and create paths (#1318)
+- test: resolve every bundled tab plugin loader (#1317)
+- test: cover the file navigator controller adapter wiring (#1315)
+- test: cover the remote port path prefix filters (#1313)
+- test: cover the remote transcript source buffer (#1311)
+- test: cover the controller monitor RPC surface (#1310)
+- test: cover the file navigator selection-action RPC surface (#1306)
+- perf(state): cache the task and profile listings instead of walking the disk on every broadcast (#1231)
+- perf(remote)!: encode navigator file contents once on the wire (#1212)
+- style(remote): drop the advice clause from termination messages (#1203)
+- test(commands): stub the schedule manager in the question command fixture (#1191)
+- test(harness): cover claude's four-option read permission gate (#1179)
+- test(sessions): remove flaky harness shutdown case (#1166)
+
 ## [0.15.0] - 2026-09-21
 
 ### Features
