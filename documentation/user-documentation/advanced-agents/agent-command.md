@@ -44,10 +44,42 @@ If you add `in a tab` but Janissary can't open the monitor, the run fails before
 
 You can repeat `with skill <name>` to select more than one skill. Other launch clauses are single-use: `on`, `in a tab`, `in group`, `in workspace`, `using model`, and `with effort`. Repeating one reports an error such as `Agent: duplicate clause "using model".` Put quotes around a launch value that contains spaces, such as `in workspace "my project"`. An unmatched quote reports `Agent: malformed quoted value.`
 
-Each clause needs its value. For example, `on execute` reports `Agent: missing value for on.`, and `in group execute` reports `Agent: missing value for in group.` An unsupported option such as `with format fast` reports `Agent: unknown clause "with format".` Use the documented forms, such as `with skill`, `using model`, and `in workspace`. Text after the task name is task input, so launch-looking words there are not parsed as options.
+Each clause needs its value. For example, `on execute` reports `Agent: missing value for on.`, and `in group execute` reports `Agent: missing value for in group.` An unsupported option such as `with format fast` reports `Agent: unknown clause "with format".` A word before `execute` that is not a launch option reports `Agent: expected launch clause or final execute, got "<token>".` Use the documented forms, such as `with skill`, `using model`, and `in workspace`. Text after the task name is task input, so launch-looking words there are not parsed as options.
 
 For an explicit task path, use a file inside the execution workspace, or a path under `$janissary/ai/tasks/`. A path outside those locations, including one that resolves outside through a link, reports `Agent: task path outside allowed roots "<value>".`
 
 If a selected skill can't be used, `Agent: unknown skill "<name>".` means it wasn't found; `Agent: invalid skill path "<name>".` means its path isn't valid. Repeating a skill name has no effect, and mentioning another skill in a skill's instructions does not select it. A malformed `janissary.json` grant file reports `Agent: malformed skill grants "<name>".` An unrecognized command in that file reports `Agent: unknown command grant "<command>" in skill "<name>".`
 
 If an agent's final command-looking line appears inside a Markdown code fence, Janissary treats it as an example rather than a request to run the command. This applies to fences made with backticks or tildes.
+
+<img class="agent-float" src="/agents/dogan-south-west.png" alt="" />
+
+### What the task can find
+
+A bare task filename is searched by basename under the execution workspace's `ai/tasks/` folder first, including its subfolders. If it has no match there, Janissary searches its installed tasks. More than one match in the selected folder is an error. Janissary reports `Agent: ambiguous task "<value>": <matching paths>.` and does not search the installed tasks as a fallback. If nothing matches, it reports `Agent: unknown task "<value>".`
+
+For a path, use a file inside the execution workspace or under `$janissary/ai/tasks/`. Janissary follows links before checking the allowed roots. A path outside them reports `Agent: task path outside allowed roots "<value>".` A task lookup also checks that the `ai/tasks/` folder itself stays inside its allowed root. Task text is read when the run resolves the task, so later edits do not change that run's task.
+
+Skills are searched in the execution workspace and then in Janissary's installed skills. A skill's `SKILL.md` and optional `janissary.json` grant file must stay inside that skill's folder. A skill does not load other skills just because its instructions mention them. Selected skill instructions and grants are captured with the task when the run starts.
+
+The optional `janissary.json` file beside `SKILL.md` can grant whole Janissary commands:
+
+```json
+{"version":1,"commands":["question"]}
+```
+
+The names must be canonical commands. Prefixes, unknown commands, invalid JSON, or an unsupported version fail the launch. A skill without this file grants no commands. A nested agent can select only skills with the same source, name, and instructions as its parent's captured skills. Its grants are limited to the commands both runs allow, so it cannot gain access by selecting another skill.
+
+### Run results and cleanup
+
+The task receives the parameter text after its filename unchanged, including leading spaces, unmatched quotes, or words that look like launch options. Launch options are parsed only before the task filename.
+
+The agent can request a granted command on the final nonempty reply line as `janissary <command>`. The command must be explicitly granted by a selected skill. A denial is returned to the agent and does not grant another command. Autonomous providers use the least expansive available tool-approval option. If the provider fails or returns an empty final answer, the run is marked failed.
+
+Closing the tab that launched the task terminates its run. Closing the monitor only closes the view; execution continues. A parent run owns nested runs it starts, and ending the parent stops its active children. Tabs created by a run's granted commands close during cleanup. A tab that was already open, or one the command only focused, stays open. Cleanup releases the run's workspace reference and attempts each owned cleanup even if another one fails. Cleanup warnings appear after the result without changing its status.
+
+### Remote task cleanup
+
+Use `on <[user@]host[:path]>` to execute the task on another machine. A pathless address reuses an established remote workspace only when the full SSH destination matches, including the user name. Otherwise Janissary opens a run-only SSH connection and finds the project from the remote login directory. Supplying `:path` always opens a run-only connection and uses that path. SSH authentication is non-interactive, and a remote failure never falls back to local execution.
+
+The remote host resolves and snapshots the task and skills, then runs the autonomous process. Granted Janissary commands still run on your original machine with the caller's captured context. Remote activity is delivered only to this run. A remote that fails to report readiness in 15 seconds, or acknowledge close within 5 seconds, does not leave the run waiting indefinitely. If close is not acknowledged, the result includes `Cleanup warning: Remote agent close was not acknowledged.`
