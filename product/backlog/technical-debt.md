@@ -4,6 +4,49 @@
 
 ## development
 
+* Replace the thirteen positional parameters of the plugin client capability factory with one named options object, changing its one production caller and its test file.
+
+Existing Debt: The factory that builds each plugin tab's client capabilities takes its identity, dock state, chord claims, dot color, recording and transcript paths, and remote session as thirteen positional arguments, so every caller and every test fixture must reproduce the full argument list to reach the one value it needs. Severity: 5/10
+
+Existing Risk: 5/10 - `dotColor`, `recording`, and `transcript` are adjacent optional strings, so transposing any two of them typechecks and wires a tab's recording flag or transcript button to the wrong file, and the call sites pass them by position, so nothing a compiler checks would name the swap.
+
+Proposal Risk: 2/10 - Named fields make a transposed or misspelled option a compile error, though a field left optional by the options type still needs its default handled in one place.
+
+Proposal: In `web/src/plugins/api.ts`, export a `PluginClientCapabilityOptions` type beside `TabPluginClientCapabilities` with the same inputs by name: `host`, `pluginId`, `label`, `client`, `active`, `dock`, and `onClose` are required, and `splitAction`, `onDirtyHandle`, `claimedChords` (defaulting to an empty list, as it does now), `dotColor`, `recording`, `transcript`, and `remoteCapabilities` are optional. Change `createPluginClientCapabilities` to take that one object and destructure it inside the function. Update its one production caller, the `useMemo` in `web/src/plugins/PluginBody.tsx` that passes the values in order, to build the same object. Update the roughly thirty positional calls in `web/src/plugins/api.test.ts` the same way and leave their assertions untouched. Behavior must not move: `recording` and `transcript` stay supplied together with their openers only when defined, `reportFailure` keeps its one-report-per-plugin dedupe, and `claimedChords` keeps its empty default. `web/src/plugins/api.test.ts` exercises each field the factory returns and is the coverage for this change; the compiler checks the call sites, so run the diff checks after the edit.
+
+
+* Have the sessions plugin contract and the connection plug take the remote session state, kind, and action types from the protocol instead of re-declaring them.
+
+Existing Debt: The session state, kind, and action unions and the runtime sets that check them are written out again in the plugin's shared sessions module, and the connection plug declares its own copy of the state union, although the plugin contract module already re-exports other protocol types so plugins import them from one place. Severity: 3/10
+
+Existing Risk: 3/10 - A state the server adds to the protocol union but the plugin's own state set omits would make the sessions decoder reject those rows, and only the drift pin in the sessions shared test would catch it.
+
+Proposal Risk: 1/10 - Once the plugin re-exports the protocol types, the two sides agree by construction; the remaining exposure is that the re-export must stay type-only, since a value re-export would pull server code into the browser bundle, which the web build surfaces.
+
+Proposal: `src/plugins/api.ts` already re-exports `AggregatedScheduleView`, `ConversationsView`, and `RemoteSessionView` from `../protocol.js` as types. Add `RemoteSessionKind`, `RemoteSessionState`, and `RemoteSessionAction` to that list with `export type` only. In `src/plugins/sessions/shared.ts`, replace the local `SessionRowKind`, `SessionRowState`, and `SessionRowAction` aliases with aliases of those re-exported types, and type the `KINDS`, `STATES`, and `ACTIONS` sets as `Record` values keyed by the protocol type so the compiler rejects a member the protocol adds that the set omits. In `web/src/shared/ConnectionPlug.tsx`, replace the local `ConnectionPlugState` union with the protocol's `RemoteSessionState` imported from `@shared/protocol`; its `LABELS` record already forces every member to be labeled. Leave the three-member `RemoteSessionState` exported from `web/src/shared/RemoteSessionButton.tsx` as a deliberate subset, but import it under an alias where both are needed, since the names collide. Existing coverage: `src/plugins/sessions/shared.test.ts` pins the plugin shapes against the protocol, `web/src/shared/ConnectionPlug.test.tsx` covers the plug's labels, and `web/src/plugins/sessions/SessionList.test.tsx` covers the list.
+
+
+* Use the protocol's remote target view type in the tab and file navigator views, and name the plugin origin-tab return type instead of writing it inline.
+
+Existing Debt: The protocol names the remote target with its reconnecting and provisioning flags as `RemoteTargetView`, but the tab view type and the file navigator view builder each restate that intersection, and the plugin contract restates the provisioning flag a third time inside the `originTab` return type, written out on one long line. Severity: 4/10
+
+Existing Risk: 4/10 - When the protocol renames or adds a flag, only the copies that the compiler checks against it move with it, so the plugin's origin-tab type can keep promising a `provisioning` flag the host no longer sends, and a plugin that waits on that flag opens a shell or diff in a clone that has not landed.
+
+Proposal Risk: 2/10 - One named type removes the restated copies, but the origin-tab flags are literal `true` values set by one host builder, so a host that stops setting one still typechecks against the plugin's optional field.
+
+Proposal: `src/protocol/tab.ts` owns `RemoteTargetView`. Replace the inline `RemoteTarget & { reconnecting?: boolean; provisioning?: boolean }` intersection in `src/tab/types.ts` on the tab view's `remote` field, and the same return type in `src/tab/remote-file-navigator-view.ts`, with `RemoteTargetView`, importing it from the protocol module the way those files already import protocol types. In `src/plugins/api.ts`, move the `originTab` return type out of the method signature into an exported `TabPluginOriginTab` type declared beside `TabPluginServerCapabilities`, keeping its `remote` and `provisioning` members typed as `true` because they describe what the origin tab reports rather than the target. Reformat that declaration across lines as the rest of the file does. The compiler is the main check here, since the two tab sites change type only and the origin-tab type is set by the one builder in `src/plugins/line-capabilities.ts`.
+
+
+* Give the remote filesystem operation tables one named descriptor type in place of the `any` constraint that three of them suppress, then replace the decoder casts with checked narrowing.
+
+Existing Debt: The three tables that define every remote filesystem operation are each checked against `OperationDescriptor<any>` behind the same lint suppression, and their `decode` functions cast validated arguments with `as` instead of narrowing them, so the types a `run` callback receives are not tied to the validator that guards them. Severity: 5/10
+
+Existing Risk: 5/10 - Because the constraint erases each operation's payload type, a `run` that reads an argument its `decode` never produces, or a cast that disagrees with the validator, typechecks and reaches the remote filesystem's request path.
+
+Proposal Risk: 3/10 - One named alias leaves a single suppression to review, but the casts stay until the second increment replaces them, so the narrowing risk is reduced rather than removed.
+
+Proposal: In `src/remote/filesystem/operations.ts`, `READ_OPERATIONS` and `MUTATION_OPERATIONS` each end in `satisfies Record<string, OperationDescriptor<any>>`, and `FILESYSTEM_OPERATIONS` ends in the same clause over `RemoteFilesystemOperation`, each with the same suppression comment. First increment: declare one exported `AnyOperationDescriptor` alias beside `OperationDescriptor` carrying the single suppression, point the three `satisfies` clauses at it, and check whether `unknown` can replace `any` inside that alias by running the diff typecheck, since the suppression is only justified if it cannot. Second increment, as a separate change: replace each `as` cast in the `decode` functions, such as the `replay` entry in `MUTATION_OPERATIONS` that casts its stacks and flags, with a checked narrowing helper, and where the operation's `valid` check does not yet prove the shape, extend `valid` so the narrowing rests on a check rather than an assertion. Existing coverage: `src/remote/filesystem/operations.test.ts`; run it after each increment, and leave `descriptorFor` behavior unchanged.
+
 ## deferred
 
 * Reduce the cognitive complexity of `parseShellArgument()` in `src/plugins/shell/parse-argument.ts` (line 25), reported at 20 against the allowed 15 in a file scoring 41.80 FTA across 48 lines. The function parses shell names and launch options through a token loop combining group-clause consumption, nested flag handling, unknown-option errors, and remote-address consumption. Flatten the flag branch with early continuation while preserving token advancement, case handling, and the rule that a remote target overrides the no-workspace flag; keep the exported argument shape intact. This target is risk-sensitive because it determines shell workspace, offline, and remote-launch options. Resolve by running the `ai/tasks/hygiene/reduce-complexity.md` task against `parseShellArgument()` in `src/plugins/shell/parse-argument.ts`. Severity: **medium**. — deferred: reduce-complexity could lower cognitive complexity only while raising the file's FTA score (41.80 to 42.49); the playbook requires restoring refactors that worsen quality.
