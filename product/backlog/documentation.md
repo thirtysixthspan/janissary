@@ -2,7 +2,6 @@
 
 ## ready
 
-* clipboard-history (5/10) — 3 of 20 user-visible facts are missing and 1 is wrong: the page says every in-app copy is remembered, but empty and whitespace-only copies are excluded. It omits the shell plugin terminal as a paste target and what users see if the overlay plugin fails while the popup is open. Update `documentation/user-documentation/command-bar/clipboard.md`; ground truth: `product/specs/clipboard-history.md`, `web/src/overlay-plugins/clipboard-history/store.ts`, and `web/src/overlay-plugins/clipboard-history/Popup.tsx`. Shortcut coverage is also in `documentation/user-documentation/getting-started/keyboard.md` and `help.md`.
 
 * roles (7/10) — 2 of 18 user-visible facts are missing and 1 core fact is wrong: defaults are written only when neither the home nor project roles file exists, but the page says they are always written on first open. It also omits that a hand-written effort value outside the built-in choices remains available in the dropdown and that no launch command or dialog consumes the roles file yet. Correct `documentation/user-documentation/tab-types/roles.md`; ground truth: `product/specs/roles.md`, `src/plugins/roles/activate.ts`, `src/plugins/roles/roles-file.ts`, and `web/src/plugins/roles/RolesTab.tsx`.
 
@@ -275,3 +274,4 @@
 * sql-database — documented cell editor values when columns are hidden or reordered in documentation/user-documentation/tab-types/sql-browser.md (removed 2026-10-13)
 * shell — documented the captured output limit in documentation/user-documentation/command-bar/shell.md (removed 2026-10-13)
 * diff-tab — documented in documentation/user-documentation/tab-types/diff-tab.md (removed 2026-10-14)
+* clipboard-history — documented in documentation/user-documentation/command-bar/clipboard.md (removed 2026-10-14)
