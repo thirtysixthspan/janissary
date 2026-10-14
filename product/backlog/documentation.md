@@ -4,6 +4,10 @@
 
 ## development
 
+* diff-tab (7/10) — In a review of 20 user-visible facts, 6 are missing from the user docs and one core fact is wrong: bare `diff` scopes to the application's launch directory, not always the project root. Although `help.md` lists `diff on <tab name>`, the reference does not explain that workspace form, the exact refusals when a workspace is unavailable or still provisioning, the 400-line collapse behavior, or how comments retain the source text they annotate. Update `documentation/user-documentation/tab-types/diff-tab.md` and its command entry in `documentation/user-documentation/command-bar/commands.md`; the behavior is specified in `product/specs/diff-tab.md` and implemented in `src/plugins/diff/activate.ts`, `src/plugins/diff/change-set.ts`, and `src/plugins/diff/session.ts`.
+
+* clipboard-history (3/10) — 2 of 18 user-visible facts are missing and none are wrong: empty or whitespace-only copies are excluded, and the popup's failure-isolation behavior when its overlay plugin breaks is undocumented. Add these edge details to `documentation/user-documentation/command-bar/clipboard.md`; the ground truth is `product/specs/clipboard-history.md`, `web/src/overlay-plugins/clipboard-history/store.ts`, and `web/src/overlay-plugins/clipboard-history/Popup.tsx`, with shortcut coverage also in `documentation/user-documentation/getting-started/keyboard.md` and `help.md`.
+
 ## deferred
 
 ## declined
