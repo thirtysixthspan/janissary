@@ -3,8 +3,6 @@
 ## ready
 
 
-* remote-server (8/10) — 3 of 15 user-visible behavior groups are absent or partial, especially remote autonomous-agent execution, detached harness alerts/captures, forwarded Git identity, and remote file failure outcomes. Extend `documentation/user-documentation/advanced-agents/remote-agents.md` with the verified remote-agent workflow and the most consequential detached-session and file-error behavior. Ground truth: `product/specs/remote-server.md`, `src/remote/serve-agent-resolution.ts`, `src/remote/acp-session.ts`, and the remote file-serving implementation; existing help provides only brief invocation syntax.
-
 * image-tab (8/10) — 9 of 32 user-visible fact groups are missing and 1 feature-list claim is incomplete. Expand `documentation/user-documentation/tab-types/image-viewer.md` with focus and profile behavior, reload guarding, viewer control behavior when hidden or switching tabs, and the complete list of unsupported editing features. Ground truth: `product/specs/image-tab.md`, `src/plugins/image/manifest.ts`, `src/plugins/image/activate.ts`, and `web/src/plugins/image/`.
 
 * shell-tab (8/10) — 17 of 30 user-visible fact groups are missing and none are wrong. Expand `documentation/user-documentation/command-bar/shell.md` with `clear` routing, app-command timeout/partial output, history distinctions, docked shortcut ownership, remote metadata actions, transcript limits/failures, the one-second transcript shutdown wait, and the fact that deleting a live transcript is allowed even though saving, renaming, and moving it are blocked. Add a user-facing explanation of shell recordings, their retrieval, failure behavior, and echoed-secret exposure. Ground truth: `product/specs/shell-tab.md`, `product/specs/harness-recording.md`, `src/plugins/shell/activate.ts`, `src/shell/transcript/writer.ts`, `src/shell/transcript/manager.ts`, and `web/src/plugins/shell/ShellTab.tsx`.
@@ -48,6 +46,8 @@
 ## declined
 
 ## resolved
+
+* remote-server — documented in documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-10-14)
 
 * database — documented in documentation/user-documentation/command-bar/database.md (removed 2026-10-14)
 

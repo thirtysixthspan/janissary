@@ -80,6 +80,8 @@ The tab tells you when the token in use isn't the one you forwarded. You'll see 
 
 Your Claude, OpenCode, and Gemini tokens are forwarded the same way, which is what keeps a harness signed in on a machine that can't sign itself in. A Linux host has no keychain for `claude`, and a host nobody has run `opencode auth login` on has nothing for `opencode` or for its Google provider, so without the forwarded tokens those tabs start up logged out. None of the three reports anything when it works or when it doesn't, because the harness itself says whether it's signed in.
 
+Commits made in the remote workspace use the name and email of the person who opened Janissary. If no identity was forwarded, Git uses the remote project's own identity instead. This keeps an agent's commits from being attributed to the SSH account by accident.
+
 ## Find the connections
 
 A remote tab lists two connections: `ssh:<address>` for the transport, and `terminal:<program>` for the process on the far side, so a remote claude harness shows `terminal:claude` exactly as a local one does. Both are closable on their own. `connection close ssh:<id>` matches the tab's label first, then the address it was launched with. Closing a shared SSH connection closes every shell, harness, and file navigator using it. See [Connections](/user-documentation/command-bar/connections).
@@ -90,7 +92,7 @@ Click the 📁 button in a remote shell or harness tab to open a [file navigator
 
 Open and edit remote files normally from that tree. Janissary keeps the working copy it needs locally and writes editor saves back to the remote host. Changing the tree's root keeps each open editor pointed at its original remote file, even when another directory contains a file with the same name. If a save fails, the editor stays marked as changed and the notifications feed explains the failure. A remote file saves back only while the file navigator you opened it from is still open; after you close that navigator, saving is refused with a notification, so reopen the file from a remote tree to save it. **Open externally** is unavailable for remote files because an outside application could not send its changes back.
 
-Remote file requests fail if the host doesn't answer within a minute. Pulls, commits, searches, batch moves, deletes or pastes, undo or redo replay, and whole-file reads or writes can take up to ten minutes. The failure reason is `The remote machine did not answer in time.` A request keeps waiting while the connection reconnects; a reply that arrives after the request has failed is ignored.
+Remote file requests fail if the host doesn't answer within a minute. Pulls, commits, searches, batch moves, deletes or pastes, undo or redo replay, and whole-file reads or writes can take up to ten minutes. The failure reason is `The remote machine did not answer in time.` A request keeps waiting while the connection reconnects; a reply that arrives after the request has failed is ignored. A lost reply is not retried, because the remote may already have completed the operation. For changes such as a move, delete, paste, or save, the navigator reports the failure on the affected path as it does for local files. Operations that return data, such as a listing, search, or read, fail without a result instead.
 
 File moves and clipboard pastes stay on one machine. Dropping between hosts is not offered; pasting onto a different host is refused without clearing your clipboard. Dragging a remote row into a command bar or editor inserts a path such as `devbox:/srv/project/src/index.ts`, so the host is never ambiguous.
 
@@ -150,7 +152,9 @@ An ordinary `janus` launch leaves all of this alone. Parked sessions are listed 
 
 ## What stays local
 
-Screen captures, recordings, and busy detection are worked out on your machine from the terminal output streaming back, so `harness capture` writes a capture file locally and the busy dot behaves as usual. `harness transcript` is the exception. It reads the harness's own session record, which lives on the remote, so the remote reads it and sends the rendered result across.
+While connected, screen captures, recordings, and busy detection are worked out on your machine from the terminal output streaming back. A detached or reconnecting harness is different: `harness capture <name>` asks the remote host for a fresh capture, and one capture is retained for each permission prompt detected while detached. Captures are saved under `.janissary/captures/`; there is no separate screen for browsing them. A detached capture uses a separate SSH query and returns authentication, protocol, or timeout failures to the requesting transcript. `harness transcript` also reads the harness's own session record on the remote and sends the rendered result across.
+
+Remote harnesses continue to handle permission prompts while detached or reconnecting when auto-accept is enabled. If Janissary cannot clear a prompt, its notification is queued and appears in the notifications feed after you attach again, in the order it happened. Captures and queued notifications do not survive the remote session expiring or being terminated.
 
 A remote tab still can't launch its own remote tab. There is no `files on <address>` form without an existing tab on that host, and files cannot be copied between machines or handed to `open external` from a remote tree.
 
@@ -165,3 +169,15 @@ The command implies a remote workspace even if you include `--no-workspace`. It 
 Use `acp <prompt>` in a remote shell tab to query a core ACP connection running against that host's workspace — see [ACP agents](/user-documentation/advanced-agents/acp-agent). The `db` and `browser` commands it runs on its own still act on your machine, not the remote.
 
 For this to work, `opencode` has to be installed and authenticated on the remote — or an OpenCode or Gemini API key configured in your local project, which is forwarded across the connection the same way the other credentials are.
+
+## Run an autonomous agent on a remote host
+
+Add `on <host>` to an `agent` command to run its agent process on that host:
+
+```
+agent on devbox execute fix the tests
+```
+
+The host resolves the task and requested skills from its workspace and Janissary installation. It must already have `janus` available and accept non-interactive SSH authentication, since an autonomous run has no tab in which to answer a password prompt. A missing host, failed authentication, unsupported protocol, or task-resolution error fails the run. Janissary does not fall back to running it locally.
+
+If the host matches an established remote workspace and you leave off a path, the run shares that workspace. Otherwise, Janissary opens a run-only SSH connection and provisions the project there. The selected agent and model run remotely, but the autonomous tool loop stays on your machine. Its `db`, `browser`, and `question` commands use your local app and files. Closing the caller, detaching its remote session, or losing the connection stops the run. The remote agent's close is acknowledged before cleanup; if that acknowledgment is missing, the result includes `Cleanup warning: Remote agent close was not acknowledged.`
