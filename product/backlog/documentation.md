@@ -3,8 +3,6 @@
 ## ready
 
 
-* monitoring (7/10) — The monitoring guide omits the `unmonitor <name> <target>` form for removing one target while leaving the monitor running, and its suggested-command paragraph says delivery queues behind existing work although the spec describes immediate dispatch when busy. Verify the current dispatch path, then correct `documentation/user-documentation/automation/monitoring.md`. Ground truth: `product/specs/monitoring.md`, `src/monitor/parsing.ts`, `src/monitor/stop.ts`, and the suggested-command execution path.
-
 * scheduling (4/10) — The guide omits that `in <tab>` resolves labels and aliases case-insensitively and that clicking outside the New schedule dialog leaves it open. Add these details to `documentation/user-documentation/automation/scheduling.md`. Ground truth: `product/specs/scheduling.md`, `src/commands/schedule.ts`, `src/tab/lookup.ts`, and `web/src/ScheduleLaunchDialog/`.
 
 * pdf-tab (5/10) — The PDF guide says the strip label is `pdf`, but the shipped tab title is the file name and `pdf` is the internal label prefix. Correct the tab-name description in `documentation/user-documentation/tab-types/pdf-viewer.md`. Ground truth: `product/specs/pdf-tab.md`, `src/plugins/pdf/manifest.ts`, and `src/plugins/pdf/activate.ts`.
@@ -273,3 +271,5 @@
 * audio-tab — documented in documentation/user-documentation/tab-types/audio-player.md (removed 2026-10-14)
 
 * append-only-log — documented in documentation/user-documentation/getting-started/activity-log.md (removed 2026-10-14)
+
+* monitoring — documented in documentation/user-documentation/automation/monitoring.md, help.md (removed 2026-10-14)
