@@ -3,8 +3,6 @@
 ## ready
 
 
-* roles (7/10) — 2 of 18 user-visible facts are missing and 1 core fact is wrong: defaults are written only when neither the home nor project roles file exists, but the page says they are always written on first open. It also omits that a hand-written effort value outside the built-in choices remains available in the dropdown and that no launch command or dialog consumes the roles file yet. Correct `documentation/user-documentation/tab-types/roles.md`; ground truth: `product/specs/roles.md`, `src/plugins/roles/activate.ts`, `src/plugins/roles/roles-file.ts`, and `web/src/plugins/roles/RolesTab.tsx`.
-
 * launcher (6/10) — 8 of 20 user-visible fact groups are missing and none are wrong. The guide omits the built-in command destinations and the exclusion of Tasks and History, unrecognized-command and duplicate-ID outcomes, the exact “needs you” cases, live activity-age updates, summary expansion controls, the transcript button, and summary reset on close. Update `documentation/user-documentation/tab-types/launcher.md`; ground truth: `product/specs/launcher.md`, `src/plugins/launcher/activate.ts`, `src/plugins/launcher/commands-file.ts`, `src/plugins/launcher/configure.ts`, `src/plugins/launcher/summarizer.ts`, `web/src/plugins/launcher/CommandRail.tsx`, `web/src/plugins/launcher/TabList.tsx`, and `web/src/plugins/launcher/LauncherTabRowView.tsx`.
 
 * application-config (9/10) — 23 of 23 user-visible configuration facts are missing from user documentation, including setting names and defaults, per-setting validation and fallback, notification permission behavior, and runtime write outcomes. Add a focused configuration reference under `documentation/user-documentation/` and link it from relevant command guides. Ground truth: `product/specs/application-config.md`, `src/config.ts`, `src/config-decode.ts`, and `src/main.ts`; the existing config pointer in `help.md` is only a terse reference.
@@ -267,6 +265,7 @@
 * workspaced-agent — replaced stale zsh launch examples with `shell` in documentation/user-documentation/advanced-agents/workspaced-agent.md (removed 2026-10-13)
 * relaunch — clarified remote shell and harness restoration in documentation/user-documentation/getting-started/startup.md (removed 2026-10-13)
 * scheduling — corrected eligible targets in documentation/user-documentation/automation/scheduling.md (removed 2026-10-13)
+* roles — documented in documentation/user-documentation/tab-types/roles.md (removed 2026-10-14)
 * agent-command — added launch syntax and resolution error guidance in documentation/user-documentation/advanced-agents/agent-command.md (removed 2026-10-13)
 * transcript — documented automatic following and resuming after scrolling away in documentation/user-documentation/getting-started/tabs.md (removed 2026-10-13)
 * roles — documented overlapping role-creation requests in documentation/user-documentation/tab-types/roles.md (removed 2026-10-13)

@@ -14,7 +14,7 @@ The tab opens in the center strip with two columns. **Models** on the left lists
 
 A role has a name, a description, and an ordered list of choices. The description is plain text: write what the role is for, so you or an agent can tell `planning` from `research` at a glance.
 
-The first time you open the tab it writes five roles for you: **planning**, **research**, **code review**, **implementation**, and **documentation**. Each one starts with a description and no model choices, except **planning**, which comes with two. Edit them freely — nothing depends on the defaults after that.
+If neither your project nor your home folder has a `roles.json` file, opening the tab creates five roles for you: **planning**, **research**, **code review**, **implementation**, and **documentation**. Each one starts with a description and no model choices, except **planning**, which comes with two. If either file already exists, the tab uses it instead and does not add the defaults.
 
 ## Add a model to a role
 
@@ -22,7 +22,7 @@ Drag a model from the **Models** column onto a role card and it becomes that rol
 
 Without a mouse, click **Add entry** on the card, pick the harness, the model, and an effort, and press **Add**. The effort picker starts on `default` and returns to it when you change the harness or reopen the picker, so a choice never carries over to an entry you did not make it for.
 
-Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all and leaves the harness on its own default; the other levels are the same ones the **New harness** dialog offers. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen.
+Each choice row carries an effort dropdown: `default`, `low`, `medium`, `high`, `xhigh`, or `max`. `default` stores no effort at all and leaves the harness on its own default; the other levels are the same ones the **New harness** dialog offers. If a hand-written role has another effort value, that value stays visible as an option in its dropdown. Change it whenever you like: the tab saves as you go. If saving fails, it shows `Could not write roles.json at <path>.` and preserves your previous file and the choices on screen.
 
 ## Reorder and remove
 
