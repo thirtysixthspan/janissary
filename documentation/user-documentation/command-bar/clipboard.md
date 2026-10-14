@@ -48,8 +48,6 @@ The list lives in the window and is not written anywhere, so reloading or restar
 
 ## If the popup fails
 
-<img class="agent-float" src="/agents/ahmed-south.png" alt="" />
-
 If the overlay plugin fails while the popup is opening or already open, the popup closes and keyboard focus returns to where it was. The rest of Janissary keeps working. The Notifications feed reports `Overlay plugin "clipboard-history" disabled: <reason>.`; only the clipboard-history chord and `clip` command stop working.
 
 ## Keeping more or fewer
