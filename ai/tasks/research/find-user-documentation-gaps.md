@@ -10,7 +10,7 @@ This task edits **one file only**: `product/backlog/documentation.md`. You will 
 
 Do the steps below **in order**. Do not skip steps. Do not invent your own process. A candidate inventory is not an evaluation: a run is incomplete until every candidate has a Step 4 fact comparison or an internal-only determination, every completed area has a Step 3 progress line, and the final inventory has exactly one outcome per candidate. Do not commit, push, or report completion while any candidate is unevaluated.
 
-**Run autonomously.** Do not ask the user questions or wait for feedback at any step.
+**Run autonomously to completion.** Do not ask the user questions or wait for feedback at any step. Do not stop because the inventory is large, the work seems time-consuming, or only part of the audit has been completed. Do not treat gathering the inventory, inspecting a sample, or identifying likely gaps as completion. Continue evaluating candidates until the completion gate in Step 5 passes. If work is interrupted by an actual tool or environment failure, report the precise blocker and the remaining unevaluated candidates; never present a partial audit as complete.
 
 ---
 
@@ -82,6 +82,8 @@ Order the complete candidate list:
 3. All remaining spec areas and candidates flagged from code, ordered by area ID.
 
 Deep-evaluate **every** area in the candidate list in that order. There is no evaluation limit and no candidate may be deferred for a later run because of the list's size. An inventory scan, a filename match, an old `resolved` note, or a docs commit in the history does not count as a current evaluation; compare current shipped behavior and current documentation for each area.
+
+Work through the ordered inventory sequentially and keep a visible progress line after each completed ledger row. When the inventory is large, divide the work into consecutive batches for readability, but do not treat a batch boundary as a stopping point: continue immediately with the next unevaluated candidate. Maintain the exact total candidate count from Step 2 and reconcile the number of completed ledger rows against it before Step 5. Never replace remaining evaluations with a summary, sample, shortlist, or a decision to stop.
 
 Before Step 4, create an audit ledger in your working notes with one row per candidate and these fields: area ID, candidate reason, documentable fact count N, correct/missing/wrong counts, score or internal-only, and the evidence file paths. Fill a row only after its Step 4 comparison or internal-only determination is complete. Record a progress line as each row is completed, naming its area ID and outcome. Do not move to the next area until the current ledger row and progress line are complete.
 
@@ -157,7 +159,7 @@ Before moving on, verify:
 2. Re-read the file once: your carried-over entries in `ready` are sorted by score, all new gap candidates are in `development`, no area ID is duplicated among your own active entries, every scored candidate bullet is a single paragraph with fact counts and file paths but no line numbers, and no bullet you don't own was altered.
 3. Confirm the final review inventory has exactly one outcome for every candidate area from Step 2, and its count matches the recorded expected count. Every score-3–10 user-facing gap must appear once in the task-owned active backlog entries; no score-1–2 area or internal-only area may appear in those entries. Do not report an area as reviewed unless Step 4's fact-by-fact comparison or internal-only determination was completed for it.
 
-**Completion gate:** if the inventory count does not match, any candidate lacks its fact statuses and score (or internal-only determination), any progress line is missing, or a task-owned active backlog entry has no actionable gap, do not proceed to Step 6. Continue the audit and reconciliation until all checks pass. A long inventory is not a reason to shorten or omit the work.
+**Completion gate:** if the inventory count does not match, any candidate lacks its fact statuses and score (or internal-only determination), any progress line is missing, or a task-owned active backlog entry has no actionable gap, do not proceed to Step 6 or report the task as complete. Return to the first incomplete candidate and continue the audit and reconciliation until all checks pass. A long inventory, a nearly complete audit, or a small number of remaining candidates is not a reason to stop, shorten, defer, or omit the work. Only a real blocking failure that prevents further research can interrupt this loop; in that case, report the run as incomplete and identify the blocker and remaining areas explicitly.
 
 The ledger is the completion proof. Do not substitute the number of backlog bullets for the candidate count: no-gap and internal-only areas still require completed ledger rows and final-report outcomes, but they do not become backlog items.
 
