@@ -3,8 +3,6 @@
 ## ready
 
 
-* relaunch (8/10) — 4 user-visible behaviors are specified, but the guides only summarize preservation and do not explain automatic reattachment and its failure/termination outcomes. Expand `documentation/user-documentation/getting-started/startup.md` to describe the fresh local shell, automatic attempts to reattach eligible parked remote sessions, and where detached sessions remain visible. Ground truth: `product/specs/relaunch.md`, `src/main.ts`, `src/index.ts`, and `src/sessions/attach.ts`.
-
 * application-state (4/10) — the startup guide omits the preserved harness capture and Git-failure output among relaunch artifacts. Add these to `documentation/user-documentation/getting-started/startup.md`, clarifying that retained files do not mean local tabs are restored. Ground truth: `product/specs/application-state.md`, `src/state/dirs.ts`, and `src/index.ts`.
 
 * workspaced-agent (6/10) — the OAuth-specific section correctly says the local ChatGPT login is not forwarded and each remote uses its own login, but the shared remote-token summary says “All four tokens travel” and can imply OAuth is forwarded. Reconcile `documentation/user-documentation/advanced-agents/tokens.md` and the remote credential summary in `documentation/user-documentation/advanced-agents/workspaced-agent.md` so forwarded API-key token files are distinct from host-local OAuth. Ground truth: `product/specs/workspaced-agent.md`, `src/project/opencode-oauth.ts`, `src/sandbox/opencode-data.ts`, and `src/sandbox/environment.ts`.
@@ -273,3 +271,5 @@
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md (removed 2026-10-14)
 
 * open — documented in documentation/user-documentation/tab-types/opening-files.md, documentation/user-documentation/command-bar/play.md (removed 2026-10-14)
+
+* relaunch — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-10-14)

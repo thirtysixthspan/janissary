@@ -72,7 +72,9 @@ janus --relaunch
 
 `--relaunch` keeps what the previous session left on disk instead of clearing it: harness recordings and transcripts, browser logs, and workspace clones are all still there. It doesn't bring local tabs back. A relaunch opens the same single `janus` shell tab every launch does, and local shell and harness tabs, their transcripts and command history, scheduled commands, and every other local tab you had open are gone. Detached remote sessions are the exception: surviving remote shell and harness tabs are restored.
 
-`--relaunch` restores surviving remote shell and harness tabs as each host answers. Remote agent tabs aren't restored. Remote shells return on their existing PTYs with their last working directories. One unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for what a host that is gone or down leaves behind.
+`--relaunch` tries each eligible parked remote session independently and opens its tabs as the host answers. Remote agent tabs aren't restored. Remote shells return on their existing PTYs with their last working directories. A host that refuses the attach or has nothing running is marked terminated; a host that can't be reached stays listed as detached in [Sessions](/user-documentation/tab-types/sessions), with the failure on its row and **Attach** available to try again. One unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for the full restore behavior.
+
+Without `--relaunch`, parked sessions stay detached in Sessions and wait for you to press **Attach**.
 
 <img class="agent-float" src="/agents/mahir-south-west.png" alt="" />
 
