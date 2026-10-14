@@ -10,7 +10,7 @@ open paper.pdf
 
 `pdf <path>` does the same thing, and takes the same paths and wildcards `open` does. If that document is already open, either command focuses the existing tab instead of creating a duplicate.
 
-The tab shows a compact header with the file's name, size, and location, the page you are on out of the document's total, and the view controls. The document fills the space below. The tab is labeled `pdf` in the strip (the filename is in the header) and carries a × close button, which closes that tab without selecting it first.
+The tab shows a compact header with the file's name, size, and location, the page you are on out of the document's total, and the view controls. The document fills the space below. The tab's name in the strip is the file name, and it carries a × close button, which closes that tab without selecting it first. Its internal label starts with `pdf` and gains a number when needed, such as `pdf-2`.
 
 ## Two ways to read
 
