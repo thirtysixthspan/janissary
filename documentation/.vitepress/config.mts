@@ -79,6 +79,7 @@ export default defineConfig({
             { text: "Tab completion", link: "/user-documentation/command-bar/tab-completion" },
             { text: "Shell commands", link: "/user-documentation/command-bar/shell" },
             { text: "Browser automation", link: "/user-documentation/command-bar/browser" },
+            { text: "Play a file", link: "/user-documentation/command-bar/play" },
             { text: "Databases", link: "/user-documentation/command-bar/database" },
             { text: "Connections", link: "/user-documentation/command-bar/connections" },
             { text: "Command history", link: "/user-documentation/command-bar/history" },
