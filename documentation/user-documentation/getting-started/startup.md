@@ -97,19 +97,4 @@ JANUS_DEBUG=1 janus
 
 ## Configuration
 
-Settings live in `.janissary/config.json` inside the directory you launch from; a default file is created on first launch. Every setting is editable in the file:
-
-| Setting | Default | What it does |
-|---|---|---|
-| `transcriptMaxLines` | `25000` | How many transcript entries each tab keeps. Past the cap, the oldest entries are dropped. |
-| `tabNameMaxLength` | `16` | The longest inactive tab name shown in the strip. Longer names end in `…`. Neither a `shell <name>` nor a `harness claude as <label>` is capped; both are only shortened for display |
-| `activeTabNameMaxLength` | `50` | The longest focused tab name shown in the strip. Focusing a tab expands its name up to this limit. |
-| `theme` | `"dark"` | The application color theme. Change it at runtime with [`theme <name>`](/user-documentation/command-bar/commands#theme). |
-| `syntaxTheme` | `"github-dark"` | The syntax-highlighting theme for [editor tabs](/user-documentation/tab-types/editor). Change it at runtime with `syntax theme <name>`. |
-| `sandboxWorkspaces` | `true` | Whether workspaced tabs are confined to their workspace clone by the macOS sandbox. See [Workspacing](/user-documentation/advanced-agents/workspacing). |
-| `notifications` | all events off | Which background events feed the [notifications](/user-documentation/tab-types/notifications) tab. There's no runtime command for this; edit the file directly. |
-| `syncPaths` | `["product/backlog/", "product/plans/"]` | Project-relative paths kept synced with GitHub in the [editor](/user-documentation/tab-types/editor#keeping-a-file-synced-with-github). See [Git-synced files](/user-documentation/tab-types/editor-git-sync) for the entry syntax and how a sync happens. There's no runtime command for this; edit the file directly. |
-| `externalViewers` | `{ "video": "QuickTime Player" }` | Which application each viewer hands a file to on `open external`, keyed by the viewer's name — `video`, `audio`, and `pdf`. Give it a macOS application name; an empty or missing entry uses your operating system's own default. A map you set replaces the default outright rather than merging with it. There's no runtime command for this; edit the file directly. |
-| `pluginSettings` | `{}` | Preferences a tab remembers for itself, keyed by the tab's name. The search tab stores its three toggles here, `{ "search": { "regex": false, "matchCase": false, "wholeWord": false } }`, so they come back as you left them after a restart. You don't need to edit it by hand. |
-
-Changing `theme` or `syntaxTheme` at runtime atomically rewrites this file, preserving every other key, and applies the running change only when that write succeeds. Flipping a search toggle rewrites it the same way. If the file isn't valid JSON, the app warns on startup and falls back to defaults for that session — your file is left untouched so you can fix it. Within valid JSON, a setting with the wrong type falls back independently to its default, as do missing notification event toggles.
+Settings live in `.janissary/config.json` inside the directory you launch from; Janissary creates a default file on first launch. See [App configuration](/user-documentation/getting-started/configuration) for every setting, its default, and what happens when a value is invalid. You can change `theme` and `syntaxTheme` while the app is running; edit the other settings in the file.

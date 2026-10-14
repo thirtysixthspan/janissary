@@ -35,7 +35,7 @@ If the help file can't be read, `help` falls back to a single summary line namin
 
 ## `theme`
 
-`theme <name>` sets the application's color theme — the tab strip, transcript colors, panels, borders, pickers, dialogs, and editor chrome — and applies it immediately, with no restart. It persists to the `theme` key in [`.janissary/config.json`](/user-documentation/getting-started/startup#configuration), so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the six built-in themes: `dark` (the default), `light`, `solarized-dark`, `solarized-light`, `nord`, and `dracula`. There are no custom themes.
+`theme <name>` sets the application's color theme — the tab strip, transcript colors, panels, borders, pickers, dialogs, and editor chrome — and applies it immediately, with no restart. It persists to the `theme` key in [app configuration](/user-documentation/getting-started/configuration), so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the six built-in themes: `dark` (the default), `light`, `solarized-dark`, `solarized-light`, `nord`, and `dracula`. There are no custom themes.
 
 Bare `theme` opens a picker overlay listing every theme, each row showing a swatch of that theme's own colors next to its name, with the active theme marked. `↑`/`↓` move the selection, `Return` applies it, `Escape` closes, and a row can be clicked.
 
@@ -57,7 +57,7 @@ The theme applies to the whole window — there is no per-tab or per-workspace t
 
 <img class="agent-float left" src="/agents/orhan-south-east.png" alt="" />
 
-`syntax theme <name>` sets the syntax-highlighting theme used by every open [editor tab](/user-documentation/tab-types/editor) and diff tab, and persists it so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the available themes — which is also a quick way to see what's on offer. Bare `syntax theme` opens a picker overlay instead: arrows move, `Return` picks, `Escape` closes. Any other `syntax` subcommand prints `Usage: syntax theme [name]`.
+`syntax theme <name>` sets the syntax-highlighting theme used by every open [editor tab](/user-documentation/tab-types/editor) and diff tab, and persists it so it survives a restart. Names match case-insensitively. An unrecognized name shows an error listing the available themes — which is also a quick way to see what's on offer. Bare `syntax theme` opens a picker overlay instead: arrows move, `Return` picks, `Escape` closes. Any other `syntax` subcommand prints `Usage: syntax theme [name]`. See [app configuration](/user-documentation/getting-started/configuration) for the setting and its default.
 
 A picker needs a screen, so a command that arrives from somewhere without one answers with the list instead of opening anything. Another agent running `syntax theme`, or a [schedule](/user-documentation/automation/scheduling) firing it, gets the available themes printed with the active one marked `*`. The same is true of bare `theme`.
 
@@ -84,7 +84,7 @@ Closing the browser window or reloading the page while work is unsaved gets you 
 ## `notifications` and `notify`
 
 
-`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. All five event types default off in `.janissary/config.json`; rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead, escalating to a docked feed after three within ten seconds. See [Notifications](/user-documentation/tab-types/notifications) for settings, navigation, and diagnostics.
+`notifications` opens a single feed tab for background activity: an agent finishing, a message arriving, a scheduled command firing, an agent starting a turn, or a model query being rate limited. Background event toggles in `.janissary/config.json` default off; rate-limit reports use `notifications.events.rateLimited`. `notifications left` or `notifications right` docks the feed into a sidebar, and `notifications clear` empties the queue, the record file, and any toasts on screen. `notify <message>` and diagnostic messages bypass event toggles and focus suppression. A notification with no feed on screen appears as a toast instead, escalating to a docked feed after three within ten seconds. See [Notifications](/user-documentation/tab-types/notifications) for delivery details and [app configuration](/user-documentation/getting-started/configuration) for the settings.
 
 ## Command comments
 

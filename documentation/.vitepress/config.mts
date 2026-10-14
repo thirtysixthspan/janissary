@@ -60,6 +60,7 @@ export default defineConfig({
             { text: "Why the name \"Janissary\"?", link: "/user-documentation/getting-started/why-the-name" },
             { text: "Installing", link: "/user-documentation/getting-started/install" },
             { text: "Starting the app", link: "/user-documentation/getting-started/startup" },
+            { text: "App configuration", link: "/user-documentation/getting-started/configuration" },
             { text: "Tabs", link: "/user-documentation/getting-started/tabs" },
             { text: "Tab groups", link: "/user-documentation/getting-started/groups" },
             { text: "Tab names", link: "/user-documentation/getting-started/agents" },

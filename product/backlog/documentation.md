@@ -3,8 +3,6 @@
 ## ready
 
 
-* application-config (9/10) — 23 of 23 user-visible configuration facts are missing from user documentation, including setting names and defaults, per-setting validation and fallback, notification permission behavior, and runtime write outcomes. Add a focused configuration reference under `documentation/user-documentation/` and link it from relevant command guides. Ground truth: `product/specs/application-config.md`, `src/config.ts`, `src/config-decode.ts`, and `src/main.ts`; the existing config pointer in `help.md` is only a terse reference.
-
 * agent-command (8/10) — 14 of 35 user-visible fact groups are missing and 7 are incomplete or misleading. The guide should clarify parser errors and preserved task text, task-root and skill resolution/confinement, grant validation, snapshots and nested runs, cleanup ownership, provider denial and empty answers, and bounded remote cleanup. Correct the existing skill and remote execution descriptions in `documentation/user-documentation/advanced-agents/agent-command.md`; ground truth: `product/specs/agent-command.md`, `src/agent/command-parser.ts`, `src/agent/task-resolution.ts`, `src/agent/skill-grants.ts`, `src/agent/run.ts`, `src/agent/manager.ts`, `src/agent/workspace-execution.ts`, and `src/remote/acp-session.ts`.
 
 * context-menu (8/10) — 7 of 16 fact groups are missing and 2 are wrong. Correct the claims that inert right-clicks expose the browser menu and that an editor without a selection has no menu; document the always-present **Paste from clipboard…** item and the harness selection menu entries. Update `documentation/user-documentation/getting-started/context-menus.md` and coordinate with `documentation/user-documentation/command-bar/clipboard.md` and `documentation/user-documentation/advanced-agents/harness.md`. Ground truth: `product/specs/context-menu.md`, `web/src/context-menu/default-menu-target.ts`, `web/src/context-menu/useDefaultContextMenu.ts`, and `web/src/context-menu/DefaultContextMenu.tsx`.
@@ -258,6 +256,8 @@
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-10-13)
 * diff-tab — already resolved: documentation/user-documentation/tab-types/diff-tab.md, documentation/user-documentation/tab-types/sessions.md, help.md (removed 2026-10-13)
 * launcher — documented in documentation/user-documentation/tab-types/launcher.md (removed 2026-10-14)
+
+* application-config — documented in documentation/user-documentation/getting-started/configuration.md, documentation/user-documentation/getting-started/startup.md, documentation/user-documentation/command-bar/commands.md, documentation/user-documentation/tab-types/notifications.md, documentation/user-documentation/tab-types/editor-git-sync.md, documentation/user-documentation/tab-types/opening-files.md, documentation/user-documentation/command-bar/clipboard.md, documentation/user-documentation/command-bar/shell.md (removed 2026-10-14)
 
 * agent-workflow — updated documentation/user-documentation/getting-started/application.md and documentation/user-documentation/getting-started/design-principles.md to distinguish autonomous runs and monitor tabs from shell and harness tabs (removed 2026-10-13)
 * command-queue — corrected shell and harness queue support in documentation/user-documentation/command-bar/queue.md (removed 2026-10-13)

@@ -70,7 +70,7 @@ Click or move keyboard focus into the feed. While it has focus, `↑` and `↓` 
 
 ## What it reports
 
-The feed can report five kinds of background activity, and every one defaults to `false`. Enable the ones you want by editing `.janissary/config.json`:
+The feed can report five kinds of background activity, and every one defaults to `false`. Enable the ones you want by editing `.janissary/config.json`; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
 
 ```json
 {
