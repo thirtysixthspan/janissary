@@ -3,8 +3,6 @@
 ## ready
 
 
-* pdf-tab (5/10) — The PDF guide says the strip label is `pdf`, but the shipped tab title is the file name and `pdf` is the internal label prefix. Correct the tab-name description in `documentation/user-documentation/tab-types/pdf-viewer.md`. Ground truth: `product/specs/pdf-tab.md`, `src/plugins/pdf/manifest.ts`, and `src/plugins/pdf/activate.ts`.
-
 * tab-plugins (4/10) — The user-facing plugin overview omits the bundled agent-monitor tab and its entry point. Add it to `documentation/user-documentation/command-bar/plugins.md` and link to its user guide if one exists; ground truth: `product/specs/tab-plugins.md`, `src/plugins/catalog.ts`, and the agent-monitor plugin manifest and activation.
 
 * shell (7/10) — Five of nine audited captured-shell behavior groups are missing from user documentation, including persistence per tab, working-directory fallback, serialization, and process lifecycle. Expand `documentation/user-documentation/command-bar/shell.md` to distinguish captured command execution from the interactive zsh terminal. Ground truth: `product/specs/shell.md`, `src/shell/manager.ts`, and `src/shell/index.ts`.
@@ -273,3 +271,5 @@
 * append-only-log — documented in documentation/user-documentation/getting-started/activity-log.md (removed 2026-10-14)
 
 * monitoring — documented in documentation/user-documentation/automation/monitoring.md, help.md (removed 2026-10-14)
+
+* pdf-tab — documented in documentation/user-documentation/tab-types/pdf-viewer.md (removed 2026-10-14)
