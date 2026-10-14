@@ -3,8 +3,6 @@
 ## ready
 
 
-* workspaced-agent (6/10) — the OAuth-specific section correctly says the local ChatGPT login is not forwarded and each remote uses its own login, but the shared remote-token summary says “All four tokens travel” and can imply OAuth is forwarded. Reconcile `documentation/user-documentation/advanced-agents/tokens.md` and the remote credential summary in `documentation/user-documentation/advanced-agents/workspaced-agent.md` so forwarded API-key token files are distinct from host-local OAuth. Ground truth: `product/specs/workspaced-agent.md`, `src/project/opencode-oauth.ts`, `src/sandbox/opencode-data.ts`, and `src/sandbox/environment.ts`.
-
 * history (3/10) — The user guide covers recall, ghost text, and picker behavior but omits how long or multiline commands are labeled in picker rows: it shows the first nonblank line, an optional line-count suffix, and clips before that suffix while retaining the full command for selection. Add this detail to `documentation/user-documentation/command-bar/history.md`; ground truth: `product/specs/history.md`, `src/tab/history.ts`, and the history-picker rendering source under `web/src/`.
 
 * audio-tab (5/10) — The audio guide says a decode-failure notification opens the feed when it is closed, but notifications can instead surface as a toast without opening the feed. Correct the recovery description in `documentation/user-documentation/tab-types/audio-player.md` to match the notification delivery behavior. Ground truth: `product/specs/audio-tab.md`, `src/plugins/audio/activate.ts`, and `src/notifications/deliver.ts`; the shared notification behavior is described in `documentation/user-documentation/tab-types/notifications.md`.
@@ -32,6 +30,8 @@
 ## declined
 
 ## resolved
+
+* workspaced-agent — documented in documentation/user-documentation/advanced-agents/tokens.md, documentation/user-documentation/advanced-agents/workspaced-agent.md (removed 2026-10-14)
 
 * remote-server — documented in documentation/user-documentation/advanced-agents/remote-agents.md (removed 2026-10-14)
 
