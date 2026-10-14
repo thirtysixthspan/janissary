@@ -3,8 +3,6 @@
 ## ready
 
 
-* database (4/10) — The database and SQL-browser pages cover the main commands, persistence, query results, and common errors, but the `db` reference does not distinguish a database connection/open failure from an SQL execution error. Add the shipped open-failure response to `documentation/user-documentation/command-bar/database.md` if it is useful for recovery. Ground truth: `product/specs/database.md`, `src/database/query.ts`, and `src/database/manager.ts`; related existing pages are `documentation/user-documentation/command-bar/database.md` and `documentation/user-documentation/tab-types/sql-browser.md`.
-
 * notifications (8/10) — 3 of 15 user-facing fact groups are missing and alert-channel wording is contradictory. Clarify that toasts themselves are silent while eligible explicit events may separately produce desktop banners and bell sounds; explain permission and visibility conditions, and document `osNotifications`, `terminalBell`, and category settings with defaults in `documentation/user-documentation/tab-types/notifications.md`. Reconcile the contradictory alert summary in `help.md` with that behavior. Ground truth: `product/specs/notifications.md`, `src/notifications/index.ts`, and `src/notifications/deliver.ts`.
 
 * remote-server (8/10) — 3 of 15 user-visible behavior groups are absent or partial, especially remote autonomous-agent execution, detached harness alerts/captures, forwarded Git identity, and remote file failure outcomes. Extend `documentation/user-documentation/advanced-agents/remote-agents.md` with the verified remote-agent workflow and the most consequential detached-session and file-error behavior. Ground truth: `product/specs/remote-server.md`, `src/remote/serve-agent-resolution.ts`, `src/remote/acp-session.ts`, and the remote file-serving implementation; existing help provides only brief invocation syntax.
@@ -52,6 +50,8 @@
 ## declined
 
 ## resolved
+
+* database — documented in documentation/user-documentation/command-bar/database.md (removed 2026-10-14)
 
 * context-menu — documented in documentation/user-documentation/getting-started/context-menus.md, documentation/user-documentation/advanced-agents/harness.md (removed 2026-10-14)
 

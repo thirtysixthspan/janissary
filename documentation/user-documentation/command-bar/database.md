@@ -39,6 +39,7 @@ A database name must match `^[A-Za-z0-9_-]+$` — letters, numbers, `-`, and `_`
 - **Row-returning statements**, meaning those starting with `SELECT`, `PRAGMA`, `WITH`, or `EXPLAIN` (case-insensitive), print an aligned table: a header row, a dashed separator, one row per record, and a trailing `(<n> row(s))` count. No matching rows prints `(0 rows)`.
 - **Every other statement**, like `CREATE TABLE`, `INSERT`, or `UPDATE`, runs and reports `OK.` on success. Multiple semicolon-separated statements are allowed.
 - A bad statement or a missing table reports `Query error: <message>` without crashing the tab.
+- If Janissary cannot open the database connection, the command instead reports `Failed to open database "<name>": <message>`. This is different from a SQL error: no statement ran. Check that the project database directory is accessible, then run the command again.
 - Querying a database that doesn't exist reports `Database "<name>" does not exist. Create it with: db sqlite create <name>`, and deleting one reports `Database "<name>" does not exist.`
 
 ## Connections are global and persistent
