@@ -7,9 +7,14 @@ Review a project's changes and open a changed file or line from the diff view.
 ```
 diff
 diff src
+diff on ahmed
 ```
 
-`diff` opens or focuses the one diff tab and shows changes in the project directory. Add a directory path to review changes under that directory. The path must be an existing directory inside the project; for a missing directory, the app reports `Cannot diff <path>: no such directory.` A shell or harness tab with a workspace also has a **Show diff in the workspace** control that opens the same view for its workspace.
+`diff` opens or focuses the project's diff tab. It compares the selected directory's changes with `HEAD`, including staged, unstaged, and untracked files. `diff src` limits the view to the `src` directory and its contents, even when the command is run from another project directory. Use a path inside the project; a path outside it is refused. The path must also name an existing directory. The app reports `Cannot diff <path>: no such directory.` for a missing directory and `Cannot diff <path>: it is outside the project root <project-root>.` for a path outside the project.
+
+You can open the project diff from any tab. To compare a shell or harness workspace instead, use `diff on <tab name>`, replacing the name with the tab's label or display alias. Matching ignores case. For example, `diff on ahmed` opens that tab's workspace diff. You cannot combine a path with `on`; the app reports `Usage: diff [path] [on <tab name>]`. A tab without a workspace, or a name that does not identify an open shell or harness tab with one, reports `Cannot diff on <name>: no open shell or harness tab named "<name>" has a workspace.` If its workspace is still being prepared, the app reports `Cannot diff on <name>: the workspace of "<name>" is still being prepared.`
+
+The project diff is always one tab, titled **diff**. Opening it for another project directory changes the directory shown in that same tab. Each workspace has its own tab named for the shell or harness tab that owns it. Shells that share a workspace also share its diff tab. You can open a workspace diff from the shell or harness **Show diff in the workspace** control, or from a live row in [Sessions](/user-documentation/tab-types/sessions). A remote workspace diff shows its host, directory, and branch when available. It reads changes over the existing remote connection and keeps that connection alive while the diff tab is open. If the workspace disappears, its diff tab closes.
 
 ## Read the changes
 
@@ -23,11 +28,13 @@ Click a file name to open it. Double-click an added or unchanged line to open th
 
 <img class="agent-float left" src="/agents/dogan-south-east.png" alt="" />
 
-Use the arrows-up-down control in a file heading to cycle through collapsed, compact diff, and full-file views. Double-click the heading to collapse or reopen its current view. Full-file context is available for tracked text files; added, deleted, binary, and mode-only files have no additional context to show.
+Use the arrows-up-down control in a file heading to cycle through collapsed, compact diff, and full-file views. Double-click the heading to collapse or reopen its current view. A change with more than 400 added and removed lines combined starts collapsed. Full-file context is available for tracked text files; added, deleted, binary, and mode-only files have no additional context to show. When full-file context finishes loading, the view restores its previous scroll position.
 
 ## Change the layout
 
 Use the plus-minus control in the header to switch between unified and split layouts. The app remembers your choice when you close and reopen the tab. In split layout, the original text is on the left and the changed text is on the right.
+
+Syntax highlighting supports Markdown, JavaScript, TypeScript, and JSON files. Other file types appear as plain text. A side with more than 10,000 lines or 1 MB of visible text also appears as plain text.
 
 ## Navigate with the keyboard
 
@@ -52,4 +59,6 @@ In unified layout, use the **+** beside a line to write a note about it. Save th
 
 The tab refreshes its view automatically about once a second. A directory outside a Git repository shows **This directory is not a git repository**; a repository with no changes shows **No changes**. A Git failure appears in the tab, which continues working and tries again on a later refresh. A read that takes longer than 30 seconds times out and shows its reason.
 
-The diff is read-only. It does not stage, discard, or commit changes. Closing the tab clears its comments and expanded views; your layout choice is kept.
+In a remote workspace, if the host does not provide a usable change set, the tab shows **The remote host did not answer with a change set.**
+
+The diff is read-only. It does not stage, discard, or commit changes. Comments are temporary and stay with their file entry in this tab. If the source line changes, its comment remains attached to the earlier text and identifies the change. Comments and drafts are forgotten when you close the tab, change its directory, or the file entry disappears. Closing the tab also clears expanded views; your layout choice is kept.
