@@ -18,7 +18,25 @@ Full form: `open [external] [page] <target>`. Relative paths resolve against the
 
 Files opened from a remote [file navigator](/user-documentation/tab-types/file-navigator) use the same viewer or editor as local files. Janissary reads the remote content into its session cache first; saving an editor tab writes the change back to the remote host. If that write fails, the editor remains marked as changed and the notifications feed reports the failure.
 
+The target stays together, including spaces. For example, `open meeting notes.md` opens one file named `meeting notes.md`; you don't need to split it into arguments or add quotes.
+
 Targets with an `http://` or `https://` scheme are treated as web addresses; the `page` keyword forces web interpretation and assumes `https://` for a bare address like `example.com`. So are other targets written as a URL, like `file:///etc/passwd`, `ftp://example.com`, `data:…`, or `javascript:…`, but only `http` and `https` pages can be opened, so those are rejected as invalid. Anything else is a file path, including a file whose name happens to contain a colon, like `notes:v2.md`.
+
+## Supported file formats
+
+These bundled viewers match extensions without regard to letter case:
+
+| Kind | Extensions | What opens |
+|---|---|---|
+| Images | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.bmp`, `.svg`, `.avif`, `.ico` | Image tab |
+| Video | `.mp4`, `.m4v`, `.webm`, `.ogv`, `.mov` | Video tab |
+| Video, external only | `.mkv`, `.avi`, `.wmv`, `.flv`, `.mpg`, `.mpeg` | Configured video player |
+| Audio | `.mp3`, `.m4a`, `.aac`, `.wav`, `.flac`, `.ogg`, `.oga`, `.opus`, `.aiff` | Audio tab |
+| Audio, external only | `.wma` | Configured audio player |
+| Markdown | `.md`, `.markdown` | Markdown tab |
+| PDF | `.pdf` | PDF tab |
+
+Text files and extensionless files such as `Makefile` open in the editor. An unrecognized type can still be handed to your operating system with `open external <file>`.
 
 ## Opening outside the app: `open external`
 
@@ -34,6 +52,8 @@ open external page example.com    the same, for a bare address
 ```
 
 This works for any file, including types Janissary has no viewer of its own for. Your operating system already knows what opens a `.zip`, so `open external` hands the file over and confirms with `Opening papers.zip in your default viewer…`. A video, an audio file, and a PDF each name their own reader: `Opening clip.mp4 in your default video player…`, `Opening track.mp3 in your default audio player…`, `Opening paper.pdf in your default PDF viewer…`. When you've named an application in `externalViewers`, the confirmation names that one instead: `Opening clip.mp4 in QuickTime Player…`. Set viewer names in [app configuration](/user-documentation/getting-started/configuration). If nothing can be launched at all, you get the path rather than an application: `No video player available. The file is at <file>`.
+
+The `externalViewers` map uses opener names as keys: `video`, `audio`, and `pdf`. For example, set `externalViewers.video` to the application name you want for video files. The video default is QuickTime Player; an empty or missing entry uses the operating system's handler. Image and Markdown files use the operating system's handler, and web addresses use its default browser.
 
 A few formats can only be opened this way — `open clip.mkv` and `open track.wma` go straight to an external player with no tab. Which application gets a video or an audio file is yours to set; see [Video player](/user-documentation/tab-types/video-player) and [Audio player](/user-documentation/tab-types/audio-player).
 
@@ -97,6 +117,12 @@ open shots/*.png
 Janissary expands the pattern itself rather than handing it to a shell, so it matches the same files whatever shell you use. You get `*`, `?`, character classes like `[abc]`, and brace expansion like `*.{png,jpg}`. The pattern is only ever matched against filenames, never run — one containing shell punctuation matches nothing.
 
 Past 10 matches, the first 10 open and a note reports how many matched in total. A pattern matching nothing reports that too, as does one that matches only directories. Wildcards only apply to file paths, never web addresses.
+
+Matches are deduplicated and sorted by path before opening. If a plugin handles them, Janissary waits for each file to finish opening before it starts the next, so the order stays predictable.
+
+The `video`, `audio`, and `pdf` commands use the same wildcard rules and ten-file limit as `open`, but each accepts only its own file type. `audio` adds matching tracks to the playlist in order. `play` accepts one file or recording name and never expands wildcards.
+
+In a [file navigator](/user-documentation/tab-types/file-navigator#mouse), double-click opens a file and `Shift`+double-click edits it. `Shift+Enter` does the same as `Shift`+double-click. Some file types change what the edit gesture does: Markdown opens its preview, while video and audio files go to their external player. The [file navigator guide](/user-documentation/tab-types/file-navigator#keyboard) lists the complete keyboard behavior.
 
 ## Errors
 

@@ -3,8 +3,6 @@
 ## ready
 
 
-* open (6/10) — 18 of 54 user-visible fact groups are missing and 6 are partial. Extend `documentation/user-documentation/tab-types/opening-files.md` with remote external-open refusal, paths with spaces, supported formats, viewer configuration keys, wildcard ordering/deduplication, file-navigator gestures, and plugin-specific command limits; add a focused `play` reference for recording lookup and errors. Ground truth: `product/specs/open.md`, `src/commands/open.ts`, `src/open/`, `src/play/run.ts`, and the bundled opener manifests.
-
 * relaunch (8/10) — 4 user-visible behaviors are specified, but the guides only summarize preservation and do not explain automatic reattachment and its failure/termination outcomes. Expand `documentation/user-documentation/getting-started/startup.md` to describe the fresh local shell, automatic attempts to reattach eligible parked remote sessions, and where detached sessions remain visible. Ground truth: `product/specs/relaunch.md`, `src/main.ts`, `src/index.ts`, and `src/sessions/attach.ts`.
 
 * application-state (4/10) — the startup guide omits the preserved harness capture and Git-failure output among relaunch artifacts. Add these to `documentation/user-documentation/getting-started/startup.md`, clarifying that retained files do not mean local tabs are restored. Ground truth: `product/specs/application-state.md`, `src/state/dirs.ts`, and `src/index.ts`.
@@ -273,3 +271,5 @@
 * sessions-tab — documented in documentation/user-documentation/tab-types/sessions.md; clarified restored harness output and transcript history, and restored shell commands with their output (removed 2026-10-14)
 
 * editor-tab — documented in documentation/user-documentation/tab-types/editor.md (removed 2026-10-14)
+
+* open — documented in documentation/user-documentation/tab-types/opening-files.md, documentation/user-documentation/command-bar/play.md (removed 2026-10-14)

@@ -71,7 +71,7 @@ export function AsciicastTab({
   }, [onKey]);
 
   return (
-    <div className="asciicast-tab" data-dock={dock ?? undefined}>
+    <div className="asciicast-tab" data-doc-shot="asciicast-view" data-dock={dock ?? undefined}>
       <div className="asciicast-head">
         <AsciicastMeta
           header={source.header}
