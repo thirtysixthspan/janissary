@@ -1,7 +1,5 @@
 # Editor
 
-<img class="agent-float" src="/agents/hamza-south.png" alt="" />
-
 `edit <file>` opens a plain-text editor in its own tab:
 
 ```
@@ -20,11 +18,13 @@ You can also land in an editor by clicking a `file.ts:42`-style link in any tran
 
 ## Focus stays in the buffer
 
+<img class="agent-float" src="/agents/hamza-south.png" alt="" />
+
 Click anywhere in the editor body, including the empty space below the last line, and typing keeps working. Clicking on a line of text moves the cursor there; clicking on empty space doesn't move the cursor, but doesn't take focus away either.
 
 Double-click a word to select it. Triple-click, or click the line number in the gutter, to select the whole line; dragging after either extends the selection a line at a time. `Shift`-click extends the selection from where it already starts.
 
-With text selected, press `Cmd+I` on macOS or `Ctrl+I` elsewhere to start a new chat with that text. Right-clicking the selection offers the same action and leaves the selection in place. Right-clicking with nothing selected opens no menu at all, not even the browser's. See [Right-click menus](/user-documentation/getting-started/context-menus) for how the default menu behaves everywhere else in the app.
+With text selected, press `Cmd+I` on macOS or `Ctrl+I` elsewhere to start a new chat with that text. Right-clicking opens the app's default menu and leaves the selection in place. It offers **Copy**, **Paste**, and **Paste from clipboard…**, followed by **Chat about this** when text is selected. With no selection, **Copy** and **Chat about this** are absent, but the menu still offers **Paste** and **Paste from clipboard…**. Paste targets the editor buffer even though the pointer is over rendered text. See [Right-click menus](/user-documentation/getting-started/context-menus) for the other menu behavior.
 
 A plain click on the header (the file name, size, or location) puts focus straight back in the buffer once you release the mouse, so your cursor and typing pick up right where they were. If you drag to select header text instead, for example to copy the file's path, focus stays in the header so the selection sticks.
 
@@ -91,7 +91,7 @@ Each selection has its own caret. Typing, `Backspace`, `Delete`, and paste apply
 
 Press `Cmd+U` to drop the most recently added selection. Press `Escape` to collapse all of them to the most recent one. A click in the buffer, `Cmd+F`, saving, or an automatic reload also returns to one caret. Switching tabs and back keeps the selections. Arrow keys and selection-extension keys move every caret independently, though vertical movement uses whole document lines when several carets are active.
 
-These editing shortcuts are bundled with the editor. If one fails, its attempted change is discarded and every shortcut supplied by that editing feature stops responding for the rest of the browser session. The notifications feed reports `Editor plugin "<plugin>" disabled: <reason>.` Other editing features keep working, and reloading the page gives the failed one a fresh start.
+These editing shortcuts are bundled with the editor. If one fails, its attempted change is discarded and that plugin stops responding for the rest of the session. The notifications feed reports `Editor plugin "<plugin>" disabled: <reason>.`, attributed to the editor tab where you pressed the shortcut. Other editing features keep working, and reloading the page gives the failed one a fresh start. While a persona suggestion is waiting for review, or while the in-editor persona query line has focus, plugin shortcuts do nothing; `Tab` still completes a persona name in the query line.
 
 ## Caret and scroll
 
@@ -99,7 +99,7 @@ The blinking caret marks where text will be inserted, and is only visible while 
 
 Moving the cursor, whether by typing, arrow keys, a click, or paging, always scrolls it into view, and the whole line it lands on comes with it — never clipped at an edge, never left below the fold. Staying in place doesn't re-scroll. At the very top or bottom of the visible area, `↑`/`↓` still moves the cursor by exactly one visual row and scrolls by that same row to keep it in sight, rather than jumping to the start or end of the file. That means the view scrolls by screen rows, not whole lines: holding `↓` through a wrapped paragraph moves down it a row at a time instead of skipping the whole paragraph in one press. Once there is nothing left to scroll — the view is already at the start or end of the file — that same press moves a whole line instead. `PageUp`/`PageDown` always page through buffer lines rather than screen rows, so a page through heavily wrapped text covers more than one screen.
 
-Pasting is the one edit that doesn't move the view. The clipboard text goes in at the caret and the caret stays at the start of it, so the pasted lines appear under the place you were working instead of the view chasing the caret to the end of a long paste. One `Cmd+Z` takes the whole paste back.
+Pasting is the one edit that doesn't move the view. The clipboard's plain text goes in at the caret, replacing any selection, and the caret stays at the start of the pasted text, so the pasted lines appear under the place you were working instead of the view chasing the caret to the end of a long paste. One `Cmd+Z` takes the whole paste back, even for a one-character paste. Clipboard content with no text inserts nothing.
 
 Switching to another tab and back leaves your scroll position exactly where you left it, even if the cursor itself is out of view — only an actual cursor move while the tab is active pulls the view back to it.
 
@@ -135,7 +135,7 @@ Click the save button or press `Ctrl+S` / `Cmd+S` to write the buffer to disk. O
 enabled. The save atomically replaces the file while keeping its existing permissions, so a failed
 write leaves the previous on-disk file and your unsaved editor state intact.
 
-If you save again while a save is still running, unchanged text waits for that same write. If you have edited more, the newer save runs after it. Choosing Save in the close dialog also waits for the requested content to reach disk. A failed save leaves the tab open so you can address the error and retry.
+If you save again while a save is still running, unchanged text waits for that same write. If you have edited more, the newer save waits its turn and checks against the preceding successful save, so the editor's earlier write doesn't trigger an overwrite conflict. Edits made after the last requested save remain unsaved. A failed write rejects saves waiting behind it; you can retry afterward. Choosing Save in the close dialog also waits for the requested content to reach disk. A failed save leaves the tab open so you can address the error and retry.
 
 If a save receives no answer before its wait expires, the editor shows `request timed out` and keeps your buffer unsaved. The file may still have been written, so Janissary won't repeat the save automatically; you can save again when you're ready.
 
@@ -149,7 +149,7 @@ Unlike other tab kinds, editing an editor tab's label doesn't just set a display
 
 Either way, the buffer is never reloaded: your unsaved content, cursor position, and undo history stay exactly as they were, and focus returns to the buffer once the rename finishes. Renaming the same file from the [file navigator](/user-documentation/tab-types/file-navigator) has the same effect on an editor tab that already has it open.
 
-A rename can't replace another file or move the file into a different folder. If the name you type is already taken in that folder, the rename is refused with `The destination already exists; choose another name`. A name with a `/` in it, or `..`, is refused with `The name contains a path separator; enter a name without folders`. Both show up as a notification, and the tab and the file stay exactly as they were. Changing only the capitalization of the file's own name is fine.
+A rename can't replace another file or move the file into a different folder. If the name you type is already taken in that folder, the rename is refused with `Could not rename <old> to <new>. The destination already exists; choose another name.` A name containing a path separator, or a name of `.` or `..`, is refused with `Could not rename <old> to <new>. The name contains a path separator; enter a name without folders.` Both show up as a file-operation notification, and the tab and the file stay exactly as they were. Changing only the capitalization of the file's own name is fine. Pressing Enter or clicking away accepts a typed name; if the name hasn't changed, nothing is renamed. Escape keeps the current name.
 
 ## Closing with unsaved changes
 
