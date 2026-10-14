@@ -3,8 +3,6 @@
 ## ready
 
 
-* scheduling (4/10) — The guide omits that `in <tab>` resolves labels and aliases case-insensitively and that clicking outside the New schedule dialog leaves it open. Add these details to `documentation/user-documentation/automation/scheduling.md`. Ground truth: `product/specs/scheduling.md`, `src/commands/schedule.ts`, `src/tab/lookup.ts`, and `web/src/ScheduleLaunchDialog/`.
-
 * pdf-tab (5/10) — The PDF guide says the strip label is `pdf`, but the shipped tab title is the file name and `pdf` is the internal label prefix. Correct the tab-name description in `documentation/user-documentation/tab-types/pdf-viewer.md`. Ground truth: `product/specs/pdf-tab.md`, `src/plugins/pdf/manifest.ts`, and `src/plugins/pdf/activate.ts`.
 
 * tab-plugins (4/10) — The user-facing plugin overview omits the bundled agent-monitor tab and its entry point. Add it to `documentation/user-documentation/command-bar/plugins.md` and link to its user guide if one exists; ground truth: `product/specs/tab-plugins.md`, `src/plugins/catalog.ts`, and the agent-monitor plugin manifest and activation.
@@ -18,6 +16,8 @@
 ## declined
 
 ## resolved
+
+* scheduling — documented in documentation/user-documentation/automation/scheduling.md (removed 2026-10-14)
 
 * sidebars — documented in documentation/user-documentation/getting-started/tabs.md, documentation/user-documentation/automation/profiles.md (removed 2026-10-14)
 
