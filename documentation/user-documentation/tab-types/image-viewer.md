@@ -12,6 +12,8 @@ If that image is already open, `open <image>` focuses the existing image tab ins
 
 The tab shows a compact header with the file's name, size, and location, and the image fills the space below, fit to the tab: a landscape image spans the full width, a portrait one the full height. In the strip the tab is named after the file, with a × close button right after the name that closes that tab without selecting it first; `image` is only the label behind `close image`, so a second image tab is `image-2`. An image tab can be reordered inside its [group](/user-documentation/getting-started/groups) like any other, and the header's **Split** control moves it into the other pane — see [Working in two panes](/user-documentation/getting-started/tabs#working-in-two-panes).
 
+Opening an image focuses its tab. If it is already open, Janissary focuses that same tab instead of making another one. The viewer's keyboard controls work only while that image is visible: a hidden image tab in another pane or behind another tab ignores them. Switching back to an image resets its zoom and pan to the centered 100% view.
+
 ![An image tab: the metadata header above the image, with the zoom percentage indicator visible in the corner.](/screenshots/image-tab.png)
 
 ## Zoom and pan
@@ -42,7 +44,7 @@ Editing is geometry only, with five controls in the toolbar:
 
 Rotate and flip take effect straight away. Crop waits: adjust the rectangle, then **Apply crop** to commit it or **Cancel crop** to drop it. The header shows the current dimensions while you work.
 
-There's no drawing, text, filter, or resize, and you can only edit one image at a time.
+The editor changes geometry only. It has no drawing, text, shapes, stickers, frames, filters, resize controls, or AI tools, and you can only edit one image at a time.
 
 ### Undo and redo
 
@@ -66,6 +68,8 @@ Unsaved edits aren't dropped quietly the way zoom and pan are. Closing a tab tha
 
 ## Lifecycle
 
-An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored by `janus --relaunch`. An edit in progress isn't saved either — it belongs to the open tab. Closing one — via its × button or `close` — just removes the view; the file is untouched. Only files you've explicitly opened are ever served to the viewer.
+An image tab is a live view, not saved state: zoom and pan reset when you switch away to another image tab, and image tabs are not restored by `janus --relaunch`. An edit in progress isn't saved either — it belongs to the open tab. Closing one — via its × button or `close` — just removes the view; the file is untouched. Unsaved edits also bring up the save-changes dialog if you reload the browser page, just as they do when you close the tab. Only files you've explicitly opened are ever served to the viewer.
+
+`profile save <name>` includes an open image tab and records the file to reopen. Launching that profile opens the image again; if it was already open, Janissary reuses its tab. The saved profile returns to the same focused tab when the image was active, but it does not preserve the image's zoom, pan, or unfinished edits. See [Profiles](/user-documentation/automation/profiles) for how profiles save and reopen tabs.
 
 To hand an image to the OS viewer instead, use `open external <image>` — see [Opening files and pages](/user-documentation/tab-types/opening-files).
