@@ -47,6 +47,8 @@ The token reaches the workspace whether or not isolation is actually active on t
 
 [Tokens for agents](/user-documentation/advanced-agents/tokens) covers how to create the token, which permissions it needs, where to save it, and how it reaches an agent or harness launched on another machine with `on <address>`.
 
+Token files can be forwarded to a remote workspace. Your saved ChatGPT login is not; OpenCode uses the login on the machine running the workspace.
+
 Pushing from inside a workspace deliberately ignores the credential helpers your own git config would otherwise use, such as the macOS keychain's own login. Only the token in `.janissary/github-token`, or failing that the one `gh` has stored, is consulted. That keeps a stale cached credential from intercepting the push and failing with `Write access to repository not granted` even though your token is valid.
 
 Commits are a separate matter, and they *are* yours. The name and email git resolves for your project — the same ones a commit you make outside the workspace carries — are passed into every workspaced tab, so an agent's commits are attributed to you. This holds on a machine reached with `on <address>` too: the identity travels with the tab rather than being taken from the remote account, which would otherwise sign the commits as whoever that host logs in as, or refuse to commit at all if that account has no name and email set.
