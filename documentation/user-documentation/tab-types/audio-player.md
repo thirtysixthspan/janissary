@@ -100,7 +100,7 @@ Holding `Shift` while you double-click an audio row in the file navigator sends 
 
 A file can use a codec the app can't decode, or simply be damaged. When that happens the track is dropped from the playlist and the next one starts, so one bad file never stalls a queue.
 
-The drop is reported to the [notifications](/user-documentation/tab-types/notifications) feed and nowhere else, as `Dropped <name> — it could not be played.` Like every notification, it opens that feed in the right sidebar if you don't already have it open.
+The drop is reported to the [notifications](/user-documentation/tab-types/notifications) feed and nowhere else, as `Dropped <name> — it could not be played.` If the feed isn't on screen, the line appears as a toast instead of opening the feed. A burst of notifications can still bring the feed onscreen.
 
 A track that won't decode is an ordinary media outcome, not a failure of the player itself, so the tab keeps working and nothing is disabled. A genuine plugin failure is different: it closes the audio tab and reports the standard failure line — see [Bundled plugins](/user-documentation/command-bar/plugins).
 

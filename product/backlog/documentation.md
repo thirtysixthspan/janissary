@@ -3,8 +3,6 @@
 ## ready
 
 
-* audio-tab (5/10) — The audio guide says a decode-failure notification opens the feed when it is closed, but notifications can instead surface as a toast without opening the feed. Correct the recovery description in `documentation/user-documentation/tab-types/audio-player.md` to match the notification delivery behavior. Ground truth: `product/specs/audio-tab.md`, `src/plugins/audio/activate.ts`, and `src/notifications/deliver.ts`; the shared notification behavior is described in `documentation/user-documentation/tab-types/notifications.md`.
-
 * append-only-log (5/10) — The activity-log field table labels the `agent` field as `zsh`, although each entry stores the originating tab label; correct the field name in `documentation/user-documentation/getting-started/activity-log.md`. Ground truth: `product/specs/append-only-log.md` and `src/transcript/logger.ts`.
 
 * sidebars (7/10) — The tabs guide says sidebar width and dock placement are never persisted, but profiles can save and restore sidebar widths, docked tabs, and selected docked entries. Reconcile the persistence explanation in `documentation/user-documentation/getting-started/tabs.md` with `documentation/user-documentation/automation/profiles.md`. Ground truth: `product/specs/sidebars.md`, `src/tab/place-profile-tabs.ts`, and `web/src/useLayoutState.ts`.
@@ -273,3 +271,5 @@
 * relaunch — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-10-14)
 
 * application-state — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-10-14)
+
+* audio-tab — documented in documentation/user-documentation/tab-types/audio-player.md (removed 2026-10-14)
