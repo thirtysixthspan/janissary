@@ -21,7 +21,7 @@ Every line in the file is one JSON object:
 | Field | What it holds |
 |---|---|
 | `timestamp` | Local time the line was logged, as `HH:MM:SS.mmm` |
-| `zsh` | The tab's label |
+| `agent` | The tab's label |
 | `text` | The command, message, or output text |
 
 A new file starts at local midnight, not UTC. The split follows your machine's clock and calendar, not a fixed time zone.
