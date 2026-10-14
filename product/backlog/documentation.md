@@ -3,8 +3,6 @@
 ## ready
 
 
-* context-menu (8/10) — 7 of 16 fact groups are missing and 2 are wrong. Correct the claims that inert right-clicks expose the browser menu and that an editor without a selection has no menu; document the always-present **Paste from clipboard…** item and the harness selection menu entries. Update `documentation/user-documentation/getting-started/context-menus.md` and coordinate with `documentation/user-documentation/command-bar/clipboard.md` and `documentation/user-documentation/advanced-agents/harness.md`. Ground truth: `product/specs/context-menu.md`, `web/src/context-menu/default-menu-target.ts`, `web/src/context-menu/useDefaultContextMenu.ts`, and `web/src/context-menu/DefaultContextMenu.tsx`.
-
 * database (4/10) — The database and SQL-browser pages cover the main commands, persistence, query results, and common errors, but the `db` reference does not distinguish a database connection/open failure from an SQL execution error. Add the shipped open-failure response to `documentation/user-documentation/command-bar/database.md` if it is useful for recovery. Ground truth: `product/specs/database.md`, `src/database/query.ts`, and `src/database/manager.ts`; related existing pages are `documentation/user-documentation/command-bar/database.md` and `documentation/user-documentation/tab-types/sql-browser.md`.
 
 * notifications (8/10) — 3 of 15 user-facing fact groups are missing and alert-channel wording is contradictory. Clarify that toasts themselves are silent while eligible explicit events may separately produce desktop banners and bell sounds; explain permission and visibility conditions, and document `osNotifications`, `terminalBell`, and category settings with defaults in `documentation/user-documentation/tab-types/notifications.md`. Reconcile the contradictory alert summary in `help.md` with that behavior. Ground truth: `product/specs/notifications.md`, `src/notifications/index.ts`, and `src/notifications/deliver.ts`.
@@ -54,6 +52,8 @@
 ## declined
 
 ## resolved
+
+* context-menu — documented in documentation/user-documentation/getting-started/context-menus.md, documentation/user-documentation/advanced-agents/harness.md (removed 2026-10-14)
 
 * agent-command — expanded documentation/user-documentation/advanced-agents/agent-command.md with verified parser, task and skill resolution, grants, snapshots, nested-run cleanup, provider outcomes, and remote cleanup behavior (removed 2026-10-14)
 
