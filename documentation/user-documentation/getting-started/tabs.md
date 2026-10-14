@@ -19,9 +19,12 @@ but `close <label>` still works.
 Sidebar visibility is derived from its contents. An empty sidebar cannot be shown, and a docked tab
 does not keep the app alive: closing the last non-docked tab still quits. Dragging a sidebar's
 resize control changes its width within a minimum and roughly half the viewport. Sidebar width and
-dock placement reset on relaunch and are never persisted.
+dock placement reset when you relaunch the app normally. A saved [profile](/user-documentation/automation/profiles)
+can restore sidebar widths and docked tabs. It does not save which docked tab is selected.
 
-Which tab is docked where belongs to the app, so it stays the same in every window you have open, and the app itself keeps a docked tab from becoming the active one. The sidebar's width, and which of several docked tabs it is showing, are screen furniture instead: they belong to the window in front of you and nothing carries them to another window or to your next launch.
+<img class="agent-float" src="/agents/malik-south-east.png" alt="" />
+
+Which tab is docked where belongs to the app, so it stays the same in every window you have open, and the app itself keeps a docked tab from becoming the active one. The sidebar's width, and which of several docked tabs it is showing, are screen furniture instead: they belong to the window in front of you. A profile can save and restore the widths, but not the selected docked tab.
 
 ![A sidebar holding a file navigator and the notifications feed together, with its own small tab strip above the visible one.](/screenshots/sidebar-shared.png)
 
