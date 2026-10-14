@@ -3,8 +3,6 @@
 ## ready
 
 
-* agent-command (8/10) — 14 of 35 user-visible fact groups are missing and 7 are incomplete or misleading. The guide should clarify parser errors and preserved task text, task-root and skill resolution/confinement, grant validation, snapshots and nested runs, cleanup ownership, provider denial and empty answers, and bounded remote cleanup. Correct the existing skill and remote execution descriptions in `documentation/user-documentation/advanced-agents/agent-command.md`; ground truth: `product/specs/agent-command.md`, `src/agent/command-parser.ts`, `src/agent/task-resolution.ts`, `src/agent/skill-grants.ts`, `src/agent/run.ts`, `src/agent/manager.ts`, `src/agent/workspace-execution.ts`, and `src/remote/acp-session.ts`.
-
 * context-menu (8/10) — 7 of 16 fact groups are missing and 2 are wrong. Correct the claims that inert right-clicks expose the browser menu and that an editor without a selection has no menu; document the always-present **Paste from clipboard…** item and the harness selection menu entries. Update `documentation/user-documentation/getting-started/context-menus.md` and coordinate with `documentation/user-documentation/command-bar/clipboard.md` and `documentation/user-documentation/advanced-agents/harness.md`. Ground truth: `product/specs/context-menu.md`, `web/src/context-menu/default-menu-target.ts`, `web/src/context-menu/useDefaultContextMenu.ts`, and `web/src/context-menu/DefaultContextMenu.tsx`.
 
 * database (4/10) — The database and SQL-browser pages cover the main commands, persistence, query results, and common errors, but the `db` reference does not distinguish a database connection/open failure from an SQL execution error. Add the shipped open-failure response to `documentation/user-documentation/command-bar/database.md` if it is useful for recovery. Ground truth: `product/specs/database.md`, `src/database/query.ts`, and `src/database/manager.ts`; related existing pages are `documentation/user-documentation/command-bar/database.md` and `documentation/user-documentation/tab-types/sql-browser.md`.
@@ -56,6 +54,8 @@
 ## declined
 
 ## resolved
+
+* agent-command — expanded documentation/user-documentation/advanced-agents/agent-command.md with verified parser, task and skill resolution, grants, snapshots, nested-run cleanup, provider outcomes, and remote cleanup behavior (removed 2026-10-14)
 
 * harness — documented in documentation/user-documentation/advanced-agents/harness.md (removed 2026-10-08)
 
