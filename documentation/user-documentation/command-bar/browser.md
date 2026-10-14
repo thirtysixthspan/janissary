@@ -13,7 +13,7 @@ browser content
 
 | Subcommand | What it does |
 |---|---|
-| `browser open [name] [--headed\|-H]` | Launch this tab's browser if it isn't running, and open a new window |
+| `browser open [name] [--headed\|-H]` | Launch this tab's browser if it isn't running, and open a new window; `name` is accepted but currently has no effect |
 | `browser list` | List this tab's windows, marking the current one |
 | `browser use <id>` | Make a window current |
 | `browser goto <url>` | Navigate the current window |
@@ -65,7 +65,7 @@ None of this is a guarantee. A site that blocks automated traffic outright can s
 
 ## Reading a page
 
-`browser goto <url>` waits for the page to load, then answers with its title and address, so you can see where you landed. `browser content` returns the page's rendered text (what a reader would see, not the raw HTML), cut off at roughly 10,000 characters with a note that it was truncated. That keeps a long page from overflowing the transcript. `browser eval <js>` runs JavaScript in the page and prints the result as JSON.
+`browser goto <url>` waits for the page to load, then answers with its title and address, so you can see where you landed. `browser content` returns the page title and its `textContent`, cut off at roughly 10,000 characters with a note that it was truncated. That keeps a long page from overflowing the transcript. `browser eval <js>` runs JavaScript in the page and prints the result as JSON.
 
 ## Screenshots
 
