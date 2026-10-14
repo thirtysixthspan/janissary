@@ -6,6 +6,10 @@ Type `shell` to open a separate tab with a live zsh terminal. Application comman
 
 When you run a shell command this way, Janissary captures at most 1 Mi characters for the reply. If the command produces more, the captured output ends with `(output truncated after 1 MiB)`, but the command keeps running until it finishes. This limit applies to the captured reply, not to the interactive zsh terminal's own scrollback.
 
+Captured commands run in a separate shell process for each tab. Type `!pwd` in a tab's command bar to run a command there; Janissary captures both standard output and error in that tab's transcript. The process keeps its working directory and environment between commands, and starts in the tab's current directory. If that directory no longer exists, it starts in the project directory instead. Commands in the same tab run one at a time, including when you queue them.
+
+Closing the tab or shutting down Janissary stops its captured shell. If the shell exits on its own during a command, the reply ends with `(shell exited)`; the next command starts a new shell process.
+
 Every launch opens one of these for you: the `janus` tab you start in is a zsh shell tab in the project directory. Type `shell` in its command bar when you want another shell tab. Typing `exit` in it closes it like any shell tab, and as the last tab that quits the app.
 
 <img class="agent-float" src="/agents/fariz-south-east.png" alt="" />
