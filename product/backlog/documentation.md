@@ -3,8 +3,6 @@
 ## ready
 
 
-* history (3/10) — The user guide covers recall, ghost text, and picker behavior but omits how long or multiline commands are labeled in picker rows: it shows the first nonblank line, an optional line-count suffix, and clips before that suffix while retaining the full command for selection. Add this detail to `documentation/user-documentation/command-bar/history.md`; ground truth: `product/specs/history.md`, `src/tab/history.ts`, and the history-picker rendering source under `web/src/`.
-
 * audio-tab (5/10) — The audio guide says a decode-failure notification opens the feed when it is closed, but notifications can instead surface as a toast without opening the feed. Correct the recovery description in `documentation/user-documentation/tab-types/audio-player.md` to match the notification delivery behavior. Ground truth: `product/specs/audio-tab.md`, `src/plugins/audio/activate.ts`, and `src/notifications/deliver.ts`; the shared notification behavior is described in `documentation/user-documentation/tab-types/notifications.md`.
 
 * append-only-log (5/10) — The activity-log field table labels the `agent` field as `zsh`, although each entry stores the originating tab label; correct the field name in `documentation/user-documentation/getting-started/activity-log.md`. Ground truth: `product/specs/append-only-log.md` and `src/transcript/logger.ts`.
@@ -30,6 +28,8 @@
 ## declined
 
 ## resolved
+
+* history — documented in documentation/user-documentation/command-bar/history.md (removed 2026-10-14)
 
 * workspaced-agent — documented in documentation/user-documentation/advanced-agents/tokens.md, documentation/user-documentation/advanced-agents/workspaced-agent.md (removed 2026-10-14)
 
