@@ -3,8 +3,6 @@
 ## ready
 
 
-* launcher (6/10) — 8 of 20 user-visible fact groups are missing and none are wrong. The guide omits the built-in command destinations and the exclusion of Tasks and History, unrecognized-command and duplicate-ID outcomes, the exact “needs you” cases, live activity-age updates, summary expansion controls, the transcript button, and summary reset on close. Update `documentation/user-documentation/tab-types/launcher.md`; ground truth: `product/specs/launcher.md`, `src/plugins/launcher/activate.ts`, `src/plugins/launcher/commands-file.ts`, `src/plugins/launcher/configure.ts`, `src/plugins/launcher/summarizer.ts`, `web/src/plugins/launcher/CommandRail.tsx`, `web/src/plugins/launcher/TabList.tsx`, and `web/src/plugins/launcher/LauncherTabRowView.tsx`.
-
 * application-config (9/10) — 23 of 23 user-visible configuration facts are missing from user documentation, including setting names and defaults, per-setting validation and fallback, notification permission behavior, and runtime write outcomes. Add a focused configuration reference under `documentation/user-documentation/` and link it from relevant command guides. Ground truth: `product/specs/application-config.md`, `src/config.ts`, `src/config-decode.ts`, and `src/main.ts`; the existing config pointer in `help.md` is only a terse reference.
 
 * agent-command (8/10) — 14 of 35 user-visible fact groups are missing and 7 are incomplete or misleading. The guide should clarify parser errors and preserved task text, task-root and skill resolution/confinement, grant validation, snapshots and nested runs, cleanup ownership, provider denial and empty answers, and bounded remote cleanup. Correct the existing skill and remote execution descriptions in `documentation/user-documentation/advanced-agents/agent-command.md`; ground truth: `product/specs/agent-command.md`, `src/agent/command-parser.ts`, `src/agent/task-resolution.ts`, `src/agent/skill-grants.ts`, `src/agent/run.ts`, `src/agent/manager.ts`, `src/agent/workspace-execution.ts`, and `src/remote/acp-session.ts`.
@@ -259,6 +257,7 @@
 * roles — documented in documentation/user-documentation/tab-types/roles.md (removed 2026-10-13)
 * shell-tab — documented in documentation/user-documentation/command-bar/shell.md (removed 2026-10-13)
 * diff-tab — already resolved: documentation/user-documentation/tab-types/diff-tab.md, documentation/user-documentation/tab-types/sessions.md, help.md (removed 2026-10-13)
+* launcher — documented in documentation/user-documentation/tab-types/launcher.md (removed 2026-10-14)
 
 * agent-workflow — updated documentation/user-documentation/getting-started/application.md and documentation/user-documentation/getting-started/design-principles.md to distinguish autonomous runs and monitor tabs from shell and harness tabs (removed 2026-10-13)
 * command-queue — corrected shell and harness queue support in documentation/user-documentation/command-bar/queue.md (removed 2026-10-13)
