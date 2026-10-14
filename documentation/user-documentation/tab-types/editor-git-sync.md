@@ -14,7 +14,7 @@ It's deliberately narrow: only paths you list are synced, nothing else, and ther
 
 ## Configuring which files are synced
 
-Which paths are eligible to sync is controlled entirely by the `syncPaths` setting in `.janissary/config.json` (see [the app's configuration](/user-documentation/getting-started/startup#configuration)). There's no runtime command for it — edit the file directly:
+Which paths are eligible to sync is controlled entirely by the `syncPaths` setting in `.janissary/config.json` (see [app configuration](/user-documentation/getting-started/configuration)). There's no runtime command for it — edit the file directly:
 
 ```json
 {

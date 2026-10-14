@@ -52,7 +52,7 @@ If the overlay plugin fails while the popup is opening or already open, the popu
 
 ## Keeping more or fewer
 
-Fifteen entries by default, with the oldest falling off. To keep more, set `clipboardHistoryMaxEntries` in `.janissary/config.json`:
+Fifteen entries by default, with the oldest falling off. To keep more, set `clipboardHistoryMaxEntries` in `.janissary/config.json` (see [app configuration](/user-documentation/getting-started/configuration)):
 
 ```json
 { "clipboardHistoryMaxEntries": 40 }
