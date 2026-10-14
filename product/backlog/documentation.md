@@ -3,8 +3,6 @@
 ## ready
 
 
-* append-only-log (5/10) — The activity-log field table labels the `agent` field as `zsh`, although each entry stores the originating tab label; correct the field name in `documentation/user-documentation/getting-started/activity-log.md`. Ground truth: `product/specs/append-only-log.md` and `src/transcript/logger.ts`.
-
 * sidebars (7/10) — The tabs guide says sidebar width and dock placement are never persisted, but profiles can save and restore sidebar widths, docked tabs, and selected docked entries. Reconcile the persistence explanation in `documentation/user-documentation/getting-started/tabs.md` with `documentation/user-documentation/automation/profiles.md`. Ground truth: `product/specs/sidebars.md`, `src/tab/place-profile-tabs.ts`, and `web/src/useLayoutState.ts`.
 
 * browser (7/10) — The browser reference calls `content` rendered page text, but the shipped command reads `document.body.textContent`; it also does not explain that the optional `browser open <name>` argument currently has no effect. Align `documentation/user-documentation/command-bar/browser.md` and `help.md` with the actual command behavior. Ground truth: `product/specs/browser.md`, `src/browser/index.ts`, `src/browser/command.ts`, and `src/browser/tab.ts`.
@@ -273,3 +271,5 @@
 * application-state — documented in documentation/user-documentation/getting-started/startup.md (removed 2026-10-14)
 
 * audio-tab — documented in documentation/user-documentation/tab-types/audio-player.md (removed 2026-10-14)
+
+* append-only-log — documented in documentation/user-documentation/getting-started/activity-log.md (removed 2026-10-14)
