@@ -27,8 +27,9 @@ sidebar if it doesn't exist yet, brought onto screen without changing which tab 
 Anything that brings the feed onto the screen empties that window's corner, so a click takes the
 rest of the toasts with it. A window that reloads or reconnects comes back with an empty corner:
 toasts are never re-sent, though the feed still holds everything.
-A toast is silent: no sound plays and no operating-system notification is raised, so a notification
-only reaches you if you happen to be looking. A toast is also the shortened form of the line: it
+A toast itself is silent: it plays no sound and raises no desktop banner. Some notifications can
+also produce a desktop banner or bell sound independently of the toast; see [Desktop banners and
+bell sounds](#desktop-banners-and-bell-sounds). A toast is also the shortened form of the line: it
 carries no timestamp and none of the clickable targets the feed entry has, and a long message is cut
 off after two lines. It tells you something happened and nothing more, which is why clicking it is
 the way through to the detail. A docked feed holds its toasts back on whichever window is actually
@@ -40,6 +41,39 @@ is if already docked — and every toast on screen clears at once, since the fee
 same lines. A notification that was detected earlier and only delivered now, such as a remote
 harness's queued approval arriving when you reattach, counts toward that burst but never raises a
 toast of its own; the feed is the only place you will see it.
+
+## Desktop banners and bell sounds
+
+Eligible explicit notifications can also show a desktop banner and play a category sound. This is
+separate from the in-app toast: the toast stays silent even when a banner or sound is enabled.
+Background activity toggles such as `stateChange`, `scheduleFire`, `agentStart`, and `rateLimited`
+control feed entries only; they do not trigger desktop banners or bell sounds.
+
+Each browser window handles its own banner and sound. It suppresses both only when Janissary's
+window has focus and the notification's tab is visible there. A background tab or an unselected
+docked tab can therefore alert while Janissary is in front. A visible notifications feed does not
+silence a banner. Clicking a banner focuses the window and selects the tab where it currently lives.
+
+Janissary never asks for desktop-notification permission. A banner appears only if the browser has
+already granted permission for the Janissary site; denying or withholding permission does not affect
+the feed or bell. Browser autoplay rules can block sounds until you interact with the page.
+
+Set the alert channels and category volumes in `.janissary/config.json`:
+
+| Setting | Default | What it controls |
+|---|---:|---|
+| `osNotifications` | `true` | Allows eligible desktop banners when the browser has permission. |
+| `terminalBell` | `true` | Allows eligible category sounds to play. |
+| `terminalBellVolumeSuccess` | `0.8` | Success-sound volume, from `0` to `1`. |
+| `terminalBellVolumeWarning` | `0.8` | Warning-sound volume, from `0` to `1`. |
+| `terminalBellVolumeError` | `0.8` | Error-sound volume, from `0` to `1`. |
+| `terminalBellMuteSuccess` | `false` | Mutes success sounds without affecting banners. |
+| `terminalBellMuteWarning` | `false` | Mutes warning sounds without affecting banners. |
+| `terminalBellMuteError` | `false` | Mutes error sounds without affecting banners. |
+
+The switches are independent. A category mute affects only its sound; it does not silence that
+category's desktop banners. See [app configuration](/user-documentation/getting-started/configuration)
+for how to edit and validate these settings.
 
 Every notification is also appended to `.janissary/notifications.json`, one JSON line per
 notification, as a durable trail that outlives the run. `notifications clear` is what empties the
