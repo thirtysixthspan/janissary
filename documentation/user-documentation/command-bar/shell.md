@@ -14,6 +14,8 @@ The command bar starts focused. Double-click the terminal or press `Shift+Tab` t
 
 A multi-line command stays editable in the bar until you submit it. If it goes to zsh, its lines are pasted together and submitted as one command.
 
+The command bar handles application commands before zsh. Bare `clear` clears the terminal; use `/clear` to clear an app transcript. If an application command takes more than 30 seconds, its reply shows the output produced so far and the command keeps running. This timeout does not close the shell or its zsh process.
+
 By default, `shell` gives the new shell a sandbox of its own: a fresh workspace clone of the project, a separate checkout, with zsh confined to it. The full form is:
 
 ```
@@ -40,11 +42,15 @@ When a command finishes while the zsh tab is hidden, it gets an unread flag. If 
 
 `↑` and `↓` recall lines sent from this tab's command bar, including application commands handled there, and commands typed directly into the terminal. `Ctrl+R`, or typing `hist` in the command bar, opens this tab's history; use `↑` and `↓` to choose a line, `Return` to put it back in the bar, and `Escape` to close the history.
 
+This tab history and the global command history are different. The tab history includes commands typed directly into its terminal. Global ghost suggestions include only lines submitted through the command bar, including application commands and lines prefixed with `!`. Direct terminal input and commands delivered by `send` or `queue` don't enter global history. Setup commands installed by the shell don't appear in either history.
+
 Janissary never types anything at zsh's prompt to set the tab up. zsh's own startup does it. So zsh's history holds only what you ran: `history`, `↑` in the terminal, and your history file. It's the same for this tab's history.
 
 `Shift+↑`/`Shift+↓` and `Ctrl+↑`/`Ctrl+↓` scroll the terminal with acceleration. `Page Up` and `Page Down` move by half a screen, and `Escape` returns to the bottom of the scrollback.
 
 Press `Cmd+T`, or the new-shell button in the metadata row, to open another zsh tab in the directory this shell is currently in. Beside an unsandboxed shell the new one is unsandboxed too; beside a sandboxed one it shares the same workspace clone rather than making a new one. While the shell's own clone is still being made, the button is dimmed and `Cmd+T` does nothing. In other tabs, `Cmd+T` opens a new shell tab.
+
+`Cmd+T` belongs to the visible shell tab, or to the selected shell when it is docked. A docked shell doesn't take the shortcut from another tab's command bar. The metadata row also offers **Open file navigator here**, **new shell here**, a split control, and connection and schedule windows. A remote shell shows its host and connection state; **Detach** closes every tab sharing that remote session after confirmation, and **Attach** is available while it reconnects.
 
 With the command bar focused, `Ctrl+C` sends an interrupt to zsh, unless text is selected in the bar, when it copies that text. `Ctrl+D` sends end-of-input, and `Ctrl+Z` suspends the running command. See [Keyboard shortcuts](/user-documentation/getting-started/keyboard) for these keys and the other shell-tab shortcuts.
 
@@ -54,7 +60,7 @@ With the terminal focused, press `Ctrl+Shift+C` to copy its selection. On macOS,
 
 <img class="agent-float left" src="/agents/bilal-south.png" alt="" />
 
-Press the 📋 **Open transcript** button in the shell tab's metadata row. It opens everything the shell has shown so far in an editor tab named after the file, such as `tx-2026-10-13T03-42-46-527Z.txt`, where `Cmd+F` searches it. The button appears as the shell starts. You can't save over the transcript while its shell is running or while its final lines are being written after the shell exits; to keep notes on it, copy it to another file first. You can't rename or move it during that same period, from its editor tab or a file navigator.
+Press the 📋 **Open transcript** button in the shell tab's metadata row. It opens everything the shell has shown so far in an editor tab named after the file, such as `tx-2026-10-13T03-42-46-527Z.txt`, where `Cmd+F` searches it. The button appears as the shell starts. You can't save over the transcript while its shell is running or while its final lines are being written after the shell exits; to keep notes on it, copy it to another file first. You can't rename or move it during that same period, from its editor tab or a file navigator, but you can delete it from a file navigator. At shutdown, Janissary waits up to one second for open transcripts to write their final row and close.
 
 The file lives at `.janissary/shell-transcripts/<name>-<timestamp>.txt` on the machine running Janissary, even when the shell itself is remote. The tab's recording, named the same way, sits in `.janissary/recordings/`. The transcript is plain text: the prompts, the commands you typed and their output, with no colors. A full-screen program such as `vim` or `less` isn't in it, though what the shell printed before and after is. Replies to app commands such as `help` aren't in it either. Each line is saved once, when the cursor moves past it, so a later `clear` doesn't erase anything already saved. When the shell closes or exits, its unfinished prompt or progress row is saved as it stands.
 
@@ -63,6 +69,12 @@ Be careful with secrets. A secret you type on a command line, such as `export TO
 Transcripts are kept across `janus --relaunch` and cleared at a normal launch. To turn them off, set `"recordShellTabs": false` in `.janissary/config.json` and restart. That turns off the shell recording too. See [app configuration](/user-documentation/getting-started/configuration) for the other settings.
 
 If the transcript can't be written, the notifications feed shows `shell transcript failed` and the shell keeps running. The button still opens whatever was saved before the failure.
+
+## Play a shell recording
+
+Each shell session is recorded automatically unless the project sets `"recordShellTabs": false` in `.janissary/config.json`. Press the film icon in the metadata row to open the recording while the shell is running or after recording stops. You can also run `play <label>` to open the newest recording for that shell, or open its `.cast` file from the file navigator. See [Recording player](/user-documentation/tab-types/recording-player) for playback controls.
+
+The recording captures terminal output and resizes, not keystrokes as input. But zsh echoes command lines and interactive programs often echo what you type, so those characters are recorded too. A secret typed at a command prompt can appear in the recording. A password entered at a prompt that hides typing is not echoed and is not recorded. Files stay under `.janissary/recordings/` on the machine running Janissary and are cleared at a fresh launch. If writing fails, the shell keeps running, the notifications feed shows `shell recording failed`, and the film icon still opens any partial recording.
 
 ## Query ACP from a shell
 
