@@ -3,8 +3,6 @@
 ## ready
 
 
-* notifications (8/10) — 3 of 15 user-facing fact groups are missing and alert-channel wording is contradictory. Clarify that toasts themselves are silent while eligible explicit events may separately produce desktop banners and bell sounds; explain permission and visibility conditions, and document `osNotifications`, `terminalBell`, and category settings with defaults in `documentation/user-documentation/tab-types/notifications.md`. Reconcile the contradictory alert summary in `help.md` with that behavior. Ground truth: `product/specs/notifications.md`, `src/notifications/index.ts`, and `src/notifications/deliver.ts`.
-
 * remote-server (8/10) — 3 of 15 user-visible behavior groups are absent or partial, especially remote autonomous-agent execution, detached harness alerts/captures, forwarded Git identity, and remote file failure outcomes. Extend `documentation/user-documentation/advanced-agents/remote-agents.md` with the verified remote-agent workflow and the most consequential detached-session and file-error behavior. Ground truth: `product/specs/remote-server.md`, `src/remote/serve-agent-resolution.ts`, `src/remote/acp-session.ts`, and the remote file-serving implementation; existing help provides only brief invocation syntax.
 
 * image-tab (8/10) — 9 of 32 user-visible fact groups are missing and 1 feature-list claim is incomplete. Expand `documentation/user-documentation/tab-types/image-viewer.md` with focus and profile behavior, reload guarding, viewer control behavior when hidden or switching tabs, and the complete list of unsupported editing features. Ground truth: `product/specs/image-tab.md`, `src/plugins/image/manifest.ts`, `src/plugins/image/activate.ts`, and `web/src/plugins/image/`.
@@ -273,3 +271,5 @@
 * shell — documented the captured output limit in documentation/user-documentation/command-bar/shell.md (removed 2026-10-13)
 * diff-tab — documented in documentation/user-documentation/tab-types/diff-tab.md (removed 2026-10-14)
 * clipboard-history — documented in documentation/user-documentation/command-bar/clipboard.md (removed 2026-10-14)
+
+* notifications — documented in documentation/user-documentation/tab-types/notifications.md, help.md (removed 2026-10-14)
