@@ -158,6 +158,6 @@ again.
 ### Lifetime
 
 The search tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is
-not restored on `--relaunch`; only its toggles outlive the application, in the config file. Closing
+not restored; only its toggles outlive the application, in the config file. Closing
 the tab abandons any search still running and forgets everything else it held. Only one search runs at a time: starting a new one abandons the
 previous, so results from a query the user has moved on from never arrive.

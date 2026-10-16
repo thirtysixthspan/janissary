@@ -34,7 +34,7 @@ A free-text panel starts with focus on the text field. An approval panel starts 
 
 A tab can only have one pending question visible. If the same tab asks a second question before the first is answered, the second one waits and only appears once you resolve the first. Different tabs can each have their own pending question at the same time, independent of one another.
 
-Questions live only in memory for the running session — they're not saved, and a `janus --relaunch` doesn't bring back anything that was still pending.
+Questions live only in memory for the running session — they're not saved, and a new launch doesn't bring back anything that was still pending.
 
 ## Notifications
 

@@ -92,8 +92,7 @@ remote `sudo` password typed into an ssh tab does not land on disk. Terminal res
 playback reflows the way the session did.
 
 The file is created **lazily, on the first output** — a session that never connects leaves no empty
-file — and closed when the ssh process exits. Recordings are **cleared at a fresh launch** and
-**preserved across `--relaunch`**, so a run's recordings are bounded to that run.
+file — and closed when the ssh process exits. Recordings are **cleared at every launch**, so a run's recordings are bounded to that run.
 
 `play <file>` opens an asciicast tab playing that session's recording, following it while
 the session is still running; see [[harness-recording]] § Retrieval for what the player offers. The
@@ -114,8 +113,7 @@ reachable.
 
 ## Persistence
 
-Like harness tabs, ssh tabs are **live and in-memory**: not saved, not restored on
-`--relaunch`. Each `ssh` invocation starts a fresh session.
+Like harness tabs, ssh tabs are **live and in-memory**: not saved, not restored. Each `ssh` invocation starts a fresh session.
 
 A **profile** is the one thing that does bring an ssh session back. `profile save` captures each
 open ssh tab as an `ssh` entry carrying its destination and the options the session was opened

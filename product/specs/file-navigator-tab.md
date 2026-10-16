@@ -16,7 +16,7 @@ moves to the new file navigator tab.
 
 Unlike a shell tab, a file navigator tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like markdown and image
-tabs, it is not saved and is not restored on `--relaunch`.
+tabs, it is not saved and is not restored.
 
 ### `files [path]`
 
@@ -152,7 +152,7 @@ remote tree cannot describe that way — reading a directory, a file, or row det
 no per-item result to carry the message — are still reported, as an operation failure.
 
 Remote trees are live views only. They are omitted by `profile save`, are not restored by
-`profile launch` or `--relaunch`, and close if their channel drops. The connection-ended failure is
+`profile launch` or by a launch restore, and close if their channel drops. The connection-ended failure is
 reported once through the notifications feed; a refused individual filesystem operation is reported
 as an operation failure and does not close the channel.
 

@@ -73,7 +73,7 @@ taking a distinct dot color. Focus moves to the new page tab.
 
 Unlike a shell tab, a page tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like image tabs and
-browser windows, it is not saved and is not restored on `--relaunch`. A profile does capture one,
+browser windows, it is not saved and is not restored. A profile does capture one,
 by the address it is showing, and reopens it by issuing the same `open` a user would type (see
 [[profiles]]).
 

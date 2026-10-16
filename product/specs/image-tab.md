@@ -22,7 +22,7 @@ to the new image tab.
 
 Unlike a shell tab, an image tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like browser windows
-(see Browser), it is not saved and is not restored on `--relaunch`. A profile can still capture one
+(see Browser), it is not saved and is not restored. A profile can still capture one
 and reopen it on launch (see [[profiles]]).
 
 ### Image tab data
@@ -115,7 +115,7 @@ When the image is zoomed in beyond the tab area, the out-of-view parts are reach
 
 No scrollbars are shown; panning is via the arrow keys and drag. Zoom and pan are live, in-memory:
 a newly opened image tab starts at 100% zoom with no offset, and the state is not persisted or
-restored on `--relaunch`. Switching to a different image tab resets zoom and pan to their defaults.
+restored. Switching to a different image tab resets zoom and pan to their defaults.
 The zoom and pan keys act only on the image tab currently on screen: an image tab in the other split
 pane, or one hidden behind another tab, ignores them entirely.
 
@@ -190,8 +190,7 @@ covers every close path — the tab's × button, `Cmd+W`, and typing `close` or 
 image edits also hold up `quit`, closing the last tab, and closing or reloading the browser page
 (see [[quit-confirmation]]).
 
-An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted, not restored on
-`--relaunch`, and not captured by a profile beyond the file a profile already records.
+An in-progress edit is a live, in-memory view like zoom and pan: it is not persisted, not restored, and not captured by a profile beyond the file a profile already records.
 
 ### Tab strip: name and close button
 

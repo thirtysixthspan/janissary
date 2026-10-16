@@ -192,6 +192,6 @@ A repository with no commits yet reads as every file added, rather than as an er
 ### Lifetime
 
 The diff tab is a live, in-memory view tab like every other plugin tab. It is not persisted and is not
-restored on `--relaunch`. Closing the tab forgets what it held — the hunks it showed, temporary comments and drafts, the expansions
+restored. Closing the tab forgets what it held — the hunks it showed, temporary comments and drafts, the expansions
 and the keyboard walk. The layout is the one thing kept: it outlives the tab that chose it. A workspace
 diff also releases the channel it joined when it closes.

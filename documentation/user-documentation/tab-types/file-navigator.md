@@ -45,7 +45,7 @@ Row sizes, modified times, and permissions come from the remote host. Until thos
 
 Moves and copies stay on one machine. A drag onto a tree on another host has no drop highlight, and a cross-host paste is refused without changing anything or clearing the clipboard marks. Dragging a remote row into a command bar, an editor, or a harness inserts a host-qualified absolute path such as `devbox:/srv/project/src/index.ts`; local rows still insert relative paths.
 
-A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined tab keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it. Remote trees are not restored by a profile or `janus --relaunch`.
+A navigator opened from a remote tab's 📁 button closes when that tab closes, even if another joined tab keeps using the shared connection. Retargeting the navigator to a local directory removes that tie. A dropped or explicitly closed SSH connection closes every tree and tab using it. Remote trees are not restored by a profile.
 
 ## Docking to a sidebar
 
@@ -362,7 +362,7 @@ its successful moves in reverse order, and redo reapplies them in forward order.
 the redo stack. Grouped undo and redo use **Overwrite all**, **Skip conflicts**, and **Cancel** if
 destinations now contain conflicts. Failed and skipped items stay available for a later retry.
 
-Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored by `janus --relaunch`. Closing a tree also stops every directory watch it had open, so a folder that keeps changing stops costing anything the moment you close it.
+Like other view tabs, a file navigator is a live view — closed with its × button or `close`, and not restored. Closing a tree also stops every directory watch it had open, so a folder that keeps changing stops costing anything the moment you close it.
 
 One thing a tree will not do is reach outside itself. Every path you supply to a file action or to a directory expansion has to land inside that tree's current root; one that points above it is ignored, so a move, rename, delete, or watch can never be aimed at something the tree isn't showing. Walking up to the parent is still available, and lands you in a tree rooted there.
 

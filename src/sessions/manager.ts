@@ -100,7 +100,7 @@ export class SessionsManager {
     return true;
   }
 
-  // Every parked session, attached independently as part of a `--relaunch` restore. Each runs on
+  // Every parked session, attached independently as part of the restore every launch runs. Each runs on
   // its own: a refusing peer is marked terminated and an unreachable host stays detached, and neither
   // holds the restore up, which is why nothing here is awaited.
   restoreAll(): void {

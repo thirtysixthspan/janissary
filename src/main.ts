@@ -76,13 +76,13 @@ export async function boot(argv = process.argv.slice(2)): Promise<void> {
   loadHarnessModels(cwd);
   loadProjectTokens(cwd);
   loadGitIdentity(cwd);
-  clearStateDirectories(args.relaunch);
+  clearStateDirectories();
 
   const webDir = path.join(import.meta.dirname, '..', 'web', 'dist');
   if (!existsSync(path.join(webDir, 'index.html'))) {
     throw new Error('web UI bundle not found (web/dist).\n  Run `npm run build:web` (or use `npm start`, which builds it first).');
   }
-  const server = await startServer({ webDir, token: makeToken(), port: args.port, relaunch: args.relaunch, projectDir: cwd });
+  const server = await startServer({ webDir, token: makeToken(), port: args.port, projectDir: cwd });
 
   // Machine-readable line first (the launcher may parse it), then a human line.
   process.stdout.write(`__JANUS_URL__ ${server.url}\n`);

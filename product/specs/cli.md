@@ -22,7 +22,6 @@
 | ---- | ---- | ------- | ----------- |
 | `--port=<n>` | string (numeric) | auto | Port for the HTTP server to listen on. |
 | `--no-open` | boolean | `false` | Start the server without opening the app window. |
-| `--relaunch` | boolean | `false` | Preserve existing state instead of clearing it. See `product/specs/relaunch.md`. |
 | `--help` | boolean | `false` | Print usage text to stdout and exit 0. |
 | `--version` | boolean | `false` | Print the application name and version to stdout and exit 0. |
 
@@ -58,15 +57,15 @@ The detached server itself boots the full application against its target directo
 2. Initialize `.janissary/` subdirectories (database, profiles, workspace, and the per-run harness and browser directories).
 3. Start the transcript logger.
 4. Load application config from `.janissary/config.json`.
-5. Unless `--relaunch`: clear the per-run directories and the workspace directory.
-6. Open the launch shell (see `tabs.md`), failing the start when it cannot be opened, then, under `--relaunch`, reattach parked remote sessions (see `relaunch.md`), and start the HTTP server (on the requested port, or an ephemeral port if none given).
+5. Clear the per-run directories and the workspace directory.
+6. Open the launch shell (see `tabs.md`), failing the start when it cannot be opened, then reattach parked remote sessions (see `sessions-tab.md`), and start the HTTP server (on the requested port, or an ephemeral port if none given).
 7. Write the server URL (`__JANUS_URL__ <url>`) and a human-readable banner to the log.
 8. Unless `--no-open`: open the app in a Chrome app window (or the default browser if no system Chrome is found).
 9. Register signal handlers for graceful shutdown (SIGINT, SIGTERM), app window cleanup, and instance lock release on exit.
 
-The launcher watches `.janissary/log/server.log` for the `__JANUS_URL__` line written by the server it just started. Under `--relaunch` the log still holds earlier runs' output, including their `__JANUS_URL__` lines, and the launcher ignores everything that was already there. Once the new line appears, the launcher exits 0 and prints nothing to the terminal — except under `--no-open`, where it prints the new server's URL, since no window opens to carry the session visually. If the server process exits before that line appears, the launcher relays the tail of what that server wrote to the log to the terminal and exits with the server's own exit code. If neither happens within 20 seconds, the launcher kills the detached server, prints a timeout failure to the terminal, and exits 1.
+The launcher watches `.janissary/log/server.log` for the `__JANUS_URL__` line written by the server it just started. The log is truncated before the server starts, so the only `__JANUS_URL__` line the launcher can see is the new server's. Once the new line appears, the launcher exits 0 and prints nothing to the terminal — except under `--no-open`, where it prints the new server's URL, since no window opens to carry the session visually. If the server process exits before that line appears, the launcher relays the tail of what that server wrote to the log to the terminal and exits with the server's own exit code. If neither happens within 20 seconds, the launcher kills the detached server, prints a timeout failure to the terminal, and exits 1.
 
-`.janissary/log/server.log` is truncated at the start of a normal launch and appended to under `--relaunch`, mirroring how state and workspace are cleared or preserved. It captures everything the server would otherwise have printed to stdout/stderr: the URL banner, the human-readable banner, non-fatal warnings (invalid config/agent-names/harness-models files, extension load failures), and — on a startup failure — the failed-to-start banner.
+`.janissary/log/server.log` is truncated at the start of every launch, mirroring how the per-run state and workspace are cleared. It captures everything the server would otherwise have printed to stdout/stderr: the URL banner, the human-readable banner, non-fatal warnings (invalid config/agent-names/harness-models files, extension load failures), and — on a startup failure — the failed-to-start banner.
 
 Because the server is detached, Ctrl+C on the launcher no longer stops it (the launcher has already exited by the time a user could press it). Use `janus stop` to shut down a running instance.
 

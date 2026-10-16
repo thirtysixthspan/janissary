@@ -200,4 +200,4 @@ Some files stay synced with their project's default branch on `origin` automatic
 
 ## Lifecycle
 
-Editor tabs are live views: they aren't restored by `janus --relaunch`, so save before quitting. The buffer, cursor, undo history, and scroll position do survive tab switches within a session.
+Editor tabs are live views: they aren't restored, so save before quitting. The buffer, cursor, undo history, and scroll position do survive tab switches within a session.

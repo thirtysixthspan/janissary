@@ -36,7 +36,7 @@ No notification is added when the owning tab is already focused. As with every n
 
 Each tab can expose one pending question at a time. A second request from the same tab remains queued until the first resolves, then becomes visible. Different tabs can have pending questions concurrently.
 
-Questions are in-memory state. They are not persisted or restored by `--relaunch`.
+Questions are in-memory state. They are not persisted or restored.
 
 ### Cancellation
 

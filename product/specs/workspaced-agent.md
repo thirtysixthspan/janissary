@@ -196,7 +196,7 @@ If optional credential preparation fails, the workspace still becomes ready and 
 ### Workspace lifecycle
 
 Workspace directories are ephemeral:
-- **Normal launch**: `.janissary/workspace/` is cleared before rendering.
+- **Every launch**: `.janissary/workspace/` is cleared before rendering.
 - **Tab creation**: The tab (agent or harness) appears immediately; the clone runs in the
   background and never blocks the rest of the app. Closing the tab before the clone finishes
   cancels that tab's clone right away, the same as any other close. If another launch reuses its

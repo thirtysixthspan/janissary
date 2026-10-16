@@ -415,8 +415,7 @@ tab are unaffected, and a named-harness or ssh tab is still recorded (see [[harn
 
 The recording is a playable asciicast file under `.janissary/recordings/`, named after the tab's label
 and the time it started, and governed by the same rules as a harness or ssh recording: it is created
-lazily on the first output, captures output and resizes only, is cleared at a fresh launch and
-preserved across `--relaunch`, and can be played back with `play <label>` or opened by pressing the
+lazily on the first output, captures output and resizes only, is cleared at every launch, and can be played back with `play <label>` or opened by pressing the
 tab's recording flag. See [[harness-recording]].
 
 **What is written is what the terminal printed, and — because zsh echoes it — what was typed.** No
@@ -450,8 +449,7 @@ has no recording (see [[harness-recording]] § What is **not** recorded). A proj
 ISO time it started with `:` and `.` replaced by `-`. A tab's `.txt` and its `.cast` recording are named
 alike, but their timestamps are taken separately and may differ by a few milliseconds. The file is
 created lazily, on the shell's first output; zsh's first prompt provides that at once, and a shell that
-finished before printing anything leaves no file. It is cleared at a fresh launch and preserved across
-`--relaunch`.
+finished before printing anything leaves no file. It is cleared at every launch.
 
 **What it holds.** Every normal-screen row as displayed: prompts, the command lines typed, their output,
 background-job output and startup-file output, as plain text with no escape sequence or colour, and
@@ -508,8 +506,7 @@ written.
 
 ## Everything else
 
-The tab is an ordinary plugin tab in the rest: live and in-memory, never persisted and never restored
-by `--relaunch`, dockable into either sidebar, and splittable. Selecting text with the pointer and
+The tab is an ordinary plugin tab in the rest: live and in-memory, never persisted and never restored, dockable into either sidebar, and splittable. Selecting text with the pointer and
 right-clicking offers the same **Copy** every other terminal surface offers.
 
 Its terminal connection belongs only to that shell tab. A plugin tab cannot attach to, type into, or

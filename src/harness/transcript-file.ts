@@ -5,7 +5,7 @@ import { harnessArtifactFilename } from './artifact-name.js';
 // `.janissary/harness-transcripts/`, deliberately not `.janissary/transcripts/` — that directory
 // belongs to `TranscriptStore`'s per-tab `<label>.json` logs, an unrelated concept. Same
 // init/ensure/path/clear quartet as `recording-file.ts`, so the transcript files inherit the same
-// clear-at-fresh-launch / preserve-across-`--relaunch` policy from `src/main.ts`.
+// clear-at-every-launch policy from `src/main.ts`.
 let transcriptDirectory = '';
 
 export function initHarnessTranscriptDirectory(projectDirectory: string): void {

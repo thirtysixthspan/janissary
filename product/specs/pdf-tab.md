@@ -17,7 +17,7 @@ the new PDF tab.
 
 Unlike a shell tab, a PDF tab has no shell, agent session, browser, transcript, or command history,
 and no persisted agent state. It is a **live, in-memory view** — like image and markdown tabs, it is
-not saved and is not restored on `--relaunch`. A profile can still capture one and reopen it on
+not saved and is not restored. A profile can still capture one and reopen it on
 launch (see [[profiles]]). The document shown is the file as it was when opened; later edits to the
 file on disk are not reflected until it is opened again.
 
@@ -96,7 +96,7 @@ The stage exposes scrollbars when the document overflows, including in continuou
 A tab opens in **single page**. An icon-only button in the header switches between the two; its name
 and tooltip say what the click will do, reading `Continuous scroll` while the tab is showing one page
 and `Single page` while it is scrolling. Switching keeps the page currently in view. The choice is per
-tab and live in memory: it is not persisted, not restored by `--relaunch`, and a second PDF tab opens
+tab and live in memory: it is not persisted, not restored, and a second PDF tab opens
 in single page regardless of what the first was switched to.
 
 ### The page strip
@@ -144,7 +144,7 @@ This deliberately differs from the image tab, where Page Up / Page Down and a ba
 image has one page and nowhere to scroll, while in a document those keys already mean something.
 
 A newly opened PDF tab starts on the first page at 100%. Zoom, scroll position, and the current page
-are live and in-memory; none of them is persisted, restored on `--relaunch`, or carried into a
+are live and in-memory; none of them is persisted, restored, or carried into a
 profile, which records the file only.
 
 ### Text selection

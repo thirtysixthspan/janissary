@@ -28,7 +28,7 @@ where it was.
 
 Unlike a shell tab, an editor tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a live, in-memory view — like markdown tabs and image
-tabs, it is not saved and is not restored on `--relaunch`.
+tabs, it is not saved and is not restored.
 
 The file-content reference used by an editor is valid only while that editor owns the current file.
 Opening an already-open file does not leave an additional reference behind, changing the editor's
@@ -211,7 +211,7 @@ an automatic reload of an external change. Pure cursor movements and selections 
 sync, since the text itself is unchanged.
 
 This draft copy is entirely transient and server-side: it is never shown back in the editor, never
-written to disk, and never persisted or restored on `--relaunch`. A successful save clears it, since
+written to disk, and never persisted or restored. A successful save clears it, since
 the saved file is then the current content; further editing builds a fresh draft again. If the
 connection drops, the server's copy can lag while disconnected. Reconnecting resends the current draft without requiring another edit. A draft is considered delivered only after the server acknowledges it; edits made while waiting are coalesced into the next update. Replies from an earlier connection or file reference cannot mark newer content delivered. Closing the editor stops its pending updates. This recovery replaces transient draft content only and does not repeat disk saves or other commands.
 

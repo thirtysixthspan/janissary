@@ -70,7 +70,7 @@ The file lives at `.janissary/shell-transcripts/<name>-<timestamp>.txt` on the m
 
 Be careful with secrets. A secret you type on a command line, such as `export TOKEN=…`, ends up in the file. A password typed at a prompt that hides your typing, like `sudo` or `ssh`, doesn't. The file never leaves your machine.
 
-Transcripts are kept across `janus --relaunch` and cleared at a normal launch. To turn them off, set `"recordShellTabs": false` in `.janissary/config.json` and restart. That turns off the shell recording too. See [app configuration](/user-documentation/getting-started/configuration) for the other settings.
+Transcripts are cleared at every launch. To turn them off, set `"recordShellTabs": false` in `.janissary/config.json` and restart. That turns off the shell recording too. See [app configuration](/user-documentation/getting-started/configuration) for the other settings.
 
 If the transcript can't be written, the notifications feed shows `shell transcript failed` and the shell keeps running. The button still opens whatever was saved before the failure.
 

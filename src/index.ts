@@ -15,7 +15,7 @@ import { openLaunchShell } from './launch-shell.js';
 
 const CLIENT_RECONNECT_GRACE_MS = 1000;
 
-export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; relaunch?: boolean; projectDir?: string };
+export type ServerOptions = { webDir: string; host?: string; port?: number; token?: string; projectDir?: string };
 export type RunningServer = { url: string; port: number; token: string; close: () => Promise<void>; shutdown: () => void };
 
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
@@ -67,7 +67,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     }
     throw error;
   }
-  if (options.relaunch) controller.reattachSessions();
+  controller.reattachSessions();
 
   const serveStatic = staticFileServer({
     webDir: options.webDir, token, openFilePath: (id) => controller.openFilePath(id),

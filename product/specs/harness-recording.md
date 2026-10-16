@@ -44,7 +44,7 @@ The transcript file is `.janissary/harness-transcripts/<label>-<timestamp>.txt`,
 scheme as captures and recordings. It is created **lazily, on the first entry** — a harness that
 never produces one leaves no empty file — appended to for the life of the tab, and never truncated.
 Closing the harness tab or quitting the application stops transcript collection and closes the file.
-The directory is **cleared at a fresh launch** and **preserved across `--relaunch`**, matching
+The directory is **cleared at every launch**, matching
 `.janissary/recordings/`. It is separate from `.janissary/transcripts/`, which holds ordinary tabs'
 own logs.
 
@@ -171,9 +171,7 @@ tab is enough on its own: a detached remote harness, whose PTY never reports an 
 recording when its tab goes. A PTY that later reuses the same session id (an attach bringing the tab
 back) starts a new recording file rather than appending to the earlier one.
 
-The recordings directory is **cleared at a fresh launch** and **preserved across `--relaunch`**,
-matching `.janissary/captures/` — a run's recordings are bounded to that run, and a relaunch handoff
-keeps them.
+The recordings directory is **cleared at every launch**, matching `.janissary/captures/` — a run's recordings are bounded to that run.
 
 Harness, ssh and shell recordings share one directory, so telling them apart means reading a file's
 header `command` field or recognizing the tab label in its name. Two concurrent sessions to the same

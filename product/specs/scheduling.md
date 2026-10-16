@@ -1,6 +1,6 @@
 # Scheduling
 
-The `schedule` command (parsed by `parseScheduleCommand` in `src/schedule/index.ts`, dispatched by `src/commands/schedule.ts`) queues commands to run later in a tab — the issuing tab by default, or another tab named with an `in <tab>` clause. Each tab owns its schedule, held in memory for the life of the tab: it ends when the tab closes, and no launch, `--relaunch` included, brings it back. Harness tabs can hold schedules too. So can a plugin tab that owns a live terminal — a shell tab — whose schedule likewise lives in memory only and ends with the tab.
+The `schedule` command (parsed by `parseScheduleCommand` in `src/schedule/index.ts`, dispatched by `src/commands/schedule.ts`) queues commands to run later in a tab — the issuing tab by default, or another tab named with an `in <tab>` clause. Each tab owns its schedule, held in memory for the life of the tab: it ends when the tab closes, and no launch brings it back. Harness tabs can hold schedules too. So can a plugin tab that owns a live terminal — a shell tab — whose schedule likewise lives in memory only and ends with the tab.
 
 ### Schedule forms
 

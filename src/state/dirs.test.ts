@@ -115,8 +115,8 @@ describe('clearStateDirectories', () => {
     for (const mock of Object.values(mocks)) mock.mockClear();
   });
 
-  it('clears every entry with a clear on a fresh start', () => {
-    clearStateDirectories(false);
+  it('clears every entry with a clear on every launch', () => {
+    clearStateDirectories();
 
     expect(mocks.clearCaptureDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearHarnessRecordingDirectory).toHaveBeenCalledOnce();
@@ -125,19 +125,6 @@ describe('clearStateDirectories', () => {
     expect(mocks.clearBrowserLogDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearGitFailureDirectory).toHaveBeenCalledOnce();
     expect(mocks.clearWorkspaceDir).toHaveBeenCalledOnce();
-    expect(mocks.clearRemoteFileCache).toHaveBeenCalledOnce();
-  });
-
-  it('runs no per-subsystem clear on a relaunch except the always ones', () => {
-    clearStateDirectories(true);
-
-    expect(mocks.clearCaptureDirectory).not.toHaveBeenCalled();
-    expect(mocks.clearHarnessRecordingDirectory).not.toHaveBeenCalled();
-    expect(mocks.clearHarnessTranscriptDirectory).not.toHaveBeenCalled();
-    expect(mocks.clearShellTranscriptDirectory).not.toHaveBeenCalled();
-    expect(mocks.clearBrowserLogDirectory).not.toHaveBeenCalled();
-    expect(mocks.clearGitFailureDirectory).not.toHaveBeenCalled();
-    expect(mocks.clearWorkspaceDir).not.toHaveBeenCalled();
     expect(mocks.clearRemoteFileCache).toHaveBeenCalledOnce();
   });
 });

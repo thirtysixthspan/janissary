@@ -85,7 +85,7 @@ process still running on it; pressing it on any row of that session brings back 
 one connection serves them all. On a reconnecting session it means "try now" and collapses the
 backoff wait.
 
-Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host, and its saved cwd is never checked against a directory on the local machine. Remote shell rows reopen the same running PTY with its saved cwd, offline mode, and zsh marker nonce; no navigator opens beside it. The same shell tabs return after `--relaunch`.
+Attachment works when the remote workspace path does not exist on the local machine. The restored tabs return to the saved workspace on the remote host, and its saved cwd is never checked against a directory on the local machine. Remote shell rows reopen the same running PTY with its saved cwd, offline mode, and zsh marker nonce; no navigator opens beside it. The same shell tabs return on every launch.
 
 After attaching a detached remote shell, detaching and attaching it again restores the same shell tab. The temporary SSH prompt tab closes after the shell takes over the connection, and each later session record continues to identify that shell as the session owner.
 
@@ -93,7 +93,7 @@ After attaching a detached remote shell, detaching and attaching it again restor
 Closing the local tabs during that action never stops their remote processes.
 A detached harness remains listed after its local tab closes. Attaching restores the same running process and keeps its tab open; repeated detach and attach cycles do not start replacement harnesses. A late exit from an earlier connection does not close the restored tab or remove its session row.
 The restored harness displays its retained terminal output and transcript history without waiting for another response from the harness. A newly opened restored shell tab likewise shows its retained shell history in its terminal — each retained command with the output it produced, in the order they ran, and without the shell's internal sentinel lines — so restored history reads the way live command output always has. Earlier history can be trimmed to keep retention bounded; repeated reconnections do not duplicate the displayed history.
-Detached sessions retain live shell and harness processes. Attaching recreates only those surviving tab types; a legacy record naming only removed agent processes is listed as detached and skipped on relaunch, never connected to and never rewritten.
+Detached sessions retain live shell and harness processes. Attaching recreates only those surviving tab types; a legacy record naming only removed agent processes is listed as detached and skipped on launch, never connected to and never rewritten.
 
 Detach closes every tab and navigator riding that connection, so it asks for confirmation first, naming
 what will go. It acts on the whole connection — a per-tab detach would have to keep the connection up

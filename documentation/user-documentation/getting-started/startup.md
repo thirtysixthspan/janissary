@@ -13,7 +13,7 @@ from the project directory.
 
 `janus` starts the server in the background and hands your shell prompt straight back once it's ready. The terminal you launched from doesn't need to stay open, and closing it — or pressing `Ctrl+C` in it — no longer stops the app. Use [`janus stop`](#stopping-the-app) to shut it down.
 
-Every launch opens a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. Type `shell` in its command bar to open a shell tab. By default each launch also starts fresh, with the previous session's logs, recordings, and workspace clones cleared; `--relaunch` (below) keeps them.
+Every launch opens a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. Type `shell` in its command bar to open a shell tab. Each launch also starts fresh, with the previous session's logs, recordings, and workspace clones cleared. Remote sessions you left parked are reattached (see [Starting fresh](#starting-fresh) below).
 
 If the shell can't be started, the app doesn't start either: the launch fails with `could not open the launch shell` and the reason.
 
@@ -37,7 +37,6 @@ If the shell can't be started, the app doesn't start either: the launch fails wi
 |---|---|
 | `--port=<n>` | Listen on port `n` (1–65535). Without it, a free port is picked automatically. |
 | `--no-open` | Start the server without opening the app window; prints the server URL to the terminal instead. |
-| `--relaunch` | Keep the previous session's logs, recordings, and workspace clones instead of clearing them, and reattach parked remote sessions. |
 | `--help` | Print usage and exit. |
 | `--version` | Print the name and version and exit. |
 
@@ -63,24 +62,17 @@ It shuts down the instance running against the current directory. Pass a directo
 
 Closing the app window stops it too. When the last window or browser tab showing the app goes away, the server waits one second and then shuts down, the same as `janus stop`. The pause is there so a page reload or a browser back-and-forward can reconnect without losing your session; if a window comes back within that second, the shutdown is cancelled. If you have the app open in two windows, closing one changes nothing.
 
-## Keeping state with `--relaunch`
+## Starting fresh
 
-```
-janus --relaunch
-```
+Each launch starts fresh: harness captures, recordings and transcripts, browser logs, Git-failure output, and workspace clones from the previous session are cleared. Local shell and harness tabs, their transcripts and command history, scheduled commands, and every other local tab you had open are gone. The launch opens the same single `janus` shell tab every launch does.
 
-
-`--relaunch` keeps what the previous session left on disk instead of clearing it: harness captures, recordings and transcripts, browser logs, Git-failure output, and workspace clones are all still there. Keeping these files doesn't restore local tabs. A relaunch opens the same single `janus` shell tab every launch does, and local shell and harness tabs, their transcripts and command history, scheduled commands, and every other local tab you had open are gone. Detached remote sessions are the exception: surviving remote shell and harness tabs are restored.
-
-`--relaunch` tries each eligible parked remote session independently and opens its tabs as the host answers. Remote agent tabs aren't restored. Remote shells return on their existing PTYs with their last working directories. A host that refuses the attach or has nothing running is marked terminated; a host that can't be reached stays listed as detached in [Sessions](/user-documentation/tab-types/sessions), with the failure on its row and **Attach** available to try again. One unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for the full restore behavior.
-
-Without `--relaunch`, parked sessions stay detached in Sessions and wait for you to press **Attach**.
+Detached remote sessions are the exception. Every launch tries each eligible parked remote session independently and opens its tabs as the host answers: surviving remote shell and harness tabs are restored, and remote agent tabs aren't. Remote shells return on their existing PTYs with their last working directories. A host that refuses the attach or has nothing running is marked terminated; a host that can't be reached stays listed as detached in [Sessions](/user-documentation/tab-types/sessions), with the failure on its row and **Attach** available to try again. One unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for the full restore behavior.
 
 <img class="agent-float" src="/agents/mahir-south-west.png" alt="" />
 
 ## Troubleshooting
 
-Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of each normal launch and kept (with new output appended) across `--relaunch`. A launch that fails outright is the exception: the tail of what that launch wrote to the same log, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it. Under `--relaunch` that is only the new launch's output, never an earlier run's.
+Since a normal launch doesn't print to the terminal, check `.janissary/log/server.log` for anything the server would otherwise have shown — it's cleared at the start of every launch. A launch that fails outright is the exception: the tail of what that launch wrote to the same log, up to the last couple of hundred lines, is printed to your terminal before `janus` exits with the server's own code, so the reason is usually already on screen and you do not have to go looking for it.
 
 If startup fails, the error names the app and version, says what went wrong, and suggests what to do next. The ones you're most likely to see:
 

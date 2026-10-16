@@ -16,7 +16,7 @@ import { usePdfKeys } from './usePdfKeys';
 // thumbnail strip and the stage.
 //
 // Layout, zoom, the current page, and whether the strip is showing are per tab and live in memory.
-// None of it is persisted, restored by `--relaunch`, or carried into a second PDF tab — exactly as
+// None of it is persisted, restored on launch, or carried into a second PDF tab — exactly as
 // image zoom and markdown scroll position behave.
 export function PdfTab({
   payload: pdf, capabilities,

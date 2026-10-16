@@ -11,7 +11,7 @@ of opening a duplicate.
 
 Unlike a shell tab, a video tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — it is not saved, is not
-restored on `--relaunch`, and is not recorded in or reopened by a profile.
+restored, and is not recorded in or reopened by a profile.
 
 ### Video tab data
 
@@ -86,7 +86,7 @@ view plays whether or not that pane holds the keyboard focus.
 
 Playback state is still live and in-memory: it belongs to the open tab, not to the file. Opening the
 same file again after closing its tab starts from the beginning, and nothing about playback is
-persisted or restored on `--relaunch`.
+persisted or restored.
 
 ### Capturing a frame
 
