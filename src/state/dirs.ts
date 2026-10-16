@@ -15,13 +15,11 @@ import { TranscriptLogger } from '../transcript/logger.js';
 
 // The per-subsystem init/clear pairs of the state directory, in the order `boot()` established.
 // Everything that owns state under `.janissary/` has exactly one entry here, so wiring a new
-// subsystem in with its init cannot forget its clear. The `always` entries are the ones whose
-// clear keeps running even on a relaunch (see `clearStateDirectories`).
+// subsystem in with its init cannot forget its clear.
 export type StateDirectoryEntry = {
   name: string;
   init: (projectDir: string, packageRoot: string) => void;
   clear?: () => void;
-  always?: boolean;
 };
 
 export const STATE_DIRECTORY_ENTRIES = [
@@ -29,64 +27,53 @@ export const STATE_DIRECTORY_ENTRIES = [
     name: 'harnessCapture',
     init: (projectDir: string): void => { initHarnessCaptureDirectory(projectDir); },
     clear: (): void => { clearCaptureDirectory(); },
-    always: false,
   },
   {
     name: 'harnessRecording',
     init: (projectDir: string): void => { initHarnessRecordingDirectory(projectDir); },
     clear: (): void => { clearHarnessRecordingDirectory(); },
-    always: false,
   },
   {
     name: 'harnessTranscript',
     init: (projectDir: string): void => { initHarnessTranscriptDirectory(projectDir); },
     clear: (): void => { clearHarnessTranscriptDirectory(); },
-    always: false,
   },
   {
     name: 'shellTranscript',
     init: (projectDir: string): void => { initShellTranscriptDirectory(projectDir); },
     clear: (): void => { clearShellTranscriptDirectory(); },
-    always: false,
   },
   {
     name: 'browserLog',
     init: (projectDir: string): void => { initBrowserLogDirectory(projectDir); },
     clear: (): void => { clearBrowserLogDirectory(); },
-    always: false,
   },
   {
     name: 'gitFailureOutput',
     init: (projectDir: string): void => { initGitFailureDirectory(projectDir); },
     clear: (): void => { clearGitFailureDirectory(); },
-    always: false,
   },
   {
     name: 'globalHistory',
     init: (_projectDir: string): void => { initGlobalHistory(); },
-    always: false,
   },
   {
     name: 'connections',
     init: (projectDir: string): void => { initDbDir(projectDir); },
-    always: false,
   },
   {
     name: 'profiles',
     init: (projectDir: string, packageRoot: string): void => { initProfileDir(projectDir, packageRoot); },
-    always: false,
   },
   {
     name: 'workspace',
     init: (projectDir: string): void => { initWorkspaceDir(projectDir); },
     clear: (): void => { clearWorkspaceDir(); },
-    always: false,
   },
   {
     name: 'remoteFileCache',
     init: (projectDir: string): void => { initRemoteFileCache(projectDir); },
     clear: (): void => { clearRemoteFileCache(); },
-    always: true,
   },
   {
     // No `clear`, deliberately: outliving the process is the whole point of the record, so a fresh
@@ -94,7 +81,6 @@ export const STATE_DIRECTORY_ENTRIES = [
     // and a record describing a peer that can no longer exist is pruned when the store loads it.
     name: 'remoteSessions',
     init: (projectDir: string): void => { initRemoteSessionStore(projectDir); },
-    always: false,
   },
   {
     // No `clear`, on the same terms as `remoteSessions` above: the record exists to outlive the
@@ -102,12 +88,10 @@ export const STATE_DIRECTORY_ENTRIES = [
     // is a deliberate user action rather than a launch-time decision.
     name: 'notificationRecord',
     init: (projectDir: string): void => { initNotificationRecord(projectDir); },
-    always: false,
   },
   {
     name: 'transcriptLog',
     init: (projectDir: string): void => { new TranscriptLogger(projectDir); },
-    always: false,
   },
 ] as const satisfies readonly StateDirectoryEntry[];
 
@@ -141,13 +125,10 @@ export function initStateDirectories(options: StateDirectoryOptions): void {
   }
 }
 
-// What a fresh (non-relaunch) start clears away: every entry with a clear, except the `always`
-// ones, which run regardless of the launch kind (a relaunch still owns its file cache).
-export function clearStateDirectories(relaunch: boolean): void {
+// What every launch clears away: every entry with a clear.
+export function clearStateDirectories(): void {
   const entries: readonly StateDirectoryEntry[] = STATE_DIRECTORY_ENTRIES;
   for (const entry of entries) {
-    if (!entry.clear) continue;
-    if (!entry.always && relaunch) continue;
-    entry.clear();
+    entry.clear?.();
   }
 }

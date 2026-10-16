@@ -187,4 +187,4 @@ The feed can share a sidebar with the [file navigator](/user-documentation/tab-t
 
 The sidebar strip owns the close buttons; the feed's header below it owns the dock-cycle control.
 
-You can also use `close notifications` from another tab. Bare `close` closes the active central tab, so it doesn't target a docked feed. The feed is not restored by `janus --relaunch`.
+You can also use `close notifications` from another tab. Bare `close` closes the active central tab, so it doesn't target a docked feed. The feed is not restored.

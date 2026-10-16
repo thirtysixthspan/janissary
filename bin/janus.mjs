@@ -50,7 +50,7 @@ const TAIL_LINES = 200;
 // both `--port=<n>` and `--port <n>` forms. `--port` is the only value-taking flag today
 // (src/cli-args.ts) — this scan needs updating if another value-taking flag is added.
 function resolveProjectDir(argv) {
-  const booleanFlags = new Set(['--help', '--version', '--relaunch', '--no-open']);
+  const booleanFlags = new Set(['--help', '--version', '--no-open']);
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--port') { i++; continue; }
@@ -102,7 +102,7 @@ if (!isDirectory(projectDir)) runAttached();
 const logDir = path.join(projectDir, '.janissary', 'log');
 mkdirSync(logDir, { recursive: true });
 const logPath = path.join(logDir, 'server.log');
-const logFd = openSync(logPath, arguments_.includes('--relaunch') ? 'a' : 'w');
+const logFd = openSync(logPath, 'w');
 const logStart = fstatSync(logFd).size;
 
 const child = spawn(command, commandArguments, { detached: true, stdio: ['ignore', logFd, logFd] });

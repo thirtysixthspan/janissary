@@ -80,7 +80,7 @@ Pressing **Create** launches the harness tab immediately — it synthesizes the 
 validation, workspace/sandbox setup, and creator-transcript recording happen exactly as if the
 command had been typed. **Cancel** or **Escape** closes the dialog with nothing launched. The
 dialog's selections are remembered in memory for the rest of the app run (reopening restores them);
-they are never persisted to disk or restored across `--relaunch`. When the dialog reopens with
+they are never persisted to disk or restored. When the dialog reopens with
 remembered settings, keyboard focus lands on **Create** so hitting Return relaunches immediately;
 a fresh dialog (no prior settings yet this run) keeps focus on the dialog itself. Only the bare `harness` command
 opens the dialog — every other form (`harness claude`, `harness claude -w`, `harness capture <name>`,
@@ -154,7 +154,7 @@ refused before any leftover check, removal, or clone, with
 posted to the notifications feed. For `on <address>` the host refuses it the same way, and the
 placeholder shows that line as its workspace error. A launch without a workspace keeps any label.
 
-Sessions-tab Attach and `--relaunch` restore bring back an existing session rather than launching a
+Sessions-tab Attach and the launch restore bring back an existing session rather than launching a
 new one, so they keep disambiguating with `-2`, `-3`, ….
 
 ### Workspace default and opt-out
@@ -465,7 +465,7 @@ added only for successful auto-approvals — a prompt still awaiting the user, a
 If an approved prompt does not clear (the same gate screen redraws unchanged), the app does not
 re-send the keystroke; it records `<label>: Auto-approve could not clear the permission prompt;
 standing down` once and leaves that gate alone until the screen changes. Auto-approval is in-memory
-per launch — like the harness tab itself, it is never persisted or restored on `--relaunch`. As with
+per launch — like the harness tab itself, it is never persisted or restored. As with
 every notification, the `auto-approve` line is held in the notification queue and shown as a toast
 when no feed is on screen — except when it is replayed from a detached session, which never toasts.
 
@@ -497,7 +497,7 @@ today means **opencode and codex**. `--auto-resume` confirms the default; `--no-
 and wins if both are present. A harness with no recognized limit screen refuses the flag:
 `--auto-resume is only supported for the opencode and codex harnesses.` The flag is deliberately
 long-form only — it has no short letter, unlike `-y`. Auto-resume is per launch and in-memory: like
-auto-approve, it is never persisted or restored on `--relaunch`.
+auto-approve, it is never persisted or restored.
 
 claude is absent because it resumes itself — it waits for the limit and carries on by default.
 
@@ -919,7 +919,7 @@ after its last burst of output.
 Running the command writes that latest capture to `.janissary/captures/<label>-<timestamp>.txt`
 in the project directory and opens it as a regular editor tab — each invocation writes a file and
 opens a new tab; the capture is a snapshot, not a live view. Capture files accumulate only within
-a run: the directory is cleared at the next normal launch (a `--relaunch` handoff preserves it).
+a run: the directory is cleared at the next launch.
 
 For a remote harness tab, the capture comes from the far side's own detection rather than locally
 streamed bytes (see [[remote-server]]), and how it is reached depends on the tab's connection state.
@@ -1006,8 +1006,7 @@ A harness tab opened by `profile launch` instead joins the profile's own group (
 
 ## Persistence
 
-Harness tabs are **live and in-memory** — like every tab, they are not saved and are not restored on
-`--relaunch`. Each launch starts fresh. A schedule attached to a harness tab (directly, or via a
+Harness tabs are **live and in-memory** — like every tab, they are not saved and are not restored. Each launch starts fresh. A schedule attached to a harness tab (directly, or via a
 profile's authored `schedule`/`run` entries — see Profiles) is memory-only for the same reason: it
 ends when the harness's PTY exits and its tab closes (see Lifecycle above and Scheduling § Firing).
 

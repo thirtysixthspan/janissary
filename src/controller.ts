@@ -26,7 +26,7 @@ export class ControllerCore {
     wireControllerEvents(this.managers, this.sinks);
   }
 
-  // What `--relaunch` does once the launch shell is open, before any client connects: attach every
+  // What every launch does once the launch shell is open, before any client connects: attach every
   // parked remote session, each on its own. A refusing peer is marked ended, an unreachable host stays
   // detached with its failure on its row, and neither holds the rest up — which is why nothing here
   // is awaited.

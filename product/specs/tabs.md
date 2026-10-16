@@ -4,7 +4,7 @@ Multiple workspace tabs, each with independent state. A zsh shell tab named `jan
 
 ### Default tab
 
-Every launch, `--relaunch` included, opens a single zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory. No other tabs exist until explicitly created — the launch shell is the only one a launch opens. The shell is opened before any window can connect, so the strip is never empty. When it cannot be opened — no zsh to run, or a shell plugin that fails or is disabled — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]). A remote shell tab is restored by `--relaunch` around its existing remote PTY, with its last reported cwd and without reopening a navigator.
+Every launch opens a single zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory. No other tabs exist until explicitly created — the launch shell is the only one a launch opens. The shell is opened before any window can connect, so the strip is never empty. When it cannot be opened — no zsh to run, or a shell plugin that fails or is disabled — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]). A remote shell tab is restored around its existing remote PTY, with its last reported cwd and without reopening a navigator.
 
 ### Shell tab creation
 
@@ -259,7 +259,7 @@ Closes the current tab and all of its associated connections — its shell, ACP 
 
 ### View tabs
 
-Besides shell and harness tabs, several **view tabs** render a non-transcript body in place of the command line: embedded web page (`open <url>`), the plain-text editor, bundled plugin views such as rendered markdown (`open <file>.md`), the image viewer (`open <image>`), and video, the file navigator (see `file-navigator-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are saved or restored on `--relaunch`.
+Besides shell and harness tabs, several **view tabs** render a non-transcript body in place of the command line: embedded web page (`open <url>`), the plain-text editor, bundled plugin views such as rendered markdown (`open <file>.md`), the image viewer (`open <image>`), and video, the file navigator (see `file-navigator-tab.md`), the monitor reporting feed (see `monitoring.md`), and the notifications feed (see `notifications.md`). View tabs are **live, in-memory** — none are saved or restored.
 
 One bundled plugin view keeps the command line and replaces the transcript instead: the **shell tab** (`shell`) is a live zsh terminal under the shell tab's metadata row and command bar, laid out like a shell tab with a terminal where the transcript would be. It is a plugin tab in every other respect — live, in-memory, dockable, splittable — and is described in [[shell-tab]].
 

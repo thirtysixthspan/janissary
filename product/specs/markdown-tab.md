@@ -17,7 +17,7 @@ moves to the new markdown tab.
 
 Unlike a shell tab, a markdown tab has no shell, agent session, browser, transcript, or command
 history, and no persisted agent state. It is a **live, in-memory view** — like image tabs and
-browser windows (see Browser), it is not saved and is not restored on `--relaunch`. A profile can
+browser windows (see Browser), it is not saved and is not restored. A profile can
 still capture one and reopen it on launch (see [[profiles]]). The rendered
 content is a snapshot of the file as it was when opened; later edits to the file on disk are not
 reflected until it is opened again.
@@ -107,7 +107,7 @@ behind another tab, or in the other split pane, ignores them:
 - **Mouse wheel** — scroll up / down.
 
 A newly opened markdown tab starts scrolled to the top. Scroll position is live and in-memory; it is
-not persisted or restored on `--relaunch`.
+not persisted or restored.
 
 ### Tab strip: name and close button
 

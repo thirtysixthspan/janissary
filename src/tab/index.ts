@@ -54,7 +54,7 @@ export const makeFilesTab = (label: string, dotColor: string, number: number, gr
 
 // A notifications view tab (opened via `notifications`). A singleton, view-only feed whose body is
 // the standard transcript fed by its own `log`; it takes no typed input. Live and in-memory like
-// the file navigator tab — never persisted, never restored on `--relaunch`.
+// the file navigator tab — never persisted, never restored on launch.
 export const makeNotificationsTab = (label: string, dotColor: string, number: number, group: number, groupColor: string, groupName = defaultGroupName(group)): Tab => ({
   ...makeTab(label, dotColor, number, [], [], undefined, group, groupColor, groupName),
   view: 'notifications',

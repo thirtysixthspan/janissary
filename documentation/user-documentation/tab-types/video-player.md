@@ -93,7 +93,7 @@ Nothing launches on its own — the tab stays put and you decide. A file the app
 
 ## Lifecycle
 
-A video tab is a live view, not saved state. Playback position belongs to the open tab, not the file: close the tab and open the video again and it starts from the beginning. Video tabs are not restored by `janus --relaunch`.
+A video tab is a live view, not saved state. Playback position belongs to the open tab, not the file: close the tab and open the video again and it starts from the beginning. Video tabs are not restored.
 
 A [profile](/user-documentation/automation/profiles) does record an open video tab, by its file. Launching that profile reopens the video the same way `open` would, from the beginning — nothing about playback is saved.
 

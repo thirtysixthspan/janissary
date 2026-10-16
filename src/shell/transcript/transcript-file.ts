@@ -4,8 +4,8 @@ import { harnessArtifactFilename } from '../../harness/artifact-name.js';
 
 // `.janissary/shell-transcripts/`, distinct from `.janissary/transcripts/` (`TranscriptStore`'s
 // per-tab `<label>.json` logs) and from `.janissary/harness-transcripts/` (harness session
-// transcripts). The clear-at-fresh-launch / preserve-across-`--relaunch` policy comes from this
-// directory's entry in `src/state/dirs.ts`.
+// transcripts). The clear-at-every-launch policy comes from this directory's entry in
+// `src/state/dirs.ts`.
 let transcriptDirectory = '';
 
 export function initShellTranscriptDirectory(projectDirectory: string): void {

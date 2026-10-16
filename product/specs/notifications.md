@@ -11,7 +11,7 @@ The **notifications tab** is a singleton, view-only feed that renders the queue 
 scrollable transcript. It is a non-agent **view tab** (`view: 'notifications'`): it renders the
 standard transcript body fed by its own log, but has no command bar and takes no typed input. Like
 the file navigator tab (see `file-navigator-tab.md`) it is a **live, in-memory view** — never
-persisted, never restored on `--relaunch`. When the feed is empty it shows no content at all —
+persisted, never restored. When the feed is empty it shows no content at all —
 unlike a tab with a transcript, it does not show the "Type `help` for available commands"
 hint, since there is no command bar to type into.
 
@@ -26,7 +26,7 @@ status marker is appended.
 The queue holds every notification of the current run, oldest dropped first past **200**. It
 survives the notifications tab being closed and reopened — a feed opened at any moment renders
 whatever the queue still holds, including notifications raised long before it existed. It is held
-in memory only: it is not persisted and not restored by `--relaunch`, which keeps the feed a live
+in memory only: it is not persisted and not restored, which keeps the feed a live
 view rather than a restored one.
 
 Because the feed renders the queue, 200 is also the most the feed can show, whether it is already

@@ -8,7 +8,6 @@ export class CliUsageError extends Error {}
 export interface CliArgs {
   help: boolean;
   version: boolean;
-  relaunch: boolean;
   noOpen: boolean;
   stop: boolean;
   init: boolean;
@@ -36,7 +35,7 @@ export interface CliArgs {
 // its arguments are handed on verbatim for `parseE2EBrowserArgs` to read.
 function e2eBrowserCommand(rest: string[]): CliArgs {
   return {
-    help: false, version: false, relaunch: false, noOpen: false,
+    help: false, version: false, noOpen: false,
     stop: false, init: false, remoteServe: false, remoteServePath: undefined,
     e2eBrowser: true, e2eBrowserArgs: rest,
     port: undefined, projectDir: undefined,
@@ -54,7 +53,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
       options: {
         help: { type: 'boolean' },
         version: { type: 'boolean' },
-        relaunch: { type: 'boolean' },
         'no-open': { type: 'boolean' },
         port: { type: 'string' },
       },
@@ -86,7 +84,6 @@ export function parseCliArgs(argv: string[]): CliArgs {
   return {
     help: Boolean(values.help),
     version: Boolean(values.version),
-    relaunch: Boolean(values.relaunch),
     noOpen: Boolean(values['no-open']),
     stop,
     init,

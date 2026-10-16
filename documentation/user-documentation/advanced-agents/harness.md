@@ -242,11 +242,11 @@ Wrapping the whole launch in a [`schedule`](/user-documentation/automation/sched
 
 <img class="agent-float" src="/agents/aslan-south-west.png" alt="" />
 
-The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file and a normalized session transcript, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored by `janus --relaunch`; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
+The tab lives exactly as long as the harness process. When the harness exits — quitting normally, crashing, or the binary not being found — the tab closes with it, and its on-screen scrollback goes with it. The full session is preserved in a recording file and a normalized session transcript, though (see below). The × button and `close` end it the same way. Harness tabs aren't restored; each launch starts fresh. If a harness tab is the last tab standing, its exit quits the app.
 
 Ending a harness ends everything it started. Its helpers, MCP servers, and the commands it runs all go with it, so nothing is left behind holding a port or a file. That holds whether you close the tab or the harness quits on its own. Each process is asked to stop first, and anything still running two seconds later is killed. The one thing out of reach is a process that deliberately detaches itself, like a background daemon. The same cleanup applies to every program Janissary runs in a terminal, including an [SSH session](#ssh-sessions), an inline terminal card, and a remote harness on its own host.
 
-A [schedule](/user-documentation/automation/scheduling) attached to a harness tab lives no longer than the tab does. When the harness exits, its scheduled commands go with it rather than firing later — and because `janus --relaunch` restores no harness tabs, there is no tab left to carry them.
+A [schedule](/user-documentation/automation/scheduling) attached to a harness tab lives no longer than the tab does. When the harness exits, its scheduled commands go with it rather than firing later — and because harness tabs are never restored, there is no tab left to carry them.
 
 Other tabs can drive a harness: `send <tab> <text>` types a line into it, and [scheduled commands](/user-documentation/automation/scheduling) targeted at a harness tab are typed into it the same way. A harness launched by a [profile](/user-documentation/automation/profiles) can also be given a model, an effort level, and startup commands, the same as typing the command directly.
 
@@ -266,7 +266,7 @@ A recording covers one stretch of time the tab is attached, so a session you det
 
 The file is created only once the harness produces its first output, so a harness that exits immediately (for example, a binary that isn't found) leaves no recording behind.
 
-The files are standard [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/), so they also drop into any asciicast web player, and reading one recorded by an older version or another tool works both ways. Recordings from the current run are cleared the next time you start `janus` normally; a `janus --relaunch` keeps them. SSH sessions and shell tabs are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
+The files are standard [asciicast v3](https://docs.asciinema.org/manual/asciicast/v3/), so they also drop into any asciicast web player, and reading one recorded by an older version or another tool works both ways. Recordings from the current run are cleared the next time you start `janus`. SSH sessions and shell tabs are recorded the same way and land in the same directory (see [SSH sessions](#ssh-sessions) below).
 
 ### The recording flag
 
@@ -397,7 +397,7 @@ Transcript collection follows the current harness session from when the tab open
 The transcript file is created lazily at `.janissary/harness-transcripts/<label>-<timestamp>.txt`
 when the first transcript entry arrives. A harness that produces no transcript leaves no empty file.
 Closing the harness tab or quitting the app stops transcript updates and closes the file cleanly.
-The directory is cleared on a fresh launch and preserved by `janus --relaunch`. SSH tabs never have
+The directory is cleared on every launch. SSH tabs never have
 a session transcript.
 
 If Janissary cannot find a session record it recognizes, the tab remains available for screen-based monitoring without a transcript file. The notifications feed reports `no harness transcript found` once for that tab. This message concerns the session transcript, separately from a `.cast` recording failure. It is delivered the same way, queued whether or not the feed is open, and is never reported for SSH tabs.
@@ -461,5 +461,5 @@ The ssh tab closes as soon as the `ssh` process exits, whether that's a normal l
 
 Typing `!ssh <host>` runs SSH in an inline terminal card in the current tab's transcript, the same as any other interactive program run through `!`. Only a bare `ssh …` command opens its own tab.
 
-SSH tabs are in-memory only. They are not restored by `janus --relaunch`, so each launch starts a
+SSH tabs are in-memory only. They are not restored, so each launch starts a
 new session.

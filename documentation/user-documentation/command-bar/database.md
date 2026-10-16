@@ -54,4 +54,4 @@ To look through a database's tables rather than query them, open it in the [SQL 
 
 ## Databases persist across sessions
 
-Database files live in `.janissary/db/sqlite/<name>.sqlite` and are never cleared — not on a normal launch, not on `--relaunch`, not on quit. Unlike a tab's workspace or session state, a database you create sticks around until you `db sqlite delete` it.
+Database files live in `.janissary/db/sqlite/<name>.sqlite` and are never cleared — not on any launch, not on quit. Unlike a tab's workspace or session state, a database you create sticks around until you `db sqlite delete` it.

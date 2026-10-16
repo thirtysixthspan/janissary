@@ -68,4 +68,4 @@ With the results focused, `↑` moves up the window to a later match and `↓` m
 
 Opening a match puts the file in an [editor tab](/user-documentation/tab-types/editor) with the matching line centered. A file that's already open is focused rather than opened twice. The search tab stays open with its query and results, so you can open the next match without searching again.
 
-The search tab is a live view. It isn't restored by `janus --relaunch`.
+The search tab is a live view. It isn't restored.

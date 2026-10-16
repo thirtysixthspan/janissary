@@ -144,11 +144,11 @@ The remote deletes its workspace clone when the session is terminated. A detache
 
 ## Coming back after a restart
 
-`janus --relaunch` reconnects every session you had parked, without asking. It goes through them one at a time and opens each one's tabs as that host answers, so a slow machine holds up only its own row. What a restart cannot get back is a remote file navigator: it's a view onto a workspace that is already coming back, so it stays closed and you open it again yourself.
+Every launch reconnects every session you had parked, without asking. It goes through them one at a time and opens each one's tabs as that host answers, so a slow machine holds up only its own row. What a restart cannot get back is a remote file navigator: it's a view onto a workspace that is already coming back, so it stays closed and you open it again yourself.
 
 Each parked session settles one of three ways. If the host still has it, the tabs reopen and the row goes back to active. If the host says the session is gone, or comes back with nothing running in it, the row is marked terminated and dropped, the way it would be if you pressed **Terminate** yourself. If the host never answers, the row stays parked with **Attach** still on it and the reason shown beside it, so you can try again when the machine is awake. The restore finishes either way, and a host that is down never stops the others from coming back.
 
-An ordinary `janus` launch leaves all of this alone. Parked sessions are listed as detached and wait for you to press **Attach**, because a fresh launch otherwise knows nothing about the machines you were working on. See [Sessions](/user-documentation/tab-types/sessions) for the row and its buttons.
+Every launch runs this restore, so a parked session comes back without you doing anything. See [Sessions](/user-documentation/tab-types/sessions) for the row and its buttons.
 
 ## What stays local
 

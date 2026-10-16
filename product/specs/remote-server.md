@@ -458,9 +458,9 @@ later detach and attach repeats this behavior without leaving a second prompt ta
 
 Attached harnesses redraw their retained terminal history immediately, including output from before detachment and while disconnected, without starting a replacement harness. Repeated reconnects replace the displayed terminal history rather than appending duplicate copies. The restored display is also available to captures and monitoring. Terminal and transcript histories have separate bounded retention; older text may be trimmed, and a trimmed terminal replay includes an earlier-history notice. A quiet terminal's retained display is not evicted by transcript activity. A rebuilt harness transcript receives its retained blocks once, while an automatic reconnect adds only missed blocks to the transcript already open.
 
-Only surviving shell and harness processes are restored. Legacy agent-only records are retained untouched and skipped during relaunch; a mixed shell record restores its shell processes through the temporary SSH bridge and omits agent processes.
+Only surviving shell and harness processes are restored. Legacy agent-only records are retained untouched and skipped during launch restore; a mixed shell record restores its shell processes through the temporary SSH bridge and omits agent processes.
 
-Remote shell tabs are restored around their existing PTYs after `--relaunch` and when attaching a parked session. Their last reported cwd, offline mode, and marker nonce are retained, and no navigator is reopened. The sessions tab identifies these rows as `shell`. Remote shells are omitted when saving profiles, so a profile never starts a replacement local shell for them.
+Remote shell tabs are restored around their existing PTYs on every launch and when attaching a parked session. Their last reported cwd, offline mode, and marker nonce are retained, and no navigator is reopened. The sessions tab identifies these rows as `shell`. Remote shells are omitted when saving profiles, so a profile never starts a replacement local shell for them.
 
 A session can be terminated for good from its parked state: janissary reconnects far enough to tell the
 peer to shut down, which stops its processes and removes its remote workspace. Forgetting a parked
@@ -770,9 +770,9 @@ a shared channel's server holds one agent per tab using it.
   remote tree.
 - An alternative confinement mechanism where the remote platform has no sandbox.
 - Nested remoting: a remote tab cannot itself launch `on <another-host>`.
-- Restoring a remote file navigator through a profile, an attach, or `--relaunch`.
+- Restoring a remote file navigator through a profile, an attach, or a launch restore.
 - Probing hosts on janissary's own initiative: nothing opens an ssh connection except a pressed
-  attach, a pressed end, or a `--relaunch` restore.
+  attach, a pressed end, or a launch restore.
 - Arbitrating two janissary instances attaching one peer — last attach wins, and the loser enters
   its own reconnect backoff.
 - `acp` in a remote **harness** tab — it is already driving its own agent binary in a terminal.

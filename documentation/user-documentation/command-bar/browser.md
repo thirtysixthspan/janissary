@@ -75,4 +75,4 @@ None of this is a guarantee. A site that blocks automated traffic outright can s
 
 `browser close` closes the current window; `browser close <id>` and `browser window close <id>` close a specific one (the two forms are equivalent). Closing a tab's last window ends that tab's browser process. Closing the tab, or quitting the app, closes every window it had open.
 
-Browser windows are live, per-tab state: unlike a SQLite connection, they are **not** restored by `janus --relaunch`. Start with `browser open` again after a relaunch if you need one.
+Browser windows are live, per-tab state: unlike a SQLite connection, they are **not** restored. Start with `browser open` again after a relaunch if you need one.

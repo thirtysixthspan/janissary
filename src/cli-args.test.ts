@@ -19,7 +19,6 @@ describe('parseCliArgs', () => {
     const args = parseCliArgs([]);
     expect(args.help).toBe(false);
     expect(args.version).toBe(false);
-    expect(args.relaunch).toBe(false);
     expect(args.noOpen).toBe(false);
     expect(args.port).toBeUndefined();
     expect(args.projectDir).toBeUndefined();
@@ -41,17 +40,12 @@ describe('parseCliArgs', () => {
     expect(parseCliArgs([]).port).toBeUndefined();
   });
 
-  it('parses --relaunch', () => {
-    expect(parseCliArgs(['--relaunch']).relaunch).toBe(true);
-  });
-
   it('parses --no-open', () => {
     expect(parseCliArgs(['--no-open']).noOpen).toBe(true);
   });
 
   it('parses multiple flags together', () => {
-    const args = parseCliArgs(['--relaunch', '--no-open', '--port=8080']);
-    expect(args.relaunch).toBe(true);
+    const args = parseCliArgs(['--no-open', '--port=8080']);
     expect(args.noOpen).toBe(true);
     expect(args.port).toBe(8080);
     expect(args.help).toBe(false);
@@ -60,6 +54,10 @@ describe('parseCliArgs', () => {
 
   it('throws CliUsageError on unknown flag', () => {
     expect(() => parseCliArgs(['--no-opne'])).toThrow(CliUsageError);
+  });
+
+  it('throws CliUsageError on the removed --relaunch flag', () => {
+    expect(() => parseCliArgs(['--relaunch'])).toThrow(CliUsageError);
   });
 
   it('throws CliUsageError on bare --port', () => {
@@ -185,7 +183,6 @@ describe('usageText', () => {
     expect(text).toContain('--port=<n>');
     expect(text).toContain('<project-dir>');
     expect(text).toContain('--no-open');
-    expect(text).toContain('--relaunch');
     expect(text).toContain('--help');
     expect(text).toContain('--version');
   });
