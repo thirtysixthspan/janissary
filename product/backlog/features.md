@@ -2,8 +2,6 @@
 
 ## ready
 
-* add system schedules. These schedules operate independently of any tab, and outlast application restarts. They can trigger any command to be executed. An example use case would be to schedule a harness tab to be launched and to send that harness a command. Schedules are maintained within a project. When a schedule launches, a notification is made describing the event. The scheduling UI should be updated to allow the creation of system schedules. System schedules can accept one or a list of commands to be executed.  
-
 ## development
 
 * add an ACP skill to allow an agent to spin up other agents with different models, pass them ai tasks (form the repository) to execute and access to monitor the transcript as the agent works, and to recieve the response.
