@@ -98,6 +98,7 @@ describe('native notification delivery', () => {
     for (const event of Object.keys(AMBIENT_EVENTS)) expect(soundCategory(event)).toBeUndefined();
     expect(soundCategory('plugin-failure')).toBe('error');
     expect(soundCategory('harness-idle')).toBe('warning');
+    expect(soundCategory('system-schedule-fire')).toBe('warning');
     expect(soundCategory('manual')).toBe('success');
   });
 });

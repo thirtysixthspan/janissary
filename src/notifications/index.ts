@@ -24,6 +24,7 @@ import { deliverNotification } from './deliver.js';
 // `-b` tab's browser is no longer there — a failed launch, a browser that exited, or a guard that
 // died are one event to the user, since the consequence is the same: `connect()` now fails.
 // Explicit events are always eligible and bypass focus suppression.
+// `system-schedule-fire` is explicit and focus-independent, with its own default-on config toggle.
 // `remote-session` reports what the sessions tab just did to a remote session — detached,
 // attached, ended, forgotten — so the change is on the record even when the tab is closed. It
 // carries its line verbatim, exactly as `remote-session-terminated` does, and is deliberately distinct
@@ -52,6 +53,7 @@ export type NotificationEventType =
   | 'remote-session'
   | 'state-change'
   | 'schedule-fire'
+  | 'system-schedule-fire'
   | 'agent-start'
   | 'rate-limited'
   | 'harness-idle'
@@ -133,6 +135,7 @@ export const EXPLICIT_EVENTS: Record<ExplicitNotificationEvent, true> = {
   'launch-workspace-cleaned': true,
   'launch-root-cloned': true,
   'remote-refused': true,
+  'system-schedule-fire': true,
 };
 
 function isAmbient(event: NotificationEventType): event is AmbientNotificationEvent {
@@ -141,7 +144,8 @@ function isAmbient(event: NotificationEventType): event is AmbientNotificationEv
 
 // Whether an event should be recorded, given the config and the active tab. Defensive against the
 // tab feeding itself. An explicit trigger always fires, subject only to the tab being open (enforced
-// in `notify`); an ambient one is subject to its toggle and to focus suppression.
+// in `notify`), except system schedule notices have their own default-on toggle. Ambient events use
+// their own toggle and are subject to focus suppression.
 export function shouldNotify(
   config: NotificationConfig | undefined,
   event: NotificationEventType,
@@ -149,6 +153,7 @@ export function shouldNotify(
   activeLabel: string,
 ): boolean {
   if (tabLabel === NOTIFICATIONS_LABEL) return false;
+  if (event === 'system-schedule-fire') return config?.events.systemScheduleFire ?? true;
   if (!isAmbient(event)) return EXPLICIT_EVENTS[event];
   if (tabLabel === activeLabel) return false;
   if (!config) return false;

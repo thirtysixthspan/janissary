@@ -217,14 +217,15 @@ describe('loadConfig', () => {
     expect(getConfig().transcriptMaxLines).toBe(DEFAULT_TRANSCRIPT_MAX_LINES);
   });
 
-  it('writes a default notifications block with every event off', () => {
+  it('writes a default notifications block with system schedule notices on', () => {
     const config = loadConfig(tmpDir);
     expect(config.notifications).toEqual({
-      events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false },
+      events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: true },
     });
 
     const configPath = path.join(tmpDir, '.janissary', 'config.json');
     expect(JSON.parse(readFileSync(configPath, 'utf8')).notifications.events.stateChange).toBe(false);
+    expect(JSON.parse(readFileSync(configPath, 'utf8')).notifications.events.systemScheduleFire).toBe(true);
   });
 
   it('reads custom notification event toggles from an existing config.json', () => {
@@ -238,21 +239,51 @@ describe('loadConfig', () => {
     expect(loadConfig(tmpDir).notifications?.events.stateChange).toBe(false);
   });
 
-  it('fills omitted and invalid notification toggles from defaults', () => {
+  it('fills omitted and invalid notification toggles from defaults without discarding valid neighbors', () => {
     const configDir = path.join(tmpDir, '.janissary');
     mkdirSync(configDir, { recursive: true });
-    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
-      notifications: { events: { stateChange: 'yes' } },
-    }));
+    const configPath = path.join(configDir, 'config.json');
+    const raw = JSON.stringify({
+      notifications: { events: { stateChange: true, scheduleFire: false, systemScheduleFire: 'yes' } },
+    });
+    writeFileSync(configPath, raw);
 
     expect(loadConfig(tmpDir).notifications).toEqual({
       events: {
-        stateChange: false,
+        stateChange: true,
         scheduleFire: false,
         agentStart: false,
         rateLimited: false,
+        systemScheduleFire: true,
       },
     });
+    expect(readFileSync(configPath, 'utf8')).toBe(raw);
+  });
+
+  it.each([
+    {},
+    { notifications: null },
+    { notifications: { events: null } },
+    { notifications: { events: { stateChange: true } } },
+  ])('defaults system schedule notices on for missing or malformed settings: %j', (rawConfig) => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    const configPath = path.join(configDir, 'config.json');
+    const raw = JSON.stringify(rawConfig);
+    writeFileSync(configPath, raw);
+
+    expect(loadConfig(tmpDir).notifications?.events.systemScheduleFire).toBe(true);
+    expect(readFileSync(configPath, 'utf8')).toBe(raw);
+  });
+
+  it('preserves an explicit false system schedule toggle', () => {
+    const configDir = path.join(tmpDir, '.janissary');
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(path.join(configDir, 'config.json'), JSON.stringify({
+      notifications: { events: { systemScheduleFire: false } },
+    }));
+
+    expect(loadConfig(tmpDir).notifications?.events.systemScheduleFire).toBe(false);
   });
 
   it('defaults syncPaths to product/backlog/ and product/plans/', () => {

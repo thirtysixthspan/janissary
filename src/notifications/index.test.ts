@@ -12,10 +12,10 @@ import { NOTIFICATION_QUEUE_LIMIT, NotificationQueue } from './queue.js';
 import { messageBus } from '../bus.js';
 
 const allOn: NotificationConfig = {
-  events: { stateChange: true, scheduleFire: true, agentStart: true, rateLimited: true },
+  events: { stateChange: true, scheduleFire: true, agentStart: true, rateLimited: true, systemScheduleFire: true },
 };
 const allOff: NotificationConfig = {
-  events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false },
+  events: { stateChange: false, scheduleFire: false, agentStart: false, rateLimited: false, systemScheduleFire: false },
 };
 
 // One case per member of `NotificationEventType`, driven off the tables that classify them — so a
@@ -27,8 +27,9 @@ describe('shouldNotify covers every notification event', () => {
     [AmbientNotificationEvent, keyof NotificationConfig['events']]
   >;
   const explicitEvents = Object.keys(EXPLICIT_EVENTS) as ExplicitNotificationEvent[];
+  const untoggledExplicitEvents = explicitEvents.filter((event) => event !== 'system-schedule-fire');
 
-  it.each(explicitEvents)('fires for the explicit event %s whatever the config and focus say', (event) => {
+  it.each(untoggledExplicitEvents)('fires for the explicit event %s whatever the config and focus say', (event) => {
     expect(shouldNotify(allOff, event, 'janus', 'janus')).toBe(true);
     expect(shouldNotify(undefined, event, 'build', 'janus')).toBe(true);
   });
@@ -51,6 +52,31 @@ describe('shouldNotify covers every notification event', () => {
     'renders text for %s',
     (event) => { expect(typeof notificationText(event, 'build', 'detail')).toBe('string'); },
   );
+});
+
+describe('shouldNotify — system-schedule-fire event', () => {
+  it('is explicit but not ambient', () => {
+    expect(EXPLICIT_EVENTS['system-schedule-fire']).toBe(true);
+    expect(Object.keys(AMBIENT_EVENTS)).not.toContain('system-schedule-fire');
+  });
+
+  it('defaults on without config and bypasses focus suppression when enabled', () => {
+    expect(shouldNotify(undefined, 'system-schedule-fire', 'system', 'system')).toBe(true);
+    expect(shouldNotify(allOn, 'system-schedule-fire', 'system', 'system')).toBe(true);
+  });
+
+  it('honors its own disabled toggle', () => {
+    expect(shouldNotify(allOff, 'system-schedule-fire', 'system', 'janus')).toBe(false);
+  });
+
+  it('never notifies from the notifications feed', () => {
+    expect(shouldNotify(allOn, 'system-schedule-fire', NOTIFICATIONS_LABEL, 'janus')).toBe(false);
+  });
+
+  it('renders its supplied message verbatim', () => {
+    expect(notificationText('system-schedule-fire', 'system', 'System schedule nightly ran: script deploy'))
+      .toBe('System schedule nightly ran: script deploy');
+  });
 });
 
 describe('shouldNotify — ambient events', () => {

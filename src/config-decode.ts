@@ -58,6 +58,7 @@ function notifications(value: unknown, fallback: NotificationConfig): Notificati
       scheduleFire: booleanValue(events.scheduleFire, fallback.events.scheduleFire),
       agentStart: booleanValue(events.agentStart, fallback.events.agentStart),
       rateLimited: booleanValue(events.rateLimited, fallback.events.rateLimited),
+      systemScheduleFire: booleanValue(events.systemScheduleFire, fallback.events.systemScheduleFire),
     },
   };
 }

@@ -74,6 +74,11 @@ describe('notificationText', () => {
     expect(notificationText('schedule-fire', 'build', 'deploy')).toBe('Scheduled: deploy in build');
   });
 
+  it('passes system schedule notice text through unchanged', () => {
+    expect(notificationText('system-schedule-fire', 'system', 'System schedule nightly ran: script deploy'))
+      .toBe('System schedule nightly ran: script deploy');
+  });
+
   it('renders rate-limited event text', () => {
     expect(notificationText('rate-limited', 'build')).toBe("Agent 'build' is being rate limited");
   });
