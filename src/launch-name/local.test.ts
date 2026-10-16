@@ -31,6 +31,19 @@ afterEach(() => {
 });
 
 describe('resolveLocalLaunchName', () => {
+  it('refuses the reserved label before removing a leftover workspace', () => {
+    mkdirSync(workspacePath('system'), { recursive: true });
+    writeFileSync(path.join(workspacePath('system'), 'keep.txt'), 'owned');
+    const managers = managersWith([]);
+
+    expect(resolveLocalLaunchName(managers, { creator: 'janus', name: ' SyStEm ', explicit: true, workspace: true }))
+      .toBeUndefined();
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'launch-refused', 'janus', 'Cannot use "system": that name is reserved for the system tab.',
+    );
+    expect(existsSync(path.join(workspacePath('system'), 'keep.txt'))).toBe(true);
+  });
+
   it('refuses a -w name whose workspace an open tab uses under another case, removing nothing', () => {
     mkdirSync(workspacePath('foo'), { recursive: true });
     writeFileSync(path.join(workspacePath('foo'), 'live.txt'), 'live work');

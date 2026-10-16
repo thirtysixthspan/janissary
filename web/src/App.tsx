@@ -35,6 +35,8 @@ export function App({ client }: { client: JanusClient }) {
   // one. Built once per mount; claims are re-established by each body's effect.
   const [pluginChords] = useState(createPluginChordRegistry);
   const [tabs, setTabs] = useState<TabView[]>([]);
+  const [hasState, setHasState] = useState(false);
+  const receiveTabs = useCallback((next: TabView[]) => { setTabs(next); setHasState(true); }, []);
   const [activeTab, setActiveTab] = useState(0);
   const [secondaryTab, setSecondaryTab] = useState<number>();
   const { tabNameMaxLength, setTabNameMaxLength, activeTabNameMaxLength, setActiveTabNameMaxLength } = useTabNameLimits();
@@ -69,7 +71,8 @@ export function App({ client }: { client: JanusClient }) {
     focusLeft, focusRight,
   } = useLayoutState(client);
 
-  const current = tabs[activeTab] ?? actionEntries[0]?.tab;
+  const selected = tabs[activeTab];
+  const current = selected && !selected.hidden && !selected.dock ? selected : undefined;
   currentRef.current = current;
 
   // The overlay-plugin host. Nothing holds it: the seam resolves a chord or a command word to a plugin
@@ -126,18 +129,19 @@ export function App({ client }: { client: JanusClient }) {
   );
   const focusedPluginTabIndexRef = useRef<number | undefined>(undefined);
   const focusedPluginTabIndex = focusedPluginTab === undefined
-    ? -1 : tabs.findIndex((tab) => tab.label === focusedPluginTab);
+    ? -1 : tabs.findIndex((tab) => tab.label === focusedPluginTab && !tab.hidden);
   focusedPluginTabIndexRef.current = focusedPluginTabIndex < 0 ? undefined : focusedPluginTabIndex;
 
   const closeTab = useCallback((index: number) => {
+    const tab = index < 0 ? undefined : tabs.at(index);
+    if (!tab) return;
     if (closeQuitsApp(tabs, index)) { guardedOpenQuitConfirm(); return; }
-    if (guardRef.current?.(index)) return;
-    const tab = tabs.at(index);
-    if (tab) client.send({ method: 'closeTab', params: { label: tab.label } });
+    if (!tab.systemShell && guardRef.current?.(index)) return;
+    client.send({ method: 'closeTab', params: { label: tab.label } });
   }, [client, tabs, guardedOpenQuitConfirm]);
 
   useServerState(client, {
-    setTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
+    setTabs: receiveTabs, setActiveTab, setSecondaryTab, setHarnessLaunch, setScheduleLaunch,
     setTabNameMaxLength, setActiveTabNameMaxLength, setClipboardHistoryMaxEntries, setGlobalHistory,
     setSyntaxTheme,
     setTasks, setProfiles,
@@ -183,7 +187,7 @@ export function App({ client }: { client: JanusClient }) {
     insertions: pluginCommandLineInsertions, replacements: pluginCommandLineReplacements,
   });
 
-  if (!current) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
+  if (!hasState) return <div className="app" style={{ padding: 16, color: 'var(--muted)' }}>Connecting…</div>;
 
   return (
     <PluginChordProvider registry={pluginChords}>

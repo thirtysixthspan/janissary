@@ -11,7 +11,7 @@ export function useSidebarSelection(
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const previousLabelsRef = useRef<Set<string>>(new Set());
   const entries = useMemo<SidebarEntry[]>(
-    () => tabs.map((tab, index) => ({ tab, index })).filter((entry) => entry.tab.dock === side),
+    () => tabs.map((tab, index) => ({ tab, index })).filter((entry) => entry.tab.dock === side && !entry.tab.hidden),
     [side, tabs],
   );
 
@@ -61,7 +61,8 @@ export function useSidebarSelection(
     setSelectedLabel(label);
     return true;
   }), [client, side]);
-  const plugins = entries.filter((entry) => entry.tab.view === 'plugin' && entry.tab.plugin);
+  const plugins = tabs.map((tab, index) => ({ tab, index }))
+    .filter((entry) => entry.tab.dock === side && entry.tab.view === 'plugin' && entry.tab.plugin);
 
   return { entries, selectedLabel, setSelectedLabel, current, activeIndex, plugins };
 }

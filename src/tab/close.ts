@@ -22,7 +22,7 @@ export function closeTabOp(
   openFiles: Map<string, string>,
   discardFocusHistoryLabel: (label: string) => void,
   popFocusHistory: () => number | undefined,
-  applyResult: (tabs: Tab[], activeTab: number) => void,
+  applyResult: (tabs: Tab[], activeTab: number) => number | void,
   resolveTabs?: () => Tab[],
 ): Promise<void> | undefined {
   const tab = tabs[index];
@@ -38,14 +38,17 @@ export function closeTabOp(
   discardFocusHistoryLabel(tab.label);
   const nextTabs = removeTabAt(tabs, index);
   const restored = wasActive ? popFocusHistory() : undefined;
-  const nextActiveTab = restored ?? Math.min(activeTab, nextTabs.length - 1);
-  applyResult(nextTabs, nextActiveTab);
+  const restoredLabel = restored === undefined ? undefined : tabs[restored]?.label;
+  const selectedLabel = wasActive ? restoredLabel : tabs[activeTab]?.label;
+  const selectedIndex = nextTabs.findIndex((candidate) => candidate.label === selectedLabel);
+  const nextActiveTab = selectedIndex === -1 ? Math.min(index, nextTabs.length - 1) : selectedIndex;
+  const finalActiveTab = applyResult(nextTabs, nextActiveTab) ?? nextActiveTab;
   // The tab that just became active starts its unread dwell rather than dropping its badge, so a
   // glance at a tab the close moved focus onto is not mistaken for having read it. `resolveTabs` is
   // passed rather than `nextTabs` because that array is a fresh object per tab — `removeTabAt` maps
   // each survivor into a new one — and the dwell fires later, by which time `port.tabs` may be a
   // newer array again.
-  const active = nextTabs[nextActiveTab];
+  const active = nextTabs[finalActiveTab];
   if (active) beginDwell(resolveTabs ?? (() => nextTabs), active.label);
   messageBus.emit('state', { type: 'dirty' });
   // A plain ssh tab is a row in the sessions list, and every other manager's release has already

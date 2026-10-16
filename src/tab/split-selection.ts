@@ -2,7 +2,7 @@ import type { CenterPane, Tab } from './types.js';
 import { centerPane, isCenterActionTab } from './placement.js';
 import { moveToOtherPane } from './split.js';
 import { applyProfileTabPanes, resolveProfileTabFocus } from './place-profile-tabs.js';
-import { beginDwell } from './dwell.js';
+import { beginDwell, disposeDwell } from './dwell.js';
 import { clearUnreadTab } from './transcript/events.js';
 
 export function focusedPane(tabs: Tab[], activeTab: number): CenterPane {
@@ -32,19 +32,23 @@ export function repairPaneSelections(
   // harness that finished in that state is badged for the session and never escalated.
   const resolve = resolveTabs ?? (() => tabs);
   const selected = tabs[activeTab];
-  if (selected) beginDwell(resolve, selected.label);
   const centerTabs = tabs.filter((tab) => isCenterActionTab(tab));
   const leftTabs = centerTabs.filter((tab) => centerPane(tab) === 'left');
   const rightTabs = centerTabs.filter((tab) => centerPane(tab) === 'right');
   if (leftTabs.length === 0 || rightTabs.length === 0) {
     for (const tab of centerTabs) tab.pane = undefined;
-    return { activeTab, secondaryTabLabel: undefined };
+    const nextActiveTab = selected && !selected.hidden && !selected.dock
+      ? activeTab : tabs.findIndex((tab) => isCenterActionTab(tab));
+    const active = tabs[nextActiveTab];
+    if (active) beginDwell(resolve, active.label);
+    else disposeDwell();
+    return { activeTab: nextActiveTab, secondaryTabLabel: undefined };
   }
   let nextActiveTab = activeTab;
   const active = tabs[nextActiveTab];
   nextActiveTab = !active || !isCenterActionTab(active) ? tabs.findIndex((tab) => tab.label === leftTabs[0].label) : nextActiveTab;
   const liveActive = tabs[nextActiveTab];
-  if (nextActiveTab !== activeTab) beginDwell(resolve, liveActive.label);
+  beginDwell(resolve, liveActive.label);
   const oppositePane: CenterPane = centerPane(liveActive) === 'left' ? 'right' : 'left';
   const secondary = tabs.find((tab) => tab.label === secondaryTabLabel);
   const nextSecondary = !secondary || !isCenterActionTab(secondary) || centerPane(secondary) !== oppositePane || secondary.label === liveActive.label

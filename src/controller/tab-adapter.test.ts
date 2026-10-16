@@ -21,6 +21,7 @@ function makeManagers(labels: string[] = ['agent']) {
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
       setActiveTab,
       moveTabToOtherPane,
+      userCloseTab: vi.fn(),
       ...fakeNotificationsHost(tabs),
     },
     notifications: new NotificationQueue(),
@@ -73,6 +74,15 @@ describe('tab adapter focus', () => {
     const { managers, setActiveTab } = makeManagers(['agent']);
     createTabControllerAdapter(managers).focusTab('gone');
     expect(setActiveTab).toHaveBeenCalledWith(-1);
+  });
+
+  it('routes user close requests by label through userCloseTab', () => {
+    const { managers } = makeManagers(['agent', 'system']);
+    const adapter = createTabControllerAdapter(managers);
+    adapter.closeTab('system');
+    adapter.closeTab('missing');
+    expect(managers.tab.userCloseTab).toHaveBeenCalledOnce();
+    expect(managers.tab.userCloseTab).toHaveBeenCalledWith(1);
   });
 
   it('moveTabToOtherPane forwards the index to the tab manager', () => {

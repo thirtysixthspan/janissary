@@ -8,6 +8,7 @@ import {
 } from './api.js';
 import { createPluginContext } from './context.js';
 import { TabManager } from '../tab/manager.js';
+import { resolveLaunchLabel } from './launch-tab-label.js';
 
 // The launch origin is how the application opens its launch shell before any tab exists: an origin
 // whose label names the tab to open rather than a tab to open it from.
@@ -32,6 +33,13 @@ function emptyManagers(): Managers {
 }
 
 describe('a launch origin', () => {
+  it('keeps the host-only fixed system label exemption outside the user name gate', () => {
+    const managers = emptyManagers();
+    expect(resolveLaunchLabel(
+      managers, declaration, { ...launch, label: 'system' }, {},
+    )).toBe('system');
+  });
+
   it('answers originTab with the project root although no tab carries its label', () => {
     const capabilities = createPluginContext(emptyManagers(), declaration, activation, launch, () => true);
 

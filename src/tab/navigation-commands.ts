@@ -22,7 +22,7 @@ export function setActiveTabOp(
   resolveTabs?: () => Tab[],
 ): void {
   if (index < 0 || index >= tabs.length) return;
-  if (tabs[index]?.dock) return; // a docked tab is never the active tab
+  if (tabs[index]?.dock || tabs[index]?.hidden) return;
   recordLeavingActiveTab(index);
   const tab = tabs[applyActiveTab(index)];
   if (tab) beginDwell(resolveTabs ?? (() => tabs), tab.label);

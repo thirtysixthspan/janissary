@@ -306,6 +306,8 @@ export type TabRuntime = {
 };
 
 export type Tab = {
+  hidden?: true;
+  systemShell?: true;
   // Core tabs may opt in directly; plugins opt in through the queue capability pair.
   hasCommandQueue?: true;
   label: string;

@@ -33,7 +33,7 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     reorderTabTo: (from, to) => managers.tab.reorderTabTo(from, to),
     closeTab: (label) => {
       const index = managers.tab.findIndex(label);
-      if (index !== -1) managers.tab.closeTab(index);
+      if (index !== -1) managers.tab.userCloseTab(index);
     },
     renameTab: (index, title) => managers.tab.renameTab(index, title),
     editQueuedCommand: (index, text, tab) => managers.tab.editQueued(tab ?? managers.tab.cur().label, index, text),

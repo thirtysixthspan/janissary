@@ -11,6 +11,7 @@ export function focusCenterVisibleTab(
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>,
   inputReference: React.RefObject<HTMLTextAreaElement | null>,
 ): void {
+  if (!currentTab || currentTab.hidden || currentTab.dock) return;
   const harnessPtyId = currentTab?.view === 'harness' ? currentTab.harness?.ptyId : undefined;
   if (harnessPtyId) harnessHandles.current.get(harnessPtyId)?.focus();
   else inputReference.current?.focus();
@@ -26,6 +27,7 @@ export function useFocusOnTabSwitch(
   questionPanelRef: React.RefObject<QuestionPanelHandle | null>,
 ) {
   useEffect(() => {
+    if (currentRef.current?.hidden || currentRef.current?.dock) return;
     if (currentRef.current?.pendingQuestion) { questionPanelRef.current?.focusCancel(); return; }
     focusCenterVisibleTab(currentRef.current, harnessHandles, inputReference);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- refs and focus helper are stable; activeTab is the trigger

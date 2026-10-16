@@ -16,7 +16,11 @@ Empties the current tab's transcript log. Other tabs are unaffected.
 
 ### `rename`
 
-Sets the current tab's display alias — see `tabs.md` for how the alias behaves. `rename <newname>` sets it; bare `rename` clears it.
+Sets the current tab's display alias — see `tabs.md` for how the alias behaves. `rename <newname>` sets it; bare `rename` clears it. The normalized exact name `system` is reserved, case-insensitively, and returns `Cannot use "system": that name is reserved for the system tab.` without changing the alias or an editor file. A managed system tab can clear its alias back to its canonical label.
+
+### `tab focus`
+
+`tab focus <name>` explicitly focuses the first tab whose label or display alias matches `<name>`, ignoring case. Everything after `focus` is treated as the name, so names may contain spaces. Success prints nothing. A missing name returns `No tab named "<name>".` Bare `tab`, bare `tab focus`, and any unsupported subcommand return `Usage: tab focus <name>.` Explicit focus reveals a hidden system tab and undocks it if necessary. The command claims the entire `tab` token, including malformed forms.
 
 ### `syntax`
 

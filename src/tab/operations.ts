@@ -11,6 +11,7 @@ import { setActiveTabOp, moveTabOp, reorderTabOp, reorderTabToOp } from './navig
 import { centerPane, isCenterActionTab } from './placement.js';
 import { hasSplit } from './split.js';
 import { focusedPane, recentLabel, moveTabToOtherPaneSelection } from './split-selection.js';
+import { revealTab } from './visibility.js';
 
 export type TabOperationsPort = {
   tabs: Tab[];
@@ -28,6 +29,7 @@ export type TabOperationsPort = {
 };
 
 export function setActiveTab(port: TabOperationsPort, index: number): void {
+  if (!revealTab(port, index)) return;
   setActiveTabOp(port.tabs, index, (i) => port.recordLeavingActiveTab(i), (i) => {
     const previous = port.tabs[port.activeTab];
     const next = port.tabs[i];
@@ -101,19 +103,22 @@ export function closeTab(port: TabOperationsPort, index: number): Promise<void> 
   }, () => port.popFocusHistory((tab) => isCenterActionTab(tab) && centerPane(tab) === closingPane && tab.label !== closing.label), (tabs, activeTab) => {
     port.tabs = tabs;
     port.activeTab = activeTab;
-    if (wasActive && hasSplit(tabs) && centerPane(tabs[activeTab]) !== closingPane) {
+    const selected = tabs[activeTab];
+    if (wasActive && hasSplit(tabs) && (!selected || centerPane(selected) !== closingPane)) {
       const replacement = recentLabel(tabs, port.focusHistory, (tab) => isCenterActionTab(tab) && centerPane(tab) === closingPane);
       if (replacement) port.activeTab = port.findIndex(replacement);
     }
     if (wasSecondary) port.secondaryTabLabel = undefined;
     port.repairSelections();
+    return port.activeTab;
   }, () => port.tabs);
 }
 
-export function renameTab(port: TabOperationsPort, index: number, title: string): void {
+export function renameTab(port: TabOperationsPort, index: number, title: string): string | undefined {
   const refusal = renameTabOp(port.tabs, index, title, TAB_RENAME_MAX_LENGTH, (reference, path) => port.replaceFile(reference, path), (label, path) => port.managerServices.editorWatch.watch(label, path), (path) => port.managerServices.shellTranscript.isWriting(path));
   const label = port.tabs[index]?.label;
   if (refusal && label) notify(port.managerServices, 'file-operation', label, refusal);
+  return refusal;
 }
 
 export function toggleCollapse(port: TabOperationsPort, label?: string): void {

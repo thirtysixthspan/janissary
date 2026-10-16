@@ -20,7 +20,10 @@ export function resolveProfileTabFocus(
   candidates: ProfileTabCandidate[],
   findIndex: (label: string) => number,
 ): { activeTab?: number; secondaryTabLabel?: string } {
-  const ordered = candidates.toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
+  const ordered = candidates.filter((candidate) => {
+    const tab = tabs.find((item) => item.label === candidate.label);
+    return tab && isCenterActionTab(tab);
+  }).toSorted((a, b) => (a.number ?? Infinity) - (b.number ?? Infinity));
   const left = ordered.find((candidate) => candidate.pane !== 'right');
   const right = ordered.find((candidate) => candidate.pane === 'right');
 

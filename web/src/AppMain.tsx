@@ -19,7 +19,7 @@ import type { LayoutState } from './useLayoutState';
 import type { DirtyTabHandle, HarnessTabHandle, QuestionPanelHandle } from './shared/tab/handles';
 
 type AppMainProps = LayoutState & {
-  current: TabView;
+  current?: TabView;
   inputReference: React.RefObject<HTMLTextAreaElement | null>;
   dropRef: React.RefObject<CommandInputDropHandle | null>;
   quitConfirmOpen: boolean;
@@ -72,8 +72,8 @@ export function AppMain({
   return (
     <AppShell
       tabs={tabs} client={client} dropRef={dropRef} tabNameMaxLength={tabNameMaxLength}
-      notificationsVisible={current.view === 'notifications'}
-      targetCwd={current.cwd}
+      notificationsVisible={current?.view === 'notifications'}
+      targetCwd={current?.cwd}
       activeTabNameMaxLength={activeTabNameMaxLength}
       sidebarLeftWidth={sidebarLeftWidth} onSidebarLeftWidthChange={setSidebarLeftWidth}
       sidebarRightWidth={sidebarRightWidth} onSidebarRightWidthChange={setSidebarRightWidth}

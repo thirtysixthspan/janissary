@@ -1,6 +1,7 @@
 import type { RemoteSessionView } from '../protocol.js';
 import { agentNames } from '../agent/names.js';
 import { POOL_EXHAUSTED, openTabRefusal, sessionsRowRefusal } from './messages.js';
+import { isReservedTabLabel, RESERVED_SYSTEM_LABEL_REFUSAL } from '../tab/reserved-label.js';
 
 // Whether a harness or agent launch may take the name it asked for, as a pure function of the open
 // tab labels and the sessions rows the caller read (principle 4). An explicit name — one the user
@@ -45,6 +46,7 @@ export function sameLaunchName(a: string, b: string): boolean {
 
 // The refusal line for `name`, or undefined when nothing holds it.
 export function clashOf(name: string, request: LaunchNameRequest): string | undefined {
+  if (isReservedTabLabel(name)) return RESERVED_SYSTEM_LABEL_REFUSAL;
   if (request.tabs.some((label) => sameLaunchName(label, name))) return openTabRefusal(name);
   const row = request.rows.find((candidate) => CLASHING_KINDS.has(candidate.kind)
     && CLASHING_STATES.has(candidate.state) && sameLaunchName(candidate.label, name));

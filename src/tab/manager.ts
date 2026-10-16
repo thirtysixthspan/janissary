@@ -19,6 +19,7 @@ import * as selectionOperations from './selection-operations.js';
 import * as viewOperations from './view-operations.js';
 import { retargetEditorTab as retargetEditorTabOp } from './retarget-editor.js';
 import { inheritGroupNames } from './groups.js';
+import { userCloseTab } from './user-close.js';
 
 export class TabManager extends TabTranscriptState {
   tabs: Tab[] = [];
@@ -170,7 +171,9 @@ export class TabManager extends TabTranscriptState {
 
   closeTab(index: number): Promise<void> | undefined { return tabOperations.closeTab(this, index); }
 
-  renameTab(index: number, title: string): void { tabOperations.renameTab(this, index, title); }
+  userCloseTab(index: number): Promise<void> | undefined { return userCloseTab(this, index); }
+
+  renameTab(index: number, title: string): string | undefined { return tabOperations.renameTab(this, index, title); }
 
 
   toggleCollapse(label?: string): void { tabOperations.toggleCollapse(this, label); }

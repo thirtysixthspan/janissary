@@ -17,7 +17,7 @@ describe('availableCommands', () => {
 
   // Derived from the registry now. The hand-written list it replaced omitted these outright, which
   // is the drift that made a second list worth deleting rather than correcting.
-  it.each([['open'], ['edit'], ['queue'], ['rename'], ['profile'], ['monitor'], ['theme']])(
+  it.each([['open'], ['edit'], ['queue'], ['rename'], ['profile'], ['monitor'], ['tab'], ['theme']])(
     'includes %s, which the hand-written list omitted',
     (name) => { expect(availableCommands).toContain(name); },
   );
@@ -78,6 +78,10 @@ describe('getOutput("help")', () => {
 
   it('documents the Ctrl+G tab-navigator key binding', () => {
     expect(helpText()).toContain('Ctrl+G');
+  });
+
+  it('documents explicit tab focus in the command table', () => {
+    expect(helpText()).toContain('`tab focus <name>`');
   });
 });
 

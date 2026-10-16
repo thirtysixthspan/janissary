@@ -35,6 +35,26 @@ describe('useFocusOnTabSwitch', () => {
     expect(focus).toHaveBeenCalledTimes(1);
   });
 
+  it('focuses no control for a hidden tab or an absent center selection', () => {
+    const terminalFocus = vi.fn();
+    const inputFocus = vi.fn();
+    const harnessHandles = refOf(new Map([['pty-1', { focus: terminalFocus } as unknown as HarnessTabHandle]]));
+    const inputReference = refOf<HTMLTextAreaElement | null>({ focus: inputFocus } as unknown as HTMLTextAreaElement);
+    const currentRef = refOf<TabView | undefined>({
+      hidden: true, view: 'harness', harness: { ptyId: 'pty-1' },
+    } as unknown as TabView);
+
+    const { rerender } = renderHook(
+      ({ activeTab }) => useFocusOnTabSwitch(activeTab, currentRef, harnessHandles, inputReference, noQuestionPanel()),
+      { initialProps: { activeTab: 0 } },
+    );
+    currentRef.current = undefined;
+    rerender({ activeTab: 1 });
+
+    expect(terminalFocus).not.toHaveBeenCalled();
+    expect(inputFocus).not.toHaveBeenCalled();
+  });
+
   it('re-focuses only when activeTab changes', () => {
     const focus = vi.fn();
     const harnessHandles = refOf(new Map<string, HarnessTabHandle>());

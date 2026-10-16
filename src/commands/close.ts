@@ -13,9 +13,9 @@ export const command: Command = {
     if (parsed.target === 'tabname') {
       const target = resolveTarget(parsed.name, managers, (output) => appendCommandOutput(managers, tab.label, { input: command_, output }, invocation));
       if (!target) return;
-      managers.tab.closeTab(managers.tab.findIndex(target.label));
+      managers.tab.userCloseTab(managers.tab.findIndex(target.label));
     } else {
-      managers.tab.closeTab(tab.index);
+      managers.tab.userCloseTab(tab.index);
     }
   },
 };

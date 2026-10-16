@@ -7,10 +7,10 @@ export const command: Command = {
   samples: ['rename', 'rename notes'],
   run: (command_, tab, managers, invocation) => {
     const rest = command_.replace(/^rename\b\s*/i, '').trim();
-    managers.tab.renameTab(tab.index, rest);
-    const output = rest
+    const refusal = managers.tab.renameTab(tab.index, rest);
+    const output = refusal ?? (rest
       ? `Tab "${tab.label}" now displays as "${rest}" (routing still uses "${tab.label}").`
-      : `Tab "${tab.label}" alias cleared.`;
+      : `Tab "${tab.label}" alias cleared.`);
     appendCommandOutput(managers, tab.label, { input: command_, output }, invocation);
   },
 };

@@ -116,6 +116,13 @@ describe('classifyCommandBarSubmit', () => {
     expect(classifyCommandBarSubmit('close files', lastCenter, 0)).toEqual({ kind: 'confirm-close', index: 1 });
   });
 
+  it('sends a system-tab close to the server without quit or unsaved-close confirmation', () => {
+    const tabs = [tab('janus'), tab('system', { systemShell: true, title: 'review notes' })];
+    expect(classifyCommandBarSubmit('close', tabs, 1)).toEqual({ kind: 'run' });
+    expect(classifyCommandBarSubmit('exit review notes', tabs, 0)).toEqual({ kind: 'run' });
+    expect(classifyCommandBarSubmit('close janus', tabs, 0)).toEqual({ kind: 'confirm-quit' });
+  });
+
   it('treats nav as an ordinary line, because the navigator is the agent bar\'s own branch', () => {
     expect(classifyCommandBarSubmit('nav', tabs, 0)).toEqual({ kind: 'run' });
     expect(classifyCommandBarSubmit('nav janus', tabs, 0)).toEqual({ kind: 'run' });

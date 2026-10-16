@@ -48,6 +48,17 @@ describe('closeTabOp', () => {
     for (const name of MANAGER_TAB_RELEASE) expect(managers[name].closeTab).not.toHaveBeenCalled();
   });
 
+  it('destructively releases a hidden system tab without treating it as the last user tab', () => {
+    const managers = makeManagers();
+    const system: Tab = { ...makeTab('system', 'blue'), hidden: true, systemShell: true };
+
+    const { applied } = close([makeTab('main', 'red'), system], 1, managers);
+
+    expect(emit).not.toHaveBeenCalledWith('app', { type: 'exit' });
+    expect(applied).toBe(true);
+    expect(managers.shell.closeTab).toHaveBeenCalledWith('system');
+  });
+
   it('releases a tab that is not the last, without exiting', () => {
     const managers = makeManagers();
 

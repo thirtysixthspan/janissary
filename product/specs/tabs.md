@@ -252,6 +252,18 @@ Setting the alias to an empty value, or to the same text as the label, clears it
 
 While editing via double-click, the field accepts up to 50 characters — independent of the strip's display truncation length — so a full file name can always be typed in, including for an editor tab whose rename renames the file on disk. The field starts sized to its pre-filled content and widens only as further characters are typed, rather than reserving space for the maximum length up front.
 
+The exact name `system` is reserved, ignoring case, for a managed system tab. A launch label or user alias normalized to that name is refused with `Cannot use "system": that name is reserved for the system tab.` A managed system tab may clear an alias to return to its own canonical label. Names such as `system-2` and `system.md` remain available.
+
+### `tab focus` command
+
+`tab focus <name>` explicitly selects the first open tab whose label or display alias matches `<name>`, ignoring case. The full trimmed text after `focus` is the name, including spaces. A hidden system tab may be focused by its label or alias; focusing reveals it, removes its hidden state, and undocks it into the center while preserving its full-array index and system identity. Success is silent. A missing target prints `No tab named "<name>".` Bare `tab`, `tab focus`, and any other `tab` subcommand print `Usage: tab focus <name>.` Hidden tabs stay in the complete tab list but do not appear in the central strip, tab navigator, or navigation cycling until explicitly focused.
+
+### Hidden system tab lifecycle
+
+A tab marked as a system shell is retained when a user closes it. `close`, `exit`, the strip or sidebar close button, Cmd+W/Ctrl+W, and a plugin close request all hide it instead of releasing its resources. Hiding preserves its order, number, label and alias, runtime, queued commands, served-file references, PTY, and tab-owned timers; it neither asks for quit or save confirmation nor requests application exit. Repeating close while it is hidden changes nothing. This behavior applies only to a managed tab marked as a system shell; ordinary tabs keep destructive close behavior.
+
+Hidden tabs are not center action or reporting entries and are skipped by `next`, Shift+arrow navigation, and `nav`. Passive selection repair, reorder, notifications, and background work never reveal a hidden tab. Explicit focus does. A hidden docked plugin stays in its sidebar placement and remains mounted but inactive; the sidebar frame disappears if no visible docked entry remains. If no center tab can be selected, the active index is `-1`, the secondary selection is empty, and the app remains open. A later destructive owner action or application shutdown still releases the hidden tab's resources.
+
 
 ### `close` command
 

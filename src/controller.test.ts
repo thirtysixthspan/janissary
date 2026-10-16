@@ -1412,13 +1412,15 @@ describe('Controller sidebar docking', () => {
     expect(c.managers.tab.activeTab).toBe(index);
   });
 
-  it('setActiveTab RPC is a no-op against a docked tab index', () => {
+  it('setActiveTab RPC undocks and selects the same full-array tab index', () => {
     const { c } = makeController();
     c.dispatch(`files left ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    const before = c.managers.tab.activeTab;
+    const labels = c.view().map((tab) => tab.label);
     c.setActiveTab(index);
-    expect(c.managers.tab.activeTab).toBe(before);
+    expect(c.managers.tab.activeTab).toBe(index);
+    expect(c.view()[index].dock).toBeUndefined();
+    expect(c.view().map((tab) => tab.label)).toEqual(labels);
   });
 
   it('moveTab (next-tab cycling) skips a docked tab', () => {

@@ -162,6 +162,29 @@ describe('App closing a tab from its button', () => {
 
     expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
   }, 15_000);
+
+  it('sends a system tab close directly without quit or unsaved confirmation', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App client={client} />);
+    act(() => { stateListener!([makeTab({ label: 'system', systemShell: true })], 0, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(container.querySelector('.tab-close')!);
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'system' } });
+    expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
+    expect(screen.queryByText('You have unsaved changes. Close anyway?')).not.toBeInTheDocument();
+  }, 15_000);
+
+  it.each([{ metaKey: true }, { ctrlKey: true }])('sends a system tab close from its keyboard chord without a dialog', async (modifiers) => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab({ label: 'system', systemShell: true })], 0, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', ...modifiers });
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'system' } });
+    expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
+  }, 15_000);
 });
 
 // The focused pane's split chord is built in `AppMain` and had no test, so the RPC it sends — the
@@ -243,6 +266,43 @@ describe('App closing the last tab', () => {
     fireEvent.click(container.querySelector('.tab-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'one' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
+  }, 15_000);
+
+  it('routes typed close for a system tab to the server without opening client confirmation', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => {
+      stateListener!([
+        makeTab({ label: 'janus' }), makeTab({ label: 'system', title: 'review notes', systemShell: true }),
+      ], 1, 16, [], 'github-dark', 'dark', []);
+    });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'close review notes' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'close review notes' } });
+    expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
+    expect(screen.queryByText('You have unsaved changes. Close anyway?')).not.toBeInTheDocument();
+  }, 15_000);
+});
+
+describe('App with no visible center selection', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('keeps the hidden system tab body mounted when the only user tab is docked', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App client={client} />);
+    const docked = makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp', absoluteRoot: '/tmp', rows: [] } });
+    const hidden = makeTab({ label: 'system', hidden: true, systemShell: true });
+    act(() => { stateListener!([docked, hidden], -1, 16, [], 'github-dark', 'dark', []); });
+
+    expect(screen.queryByText('Connecting…')).not.toBeInTheDocument();
+    expect(container.querySelector(':scope .app-center .tab-body')).toHaveAttribute('inert');
+    expect(container.querySelector(':scope .app-center .tab-body')).toHaveStyle({ display: 'none' });
+    expect(container.querySelector(':scope .sidebar-left')).toBeInTheDocument();
   }, 15_000);
 });
 

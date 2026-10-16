@@ -42,7 +42,7 @@ An active plugin also shows `activation=<milliseconds>ms`. A disabled plugin sho
 
 ### Plugin tabs
 
-Every v2 plugin tab is a live, in-memory view tab. It inherits the creating tab's group and group color, receives a distinct dot color, can move into either split pane, and stays mounted while hidden so view state survives focus changes. Plugin tabs are not persisted or restored. A profile does save one, as the plugin that owns it plus the file it was opened on, and reopens it by issuing the same `open` a user would type (see [[profiles]]).
+Every v2 plugin tab is a live, in-memory view tab. It inherits the creating tab's group and group color, receives a distinct dot color, can move into either split pane, and stays mounted while hidden so view state survives focus changes. A hidden system-shell plugin tab also stays mounted at its existing center or sidebar placement after a user closes it, with `active` false and no visible overlay or focus target; explicit focus reveals it. Plugin tabs are not persisted or restored. A profile does save one, as the plugin that owns it plus the file it was opened on, and reopens it by issuing the same `open` a user would type (see [[profiles]]).
 
 The wire view identifies the plugin, the payload schema version, and an opaque payload. Instance keys, source-tab ownership, and served-file reference ownership remain server-only. The host checks a stable instance key before asking the plugin to construct a payload, so reopening the same resource focuses the existing tab and registers no duplicate served file.
 

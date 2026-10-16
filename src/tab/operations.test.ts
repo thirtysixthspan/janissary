@@ -4,7 +4,7 @@ import { MANAGER_TAB_RELEASE } from '../managers.js';
 import type { TabOperationsPort } from './operations.js';
 import type { CenterPane, Tab } from './types.js';
 import { beginDwell, UNREAD_DWELL_MS } from './dwell.js';
-import { repairSelections } from './selection-operations.js';
+import { repairSelections, recordLeavingActiveTab, popFocusHistory } from './selection-operations.js';
 
 function tab(label: string, pane?: CenterPane, dock?: 'left' | 'right'): Tab {
   return { label, pane, dock, view: 'agent', hasUnread: true } as unknown as Tab;
@@ -33,10 +33,10 @@ function makePort(tabs: Tab[], activeTab = 0, secondaryTabLabel?: string) {
     focusHistory: [] as string[],
     managerServices: managerServices() as never,
     openFiles: new Map<string, string>(),
-    findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
-    recordLeavingActiveTab: vi.fn(),
-    popFocusHistory: vi.fn(),
-    repairSelections: vi.fn(),
+    findIndex: (label: string) => port.tabs.findIndex((t) => t.label === label),
+    recordLeavingActiveTab: vi.fn((index: number) => recordLeavingActiveTab(port, index)),
+    popFocusHistory: vi.fn((eligible?: (tab: Tab) => boolean) => popFocusHistory(port, eligible)),
+    repairSelections: vi.fn(() => repairSelections(port)),
     persist: vi.fn(),
     buildAgentState: vi.fn(),
     registerFile: vi.fn(() => 'ref'),
@@ -105,6 +105,16 @@ describe('setDock', () => {
     setDock(port, 0, 'right');
     expect(port.tabs).toHaveLength(2);
     expect(port.activeTab).toBeGreaterThanOrEqual(0);
+  });
+
+  it('skips a hidden tab when docking the active tab chooses its nearest center replacement', () => {
+    const tabs = [tab('active'), tab('system'), tab('visible')];
+    tabs[1].hidden = true;
+    const port = makePort(tabs, 0);
+    setDock(port, 0, 'left');
+    expect(port.activeTab).toBe(2);
+    expect(port.tabs[1].hidden).toBe(true);
+    expect(port.tabs[1].dock).toBeUndefined();
   });
 
   // The split's other side just left the center too, so the pair is no longer a pair.
@@ -317,8 +327,6 @@ describe('operations that reselect a tab and the unread dwell', () => {
   it('defers the badge of the tab a close promotes to active', () => {
     vi.useFakeTimers();
     try {
-      // An unsplit strip, so the surviving tab's index is the one the port's own `activeTab` names.
-      // `makePort`'s `findIndex` closes over the pre-close array, which a split would make stale.
       const port = makePort(strip());
       closeTab(port, 0);
       expect(port.tabs.map((t) => t.label)).toEqual(['b', 'c']);

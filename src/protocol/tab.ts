@@ -57,6 +57,8 @@ export type PendingQuestionView = {
 // A tab as the client renders it: presentation metadata plus the already-flattened transcript
 // lines (the server owns `flattenBuffer`, so the client never needs it).
 export type TabView = {
+  hidden?: true;
+  systemShell?: true;
   label: string;
   backgroundReplies?: { id: string; output: string }[];
   number: number;

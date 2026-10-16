@@ -158,6 +158,18 @@ afterEach(() => {
 });
 
 describe('launchTab with a workspace', () => {
+  it.each([true, false])('refuses a reserved user name before clone or terminal spawn (workspace=%s)', async (workspace) => {
+    const managers = makeManagers();
+    const { host, results } = hostFor(managers, { name: ' SyStEm ', ...(workspace && { workspace: { offline: true } }) });
+    await launch(host, managers, 'SyStEm');
+    expect(results).toEqual([undefined]);
+    expect(managers.workspace.create).not.toHaveBeenCalled();
+    expect(managers.pty.spawn).not.toHaveBeenCalled();
+    expect(pluginTabs(managers)).toEqual([]);
+    expect(notify).toHaveBeenCalledWith(managers, 'launch-refused', 'janus', 'Cannot use "system": that name is reserved for the system tab.');
+    host.dispose();
+  });
+
   it('refuses a ready callback allocation when the callback resumes after run termination', async () => {
     const managers = makeManagers();
     managers.agent = new AgentRunManager(managers);

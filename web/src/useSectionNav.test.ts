@@ -27,6 +27,14 @@ describe('getPresentSections', () => {
   it('always includes center and skips absent sidebars/reporting', () => {
     expect(getPresentSections([makeTab()])).toEqual(['center']);
   });
+
+  it('does not create sidebar or reporting sections for hidden records', () => {
+    expect(getPresentSections([
+      makeTab({ label: 'system-left', dock: 'left', hidden: true }),
+      makeTab({ label: 'system-report', view: 'monitor', hidden: true }),
+      makeTab({ label: 'system-right', dock: 'right', hidden: true }),
+    ])).toEqual(['center']);
+  });
 });
 
 describe('nextSection', () => {

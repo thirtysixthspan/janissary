@@ -56,9 +56,10 @@ export function openNotificationsTab(managers: Managers, dock?: 'left' | 'right'
 // a focused tab moves focus to whatever sits nearest, so the active tab is recorded first and
 // restored afterwards.
 function withActiveTabRestored(managers: Managers, dock: () => Tab): Tab {
-  const wasActive = managers.tab.cur().label;
+  const selected = managers.tab.tabs[managers.tab.activeTab];
+  const wasActive = selected && !selected.hidden && !selected.dock ? selected.label : undefined;
   const tab = dock();
-  const restore = managers.tab.findIndex(wasActive);
+  const restore = wasActive === undefined ? -1 : managers.tab.findIndex(wasActive);
   if (restore !== -1) managers.tab.setActiveTab(restore);
   return tab;
 }

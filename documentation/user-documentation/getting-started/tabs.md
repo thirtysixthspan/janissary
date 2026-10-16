@@ -39,6 +39,8 @@ shell bilal     create a tab named "bilal"
 
 The new tab is focused immediately. Names are always lowercased, and each must be free before the tab opens: a name an open tab already has, or a live row in the [sessions](/user-documentation/tab-types/sessions) tab, is refused, no tab opens, and the refusal goes to the [notifications](/user-documentation/tab-types/notifications) feed rather than the transcript. Random names come from a pool of 52 (see [Agents](/user-documentation/getting-started/agents)); if the pool is exhausted, the shell plugin falls back to a numbered label.
 
+The exact name `system` is reserved, ignoring case, even when no managed system tab is open. Trying `shell SyStEm` reports `Cannot use "system": that name is reserved for the system tab.` Names such as `system-2` remain available.
+
 ## Reading the tab strip
 
 The strip tells you what every tab is doing without switching to it. Three signals matter:
@@ -87,7 +89,16 @@ Text in metadata rows and headers can be selected with the mouse and copied, inc
 
 ## Switching and reordering
 
-`Shift+←` / `Shift+→` cycle through tabs; the `next` command switches to the next tab. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right within its own group (see [Tab groups](/user-documentation/getting-started/groups)). Clicking a tab's label focuses it as soon as you press the mouse down, and a tab that has lost its command line, such as a harness or shell tab, takes the keyboard that way instead. Releasing the click in a shell tab's body rather than on the command line puts the cursor back in that tab's command bar. You can also drag a tab label to reorder it in the same strip, or drop it on the other center strip when you're working in two panes. A drag needs a few pixels of travel before it starts, and once it has, the neighbouring tabs shift out of the way to preview where the tab will land. `Escape` mid-drag puts everything back exactly as it was. If the strip changes under a drag in progress, because an agent opens a tab or a schedule fires, the drag is dropped rather than half-applied, so the order never ends up somewhere you did not choose. With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any of them by typing part of its label or number.
+`Shift+←` / `Shift+→` cycle through visible center action tabs; the `next` command switches to the next one. `Ctrl+←` / `Ctrl+→` move the current tab one position left or right within its own group (see [Tab groups](/user-documentation/getting-started/groups)). Clicking a tab's label focuses it as soon as you press the mouse down, and a tab that has lost its command line, such as a harness or shell tab, takes the keyboard that way instead. Releasing the click in a shell tab's body rather than on the command line puts the cursor back in that tab's command bar. You can also drag a tab label to reorder it in the same strip, or drop it on the other center strip when you're working in two panes. A drag needs a few pixels of travel before it starts, and once it has, the neighbouring tabs shift out of the way to preview where the tab will land. `Escape` mid-drag puts everything back exactly as it was. If the strip changes under a drag in progress, because an agent opens a tab or a schedule fires, the drag is dropped rather than half-applied, so the order never ends up somewhere you did not choose. With several tabs open, the [tab navigator](/user-documentation/command-bar/tab-navigator) (`Ctrl+G`) jumps straight to any visible center action tab by typing part of its label or number.
+
+To focus a tab directly by its label or display alias, use `tab focus <name>`. Matching ignores case, and the full text after `focus` is the name, including spaces:
+
+```
+tab focus bilal
+tab focus review notes
+```
+
+If a managed system tab is hidden, `tab focus system` or its display alias reveals it. Closing a managed system tab hides it instead of tearing it down; it stays addressable by `tab focus` and does not trigger a quit or unsaved-changes prompt. A system tab is only present when a managed feature creates one.
 
 A tab's label in the strip is not something you can select and copy. The metadata row and panel headers are; the strip deliberately is not, so dragging a label never picks up stray text.
 

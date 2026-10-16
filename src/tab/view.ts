@@ -93,6 +93,8 @@ export function buildTabView(
   const queue = queueProjection(tab, declarationOf?.(tab.plugin?.id ?? ''), commandQueue);
   return {
     label: tab.label,
+    ...(tab.hidden && { hidden: true }),
+    ...(tab.systemShell && { systemShell: true }),
     backgroundReplies: tab.log.flatMap((entry) => entry.background && !entry.running ? [{ id: entry.background, output: entry.output }] : []),
     number: tab.number,
     dotColor: tab.dotColor,

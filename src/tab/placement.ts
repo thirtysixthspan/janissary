@@ -5,7 +5,11 @@ import type { CenterPane } from './types.js';
 // `@shared` alias so the two cannot drift. Typed over the three fields both the server `Tab` and the
 // wire `TabView` carry, and free of runtime imports so the client bundle can load it.
 
-export type PlacedTab = Pick<TabView, 'dock' | 'view' | 'pane'>;
+export type PlacedTab = Pick<TabView, 'dock' | 'view' | 'pane' | 'hidden' | 'systemShell'>;
+
+export function isVisibleTab(tab: PlacedTab): boolean {
+  return !tab.hidden;
+}
 
 export function centerPane(tab: PlacedTab): CenterPane {
   return tab.pane ?? 'left';
@@ -18,7 +22,7 @@ export function isReportingTab(tab: PlacedTab): boolean {
 }
 
 export function isCenterActionTab(tab: PlacedTab): boolean {
-  return !tab.dock && !isReportingTab(tab);
+  return isVisibleTab(tab) && !tab.dock && !isReportingTab(tab);
 }
 
 export function isSplitEligibleTab(tab: PlacedTab): boolean {
@@ -29,6 +33,10 @@ export function isSplitEligibleTab(tab: PlacedTab): boolean {
 // quits, however few center tabs remain.
 export function closeQuitsApp(tabs: PlacedTab[], index: number): boolean {
   const tab = index < 0 ? undefined : tabs.at(index);
-  if (!tab || tab.dock) return false;
-  return tabs.filter((candidate) => !candidate.dock).length <= 1;
+  if (!tab || !countsForQuit(tab)) return false;
+  return tabs.filter((candidate) => countsForQuit(candidate)).length <= 1;
+}
+
+export function countsForQuit(tab: PlacedTab): boolean {
+  return isVisibleTab(tab) && !tab.dock && !tab.systemShell;
 }

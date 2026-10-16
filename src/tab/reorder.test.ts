@@ -57,6 +57,14 @@ describe('computeReorderTo', () => {
     );
     expect(result?.tabs.map((tab) => tab.label)).toEqual(['b', 'a']);
   });
+
+  it('rejects a hidden tab as either reorder endpoint', () => {
+    const tabs = [makeTab('a', 1), makeTab('system', 1, { hidden: true }), makeTab('b', 1)];
+    expect(computeReorderTo(tabs, 0, 1)).toBeUndefined();
+    expect(computeReorderTo(tabs, 1, 2)).toBeUndefined();
+    expect(computeReorder(tabs, 1, 1)).toBeUndefined();
+    expect(tabs.map((tab) => tab.label)).toEqual(['a', 'system', 'b']);
+  });
 });
 
 describe('computeReorder', () => {

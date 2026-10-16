@@ -27,21 +27,22 @@ export function DockedPluginBody({
 }) {
   const [actionsTarget, setActionsTarget] = useState<HTMLSpanElement | null>(null);
   if (!tab.plugin) return null;
+  const isVisible = visible && !tab.hidden;
   return (
-    <div className="sidebar-plugin" data-tab-label={tab.label} style={{ display: visible ? 'flex' : 'none' }}>
+    <div className="sidebar-plugin" data-tab-label={tab.label} inert={!isVisible} style={{ display: isVisible ? 'flex' : 'none' }}>
       <DockCycleHeader dock={tab.dock} client={client} index={index} classPrefix="sidebar-plugin">
         <span className="sidebar-plugin-actions" ref={setActionsTarget} />
       </DockCycleHeader>
       <DockedActionsContext.Provider value={actionsTarget}>
         <PluginBody
-          plugin={tab.plugin} label={tab.label} client={client} active={visible} dock={tab.dock ?? null}
+          plugin={tab.plugin} label={tab.label} client={client} active={isVisible} dock={tab.dock ?? null}
           onClose={onClose} remote={tab.remote}
           acpResponse={tab.acpResponse}
           agentRun={tab.agentRun}
           pendingQuestion={tab.pendingQuestion}
         />
       </DockedActionsContext.Provider>
-      {overlay}
+      {isVisible && overlay}
     </div>
   );
 }

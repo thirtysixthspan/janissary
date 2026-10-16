@@ -13,7 +13,7 @@ type Properties = {
   // Narrowed by the caller's guard, so the harness payload is read without asserting: a harness tab
   // caught without one is never rendered rather than throwing here.
   t: HarnessTabView;
-  current: TabView;
+  current?: TabView;
   client: JanusClient;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   visible: boolean;
@@ -33,9 +33,10 @@ export function HarnessTabLayer({
   t, current, client, harnessHandles, visible, index, onSplit,
   taskPickerOpen, navOpen, pickerOverlays,
 }: Properties) {
-  const isActive = t.label === current.label;
+  const isVisible = visible && !t.hidden && !t.dock;
+  const isActive = isVisible && t.label === current?.label;
   const scheduleOnly = t.harness.name !== 'ssh';
-  const statusWindows = useStatusWindows(current.label, {
+  const statusWindows = useStatusWindows(current?.label ?? '', {
     active: isActive,
     connectionsHaveContent: !scheduleOnly && t.connections.length > 0,
     scheduleHasContent: t.schedule.length > 0,
@@ -44,9 +45,10 @@ export function HarnessTabLayer({
     <div
       className="tab-body"
       data-pane-index={index}
+      inert={!isVisible}
       style={{
         borderLeft: tabBodyBorder(t.dotColor, isActive), position: 'relative',
-        display: visible ? 'flex' : 'none',
+        display: isVisible ? 'flex' : 'none',
         gridColumn: t.pane === 'right' ? 2 : 1,
         gridRow: 2,
       }}
@@ -57,7 +59,7 @@ export function HarnessTabLayer({
         navOpen={!!navOpen && isActive}
         connectionsButton={scheduleOnly ? undefined : statusButton(t.connections.length > 0, statusWindows.connections)}
         scheduleButton={statusButton(t.schedule.length > 0, statusWindows.schedule)}
-        onSplit={onSplit}
+        onSplit={isVisible ? onSplit : undefined}
         ref={(h) => { if (h) harnessHandles.current.set(t.harness.ptyId, h); else harnessHandles.current.delete(t.harness.ptyId); }} />
       <StatusPanels
         connections={t.connections}
@@ -66,7 +68,7 @@ export function HarnessTabLayer({
         connectionsWindow={statusWindows.connections}
         scheduleWindow={statusWindows.schedule}
       />
-      {pickerOverlays}
+      {isActive && pickerOverlays}
     </div>
   );
 }
