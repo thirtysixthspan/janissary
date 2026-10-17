@@ -343,16 +343,13 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
     ws.on('message', (d) => { events.push(JSON.parse(d.toString())); });
     await new Promise((res, rej) => { ws.on('open', res); ws.on('error', rej); });
 
-    const hasStartupState = (event: ServerEvent): event is Extract<ServerEvent, { t: 'state' }> => {
+    const hasVisibleJanus = (event: ServerEvent): event is Extract<ServerEvent, { t: 'state' }> => {
       if (event.t !== 'state') return false;
-      const janus = event.tabs.findIndex((tab) => tab.label === 'janus' && !tab.hidden);
-      return janus !== -1
-        && event.activeTab === janus
-        && event.tabs.some((tab) => tab.label === 'system' && tab.hidden && tab.systemShell);
+      return event.tabs.some((tab) => tab.label === 'janus' && !tab.hidden);
     };
     ws.send(JSON.stringify({ t: 'rpc', id: 1, method: 'init', params: {} }));
     try {
-      await waitFor(() => events.some((event) => hasStartupState(event)));
+      await waitFor(() => events.some((event) => hasVisibleJanus(event)));
     } catch (error) {
       const diagnostic = events.map((event) => {
         if (event.t === 'state') {
@@ -365,19 +362,18 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
         if (event.t === 'rpc-reply') {
           return {
             type: event.t,
-            id: event.id,
-            hasError: event.error !== undefined,
-            resultType: event.result === 'ok' ? 'ok' : typeof event.result,
+            status: event.error === undefined ? 'success' : 'error',
           };
         }
         return { type: event.t };
       });
       throw new Error(`initial state timeout; observed ${JSON.stringify(diagnostic)}`, { cause: error });
     }
-    const initial = events.find((event) => hasStartupState(event));
+    const initial = events.find((event) => hasVisibleJanus(event));
     expect(initial).toBeDefined();
-    expect(initial?.tabs[initial.activeTab]?.label).toBe('janus');
-    expect(initial?.tabs.find((tab) => tab.label === 'janus')?.hidden).toBeUndefined();
+    const janusIndex = initial?.tabs.findIndex((tab) => tab.label === 'janus') ?? -1;
+    expect(initial?.tabs[janusIndex]?.hidden).toBeFalsy();
+    expect(initial?.activeTab).toBe(janusIndex);
     expect(initial?.tabs.find((tab) => tab.label === 'system')).toMatchObject({ hidden: true, systemShell: true });
 
     ws.send(JSON.stringify({ t: 'rpc', id: 2, method: 'command', params: { text: 'help' } }));

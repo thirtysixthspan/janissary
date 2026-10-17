@@ -6,6 +6,8 @@ Multiple workspace tabs, each with independent state. A zsh shell tab named `jan
 
 Every launch opens a zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory, then attempts one hidden system shell. The `janus` shell is opened and validated before any window can connect, so the strip is never empty. When the live `janus` shell cannot be opened — including a missing or invalid shell payload or dead/mismatched PTY — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]). A system-shell failure is nonfatal and posts a startup-failure notification. Parked remote shells are still restored around their existing remote PTYs, with their last reported cwd and without reopening a navigator.
 
+Startup notifications do not change tab focus: `janus` remains visible and active while the managed `system` shell remains hidden.
+
 ### Shell tab creation
 
 `shell [name] [in group <name|id>]` opens a shell through the bundled shell plugin. An unnamed shell draws a free name from the shared pool; a named shell applies the common launch-name checks. Without a group clause it joins the issuing tab's group. A group clause selects an existing group by case-insensitive name or numeric ID; an unknown name creates a group with the next available ID, and an unknown positive ID creates that ID with the generated name `group-<id>`. A typed launch takes focus. Typed launches normally create a fresh workspace, while metadata-row shell buttons join the source workspace. See [[shell-tab]] and [[agents]].

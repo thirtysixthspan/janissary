@@ -15,6 +15,7 @@ The failure reproduces in GitHub CI runs 39007389829 and 39036689506. Diagnostic
 ## Decisions
 
 - Keep non-secret, CI-safe failure context in the existing `src/index.test.ts` case. It records observed event types, RPC reply status, and state tab summaries (`label`, `hidden`, `systemShell`, `activeTab`) only when the predicate times out. It does not log the token, URL, transcript, cwd, or shell output.
+- Keep RPC diagnostics to reply status only; omit reply identifiers and all result details. This narrows the diagnostic scope for the label-based assertion correction.
 - Keep the test's real WebSocket and its token gate. Do not skip, retry-filter, lengthen the timeout as a remedy, or replace its assertion with a weaker check.
 - Assert the full startup contract in the existing case: the state includes visible `janus`, `activeTab` selects `janus`, and a `system` tab is marked hidden and managed. Find `janus` by label for both its startup state and follow-up `help` transcript assertion because startup notifications may insert their tab before it.
 - Make no production change: CI evidence shows startup and notification focus behavior are correct. Correct only the stale test assumption about array position while retaining the meaningful visibility, focus, hidden-system, and transcript assertions.
