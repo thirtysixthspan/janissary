@@ -168,13 +168,32 @@ describe('ScheduleDialog', () => {
     expect(getByText('Schedule')).toBeDisabled();
   });
 
-  it('clears a remembered script removed by a refreshed catalog without choosing another', () => {
+  it('keeps a removed runscript cleared after catalog refresh and dialog reopen', () => {
     const first = renderDialog();
+    fireEvent.change(first.getByLabelText('Name'), { target: { value: 'deploy-nightly' } });
+    fireEvent.change(first.getByLabelText('Command'), { target: { value: 'echo retained' } });
     fireEvent.change(first.getByLabelText(/Schedule target/), { target: { value: 'system' } });
     fireEvent.change(first.getByLabelText(/Runscript/), { target: { value: 'deploy' } });
+    fireEvent.change(first.getByLabelText(/Time/), { target: { value: '3pm' } });
     first.rerender(<ScheduleDialog view={{ ...view, runscripts: ['cleanup'] }} client={{ send: first.send } as unknown as JanusClient} />);
     expect((first.getByLabelText(/Runscript/) as HTMLSelectElement).value).toBe('');
     expect(first.getByText('Schedule')).toBeDisabled();
+
+    first.rerender(<ScheduleDialog view={view} client={{ send: first.send } as unknown as JanusClient} />);
+    expect((first.getByLabelText(/Runscript/) as HTMLSelectElement).value).toBe('');
+    expect(first.getByText('Schedule')).toBeDisabled();
+    fireEvent.change(first.getByLabelText(/Schedule target/), { target: { value: 'tab:janus' } });
+    expect((first.getByLabelText('Command') as HTMLInputElement).value).toBe('echo retained');
+    first.unmount();
+
+    const second = renderDialog();
+    expect((second.getByLabelText('Name') as HTMLInputElement).value).toBe('deploy-nightly');
+    expect((second.getByLabelText(/Schedule target/) as HTMLSelectElement).value).toBe('tab:janus');
+    fireEvent.change(second.getByLabelText(/Schedule target/), { target: { value: 'system' } });
+    expect((second.getByLabelText(/Runscript/) as HTMLSelectElement).value).toBe('');
+    expect(second.getByText('Schedule')).toBeDisabled();
+    fireEvent.change(second.getByLabelText(/Runscript/), { target: { value: 'deploy' } });
+    expect(second.getByText('Schedule')).not.toBeDisabled();
   });
 
   it('preserves the tab command draft while switching to and from system mode', () => {

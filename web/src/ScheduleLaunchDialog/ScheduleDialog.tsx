@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { ScheduleLaunchView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
@@ -40,6 +40,12 @@ export function ScheduleDialog({ view, client }: Properties) {
   const [storedFields, setFields] = useState<ScheduleFields>(() => remembered ?? initialFields(view));
   const fields = reconcileScheduleFields(storedFields, view);
   const [hadRemembered] = useState(() => remembered !== null);
+
+  useEffect(() => {
+    if (fields.script === storedFields.script) return;
+    setFields(fields);
+    remembered = fields;
+  }, [fields, storedFields.script]);
 
   const update = useCallback((patch: Partial<ScheduleFields>) => {
     setFields((prev) => {
