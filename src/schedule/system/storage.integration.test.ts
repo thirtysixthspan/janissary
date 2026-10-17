@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { clearStateDirectories } from '../../state/dirs.js';
@@ -34,6 +34,31 @@ describe('system schedule storage integration', () => {
       expect(store.save(snapshot)).toEqual({ ok: false, kind: 'unsupported-version', version: 2 });
       expect(new SystemScheduleStore(root).save(snapshot)).toEqual({ ok: false, kind: 'unsupported-version', version: 2 });
     } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('preserves the previous snapshot and cleans up after a temporary write failure', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'schedule failed replacement '));
+    let directory: string | undefined;
+    try {
+      const store = new SystemScheduleStore(root);
+      expect(store.save(snapshot)).toEqual({ ok: true });
+      const previousBytes = readFileSync(store.file, 'utf8');
+      directory = path.dirname(store.file);
+      chmodSync(directory, 0o555);
+
+      const replacement = {
+        ...snapshot,
+        entries: snapshot.entries.map((entry) => ({ ...entry, nextRun: entry.nextRun + 1 })),
+      };
+      const result = store.save(replacement);
+
+      expect(result).toMatchObject({ ok: false, kind: 'io' });
+      expect(readFileSync(store.file, 'utf8')).toBe(previousBytes);
+      expect(readdirSync(directory)).toEqual(['system-schedules.json']);
+    } finally {
+      if (directory) chmodSync(directory, 0o755);
       rmSync(root, { recursive: true, force: true });
     }
   });
