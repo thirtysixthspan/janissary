@@ -41,6 +41,14 @@ export const PROJECT_TOKENS = [
     env: ['OPENCODE_API_KEY'],
   },
   {
+    name: 'kilo',
+    file: 'kilo-token',
+    // A Kilo API key for the Kilo gateway, which an opencode harness can route through. Static like
+    // the OpenCode key: no refresh, no expiry. The variable is the one Kilo's own gateway docs use;
+    // a workspace cannot read opencode's credential store, so the key has to arrive as a variable.
+    env: ['KILO_API_KEY'],
+  },
+  {
     name: 'gemini',
     file: 'gemini-token',
     // A Google AI API key. The Google provider's route into a workspace, for the same reason: its

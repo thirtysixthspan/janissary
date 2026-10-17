@@ -182,7 +182,10 @@
 // assurance on remote agent runs.
 // Version 32 carries an optional `expectedHash` on `write-file`. A version-31 remote would ignore
 // it and overwrite changed remote content while both hosts appeared to complete the save normally.
-export const REMOTE_PROTOCOL_VERSION = 32;
+// Version 33 adds the `kilo` name to the `provision` token map. A version-32 remote decodes that map
+// against its own table, refuses an unknown name, and so rejects the whole frame as malformed the
+// moment a Kilo key is forwarded, which fails the provisioning instead of leaving the key out.
+export const REMOTE_PROTOCOL_VERSION = 33;
 
 // The single line that flips the channel from a raw terminal to a framed transport. Chosen so it
 // cannot occur in ordinary ssh banner, motd, or authentication output.

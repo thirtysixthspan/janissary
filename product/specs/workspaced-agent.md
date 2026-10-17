@@ -46,9 +46,9 @@ except the workspace lives under the **remote** host's project root rather than 
 is governed entirely by that host: its sandbox policy (so isolation is active where the remote is
 macOS and inactive otherwise, and the notice shown in the tab is the remote's) and its own
 repository's `origin` transport. The credentials are the exception: this project's
-`.janissary/github-token`, `.janissary/claude-token`, and `.janissary/opencode-token` are all
-forwarded on the provisioning frame, each falling back to the remote project's own file when nothing
-is sent. A remote tab records
+`.janissary/github-token`, `.janissary/claude-token`, `.janissary/opencode-token`, `.janissary/kilo-token`,
+and `.janissary/gemini-token` are all forwarded on the provisioning frame, each falling back to the
+remote project's own file when nothing is sent. A remote tab records
 no local workspace directory, so closing it deletes nothing locally; the remote server removes the
 clone when its ssh session ends. An autonomous agent run borrowing this workspace holds a separate,
 ephemeral run reference. Releasing that reference does not disturb other tabs using the clone; when
@@ -66,8 +66,8 @@ transcript. `--offline` additionally denies network access for the tab.
 
 ### Where token files are read from
 
-Each of the four credential files described below — `github-token`, `claude-token`, `opencode-token`,
-`gemini-token` — is looked for in two places, and the first one holding a value wins: the project's
+Each of the five credential files described below — `github-token`, `claude-token`, `opencode-token`,
+`kilo-token`, `gemini-token` — is looked for in two places, and the first one holding a value wins: the project's
 own `.janissary/` directory, then the user's `~/.janissary/`. A credential put in the home directory
 therefore serves every project on the machine, and a project that needs a different one says so by
 keeping its own file. `loadProjectTokens` in `src/project/tokens.ts` resolves both, once at startup,
@@ -139,6 +139,13 @@ An `opencode` harness has the same file, `.janissary/opencode-token`, injected a
 workspaced spawn, isolation-independent, off the scrub list, forwarded to a remote with the remote's
 own file as the fallback. The credential itself is a static API key with no refresh and no expiry, so
 unlike the Claude token there is nothing to re-mint on a schedule.
+
+The Kilo gateway has a token file of its own, `.janissary/kilo-token`, for an opencode harness routed
+through it. It is injected as `KILO_API_KEY` under the same rules as the OpenCode key: any workspaced
+spawn, isolation-independent, off the scrub list, and forwarded to a remote with the remote's own file
+as the fallback. A static key like the OpenCode one, with nothing to refresh. Janissary does not check
+which variable opencode reads for its Kilo provider, so a workspace whose harness reads a different
+name needs that variable exported in the environment janissary starts from.
 
 OpenCode Zen and OpenCode Go need the token file or an ambient API key inside a workspace. opencode keeps its credentials in
 `~/.local/share/opencode/auth.json`, and that file is a denied secret path (see [[sandbox]]) — a

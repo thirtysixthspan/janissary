@@ -130,9 +130,11 @@ is behind is refused before a tab is provisioned rather than after the harness f
 The provisioning frame now carries the credentials as a single map keyed by token name rather than
 one named field per credential, which is what moved the version a fifth time. That bump is the one
 that changes a frame's shape rather than adding to it: an installation on any earlier version finds
-none of the fields it reads and would provision a workspace with no credentials whatsoever. Adding a
-credential no longer touches the contract at all, so this is expected to be the last version move on
-the tokens' account.
+none of the fields it reads and would provision a workspace with no credentials whatsoever. A new
+credential no longer changes the frame's shape, but it still changes the contract: a remote decodes
+the map against its own credential list and refuses a name it does not know, so a version that lacks
+the row rejects the whole provisioning request. Each new credential therefore moves the version, as
+the Kilo key does in version 33.
 
 Remote filesystem sessions and the per-spawn agent name extend the contract again, moving
 `REMOTE_PROTOCOL_VERSION` to 7. A version-6 remote would ignore navigator requests and stamp a
@@ -248,6 +250,11 @@ confined the ACP process. Only that host knows the result; local confinement set
 it. A version-30 peer cannot report this fact, so an agent run could otherwise appear ready without
 disclosing that its process was not confined. Exact-version handshake refusal prevents that false
 assurance.
+
+Protocol version 33 adds the Kilo key's name to the provisioning token map. A version-32 remote refuses
+any name outside its own credential list, so forwarding a Kilo key to one would fail the whole
+provisioning request as malformed rather than provisioning a workspace without the key. Exact-version
+refusal at the handshake reports the mismatch before a tab is provisioned.
 
 The handshake check is narrower for an attach than for a launch. An attach is answered by the
 freshly started remote server that then relays into the parked peer, so the version it announces is
@@ -669,9 +676,9 @@ token, or an `origin` on another host, a clone uses whatever transport the remot
 its credential helper or ssh keys, are never used.
 
 The local project's `.janissary/claude-token`, `.janissary/opencode-token`, and
-`.janissary/gemini-token` travel the same way, in the same map on the same frame, and are injected as
-`CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, and — for the Gemini key, both variables opencode
-reads — `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` into the same processes, each
+`.janissary/kilo-token`, and `.janissary/gemini-token` travel the same way, in the same map on the same
+frame, and are injected as `CLAUDE_CODE_OAUTH_TOKEN`, `OPENCODE_API_KEY`, `KILO_API_KEY`, and — for the
+Gemini key, both variables opencode reads — `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` into the same processes, each
 with the remote's own matching file as the same fallback, resolved the same two ways. It matters most on exactly the hosts the GitHub
 token's isolation-independence describes: a Keychain and the sandbox both need macOS, so on a Linux
 remote the harness has no credential store to fall back on and its own credentials file is denied,
