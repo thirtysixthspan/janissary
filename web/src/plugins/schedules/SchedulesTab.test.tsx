@@ -168,3 +168,54 @@ describe('SchedulesTab', () => {
     });
   });
 });
+
+describe('SchedulesTab sections', () => {
+  const systemRow = () => row({
+    id: 'nightly', tab: 'system', command: 'script nightly', owner: 'system', key: 'nightly-key',
+  });
+
+  it('renders the system section above the tab section, each with its own headings row', () => {
+    const { container } = renderTab([row({ id: 'standup' }), systemRow()]);
+    const sections = container.querySelectorAll('.schedules-section');
+
+    expect(sections).toHaveLength(2);
+    expect(sections[0]!.textContent).toContain('nightly');
+    expect(sections[1]!.textContent).toContain('standup');
+    for (const section of sections) {
+      expect(section.querySelectorAll(':scope .schedules-headings')).toHaveLength(1);
+    }
+  });
+
+  it.each([null, 'left'] as const)('gives each section a headings row in %s mode', (dock) => {
+    const { container } = renderTab([row({ id: 'standup' }), systemRow()], dock);
+
+    expect(container.querySelectorAll('.schedules-headings')).toHaveLength(2);
+  });
+
+  it('renders only the tab section when no project-owned rows exist', () => {
+    const { container } = renderTab([row()]);
+
+    expect(container.querySelectorAll('.schedules-section')).toHaveLength(1);
+    expect(container.querySelectorAll('.schedules-headings')).toHaveLength(1);
+  });
+
+  it('numbers rows continuously from the top across both sections', () => {
+    const { container } = renderTab([row({ id: 'standup' }), systemRow()]);
+    const numbers = [...container.querySelectorAll(':scope .schedules-row .schedules-num')]
+      .map((element) => element.textContent);
+
+    expect(numbers).toEqual(['1)', '2)']);
+  });
+
+  it('follows the on-screen order for keyboard focus, so Home then Enter focuses the system row', () => {
+    const { container, intent } = renderTab([row({ id: 'standup' }), systemRow()]);
+    const list = container.querySelector('.schedules-tab')!;
+
+    fireEvent.keyDown(list, { key: 'Home' });
+    fireEvent.keyDown(list, { key: 'Enter' });
+
+    expect(intent).toHaveBeenCalledWith('focus-owner', {
+      tab: 'system', owner: 'system', key: 'nightly-key',
+    });
+  });
+});
