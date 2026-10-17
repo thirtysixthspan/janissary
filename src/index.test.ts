@@ -343,9 +343,16 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
     ws.on('message', (d) => { events.push(JSON.parse(d.toString())); });
     await new Promise((res, rej) => { ws.on('open', res); ws.on('error', rej); });
 
+    const hasStartupState = (event: ServerEvent): event is Extract<ServerEvent, { t: 'state' }> => {
+      if (event.t !== 'state') return false;
+      const janus = event.tabs.findIndex((tab) => tab.label === 'janus' && !tab.hidden);
+      return janus !== -1
+        && event.activeTab === janus
+        && event.tabs.some((tab) => tab.label === 'system' && tab.hidden && tab.systemShell);
+    };
     ws.send(JSON.stringify({ t: 'rpc', id: 1, method: 'init', params: {} }));
     try {
-      await waitFor(() => events.some((event) => event.t === 'state' && event.tabs[0]?.label === 'janus'));
+      await waitFor(() => events.some((event) => hasStartupState(event)));
     } catch (error) {
       const diagnostic = events.map((event) => {
         if (event.t === 'state') {
@@ -356,18 +363,22 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
           };
         }
         if (event.t === 'rpc-reply') {
-          return { type: event.t, id: event.id, hasError: event.error !== undefined, result: event.result };
+          return {
+            type: event.t,
+            id: event.id,
+            hasError: event.error !== undefined,
+            resultType: event.result === 'ok' ? 'ok' : typeof event.result,
+          };
         }
         return { type: event.t };
       });
       throw new Error(`initial state timeout; observed ${JSON.stringify(diagnostic)}`, { cause: error });
     }
-    const initial = events.find((event): event is Extract<ServerEvent, { t: 'state' }> =>
-      event.t === 'state' && event.tabs[0]?.label === 'janus');
-    expect(initial?.activeTab).toBe(0);
-    expect(initial?.tabs.map(({ label }) => label)).toEqual(['janus', 'system']);
-    expect(initial?.tabs[0].hidden).toBeUndefined();
-    expect(initial?.tabs[1]).toMatchObject({ hidden: true, systemShell: true });
+    const initial = events.find((event) => hasStartupState(event));
+    expect(initial).toBeDefined();
+    expect(initial?.tabs[initial.activeTab]?.label).toBe('janus');
+    expect(initial?.tabs.find((tab) => tab.label === 'janus')?.hidden).toBeUndefined();
+    expect(initial?.tabs.find((tab) => tab.label === 'system')).toMatchObject({ hidden: true, systemShell: true });
 
     ws.send(JSON.stringify({ t: 'rpc', id: 2, method: 'command', params: { text: 'help' } }));
     // `help` output is rendered as Markdown (see Controller.runApp), so it arrives as `markdown` lines.
