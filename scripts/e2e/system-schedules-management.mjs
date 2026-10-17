@@ -1,9 +1,26 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { projectFromEvidence, seedRunscript } from './system-schedules-fixtures.mjs';
 
 export default async function systemScheduleManagement({ page, record, scratchDir, runCommand, tabs, dialogs }) {
+  const project = projectFromEvidence(scratchDir);
+  const store = path.join(project, '.janissary', 'system-schedules.json');
+  const runscript = path.join(project, '.janissary', 'scripts', 'management-probe.rs');
+  const marker = path.join(scratchDir, 'management-cleared');
+  if (existsSync(marker)) {
+    await runCommand(page, 'schedule system list');
+    await runCommand(page, 'schedules');
+    const aggregate = page.locator('.schedules-tab:visible');
+    await aggregate.getByText('No scheduled commands.', { exact: true }).waitFor({ timeout: 10_000 });
+    const persisted = JSON.parse(readFileSync(store, 'utf8'));
+    assert.equal(persisted.entries.length, 0, 'aggregate clear-all remains persisted after ordinary restart');
+    assert.ok(existsSync(runscript), 'the cleared schedule runscript survives ordinary restart');
+    record.management = { phase: 'verified-after-restart', aggregateEmpty: true, systemStoreEmpty: true, runscriptPreserved: true };
+    record.tabs = await tabs(page);
+    return;
+  }
+
   seedRunscript(scratchDir, 'management-probe', 'printf management-probe\\n\n');
   await runCommand(page, 'schedule system duplicate every 1m script management-probe');
   await runCommand(page, 'schedule system duplicate every 2m script management-probe');
@@ -28,8 +45,6 @@ export default async function systemScheduleManagement({ page, record, scratchDi
   const schedules = refreshedTabs.find((tab) => tab.name === 'schedules');
   assert.ok(schedules, 'the aggregate schedules tab remains open');
   await page.locator('.tab').nth(schedules.index).click();
-  const project = projectFromEvidence(scratchDir);
-  const store = path.join(project, '.janissary', 'system-schedules.json');
   const before = JSON.parse(readFileSync(store, 'utf8'));
   const duplicates = before.entries.filter((entry) => entry.id === 'duplicate');
   assert.equal(duplicates.length, 2, 'both duplicate system schedules are persisted');
@@ -55,11 +70,12 @@ export default async function systemScheduleManagement({ page, record, scratchDi
   await aggregateRows.first().waitFor({ state: 'detached', timeout: 10_000 });
   const cleared = JSON.parse(readFileSync(store, 'utf8'));
   assert.equal(cleared.entries.length, 0, 'aggregate clear-all empties persisted system schedules');
-  assert.ok(existsSync(path.join(project, '.janissary', 'scripts', 'management-probe.rs')), 'clear-all preserves the runscript');
+  assert.ok(existsSync(runscript), 'clear-all preserves the runscript');
   await page.locator('.tab').nth(janus.index).click();
   await runCommand(page, 'schedule list');
   const tabScheduleList = await page.locator('.tab-body[data-tab-label="janus"]:visible').textContent();
   assert.ok(tabScheduleList?.includes('No scheduled commands.'), 'aggregate clear-all empties the tab-owned schedule');
-  record.management = { aggregateRowsVisible: true, dialogOpened: true, keyedDuplicateDelete: true, clearAllBothOwners: true, runscriptPreserved: true };
+  writeFileSync(marker, 'aggregate schedules cleared before ordinary restart\n');
+  record.management = { phase: 'cleared-before-restart', aggregateRowsVisible: true, dialogOpened: true, keyedDuplicateDelete: true, clearAllBothOwners: true, runscriptPreserved: true };
   record.tabs = await tabs(page);
 }
