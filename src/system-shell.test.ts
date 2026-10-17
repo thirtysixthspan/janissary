@@ -114,6 +114,39 @@ describe('SystemShellManager', () => {
     expect(managers.tab.tabs.map((tab) => tab.label)).toEqual(['janus']);
   });
 
+  it.each([
+    { outcome: { status: 'rejected' as const, reason: 'shell command rejected' }, reason: 'shell command rejected' },
+    { outcome: { status: 'failed' as const, error: new Error('shell command failed') }, reason: 'shell command failed' },
+  ])('closes a created shell tab and its PTY after a $outcome.status result', async ({ outcome, reason }) => {
+    const runCommandResult = managers.plugins.runCommandResult.bind(managers.plugins);
+    let openedTab: (typeof managers.tab.tabs)[number] | undefined;
+    let ptyId: string | undefined;
+    let pty: PtySession | undefined;
+    vi.spyOn(managers.plugins, 'runCommandResult').mockImplementation(async (id, command, origin) => {
+      const completed = await runCommandResult(id, command, origin);
+      expect(completed.status).toBe('ok');
+      openedTab = managers.tab.byLabel('system');
+      ptyId = managers.pty.terminalIdFor('system');
+      pty = vi.mocked(spawnPty).mock.results[0]?.value;
+      expect(openedTab?.plugin?.id).toBe('shell');
+      expect(ptyId).toBeDefined();
+      if (ptyId !== undefined) expect(managers.pty.isRunningFor(ptyId, ['system'])).toBe(true);
+      return outcome;
+    });
+
+    const result = await manager.ensure();
+
+    expect(result).toEqual({ status: 'failed', reason: outcome.status === 'rejected' ? outcome.reason : outcome.error });
+    expect(openedTab).toBeDefined();
+    expect(managers.tab.byLabel('system')).toBeUndefined();
+    expect(ptyId).toBeDefined();
+    expect(pty && managers.pty.isRunningFor(pty.id, ['system'])).toBe(false);
+    expect(pty?.kill).toHaveBeenCalledOnce();
+    expect(managers.tab.tabs.map((tab) => tab.label)).toEqual(['janus']);
+    expect(systemNotices()).toHaveLength(1);
+    expect(systemNotices()[0]?.message).toBe(`System shell could not start: ${reason}.`);
+  });
+
   it('reports a completed command without a valid shell and cleans up only its invalid tab', async () => {
     vi.spyOn(managers.plugins, 'runCommandResult').mockImplementation(async () => {
       managers.tab.openPluginTab(

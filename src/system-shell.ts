@@ -68,7 +68,7 @@ export class SystemShellManager {
     const outcome = await this.managers.plugins.runCommandResult(SHELL_PLUGIN, SHELL_COMMAND, SYSTEM_ORIGIN);
     const opened = this.managers.tab.tabs.find((tab) => !before.has(tab) && tab.label === SYSTEM_LABEL);
     if (outcome.status !== 'ok') {
-      if (opened && !liveShellPtyId(opened, this.managers)) await this.closeAttempt(opened);
+      if (opened) await this.closeAttempt(opened);
       return this.fail(outcome.status === 'rejected' ? outcome.reason : outcome.error);
     }
     if (!opened || !liveShellPtyId(opened, this.managers)) {

@@ -21,8 +21,11 @@ After `janus` opens, the application attempts a second shell through the same pl
 and hidden immediately, leaving `janus` visible and focused. It is a normal zsh shell tab when
 revealed with `tab focus system`; closing it hides it again. A failure to open this shell posts
 `System shell could not start: <reason>.` in Notifications and does not prevent startup or remote
-session restoration. The failed attempt leaves no placeholder tab. A later ensure attempt may retry;
-a dead already-managed system shell is left in place for the later lifecycle that owns replacement.
+session restoration. If the command creates the tab before returning a failure, that attempt's tab
+and local terminal are closed while its original reason is reported; a pre-existing tab named
+`system` is left untouched. The failed attempt leaves no placeholder tab. A later ensure attempt may
+retry; a dead already-managed system shell is left in place for the later lifecycle that owns
+replacement.
 
 The launch shell is the visible tab when the window first appears, and its command bar holds the
 keyboard focus, not its terminal. The first thing typed after launch goes to the `janus` command bar
