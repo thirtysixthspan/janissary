@@ -5,15 +5,16 @@ import { DEFAULT_SYNTAX_THEME } from './syntax-themes.js';
 import { DEFAULT_APP_THEME } from './app-themes.js';
 import { configRecord, decodeConfig } from './config-decode.js';
 
-// Per-event opt-in toggles for the notifications tab (see `notifications/index.ts`). Each defaults to
-// false; the user enables an event by editing `.janissary/config.json` directly. There is
-// deliberately no toggle for the `manual` event (an agent-triggered `notify`), which always fires.
+// Per-event toggles for the notifications tab (see `notifications/index.ts`). Ambient events default
+// to false; system schedule notices default to true. There is deliberately no toggle for `manual`
+// (an agent-triggered `notify`), which always fires.
 export type NotificationConfig = {
   events: {
     stateChange: boolean;
     scheduleFire: boolean;
     agentStart: boolean;
     rateLimited: boolean;
+    systemScheduleFire: boolean;
   };
 };
 
@@ -99,6 +100,7 @@ const DEFAULT_CONFIG: Config = {
       scheduleFire: false,
       agentStart: false,
       rateLimited: false,
+      systemScheduleFire: true,
     },
   },
   osNotifications: true,

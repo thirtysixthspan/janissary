@@ -1,5 +1,6 @@
 import type { Tab } from './types.js';
 import { checkLaunchName, poolCandidates, type LaunchNameRow } from '../launch-name/check.js';
+import { isReservedTabLabel } from './reserved-label.js';
 
 function uniqueLabel(used: Set<string>, prefix: string): string {
   if (!used.has(prefix)) return prefix;
@@ -9,7 +10,14 @@ function uniqueLabel(used: Set<string>, prefix: string): string {
 }
 
 export function uniquePluginLabel(tabs: Tab[], prefix: string): string {
-  return uniqueLabel(new Set(tabs.map((t) => t.label)), prefix);
+  if (isReservedTabLabel(prefix)) {
+    const used = new Set(tabs.map((tab) => tab.label.toLowerCase()));
+    let suffix = 2;
+    while (used.has(`${prefix.toLowerCase()}-${suffix}`)) suffix++;
+    return `${prefix}-${suffix}`;
+  }
+  const used = new Set(tabs.map((t) => t.label));
+  return uniqueLabel(used, prefix);
 }
 
 // A pool name by the same rule an unnamed agent launch takes one: free of every open tab and of

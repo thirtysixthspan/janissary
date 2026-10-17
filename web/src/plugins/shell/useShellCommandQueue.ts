@@ -1,17 +1,52 @@
+import { useEffect, useRef } from 'react';
 import { useCommandQueue } from '../api';
 import type { TabPluginClientCapabilities } from '../api';
-import type { ShellQueuedLine } from '@shared/plugins/shell/shared';
+import { isShellQueuedCommand } from '@shared/plugins/shell/shared';
 import { reportShellIntentFailure } from './report-shell-intent-failure';
+import { createQueuedCommandAdapter } from './queued-command-adapter';
 
 // Shell-specific transport and history adaptation for the core FIFO service.
 export function useShellCommandQueue(
   capabilities: TabPluginClientCapabilities,
-  run: (line: string, record?: boolean) => Promise<boolean>,
+  run: (line: string, record?: boolean, receipt?: string) => Promise<boolean>,
   initiallyBusy: boolean,
   onQueued: (line: string) => void,
   queuedLines: readonly string[],
+  terminalReady: boolean,
+  terminalGeneration?: string,
 ) {
-  return useCommandQueue({
+  const capabilitiesReference = useRef(capabilities);
+  capabilitiesReference.current = capabilities;
+  const runReference = useRef(run);
+  runReference.current = run;
+  const createAdapter = () => createQueuedCommandAdapter({
+      dequeue: async () => {
+        try {
+          const command = await capabilitiesReference.current.intent<unknown>('dequeue-command', null);
+          return isShellQueuedCommand(command) ? command : null;
+        } catch (error: unknown) {
+          reportShellIntentFailure(capabilitiesReference.current, 'shell dequeue intent failed', error);
+          return null;
+        }
+      },
+      discard: async (receipt) => {
+        await capabilitiesReference.current.intent('dispatch-command', { receipt, discard: true });
+      },
+    }, (line, queued, receipt) => runReference.current(line, !queued, receipt));
+  const adapterReference = useRef<ReturnType<typeof createQueuedCommandAdapter> | null>(null);
+  adapterReference.current ??= createAdapter();
+  const generationReference = useRef(terminalGeneration);
+  useEffect(() => {
+    if (generationReference.current === terminalGeneration) return;
+    void adapterReference.current?.dispose();
+    adapterReference.current = createAdapter();
+    generationReference.current = terminalGeneration;
+  }, [terminalGeneration]);
+  useEffect(() => {
+    adapterReference.current?.attach();
+    return () => { void adapterReference.current?.dispose(); };
+  }, [terminalGeneration]);
+  const queueState = useCommandQueue({
     enqueue: async (line) => {
       try {
         await capabilities.intent<{ queued: boolean }>('queue', line);
@@ -19,14 +54,10 @@ export function useShellCommandQueue(
         reportShellIntentFailure(capabilities, 'shell queue intent failed', error);
       }
     },
-    dequeue: async () => {
-      try {
-        const result = await capabilities.intent<ShellQueuedLine>('dequeue', null);
-        return typeof result.line === 'string' ? result.line : null;
-      } catch (error: unknown) {
-        reportShellIntentFailure(capabilities, 'shell dequeue intent failed', error);
-        return null;
-      }
-    },
-  }, (line, queued) => run(line, !queued), initiallyBusy, onQueued, queuedLines);
+    dequeue: () => terminalReady ? adapterReference.current?.dequeue() ?? Promise.resolve(null) : Promise.resolve(null),
+  }, (line, queued) => adapterReference.current?.run(line, queued) ?? Promise.resolve(false), initiallyBusy, onQueued, queuedLines);
+  useEffect(() => {
+    if (terminalReady && queuedLines.length > 0) queueState.queue.wake();
+  }, [queueState.queue, queuedLines, terminalReady]);
+  return queueState;
 }

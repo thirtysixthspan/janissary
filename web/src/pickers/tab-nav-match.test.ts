@@ -30,6 +30,11 @@ describe('filterTabs', () => {
     ]);
   });
 
+  it('excludes hidden system records while retaining full-list indices for visible entries', () => {
+    const tabs = [makeTab({ label: 'system', hidden: true, systemShell: true }), makeTab({ label: 'notes' })];
+    expect(filterTabs(tabs, '')).toEqual([{ tab: tabs[1], index: 1 }]);
+  });
+
   it('matches by substring on label, case-insensitively', () => {
     const tabs = [makeTab({ label: 'Deploy' }), makeTab({ label: 'shell', number: 2 })];
     expect(filterTabs(tabs, 'depl').map((e) => e.tab.label)).toEqual(['Deploy']);

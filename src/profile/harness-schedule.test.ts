@@ -32,6 +32,28 @@ describe('buildHarnessSchedule', () => {
     expect(entries.map((e) => e.id)).toEqual(['t1']);
   });
 
+  it('reports and skips all valid system management and creation forms', () => {
+    const report = vi.fn();
+    const entries = buildHarnessSchedule(entry({ schedule: [
+      'system nightly every day at 9am script deploy', 'system list', 'system cancel nightly', 'system clear',
+    ] }), report);
+    expect(entries).toEqual([]);
+    expect(report.mock.calls.map(([message]) => message)).toEqual([
+      'Schedule "system nightly every day at 9am script deploy" for "lint" cannot target system schedules.',
+      'Schedule "system list" for "lint" cannot target system schedules.',
+      'Schedule "system cancel nightly" for "lint" cannot target system schedules.',
+      'Schedule "system clear" for "lint" cannot target system schedules.',
+    ]);
+  });
+
+  it('reports malformed system grammar through the parser error path', () => {
+    const report = vi.fn();
+    expect(buildHarnessSchedule(entry({ schedule: ['system list extra'] }), report)).toEqual([]);
+    expect(report).toHaveBeenCalledWith(
+      'Schedule "system list extra" for "lint": Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system clear',
+    );
+  });
+
   // `in <tab>` would attach the timer to a different tab than the harness this schedule belongs to.
   it('reports a schedule that names another tab, and skips it', () => {
     const report = vi.fn();

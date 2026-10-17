@@ -21,22 +21,25 @@ export function PluginTabLayer({
 }: {
   tab: TabView;
   index: number;
-  current: TabView;
+  current?: TabView;
   visible: boolean;
   client: JanusClient;
-  onClose: () => void;
+  onClose: (reason?: { terminalExited: string }) => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
   overlay?: ReactNode;
 }) {
+  const isVisible = visible && !tab.hidden && !tab.dock;
+  const isActive = isVisible && tab.label === current?.label;
   return (
     <div
       className="tab-body"
       data-pane-index={index}
       data-tab-label={tab.label}
+      inert={!isVisible}
       style={{
-        borderLeft: tabBodyBorder(tab.dotColor, tab.label === current.label),
-        display: visible ? 'flex' : 'none',
+        borderLeft: tabBodyBorder(tab.dotColor, isActive),
+        display: isVisible ? 'flex' : 'none',
         gridColumn: tab.pane === 'right' ? 2 : 1,
         gridRow: 2,
       }}
@@ -48,11 +51,11 @@ export function PluginTabLayer({
           acpResponse={tab.acpResponse}
           agentRun={tab.agentRun}
           pendingQuestion={tab.pendingQuestion}
-          active={tab.label === current.label} onClose={onClose} onSplit={onSplit}
+          active={isActive} onClose={onClose} onSplit={isVisible ? onSplit : undefined}
           onDirtyHandle={onDirtyHandle}
         />
       )}
-      {overlay}
+      {isActive && overlay}
     </div>
   );
 }

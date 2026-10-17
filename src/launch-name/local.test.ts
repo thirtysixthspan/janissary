@@ -7,6 +7,7 @@ import { notify } from '../notifications/index.js';
 import type { Managers } from '../managers.js';
 import type { Tab } from '../tab/types.js';
 import { resolveLocalLaunchName } from './local.js';
+import { suffixCandidates } from './check.js';
 import { localRunningRefusal } from './messages.js';
 
 vi.mock('../notifications/index.js', () => ({ notify: vi.fn() }));
@@ -31,6 +32,19 @@ afterEach(() => {
 });
 
 describe('resolveLocalLaunchName', () => {
+  it('refuses the reserved label before removing a leftover workspace', () => {
+    mkdirSync(workspacePath('system'), { recursive: true });
+    writeFileSync(path.join(workspacePath('system'), 'keep.txt'), 'owned');
+    const managers = managersWith([]);
+
+    expect(resolveLocalLaunchName(managers, { creator: 'janus', name: ' SyStEm ', explicit: true, workspace: true }))
+      .toBeUndefined();
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'launch-refused', 'janus', 'Cannot use "system": that name is reserved for the system tab.',
+    );
+    expect(existsSync(path.join(workspacePath('system'), 'keep.txt'))).toBe(true);
+  });
+
   it('refuses a -w name whose workspace an open tab uses under another case, removing nothing', () => {
     mkdirSync(workspacePath('foo'), { recursive: true });
     writeFileSync(path.join(workspacePath('foo'), 'live.txt'), 'live work');
@@ -59,5 +73,42 @@ describe('resolveLocalLaunchName', () => {
     expect(first).toBe('alpha-bravo-charlie');
     expect(resolveLocalLaunchName(managers, { creator: 'janus', name: second, explicit: true, workspace: true })).toBe('alpha-bravo-charlot');
     expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('chooses the smallest free postfix after tab and live workspace collisions', () => {
+    const managers = managersWith([
+      { label: 'claude' },
+      { label: 'claude-2' },
+      { label: 'workspace-owner', workspaceDir: workspacePath('claude-3') },
+    ]);
+    expect(resolveLocalLaunchName(managers, {
+      creator: 'janus', name: 'claude', explicit: false, workspace: true,
+      suffixOnClash: true, candidates: suffixCandidates('claude'),
+    })).toBe('claude-4');
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('rejects a reserved scheduled base instead of suffixing it', () => {
+    const managers = managersWith([]);
+
+    expect(resolveLocalLaunchName(managers, {
+      creator: 'janus', name: ' SyStEm ', explicit: false, workspace: false,
+      suffixOnClash: true, candidates: suffixCandidates(' SyStEm '),
+    })).toBeUndefined();
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'launch-refused', 'janus', 'Cannot use "system": that name is reserved for the system tab.',
+    );
+  });
+
+  it('rejects an invalid scheduled workspace base before considering postfixes', () => {
+    const managers = managersWith([]);
+
+    expect(resolveLocalLaunchName(managers, {
+      creator: 'janus', name: '../victim', explicit: false, workspace: true,
+      suffixOnClash: true, candidates: suffixCandidates('../victim'),
+    })).toBeUndefined();
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'launch-refused', 'janus', expect.stringContaining('a workspace name must be a single folder name'),
+    );
   });
 });

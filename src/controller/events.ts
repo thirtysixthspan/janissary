@@ -40,5 +40,6 @@ export function wireControllerEvents(managers: Managers, sinks: Sinks): void {
       return;
     }
     sinks.sendPtyExit(event.id, event.exitCode);
+    void managers.systemShell.handlePtyExit(event.id);
   });
 }

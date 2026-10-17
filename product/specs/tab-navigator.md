@@ -1,10 +1,10 @@
 # Tab Navigator
 
-A fuzzy-searchable jump list for switching directly to any open tab by typing part of its label or number.
+A fuzzy-searchable jump list for switching directly to any visible center action tab by typing part of its label or number.
 
 ### Opening the navigator
 
-`Ctrl+G` (or the `nav` command, optionally followed by a query, e.g. `nav depl`) opens a modal window listing every open tab — harness, SSH, shell, viewer, and reporting tabs alike — floating above the command bar. If the navigator is already open, `Ctrl+G` or `nav` closes it again instead of reopening it. In any tab with a command bar — a shell tab, a harness tab, or another plugin tab — `Ctrl+G` opens the navigator; it overlays whichever tab was focused when it opened, never a different, unrelated tab.
+`Ctrl+G` (or the `nav` command, optionally followed by a query, e.g. `nav depl`) opens a modal window listing visible center action tabs — harness, SSH, shell, and viewer tabs — floating above the command bar. Hidden tabs, docked tabs, and reporting tabs are excluded. If the navigator is already open, `Ctrl+G` or `nav` closes it again instead of reopening it. In any tab with a command bar — a shell tab, a harness tab, or another plugin tab — `Ctrl+G` opens the navigator; it overlays whichever tab was focused when it opened, never a different, unrelated tab.
 
 ### Filtering
 

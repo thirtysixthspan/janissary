@@ -22,7 +22,7 @@ export const CORE_PARAMS: Record<CoreRpcCall['method'], ParamsDecoder> = {
   command: (p) => isString(p.text) && (p.tab === undefined || isString(p.tab)),
   setActiveTab: (p) => isInteger(p.index),
   focusTab: (p) => isString(p.label),
-  closeTab: (p) => isString(p.label),
+  closeTab: (p) => isString(p.label) && (p.terminalExited === undefined || isString(p.terminalExited)),
   renameTab: (p) => isInteger(p.index) && isString(p.title),
   editQueuedCommand: (p) => isInteger(p.index) && isString(p.text) && (p.tab === undefined || isString(p.tab)),
   deleteQueuedCommand: (p) => isInteger(p.index) && (p.tab === undefined || isString(p.tab)),

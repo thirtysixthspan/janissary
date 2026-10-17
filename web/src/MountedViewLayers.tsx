@@ -17,9 +17,9 @@ import { useEditorPluginHost } from './useEditorPluginHost';
 
 type Properties = {
   tabs: TabView[];
-  current: TabView;
+  current?: TabView;
   client: JanusClient;
-  closeTab: (index: number) => void;
+  closeTab: (index: number, reason?: { terminalExited: string }) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
@@ -41,13 +41,14 @@ type Properties = {
 
 function TabBodyDiv({
   tab, index, current, visibleLabels, children,
-}: { tab: TabView; index: number; current: TabView; visibleLabels: string[]; children: React.ReactNode }) {
+}: { tab: TabView; index: number; current?: TabView; visibleLabels: string[]; children: React.ReactNode }) {
   return (
     <div
       className="tab-body"
       data-pane-index={index}
+      inert={!visibleLabels.includes(tab.label)}
       style={{
-        borderLeft: tabBodyBorder(tab.dotColor, tab.label === current.label),
+        borderLeft: tabBodyBorder(tab.dotColor, tab.label === current?.label),
         position: 'relative',
         display: visibleLabels.includes(tab.label) ? 'flex' : 'none',
         gridColumn: tab.pane === 'right' ? 2 : 1,
@@ -63,11 +64,14 @@ function TabBodyDiv({
 // editor buffers, undo stacks, cursor/scroll position, embedded-page navigation, and video playback
 // position survive tab switches. Split out of App.tsx to keep it under the file-size limit.
 export function MountedViewLayers({
-  tabs, current, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
-  visibleLabels = [current.label], onSplit, onPluginDirty, pickerOverlays, pickerSourceTab, overlayOpen,
+  tabs, current: candidate, client, closeTab, harnessHandles, tabHandles, questionPanelRef,
+  visibleLabels: requestedLabels, onSplit, onPluginDirty, pickerOverlays, pickerSourceTab, overlayOpen,
   taskPickerOpen, taskRows, taskPickerIndex, onPickTask, onToggleTaskDir,
   navOpen, navQuery, navIndex, onPickTab, contributedOverlay,
 }: Properties) {
+  const current = candidate && !candidate.hidden && !candidate.dock ? candidate : undefined;
+  const visibleLabels = (requestedLabels ?? (current ? [current.label] : []))
+    .filter((label) => tabs.some((tab) => tab.label === label && !tab.hidden && !tab.dock));
   // This composition mounts every editor tab, so it owns the one session plugin host they all share
   // and the disabled-plugin queue that host fills. Disabling is session-scoped rather than per tab,
   // and a plugin can be disabled before any tab has mounted to report it.
@@ -87,7 +91,7 @@ export function MountedViewLayers({
           visible={visibleLabels.includes(t.label)} index={index}
           onSplit={onSplit ? () => onSplit(index) : undefined}
           taskPickerOpen={taskPickerOpen} navOpen={navOpen}
-          pickerOverlays={t.label === current.label && (
+          pickerOverlays={t.label === current?.label && (
             <>
               {taskPickerOpen && onPickTask && onToggleTaskDir && (
                 <TaskPicker rows={taskRows ?? []} selected={taskPickerIndex ?? 0} onPick={onPickTask} onToggleDir={onToggleTaskDir} />
@@ -103,13 +107,13 @@ export function MountedViewLayers({
 
       {indexedTabs(tabs, isEditorTabView).map(({ t, index }) => (
         <TabBodyDiv key={t.label} tab={t} index={index} current={current} visibleLabels={visibleLabels}>
-          <EditorTab editor={t.editor} tab={t} client={client} active={t.label === current.label}
+          <EditorTab editor={t.editor} tab={t} client={client} active={visibleLabels.includes(t.label) && t.label === current?.label}
             visible={visibleLabels.includes(t.label)}
             overlayOpen={overlayOpen}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             pluginHost={editorPluginHost} pluginReports={editorPluginReports}
             ref={(h) => { if (h) tabHandles.current.set(t.label, h); else tabHandles.current.delete(t.label); }} />
-          {(pickerSourceTab ? pickerSourceTab === t.label : t.label === current.label) && pickerOverlays}
+          {visibleLabels.includes(t.label) && (pickerSourceTab ? pickerSourceTab === t.label : t.label === current?.label) && pickerOverlays}
         </TabBodyDiv>
       ))}
 
@@ -123,17 +127,17 @@ export function MountedViewLayers({
             current={current}
             visible={visibleLabels.includes(t.label)}
             client={client}
-            onClose={() => closeTab(index)}
+             onClose={(reason) => closeTab(index, reason)}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             onDirtyHandle={(handle) => {
               if (handle) tabHandles.current.set(t.label, handle);
               else tabHandles.current.delete(t.label);
               onPluginDirty?.(t.label, handle?.isDirty() ?? false);
             }}
-            overlay={t.label === current.label ? pluginOverlay(t) : undefined}
+            overlay={t.label === current?.label ? pluginOverlay(t) : undefined}
           />
         ))}
-      {current.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}
+      {current?.pendingQuestion && <QuestionPanel ref={questionPanelRef} question={current.pendingQuestion} client={client} />}
     </>
   );
 }

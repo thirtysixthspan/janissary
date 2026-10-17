@@ -4,7 +4,10 @@ Multiple workspace tabs, each with independent state. A zsh shell tab named `jan
 
 ### Default tab
 
-Every launch opens a single zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory. No other tabs exist until explicitly created — the launch shell is the only one a launch opens. The shell is opened before any window can connect, so the strip is never empty. When it cannot be opened — no zsh to run, or a shell plugin that fails or is disabled — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]). A remote shell tab is restored around its existing remote PTY, with its last reported cwd and without reopening a navigator.
+Every launch opens a zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory, then attempts one hidden system shell. The `janus` shell is opened and validated before any window can connect, so the strip is never empty. When the live `janus` shell cannot be opened — including a missing or invalid shell payload or dead/mismatched PTY — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]). A system-shell failure is nonfatal and posts a startup-failure notification. Parked remote shells are still restored around their existing remote PTYs, with their last reported cwd and without reopening a navigator.
+
+Startup notifications do not change tab focus: `janus` remains visible and active while the managed `system` shell remains hidden.
+Commands submitted in `janus` keep their output there even when a startup notification adds another tab ahead of it.
 
 ### Shell tab creation
 
@@ -252,8 +255,31 @@ Setting the alias to an empty value, or to the same text as the label, clears it
 
 While editing via double-click, the field accepts up to 50 characters — independent of the strip's display truncation length — so a full file name can always be typed in, including for an editor tab whose rename renames the file on disk. The field starts sized to its pre-filled content and widens only as further characters are typed, rather than reserving space for the maximum length up front.
 
+The exact name `system` is reserved, ignoring case, for a managed system tab. A launch label or user alias normalized to that name is refused with `Cannot use "system": that name is reserved for the system tab.` A managed system tab may clear an alias to return to its own canonical label. Names such as `system-2` and `system.md` remain available.
+
+### `tab focus` command
+
+`tab focus <name>` explicitly selects the first open tab whose label or display alias matches `<name>`, ignoring case. The full trimmed text after `focus` is the name, including spaces. A hidden system tab may be focused by its label or alias; focusing reveals it, removes its hidden state, and undocks it into the center while preserving its full-array index and system identity. Success is silent. A missing target prints `No tab named "<name>".` Bare `tab`, `tab focus`, and any other `tab` subcommand print `Usage: tab focus <name>.` Hidden tabs stay in the complete tab list but do not appear in the central strip, tab navigator, or navigation cycling until explicitly focused.
+
+### Hidden system tab lifecycle
+
+A tab marked as a system shell is retained when a user closes it. `close`, `exit`, the strip or sidebar close button, Cmd+W/Ctrl+W, and a plugin close request all hide it instead of releasing its resources. Hiding preserves its order, number, label and alias, runtime, queued commands, served-file references, PTY, and tab-owned timers; it neither asks for quit or save confirmation nor requests application exit. Repeating close while it is hidden changes nothing. This behavior applies only to a managed tab marked as a system shell; ordinary tabs keep destructive close behavior.
+
+A process exit is distinct from a user close. Shell terminal callbacks carry the PTY id captured when
+that terminal attached; the server accepts the report only for the current shell payload with that id,
+after the PTY is no longer live and while the tab is not closing. Valid ordinary-shell exits destructively
+close the tab without quit or unsaved-work confirmation. A valid managed system-shell report calls the
+same idempotent handler used by the server's `pty:exit` event. Stale, live, duplicate, and already-closing
+reports do nothing.
+
+Hidden tabs are not center action or reporting entries and are skipped by `next`, Shift+arrow navigation, and `nav`. Passive selection repair, reorder, notifications, and background work never reveal a hidden tab. Explicit focus does. A hidden docked plugin stays in its sidebar placement and remains mounted but inactive; the sidebar frame disappears if no visible docked entry remains. If no center tab can be selected, the active index is `-1`, the secondary selection is empty, and the app remains open. A later destructive owner action or application shutdown still releases the hidden tab's resources.
+
+When the server observes the managed system shell's PTY exit, it broadcasts that exit before recovery begins, hides the same tab, and removes only its tab-owned schedules and hooks. It replaces the PTY through the shell plugin while preserving the tab's identity, placement, focus, and queue. The exited PTY's recording and text transcript finish normally. A failed replacement leaves the tab hidden and permits a later explicit ensure retry; it does not retry automatically. This server-observed process exit does not use the user-close path, which only hides the managed tab.
+
 
 ### `close` command
+
+The managed hidden `system` shell does not count as a remaining user tab for the last-tab quit check. Closing the last visible, non-docked user tab therefore quits even when the managed system shell is still present; a user close of the system shell itself only hides it (see "Hidden system tab lifecycle" above).
 
 Closes the current tab and all of its associated connections — its shell, ACP session, browser, harness terminal, and scheduled timers — removes any workspace clone and its in-memory tab state, and restores focus to whichever tab was focused immediately before the closed one became active. If that tab no longer exists (it was closed too, or is now docked into a sidebar) or was never recorded, focus falls back to the nearest adjacent tab. While more than one tab is open, `close` (or its alias `exit`) only closes tabs — exiting the app is `quit`, which asks for confirmation first (see `quit-confirmation.md`). **Closing the last remaining non-docked tab quits the app**: it behaves exactly like `quit`, whether the close came from the command, the tab strip's × button, the Cmd+W / Ctrl+W keyboard shortcut, or the tab's process exiting. Sidebar-docked tabs do not count toward this check — the app quits when the central tab strip has no tabs left, regardless of what is docked. Closing a docked tab never quits the app and never opens the quit confirmation, even when only one non-docked tab remains. When a typed `close`/`exit` would quit — bare on the last tab, or `close <name>` naming it — the quit confirmation dialog is shown first, same as typing `quit`; a process exit quits directly. `close <name>` (or `exit <name>`) closes the tab whose label or display alias (see "Tab display alias" above) matches the given name instead of the active one; the match is case-insensitive, and the first tab in the strip that matches is closed, the same rule `send` and `queue` use. This is how a view tab that authors no label of its own — an embedded page, an image — is closed from elsewhere, since each carries a name like `page`, `page-2`, or `image`. If no tab with that name exists, an error is reported. Typing `close <partial>` (or `exit <partial>`) tab-completes the name against every open tab's label. A close made in the window — a tab strip or sidebar ×, a docked plugin tab's close control, Cmd+W / Ctrl+W, or the save-changes dialog — names the tab it was made on by its exact label, and the server looks that label up when the request arrives. A tab opening, closing, or moving elsewhere in the meantime never redirects the close onto a neighbour, and a close for a tab that is already gone does nothing. (Open SQLite connections are global, not tab-scoped, so they are left open — close them with `connection close sqlite:<name>` — except when the last non-docked tab closes, which closes all of them as part of app shutdown.)
 

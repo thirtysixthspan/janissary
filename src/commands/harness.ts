@@ -9,6 +9,8 @@ export const command: Command = {
   // recorded, so nothing is appended ahead of the dialog. Every other `harness …` form runs.
   run: (command_, tab, managers, invocation) => {
     if (command_.trim().toLowerCase() === 'harness') { managers.harness.openLaunchDialog(); return; }
-    runDelegated(command_, tab.label, managers, (input) => managers.harness.run(input), invocation);
+    runDelegated(command_, tab.label, managers, (input) => invocation?.systemSchedule === undefined
+      ? managers.harness.run(input)
+      : managers.harness.run(input, invocation), invocation);
   },
 };

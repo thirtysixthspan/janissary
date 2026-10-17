@@ -24,14 +24,13 @@ const INSTANCE_KEY = 'schedules';
 const TAB_TITLE = 'schedules';
 
 function toPayload(rows: readonly AggregatedScheduleView[]): SchedulesPayload {
-  const entries: ScheduleRow[] = rows.map((row) => ({
-    id: row.id,
-    spec: row.spec,
-    next: row.next,
-    recurring: row.recurring,
-    tab: row.tab,
-    command: row.command,
-  }));
+  const entries: ScheduleRow[] = rows.map((row) => {
+    const entry = {
+      id: row.id, spec: row.spec, next: row.next, recurring: row.recurring,
+      tab: row.tab, command: row.command,
+    };
+    return row.owner === 'system' ? { ...entry, owner: 'system' as const, key: row.key } : entry;
+  });
   return { entries };
 }
 
@@ -59,23 +58,27 @@ export function activate(): TabPluginActivation {
       clear: {
         payload: isEmptyIntent,
         run: (_tab, _payload: Record<string, never>, capabilities) => {
-          capabilities.topicAction({ topic: 'schedules', action: 'clear' });
+          const error = capabilities.topicAction({ topic: 'schedules', action: 'clear' });
+          if (error) capabilities.rejectRequest(error);
           return null;
         },
       },
       cancel: {
         payload: isCancelIntent,
         run: (_tab, payload: CancelIntent, capabilities) => {
-          capabilities.topicAction({
-            topic: 'schedules', action: 'cancel', tab: payload.tab, id: payload.id,
-          });
+          const error = capabilities.topicAction(payload.owner === 'system'
+            ? { topic: 'schedules', action: 'cancel', ...payload }
+            : { topic: 'schedules', action: 'cancel', tab: payload.tab, id: payload.id });
+          if (error) capabilities.rejectRequest(error);
           return null;
         },
       },
       'focus-owner': {
         payload: isFocusOwnerIntent,
         run: (_tab, payload: FocusOwnerIntent, capabilities) => {
-          capabilities.topicAction({ topic: 'schedules', action: 'focusOwner', tab: payload.tab });
+          capabilities.topicAction(payload.owner === 'system'
+            ? { topic: 'schedules', action: 'focusOwner', ...payload }
+            : { topic: 'schedules', action: 'focusOwner', tab: payload.tab });
           return null;
         },
       },

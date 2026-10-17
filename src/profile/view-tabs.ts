@@ -126,7 +126,7 @@ function closeMatching(managers: Managers, target: ViewTarget, notes: string[]):
 // Compared by label rather than by object: an open rebuilds the tab records it moves.
 function openedTab(managers: Managers, target: ViewTarget, before: ReadonlySet<string>): Tab | undefined {
   return managers.tab.tabs.find((t) => target.matches(t) && !before.has(t.label))
-    ?? managers.tab.tabs.find((t) => target.matches(t));
+    ?? managers.tab.tabs.find((t) => target.matches(t) && t.systemShell !== true && t.label !== 'janus');
 }
 
 export async function openProfileViewTabs(

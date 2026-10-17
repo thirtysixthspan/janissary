@@ -5,6 +5,20 @@ import type { Managers } from '../managers.js';
 import type { Tab } from './types.js';
 
 describe('buildTabView', () => {
+  it('broadcasts lifecycle markers only while they are true', () => {
+    const tab = makeTab('system', '#fff');
+    tab.hidden = true;
+    tab.systemShell = true;
+    const hidden = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+    expect(hidden).toMatchObject({ hidden: true, systemShell: true });
+
+    delete tab.hidden;
+    delete tab.systemShell;
+    const visible = buildTabView(tab, false, '/tmp', undefined, [], [], [], (p) => p);
+    expect('hidden' in visible).toBe(false);
+    expect('systemShell' in visible).toBe(false);
+  });
+
   it('projects completed background replies with stable IDs and excludes ordinary or unfinished entries', () => {
     const tab = makeTab('shell', '#fff');
     tab.log = [{ input: '', output: 'ordinary' }, { input: '', output: 'pending', background: 'pending', running: true }, { input: '', output: 'suggestion', background: 'finished' }];

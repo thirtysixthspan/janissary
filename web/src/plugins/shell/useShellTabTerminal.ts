@@ -1,6 +1,6 @@
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { useShellTerminal, type ShellTerminalHandle } from './useShellTerminal';
+import { useShellTerminal } from './useShellTerminal';
 import { reportShellCwd } from './report-shell-cwd';
 import { reportShellIntentFailure } from './report-shell-intent-failure';
 
@@ -17,7 +17,7 @@ type Options = {
 // ref, so none of these needs a stable identity.
 export function useShellTabTerminal({
   payload, capabilities, containerRef, onCommand, onCommandRunning,
-}: Options): ShellTerminalHandle {
+}: Options) {
   return useShellTerminal({
     ptyId: payload.ptyId,
     ...(payload.provisioning && { connectPtyId: payload.connectPtyId }),
@@ -37,16 +37,16 @@ export function useShellTabTerminal({
     onCwd: (cwd) => { reportShellCwd(capabilities, cwd); },
     // The tab closes when the shell exits: no exited state and no way to start another, so a closed
     // tab is the honest representation of a shell that is no longer running.
-    onExit: () => {
+    onExit: (ptyId) => {
       if (payload.provisioning) return;
       if (payload.host && !payload.prompted) {
         void capabilities.intent('exited-early', null).then(
-          () => { capabilities.close(); },
-          () => { capabilities.close(); },
+          () => { capabilities.close({ terminalExited: ptyId }); },
+          () => { capabilities.close({ terminalExited: ptyId }); },
         );
         return;
       }
-      capabilities.close();
+      capabilities.close({ terminalExited: ptyId });
     },
   });
 }

@@ -8,7 +8,7 @@ export type BaseCenterActionAreaProps = {
   activeTab: number;
   secondaryTab?: number;
   client: JanusClient;
-  closeTab: (index: number) => void;
+  closeTab: (index: number, reason?: { terminalExited: string }) => void;
   tabNameMaxLength: number;
   activeTabNameMaxLength: number;
   onFocusCommandBar: () => void;

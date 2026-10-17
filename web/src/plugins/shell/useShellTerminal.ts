@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import {
@@ -39,7 +39,7 @@ type Options = {
   onCommand?: (command: string) => void;
   // Called when the shell behind this terminal exits. A plugin tab has nowhere else to hear it: the
   // event is broadcast once, to whoever happened to be connected at the time.
-  onExit: () => void;
+  onExit: (ptyId: string) => void;
   // The nonce zsh's startup files installed the hooks with, minted by the server with the shell. Read
   // once, at mount: every mount only attaches, and nothing is ever typed into the shell for it.
   hookNonce: string;
@@ -61,9 +61,10 @@ export type ShellTerminalHandle = {
 
 export function useShellTerminal({
   ptyId, connectPtyId, containerRef, attachTerminal, copyText, reportColors, openLink, onExit, onCommandRunning, onCwd, onCommand, hookNonce,
-}: Options): ShellTerminalHandle {
+}: Options): ShellTerminalHandle & { terminalReady: boolean } {
   const handleRef = useRef<PluginTerminal | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
+  const [attachedPtyId, setAttachedPtyId] = useState<string | null>(null);
   const exitRef = useRef(onExit);
   exitRef.current = onExit;
   const runningRef = useRef(onCommandRunning);
@@ -96,7 +97,7 @@ export function useShellTerminal({
     reportColorsRef.current?.(ptyId, terminalColors());
   }, [ptyId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     const attach = attachRef.current;
     // No container means the body has not been laid out yet, no `attachTerminal` means this plugin
@@ -105,6 +106,7 @@ export function useShellTerminal({
     if (!container || !attach) return;
     const attachId = ptyId ?? connectPtyId;
     if (!attachId) return;
+    setAttachedPtyId(null);
     const shellStarted = ptyId !== undefined;
 
     const styles = getComputedStyle(document.documentElement);
@@ -172,8 +174,9 @@ export function useShellTerminal({
     const onAttached = (handle: PluginTerminal) => {
       if (disposed) { handle.detach(); return; }
       handleRef.current = handle;
+      setAttachedPtyId(attachId);
       terminal.onData((data) => { handleRef.current?.write(data); });
-      handle.onExit(() => { exitRef.current(); });
+      handle.onExit(() => { exitRef.current(attachId); });
       resize();
     };
     const attachment = attach(attachId, (data) => { terminal.write(data); });
@@ -185,6 +188,7 @@ export function useShellTerminal({
 
     return () => {
       disposed = true;
+      setAttachedPtyId(null);
       releasePressFocus();
       observer.disconnect();
       themeObserver.disconnect();
@@ -212,5 +216,8 @@ export function useShellTerminal({
   const scrollLines = useCallback((amount: number) => { terminalRef.current?.scrollLines(amount); }, []);
   const scrollToBottom = useCallback(() => { terminalRef.current?.scrollToBottom(); }, []);
   const rows = useCallback(() => terminalRef.current?.rows ?? 0, []);
-  return { write, display, displayReply, focus, clearSelection, scrollLines, scrollToBottom, rows };
+  return {
+    write, display, displayReply, focus, clearSelection, scrollLines, scrollToBottom, rows,
+    terminalReady: ptyId !== undefined && attachedPtyId === ptyId,
+  };
 }

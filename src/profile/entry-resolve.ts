@@ -17,6 +17,10 @@ export function closeMatchingTabs(
   const toOpen: ProfileHarnessEntry[] = [];
   for (const entry of entries) {
     const label = labelOf(entry);
+    if (label.toLowerCase() === 'system') {
+      skipped.push('system (reserved for the system tab)');
+      continue;
+    }
     if (label.toLowerCase() === issuingLabel.toLowerCase()) {
       skipped.push(`${label} (cannot relaunch the issuing tab)`);
       continue;

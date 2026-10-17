@@ -18,6 +18,10 @@ export type ScheduleParseResult =
   | { action: 'list'; target?: string }
   | { action: 'cancel'; id: string; target?: string }
   | { action: 'clear'; target?: string }
+  | { scope: 'system'; action: 'add'; entry: Omit<ScheduleEntry, 'id'>; name: string; script: string }
+  | { scope: 'system'; action: 'list' }
+  | { scope: 'system'; action: 'cancel'; id: string }
+  | { scope: 'system'; action: 'clear' }
   | { error: string };
 
 // A parsed schedule form before the `schedule` wrapper attaches the timer's name.

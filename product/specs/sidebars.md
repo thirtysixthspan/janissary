@@ -36,9 +36,10 @@ relaunch.
 
 ### Visibility is derived
 
-A sidebar is **not** an independent on/off setting: it renders exactly when some tab is docked to
-it, and disappears the moment that tab is undocked or closed. There is no way to show an empty
-sidebar. A docked tab does **not** prevent the app from quitting — closing the last non-docked
+A sidebar is **not** an independent on/off setting: it renders when it has a visible docked
+entry and disappears when none remain. A hidden system plugin tab keeps its dock placement and body
+mounted but is not a selectable entry; if it is the side's only record, the sidebar frame is hidden
+until that tab is explicitly focused. There is no way to show an empty sidebar. A docked tab does **not** prevent the app from quitting — closing the last non-docked
 tab quits the app, the same as if no sidebar existed.
 
 ### Leaving the strip
@@ -50,7 +51,8 @@ group, the moment it is undocked.
 ### The active-tab invariant
 
 A docked tab is **never the active tab**. Docking the currently active tab moves focus to the
-nearest tab that isn't docked. Undocking a tab back to the center strip makes it active again —
+nearest tab that isn't docked. Explicitly focusing a hidden docked tab reveals and undocks it into
+the focused center pane. Undocking a visible tab back to the center strip makes it active again —
 focusing a docked tab always means bringing it fully into view, which requires undocking it.
 Tab-cycling commands (e.g. switching to the next tab) skip over docked tabs, since they are not
 eligible to become active.

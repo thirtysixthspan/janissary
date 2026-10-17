@@ -9,6 +9,7 @@ import { scheduleView, aggregatedScheduleView } from './views.js';
 import { formatLateDuration } from './display.js';
 import { typeIntoHarness } from '../harness/input.js';
 import { canRunSchedules } from './targets.js';
+import { cachedRunscripts } from '../state/listings.js';
 
 // Independent of `resume-watch.ts`'s own threshold for "the machine was asleep": this one is the
 // user-visible lateness bar `product/specs/scheduling.md` documents as five seconds, and it stays
@@ -46,15 +47,17 @@ export class ScheduleManager {
     messageBus.emit('state', { type: 'dirty' });
   }
 
-  // The launch dialog's target-tab catalog while open, or null when closed: the eligible tab
-  // labels (the same `canRunSchedules` predicate `resolveTargetTab` uses) plus the active tab's
-  // label as the default.
+  // The launch dialog's target and runscript catalogs while open, or null when closed.
   scheduleLaunchView(): ScheduleLaunchView | null {
     if (!this.launchDialogOpen) return null;
     const targets = this.managers.tab.tabs
-      .filter((t) => canRunSchedules(t, this.managers))
+      .filter((t) => !t.systemShell && canRunSchedules(t, this.managers))
       .map((t) => t.label);
-    return { targets, active: this.managers.tab.cur().label };
+    return {
+      targets,
+      active: this.managers.tab.cur().label,
+      runscripts: cachedRunscripts(this.managers.tab.launchDir ?? process.cwd()),
+    };
   }
 
   // The per-entry hooks a caller registered through `add`, keyed by tab and then entry id. Two
@@ -66,6 +69,7 @@ export class ScheduleManager {
 
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
   start(): void {
+    if (this.timer) return;
     this.timer = setInterval(() => this.tick(), 1000);
     this.timer.unref?.();
   }
@@ -73,6 +77,7 @@ export class ScheduleManager {
   // Stop the firing loop (app shutdown).
   stop(): void {
     clearInterval(this.timer);
+    this.timer = undefined;
     this.resumeSubscription.unsubscribe();
   }
 
@@ -156,16 +161,16 @@ export class ScheduleManager {
     return scheduleView(this.schedules, label);
   }
 
-  // Every scheduled entry across all still-open tabs, flattened and sorted soonest-first by the raw
-  // next-run timestamp, then shaped like `view(label)` rows plus the owning tab label and command.
+  // Every scheduled entry across open tabs and the project owner, flattened and sorted by raw time.
   aggregatedView(): AggregatedScheduleView[] {
-    return aggregatedScheduleView(this.schedules, this.managers.tab.tabs);
+    return aggregatedScheduleView(
+      this.schedules, this.managers.tab.tabs, this.managers.systemSchedule.list(),
+    );
   }
 
   // Fire any commands whose next-run time has passed, in every still-open tab. A recurring entry is
   // rescheduled to its next run; a one-shot drops off.
-  private tick(): void {
-    const now = Date.now();
+  tick(now = Date.now()): void {
     let changed = false;
     for (const label of this.managers.tab.allLabels()) {
       const tab = this.managers.tab.byLabel(label);
@@ -177,6 +182,7 @@ export class ScheduleManager {
       changed = true;
     }
     if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
+    this.managers.systemSchedule?.tick(now);
   }
 
   // The named, low-frequency signal a tab plugin may subscribe to: emitted wherever the scheduled

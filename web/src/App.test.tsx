@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TabView, TaskRow } from '@shared/protocol';
+import type { StateEvent, TabView, TaskRow } from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
 import type { JanusClient, LayoutListener, StateListener } from './shared/ws/ws';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
@@ -26,6 +26,7 @@ const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matc
 type EmitState = (
   tabs: TabView[], activeTab: number, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, theme: string, tasks: TaskRow[],
+  scheduleLaunch?: StateEvent['scheduleLaunch'],
 ) => void;
 let stateListener: EmitState | null = null;
 let layoutListener: LayoutListener | null = null;
@@ -39,13 +40,13 @@ const client = {
   registerStateCollector: registerStateCollectorMock,
   saveFile: () => Promise.resolve(undefined),
   onState(listener: StateListener) {
-    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks) => {
+    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks, scheduleLaunch = null) => {
       listener({
         t: 'state', tabs, activeTab: active, tabNameMaxLength: maxLength,
         activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: history,
         syntaxTheme: syntax, theme, tasks,
         profiles: [], projectDir: '/tmp', version: '1.2.3',
-        harnessLaunch: null, scheduleLaunch: null,
+        harnessLaunch: null, scheduleLaunch,
       });
     };
     return () => {};
@@ -95,6 +96,26 @@ describe('App app theme picker', () => {
     expect(screen.getByText('theme', { selector: '.picker-title' })).toBeInTheDocument();
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'Enter' });
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'theme dark' } });
+  }, 15_000);
+});
+
+describe('App schedule launch snapshot', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('opens the dialog on the project target when the managed system shell is active', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => {
+      stateListener!([makeTab({ label: 'system', systemShell: true })], 0, 16, [], 'github-dark', 'dark', [], {
+        targets: [], active: 'system', runscripts: ['deploy'],
+      });
+    });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Schedule target/)).toHaveValue('system');
+    expect(screen.getByLabelText(/Runscript/)).toHaveValue('');
   }, 15_000);
 });
 
@@ -161,6 +182,29 @@ describe('App closing a tab from its button', () => {
     fireEvent.click(screen.getAllByTitle(/close/i)[0]!);
 
     expect(sendMock).not.toHaveBeenCalledWith(expect.objectContaining({ method: 'closeTab' }));
+  }, 15_000);
+
+  it('sends a system tab close directly without quit or unsaved confirmation', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App client={client} />);
+    act(() => { stateListener!([makeTab({ label: 'system', systemShell: true })], 0, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.click(container.querySelector('.tab-close')!);
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'system' } });
+    expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
+    expect(screen.queryByText('You have unsaved changes. Close anyway?')).not.toBeInTheDocument();
+  }, 15_000);
+
+  it.each([{ metaKey: true }, { ctrlKey: true }])('sends a system tab close from its keyboard chord without a dialog', async (modifiers) => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => { stateListener!([makeTab({ label: 'system', systemShell: true })], 0, 16, [], 'github-dark', 'dark', []); });
+
+    fireEvent.keyDown(globalThis as unknown as Window, { key: 'w', ...modifiers });
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'system' } });
+    expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
   }, 15_000);
 });
 
@@ -243,6 +287,43 @@ describe('App closing the last tab', () => {
     fireEvent.click(container.querySelector('.tab-close')!);
     expect(sendMock).toHaveBeenCalledWith({ method: 'closeTab', params: { label: 'one' } });
     expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
+  }, 15_000);
+
+  it('routes typed close for a system tab to the server without opening client confirmation', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => {
+      stateListener!([
+        makeTab({ label: 'janus' }), makeTab({ label: 'system', title: 'review notes', systemShell: true }),
+      ], 1, 16, [], 'github-dark', 'dark', []);
+    });
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'close review notes' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'close review notes' } });
+    expect(screen.queryByText('Are you sure you want to quit?')).not.toBeInTheDocument();
+    expect(screen.queryByText('You have unsaved changes. Close anyway?')).not.toBeInTheDocument();
+  }, 15_000);
+});
+
+describe('App with no visible center selection', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('keeps the hidden system tab body mounted when the only user tab is docked', async () => {
+    const { App } = await import('./App');
+    const { container } = render(<App client={client} />);
+    const docked = makeTab({ label: 'files', view: 'files', dock: 'left', files: { root: '/tmp', absoluteRoot: '/tmp', rows: [] } });
+    const hidden = makeTab({ label: 'system', hidden: true, systemShell: true });
+    act(() => { stateListener!([docked, hidden], -1, 16, [], 'github-dark', 'dark', []); });
+
+    expect(screen.queryByText('Connecting…')).not.toBeInTheDocument();
+    expect(container.querySelector(':scope .app-center .tab-body')).toHaveAttribute('inert');
+    expect(container.querySelector(':scope .app-center .tab-body')).toHaveStyle({ display: 'none' });
+    expect(container.querySelector(':scope .sidebar-left')).toBeInTheDocument();
   }, 15_000);
 });
 

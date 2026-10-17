@@ -59,6 +59,11 @@ describe('closeQuitsApp', () => {
     expect(closeQuitsApp([{}, { view: 'editor' }], 0)).toBe(false);
   });
 
+  it('counts a visible non-docked reporting tab as an ordinary user close target', () => {
+    expect(closeQuitsApp([{ view: 'monitor' }], 0)).toBe(true);
+    expect(closeQuitsApp([{ view: 'monitor' }, { systemShell: true }], 0)).toBe(true);
+  });
+
   it('never quits when the closing tab is docked', () => {
     expect(closeQuitsApp([docked, {}], 0)).toBe(false);
   });
@@ -66,5 +71,21 @@ describe('closeQuitsApp', () => {
   it('does not quit for an index that names no tab', () => {
     expect(closeQuitsApp([{}], 1)).toBe(false);
     expect(closeQuitsApp([{}], -1)).toBe(false);
+  });
+
+  it.each([{}, { hidden: true }, { dock: 'left' }, { hidden: true, dock: 'right' }] as const)('never counts a system record with placement %j', (placement) => {
+    const system: PlacedTab = { ...placement, systemShell: true };
+    expect(closeQuitsApp([system], 0)).toBe(false);
+    expect(closeQuitsApp([system, {}], 1)).toBe(true);
+    expect(closeQuitsApp([system, {}, { view: 'monitor' }], 1)).toBe(false);
+  });
+
+  it('excludes hidden records from navigation and splitting without changing reporting classification', () => {
+    for (const view of VIEWS) {
+      expect(isCenterActionTab({ view, hidden: true })).toBe(false);
+      expect(isSplitEligibleTab({ view, hidden: true })).toBe(false);
+    }
+    expect(isReportingTab({ view: 'monitor', hidden: true })).toBe(true);
+    expect(closeQuitsApp([{}, { hidden: true }], 0)).toBe(true);
   });
 });

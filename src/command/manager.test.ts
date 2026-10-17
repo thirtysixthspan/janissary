@@ -156,6 +156,35 @@ describe('CommandManager dispatchLineWithOutput', () => {
 });
 
 describe('CommandManager structured results', () => {
+  it('captures schedule provenance at dispatch and copies it into child invocation contexts', async () => {
+    const { managers } = makeManagers();
+    let childInvocation: CommandInvocationContext | undefined;
+    const child = {
+      name: 'fixture-schedule-child', match: (input: string) => input === 'fixture-schedule-child',
+      samples: ['fixture-schedule-child'], structuredResult: true as const,
+      run: (_input: string, _tab: unknown, _services: Managers, invocation: CommandInvocationContext) => {
+        childInvocation = invocation;
+        return { response: 'scheduled child' };
+      },
+    };
+    const parent = {
+      name: 'fixture-schedule-parent', match: (input: string) => input === 'fixture-schedule-parent',
+      samples: ['fixture-schedule-parent'], structuredResult: true as const,
+      run: async (_input: string, _tab: unknown, services: Managers, invocation: CommandInvocationContext) =>
+        services.command.dispatchLineInInvocation('janus', 'fixture-schedule-child', invocation),
+    };
+    commands.push(child, parent);
+    try {
+      const provenance = Object.freeze({ kind: 'system-schedule' as const, scheduleKey: 'daily-build' });
+      await managers.command.dispatchQueuedLine('janus', 'fixture-schedule-parent', provenance);
+      expect(childInvocation?.systemSchedule).toEqual(provenance);
+      expect(Object.isFrozen(childInvocation?.systemSchedule)).toBe(true);
+    } finally {
+      commands.splice(commands.indexOf(child), 1);
+      commands.splice(commands.indexOf(parent), 1);
+    }
+  });
+
   it('returns a structured result together with the output it appended', async () => {
     const { managers } = makeManagers();
     const command = {

@@ -177,6 +177,40 @@ describe('parseScheduleCommand', () => {
     expect(parseScheduleCommand('t every 5m', NOW)).toHaveProperty('error');
     expect(parseScheduleCommand('t at notatime echo', NOW)).toHaveProperty('error');
   });
+
+  it.each([
+    ['at 3pm', 'at 3:00pm', false],
+    ['on august 12th', 'on aug 12 at 9:00am', false],
+    ['every 5m', 'every 5m', true],
+    ['every day at 9am', 'every day at 9:00am', true],
+    ['every monday at 9am', 'every monday at 9:00am', true],
+  ])('parses a system %s schedule', (form, spec, recurring) => {
+    const parsed = parseScheduleCommand(`system Build ${form} script deploy`, NOW);
+    expect(parsed).toMatchObject({
+      scope: 'system', action: 'add', name: 'Build', script: 'deploy',
+      entry: { command: 'script deploy', spec, recurring },
+    });
+  });
+
+  it('parses case-insensitive system keywords and management forms', () => {
+    expect(parseScheduleCommand('SYSTEM LiSt', NOW)).toEqual({ scope: 'system', action: 'list' });
+    expect(parseScheduleCommand('system CANCEL deploy', NOW)).toEqual({ scope: 'system', action: 'cancel', id: 'deploy' });
+    expect(parseScheduleCommand('system CLEAR', NOW)).toEqual({ scope: 'system', action: 'clear' });
+  });
+
+  it('uses the system usage message for malformed grammar and invalid script names', () => {
+    const usage = 'Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system clear';
+    for (const line of [
+      'system list extra', 'system cancel', 'system clear extra', 'system deploy at nope script deploy',
+      'system deploy at 3pm', 'system deploy at 3pm script bad_Name', 'system deploy at 3pm script deploy extra',
+      'system deploy every day', 'system deploy on never script deploy',
+    ]) expect(parseScheduleCommand(line, NOW)).toEqual({ error: usage });
+  });
+
+  it('reserves the leading system timer name while keeping `in system` as a tab target', () => {
+    expect(parseScheduleCommand('system every 5m echo hi', NOW)).toHaveProperty('error');
+    expect(parseScheduleCommand('timer in system every 5m echo hi', NOW)).toMatchObject({ action: 'add', name: 'timer', target: 'system' });
+  });
 });
 
 describe('formatSchedule', () => {

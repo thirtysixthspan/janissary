@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { tmpdir } from 'node:os';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { WebSocket } from 'ws';
@@ -12,6 +12,11 @@ import { guardRequest } from './request-boundary.js';
 import { fakeRequest, fakeResponse, loopbackBindable } from './http-test-fixture.js';
 import type { ServerEvent } from './protocol.js';
 import { messageBus } from './bus.js';
+import { ControllerCore } from './controller.js';
+import { TabPluginHost } from './plugins/host.js';
+import { SystemShellManager } from './system-shell.js';
+import { SystemScheduleManager } from './schedule/system/manager.js';
+import { ScheduleManager } from './schedule/manager.js';
 
 const webDir = mkdtempSync(path.join(tmpdir(), 'janus-test-'));
 writeFileSync(path.join(webDir, 'index.html'), '<!DOCTYPE html><html><body></body></html>');
@@ -143,6 +148,111 @@ describe('the static file server', () => {
 });
 
 describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
+  it('waits for shell preparation and recovery before starting the scheduler', async () => {
+    const order: string[] = [];
+    const gate = Promise.withResolvers<{ status: 'failed'; reason: Error }>();
+    const run = vi.spyOn(TabPluginHost.prototype, 'runCommandResult');
+    const ensure = vi.spyOn(SystemShellManager.prototype, 'ensure').mockImplementation(async () => {
+      order.push('ensure-start');
+      const result = await gate.promise;
+      order.push('ensure-finished');
+      return result;
+    });
+    const recover = vi.spyOn(SystemScheduleManager.prototype, 'load').mockImplementation(() => { order.push('recover'); });
+    const start = vi.spyOn(ScheduleManager.prototype, 'start').mockImplementation(() => { order.push('start'); });
+    const tick = vi.spyOn(SystemScheduleManager.prototype, 'tick');
+    const starting = startServer({ webDir, projectDir: tmpdir() });
+
+    try {
+      await waitFor(() => ensure.mock.calls.length === 1);
+      await Promise.resolve();
+      expect(order).toEqual(['ensure-start']);
+      expect(start).not.toHaveBeenCalled();
+      expect(tick).not.toHaveBeenCalled();
+
+      gate.resolve({ status: 'failed', reason: new Error('shell unavailable') });
+      server = await starting;
+
+      expect(order).toEqual(['ensure-start', 'ensure-finished', 'recover', 'start']);
+      expect(server.port).toBeGreaterThan(0);
+      expect(tick).not.toHaveBeenCalled();
+      expect(run.mock.invocationCallOrder[0]).toBeLessThan(ensure.mock.invocationCallOrder[0] ?? Infinity);
+      expect((ensure.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(recover.mock.invocationCallOrder[0] ?? Infinity);
+      expect((recover.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(start.mock.invocationCallOrder[0] ?? Infinity);
+    } finally {
+      gate.resolve({ status: 'failed', reason: new Error('shell unavailable') });
+      run.mockRestore();
+      ensure.mockRestore();
+      recover.mockRestore();
+      start.mockRestore();
+      tick.mockRestore();
+    }
+  });
+
+  it('still reattaches remote sessions and listens when schedule loading and system-shell startup fail', async () => {
+    const projectDir = mkdtempSync(path.join(tmpdir(), 'janus-invalid-schedules-'));
+    const stateDir = path.join(projectDir, '.janissary');
+    mkdirSync(stateDir);
+    writeFileSync(path.join(stateDir, 'system-schedules.json'), '{invalid json');
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const ensure = vi.spyOn(SystemShellManager.prototype, 'ensure').mockResolvedValue({
+      status: 'failed', reason: new Error('system shell unavailable'),
+    });
+    const reattach = vi.spyOn(ControllerCore.prototype, 'reattachSessions');
+    const start = vi.spyOn(ScheduleManager.prototype, 'start');
+
+    try {
+      server = await startServer({ webDir, projectDir });
+
+      expect(server.port).toBeGreaterThan(0);
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining('System schedules could not load:'));
+      expect(ensure).toHaveBeenCalledOnce();
+      expect(start).toHaveBeenCalledOnce();
+      expect(reattach).toHaveBeenCalledOnce();
+      expect((start.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(reattach.mock.invocationCallOrder[0] ?? Infinity);
+    } finally {
+      stderr.mockRestore();
+      ensure.mockRestore();
+      reattach.mockRestore();
+      start.mockRestore();
+    }
+  });
+
+  it('ensures the system shell after janus and still listens and restores sessions on failure', async () => {
+    const order: string[] = [];
+    const runSpy = vi.spyOn(TabPluginHost.prototype, 'runCommandResult');
+    const load = vi.spyOn(SystemScheduleManager.prototype, 'load').mockImplementation(() => { order.push('load'); });
+    const start = vi.spyOn(ScheduleManager.prototype, 'start').mockImplementation(() => { order.push('start'); });
+    const ensure = vi.spyOn(SystemShellManager.prototype, 'ensure').mockImplementation(async () => {
+      order.push('ensure');
+      return { status: 'failed', reason: new Error('system zsh unavailable') };
+    });
+    const reattach = vi.spyOn(ControllerCore.prototype, 'reattachSessions').mockImplementation(function () {
+      order.push('reattach');
+    });
+
+    try {
+      server = await startServer({ webDir, projectDir: tmpdir() });
+
+      expect(server.port).toBeGreaterThan(0);
+      expect(order).toEqual(['ensure', 'load', 'start', 'reattach']);
+      expect(runSpy.mock.invocationCallOrder[0]).toBeLessThan(ensure.mock.invocationCallOrder[0] ?? Infinity);
+      expect((ensure.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(reattach.mock.invocationCallOrder[0] ?? Infinity);
+      expect(runSpy).toHaveBeenCalledOnce();
+      expect(ensure).toHaveBeenCalledOnce();
+      expect(load).toHaveBeenCalledOnce();
+      expect(start).toHaveBeenCalledOnce();
+      expect(reattach).toHaveBeenCalledOnce();
+      expect((start.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(reattach.mock.invocationCallOrder[0] ?? Infinity);
+    } finally {
+      runSpy.mockRestore();
+      load.mockRestore();
+      start.mockRestore();
+      ensure.mockRestore();
+      reattach.mockRestore();
+    }
+  });
+
   it('waits for controller cleanup before closing its listeners', async () => {
     const gate = Promise.withResolvers<void>();
     const shutdown = vi.spyOn(AgentRunManager.prototype, 'dispose').mockImplementation(() => gate.promise);
@@ -233,12 +343,46 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
     ws.on('message', (d) => { events.push(JSON.parse(d.toString())); });
     await new Promise((res, rej) => { ws.on('open', res); ws.on('error', rej); });
 
+    const hasVisibleJanus = (event: ServerEvent): event is Extract<ServerEvent, { t: 'state' }> => {
+      if (event.t !== 'state') return false;
+      return event.tabs.some((tab) => tab.label === 'janus' && !tab.hidden);
+    };
     ws.send(JSON.stringify({ t: 'rpc', id: 1, method: 'init', params: {} }));
-    await waitFor(() => events.some((e) => e.t === 'state' && e.tabs[0]?.label === 'janus'));
+    try {
+      await waitFor(() => events.some((event) => hasVisibleJanus(event)));
+    } catch (error) {
+      const diagnostic = events.map((event) => {
+        if (event.t === 'state') {
+          return {
+            type: event.t,
+            activeTab: event.activeTab,
+            tabs: event.tabs.map(({ label, hidden, systemShell }) => ({ label, hidden, systemShell })),
+          };
+        }
+        if (event.t === 'rpc-reply') {
+          return {
+            type: event.t,
+            status: event.error === undefined ? 'success' : 'error',
+          };
+        }
+        return { type: event.t };
+      });
+      throw new Error(`initial state timeout; observed ${JSON.stringify(diagnostic)}`, { cause: error });
+    }
+    const initial = events.find((event) => hasVisibleJanus(event));
+    expect(initial).toBeDefined();
+    const janusIndex = initial?.tabs.findIndex((tab) => tab.label === 'janus') ?? -1;
+    expect(initial?.tabs[janusIndex]?.hidden).toBeFalsy();
+    expect(initial?.activeTab).toBe(janusIndex);
+    expect(initial?.tabs.find((tab) => tab.label === 'system')).toMatchObject({ hidden: true, systemShell: true });
 
     ws.send(JSON.stringify({ t: 'rpc', id: 2, method: 'command', params: { text: 'help' } }));
     // `help` output is rendered as Markdown (see Controller.runApp), so it arrives as `markdown` lines.
-    await waitFor(() => events.some((e) => e.t === 'state' && e.tabs[0].bufferLines.some((l) => l.type === 'markdown')));
+    await waitFor(() => events.some((event) => {
+      if (event.t !== 'state') return false;
+      const janus = event.tabs.find((tab) => tab.label === 'janus');
+      return janus?.bufferLines.some((line) => line.type === 'markdown') ?? false;
+    }));
     ws.close();
   });
 

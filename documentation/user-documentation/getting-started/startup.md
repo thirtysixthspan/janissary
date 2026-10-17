@@ -13,9 +13,9 @@ from the project directory.
 
 `janus` starts the server in the background and hands your shell prompt straight back once it's ready. The terminal you launched from doesn't need to stay open, and closing it — or pressing `Ctrl+C` in it — no longer stops the app. Use [`janus stop`](#stopping-the-app) to shut it down.
 
-Every launch opens a single zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. Type `shell` in its command bar to open a shell tab. Each launch also starts fresh, with the previous session's logs, recordings, and workspace clones cleared. Remote sessions you left parked are reattached (see [Starting fresh](#starting-fresh) below).
+Every launch opens the visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus`, in the project directory. It also starts one hidden `system` shell in the same directory without a workspace. Use `tab focus system` to reveal it; closing it hides it again. Type `shell` in `janus`'s command bar to open another shell tab. Each launch starts fresh, with the previous session's logs, recordings, and workspace clones cleared. Remote sessions you left parked are reattached (see [Starting fresh](#starting-fresh) below).
 
-If the shell can't be started, the app doesn't start either: the launch fails with `could not open the launch shell` and the reason.
+If the required `janus` shell can't be started, the app doesn't start: the launch fails with `could not open the launch shell` and the reason. If only the hidden `system` shell fails, Janissary continues starting and posts `System shell could not start: <reason>.` in Notifications.
 
 ## Arguments
 
@@ -64,7 +64,7 @@ Closing the app window stops it too. When the last window or browser tab showing
 
 ## Starting fresh
 
-Each launch starts fresh: harness captures, recordings and transcripts, browser logs, Git-failure output, and workspace clones from the previous session are cleared. Local shell and harness tabs, their transcripts and command history, scheduled commands, and every other local tab you had open are gone. The launch opens the same single `janus` shell tab every launch does.
+Each launch starts fresh: harness captures, recordings and transcripts, browser logs, Git-failure output, and workspace clones from the previous session are cleared. Local shell and harness tabs, their transcripts and command history, tab-owned scheduled commands, and every other local tab you had open are gone. Project system schedules persist across launches; see [Project system schedules](/user-documentation/automation/scheduling#project-system-schedules). The launch opens the same single `janus` shell tab every launch does.
 
 Detached remote sessions are the exception. Every launch tries each eligible parked remote session independently and opens its tabs as the host answers: surviving remote shell and harness tabs are restored, and remote agent tabs aren't. Remote shells return on their existing PTYs with their last working directories. A host that refuses the attach or has nothing running is marked terminated; a host that can't be reached stays listed as detached in [Sessions](/user-documentation/tab-types/sessions), with the failure on its row and **Attach** available to try again. One unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for the full restore behavior.
 

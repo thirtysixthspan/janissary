@@ -25,6 +25,12 @@ describe('transcriptIntents', () => {
     expect(send).toHaveBeenCalledWith({ method: 'focusTab', params: { label: 'build' } });
   });
 
+  it('focuses the system tab named by a system schedule notice link', () => {
+    const { send } = fakeClient();
+    transcriptIntents(send).onFocusTab('system');
+    expect(send).toHaveBeenCalledWith({ method: 'focusTab', params: { label: 'system' } });
+  });
+
   it('sends nothing until an intent is invoked', () => {
     const { send } = fakeClient();
     transcriptIntents(send);

@@ -72,6 +72,19 @@ describe('applyDock occupant rule for plugin tabs', () => {
   });
 });
 
+describe('applyDock focus fallback', () => {
+  it('skips hidden records when the active tab is docked', () => {
+    const tabs = [makeTab('active', '#fff'), makeTab('system', '#fff'), makeTab('visible', '#fff')];
+    tabs[1].hidden = true;
+
+    const active = applyDock(tabs, 0, 0, 'left', vi.fn());
+
+    expect(active).toBe(2);
+    expect(tabs[1].hidden).toBe(true);
+    expect(tabs[1].dock).toBeUndefined();
+  });
+});
+
 // Undocking back to the center strip makes the tab the active one, so its unread badge waits out the
 // dwell rather than going with the undock. Docking *into* a sidebar is the opposite case: the tab is
 // now permanently visible chrome that was never selected, so no dwell is coming and the badge is

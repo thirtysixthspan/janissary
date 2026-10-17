@@ -2,6 +2,7 @@ import { listTasks } from '../tasks.js';
 import { listProfileRows } from '../profiles.js';
 import type { TaskRow } from '../tab/types.js';
 import type { ProfileRow } from '../profile/types.js';
+import { catalogRunscripts } from '../schedule/system/runscript-files.js';
 
 // The task and profile listings ride on every state broadcast, which fires on essentially every
 // mutation (each shell or ACP output chunk, each keystroke). Walking the disk each time put several
@@ -23,6 +24,7 @@ function refresh<T>(entry: Entry<T> | undefined, key: string, now: number, compu
 
 let tasks: Entry<TaskRow[]> | undefined;
 let profiles: Entry<ProfileRow[]> | undefined;
+let runscripts: Entry<string[]> | undefined;
 
 export function cachedTasks(projectDir: string, now: () => number = Date.now): TaskRow[] {
   tasks = refresh(tasks, projectDir, now(), () => listTasks(projectDir));
@@ -32,4 +34,15 @@ export function cachedTasks(projectDir: string, now: () => number = Date.now): T
 export function cachedProfileRows(now: () => number = Date.now): ProfileRow[] {
   profiles = refresh(profiles, '', now(), () => listProfileRows());
   return profiles.value;
+}
+
+export function cachedRunscripts(projectDir: string, now: () => number = Date.now): string[] {
+  runscripts = refresh(runscripts, projectDir, now(), () => {
+    try {
+      return catalogRunscripts(projectDir);
+    } catch {
+      return [];
+    }
+  });
+  return runscripts.value;
 }

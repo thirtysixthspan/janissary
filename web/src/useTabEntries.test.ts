@@ -80,6 +80,14 @@ describe('useTabEntries', () => {
     expect(result.current.reportingEntries).toEqual([]);
   });
 
+  it('excludes hidden tabs from both center and reporting entries without shifting wire indices', () => {
+    const tabs = [makeTab({ label: 'hidden', hidden: true }), makeTab({ label: 'visible' }),
+      makeTab({ label: 'hidden-monitor', view: 'monitor', hidden: true }), makeTab({ label: 'monitor', view: 'monitor' })];
+    const { result } = renderHook(() => useTabEntries(tabs));
+    expect(result.current.actionEntries).toEqual([{ tab: tabs[1], index: 1 }]);
+    expect(result.current.reportingEntries).toEqual([{ tab: tabs[3], index: 3 }]);
+  });
+
   it('re-derives when the tabs change', () => {
     const first = [makeTab({ label: 'a' })];
     const { result, rerender } = renderHook(({ tabs }) => useTabEntries(tabs), { initialProps: { tabs: first } });

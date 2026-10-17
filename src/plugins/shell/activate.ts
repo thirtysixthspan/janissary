@@ -7,14 +7,15 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import {
-  isEmptyShellIntent, isShellCommandState, isShellCompleteRequest, isShellCwd, isShellDispatch,
-  isShellPayload,
-  type ShellCommandState, type ShellCompleteRequest, type ShellPayload, type ShellQueuedLine,
+  isEmptyShellIntent, isShellCommandState, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellTerminalStatusRequest,
+  isShellPayload, isShellQueuedCommandRequest,
+  type ShellCommandState, type ShellCompleteRequest, type ShellPayload, type ShellQueuedCommand, type ShellQueuedLine,
 } from './shared.js';
 import { openShellTab } from './open-tab.js';
 import { launchShellTab } from './launch-tab.js';
 import { spawnShell } from './spawn-shell.js';
 import { parseShellArgument } from './parse-argument.js';
+import { restartTerminalIntent } from './restart-terminal.js';
 
 let invocationCounter = 0;
 
@@ -95,8 +96,9 @@ export function activate(): TabPluginActivation {
     intent: defineIntents<
       ShellPayload,
       {
-        'terminal-status': TabPluginIntentEntry<ShellPayload, undefined>;
+        'terminal-status': TabPluginIntentEntry<ShellPayload, { ptyId: string }>;
         'exited-early': TabPluginIntentEntry<ShellPayload, undefined>;
+        'restart-terminal': TabPluginIntentEntry<ShellPayload, { ptyId: string }>;
         sibling: TabPluginIntentEntry<ShellPayload, undefined>;
         'command-state': TabPluginIntentEntry<ShellPayload, ShellCommandState>;
         cwd: TabPluginIntentEntry<ShellPayload, string>;
@@ -105,16 +107,17 @@ export function activate(): TabPluginActivation {
         complete: TabPluginIntentEntry<ShellPayload, ShellCompleteRequest>;
         queue: TabPluginIntentEntry<ShellPayload, string>;
         dequeue: TabPluginIntentEntry<ShellPayload, undefined>;
+        'dequeue-command': TabPluginIntentEntry<ShellPayload, undefined>;
+        'dispatch-command': TabPluginIntentEntry<ShellPayload, { receipt: string; discard?: true }>;
       }
     >('shell', isShellPayload, {
-      // Asked once on mount. A tab whose shell exited while no browser was attached holds the payload
-      // of a process that finished minutes ago and has no way to hear about it: the exit event went to
-      // nobody, and a plugin tab is in-memory only. This is how it finds out and closes.
+      // Asked once for the attachment's captured PTY id. The server echoes its current generation so
+      // a delayed response cannot close a replacement terminal.
       'terminal-status': {
-        payload: isEmptyShellIntent,
+        payload: isShellTerminalStatusRequest,
         run: (tabPayload, _payload, capabilities) => ({
-          // A provisioning shell has no process yet, and must not close itself for want of one.
-          running: tabPayload.ptyId === undefined || capabilities.terminalRunning(tabPayload.ptyId),
+          ptyId: tabPayload.ptyId ?? '',
+          running: _payload.ptyId !== tabPayload.ptyId || capabilities.terminalRunning(_payload.ptyId),
         }),
       },
       'exited-early': {
@@ -129,6 +132,7 @@ export function activate(): TabPluginActivation {
           return { reported: true };
         },
       },
+      'restart-terminal': restartTerminalIntent,
       // ➕ and `Cmd+T`: another shell beside this one, in the same place. A shell still waiting for its
       // clone has no place yet, so it opens nothing.
       sibling: {
@@ -198,6 +202,17 @@ export function activate(): TabPluginActivation {
       dequeue: {
         payload: isEmptyShellIntent,
         run: (_tabPayload, _payload, capabilities): ShellQueuedLine => ({ line: capabilities.nextQueuedLine() }),
+      },
+      'dequeue-command': {
+        payload: isEmptyShellIntent,
+        run: (_tabPayload, _payload, capabilities): ShellQueuedCommand => capabilities.nextQueuedCommand(),
+      },
+      'dispatch-command': {
+        payload: isShellQueuedCommandRequest,
+        run: (_tabPayload, request, capabilities) => capabilities.dispatchQueuedCommand(
+          request.receipt,
+          request.discard ? { discard: true } : undefined,
+        ),
       },
     }),
   };

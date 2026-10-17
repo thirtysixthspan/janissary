@@ -50,7 +50,7 @@ describe('useServerState', () => {
       profiles: [{ name: 'profile', source: 'janissary' }],
       projectDir: '/projects/example', version: '4.5.6',
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'], autoResume: [] },
-      scheduleLaunch: { targets: ['agent'], active: 'agent' },
+      scheduleLaunch: { targets: ['agent'], active: 'agent', runscripts: [] },
     };
     act(() => { client.emitSnapshot(snapshot); });
     expect(setters.setTabs).toHaveBeenCalledWith(snapshot.tabs);

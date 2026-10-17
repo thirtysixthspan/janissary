@@ -59,6 +59,11 @@ describe('recentLabel', () => {
 });
 
 describe('repairPaneSelections', () => {
+  it('clears an unsplit hidden active index when no center action tab remains', () => {
+    const tabs = [tab('system', undefined, { hidden: true, systemShell: true })];
+    expect(repairPaneSelections(tabs, 0)).toEqual({ activeTab: -1, secondaryTabLabel: undefined });
+  });
+
   // Focus has to land somewhere real. When the index it was left pointing at no longer names a
   // center action tab, the first left-pane tab is what the pane split is anchored on.
   it('moves the active index to the first left-pane tab when it names nothing focusable', () => {

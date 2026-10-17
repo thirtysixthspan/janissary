@@ -25,6 +25,7 @@ import { closePluginTabs } from './teardown.js';
 import { noteInOriginTab } from './transcript-note.js';
 import { openPluginSibling, runPluginCommand } from './sibling.js';
 import { reattachPlugin } from './reattach.js';
+import { authorizeRestartIntent } from './restart-intent-authorization.js';
 
 export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
@@ -77,32 +78,33 @@ export class TabPluginHost {
       openerPresentation(id, activation, presentation)(file, capabilities));
   }
 
-  async runCommand(id: string, command: string, origin: PluginFailureOrigin): Promise<void> {
-    await this.runGuarded(id, origin, (activation, capabilities) =>
+  async runCommand(id: string, command: string, origin: PluginFailureOrigin): Promise<void> { await this.runCommandResult(id, command, origin); }
+
+  runCommandResult(id: string, command: string, origin: PluginFailureOrigin): Promise<PluginCallOutcome<void>> {
+    return this.runGuarded(id, origin, (activation, capabilities) =>
       runPluginCommand(id, command, activation, capabilities));
   }
+
+  isPayload(id: string, payload: unknown): boolean { return this.records.get(id)?.activation?.isPayload(payload) ?? false; }
 
   async openSibling(id: string, origin: PluginFailureOrigin): Promise<void> {
     const workspace = this.managers.tab.byLabel(origin.label)?.workspaceDir;
     if (workspace && this.managers.workspace.provisioning(workspace)) return;
-    return this.runGuarded(id, origin, openPluginSibling);
+    await this.runGuarded(id, origin, openPluginSibling);
   }
 
-  runSelectionAction(id: string, action: string, paths: readonly string[], origin: PluginFailureOrigin): Promise<void> {
-    return runPluginSelectionAction(this.requestPort(), id, action, paths, origin);
-  }
+  runSelectionAction(id: string, action: string, paths: readonly string[], origin: PluginFailureOrigin): Promise<void> { return runPluginSelectionAction(this.requestPort(), id, action, paths, origin); }
 
   runDefaultMenuAction(id: string, action: string, selection: string, origin: PluginFailureOrigin): Promise<void> {
     return runPluginDefaultMenuAction(this.requestPort(), id, action, selection, origin);
   }
 
   intent(tabLabel: string, intent: string, payload: unknown): Promise<unknown> {
+    if (intent === 'restart-terminal') authorizeRestartIntent(this.managers.tab.byLabel(tabLabel));
     return runPluginIntent(this.requestPort(), tabLabel, intent, payload);
   }
 
-  clientFailed(tabLabel: string, reason: string): void {
-    reportClientFailure(this.requestPort(), tabLabel, reason);
-  }
+  clientFailed(tabLabel: string, reason: string): void { reportClientFailure(this.requestPort(), tabLabel, reason); }
 
   async reattach(id: string, data: TabPluginReattachRecord, origin: PluginFailureOrigin): Promise<void> {
     const record = this.records.get(id);
@@ -140,15 +142,16 @@ export class TabPluginHost {
     call: (
       activation: TabPluginActivation, capabilities: TabPluginServerCapabilities,
     ) => void | Promise<void>,
-  ): Promise<void> {
+  ): Promise<PluginCallOutcome<void>> {
     const record = this.records.get(id);
     if (!record) throw new Error(`Unknown tab plugin "${id}"`);
     const activation = await this.ensureActive(record, origin);
-    if (!activation) return;
+    if (!activation) return { status: 'failed', error: record.reason ?? `Tab plugin "${id}" did not activate` };
     const outcome = await this.invoke(record, activation, origin,
       (capabilities) => call(activation, capabilities));
     if (outcome.status === 'failed') this.disable(record, outcome.error, origin);
     else if (outcome.status === 'rejected') noteInOriginTab(this.managers, origin, outcome.reason);
+    return outcome;
   }
 
   private invoke<Result>(

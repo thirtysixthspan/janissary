@@ -9,6 +9,7 @@ import { flattenBuffer } from './formatting.js';
 import { remoteFileNavigatorRoot } from './remote-file-navigator-root.js';
 import { remoteFileNavigatorTarget } from './remote-file-navigator-view.js';
 import { tabGroupName } from './groups.js';
+import { queueEntryLine } from '../command-queue/entry.js';
 
 export function buildTabViews(
   tabs: Tab[],
@@ -26,7 +27,7 @@ export function buildTabViews(
       acpLabel(tab.label),
       connectionsFor(tab.label),
       scheduleView(tab.label),
-      tab.runtime?.queue ?? [],
+      tab.runtime?.queue.map((entry) => queueEntryLine(entry)) ?? [],
       shorten,
       managers.questions.pendingFor(tab.label),
       (label) => managers.remote.workspaceOf(label),
@@ -93,6 +94,8 @@ export function buildTabView(
   const queue = queueProjection(tab, declarationOf?.(tab.plugin?.id ?? ''), commandQueue);
   return {
     label: tab.label,
+    ...(tab.hidden && { hidden: true }),
+    ...(tab.systemShell && { systemShell: true }),
     backgroundReplies: tab.log.flatMap((entry) => entry.background && !entry.running ? [{ id: entry.background, output: entry.output }] : []),
     number: tab.number,
     dotColor: tab.dotColor,

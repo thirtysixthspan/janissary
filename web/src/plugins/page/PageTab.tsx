@@ -99,7 +99,7 @@ export function PageTab({
             className="page-close"
             title="Close"
             aria-label="Close tab"
-            onClick={close}
+            onClick={() => close()}
           >
             ×
           </button>

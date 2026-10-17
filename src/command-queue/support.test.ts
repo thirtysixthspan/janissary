@@ -27,6 +27,15 @@ describe('core queue opt-in', () => {
     expect(supportsCommandQueue({ ...makeTab('core-view', '#fff'), hasCommandQueue: true }, [])).toBe(true);
   });
 
+  it('recognizes the receipt capability pair independently of the legacy pair', () => {
+    const receiptDeclaration = {
+      ...declaration, capabilities: ['nextQueuedCommand', 'dispatchQueuedCommand'],
+    } as unknown as TabPluginDeclaration;
+    expect(supportsCommandQueue(queuedTab(), [receiptDeclaration])).toBe(true);
+    expect(declaresCommandQueue({ capabilities: ['nextQueuedCommand'] })).toBe(false);
+    expect(declaresCommandQueue({ capabilities: ['dispatchQueuedCommand'] })).toBe(false);
+  });
+
   it('publishes queue availability and entries only for opted-in tabs', () => {
     const view = (tab: ReturnType<typeof makeTab>, declarations: TabPluginDeclaration[]) => buildTabView(
       tab, false, '/repo', undefined, [], [], ['next'], (path) => path,

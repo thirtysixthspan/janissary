@@ -58,6 +58,9 @@ function declaration(
 function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
   const cancel = vi.fn();
   const clearAll = vi.fn();
+  const cancelByKey = vi.fn(() => ({ ok: true as const }));
+  const clearSystem = vi.fn(() => ({ ok: true as const }));
+  const systemRows: { id: string; key: string }[] = [];
   const setActiveTab = vi.fn();
   const tabs = [{ label: 'janus', log: [] }, { label: 'agent-1', log: [] }];
   const managers = {
@@ -71,6 +74,8 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
     questions: { pendingFor: (): unknown => undefined },
     launchDir: undefined,
     schedule: { aggregatedView: () => rows, cancel, clearAll },
+    systemSchedule: { list: () => systemRows, cancelByKey, clear: clearSystem },
+    systemShell: { ensure: vi.fn(async () => ({ status: 'failed' as const, reason: 'unavailable' })) },
     conversations: {
       view: vi.fn(() => ({ summaries: [], windows: [], models: [] })),
       create: vi.fn(), load: vi.fn(), loadOlder: vi.fn(), send: vi.fn(), cancel: vi.fn(),
@@ -95,7 +100,7 @@ function makeManagers(rows: AggregatedScheduleView[] = ROWS) {
       browseExport: vi.fn(),
     },
   } as unknown as Managers;
-  return { cancel, clearAll, managers, setActiveTab };
+  return { cancel, cancelByKey, clearAll, clearSystem, managers, setActiveTab, systemRows };
 }
 
 function contextFor(
@@ -366,14 +371,61 @@ describe('the schedules topic source', () => {
     expect(readTopicData(managers, 'schedules')).toEqual(ROWS);
   });
 
-  it('routes cancel and clear to the schedule manager', () => {
-    const { cancel, clearAll, managers } = makeManagers();
+  it('routes tab cancel and atomic clear to their schedule owners', () => {
+    const { cancel, clearAll, clearSystem, managers } = makeManagers();
 
     runTopicAction(managers, { topic: 'schedules', action: 'cancel', tab: 'agent-1', id: 'fetch' });
     runTopicAction(managers, { topic: 'schedules', action: 'clear' });
 
     expect(cancel).toHaveBeenCalledWith('agent-1', 'fetch');
+    expect(clearSystem).toHaveBeenCalledOnce();
     expect(clearAll).toHaveBeenCalled();
+  });
+
+  it('cancels one current system key and refuses stale keys or owner mismatches', () => {
+    const systemRow: AggregatedScheduleView = {
+      tab: 'system', id: 'build', spec: 'at 9am', next: 'later', recurring: false,
+      command: 'script build', owner: 'system', key: 'key-a',
+    };
+    const fixture = makeManagers([systemRow]);
+    fixture.systemRows.push({ id: 'build', key: 'key-a' }, { id: 'build', key: 'key-b' });
+
+    runTopicAction(fixture.managers, {
+      topic: 'schedules', action: 'cancel', tab: 'system', id: 'build', owner: 'system', key: 'key-a',
+    });
+    runTopicAction(fixture.managers, {
+      topic: 'schedules', action: 'cancel', tab: 'system', id: 'build', owner: 'system', key: 'stale',
+    });
+    runTopicAction(fixture.managers, {
+      topic: 'schedules', action: 'cancel', tab: 'system', id: 'build',
+    });
+
+    expect(fixture.cancelByKey).toHaveBeenCalledOnce();
+    expect(fixture.cancelByKey).toHaveBeenCalledWith('key-a');
+  });
+
+  it('returns a failed keyed-cancel save without changing the owner', () => {
+    const systemRow: AggregatedScheduleView = {
+      tab: 'system', id: 'build', spec: 'at 9am', next: 'later', recurring: false,
+      command: 'script build', owner: 'system', key: 'key-a',
+    };
+    const fixture = makeManagers([systemRow]);
+    fixture.systemRows.push({ id: 'build', key: 'key-a' });
+    fixture.cancelByKey.mockReturnValue({ ok: false, error: 'could not save system schedules' } as never);
+
+    expect(runTopicAction(fixture.managers, {
+      topic: 'schedules', action: 'cancel', tab: 'system', id: 'build', owner: 'system', key: 'key-a',
+    })).toBe('could not save system schedules');
+    expect(fixture.cancelByKey).toHaveBeenCalledWith('key-a');
+  });
+
+  it('leaves tab schedules unchanged when clearing the system snapshot fails', () => {
+    const fixture = makeManagers();
+    fixture.clearSystem.mockReturnValue({ ok: false, error: 'could not save system schedules' } as never);
+
+    expect(runTopicAction(fixture.managers, { topic: 'schedules', action: 'clear' }))
+      .toBe('could not save system schedules');
+    expect(fixture.clearAll).not.toHaveBeenCalled();
   });
 
   it('focuses the tab a row belongs to', () => {
@@ -403,11 +455,20 @@ describe('the topicData and topicAction capabilities', () => {
   });
 
   it('perform a declared topic\'s named action', () => {
-    const { clearAll, managers } = makeManagers();
+    const { clearAll, clearSystem, managers } = makeManagers();
 
     contextFor(managers).topicAction({ topic: 'schedules', action: 'clear' });
 
     expect(clearAll).toHaveBeenCalled();
+    expect(clearSystem).toHaveBeenCalledOnce();
+  });
+
+  it('returns a schedules persistence error through the topicAction capability', () => {
+    const { clearSystem, managers } = makeManagers();
+    clearSystem.mockReturnValue({ ok: false, error: 'could not save system schedules' } as never);
+
+    expect(contextFor(managers).topicAction({ topic: 'schedules', action: 'clear' }))
+      .toBe('could not save system schedules');
   });
 
   // Reaching for a topic the manifest never named is a plugin-authoring mistake, exactly like using

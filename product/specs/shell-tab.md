@@ -16,6 +16,17 @@ in the first palette colour and the `launch` group (ID 1; see [[tabs]]). It is a
 respect — `exit` closes it, and as the last tab that quits the app — and the application opens it
 through the same plugin as `shell`, from no tab at all.
 
+After `janus` opens, the application attempts a second shell through the same plugin, with label
+`system`, in the project directory and without a workspace. It is marked as the managed system shell
+and hidden immediately, leaving `janus` visible and focused. It is a normal zsh shell tab when
+revealed with `tab focus system`; closing it hides it again. A failure to open this shell posts
+`System shell could not start: <reason>.` in Notifications and does not prevent startup or remote
+session restoration. If the command creates the tab before returning a failure, that attempt's tab
+and local terminal are closed while its original reason is reported; a pre-existing tab named
+`system` is left untouched. The failed attempt leaves no placeholder tab. A later ensure attempt may
+retry; a dead already-managed system shell is left in place for the later lifecycle that owns
+replacement.
+
 The launch shell is the visible tab when the window first appears, and its command bar holds the
 keyboard focus, not its terminal. The first thing typed after launch goes to the `janus` command bar
 without a click. A window that opens without operating-system focus keeps the command bar as its
@@ -86,7 +97,7 @@ gives a light terminal — and they change with the theme, including when the pi
 different one. The padding between the focus line and the terminal text takes the same theme
 background, so no dark strip shows beside the text under a light theme. Harness terminals keep their shared dark terminal colors.
 
-The shell opts into the core [[command-queue]]. Its bar queues while zsh is busy or provisioning; zsh's prompt signals wake the core FIFO service. The core spec owns submission ordering, cross-tab queue delivery, the `queue >` indicator, and popup editing. Shell supplies ordinary command-bar routing and records queued submissions in its own history. Direct terminal input bypasses the queue.
+The shell opts into the core [[command-queue]]. Its bar queues while zsh is busy or provisioning; zsh's prompt signals wake the core FIFO service. The core spec owns submission ordering, cross-tab queue delivery, the `queue >` indicator, and popup editing. Shell supplies ordinary command-bar routing and records queued submissions in its own history. The hidden retained system shell drains while inactive, but waits until its terminal is attached before dequeuing shell-directed work. Structured queue receipts preserve server-owned schedule provenance through application dispatch; shell-first commands and application-intercepted commands discard an unused receipt, while dispatch rejection and consumer cleanup also release it. Direct terminal input bypasses the queue.
 
 An application command that answers with text rather than opening something — `help`, for one — is
 shown in the terminal as a command line, followed by its reply on the next line. The reply is markdown, as
@@ -396,13 +407,24 @@ One tab per `shell` command, always. `shell` twice opens two tabs even in the sa
 stateful and refocusing the first would take its foreground program and its directory away from the
 second.
 
-**The tab closes when the shell exits** — `exit` typed in the terminal, or a shell whose input ends.
-There is no exited state and no way to start a fresh shell in the same tab, so a closed tab is the
-honest representation of a shell that is no longer running. Closing the tab closes the shell the same
-way. A shell that exits while no browser is attached does not leave a tab behind waiting for input
-that can never arrive: the tab asks on its next appearance whether the process is still there, and
-closes if it is not. Closing one shell tab leaves every other shell tab, including the launch `janus`
-tab, visible and usable.
+When an ordinary shell exits, its tab closes; there is no exited state or way to start a fresh shell in
+that tab. A shell that exits while no browser is attached is checked on its next appearance and closes
+if its process has ended. The terminal callback and mount-time status request carry the PTY id captured
+by that attachment. A status reply is actionable only when its echoed id matches and `running` is false,
+so a delayed callback or reply cannot close a replacement generation. A verified exit closes directly,
+including for the last ordinary shell, without quit or unsaved-close confirmation. Closing one ordinary
+shell leaves every other shell tab visible and usable. The server's `pty:exit` event remains the owner of
+managed system-shell recovery; a client report calls the same idempotent `SystemShellManager.handlePtyExit`
+and does not start another recovery path.
+
+The managed `system` shell has a different process-exit lifecycle. When the server observes its PTY
+exit, it sends the original exit event to the client, hides the same tab, removes that tab's schedules,
+and asks the shell plugin to replace its exited PTY with a fresh project-root shell. Its label, alias,
+placement, focus, and queued commands stay with the tab; the old recording and text transcript finish
+through their PTY-exit listeners. The replacement uses a fresh marker nonce. If replacement fails, the
+tab stays hidden with its identity and queue intact and does not retry on its own. A later explicit
+ensure may retry while the shell plugin remains enabled. This process-exit recovery is separate from
+user close: closing the managed tab only hides it and does not restart its shell.
 
 ## Session recording
 

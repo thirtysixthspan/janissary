@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createController, type Controller } from '../controller.js';
 import { openNotificationsTab } from '../notifications/tab.js';
 import { TabPluginHost } from '../plugins/host.js';
+import { SystemShellManager } from '../system-shell.js';
 import { seedRootTab } from '../tab/root-tab-test-fixture.js';
 
 // The external-open path shells out to the OS image viewer; stub it so tests never launch an app.
@@ -41,8 +42,13 @@ describe('createManagers plugin host wiring', () => {
   it('constructs the host before managers that consume plugin contributions', () => {
     const c = makeController();
     expect(c.managers.plugins).toBeInstanceOf(TabPluginHost);
+    expect(c.managers.systemShell).toBeInstanceOf(SystemShellManager);
     expect(Object.keys(c.managers).indexOf('plugins'))
       .toBeLessThan(Object.keys(c.managers).indexOf('openFile'));
+    expect(Object.keys(c.managers).indexOf('plugins'))
+      .toBeLessThan(Object.keys(c.managers).indexOf('systemShell'));
+    expect(Object.keys(c.managers).indexOf('pty'))
+      .toBeLessThan(Object.keys(c.managers).indexOf('systemShell'));
     c.shutdown();
   });
 

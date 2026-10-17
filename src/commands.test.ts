@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { availableCommands, getOutput } from './commands.js';
 import { commands, findCommand } from './commands/index.js';
 import { findPriorityConflicts } from './commands/priority.js';
+import { resolveCommand } from './resolve.js';
 
 function helpText(): string {
   const result = getOutput('help');
@@ -17,7 +18,7 @@ describe('availableCommands', () => {
 
   // Derived from the registry now. The hand-written list it replaced omitted these outright, which
   // is the drift that made a second list worth deleting rather than correcting.
-  it.each([['open'], ['edit'], ['queue'], ['rename'], ['profile'], ['monitor'], ['theme']])(
+  it.each([['open'], ['edit'], ['execute'], ['queue'], ['rename'], ['profile'], ['monitor'], ['tab'], ['theme']])(
     'includes %s, which the hand-written list omitted',
     (name) => { expect(availableCommands).toContain(name); },
   );
@@ -66,6 +67,12 @@ describe('findCommand fallback', () => {
   });
 });
 
+describe('execute command routing', () => {
+  it('routes execute case-insensitively through the registry', () => {
+    expect(resolveCommand('ExEcUtE deploy')).toEqual({ kind: 'app', name: 'execute', cmd: 'ExEcUtE deploy' });
+  });
+});
+
 describe('getOutput("help")', () => {
   it('documents the queue command', () => {
     expect(helpText()).toContain('`queue`');
@@ -78,6 +85,10 @@ describe('getOutput("help")', () => {
 
   it('documents the Ctrl+G tab-navigator key binding', () => {
     expect(helpText()).toContain('Ctrl+G');
+  });
+
+  it('documents explicit tab focus in the command table', () => {
+    expect(helpText()).toContain('`tab focus <name>`');
   });
 });
 

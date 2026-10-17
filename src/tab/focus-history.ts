@@ -3,13 +3,15 @@
 // operations on the `tabs`/`focusHistory` state; TabManager owns the state itself.
 
 import type { Tab } from './types.js';
+import { isCenterActionTab } from './placement.js';
 
 // Records that `activeTab` is about to stop being active in favor of `newIndex`, so closing
 // `newIndex` later can restore focus to it. No-ops (returns `focusHistory` unchanged) if
 // `newIndex` is already active.
 export function recordLeavingActiveTab(tabs: Tab[], activeTab: number, focusHistory: string[], newIndex: number): string[] {
   if (newIndex === activeTab) return focusHistory;
-  const leaving = tabs[activeTab]?.label;
+  const active = tabs[activeTab];
+  const leaving = active && isCenterActionTab(active) ? active.label : undefined;
   if (!leaving) return focusHistory;
   return [...focusHistory.filter((l) => l !== leaving), leaving];
 }
@@ -18,13 +20,13 @@ export function recordLeavingActiveTab(tabs: Tab[], activeTab: number, focusHist
 // discarding any stale entries (closed or since-docked tabs) along the way. Returns the resolved
 // tab index (or `undefined` if none remain) and the history with all consumed entries removed.
 export function popFocusHistory(
-  tabs: Tab[], focusHistory: string[], eligible: (tab: Tab) => boolean = (tab) => !tab.dock,
+  tabs: Tab[], focusHistory: string[], eligible: (tab: Tab) => boolean = isCenterActionTab,
 ): { index: number | undefined; history: string[] } {
   const history = [...focusHistory];
   while (history.length > 0) {
     const label = history.pop();
     const index = tabs.findIndex((t) => t.label === label);
-    if (index !== -1 && eligible(tabs[index])) return { index, history };
+    if (index !== -1 && !tabs[index].hidden && eligible(tabs[index])) return { index, history };
   }
   return { index: undefined, history };
 }

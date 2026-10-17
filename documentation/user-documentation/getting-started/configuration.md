@@ -28,9 +28,10 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | `syntaxTheme` | `"github-dark"` | Syntax highlighting for every editor and diff tab. Set it with [`syntax theme`](/user-documentation/command-bar/commands#syntax-theme). |
 | `theme` | `"dark"` | Colors for the app window. Set it with [`theme`](/user-documentation/command-bar/commands#theme). |
 | `notifications.events.stateChange` | `false` | Adds background agent-finished events to the notifications feed. |
-| `notifications.events.scheduleFire` | `false` | Adds scheduled-command events to the feed. |
+| `notifications.events.scheduleFire` | `false` | Adds tab-owned scheduled-command events to the feed. |
 | `notifications.events.agentStart` | `false` | Adds background agent-start events to the feed. |
 | `notifications.events.rateLimited` | `false` | Adds background model rate-limit events to the feed. |
+| `notifications.events.systemScheduleFire` | `true` | Adds system schedule firing, missed-run, missing-runscript, and shell-start failure notices. |
 | `osNotifications` | `true` | Allows eligible explicit notifications to use desktop banners when the browser has permission. Janissary does not request permission. |
 | `terminalBell` | `true` | Plays sound cues for eligible explicit notifications. Browser autoplay restrictions can block playback before you interact with the page. |
 | `terminalBellVolumeSuccess` | `0.8` | Volume from `0` to `1` for success cues. |
@@ -43,7 +44,7 @@ Keep only the settings you want to change. Any setting you leave out uses its de
 | `externalViewers` | `{ "video": "QuickTime Player" }` | macOS application names used by external file viewers. An empty or missing entry uses the operating system's default. Setting this map replaces the defaults. See [Opening files and pages](/user-documentation/tab-types/opening-files#opening-outside-the-app-open-external). |
 | `pluginSettings` | `{}` | Preferences saved by tab plugins. Each plugin owns its entry; the search tab stores its search toggles here. |
 
-The `notifications` object can also be left out. Each missing or invalid event toggle defaults to `false`; an event must be enabled explicitly. These toggles control background events, not manual notifications or diagnostics. See [Notifications](/user-documentation/tab-types/notifications) for delivery behavior.
+The `notifications` object can also be left out. Missing or invalid ambient event toggles default to `false`; `systemScheduleFire` defaults to `true`, including in older partial configs. Set it to `false` if you don't want system schedule notices. These toggles control the listed notification events. Manual notifications and other diagnostics do not use them. See [Notifications](/user-documentation/tab-types/notifications) for delivery behavior.
 
 ## Editing and validation
 

@@ -5,11 +5,16 @@ import type { ScheduleRow } from '@shared/plugins/schedules/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { SchedulesTab } from './SchedulesTab';
 
-function row(overrides: Partial<ScheduleRow> = {}): ScheduleRow {
-  return {
+function row(
+  overrides: Partial<Omit<ScheduleRow, 'owner' | 'key'>> & { owner?: 'system'; key?: string } = {},
+): ScheduleRow {
+  const fields: Omit<ScheduleRow, 'owner' | 'key'> = {
     id: 'fetch', spec: 'every 5m', next: 'Jan 1 3:00pm', recurring: false,
     tab: 'agent-1', command: 'echo hi', ...overrides,
   };
+  return overrides.owner === 'system'
+    ? { ...fields, owner: 'system', key: overrides.key ?? 'system-key' }
+    : fields;
 }
 
 function makeCapabilities(dock: 'left' | 'right' | null = null, onSplit?: () => void) {
@@ -138,5 +143,28 @@ describe('SchedulesTab', () => {
     fireEvent.keyDown(list, { key: 'Backspace' });
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(intent).toHaveBeenCalledWith('cancel', { tab: 'agent-1', id: 'fetch' });
+  });
+
+  it.each([null, 'left'] as const)('uses owner keys for duplicate system rows in %s mode', (dock) => {
+    const entries = [
+      row({ id: 'build', tab: 'system', command: 'script build', owner: 'system', key: 'first' }),
+      row({ id: 'build', tab: 'system', command: 'script build', owner: 'system', key: 'second' }),
+    ];
+    const { container, intent } = renderTab(entries, dock);
+    const list = container.querySelector('.schedules-tab')!;
+    const renderedRows = container.querySelectorAll('.schedules-row');
+    expect(renderedRows).toHaveLength(2);
+
+    fireEvent.doubleClick(renderedRows[1]!);
+    expect(intent).toHaveBeenCalledWith('focus-owner', {
+      tab: 'system', owner: 'system', key: 'second',
+    });
+
+    fireEvent.click(renderedRows[1]!);
+    fireEvent.keyDown(list, { key: 'Delete' });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(intent).toHaveBeenLastCalledWith('cancel', {
+      tab: 'system', owner: 'system', key: 'second', id: 'build',
+    });
   });
 });

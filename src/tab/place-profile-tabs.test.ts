@@ -56,7 +56,7 @@ describe('resolveProfileTabFocus', () => {
   });
 
   it('makes the left candidate secondary when the active tab is already on the right', () => {
-    const tabs = [tab('right', { pane: 'right' })];
+    const tabs = [tab('right', { pane: 'right' }), tab('left')];
     const result = resolveProfileTabFocus(
       tabs, 0, [{ label: 'left' }],
       (label) => tabs.findIndex((item) => item.label === label),
@@ -74,7 +74,7 @@ describe('resolveProfileTabFocus', () => {
   });
 
   it('makes the right candidate secondary when the active tab is not on the right', () => {
-    const tabs = [tab('left')];
+    const tabs = [tab('left'), tab('right', { pane: 'right' })];
     const result = resolveProfileTabFocus(
       tabs, 0, [{ label: 'right', pane: 'right' }],
       (label) => tabs.findIndex((item) => item.label === label),
@@ -86,5 +86,10 @@ describe('resolveProfileTabFocus', () => {
     const tabs = [tab('left')];
     const result = resolveProfileTabFocus(tabs, 0, [], (label) => tabs.findIndex((item) => item.label === label));
     expect(result).toEqual({});
+  });
+
+  it('ignores missing, hidden, docked and reporting focus candidates', () => {
+    const tabs = [tab('hidden', { hidden: true }), tab('docked', { dock: 'left' }), tab('report', { view: 'monitor' })];
+    expect(resolveProfileTabFocus(tabs, -1, [...tabs.map(({ label }) => ({ label })), { label: 'missing' }], () => -1)).toEqual({});
   });
 });

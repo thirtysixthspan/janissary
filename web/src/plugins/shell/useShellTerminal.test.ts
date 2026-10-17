@@ -195,6 +195,7 @@ describe('useShellTerminal', () => {
   it('writes what the tab sends through its handle', () => {
     const { result, written } = harness();
 
+    expect(result.current.terminalReady).toBe(true);
     act(() => { result.current.write('ls -la\n'); });
 
     expect(written.at(-1)).toBe('ls -la\n');

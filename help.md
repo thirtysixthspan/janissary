@@ -13,7 +13,8 @@
 | `conversations` | Open the conversation list; `conversations left`/`right` docks it, and `conversations <title>` opens a saved conversation by title, ignoring case |
 | `db` | Create, delete, query, or list SQLite databases |
 | `diff` | `diff` opens the diff tab on the project's changes versus HEAD; `diff <path>` scopes it to that path's changes; `diff on <tab name>` opens that tab's workspace diff |
-| `edit` | Open a file for editing (`edit <file>` or `edit <file>:<line>` to jump to a line) — the plain-text editor for most files, the image editor for an image, the PDF viewer for a PDF |
+| `edit` | Open a file for editing (`edit <file>[:line]`); a bare existing runscript name opens it when no exact file exists |
+| `execute` | Run an existing project runscript immediately in the managed system shell (`execute <name>`) |
 | `files` | `files [path]` opens a navigator here; `files <path> in <label>` targets another tab. Remote paths use that host's workspace. Add `with <name\|size\|modified\|permissions>` to choose a detail column |
 | `harness` | Open an AI coding harness with a disposable workspace and browser. Use `--no-workspace`, `--no-browser`, `--no-auto-approve`, or `--no-auto-resume` to opt out; `capture <name>` saves a screen |
 | `help` | List available commands; `help <section>` shows one section, such as `help commands` or `help shell` |
@@ -37,7 +38,7 @@
 | `quit` | Exit the application (asks for confirmation); `/quit` is equivalent |
 | `rename` | Rename the current tab's display name (`rename <name>`); bare `rename` clears the alias |
 | `roles` | Open the roles tab, where named roles map to an ordered list of harness/model/effort choices in `roles.json`; bare `roles` only |
-| `schedule` | Run a command later — once or on a recurring schedule |
+| `schedule` | Run a tab command later with `schedule <name> <form> <command>`, or manage project runscripts with `schedule system <name> <form> script <name>` |
 | `schedules` | Open the aggregated, view-only tab listing every scheduled command across all tabs, through the bundled schedules tab plugin (`schedules left`/`right` to dock it) |
 | `search` | `search` opens project search; `search <phrase>` searches for a phrase. Use `search transcript <pattern>` to search this tab's transcript with a case-insensitive regex |
 | `send` | Deliver a line to a harness, or submit it through a shell tab's command bar — application commands run in the app and unclaimed lines go to zsh |
@@ -46,6 +47,7 @@
 | `sql` | `sql [<name>]` opens a database browser with table filtering, sorting, paging, editing, export, and a SQL console. Bare `sql` opens the most recently used database; add `left` or `right` to dock it |
 | `ssh` | Open an SSH session to a remote host in a full-tab terminal |
 | `syntax` | `syntax theme <name>` sets the syntax-highlighting theme for every open editor and diff tab; `syntax theme` alone opens a theme-picker modal |
+| `tab focus <name>` | Focus the first tab matching its label or alias; explicitly reveals a hidden system tab |
 | `tasks` | Open the task picker listing executable `ai/tasks/*.md` files from the project and Janissary (Ctrl+A) |
 | `theme` | Set the application UI theme (`theme <name>`); `theme` alone opens a theme-picker modal; `theme sync` sets the syntax theme to match the app theme name |
 | `unmonitor` | Stop a monitor by name, remove one target (`unmonitor <name> <target>`), or stop all monitors started from this tab (`--all`) |
@@ -77,7 +79,7 @@ Both `shell` and `harness` launches accept `in group <name|id>` to join an exist
 | --- | ------ |
 | `←` / `→` | Move cursor in the input field |
 | `↑` / `↓` | Previous / next command in history |
-| `Tab` | Complete a file path, a tab label for `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, or a `monitor` persona / monitor name / target |
+| `Tab` | Complete a file path, a tab label for `send` / `queue` / `close`, a connection string for `connection close`, a `browser` subcommand / window id, a `monitor` persona / monitor name / target, or the `schedule system` grammar, runscript names, and system schedule names |
 | `Enter` | Execute the current command |
 | `Ctrl+E` | Open the queue picker for a shell or another tab with a queue and command bar (no-op on tabs without queues) |
 | `Ctrl+T` | Expand / collapse ACP tool steps in the response panel |

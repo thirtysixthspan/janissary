@@ -100,6 +100,16 @@ const factory = (_resources: object, start: { label: string; cwd: string; connec
 const ready = vi.fn();
 
 describe('launchRemotePluginTab', () => {
+  it.each([false, true])('refuses reserved names before remote allocation or join (join=%s)', (join) => {
+    const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' }, workspaceDir: '/remote/work' });
+    const request: TabPluginLaunchRequest = { name: 'SyStEm', remote: join ? { join: true } : { address: 'devbox' } };
+    expect(launchRemotePluginTab(h.input, 'fixture', request, factory, ready)).toBeUndefined();
+    expect(h.managers.remote.create).not.toHaveBeenCalled();
+    expect(h.managers.remote.attach).not.toHaveBeenCalled();
+    expect(h.opened).toEqual([]);
+    expect(notify).toHaveBeenCalledWith(h.managers, 'launch-refused', 'janus', 'Cannot use "system": that name is reserved for the system tab.');
+  });
+
   it('refuses a join while its remote workspace is provisioning', () => {
     const h = harness({ sourceRemote: { address: 'devbox', host: 'devbox' } });
 

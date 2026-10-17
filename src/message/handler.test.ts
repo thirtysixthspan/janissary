@@ -153,7 +153,7 @@ describe('handle', () => {
   it('routes closeTab', () => {
     const controller = makeController();
     dispatchCall(controller, 2, { method: 'closeTab', params: { label: 'build' } });
-    expect(controller.closeTab).toHaveBeenCalledWith('build');
+    expect(controller.closeTab).toHaveBeenCalledWith('build', undefined);
   });
 
   it('routes renameTab', () => {

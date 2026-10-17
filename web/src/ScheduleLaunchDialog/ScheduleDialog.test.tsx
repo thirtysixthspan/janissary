@@ -4,14 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { JanusClient } from '../shared/ws/ws';
 import { ScheduleDialog, resetScheduleDialogMemory } from './ScheduleDialog';
 
-const view = { targets: ['janus', 'claude'], active: 'janus' };
+const view = { targets: ['janus', 'claude'], active: 'janus', runscripts: ['deploy', 'cleanup'] };
 
 function makeClient() {
   const send = vi.fn();
   return { client: { send } as unknown as JanusClient, send };
 }
 
-function renderDialog(customView: { targets: string[]; active: string } = view) {
+function renderDialog(customView: { targets: string[]; active: string; runscripts: string[] } = view) {
   const { client, send } = makeClient();
   const utils = render(<ScheduleDialog view={customView} client={client} />);
   return { ...utils, send };
@@ -29,8 +29,8 @@ describe('ScheduleDialog', () => {
   it('renders a target option per delivered tab, defaulting to the active tab', () => {
     const { container } = renderDialog();
     const targetSelect = [...container.querySelectorAll('select')][0] as HTMLSelectElement;
-    expect([...targetSelect.querySelectorAll('option')].map((o) => o.value)).toEqual(['janus', 'claude']);
-    expect(targetSelect.value).toBe('janus');
+    expect([...targetSelect.querySelectorAll('option')].map((o) => o.value)).toEqual(['system', 'tab:janus', 'tab:claude']);
+    expect(targetSelect.value).toBe('tab:janus');
   });
 
   it('shows the date field only for the `on` type', () => {
@@ -80,7 +80,7 @@ describe('ScheduleDialog', () => {
     fireEvent.change(getByLabelText('Name'), { target: { value: 'fetch' } });
     fireEvent.change(getByLabelText('Command'), { target: { value: 'echo hi' } });
     fireEvent.change(getByLabelText(/Time/), { target: { value: '3pm' } });
-    fireEvent.change(getByLabelText(/Target tab/), { target: { value: 'claude' } });
+    fireEvent.change(getByLabelText(/Schedule target/), { target: { value: 'tab:claude' } });
     fireEvent.click(getByText('Schedule'));
     expect(send).toHaveBeenNthCalledWith(1, command('schedule fetch in claude at 3pm echo hi'));
   });
@@ -125,12 +125,96 @@ describe('ScheduleDialog', () => {
   it('restores the previous selections when reopened within the run', () => {
     const first = renderDialog();
     fireEvent.change(first.getByLabelText('Name'), { target: { value: 'fetch' } });
-    fireEvent.change(first.getByLabelText(/Target tab/), { target: { value: 'claude' } });
+    fireEvent.change(first.getByLabelText(/Schedule target/), { target: { value: 'tab:claude' } });
     first.unmount();
 
     const second = renderDialog();
     expect((second.getByLabelText('Name') as HTMLInputElement).value).toBe('fetch');
-    expect((second.getByLabelText(/Target tab/) as HTMLSelectElement).value).toBe('claude');
+    expect((second.getByLabelText(/Schedule target/) as HTMLSelectElement).value).toBe('tab:claude');
+  });
+
+  it('defaults to project ownership when opened from the managed system shell', () => {
+    const { getByLabelText } = renderDialog({ ...view, active: 'system' });
+    expect((getByLabelText(/Schedule target/) as HTMLSelectElement).value).toBe('system');
+  });
+
+  it('submits a system schedule through the command RPC and closes after it', () => {
+    const { getByText, getByLabelText, send } = renderDialog();
+    fireEvent.change(getByLabelText('Name'), { target: { value: 'deploy' } });
+    fireEvent.change(getByLabelText(/Schedule target/), { target: { value: 'system' } });
+    fireEvent.change(getByLabelText(/Runscript/), { target: { value: 'deploy' } });
+    fireEvent.change(getByLabelText(/Time/), { target: { value: '3pm' } });
+    fireEvent.click(getByText('Schedule'));
+    expect(send).toHaveBeenNthCalledWith(1, command('schedule system deploy at 3pm script deploy'));
+    expect(send).toHaveBeenNthCalledWith(2, CLOSE);
+  });
+
+  it('offers only the runscript names supplied in the launch snapshot', () => {
+    const { getByLabelText } = renderDialog();
+    fireEvent.change(getByLabelText(/Schedule target/), { target: { value: 'system' } });
+    const scripts = getByLabelText(/Runscript/) as HTMLSelectElement;
+    expect([...scripts.options].map((option) => option.value)).toEqual(['', 'deploy', 'cleanup']);
+  });
+
+  it('shows an accessible empty runscript state and keeps system submission disabled', () => {
+    const { getByLabelText, getByRole, getByText } = renderDialog({ ...view, runscripts: [] });
+    fireEvent.change(getByLabelText('Name'), { target: { value: 'deploy' } });
+    fireEvent.change(getByLabelText(/Schedule target/), { target: { value: 'system' } });
+    fireEvent.change(getByLabelText(/Time/), { target: { value: '3pm' } });
+    const picker = getByLabelText(/Runscript/);
+    expect(picker).toBeDisabled();
+    expect(picker).toHaveAttribute('aria-describedby', 'schedule-runscript-empty');
+    expect(getByRole('status')).toHaveTextContent('Add a valid .rs file under .janissary/scripts/.');
+    expect(getByText('Schedule')).toBeDisabled();
+  });
+
+  it('keeps a removed runscript cleared after catalog refresh and dialog reopen', () => {
+    const first = renderDialog();
+    fireEvent.change(first.getByLabelText('Name'), { target: { value: 'deploy-nightly' } });
+    fireEvent.change(first.getByLabelText('Command'), { target: { value: 'echo retained' } });
+    fireEvent.change(first.getByLabelText(/Schedule target/), { target: { value: 'system' } });
+    fireEvent.change(first.getByLabelText(/Runscript/), { target: { value: 'deploy' } });
+    fireEvent.change(first.getByLabelText(/Time/), { target: { value: '3pm' } });
+    first.rerender(<ScheduleDialog view={{ ...view, runscripts: ['cleanup'] }} client={{ send: first.send } as unknown as JanusClient} />);
+    expect((first.getByLabelText(/Runscript/) as HTMLSelectElement).value).toBe('');
+    expect(first.getByText('Schedule')).toBeDisabled();
+
+    first.rerender(<ScheduleDialog view={view} client={{ send: first.send } as unknown as JanusClient} />);
+    expect((first.getByLabelText(/Runscript/) as HTMLSelectElement).value).toBe('');
+    expect(first.getByText('Schedule')).toBeDisabled();
+    fireEvent.change(first.getByLabelText(/Schedule target/), { target: { value: 'tab:janus' } });
+    expect((first.getByLabelText('Command') as HTMLInputElement).value).toBe('echo retained');
+    first.unmount();
+
+    const second = renderDialog();
+    expect((second.getByLabelText('Name') as HTMLInputElement).value).toBe('deploy-nightly');
+    expect((second.getByLabelText(/Schedule target/) as HTMLSelectElement).value).toBe('tab:janus');
+    fireEvent.change(second.getByLabelText(/Schedule target/), { target: { value: 'system' } });
+    expect((second.getByLabelText(/Runscript/) as HTMLSelectElement).value).toBe('');
+    expect(second.getByText('Schedule')).toBeDisabled();
+    fireEvent.change(second.getByLabelText(/Runscript/), { target: { value: 'deploy' } });
+    expect(second.getByText('Schedule')).not.toBeDisabled();
+  });
+
+  it('preserves the tab command draft while switching to and from system mode', () => {
+    const { getByLabelText } = renderDialog();
+    fireEvent.change(getByLabelText('Command'), { target: { value: 'echo hi' } });
+    fireEvent.change(getByLabelText(/Schedule target/), { target: { value: 'system' } });
+    fireEvent.change(getByLabelText(/Runscript/), { target: { value: 'deploy' } });
+    fireEvent.change(getByLabelText(/Schedule target/), { target: { value: 'tab:janus' } });
+    expect((getByLabelText('Command') as HTMLInputElement).value).toBe('echo hi');
+  });
+
+  it('remembers the project target and runscript across dialog reopens', () => {
+    const first = renderDialog();
+    fireEvent.change(first.getByLabelText('Name'), { target: { value: 'deploy' } });
+    fireEvent.change(first.getByLabelText(/Schedule target/), { target: { value: 'system' } });
+    fireEvent.change(first.getByLabelText(/Runscript/), { target: { value: 'cleanup' } });
+    first.unmount();
+
+    const second = renderDialog();
+    expect((second.getByLabelText(/Schedule target/) as HTMLSelectElement).value).toBe('system');
+    expect((second.getByLabelText(/Runscript/) as HTMLSelectElement).value).toBe('cleanup');
   });
 
   it('does not focus the Schedule button on a fresh dialog with no remembered settings', () => {

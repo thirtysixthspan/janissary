@@ -1,0 +1,81 @@
+# add system schedules
+
+**Complexity: 7/10** — a new project-level owner, a persisted schedule file, a hidden shell tab that the strip and navigation must skip and the client must still drain, new commands (`execute`, `tab focus`), protocol changes on the schedules tab and the creation dialog, and cross-cutting changes to close, quit, and notice attribution for the hidden tab.
+
+System schedules are project-owned recurring or one-shot runscript references that keep working across ordinary application restarts. They are stored in `.janissary/system-schedules.json`; the referenced `.janissary/scripts/<name>.rs` files remain editable project data, are read at use time, and are protected from accidental Git staging without changing the project's `.gitignore`. A managed, hidden `system` shell runs their commands through the ordinary shell/application dispatcher. Its FIFO and receipt state are process-local, so shutdown never replays queued work.
+
+The delivered feature includes all five schedule forms, project schedule management, script execution and editing routes, grammar-aware completion, a project target in the web creation dialog, and owner-aware aggregate schedule rows and actions. Duplicate schedule names are allowed, each row has an immutable key, and scheduled harness launches use the smallest free numeric suffix only when their server-owned queue receipt carries system-schedule provenance. The 16 numbered delivery plans and 25 completed PR-repair plans are consolidated here; the original 7/10 complexity rating remains the feature's assessment.
+
+## Design decisions
+
+### Ownership and storage
+
+- `SystemScheduleManager` owns entries at project scope beside the tab-owned `ScheduleManager`. Entries live in a versioned snapshot at `.janissary/system-schedules.json`; each has an opaque immutable key independent of its displayed name, a runscript name, descriptive `script <name>` command, and raw recurrence data.
+- Mutations synchronously save the complete next snapshot before changing memory, emitting updates, or acknowledging success. A failed save leaves the prior in-memory and persisted snapshot intact. Invalid data is reported without rewriting it; an unsupported future version blocks writes to prevent downgrade.
+- The schedule store and `.janissary/scripts/` survive startup cleanup. In Git projects, existing ignore rules are honored or narrow repository-local exclude entries are added. Tracked targets refuse storage; the project `.gitignore` is never rewritten. Runscripts and schedule snapshots are not copied into profiles.
+- Startup captures one cutoff before shell preparation, opens the required `janus` shell, attempts the managed system shell, loads the store and recovers missed entries, starts the existing scheduler, then begins non-awaited remote-session reattachment before listening. `janus` failure remains fatal; system-shell and schedule-store failures are nonfatal. Due entries at or before the cutoff are reported once as missed, one-shots are removed, and recurring entries advance to a future occurrence without catch-up. A failed recovery save leaves due entries stored but prevents them from firing during that startup.
+
+### Runscripts and execution
+
+- Runscripts use lowercase alphanumeric words separated by single hyphens and the implied `.rs` extension. They are read from the project root, not a tab cwd or workspace. Blank lines and full-line comments are skipped; other physical lines are preserved as individual commands, including inline comments. Contents are reread on every firing or `execute` call; an empty script is a successful no-op. Symlinks in the state directory, scripts directory, target script, or schedule-store path are refused.
+- A system schedule names an existing readable runscript. A missing runscript at creation returns `No runscript named "<name>".`; an unsafe or unreadable existing script returns `Could not read runscript "<name>".`. On firing, a missing file posts the system schedule notice and removes a one-shot or advances a recurring entry. An unsafe/unreadable script or failed shell ensure leaves the entry due for retry.
+- `execute <name>` ensures the managed shell and appends the current script lines as one contiguous ordinary queue batch. It is silent on success, adds no schedule, provenance, or schedule notice, and reports missing/unreadable scripts with the messages above. `edit <name>` falls back to an existing runscript only when no exact file target exists; missing scripts are never created implicitly. Existing exact-file, path, extension, home/`$root`, cwd, and line-number behavior stays intact.
+- Each scheduled firing reads the current runscript, commits the resulting schedule state, then appends its entire batch with one schedule key and provenance. Duplicate-name entries fire independently. Empty scripts advance without queue rows. Cancellation or clearing during asynchronous preparation wins, and no stale batch is appended. Work prepared by separate entries progresses independently. These ordering guarantees do not make the transient queue crash-proof or exactly-once across process failure.
+
+### Managed system shell and queue
+
+- Every startup attempts one `system` shell through the shell plugin, using zsh at the project root without a workspace. It is marked with server-owned managed identity and hidden while `janus` remains focused. A failed or partially created attempt is cleaned up, reported once with `System shell could not start: <reason>.`, and can be retried; it does not stop startup. A dead managed shell is replaced in place through the shell plugin after its PTY exits, preserving its tab identity and queue. Replacement failure leaves it hidden and does not retry automatically; a later explicit ensure may retry.
+- Hidden tabs stay in the complete server/client tab list so indices and RPC identity remain stable, but are omitted from the center strip, `next`, Shift+arrow cycling, `nav`, and profile capture. `tab focus <name>` explicitly reveals a hidden tab and undocks it if needed. The normalized case-insensitive label and alias `system` is reserved for the managed shell.
+- User close paths hide the managed tab without releasing its PTY, queue, references, or tab-owned timers and without save/quit prompts. Actual process exit is separate: callbacks and mount-time status requests carry the PTY generation captured by that terminal attachment, and the server validates the generation before recovery for the managed shell or destructive close for ordinary shell tabs. The additive `terminalExited` argument uses the existing `closeTab` RPC and client `close` callback; it does not increment plugin API v2. Shutdown and plugin teardown remain destructive. The hidden system shell does not count as a user tab for last-tab quit behavior; closing the last visible, non-docked user tab still quits.
+- Shell command queues are server-owned FIFO rows. Ordinary strings and the legacy `queueLine`/`nextQueuedLine` capabilities remain available; scheduled rows carry server-only origin metadata behind opaque, single-use, tab-incarnation-scoped receipts with a 256-outstanding-receipt limit. The shell plugin's retained client consumer handles both hidden and visible shells, waits for the current PTY terminal attachment before dequeuing, preserves FIFO while zsh is busy, and discards unused receipts when a line is intercepted or cannot be dispatched. Failures of individual shell/application commands do not stop later lines and do not create automatic schedule notices.
+- A receipt-backed system-schedule harness launch keeps its requested base name if free, otherwise chooses the smallest free `-N` suffix through local and remote retries. Typed launches, `execute`, `send`, ordinary `queue`, tab schedules (including `in system`), profile launches, and remote session restoration keep their existing naming behavior.
+
+### Commands, profiles, notices, and UI
+
+- `schedule system NAME <form> script <name>` supports the existing five time forms. The management forms are `schedule system list`, `schedule system cancel <name>` (all name matches), and `schedule system clear`. A system schedule name may repeat; `system` immediately after `schedule` is reserved, while `in system` remains a tab target. System operations do not require an eligible issuing tab. Tab schedule grammar, ownership, and recurring harness-spawn boundary remain unchanged.
+- `profile save` omits the managed shell by identity. Profile relaunch reports and skips any authored `system` tab label before lookup or close. Subjectless shell placement does not select an existing managed system or launch shell when the profile command opens nothing; a newly opened matching shell takes precedence. Profile-authored `schedule system` lines are reported and skipped before tab-only fields are read.
+- Explicit system schedule notices share the default-on `notifications.events.systemScheduleFire` toggle, bypass focus suppression, use warning classification, and link to `system`: firing, missed run, missing runscript, and shell startup failure. Firing means enqueued, not completed. Ordinary command errors and `execute` success do not notify.
+- The aggregate `schedules` view merges tab and project entries by next-run time. System rows show owner `system` and command `script <name>`; keyed deletion removes only one duplicate, command cancel removes all matching names, and focus ensures/reveals the managed shell. Clear all saves an empty project snapshot before clearing tab schedules and never deletes scripts. System entries do not appear in a per-tab schedule window.
+- The web New schedule dialog offers project ownership separately from eligible tabs and selects from the server's catalog of existing valid runscripts. It creates no scripts. Empty or unsafe catalogs disable project submission; a removed remembered script selection stays blank after later refreshes and dialog reopens. The dialog submits through the normal command path, where the script is revalidated.
+
+## What already exists (reuse, don't rebuild)
+
+| Piece | Where | Relevance |
+| --- | --- | --- |
+| Tab scheduler and one-second tick | `src/schedule/manager.ts` | Continues to drive tab schedules and invokes the project owner on the same tick. |
+| Schedule recurrence and display | `src/schedule/types.ts`, `src/schedule/time.ts`, `src/schedule/display.ts` | Shared entry timing and formatting. |
+| Atomic replacement | `src/atomic-write.ts` | Complete-snapshot store writes preserve the prior file on failed replacement. |
+| Tab queue and client consumer | `src/tab/queue-state.ts`, `src/command-queue/receipts.ts`, `web/src/shared/command-queue/`, `web/src/plugins/shell/` | Existing FIFO, host-owned receipts, attachment readiness, and shell busy/idle behavior. |
+| Shell plugin and manager lifecycle | `src/plugins/shell/`, `src/system-shell.ts`, `src/managers.ts` | Guarded project-root shell creation, PTY replacement, cleanup, and ordered disposal. |
+| Plugin schedule topic | `src/plugins/topics.ts`, `src/plugins/schedules/` | Owner-aware row actions and aggregate refresh through declared plugin capabilities. |
+| Notifications | `src/notifications/` | Existing queue, feed, toast, sound, desktop alert and focus-link pipeline. |
+| Profile and command paths | `src/profile/`, `src/commands/`, `src/completion/` | Existing profile, command registry, editor target resolution and completion flows. |
+
+## Proposed changes
+
+The feature is implemented across server, client, protocol, specs, help, and E2E support. The project owner and store live under `src/schedule/system/`; `SystemShellManager` owns managed-shell startup and recovery; `src/command-queue/` and the shell plugin preserve queue provenance without exposing it in `TabView`. The one scheduler tick coordinates tab and project owners. Manager disposal stops ticks and settles in-flight preparations before disposing the system shell and its queue.
+
+The command registry contains `schedule`, `execute`, and `tab focus` definitions. Pure schedule parsing handles the system subspace while preserving tab grammar. `edit` adds only the bare runscript fallback. Completion reads the valid project script catalog for schedule, execute, and bare edit contexts. System grammar is never allowed to mutate project schedules from profile-authored lines.
+
+The aggregate schedules plugin uses owner/key identity for project rows and the existing capability path for cancellation, focus, and clear-all. The web dialog uses the server launch snapshot's cached runscript catalog and submits through the normal command route. The project specs describe current behavior in `scheduling.md`, `command-queue.md`, `tabs.md`, `shell-tab.md`, `profiles.md`, `notifications.md`, `state-directory.md`, `harness.md`, `application-commands.md`, `application-config.md`, `application-state.md`, `cli.md`, `editor-tab.md`, `tab-completion.md`, `tab-navigator.md`, `keyboard-navigation.md`, `quit-confirmation.md`, `sidebars.md`, `tab-plugins.md`, and `websocket-rpc.md`. User documentation and developer plugin reference were updated with their delivery work and remain in the PR.
+
+## Tests
+
+The branch includes focused coverage for versioned storage, invalid and future store versions, atomic replacement failure, Git-local exclusion, runscript parsing and symlink refusal; owner mutation ordering, duplicate keys, boot missed-run recovery, concurrent firing, cancellation races, unreadable/missing scripts, shell failures, batch contiguity, and shutdown; hidden-tab navigation, close, quit, profile, and PTY-generation lifecycle; receipt ownership and cleanup; grammar, profile schedule isolation, command routing, completion, exact-file edit precedence, and no-create refusals; aggregate keyed actions, clear persistence failure, and dialog catalog reconciliation. Shell-exit tests cover generation-bound client callbacks/status replies, managed replacement and ordinary-shell close, while preserving zero-argument close callers and frozen plugin v1 fixtures.
+
+End-to-end drivers under `scripts/e2e/` cover execution, ordinary restart, and management. The tests assert restart persistence of schedules and scripts, continuation after `false`, hidden-shell output after focus, duplicate-key deletion, clear-all persistence after restart, and script retention. The final attached-browser execution, restart, and management scenarios passed. Full CI run `39039186100` passed lint, typecheck, and tests after startup-state repair; final CI run `39042403926` passed all jobs on implementation head `98be284a`.
+
+## Out of scope
+
+- Running missed system firings after application restart or replaying a recurring closed-app backlog.
+- Persisting shell queues or receipts, draining them server-side, guaranteeing exactly-once execution across crashes, or adding a per-line timeout.
+- Multi-line shell constructs in a runscript, stop-on-error behavior, or automatic per-command error notices.
+- Changing tab-owned schedule grammar, lifetime, or recurring harness-spawn rules.
+- Creating runscripts from the schedule dialog, adding a terminal UI dialog, or editing schedule rows in place.
+- Changing typed or profile harness-name refusal, remote-session reattachment, or any behavior for an unverified PTY generation.
+
+## Verification
+
+Implementation verification used focused server and web tests, the three attached-browser E2E drivers, and CI. The final browser scenarios passed against a scratch project. CI run `39039186100` passed lint, typecheck, and tests after the startup-state fix; run `39042403926` passed all jobs on head `98be284a` after the final E2E repairs. Later PR commits corrected E2E observation races and strengthened coverage for duplicate schedule keys, runscript retention, and clear-all across restart; the final drivers passed with those assertions.
+
+At normal startup, `janus` is validated first, system-shell preparation and schedule load/recovery follow, then the scheduler starts and remote sessions are reattached without waiting. Scheduled batches are persisted before queue append, while the queue itself remains in memory. The live system shell can be explicitly revealed with `tab focus system`; ordinary restart creates a fresh hidden shell and queue while retaining the project schedules and scripts.

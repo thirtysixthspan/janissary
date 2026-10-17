@@ -46,8 +46,9 @@ toast of its own; the feed is the only place you will see it.
 
 Eligible explicit notifications can also show a desktop banner and play a category sound. This is
 separate from the in-app toast: the toast stays silent even when a banner or sound is enabled.
-Background activity toggles such as `stateChange`, `scheduleFire`, `agentStart`, and `rateLimited`
-control feed entries only; they do not trigger desktop banners or bell sounds.
+The ambient toggles `stateChange`, `scheduleFire`, `agentStart`, and `rateLimited` control feed
+entries only; they do not trigger desktop banners or bell sounds. `scheduleFire` covers tab-owned
+schedules. System schedule notices are explicit and can raise a banner and warning sound.
 
 Each browser window handles its own banner and sound. It suppresses both only when Janissary's
 window has focus and the notification's tab is visible there. A background tab or an unselected
@@ -104,7 +105,7 @@ Click or move keyboard focus into the feed. While it has focus, `↑` and `↓` 
 
 ## What it reports
 
-The feed can report five kinds of background activity, and every one defaults to `false`. Enable the ones you want by editing `.janissary/config.json`; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
+The four ambient event toggles default to `false`. The separate `systemScheduleFire` toggle defaults to `true`. Edit `.janissary/config.json` to choose which background events you want and whether to silence system schedule notices; see [app configuration](/user-documentation/getting-started/configuration) for desktop banners and sound settings too:
 
 ```json
 {
@@ -113,7 +114,8 @@ The feed can report five kinds of background activity, and every one defaults to
       "stateChange": true,
       "scheduleFire": true,
       "agentStart": true,
-      "rateLimited": true
+      "rateLimited": true,
+      "systemScheduleFire": true
     }
   }
 }
@@ -124,15 +126,28 @@ Each toggle controls one kind of event:
 | Toggle | Notifies when |
 |---|---|
 | `stateChange` | An agent finishes (its turn ends or errors out) |
-| `scheduleFire` | A scheduled command fires in a tab |
+| `scheduleFire` | A tab-owned scheduled command fires in its tab |
 | `agentStart` | An agent begins a turn |
 | `rateLimited` | A model query is identified as rate limited |
+| `systemScheduleFire` | A system schedule fires, is missed, names a missing runscript, or the system shell cannot start |
 
-These five events notify only for a **background** tab. Activity in the currently active tab is suppressed.
+The four ambient events notify only for a **background** tab. Activity in the currently active tab is suppressed. System schedule notices are explicit, use their own toggle, and are not suppressed when the `system` tab is active.
 
 `notifications.events.rateLimited` covers interactive `acp` queries, periodic monitor queries, and `monitor ask` queries. It recognizes rate limits from error text, and also from an interactive query's ordinary reply text. The feed says `Agent '<tab>' is being rate limited`; the original in-tab output stays available. Other failures don't produce this event.
 
-A command that fires more than five seconds late ignores all five toggles and posts regardless, even from the active tab. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for when that happens.
+A tab-owned scheduled command that fires more than five seconds late ignores the ambient toggles and posts regardless, even from the active tab. See [Sleep and resume](/user-documentation/getting-started/sleep-and-resume#overdue-scheduled-commands) for when that happens.
+
+### System schedule notices
+
+System schedules use a separate explicit notification, independent of `scheduleFire`. The `systemScheduleFire` toggle defaults to `true`, so you receive notices for a firing, a run missed while Janissary was closed, a missing runscript, or a system shell that could not start. These notices use the warning banner and bell category and still appear when `system` is the active tab. Set `systemScheduleFire` to `false` to suppress the notice from the queue, feed, record file, toast, banner, and bell.
+
+The feed shows the stored script invocation when a runscript is queued. For example, `System schedule nightly ran: script deploy` means the `deploy` runscript was enqueued; it does not mean every line has finished. Other outcomes read:
+
+- `System schedule <name> missed its run at <time>; not run (app was closed).`
+- `System schedule <name> could not run: script ".janissary/scripts/<runscript-name>.rs" is missing.`
+- `System shell could not start: <reason>.`
+
+The schedule name is the schedule's name. The missed time uses the same local date and time format shown in the schedules list. A startup failure's reason is shortened to its first line. Each notice is attributed to `system`, and its tab link focuses the system tab, revealing it if hidden. If the system tab has not been created yet, the notice is still held and recorded under `system`; clicking its link does nothing and does not create a placeholder tab.
 
 ## A harness that finished and you weren't looking
 

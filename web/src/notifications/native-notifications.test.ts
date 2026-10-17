@@ -87,6 +87,13 @@ describe('NativeNotifications', () => {
     expect(notifications[0]?.close).toHaveBeenCalledOnce();
   });
 
+  it('clicking a system schedule banner falls back to the hidden system tab focus RPC', () => {
+    vi.spyOn(globalThis, 'focus').mockImplementation(() => {});
+    new NativeNotifications(client).show({ ...event, tab: 'system', from: 'system' }, centre('janus'));
+    clicked();
+    expect(send).toHaveBeenCalledWith({ method: 'focusTab', params: { label: 'system' } });
+  });
+
   it('clicking a docked tab banner reveals it locally without sending focusTab', () => {
     const focus = vi.spyOn(globalThis, 'focus').mockImplementation(() => {});
     const reveal = vi.fn(() => true);

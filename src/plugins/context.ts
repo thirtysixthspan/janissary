@@ -30,6 +30,7 @@ import { ownTabCapabilities } from './own-tab-capabilities.js';
 import { isPluginSettings, validateTabValue } from './tab-value.js';
 import { tabActivityRows } from './activity.js';
 import { withRunAllocation, withRunAllocationAsync } from './run-allocation.js';
+import { queueCapabilities } from './queue-capabilities.js';
 
 // Holds a plugin to the capability set its own manifest asked for. Without this the `capabilities`
 // field is decorative: every plugin receives the whole context regardless of what it declared, so
@@ -206,7 +207,7 @@ export function createPluginContext(
     },
     topicAction: (action) => {
       requireDeclaredTopic(declaration, action.topic);
-      if (isEnabled()) runTopicAction(managers, action);
+      return isEnabled() ? runTopicAction(managers, action) : undefined;
     },
     configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
     openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),
@@ -221,6 +222,7 @@ export function createPluginContext(
     // The four a plugin tab needs to be a place a line can be typed and a process can be checked on,
     // moved out whole because they depend on nothing here beyond what they are handed.
     ...lineCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
+    ...queueCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     ...remoteCapabilities({ managers, originLabel: origin.label, answeringLabel, isEnabled }),
     ...acpCapabilities({ managers, declaration, origin, answeringLabel, isEnabled, deadline }),
     rejectRequest: (reason) => {

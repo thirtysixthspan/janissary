@@ -49,6 +49,8 @@ export const shellManifest = {
     'terminalRunning',
     'queueLine',
     'nextQueuedLine',
+    'nextQueuedCommand',
+    'dispatchQueuedCommand',
     'recordCwd',
     'recordGlobalHistory',
     'openOrFocusTab',

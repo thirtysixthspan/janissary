@@ -17,6 +17,7 @@ const CATEGORIES: Record<ExplicitNotificationEvent, SoundCategory> = {
   'launch-workspace-cleaned': 'warning',
   'launch-root-cloned': 'warning',
   'remote-refused': 'warning',
+  'system-schedule-fire': 'warning',
   'plugin-failure': 'error',
   'e2e-browser-gone': 'error',
   'file-operation': 'error',

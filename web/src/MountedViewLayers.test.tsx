@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render as renderBare, waitFor } from '@testing-library/react';
+import { act, fireEvent, render as renderBare, waitFor } from '@testing-library/react';
 import React from 'react';
 import type { TabView } from '@shared/protocol';
 import type { HarnessTabHandle } from './shared/tab/handles';
@@ -41,17 +41,28 @@ vi.mock('./editor/EditorTab', () => {
 // both deferred loading and stable mounting without importing the production video chunk.
 let pluginLoadCount = 0;
 let pluginMountCount = 0;
+let pluginLiveSubscriptions = 0;
+const pluginWakeSubscribers = new Set<() => void>();
 vi.mock('./plugins/registry', () => {
-  const { lazy, useEffect, createElement } = React;
+  const { lazy, useEffect, useState, createElement } = React;
   const Component = lazy(async () => {
     pluginLoadCount += 1;
     const FixturePlugin = (
-      { onMounted, capabilities }: { onMounted(): void; capabilities: { close(): void } },
+      { onMounted, capabilities }: { onMounted(): void; capabilities: { close(): void; active: boolean; splitAction: React.ReactNode } },
     ) => {
-      useEffect(() => { pluginMountCount += 1; }, []);
+      const [wakeCount, setWakeCount] = useState(0);
+      useEffect(() => {
+        pluginMountCount += 1;
+        const receive = () => setWakeCount((count) => count + 1);
+        pluginWakeSubscribers.add(receive);
+        pluginLiveSubscriptions += 1;
+        return () => { pluginWakeSubscribers.delete(receive); pluginLiveSubscriptions -= 1; };
+      }, []);
       useEffect(onMounted, [onMounted]);
       return createElement('button', {
-        type: 'button', 'data-testid': 'plugin', onClick: () => capabilities.close(),
+        type: 'button', 'data-testid': 'plugin', 'data-active': String(capabilities.active),
+        'data-split': String(capabilities.splitAction !== null), 'data-wakes': String(wakeCount),
+        onClick: () => capabilities.close(),
       });
     };
     return {
@@ -641,6 +652,46 @@ describe('MountedViewLayers', () => {
     expect(pluginMountCount).toBe(1);
   });
 
+  it('retains a hidden system plugin consumer across repeated hide and focus at unchanged placement', async () => {
+    pluginMountCount = 0;
+    pluginLiveSubscriptions = 0;
+    pluginWakeSubscribers.clear();
+    const hidden = { ...makePluginTab('system', '/open/system'), hidden: true as const, systemShell: true as const };
+    const other = makeEditorTab('notes', '/notes.ts');
+    const harnessHandles = makeHarnessHandles();
+    const tabHandles = makeEditorHandles();
+    const props = (system: TabView, current: TabView) => ({
+      tabs: [system, other], current, client: { send: vi.fn() } as never, closeTab: vi.fn(),
+      harnessHandles, tabHandles, onSplit: vi.fn(), navOpen: true, navQuery: '', navIndex: 0, onPickTab: vi.fn(),
+    });
+    const { container, rerender } = render(React.createElement(MountedViewLayers, props(hidden, other)));
+    await waitFor(() => { expect(container.querySelector('[data-testid="plugin"]')).toBeTruthy(); });
+    const body = container.querySelector<HTMLElement>('[data-testid="plugin"]')!;
+    expect(body).toHaveAttribute('data-active', 'false');
+    expect(body).toHaveAttribute('data-split', 'false');
+    expect(body).toHaveAttribute('data-wakes', '0');
+    expect(container.querySelector('.tab-nav-picker')).toBeNull();
+    expect(body.closest('.tab-body')).toHaveAttribute('inert');
+    expect(pluginMountCount).toBe(1);
+    expect(pluginLiveSubscriptions).toBe(1);
+
+    act(() => { for (const wake of pluginWakeSubscribers) wake(); });
+    expect(body).toHaveAttribute('data-wakes', '1');
+    const revealed = { ...hidden, hidden: undefined };
+    rerender(React.createElement(MountedViewLayers, props(revealed, revealed)));
+    expect(body).toHaveAttribute('data-active', 'true');
+    expect(body).toHaveAttribute('data-split', 'true');
+    rerender(React.createElement(MountedViewLayers, props({ ...revealed, hidden: true }, other)));
+    expect(body).toHaveAttribute('data-active', 'false');
+    expect(body.closest('.tab-body')).toHaveAttribute('inert');
+    act(() => { for (const wake of pluginWakeSubscribers) wake(); });
+    expect(body).toHaveAttribute('data-wakes', '2');
+    rerender(React.createElement(MountedViewLayers, props(revealed, revealed)));
+    expect(body).toHaveAttribute('data-active', 'true');
+    expect(pluginMountCount).toBe(1);
+    expect(pluginLiveSubscriptions).toBe(1);
+  });
+
   it('does not remount a plugin when only its payload changes', async () => {
     pluginMountCount = 0;
     const tab = makePluginTab('vtab', '/open/1');
@@ -683,6 +734,6 @@ describe('MountedViewLayers', () => {
     );
     await waitFor(() => { expect(container.querySelector('[data-testid="plugin"]')).toBeTruthy(); });
     fireEvent.click(container.querySelector('[data-testid="plugin"]') as Element);
-    expect(closeTab).toHaveBeenCalledWith(1);
+    expect(closeTab).toHaveBeenCalledWith(1, undefined);
   });
 });

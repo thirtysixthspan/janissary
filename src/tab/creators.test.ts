@@ -13,6 +13,14 @@ const plugin: PluginTabRecord = {
 };
 
 describe('uniquePluginLabel', () => {
+  it.each(['system', 'SYSTEM', 'SyStEm'])('reserves the exact %s prefix and skips occupied suffixes without a managed shell', (prefix) => {
+    expect(uniquePluginLabel([], prefix)).toBe(`${prefix}-2`);
+    const tabs = [makeTab('janus', '#fff'), makeTab('system-2', '#123'), makeTab('SYSTEM-4', '#456')];
+    expect(uniquePluginLabel(tabs, prefix)).toBe(`${prefix}-3`);
+    const result = addPluginTab(tabs, 0, prefix, 'fixture', plugin);
+    expect(result.tabs[result.activeTab].label).toBe(`${prefix}-3`);
+  });
+
   it('suffixes the declaration prefix when plugin tabs already exist', () => {
     const tabs = [makeTab('janus', '#fff'), makePluginTab('video', '#123', 2, 1, '#fff', 'clip.mp4', plugin)];
     expect(uniquePluginLabel(tabs, 'video')).toBe('video-2');

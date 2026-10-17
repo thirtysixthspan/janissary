@@ -6,8 +6,8 @@
 | Ctrl+C | Quit application |
 | ← / Ctrl+B | Move input cursor left |
 | → / Ctrl+F | Move input cursor right |
-| Shift+← / Cmd+Shift+[ | Switch to previous tab (no-op if one tab) |
-| Shift+→ / Cmd+Shift+] | Switch to next tab (no-op if one tab) |
+| Shift+← / Cmd+Shift+[ | Switch to previous visible center action tab (no-op if one eligible tab) |
+| Shift+→ / Cmd+Shift+] | Switch to next visible center action tab (no-op if one eligible tab) |
 | Ctrl+← | Move the current tab one position left |
 | Ctrl+→ | Move the current tab one position right |
 | ↑ | Walk backward through command history |
@@ -36,9 +36,11 @@
 
 The UI is composed of up to four **application sections**: the left sidebar, the center action
 area, the right sidebar, and the reporting section below it. A section exists only when it holds
-at least one tab (the center is always present). Moving keyboard focus into a section always
+at least one visible tab (the center is always present). Moving keyboard focus into a section always
 focuses that section's currently-visible tab — the docked tab shown in a sidebar, or the selected
 monitor in the reporting section.
+
+Center tab cycling and the navigator skip hidden system tabs. Cmd+W/Ctrl+W closes the focused tab; if it is a hidden-system-capable tab marked as the system shell, that close hides it without asking about unsaved work or quitting. The hidden tab is not selected by later passive navigation.
 
 A focused file navigator tab captures arrow keys, Home/End, PageUp/PageDown, Enter, Space, and printable
 characters (type-ahead) for its own tree navigation instead of the bindings above — see File Navigator Tab.

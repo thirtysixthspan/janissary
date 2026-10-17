@@ -24,7 +24,7 @@ export function useTabEntries(tabs: TabView[]) {
     [tabs],
   );
   const reportingEntries = useMemo(
-    () => tabs.map((tab, index) => ({ tab, index })).filter((e) => isReportingTab(e.tab)),
+    () => tabs.map((tab, index) => ({ tab, index })).filter((e) => !e.tab.hidden && isReportingTab(e.tab)),
     [tabs],
   );
   return { actionEntries, reportingEntries };

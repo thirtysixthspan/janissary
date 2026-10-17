@@ -10,6 +10,8 @@ This is the rule for every command bar, whichever kind of tab it belongs to: typ
 
 Typing `close` or its alias `exit` when only a single tab is open triggers the same dialog, because closing the last tab quits the app (see `tabs.md`). A single leading slash is also accepted, so `/close` and `/exit` receive the same confirmation. A named close such as `/close <name>` receives the same save or quit guard as `close <name>`. Cancelling leaves the tab open. Every other way of closing the last tab shows the same dialog too — the tab strip's × button, Cmd+W/Ctrl+W, and a page-view tab's own × button all behave identically. Only the tab's underlying process exiting on its own (not a user-initiated close) quits directly without the dialog.
 
+A tab marked as the managed system shell is excluded from last-tab quit counting, even when it is the only remaining visible record. A user close of that tab hides it instead; the close does not open this dialog or an unsaved-changes dialog, and it does not exit the app. Closing the last ordinary user tab still opens the appropriate confirmation even if a revealed system tab remains.
+
 ### `exit` is not `quit`
 
 `exit` is an alias of `close` (closes the current tab, or `exit <name>` for a named one) — while more than one tab is open it does not exit the application and does not show this dialog. Only `quit`, or closing the last remaining tab, exits the app.

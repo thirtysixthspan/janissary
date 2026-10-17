@@ -1,6 +1,7 @@
 import { isPluginTab } from './view-guards.js';
 import { beginDwell } from './dwell.js';
 import type { Tab } from './types.js';
+import { isCenterActionTab } from './placement.js';
 
 // Resolves docking a tab into a sidebar (`'left'` | `'right'`), or undocking it back to the
 // center strip (`null`, which also makes it the active tab). Docking into a side that already
@@ -49,7 +50,7 @@ function nearestNonDocked(tabs: Tab[], activeTab: number, recordLeavingActiveTab
   const total = tabs.length;
   for (let step = 0; step < total; step++) {
     const index = (activeTab + step) % total;
-    if (!tabs[index]?.dock) { recordLeavingActiveTab(index); return index; }
+    if (isCenterActionTab(tabs[index])) { recordLeavingActiveTab(index); return index; }
   }
-  return activeTab;
+  return -1;
 }

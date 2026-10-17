@@ -58,7 +58,7 @@ The detached server itself boots the full application against its target directo
 3. Start the transcript logger.
 4. Load application config from `.janissary/config.json`.
 5. Clear the per-run directories and the workspace directory.
-6. Open the launch shell (see `tabs.md`), failing the start when it cannot be opened, then reattach parked remote sessions (see `sessions-tab.md`), and start the HTTP server (on the requested port, or an ephemeral port if none given).
+6. Open and validate the live `janus` launch shell (see `tabs.md`), failing the start when it cannot be opened. Attempt the hidden `system` shell after `janus`; a failure posts a startup-failure notification but does not stop the server. Load project system schedules and recover missed entries after shell preparation, then start the scheduler. Reattach parked remote sessions (see `sessions-tab.md`) without waiting for them, and start the HTTP server (on the requested port, or an ephemeral port if none given).
 7. Write the server URL (`__JANUS_URL__ <url>`) and a human-readable banner to the log.
 8. Unless `--no-open`: open the app in a Chrome app window (or the default browser if no system Chrome is found).
 9. Register signal handlers for graceful shutdown (SIGINT, SIGTERM), app window cleanup, and instance lock release on exit.

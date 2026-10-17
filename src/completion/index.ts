@@ -10,6 +10,8 @@ import { completeBrowserCommand } from './browser.js';
 import { completeFilePath } from './fs.js';
 import { readCompletionCursor } from './cursor.js';
 import { SYNTAX_THEMES } from '../syntax-themes.js';
+import { completeSystemSchedule, type SystemScheduleCompletions } from './system-schedule.js';
+import { completeRunscriptCommand } from './runscript-commands.js';
 
 /**
  * Tab-complete the token ending at the cursor.
@@ -32,9 +34,12 @@ export function completeCommandLine(
   labels: string[] = [],
   connections: string[] = [],
   monitor?: MonitorCompletions,
+  systemSchedule?: SystemScheduleCompletions,
 ): CompletionResult {
   const cursor = readCompletionCursor(input, cursorOffset);
   const result = completeSendTarget(cursor, labels) ??
+    completeRunscriptCommand(cursor, cwd, systemSchedule?.scripts ?? []) ??
+    completeSystemSchedule(cursor, systemSchedule) ??
     completeScheduleTarget(cursor, labels) ??
     completeConnectionClose(cursor, connections) ??
     completeBrowserCommand(cursor, connections) ??

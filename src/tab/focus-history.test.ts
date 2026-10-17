@@ -51,6 +51,11 @@ describe('popFocusHistory', () => {
     expect(popFocusHistory(TABS, ['notes', 'src'])).toEqual({ index: 1, history: [] });
   });
 
+  it('skips a hidden history record and selects the most recent visible center tab', () => {
+    const tabs = [tab('visible'), tab('system', { hidden: true, systemShell: true })];
+    expect(popFocusHistory(tabs, ['visible', 'system'])).toEqual({ index: 0, history: [] });
+  });
+
   it('answers nothing when every entry is stale or docked', () => {
     expect(popFocusHistory(TABS, ['src', 'gone'])).toEqual({ index: undefined, history: [] });
   });

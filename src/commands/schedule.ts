@@ -2,10 +2,11 @@ import type { Command, CommandManagers } from './types.js';
 import type { ScheduleEntry, ScheduleParseResult } from '../schedule/types.js';
 import type { Tab } from '../tab/types.js';
 import { parseScheduleCommand } from '../schedule/index.js';
-import { formatSchedule } from '../schedule/display.js';
+import { formatSchedule, fmtNextRun } from '../schedule/display.js';
 import { byLabelOrAlias } from '../tab/lookup.js';
 import { canRunSchedules } from '../schedule/targets.js';
 import { appendCommandOutput } from '../command/append.js';
+import { readRunscript } from '../schedule/system/runscript-files.js';
 
 // Resolve the tab a schedule operation applies to: the issuing tab by default, or the
 // `in <tab>` target, typed as a label or display alias like any other tab reference. Only a
@@ -47,6 +48,7 @@ export const command: Command = {
     const parsed = parseScheduleCommand(command_.replace(/^schedule\b\s*/i, ''), new Date());
     const append = (text: string) => appendCommandOutput(managers, tab.label, { input: command_, output: text }, invocation);
     if ('error' in parsed) { append(parsed.error); return; }
+    if ('scope' in parsed) { runSystemSchedule(parsed, append, managers); return; }
     const target = resolveTargetTab(parsed.target, tab.label, managers);
     if ('error' in target) { append(target.error); return; }
     const suffix = target.label === tab.label ? '' : ` in ${target.label}`;
@@ -57,3 +59,42 @@ export const command: Command = {
     append(message);
   },
 };
+
+function runSystemSchedule(
+  parsed: Extract<ScheduleParseResult, { scope: 'system' }>,
+  append: (text: string) => void,
+  managers: CommandManagers,
+): void {
+  const owner = managers.systemSchedule;
+  if (parsed.action === 'list') {
+    const entries = owner.list();
+    append(entries.length === 0 ? 'No scheduled commands in system.' : entries.map((entry) =>
+      `${entry.id}  ${entry.spec}  (next: ${fmtNextRun(entry.nextRun)})  script ${entry.script}`,
+    ).join('\n'));
+    return;
+  }
+  if (parsed.action === 'add') {
+    let scriptExists: boolean;
+    try {
+      scriptExists = readRunscript(managers.tab.launchDir, parsed.script).exists;
+    } catch {
+      append(`Could not read runscript "${parsed.script}".`);
+      return;
+    }
+    if (!scriptExists) { append(`No runscript named "${parsed.script}".`); return; }
+    const result = owner.add({ ...parsed.entry, id: parsed.name, script: parsed.script });
+    append(result.ok ? `Scheduled ${parsed.name} system: ${parsed.entry.spec} (script ${parsed.script}).` : 'Could not save system schedule.');
+    return;
+  }
+  if (parsed.action === 'cancel') {
+    const count = owner.list().filter((entry) => entry.id === parsed.id).length;
+    if (count === 0) { append(`No scheduled command "${parsed.id}" in system.`); return; }
+    const result = owner.cancelByName(parsed.id);
+    append(result.ok ? `Cancelled ${parsed.id} in system.` : 'Could not save system schedules.');
+    return;
+  }
+  const count = owner.list().length;
+  if (count === 0) { append('No scheduled commands in system.'); return; }
+  const result = owner.clear();
+  append(result.ok ? `Cleared ${count} scheduled commands in system.` : 'Could not save system schedules.');
+}

@@ -110,12 +110,25 @@ describe('schedules plugin intents', () => {
     for (const [name, payload, message] of [
       ['clear', { unexpected: true }, 'invalid clear payload'],
       ['cancel', { tab: 'agent-1' }, 'invalid cancel payload'],
+      ['cancel', { tab: 'system', id: 'build', owner: 'system' }, 'invalid cancel payload'],
       ['focus-owner', {}, 'invalid focus-owner payload'],
+      ['focus-owner', { tab: 'system', owner: 'system' }, 'invalid focus-owner payload'],
       ['unknown', {}, 'unknown schedules intent "unknown"'],
     ] as const) {
       expect(() => intent(name, payload, fixture)).toThrow(new TabPluginRejection(message));
     }
     expect(fixture.actions).toEqual([]);
+  });
+
+  it.each([
+    ['clear', {}, 'clear'],
+    ['cancel', { tab: 'system', id: 'build', owner: 'system', key: 'system-key' }, 'cancel'],
+  ] as const)('turns a durable %s error into a request rejection', (name, payload) => {
+    const fixture = fakeCapabilities();
+    fixture.capabilities.topicAction = vi.fn(() => 'could not save system schedules');
+
+    expect(() => intent(name, payload, fixture))
+      .toThrow(new TabPluginRejection('could not save system schedules'));
   });
 
   // The table matches its own entries only, so a name every object inherits is an unknown intent,

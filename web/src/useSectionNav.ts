@@ -13,9 +13,9 @@ const SECTION_SELECTOR = '.sidebar-left, .sidebar-right, .reporting-section, .ap
 export function getPresentSections(tabs: TabView[]): Section[] {
   return SECTION_ORDER.filter((section) => {
     if (section === 'center') return true;
-    if (section === 'left') return tabs.some((tab) => tab.dock === 'left');
-    if (section === 'right') return tabs.some((tab) => tab.dock === 'right');
-    return tabs.some((tab) => isReportingTab(tab));
+    if (section === 'left') return tabs.some((tab) => !tab.hidden && tab.dock === 'left');
+    if (section === 'right') return tabs.some((tab) => !tab.hidden && tab.dock === 'right');
+    return tabs.some((tab) => !tab.hidden && isReportingTab(tab));
   });
 }
 

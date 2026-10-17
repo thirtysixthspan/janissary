@@ -50,7 +50,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   useApplicationBarEdits(appBar, inputReference, draft, setDraft);
 
   const terminalHistory = useTerminalCommandHistory(setSent);
-  const { write, displayReply, focus: focusTerminal, clearSelection, scrollLines, scrollToBottom, rows: terminalRows } = useShellTabTerminal({
+  const { write, displayReply, focus: focusTerminal, clearSelection, scrollLines, scrollToBottom, rows: terminalRows, terminalReady } = useShellTabTerminal({
     payload,
     capabilities,
     containerRef: terminalReference,
@@ -69,7 +69,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     scrollToBottom,
   });
 
-  useShellTerminalStatus(capabilities);
+  useShellTerminalStatus(capabilities, payload.ptyId);
   useBackgroundReplies(capabilities.onBackgroundReply, displayReply);
 
   // Focus belongs to the command line at all times, and a tab that has just become the visible one is
@@ -82,10 +82,10 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const run = useShellSubmit({
     appBar, capabilities, displayReply, expectCommand: terminalHistory.expect, openHistory, setMatches, setSent, write,
   });
-  const { queue, submit } = useShellCommandQueue(capabilities, run, startsBusy, (line) => {
+  const { queue, submit } = useShellCommandQueue(capabilities, run, commandRunning, (line) => {
     setMatches([]);
     setSent((previous) => appendShellHistory(previous, line));
-  }, appBar.queuedLines);
+  }, appBar.queuedLines, terminalReady, payload.ptyId);
   queueReference.current = queue;
 
   const bar = useCommandBarKeys({
@@ -199,7 +199,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         dotColor={dotColor}
         busy={commandRunning}
         label={commandRunning ? 'queue' : undefined}
-        autoFocus
+        autoFocus={capabilities.active}
         acceptsFileDrops
         ariaLabel="Shell command"
         above={matches.length > 1 ? (

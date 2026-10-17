@@ -78,6 +78,8 @@ text leaves focus alone instead, preserving the native selection so it can be co
 
 ### New files
 
+For the command-line `edit` command only, a bare valid runscript name opens the existing `.janissary/scripts/<name>.rs` file when no exact target exists relative to the issuing tab's working directory. An existing exact target wins. A missing runscript returns `No runscript named "<name>".` without opening an editor or creating a file or directory. Paths, names with extensions, and `:line` targets keep their ordinary file behavior. Profiles and other direct editor opens are unaffected.
+
 The `edit <file>` command can open a path that does not yet exist on disk. The editor opens with
 an empty buffer showing the file's name, a size of "unknown", and the resolved path in the metadata
 header. The file is not written to disk until the user explicitly saves (Ctrl+S / Cmd+S). On the

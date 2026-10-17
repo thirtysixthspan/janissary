@@ -7,6 +7,20 @@ function row(label: string, state: LaunchNameRow['state'], kind: LaunchNameRow['
 }
 
 describe('checkLaunchName — explicit names', () => {
+  it.each(['system', ' SYSTEM ', 'SyStEm'])('refuses reserved %s before collision and running checks', (name) => {
+    const running = vi.fn();
+    for (const tabs of [[], ['system']]) {
+      expect(checkLaunchName({ name, explicit: true, tabs, rows: [], running })).toEqual({
+        accepted: false, message: 'Cannot use "system": that name is reserved for the system tab.',
+      });
+    }
+    expect(running).not.toHaveBeenCalled();
+  });
+
+  it.each(['system-2', 'system.md'])('allows the unreserved exact name %s', (name) => {
+    expect(checkLaunchName({ name, explicit: true, tabs: [], rows: [] })).toMatchObject({ accepted: true, name });
+  });
+
   it('accepts a name nothing holds', () => {
     expect(checkLaunchName({ name: 'foo', explicit: true, tabs: ['janus'], rows: [] }))
       .toEqual({ accepted: true, name: 'foo', moved: false });
@@ -47,6 +61,13 @@ describe('checkLaunchName — explicit names', () => {
 });
 
 describe('checkLaunchName — default names', () => {
+  it('skips reserved defaults in both suffix and custom candidate sequences', () => {
+    expect(checkLaunchName({ name: 'system', explicit: false, tabs: [], rows: [] }))
+      .toEqual({ accepted: true, name: 'system-2', moved: true });
+    expect(checkLaunchName({ name: 'system', explicit: false, tabs: [], rows: [], candidates: ['SYSTEM', 'system', 'free'] }))
+      .toEqual({ accepted: true, name: 'free', moved: true });
+  });
+
   it('keeps a free default harness name unmoved', () => {
     expect(checkLaunchName({ name: 'claude', explicit: false, tabs: [], rows: [] }))
       .toEqual({ accepted: true, name: 'claude', moved: false });

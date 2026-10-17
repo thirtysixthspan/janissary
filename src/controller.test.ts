@@ -227,6 +227,7 @@ describe('Controller', () => {
     vi.useFakeTimers();
     try {
       const { c } = makeController(); // starts the 1s scheduler interval (fake)
+      c.managers.schedule.start();
       c.dispatch('schedule t1 every 1m clear'); // recurring; first run ~60s out, no shell spawn
       vi.advanceTimersByTime(61_000); // let the scheduler tick fire it
       expect(c.view().find((t) => t.label === 'janus')!.cmdHistory).toContain('clear');
@@ -934,6 +935,7 @@ describe('Controller send command', () => {
     vi.useFakeTimers();
     try {
       const { c } = makeController();
+      c.managers.schedule.start();
       c.dispatch('harness claude --no-workspace --no-auto-approve');
       c.managers.tab.setActiveTab(0); // schedule owned by janus, not the harness tab it targets
       c.dispatch('schedule s1 every 1m send claude /standup');
@@ -969,6 +971,7 @@ describe('Controller schedule in another tab', () => {
     vi.useFakeTimers();
     try {
       const { c } = makeController();
+      c.managers.schedule.start();
       c.dispatch('harness claude --no-workspace --no-auto-approve');
       c.managers.tab.setActiveTab(0);
       c.dispatch('schedule standup in claude every 1m /standup');
@@ -1163,6 +1166,7 @@ describe('Controller profile launch (harness entries)', () => {
       const write = vi.fn();
       vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write, resize: vi.fn(), kill: vi.fn() }));
       const { c } = makeController();
+      c.managers.schedule.start();
       c.dispatch('profile launch small-fix');
       vi.advanceTimersByTime(1050);
       expect(write).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md');
@@ -1183,6 +1187,7 @@ describe('Controller profile launch (harness entries)', () => {
       const write = vi.fn();
       vi.mocked(spawnPty).mockImplementation((program) => ({ id: 'mock-pty-1', program, write, resize: vi.fn(), kill: vi.fn() }));
       const { c } = makeController();
+      c.managers.schedule.start();
       c.dispatch('profile launch small-fix');
       vi.advanceTimersByTime(30 * 60 * 1000 + 1050);
       expect(write).toHaveBeenCalledWith('execute ./ai/fix-a-small-issue.md');
@@ -1412,13 +1417,15 @@ describe('Controller sidebar docking', () => {
     expect(c.managers.tab.activeTab).toBe(index);
   });
 
-  it('setActiveTab RPC is a no-op against a docked tab index', () => {
+  it('setActiveTab RPC undocks and selects the same full-array tab index', () => {
     const { c } = makeController();
     c.dispatch(`files left ${root}`);
     const index = c.view().findIndex((t) => t.view === 'files');
-    const before = c.managers.tab.activeTab;
+    const labels = c.view().map((tab) => tab.label);
     c.setActiveTab(index);
-    expect(c.managers.tab.activeTab).toBe(before);
+    expect(c.managers.tab.activeTab).toBe(index);
+    expect(c.view()[index].dock).toBeUndefined();
+    expect(c.view().map((tab) => tab.label)).toEqual(labels);
   });
 
   it('moveTab (next-tab cycling) skips a docked tab', () => {

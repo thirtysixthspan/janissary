@@ -1,4 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { command } from './edit.js';
 
 describe('edit command', () => {
@@ -16,6 +19,91 @@ describe('edit command', () => {
     expect(command.match('open foo.txt')).toBe(false);
   });
 });
+
+describe('edit runscript fallback', () => {
+  it('opens an existing exact target before a same-named runscript', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'edit-runscript-'));
+    try {
+      mkdirSync(path.join(root, '.janissary', 'scripts'), { recursive: true });
+      writeFileSync(path.join(root, 'deploy'), 'project file');
+      writeFileSync(path.join(root, '.janissary', 'scripts', 'deploy.rs'), 'echo script');
+      const targets: string[] = [];
+      const managers = editManagers(root, targets);
+
+      command.run('edit deploy', { label: 'janus', index: 0 }, managers as never);
+
+      expect(targets).toEqual(['deploy']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('opens an existing runscript by its project-root path', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'edit-runscript-'));
+    try {
+      mkdirSync(path.join(root, '.janissary', 'scripts'), { recursive: true });
+      const runscript = path.join(root, '.janissary', 'scripts', 'deploy.rs');
+      writeFileSync(runscript, 'echo script');
+      const targets: string[] = [];
+
+      command.run('edit deploy', { label: 'janus', index: 0 }, editManagers(root, targets) as never);
+
+      expect(targets).toEqual([runscript]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reports a missing runscript without calling the editor', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'edit-runscript-'));
+    try {
+      const targets: string[] = [];
+      const appended: { input: string; output: string }[] = [];
+      const managers = editManagers(root, targets, appended);
+
+      command.run('edit deploy', { label: 'janus', index: 0 }, managers as never);
+
+      expect(targets).toEqual([]);
+      expect(appended.at(-1)).toEqual({ input: 'edit deploy', output: 'No runscript named "deploy".' });
+      expect(existsSync(path.join(root, '.janissary'))).toBe(false);
+      expect(existsSync(path.join(root, 'deploy'))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps a line-suffixed bare name on ordinary file resolution', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'edit-runscript-'));
+    try {
+      mkdirSync(path.join(root, '.janissary', 'scripts'), { recursive: true });
+      writeFileSync(path.join(root, '.janissary', 'scripts', 'deploy.rs'), 'echo script');
+      const targets: string[] = [];
+
+      command.run('edit deploy:2', { label: 'janus', index: 0 }, editManagers(root, targets) as never);
+
+      expect(targets).toEqual(['deploy']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+function editManagers(
+  root: string,
+  targets: string[],
+  appended: { input: string; output: string }[] = [],
+): object {
+  return {
+    tab: {
+      launchDir: root,
+      cwdOf: () => root,
+      append: (_label: string, entry: { input: string; output: string }) => { appended.push(entry); },
+    },
+    openFile: {
+      editForCommand: (_command: string, target: string) => { targets.push(target); },
+    },
+  };
+}
 
 describe('edit command run', () => {
   let appended: { input: string; output: string }[];

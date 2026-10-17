@@ -31,6 +31,17 @@ function route(view: Tab['view'], overrides: Partial<Tab> = {}): ReturnType<type
 }
 
 describe('captureTab routing', () => {
+  it.each([false, true])('silently excludes a %s system shell regardless of its label', (hidden) => {
+    const managed = tab({ label: 'renamed', view: undefined, systemShell: true, hidden, number: 7 });
+    const state = newCaptureState();
+
+    captureTab(managed, managers([managed]), state);
+
+    expect(state.tabEntries).toEqual([]);
+    expect(state.skipped).toEqual([]);
+    expect(state.harnesses + state.editors + state.plugins + state.ssh + state.fileNavigators).toBe(0);
+  });
+
   // A tab mid-provision carries its view but not its payload yet. Counting it would write an entry
   // with nothing in it, so it is reported as skipped instead and the editor counter stays put.
   it('skips an editor tab that has no editor payload yet', () => {

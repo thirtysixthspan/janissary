@@ -55,6 +55,26 @@ describe('renameEditorTab refusals', () => {
     expect(tab().title).toBe('notes.md');
   });
 
+  it('refuses the normalized reserved system alias before changing an editor path or file', () => {
+    const { managers, filePath, index, tab } = setup();
+    const refusal = managers.tab.renameTab(index, '  SyStEm  ');
+    expect(refusal).toBe('Cannot use "system": that name is reserved for the system tab.');
+    expect(tab().editor?.path).toBe(filePath);
+    expect(tab().editor?.name).toBe('notes.md');
+    expect(readFileSync(filePath, 'utf8')).toBe('notes');
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'file-operation', tab().label, 'Cannot use "system": that name is reserved for the system tab.',
+    );
+  });
+
+  it('checks the reserved name after trimming and the existing alias length limit', () => {
+    const { managers, tab } = setup();
+    tab().editor = undefined;
+    const candidate = `system${'x'.repeat(44)}overflow`;
+    expect(managers.tab.renameTab(0, candidate)).toBeUndefined();
+    expect(tab().title).toBe(candidate.trim().slice(0, 50));
+  });
+
   it('refuses to point a not-yet-saved new file at an existing sibling', () => {
     const { dir, filePath, tab, rename } = setup({ newFile: true });
 

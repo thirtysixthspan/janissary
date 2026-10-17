@@ -17,6 +17,9 @@ What gets completed depends on where in the command you are:
 | After `harness <name>`, at `--model` | That harness's known model names; `--model` may sit anywhere after the harness name |
 | After `syntax` | `theme` at the first argument, and the available theme names after it |
 | After `search` | `transcript`, its only subcommand |
+| After `execute`, or a bare `edit` target | Existing project runscript names; bare `edit` also lists matching files |
 | Anywhere else | Filesystem paths, relative to the tab's working directory |
 
 Path completion lists your home directory for `~` and leaves the tilde in the token it writes back, so `ls ~/pro` and `Tab` gives `ls ~/projects/` when there is one match. A bare `~` works the same as `~/`: `ls ~` and `Tab` offers what's in your home directory rather than in the folder above it. Dotfiles stay hidden unless what you've typed already starts with a `.`.
+
+Run `execute <name>` to execute a runscript now. `edit <name>` opens it for editing when no exact file target exists; a matching file path takes precedence. Paths, file extensions, and `:line` targets keep filesystem completion.

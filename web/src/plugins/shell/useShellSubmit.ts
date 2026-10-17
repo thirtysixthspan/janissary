@@ -21,7 +21,7 @@ export function useShellSubmit(input: {
   openHistory: () => void;
 }) {
   const { appBar, capabilities, displayReply, expectCommand, openHistory, setMatches, setSent, write } = input;
-  return useCallback(async (text: string, record = true): Promise<boolean> => {
+  return useCallback(async (text: string, record = true, receipt?: string): Promise<boolean> => {
     setMatches([]);
     // A line the bar records in its own history enters the application's global history too, which
     // is what ghost text completes from in every tab.
@@ -35,9 +35,16 @@ export function useShellSubmit(input: {
       expectCommand(command);
       write(shellCommandInput(command));
     };
+    const discard = async () => {
+      if (receipt) await capabilities.intent('dispatch-command', { receipt, discard: true });
+    };
     if (routeFor(text) === 'shell') {
       const line = shellLine(text);
-      if (!line) return false;
+      if (!line) {
+        await discard();
+        return false;
+      }
+      await discard();
       runInShell(line);
       remember(text);
       return true;
@@ -45,15 +52,19 @@ export function useShellSubmit(input: {
     // Not recorded, so the list it opens is the same one `Ctrl+R` opens rather than one with `hist`
     // newly at the bottom.
     if (opensShellHistory(text)) {
+      await discard();
       openHistory();
       return false;
     }
     if (appBar.intercept(text)) {
+      await discard();
       remember(text);
       return false;
     }
     try {
-      const result = await capabilities.intent<ShellDispatchResult>('dispatch', text);
+      const result = receipt
+        ? await capabilities.intent<ShellDispatchResult>('dispatch-command', { receipt })
+        : await capabilities.intent<ShellDispatchResult>('dispatch', text);
       remember(text);
       if (result.dispatched) {
         if (!result.coreResponse) displayReply(text, result.output);
@@ -62,6 +73,7 @@ export function useShellSubmit(input: {
       runInShell(text);
       return true;
     } catch (error: unknown) {
+      await discard();
       reportShellIntentFailure(capabilities, 'shell dispatch intent refused', error);
       return false;
     }

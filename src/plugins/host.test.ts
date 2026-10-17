@@ -95,6 +95,71 @@ describe('tab plugin discovery', () => {
 });
 
 describe('TabPluginHost commands', () => {
+  it('returns a completed command outcome', async () => {
+    const command = vi.fn();
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(
+      managers, [declaration({ command: 'fixture' })], { fixture: loader(activation({ command })) },
+    );
+
+    await expect(host.runCommandResult('fixture', 'fixture value', origin))
+      .resolves.toEqual({ status: 'ok', value: undefined });
+    expect(command).toHaveBeenCalledOnce();
+  });
+
+  it('returns the command rejection reason while preserving the ordinary transcript effect', async () => {
+    const { append, managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration({ command: 'fixture' })], {
+      fixture: loader(activation({ command: (_argument, capabilities) => capabilities.rejectRequest('zsh refused') })),
+    });
+
+    await expect(host.runCommandResult('fixture', 'fixture value', origin))
+      .resolves.toEqual({ status: 'rejected', reason: 'zsh refused' });
+    expect(append).toHaveBeenCalledWith('janus', { input: origin.command, output: 'zsh refused' });
+    expect(host.statusFor('fixture')?.state).toBe('active');
+  });
+
+  it('returns the original handler failure and disables the plugin', async () => {
+    const error = new Error('command exploded');
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration({ command: 'fixture' })], {
+      fixture: loader(activation({ command: () => { throw error; } })),
+    });
+
+    const outcome = await host.runCommandResult('fixture', 'fixture value', origin);
+
+    expect(outcome).toEqual({ status: 'failed', error });
+    expect(host.statusFor('fixture')).toMatchObject({ state: 'disabled', reason: 'command exploded' });
+  });
+
+  it('returns the activation failure reason', async () => {
+    const error = new Error('activation exploded');
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(managers, [declaration({ command: 'fixture' })], {
+      fixture: async () => ({ activate: () => { throw error; } }),
+    });
+
+    const outcome = await host.runCommandResult('fixture', 'fixture value', origin);
+
+    expect(outcome).toEqual({ status: 'failed', error: 'activation exploded' });
+    expect(host.statusFor('fixture')).toMatchObject({ state: 'disabled', reason: 'activation exploded' });
+  });
+
+  it('returns an explicit failure for an already-disabled plugin', async () => {
+    const load = vi.fn(loader(activation()));
+    const { managers } = makeManagers();
+    const host = new TabPluginHost(
+      managers, [declaration({ command: 'fixture', apiVersion: TAB_PLUGIN_API_VERSION + 1 })],
+      { fixture: load },
+    );
+
+    const outcome = await host.runCommandResult('fixture', 'fixture value', origin);
+
+    expect(outcome).toEqual({ status: 'failed', error: 'requires tab plugin API 3; host provides 2' });
+    expect(load).not.toHaveBeenCalled();
+    expect(host.statusFor('fixture')?.state).toBe('disabled');
+  });
+
   it('runs the declared command and queues its claimed opens against its own opener', async () => {
     const { managers, runAs } = makeManagers();
     const command = vi.fn((argument: string, capabilities: TabPluginServerCapabilities) => {
@@ -202,6 +267,31 @@ describe('TabPluginHost commands', () => {
     expect(host.statusFor('fixture')).toMatchObject({
       state: 'disabled', reason: 'command exploded after queueing',
     });
+  });
+});
+
+describe('system-shell restart authorization', () => {
+  it('refuses the restart intent for an ordinary shell tab', async () => {
+    const { managers } = makeManagers();
+    managers.tab.tabs.push({
+      label: 'shell-tab', plugin: { id: 'shell', instanceKey: 'shell-1' },
+    } as Tab);
+    const host = new TabPluginHost(managers, [declaration()], { fixture: loader(activation()) });
+
+    expect(() => host.intent('shell-tab', 'restart-terminal', { ptyId: 'pty1' }))
+      .toThrow('Only a managed system shell can restart its terminal');
+    expect(host.statusFor('fixture')?.state).toBe('declared');
+  });
+
+  it('authorizes the restart intent only for a managed shell-plugin tab', async () => {
+    const { managers } = makeManagers();
+    managers.tab.tabs.push({
+      label: 'system', systemShell: true, plugin: { id: 'shell', instanceKey: 'shell-1' },
+    } as Tab);
+    const host = new TabPluginHost(managers, [declaration()], { fixture: loader(activation()) });
+
+    await expect(host.intent('system', 'restart-terminal', { ptyId: 'pty1' }))
+      .rejects.toThrow('Unknown tab plugin "shell"');
   });
 });
 

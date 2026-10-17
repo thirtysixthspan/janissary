@@ -81,7 +81,7 @@ function makeManagers(tabs: Tab[]): { managers: Managers; appended: string[] } {
     tab: {
       tabs,
       append: vi.fn((_label: string, entry: { output: string }) => { appended.push(entry.output); }),
-      closeTab: vi.fn(),
+      userCloseTab: vi.fn(),
       findIndex: (label: string) => tabs.findIndex((t) => t.label === label),
     },
   } as unknown as Managers;
@@ -101,20 +101,20 @@ describe('close command run', () => {
   it('closes the tab whose display alias matches', () => {
     const { managers, appended } = makeManagers(tabs);
     command.run('close reviewer', { label: 'janus', index: 0 }, managers);
-    expect(managers.tab.closeTab).toHaveBeenCalledWith(1);
+    expect(managers.tab.userCloseTab).toHaveBeenCalledWith(1);
     expect(appended).toEqual([]);
   });
 
   it('closes the tab whose label matches in a different case', () => {
     const { managers } = makeManagers(tabs);
     command.run('close NOTES', { label: 'janus', index: 0 }, managers);
-    expect(managers.tab.closeTab).toHaveBeenCalledWith(2);
+    expect(managers.tab.userCloseTab).toHaveBeenCalledWith(2);
   });
 
   it('resolves an alias for "exit" the same way', () => {
     const { managers } = makeManagers(tabs);
     command.run('exit Reviewer', { label: 'janus', index: 0 }, managers);
-    expect(managers.tab.closeTab).toHaveBeenCalledWith(1);
+    expect(managers.tab.userCloseTab).toHaveBeenCalledWith(1);
   });
 
   it('reports an unknown name on the invoking tab and closes nothing', () => {
@@ -122,12 +122,12 @@ describe('close command run', () => {
     command.run('close ghost', { label: 'janus', index: 0 }, managers);
     expect(appended).toEqual(['No tab named "ghost".']);
     expect(managers.tab.append).toHaveBeenCalledWith('janus', { input: 'close ghost', output: 'No tab named "ghost".' });
-    expect(managers.tab.closeTab).not.toHaveBeenCalled();
+    expect(managers.tab.userCloseTab).not.toHaveBeenCalled();
   });
 
   it('closes the invoking tab when bare', () => {
     const { managers } = makeManagers(tabs);
     command.run('close', { label: 'notes', index: 2 }, managers);
-    expect(managers.tab.closeTab).toHaveBeenCalledWith(2);
+    expect(managers.tab.userCloseTab).toHaveBeenCalledWith(2);
   });
 });

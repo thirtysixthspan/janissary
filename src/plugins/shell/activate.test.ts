@@ -427,19 +427,46 @@ describe('shell plugin activation', () => {
   it('answers whether the terminal behind a tab is still running', () => {
     const { capabilities } = fakeCapabilities({ running: true });
 
-    expect(ask(capabilities, 'terminal-status')).toEqual({ running: true });
+    expect(ask(capabilities, 'terminal-status', { ptyId: PAYLOAD.ptyId })).toEqual({ ptyId: PAYLOAD.ptyId, running: true });
   });
 
   it('reports a shell that exited while no browser was attached as not running', () => {
     const { capabilities } = fakeCapabilities({ running: false });
 
-    expect(ask(capabilities, 'terminal-status', undefined)).toEqual({ running: false });
+    expect(ask(capabilities, 'terminal-status', { ptyId: PAYLOAD.ptyId })).toEqual({ ptyId: PAYLOAD.ptyId, running: false });
+  });
+
+  it('restarts only the matching exited terminal from the project root with a fresh marker nonce', () => {
+    const { capabilities, updated, spawns } = fakeCapabilities({ running: false });
+
+    expect(ask(capabilities, 'restart-terminal', { ptyId: PAYLOAD.ptyId })).toEqual({ restarted: true });
+
+    expect(spawns).toEqual([{
+      cwd: PAYLOAD.root, shell: SHELL_PROGRAM, args: [], zshHooks: { nonce: expect.any(String) },
+    }]);
+    expect(updated[0]?.key).toBe(PAYLOAD.instanceKey);
+    expect(updated[0]?.payload).toMatchObject({
+      ptyId: 'pty7', cwd: PAYLOAD.root, root: PAYLOAD.root, workspace: false,
+    });
+    expect(updated[0]?.payload).not.toHaveProperty('hookNonce', PAYLOAD.hookNonce);
+  });
+
+  it.each([
+    { request: { ptyId: 'stale-pty' }, running: false, message: 'the exited terminal is no longer current' },
+    { request: { ptyId: PAYLOAD.ptyId }, running: true, message: 'the terminal is still running' },
+  ])('refuses restart when $message', ({ request, running, message }) => {
+    const { capabilities, updated, spawns } = fakeCapabilities({ running });
+
+    expect(() => ask(capabilities, 'restart-terminal', request)).toThrow(new TabPluginRejection(message));
+    expect(updated).toEqual([]);
+    expect(spawns).toEqual([]);
   });
 
   it('answers running for a shell still waiting for its workspace, which has no terminal to ask about', () => {
     const { capabilities } = fakeCapabilities({ running: false });
 
-    expect(ask(capabilities, 'terminal-status', null, PROVISIONING)).toEqual({ running: true });
+    expect(ask(capabilities, 'terminal-status', { ptyId: 'connecting-pty' }, PROVISIONING))
+      .toEqual({ ptyId: '', running: true });
     expect(capabilities.terminalRunning).not.toHaveBeenCalled();
   });
 
@@ -609,6 +636,29 @@ describe('shell plugin activation', () => {
     expect(ask(capabilities, 'queue', 'ls -la')).toEqual({ queued: true });
     expect(ask(capabilities, 'dequeue', null)).toEqual({ line: 'ls -la' });
     expect(ask(capabilities, 'dequeue', null)).toEqual({ line: null });
+  });
+
+  it('forwards structured dequeue, dispatch, and discard through validated intents', async () => {
+    const { capabilities } = fakeCapabilities();
+    const nextQueuedCommand = vi.fn(() => ({ line: 'scheduled', receipt: 'opaque-receipt' }));
+    const dispatchQueuedCommand = vi.fn(async (_receipt: string, _options?: { discard: true }) => ({
+      dispatched: true, output: 'done',
+    }));
+    Object.assign(capabilities, { nextQueuedCommand, dispatchQueuedCommand });
+
+    expect(ask(capabilities, 'dequeue-command', null)).toEqual({
+      line: 'scheduled', receipt: 'opaque-receipt',
+    });
+    await expect(ask(capabilities, 'dispatch-command', { receipt: 'opaque-receipt' }))
+      .resolves.toEqual({ dispatched: true, output: 'done' });
+    await expect(ask(capabilities, 'dispatch-command', { receipt: 'opaque-receipt', discard: true }))
+      .resolves.toEqual({ dispatched: true, output: 'done' });
+
+    expect(nextQueuedCommand).toHaveBeenCalledOnce();
+    expect(dispatchQueuedCommand).toHaveBeenNthCalledWith(1, 'opaque-receipt', undefined);
+    expect(dispatchQueuedCommand).toHaveBeenNthCalledWith(2, 'opaque-receipt', { discard: true });
+    expect(() => ask(capabilities, 'dispatch-command', { receipt: 7 })).toThrow(TabPluginRejection);
+    expect(() => ask(capabilities, 'dispatch-command', { receipt: 'x', discard: false })).toThrow(TabPluginRejection);
   });
 
   it('rejects a queued line that is not a string', () => {

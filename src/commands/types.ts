@@ -1,4 +1,5 @@
 import type { Managers } from '../managers.js';
+import type { SystemScheduleOrigin } from '../command-queue/entry.js';
 
 export type CommandManagers = Managers;
 
@@ -13,6 +14,7 @@ export type CommandInvocationContext = Readonly<{
   }>;
   signal: AbortSignal;
   awaitResult?: true;
+  systemSchedule?: Readonly<SystemScheduleOrigin>;
 }>;
 
 export interface Command {

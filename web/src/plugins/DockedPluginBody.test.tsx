@@ -7,6 +7,7 @@ import { Sidebar } from '../Sidebar';
 import { createPluginHost, PluginHostProvider, type PluginHost } from './host';
 import { clientPlugin, type ClientPluginRegistration } from './registry';
 import { DockedPluginBody } from './DockedPluginBody';
+import { sidebarSelectionFor } from '../sidebar-selection-coordinator';
 
 // Each case owns its registry and its failure ledger, so a fixture plugin never has to be written
 // into the production map and a disabled plugin cannot leak into the next case.
@@ -147,6 +148,33 @@ describe('a plugin tab docked into a sidebar', () => {
     await waitFor(() => { expect(screen.getByTestId('second-body')).toBeInTheDocument(); });
     expect(screen.getByTestId('first-body')).toHaveAttribute('data-active', 'true');
     expect(screen.getByTestId('second-body')).toHaveAttribute('data-active', 'false');
+  });
+
+  it('retains a hidden docked system plugin without exposing it to sidebar selection', async () => {
+    const mounts = vi.fn();
+    registerCountingPlugin('fixture', mounts);
+    const client = { send: vi.fn() } as unknown as JanusClient;
+    const coordinator = sidebarSelectionFor(client);
+    const hidden = { ...pluginTab('system', 'fixture'), hidden: true as const, systemShell: true as const };
+    const { container, rerender } = render(<Sidebar side="left" tabs={[hidden]} client={client} />);
+
+    await waitFor(() => { expect(screen.getByTestId('fixture-body')).toBeInTheDocument(); });
+    expect(screen.getByTestId('fixture-body')).toHaveAttribute('data-active', 'false');
+    expect(screen.getByTestId('fixture-body').closest('.sidebar-plugin')).toHaveAttribute('inert');
+    expect(container.querySelector(':scope .sidebar-left')).toHaveStyle({ display: 'none' });
+    expect(container.querySelectorAll(':scope .tabstrip .tab')).toHaveLength(0);
+    expect(coordinator.isSelected('system')).toBe(false);
+    expect(coordinator.select('system')).toBe(false);
+    expect(mounts).toHaveBeenCalledOnce();
+
+    const revealed = { ...hidden, hidden: undefined };
+    rerender(<Sidebar side="left" tabs={[revealed]} client={client} />);
+    expect(screen.getByTestId('fixture-body')).toHaveAttribute('data-active', 'true');
+    expect(coordinator.isSelected('system')).toBe(true);
+    rerender(<Sidebar side="left" tabs={[{ ...revealed, hidden: true }]} client={client} />);
+    expect(screen.getByTestId('fixture-body')).toHaveAttribute('data-active', 'false');
+    expect(container.querySelector(':scope .sidebar-left')).toHaveStyle({ display: 'none' });
+    expect(mounts).toHaveBeenCalledOnce();
   });
 
   // Placement is host-owned: a plugin that lays itself out for a narrow sidebar reads the side here

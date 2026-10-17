@@ -1,12 +1,9 @@
-import { isRecord } from '../api.js';
-
-export const SCHEDULES_PAYLOAD_SCHEMA_VERSION = 1;
+export const SCHEDULES_PAYLOAD_SCHEMA_VERSION = 2;
 
 // One row of the aggregated list: a scheduled command, the tab that owns it, and when it next runs.
 // Deliberately re-declared rather than imported from the host's `AggregatedScheduleView`: this
-// contract's only import is the published `isRecord` guard through `../api.js`, so the client can
-// run its guards without pulling server resolution into the browser graph. `shared.test.ts` pins
-// the two shapes against each other.
+// contract is import-free, so the client can run its guards without pulling server resolution into
+// the browser graph. `shared.test.ts` pins the two row shapes against each other.
 export type ScheduleRow = {
   id: string;
   spec: string;
@@ -14,12 +11,14 @@ export type ScheduleRow = {
   recurring: boolean;
   tab: string;
   command: string;
-};
+} & ({ owner?: 'tab'; key?: never } | { owner: 'system'; key: string });
 
 export type SchedulesPayload = { entries: ScheduleRow[] };
 
-export type CancelIntent = { tab: string; id: string };
-export type FocusOwnerIntent = { tab: string };
+type ScheduleOwnerIntent = { tab: string; owner?: 'tab'; key?: never }
+  | { tab: 'system'; owner: 'system'; key: string };
+export type CancelIntent = ScheduleOwnerIntent & { id: string };
+export type FocusOwnerIntent = ScheduleOwnerIntent;
 
 function isScheduleRow(value: unknown): value is ScheduleRow {
   return isRecord(value)
@@ -28,7 +27,14 @@ function isScheduleRow(value: unknown): value is ScheduleRow {
     && typeof value.next === 'string'
     && typeof value.recurring === 'boolean'
     && typeof value.tab === 'string'
-    && typeof value.command === 'string';
+    && typeof value.command === 'string'
+    && (value.owner === undefined && value.key === undefined
+      || value.owner === 'tab' && value.key === undefined
+      || value.owner === 'system' && typeof value.key === 'string');
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 export function isSchedulesPayload(value: unknown): value is SchedulesPayload {
@@ -38,11 +44,18 @@ export function isSchedulesPayload(value: unknown): value is SchedulesPayload {
 }
 
 export function isCancelIntent(value: unknown): value is CancelIntent {
-  return isRecord(value) && typeof value.tab === 'string' && typeof value.id === 'string';
+  return isRecord(value) && typeof value.tab === 'string' && typeof value.id === 'string'
+    && isScheduleOwnerIntent(value);
 }
 
 export function isFocusOwnerIntent(value: unknown): value is FocusOwnerIntent {
-  return isRecord(value) && typeof value.tab === 'string';
+  return isRecord(value) && typeof value.tab === 'string' && isScheduleOwnerIntent(value);
+}
+
+function isScheduleOwnerIntent(value: Record<string, unknown>): boolean {
+  return value.owner === undefined && value.key === undefined
+    || value.owner === 'tab' && value.key === undefined
+    || value.owner === 'system' && value.tab === 'system' && typeof value.key === 'string';
 }
 
 export function isEmptyIntent(value: unknown): value is Record<string, never> {

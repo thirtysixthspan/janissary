@@ -75,10 +75,10 @@ export function Sidebar({
     onNotificationsVisibilityChange?.(current?.tab.view === 'notifications');
   }, [current?.tab.view, onNotificationsVisibilityChange]);
 
-  if (entries.length === 0) return null;
+  if (entries.length === 0 && plugins.length === 0) return null;
 
   return (
-    <div className={`sidebar sidebar-${side}`} style={{ flex: `0 0 ${width}px` }} data-doc-shot={`sidebar-${side}`}>
+    <div className={`sidebar sidebar-${side}`} inert={!current} style={{ flex: `0 0 ${width}px`, display: current ? undefined : 'none' }} data-doc-shot={`sidebar-${side}`}>
       {side === 'right' && divider}
       <div className="sidebar-body">
         <TabStrip
@@ -96,14 +96,14 @@ export function Sidebar({
           startControl={side === 'right' ? resizeButton : undefined}
           endControl={side === 'left' ? resizeButton : undefined}
         />
-        {isFilesTabView(current.tab) && (
+        {current && isFilesTabView(current.tab) && (
           <FileNavigatorTab
             files={current.tab.files} client={client} index={current.index} label={current.tab.label} dock={current.tab.dock} autoFocus={false}
             dropRef={dropRef} targetCwd={targetCwd ?? current.tab.cwd}
             multiOpen={multiOpenablePaths}
           />
         )}
-        {current.tab.view === 'notifications' && (
+        {current?.tab.view === 'notifications' && (
           <NotificationsTab lines={current.tab.bufferLines} client={client} index={current.index} dock={current.tab.dock} />
         )}
         {plugins.map((e) => (
@@ -111,9 +111,9 @@ export function Sidebar({
             key={e.tab.label}
             tab={e.tab}
             index={e.index}
-            visible={e.tab.label === current.tab.label}
+            visible={e.tab.label === current?.tab.label}
             client={client}
-            overlay={pickerSourceTab === e.tab.label ? pickerOverlays : undefined}
+            overlay={!e.tab.hidden && pickerSourceTab === e.tab.label ? pickerOverlays : undefined}
             onClose={() => client.send({ method: 'closeTab', params: { label: e.tab.label } })}
           />
         ))}

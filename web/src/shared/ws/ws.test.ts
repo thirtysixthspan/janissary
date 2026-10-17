@@ -164,7 +164,7 @@ describe('JanusClient', () => {
       syntaxTheme: 'monokai', theme: 'light', tasks: [],
       profiles: [], projectDir: '/project', version: '7.8.9',
       harnessLaunch: { names: ['claude'], models: { claude: ['opus'] }, autoApprove: ['claude'], autoResume: [] },
-      scheduleLaunch: { targets: ['agent'], active: 'agent' },
+      scheduleLaunch: { targets: ['agent'], active: 'agent', runscripts: [] },
     };
     messageHandler!({ data: JSON.stringify(snapshot) });
     expect(first).toHaveBeenCalledExactlyOnceWith(snapshot);

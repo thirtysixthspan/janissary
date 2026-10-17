@@ -3,20 +3,21 @@
 // easily-tested module rather than inline in the manager class.
 
 import { getQueue, pushQueue, shiftQueue, updateQueueEntry, removeQueueEntry } from './queue.js';
+import type { QueueEntry } from '../command-queue/entry.js';
 
-export function queueFor(queue: string[]): string[] {
+export function queueFor(queue: QueueEntry[]): string[] {
   return getQueue(queue);
 }
 
 export function enqueue(
-  queue: string[], text: string, onChange: () => void,
+  queue: QueueEntry[], text: string, onChange: () => void,
 ): void {
   pushQueue(queue, text);
   onChange();
 }
 
 export function dequeue(
-  queue: string[], onChange: () => void,
+  queue: QueueEntry[], onChange: () => void,
 ): string | undefined {
   const front = shiftQueue(queue);
   if (front !== undefined) onChange();
@@ -24,13 +25,13 @@ export function dequeue(
 }
 
 export function editQueued(
-  queue: string[], index: number, text: string, onChange: () => void,
+  queue: QueueEntry[], index: number, text: string, onChange: () => void,
 ): void {
   if (updateQueueEntry(queue, index, text)) onChange();
 }
 
 export function deleteQueued(
-  queue: string[], index: number, onChange: () => void,
+  queue: QueueEntry[], index: number, onChange: () => void,
 ): void {
   if (removeQueueEntry(queue, index)) onChange();
 }

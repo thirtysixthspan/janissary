@@ -18,6 +18,7 @@ import { command as profile } from './profile.js';
 import { command as open } from './open.js';
 import { command as play } from './play.js';
 import { command as edit } from './edit.js';
+import { command as execute } from './execute.js';
 import { command as newFile } from './new-file.js';
 import { command as newDirectory } from './new-directory.js';
 import { command as send } from './send.js';
@@ -30,6 +31,7 @@ import { command as notify } from './notify.js';
 import { command as syntax } from './syntax.js';
 import { command as theme } from './theme.js';
 import { command as tasks } from './tasks.js';
+import { command as tab } from './tab.js';
 import { command as question } from './question.js';
 import { monitor, unmonitor, monitors } from './monitor.js';
 import { command as plugins } from './plugins.js';
@@ -60,6 +62,7 @@ const coreCommands: Command[] = [
   open,
   play,
   edit,
+  execute,
   newFile,
   newDirectory,
   send,
@@ -72,6 +75,7 @@ const coreCommands: Command[] = [
   syntax,
   theme,
   tasks,
+  tab,
   question,
   plugins,
   monitors,

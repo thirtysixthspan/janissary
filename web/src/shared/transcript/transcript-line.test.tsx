@@ -300,4 +300,18 @@ describe('renderLine — message tab link', () => {
     await userEvent.click(screen.getByRole('button', { name: 'build' }));
     expect(intents.onFocusTab).toHaveBeenCalledWith('build');
   });
+
+  it('asks to focus the hidden system tab from a system schedule notice', async () => {
+    const intents = fakeIntents();
+    const line: BufferLine = {
+      type: 'message',
+      text: 'System schedule nightly ran: script deploy',
+      from: '8:32pm system',
+      openTab: 'system',
+    };
+    render(<>{renderLine(line, 0, intents, noop, vi.fn())}</>);
+
+    await userEvent.click(screen.getByRole('button', { name: 'system' }));
+    expect(intents.onFocusTab).toHaveBeenCalledWith('system');
+  });
 });

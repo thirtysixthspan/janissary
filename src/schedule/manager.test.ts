@@ -610,6 +610,7 @@ describe('ScheduleManager schedule launch dialog', () => {
     const managers = {
       tab: {
         tabs,
+        launchDir: process.cwd(),
         byLabel: (label: string) => tabs.find((t) => t.label === label),
         cur: () => tabs.find((t) => t.label === activeLabel),
       },
@@ -630,18 +631,24 @@ describe('ScheduleManager schedule launch dialog', () => {
       { label: 'shots', view: 'image' },
     ], 'claude');
     mgr.openScheduleLaunch();
-    expect(mgr.scheduleLaunchView()).toEqual({ targets: ['janus', 'claude'], active: 'claude' });
+    expect(mgr.scheduleLaunchView()).toEqual({ targets: ['janus', 'claude'], active: 'claude', runscripts: [] });
+  });
+
+  it('does not list the managed system shell as an ordinary tab target', () => {
+    const mgr = makeMgr([{ label: 'janus' }, { label: 'system', systemShell: true }], 'system');
+    mgr.openScheduleLaunch();
+    expect(mgr.scheduleLaunchView()).toEqual({ targets: ['janus'], active: 'system', runscripts: [] });
   });
 
   it('lists a plugin tab that owns a terminal and leaves out one that does not', () => {
     const tabs: Partial<Tab>[] = [{ label: 'janus' }, { label: 'bekir', view: 'plugin' }, { label: 'video', view: 'plugin' }];
     const managers = {
-      tab: { tabs, cur: () => tabs[0] },
+      tab: { tabs, launchDir: process.cwd(), cur: () => tabs[0] },
       pty: { terminalIdFor: (label: string) => (label === 'bekir' ? 'pty4' : undefined) },
     } as unknown as Managers;
     const mgr = new ScheduleManager(managers);
     mgr.openScheduleLaunch();
-    expect(mgr.scheduleLaunchView()).toEqual({ targets: ['janus', 'bekir'], active: 'janus' });
+    expect(mgr.scheduleLaunchView()).toEqual({ targets: ['janus', 'bekir'], active: 'janus', runscripts: [] });
   });
 
   it('reflects closeScheduleLaunch back to null', () => {
@@ -804,6 +811,7 @@ describe('ScheduleManager aggregatedView', () => {
         tabs: labels.map((label) => ({ label })),
         byLabel: (label: string) => ({ label }),
       },
+      systemSchedule: { list: () => [] },
     } as unknown as Managers;
     return new ScheduleManager(managers);
   }

@@ -7,6 +7,8 @@ edit src/main.ts
 edit notes/new-idea.md      the path doesn't have to exist yet
 ```
 
+For a bare valid runscript name, `edit deploy` opens the existing project script at `.janissary/scripts/deploy.rs` when no exact file named `deploy` exists in your working directory. A missing runscript prints `No runscript named "deploy".` and doesn't create a file. Explicit paths and names with extensions keep the usual behavior.
+
 The tab shows the file's name, size, and location in a header, with the editable buffer below.
 Typing, arrow keys, `Home`/`End`, `PageUp`/`PageDown`, mouse clicks and selection, and paste all
 work as you'd expect. The save, commit, connection, sync, and Split controls that are available stay grouped at the right edge of the header. The save button is enabled when you have unsaved changes and dimmed when the buffer is clean.

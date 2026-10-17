@@ -9,6 +9,7 @@ import type {
 import type { CompletionResult } from '../completion/types.js';
 import type { AcpPromptResult } from '../acp/types.js';
 import type { Tab } from '../tab/types.js';
+import type { QueueCapabilityTypes } from './queue-capability-types.js';
 
 // The capability half of the contract, and the topic half below it, live in modules of their own and
 // are re-exported here, so a plugin still reads the whole v2 contract from one module.
@@ -211,7 +212,7 @@ export type TabPluginSelectionAction = {
   action: string;
 };
 
-export type TabPluginServerCapabilities = {
+export type TabPluginServerCapabilities = QueueCapabilityTypes & {
   // Core ACP connection operations, scoped to this plugin's own answering tab.
   //
   // `startAcp` takes an optional request. `{ withoutTools: true }` asks for a session with no tool
@@ -292,7 +293,7 @@ export type TabPluginServerCapabilities = {
   // topic this plugin did not declare is a plugin-authoring mistake and disables it.
   topicData(topic: TabPluginNotificationTopic): TabPluginNotification['data'];
   // Ask the host to perform one of the actions a declared topic defines.
-  topicAction(action: TabPluginTopicAction): void;
+  topicAction(action: TabPluginTopicAction): string | undefined;
   // Ask the host to run its ordinary `open` pipeline for `target`, restricted to this plugin's own
   // claimed extensions. The host queues the request and runs it after the guarded call returns, so
   // glob expansion and per-file dispatch never count against the plugin's own call budget.

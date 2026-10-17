@@ -120,6 +120,24 @@ describe('TabManager by-label lookups', () => {
 
 describe('TabManager queue', () => {
 
+  it('appends a system-schedule batch contiguously with one provenance key and one update', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } });
+    const changed = vi.fn();
+    const subscription = messageBus.on('state', 'dirty', changed);
+
+    tm.enqueueSystemScheduleBatch('system', ['first', 'second', 'third'], 'schedule-key');
+
+    expect(tm.queueFor('system')).toEqual(['first', 'second', 'third']);
+    expect(tm.tabs.find((tab) => tab.label === 'system')?.runtime?.queue).toEqual([
+      { line: 'first', origin: { kind: 'system-schedule', scheduleKey: 'schedule-key' } },
+      { line: 'second', origin: { kind: 'system-schedule', scheduleKey: 'schedule-key' } },
+      { line: 'third', origin: { kind: 'system-schedule', scheduleKey: 'schedule-key' } },
+    ]);
+    expect(changed).toHaveBeenCalledOnce();
+    subscription.unsubscribe();
+  });
+
   it('editQueued replaces the right index and no-ops out of range', () => {
     const tm = makeTabManager();
     tm.enqueue('janus', 'first');
@@ -549,6 +567,28 @@ describe('TabManager queue', () => {
 });
 
 describe('TabManager close completion', () => {
+  it('userCloseTab hides a system record idempotently without discarding its queue or resources', () => {
+    const { tm, managers } = makeTabManagerWithManagers();
+    const system = { ...tm.cur(), label: 'system', number: 2, systemShell: true as const };
+    tm.tabs.push(system);
+    tm.enqueue('system', 'echo retained');
+    const labelsAtEmit: string[][] = [];
+    const subscription = messageBus.on('state', 'dirty', () => {
+      labelsAtEmit.push(tm.tabs.map((tab) => tab.label));
+    });
+
+    tm.userCloseTab(1);
+    tm.userCloseTab(1);
+    subscription.unsubscribe();
+
+    expect(labelsAtEmit).toEqual([['janus', 'system']]);
+    expect(tm.tabs[1]).toBe(system);
+    expect(system.hidden).toBe(true);
+    expect(tm.queueFor('system')).toEqual(['echo retained']);
+    expect(managers.pty.closeTab).not.toHaveBeenCalled();
+    expect(managers.schedule.delete).not.toHaveBeenCalled();
+  });
+
   it('removes a tab immediately and resolves after its workspace release', async () => {
     vi.useFakeTimers();
     try {

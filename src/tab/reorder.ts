@@ -27,6 +27,7 @@ export function computeReorderTo(
 ): { tabs: Tab[]; activeTab: number } | undefined {
   if (from < 0 || to < 0 || from >= tabs.length || to >= tabs.length || from === to) return undefined;
   const moved = tabs[from];
+  if (moved.hidden || tabs[to].hidden) return undefined;
   if (
     isCenterActionTab(moved)
     && isCenterActionTab(tabs[to])

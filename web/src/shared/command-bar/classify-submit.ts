@@ -32,7 +32,7 @@ function classifyClose(trimmed: string, tabs: TabView[], activeTab: number, sour
     : sourceTab === undefined ? activeTab : tabs.findIndex((tab) => tab.label === sourceTab);
   // A close naming a tab that is not open is not a close at all, so the line runs and the server
   // answers for it. Swallowing it here would report nothing for a command the user did type.
-  if (index === -1) return { kind: 'run' };
+  if (index < 0 || tabs[index]?.systemShell) return { kind: 'run' };
   return closeQuitsApp(tabs, index) ? { kind: 'confirm-quit' } : { kind: 'confirm-close', index };
 }
 

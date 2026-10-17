@@ -58,6 +58,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     sendNativeNotification: (event) => broadcast({ t: 'native-notification', ...event }),
     sendAgentRun: (event) => broadcast({ t: 'agent-run-updated', ...event }),
   }, options.projectDir);
+  const bootCutoff = Date.now();
   try {
     await openLaunchShell(controller.managers);
   } catch (error) {
@@ -67,6 +68,9 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     }
     throw error;
   }
+  await controller.managers.systemShell.ensure();
+  controller.managers.systemSchedule.load(bootCutoff);
+  controller.managers.schedule.start();
   controller.reattachSessions();
 
   const serveStatic = staticFileServer({
