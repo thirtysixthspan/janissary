@@ -25,6 +25,13 @@ export abstract class TabQueueState {
     this.queueChanged();
   }
 
+  enqueueSystemScheduleBatch(label: string, lines: string[], scheduleKey: string): void {
+    const runtime = runtimeFor(this.tabs, label);
+    if (!runtime || lines.length === 0) return;
+    for (const line of lines) enqueueSystemSchedule(runtime.queue, line, scheduleKey);
+    this.queueChanged();
+  }
+
   dequeueCommand(label: string, pluginId: string): DequeuedCommand | null {
     const runtime = runtimeFor(this.tabs, label);
     if (!runtime) return null;

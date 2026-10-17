@@ -30,6 +30,7 @@ import { SessionsManager } from '../sessions/manager.js';
 import { NotificationQueue } from '../notifications/queue.js';
 import { AgentRunManager } from '../agent/manager.js';
 import { SystemShellManager } from '../system-shell.js';
+import { SystemScheduleManager } from '../schedule/system/manager.js';
 
 // Populates every manager onto an already-allocated (empty) `Managers` object, in construction
 // order (later managers may reference earlier ones via `this.managers` at call time, not
@@ -69,6 +70,7 @@ export function createManagers(managers: Managers, projectDir?: string): void {
   managers.pty = new PseudoterminalManager(managers);
   managers.systemShell = new SystemShellManager(managers);
   managers.schedule = new ScheduleManager(managers);
+  managers.systemSchedule = new SystemScheduleManager(managers);
   managers.shell = new ShellManager(managers);
   managers.harness = new HarnessManager(managers);
   managers.shellTranscript = new ShellTranscriptManager(managers);

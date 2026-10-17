@@ -66,6 +66,7 @@ export class ScheduleManager {
 
   // Begin the firing loop. `unref` so a pending tick never keeps the process alive on its own.
   start(): void {
+    if (this.timer) return;
     this.timer = setInterval(() => this.tick(), 1000);
     this.timer.unref?.();
   }
@@ -73,6 +74,7 @@ export class ScheduleManager {
   // Stop the firing loop (app shutdown).
   stop(): void {
     clearInterval(this.timer);
+    this.timer = undefined;
     this.resumeSubscription.unsubscribe();
   }
 
@@ -164,8 +166,7 @@ export class ScheduleManager {
 
   // Fire any commands whose next-run time has passed, in every still-open tab. A recurring entry is
   // rescheduled to its next run; a one-shot drops off.
-  private tick(): void {
-    const now = Date.now();
+  tick(now = Date.now()): void {
     let changed = false;
     for (const label of this.managers.tab.allLabels()) {
       const tab = this.managers.tab.byLabel(label);
@@ -177,6 +178,7 @@ export class ScheduleManager {
       changed = true;
     }
     if (changed) { messageBus.emit('state', { type: 'dirty' }); this.announceChange(); }
+    this.managers.systemSchedule?.tick(now);
   }
 
   // The named, low-frequency signal a tab plugin may subscribe to: emitted wherever the scheduled

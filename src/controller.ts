@@ -121,6 +121,5 @@ export type Controller = ControllerCore & ControllerMembers;
 export function createController(sinks: Sinks, projectDir?: string): Controller {
   const core = new ControllerCore(sinks, projectDir);
   const controller = Object.assign(core, createControllerAdapters(core.managers));
-  controller.managers.schedule.start();
   return controller;
 }

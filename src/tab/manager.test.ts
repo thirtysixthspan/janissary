@@ -120,6 +120,24 @@ describe('TabManager by-label lookups', () => {
 
 describe('TabManager queue', () => {
 
+  it('appends a system-schedule batch contiguously with one provenance key and one update', () => {
+    const tm = makeTabManager();
+    tm.tabs.push({ ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } });
+    const changed = vi.fn();
+    const subscription = messageBus.on('state', 'dirty', changed);
+
+    tm.enqueueSystemScheduleBatch('system', ['first', 'second', 'third'], 'schedule-key');
+
+    expect(tm.queueFor('system')).toEqual(['first', 'second', 'third']);
+    expect(tm.tabs.find((tab) => tab.label === 'system')?.runtime?.queue).toEqual([
+      { line: 'first', origin: { kind: 'system-schedule', scheduleKey: 'schedule-key' } },
+      { line: 'second', origin: { kind: 'system-schedule', scheduleKey: 'schedule-key' } },
+      { line: 'third', origin: { kind: 'system-schedule', scheduleKey: 'schedule-key' } },
+    ]);
+    expect(changed).toHaveBeenCalledOnce();
+    subscription.unsubscribe();
+  });
+
   it('editQueued replaces the right index and no-ops out of range', () => {
     const tm = makeTabManager();
     tm.enqueue('janus', 'first');

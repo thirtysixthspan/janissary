@@ -12,6 +12,8 @@ The additive `nextQueuedCommand()` capability returns `{ line, receipt }` for th
 
 Queue rows may carry server-only system-schedule provenance. The ordinary `TabView.commandQueue` remains a list of strings. Editing a structured row replaces it with an ordinary row; deletion and legacy `nextQueuedLine()` also drop its provenance. Queue rows and receipts are in-memory only. A receipt dispatch adds readonly schedule provenance to that command's invocation context and to child invocations for the same command. Ordinary dispatch has no provenance.
 
+A system schedule appends all lines from one runscript as a contiguous FIFO batch with one shared schedule key and one queue/state update. Batches cannot interleave, and an empty runscript appends no rows. The shell consumer continues through later lines after a failing command; schedule delivery does not add a per-line failure notice or stop policy. Queue rows are not persisted, so restart never replays previously queued work.
+
 The framework-free `CommandQueue` service in `web/src/shared/command-queue/command-queue.ts` and its `useCommandQueue` hook are published through `web/src/plugins/api.ts`. Consumers supply an enqueue/dequeue transport, a line runner, and busy/idle signals. The service and hook own FIFO handling, draining, wakeups, and disposal. The shell plugin supplies thin intent adapters, routing, history attribution, and zsh's status markers. There is no command-queue plugin.
 
 ## Queueing and draining

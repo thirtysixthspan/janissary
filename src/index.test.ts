@@ -15,6 +15,8 @@ import { messageBus } from './bus.js';
 import { ControllerCore } from './controller.js';
 import { TabPluginHost } from './plugins/host.js';
 import { SystemShellManager } from './system-shell.js';
+import { SystemScheduleManager } from './schedule/system/manager.js';
+import { ScheduleManager } from './schedule/manager.js';
 
 const webDir = mkdtempSync(path.join(tmpdir(), 'janus-test-'));
 writeFileSync(path.join(webDir, 'index.html'), '<!DOCTYPE html><html><body></body></html>');
@@ -149,6 +151,8 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
   it('ensures the system shell after janus and still listens and restores sessions on failure', async () => {
     const order: string[] = [];
     const runSpy = vi.spyOn(TabPluginHost.prototype, 'runCommandResult');
+    const load = vi.spyOn(SystemScheduleManager.prototype, 'load').mockImplementation(() => { order.push('load'); });
+    const start = vi.spyOn(ScheduleManager.prototype, 'start').mockImplementation(() => { order.push('start'); });
     const ensure = vi.spyOn(SystemShellManager.prototype, 'ensure').mockImplementation(async () => {
       order.push('ensure');
       return { status: 'failed', reason: new Error('system zsh unavailable') };
@@ -161,14 +165,19 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
       server = await startServer({ webDir, projectDir: tmpdir() });
 
       expect(server.port).toBeGreaterThan(0);
-      expect(order).toEqual(['ensure', 'reattach']);
+      expect(order).toEqual(['ensure', 'load', 'start', 'reattach']);
       expect(runSpy.mock.invocationCallOrder[0]).toBeLessThan(ensure.mock.invocationCallOrder[0] ?? Infinity);
       expect((ensure.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(reattach.mock.invocationCallOrder[0] ?? Infinity);
       expect(runSpy).toHaveBeenCalledOnce();
       expect(ensure).toHaveBeenCalledOnce();
+      expect(load).toHaveBeenCalledOnce();
+      expect(start).toHaveBeenCalledOnce();
       expect(reattach).toHaveBeenCalledOnce();
+      expect((start.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(reattach.mock.invocationCallOrder[0] ?? Infinity);
     } finally {
       runSpy.mockRestore();
+      load.mockRestore();
+      start.mockRestore();
       ensure.mockRestore();
       reattach.mockRestore();
     }

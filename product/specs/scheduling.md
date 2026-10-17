@@ -4,6 +4,10 @@
 
 The system schedule store is a versioned snapshot in `.janissary/system-schedules.json`. A missing file is an empty store. Invalid JSON or invalid version-1 entries produce a load error without changing the file; a later valid save may replace them. A newer unsupported store version blocks saving so an older Janissary process cannot downgrade it. If a save fails with an I/O error, the previous snapshot remains unchanged. Schedule keys are opaque and unique even when displayed schedule names repeat. Each entry stores the runscript name and the descriptive command `script <name>`, along with its raw recurrence data; script contents are read separately when needed.
 
+System schedules are project-owned and survive tab closure. Add, cancel-by-name, cancel-by-key, and clear save the complete next snapshot synchronously before changing memory or publishing a schedule/state update. Cancelling a name removes every matching row; cancelling by key removes only that row. A failed save leaves the in-memory list unchanged. Invalid or unsupported startup data is reported once to stderr and does not stop startup.
+
+Startup captures one cutoff before shell preparation. After the required `janus` shell opens and the managed system shell is attempted, overdue entries at or before that cutoff are reported as missed and never queued. Missed one-shots are removed; missed recurring entries advance to a future occurrence, skipping the closed-app backlog. Recovery is saved before its result is published. If that save fails, due entries remain stored in memory but do not fire during this startup. The scheduler starts only after recovery finishes.
+
 Runscripts are named lowercase words separated by single hyphens and stored as `.janissary/scripts/<name>.rs` under the project root. Parsing preserves each command line and inline shell comment, ignores blank lines and full-line comments, and treats each physical line as a separate command. The catalog lists existing valid regular `.rs` files alphabetically. Reads use current file contents and reject symlinks in the state directory, scripts directory, or target file.
 
 In a Git project, schedule storage ensures both durable paths are ignored using effective existing rules or narrowly anchored entries in `.git/info/exclude` (including the target repository's equivalent for worktrees). Existing exclude content is preserved. Tracked targets cause saving to fail; non-Git projects need no Git configuration. Startup cleanup leaves both paths untouched (see [[state-directory]]).
@@ -55,6 +59,12 @@ own timers on the same tab are untouched. An app-added entry replaces an earlier
 rather than piling a second row under it, and a user who cancels it simply stops waiting. The
 `in <label>` clause is what reaches it, for the same reason every other harness timer needs one: a
 harness tab cannot run commands itself.
+
+### System schedule firing
+
+The project-owned system schedule manager handles persisted runscript schedules independently of tab labels. A due key is prepared from the runscript's current contents, then the managed system shell is ensured. The complete resulting snapshot is saved before any runscript lines are appended to the system shell's FIFO. Each script's lines form one contiguous batch with shared schedule provenance. Empty scripts advance successfully without queue rows. If a script is missing, a one-shot is removed or a recurring entry advances and the existing missing-script notice is posted. Unsafe or unreadable scripts and shell-start failures leave the entry due for retry. One failing queued command does not stop later lines.
+
+The queue and its rows are in-memory only. Shutdown stops the scheduler, waits for prepared work to settle, and disposes the system schedule owner before the managed shell and its queue. No queued command is persisted or replayed after restart.
 
 ### Sleep and overdue commands
 
