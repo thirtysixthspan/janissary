@@ -34,6 +34,11 @@ export default async function systemScheduleManagement({ page, record, scratchDi
   const duplicates = before.entries.filter((entry) => entry.id === 'duplicate');
   assert.equal(duplicates.length, 2, 'both duplicate system schedules are persisted');
   const targetRow = aggregateRows.filter({ has: page.locator('.schedules-id', { hasText: /^duplicate$/ }) }).first();
+  const selectedSpec = await targetRow.locator('.schedules-spec').textContent();
+  const selected = duplicates.filter((entry) => entry.spec === selectedSpec);
+  assert.equal(selected.length, 1, 'the rendered schedule specification identifies one persisted duplicate');
+  const unselected = duplicates.filter((entry) => entry.key !== selected[0].key);
+  assert.equal(unselected.length, 1, 'the other persisted duplicate is the unselected schedule');
   await targetRow.click();
   await page.keyboard.press('Delete');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
@@ -42,7 +47,7 @@ export default async function systemScheduleManagement({ page, record, scratchDi
   const afterDelete = JSON.parse(readFileSync(store, 'utf8'));
   const remaining = afterDelete.entries.filter((entry) => entry.id === 'duplicate');
   assert.equal(remaining.length, 1, 'the aggregate row action deletes exactly one duplicate');
-  assert.ok(duplicates.some((entry) => entry.key !== remaining[0].key), 'the other duplicate keeps its persisted key');
+  assert.deepEqual(remaining.map((entry) => entry.key), [unselected[0].key], 'the unselected duplicate keeps its original persisted key');
   assert.equal(await aggregateRows.filter({ has: page.locator('.schedules-id', { hasText: /^duplicate$/ }) }).count(), 1, 'the remaining duplicate is still rendered');
   assert.equal(await aggregateRows.filter({ has: page.locator('.schedules-id', { hasText: /^tab-owned$/ }) }).count(), 1, 'the tab-owned schedule remains rendered after keyed deletion');
 

@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Prove the keyed deletion leaves one of the two original schedule keys.
-
-Existing Issue: The management driver asserts that the remaining key differs from at least one original key, so a newly generated or otherwise unexpected key still passes instead of proving the undeleted schedule retained its identity. Severity: 4/10
-
-Existing Risk: 4/10 - A regression that recreates a duplicate under a different key or removes the wrong row can pass the browser check, weakening its verification of keyed deletion.
-
-Proposal Risk: 2/10 - Comparing the persisted survivor to the original key for the unselected row makes an identity regression fail in the real aggregate UI path.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "assert the original key survives aggregate row deletion". In `scripts/e2e/system-schedules-management.mjs`, capture the two persisted keys and identify which duplicate is selected from its rendered schedule specification before pressing Delete. After confirming deletion, assert that the store contains exactly the other original key, not merely a key unequal to one of the originals. Keep the existing rendered-row and tab-owned-row checks; the schedules plugin tests in `web/src/plugins/schedules/SchedulesTab.test.tsx` already pin that Delete sends the selected system row's key.
-
-
 * Verify aggregate clear-all remains empty after an ordinary restart.
 
 Existing Issue: The management browser driver checks clear-all in the live process but does not restart the app and verify the cleared aggregate state remains empty, despite plan 16 requiring the clear-all scenario to include restart coverage. Severity: 5/10
