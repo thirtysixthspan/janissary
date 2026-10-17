@@ -8,7 +8,7 @@ export default async function systemScheduleRestart({ page, record, scratchDir, 
   const markerFile = path.join(scratchDir, 'restart-seeded');
   const store = path.join(project, '.janissary', 'system-schedules.json');
   if (!existsSync(markerFile)) {
-    seedRunscript(scratchDir, 'restart-probe', 'printf restart-script-preserved\\n\n');
+    seedRunscript(scratchDir, 'restart-probe', "printf 'restart-script-preserved\\n'\n");
     await runCommand(page, 'schedule system restart-check every 1m script restart-probe');
     assert.ok(existsSync(store), 'the system schedule store was created by the app');
     writeFileSync(markerFile, 'created-before-restart\n');
@@ -24,6 +24,7 @@ export default async function systemScheduleRestart({ page, record, scratchDir, 
   const runscript = path.join(project, '.janissary', 'scripts', 'restart-probe.rs');
   assert.ok(existsSync(runscript), 'the runscript survives ordinary process restart');
   await runCommand(page, 'execute restart-probe');
+  await runCommand(page, 'tab focus system');
   const systemShell = page.locator('.tab-body[data-tab-label="system"]:visible').first();
   await systemShell.getByText('restart-script-preserved', { exact: true }).waitFor({ timeout: 15_000 });
   record.restart = { phase: 'verified-after-restart', persistedEntryVisible: true, storeUnchanged: before === readFileSync(store, 'utf8') };
