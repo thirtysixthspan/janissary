@@ -274,7 +274,7 @@ describe('completeLine', () => {
     );
     capabilities.completeLine('l', 1);
     expect(completeCommandLine).toHaveBeenLastCalledWith(
-      'l', 1, '/repo/clone/subdir', ['janus', 'shell'], [], expect.any(Object),
+      'l', 1, '/repo/clone/subdir', ['janus', 'shell'], [], expect.any(Object), { names: [], scripts: [] },
     );
     expect(managers.connection.completionConnections).toHaveBeenCalledWith('shell');
     expect(capabilities.originTab()).toEqual({ label: 'shell', cwd: '/repo/clone/subdir', root: '/repo' });

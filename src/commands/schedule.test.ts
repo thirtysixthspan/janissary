@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { command } from './schedule.js';
+import { createController } from '../controller.js';
 import { ScheduleManager } from '../schedule/manager.js';
+import { SystemScheduleStore } from '../schedule/system/store.js';
+import { makeTab } from '../tab/index.js';
 import type { Managers } from '../managers.js';
 import type { ScheduleEntry } from '../schedule/types.js';
 import type { LogEntry } from '../tab/types.js';
@@ -28,11 +34,30 @@ describe('schedule command run', () => {
   let outputs: string[];
   let tab: { label: string; index: number };
   let managers: unknown;
+  let projectRoot: string;
+  let systemEntries: { id: string; key: string; script: string; command: string; spec: string; nextRun: number; recurring: boolean }[];
+  let systemOwner: { list: () => typeof systemEntries; add: ReturnType<typeof vi.fn>; cancelByName: ReturnType<typeof vi.fn>; clear: ReturnType<typeof vi.fn> };
   const schedule = () => schedules.get('janus') ?? [];
 
   beforeEach(() => {
     schedules = new Map();
     outputs = [];
+    projectRoot = mkdtempSync(path.join(tmpdir(), 'system-schedule-command-'));
+    mkdirSync(path.join(projectRoot, '.janissary', 'scripts'), { recursive: true });
+    writeFileSync(path.join(projectRoot, '.janissary', 'scripts', 'deploy.rs'), 'echo deploy\n');
+    systemEntries = [];
+    systemOwner = {
+      list: () => systemEntries,
+      add: vi.fn((entry) => {
+        systemEntries.push({ ...entry, key: `key-${systemEntries.length}` });
+        return { ok: true };
+      }),
+      cancelByName: vi.fn((name) => {
+        systemEntries = systemEntries.filter((entry) => entry.id !== name);
+        return { ok: true };
+      }),
+      clear: vi.fn(() => { systemEntries = []; return { ok: true }; }),
+    };
     tab = { label: 'janus', index: 0 };
     const tabs: { label: string; title?: string; view?: string; harness?: unknown; workspaceDir?: string }[] = [
       { label: 'janus' },
@@ -50,7 +75,9 @@ describe('schedule command run', () => {
         set: (label: string, next: ScheduleEntry[]) => { schedules.set(label, next); },
         openScheduleLaunch: vi.fn(),
       },
+      systemSchedule: systemOwner,
       tab: {
+        launchDir: projectRoot,
         tabs,
         byLabel: (label: string) => tabs.find((t) => t.label === label),
         append: (_label: string, entry: LogEntry) => { outputs.push(entry.output); },
@@ -59,6 +86,8 @@ describe('schedule command run', () => {
       },
     };
   });
+
+  afterEach(() => { rmSync(projectRoot, { recursive: true, force: true }); });
 
   const run = (command_: string) => command.run!(command_, tab, managers as never);
 
@@ -215,6 +244,60 @@ describe('schedule command run', () => {
     expect(outputs.at(-1)).toBe('Tab "video" cannot run scheduled commands.');
     expect(schedules.size).toBe(0);
   });
+
+  it('routes system creation to the project owner and prints exact output', () => {
+    run('schedule system deploy at 3pm script deploy');
+    expect(systemOwner.add).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'deploy', script: 'deploy', command: 'script deploy', spec: 'at 3:00pm',
+    }));
+    expect(outputs.at(-1)).toBe('Scheduled deploy system: at 3:00pm (script deploy).');
+    expect(schedule()).toEqual([]);
+  });
+
+  it('refuses missing or unsafe scripts without changing the owner', () => {
+    run('schedule system missing at 3pm script absent');
+    expect(outputs.at(-1)).toBe('No runscript named "absent".');
+    symlinkSync('deploy.rs', path.join(projectRoot, '.janissary', 'scripts', 'unsafe.rs'));
+    run('schedule system unsafe at 3pm script unsafe');
+    expect(outputs.at(-1)).toBe('Could not read runscript "unsafe".');
+    expect(systemOwner.add).not.toHaveBeenCalled();
+  });
+
+  it('lists, cancels every same-named system entry, and clears with exact messages', () => {
+    systemEntries = [
+      { id: 'same', key: '1', script: 'deploy', command: 'script deploy', spec: 'at 3pm', nextRun: Date.now(), recurring: false },
+      { id: 'same', key: '2', script: 'deploy', command: 'script deploy', spec: 'every 5m', nextRun: Date.now(), recurring: true },
+    ];
+    run('schedule system list');
+    expect(outputs.at(-1)).toContain('same  at 3pm  (next:');
+    expect(outputs.at(-1)).toContain('script deploy');
+    run('schedule system cancel same');
+    expect(outputs.at(-1)).toBe('Cancelled same in system.');
+    expect(systemEntries).toEqual([]);
+    run('schedule system cancel same');
+    expect(outputs.at(-1)).toBe('No scheduled command "same" in system.');
+    systemEntries.push({ id: 'once', key: '3', script: 'deploy', command: 'script deploy', spec: 'at 3pm', nextRun: Date.now(), recurring: false });
+    run('schedule system clear');
+    expect(outputs.at(-1)).toBe('Cleared 1 scheduled commands in system.');
+    run('schedule system list');
+    expect(outputs.at(-1)).toBe('No scheduled commands in system.');
+  });
+
+  it('does not report success when the project owner cannot save', () => {
+    systemOwner.add.mockReturnValue({ ok: false, error: 'disk full' });
+    run('schedule system deploy at 3pm script deploy');
+    expect(outputs.at(-1)).toBe('Could not save system schedule.');
+  });
+
+  it('prints the management save error without claiming cancel or clear succeeded', () => {
+    systemEntries = [{ id: 'deploy', key: '1', script: 'deploy', command: 'script deploy', spec: 'at 3pm', nextRun: Date.now(), recurring: false }];
+    systemOwner.cancelByName.mockReturnValue({ ok: false, error: 'disk full' });
+    run('schedule system cancel deploy');
+    expect(outputs.at(-1)).toBe('Could not save system schedules.');
+    systemOwner.clear.mockReturnValue({ ok: false, error: 'disk full' });
+    run('schedule system clear');
+    expect(outputs.at(-1)).toBe('Could not save system schedules.');
+  });
 });
 
 describe('schedule command lifecycle callbacks', () => {
@@ -266,5 +349,32 @@ describe('schedule command lifecycle callbacks', () => {
     expect(firstRemoved).toHaveBeenCalledOnce();
     expect(secondRemoved).toHaveBeenCalledOnce();
     expect(schedule.get('janus')).toEqual([]);
+  });
+});
+
+describe('system schedule command persistence', () => {
+  it('routes a real command through parsing and the persisted project owner', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-command-store-'));
+    mkdirSync(path.join(root, '.janissary', 'scripts'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'scripts', 'deploy.rs'), 'echo deploy\n');
+    const sinks = { emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} };
+    const controller = createController(sinks, root);
+    try {
+      const issuingTab = makeTab('janus');
+      controller.managers.tab.tabs.push(issuingTab);
+      command.run!('schedule system release at 5pm script deploy', { label: issuingTab.label, index: 0 }, controller.managers);
+      const persisted = new SystemScheduleStore(root).load();
+      expect(persisted).toMatchObject({ ok: true, snapshot: { version: 1, entries: [
+        { id: 'release', script: 'deploy', command: 'script deploy', spec: 'at 5:00pm' },
+      ] } });
+      controller.managers.systemSchedule.dispose();
+      const restarted = createController(sinks, root);
+      restarted.managers.systemSchedule.load();
+      expect(restarted.managers.systemSchedule.list()).toMatchObject([{ id: 'release', script: 'deploy' }]);
+      await restarted.shutdown();
+    } finally {
+      await controller.shutdown();
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

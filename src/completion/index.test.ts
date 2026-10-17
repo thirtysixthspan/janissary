@@ -89,6 +89,35 @@ describe('completeCommandLine — schedule `in <tab>` target', () => {
   });
 });
 
+describe('completeCommandLine — system schedule grammar', () => {
+  const options = { names: ['alpha', 'nightly'], scripts: ['deploy', 'test-suite'] };
+  const noFiles = '/no/such/dir/xyz';
+
+  it('completes system subcommands, form keywords, and recurrence alternatives', () => {
+    expect(completeCommandLine('schedule sys', 12, noFiles, [], [], undefined, options).newInput)
+      .toBe('schedule system ');
+    expect(completeCommandLine('schedule system ca', 18, noFiles, [], [], undefined, options).newInput)
+      .toBe('schedule system cancel ');
+    expect(completeCommandLine('schedule system job ', 20, noFiles, [], [], undefined, options).matches)
+      .toEqual(['at', 'every', 'on']);
+    expect(completeCommandLine('schedule system job every ', 27, noFiles, [], [], undefined, options).matches)
+      .toContain('monday');
+    expect(completeCommandLine('schedule system job every monday ', 34, noFiles, [], [], undefined, options).newInput)
+      .toBe('schedule system job every monday at ');
+    expect(completeCommandLine('schedule system job on 8/12 ', 29, noFiles, [], [], undefined, options).newInput)
+      .toBe('schedule system job on 8/12 at ');
+  });
+
+  it('completes system cancellation names and script catalog names only in their slots', () => {
+    expect(completeCommandLine('schedule system cancel ni', 25, noFiles, [], [], undefined, options).newInput)
+      .toBe('schedule system cancel nightly ');
+    expect(completeCommandLine('schedule system job at 3pm script dep', 37, noFiles, [], [], undefined, options).newInput)
+      .toBe('schedule system job at 3pm script deploy ');
+    expect(completeCommandLine('schedule system job at 3pm script ', 35, noFiles, [], [], undefined, options).matches)
+      .toEqual(['deploy', 'test-suite']);
+  });
+});
+
 describe('completeCommandLine — connection strings', () => {
   const noFiles = '/no/such/dir/xyz';
   const conns = ['shell:bash', 'acp:opencode', 'sqlite:movies', 'sqlite:shop'];

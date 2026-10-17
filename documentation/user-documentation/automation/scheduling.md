@@ -40,6 +40,22 @@ schedule cancel tests      remove one (reports if there's no such name)
 schedule clear             remove them all
 ```
 
+## Project system schedules
+
+System schedules belong to the project rather than a tab, so they survive tab closure and app restarts. They run a named runscript:
+
+```
+schedule system deploy at 5pm script deploy
+schedule system cleanup every day at 2am script cleanup
+schedule system list
+schedule system cancel deploy
+schedule system clear
+```
+
+Use any of the five schedule forms above before `script <name>`. The script must already exist and use a valid lowercase name. Names may repeat; `schedule system cancel <name>` removes every matching entry. `list` shows each name, schedule, next run, and runscript. An empty list or clear reports `No scheduled commands in system.`; a successful clear reports `Cleared <n> scheduled commands in system.`. A missing script reports `No runscript named "<name>".`; a script that can't be read safely reports `Could not read runscript "<name>".`. Other malformed system commands show `Usage: schedule system NAME <form> script <name> | schedule system list | schedule system cancel <name> | schedule system clear`.
+
+`system` immediately after `schedule` is reserved for this project-level grammar. The `in <tab>` clause still targets a tab named `system` in ordinary tab schedules.
+
 ## Scheduling into another tab
 
 <img class="agent-float left" src="/agents/selim-south-east.png" alt="" />

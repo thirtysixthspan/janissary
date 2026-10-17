@@ -2,6 +2,7 @@ import { completeCommandLine } from '../completion/index.js';
 import type { Managers } from '../managers.js';
 import type { CompletionResult } from '../completion/types.js';
 import { listPersonas } from '../personas.js';
+import { catalogRunscripts } from '../schedule/system/runscript-files.js';
 
 export function complete(managers: Managers, text: string, cursor: number, label?: string): CompletionResult {
   const tab = (label ? managers.tab.byLabel(label) : undefined) ?? managers.tab.cur();
@@ -10,8 +11,16 @@ export function complete(managers: Managers, text: string, cursor: number, label
   const actionTabs = managers.tab.tabs.filter((t) => t.view !== 'monitor');
   const groups = [...new Set(actionTabs.map((t) => t.group))].toSorted((a, b) => a - b).map((g) => `group:${g}`);
   const targets = [...actionTabs.map((t) => t.label).filter((l) => l !== tab.label), ...groups];
+  let scripts: string[] = [];
+  try { scripts = catalogRunscripts(managers.tab.launchDir); } catch { /* An unsafe catalog has no suggestions. */ }
+  const currentNames = 'systemSchedule' in managers
+    ? managers.systemSchedule.list().map((entry) => entry.id)
+    : [];
+  const names = [...new Set(currentNames)]
+    .toSorted((left, right) => left.localeCompare(right));
   return completeCommandLine(
     text, cursor, cwd, labels,managers.connection.completionConnections(tab.label),
     { personas: listPersonas('monitor'), names: managers.monitor.namesFor(tab.label), targets },
+    { names, scripts },
   );
 }
