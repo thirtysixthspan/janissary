@@ -66,6 +66,42 @@ describe('SystemScheduleManager mutations', () => {
     await controller.shutdown();
   });
 
+  it('fires same-named due entries independently by key and persists each outcome', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-duplicate-name-fire-'));
+    const scripts = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    writeFileSync(path.join(scripts, 'recurring.rs'), 'recurring first\nrecurring second\n');
+    writeFileSync(path.join(scripts, 'one-shot.rs'), 'one-shot first\none-shot second\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab: system });
+    const recurring = controller.managers.systemSchedule.add({
+      ...schedule('same', 'ignored'), script: 'recurring', command: 'script recurring', nextRun: 0,
+      recurring: true, intervalMs: 60_000,
+    });
+    const oneShot = controller.managers.systemSchedule.add({
+      ...schedule('same', 'ignored'), script: 'one-shot', command: 'script one-shot', nextRun: 0,
+    });
+    if (!recurring.ok || !recurring.entry || !oneShot.ok || !oneShot.entry) {
+      throw new Error('same-named schedules were not added');
+    }
+    expect(recurring.entry.key).not.toBe(oneShot.entry.key);
+
+    await controller.managers.systemSchedule.tick(1);
+
+    expect(system.runtime?.queue).toEqual([
+      { line: 'recurring first', origin: { kind: 'system-schedule', scheduleKey: recurring.entry.key } },
+      { line: 'recurring second', origin: { kind: 'system-schedule', scheduleKey: recurring.entry.key } },
+      { line: 'one-shot first', origin: { kind: 'system-schedule', scheduleKey: oneShot.entry.key } },
+      { line: 'one-shot second', origin: { kind: 'system-schedule', scheduleKey: oneShot.entry.key } },
+    ]);
+    const persisted = { ...recurring.entry, nextRun: 60_001 };
+    expect(controller.managers.systemSchedule.list()).toEqual([persisted]);
+    expect(new SystemScheduleStore(root).load()).toEqual({ ok: true, snapshot: { version: 1, entries: [persisted] } });
+    await controller.shutdown();
+  });
+
   it('keeps due entries and the persisted snapshot when boot recovery cannot save', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-boot-save-'));
     const store = new SystemScheduleStore(root);
