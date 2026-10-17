@@ -13,7 +13,7 @@
   padding: 0 4px; line-height: 1;
 }
 .schedules-dock-cycle:hover { color: var(--fg); }
-.schedules-clear {
+.schedules-clear, .schedules-row-delete {
   background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 13px;
   padding: 0 4px; line-height: 1; justify-self: center;
 }

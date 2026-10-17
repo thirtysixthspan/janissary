@@ -6,10 +6,10 @@ import { scheduleRowKey } from './schedules-keys';
 
 // One section of the schedules list: its own column-heading row followed by its rows. `offset` is the
 // section's first position in the flat, on-screen order, so numbering and selection indexes continue
-// across sections. The heading row ends in a trash icon that clears this section's owner. An empty
-// section renders nothing.
+// across sections. The heading row ends in a trash icon that clears this section's owner, and each
+// row ends in a trash icon that asks to delete that row's schedule. An empty section renders nothing.
 export function ScheduleSection({
-  owner, entries, offset, compact, selected, onRowClick, onRowDoubleClick, onClear,
+  owner, entries, offset, compact, selected, onRowClick, onRowDoubleClick, onClear, onDelete,
 }: {
   owner: 'system' | 'tab';
   entries: ScheduleRow[];
@@ -19,6 +19,7 @@ export function ScheduleSection({
   onRowClick: (index: number) => void;
   onRowDoubleClick: (entry: ScheduleRow) => void;
   onClear: () => void;
+  onDelete: (entry: ScheduleRow) => void;
 }) {
   if (entries.length === 0) return null;
   return (
@@ -49,6 +50,17 @@ export function ScheduleSection({
           >
             <span className="schedules-num">{index + 1})</span>
             {compact ? <CompactRow entry={entry} /> : <FullRow entry={entry} />}
+            <button
+              type="button"
+              className="schedules-row-delete"
+              aria-label={`Delete schedule ${entry.id}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete(entry);
+              }}
+            >
+              <FontAwesomeIcon icon={faTrash} />
+            </button>
           </div>
         );
       })}
