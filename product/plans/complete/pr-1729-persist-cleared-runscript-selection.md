@@ -15,7 +15,7 @@ Keep the existing field reconciliation as the source of the visible form state. 
 1. Synchronize a catalog-cleared script selection into component state and remembered fields.
 2. Extend the dialog interaction test to remove and re-add a selected script, assert selection remains blank and system submission disabled, then close and reopen to verify the cleared choice persists.
 3. Update `product/specs/scheduling.md` to state that a removed selection stays cleared after later catalog refreshes and dialog reopens.
-4. Run `./scripts/run.mjs check-diff`, promote the plan, remove only the selected backlog entry, and publish to the existing PR branch.
+4. In an implementation run, perform verification (including `check-diff` and `git diff --check`), plan promotion, selected-entry removal, and publication only when the active task authorizes each action; follow that task's scope, branch, and publication constraints.
 
 ## Tests
 
