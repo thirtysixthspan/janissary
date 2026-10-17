@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that the system-target creation dialog is still planned, since this commit delivers it.
-
-Existing Issue: The pull request body says the creation dialog's system target remains planned even though this commit adds the system target, runscript picker, and submit flow. Severity: 3/10
-
-Existing Risk: 2/10 - Reviewers may misunderstand the scope already delivered and assess the PR against an outdated statement of its remaining work.
-
-Proposal Risk: 1/10 - Updating the body makes the delivered dialog and any remaining work explicit, though other PR-scope statements still require their own accuracy.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "correct the PR description's outdated system-target dialog status". Update the PR body to state that the system-target creation dialog and runscript picker are delivered, and distinguish any remaining aggregate-schedules UI or browser end-to-end work from this dialog. Keep the PR title and implementation unchanged.
-
-
 * Deliver the plan's requirement to forget a runscript selection removed from a refreshed catalog.
 
 Existing Issue: `ScheduleDialog` renders reconciled fields from the latest catalog but leaves the unreconciled script in component state and module-level `remembered`, so a later snapshot or reopen can silently select that script again if it reappears. Severity: 4/10
