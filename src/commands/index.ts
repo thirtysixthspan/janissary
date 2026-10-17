@@ -19,6 +19,7 @@ import { command as open } from './open.js';
 import { command as play } from './play.js';
 import { command as edit } from './edit.js';
 import { command as execute } from './execute.js';
+import { command as create } from './create.js';
 import { command as newFile } from './new-file.js';
 import { command as newDirectory } from './new-directory.js';
 import { command as send } from './send.js';
@@ -63,6 +64,7 @@ const coreCommands: Command[] = [
   play,
   edit,
   execute,
+  create,
   newFile,
   newDirectory,
   send,

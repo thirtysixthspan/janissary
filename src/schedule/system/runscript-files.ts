@@ -1,4 +1,4 @@
-import { lstatSync, readFileSync, readdirSync } from 'node:fs';
+import { lstatSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { ensureSystemScheduleExcluded } from './local-exclude.js';
 import { isRunscriptName, parseRunscriptText } from './runscript.js';
@@ -42,6 +42,29 @@ export function readRunscript(projectRoot: string, name: string): { file: string
   }
   if (stat.isSymbolicLink() || !stat.isFile()) throw new Error(`Runscript path is not a regular file: ${file}`);
   return { file, exists: true, lines: parseRunscriptText(readFileSync(file, 'utf8')) };
+}
+
+function makeScriptsDirectory(projectRoot: string): void {
+  const stateDir = path.join(projectRoot, '.janissary');
+  const scriptsDir = path.join(stateDir, 'scripts');
+  if (!assertDirectory(stateDir)) mkdirSync(stateDir);
+  if (!assertDirectory(scriptsDir)) mkdirSync(scriptsDir);
+}
+
+// Creates an empty runscript without ever overwriting one. An existing entry is accepted only when
+// the reader would accept it as a regular file, so a symlink planted at the target is refused.
+export function createRunscript(projectRoot: string, name: string): { file: string; created: boolean } {
+  if (!isRunscriptName(name)) throw new Error(`Invalid runscript name: ${name}`);
+  const file = path.join(projectRoot, '.janissary', 'scripts', `${name}.rs`);
+  if (!scriptsDirectory(projectRoot).exists) makeScriptsDirectory(projectRoot);
+  try {
+    writeFileSync(file, '', { flag: 'wx' });
+    return { file, created: true };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  }
+  readRunscript(projectRoot, name);
+  return { file, created: false };
 }
 
 export function catalogRunscripts(projectRoot: string): string[] {
