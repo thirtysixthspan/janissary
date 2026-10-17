@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { ScheduleRow, SchedulesPayload } from '@shared/plugins/schedules/shared';
 import type { TabPluginClientCapabilities } from '../api';
 import { nextSelection } from './schedules-keys';
@@ -93,15 +91,6 @@ export function SchedulesTab({
       <div className="schedules-header">
         <div className="schedules-actions">
           {capabilities.splitAction}
-          <button
-            type="button"
-            className="schedules-clear"
-            aria-label="Clear all schedules"
-            disabled={entries.length === 0}
-            onClick={() => { void capabilities.intent('clear', {}); }}
-          >
-            <FontAwesomeIcon icon={faTrash} />
-          </button>
         </div>
       </div>
       {entries.length === 0 ? (
@@ -109,20 +98,24 @@ export function SchedulesTab({
       ) : (
         <>
           <ScheduleSection
+            owner="system"
             entries={sections.system}
             offset={0}
             compact={compact}
             selected={selected}
             onRowClick={onRowClick}
             onRowDoubleClick={focusOwner}
+            onClear={() => { void capabilities.intent('clear', { owner: 'system' }); }}
           />
           <ScheduleSection
+            owner="tab"
             entries={sections.tabs}
             offset={sections.system.length}
             compact={compact}
             selected={selected}
             onRowClick={onRowClick}
             onRowDoubleClick={focusOwner}
+            onClear={() => { void capabilities.intent('clear', { owner: 'tab' }); }}
           />
         </>
       )}

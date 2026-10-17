@@ -371,15 +371,18 @@ describe('the schedules topic source', () => {
     expect(readTopicData(managers, 'schedules')).toEqual(ROWS);
   });
 
-  it('routes tab cancel and atomic clear to their schedule owners', () => {
+  it('routes tab cancel and each owner\'s clear to that owner alone', () => {
     const { cancel, clearAll, clearSystem, managers } = makeManagers();
 
     runTopicAction(managers, { topic: 'schedules', action: 'cancel', tab: 'agent-1', id: 'fetch' });
-    runTopicAction(managers, { topic: 'schedules', action: 'clear' });
-
+    runTopicAction(managers, { topic: 'schedules', action: 'clear', owner: 'system' });
     expect(cancel).toHaveBeenCalledWith('agent-1', 'fetch');
     expect(clearSystem).toHaveBeenCalledOnce();
-    expect(clearAll).toHaveBeenCalled();
+    expect(clearAll).not.toHaveBeenCalled();
+
+    runTopicAction(managers, { topic: 'schedules', action: 'clear', owner: 'tab' });
+    expect(clearAll).toHaveBeenCalledOnce();
+    expect(clearSystem).toHaveBeenCalledOnce();
   });
 
   it('cancels one current system key and refuses stale keys or owner mismatches', () => {
@@ -419,11 +422,11 @@ describe('the schedules topic source', () => {
     expect(fixture.cancelByKey).toHaveBeenCalledWith('key-a');
   });
 
-  it('leaves tab schedules unchanged when clearing the system snapshot fails', () => {
+  it('reports a failed system clear and leaves tab schedules untouched', () => {
     const fixture = makeManagers();
     fixture.clearSystem.mockReturnValue({ ok: false, error: 'could not save system schedules' } as never);
 
-    expect(runTopicAction(fixture.managers, { topic: 'schedules', action: 'clear' }))
+    expect(runTopicAction(fixture.managers, { topic: 'schedules', action: 'clear', owner: 'system' }))
       .toBe('could not save system schedules');
     expect(fixture.clearAll).not.toHaveBeenCalled();
   });
@@ -457,17 +460,20 @@ describe('the topicData and topicAction capabilities', () => {
   it('perform a declared topic\'s named action', () => {
     const { clearAll, clearSystem, managers } = makeManagers();
 
-    contextFor(managers).topicAction({ topic: 'schedules', action: 'clear' });
+    contextFor(managers).topicAction({ topic: 'schedules', action: 'clear', owner: 'tab' });
+    expect(clearAll).toHaveBeenCalledOnce();
+    expect(clearSystem).not.toHaveBeenCalled();
 
-    expect(clearAll).toHaveBeenCalled();
+    contextFor(managers).topicAction({ topic: 'schedules', action: 'clear', owner: 'system' });
     expect(clearSystem).toHaveBeenCalledOnce();
+    expect(clearAll).toHaveBeenCalledOnce();
   });
 
   it('returns a schedules persistence error through the topicAction capability', () => {
     const { clearSystem, managers } = makeManagers();
     clearSystem.mockReturnValue({ ok: false, error: 'could not save system schedules' } as never);
 
-    expect(contextFor(managers).topicAction({ topic: 'schedules', action: 'clear' }))
+    expect(contextFor(managers).topicAction({ topic: 'schedules', action: 'clear', owner: 'system' }))
       .toBe('could not save system schedules');
   });
 
@@ -476,7 +482,7 @@ describe('the topicData and topicAction capabilities', () => {
   it('throw for a topic the declaration never named', () => {
     const { clearAll, managers } = makeManagers();
     const capabilities = contextFor(managers, ['topicData', 'topicAction'], []);
-    const action: TabPluginTopicAction = { topic: 'schedules', action: 'clear' };
+    const action: TabPluginTopicAction = { topic: 'schedules', action: 'clear', owner: 'tab' };
 
     expect(() => capabilities.topicData('schedules'))
       .toThrow('used topic "schedules" without declaring it');

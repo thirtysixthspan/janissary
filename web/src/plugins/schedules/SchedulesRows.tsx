@@ -1,25 +1,38 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { ScheduleRow } from '@shared/plugins/schedules/shared';
 import { scheduleRowKey } from './schedules-keys';
 
 // One section of the schedules list: its own column-heading row followed by its rows. `offset` is the
 // section's first position in the flat, on-screen order, so numbering and selection indexes continue
-// across sections. An empty section renders nothing.
+// across sections. The heading row ends in a trash icon that clears this section's owner. An empty
+// section renders nothing.
 export function ScheduleSection({
-  entries, offset, compact, selected, onRowClick, onRowDoubleClick,
+  owner, entries, offset, compact, selected, onRowClick, onRowDoubleClick, onClear,
 }: {
+  owner: 'system' | 'tab';
   entries: ScheduleRow[];
   offset: number;
   compact: boolean;
   selected: number | null;
   onRowClick: (index: number) => void;
   onRowDoubleClick: (entry: ScheduleRow) => void;
+  onClear: () => void;
 }) {
   if (entries.length === 0) return null;
   return (
     <div className="schedules-section">
       <div className="schedules-headings">
         {compact ? <CompactHeadings /> : <FullHeadings />}
+        <button
+          type="button"
+          className="schedules-clear"
+          aria-label={owner === 'system' ? 'Clear system schedules' : 'Clear tab schedules'}
+          onClick={onClear}
+        >
+          <FontAwesomeIcon icon={faTrash} />
+        </button>
       </div>
       {entries.map((entry, i) => {
         const index = offset + i;

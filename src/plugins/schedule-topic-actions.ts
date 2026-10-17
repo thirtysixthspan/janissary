@@ -22,10 +22,12 @@ export function scheduleTopicAction(managers: Managers, action: TabPluginTopicAc
       return;
     }
     case 'clear': {
+      if (action.owner === 'tab') {
+        managers.schedule.clearAll();
+        return;
+      }
       const systemResult = managers.systemSchedule.clear();
-      if (!systemResult.ok) return systemResult.error;
-      managers.schedule.clearAll();
-      return;
+      return systemResult.ok ? undefined : systemResult.error;
     }
     case 'focusOwner': {
       focusScheduleOwner(managers, action);
