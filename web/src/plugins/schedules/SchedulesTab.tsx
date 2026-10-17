@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { ScheduleRow, SchedulesPayload } from '@shared/plugins/schedules/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { nextSelection } from './schedules-keys';
+import { nextSelection, scheduleRowKey } from './schedules-keys';
 import { DeleteScheduleDialog } from './DeleteScheduleDialog';
 
 const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
@@ -35,7 +35,12 @@ export function SchedulesTab({
     if (selected !== null && selected >= entries.length) setSelected(entries.length === 0 ? null : entries.length - 1);
   }, [entries.length, selected]);
 
-  const focusOwner = (tab: string) => { void capabilities.intent('focus-owner', { tab }); };
+  const focusOwner = (entry: ScheduleRow) => {
+    const identity = entry.owner === 'system'
+      ? { tab: entry.tab, owner: 'system', key: entry.key }
+      : { tab: entry.tab };
+    void capabilities.intent('focus-owner', identity);
+  };
 
   const onRowClick = (i: number) => {
     setSelected(i);
@@ -43,7 +48,12 @@ export function SchedulesTab({
   };
 
   const confirmDelete = () => {
-    if (pendingDelete) void capabilities.intent('cancel', { tab: pendingDelete.tab, id: pendingDelete.id });
+    if (pendingDelete) {
+      const identity = pendingDelete.owner === 'system'
+        ? { tab: pendingDelete.tab, owner: 'system', key: pendingDelete.key }
+        : { tab: pendingDelete.tab };
+      void capabilities.intent('cancel', { ...identity, id: pendingDelete.id });
+    }
     setPendingDelete(null);
   };
 
@@ -63,7 +73,7 @@ export function SchedulesTab({
     if (e.key === 'Enter' && selected !== null) {
       e.preventDefault();
       e.stopPropagation();
-      focusOwner(entries[selected].tab);
+      focusOwner(entries[selected]);
     }
   };
 
@@ -98,14 +108,14 @@ export function SchedulesTab({
           </div>
           {entries.map((entry, i) => (
             <div
-              key={`${entry.tab}:${entry.id}`}
+              key={scheduleRowKey(entry)}
               role="button"
               tabIndex={-1}
               aria-selected={i === selected}
               className={`schedules-row${entry.recurring ? ' recurring' : ''}${i === selected ? ' selected' : ''}`}
               data-index={i}
               onClick={() => onRowClick(i)}
-              onDoubleClick={() => focusOwner(entry.tab)}
+              onDoubleClick={() => focusOwner(entry)}
             >
               <span className="schedules-num">{i + 1})</span>
               {compact ? <CompactRow entry={entry} /> : <FullRow entry={entry} />}

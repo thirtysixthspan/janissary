@@ -6,6 +6,7 @@ import type {
   TabPluginTopicAction,
 } from './api.js';
 import { tabActivityRows } from './activity.js';
+import { scheduleTopicAction } from './schedule-topic-actions.js';
 
 const TABS_NOTIFICATION_WINDOW_MS = 100;
 
@@ -16,34 +17,9 @@ const TABS_NOTIFICATION_WINDOW_MS = 100;
 type TopicSource = {
   subscribe(fire: () => void): Subscription;
   read(managers: Managers): TabPluginNotification['data'];
-  act(managers: Managers, action: TabPluginTopicAction): void;
+  act(managers: Managers, action: TabPluginTopicAction): string | undefined;
   empty: TabPluginNotification['data'];
 };
-
-// Focus the tab a schedule row belongs to. Refused for a tab that owns no row, so the action stays
-// "focus the owner of something I am already showing" rather than a way to focus any tab at all.
-function focusScheduleOwner(managers: Managers, label: string): void {
-  if (managers.schedule.aggregatedView().every((row) => row.tab !== label)) return;
-  const index = managers.tab.findIndex(label);
-  if (index !== -1) managers.tab.setActiveTab(index);
-}
-
-function actOnSchedules(managers: Managers, action: TabPluginTopicAction): void {
-  if (action.topic !== 'schedules') return;
-  switch (action.action) {
-    case 'cancel': {
-      managers.schedule.cancel(action.tab, action.id);
-      return;
-    }
-    case 'clear': {
-      managers.schedule.clearAll();
-      return;
-    }
-    case 'focusOwner': {
-      focusScheduleOwner(managers, action.tab);
-    }
-  }
-}
 
 function actOnConversations(managers: Managers, action: TabPluginTopicAction): void {
   if (action.topic !== 'conversations') return;
@@ -174,25 +150,25 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
   schedules: {
     subscribe: (fire) => messageBus.on('schedules', 'changed', fire),
     read: (managers) => managers.schedule.aggregatedView(),
-    act: actOnSchedules,
+    act: scheduleTopicAction,
     empty: [],
   },
   conversations: {
     subscribe: (fire) => messageBus.on('conversations', 'changed', fire),
     read: (managers) => managers.conversations.view(),
-    act: actOnConversations,
+    act: (managers, action) => { actOnConversations(managers, action); },
     empty: { summaries: [], windows: [], models: [] },
   },
   sessions: {
     subscribe: (fire) => messageBus.on('sessions', 'changed', fire),
     read: (managers) => managers.sessions.view(),
-    act: actOnSessions,
+    act: (managers, action) => { actOnSessions(managers, action); },
     empty: [],
   },
   databases: {
     subscribe: (fire) => messageBus.on('databases', 'changed', fire),
     read: (managers) => managers.database.readView(),
-    act: actOnDatabases,
+    act: (managers, action) => { actOnDatabases(managers, action); },
     empty: { databases: [], results: [], lastOpened: null },
   },
   tabs: {
@@ -202,7 +178,7 @@ const TOPIC_SOURCES: Record<TabPluginNotificationTopic, TopicSource> = {
     // transcript append.
     subscribe: subscribeTabs,
     read: (managers) => tabActivityRows(managers),
-    act: actOnTabs,
+    act: (managers, action) => { actOnTabs(managers, action); },
     empty: [],
   },
 };
@@ -223,6 +199,6 @@ export function emptyTopicData(
   return TOPIC_SOURCES[topic].empty;
 }
 
-export function runTopicAction(managers: Managers, action: TabPluginTopicAction): void {
-  TOPIC_SOURCES[action.topic].act(managers, action);
+export function runTopicAction(managers: Managers, action: TabPluginTopicAction): string | undefined {
+  return TOPIC_SOURCES[action.topic].act(managers, action);
 }

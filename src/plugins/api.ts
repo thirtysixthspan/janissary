@@ -293,7 +293,7 @@ export type TabPluginServerCapabilities = QueueCapabilityTypes & {
   // topic this plugin did not declare is a plugin-authoring mistake and disables it.
   topicData(topic: TabPluginNotificationTopic): TabPluginNotification['data'];
   // Ask the host to perform one of the actions a declared topic defines.
-  topicAction(action: TabPluginTopicAction): void;
+  topicAction(action: TabPluginTopicAction): string | undefined;
   // Ask the host to run its ordinary `open` pipeline for `target`, restricted to this plugin's own
   // claimed extensions. The host queues the request and runs it after the guarded call returns, so
   // glob expansion and per-file dispatch never count against the plugin's own call budget.

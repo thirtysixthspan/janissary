@@ -804,6 +804,7 @@ describe('ScheduleManager aggregatedView', () => {
         tabs: labels.map((label) => ({ label })),
         byLabel: (label: string) => ({ label }),
       },
+      systemSchedule: { list: () => [] },
     } as unknown as Managers;
     return new ScheduleManager(managers);
   }

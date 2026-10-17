@@ -2,6 +2,7 @@ import type { ScheduleEntry } from './types.js';
 import type { Tab } from '../tab/types.js';
 import type { AggregatedScheduleView, ScheduleView } from '../protocol.js';
 import { fmtNextRun } from './display.js';
+import type { SystemScheduleEntry } from './system/types.js';
 
 // Pure view-shaping helpers extracted from ScheduleManager: turn the raw per-tab schedule map
 // into the row shapes the client renders, with no dependency on PTY/command dispatch.
@@ -14,17 +15,26 @@ export function scheduleView(schedules: Map<string, ScheduleEntry[]>, label: str
 }
 
 // Every scheduled entry across all still-open tabs, flattened and sorted soonest-first by the raw
-// next-run timestamp, then shaped like `scheduleView(label)` rows plus the owning tab label and
-// command. Labels with no matching open tab are skipped, mirroring the open-tab guard in `tick()`.
-export function aggregatedScheduleView(schedules: Map<string, ScheduleEntry[]>, tabs: Tab[]): AggregatedScheduleView[] {
-  const rows: { entry: ScheduleEntry; label: string }[] = [];
+// next-run timestamp, then shaped like `scheduleView(label)` rows plus owner label and command. Tab
+// labels with no matching open tab are skipped; project rows are independent of the system tab.
+export function aggregatedScheduleView(
+  schedules: Map<string, ScheduleEntry[]>, tabs: Tab[], systemEntries: SystemScheduleEntry[] = [],
+): AggregatedScheduleView[] {
+  const rows: (
+    | { entry: ScheduleEntry; label: string; system: false }
+    | { entry: SystemScheduleEntry; label: string; system: true }
+  )[] = [];
   for (const [label, entries] of schedules) {
     if (tabs.every((t) => t.label !== label)) continue;
-    for (const entry of entries) rows.push({ entry, label });
+    for (const entry of entries) rows.push({ entry, label, system: false });
   }
+  for (const entry of systemEntries) rows.push({ entry, label: 'system', system: true });
   return rows
     .toSorted((a, b) => a.entry.nextRun - b.entry.nextRun)
-    .map(({ entry: e, label }) => ({
-      tab: label, id: e.id, spec: e.spec, next: fmtNextRun(e.nextRun), recurring: e.recurring, command: e.command,
-    }));
+    .map(({ entry: e, label, system }) => {
+      const row = {
+        tab: label, id: e.id, spec: e.spec, next: fmtNextRun(e.nextRun), recurring: e.recurring, command: e.command,
+      };
+      return system ? { ...row, owner: 'system' as const, key: e.key } : row;
+    });
 }

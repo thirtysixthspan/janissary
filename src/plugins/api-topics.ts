@@ -82,11 +82,13 @@ export type TabPluginNotification =
 // already agreed to show it, which keeps the grant as narrow as the view that motivates it. Each
 // topic names its own actions, so adding a topic never widens what an existing one can do.
 export type TabPluginTopicAction =
-  | { topic: 'schedules'; action: 'cancel'; tab: string; id: string }
+  | { topic: 'schedules'; action: 'cancel'; tab: string; id: string; owner?: 'tab' }
+  | { topic: 'schedules'; action: 'cancel'; tab: 'system'; id: string; owner: 'system'; key: string }
   | { topic: 'schedules'; action: 'clear' }
   // Focus the tab a row belongs to. Refused for a tab that owns no row in the topic's current data,
   // so this stays "focus the owner of what I am showing" rather than a general focus-anything grant.
-  | { topic: 'schedules'; action: 'focusOwner'; tab: string }
+  | { topic: 'schedules'; action: 'focusOwner'; tab: string; owner?: 'tab' }
+  | { topic: 'schedules'; action: 'focusOwner'; tab: 'system'; owner: 'system'; key: string }
   | { topic: 'conversations'; action: 'create'; id: string }
   | { topic: 'conversations'; action: 'load'; id: string }
   | { topic: 'conversations'; action: 'loadOlder'; id: string }

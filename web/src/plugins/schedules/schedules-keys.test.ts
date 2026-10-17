@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nextSelection } from './schedules-keys';
+import { nextSelection, scheduleRowKey } from './schedules-keys';
 
 describe('nextSelection', () => {
   it('ArrowDown moves forward by one and clamps at the last index', () => {
@@ -30,5 +30,18 @@ describe('nextSelection', () => {
   it('length 0 always returns null regardless of key', () => {
     expect(nextSelection(0, 2, 'ArrowDown')).toBeNull();
     expect(nextSelection(0, null, 'Home')).toBeNull();
+  });
+});
+
+describe('scheduleRowKey', () => {
+  it('keeps duplicate system names distinct by immutable key', () => {
+    const base = { id: 'build', spec: 'at 9am', next: 'later', recurring: false, tab: 'system', command: 'script build' };
+    expect(scheduleRowKey({ ...base, owner: 'system', key: 'first' }))
+      .not.toBe(scheduleRowKey({ ...base, owner: 'system', key: 'second' }));
+  });
+
+  it('keeps a system-tab timer distinct from a project-owned system row', () => {
+    const base = { id: 'build', spec: 'at 9am', next: 'later', recurring: false, tab: 'system', command: 'script build' };
+    expect(scheduleRowKey(base)).not.toBe(scheduleRowKey({ ...base, owner: 'system', key: 'first' }));
   });
 });

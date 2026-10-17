@@ -206,6 +206,34 @@ describe('hidden lifecycle through real controller and RPC dispatch', () => {
     expect(controller.managers.schedule.get('system')).toHaveLength(1);
   });
 
+  it('ensures and reveals the current managed shell for a keyed system schedule', async () => {
+    const { manager, tab } = systemTab();
+    manager.userCloseTab(1);
+    const schedule = controller.managers.systemSchedule.add({
+      id: 'build', key: 'test-key', command: 'script build', script: 'build', spec: 'at 9am',
+      nextRun: Date.now() + 60_000, recurring: false,
+    });
+    if (!schedule.ok || !schedule.entry) throw new Error('system schedule was not added');
+    const ensure = vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab });
+
+    runTopicAction(controller.managers, {
+      topic: 'schedules', action: 'focusOwner', tab: 'system', owner: 'system', key: schedule.entry.key,
+    });
+    await Promise.resolve();
+
+    expect(ensure).toHaveBeenCalledOnce();
+    expect(manager.activeTab).toBe(manager.tabs.findIndex((candidate) => candidate.label === tab.label));
+    expect(tab.hidden).toBeUndefined();
+
+    manager.activeTab = 0;
+    runTopicAction(controller.managers, {
+      topic: 'schedules', action: 'focusOwner', tab: 'system', owner: 'system', key: 'stale-key',
+    });
+    await Promise.resolve();
+    expect(manager.activeTab).toBe(0);
+    expect(ensure).toHaveBeenCalledOnce();
+  });
+
   it('restores a surviving history label after lower-index destructive removal without revealing hidden history', async () => {
     const { manager, tab } = systemTab();
     manager.userCloseTab(1);

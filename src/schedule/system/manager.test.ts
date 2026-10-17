@@ -8,6 +8,7 @@ import { makeTab } from '../../tab/index.js';
 import { SystemScheduleStore } from './store.js';
 import * as firing from './firing.js';
 import { notifySystemShellStartFailure } from './notices.js';
+import { runTopicAction } from '../../plugins/topics.js';
 
 const sinks = { emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} };
 const schedule = (id: string, key: string) => ({
@@ -40,6 +41,35 @@ describe('SystemScheduleManager mutations', () => {
     expect(controller.managers.systemSchedule.list()).toEqual([]);
     expect(changed).not.toHaveBeenCalled();
     unsubscribe.unsubscribe();
+    void controller.shutdown();
+  });
+
+  it('propagates clear persistence failure before changing either owner and keeps scripts on success', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-aggregate-clear-'));
+    const scriptDir = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scriptDir, { recursive: true });
+    const scriptFile = path.join(scriptDir, 'build.rs');
+    writeFileSync(scriptFile, 'npm run build\n');
+    const controller = createController(sinks, root);
+    const system = controller.managers.systemSchedule;
+    const added = system.add(schedule('build', 'unused'));
+    if (!added.ok || !added.entry) throw new Error('system schedule was not added');
+    controller.managers.schedule.set('janus', [{
+      id: 'timer', command: 'help', spec: 'at 9am', nextRun: Date.now() + 60_000, recurring: false,
+    }]);
+    const save = vi.spyOn(SystemScheduleStore.prototype, 'save')
+      .mockReturnValue({ ok: false, kind: 'io', error: new Error('disk full') });
+
+    expect(runTopicAction(controller.managers, { topic: 'schedules', action: 'clear' }))
+      .toBe('could not save system schedules');
+    expect(system.list()).toEqual([added.entry]);
+    expect(controller.managers.schedule.get('janus')).toHaveLength(1);
+
+    save.mockRestore();
+    expect(runTopicAction(controller.managers, { topic: 'schedules', action: 'clear' })).toBeUndefined();
+    expect(system.list()).toEqual([]);
+    expect(controller.managers.schedule.get('janus')).toEqual([]);
+    expect(readFileSync(scriptFile, 'utf8')).toBe('npm run build\n');
     void controller.shutdown();
   });
 

@@ -207,7 +207,7 @@ export function createPluginContext(
     },
     topicAction: (action) => {
       requireDeclaredTopic(declaration, action.topic);
-      if (isEnabled()) runTopicAction(managers, action);
+      return isEnabled() ? runTopicAction(managers, action) : undefined;
     },
     configuredViewer: () => isEnabled() ? getConfig().externalViewers?.[declaration.id] ?? '' : '',
     openExternally: (absPath, application) => isEnabled() && didOsOpen(absPath, application),

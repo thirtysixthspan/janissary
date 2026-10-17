@@ -158,10 +158,11 @@ export class ScheduleManager {
     return scheduleView(this.schedules, label);
   }
 
-  // Every scheduled entry across all still-open tabs, flattened and sorted soonest-first by the raw
-  // next-run timestamp, then shaped like `view(label)` rows plus the owning tab label and command.
+  // Every scheduled entry across open tabs and the project owner, flattened and sorted by raw time.
   aggregatedView(): AggregatedScheduleView[] {
-    return aggregatedScheduleView(this.schedules, this.managers.tab.tabs);
+    return aggregatedScheduleView(
+      this.schedules, this.managers.tab.tabs, this.managers.systemSchedule.list(),
+    );
   }
 
   // Fire any commands whose next-run time has passed, in every still-open tab. A recurring entry is

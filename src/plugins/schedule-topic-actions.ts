@@ -1,0 +1,54 @@
+import type { Managers } from '../managers.js';
+import type { TabPluginTopicAction } from './api.js';
+
+type ScheduleAction = Extract<TabPluginTopicAction, { topic: 'schedules' }>;
+
+export function scheduleTopicAction(managers: Managers, action: TabPluginTopicAction): string | undefined {
+  if (action.topic !== 'schedules') return;
+  switch (action.action) {
+    case 'cancel': {
+      const authorized = managers.schedule.aggregatedView().some((candidate) => candidate.tab === action.tab
+        && candidate.id === action.id
+        && (action.owner === 'system'
+          ? candidate.owner === 'system' && candidate.key === action.key
+          : candidate.owner !== 'system'));
+      if (!authorized) return;
+      if (action.owner === 'system') {
+        if (managers.systemSchedule.list().every((entry) => entry.key !== action.key || entry.id !== action.id)) return;
+        const result = managers.systemSchedule.cancelByKey(action.key);
+        return result.ok ? undefined : result.error;
+      }
+      managers.schedule.cancel(action.tab, action.id);
+      return;
+    }
+    case 'clear': {
+      const systemResult = managers.systemSchedule.clear();
+      if (!systemResult.ok) return systemResult.error;
+      managers.schedule.clearAll();
+      return;
+    }
+    case 'focusOwner': {
+      focusScheduleOwner(managers, action);
+      return;
+    }
+  }
+}
+
+function focusScheduleOwner(
+  managers: Managers,
+  action: Extract<ScheduleAction, { action: 'focusOwner' }>,
+): void {
+  const rows = managers.schedule.aggregatedView();
+  if (action.owner === 'system') {
+    if (action.tab !== 'system' || rows.every((row) => row.owner !== 'system' || row.key !== action.key)) return;
+    void managers.systemShell.ensure().then((result) => {
+      if (result.status !== 'ok') return;
+      const index = managers.tab.findIndex(result.tab.label);
+      if (index !== -1) managers.tab.setActiveTab(index);
+    });
+    return;
+  }
+  if (rows.every((row) => row.tab !== action.tab || row.owner === 'system')) return;
+  const index = managers.tab.findIndex(action.tab);
+  if (index !== -1) managers.tab.setActiveTab(index);
+}
