@@ -25,4 +25,16 @@ describe('recoverSystemSchedules', () => {
     expect(result.missed).toEqual([interval]);
     expect(result.entries[0].nextRun).toBeGreaterThan(10_000);
   });
+
+  it('recovers duplicate display names independently by immutable key', () => {
+    const once = entry({ key: 'once-key', id: 'same', recurring: false, timeOfDay: undefined, nextRun: 100 });
+    const recurring = entry({ key: 'daily-key', id: 'same', nextRun: 100 });
+
+    const result = recoverSystemSchedules([once, recurring], 100);
+
+    expect(result.missed).toEqual([once, recurring]);
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0]).toMatchObject({ key: 'daily-key', id: 'same', recurring: true });
+    expect(result.entries[0].nextRun).toBeGreaterThan(100);
+  });
 });

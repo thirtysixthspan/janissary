@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { tmpdir } from 'node:os';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { WebSocket } from 'ws';
@@ -148,6 +148,76 @@ describe('the static file server', () => {
 });
 
 describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
+  it('waits for shell preparation and recovery before starting the scheduler', async () => {
+    const order: string[] = [];
+    const gate = Promise.withResolvers<{ status: 'failed'; reason: Error }>();
+    const run = vi.spyOn(TabPluginHost.prototype, 'runCommandResult');
+    const ensure = vi.spyOn(SystemShellManager.prototype, 'ensure').mockImplementation(async () => {
+      order.push('ensure-start');
+      const result = await gate.promise;
+      order.push('ensure-finished');
+      return result;
+    });
+    const recover = vi.spyOn(SystemScheduleManager.prototype, 'load').mockImplementation(() => { order.push('recover'); });
+    const start = vi.spyOn(ScheduleManager.prototype, 'start').mockImplementation(() => { order.push('start'); });
+    const tick = vi.spyOn(SystemScheduleManager.prototype, 'tick');
+    const starting = startServer({ webDir, projectDir: tmpdir() });
+
+    try {
+      await waitFor(() => ensure.mock.calls.length === 1);
+      await Promise.resolve();
+      expect(order).toEqual(['ensure-start']);
+      expect(start).not.toHaveBeenCalled();
+      expect(tick).not.toHaveBeenCalled();
+
+      gate.resolve({ status: 'failed', reason: new Error('shell unavailable') });
+      server = await starting;
+
+      expect(order).toEqual(['ensure-start', 'ensure-finished', 'recover', 'start']);
+      expect(server.port).toBeGreaterThan(0);
+      expect(tick).not.toHaveBeenCalled();
+      expect(run.mock.invocationCallOrder[0]).toBeLessThan(ensure.mock.invocationCallOrder[0] ?? Infinity);
+      expect((ensure.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(recover.mock.invocationCallOrder[0] ?? Infinity);
+      expect((recover.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(start.mock.invocationCallOrder[0] ?? Infinity);
+    } finally {
+      gate.resolve({ status: 'failed', reason: new Error('shell unavailable') });
+      run.mockRestore();
+      ensure.mockRestore();
+      recover.mockRestore();
+      start.mockRestore();
+      tick.mockRestore();
+    }
+  });
+
+  it('still reattaches remote sessions and listens when schedule loading and system-shell startup fail', async () => {
+    const projectDir = mkdtempSync(path.join(tmpdir(), 'janus-invalid-schedules-'));
+    const stateDir = path.join(projectDir, '.janissary');
+    mkdirSync(stateDir);
+    writeFileSync(path.join(stateDir, 'system-schedules.json'), '{invalid json');
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const ensure = vi.spyOn(SystemShellManager.prototype, 'ensure').mockResolvedValue({
+      status: 'failed', reason: new Error('system shell unavailable'),
+    });
+    const reattach = vi.spyOn(ControllerCore.prototype, 'reattachSessions');
+    const start = vi.spyOn(ScheduleManager.prototype, 'start');
+
+    try {
+      server = await startServer({ webDir, projectDir });
+
+      expect(server.port).toBeGreaterThan(0);
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining('System schedules could not load:'));
+      expect(ensure).toHaveBeenCalledOnce();
+      expect(start).toHaveBeenCalledOnce();
+      expect(reattach).toHaveBeenCalledOnce();
+      expect((start.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(reattach.mock.invocationCallOrder[0] ?? Infinity);
+    } finally {
+      stderr.mockRestore();
+      ensure.mockRestore();
+      reattach.mockRestore();
+      start.mockRestore();
+    }
+  });
+
   it('ensures the system shell after janus and still listens and restores sessions on failure', async () => {
     const order: string[] = [];
     const runSpy = vi.spyOn(TabPluginHost.prototype, 'runCommandResult');
