@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { projectFromEvidence, seedRunscript } from './system-schedules-fixtures.mjs';
 
@@ -7,10 +7,12 @@ export default async function systemScheduleManagement({ page, record, scratchDi
   seedRunscript(scratchDir, 'management-probe', 'printf management-probe\\n\n');
   await runCommand(page, 'schedule system duplicate every 1m script management-probe');
   await runCommand(page, 'schedule system duplicate every 2m script management-probe');
+  await runCommand(page, 'schedule tab-owned every 1h true');
   await runCommand(page, 'schedules');
   const aggregateRows = page.locator('.schedules-row:visible');
   await aggregateRows.first().waitFor({ timeout: 10_000 });
-  const rendered = (await page.locator('.schedules-tab:visible').textContent()) ?? '';
+  const aggregate = page.locator('.schedules-tab:visible');
+  const rendered = (await aggregate.textContent()) ?? '';
   assert.ok(rendered.includes('duplicate'), 'the aggregate plugin renders project-owned rows');
   assert.ok(rendered.includes('management-probe'), 'aggregate rows retain their runscript command');
 
@@ -22,11 +24,37 @@ export default async function systemScheduleManagement({ page, record, scratchDi
   const openDialogs = await dialogs(page);
   assert.ok(openDialogs.some((dialog) => dialog.text.includes('New schedule')), 'bare schedule opens the real dialog');
   await page.keyboard.press('Escape');
-  await runCommand(page, 'schedule system cancel duplicate');
-  await runCommand(page, 'schedule system list');
+  const refreshedTabs = await tabs(page);
+  const schedules = refreshedTabs.find((tab) => tab.name === 'schedules');
+  assert.ok(schedules, 'the aggregate schedules tab remains open');
+  await page.locator('.tab').nth(schedules.index).click();
   const project = projectFromEvidence(scratchDir);
-  const snapshot = JSON.parse(readFileSync(path.join(project, '.janissary', 'system-schedules.json'), 'utf8'));
-  assert.ok(snapshot.entries.every((entry) => entry.id !== 'duplicate'), 'cancel by name removes every matching system row');
-  record.management = { aggregateRowsVisible: true, dialogOpened: true, duplicateNameCancelClearedOwner: true };
+  const store = path.join(project, '.janissary', 'system-schedules.json');
+  const before = JSON.parse(readFileSync(store, 'utf8'));
+  const duplicates = before.entries.filter((entry) => entry.id === 'duplicate');
+  assert.equal(duplicates.length, 2, 'both duplicate system schedules are persisted');
+  const targetRow = aggregateRows.filter({ has: page.locator('.schedules-id', { hasText: /^duplicate$/ }) }).first();
+  await targetRow.click();
+  await page.keyboard.press('Delete');
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+  await aggregateRows.nth(1).waitFor({ timeout: 10_000 });
+  await aggregateRows.nth(2).waitFor({ state: 'detached', timeout: 10_000 });
+  const afterDelete = JSON.parse(readFileSync(store, 'utf8'));
+  const remaining = afterDelete.entries.filter((entry) => entry.id === 'duplicate');
+  assert.equal(remaining.length, 1, 'the aggregate row action deletes exactly one duplicate');
+  assert.ok(duplicates.some((entry) => entry.key !== remaining[0].key), 'the other duplicate keeps its persisted key');
+  assert.equal(await aggregateRows.filter({ has: page.locator('.schedules-id', { hasText: /^duplicate$/ }) }).count(), 1, 'the remaining duplicate is still rendered');
+  assert.equal(await aggregateRows.filter({ has: page.locator('.schedules-id', { hasText: /^tab-owned$/ }) }).count(), 1, 'the tab-owned schedule remains rendered after keyed deletion');
+
+  await aggregate.getByRole('button', { name: 'Clear all schedules' }).click();
+  await aggregateRows.first().waitFor({ state: 'detached', timeout: 10_000 });
+  const cleared = JSON.parse(readFileSync(store, 'utf8'));
+  assert.equal(cleared.entries.length, 0, 'aggregate clear-all empties persisted system schedules');
+  assert.ok(existsSync(path.join(project, '.janissary', 'scripts', 'management-probe.rs')), 'clear-all preserves the runscript');
+  await page.locator('.tab').nth(janus.index).click();
+  await runCommand(page, 'schedule list');
+  const tabScheduleList = await page.locator('.tab-body[data-tab-label="janus"]:visible').textContent();
+  assert.ok(tabScheduleList?.includes('No scheduled commands.'), 'aggregate clear-all empties the tab-owned schedule');
+  record.management = { aggregateRowsVisible: true, dialogOpened: true, keyedDuplicateDelete: true, clearAllBothOwners: true, runscriptPreserved: true };
   record.tabs = await tabs(page);
 }

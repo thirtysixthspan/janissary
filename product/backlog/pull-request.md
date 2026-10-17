@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the plan's aggregate-row deletion and clear-all browser checks.
-
-Existing Issue: The management driver confirms that duplicate project rows render, then cancels them by name through the command path without exercising keyed row deletion or Clear all schedules in the aggregate UI. Severity: 5/10
-
-Existing Risk: 5/10 - A regression that deletes every same-name row from one UI action or fails to clear both owners can pass the new browser verification despite the plan's distinct-key and cross-owner guarantees.
-
-Proposal Risk: 2/10 - Exercising one-row deletion and clear-all against mixed ownership leaves the remaining risk to the existing plugin tests, which cover their isolated behavior.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "verify keyed aggregate-row deletion and clear-all in the browser driver". Extend `scripts/e2e/system-schedules-management.mjs` to create two same-name system rows plus a tab-owned schedule, delete one rendered system row using its row action, and assert the other duplicate and tab schedule remain. Then invoke Clear all schedules in the aggregate UI and assert both owners are empty while the runscript remains. Reuse the project's existing schedules plugin tests under `src/plugins/schedules/` as regression coverage for the row actions; keep the browser assertions against rendered rows and the persisted system store so ownership behavior is verified end to end.
-
-
 * Verify that the runscript itself survives the ordinary restart scenario.
 
 Existing Issue: The restart driver checks that the schedule entry remains in the store after relaunch but never checks that `restart-probe.rs` remains available or can still be executed. Severity: 4/10
