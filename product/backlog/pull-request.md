@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Verify that the runscript itself survives the ordinary restart scenario.
-
-Existing Issue: The restart driver checks that the schedule entry remains in the store after relaunch but never checks that `restart-probe.rs` remains available or can still be executed. Severity: 4/10
-
-Existing Risk: 5/10 - Startup cleanup could remove project scripts while preserving the schedule snapshot, leaving a persisted schedule that cannot run and an E2E restart check that still passes.
-
-Proposal Risk: 2/10 - Checking the script file and executing it after relaunch verifies both retained project data and the real command path, with storage and command tests covering remaining edge cases.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "verify runscript persistence across ordinary restart". In `scripts/e2e/system-schedules-restart.mjs`, after confirming the persisted `restart-check` entry, assert that `.janissary/scripts/restart-probe.rs` still exists and run `execute restart-probe`; wait for its distinctive output in the managed system shell before recording the scenario as verified. Keep the same scratch project and ordinary launcher restart flow. The existing system storage integration test covers schedule-store clear/reload behavior, while this driver should pin script retention and execution across the process boundary.
-
-
 * Wait for post-failure output before asserting script continuation.
 
 Existing Issue: The execution driver waits for the first runscript marker and immediately reads the transcript for `later-line`, although the queued `pwd`, `false`, and final `printf` commands may not have run yet. Severity: 4/10

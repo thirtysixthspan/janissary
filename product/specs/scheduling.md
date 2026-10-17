@@ -6,6 +6,8 @@ The system schedule store is a versioned snapshot in `.janissary/system-schedule
 
 System schedules are project-owned and survive tab closure. Add, cancel-by-name, cancel-by-key, and clear save the complete next snapshot synchronously before changing memory or publishing a schedule/state update. Cancelling a name removes every matching row; cancelling by key removes only that row. A failed save leaves the in-memory list unchanged. Invalid or unsupported startup data is reported once to stderr and does not stop startup.
 
+Ordinary-restart end-to-end verification confirms that a persisted system schedule remains listed and that its referenced runscript remains available and can execute in the managed system shell after relaunch.
+
 Startup captures one cutoff before shell preparation. After the required `janus` shell opens and the managed system shell is attempted, overdue entries at or before that cutoff are reported as missed and never queued. Missed one-shots are removed; missed recurring entries advance to a future occurrence, skipping the closed-app backlog. Recovery is saved before its result is published. If that save fails, due entries remain stored in memory but do not fire during this startup. The scheduler starts only after recovery finishes.
 
 Runscripts are named lowercase words separated by single hyphens and stored as `.janissary/scripts/<name>.rs` under the project root. Parsing preserves each command line and inline shell comment, ignores blank lines and full-line comments, and treats each physical line as a separate command. The catalog lists existing valid regular `.rs` files alphabetically. Reads use current file contents and reject symlinks in the state directory, scripts directory, or target file.
