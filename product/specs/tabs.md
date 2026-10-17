@@ -7,6 +7,7 @@ Multiple workspace tabs, each with independent state. A zsh shell tab named `jan
 Every launch opens a zsh shell tab (see [[shell-tab]]) labelled `janus`, with dot color `#5b9cff`, in the project directory, then attempts one hidden system shell. The `janus` shell is opened and validated before any window can connect, so the strip is never empty. When the live `janus` shell cannot be opened — including a missing or invalid shell payload or dead/mismatched PTY — the launch stops with the failed-to-start banner `<name> <version> — failed to start: could not open the launch shell: <reason>` (see [[cli]]). A system-shell failure is nonfatal and posts a startup-failure notification. Parked remote shells are still restored around their existing remote PTYs, with their last reported cwd and without reopening a navigator.
 
 Startup notifications do not change tab focus: `janus` remains visible and active while the managed `system` shell remains hidden.
+Commands submitted in `janus` keep their output there even when a startup notification adds another tab ahead of it.
 
 ### Shell tab creation
 
