@@ -105,7 +105,6 @@ export function SchedulesTab({
             selected={selected}
             onRowClick={onRowClick}
             onRowDoubleClick={focusOwner}
-            onClear={() => { void capabilities.intent('clear', { owner: 'system' }); }}
             onDelete={setPendingDelete}
           />
           <ScheduleSection
@@ -116,7 +115,6 @@ export function SchedulesTab({
             selected={selected}
             onRowClick={onRowClick}
             onRowDoubleClick={focusOwner}
-            onClear={() => { void capabilities.intent('clear', { owner: 'tab' }); }}
             onDelete={setPendingDelete}
           />
         </>
