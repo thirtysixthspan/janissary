@@ -1,5 +1,6 @@
 import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { ensureSystemScheduleExcluded } from './local-exclude.js';
 import { isRunscriptName, parseRunscriptText } from './runscript.js';
 
 function assertDirectory(directory: string): boolean {
@@ -15,6 +16,11 @@ function assertDirectory(directory: string): boolean {
 }
 
 function scriptsDirectory(projectRoot: string): { directory: string; exists: boolean } {
+  try {
+    ensureSystemScheduleExcluded(projectRoot);
+  } catch (error) {
+    process.stderr.write(`System schedule paths could not be excluded from Git: ${error instanceof Error ? error.message : String(error)}\n`);
+  }
   const stateDir = path.join(projectRoot, '.janissary');
   const scriptsDir = path.join(stateDir, 'scripts');
   if (!assertDirectory(stateDir)) return { directory: scriptsDir, exists: false };

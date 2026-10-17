@@ -6,6 +6,7 @@ import path from 'node:path';
 import type * as Fs from 'node:fs';
 import { clearStateDirectories } from '../../state/dirs.js';
 import { initHarnessCaptureDirectory } from '../../harness/capture/file.js';
+import { catalogRunscripts } from './runscript-files.js';
 import { SystemScheduleStore } from './store.js';
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -94,6 +95,29 @@ describe('system schedule storage integration', () => {
       mkdirSync(path.join(project, '.janissary', 'scripts'));
       writeFileSync(path.join(project, '.janissary', 'scripts', 'deploy.rs'), 'echo hi');
       expect(git(root, 'status', '--short')).toBe('?? .gitignore');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('excludes runscripts when cataloged without saving a system schedule', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'schedule catalog git project '));
+    try {
+      git(root, 'init', '-q');
+      writeFileSync(path.join(root, '.gitignore'), 'user-rule\n');
+      const project = path.join(root, 'project');
+      const scripts = path.join(project, '.janissary', 'scripts');
+      mkdirSync(scripts, { recursive: true });
+      writeFileSync(path.join(scripts, 'deploy.rs'), 'echo deploy');
+      const excludeFile = path.join(root, '.git', 'info', 'exclude');
+      const originalExclude = `${readFileSync(excludeFile, 'utf8')}# preserve catalog rule\n`;
+      writeFileSync(excludeFile, originalExclude);
+
+      expect(catalogRunscripts(project)).toEqual(['deploy']);
+      expect(git(root, 'check-ignore', '--quiet', '--', 'project/.janissary/scripts/deploy.rs')).toBe('');
+      expect(git(root, 'check-ignore', '--quiet', '--', 'project/.janissary/system-schedules.json')).toBe('');
+      expect(readFileSync(path.join(root, '.gitignore'), 'utf8')).toBe('user-rule\n');
+      expect(readFileSync(excludeFile, 'utf8').startsWith(originalExclude)).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
