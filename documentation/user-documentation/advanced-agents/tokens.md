@@ -1,12 +1,13 @@
 # Tokens for agents
 
-Janissary reads four optional token files from a `.janissary/` directory. Each is a plain text file holding just the token value. Janissary only ever reads them, never writes to them, and a project's `.janissary/` is gitignored by default so none of them gets committed.
+Janissary reads five optional token files from a `.janissary/` directory. Each is a plain text file holding just the token value. Janissary only ever reads them, never writes to them, and a project's `.janissary/` is gitignored by default so none of them gets committed.
 
 | File | What it gives a workspaced tab | Set it up when |
 | --- | --- | --- |
 | `github-token` | working `git push` and `gh` | you want to push or open pull requests from inside a workspace |
 | `claude-token` | a signed-in `claude` harness | the machine running the tab has no usable keychain |
 | `opencode-token` | access to OpenCode Zen and OpenCode Go | your harness uses either of those providers |
+| `kilo-token` | access to the Kilo gateway | your opencode harness routes through Kilo |
 | `gemini-token` | a working Google provider | your harness talks to Gemini |
 
 None of them is required. Without them, workspaces still clone, run, commit, fetch, and pull.
@@ -97,7 +98,7 @@ A token reaches the tab whether or not isolation is actually active on that mach
 
 <img class="agent-float" src="/agents/hakim-south.png" alt="" />
 
-All four token files travel to a [remote shell or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine.
+All five token files travel to a [remote shell or harness](/user-documentation/advanced-agents/remote-agents) the same way. Janissary sends them through the encrypted SSH connection when it asks the remote for a workspace, and injects them only into that workspace's processes. None is written to the remote filesystem, so you don't need to copy any of these files to the other machine. If you have no token to send, the remote falls back to its own copy, looked up in the same two places on that machine.
 
 Your saved ChatGPT login is separate from these token files. Janissary does not forward it: OpenCode uses the Codex login saved on the machine running the workspace. A remote workspace therefore uses the remote machine's login, if it has one.
 

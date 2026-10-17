@@ -273,7 +273,7 @@ describe('sandboxSpawn', () => {
       SSH_AUTH_SOCK: 'x', GPG_AGENT_INFO: 'x', GIT_ASKPASS: 'x', GIT_CREDENTIAL_HELPER: 'x', KRB5CCNAME: 'x',
       ANTHROPIC_API_KEY: 'keep-me', OPENAI_API_KEY: 'keep-me', GOOGLE_API_KEY: 'keep-me',
       GEMINI_API_KEY: 'keep-me', GOOGLE_GENERATIVE_AI_API_KEY: 'keep-me', GOOGLE_VERTEX_PROJECT: 'keep-me',
-      GOOGLE_APPLICATION_CREDENTIALS: 'keep-me',
+      GOOGLE_APPLICATION_CREDENTIALS: 'keep-me', KILO_API_KEY: 'keep-me',
     };
     const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
     for (const dropped of [
@@ -291,7 +291,7 @@ describe('sandboxSpawn', () => {
     for (const kept of [
       'ANTHROPIC_API_KEY', 'OPENAI_API_KEY', 'GOOGLE_API_KEY',
       'GEMINI_API_KEY', 'GOOGLE_GENERATIVE_AI_API_KEY', 'GOOGLE_VERTEX_PROJECT',
-      'GOOGLE_APPLICATION_CREDENTIALS',
+      'GOOGLE_APPLICATION_CREDENTIALS', 'KILO_API_KEY',
     ]) {
       expect(result.env[kept]).toBe('keep-me');
     }
@@ -367,6 +367,32 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
+  it.skipIf(!sandboxAvailable())('injects KILO_API_KEY when a kilo token is configured', () => {
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir, tokens: { kilo: 'kilo_live_key' } }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.env.KILO_API_KEY).toBe('kilo_live_key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  // Off ENV_SCRUB_PATTERNS like the OpenCode key, so someone who exports it themselves keeps working
+  // when no token file is configured.
+  it.skipIf(!sandboxAvailable())('leaves an ambient KILO_API_KEY in place when no kilo token is configured', () => {
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const env = { PATH: '/usr/bin', KILO_API_KEY: 'ambient-key' };
+    const result = sandboxSpawn({ workspaceDir }, 'bash', [], env);
+    expect(result.env.KILO_API_KEY).toBe('ambient-key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
+  it('still injects the Kilo credential for a workspaced spawn when nothing is confined', () => {
+    configureUnconfined();
+    const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
+    const result = sandboxSpawn({ workspaceDir, tokens: { kilo: 'kilo_live_key' } }, 'bash', [], { PATH: '/usr/bin' });
+    expect(result.command).toBe('bash');
+    expect(result.env.KILO_API_KEY).toBe('kilo_live_key');
+    rmSync(workspaceDir, { recursive: true, force: true });
+  });
+
   // Both names, because opencode detects its Google provider from one and loads the key from the
   // other: with only GEMINI_API_KEY set, the provider looked configured and the first prompt failed
   // reporting GOOGLE_GENERATIVE_AI_API_KEY missing.
@@ -406,7 +432,7 @@ describe('sandboxSpawn', () => {
     rmSync(workspaceDir, { recursive: true, force: true });
   });
 
-  it.skipIf(!sandboxAvailable())('injects every credential when all four tokens are given', () => {
+  it.skipIf(!sandboxAvailable())('injects every credential when all five tokens are given', () => {
     const workspaceDir = mkdtempSync(path.join(tmpdir(), 'sandbox-ws-'));
     mkdirSync(`${workspaceDir}.tmp`, { recursive: true });
     const result = sandboxSpawn(
@@ -416,6 +442,7 @@ describe('sandboxSpawn', () => {
           github: 'scoped-token',
           claude: 'subscription-token',
           opencode: 'oc_live_key',
+          kilo: 'kilo_live_key',
           gemini: 'AIzaSyExample',
         },
       },
@@ -425,6 +452,7 @@ describe('sandboxSpawn', () => {
     expect(result.env.GH_CONFIG_DIR).toBe(path.join(realpathSync(`${workspaceDir}.tmp`), 'gh-config'));
     expect(result.env.CLAUDE_CODE_OAUTH_TOKEN).toBe('subscription-token');
     expect(result.env.OPENCODE_API_KEY).toBe('oc_live_key');
+    expect(result.env.KILO_API_KEY).toBe('kilo_live_key');
     expect(result.env.GEMINI_API_KEY).toBe('AIzaSyExample');
     expect(result.env.GOOGLE_GENERATIVE_AI_API_KEY).toBe('AIzaSyExample');
     rmSync(`${workspaceDir}.tmp`, { recursive: true, force: true });

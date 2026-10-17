@@ -198,7 +198,9 @@ already carved in. An OpenCode API key configured at `.janissary/opencode-token`
 `src/project-tokens.ts`) is set as `OPENCODE_API_KEY` on exactly the same terms, for the same
 reasons: the variable the OpenCode Zen and OpenCode Go providers declare, off the scrub list as a
 provider credential, and needing no companion because opencode reads its own configuration from
-`~/.local/share/opencode`, likewise already carved in. A Google AI key configured at
+`~/.local/share/opencode`, likewise already carved in. A Kilo API key configured at
+`.janissary/kilo-token` is set as `KILO_API_KEY` on the same terms: off the scrub list as a provider
+credential, and no companion variable. A Google AI key configured at
 `.janissary/gemini-token` (loaded by `src/project-tokens.ts`) is set on the same terms again, under
 two variables rather than one: `GEMINI_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY`, both carrying the
 same key. opencode reads the two at different moments — it recognizes a configured Google provider
