@@ -64,7 +64,7 @@ Closing the app window stops it too. When the last window or browser tab showing
 
 ## Starting fresh
 
-Each launch starts fresh: harness captures, recordings and transcripts, browser logs, Git-failure output, and workspace clones from the previous session are cleared. Local shell and harness tabs, their transcripts and command history, scheduled commands, and every other local tab you had open are gone. The launch opens the same single `janus` shell tab every launch does.
+Each launch starts fresh: harness captures, recordings and transcripts, browser logs, Git-failure output, and workspace clones from the previous session are cleared. Local shell and harness tabs, their transcripts and command history, tab-owned scheduled commands, and every other local tab you had open are gone. Project system schedules persist across launches; see [Project system schedules](/user-documentation/automation/scheduling#project-system-schedules). The launch opens the same single `janus` shell tab every launch does.
 
 Detached remote sessions are the exception. Every launch tries each eligible parked remote session independently and opens its tabs as the host answers: surviving remote shell and harness tabs are restored, and remote agent tabs aren't. Remote shells return on their existing PTYs with their last working directories. A host that refuses the attach or has nothing running is marked terminated; a host that can't be reached stays listed as detached in [Sessions](/user-documentation/tab-types/sessions), with the failure on its row and **Attach** available to try again. One unreachable host never holds up the rest. See [Coming back after a restart](/user-documentation/advanced-agents/remote-agents#coming-back-after-a-restart) for the full restore behavior.
 
