@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Deliver the planned API-v2 changelog entry for the optional terminal-exit close argument.
-
-Existing Issue: The contract prose above the API changelog documents the optional `close` argument, but the API v2 changelog itself has no entry for it. Severity: 4/10
-
-Existing Risk: 4/10 - A reader consulting the version history can miss this published client-contract change and later misjudge compatibility or the API's evolution.
-
-Proposal Risk: 1/10 - A concise additive v2 changelog entry records the contract change without suggesting an API integer increment.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "add the terminal-exit close argument to the API v2 changelog". In `documentation/developer-documentation/tab-plugins.md` under `## API changelog` and `### v2`, add an entry stating that `close` accepts optional `{ terminalExited: ptyId }` for verified terminal exits, that this is additive and leaves `TAB_PLUGIN_API_VERSION` unchanged, and that zero-argument close remains ordinary user close. Keep the entry consistent with the existing client-contract paragraph and `product/specs/tab-plugins.md`.
-
-
 * Add the focused status-hook test required by the plan for generation-bound mount-time exit reports.
 
 Existing Issue: The plan calls for `web/src/plugins/shell/useShellTerminalStatus.test.ts`, but the commit adds no test for the hook itself and exercises only a subset of its generation behavior through `ShellTab.test.tsx`. Severity: 5/10

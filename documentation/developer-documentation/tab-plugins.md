@@ -367,6 +367,8 @@ API v2 removes agent-tab launch actions and uses `launchShellHere()` for a sibli
 
 ### v2
 
+- The client `close` callback accepts the optional `{ terminalExited: ptyId }` argument for verified process exits. This additive argument leaves `TAB_PLUGIN_API_VERSION` unchanged; `close()` with no argument remains the normal user-close path.
+
 - The scoped agent monitor adds `terminateAgentRun()` as the thirty-eighth server capability. It terminates only the local run bound to the answering agent-monitor tab; it accepts no run selector and adds no remote-run control. The contract now has thirty-eight server and fourteen client capabilities.
 
 - Removed agent-tab launch actions and conversation launch-agent intents; metadata actions open sibling shells through launchShellHere and the guarded openSibling hook.
