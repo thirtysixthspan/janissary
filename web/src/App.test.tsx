@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TabView, TaskRow } from '@shared/protocol';
+import type { StateEvent, TabView, TaskRow } from '@shared/protocol';
 import userEvent from '@testing-library/user-event';
 import type { JanusClient, LayoutListener, StateListener } from './shared/ws/ws';
 import { collectNavigatorSelections } from './file-navigator/file/navigator-selection-registry';
@@ -26,6 +26,7 @@ const requestMock = vi.fn().mockResolvedValue({ newInput: '', newCursor: 0, matc
 type EmitState = (
   tabs: TabView[], activeTab: number, tabNameMaxLength: number, globalHistory: string[],
   syntaxTheme: string, theme: string, tasks: TaskRow[],
+  scheduleLaunch?: StateEvent['scheduleLaunch'],
 ) => void;
 let stateListener: EmitState | null = null;
 let layoutListener: LayoutListener | null = null;
@@ -39,13 +40,13 @@ const client = {
   registerStateCollector: registerStateCollectorMock,
   saveFile: () => Promise.resolve(undefined),
   onState(listener: StateListener) {
-    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks) => {
+    stateListener = (tabs, active, maxLength, history, syntax, theme, tasks, scheduleLaunch = null) => {
       listener({
         t: 'state', tabs, activeTab: active, tabNameMaxLength: maxLength,
         activeTabNameMaxLength: 50, clipboardHistoryMaxEntries: 15, globalHistory: history,
         syntaxTheme: syntax, theme, tasks,
         profiles: [], projectDir: '/tmp', version: '1.2.3',
-        harnessLaunch: null, scheduleLaunch: null,
+        harnessLaunch: null, scheduleLaunch,
       });
     };
     return () => {};
@@ -95,6 +96,26 @@ describe('App app theme picker', () => {
     expect(screen.getByText('theme', { selector: '.picker-title' })).toBeInTheDocument();
     fireEvent.keyDown(globalThis as unknown as Window, { key: 'Enter' });
     expect(sendMock).toHaveBeenCalledWith({ method: 'command', params: { text: 'theme dark' } });
+  }, 15_000);
+});
+
+describe('App schedule launch snapshot', () => {
+  beforeEach(() => {
+    sendMock.mockClear();
+    stateListener = null;
+  });
+
+  it('opens the dialog on the project target when the managed system shell is active', async () => {
+    const { App } = await import('./App');
+    render(<App client={client} />);
+    act(() => {
+      stateListener!([makeTab({ label: 'system', systemShell: true })], 0, 16, [], 'github-dark', 'dark', [], {
+        targets: [], active: 'system', runscripts: ['deploy'],
+      });
+    });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Schedule target/)).toHaveValue('system');
+    expect(screen.getByLabelText(/Runscript/)).toHaveValue('');
   }, 15_000);
 });
 

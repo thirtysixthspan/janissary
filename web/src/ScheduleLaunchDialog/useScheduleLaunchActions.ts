@@ -3,7 +3,8 @@ import type { JanusClient } from '../shared/ws/ws';
 import { buildScheduleCommand, type ScheduleFields } from './schedule-command';
 
 function isValid(fields: ScheduleFields): boolean {
-  if (!fields.name.trim() || !fields.command.trim()) return false;
+  if (!fields.name.trim()) return false;
+  if (fields.target.kind === 'system' ? !fields.script : !fields.command.trim()) return false;
   switch (fields.type) {
     case 'at': { return fields.time.trim() !== ''; }
     case 'on': { return fields.date.trim() !== ''; }

@@ -9,6 +9,7 @@ import { scheduleView, aggregatedScheduleView } from './views.js';
 import { formatLateDuration } from './display.js';
 import { typeIntoHarness } from '../harness/input.js';
 import { canRunSchedules } from './targets.js';
+import { cachedRunscripts } from '../state/listings.js';
 
 // Independent of `resume-watch.ts`'s own threshold for "the machine was asleep": this one is the
 // user-visible lateness bar `product/specs/scheduling.md` documents as five seconds, and it stays
@@ -46,15 +47,17 @@ export class ScheduleManager {
     messageBus.emit('state', { type: 'dirty' });
   }
 
-  // The launch dialog's target-tab catalog while open, or null when closed: the eligible tab
-  // labels (the same `canRunSchedules` predicate `resolveTargetTab` uses) plus the active tab's
-  // label as the default.
+  // The launch dialog's target and runscript catalogs while open, or null when closed.
   scheduleLaunchView(): ScheduleLaunchView | null {
     if (!this.launchDialogOpen) return null;
     const targets = this.managers.tab.tabs
-      .filter((t) => canRunSchedules(t, this.managers))
+      .filter((t) => !t.systemShell && canRunSchedules(t, this.managers))
       .map((t) => t.label);
-    return { targets, active: this.managers.tab.cur().label };
+    return {
+      targets,
+      active: this.managers.tab.cur().label,
+      runscripts: cachedRunscripts(this.managers.tab.launchDir ?? process.cwd()),
+    };
   }
 
   // The per-entry hooks a caller registered through `add`, keyed by tab and then entry id. Two

@@ -2,7 +2,8 @@ import React, { useCallback, useState } from 'react';
 import type { ScheduleLaunchView } from '@shared/protocol';
 import type { JanusClient } from '../shared/ws/ws';
 import { useLaunchDialog } from '../shared/use-launch-dialog';
-import type { ScheduleFields, ScheduleType } from './schedule-command';
+import type { ScheduleFields, ScheduleTarget, ScheduleType } from './schedule-command';
+import { initialScheduleTarget, reconcileScheduleFields } from './schedule-selection';
 import { useScheduleLaunchActions } from './useScheduleLaunchActions';
 
 type Properties = { view: ScheduleLaunchView; client: JanusClient };
@@ -17,9 +18,9 @@ const SCHEDULE_TYPES: { value: ScheduleType; label: string }[] = [
 
 const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-function initialFields(active: string): ScheduleFields {
+function initialFields(view: ScheduleLaunchView): ScheduleFields {
   return {
-    name: '', target: active, activeTarget: active, command: '',
+    name: '', target: initialScheduleTarget(view), activeTarget: view.active, command: '', script: '',
     type: 'at', time: '', date: '', interval: '', weekday: 'monday',
   };
 }
@@ -36,16 +37,21 @@ export function resetScheduleDialogMemory(): void {
 // schedule forms: it assembles the equivalent `schedule …` string and submits it through the
 // normal command path, so the server's existing parsing/validation/firing runs unchanged.
 export function ScheduleDialog({ view, client }: Properties) {
-  const [fields, setFields] = useState<ScheduleFields>(() => remembered ?? initialFields(view.active));
+  const [storedFields, setFields] = useState<ScheduleFields>(() => remembered ?? initialFields(view));
+  const fields = reconcileScheduleFields(storedFields, view);
   const [hadRemembered] = useState(() => remembered !== null);
 
   const update = useCallback((patch: Partial<ScheduleFields>) => {
     setFields((prev) => {
-      const next = { ...prev, ...patch };
+      const next = reconcileScheduleFields({ ...prev, ...patch }, view);
       remembered = next;
       return next;
     });
-  }, []);
+  }, [view]);
+
+  const selectTarget = (value: string): ScheduleTarget => value === 'system'
+    ? { kind: 'system' }
+    : { kind: 'tab', label: value.slice('tab:'.length) };
 
   const { cancel, create, canSubmit } = useScheduleLaunchActions(client, fields);
   const { dialogRef, submitButtonRef } = useLaunchDialog(cancel, create, canSubmit, hadRemembered);
@@ -58,9 +64,13 @@ export function ScheduleDialog({ view, client }: Properties) {
           <label>Name
             <input type="text" value={fields.name} onChange={(e) => update({ name: e.target.value })} />
           </label>
-          <label>Target tab
-            <select value={fields.target} onChange={(e) => update({ target: e.target.value })}>
-              {view.targets.map((label) => <option key={label} value={label}>{label}</option>)}
+          <label>Schedule target
+            <select
+              value={fields.target.kind === 'system' ? 'system' : `tab:${fields.target.label}`}
+              onChange={(e) => update({ target: selectTarget(e.target.value) })}
+            >
+              <option value="system">Project (system)</option>
+              {view.targets.map((label) => <option key={label} value={`tab:${label}`}>{label}</option>)}
             </select>
           </label>
           <label>Schedule type
@@ -90,9 +100,28 @@ export function ScheduleDialog({ view, client }: Properties) {
               <input type="text" value={fields.time} placeholder="3pm" onChange={(e) => update({ time: e.target.value })} />
             </label>
           )}
-          <label>Command
-            <input type="text" value={fields.command} onChange={(e) => update({ command: e.target.value })} />
-          </label>
+          {fields.target.kind === 'system' ? (
+            <label>Runscript
+              <select
+                aria-describedby={view.runscripts.length === 0 ? 'schedule-runscript-empty' : undefined}
+                value={fields.script}
+                disabled={view.runscripts.length === 0}
+                onChange={(e) => update({ script: e.target.value })}
+              >
+                <option value="">Choose a runscript</option>
+                {view.runscripts.map((script) => <option key={script} value={script}>{script}</option>)}
+              </select>
+              {view.runscripts.length === 0 && (
+                <span id="schedule-runscript-empty" role="status">
+                  No valid runscripts. Add a valid .rs file under .janissary/scripts/.
+                </span>
+              )}
+            </label>
+          ) : (
+            <label>Command
+              <input type="text" value={fields.command} onChange={(e) => update({ command: e.target.value })} />
+            </label>
+          )}
         </div>
         <div className="modal-actions">
           <button ref={submitButtonRef} className="modal-button" disabled={!canSubmit} onClick={create}>Schedule</button>

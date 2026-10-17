@@ -5,9 +5,13 @@ import type * as StateListings from './listings.js';
 
 const listTasks = vi.fn<(projectDir: string) => TaskRow[]>();
 const listProfileRows = vi.fn<() => ProfileRow[]>();
+const catalogRunscripts = vi.fn<(projectDir: string) => string[]>();
 
 vi.mock('../tasks.js', () => ({ listTasks: (projectDir: string) => listTasks(projectDir) }));
 vi.mock('../profiles.js', () => ({ listProfileRows: () => listProfileRows() }));
+vi.mock('../schedule/system/runscript-files.js', () => ({
+  catalogRunscripts: (projectDir: string) => catalogRunscripts(projectDir),
+}));
 
 let listings: typeof StateListings;
 
@@ -19,6 +23,7 @@ beforeEach(async () => {
   vi.resetModules();
   listTasks.mockReset();
   listProfileRows.mockReset();
+  catalogRunscripts.mockReset();
   listings = await import('./listings.js');
 });
 
@@ -64,5 +69,26 @@ describe('cachedProfileRows', () => {
     expect(listProfileRows).toHaveBeenCalledTimes(1);
     expect(listings.cachedProfileRows(() => 11_000)).toEqual([{ name: 'web', source: 'janissary' }]);
     expect(listProfileRows).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('cachedRunscripts', () => {
+  it('returns the catalog from the existing reader and reuses it inside the interval', () => {
+    catalogRunscripts.mockReturnValue(['alpha', 'zeta']);
+    const first = listings.cachedRunscripts('/p', () => 10_000);
+    const second = listings.cachedRunscripts('/p', () => 10_000 + listings.LISTING_TTL_MS - 1);
+    expect(first).toEqual(['alpha', 'zeta']);
+    expect(second).toBe(first);
+    expect(catalogRunscripts).toHaveBeenCalledTimes(1);
+    expect(catalogRunscripts).toHaveBeenCalledWith('/p');
+  });
+
+  it('refreshes after the interval and returns no options when catalog discovery is unsafe', () => {
+    catalogRunscripts.mockReturnValueOnce(['deploy']).mockImplementationOnce(() => {
+      throw new Error('unsafe scripts directory');
+    });
+    listings.cachedRunscripts('/p', () => 10_000);
+    expect(listings.cachedRunscripts('/p', () => 10_000 + listings.LISTING_TTL_MS)).toEqual([]);
+    expect(catalogRunscripts).toHaveBeenCalledTimes(2);
   });
 });
