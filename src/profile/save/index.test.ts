@@ -391,6 +391,21 @@ describe('saveProfile', () => {
     expect(summary.skipped).toEqual(['bob']);
   });
 
+  it.each([false, true])('silently omits the managed system shell when hidden=%s', async (hidden) => {
+    const managed = makeHarnessTab('renamed', '#222', 4, 2, '#222', {
+      name: 'system', program: 'sh', ptyId: 'system-pty', status: 'running',
+    });
+    managed.systemShell = true;
+    managed.hidden = hidden;
+    const ordinary = claudeTab('worker', '#aaa');
+
+    const summary = await saveProfile('demo', makeManagers([managed, ordinary]));
+
+    expect(load('demo').entries.map((entry) => entry.name)).toEqual(['worker']);
+    expect(summary.harnesses).toBe(1);
+    expect(summary.skipped).toEqual([]);
+  });
+
   it('reports a tab labeled janus as skipped if it is not the first tab', async () => {
     const managers = makeManagers([makeTab('bob', '#aaa'), makeTab('janus', '#000')]);
 

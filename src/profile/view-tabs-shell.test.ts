@@ -12,12 +12,13 @@ function shellTab(label: string, number: number, instanceKey: string): Tab {
   });
 }
 
-function makeManagers(initial: Tab[]): Managers {
+function makeManagers(initial: Tab[], opens = true): Managers {
   let tabs = initial;
   let activeTab = 0;
   // Rebuilds every record it keeps, as an open in the real tab manager does, so nothing can tell the
   // new tab from the old ones by object identity.
   const runCommand = vi.fn(async () => {
+    if (!opens) return;
     await Promise.resolve();
     tabs = [
       ...tabs.map((tab) => ({ ...tab })),
@@ -68,5 +69,34 @@ describe('openProfileViewTabs with the launch shell open', () => {
     expect(managers.plugins.runCommand).toHaveBeenCalledWith(
       'shell', 'shell --no-workspace', { label: 'janus', command: 'shell --no-workspace' },
     );
+  });
+
+  it('prefers a newly opened shell beside the launch and managed system shells', async () => {
+    const systemShell = { ...shellTab('renamed', 2, 'system'), systemShell: true };
+    const managers = makeManagers([shellTab('janus', 1, 'shell-1'), systemShell]);
+
+    const opened = await openProfileViewTabs(
+      [{ type: 'plugin', id: 'shell', group: 2 }], managers, 'janus', 2,
+      (_group, fallbackDotColor) => fallbackDotColor, [],
+    );
+
+    expect(opened.map((candidate) => candidate.label)).toEqual(['shell-2']);
+    expect(managers.tab.tabs.map((tab) => tab.label)).toEqual(['janus', 'renamed', 'shell-2']);
+  });
+
+  it('does not place or focus existing launch/system shells when the command opens nothing', async () => {
+    const systemShell = { ...shellTab('renamed', 2, 'system'), systemShell: true };
+    const managers = makeManagers([shellTab('janus', 1, 'shell-1'), systemShell], false);
+    const notes: string[] = [];
+
+    const opened = await openProfileViewTabs(
+      [{ type: 'plugin', id: 'shell', dock: 'left' }], managers, 'janus', 1,
+      (_group, fallbackDotColor) => fallbackDotColor, notes,
+    );
+
+    expect(opened).toEqual([]);
+    expect(managers.tab.tabs.map((tab) => tab.label)).toEqual(['janus', 'renamed']);
+    expect(managers.tab.setActiveTab).not.toHaveBeenCalled();
+    expect(notes).toEqual(['Could not open shell tab "shell".']);
   });
 });

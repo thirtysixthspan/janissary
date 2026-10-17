@@ -46,6 +46,7 @@ function push(state: CaptureState, entry: ProfileTabFile | undefined, count: Cap
 export function captureTab(
   tab: Tab, managers: Managers, state: CaptureState, selections: Map<number, TreeSelection> = new Map(),
 ): void {
+  if (tab.systemShell === true) return;
   if (tab === managers.tab.tabs[0] && tab.label === LAUNCH_LABEL) return;
   switch (tab.view) {
     case undefined: {
