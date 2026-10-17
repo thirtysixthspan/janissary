@@ -67,6 +67,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     }
     throw error;
   }
+  await controller.managers.systemShell.ensure();
   controller.reattachSessions();
 
   const serveStatic = staticFileServer({

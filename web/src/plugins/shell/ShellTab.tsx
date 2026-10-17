@@ -199,7 +199,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
         dotColor={dotColor}
         busy={commandRunning}
         label={commandRunning ? 'queue' : undefined}
-        autoFocus
+        autoFocus={capabilities.active}
         acceptsFileDrops
         ariaLabel="Shell command"
         above={matches.length > 1 ? (

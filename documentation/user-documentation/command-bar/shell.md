@@ -10,7 +10,7 @@ Captured commands run in a separate shell process for each tab. Type `!pwd` in a
 
 Closing the tab or shutting down Janissary stops its captured shell. If the shell exits on its own during a command, the reply ends with `(shell exited)`; the next command starts a new shell process.
 
-Every launch opens one of these for you: the `janus` tab you start in is a zsh shell tab in the project directory. Type `shell` in its command bar when you want another shell tab. Typing `exit` in it closes it like any shell tab, and as the last tab that quits the app.
+Every launch opens the visible `janus` zsh shell tab in the project directory, plus one hidden `system` shell in the project directory without a workspace. Run `tab focus system` to reveal the hidden shell; closing it hides it again. If that shell cannot start, Janissary continues starting and posts `System shell could not start: <reason>.` in Notifications. The required `janus` tab remains your starting point. Type `shell` in its command bar when you want another shell tab. Typing `exit` in `janus` closes it like any ordinary shell tab, and as the last visible tab that quits the app.
 
 <img class="agent-float" src="/agents/fariz-south-east.png" alt="" />
 

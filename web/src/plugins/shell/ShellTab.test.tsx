@@ -1159,6 +1159,12 @@ describe('ShellTab', () => {
     await waitFor(() => { expect(document.activeElement).toBe(bar()); });
   });
 
+  it('does not autofocus the command bar while the shell tab is inactive', () => {
+    renderTab({ active: false });
+
+    expect(document.activeElement).not.toBe(bar());
+  });
+
   it('returns focus to the command bar when the terminal is clicked once', () => {
     renderTab();
     const body = document.querySelector('.shell-body')!;

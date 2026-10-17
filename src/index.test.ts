@@ -12,6 +12,9 @@ import { guardRequest } from './request-boundary.js';
 import { fakeRequest, fakeResponse, loopbackBindable } from './http-test-fixture.js';
 import type { ServerEvent } from './protocol.js';
 import { messageBus } from './bus.js';
+import { ControllerCore } from './controller.js';
+import { TabPluginHost } from './plugins/host.js';
+import { SystemShellManager } from './system-shell.js';
 
 const webDir = mkdtempSync(path.join(tmpdir(), 'janus-test-'));
 writeFileSync(path.join(webDir, 'index.html'), '<!DOCTYPE html><html><body></body></html>');
@@ -143,6 +146,34 @@ describe('the static file server', () => {
 });
 
 describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
+  it('ensures the system shell after janus and still listens and restores sessions on failure', async () => {
+    const order: string[] = [];
+    const runSpy = vi.spyOn(TabPluginHost.prototype, 'runCommandResult');
+    const ensure = vi.spyOn(SystemShellManager.prototype, 'ensure').mockImplementation(async () => {
+      order.push('ensure');
+      return { status: 'failed', reason: new Error('system zsh unavailable') };
+    });
+    const reattach = vi.spyOn(ControllerCore.prototype, 'reattachSessions').mockImplementation(function () {
+      order.push('reattach');
+    });
+
+    try {
+      server = await startServer({ webDir, projectDir: tmpdir() });
+
+      expect(server.port).toBeGreaterThan(0);
+      expect(order).toEqual(['ensure', 'reattach']);
+      expect(runSpy.mock.invocationCallOrder[0]).toBeLessThan(ensure.mock.invocationCallOrder[0] ?? Infinity);
+      expect((ensure.mock.invocationCallOrder[0] ?? Infinity)).toBeLessThan(reattach.mock.invocationCallOrder[0] ?? Infinity);
+      expect(runSpy).toHaveBeenCalledOnce();
+      expect(ensure).toHaveBeenCalledOnce();
+      expect(reattach).toHaveBeenCalledOnce();
+    } finally {
+      runSpy.mockRestore();
+      ensure.mockRestore();
+      reattach.mockRestore();
+    }
+  });
+
   it('waits for controller cleanup before closing its listeners', async () => {
     const gate = Promise.withResolvers<void>();
     const shutdown = vi.spyOn(AgentRunManager.prototype, 'dispose').mockImplementation(() => gate.promise);

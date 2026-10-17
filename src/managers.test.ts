@@ -40,6 +40,11 @@ describe('MANAGER_DISPOSE_ORDER', () => {
     expect(positionOf('shellTranscript')).toBeLessThan(positionOf('shell'));
   });
 
+  it('disposes the system shell before its plugin and PTY dependencies', () => {
+    expect(positionOf('systemShell')).toBeLessThan(positionOf('plugins'));
+    expect(positionOf('systemShell')).toBeLessThan(positionOf('pty'));
+  });
+
   it('disposes the state the others read while tearing down last', () => {
     expect(MANAGER_DISPOSE_ORDER.slice(-3)).toEqual(['questions', 'tab', 'database']);
   });

@@ -16,6 +16,14 @@ in the first palette colour and the `launch` group (ID 1; see [[tabs]]). It is a
 respect — `exit` closes it, and as the last tab that quits the app — and the application opens it
 through the same plugin as `shell`, from no tab at all.
 
+After `janus` opens, the application attempts a second shell through the same plugin, with label
+`system`, in the project directory and without a workspace. It is marked as the managed system shell
+and hidden immediately, leaving `janus` visible and focused. It is a normal zsh shell tab when
+revealed with `tab focus system`; closing it hides it again. A failure to open this shell posts
+`System shell could not start: <reason>.` in Notifications and does not prevent startup or remote
+session restoration. The failed attempt leaves no placeholder tab. A later ensure attempt may retry;
+a dead already-managed system shell is left in place for the later lifecycle that owns replacement.
+
 The launch shell is the visible tab when the window first appears, and its command bar holds the
 keyboard focus, not its terminal. The first thing typed after launch goes to the `janus` command bar
 without a click. A window that opens without operating-system focus keeps the command bar as its

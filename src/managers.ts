@@ -25,6 +25,7 @@ import type { ConversationsManager } from './conversations/manager.js';
 import type { SessionsManager } from './sessions/manager.js';
 import type { NotificationQueue } from './notifications/queue.js';
 import type { AgentRunManager } from './agent/manager.js';
+import type { SystemShellManager } from './system-shell.js';
 
 export type ManagerLifecycle = {
   dispose?(): void | Promise<void>;
@@ -32,6 +33,7 @@ export type ManagerLifecycle = {
 
 type ManagerRegistry = {
   agent: AgentRunManager;
+  systemShell: SystemShellManager;
   tab: TabManager;
   shell: ShellManager;
   acp: AcpManager;
@@ -93,6 +95,7 @@ export const MANAGER_DISPOSE_ORDER = [
   'shellTranscript',
   'shell',
   'schedule',
+  'systemShell',
   'pty',
   'editorAcp',
   'editorWatch',
