@@ -25,6 +25,9 @@ export type RemoteNameRetry = {
   creator: string;
   runId?: string;
   explicit: boolean;
+  // Set only by a receipt-backed system schedule; retries keep the original base and naming policy.
+  systemSchedule?: true;
+  baseLabel?: string;
   // Every label this launch has tried, oldest first, ending with this attempt's.
   tried: readonly string[];
   // Reopen the launch under the next free name, passing over every label in `tried`.

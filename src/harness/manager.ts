@@ -1,5 +1,6 @@
 import { distinctColor } from '../tab/colors.js';
 import { resolveLocalLaunchName, LAUNCH_REFUSED } from '../launch-name/local.js';
+import { suffixCandidates } from '../launch-name/check.js';
 import { HARNESS_NAMES } from './index.js';
 import { parseHarnessCommand, type HarnessLaunch } from './command-parse.js';
 import { resolveLaunchDir } from './launch-dir.js';
@@ -23,6 +24,7 @@ import { parseRemoteAddress } from '../remote/address.js';
 import { cancelHarnessIdleEscalation, disposeHarnessIdleEscalations } from './idle-notification.js';
 import type { TerminalColors } from './terminal-colors.js';
 import { resolveTabGroup } from '../tab/groups.js';
+import type { CommandInvocationContext } from '../commands/types.js';
 
 // Owns harness command handling: launching a harness `<name>` as a PTY-backed tab (optionally in a
 // fresh `--workspace` git clone, and optionally under a custom `as <label>`) and naming it uniquely.
@@ -104,7 +106,7 @@ export class HarnessManager extends HarnessTabSpawn {
   // Handle a `harness <name> [as <label>] [-w] [--offline] [--model <name>] [--effort <level>]`
   // command. Returns an error message to surface in the creator's transcript, or undefined once
   // the harness tab has been opened.
-  run(input: string): string | undefined {
+  run(input: string, invocation?: CommandInvocationContext): string | undefined {
     const parsed = parseHarnessCommand(input);
     if ('error' in parsed) return parsed.error;
     if ('capture' in parsed) return captureSubcommand(this.managers, (l) => this.latestScreenText(l), input, parsed.label);
@@ -112,7 +114,7 @@ export class HarnessManager extends HarnessTabSpawn {
     if (parsed.model && !isKnownModel(parsed.name, parsed.model)) {
       return `Unknown model "${parsed.model}" for harness "${parsed.name}" — add it to harness-models.json.`;
     }
-    return this.open(parsed);
+    return this.open(parsed, invocation);
   }
 
   // Open the "New harness" launch dialog (bare `harness`). Held as a flag, mirroring
@@ -143,22 +145,42 @@ export class HarnessManager extends HarnessTabSpawn {
   // made at all — the clone is provisioned by `janus remote-serve` on the named host. `retry` is set
   // when a remote host reported a default name running: the same launch, by the same creator, under
   // the next free name past every one already `tried`.
-  private open(launch: HarnessLaunch, retry?: { creator: Tab; tried: readonly string[] }): string | undefined {
+  private open(
+    launch: HarnessLaunch,
+    invocation?: CommandInvocationContext,
+    retry?: { creator: Tab; cwd: string; tried: readonly string[]; systemSchedule?: true; baseLabel?: string },
+  ): string | undefined {
     const {
       name, workspace, offline, autoApprove, autoResume, browser, label: label_, model, effort, prompt, remote,
     } = launch;
-    const creator = retry?.creator ?? this.managers.tab.cur();
+    const creator = retry?.creator ?? (invocation === undefined
+      ? this.managers.tab.cur()
+      : this.managers.tab.byLabel(invocation.caller.label));
+    if (!creator) return undefined;
     const explicit = label_ !== undefined;
     const tried = retry?.tried ?? [];
+    const systemSchedule = invocation?.systemSchedule !== undefined || retry?.systemSchedule === true;
+    const baseLabel = retry?.baseLabel ?? label_ ?? name;
+    const fallbackCwd = retry?.cwd ?? invocation?.caller.cwd ?? this.managers.tab.cwdOf(creator.label) ?? process.cwd();
     const label = resolveLocalLaunchName(this.managers, {
-      creator: creator.label, name: label_ ?? name, explicit, workspace: workspace && !remote, skip: tried,
+      creator: creator.label,
+      name: baseLabel,
+      explicit: systemSchedule ? false : explicit,
+      workspace: workspace && !remote,
+      skip: tried,
+      ...(systemSchedule && { candidates: suffixCandidates(baseLabel), suffixOnClash: true }),
     });
     if (label === undefined) return undefined;
     const nameRetry = remote && {
-      creator: creator.label, explicit, tried: [...tried, label],
-      relaunch: (next: readonly string[]) => { this.open(launch, { creator, tried: next }); },
+      creator: creator.label, explicit: systemSchedule ? false : explicit, tried: [...tried, label],
+      ...(systemSchedule && { systemSchedule: true as const, baseLabel }),
+      relaunch: (next: readonly string[]) => {
+        this.open(launch, undefined, {
+          creator, cwd: fallbackCwd, tried: next,
+          ...(systemSchedule && { systemSchedule: true as const, baseLabel }),
+        });
+      },
     };
-    const fallbackCwd = this.managers.tab.cwdOf(creator.label) ?? process.cwd();
 
     const dir = resolveLaunchDir(this.managers, workspace && !remote, label, fallbackCwd);
     if (typeof dir === 'string') return dir;

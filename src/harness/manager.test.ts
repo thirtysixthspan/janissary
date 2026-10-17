@@ -1397,6 +1397,34 @@ describe('HarnessManager remote launch', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
+  it('retries a scheduled remote name past all tried and occupied suffixes as the original creator', async () => {
+    const { managers, tabs, refuse, launchedLabels } = remoteLaunch();
+    const creator = {
+      label: 'caller', log: [], group: 6, groupName: 'Creator group', groupColor: '#123456',
+    } as unknown as Tab;
+    tabs.push(creator, { label: 'claude-2' } as unknown as Tab);
+    const invocation = {
+      runId: 'run', invocationId: 'invocation',
+      caller: { label: 'caller', cwd: '/captured/remote-cwd', context: [] },
+      signal: new AbortController().signal,
+      systemSchedule: { kind: 'system-schedule' as const, scheduleKey: 'owned-schedule' },
+    };
+    const manager = new HarnessManager(managers);
+    expect(manager.run('harness claude on devbox', invocation)).toBeUndefined();
+
+    refuse();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(launchedLabels()).toEqual(['claude', 'claude-3']);
+    refuse();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(launchedLabels()).toEqual(['claude', 'claude-3', 'claude-4']);
+    expect(tabs.at(-1)).toMatchObject({ label: 'claude-4', group: 6, groupName: 'Creator group' });
+    expect((managers.remote as unknown as { create: ReturnType<typeof vi.fn> }).create.mock.calls
+      .map((call) => call[2])).toEqual(['/captured/remote-cwd', '/captured/remote-cwd', '/captured/remote-cwd']);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
   it('gives up on a default name after five attempts with one refusal', async () => {
     const { managers, tabs, refuse, launchedLabels } = remoteLaunch();
     const manager = new HarnessManager(managers);
@@ -1486,6 +1514,53 @@ describe('HarnessManager remote launch', () => {
     )).toContain('devbox;id');
   });
 
+});
+
+describe('HarnessManager system-schedule naming', () => {
+  function scheduleInvocation(label: string, cwd: string): {
+    runId: string; invocationId: string; caller: { label: string; cwd: string; context: string[] }; signal: AbortSignal;
+    systemSchedule: { kind: 'system-schedule'; scheduleKey: string };
+  } {
+    return {
+      runId: 'run', invocationId: 'invocation', caller: { label, cwd, context: [] },
+      signal: new AbortController().signal,
+      systemSchedule: { kind: 'system-schedule', scheduleKey: 'owned-schedule' },
+    };
+  }
+
+  it('uses the captured creator and cwd while suffixing a scheduled clash', () => {
+    const { managers, tabs } = makeManagers();
+    const creator = {
+      label: 'caller', log: [], group: 7, groupName: 'Creator group', groupColor: '#abcdef',
+    } as unknown as Tab;
+    tabs.push(creator, { label: 'claude' } as unknown as Tab);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude --no-workspace', scheduleInvocation('caller', '/captured/cwd'))).toBeUndefined();
+
+    expect(tabs.at(-1)).toMatchObject({ label: 'claude-2', group: 7, groupName: 'Creator group', groupColor: '#abcdef' });
+    expect(managers.pty.spawn).toHaveBeenCalledWith(
+      'claude-2', 'claude', 'claude', '/captured/cwd', undefined, false, expect.anything(),
+    );
+  });
+
+  it('keeps typed and profile explicit-name clashes as refusals', () => {
+    const { managers, tabs } = makeManagers();
+    tabs.push({ label: 'quality' } as unknown as Tab);
+    const manager = new HarnessManager(managers);
+
+    expect(manager.run('harness claude as quality')).toBeUndefined();
+    expect(manager.openFromProfile(
+      { name: 'claude', tool: 'claude', workspace: false }, 'quality', 1, '#fff', 'janus',
+    )).toBe('launch refused — see notifications');
+    expect(manager.run('harness claude as quality --no-workspace', scheduleInvocation('janus', '/project'))).toBeUndefined();
+
+    expect(tabs.filter((tab) => tab.label.startsWith('quality'))).toHaveLength(2);
+    expect(tabs.at(-1)?.label).toBe('quality-2');
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'launch-refused', 'janus', 'Cannot launch "quality": a tab named "quality" is already open.',
+    );
+  });
 });
 
 describe('HarnessManager launch-name clashes', () => {

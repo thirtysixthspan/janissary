@@ -4,6 +4,7 @@ import { workspaceLabelError } from '../workspace/label.js';
 import { checkLaunchName, sameLaunchName } from './check.js';
 import { hasLeftoverWorkspace, isWorkspaceRunning, removeLeftoverWorkspace } from './leftover.js';
 import { cleanedNotice, invalidNameRefusal, localRunningRefusal, removalFailedRefusal } from './messages.js';
+import { isReservedTabLabel, RESERVED_SYSTEM_LABEL_REFUSAL } from '../tab/reserved-label.js';
 
 // The local half of the launch-name check: read the open tabs and the sessions rows, run the pure
 // check, and — for a `-w` launch — clear a leftover workspace folder before the clone would land on
@@ -23,13 +24,14 @@ export type LocalLaunchName = {
   workspace: boolean;
   candidates?: Iterable<string>;
   skip?: readonly string[];
+  suffixOnClash?: boolean;
 };
 
 // The refusal for an explicit `-w` name that cannot become one workspace folder, checked before
 // anything reads or removes a path built from it. A default name is drawn from a fixed set of safe
 // names, and a launch without `-w` builds no path, so either keeps any label it likes.
 function invalidWorkspaceName(request: LocalLaunchName): string | undefined {
-  if (!request.workspace || !request.explicit) return undefined;
+  if (!request.workspace || (!request.explicit && !request.suffixOnClash)) return undefined;
   const reason = workspaceLabelError(request.name);
   return reason === undefined ? undefined : invalidNameRefusal(request.name, reason);
 }
@@ -46,6 +48,10 @@ function runningCheck(managers: Managers, workspace: boolean): ((name: string) =
  * posted). A `-w` launch's leftover folder is removed and announced here, before the caller clones.
  */
 export function resolveLocalLaunchName(managers: Managers, request: LocalLaunchName): string | undefined {
+  if (request.suffixOnClash && isReservedTabLabel(request.name)) {
+    notify(managers, 'launch-refused', request.creator, RESERVED_SYSTEM_LABEL_REFUSAL);
+    return undefined;
+  }
   const invalid = invalidWorkspaceName(request);
   if (invalid !== undefined) {
     notify(managers, 'launch-refused', request.creator, invalid);

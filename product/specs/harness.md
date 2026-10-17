@@ -128,6 +128,8 @@ terminated, ssh, or file-navigator row never makes a label in use. Labels compar
 - **Default label** (bare `harness <name>`): moves on to the next free `-2`, `-3`, … past every label in use, as above.
 - **`as <label>` or a profile entry's `name`**: refused. The refusal is posted to the notifications feed, attributed to the tab the command was typed in, with nothing written to that tab's transcript, and no tab opens. The lines read `Cannot launch "<label>": a tab named "<label>" is already open.`, `Cannot launch "<label>": "<label>" is already in the sessions tab (<state> on <host>).`, or `Cannot launch "<label>": "<label>" is already running ($workspace/<label>).`.
 
+A harness launch dispatched from a durable system schedule keeps its requested base label when free; on a clash it takes the smallest free numeric postfix, including when the base came from `as <label>`. This exception is granted only to the server-dispatched invocation carrying the schedule's receipt-backed origin. Typing in the `system` tab, `execute`, `send`, ordinary `queue`, and tab-owned timers (including one targeting `system`) do not grant it, and keep the refusal behavior above. Profile launches and remote attachment or restoration also keep their existing name behavior.
+
 A remote launch's host answers only after the placeholder tab has opened. When it reports the label
 running, the placeholder closes at once, without showing an error. For an `as` label,
 `Cannot launch "<label>": "<label>" is already running on <host>.` is posted. For a default label the
