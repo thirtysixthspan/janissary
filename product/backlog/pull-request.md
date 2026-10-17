@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Wait for post-failure output before asserting script continuation.
-
-Existing Issue: The execution driver waits for the first runscript marker and immediately reads the transcript for `later-line`, although the queued `pwd`, `false`, and final `printf` commands may not have run yet. Severity: 4/10
-
-Existing Risk: 4/10 - Normal scheduling or browser timing can make the driver fail intermittently even when the shell correctly continues after a failed command, reducing confidence in the integration result.
-
-Proposal Risk: 2/10 - Waiting for the later output before reading the transcript removes the race while still failing when queue processing stops after `false`.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "wait for later script output before checking continuation". In `scripts/e2e/system-schedules-execution.mjs`, wait on the visible system-shell locator for the exact `later-line` output, with a bounded timeout, before capturing `textContent()` and asserting both the marker and continuation. Keep the `false` line between the marker and `later-line` so the assertion continues to verify that a failed command does not stop subsequent script lines.
-
-
 * Prove the keyed deletion leaves one of the two original schedule keys.
 
 Existing Issue: The management driver asserts that the remaining key differs from at least one original key, so a newly generated or otherwise unexpected key still passes instead of proving the undeleted schedule retained its identity. Severity: 4/10

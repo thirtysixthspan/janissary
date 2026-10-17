@@ -9,6 +9,7 @@ export default async function systemScheduleExecution({ page, record, scratchDir
   await runCommand(page, 'tab focus system');
   const shell = page.locator('.tab-body[data-tab-label="system"]:visible').first();
   await page.getByText(marker, { exact: true }).waitFor({ timeout: 15_000 });
+  await shell.getByText('later-line', { exact: true }).waitFor({ timeout: 15_000 });
   const transcript = (await shell.textContent()) ?? '';
   assert.ok(transcript.includes(marker), 'the real managed shell prints the runscript marker');
   assert.ok(transcript.includes('later-line'), 'a failing command does not stop subsequent script lines');
