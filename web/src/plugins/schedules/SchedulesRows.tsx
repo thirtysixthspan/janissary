@@ -83,11 +83,11 @@ function CompactHeadings() {
 function FullRow({ entry }: { entry: ScheduleRow }) {
   return (
     <>
-      <span className="schedules-owner">{entry.tab}</span>
-      <span className="schedules-id">{entry.id}</span>
-      <span className="schedules-next">{entry.next}</span>
-      <span className="schedules-spec">{entry.spec}</span>
-      <span className="schedules-command">{entry.command}</span>
+      <span className="schedules-owner" title={entry.tab}>{entry.tab}</span>
+      <span className="schedules-id" title={entry.id}>{entry.id}</span>
+      <span className="schedules-next" title={entry.next}>{entry.next}</span>
+      <span className="schedules-spec" title={entry.spec}>{entry.spec}</span>
+      <span className="schedules-command" title={entry.command}>{entry.command}</span>
     </>
   );
 }
@@ -95,9 +95,9 @@ function FullRow({ entry }: { entry: ScheduleRow }) {
 function CompactRow({ entry }: { entry: ScheduleRow }) {
   return (
     <>
-      <span className="schedules-next">{entry.next.split(' ').pop()}</span>
-      <span className="schedules-id">{entry.id}</span>
-      <span className="schedules-owner">{entry.tab}</span>
+      <span className="schedules-next" title={entry.next}>{entry.next.split(' ').pop()}</span>
+      <span className="schedules-id" title={entry.id}>{entry.id}</span>
+      <span className="schedules-owner" title={entry.tab}>{entry.tab}</span>
     </>
   );
 }
