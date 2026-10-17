@@ -18,7 +18,7 @@
   padding: 0 4px; line-height: 1; justify-self: center;
 }
 .schedules-headings, .schedules-row {
-  display: grid; grid-template-columns: 2em 1fr 1fr 1fr 1fr 2fr 1.5em;
+  display: grid; grid-template-columns: 2em minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) 1.5em;
   gap: 12px; align-items: baseline; width: 100%; text-align: left;
   padding: 4px 12px; white-space: nowrap;
 }
@@ -34,8 +34,10 @@
 .schedules-id { flex-shrink: 0; }
 .schedules-next { flex-shrink: 0; }
 .schedules-spec { color: var(--muted); flex-shrink: 0; }
-.schedules-command { overflow: hidden; text-overflow: ellipsis; }
+.schedules-headings > span, .schedules-row > span {
+  min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-align: left;
+}
 .schedules-compact .schedules-headings, .schedules-compact .schedules-row {
-  grid-template-columns: 1.5em 1fr 1fr 1fr 1.5em; gap: 8px; font-size: 12px;
+  grid-template-columns: 1.5em minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 1.5em; gap: 8px; font-size: 12px;
 }
 .schedules-section + .schedules-section { margin-top: 8px; }

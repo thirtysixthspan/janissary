@@ -237,3 +237,18 @@ describe('SchedulesTab sections', () => {
     });
   });
 });
+
+describe('SchedulesTab cell text', () => {
+  it('shows the full command on hover, since a long one is shortened in its column', () => {
+    const command = 'npm run build -- --watch --profile=production --output=dist/app-bundle';
+    const { container } = renderTab([row({ command })]);
+
+    expect(container.querySelector('.schedules-command')).toHaveAttribute('title', command);
+  });
+
+  it('shows the full next-run time on hover in the compressed layout', () => {
+    renderTab([row({ next: 'Jan 1 3:00pm' })], 'right');
+
+    expect(screen.getByText('3:00pm')).toHaveAttribute('title', 'Jan 1 3:00pm');
+  });
+});
