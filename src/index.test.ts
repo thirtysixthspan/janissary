@@ -382,7 +382,8 @@ describe.skipIf(!canBindLoopback)('startServer (WS + RPC + security)', () => {
 
     ws.send(JSON.stringify({ t: 'rpc', id: 2, method: 'command', params: { text: 'help' } }));
     // `help` output is rendered as Markdown (see Controller.runApp), so it arrives as `markdown` lines.
-    await waitFor(() => events.some((e) => e.t === 'state' && e.tabs[0].bufferLines.some((l) => l.type === 'markdown')));
+    await waitFor(() => events.some((event) => event.t === 'state'
+      && event.tabs.some((tab) => tab.label === 'janus' && tab.bufferLines.some((line) => line.type === 'markdown'))));
     ws.close();
   });
 

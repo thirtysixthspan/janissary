@@ -16,7 +16,7 @@ The failure reproduces in GitHub CI runs 39007389829 and 39036689506. Diagnostic
 
 - Keep non-secret, CI-safe failure context in the existing `src/index.test.ts` case. It records observed event types, RPC reply status, and state tab summaries (`label`, `hidden`, `systemShell`, `activeTab`) only when the predicate times out. It does not log the token, URL, transcript, cwd, or shell output.
 - Keep the test's real WebSocket and its token gate. Do not skip, retry-filter, lengthen the timeout as a remedy, or replace its assertion with a weaker check.
-- Assert the full startup contract in the existing case: the state includes visible `janus`, `activeTab` selects `janus`, and a `system` tab is marked hidden and managed. Do not require `janus` to stay at index zero because startup notifications may insert their tab before it. Preserve the follow-up `help` transcript assertion.
+- Assert the full startup contract in the existing case: the state includes visible `janus`, `activeTab` selects `janus`, and a `system` tab is marked hidden and managed. Find `janus` by label for both its startup state and follow-up `help` transcript assertion because startup notifications may insert their tab before it.
 - Make no production change: CI evidence shows startup and notification focus behavior are correct. Correct only the stale test assumption about array position while retaining the meaningful visibility, focus, hidden-system, and transcript assertions.
 - Do not change the product startup contract, system-shell visibility/focus behavior, unrelated schedules behavior, or CI workflow policy.
 
@@ -34,7 +34,7 @@ The failure reproduces in GitHub CI runs 39007389829 and 39036689506. Diagnostic
 ## Implementation steps
 
 1. Use CI-safe failure context in the existing failing test to report event type and RPC reply status plus each received state's tab labels, `hidden`/`systemShell` flags, and `activeTab`.
-2. Replace the array-index predicate with one that finds a visible `janus` and confirms that its index is active, while the managed `system` tab is hidden. Preserve the real token-gated WebSocket flow, original timeout, and follow-up transcript assertion.
+2. Replace both array-index predicates with label-based checks: find a visible `janus` and confirm that its index is active while managed `system` is hidden, then verify Markdown output in `janus` after `help`. Preserve the real token-gated WebSocket flow and original timeouts.
 3. Run the focused test and diff-scoped checks. Review the diagnostic fields to ensure they contain no secret, path, or transcript data.
 
 ## Verification
