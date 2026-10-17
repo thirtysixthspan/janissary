@@ -1,6 +1,8 @@
 import type { Managers } from './managers.js';
 import type { Tab } from './tab/types.js';
 import { notifySystemShellStartFailure } from './schedule/system/notices.js';
+import { hideTab } from './tab/visibility.js';
+import { messageBus } from './bus.js';
 
 const SYSTEM_LABEL = 'system';
 const SHELL_PLUGIN = 'shell';
@@ -41,6 +43,23 @@ export class SystemShellManager {
     if (this.ensurePromise) return this.awaitEnsure();
   }
 
+  async handlePtyExit(ptyId: string): Promise<void> {
+    if (this.disposed) return;
+    const tab = this.managers.tab.tabs.find((candidate) => candidate.systemShell === true);
+    if (!tab || tab.remote || tab.runtime?.closing || tab.view !== 'plugin' || tab.plugin?.id !== SHELL_PLUGIN) return;
+    if (!this.managers.plugins.isPayload(SHELL_PLUGIN, tab.plugin.payload)) return;
+    const payload = tab.plugin.payload;
+    if (typeof payload !== 'object' || payload === null || !('ptyId' in payload) || payload.ptyId !== ptyId) return;
+    if (tab.runtime?.serverPtyExitId === ptyId) return;
+
+    tab.runtime ??= { busy: false, context: [], queue: [] };
+    tab.runtime.serverPtyExitId = ptyId;
+    hideTab(this.managers.tab, this.managers.tab.tabs.indexOf(tab));
+    this.managers.schedule.closeTab(tab.label);
+    messageBus.emit('state', { type: 'dirty' });
+    await this.ensure();
+  }
+
   private async runEnsure(): Promise<SystemShellEnsureResult> {
     try {
       return await this.ensureShell();
@@ -58,9 +77,15 @@ export class SystemShellManager {
   private async ensureShell(): Promise<SystemShellEnsureResult> {
     const existing = this.managers.tab.tabs.find((tab) => tab.systemShell === true);
     if (existing) {
-      return liveShellPtyId(existing, this.managers)
-        ? { status: 'ok', tab: existing }
-        : this.fail('the existing system shell has no valid live local terminal');
+      if (liveShellPtyId(existing, this.managers)) return { status: 'ok', tab: existing };
+      const payload = existing.plugin?.payload;
+      if (existing.runtime?.serverPtyExitId && isShellPayload(payload)
+        && payload.ptyId === existing.runtime.serverPtyExitId && !this.disposed) {
+        await this.managers.plugins.intent(existing.label, 'restart-terminal', { ptyId: payload.ptyId });
+        const replacement = liveShellPtyId(existing, this.managers);
+        if (replacement) return { status: 'ok', tab: existing };
+      }
+      return this.fail('the existing system shell has no valid live local terminal');
     }
     if (this.managers.tab.byLabel(SYSTEM_LABEL)) return this.fail('the shell plugin opened no valid system shell');
 
@@ -90,4 +115,9 @@ export class SystemShellManager {
     notifySystemShellStartFailure(this.managers, reason);
     return { status: 'failed', reason };
   }
+}
+
+function isShellPayload(value: unknown): value is { ptyId: string } {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    && 'ptyId' in value && typeof value.ptyId === 'string';
 }

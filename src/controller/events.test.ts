@@ -20,6 +20,24 @@ it.each([true, false])('retains an ended peer tab only when remote is %s', (remo
   expect(closeTab).toHaveBeenCalledTimes(remote ? 0 : 1);
 });
 
+it('broadcasts a server PTY exit before handing its id to system-shell recovery', () => {
+  const order: string[] = [];
+  const tab = makeTab('system', 'red');
+  const handlePtyExit = vi.fn(() => { order.push('recover'); });
+  const managers = {
+    tab: { tabs: [tab], harnessTabByPtyId: vi.fn() },
+    systemShell: { handlePtyExit },
+  } as unknown as Managers;
+  const sendPtyExit = vi.fn(() => { order.push('broadcast'); });
+  wireControllerEvents(managers, { emitState: vi.fn(), sendPty: vi.fn(), sendPtyExit });
+
+  messageBus.emit('pty', { type: 'exit', id: 'system-pty', exitCode: 0 });
+
+  expect(sendPtyExit).toHaveBeenCalledWith('system-pty', 0);
+  expect(handlePtyExit).toHaveBeenCalledWith('system-pty');
+  expect(order).toEqual(['broadcast', 'recover']);
+});
+
 // The subscriptions that project a bus event onto a client sink, and the two guards in front of
 // them. Each of these is the only place a given event becomes something the client sees, so a
 // projection that quietly drops a field is invisible everywhere else.
@@ -32,6 +50,7 @@ describe('the bus subscriptions the controller projects onto clients', () => {
         harnessTabByPtyId: vi.fn(() => tab),
         closeTab: vi.fn(),
       },
+      systemShell: { handlePtyExit: vi.fn() },
     } as unknown as Managers;
     const sinks = {
       emitState: vi.fn(),
@@ -82,13 +101,14 @@ describe('the bus subscriptions the controller projects onto clients', () => {
   // another. Pinned here because it is what makes the type guards inside the handlers unreachable,
   // and because a sink reached by an event it did not ask for is the failure this rules out.
   it('reaches no sink when a channel carries a type nothing subscribed to', () => {
-    const { sinks } = wire();
+    const { managers, sinks } = wire();
 
     messageBus.emit('transcript', { type: 'entry:removed', tab: 'work' } as never);
     messageBus.emit('pty', { type: 'resize', id: 'pty1' } as never);
 
     expect(sinks.sendPty).not.toHaveBeenCalled();
     expect(sinks.sendPtyExit).not.toHaveBeenCalled();
+    expect(managers.systemShell.handlePtyExit).not.toHaveBeenCalled();
   });
 
   it('exits the process on an app exit', () => {

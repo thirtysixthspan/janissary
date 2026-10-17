@@ -264,6 +264,8 @@ A tab marked as a system shell is retained when a user closes it. `close`, `exit
 
 Hidden tabs are not center action or reporting entries and are skipped by `next`, Shift+arrow navigation, and `nav`. Passive selection repair, reorder, notifications, and background work never reveal a hidden tab. Explicit focus does. A hidden docked plugin stays in its sidebar placement and remains mounted but inactive; the sidebar frame disappears if no visible docked entry remains. If no center tab can be selected, the active index is `-1`, the secondary selection is empty, and the app remains open. A later destructive owner action or application shutdown still releases the hidden tab's resources.
 
+When the server observes the managed system shell's PTY exit, it broadcasts that exit before recovery begins, hides the same tab, and removes only its tab-owned schedules and hooks. It replaces the PTY through the shell plugin while preserving the tab's identity, placement, focus, and queue. The exited PTY's recording and text transcript finish normally. A failed replacement leaves the tab hidden and permits a later explicit ensure retry; it does not retry automatically. This server-observed process exit does not use the user-close path, which only hides the managed tab.
+
 
 ### `close` command
 

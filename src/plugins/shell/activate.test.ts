@@ -436,6 +436,32 @@ describe('shell plugin activation', () => {
     expect(ask(capabilities, 'terminal-status', undefined)).toEqual({ running: false });
   });
 
+  it('restarts only the matching exited terminal from the project root with a fresh marker nonce', () => {
+    const { capabilities, updated, spawns } = fakeCapabilities({ running: false });
+
+    expect(ask(capabilities, 'restart-terminal', { ptyId: PAYLOAD.ptyId })).toEqual({ restarted: true });
+
+    expect(spawns).toEqual([{
+      cwd: PAYLOAD.root, shell: SHELL_PROGRAM, args: [], zshHooks: { nonce: expect.any(String) },
+    }]);
+    expect(updated[0]?.key).toBe(PAYLOAD.instanceKey);
+    expect(updated[0]?.payload).toMatchObject({
+      ptyId: 'pty7', cwd: PAYLOAD.root, root: PAYLOAD.root, workspace: false,
+    });
+    expect(updated[0]?.payload).not.toHaveProperty('hookNonce', PAYLOAD.hookNonce);
+  });
+
+  it.each([
+    { request: { ptyId: 'stale-pty' }, running: false, message: 'the exited terminal is no longer current' },
+    { request: { ptyId: PAYLOAD.ptyId }, running: true, message: 'the terminal is still running' },
+  ])('refuses restart when $message', ({ request, running, message }) => {
+    const { capabilities, updated, spawns } = fakeCapabilities({ running });
+
+    expect(() => ask(capabilities, 'restart-terminal', request)).toThrow(new TabPluginRejection(message));
+    expect(updated).toEqual([]);
+    expect(spawns).toEqual([]);
+  });
+
   it('answers running for a shell still waiting for its workspace, which has no terminal to ask about', () => {
     const { capabilities } = fakeCapabilities({ running: false });
 

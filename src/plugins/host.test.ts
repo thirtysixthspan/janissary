@@ -270,6 +270,31 @@ describe('TabPluginHost commands', () => {
   });
 });
 
+describe('system-shell restart authorization', () => {
+  it('refuses the restart intent for an ordinary shell tab', async () => {
+    const { managers } = makeManagers();
+    managers.tab.tabs.push({
+      label: 'shell-tab', plugin: { id: 'shell', instanceKey: 'shell-1' },
+    } as Tab);
+    const host = new TabPluginHost(managers, [declaration()], { fixture: loader(activation()) });
+
+    expect(() => host.intent('shell-tab', 'restart-terminal', { ptyId: 'pty1' }))
+      .toThrow('Only a managed system shell can restart its terminal');
+    expect(host.statusFor('fixture')?.state).toBe('declared');
+  });
+
+  it('authorizes the restart intent only for a managed shell-plugin tab', async () => {
+    const { managers } = makeManagers();
+    managers.tab.tabs.push({
+      label: 'system', systemShell: true, plugin: { id: 'shell', instanceKey: 'shell-1' },
+    } as Tab);
+    const host = new TabPluginHost(managers, [declaration()], { fixture: loader(activation()) });
+
+    await expect(host.intent('system', 'restart-terminal', { ptyId: 'pty1' }))
+      .rejects.toThrow('Unknown tab plugin "shell"');
+  });
+});
+
 describe('TabPluginHost activation', () => {
   it('refuses an incompatible API before importing behavior', async () => {
     const { append, managers } = makeManagers();

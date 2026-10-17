@@ -25,6 +25,7 @@ import { closePluginTabs } from './teardown.js';
 import { noteInOriginTab } from './transcript-note.js';
 import { openPluginSibling, runPluginCommand } from './sibling.js';
 import { reattachPlugin } from './reattach.js';
+import { authorizeRestartIntent } from './restart-intent-authorization.js';
 
 export type TabPluginHostOptions = {
   activationTimeoutMs?: number;
@@ -99,6 +100,7 @@ export class TabPluginHost {
   }
 
   intent(tabLabel: string, intent: string, payload: unknown): Promise<unknown> {
+    if (intent === 'restart-terminal') authorizeRestartIntent(this.managers.tab.byLabel(tabLabel));
     return runPluginIntent(this.requestPort(), tabLabel, intent, payload);
   }
 

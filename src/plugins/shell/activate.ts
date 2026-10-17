@@ -15,6 +15,7 @@ import { openShellTab } from './open-tab.js';
 import { launchShellTab } from './launch-tab.js';
 import { spawnShell } from './spawn-shell.js';
 import { parseShellArgument } from './parse-argument.js';
+import { restartTerminalIntent } from './restart-terminal.js';
 
 let invocationCounter = 0;
 
@@ -97,6 +98,7 @@ export function activate(): TabPluginActivation {
       {
         'terminal-status': TabPluginIntentEntry<ShellPayload, undefined>;
         'exited-early': TabPluginIntentEntry<ShellPayload, undefined>;
+        'restart-terminal': TabPluginIntentEntry<ShellPayload, { ptyId: string }>;
         sibling: TabPluginIntentEntry<ShellPayload, undefined>;
         'command-state': TabPluginIntentEntry<ShellPayload, ShellCommandState>;
         cwd: TabPluginIntentEntry<ShellPayload, string>;
@@ -129,6 +131,7 @@ export function activate(): TabPluginActivation {
           return { reported: true };
         },
       },
+      'restart-terminal': restartTerminalIntent,
       // ➕ and `Cmd+T`: another shell beside this one, in the same place. A shell still waiting for its
       // clone has no place yet, so it opens nothing.
       sibling: {

@@ -407,13 +407,18 @@ One tab per `shell` command, always. `shell` twice opens two tabs even in the sa
 stateful and refocusing the first would take its foreground program and its directory away from the
 second.
 
-**The tab closes when the shell exits** — `exit` typed in the terminal, or a shell whose input ends.
-There is no exited state and no way to start a fresh shell in the same tab, so a closed tab is the
-honest representation of a shell that is no longer running. Closing the tab closes the shell the same
-way. A shell that exits while no browser is attached does not leave a tab behind waiting for input
-that can never arrive: the tab asks on its next appearance whether the process is still there, and
-closes if it is not. Closing one shell tab leaves every other shell tab, including the launch `janus`
-tab, visible and usable.
+When an ordinary shell exits, its tab closes; there is no exited state or way to start a fresh shell in
+that tab. A shell that exits while no browser is attached is checked on its next appearance and closes
+if its process has ended. Closing one ordinary shell leaves every other shell tab visible and usable.
+
+The managed `system` shell has a different process-exit lifecycle. When the server observes its PTY
+exit, it sends the original exit event to the client, hides the same tab, removes that tab's schedules,
+and asks the shell plugin to replace its exited PTY with a fresh project-root shell. Its label, alias,
+placement, focus, and queued commands stay with the tab; the old recording and text transcript finish
+through their PTY-exit listeners. The replacement uses a fresh marker nonce. If replacement fails, the
+tab stays hidden with its identity and queue intact and does not retry on its own. A later explicit
+ensure may retry while the shell plugin remains enabled. This process-exit recovery is separate from
+user close: closing the managed tab only hides it and does not restart its shell.
 
 ## Session recording
 

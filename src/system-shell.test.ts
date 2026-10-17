@@ -11,6 +11,7 @@ import type { PluginCallOutcome } from './plugins/invoke.js';
 import { SHELL_PAYLOAD_SCHEMA_VERSION } from './plugins/shell/shared.js';
 import { seedRootTab, seedTestTab } from './tab/root-tab-test-fixture.js';
 import type { SystemShellManager } from './system-shell.js';
+import { messageBus } from './bus.js';
 
 vi.mock('./pty.js', () => ({ spawnPty: vi.fn() }));
 
@@ -20,15 +21,19 @@ describe('SystemShellManager', () => {
   let managers: Managers;
   let manager: SystemShellManager;
   let nextPty: number;
+  let eventOrder: string[];
+  let sendPtyExit: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     projectDir = mkdtempSync(path.join(tmpdir(), 'janus-system-shell-'));
     loadConfig(projectDir);
     initNotificationRecord(projectDir);
     nextPty = 0;
+    eventOrder = [];
+    sendPtyExit = vi.fn(() => { eventOrder.push('broadcast'); });
     vi.mocked(spawnPty).mockReset();
     vi.mocked(spawnPty).mockImplementation((program) => fakePty(`pty-${++nextPty}`, program));
-    controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit: () => {} }, projectDir);
+    controller = createController({ emitState: () => {}, sendPty: () => {}, sendPtyExit }, projectDir);
     managers = controller.managers;
     seedRootTab(managers.tab);
     manager = managers.systemShell;
@@ -70,6 +75,122 @@ describe('SystemShellManager', () => {
     expect(run).not.toHaveBeenCalled();
     expect(opened.tab.hidden).toBeUndefined();
     expect(managers.tab.cur().label).toBe('janus');
+  });
+
+  it('replaces a server-exited shell in place after broadcasting its exit', async () => {
+    const opened = await manager.ensure();
+    if (opened.status !== 'ok') throw new Error('expected the system shell to open');
+    const tab = opened.tab;
+    const position = managers.tab.tabs.indexOf(tab);
+    const oldPty = managers.pty.terminalIdFor('system');
+    if (!oldPty) throw new Error('expected the system PTY');
+    const runtimes = managers.harness as unknown as { runtimes: { get(id: string): unknown } };
+    expect(runtimes.runtimes.get(oldPty)).toBeDefined();
+    const oldPayload = tab.plugin?.payload;
+    if (typeof oldPayload !== 'object' || oldPayload === null || !('hookNonce' in oldPayload)) {
+      throw new Error('expected a shell payload');
+    }
+    tab.title = 'private shell';
+    tab.group = 8;
+    tab.dock = 'right';
+    tab.runtime!.queue.push('git status');
+    managers.schedule.add('system', {
+      id: 'later', command: 'git status', spec: 'at 3pm', recurring: false, nextRun: Date.now() + 60_000,
+    }, { removed: vi.fn() });
+    const removed = vi.fn();
+    managers.schedule.add('system', {
+      id: 'owned', command: 'git diff', spec: 'at 4pm', recurring: false, nextRun: Date.now() + 60_000,
+    }, { removed });
+    managers.pty.closeTab('system');
+    const handle = manager.handlePtyExit.bind(manager);
+    const recovery = vi.spyOn(manager, 'handlePtyExit').mockImplementation(async (id) => {
+      eventOrder.push('recovery');
+      await handle(id);
+    });
+    messageBus.emit('pty', { type: 'exit', id: oldPty, exitCode: 0 });
+    await vi.waitFor(() => expect(managers.pty.terminalIdFor('system')).not.toBe(oldPty));
+    await vi.waitFor(() => expect(runtimes.runtimes.get(oldPty)).toBeUndefined());
+
+    expect(tab).toMatchObject({ label: 'system', title: 'private shell', group: 8, dock: 'right', hidden: true });
+    expect(managers.tab.tabs.indexOf(tab)).toBe(position);
+    expect(tab.runtime?.queue).toEqual(['git status']);
+    expect(tab.plugin?.payload).toMatchObject({
+      ptyId: managers.pty.terminalIdFor('system'), cwd: projectDir, root: projectDir, workspace: false,
+    });
+    expect(tab.plugin?.payload).not.toHaveProperty('hookNonce', oldPayload.hookNonce);
+    expect(removed).toHaveBeenCalledOnce();
+    expect(managers.schedule.get('system')).toBeUndefined();
+    expect(recovery).toHaveBeenCalledOnce();
+    expect(eventOrder).toEqual(['broadcast', 'recovery']);
+    expect(sendPtyExit).toHaveBeenCalledWith(oldPty, 0);
+    expect(managers.tab.cur().label).toBe('janus');
+    expect(spawnPty).toHaveBeenCalledTimes(2);
+    await manager.handlePtyExit(oldPty);
+    expect(spawnPty).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores stale, mismatched, duplicate, ordinary and closing-tab exit events', async () => {
+    const opened = await manager.ensure();
+    if (opened.status !== 'ok') throw new Error('expected the system shell to open');
+    const tab = opened.tab;
+    const oldPty = managers.pty.terminalIdFor('system');
+    if (!oldPty) throw new Error('expected the system PTY');
+    const initialSpawnCount = vi.mocked(spawnPty).mock.calls.length;
+
+    await manager.handlePtyExit('stale');
+    tab.systemShell = undefined;
+    await manager.handlePtyExit(oldPty);
+    tab.systemShell = true;
+    tab.plugin!.id = 'image';
+    await manager.handlePtyExit(oldPty);
+    tab.plugin!.id = 'shell';
+    tab.runtime!.closing = true;
+    await manager.handlePtyExit(oldPty);
+
+    expect(vi.mocked(spawnPty)).toHaveBeenCalledTimes(initialSpawnCount);
+    expect(tab.hidden).toBe(true);
+    expect(managers.tab.byLabel('system')).toBe(tab);
+  });
+
+  it('keeps a failed hidden generation for a later explicit ensure retry', async () => {
+    const opened = await manager.ensure();
+    if (opened.status !== 'ok') throw new Error('expected the system shell to open');
+    const oldPty = managers.pty.terminalIdFor('system');
+    if (!oldPty) throw new Error('expected the system PTY');
+    managers.pty.closeTab('system');
+    vi.spyOn(managers.plugins, 'intent').mockRejectedValueOnce(new Error('restart was refused'));
+
+    await manager.handlePtyExit(oldPty);
+
+    expect(opened.tab.hidden).toBe(true);
+    expect(managers.tab.byLabel('system')).toBe(opened.tab);
+    expect(opened.tab.runtime?.serverPtyExitId).toBe(oldPty);
+    expect(systemNotices()).toHaveLength(1);
+    const retry = await manager.ensure();
+
+    expect(retry).toEqual({ status: 'ok', tab: opened.tab });
+    expect(livePty('system')).not.toBe(oldPty);
+    expect(systemNotices()).toHaveLength(1);
+  });
+
+  it('does not recover a closing or disposed shell, or a shell plugin disabled for a fault', async () => {
+    const opened = await manager.ensure();
+    if (opened.status !== 'ok') throw new Error('expected the system shell to open');
+    const oldPty = managers.pty.terminalIdFor('system');
+    if (!oldPty) throw new Error('expected the system PTY');
+    const initialSpawnCount = vi.mocked(spawnPty).mock.calls.length;
+
+    opened.tab.runtime!.closing = true;
+    await manager.handlePtyExit(oldPty);
+    opened.tab.runtime!.closing = undefined;
+    managers.plugins.clientFailed('system', 'shell plugin fault');
+    await manager.handlePtyExit(oldPty);
+    await manager.dispose();
+    await manager.handlePtyExit(oldPty);
+
+    expect(managers.plugins.statusFor('shell')?.state).toBe('disabled');
+    expect(managers.tab.byLabel('system')).toBeUndefined();
+    expect(vi.mocked(spawnPty)).toHaveBeenCalledTimes(initialSpawnCount);
   });
 
   it('shares concurrent ensure calls and clears the in-flight result for later ensures', async () => {
@@ -230,6 +351,10 @@ describe('SystemShellManager', () => {
 
   function systemNotices() {
     return managers.notifications.all.filter((notice) => notice.event === 'system-schedule-fire');
+  }
+
+  function livePty(label: string): string | undefined {
+    return managers.pty.terminalIdFor(label);
   }
 });
 

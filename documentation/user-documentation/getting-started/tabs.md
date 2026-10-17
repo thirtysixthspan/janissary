@@ -2,7 +2,7 @@
 
 Shell tabs keep their own terminal, command history, working directory, and unfinished command line. Harness tabs keep their own live terminal. File and other view tabs retain their own content and view state while you switch tabs.
 
-A session starts with a visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus` and one hidden `system` shell. The hidden shell starts in the project directory without a workspace. Run `tab focus system` to reveal it; closing it hides it again. New tabs are otherwise created on demand — shell tabs with the `shell` command (below), harness tabs with `harness`, and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
+A session starts with a visible zsh [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab) named `janus` and one hidden `system` shell. The hidden shell starts in the project directory without a workspace. Run `tab focus system` to reveal it; closing it hides it without stopping its process. If its zsh exits, Janissary hides the tab and starts a fresh shell there. Focus `system` again to return to it. New tabs are otherwise created on demand — shell tabs with the `shell` command (below), harness tabs with `harness`, and view tabs by opening files, pages, or harnesses (see [Tab Types](/user-documentation/tab-types/opening-files)).
 
 A left and right sidebar flank the tab area, hidden until something is docked into them. The [file navigator](/user-documentation/tab-types/file-navigator), [notifications](/user-documentation/tab-types/notifications) feed, [schedules](/user-documentation/automation/scheduling) tab, [conversation list](/user-documentation/tab-types/conversations), and [sessions](/user-documentation/tab-types/sessions) list each have a `left`/`right` form (`files left`, `notifications right`, `schedules left`, `conversations right`, `sessions left`) that opens or moves them straight into a sidebar. Bare `conversations` and bare `sessions` return their list to the center. Drag the up/down-arrow button at the right of a sidebar's tab gutter to resize it. A sidebar holds at most one docked tab of each kind; docking a second tab of the *same* kind into an occupied side sends the first back to the center strip, but different kinds share the sidebar side by side. For a tab contributed by a bundled plugin, the kind is the plugin rather than the tab, so two image tabs displace each other while an image tab and a PDF tab sit side by side.
 
@@ -98,7 +98,7 @@ tab focus bilal
 tab focus review notes
 ```
 
-If a managed system tab is hidden, `tab focus system` or its display alias reveals it. Closing a managed system tab hides it instead of tearing it down; it stays addressable by `tab focus` and does not trigger a quit or unsaved-changes prompt. A system tab is only present when a managed feature creates one.
+If a managed system tab is hidden, `tab focus system` or its display alias reveals it. Closing a managed system tab hides it instead of tearing it down; it stays addressable by `tab focus` and does not trigger a quit or unsaved-changes prompt. If the system shell process exits on its own, Janissary hides the same tab and replaces the shell in place; the tab's queued lines stay with it. A system tab is only present when a managed feature creates one.
 
 A tab's label in the strip is not something you can select and copy. The metadata row and panel headers are; the strip deliberately is not, so dragging a label never picks up stray text.
 

@@ -94,6 +94,7 @@ export type ShellDispatchResult = { dispatched: boolean; output: string; coreRes
 // second one, so a plugin holding a ptyId and a command line needs exactly one wire route.
 export type ShellCompleteRequest = { line: string; cursor: number };
 export type ShellCommandState = { running: boolean };
+export type RestartTerminalRequest = { ptyId: string };
 
 // An absolute path already in normal form: no empty, `.` or `..` segment and no trailing slash beyond
 // the root itself. zsh's `$PWD` is always written that way, so a real report never trips this, while
@@ -197,4 +198,8 @@ export function isShellCompleteRequest(value: unknown): value is ShellCompleteRe
 
 export function isShellCommandState(value: unknown): value is ShellCommandState {
   return isRecord(value) && typeof value.running === 'boolean';
+}
+
+export function isRestartTerminalRequest(value: unknown): value is RestartTerminalRequest {
+  return isRecord(value) && typeof value.ptyId === 'string';
 }
