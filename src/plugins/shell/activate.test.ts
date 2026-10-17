@@ -427,13 +427,13 @@ describe('shell plugin activation', () => {
   it('answers whether the terminal behind a tab is still running', () => {
     const { capabilities } = fakeCapabilities({ running: true });
 
-    expect(ask(capabilities, 'terminal-status')).toEqual({ running: true });
+    expect(ask(capabilities, 'terminal-status', { ptyId: PAYLOAD.ptyId })).toEqual({ ptyId: PAYLOAD.ptyId, running: true });
   });
 
   it('reports a shell that exited while no browser was attached as not running', () => {
     const { capabilities } = fakeCapabilities({ running: false });
 
-    expect(ask(capabilities, 'terminal-status', undefined)).toEqual({ running: false });
+    expect(ask(capabilities, 'terminal-status', { ptyId: PAYLOAD.ptyId })).toEqual({ ptyId: PAYLOAD.ptyId, running: false });
   });
 
   it('restarts only the matching exited terminal from the project root with a fresh marker nonce', () => {
@@ -465,7 +465,8 @@ describe('shell plugin activation', () => {
   it('answers running for a shell still waiting for its workspace, which has no terminal to ask about', () => {
     const { capabilities } = fakeCapabilities({ running: false });
 
-    expect(ask(capabilities, 'terminal-status', null, PROVISIONING)).toEqual({ running: true });
+    expect(ask(capabilities, 'terminal-status', { ptyId: 'connecting-pty' }, PROVISIONING))
+      .toEqual({ ptyId: '', running: true });
     expect(capabilities.terminalRunning).not.toHaveBeenCalled();
   });
 

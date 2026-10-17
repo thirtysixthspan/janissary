@@ -734,6 +734,6 @@ describe('MountedViewLayers', () => {
     );
     await waitFor(() => { expect(container.querySelector('[data-testid="plugin"]')).toBeTruthy(); });
     fireEvent.click(container.querySelector('[data-testid="plugin"]') as Element);
-    expect(closeTab).toHaveBeenCalledWith(1);
+    expect(closeTab).toHaveBeenCalledWith(1, undefined);
   });
 });

@@ -85,6 +85,45 @@ describe('tab adapter focus', () => {
     expect(managers.tab.userCloseTab).toHaveBeenCalledWith(1);
   });
 
+  it('accepts an exited shell generation and closes an ordinary shell directly', () => {
+    const { managers, tabs } = makeManagers(['shell']);
+    Object.assign(tabs[0], { view: 'plugin', plugin: { id: 'shell', payload: { ptyId: 'dead-pty' } } });
+    Object.assign(managers, {
+      plugins: { isPayload: () => true },
+      pty: { isRunningFor: () => false },
+    });
+    const closeTab = vi.fn();
+    Object.assign(managers.tab, { closeTab });
+
+    createTabControllerAdapter(managers).closeTab('shell', 'dead-pty');
+
+    expect(closeTab).toHaveBeenCalledWith(0);
+    expect(managers.tab.userCloseTab).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { reason: 'old-pty', live: false, closing: false },
+    { reason: 'current-pty', live: true, closing: false },
+    { reason: 'current-pty', live: false, closing: true },
+  ])('ignores stale, live, and closing shell exit reports', ({ reason, live, closing }) => {
+    const { managers, tabs } = makeManagers(['shell']);
+    Object.assign(tabs[0], {
+      view: 'plugin', plugin: { id: 'shell', payload: { ptyId: 'current-pty' } },
+      runtime: { closing },
+    });
+    Object.assign(managers, {
+      plugins: { isPayload: () => true },
+      pty: { isRunningFor: () => live },
+    });
+    const closeTab = vi.fn();
+    Object.assign(managers.tab, { closeTab });
+
+    createTabControllerAdapter(managers).closeTab('shell', reason);
+
+    expect(closeTab).not.toHaveBeenCalled();
+    expect(managers.tab.userCloseTab).not.toHaveBeenCalled();
+  });
+
   it('moveTabToOtherPane forwards the index to the tab manager', () => {
     const { managers, moveTabToOtherPane } = makeManagers();
     createTabControllerAdapter(managers).moveTabToOtherPane(3);

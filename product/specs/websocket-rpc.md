@@ -74,6 +74,14 @@ A recognized method that reaches the dispatcher with no handler behind it is rep
 
 A plugin that refuses a request it considers malformed — an unrecognized intent name, a payload that fails its own validation — also replies with an RPC error, but stays enabled and keeps its tabs. Only the plugin itself breaking disables it. A client cannot disable a plugin by sending it wrong intents.
 
+The existing `closeTab` request may include optional `terminalExited` with its required `label`. It
+identifies the PTY generation whose process exited and does not add another RPC. The server accepts it
+only for the current shell-plugin payload with the matching PTY id, a PTY that is no longer live, and a
+tab that is not already closing; stale or invalid reports are no-ops. The shell's `terminal-status` intent
+takes `{ ptyId }` and returns `{ ptyId, running }`, echoing the current payload id (or an empty id while
+provisioning), so the client acts only on a response for its captured attachment generation. A valid
+system-shell report calls `SystemShellManager.handlePtyExit`, also used by the server PTY-exit event.
+
 `pluginFailed` reports a client loading or rendering failure:
 
 ```json

@@ -34,7 +34,7 @@ type AppMainProps = LayoutState & {
   windowFocused: boolean;
   actionEntries: TabEntry[];
   reportingEntries: TabEntry[];
-  closeTab: (index: number) => void;
+  closeTab: (index: number, reason?: { terminalExited: string }) => void;
   tabNameMaxLength: number;
   activeTabNameMaxLength: number;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;

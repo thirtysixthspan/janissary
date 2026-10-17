@@ -228,7 +228,7 @@ export type TabPluginClientCapabilities = {
   // Close this tab. Unlike `splitAction` this is a callback rather than a host-rendered control,
   // because a plugin may need to close on something other than a click of its own button — an
   // embedded cross-origin page swallows the host's Cmd+W and has to answer for it itself.
-  close(): void;
+  close(reason?: { terminalExited: string }): void;
   // Register this tab's unsaved work with the host, or `null` to drop it. Optional so a plugin that
   // has nothing to save behaves exactly as it did before this existed. Call it again whenever the
   // answer to `isDirty` changes: re-registering is how the host learns, and it is what puts the
@@ -297,7 +297,7 @@ export function createPluginClientCapabilities(
   client: JanusClient,
   active: boolean,
   dock: 'left' | 'right' | null,
-  onClose: () => void,
+  onClose: (reason?: { terminalExited: string }) => void,
   splitAction?: ReactNode,
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void,
   claimedChords: readonly string[] = [],

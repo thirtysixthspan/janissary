@@ -37,16 +37,16 @@ export function useShellTabTerminal({
     onCwd: (cwd) => { reportShellCwd(capabilities, cwd); },
     // The tab closes when the shell exits: no exited state and no way to start another, so a closed
     // tab is the honest representation of a shell that is no longer running.
-    onExit: () => {
+    onExit: (ptyId) => {
       if (payload.provisioning) return;
       if (payload.host && !payload.prompted) {
         void capabilities.intent('exited-early', null).then(
-          () => { capabilities.close(); },
-          () => { capabilities.close(); },
+          () => { capabilities.close({ terminalExited: ptyId }); },
+          () => { capabilities.close({ terminalExited: ptyId }); },
         );
         return;
       }
-      capabilities.close();
+      capabilities.close({ terminalExited: ptyId });
     },
   });
 }

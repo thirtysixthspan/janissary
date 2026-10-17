@@ -409,7 +409,13 @@ second.
 
 When an ordinary shell exits, its tab closes; there is no exited state or way to start a fresh shell in
 that tab. A shell that exits while no browser is attached is checked on its next appearance and closes
-if its process has ended. Closing one ordinary shell leaves every other shell tab visible and usable.
+if its process has ended. The terminal callback and mount-time status request carry the PTY id captured
+by that attachment. A status reply is actionable only when its echoed id matches and `running` is false,
+so a delayed callback or reply cannot close a replacement generation. A verified exit closes directly,
+including for the last ordinary shell, without quit or unsaved-close confirmation. Closing one ordinary
+shell leaves every other shell tab visible and usable. The server's `pty:exit` event remains the owner of
+managed system-shell recovery; a client report calls the same idempotent `SystemShellManager.handlePtyExit`
+and does not start another recovery path.
 
 The managed `system` shell has a different process-exit lifecycle. When the server observes its PTY
 exit, it sends the original exit event to the client, hides the same tab, removes that tab's schedules,

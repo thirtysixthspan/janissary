@@ -117,7 +117,7 @@ function makeCapabilities(overrides: {
   dispatched?: boolean;
   output?: string;
   completions?: { matches: string[]; newInput: string; newCursor: number };
-  status?: { running: boolean };
+  status?: { ptyId: string; running: boolean };
   claimedChords?: readonly string[];
   label?: string;
   dotColor?: string;
@@ -142,7 +142,7 @@ function makeCapabilities(overrides: {
   const capabilities = {
     resourceUrl: (reference: string) => reference,
     intent: vi.fn(async (name: string, _payload?: unknown) => {
-      if (name === 'terminal-status') return overrides.status ?? { running: true };
+      if (name === 'terminal-status') return overrides.status ?? { ptyId: PAYLOAD.ptyId, running: true };
       if (name === 'dispatch') {
         await answered;
         return { dispatched: overrides.dispatched ?? false, output: overrides.output ?? '' };
@@ -1097,10 +1097,7 @@ describe('ShellTab', () => {
     const { capabilities } = renderTab();
 
     await waitFor(() => {
-      // `null` rather than `undefined`: the request is serialized with `JSON.stringify`, which drops
-      // an `undefined` value, and the server's `pluginIntent` guard requires the key to be present —
-      // so `undefined` here is an intent the host refuses before the plugin is ever asked.
-      expect(capabilities.intent).toHaveBeenCalledWith('terminal-status', null);
+      expect(capabilities.intent).toHaveBeenCalledWith('terminal-status', { ptyId: PAYLOAD.ptyId });
     });
   });
 
@@ -1129,13 +1126,21 @@ describe('ShellTab', () => {
   });
 
   it('closes a tab whose shell exited while no browser was attached', async () => {
-    const { closed } = renderTab({ status: { running: false } });
+    const { capabilities, closed } = renderTab({ status: { ptyId: PAYLOAD.ptyId, running: false } });
 
     await waitFor(() => { expect(closed).toHaveLength(1); });
+    expect(capabilities.close).toHaveBeenCalledWith({ terminalExited: PAYLOAD.ptyId });
+  });
+
+  it('ignores a status response for a replaced terminal generation', async () => {
+    const { capabilities, closed } = renderTab({ status: { ptyId: 'replacement-pty', running: false } });
+
+    await waitFor(() => { expect(capabilities.intent).toHaveBeenCalled(); });
+    expect(closed).toEqual([]);
   });
 
   it('leaves a tab whose shell is still running alone', async () => {
-    const { closed } = renderTab({ status: { running: true } });
+    const { closed } = renderTab({ status: { ptyId: PAYLOAD.ptyId, running: true } });
 
     await waitFor(() => { expect(screen.getByLabelText('Shell command')).toBeInTheDocument(); });
     expect(closed).toEqual([]);
@@ -1147,7 +1152,9 @@ describe('ShellTab', () => {
 
     mountShell(PAYLOAD, made.capabilities);
 
-    await waitFor(() => { expect(made.capabilities.intent).toHaveBeenCalledWith('terminal-status', null); });
+    await waitFor(() => {
+      expect(made.capabilities.intent).toHaveBeenCalledWith('terminal-status', { ptyId: PAYLOAD.ptyId });
+    });
     expect(made.capabilities.intent).not.toHaveBeenCalledWith('install-hooks', expect.anything());
     expect(writes).not.toHaveBeenCalled();
   });

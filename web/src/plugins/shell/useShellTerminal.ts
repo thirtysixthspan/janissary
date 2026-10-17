@@ -39,7 +39,7 @@ type Options = {
   onCommand?: (command: string) => void;
   // Called when the shell behind this terminal exits. A plugin tab has nowhere else to hear it: the
   // event is broadcast once, to whoever happened to be connected at the time.
-  onExit: () => void;
+  onExit: (ptyId: string) => void;
   // The nonce zsh's startup files installed the hooks with, minted by the server with the shell. Read
   // once, at mount: every mount only attaches, and nothing is ever typed into the shell for it.
   hookNonce: string;
@@ -173,7 +173,7 @@ export function useShellTerminal({
       if (disposed) { handle.detach(); return; }
       handleRef.current = handle;
       terminal.onData((data) => { handleRef.current?.write(data); });
-      handle.onExit(() => { exitRef.current(); });
+      handle.onExit(() => { exitRef.current(attachId); });
       resize();
     };
     const attachment = attach(attachId, (data) => { terminal.write(data); });

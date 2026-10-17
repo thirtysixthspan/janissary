@@ -69,7 +69,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
     scrollToBottom,
   });
 
-  useShellTerminalStatus(capabilities);
+  useShellTerminalStatus(capabilities, payload.ptyId);
   useBackgroundReplies(capabilities.onBackgroundReply, displayReply);
 
   // Focus belongs to the command line at all times, and a tab that has just become the visible one is

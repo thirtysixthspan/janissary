@@ -95,6 +95,7 @@ export type ShellDispatchResult = { dispatched: boolean; output: string; coreRes
 export type ShellCompleteRequest = { line: string; cursor: number };
 export type ShellCommandState = { running: boolean };
 export type RestartTerminalRequest = { ptyId: string };
+export type ShellTerminalStatusRequest = { ptyId: string };
 
 // An absolute path already in normal form: no empty, `.` or `..` segment and no trailing slash beyond
 // the root itself. zsh's `$PWD` is always written that way, so a real report never trips this, while
@@ -201,5 +202,9 @@ export function isShellCommandState(value: unknown): value is ShellCommandState 
 }
 
 export function isRestartTerminalRequest(value: unknown): value is RestartTerminalRequest {
+  return isRecord(value) && typeof value.ptyId === 'string';
+}
+
+export function isShellTerminalStatusRequest(value: unknown): value is ShellTerminalStatusRequest {
   return isRecord(value) && typeof value.ptyId === 'string';
 }

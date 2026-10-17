@@ -145,7 +145,7 @@ export function PluginBody({
   agentRun?: TabView['agentRun'];
   pendingQuestion?: TabView['pendingQuestion'];
   dotColor?: string;
-  onClose: () => void;
+  onClose: (reason?: { terminalExited: string }) => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
 }) {
@@ -163,7 +163,7 @@ export function PluginBody({
   // that changes, so calling through a ref is what keeps the capability object stable.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  const close = useCallback(() => { onCloseRef.current(); }, []);
+  const close = useCallback((reason?: { terminalExited: string }) => { onCloseRef.current(reason); }, []);
   // Same ref treatment again: the handle registration must survive the capability object staying
   // stable, or a plugin would drop its dirty state every time the host rebuilt this callback.
   const onDirtyHandleRef = useRef(onDirtyHandle);

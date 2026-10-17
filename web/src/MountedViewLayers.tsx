@@ -19,7 +19,7 @@ type Properties = {
   tabs: TabView[];
   current?: TabView;
   client: JanusClient;
-  closeTab: (index: number) => void;
+  closeTab: (index: number, reason?: { terminalExited: string }) => void;
   harnessHandles: React.RefObject<Map<string, HarnessTabHandle>>;
   tabHandles: React.RefObject<Map<string, DirtyTabHandle>>;
   questionPanelRef?: React.RefObject<QuestionPanelHandle | null>;
@@ -127,7 +127,7 @@ export function MountedViewLayers({
             current={current}
             visible={visibleLabels.includes(t.label)}
             client={client}
-            onClose={() => closeTab(index)}
+             onClose={(reason) => closeTab(index, reason)}
             onSplit={onSplit ? () => onSplit(index) : undefined}
             onDirtyHandle={(handle) => {
               if (handle) tabHandles.current.set(t.label, handle);

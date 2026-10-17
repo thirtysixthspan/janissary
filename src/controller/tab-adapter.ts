@@ -9,7 +9,7 @@ export type TabControllerAdapter = {
   moveTab(dir: -1 | 1): void;
   reorderTab(dir: -1 | 1): void;
   reorderTabTo(from: number, to: number): void;
-  closeTab(label: string): void;
+  closeTab(label: string, terminalExited?: string): void;
   renameTab(index: number, title: string): void;
   editQueuedCommand(index: number, text: string, tab?: string): void;
   deleteQueuedCommand(index: number, tab?: string): void;
@@ -31,9 +31,24 @@ export function createTabControllerAdapter(managers: Managers): TabControllerAda
     moveTab: (dir) => managers.tab.moveTab(dir),
     reorderTab: (dir) => managers.tab.reorderTab(dir),
     reorderTabTo: (from, to) => managers.tab.reorderTabTo(from, to),
-    closeTab: (label) => {
+    closeTab: (label, terminalExited) => {
       const index = managers.tab.findIndex(label);
-      if (index !== -1) managers.tab.userCloseTab(index);
+      const tab = managers.tab.tabs[index];
+      if (!tab) return;
+      if (terminalExited === undefined) {
+        managers.tab.userCloseTab(index);
+        return;
+      }
+      if (tab.runtime?.closing || tab.view !== 'plugin' || tab.plugin?.id !== 'shell') return;
+      if (!managers.plugins.isPayload('shell', tab.plugin.payload)) return;
+      const payload = tab.plugin.payload;
+      if (typeof payload !== 'object' || payload === null || !('ptyId' in payload)) return;
+      if (payload.ptyId !== terminalExited || managers.pty.isRunningFor(terminalExited, [label])) return;
+      if (tab.systemShell) {
+        void managers.systemShell.handlePtyExit(terminalExited);
+        return;
+      }
+      managers.tab.closeTab(index);
     },
     renameTab: (index, title) => managers.tab.renameTab(index, title),
     editQueuedCommand: (index, text, tab) => managers.tab.editQueued(tab ?? managers.tab.cur().label, index, text),

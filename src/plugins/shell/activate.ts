@@ -7,7 +7,7 @@ import {
   type TabPluginServerCapabilities,
 } from '../api.js';
 import {
-  isEmptyShellIntent, isShellCommandState, isShellCompleteRequest, isShellCwd, isShellDispatch,
+  isEmptyShellIntent, isShellCommandState, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellTerminalStatusRequest,
   isShellPayload,
   type ShellCommandState, type ShellCompleteRequest, type ShellPayload, type ShellQueuedLine,
 } from './shared.js';
@@ -96,7 +96,7 @@ export function activate(): TabPluginActivation {
     intent: defineIntents<
       ShellPayload,
       {
-        'terminal-status': TabPluginIntentEntry<ShellPayload, undefined>;
+        'terminal-status': TabPluginIntentEntry<ShellPayload, { ptyId: string }>;
         'exited-early': TabPluginIntentEntry<ShellPayload, undefined>;
         'restart-terminal': TabPluginIntentEntry<ShellPayload, { ptyId: string }>;
         sibling: TabPluginIntentEntry<ShellPayload, undefined>;
@@ -109,14 +109,13 @@ export function activate(): TabPluginActivation {
         dequeue: TabPluginIntentEntry<ShellPayload, undefined>;
       }
     >('shell', isShellPayload, {
-      // Asked once on mount. A tab whose shell exited while no browser was attached holds the payload
-      // of a process that finished minutes ago and has no way to hear about it: the exit event went to
-      // nobody, and a plugin tab is in-memory only. This is how it finds out and closes.
+      // Asked once for the attachment's captured PTY id. The server echoes its current generation so
+      // a delayed response cannot close a replacement terminal.
       'terminal-status': {
-        payload: isEmptyShellIntent,
+        payload: isShellTerminalStatusRequest,
         run: (tabPayload, _payload, capabilities) => ({
-          // A provisioning shell has no process yet, and must not close itself for want of one.
-          running: tabPayload.ptyId === undefined || capabilities.terminalRunning(tabPayload.ptyId),
+          ptyId: tabPayload.ptyId ?? '',
+          running: _payload.ptyId !== tabPayload.ptyId || capabilities.terminalRunning(_payload.ptyId),
         }),
       },
       'exited-early': {

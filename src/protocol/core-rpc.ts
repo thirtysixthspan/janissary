@@ -10,7 +10,7 @@ export type CoreRpcCall =
   | { method: 'command'; params: { text: string; tab?: string } }
   | { method: 'setActiveTab'; params: { index: number } }
   | { method: 'focusTab'; params: { label: string } }
-  | { method: 'closeTab'; params: { label: string } }
+  | { method: 'closeTab'; params: { label: string; terminalExited?: string } }
   | { method: 'renameTab'; params: { index: number; title: string } }
   // Patch or remove one entry in a tab's command queue (see `command-queue.md`): the named tab's, or the
   // active tab's when none is named. Index-based against that tab's queue; no-ops server-side when

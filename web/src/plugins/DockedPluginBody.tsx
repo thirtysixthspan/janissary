@@ -22,7 +22,7 @@ export function DockedPluginBody({
   index: number;
   visible: boolean;
   client: JanusClient;
-  onClose: () => void;
+  onClose: (reason?: { terminalExited: string }) => void;
   overlay?: ReactNode;
 }) {
   const [actionsTarget, setActionsTarget] = useState<HTMLSpanElement | null>(null);

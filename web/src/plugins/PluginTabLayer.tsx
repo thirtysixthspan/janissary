@@ -24,7 +24,7 @@ export function PluginTabLayer({
   current?: TabView;
   visible: boolean;
   client: JanusClient;
-  onClose: () => void;
+  onClose: (reason?: { terminalExited: string }) => void;
   onSplit?: () => void;
   onDirtyHandle?: (handle: TabDirtyHandle | null) => void;
   overlay?: ReactNode;

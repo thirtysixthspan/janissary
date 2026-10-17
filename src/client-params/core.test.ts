@@ -7,7 +7,7 @@ const CASES: Array<[keyof typeof CORE_PARAMS, Record<string, unknown>, Array<Rec
   ['command', { text: 'help' }, [{}, { text: 7 }, { text: null }]],
   ['setActiveTab', { index: 0 }, [{}, { index: '0' }, { index: 1.5 }]],
   ['focusTab', { label: 'one' }, [{}, { label: 3 }]],
-  ['closeTab', { label: 'one' }, [{}, { label: 2 }, { index: 2 }]],
+  ['closeTab', { label: 'one' }, [{}, { label: 2 }, { index: 2 }, { label: 'one', terminalExited: 2 }]],
   ['renameTab', { index: 0, title: 'one' }, [{ index: 0 }, { index: 0, title: 1 }, { title: 'one' }]],
   ['editQueuedCommand', { index: 0, text: 'ls', tab: 'shell1' }, [{ index: 0 }, { index: 0, text: [] }, { index: 0, text: 'ls', tab: 3 }]],
   ['deleteQueuedCommand', { index: 1, tab: 'shell1' }, [{ index: true }, { index: 1, tab: null }]],
@@ -51,6 +51,10 @@ describe('core RPC params decoders', () => {
   it('accepts a queue edit or delete that names no tab', () => {
     expect(CORE_PARAMS.editQueuedCommand({ index: 0, text: 'ls' })).toBe(true);
     expect(CORE_PARAMS.deleteQueuedCommand({ index: 0 })).toBe(true);
+  });
+
+  it('accepts an optional exited terminal id on closeTab', () => {
+    expect(CORE_PARAMS.closeTab({ label: 'one', terminalExited: 'pty-1' })).toBe(true);
   });
 
   it('accepts the editor scope of an ACP ref when both of its fields are present', () => {

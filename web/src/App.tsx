@@ -132,9 +132,13 @@ export function App({ client }: { client: JanusClient }) {
     ? -1 : tabs.findIndex((tab) => tab.label === focusedPluginTab && !tab.hidden);
   focusedPluginTabIndexRef.current = focusedPluginTabIndex < 0 ? undefined : focusedPluginTabIndex;
 
-  const closeTab = useCallback((index: number) => {
+  const closeTab = useCallback((index: number, reason?: { terminalExited: string }) => {
     const tab = index < 0 ? undefined : tabs.at(index);
     if (!tab) return;
+    if (reason?.terminalExited) {
+      client.send({ method: 'closeTab', params: { label: tab.label, terminalExited: reason.terminalExited } });
+      return;
+    }
     if (closeQuitsApp(tabs, index)) { guardedOpenQuitConfirm(); return; }
     if (!tab.systemShell && guardRef.current?.(index)) return;
     client.send({ method: 'closeTab', params: { label: tab.label } });
