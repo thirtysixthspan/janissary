@@ -252,3 +252,57 @@ describe('SchedulesTab cell text', () => {
     expect(screen.getByText('3:00pm')).toHaveAttribute('title', 'Jan 1 3:00pm');
   });
 });
+
+describe('SchedulesTab row delete', () => {
+  const systemRow = () => row({
+    id: 'nightly', tab: 'system', command: 'script nightly', owner: 'system', key: 'nightly-key',
+  });
+
+  it('asks before deleting only the schedule in the row whose icon was pressed', () => {
+    const { intent } = renderTab([row({ id: 'a' }), row({ id: 'b' })]);
+
+    fireEvent.click(screen.getByLabelText('Delete schedule b'));
+    expect(screen.getByText('Delete schedule "b"?')).toBeInTheDocument();
+    expect(intent).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('cancel', { tab: 'agent-1', id: 'b' });
+  });
+
+  it('leaves the schedule in place when the user backs out', () => {
+    const { intent } = renderTab([row({ id: 'a' })]);
+
+    fireEvent.click(screen.getByLabelText('Delete schedule a'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(intent).not.toHaveBeenCalled();
+    expect(screen.queryByText('Delete schedule "a"?')).toBeNull();
+  });
+
+  it('confirms a system row by its key', () => {
+    const { intent } = renderTab([systemRow()]);
+
+    fireEvent.click(screen.getByLabelText('Delete schedule nightly'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(intent).toHaveBeenCalledWith('cancel', {
+      tab: 'system', owner: 'system', key: 'nightly-key', id: 'nightly',
+    });
+  });
+
+  it('does not move the selection when the icon is pressed', () => {
+    const { container } = renderTab([row({ id: 'a' }), row({ id: 'b' })]);
+
+    fireEvent.click(screen.getByLabelText('Delete schedule b'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(container.querySelectorAll('.schedules-row.selected')).toHaveLength(0);
+  });
+
+  it('offers the icon in the compressed layout too', () => {
+    renderTab([row({ id: 'fetch' })], 'right');
+
+    expect(screen.getByLabelText('Delete schedule fetch')).toBeInTheDocument();
+  });
+});

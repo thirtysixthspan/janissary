@@ -106,6 +106,7 @@ export function SchedulesTab({
             onRowClick={onRowClick}
             onRowDoubleClick={focusOwner}
             onClear={() => { void capabilities.intent('clear', { owner: 'system' }); }}
+            onDelete={setPendingDelete}
           />
           <ScheduleSection
             owner="tab"
@@ -116,6 +117,7 @@ export function SchedulesTab({
             onRowClick={onRowClick}
             onRowDoubleClick={focusOwner}
             onClear={() => { void capabilities.intent('clear', { owner: 'tab' }); }}
+            onDelete={setPendingDelete}
           />
         </>
       )}

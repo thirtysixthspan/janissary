@@ -23,4 +23,8 @@ describe('schedules stylesheet', () => {
   it('keeps the headings and the rows on one shared grid', () => {
     expect(schedules).toContain('.schedules-headings, .schedules-row {');
   });
+
+  it('styles the row trash icon the same as the header icon', () => {
+    expect(schedules).toContain('.schedules-clear, .schedules-row-delete {');
+  });
 });
