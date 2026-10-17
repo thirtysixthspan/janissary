@@ -26,7 +26,7 @@ export async function fireSystemBatch(
 
 export function appendSystemBatch(managers: Managers, entry: SystemScheduleEntry, lines: string[]): void {
   managers.tab.enqueueSystemScheduleBatch('system', lines, entry.key);
-  notifySystemScheduleRun(managers, entry.id, entry.script);
+  if (lines.length > 0) notifySystemScheduleRun(managers, entry.id, entry.script);
 }
 
 export function advance(entry: SystemScheduleEntry, now: number): SystemScheduleEntry | undefined {

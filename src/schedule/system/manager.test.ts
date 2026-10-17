@@ -96,6 +96,63 @@ describe('SystemScheduleManager mutations', () => {
     await controller.shutdown();
   });
 
+  it('advances empty one-shot and recurring runscripts without queue rows or firing notices', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-empty-'));
+    const scripts = path.join(root, '.janissary', 'scripts');
+    mkdirSync(scripts, { recursive: true });
+    writeFileSync(path.join(scripts, 'empty.rs'), '\n# no commands\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab: system });
+    const oneShot = controller.managers.systemSchedule.add({
+      ...schedule('once', 'ignored'), command: 'script empty', script: 'empty', nextRun: 0,
+    });
+    const recurring = controller.managers.systemSchedule.add({
+      ...schedule('often', 'ignored'), command: 'script empty', script: 'empty', spec: 'every 1m', nextRun: 0,
+      recurring: true, intervalMs: 60_000,
+    });
+    if (!oneShot.ok || !oneShot.entry || !recurring.ok || !recurring.entry) {
+      throw new Error('empty schedules were not added');
+    }
+    const toast = vi.fn();
+    const subscription = messageBus.on('notifications', 'toast', toast);
+
+    await controller.managers.systemSchedule.tick(1);
+
+    expect(controller.managers.systemSchedule.list()).toEqual([{ ...recurring.entry, nextRun: 60_001 }]);
+    expect(system.runtime?.queue).toEqual([]);
+    expect(toast).not.toHaveBeenCalled();
+    subscription.unsubscribe();
+    await controller.shutdown();
+  });
+
+  it('queues nonempty runscript lines and posts a firing notice', async () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-nonempty-'));
+    mkdirSync(path.join(root, '.janissary', 'scripts'), { recursive: true });
+    writeFileSync(path.join(root, '.janissary', 'scripts', 'build.rs'), 'first\nsecond\n');
+    const controller = createController(sinks, root);
+    const system = { ...makeTab('system'), systemShell: true, runtime: { busy: false, context: [], queue: [] } };
+    controller.managers.tab.tabs.push(system);
+    vi.spyOn(controller.managers.systemShell, 'ensure').mockResolvedValue({ status: 'ok', tab: system });
+    const added = controller.managers.systemSchedule.add({ ...schedule('build', 'ignored'), nextRun: 0 });
+    if (!added.ok || !added.entry) throw new Error('schedule was not added');
+    const toast = vi.fn();
+    const subscription = messageBus.on('notifications', 'toast', toast);
+
+    await controller.managers.systemSchedule.tick(1);
+
+    expect(system.runtime?.queue).toEqual([
+      { line: 'first', origin: { kind: 'system-schedule', scheduleKey: added.entry.key } },
+      { line: 'second', origin: { kind: 'system-schedule', scheduleKey: added.entry.key } },
+    ]);
+    expect(toast).toHaveBeenCalledWith(expect.objectContaining({
+      message: expect.stringContaining('System schedule build ran'),
+    }));
+    subscription.unsubscribe();
+    await controller.shutdown();
+  });
+
   it('fires same-named due entries independently by key and persists each outcome', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'system-schedule-duplicate-name-fire-'));
     const scripts = path.join(root, '.janissary', 'scripts');
