@@ -84,7 +84,9 @@ export type TabPluginNotification =
 export type TabPluginTopicAction =
   | { topic: 'schedules'; action: 'cancel'; tab: string; id: string; owner?: 'tab' }
   | { topic: 'schedules'; action: 'cancel'; tab: 'system'; id: string; owner: 'system'; key: string }
-  | { topic: 'schedules'; action: 'clear' }
+  // Clear one owner's schedules. Each owner is cleared separately, so clearing tab timers never
+  // touches project schedules and a failed project save never touches tab timers.
+  | { topic: 'schedules'; action: 'clear'; owner: 'system' | 'tab' }
   // Focus the tab a row belongs to. Refused for a tab that owns no row in the topic's current data,
   // so this stays "focus the owner of what I am showing" rather than a general focus-anything grant.
   | { topic: 'schedules'; action: 'focusOwner'; tab: string; owner?: 'tab' }

@@ -64,11 +64,12 @@ describe('SchedulesTab', () => {
     expect(screen.getByText('3:00pm')).toBeInTheDocument();
   });
 
-  it('renders the empty state and disables clearing when there is nothing scheduled', () => {
+  it('renders the empty state with no clear control when there is nothing scheduled', () => {
     renderTab([]);
 
     expect(screen.getByText('No scheduled commands.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Clear all schedules')).toBeDisabled();
+    expect(screen.queryByLabelText('Clear tab schedules')).toBeNull();
+    expect(screen.queryByLabelText('Clear system schedules')).toBeNull();
   });
 
   it('renders the host\'s split action when one is supplied, and nothing when it is not', () => {
@@ -87,12 +88,12 @@ describe('SchedulesTab', () => {
     expect(container.querySelector('.schedules-row.recurring')).not.toBeNull();
   });
 
-  it('sends the clear intent from the clear button', () => {
+  it('sends the tab clear intent from the tab section header', () => {
     const { intent } = renderTab([row()]);
 
-    fireEvent.click(screen.getByLabelText('Clear all schedules'));
+    fireEvent.click(screen.getByLabelText('Clear tab schedules'));
 
-    expect(intent).toHaveBeenCalledWith('clear', {});
+    expect(intent).toHaveBeenCalledWith('clear', { owner: 'tab' });
   });
 
   it('moves the selection with the arrow, Home, and End keys', () => {
@@ -197,6 +198,23 @@ describe('SchedulesTab sections', () => {
 
     expect(container.querySelectorAll('.schedules-section')).toHaveLength(1);
     expect(container.querySelectorAll('.schedules-headings')).toHaveLength(1);
+  });
+
+  it('clears each owner from its own header row', () => {
+    const { intent } = renderTab([row({ id: 'standup' }), systemRow()]);
+
+    fireEvent.click(screen.getByLabelText('Clear system schedules'));
+    expect(intent).toHaveBeenLastCalledWith('clear', { owner: 'system' });
+
+    fireEvent.click(screen.getByLabelText('Clear tab schedules'));
+    expect(intent).toHaveBeenLastCalledWith('clear', { owner: 'tab' });
+  });
+
+  it('shows a header clear only for a section that has rows', () => {
+    renderTab([row({ id: 'standup' })]);
+
+    expect(screen.queryByLabelText('Clear system schedules')).toBeNull();
+    expect(screen.getByLabelText('Clear tab schedules')).toBeInTheDocument();
   });
 
   it('numbers rows continuously from the top across both sections', () => {

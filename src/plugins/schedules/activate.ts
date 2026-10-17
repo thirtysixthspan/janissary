@@ -8,10 +8,11 @@ import {
 } from '../api.js';
 import {
   isCancelIntent,
-  isEmptyIntent,
+  isClearIntent,
   isFocusOwnerIntent,
   isSchedulesPayload,
   type CancelIntent,
+  type ClearIntent,
   type FocusOwnerIntent,
   type ScheduleRow,
   type SchedulesPayload,
@@ -56,9 +57,9 @@ export function activate(): TabPluginActivation {
     }),
     intent: defineIntents('schedules', isSchedulesPayload, {
       clear: {
-        payload: isEmptyIntent,
-        run: (_tab, _payload: Record<string, never>, capabilities) => {
-          const error = capabilities.topicAction({ topic: 'schedules', action: 'clear' });
+        payload: isClearIntent,
+        run: (_tab, payload: ClearIntent, capabilities) => {
+          const error = capabilities.topicAction({ topic: 'schedules', action: 'clear', owner: payload.owner });
           if (error) capabilities.rejectRequest(error);
           return null;
         },

@@ -66,7 +66,8 @@ export default async function systemScheduleManagement({ page, record, scratchDi
   assert.equal(await aggregateRows.filter({ has: page.locator('.schedules-id', { hasText: /^duplicate$/ }) }).count(), 1, 'the remaining duplicate is still rendered');
   assert.equal(await aggregateRows.filter({ has: page.locator('.schedules-id', { hasText: /^tab-owned$/ }) }).count(), 1, 'the tab-owned schedule remains rendered after keyed deletion');
 
-  await aggregate.getByRole('button', { name: 'Clear all schedules' }).click();
+  await aggregate.getByRole('button', { name: 'Clear system schedules' }).click();
+  await aggregate.getByRole('button', { name: 'Clear tab schedules' }).click();
   await aggregateRows.first().waitFor({ state: 'detached', timeout: 10_000 });
   const cleared = JSON.parse(readFileSync(store, 'utf8'));
   assert.equal(cleared.entries.length, 0, 'aggregate clear-all empties persisted system schedules');

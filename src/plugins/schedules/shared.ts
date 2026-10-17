@@ -19,6 +19,7 @@ type ScheduleOwnerIntent = { tab: string; owner?: 'tab'; key?: never }
   | { tab: 'system'; owner: 'system'; key: string };
 export type CancelIntent = ScheduleOwnerIntent & { id: string };
 export type FocusOwnerIntent = ScheduleOwnerIntent;
+export type ClearIntent = { owner: 'system' | 'tab' };
 
 function isScheduleRow(value: unknown): value is ScheduleRow {
   return isRecord(value)
@@ -58,6 +59,7 @@ function isScheduleOwnerIntent(value: Record<string, unknown>): boolean {
     || value.owner === 'system' && value.tab === 'system' && typeof value.key === 'string';
 }
 
-export function isEmptyIntent(value: unknown): value is Record<string, never> {
-  return isRecord(value) && Object.keys(value).length === 0;
+export function isClearIntent(value: unknown): value is ClearIntent {
+  return isRecord(value) && Object.keys(value).length === 1
+    && (value.owner === 'system' || value.owner === 'tab');
 }

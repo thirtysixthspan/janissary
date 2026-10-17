@@ -94,12 +94,14 @@ describe('schedules plugin intents', () => {
   it('turns each intent into the topic action it names', () => {
     const fixture = fakeCapabilities();
 
-    expect(intent('clear', {}, fixture)).toBeNull();
+    expect(intent('clear', { owner: 'system' }, fixture)).toBeNull();
+    expect(intent('clear', { owner: 'tab' }, fixture)).toBeNull();
     expect(intent('cancel', { tab: 'agent-1', id: 'fetch' }, fixture)).toBeNull();
     expect(intent('focus-owner', { tab: 'agent-1' }, fixture)).toBeNull();
 
     expect(fixture.actions).toEqual([
-      { topic: 'schedules', action: 'clear' },
+      { topic: 'schedules', action: 'clear', owner: 'system' },
+      { topic: 'schedules', action: 'clear', owner: 'tab' },
       { topic: 'schedules', action: 'cancel', tab: 'agent-1', id: 'fetch' },
       { topic: 'schedules', action: 'focusOwner', tab: 'agent-1' },
     ]);
@@ -108,7 +110,9 @@ describe('schedules plugin intents', () => {
   it('answers malformed and unknown intents with a rejection, not a plugin failure', () => {
     const fixture = fakeCapabilities();
     for (const [name, payload, message] of [
-      ['clear', { unexpected: true }, 'invalid clear payload'],
+      ['clear', {}, 'invalid clear payload'],
+      ['clear', { owner: 'everything' }, 'invalid clear payload'],
+      ['clear', { owner: 'tab', unexpected: true }, 'invalid clear payload'],
       ['cancel', { tab: 'agent-1' }, 'invalid cancel payload'],
       ['cancel', { tab: 'system', id: 'build', owner: 'system' }, 'invalid cancel payload'],
       ['focus-owner', {}, 'invalid focus-owner payload'],
@@ -121,7 +125,7 @@ describe('schedules plugin intents', () => {
   });
 
   it.each([
-    ['clear', {}, 'clear'],
+    ['clear', { owner: 'system' }, 'clear'],
     ['cancel', { tab: 'system', id: 'build', owner: 'system', key: 'system-key' }, 'cancel'],
   ] as const)('turns a durable %s error into a request rejection', (name, payload) => {
     const fixture = fakeCapabilities();

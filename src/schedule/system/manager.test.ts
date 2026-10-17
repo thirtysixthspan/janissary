@@ -60,14 +60,16 @@ describe('SystemScheduleManager mutations', () => {
     const save = vi.spyOn(SystemScheduleStore.prototype, 'save')
       .mockReturnValue({ ok: false, kind: 'io', error: new Error('disk full') });
 
-    expect(runTopicAction(controller.managers, { topic: 'schedules', action: 'clear' }))
+    expect(runTopicAction(controller.managers, { topic: 'schedules', action: 'clear', owner: 'system' }))
       .toBe('could not save system schedules');
     expect(system.list()).toEqual([added.entry]);
     expect(controller.managers.schedule.get('janus')).toHaveLength(1);
 
     save.mockRestore();
-    expect(runTopicAction(controller.managers, { topic: 'schedules', action: 'clear' })).toBeUndefined();
+    expect(runTopicAction(controller.managers, { topic: 'schedules', action: 'clear', owner: 'system' })).toBeUndefined();
     expect(system.list()).toEqual([]);
+    expect(controller.managers.schedule.get('janus')).toHaveLength(1);
+    expect(runTopicAction(controller.managers, { topic: 'schedules', action: 'clear', owner: 'tab' })).toBeUndefined();
     expect(controller.managers.schedule.get('janus')).toEqual([]);
     expect(readFileSync(scriptFile, 'utf8')).toBe('npm run build\n');
     void controller.shutdown();
