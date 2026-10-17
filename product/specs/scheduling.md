@@ -1,5 +1,13 @@
 # Scheduling
 
+### Durable system schedules and runscripts
+
+The system schedule store is a versioned snapshot in `.janissary/system-schedules.json`. A missing file is an empty store. Invalid JSON or invalid version-1 entries produce a load error without changing the file; a later valid save may replace them. A newer unsupported store version blocks saving so an older Janissary process cannot downgrade it. Schedule keys are opaque and unique even when displayed schedule names repeat. Each entry stores the runscript name and the descriptive command `script <name>`, along with its raw recurrence data; script contents are read separately when needed.
+
+Runscripts are named lowercase words separated by single hyphens and stored as `.janissary/scripts/<name>.rs` under the project root. Parsing preserves each command line and inline shell comment, ignores blank lines and full-line comments, and treats each physical line as a separate command. The catalog lists existing valid regular `.rs` files alphabetically. Reads use current file contents and reject symlinks in the state directory, scripts directory, or target file.
+
+In a Git project, schedule storage ensures both durable paths are ignored using effective existing rules or narrowly anchored entries in `.git/info/exclude` (including the target repository's equivalent for worktrees). Existing exclude content is preserved. Tracked targets cause saving to fail; non-Git projects need no Git configuration. Startup cleanup leaves both paths untouched (see [[state-directory]]).
+
 The `schedule` command (parsed by `parseScheduleCommand` in `src/schedule/index.ts`, dispatched by `src/commands/schedule.ts`) queues commands to run later in a tab — the issuing tab by default, or another tab named with an `in <tab>` clause. Each tab owns its schedule, held in memory for the life of the tab: it ends when the tab closes, and no launch brings it back. Harness tabs can hold schedules too. So can a plugin tab that owns a live terminal — a shell tab — whose schedule likewise lives in memory only and ends with the tab.
 
 ### Schedule forms
