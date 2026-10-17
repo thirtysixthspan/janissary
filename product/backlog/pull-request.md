@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that the current change contains plans only, because this commit implements generation-bound shell exit handling.
-
-Existing Issue: The pull request body says the current diff consists of thirteen draft plans and that implementation is pending, while commit `ed223846` changes server, client, spec, and documentation files to implement client-reported shell exit generations. Severity: 7/10
-
-Existing Risk: 5/10 - Reviewers may rely on the plans-only statement and miss that this commit changes close behavior and the RPC/plugin contracts.
-
-Proposal Risk: 2/10 - A description that acknowledges the implementation commit makes the scope clear, though it cannot replace reviewing the code against its plan.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "correct the PR description's plans-only claim for the shell exit generation implementation". Update the PR body so it identifies commit `ed223846` as the implementation of `system-schedules-05-system-shell-exit-generation-client-contract.md`, summarizes the generation-bound close/status behavior, and distinguishes this commit from the broader plans-only publication description where appropriate. Keep the plan link and the existing acceptance claims precise; do not imply that unrelated system-schedule behavior is implemented by this commit.
-
-
 * Deliver the planned API-v2 changelog entry for the optional terminal-exit close argument.
 
 Existing Issue: The contract prose above the API changelog documents the optional `close` argument, but the API v2 changelog itself has no entry for it. Severity: 4/10
