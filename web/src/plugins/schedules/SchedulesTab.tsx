@@ -3,24 +3,29 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { ScheduleRow, SchedulesPayload } from '@shared/plugins/schedules/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { nextSelection, scheduleRowKey } from './schedules-keys';
+import { nextSelection } from './schedules-keys';
+import { sectionSchedules } from './schedules-sections';
+import { ScheduleSection } from './SchedulesRows';
 import { DeleteScheduleDialog } from './DeleteScheduleDialog';
 
 const NAV_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
-// The aggregated schedules list: every scheduled command across all tabs, ordered next-to-run
-// first. Read-only apart from selection: a single click selects a row, a double click (or Enter on
-// the selected row) focuses the tab that owns it. Arrow Up/Down/Home/End move the selection.
-// Rendered full-width in the main area, or as a compressed one-line-per-entry list when the host
-// reports the tab docked; both layouts share the same selection and focus behavior. The dock-cycle
-// control is host chrome and is deliberately absent here.
+// The aggregated schedules list: every scheduled command across all tabs. Project system schedules
+// sit in their own section above the tab-owned ones, and each section is ordered next-to-run first
+// with its own column headings. Read-only apart from selection: a single click selects a row, a
+// double click (or Enter on the selected row) focuses the tab that owns it. Arrow Up/Down/Home/End
+// move the selection through the on-screen order. Rendered full-width in the main area, or as a
+// compressed one-line-per-entry list when the host reports the tab docked; both layouts share the
+// same selection and focus behavior. The dock-cycle control is host chrome and is deliberately
+// absent here.
 export function SchedulesTab({
   payload, capabilities,
 }: {
   payload: SchedulesPayload;
   capabilities: TabPluginClientCapabilities;
 }) {
-  const entries = payload.entries;
+  const sections = sectionSchedules(payload.entries);
+  const entries = sections.ordered;
   const [selected, setSelected] = useState<number | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ScheduleRow | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -103,24 +108,22 @@ export function SchedulesTab({
         <div className="schedules-empty">No scheduled commands.</div>
       ) : (
         <>
-          <div className="schedules-headings">
-            {compact ? <CompactHeadings /> : <FullHeadings />}
-          </div>
-          {entries.map((entry, i) => (
-            <div
-              key={scheduleRowKey(entry)}
-              role="button"
-              tabIndex={-1}
-              aria-selected={i === selected}
-              className={`schedules-row${entry.recurring ? ' recurring' : ''}${i === selected ? ' selected' : ''}`}
-              data-index={i}
-              onClick={() => onRowClick(i)}
-              onDoubleClick={() => focusOwner(entry)}
-            >
-              <span className="schedules-num">{i + 1})</span>
-              {compact ? <CompactRow entry={entry} /> : <FullRow entry={entry} />}
-            </div>
-          ))}
+          <ScheduleSection
+            entries={sections.system}
+            offset={0}
+            compact={compact}
+            selected={selected}
+            onRowClick={onRowClick}
+            onRowDoubleClick={focusOwner}
+          />
+          <ScheduleSection
+            entries={sections.tabs}
+            offset={sections.system.length}
+            compact={compact}
+            selected={selected}
+            onRowClick={onRowClick}
+            onRowDoubleClick={focusOwner}
+          />
         </>
       )}
       {pendingDelete && (
@@ -131,51 +134,5 @@ export function SchedulesTab({
         />
       )}
     </div>
-  );
-}
-
-function FullHeadings() {
-  return (
-    <>
-      <span className="schedules-num" />
-      <span>Agent</span>
-      <span>Id</span>
-      <span>Next</span>
-      <span>Spec</span>
-      <span>Command</span>
-    </>
-  );
-}
-
-function CompactHeadings() {
-  return (
-    <>
-      <span className="schedules-num" />
-      <span>Next</span>
-      <span>Id</span>
-      <span>Agent</span>
-    </>
-  );
-}
-
-function FullRow({ entry }: { entry: ScheduleRow }) {
-  return (
-    <>
-      <span className="schedules-owner">{entry.tab}</span>
-      <span className="schedules-id">{entry.id}</span>
-      <span className="schedules-next">{entry.next}</span>
-      <span className="schedules-spec">{entry.spec}</span>
-      <span className="schedules-command">{entry.command}</span>
-    </>
-  );
-}
-
-function CompactRow({ entry }: { entry: ScheduleRow }) {
-  return (
-    <>
-      <span className="schedules-next">{entry.next.split(' ').pop()}</span>
-      <span className="schedules-id">{entry.id}</span>
-      <span className="schedules-owner">{entry.tab}</span>
-    </>
   );
 }
