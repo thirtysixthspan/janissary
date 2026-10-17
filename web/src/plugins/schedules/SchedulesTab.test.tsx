@@ -64,12 +64,12 @@ describe('SchedulesTab', () => {
     expect(screen.getByText('3:00pm')).toBeInTheDocument();
   });
 
-  it('renders the empty state with no clear control when there is nothing scheduled', () => {
+  it('renders the empty state with no section titles when there is nothing scheduled', () => {
     renderTab([]);
 
     expect(screen.getByText('No scheduled commands.')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Clear tab schedules')).toBeNull();
-    expect(screen.queryByLabelText('Clear system schedules')).toBeNull();
+    expect(screen.queryByText('System Schedules')).toBeNull();
+    expect(screen.queryByText('Tab Schedules')).toBeNull();
   });
 
   it('renders the host\'s split action when one is supplied, and nothing when it is not', () => {
@@ -86,14 +86,6 @@ describe('SchedulesTab', () => {
   it('marks a recurring row so it reads apart from a one-shot', () => {
     const { container } = renderTab([row({ recurring: true })]);
     expect(container.querySelector('.schedules-row.recurring')).not.toBeNull();
-  });
-
-  it('sends the tab clear intent from the tab section header', () => {
-    const { intent } = renderTab([row()]);
-
-    fireEvent.click(screen.getByLabelText('Clear tab schedules'));
-
-    expect(intent).toHaveBeenCalledWith('clear', { owner: 'tab' });
   });
 
   it('moves the selection with the arrow, Home, and End keys', () => {
@@ -200,21 +192,44 @@ describe('SchedulesTab sections', () => {
     expect(container.querySelectorAll('.schedules-headings')).toHaveLength(1);
   });
 
-  it('clears each owner from its own header row', () => {
-    const { intent } = renderTab([row({ id: 'standup' }), systemRow()]);
+  it('offers no clear control in either section, so bulk clearing stays on the commands', () => {
+    renderTab([row({ id: 'standup' }), systemRow()]);
 
-    fireEvent.click(screen.getByLabelText('Clear system schedules'));
-    expect(intent).toHaveBeenLastCalledWith('clear', { owner: 'system' });
-
-    fireEvent.click(screen.getByLabelText('Clear tab schedules'));
-    expect(intent).toHaveBeenLastCalledWith('clear', { owner: 'tab' });
+    expect(screen.queryByRole('button', { name: /clear/i })).toBeNull();
   });
 
-  it('shows a header clear only for a section that has rows', () => {
-    renderTab([row({ id: 'standup' })]);
+  it('titles each section above its headings, and omits the title of an empty section', () => {
+    const { container } = renderTab([row({ id: 'standup' })]);
 
-    expect(screen.queryByLabelText('Clear system schedules')).toBeNull();
-    expect(screen.getByLabelText('Clear tab schedules')).toBeInTheDocument();
+    expect(screen.queryByText('System Schedules')).toBeNull();
+    expect(container.querySelector('.schedules-section')!.firstElementChild).toHaveTextContent('Tab Schedules');
+  });
+
+  it('shows each section title, system first, with that section\'s rows beneath it', () => {
+    const { container } = renderTab([row({ id: 'standup' }), systemRow()]);
+    const titles = [...container.querySelectorAll('.schedules-section-title')].map((element) => element.textContent);
+
+    expect(titles).toEqual(['System Schedules', 'Tab Schedules']);
+    const sections = container.querySelectorAll('.schedules-section');
+    expect(sections[0]!.querySelector('.schedules-row')).toHaveTextContent('nightly');
+    expect(sections[1]!.querySelector('.schedules-row')).toHaveTextContent('standup');
+  });
+
+  it('orders the full columns as Agent, Id, Timing, Next Run, Command, with each row matching', () => {
+    const { container } = renderTab([row({ id: 'fetch', spec: 'every 5m', next: 'Jan 1 3:00pm', command: 'echo hi' })]);
+
+    const headings = [...container.querySelectorAll(':scope .schedules-headings > span')].map((cell) => cell.textContent);
+    const cells = [...container.querySelectorAll(':scope .schedules-row > span')].map((cell) => cell.textContent);
+
+    expect(headings).toEqual(['', 'Agent', 'Id', 'Timing', 'Next Run', 'Command']);
+    expect(cells).toEqual(['1)', 'agent-1', 'fetch', 'every 5m', 'Jan 1 3:00pm', 'echo hi']);
+  });
+
+  it('names the compressed columns Next Run, Id, Agent', () => {
+    const { container } = renderTab([row()], 'right');
+
+    const headings = [...container.querySelectorAll(':scope .schedules-headings > span')].map((cell) => cell.textContent);
+    expect(headings).toEqual(['', 'Next Run', 'Id', 'Agent']);
   });
 
   it('numbers rows continuously from the top across both sections', () => {

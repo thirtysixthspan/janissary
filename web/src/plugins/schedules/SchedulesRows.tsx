@@ -4,12 +4,12 @@ import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { ScheduleRow } from '@shared/plugins/schedules/shared';
 import { scheduleRowKey } from './schedules-keys';
 
-// One section of the schedules list: its own column-heading row followed by its rows. `offset` is the
+// One section of the schedules list: a title, its own column-heading row, then its rows. `offset` is the
 // section's first position in the flat, on-screen order, so numbering and selection indexes continue
-// across sections. The heading row ends in a trash icon that clears this section's owner, and each
-// row ends in a trash icon that asks to delete that row's schedule. An empty section renders nothing.
+// across sections. Each row ends in a trash icon that asks to delete that row's schedule. An empty
+// section renders nothing.
 export function ScheduleSection({
-  owner, entries, offset, compact, selected, onRowClick, onRowDoubleClick, onClear, onDelete,
+  owner, entries, offset, compact, selected, onRowClick, onRowDoubleClick, onDelete,
 }: {
   owner: 'system' | 'tab';
   entries: ScheduleRow[];
@@ -18,22 +18,14 @@ export function ScheduleSection({
   selected: number | null;
   onRowClick: (index: number) => void;
   onRowDoubleClick: (entry: ScheduleRow) => void;
-  onClear: () => void;
   onDelete: (entry: ScheduleRow) => void;
 }) {
   if (entries.length === 0) return null;
   return (
     <div className="schedules-section">
+      <div className="schedules-section-title">{owner === 'system' ? 'System Schedules' : 'Tab Schedules'}</div>
       <div className="schedules-headings">
         {compact ? <CompactHeadings /> : <FullHeadings />}
-        <button
-          type="button"
-          className="schedules-clear"
-          aria-label={owner === 'system' ? 'Clear system schedules' : 'Clear tab schedules'}
-          onClick={onClear}
-        >
-          <FontAwesomeIcon icon={faTrash} />
-        </button>
       </div>
       {entries.map((entry, i) => {
         const index = offset + i;
@@ -74,8 +66,8 @@ function FullHeadings() {
       <span className="schedules-num" />
       <span>Agent</span>
       <span>Id</span>
-      <span>Next</span>
-      <span>Spec</span>
+      <span className="schedules-spec">Timing</span>
+      <span className="schedules-next">Next Run</span>
       <span>Command</span>
     </>
   );
@@ -85,7 +77,7 @@ function CompactHeadings() {
   return (
     <>
       <span className="schedules-num" />
-      <span>Next</span>
+      <span>Next Run</span>
       <span>Id</span>
       <span>Agent</span>
     </>
@@ -97,8 +89,8 @@ function FullRow({ entry }: { entry: ScheduleRow }) {
     <>
       <span className="schedules-owner" title={entry.tab}>{entry.tab}</span>
       <span className="schedules-id" title={entry.id}>{entry.id}</span>
-      <span className="schedules-next" title={entry.next}>{entry.next}</span>
       <span className="schedules-spec" title={entry.spec}>{entry.spec}</span>
+      <span className="schedules-next" title={entry.next}>{entry.next}</span>
       <span className="schedules-command" title={entry.command}>{entry.command}</span>
     </>
   );

@@ -2,11 +2,17 @@ import { describe, expect, it } from 'vitest';
 import schedules from './schedules.css?raw';
 
 describe('schedules stylesheet', () => {
-  it('sizes the text tracks so they can shrink below their content width', () => {
+  it('sizes each column to its content and lets the command column shrink', () => {
     expect(schedules).toContain(
-      'grid-template-columns: 2em minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr) 1.5em',
+      'grid-template-columns: auto auto auto auto auto minmax(0, auto) auto',
     );
-    expect(schedules).toContain('grid-template-columns: 1.5em minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 1.5em');
+    expect(schedules).toContain('grid-template-columns: auto auto auto minmax(0, auto) auto');
+  });
+
+  it('keeps the headings and the rows on the section grid through subgrid', () => {
+    expect(schedules).toContain('.schedules-headings, .schedules-row {');
+    expect(schedules).toContain('grid-template-columns: subgrid');
+    expect(schedules).toContain('grid-column: 1 / -1');
   });
 
   it('clips each cell with an ellipsis and keeps its text left-aligned', () => {
@@ -20,11 +26,15 @@ describe('schedules stylesheet', () => {
     expect(cell).toContain('text-align: left');
   });
 
-  it('keeps the headings and the rows on one shared grid', () => {
-    expect(schedules).toContain('.schedules-headings, .schedules-row {');
+  it('wraps the timing and next-run cells, headings included, instead of clipping them', () => {
+    expect(schedules).toContain(
+      '.schedules-headings > .schedules-spec, .schedules-headings > .schedules-next,\n'
+      + '.schedules-row > .schedules-spec, .schedules-row > .schedules-next { white-space: normal;',
+    );
   });
 
-  it('styles the row trash icon the same as the header icon', () => {
-    expect(schedules).toContain('.schedules-clear, .schedules-row-delete {');
+  it('styles the row trash icon', () => {
+    expect(schedules).toContain('.schedules-row-delete {');
+    expect(schedules).not.toContain('.schedules-clear');
   });
 });
