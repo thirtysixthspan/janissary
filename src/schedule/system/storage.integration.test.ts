@@ -1,11 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import type * as Fs from 'node:fs';
 import { clearStateDirectories } from '../../state/dirs.js';
 import { initHarnessCaptureDirectory } from '../../harness/capture/file.js';
 import { SystemScheduleStore } from './store.js';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof Fs>();
+  return { ...actual, renameSync: vi.fn(actual.renameSync) };
+});
 
 const snapshot = {
   version: 1 as const,
@@ -40,25 +46,31 @@ describe('system schedule storage integration', () => {
 
   it('preserves the previous snapshot and cleans up after a temporary write failure', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'schedule failed replacement '));
-    let directory: string | undefined;
+    const directory = path.join(root, '.janissary');
     try {
       const store = new SystemScheduleStore(root);
       expect(store.save(snapshot)).toEqual({ ok: true });
       const previousBytes = readFileSync(store.file, 'utf8');
-      directory = path.dirname(store.file);
-      chmodSync(directory, 0o555);
+      vi.mocked(renameSync).mockClear();
+      vi.mocked(renameSync).mockImplementationOnce(() => {
+        throw Object.assign(new Error('forced replacement failure'), { code: 'EIO' });
+      });
 
-      const replacement = {
-        ...snapshot,
-        entries: snapshot.entries.map((entry) => ({ ...entry, nextRun: entry.nextRun + 1 })),
-      };
-      const result = store.save(replacement);
+      try {
+        const replacement = {
+          ...snapshot,
+          entries: snapshot.entries.map((entry) => ({ ...entry, nextRun: entry.nextRun + 1 })),
+        };
+        const result = store.save(replacement);
 
-      expect(result).toMatchObject({ ok: false, kind: 'io' });
-      expect(readFileSync(store.file, 'utf8')).toBe(previousBytes);
-      expect(readdirSync(directory)).toEqual(['system-schedules.json']);
+        expect(renameSync).toHaveBeenCalledOnce();
+        expect(result).toMatchObject({ ok: false, kind: 'io' });
+        expect(readFileSync(store.file, 'utf8')).toBe(previousBytes);
+        expect(readdirSync(directory)).toEqual(['system-schedules.json']);
+      } finally {
+        vi.mocked(renameSync).mockClear();
+      }
     } finally {
-      if (directory) chmodSync(directory, 0o755);
       rmSync(root, { recursive: true, force: true });
     }
   });
