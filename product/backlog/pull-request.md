@@ -33,3 +33,14 @@ Existing Risk: 4/10 - A clear operation that appears successful in memory but is
 Proposal Risk: 2/10 - Reopening the same scratch project after a normal restart and checking the persisted empty store and retained runscript catches a failure to persist the aggregate clear.
 
 Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "verify aggregate clear-all across ordinary restart". Extend the management scenario across the existing two-batch restart lifecycle used by `scripts/e2e/system-schedules-restart.mjs`: after the aggregate Clear all schedules action, assert both owners are empty and the runscript remains, close the browser batch, relaunch the same scratch project through the ordinary launcher, then run a second browser batch and assert the aggregate remains empty and the script still exists. Keep the current persisted-store assertion and use the existing storage integration coverage for repeated clear/reload behavior as complementary non-browser coverage.
+
+
+* Handle the hidden shell before waiting for visible post-restart script output.
+
+Existing Issue: The restart driver executes the retained runscript but waits for its marker in a visible system-shell locator without revealing the shell, even though `execute` only enqueues lines and the shell starts hidden after launch. Severity: 6/10
+
+Existing Risk: 5/10 - The restart E2E scenario times out on the normal hidden-shell startup path and cannot verify that the preserved script executed after relaunch.
+
+Proposal Risk: 2/10 - Explicitly focusing the managed system shell before waiting makes the assertion observe its retained output, with the existing execution scenario already using that reveal path.
+
+Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1729 "reveal system shell before post-restart output assertion". In `scripts/e2e/system-schedules-restart.mjs`, after `execute restart-probe`, run `tab focus system` before locating the visible `.tab-body[data-tab-label="system"]` and waiting for `restart-script-preserved`. The `execute` command in `src/commands/execute.ts` ensures the shell and queues lines but does not reveal it; compare `scripts/e2e/system-schedules-execution.mjs`, which explicitly focuses `system` after execution before observing output. Keep the runscript existence and persisted schedule assertions in the restart scenario.
