@@ -5,6 +5,7 @@ import type { Tab } from './types.js';
 import { runtimeFor } from './runtime.js';
 import type { QueueEntry } from '../command-queue/entry.js';
 import { enqueueSystemSchedule, dequeueWithReceipt, consumeReceipt, discardReceipt } from '../command-queue/receipts.js';
+import { pushQueue } from './queue.js';
 import type { DequeuedCommand, QueueReceipt } from '../command-queue/receipts.js';
 import { TabPluginRejection } from '../plugins/api-capabilities.js';
 
@@ -29,6 +30,13 @@ export abstract class TabQueueState {
     const runtime = runtimeFor(this.tabs, label);
     if (!runtime || lines.length === 0) return;
     for (const line of lines) enqueueSystemSchedule(runtime.queue, line, scheduleKey);
+    this.queueChanged();
+  }
+
+  enqueueSystemBatch(label: string, lines: string[]): void {
+    const runtime = runtimeFor(this.tabs, label);
+    if (!runtime || lines.length === 0) return;
+    for (const line of lines) pushQueue(runtime.queue, line);
     this.queueChanged();
   }
 

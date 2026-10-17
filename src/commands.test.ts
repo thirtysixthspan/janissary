@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { availableCommands, getOutput } from './commands.js';
 import { commands, findCommand } from './commands/index.js';
 import { findPriorityConflicts } from './commands/priority.js';
+import { resolveCommand } from './resolve.js';
 
 function helpText(): string {
   const result = getOutput('help');
@@ -17,7 +18,7 @@ describe('availableCommands', () => {
 
   // Derived from the registry now. The hand-written list it replaced omitted these outright, which
   // is the drift that made a second list worth deleting rather than correcting.
-  it.each([['open'], ['edit'], ['queue'], ['rename'], ['profile'], ['monitor'], ['tab'], ['theme']])(
+  it.each([['open'], ['edit'], ['execute'], ['queue'], ['rename'], ['profile'], ['monitor'], ['tab'], ['theme']])(
     'includes %s, which the hand-written list omitted',
     (name) => { expect(availableCommands).toContain(name); },
   );
@@ -63,6 +64,12 @@ describe('findCommand fallback', () => {
 
   it('returns undefined for a name the registry does not carry', () => {
     expect(findCommand('no-such-command', '')).toBeUndefined();
+  });
+});
+
+describe('execute command routing', () => {
+  it('routes execute case-insensitively through the registry', () => {
+    expect(resolveCommand('ExEcUtE deploy')).toEqual({ kind: 'app', name: 'execute', cmd: 'ExEcUtE deploy' });
   });
 });
 

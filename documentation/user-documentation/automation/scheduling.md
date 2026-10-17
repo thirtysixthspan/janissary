@@ -56,6 +56,18 @@ Use any of the five schedule forms above before `script <name>`. The script must
 
 `system` immediately after `schedule` is reserved for this project-level grammar. The `in <tab>` clause still targets a tab named `system` in ordinary tab schedules.
 
+## Run a runscript now
+
+Run a project runscript immediately with `execute <name>`:
+
+```
+execute deploy
+```
+
+The commands run in the project's managed system shell, even when you type the command from a workspaced shell. They share the system shell's FIFO with scheduled runs, and a failing line does not prevent later lines from running. Manual runs do not create a schedule or a scheduled-run notice. An empty script is a successful no-op; a missing one reports `No runscript named "<name>".`.
+
+Type `edit <name>` to open an existing runscript in the editor. An exact file target in your current working directory wins over the runscript. A missing bare name is not created automatically.
+
 ## Scheduling into another tab
 
 <img class="agent-float left" src="/agents/selim-south-east.png" alt="" />

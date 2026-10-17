@@ -14,6 +14,8 @@ Queue rows may carry server-only system-schedule provenance. The ordinary `TabVi
 
 A system schedule appends all lines from one runscript as a contiguous FIFO batch with one shared schedule key and one queue/state update. Batches cannot interleave, and an empty runscript appends no rows. The shell consumer continues through later lines after a failing command; schedule delivery does not add a per-line failure notice or stop policy. Queue rows are not persisted, so restart never replays previously queued work.
 
+`execute <name>` appends a runscript as one contiguous FIFO batch to the managed system shell using ordinary string rows with no schedule provenance. It updates the queue once, and an empty script adds no rows. Both scheduled and manual batches use the same consumer and retain FIFO ordering.
+
 The framework-free `CommandQueue` service in `web/src/shared/command-queue/command-queue.ts` and its `useCommandQueue` hook are published through `web/src/plugins/api.ts`. Consumers supply an enqueue/dequeue transport, a line runner, and busy/idle signals. The service and hook own FIFO handling, draining, wakeups, and disposal. The shell plugin supplies thin intent adapters, routing, history attribution, and zsh's status markers. There is no command-queue plugin.
 
 ## Queueing and draining

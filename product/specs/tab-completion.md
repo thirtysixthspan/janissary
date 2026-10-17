@@ -15,6 +15,8 @@ A command typed over several lines with `Shift+Enter` completes the same way on 
 
 ## Contextual Completion Rules
 
+`execute` completes valid project runscript names in its single name slot. Bare `edit` targets combine runscript names with filesystem matches; paths, names containing extensions, and `:line` targets use filesystem completion. Both use the current project runscript catalog for each request. A missing or unsafe catalog contributes no runscript suggestions. Additional `execute` arguments receive no runscript suggestions.
+
 The shell uses the following rules, in order of precedence:
 
 ### 2. Connection Management (`connection close`)

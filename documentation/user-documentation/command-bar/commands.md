@@ -12,7 +12,8 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `newfile <file>` | Open a new unsaved text file; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `newdir <directory>` | Create a directory immediately under an existing parent; see [Creating a file or directory](/user-documentation/tab-types/opening-files#create-a-file-or-directory) |
 | `open [external] [page] <target>` | Open a file, a web page, or an external application; see [Opening files and pages](/user-documentation/tab-types/opening-files) |
-| `edit <file>[:line]` | Open a file for editing, picking the editor by file type; see [Opening a file to change it](/user-documentation/tab-types/opening-files#opening-a-file-to-change-it-edit) |
+| `edit <file>[:line]` | Open a file for editing; a bare existing runscript name opens that script when no exact file exists; see [Opening files](/user-documentation/tab-types/opening-files#opening-a-file-to-change-it-edit) |
+| `execute <name>` | Run an existing project runscript immediately in the system shell; see [Scheduling](/user-documentation/automation/scheduling#run-a-runscript-now) |
 | `clear` | Empty the current tab's transcript — other tabs are unaffected. In a shell tab, `clear` clears the terminal; use `/clear` to empty the transcript |
 | `rename [newname]` | Set (or, bare, clear) the tab's display alias — see [Tabs](/user-documentation/getting-started/tabs) |
 | `tab focus <name>` | Focus the first tab matching its label or alias, including a hidden managed system tab |
@@ -25,6 +26,12 @@ These commands manage the app itself — the current tab's transcript and name, 
 | `conversations [left\|right\|<title>]` | Open or dock the [conversation list](/user-documentation/tab-types/conversations), or reopen a conversation by its title |
 | `shell [name] [-w\|--workspace\|--no-workspace] [--offline]` | Open a separate [shell tab](/user-documentation/command-bar/shell#open-a-shell-tab), in a fresh sandboxed workspace clone unless `--no-workspace` is given |
 | `quit` / `/quit` | Exit the application, after confirmation |
+
+## `edit` and `execute` runscripts
+
+Create a runscript in `.janissary/scripts/<name>.rs`, then run it immediately with `execute <name>`. Its commands run in the project shell, including when you type `execute` from a workspaced shell. The runscript name uses lowercase letters and digits, with single hyphens between words. A missing runscript prints `No runscript named "<name>".`.
+
+Use `edit <name>` to open an existing runscript. If a file with that exact name already exists at the path your working directory resolves to, Janissary opens that file instead. Other paths such as `edit notes/new-idea.md` keep the usual editor behavior.
 
 ## `help`
 

@@ -66,6 +66,8 @@ The project-owned system schedule manager handles persisted runscript schedules 
 
 The queue and its rows are in-memory only. Shutdown stops the scheduler, waits for prepared work to settle, and disposes the system schedule owner before the managed shell and its queue. No queued command is persisted or replayed after restart.
 
+`execute <name>` runs the current contents of an existing project runscript immediately in the managed system shell. Its ordinary queue rows share the FIFO with scheduled batches but carry no schedule provenance, create no schedule entry, and produce no schedule notice. A missing runscript returns `No runscript named "<name>".`. An empty runscript succeeds without queue rows. The same runscript can be opened for editing with `edit <name>` when no exact file target exists; an exact target takes precedence, and a missing runscript is never created implicitly.
+
 ### Sleep and overdue commands
 
 A command that became due while the machine was asleep runs once on wake; recurring schedules compute their next run from the current time. Delivery more than five seconds late adds a line to the notifications feed, even for the active tab and with notification toggles disabled: `<command> ran <duration> late (system was asleep)` when the entry was already overdue at the machine's last resume, or `<command> ran <duration> late` otherwise. Durations use seconds, minutes, hours and minutes, or days and hours. Several overdue entries each notify once when delivered. Remote entries wait until their channel is attached; entries on an ended session do not fire.

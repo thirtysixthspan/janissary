@@ -10,6 +10,10 @@ Returns the contents of `help.md` at the repo root (read and cached on first use
 
 `help <section>` returns one section of that text instead of all of it. The sections are the help text's own headings, **Commands** and **Key Bindings**, and the labelled key tables inside Key Bindings, such as **Global key bindings** or **Shell tab controls**. A heading's section runs to the next heading; a key table's section is its label line and the table under it. The name is matched without regard to case or extra spaces: a title equal to it wins, then a title that starts with it, then a title containing it as whole words, and among several candidates the earliest in the help text is chosen. So `help commands` prints the command table, `help shell` the shell tab's keys, and `help command bar` the command bar and tab controls. A name that matches nothing answers `No help section matches "<name>". Sections: <every section title>.` A section reply is rendered as markdown like the full text, and from a shell tab's command bar it is answered by the application rather than sent to zsh. When `help.md` cannot be read, `help <section>` returns the same generated summary as bare `help`.
 
+### `execute`
+
+`execute <name>` reads the current project runscript and appends its parsed lines as one contiguous batch to the managed system shell queue. The managed system shell is ensured before the batch is appended. Success is silent, and commands run through the ordinary shell/application dispatcher from the project shell. An empty runscript succeeds without queue rows. A malformed or invalid name returns exactly `Usage: execute <name>`. A missing script returns exactly `No runscript named "<name>".`; an existing unsafe or unreadable script returns `Could not read runscript "<name>".`. A failed shell start adds no rows and uses the system-shell start failure notice. Manual rows have no schedule provenance or schedule notice. See [[scheduling]] and [[command-queue]].
+
 ### `clear`
 
 Empties the current tab's transcript log. Other tabs are unaffected.

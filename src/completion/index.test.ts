@@ -213,3 +213,26 @@ describe('completeCommandLine — harness model', () => {
     expect(r.newInput).toBe(`harness claude --model ${model} `);
   });
 });
+
+describe('completeCommandLine — runscript commands', () => {
+  const scripts = ['deploy', 'test-suite'];
+  const noFiles = '/no/such/dir/xyz';
+
+  it('completes execute names only in its single name slot', () => {
+    expect(completeCommandLine('execute dep', 11, noFiles, [], [], undefined, { names: [], scripts }).newInput)
+      .toBe('execute deploy ');
+    expect(completeCommandLine('execute ', 8, noFiles, [], [], undefined, { names: [], scripts }).matches)
+      .toEqual(scripts);
+    expect(completeCommandLine('execute deploy extra', 20, noFiles, [], [], undefined, { names: [], scripts }).matches)
+      .toEqual([]);
+  });
+
+  it('combines bare edit script names with file matches but leaves paths to filesystem completion', () => {
+    expect(completeCommandLine('edit dep', 8, noFiles, [], [], undefined, { names: [], scripts }).newInput)
+      .toBe('edit deploy ');
+    expect(completeCommandLine('edit src/dep', 12, noFiles, [], [], undefined, { names: [], scripts }).matches)
+      .toEqual([]);
+    expect(completeCommandLine('edit deploy.ts', 14, noFiles, [], [], undefined, { names: [], scripts }).matches)
+      .toEqual([]);
+  });
+});
