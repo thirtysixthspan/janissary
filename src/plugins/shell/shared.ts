@@ -85,6 +85,9 @@ export type ShellPayload = ShellTerminalPayload | ShellProvisioningPayload;
 // The front of this tab's command queue, or `null` once it is empty.
 export type ShellQueuedLine = { line: string | null };
 
+export type ShellQueuedCommand = { line: string; receipt: string } | null;
+export type ShellQueuedCommandRequest = { receipt: string; discard?: true };
+
 // What the host decided about one line: `dispatched` is true when the application claimed it as a
 // command, false when it resolved to nothing and the shell should have it. The client writes a
 // `false` line to the terminal itself — the decision is the host's, because the command table is.
@@ -189,6 +192,16 @@ export function isEmptyShellIntent(value: unknown): value is undefined {
 // is a rejection — a request this plugin did not describe — instead of a silent success.
 export function isShellDispatch(value: unknown): value is string {
   return typeof value === 'string';
+}
+
+export function isShellQueuedCommandRequest(value: unknown): value is ShellQueuedCommandRequest {
+  return isRecord(value)
+    && typeof value.receipt === 'string'
+    && (value.discard === undefined || value.discard === true);
+}
+
+export function isShellQueuedCommand(value: unknown): value is ShellQueuedCommand {
+  return value === null || (isRecord(value) && typeof value.line === 'string' && typeof value.receipt === 'string');
 }
 
 export function isShellCompleteRequest(value: unknown): value is ShellCompleteRequest {

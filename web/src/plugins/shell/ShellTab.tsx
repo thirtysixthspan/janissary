@@ -85,7 +85,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const { queue, submit } = useShellCommandQueue(capabilities, run, startsBusy, (line) => {
     setMatches([]);
     setSent((previous) => appendShellHistory(previous, line));
-  }, appBar.queuedLines);
+  }, appBar.queuedLines, payload.ptyId);
   queueReference.current = queue;
 
   const bar = useCommandBarKeys({

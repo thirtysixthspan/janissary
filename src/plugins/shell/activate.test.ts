@@ -638,6 +638,29 @@ describe('shell plugin activation', () => {
     expect(ask(capabilities, 'dequeue', null)).toEqual({ line: null });
   });
 
+  it('forwards structured dequeue, dispatch, and discard through validated intents', async () => {
+    const { capabilities } = fakeCapabilities();
+    const nextQueuedCommand = vi.fn(() => ({ line: 'scheduled', receipt: 'opaque-receipt' }));
+    const dispatchQueuedCommand = vi.fn(async (_receipt: string, _options?: { discard: true }) => ({
+      dispatched: true, output: 'done',
+    }));
+    Object.assign(capabilities, { nextQueuedCommand, dispatchQueuedCommand });
+
+    expect(ask(capabilities, 'dequeue-command', null)).toEqual({
+      line: 'scheduled', receipt: 'opaque-receipt',
+    });
+    await expect(ask(capabilities, 'dispatch-command', { receipt: 'opaque-receipt' }))
+      .resolves.toEqual({ dispatched: true, output: 'done' });
+    await expect(ask(capabilities, 'dispatch-command', { receipt: 'opaque-receipt', discard: true }))
+      .resolves.toEqual({ dispatched: true, output: 'done' });
+
+    expect(nextQueuedCommand).toHaveBeenCalledOnce();
+    expect(dispatchQueuedCommand).toHaveBeenNthCalledWith(1, 'opaque-receipt', undefined);
+    expect(dispatchQueuedCommand).toHaveBeenNthCalledWith(2, 'opaque-receipt', { discard: true });
+    expect(() => ask(capabilities, 'dispatch-command', { receipt: 7 })).toThrow(TabPluginRejection);
+    expect(() => ask(capabilities, 'dispatch-command', { receipt: 'x', discard: false })).toThrow(TabPluginRejection);
+  });
+
   it('rejects a queued line that is not a string', () => {
     const { capabilities } = fakeCapabilities();
 

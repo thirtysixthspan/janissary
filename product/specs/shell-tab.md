@@ -97,7 +97,7 @@ gives a light terminal — and they change with the theme, including when the pi
 different one. The padding between the focus line and the terminal text takes the same theme
 background, so no dark strip shows beside the text under a light theme. Harness terminals keep their shared dark terminal colors.
 
-The shell opts into the core [[command-queue]]. Its bar queues while zsh is busy or provisioning; zsh's prompt signals wake the core FIFO service. The core spec owns submission ordering, cross-tab queue delivery, the `queue >` indicator, and popup editing. Shell supplies ordinary command-bar routing and records queued submissions in its own history. Direct terminal input bypasses the queue.
+The shell opts into the core [[command-queue]]. Its bar queues while zsh is busy or provisioning; zsh's prompt signals wake the core FIFO service. The core spec owns submission ordering, cross-tab queue delivery, the `queue >` indicator, and popup editing. Shell supplies ordinary command-bar routing and records queued submissions in its own history. The hidden retained system shell drains while inactive, but waits until its terminal is attached before dequeuing shell-directed work. Structured queue receipts preserve server-owned schedule provenance through application dispatch; shell-first commands and application-intercepted commands discard an unused receipt, while dispatch rejection and consumer cleanup also release it. Direct terminal input bypasses the queue.
 
 An application command that answers with text rather than opening something — `help`, for one — is
 shown in the terminal as a command line, followed by its reply on the next line. The reply is markdown, as

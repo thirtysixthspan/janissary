@@ -143,7 +143,8 @@ function makeCapabilities(overrides: {
     resourceUrl: (reference: string) => reference,
     intent: vi.fn(async (name: string, _payload?: unknown) => {
       if (name === 'terminal-status') return overrides.status ?? { ptyId: PAYLOAD.ptyId, running: true };
-      if (name === 'dispatch') {
+      if (name === 'dispatch-command' && typeof _payload === 'object' && _payload !== null && 'discard' in _payload) return null;
+      if (name === 'dispatch' || name === 'dispatch-command') {
         await answered;
         return { dispatched: overrides.dispatched ?? false, output: overrides.output ?? '' };
       }
@@ -443,14 +444,17 @@ describe('ShellTab', () => {
 
   it('drains a line another tab queued for it while zsh is idle', async () => {
     const queued = ['!ls'];
-    const { capabilities, rerenderShell, written } = renderTab();
+    const { capabilities, rerenderShell, written } = renderTab({ active: false });
     const intent = capabilities.intent as unknown as {
       getMockImplementation: () => (name: string, payload: unknown) => unknown;
       mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
     };
     const answer = intent.getMockImplementation();
     intent.mockImplementation(async (name, payload) => {
-      if (name === 'dequeue') return { line: queued.shift() ?? null };
+      if (name === 'dequeue-command') {
+        const line = queued.shift();
+        return line === undefined ? null : { line, receipt: `receipt-${line}` };
+      }
       return answer(name, payload);
     });
 
@@ -460,13 +464,62 @@ describe('ShellTab', () => {
     expect(queued).toEqual([]);
   });
 
+  it('discards the receipt for a queued shell-first line', async () => {
+    const { capabilities, rerenderShell, written } = renderTab();
+    const intent = capabilities.intent as unknown as {
+      getMockImplementation: () => (name: string, payload: unknown) => unknown;
+      mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
+    };
+    const answer = intent.getMockImplementation();
+    let available = true;
+    intent.mockImplementation(async (name, payload) => {
+      if (name === 'dequeue-command') {
+        if (!available) return null;
+        available = false;
+        return { line: '!pwd', receipt: 'shell-first' };
+      }
+      return answer(name, payload);
+    });
+
+    rerenderShell(PAYLOAD, capabilities, { queuedLines: { shell1: ['!pwd'] } });
+
+    await waitFor(() => { expect(written).toEqual(['pwd\n']); });
+    expect(capabilities.intent).toHaveBeenCalledWith('dispatch-command', { receipt: 'shell-first', discard: true });
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch-command', { receipt: 'shell-first' });
+  });
+
+  it('dispatches a queued application line by receipt and does not discard its consumed receipt', async () => {
+    const { capabilities, releaseDispatch, rerenderShell, written } = renderTab({ dispatched: true });
+    const intent = capabilities.intent as unknown as {
+      getMockImplementation: () => (name: string, payload: unknown) => unknown;
+      mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
+    };
+    const answer = intent.getMockImplementation();
+    let available = true;
+    intent.mockImplementation(async (name, payload) => {
+      if (name === 'dequeue-command') {
+        if (!available) return null;
+        available = false;
+        return { line: 'help', receipt: 'application' };
+      }
+      return answer(name, payload);
+    });
+
+    rerenderShell(PAYLOAD, capabilities, { queuedLines: { shell1: ['help'] } });
+    await waitFor(() => { expect(capabilities.intent).toHaveBeenCalledWith('dispatch-command', { receipt: 'application' }); });
+    await act(async () => { releaseDispatch(); });
+
+    expect(written).toEqual([]);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dispatch-command', { receipt: 'application', discard: true });
+  });
+
   it('does not ask for its next line when a line is queued for another tab', async () => {
     const { capabilities, rerenderShell } = renderTab();
 
     rerenderShell(PAYLOAD, capabilities, { queuedLines: { agent: ['ls'] } });
     await act(async () => {});
 
-    expect(capabilities.intent).not.toHaveBeenCalledWith('dequeue', null);
+    expect(capabilities.intent).not.toHaveBeenCalledWith('dequeue-command', null);
   });
 
   it('uses the tab dot color for the command bar dot', () => {
@@ -501,7 +554,10 @@ describe('ShellTab', () => {
     const answer = intent.getMockImplementation();
     intent.mockImplementation(async (name, payload) => {
       if (name === 'queue') { queued.push(payload as string); return { queued: true }; }
-      if (name === 'dequeue') return { line: queued.shift() ?? null };
+      if (name === 'dequeue-command') {
+        const line = queued.shift();
+        return line === undefined ? null : { line, receipt: `receipt-${line}` };
+      }
       return answer(name, payload);
     });
     act(() => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`C;${NONCE}`); });
@@ -532,7 +588,10 @@ describe('ShellTab', () => {
     const answer = intent.getMockImplementation();
     intent.mockImplementation(async (name, payload) => {
       if (name === 'queue') { queued.push(payload as string); return { queued: true }; }
-      if (name === 'dequeue') return { line: queued.shift() ?? null };
+      if (name === 'dequeue-command') {
+        const line = queued.shift();
+        return line === undefined ? null : { line, receipt: `receipt-${line}` };
+      }
       return answer(name, payload);
     });
 
@@ -686,12 +745,16 @@ describe('ShellTab', () => {
     const answer = intent.getMockImplementation();
     intent.mockImplementation(async (name, payload) => {
       if (name === 'queue') { queued.push(payload as string); return { queued: true }; }
-      if (name === 'dequeue') return { line: queued.shift() ?? null };
+      if (name === 'dequeue-command') {
+        const line = queued.shift();
+        return line === undefined ? null : { line, receipt: `receipt-${line}` };
+      }
       return answer(name, payload);
     });
     const { rerenderShell } = mountShell(PROVISIONING, made.capabilities);
 
     expect(made.capabilities.attachTerminal).not.toHaveBeenCalled();
+    expect(made.capabilities.intent).not.toHaveBeenCalledWith('dequeue-command', null);
     expect(document.querySelector('.command-area .command')).toHaveTextContent('queue');
     fireEvent.change(bar(), { target: { value: '!pwd' } });
     fireEvent.keyDown(bar(), { key: 'Enter' });
@@ -701,6 +764,9 @@ describe('ShellTab', () => {
     rerenderShell({ ...PAYLOAD, workspace: true, workspaceDir: PROVISIONING.workspaceDir, cwd: PROVISIONING.cwd });
     expect(made.capabilities.attachTerminal).toHaveBeenCalledWith('pty7', expect.any(Function));
     await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`D;${NONCE}`); });
+    await waitFor(() => {
+      expect(made.capabilities.intent).toHaveBeenCalledWith('dequeue-command', null);
+    });
     made.releaseDispatch();
 
     await waitFor(() => { expect(made.written).toEqual(['pwd\n']); });

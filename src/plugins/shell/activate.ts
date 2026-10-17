@@ -8,8 +8,8 @@ import {
 } from '../api.js';
 import {
   isEmptyShellIntent, isShellCommandState, isShellCompleteRequest, isShellCwd, isShellDispatch, isShellTerminalStatusRequest,
-  isShellPayload,
-  type ShellCommandState, type ShellCompleteRequest, type ShellPayload, type ShellQueuedLine,
+  isShellPayload, isShellQueuedCommandRequest,
+  type ShellCommandState, type ShellCompleteRequest, type ShellPayload, type ShellQueuedCommand, type ShellQueuedLine,
 } from './shared.js';
 import { openShellTab } from './open-tab.js';
 import { launchShellTab } from './launch-tab.js';
@@ -107,6 +107,8 @@ export function activate(): TabPluginActivation {
         complete: TabPluginIntentEntry<ShellPayload, ShellCompleteRequest>;
         queue: TabPluginIntentEntry<ShellPayload, string>;
         dequeue: TabPluginIntentEntry<ShellPayload, undefined>;
+        'dequeue-command': TabPluginIntentEntry<ShellPayload, undefined>;
+        'dispatch-command': TabPluginIntentEntry<ShellPayload, { receipt: string; discard?: true }>;
       }
     >('shell', isShellPayload, {
       // Asked once for the attachment's captured PTY id. The server echoes its current generation so
@@ -200,6 +202,17 @@ export function activate(): TabPluginActivation {
       dequeue: {
         payload: isEmptyShellIntent,
         run: (_tabPayload, _payload, capabilities): ShellQueuedLine => ({ line: capabilities.nextQueuedLine() }),
+      },
+      'dequeue-command': {
+        payload: isEmptyShellIntent,
+        run: (_tabPayload, _payload, capabilities): ShellQueuedCommand => capabilities.nextQueuedCommand(),
+      },
+      'dispatch-command': {
+        payload: isShellQueuedCommandRequest,
+        run: (_tabPayload, request, capabilities) => capabilities.dispatchQueuedCommand(
+          request.receipt,
+          request.discard ? { discard: true } : undefined,
+        ),
       },
     }),
   };
