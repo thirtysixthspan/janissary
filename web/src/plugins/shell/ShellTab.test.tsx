@@ -464,6 +464,46 @@ describe('ShellTab', () => {
     expect(queued).toEqual([]);
   });
 
+  it('waits for terminal attachment before draining queued shell lines', async () => {
+    const { promise: attachment, resolve: resolveAttachment } = withResolvers<PluginTerminal>();
+    const made = makeCapabilities();
+    const attachTerminal = made.capabilities.attachTerminal as unknown as {
+      mockImplementation: (attach: () => Promise<PluginTerminal>) => void;
+    };
+    attachTerminal.mockImplementation(() => attachment);
+    const queued = ['!first', '!second'];
+    const intent = made.capabilities.intent as unknown as {
+      getMockImplementation: () => (name: string, payload: unknown) => unknown;
+      mockImplementation: (fn: (name: string, payload: unknown) => unknown) => void;
+    };
+    const answer = intent.getMockImplementation();
+    intent.mockImplementation(async (name, payload) => {
+      if (name === 'dequeue-command') {
+        const line = queued.shift();
+        return line === undefined ? null : { line, receipt: `receipt-${line}` };
+      }
+      return answer(name, payload);
+    });
+    const { rerenderShell } = mountShell(PAYLOAD, made.capabilities);
+
+    rerenderShell(PAYLOAD, made.capabilities, { queuedLines: { shell1: ['!first', '!second'] } });
+    await act(async () => {});
+    expect(made.capabilities.intent).not.toHaveBeenCalledWith('dequeue-command', null);
+    expect(made.written).toEqual([]);
+    expect(queued).toEqual(['!first', '!second']);
+
+    await act(async () => { resolveAttachment(made.handle); });
+    await waitFor(() => { expect(made.written).toEqual(['first\n']); });
+    expect(made.capabilities.intent).toHaveBeenCalledWith('dequeue-command', null);
+    expect((made.capabilities.intent as unknown as { mock: { calls: unknown[][] } }).mock.calls
+      .filter(([name]) => name === 'dequeue-command')).toHaveLength(1);
+
+    await act(async () => { commandStateHandlers.findLast(({ id }) => id === 133)?.handle(`D;${NONCE}`); });
+    await waitFor(() => { expect(made.written).toEqual(['first\n', 'second\n']); });
+    expect((made.capabilities.intent as unknown as { mock: { calls: unknown[][] } }).mock.calls
+      .filter(([name]) => name === 'dequeue-command')).toHaveLength(2);
+  });
+
   it('discards the receipt for a queued shell-first line', async () => {
     const { capabilities, rerenderShell, written } = renderTab();
     const intent = capabilities.intent as unknown as {

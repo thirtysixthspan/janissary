@@ -21,7 +21,7 @@ describe('useShellCommandQueue', () => {
       if (receipt) await value.intent('dispatch-command', { receipt });
       return false;
     });
-    const { result } = renderHook(() => useShellCommandQueue(value, run, true, vi.fn(), ['same']));
+    const { result } = renderHook(() => useShellCommandQueue(value, run, true, vi.fn(), ['same'], true));
 
     await act(async () => { result.current.queue.setBusy(false); });
 
@@ -34,7 +34,7 @@ describe('useShellCommandQueue', () => {
   it('discards an outstanding receipt when the consumer unmounts', async () => {
     const { intent, value } = capabilities([{ line: 'pending', receipt: 'opaque-2' }]);
     const run = vi.fn(async () => await new Promise<boolean>(() => {}));
-    const { result, unmount } = renderHook(() => useShellCommandQueue(value, run, true, vi.fn(), ['pending']));
+    const { result, unmount } = renderHook(() => useShellCommandQueue(value, run, true, vi.fn(), ['pending'], true));
 
     await act(async () => { result.current.queue.setBusy(false); });
     await waitFor(() => { expect(run).toHaveBeenCalled(); });
@@ -49,7 +49,7 @@ describe('useShellCommandQueue', () => {
     const { intent, value } = capabilities([{ line: 'old-generation', receipt: 'old-receipt' }]);
     const run = vi.fn(async () => await new Promise<boolean>(() => {}));
     const { result, rerender } = renderHook(
-      ({ generation }: { generation: string }) => useShellCommandQueue(value, run, true, vi.fn(), ['old-generation'], generation),
+      ({ generation }: { generation: string }) => useShellCommandQueue(value, run, true, vi.fn(), ['old-generation'], true, generation),
       { initialProps: { generation: 'pty-old' } },
     );
 

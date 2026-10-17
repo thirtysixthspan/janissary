@@ -50,7 +50,7 @@ export function ShellTab({ payload, capabilities }: Properties) {
   useApplicationBarEdits(appBar, inputReference, draft, setDraft);
 
   const terminalHistory = useTerminalCommandHistory(setSent);
-  const { write, displayReply, focus: focusTerminal, clearSelection, scrollLines, scrollToBottom, rows: terminalRows } = useShellTabTerminal({
+  const { write, displayReply, focus: focusTerminal, clearSelection, scrollLines, scrollToBottom, rows: terminalRows, terminalReady } = useShellTabTerminal({
     payload,
     capabilities,
     containerRef: terminalReference,
@@ -82,10 +82,10 @@ export function ShellTab({ payload, capabilities }: Properties) {
   const run = useShellSubmit({
     appBar, capabilities, displayReply, expectCommand: terminalHistory.expect, openHistory, setMatches, setSent, write,
   });
-  const { queue, submit } = useShellCommandQueue(capabilities, run, startsBusy, (line) => {
+  const { queue, submit } = useShellCommandQueue(capabilities, run, commandRunning, (line) => {
     setMatches([]);
     setSent((previous) => appendShellHistory(previous, line));
-  }, appBar.queuedLines, payload.ptyId);
+  }, appBar.queuedLines, terminalReady, payload.ptyId);
   queueReference.current = queue;
 
   const bar = useCommandBarKeys({

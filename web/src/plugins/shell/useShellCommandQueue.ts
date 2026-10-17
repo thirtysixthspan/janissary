@@ -12,6 +12,7 @@ export function useShellCommandQueue(
   initiallyBusy: boolean,
   onQueued: (line: string) => void,
   queuedLines: readonly string[],
+  terminalReady: boolean,
   terminalGeneration?: string,
 ) {
   const capabilitiesReference = useRef(capabilities);
@@ -45,7 +46,7 @@ export function useShellCommandQueue(
     adapterReference.current?.attach();
     return () => { void adapterReference.current?.dispose(); };
   }, [terminalGeneration]);
-  return useCommandQueue({
+  const queueState = useCommandQueue({
     enqueue: async (line) => {
       try {
         await capabilities.intent<{ queued: boolean }>('queue', line);
@@ -53,6 +54,10 @@ export function useShellCommandQueue(
         reportShellIntentFailure(capabilities, 'shell queue intent failed', error);
       }
     },
-    dequeue: () => adapterReference.current?.dequeue() ?? Promise.resolve(null),
+    dequeue: () => terminalReady ? adapterReference.current?.dequeue() ?? Promise.resolve(null) : Promise.resolve(null),
   }, (line, queued) => adapterReference.current?.run(line, queued) ?? Promise.resolve(false), initiallyBusy, onQueued, queuedLines);
+  useEffect(() => {
+    if (terminalReady && queuedLines.length > 0) queueState.queue.wake();
+  }, [queueState.queue, queuedLines, terminalReady]);
+  return queueState;
 }

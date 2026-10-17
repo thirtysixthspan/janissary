@@ -1,6 +1,6 @@
 import type { ShellPayload } from '@shared/plugins/shell/shared';
 import type { TabPluginClientCapabilities } from '../api';
-import { useShellTerminal, type ShellTerminalHandle } from './useShellTerminal';
+import { useShellTerminal } from './useShellTerminal';
 import { reportShellCwd } from './report-shell-cwd';
 import { reportShellIntentFailure } from './report-shell-intent-failure';
 
@@ -17,7 +17,7 @@ type Options = {
 // ref, so none of these needs a stable identity.
 export function useShellTabTerminal({
   payload, capabilities, containerRef, onCommand, onCommandRunning,
-}: Options): ShellTerminalHandle {
+}: Options) {
   return useShellTerminal({
     ptyId: payload.ptyId,
     ...(payload.provisioning && { connectPtyId: payload.connectPtyId }),
