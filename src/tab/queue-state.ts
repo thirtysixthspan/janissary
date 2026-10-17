@@ -3,6 +3,10 @@ import {
 } from './queue-commands.js';
 import type { Tab } from './types.js';
 import { runtimeFor } from './runtime.js';
+import type { QueueEntry } from '../command-queue/entry.js';
+import { enqueueSystemSchedule, dequeueWithReceipt, consumeReceipt, discardReceipt } from '../command-queue/receipts.js';
+import type { DequeuedCommand, QueueReceipt } from '../command-queue/receipts.js';
+import { TabPluginRejection } from '../plugins/api-capabilities.js';
 
 export abstract class TabQueueState {
   protected abstract tabs: Tab[];
@@ -12,6 +16,32 @@ export abstract class TabQueueState {
   queueFor(label: string): string[] {
     const queue = runtimeFor(this.tabs, label)?.queue;
     return queue ? queueForOp(queue) : [];
+  }
+
+  enqueueSystemSchedule(label: string, line: string, scheduleKey: string): void {
+    const runtime = runtimeFor(this.tabs, label);
+    if (!runtime) return;
+    enqueueSystemSchedule(runtime.queue, line, scheduleKey);
+    this.queueChanged();
+  }
+
+  dequeueCommand(label: string, pluginId: string): DequeuedCommand | null {
+    const runtime = runtimeFor(this.tabs, label);
+    if (!runtime) return null;
+    const command = dequeueWithReceipt(runtime, pluginId);
+    if (command) this.queueChanged();
+    return command;
+  }
+
+  consumeCommandReceipt(label: string, pluginId: string, receipt: QueueReceipt): QueueEntry {
+    const runtime = runtimeFor(this.tabs, label);
+    if (!runtime) throw new TabPluginRejection('command queue tab is no longer open');
+    return consumeReceipt(runtime, pluginId, receipt);
+  }
+
+  discardCommandReceipt(label: string, pluginId: string, receipt: QueueReceipt): void {
+    const runtime = runtimeFor(this.tabs, label);
+    if (runtime) discardReceipt(runtime, pluginId, receipt);
   }
 
   enqueue(label: string, text: string): void {

@@ -2,6 +2,8 @@
 // tab's in-flight ACP prompt settles with.
 import type { AcpPromptResult } from '../acp/types.js';
 import type { AgentRunView } from '../agent/types.js';
+import type { QueueEntry } from '../command-queue/entry.js';
+import type { ReceiptRecord } from '../command-queue/receipts.js';
 
 export type LogEntry = {
   input: string;
@@ -281,7 +283,8 @@ export type TabRuntime = {
   cwd?: string;
   busy: boolean;
   context: string[];
-  queue: string[];
+  queue: QueueEntry[];
+  queueReceipts?: Map<string, ReceiptRecord>;
   // When content last arrived in this tab's transcript, in epoch milliseconds. A tab's activity is
   // its own output, so this is written wherever the transcript grows rather than read from the log:
   // a `LogEntry` carries no timestamp, and adding one would touch every producer, the wire

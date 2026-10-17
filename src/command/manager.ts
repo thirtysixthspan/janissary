@@ -65,6 +65,18 @@ export class CommandManager {
     return this.dispatchLine(label, input, captureLimitMs, this.createInvocationContext(label));
   }
 
+  async dispatchQueuedLine(
+    label: string,
+    input: string,
+    systemSchedule?: CommandInvocationContext['systemSchedule'],
+  ): Promise<{ dispatched: boolean; output: string; coreResponse?: boolean; result?: unknown }> {
+    const invocation = this.createInvocationContext(label);
+    const withProvenance = systemSchedule
+      ? Object.freeze({ ...invocation, systemSchedule: Object.freeze({ ...systemSchedule }) })
+      : invocation;
+    return this.dispatchLine(label, input, DISPATCH_CAPTURE_LIMIT_MS, withProvenance);
+  }
+
   async dispatchLineInInvocation(
     label: string,
     input: string,
@@ -177,6 +189,7 @@ export class CommandManager {
       caller: parent.caller,
       signal: parent.signal,
       ...(parent.awaitResult && { awaitResult: true }),
+      ...(parent.systemSchedule && { systemSchedule: parent.systemSchedule }),
     });
   }
 }

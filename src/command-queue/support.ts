@@ -5,8 +5,9 @@ import type { TabView } from '../protocol/tab.js';
 type QueueTab = Pick<Tab, 'view' | 'plugin' | 'hasCommandQueue'>;
 
 export function declaresCommandQueue(declaration: Partial<Pick<TabPluginDeclaration, 'capabilities'>> | undefined): boolean {
-  return declaration?.capabilities?.includes('queueLine') === true
-    && declaration.capabilities.includes('nextQueuedLine');
+  const capabilities = declaration?.capabilities;
+  return capabilities?.includes('queueLine') === true && capabilities.includes('nextQueuedLine')
+    || capabilities?.includes('nextQueuedCommand') === true && capabilities.includes('dispatchQueuedCommand');
 }
 
 export function supportsCommandQueue(

@@ -68,6 +68,22 @@ describe('plugin teardown', () => {
       .rejects.toThrow('Tab plugin "fixture" disabled: client render exploded.');
   });
 
+  it('releases outstanding queue receipts when the owning plugin is disabled', () => {
+    const managers = makeManagers();
+    openFixture(managers, 'queued', '/tmp/queued.fixture');
+    const pluginTab = managers.tab.tabs.find((tab) => tab.plugin?.instanceKey === 'queued');
+    if (!pluginTab) throw new Error('The plugin tab was not created.');
+    pluginTab.runtime?.queue.push('work');
+    const receipt = managers.tab.dequeueCommand(pluginTab.label, 'fixture');
+    expect(pluginTab.runtime?.queueReceipts?.size).toBe(1);
+    const host = new TabPluginHost(managers, [manifest], {});
+
+    host.clientFailed(pluginTab.label, 'plugin disabled');
+
+    expect(pluginTab.runtime?.queueReceipts?.size).toBe(0);
+    expect(receipt).toMatchObject({ line: 'work' });
+  });
+
   it('keeps a core tab when the failed launch shell owns the final central tab', () => {
     const managers = makeManagers();
     const root = managers.tab.tabs[0];

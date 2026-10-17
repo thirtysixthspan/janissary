@@ -35,6 +35,8 @@ export type TabPluginCapabilityName =
   | 'terminalRunning'
   | 'queueLine'
   | 'nextQueuedLine'
+  | 'nextQueuedCommand'
+  | 'dispatchQueuedCommand'
   | 'recordCwd'
   | 'recordGlobalHistory'
   | 'readWorkspaceChangeSet'
@@ -79,6 +81,8 @@ const CAPABILITIES: Record<TabPluginCapabilityName, true> = {
   terminalRunning: true,
   queueLine: true,
   nextQueuedLine: true,
+  nextQueuedCommand: true,
+  dispatchQueuedCommand: true,
   recordCwd: true,
   recordGlobalHistory: true,
   readWorkspaceChangeSet: true,
