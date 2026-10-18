@@ -60,6 +60,16 @@ function openRunMonitorTab(
   managers.agent.attachMonitor(runId, monitor.label);
 }
 
+function linkRunToCaller(
+  run: ReturnType<CommandManagers['agent']['create']>, parent: ReturnType<typeof trustedParentRun>,
+  signal: AbortSignal, managers: CommandManagers, completion: Promise<void>,
+): () => void {
+  if (parent) trackChildRun(parent, run, managers, completion);
+  const abortRun = () => { void managers.agent.finish(run.id, 'terminated').catch(() => {}); };
+  signal.addEventListener('abort', abortRun, { once: true });
+  return abortRun;
+}
+
 async function runAgent(
   commandText: string,
   label: string,
@@ -117,19 +127,15 @@ async function runAgent(
         await releaseWorkspace();
         throw error;
       }
-      if (parent) trackChildRun(parent, run, managers, completion.promise);
-      abortRun = () => { void managers.agent.finish(run!.id, 'terminated').catch(() => {}); };
-      caller.signal.addEventListener('abort', abortRun, { once: true });
+      abortRun = linkRunToCaller(run, parent, caller.signal, managers, completion.promise);
       snapshot = await remoteTarget.channel.resolveAgentSnapshot(launch.task, [...launch.skills]);
     } else {
       const local = await startLocalAgentRun(
         managers, capturedCaller, commandText, launch.model, launch.effort, localWorkspaceName,
       );
       run = local.run;
-      if (parent) trackChildRun(parent, run, managers, completion.promise);
+      abortRun = linkRunToCaller(run, parent, caller.signal, managers, completion.promise);
       executionDir = local.workspace.dir;
-      abortRun = () => { void managers.agent.finish(run!.id, 'terminated').catch(() => {}); };
-      caller.signal.addEventListener('abort', abortRun, { once: true });
       await local.workspace.ready;
       if (run.abortController.signal.aborted) {
         const cleanupWarnings = await finishRunCollectingWarnings(run.id, 'terminated', managers);
