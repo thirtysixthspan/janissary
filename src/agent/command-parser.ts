@@ -4,6 +4,8 @@ type Token = { value: string; start: number; end: number };
 type Fields = { host?: string; inTab: boolean; group?: string; workspace?: string; skills: string[]; model?: string; effort?: string };
 type ParseStep = { next: number } | { error: string };
 
+const SINGLE_VALUE_CLAUSES = new Map([['on', 'host'], ['using model', 'model'], ['with effort', 'effort']]);
+
 function skipSpaces(input: string, start: number): number {
   let index = start;
   while (/\s/.test(input[index] ?? '')) index++;
@@ -88,7 +90,7 @@ function parseNamedClause(words: string[], index: number, fields: Fields, seen: 
     fields.skills.push(value);
     return { next: valueIndex + 1 };
   }
-  const key = word === 'on' ? 'host' : word === 'using' && clause === 'model' ? 'model' : word === 'with' && clause === 'effort' ? 'effort' : '';
+  const key = SINGLE_VALUE_CLAUSES.get(label) ?? '';
   if (!key) return { error: `Agent: unknown clause "${word} ${clause ?? ''}".` };
   if (!assign(fields, seen, key, value)) return { error: `Agent: duplicate clause "${label}".` };
   return { next: valueIndex + 1 };
