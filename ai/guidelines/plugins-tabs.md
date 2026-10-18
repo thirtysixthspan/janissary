@@ -87,7 +87,7 @@ A plugin tab docks into either sidebar through the same mechanism the built-in d
 
 ## Host notifications
 
-A declaration may name host topics under `notifications`, and one that does must supply `notify` on its activation or it is disabled at activation — a notification has no caller and no transcript, so there is nothing for a rejection to answer into. v2 defines four topics — `schedules`, `conversations`, `sessions`, and `databases` — each carrying a named slice the host already computes. A topic is always a named, already-coalesced signal; the raw state broadcast is never one, because it fires on essentially every mutation including per-keystroke shell output.
+A declaration may name host topics under `notifications`, and one that does must supply `notify` on its activation or it is disabled at activation — a notification has no caller and no transcript, so there is nothing for a rejection to answer into. v2 defines six topics — `schedules`, `conversations`, `sessions`, `databases`, `tabs`, and `runscripts` — each carrying a named slice the host already computes. A topic is always a named, already-coalesced signal; the raw state broadcast is never one, because it fires on essentially every mutation including per-keystroke shell output.
 
 A topic action returns nothing, so an action that needs a round trip carries a request id the plugin mints and the answer comes back on the next delivery carrying the same one. Keep that id and its follow-up together in the tab payload, mint it with `randomUUID()` rather than a counter (the host echoes it, so two plugins on one topic must not collide on `q1`), and re-issue rather than wait when an answer does not arrive. See `documentation/developer-documentation/tab-plugins.md` for the worked shape.
 
