@@ -9,6 +9,7 @@ import { appendCommandOutput } from '../command/append.js';
 import { startLocalAgentRun } from '../agent/workspace-execution.js';
 import { invocationFor } from './agent-invocation.js';
 import type { AgentSnapshot } from '../agent/types.js';
+import type { AgentOutcome } from '../agent/run.js';
 import { applyNestedAgentPolicy } from '../agent/nested-policy.js';
 import { createRunCompletion, trackChildRun, trustedParentRun } from '../agent/nested-run.js';
 import { formatAgentResult } from '../agent/format-result.js';
@@ -20,17 +21,20 @@ function cleanupErrorMessages(error: unknown): string[] {
   return failures.map((failure) => failure instanceof Error ? failure.message : String(failure));
 }
 
+async function finishRunCollectingWarnings(runId: string, outcome: AgentOutcome, managers: CommandManagers): Promise<string[]> {
+  try { await managers.agent.finish(runId, outcome); }
+  catch (error) { return cleanupErrorMessages(error); }
+  return [];
+}
+
 async function finishRunAfterError(
   run: ReturnType<CommandManagers['agent']['create']> | undefined,
   managers: CommandManagers,
   error: unknown,
 ): Promise<AgentResult> {
   if (!run) return agentFailure(error);
-  const cleanupWarnings: string[] = [];
-  if (managers.agent.runs.has(run.id)) {
-    try { await managers.agent.finish(run.id, run.abortController.signal.aborted ? 'terminated' : 'failed'); }
-    catch (cleanupError) { cleanupWarnings.push(...cleanupErrorMessages(cleanupError)); }
-  }
+  const outcome = run.abortController.signal.aborted ? 'terminated' : 'failed';
+  const cleanupWarnings = managers.agent.runs.has(run.id) ? await finishRunCollectingWarnings(run.id, outcome, managers) : [];
   try { await run.finish(run.outcome ?? 'failed'); } catch { /* cleanup warnings were collected above */ }
   const result = run.outcome === 'terminated'
     ? { status: 'terminated' as const, response: 'Agent terminated.', cleanupWarnings: [] }
@@ -110,9 +114,7 @@ async function runAgent(
       caller.signal.addEventListener('abort', abortRun, { once: true });
       await local.workspace.ready;
       if (run.abortController.signal.aborted) {
-        const cleanupWarnings: string[] = [];
-        try { await managers.agent.finish(run.id, 'terminated'); }
-        catch (error) { cleanupWarnings.push(...cleanupErrorMessages(error)); }
+        const cleanupWarnings = await finishRunCollectingWarnings(run.id, 'terminated', managers);
         return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings };
       }
       snapshot = resolveAgentSnapshot(launch.task, launch.skills, {
@@ -139,9 +141,7 @@ async function runAgent(
         monitor.plugin.agentRunId = activeRun.id;
         managers.agent.attachMonitor(activeRun.id, monitor.label);
       } catch (error) {
-        const cleanupWarnings: string[] = [];
-        try { await managers.agent.finish(activeRun.id, 'failed'); }
-        catch (cleanupError) { cleanupWarnings.push(...cleanupErrorMessages(cleanupError)); }
+        const cleanupWarnings = await finishRunCollectingWarnings(activeRun.id, 'failed', managers);
         const result = agentFailure(error);
         return { ...result, cleanupWarnings: [...result.cleanupWarnings, ...cleanupWarnings] };
       }
