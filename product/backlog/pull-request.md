@@ -1,13 +1,3 @@
 <!-- This file is for maintaining work items tied to a pull request and lives on a pull request's own branch while that pull request is open. It should be empty on master, holding no more than this comment and the heading. -->
 
 # pull-request
-
-* Replace the scripts delete dialog's copied keyboard contract with the shared ConfirmDialog so Cmd+W and Shift+Tab stop reaching the window while the dialog is open.
-
-Existing Issue: The delete dialog re-implements the two-button confirm shell and its keyboard contract instead of using the shared ConfirmDialog that the plugin API already publishes, and because the copy never registers with the modal signal, Cmd+W and Shift+Tab still reach the window shortcuts while the dialog is open, contrary to the spec's claim that the dialog takes every key. Severity: 4/10
-
-Existing Risk: 4/10 - A reflexive Cmd+W while the confirmation is up closes the scripts tab behind it, and the copy will miss every future keyboard change made to the shared dialog, as the modal-open signal change already had to do for the shared dialogs.
-
-Proposal Risk: 2/10 - After the change the dialog is the shared one, so its keyboard contract is tested once, and the only residual difference is the note lines, which the shared component carries as a generic optional prop with no scripts knowledge.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1739 "replace the scripts delete dialog's copied keyboard contract with the shared ConfirmDialog". Make web/src/plugins/scripts/DeleteScriptDialog.tsx render ConfirmDialog, imported from ../api, in place of its own backdrop, document listeners, and key map, passing the title from web/src/plugins/scripts/scripts-delete-text.ts and the confirm label Delete. The shared component has no body lines, so add an optional notes prop to web/src/shared/ConfirmDialog.tsx and render those plain strings in ConfirmDialogShell between the title and the buttons; the change is additive, so the other callers and TAB_PLUGIN_API_VERSION stay unchanged, and the shared component still knows no scripts detail. Then delete web/src/plugins/scripts/scripts-delete-keys.ts and its test, because the shared hook already maps y, n, Escape, Enter, and Left and Right to the same answers. Keep scripts-delete-text.ts for the wording. Add a test beside the shared ConfirmDialog test asserting that the modal signal reports open while a dialog with notes is mounted and closed after it unmounts. Keep every existing ConfirmDialog test and every existing scripts delete test unchanged, except for removing the test of the deleted key module. Verify with the diff-scoped web tests for the shared dialog and the scripts tab.

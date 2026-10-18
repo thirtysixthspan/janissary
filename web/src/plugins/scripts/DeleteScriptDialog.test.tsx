@@ -1,6 +1,7 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, within } from '@testing-library/react';
+import { isModalOpen } from '../../shared/modal-open';
 import { DeleteScriptDialog } from './DeleteScriptDialog';
 
 // The dialog is shown before a runscript is deleted, so it captures the keyboard globally and swallows
@@ -187,5 +188,15 @@ describe('the clicks it swallows', () => {
     inside.dispatchEvent(event);
 
     expect(event.defaultPrevented).toBe(false);
+  });
+});
+
+describe('the modal signal', () => {
+  it('reports an open modal while the confirmation is up, and releases it on unmount', () => {
+    const { view } = dialog();
+    expect(isModalOpen()).toBe(true);
+
+    view.unmount();
+    expect(isModalOpen()).toBe(false);
   });
 });
