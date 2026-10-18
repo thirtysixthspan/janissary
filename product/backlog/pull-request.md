@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's Files changed list so it names the shared theme stylesheet the feature changes.
-
-Existing Issue: The description's Files changed list omits web/src/theme.css, which the diff changes to add the muted .modal-note class used by the shared confirmation dialog's note lines, so the list does not name every file the feature changes. Severity: 2/10
-
-Existing Risk: 3/10 - A reviewer who scopes the shared modal styling from the Files changed list would miss that the shared stylesheet changed, so a later edit to the note class would be reviewed without the description pointing at it.
-
-Proposal Risk: 1/10 - Once the list names the stylesheet and the rest of the description stays as written, the remaining risk is ordinary drift when later commits add files, which the description already carries.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1739 "name web/src/theme.css in the pull request description's Files changed list". Add web/src/theme.css to the Client part of the description's Files changed list, beside the shared confirmation dialog entry, and state that it adds the .modal-note class, which sets the muted color for the note lines ConfirmDialogShell renders between the title and the buttons. Then compare the named files with the output of git diff origin/master...HEAD --name-only and confirm that every non-test, non-plan file the diff changes is named, leaving the rest of the description as written. Make no code, test, or spec change. Verify by reading the description back after the edit and checking its named files against that name-only list.
-
-
 * Deliver the plan's rule that every runscript action failure reaches the notifications feed, starting with the editor's size refusal for an oversized runscript.
 
 Existing Issue: Opening a runscript larger than the editor's two-megabyte limit, through Open, Enter, or Duplicate, makes the editor refuse it and write the reason to the scripts tab's own transcript, which that tab never renders, so the feed stays silent and the runscript or its copy does not open. Severity: 5/10
