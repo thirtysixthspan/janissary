@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { TAB_PLUGIN_CAPABILITY_NAMES } from './api.js';
+import { TAB_PLUGIN_NOTIFICATION_TOPICS } from './api-topics.js';
 import { fixtureV1Manifest } from './fixture-v1/manifest.js';
 
 // `documentation/developer-documentation/tab-plugins.md` presents itself as the authoritative
@@ -11,6 +12,8 @@ import { fixtureV1Manifest } from './fixture-v1/manifest.js';
 const documentation = readFileSync(
   new URL('../../documentation/developer-documentation/tab-plugins.md', import.meta.url), 'utf8',
 );
+const specification = readFileSync(new URL('../../product/specs/tab-plugins.md', import.meta.url), 'utf8');
+const guideline = readFileSync(new URL('../../ai/guidelines/plugins-tabs.md', import.meta.url), 'utf8');
 
 const COUNT_WORDS = [
   'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
@@ -50,6 +53,15 @@ describe('tab plugin developer documentation', () => {
     for (const capability of TAB_PLUGIN_CAPABILITY_NAMES) {
       expect(documentation).toContain(`- \`${capability}(`);
     }
+  });
+
+  // The topic count is hand-kept in three docs, so each doc's own sentence is pinned to the topic
+  // list the code declares.
+  it('states the notification topic count in each doc that carries it', () => {
+    const word = COUNT_WORDS[TAB_PLUGIN_NOTIFICATION_TOPICS.length];
+    expect(documentation).toContain(`v2 defines ${word} topics`);
+    expect(specification).toContain(`This version defines ${word} kinds of host state`);
+    expect(guideline).toContain(`v2 defines ${word} topics`);
   });
 
   it('keeps the API changelog honest about the same count', () => {
