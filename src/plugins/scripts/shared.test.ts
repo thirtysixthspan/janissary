@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RunscriptRowView, RunscriptsView } from '../../protocol.js';
+import { buildRunscriptRows } from '../../schedule/system/runscript-rows.js';
 import {
   isCreateIntent,
   isNameIntent,
@@ -11,15 +11,9 @@ import {
 const ROW: RunscriptRow = { name: 'deploy', schedules: 1, open: true };
 const PAYLOAD: ScriptsPayload = { rows: [ROW] };
 
-const asWireRow: RunscriptRowView = ROW;
-const asPluginRow: RunscriptRow = asWireRow;
-const asWirePayload: RunscriptsView = PAYLOAD;
-const asPluginPayload: ScriptsPayload = asWirePayload;
-
 describe('scripts shared contract', () => {
-  it('re-declares the runscript row and payload exactly', () => {
-    expect(asPluginRow).toEqual(ROW);
-    expect(asPluginPayload).toEqual(PAYLOAD);
+  it('accepts the rows the host builds', () => {
+    expect(isScriptsPayload({ rows: buildRunscriptRows(['deploy'], () => 1, () => true) })).toBe(true);
   });
 
   it('accepts a complete payload', () => {
