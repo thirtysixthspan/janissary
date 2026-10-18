@@ -1,0 +1,20 @@
+.scripts-tab { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 4px 0; outline: none; }
+.scripts-empty { padding: 8px 12px; color: var(--muted); }
+.scripts-header {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 6px 12px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border);
+}
+.scripts-header .plugin-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 13px; padding: 0 4px; line-height: 1;
+}
+.scripts-header .plugin-actions button:hover { color: var(--fg); }
+.scripts-row {
+  display: flex; align-items: baseline; gap: 12px; width: 100%; text-align: left;
+  padding: 4px 12px; white-space: nowrap; color: var(--fg); cursor: pointer;
+}
+.scripts-row:hover { background: var(--border); }
+.scripts-row.selected { background: var(--bg-soft); }
+.scripts-num { color: var(--muted); flex-shrink: 0; }
+.scripts-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.scripts-clock { color: var(--muted); flex-shrink: 0; }
