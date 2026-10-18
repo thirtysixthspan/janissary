@@ -10,6 +10,7 @@ import { startLocalAgentRun } from '../agent/workspace-execution.js';
 import { invocationFor } from './agent-invocation.js';
 import type { AgentSnapshot } from '../agent/types.js';
 import type { AgentOutcome } from '../agent/run.js';
+import type { TabGroup } from '../tab/groups.js';
 import { applyNestedAgentPolicy } from '../agent/nested-policy.js';
 import { createRunCompletion, trackChildRun, trustedParentRun } from '../agent/nested-run.js';
 import { formatAgentResult } from '../agent/format-result.js';
@@ -40,6 +41,23 @@ async function finishRunAfterError(
     ? { status: 'terminated' as const, response: 'Agent terminated.', cleanupWarnings: [] }
     : agentFailure(error);
   return cleanupWarnings.length > 0 ? { ...result, cleanupWarnings } : result;
+}
+
+function openRunMonitorTab(
+  runId: string, taskPath: string, label: string, group: TabGroup | undefined, managers: CommandManagers,
+): void {
+  const monitorPlugin = managers.plugins.declarations.find((declaration) => declaration.agentMonitor === true);
+  if (!monitorPlugin) throw new Error('Agent: no monitoring plugin is available.');
+  const taskName = taskPath.split('/').at(-1) ?? taskPath;
+  managers.tab.openPluginTab(monitorPlugin.id, monitorPlugin.tabLabelPrefix, runId,
+    monitorPlugin.payloadSchemaVersion, label, () => ({
+    title: `Agent: ${taskName}`,
+    payload: { runId },
+  }), group ? { group: group.name } : undefined);
+  const monitor = managers.tab.pluginTabByInstanceKey(monitorPlugin.id, runId);
+  if (!monitor) throw new Error('Agent: could not open monitoring tab.');
+  monitor.plugin.agentRunId = runId;
+  managers.agent.attachMonitor(runId, monitor.label);
 }
 
 async function runAgent(
@@ -128,18 +146,7 @@ async function runAgent(
     const activeRun = run;
     if (launch.inTab) {
       try {
-        const monitorPlugin = managers.plugins.declarations.find((declaration) => declaration.agentMonitor === true);
-        if (!monitorPlugin) throw new Error('Agent: no monitoring plugin is available.');
-        const taskName = snapshot.taskPath.split('/').at(-1) ?? snapshot.taskPath;
-        managers.tab.openPluginTab(monitorPlugin.id, monitorPlugin.tabLabelPrefix, activeRun.id,
-          monitorPlugin.payloadSchemaVersion, label, () => ({
-          title: `Agent: ${taskName}`,
-          payload: { runId: activeRun.id },
-        }), selectedGroup ? { group: selectedGroup.name } : undefined);
-        const monitor = managers.tab.pluginTabByInstanceKey(monitorPlugin.id, activeRun.id);
-        if (!monitor) throw new Error('Agent: could not open monitoring tab.');
-        monitor.plugin.agentRunId = activeRun.id;
-        managers.agent.attachMonitor(activeRun.id, monitor.label);
+        openRunMonitorTab(activeRun.id, snapshot.taskPath, label, selectedGroup, managers);
       } catch (error) {
         const cleanupWarnings = await finishRunCollectingWarnings(activeRun.id, 'failed', managers);
         const result = agentFailure(error);
