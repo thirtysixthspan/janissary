@@ -24,4 +24,3 @@
   font-size: 12px; padding: 0 4px; line-height: 1;
 }
 .scripts-row-actions button:hover { color: var(--fg); }
-.scripts-delete-note { color: var(--muted); }

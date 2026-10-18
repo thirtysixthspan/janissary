@@ -20,7 +20,7 @@ export function ConfirmDialogShell({ title, notes = [], confirmLabel, cancelLabe
       <div ref={dialogRef} className="modal" role="alertdialog" aria-modal="true" tabIndex={-1}>
         <div className="modal-title">{title}</div>
         {notes.map((note) => (
-          <div key={note} style={{ color: 'var(--muted)' }}>{note}</div>
+          <div key={note} className="modal-note">{note}</div>
         ))}
         <div className="modal-actions">
           <button className={`modal-button${selected === 'confirm' ? ' selected' : ''}`} onClick={onConfirm}>

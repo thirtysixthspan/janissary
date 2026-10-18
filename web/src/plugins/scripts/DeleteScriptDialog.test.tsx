@@ -51,7 +51,8 @@ describe('DeleteScriptDialog text', () => {
   it('leaves out both lines for a runscript with no schedule and no open tab', () => {
     const { view } = dialog({ schedules: 0, open: false });
 
-    expect(view.container.querySelector('.scripts-delete-note')).toBeNull();
+    expect(view.queryByText('Used by 1 system schedule. It will fire as missing after this.')).toBeNull();
+    expect(view.queryByText('Open in an editor tab. The tab keeps its text.')).toBeNull();
   });
 });
 
