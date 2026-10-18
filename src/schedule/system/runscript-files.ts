@@ -88,7 +88,7 @@ function createExclusive(file: string, text: string): boolean {
 // the reader would accept it as a regular file, so a symlink planted at the target is refused.
 export function createRunscript(projectRoot: string, name: string): { file: string; created: boolean } {
   if (!isRunscriptName(name)) throw new Error(`Invalid runscript name: ${name}`);
-  const file = path.join(runscriptsDirectoryPath(projectRoot), `${name}.rs`);
+  const file = runscriptFilePath(projectRoot, name);
   if (!scriptsDirectory(projectRoot).exists) makeScriptsDirectory(projectRoot);
   if (createExclusive(file, '')) return { file, created: true };
   readRunscript(projectRoot, name);

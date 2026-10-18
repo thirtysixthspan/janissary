@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Route runscript creation through the shared file-path helper, so the runscript path is defined in one place as the commit intended (technical debt).
-
-Existing Issue: The commit exports `runscriptFilePath` so the runscript path has a single definition, and `readRunscript` was switched to it, but `createRunscript` still builds the same `<name>.rs` path inline, so the rule lives in two places in the file the commit centralized. Severity: 3/10
-
-Existing Risk: 3/10 - A later change to the file-name rule applied to only one of the two definitions would make a newly created runscript land at a path that the reader, the rows' open flag, and the editor never look at.
-
-Proposal Risk: 1/10 - Creation, reading, and the open flag would then share one definition, so the drift cannot start in that module, though a later naming change still has to be made in the one helper.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1739 "route createRunscript through runscriptFilePath". In `src/schedule/system/runscript-files.ts`, `createRunscript` computes its target with its own join of the scripts directory and the name plus the `.rs` suffix; replace that line with a call to the exported `runscriptFilePath(projectRoot, name)` that `readRunscript` already uses, keeping the existing `isRunscriptName` check before it and the directory, `createExclusive`, and `readRunscript` calls in their current order. Leave `cloneRunscript` and `newUntitledRunscript` unchanged, since they build from `nextFreeName` output rather than a bare name. The cases that must keep passing untouched are the create-path tests in `src/schedule/system/runscript-files.test.ts` (creating a missing scripts directory, keeping an existing runscript, refusing an invalid name, refusing a symlinked directory or target) and the `runscriptFilePath` case in the same file. No behavior changes, so no expectation is added or edited. Verify with a plain read that no other function in `src/schedule/system/runscript-files.ts` joins the scripts directory with a bare name and the `.rs` suffix.
-
-
 * Correct the message bus comment that still calls the schedules channel a low-frequency signal, now that the same channel carries a per-second tick (technical debt).
 
 Existing Issue: The comment above the schedules event type still describes the whole channel as a low-frequency signal, but the tick variant this commit adds is raised on every scheduler tick, so the channel is no longer low-frequency as a whole. Severity: 2/10
