@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Managers } from '../../managers.js';
@@ -15,7 +15,7 @@ import { createRunscriptRefresh, subscribeRunscriptRefresh } from './runscript-r
 const listens = (pluginId: string) => pluginId === 'scripts';
 
 function withProject(run: (root: string) => void): void {
-  const root = mkdtempSync(path.join(tmpdir(), 'runscript refresh '));
+  const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'runscript refresh ')));
   try {
     run(root);
   } finally {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type * as NodeFs from 'node:fs';
@@ -157,7 +157,7 @@ describe('runscript files', () => {
   });
 
   it('excludes the scripts directory from Git when it is ensured in a repository', () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'schedule ensure git '));
+    const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'schedule ensure git ')));
     try {
       git(root, 'init', '-q');
       ensureScriptsDirectory(root);
@@ -169,7 +169,7 @@ describe('runscript files', () => {
   });
 
   it('lists sorted valid runscript names and writes no Git exclusion', () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'schedule list git '));
+    const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'schedule list git ')));
     try {
       git(root, 'init', '-q');
       const scripts = path.join(root, '.janissary', 'scripts');
@@ -409,7 +409,7 @@ describe('runscript files', () => {
   });
 
   it('computes the runscript file path without creating the directory or writing a Git exclusion', () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'schedule path '));
+    const root = realpathSync(mkdtempSync(path.join(tmpdir(), 'schedule path ')));
     try {
       git(root, 'init', '-q');
       const excludeFile = path.join(root, '.git', 'info', 'exclude');
