@@ -142,9 +142,11 @@ type LayoutEvent = { type: 'update' } & LayoutUpdate;
 // A one-shot request for every connected client's file-navigator selections, issued by
 // `profile save` (see src/file-navigator/selection-request.ts) and broadcast as `collect-tree-state`.
 type FileNavigatorEvent = { type: 'collect'; id: number };
-// The scheduled-command set changed. Deliberately its own channel rather than a reason carried on
-// `state: dirty`, which fires on essentially every mutation: this one is a named, low-frequency
-// signal a tab plugin may subscribe to (see src/plugins/notifications.ts).
+// The schedules channel carries two variants at different rates. `changed` is raised when the
+// scheduled-command set changes. It is the named, low-frequency signal a tab plugin may subscribe to
+// (see src/plugins/notifications.ts), and it is its own channel rather than a reason carried on
+// `state: dirty`, which fires on essentially every mutation. `tick` is raised on every scheduler tick,
+// about once a second, and stays internal to the host.
 type ScheduleEvent =
   | { type: 'changed' }
   // Raised on every scheduler tick, changed or not.
