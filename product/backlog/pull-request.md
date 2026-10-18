@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the pull request description's claim that it adds planning documents only, so it describes the scripts tab the diff implements.
-
-Existing Issue: The description says the pull request adds planning documents only, with no code, tests, or user documentation changed and nothing implemented, while the aggregate diff adds the scripts tab across the server, the client, the specs, and the docs; it also says the Git exclusion step runs once when the tab opens, where the code runs it on every scripts command, and it omits the row numbering, the two failure lines "Could not run runscript" and "Could not use the runscripts directory.", and the delete dialog's keys. Severity: 7/10
-
-Existing Risk: 6/10 - A reviewer who reads the body approves a planning-only change without reading the code, and the merge record then labels a new feature as documentation.
-
-Proposal Risk: 2/10 - Once the body describes the diff, what remains is that its flows must match the spec's wording, which a reviewer can check against the spec, and no code changes.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1739 "correct the pull request description to describe the implemented scripts tab". Rewrite the pull request body so its summary, its commit list, its files-changed section, and its behavior flows describe the aggregate diff against origin/master rather than a planning-only state: remove the sentences saying that no code, tests, or user documentation change, that nothing is implemented, that the branch has two commits, and that the verification steps apply only once commits land; list the commits from git log origin/master..HEAD and the changed areas from git diff --name-only origin/master...HEAD (src/plugins/scripts, src/plugins/runscript-topic-actions.ts, the runscript modules under src/schedule/system, web/src/plugins/scripts, the specs, help.md, and the user and developer docs). Change the exclusion sentence to say the step runs on every scripts command, as the Command and tab section of product/specs/scripts-tab.md states, and add the row numbering, the two failure lines, and the delete dialog's y, n, Left, Right, and Enter handling to the flows, quoting the wording from the Failure text section of that spec. Change no source file, because only the body's text is wrong. Verify by re-reading the rewritten body against the spec sections named here and against the output of git diff --name-only origin/master...HEAD, and confirm that no sentence still says planning documents only.
-
-
 * Stop a double-click on the delete dialog's Delete or Cancel button from opening the row beneath it once the dialog has closed.
 
 Existing Issue: The delete dialog's Delete and Cancel buttons close the dialog on the first click, so the second click of a double-click lands on the row beneath, and that row's double-click handler sends open, which opens an unrelated runscript in an editor tab or reports No runscript named for the one just deleted. Severity: 3/10
