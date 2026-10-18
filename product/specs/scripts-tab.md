@@ -53,7 +53,7 @@ The + button creates an empty runscript and opens it in an editor tab. It asks f
 
 ### Clone
 
-Duplicate copies the runscript under the next free name. The copy is `<name>-2`, stored as `<name>-2.rs`. If that is taken, the copy is `<name>-3`, and so on. The copy holds the source file's exact text, comments and blank lines included, and it opens in an editor tab. The copy is written with an exclusive create, so a file that appears between choosing the name and writing it is never overwritten. A symlinked or non-regular source is refused.
+Duplicate copies the runscript under the next free name. The copy is `<name>-2`, stored as `<name>-2.rs`. If that is taken, the copy is `<name>-3`, and so on. The copy holds the source file's exact text, comments and blank lines included, and it opens in an editor tab unless the copy is above the editor's two-megabyte limit, in which case the copy is still created on disk, nothing opens, and the notifications feed shows the size refusal (see the oversized row of Failure text). The copy is written with an exclusive create, so a file that appears between choosing the name and writing it is never overwritten. A symlinked or non-regular source is refused.
 
 ### Delete
 
@@ -77,7 +77,7 @@ On success nothing appears. No feed line is written, and the system shell is not
 
 ### Open
 
-Double-click or Enter sends `open`. The runscript opens in an editor tab, as `edit <name>` opens it. An editor tab that already holds the same file is focused instead of a second one being opened. A missing runscript, or one that cannot be read, reports its failure line (see Failure text).
+Double-click or Enter sends `open`. The runscript opens in an editor tab, as `edit <name>` opens it, unless the file is above the editor's two-megabyte limit, in which case nothing opens and the notifications feed shows the size refusal (see the oversized row of Failure text). An editor tab that already holds the same file is focused instead of a second one being opened. A missing runscript, or one that cannot be read, reports its failure line (see Failure text).
 
 ### Failure text
 
