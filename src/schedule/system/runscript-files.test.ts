@@ -1,11 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import type * as NodeFs from 'node:fs';
 import type * as NextFreeName from '../../editor/next-free-name.js';
 import { nextFreeName } from '../../editor/next-free-name.js';
 import { catalogRunscripts, cloneRunscript, createRunscript, deleteRunscript, ensureScriptsDirectory, listRunscriptNames, newUntitledRunscript, readRunscript } from './runscript-files.js';
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeFs>();
+  return { ...actual, unlinkSync: vi.fn(actual.unlinkSync) };
+});
 
 vi.mock('../../editor/next-free-name.js', async (importOriginal) => {
   const actual = await importOriginal<typeof NextFreeName>();
@@ -235,6 +241,26 @@ describe('runscript files', () => {
     }
   });
 
+  it('reports a runscript removed by another process between the check and the unlink as not removed', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'schedule delete race '));
+    try {
+      const scripts = path.join(root, '.janissary', 'scripts');
+      mkdirSync(scripts, { recursive: true });
+      const file = path.join(scripts, 'deploy.rs');
+      writeFileSync(file, 'echo deploy\n');
+      vi.mocked(unlinkSync).mockImplementationOnce((target) => {
+        rmSync(target);
+        throw Object.assign(new Error('ENOENT: no such file or directory'), { code: 'ENOENT' });
+      });
+
+      expect(deleteRunscript(root, 'deploy')).toBe(false);
+      expect(unlinkSync).toHaveBeenCalledWith(file);
+      expect(existsSync(file)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('clones a runscript byte for byte to the next free name', () => {
     const root = mkdtempSync(path.join(tmpdir(), 'schedule clone '));
     try {
@@ -338,6 +364,27 @@ describe('runscript files', () => {
 
       expect(newUntitledRunscript(root)).toBe('untitled');
       expect(readFileSync(path.join(scripts, 'untitled.rs'), 'utf8')).toBe('echo kept\n');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('names the untitled runscript in the error when a dangling symlink blocks the create and leaves the link in place', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'schedule untitled dangling '));
+    try {
+      const scripts = path.join(root, '.janissary', 'scripts');
+      mkdirSync(scripts, { recursive: true });
+      const link = path.join(scripts, 'untitled.rs');
+      symlinkSync(path.join(root, 'missing-target.rs'), link);
+
+      let failure: unknown;
+      try {
+        newUntitledRunscript(root);
+      } catch (error) {
+        failure = error;
+      }
+      expect(failure).toMatchObject({ message: expect.stringMatching(/regular file/), runscriptName: 'untitled' });
+      expect(lstatSync(link).isSymbolicLink()).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
