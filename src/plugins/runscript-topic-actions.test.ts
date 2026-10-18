@@ -234,6 +234,21 @@ describe('the runscripts clone action', () => {
     );
     expect(edits).toEqual([]);
   });
+
+  it('keeps an oversized duplicate on disk and posts the refusal for the copy', () => {
+    const root = projectRoot();
+    const text = 'x'.repeat(2 * 1024 * 1024 + 1);
+    writeScripts(root, { deploy: text });
+    const { edits, managers } = fixture(root);
+
+    runscriptTopicAction(managers, { topic: 'runscripts', action: 'clone', name: 'deploy', origin: 'janus' });
+
+    expect(readFileSync(path.join(scriptsDirectory(root), 'deploy-2.rs'), 'utf8')).toBe(text);
+    expect(edits).toEqual([]);
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'plugin-note', 'janus', 'edit: deploy-2.rs is 2.0 MB — too large to edit in-app (limit 2.0 MB).',
+    );
+  });
 });
 
 describe('the runscripts create action', () => {
@@ -357,15 +372,18 @@ describe('the runscripts open action', () => {
     expect(edits).toEqual([]);
   });
 
-  it('opens a runscript over the editor size limit without posting to the feed', () => {
+  it('refuses a runscript over the editor size limit in the feed instead of opening it', () => {
     const root = projectRoot();
     writeScripts(root, { deploy: 'x'.repeat(2 * 1024 * 1024 + 1) });
     const { edits, managers } = fixture(root);
 
     runscriptTopicAction(managers, { topic: 'runscripts', action: 'open', name: 'deploy', origin: 'janus' });
 
-    expect(edits).toHaveLength(1);
-    expect(notify).not.toHaveBeenCalled();
+    expect(edits).toEqual([]);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(
+      managers, 'plugin-note', 'janus', 'edit: deploy.rs is 2.0 MB — too large to edit in-app (limit 2.0 MB).',
+    );
   });
 });
 

@@ -90,6 +90,7 @@ Each failure line goes to the notifications feed, not to the tab. In the table, 
 | `Could not run runscript "<name>".` | Running throws, for a reason other than a missing or unreadable file. | Run |
 | `Could not delete runscript "<name>".` | The file is a symlink or non-regular file, or it cannot be read or removed. Also when `.janissary` or `.janissary/scripts` is a symlink or not a directory, whether or not the file exists. | Delete |
 | `Could not clone runscript "<name>".` | The source is refused, or the copy cannot be created. | Duplicate |
+| `edit: <name>.rs is <size> — too large to edit in-app (limit <size>).` | The runscript file is larger than the editor's two-megabyte limit. For Duplicate, `<name>` is the copy's name. | Open, Duplicate |
 | `Could not create runscript "<name>".` | The runscripts directory cannot be used, or the new file cannot be created. The name is `untitled` when the failure comes before the name is picked, and the picked name after. | + (`New script`) |
 | `Could not use the runscripts directory.` | `.janissary` or `.janissary/scripts` is a symlink or not a directory. | `scripts` command |
 

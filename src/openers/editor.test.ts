@@ -4,7 +4,7 @@ import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { openerForExtension, openers } from './index.js';
-import { opener as editor, openInEditor, EDITOR_MAX_BYTES } from './editor.js';
+import { opener as editor, openInEditor, editorSizeRefusal, EDITOR_MAX_BYTES } from './editor.js';
 import type { OpenContext } from './types.js';
 import type { EditorView } from '../tab/types.js';
 
@@ -76,6 +76,12 @@ describe('editor opener', () => {
     editor.inline(file, ctx);
     expect(opened).toHaveLength(0);
     expect(notes[0]).toContain('too large');
+  });
+
+  it('editorSizeRefusal returns the refusal text only above the editor size limit', () => {
+    expect(editorSizeRefusal('big.txt', EDITOR_MAX_BYTES)).toBeUndefined();
+    expect(editorSizeRefusal('big.txt', EDITOR_MAX_BYTES + 1))
+      .toBe('edit: big.txt is 2.0 MB — too large to edit in-app (limit 2.0 MB).');
   });
 
   it('openInEditor opens files regardless of extension (the edit command path)', () => {

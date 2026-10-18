@@ -1,8 +1,11 @@
+import { statSync } from 'node:fs';
+import path from 'node:path';
 import type { Managers } from '../managers.js';
 import type { TabPluginTopicAction } from './api.js';
 import { runRunscriptNow } from '../commands/execute.js';
 import { notify } from '../notifications/index.js';
 import { errorText } from '../error-text.js';
+import { editorSizeRefusal } from '../openers/editor.js';
 import { isRunscriptName } from '../schedule/system/runscript.js';
 import {
   cloneRunscript,
@@ -43,8 +46,20 @@ function untitledName(error: unknown): string {
   return typeof name === 'string' ? name : 'untitled';
 }
 
+function editorRefusal(target: string): string | undefined {
+  let bytes: number;
+  try { bytes = statSync(target).size; } catch { return undefined; }
+  return editorSizeRefusal(path.basename(target), bytes);
+}
+
 function openRunscript(managers: Managers, origin: string, command: string, name: string): void {
-  managers.openFile.edit(command, runscriptFilePath(managers.tab.launchDir, name), origin);
+  const target = runscriptFilePath(managers.tab.launchDir, name);
+  const refusal = editorRefusal(target);
+  if (refusal !== undefined) {
+    post(managers, origin, refusal);
+    return;
+  }
+  managers.openFile.edit(command, target, origin);
 }
 
 function deleteOne(managers: Managers, origin: string, name: string): void {
