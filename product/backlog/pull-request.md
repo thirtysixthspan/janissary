@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Pin with a test and a comment that an admitted runscript tick never rewrites the Git exclusion, since the refresh's cost depends on that (technical debt).
-
-Existing Issue: The admitted-tab tick reads names through the listing function, which writes nothing, but no new test reads the Git exclusion file on that path, and the rows module carries no comment explaining why it avoids the catalog function that rewrites the exclusion on every call. Severity: 4/10
-
-Existing Risk: 4/10 - A well-meant change to the catalog function in the rows module would rewrite the repository's exclusion file once a second while a scripts tab is open, and nothing in the suite would flag it on a normal admitted tick.
-
-Proposal Risk: 2/10 - With the exclusion file pinned across admitted ticks and the reason written beside the listing call, a regression fails the suite and a reader meets the reason in the code rather than only in a plan that has moved to the completed folder.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1739 "pin the admitted tick's no-exclusion-write behavior". In `src/schedule/system/runscript-refresh.test.ts`, add a case in the admitted-tab section that makes a real Git repository in the temporary project with `execFileSync('git', ['init', '-q'], { cwd: root })`, the pattern `src/schedule/system/runscript-files.test.ts` already uses, writes one runscript into the scripts directory, reads the repository's `.git/info/exclude` text, runs an admitted tick with a plugin tab whose id the `listens` predicate accepts, and asserts that the exclusion text is unchanged and that the runscript was published. In `src/schedule/system/runscript-rows.ts`, add a short comment above `readRunscriptRows` saying it reads names through `listRunscriptNames` rather than `catalogRunscripts`, because the catalog call writes the Git exclusion on every call and a tick would repeat that write each second. Make no production behavior change. The existing cases in both new test modules must keep passing untouched. Verify that the new case would fail if the rows module called the catalog function instead, which the work task can confirm with the diff-scoped test run it is allowed to use.
-
-
 * Route runscript creation through the shared file-path helper, so the runscript path is defined in one place as the commit intended (technical debt).
 
 Existing Issue: The commit exports `runscriptFilePath` so the runscript path has a single definition, and `readRunscript` was switched to it, but `createRunscript` still builds the same `<name>.rs` path inline, so the rule lives in two places in the file the commit centralized. Severity: 3/10

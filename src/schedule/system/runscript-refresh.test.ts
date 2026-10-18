@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Managers } from '../../managers.js';
@@ -110,6 +111,20 @@ describe('runscript refresh changes', () => {
       writeFileSync(path.join(scriptsDir(root), 'deploy.rs'), '');
       const publish = vi.fn();
       createRunscriptRefresh(fakeManagers(root, [pluginTab('scripts')]), listens, publish).tick();
+      expect(publish).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('leaves the Git exclusion file unchanged on an admitted tick and still publishes the runscript', () => {
+    withProject((root) => {
+      execFileSync('git', ['init', '-q'], { cwd: root });
+      writeFileSync(path.join(scriptsDir(root), 'deploy.rs'), '');
+      const excludeFile = path.join(root, '.git', 'info', 'exclude');
+      const before = readFileSync(excludeFile, 'utf8');
+      expect(before).not.toContain('/.janissary/scripts');
+      const publish = vi.fn();
+      createRunscriptRefresh(fakeManagers(root, [pluginTab('scripts')]), listens, publish).tick();
+      expect(readFileSync(excludeFile, 'utf8')).toBe(before);
       expect(publish).toHaveBeenCalledTimes(1);
     });
   });

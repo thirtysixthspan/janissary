@@ -10,6 +10,9 @@ export function buildRunscriptRows(
   return names.map((name) => ({ name, schedules: scheduleCount(name), open: isOpen(name) }));
 }
 
+// Names come from listRunscriptNames rather than catalogRunscripts. The catalog call runs Git
+// commands on every call and writes the Git exclusion whenever its rules are missing, and the
+// refresh calls this on every scheduler tick while a scripts tab is open.
 export function readRunscriptRows(managers: Managers): RunscriptsView {
   const projectRoot = managers.tab.launchDir;
   let names: string[];
