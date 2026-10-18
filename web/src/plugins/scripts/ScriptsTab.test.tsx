@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RunscriptRow } from '@shared/plugins/scripts/shared';
 import type { TabPluginClientCapabilities } from '../api';
@@ -136,6 +137,18 @@ describe('ScriptsTab selection and open', () => {
     fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Enter' });
 
     expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('leaves Enter on the focused plus button to the button, so it sends create and not open', async () => {
+    const user = userEvent.setup();
+    const { intent } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('b'));
+    screen.getByRole('button', { name: 'New script' }).focus();
+    await user.keyboard('{Enter}');
+
+    expect(intent).toHaveBeenCalledWith('create', {});
+    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
   });
 });
 

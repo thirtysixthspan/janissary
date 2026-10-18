@@ -5,6 +5,11 @@ import { PluginActionsHeader, newTabIcon, nextListSelection, type TabPluginClien
 import { keyMeaning, rowIndexOf } from './scripts-keys';
 import { ScriptRows } from './ScriptRows';
 
+function ownsKey(event: React.KeyboardEvent) {
+  return event.target === event.currentTarget
+    || (event.target instanceof Element && event.target.closest('.scripts-row') !== null);
+}
+
 export function ScriptsTab({ payload, capabilities }: {
   payload: ScriptsPayload;
   capabilities: TabPluginClientCapabilities;
@@ -38,6 +43,7 @@ export function ScriptsTab({ payload, capabilities }: {
   };
 
   const onKeyDown = (event: React.KeyboardEvent) => {
+    if (!ownsKey(event)) return;
     const meaning = keyMeaning(event.key);
     if (meaning === 'move') {
       event.preventDefault();
