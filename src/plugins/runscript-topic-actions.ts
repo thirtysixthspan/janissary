@@ -30,6 +30,14 @@ function reportCause(action: string, error: unknown, name?: string): void {
   process.stderr.write(`Runscript ${subject} failed: ${errorText(error)}\n`);
 }
 
+function postRunFailure(managers: Managers, origin: string, name: string): void {
+  try {
+    post(managers, origin, failed('run', name));
+  } catch (error) {
+    reportCause('execute', error, name);
+  }
+}
+
 function untitledName(error: unknown): string {
   const name = error instanceof Error && 'runscriptName' in error ? error.runscriptName : undefined;
   return typeof name === 'string' ? name : 'untitled';
@@ -112,7 +120,10 @@ export function runscriptTopicAction(managers: Managers, action: TabPluginTopicA
         .then((text) => {
           if (text !== undefined) post(managers, origin, text);
         })
-        .catch((error: unknown) => { reportCause('execute', error, action.name); });
+        .catch((error: unknown) => {
+          reportCause('execute', error, action.name);
+          postRunFailure(managers, origin, action.name);
+        });
       return;
     }
     case 'delete': { deleteOne(managers, origin, action.name); return; }

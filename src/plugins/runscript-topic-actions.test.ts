@@ -112,6 +112,30 @@ describe('the runscripts execute action', () => {
       expect(stderr).toHaveBeenCalledWith(
         expect.stringContaining('Runscript execute "deploy" failed: feed unavailable'),
       );
+      expect(notify).toHaveBeenNthCalledWith(2, managers, 'plugin-note', 'janus', 'Could not run runscript "deploy".');
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      process.off('unhandledRejection', unhandled);
+    }
+  });
+
+  it('reports a second feed-post rejection to stderr and leaves no unhandled rejection', async () => {
+    const { managers } = fixture(projectRoot());
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const unhandled = vi.fn();
+    notify
+      .mockImplementationOnce(() => { throw new Error('feed unavailable'); })
+      .mockImplementationOnce(() => { throw new Error('feed still unavailable'); });
+    process.on('unhandledRejection', unhandled);
+
+    try {
+      runscriptTopicAction(managers, { topic: 'runscripts', action: 'execute', name: 'deploy', origin: 'janus' });
+      await settle();
+
+      expect(notify).toHaveBeenNthCalledWith(2, managers, 'plugin-note', 'janus', 'Could not run runscript "deploy".');
+      expect(stderr).toHaveBeenCalledWith(
+        expect.stringContaining('Runscript execute "deploy" failed: feed still unavailable'),
+      );
       expect(unhandled).not.toHaveBeenCalled();
     } finally {
       process.off('unhandledRejection', unhandled);
