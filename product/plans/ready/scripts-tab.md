@@ -1,6 +1,6 @@
 # script tab shows a list of current runscripts, has a + metadata button to create a new runscript in an editor, each row has an action column with an execute button person-running icon, delete button trash-can icon, clone button cone icon to duplicate the runscript with a new name name-2.rs. `scripts` command opens the script tab.
 
-**Complexity: 6/10** — a new bundled tab plugin plus a new host topic and a directory watch with its own lifecycle, which is real concurrency reasoning; most of the file operations and the editor hand-off already exist and are reused.
+**Complexity: 5/10** — a new bundled tab plugin plus a new host topic, with the list refreshed on the existing one-second tick; the file operations, the editor hand-off, and the tick already exist and are reused.
 
 Runscripts live in `.janissary/scripts/<name>.rs`, and today the only way to work with them is to type a command: `execute <name>`, `edit <name>`, or `create script <name>`, with the name already in mind. This feature adds a `scripts` command that opens a tab listing the project's runscripts, so a user can run, delete, duplicate, or create one from a list. The closest precedent is the schedules tab (`product/specs/scheduling.md`, Scheduling tab), which is a bundled list plugin with a + button in its metadata row, a trash icon on each row, and a topic that keeps its list live.
 
@@ -8,8 +8,8 @@ Runscripts live in `.janissary/scripts/<name>.rs`, and today the only way to wor
 
 - **Command.** `scripts` opens the script tab. The tab is a bundled tab plugin that claims `scripts`. No built-in command is called `scripts`, so the claim does not collide with one. The tab is titled `scripts`. It is a singleton: a second `scripts` focuses the open tab rather than opening another, as `schedules` does. Any words after `scripts` are ignored, so `scripts left` opens the tab as normal.
 - **Contents.** The list is the runscript catalog: the same valid, regular `.rs` files that `catalogRunscripts` returns, sorted alphabetically. A file whose name is not a valid runscript name does not appear, which is the existing catalog rule. Each row shows the runscript's name, followed by a clock icon (the same icon as the schedule button in the tab metadata bar) when at least one system schedule uses it. The icon's tooltip reads `Used by a system schedule`, and it appears or disappears as the row's schedule count changes. No other detail is shown on a row.
-- **Live list.** Opening the tab creates `.janissary/` and `.janissary/scripts/` when they are missing, using the same checks `create script` uses, and then watches the scripts directory. The list updates by itself when a runscript is created or deleted outside Janissary, within about a second.
-- **Row refresh.** A row's schedule count and its open-in-editor flag change without any file event. Both are recomputed on the scheduler's one-second tick, and the list is sent again only when a row's value changes. This is a deliberate ceiling: a list of a few dozen runscripts costs next to nothing per second. If the tick ever shows up in profiles, the upgrade path is to recompute on the state broadcast instead, at the cost of running far more often.
+- **Live list.** Opening the tab creates `.janissary/` and `.janissary/scripts/` when they are missing, using the same checks `create script` uses, and then reads the scripts directory on each tick. A runscript created or deleted outside Janissary appears or disappears within about one second.
+- **Row refresh.** The scheduler's one-second tick recomputes the whole list: the runscript names, each row's schedule count, and each row's open-in-editor flag. The list is sent again only when something in it changes. This is a deliberate ceiling: a directory listing of a few dozen names and two lookups per row cost next to nothing per second. If the tick ever shows up in profiles, the upgrade path is to recompute on the state broadcast instead, at the cost of running far more often.
 - **Row actions.** Each row has an action column with three buttons: execute (person-running icon), delete (trash-can icon), and clone (duplicate icon; the request's "cone icon" is read as this). Pressing a row's button does not change the selection.
 - **Selecting and opening.** A single click selects a row without switching tabs. A double-click, or Enter on the selected row, opens that runscript in an editor tab, the same as `edit <name>`. The existing editor path already focuses a tab that holds the same file rather than opening a second one, so the scripts tab inherits that.
 - **Keyboard.** The tab mirrors the schedules tab. Up and Down move the selection one row, Home and End jump to the first and last row, and the list scrolls to keep the selected row in view. Delete or Backspace opens the delete dialog for the selected row.
@@ -28,7 +28,7 @@ Runscripts live in `.janissary/scripts/<name>.rs`, and today the only way to wor
 | Runscript name validation | `src/schedule/system/runscript.ts` (`isRunscriptName`) | Validate names for create and clone |
 | Runscript catalog | `src/schedule/system/runscript-files.ts` (`catalogRunscripts`) | Source of the list rows |
 | Tab completion of runscript names | `src/controller/completion.ts` (reads `catalogRunscripts`) | Needs no change; a new or cloned runscript completes as soon as its file exists |
-| Safe reads and path checks | `src/schedule/system/runscript-files.ts` (`readRunscript`, `scriptsDirectory`, `assertDirectory`, `makeScriptsDirectory`) | Reads, the directory creation for the watch, and the refusals of symlinks and non-regular files |
+| Safe reads and path checks | `src/schedule/system/runscript-files.ts` (`readRunscript`, `scriptsDirectory`, `assertDirectory`, `makeScriptsDirectory`) | Reads, the directory creation on open, and the refusals of symlinks and non-regular files |
 | Runscript creation | `src/schedule/system/runscript-files.ts` (`createRunscript`) and `src/commands/create.ts` | The + button creates through `createRunscript`, and opens the file through the same editor path |
 | Running a runscript | `src/commands/execute.ts` | Its execution step becomes one exported function that the command and the topic action both call |
 | Free-name selection | `src/editor/next-free-name.ts` (`nextFreeName`) | Chooses the clone's `-2`, `-3` name and the `untitled-N` name |
@@ -38,13 +38,13 @@ Runscripts live in `.janissary/scripts/<name>.rs`, and today the only way to wor
 | Singleton list tab with a + button and a trash icon per row | `src/plugins/schedules/`, `web/src/plugins/schedules/` (`SchedulesTab`, `SchedulesRows`, `DeleteScheduleDialog`) | Shape of the tab, the metadata-row + button, the per-row trash icon, the confirmation dialog, and the keyboard model |
 | Icon buttons in a row's action column | `web/src/plugins/sessions/SessionRowActions.tsx` | Precedent for the action column |
 | Handling of a missing runscript | `src/schedule/system/firing.ts` | A system schedule that names a deleted runscript already fires as `missing` |
-| Folder watching | `src/file-navigator/watch.ts` (`watchDir`) | Not reused. It is keyed to a files tab's state, and this watch is host-level, so the scripts module gets its own non-recursive `fs.watch` |
+| Folder watching | `src/file-navigator/watch.ts` (`watchDir`) | Not used. The scripts list is read on the one-second tick, so no watcher is needed, and no watcher has to re-arm when the directory appears or is replaced |
 
 ## Proposed changes
 
 **Runscript files.** In `src/schedule/system/runscript-files.ts`, which stays well under the 200-line limit:
 
-- Export `ensureScriptsDirectory(projectRoot)`, which is the existing `makeScriptsDirectory` made public. It runs `scriptsDirectory` first, so the Git-exclusion step runs before the directory is created, as it does for `createRunscript`. The tab's watch calls it before watching.
+- Export `ensureScriptsDirectory(projectRoot)`, which is the existing `makeScriptsDirectory` made public. It runs `scriptsDirectory` first, so the Git-exclusion step runs before the directory is created, as it does for `createRunscript`. The tab calls it when it opens, before the first tick reads the directory.
 - Add a `text` field to what `readRunscript` returns, holding the raw file contents beside the parsed `lines`. The reader already reads that file, so the field costs one assignment. Clone uses it, because `parseRunscriptText` drops blank and full-line comments and a clone built from parsed lines would lose them. Existing callers ignore the new field.
 - Add `deleteRunscript(projectRoot, name)`. It checks the target through `readRunscript`, so a symlink or non-regular file is refused before anything is removed. It removes the file and reports whether it did.
 - Add `cloneRunscript(projectRoot, name)`. It takes the raw `text` from `readRunscript`, picks the target with `nextFreeName` on `<name>.rs`, creates that file with the exclusive write flag, writes the raw text, and returns the new name. The exclusive flag is the guard against the race between choosing a name and writing it.
@@ -52,14 +52,15 @@ Runscripts live in `.janissary/scripts/<name>.rs`, and today the only way to wor
 
 **Shared execution.** In `src/commands/execute.ts`, export `runRunscriptNow(managers, name)`. It holds the body after name validation: read the runscript, report a missing or unreadable one, ensure the system shell, and enqueue the lines to `system`. It returns the failure text, or nothing. The `execute` command appends that text to its transcript exactly as it does today, so the command's behavior does not change. The topic action sends the same text to the feed.
 
-**Host watch and topic.** A new host module beside the runscript files owns the watch.
+**Host refresh and topic.** A new host module beside the runscript files owns the refresh, which runs on the scheduler's one-second tick.
 
-- It starts when the first scripts tab opens. It calls `ensureScriptsDirectory`, starts a non-recursive `fs.watch` on the scripts directory, and re-reads the names on each event. Events that arrive together are coalesced into one re-read.
-- It stops when the last scripts tab closes or the plugin is disabled, and it releases its watch in one dispose, as other host resources do.
-- It keeps the last rows it published and sends the list again only when a row changes.
-- Rejected: watching for the whole session. That would hold a watch in every project, including projects where no scripts tab was ever opened.
+- It starts when the first scripts tab opens. It calls `ensureScriptsDirectory`, then reads the runscript names on each tick.
+- On each tick it recomputes the rows (names, schedule counts, open flags) and compares them with the rows it last published. It sends the list only when they differ.
+- It stops when the last scripts tab closes or the plugin is disabled, and it releases its state in one dispose, as other host resources do.
+- Rejected: `fs.watch`. It would need re-arming whenever the directory appears or is replaced, and the tick already runs once a second.
+- Rejected: refreshing for the whole session. That would read the directory in projects where no scripts tab is open.
 
-The `runscripts` topic is added to `NOTIFICATION_TOPICS` in `src/plugins/api-topics.ts` beside the five v2 topics. `readTopicData` in `src/plugins/topics.ts` gains a `runscripts` branch, and `runTopicAction` in the same file routes `runscripts` actions to the new action module. The change is additive, so `TAB_PLUGIN_API_VERSION` stays 2. The topic list in `documentation/developer-documentation/tab-plugins.md`, which names the v2 topics, gets the new topic. Its payload is `{ rows }`, with each row holding `name`, `schedules` (the number of system schedules that name this runscript), and `open` (whether an editor tab holds its file). Rows are sorted by name. The tick recomputes `schedules` and `open` as described under Design decisions.
+The `runscripts` topic is added to `NOTIFICATION_TOPICS` in `src/plugins/api-topics.ts` beside the five v2 topics. `readTopicData` in `src/plugins/topics.ts` gains a `runscripts` branch, and `runTopicAction` in the same file routes `runscripts` actions to the new action module. The change is additive, so `TAB_PLUGIN_API_VERSION` stays 2. The topic list in `documentation/developer-documentation/tab-plugins.md`, which names the v2 topics, gets the new topic. Its payload is `{ rows }`, with each row holding `name`, `schedules` (the number of system schedules that name this runscript), and `open` (whether an editor tab holds its file). Rows are sorted by name. The tick recomputes all three fields, as described under Design decisions.
 
 **Actions.** Every intent the client sends becomes a topic action: `execute`, `delete`, `clone`, `create` (the + button), and `open` (double-click or Enter). They are handled in a new module, `src/plugins/runscript-topic-actions.ts`, which mirrors `schedule-topic-actions.ts`.
 
@@ -75,16 +76,16 @@ Each action payload carries the issuing tab's label. The editor path needs an or
 
 **Client.** The plugin's client entry lives under `web/src/plugins/scripts/`. `index.tsx` default-exports the component and named-exports `isPayload`. The list, the metadata row with the + button, the row action column, and the delete dialog live beside it. Selection, keyboard movement, and scrolling are view-local state and stay on the client. The key handling is a pure module under `web/src/plugins/scripts/`, modeled on the Up, Down, Home, and End handling in `web/src/plugins/schedules/SchedulesTab.tsx`. It is written separately rather than imported, because one feature does not import another. Rows, counts, open flags, and the dialog's lines come from the server. The client sends intents and renders what the server sends.
 
-**Plugin declaration.** `src/plugins/scripts/manifest.ts` declares the plugin with `scripts` as its command claim and `runscripts` as its notification topic. `src/plugins/scripts/shared.ts` holds the payload and the intent guards, and imports nothing. `src/plugins/scripts/activate.ts` opens or focuses the singleton tab under one fixed instance key, starts and stops the host watch with the tab's lifetime, and routes each intent to `topicAction`. The plugin is registered in `src/plugins/catalog.ts`, `src/plugins/loaders.ts`, and `web/src/plugins/registry.tsx`.
+**Plugin declaration.** `src/plugins/scripts/manifest.ts` declares the plugin with `scripts` as its command claim and `runscripts` as its notification topic. `src/plugins/scripts/shared.ts` holds the payload and the intent guards, and imports nothing. `src/plugins/scripts/activate.ts` opens or focuses the singleton tab under one fixed instance key, starts and stops the host refresh with the tab's lifetime, and routes each intent to `topicAction`. The plugin is registered in `src/plugins/catalog.ts`, `src/plugins/loaders.ts`, and `web/src/plugins/registry.tsx`.
 
 **Specs and docs.** Add `product/specs/scripts-tab.md` as the behavior spec for the tab. In `product/specs/scheduling.md`, the runscripts paragraph gets a pointer to the new spec. The `scripts` row goes into the Commands table in `help.md` at the repository root, which stays alphabetical and is checked by `src/commands.test.ts`, and into `documentation/user-documentation/command-bar/commands.md`. The `runscripts` topic is added to the topic list in `documentation/developer-documentation/tab-plugins.md`.
 
 ## Tests
 
-- `src/plugins/scripts/activate.test.ts` and `shared.test.ts`: the `scripts` command opens the singleton and focuses it on a second run; ignored arguments still open the tab; each intent becomes a topic action carrying the tab label; a malformed intent is rejected, not treated as a failure; the watch starts with the first tab and stops with the last; disposal releases what the tab acquired.
+- `src/plugins/scripts/activate.test.ts` and `shared.test.ts`: the `scripts` command opens the singleton and focuses it on a second run; ignored arguments still open the tab; each intent becomes a topic action carrying the tab label; a malformed intent is rejected, not treated as a failure; the refresh starts with the first tab and stops with the last; disposal releases what the tab acquired.
 - `src/plugins/runscript-topic-actions.test.ts`: each action in the Actions section. Failures reach the feed with the wording above. Clone and create open the new file. Open focuses an existing editor tab for the same path.
 - `src/plugins/api-topics` tests: the four existing topics are unchanged, and the `runscripts` payload carries `schedules` and `open` per row, sorted by name.
-- The host watch module's tests: an event re-reads the names; a re-read that finds no change publishes nothing; disposal stops the watch.
+- The host refresh module's tests, driving the tick by hand: a tick that finds a new or removed name publishes the list; a tick that finds no change publishes nothing; a change in a row's schedule count or open flag publishes; disposal stops the ticks.
 - `src/schedule/system/runscript-files.test.ts`: added cases for `ensureScriptsDirectory`, `deleteRunscript`, `cloneRunscript`, and `newUntitledRunscript`, and a case showing `readRunscript` returns the raw `text` with its comments intact. Delete removes the file and refuses a symlink. Clone picks `-2` and then `-3`, keeps comments and blank lines, and refuses a symlinked source. The untitled name goes `untitled`, then `untitled-2`.
 - `src/commands/execute.test.ts` and the existing `execute` tests keep passing unchanged, and a new case checks that `runRunscriptNow` returns the same failure texts the command prints.
 - `web/src/plugins/scripts/*.test.tsx`: lazy loading and the payload guard; the rendered list and empty state; the clock marker shown only for rows whose schedule count is above zero; the keyboard model; a double-click and Enter both send `open`; each button sends its intent; the delete dialog shows the schedule and open lines from the row, and Delete with an empty selection does nothing; selection after a delete.
@@ -93,7 +94,7 @@ Each action payload carries the issuing tab's label. The editor path needs an or
 
 - Only the controls named in the feature exist: execute, delete, clone, and the + button, plus the double-click and Enter that open a row in an editor. Renaming a runscript, editing it from its row, and scheduling from the tab are not part of this feature.
 - Docking the tab into a sidebar. The tab is centre-only.
-- Watching any directory other than `.janissary/scripts`.
+- Reading any directory other than `.janissary/scripts`.
 - The runscript grammar, the catalog rule, and the behavior of `edit`, `execute`, and `create script` are unchanged. The only change to `execute` is the extraction described under Proposed changes.
 
 ## Verification
