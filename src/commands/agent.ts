@@ -20,6 +20,24 @@ function cleanupErrorMessages(error: unknown): string[] {
   return failures.map((failure) => failure instanceof Error ? failure.message : String(failure));
 }
 
+async function finishRunAfterError(
+  run: ReturnType<CommandManagers['agent']['create']> | undefined,
+  managers: CommandManagers,
+  error: unknown,
+): Promise<AgentResult> {
+  if (!run) return agentFailure(error);
+  const cleanupWarnings: string[] = [];
+  if (managers.agent.runs.has(run.id)) {
+    try { await managers.agent.finish(run.id, run.abortController.signal.aborted ? 'terminated' : 'failed'); }
+    catch (cleanupError) { cleanupWarnings.push(...cleanupErrorMessages(cleanupError)); }
+  }
+  try { await run.finish(run.outcome ?? 'failed'); } catch { /* cleanup warnings were collected above */ }
+  const result = run.outcome === 'terminated'
+    ? { status: 'terminated' as const, response: 'Agent terminated.', cleanupWarnings: [] }
+    : agentFailure(error);
+  return cleanupWarnings.length > 0 ? { ...result, cleanupWarnings } : result;
+}
+
 async function runAgent(
   commandText: string,
   label: string,
@@ -153,22 +171,8 @@ async function runAgent(
     }
     return { ...result, cleanupWarnings: [...result.cleanupWarnings, ...cleanupWarnings] };
   } catch (error) {
-    const cleanupWarnings: string[] = [];
-    if (run && managers.agent.runs.has(run.id)) {
-      try { await managers.agent.finish(run.id, run.abortController.signal.aborted ? 'terminated' : 'failed'); }
-      catch (cleanupError) { cleanupWarnings.push(...cleanupErrorMessages(cleanupError)); }
-    }
-    if (run) {
-      try { await run.finish(run.outcome ?? 'failed'); } catch { /* cleanup warnings were collected above */ }
-    }
-    if (cleanupWarnings.length > 0) {
-      const result = run?.outcome === 'terminated'
-        ? { status: 'terminated' as const, response: 'Agent terminated.', cleanupWarnings: [] }
-        : agentFailure(error);
-      return { ...result, cleanupWarnings };
-    }
-    if (run?.outcome === 'terminated') return { status: 'terminated', response: 'Agent terminated.', cleanupWarnings: [] };
-    return agentFailure(error);
+    // Awaited so the finally block resolves completion only after the run's cleanup settles.
+    return await finishRunAfterError(run, managers, error);
   } finally {
     if (caller && abortRun) caller.signal.removeEventListener('abort', abortRun);
     completion.resolve();
