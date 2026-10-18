@@ -11,7 +11,7 @@
 
 The order inside `createRunscript` stays as it is: `isRunscriptName` first, then the target path, then `scriptsDirectory` (which runs the Git exclusion and checks the directories), then `makeScriptsDirectory` when the directory is missing, then `createExclusive`, then `readRunscript` when the exclusive create reports an existing entry. The path is computed in the same position, so no check or call moves.
 
-`cloneRunscript` and `newUntitledRunscript` are left alone. They build their target from `nextFreeName` output, not from a bare name, so they do not have the duplicated rule. A read of `src/schedule/system/runscript-files.ts` confirms that the only other `path.join` with a `.rs` suffix is inside `runscriptFilePath` itself.
+`newUntitledRunscript` is left alone. Its `untitled.rs` seed is passed to `nextFreeName` and reaches the path through `createRunscript`, so it does not build a second path. `cloneRunscript` is not covered by this plan. Before `runscript-clone-single-path`, it built its candidate as a `${name}.rs` template literal ahead of `nextFreeName`, a second spelling of the rule beside `runscriptFilePath`, and that fix routes the candidate through the helper.
 
 ## What already exists (reuse, don't rebuild)
 
@@ -46,6 +46,7 @@ Run `./scripts/run.mjs check-diff` after the change. All existing tests must pas
 
 ## Out of scope
 
-- `cloneRunscript` and `newUntitledRunscript`, which build from `nextFreeName` output and stay as they are.
+- `newUntitledRunscript`, which reaches the path through `createRunscript` and stays as it is.
+- `cloneRunscript`, whose candidate spelling is fixed in `runscript-clone-single-path`.
 - Any exported signature, any other file, and any test file.
 - Any change to the `<name>.rs` rule itself, the name grammar, or the Git exclusion behavior.

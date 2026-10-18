@@ -126,7 +126,7 @@ export function cloneRunscript(projectRoot: string, name: string): string | unde
   const source = readRunscript(projectRoot, name);
   if (!source.exists) return undefined;
   const directory = runscriptsDirectoryPath(projectRoot);
-  const target = nextFreeName(directory, `${name}.rs`);
+  const target = nextFreeName(directory, path.basename(runscriptFilePath(projectRoot, name)));
   const file = path.join(directory, target);
   if (!createExclusive(file, source.text)) throw new Error(`Runscript already exists: ${file}`);
   return target.slice(0, -3);
