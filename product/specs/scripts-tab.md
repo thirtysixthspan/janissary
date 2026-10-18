@@ -86,9 +86,9 @@ Each failure line goes to the notifications feed, not to the tab. In the table, 
 | Text | When it appears | Produced by |
 | --- | --- | --- |
 | `No runscript named "<name>".` | The file is absent when the action reads it. | Run, Open, Duplicate, Delete |
-| `Could not read runscript "<name>".` | The file exists but is a symlink or non-regular file, or cannot be read. | Run, Open |
+| `Could not read runscript "<name>".` | The file exists but is a symlink or non-regular file, or cannot be read. Also when `.janissary` or `.janissary/scripts` is a symlink or not a directory, whether or not the file exists. | Run, Open |
 | `Could not run runscript "<name>".` | Running throws, for a reason other than a missing or unreadable file. | Run |
-| `Could not delete runscript "<name>".` | The file is a symlink or non-regular file, or removing it fails. | Delete |
+| `Could not delete runscript "<name>".` | The file is a symlink or non-regular file, or it cannot be read or removed. Also when `.janissary` or `.janissary/scripts` is a symlink or not a directory, whether or not the file exists. | Delete |
 | `Could not clone runscript "<name>".` | The source is refused, or the copy cannot be created. | Duplicate |
 | `Could not create runscript "<name>".` | The runscripts directory cannot be used, or the new file cannot be created. The name is `untitled` when the failure comes before the name is picked, and the picked name after. | + (`New script`) |
 | `Could not use the runscripts directory.` | `.janissary` or `.janissary/scripts` is a symlink or not a directory. | `scripts` command |
@@ -105,6 +105,7 @@ Owner to confirm: the run line and the directory line in the table above are new
 - A symlinked or non-regular file is never listed. If one replaces a listed file, the action on it reports its own failure line: the read line for Run and Open, the clone line for Duplicate, and the delete line for Delete.
 - An empty or missing scripts directory shows the empty-state line. `scripts` creates any missing folders.
 - A symlinked `.janissary` or `.janissary/scripts` makes the listing fail. The list shows the empty state, and the refresh writes no feed line for it. `scripts` reports the directory line, and + reports the create line with the name `untitled`.
+- A symlinked or non-directory `.janissary` or `.janissary/scripts` makes Run and Open report the read line, and Delete report the delete line, whether or not the runscript file exists. The directory is checked first, so those lines do not mean the file is at fault. Duplicate already reports its clone line in that case.
 - Deleting a runscript while an editor tab holds it, and saving that tab afterward, are described under Delete.
 - Known divergence. The schedules tab has no keyboard target check, and the scripts tab does (`ownsKey` in `web/src/plugins/scripts/ScriptsTab.tsx`). On the schedules tab, with a row selected, Enter on the focused `New schedule` button runs the focus action for the selected row, so the owner tab opens instead of the New schedule dialog. ArrowUp, ArrowDown, Home, End, Backspace, and Delete pressed on that button also move the schedules selection or open its delete dialog. The scripts tab leaves those keys to its + button. This change does not touch the schedules tab. The owner's choice between sharing the guard and keeping two copies is recorded in `product/plans/complete/scripts-schedules-keyboard-divergence.md`.
 

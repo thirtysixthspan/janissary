@@ -2,17 +2,6 @@
 
 # pull-request
 
-* Correct the scripts tab spec's failure table, whose read and delete triggers name only the runscript file, to cover the symlinked directory case that raises the same lines.
-
-Existing Issue: The failure table ties the read line to a file that exists and is a symlink or unreadable, and the delete line to a file that is a symlink or cannot be removed, yet a symlinked or non-directory `.janissary` or `.janissary/scripts` makes Run and Open report the read line and Delete report the delete line with no file involved, and the edge cases describe that directory case only for the listing and the create action. Severity: 3/10
-
-Existing Risk: 3/10 - A user who sees `Could not read runscript` for a script they can see on disk looks for a bad file rather than the symlinked directory above it, and fixes the wrong thing first.
-
-Proposal Risk: 1/10 - Once the table names the directory trigger, the spec matches what the code does, and the only hazard left is that one line covers two causes, which the corrected trigger makes visible to a reader.
-
-Proposal: Execute ./ai/tasks/feature/work-pull-request-issue.md 1739 "correct the scripts tab spec's failure table for the symlinked directory case". In product/specs/scripts-tab.md, revise the trigger cells of the `Could not read runscript "<name>".` and `Could not delete runscript "<name>".` rows so each also names a symlinked or non-directory `.janissary` or `.janissary/scripts` as a trigger. The code behind that is `readRunscript` in src/schedule/system/runscript-files.ts, which calls `scriptsDirectory` and throws from its `assertDirectory` check before any file is examined, and the callers that turn that throw into the lines are `runRunscriptNow` in src/commands/execute.ts and `openOne` and `deleteOne` in src/plugins/runscript-topic-actions.ts. Add one edge-case bullet beside the existing symlinked-directory bullet that states the same for Run, Open, and Delete, and notes that Duplicate already reports its clone line in that case. Change no code, because the code already has the behavior and the spec is what does not match it. No test asserts the Run, Open, or Delete line under a symlinked directory: the topic-action tests in src/plugins/runscript-topic-actions.test.ts reach that case only for the create and ensureDirectory actions, and the file-level tests in src/schedule/system/runscript-files.test.ts assert that the reader throws, not which line the user sees. So the spec is the only record of the behavior and must state it exactly. Verify by re-reading the revised rows and bullet against those call sites, and by confirming that no verbatim line in the failure table changed.
-
-
 * Guard, with a test, the hand-kept notification topic count that this change writes into the developer doc, the tab-plugin spec, and the plugin guideline, as the capability count already is.
 
 Existing Issue: The commit writes the topic count as prose ("v2 defines six topics") in the developer doc and repeats it in the tab-plugin spec and the plugin guideline, while the developer doc test pins only the capability count, so no check fails when a topic is added and the prose is left behind, which is how the guideline's count already read four against the five the code defined before this change. Severity: 3/10
