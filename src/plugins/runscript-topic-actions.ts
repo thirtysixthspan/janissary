@@ -2,6 +2,7 @@ import type { Managers } from '../managers.js';
 import type { TabPluginTopicAction } from './api.js';
 import { runRunscriptNow } from '../commands/execute.js';
 import { notify } from '../notifications/index.js';
+import { errorText } from '../error-text.js';
 import { isRunscriptName } from '../schedule/system/runscript.js';
 import {
   cloneRunscript,
@@ -24,6 +25,11 @@ function failed(verb: string, name: string): string {
   return `Could not ${verb} runscript "${name}".`;
 }
 
+function reportCause(action: string, error: unknown, name?: string): void {
+  const subject = name === undefined ? action : `${action} "${name}"`;
+  process.stderr.write(`Runscript ${subject} failed: ${errorText(error)}\n`);
+}
+
 function untitledName(error: unknown): string {
   const name = error instanceof Error && 'runscriptName' in error ? error.runscriptName : undefined;
   return typeof name === 'string' ? name : 'untitled';
@@ -36,7 +42,8 @@ function openRunscript(managers: Managers, origin: string, command: string, name
 function deleteOne(managers: Managers, origin: string, name: string): void {
   try {
     if (!deleteRunscript(managers.tab.launchDir, name)) post(managers, origin, missing(name));
-  } catch {
+  } catch (error) {
+    reportCause('delete', error, name);
     post(managers, origin, failed('delete', name));
   }
 }
@@ -45,7 +52,8 @@ function cloneOne(managers: Managers, origin: string, name: string): void {
   let copy: string | undefined;
   try {
     copy = cloneRunscript(managers.tab.launchDir, name);
-  } catch {
+  } catch (error) {
+    reportCause('clone', error, name);
     post(managers, origin, failed('clone', name));
     return;
   }
@@ -61,7 +69,9 @@ function createOne(managers: Managers, origin: string): void {
   try {
     name = newUntitledRunscript(managers.tab.launchDir);
   } catch (error) {
-    post(managers, origin, failed('create', untitledName(error)));
+    const attempted = untitledName(error);
+    reportCause('create', error, attempted);
+    post(managers, origin, failed('create', attempted));
     return;
   }
   openRunscript(managers, origin, `create script ${name}`, name);
@@ -71,7 +81,8 @@ function openOne(managers: Managers, origin: string, name: string): void {
   let exists: boolean;
   try {
     exists = readRunscript(managers.tab.launchDir, name).exists;
-  } catch {
+  } catch (error) {
+    reportCause('open', error, name);
     post(managers, origin, failed('read', name));
     return;
   }
@@ -85,7 +96,8 @@ function openOne(managers: Managers, origin: string, name: string): void {
 function ensureDirectory(managers: Managers, origin: string): void {
   try {
     ensureScriptsDirectory(managers.tab.launchDir);
-  } catch {
+  } catch (error) {
+    reportCause('ensureDirectory', error);
     post(managers, origin, 'Could not use the runscripts directory.');
   }
 }

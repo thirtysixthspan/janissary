@@ -18,6 +18,7 @@ const directories: string[] = [];
 beforeEach(() => { notify.mockClear(); });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const directory of directories) rmSync(directory, { recursive: true, force: true });
   directories.length = 0;
 });
@@ -124,9 +125,14 @@ describe('the runscripts delete action', () => {
     symlinkSync(path.join(root, 'elsewhere.txt'), path.join(scriptsDirectory(root), 'deploy.rs'));
     const { managers } = fixture(root);
 
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     runscriptTopicAction(managers, { topic: 'runscripts', action: 'delete', name: 'deploy', origin: 'janus' });
 
     expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'janus', 'Could not delete runscript "deploy".');
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining('Runscript delete "deploy" failed: Runscript path is not a regular file'),
+    );
     expect(readFileSync(path.join(root, 'elsewhere.txt'), 'utf8')).toBe('keep');
     expect(lstatSync(path.join(scriptsDirectory(root), 'deploy.rs')).isSymbolicLink()).toBe(true);
   });
@@ -173,9 +179,14 @@ describe('the runscripts clone action', () => {
     symlinkSync(path.join(root, 'elsewhere.txt'), path.join(scriptsDirectory(root), 'deploy.rs'));
     const { edits, managers } = fixture(root);
 
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     runscriptTopicAction(managers, { topic: 'runscripts', action: 'clone', name: 'deploy', origin: 'janus' });
 
     expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'janus', 'Could not clone runscript "deploy".');
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining('Runscript clone "deploy" failed: Runscript path is not a regular file'),
+    );
     expect(edits).toEqual([]);
   });
 });
@@ -210,9 +221,14 @@ describe('the runscripts create action', () => {
     symlinkSync(path.join(root, 'nowhere.rs'), path.join(scriptsDirectory(root), 'untitled-2.rs'));
     const { edits, managers } = fixture(root);
 
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     runscriptTopicAction(managers, { topic: 'runscripts', action: 'create', origin: 'janus' });
 
     expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'janus', 'Could not create runscript "untitled-2".');
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining('Runscript create "untitled-2" failed: Runscript path is not a regular file'),
+    );
     expect(edits).toEqual([]);
   });
 
@@ -221,9 +237,14 @@ describe('the runscripts create action', () => {
     symlinkSync(projectRoot(), path.join(root, '.janissary'));
     const { edits, managers } = fixture(root);
 
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     runscriptTopicAction(managers, { topic: 'runscripts', action: 'create', origin: 'janus' });
 
     expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'janus', 'Could not create runscript "untitled".');
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining('Runscript create "untitled" failed: Runscript path is not a real directory'),
+    );
     expect(edits).toEqual([]);
   });
 });
@@ -280,9 +301,14 @@ describe('the runscripts open action', () => {
     symlinkSync(path.join(root, 'elsewhere.txt'), path.join(scriptsDirectory(root), 'deploy.rs'));
     const { edits, managers } = fixture(root);
 
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     runscriptTopicAction(managers, { topic: 'runscripts', action: 'open', name: 'deploy', origin: 'janus' });
 
     expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'janus', 'Could not read runscript "deploy".');
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining('Runscript open "deploy" failed: Runscript path is not a regular file'),
+    );
     expect(edits).toEqual([]);
   });
 
@@ -334,10 +360,15 @@ describe('the runscripts ensureDirectory action', () => {
     symlinkSync(projectRoot(), path.join(root, '.janissary'));
     const { managers } = fixture(root);
 
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
     expect(() => {
       runscriptTopicAction(managers, { topic: 'runscripts', action: 'ensureDirectory', origin: 'janus' });
     }).not.toThrow();
     expect(notify).toHaveBeenCalledWith(managers, 'plugin-note', 'janus', 'Could not use the runscripts directory.');
+    expect(stderr).toHaveBeenCalledWith(
+      expect.stringContaining('Runscript ensureDirectory failed: Runscript path is not a real directory'),
+    );
   });
 });
 
