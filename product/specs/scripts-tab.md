@@ -49,7 +49,7 @@ With no row selected, `ArrowDown` selects the second row and `ArrowUp` selects t
 
 ### Create
 
-The + button creates an empty runscript and opens it in an editor tab. It asks for no name. The file is `untitled.rs`, or the next free `untitled-N.rs` when that name is taken, so two presses make `untitled.rs` and then `untitled-2.rs`. The free name comes from `nextFreeName` (`src/editor/next-free-name.ts`), and `newUntitledRunscript` in `src/schedule/system/runscript-files.ts` makes the file through `createRunscript`, which never overwrites an existing file.
+The + button creates an empty runscript and opens it in an editor tab. It asks for no name. The file is `untitled.rs`, or the next free `untitled-N.rs` when that name is taken, so two presses make `untitled.rs` and then `untitled-2.rs`. A double-click on the + button creates one runscript, because its second click is ignored, as it is for Run and Duplicate. The free name comes from `nextFreeName` (`src/editor/next-free-name.ts`), and `newUntitledRunscript` in `src/schedule/system/runscript-files.ts` makes the file through `createRunscript`, which never overwrites an existing file.
 
 ### Clone
 

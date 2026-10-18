@@ -38,7 +38,9 @@ export function ScriptsTab({ payload, capabilities }: {
     void capabilities.intent('open', intent);
   };
 
-  const createScript = () => {
+  const createScript = (event: React.MouseEvent<HTMLButtonElement>) => {
+    // The second click of a double-click has detail 2. New script acts on the first click only, so a double-click creates one runscript.
+    if (event.detail > 1) return;
     void capabilities.intent('create', {});
   };
 

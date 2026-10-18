@@ -96,6 +96,17 @@ describe('ScriptsTab new script button', () => {
       screen.getByRole('button', { name: 'New script' }),
     );
   });
+
+  it('creates one runscript when New script is double-clicked, ignoring the second click', () => {
+    const { intent } = renderTab([row('backup')]);
+    const button = screen.getByRole('button', { name: 'New script' });
+
+    fireEvent.click(button, { detail: 1 });
+    fireEvent.click(button, { detail: 2 });
+
+    expect(intent).toHaveBeenCalledTimes(1);
+    expect(intent).toHaveBeenCalledWith('create', {});
+  });
 });
 
 describe('ScriptsTab selection and open', () => {
