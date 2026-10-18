@@ -24,8 +24,12 @@ export function ScriptRowActions({ name, onAction }: {
           aria-label={`${label} ${name}`}
           onClick={(event) => {
             event.stopPropagation();
+            // The second click of a double-click has detail 2. Run and Duplicate act on the first click only.
+            // Delete needs no such check: its second click lands on the dialog backdrop, which swallows it.
+            if (action !== 'delete' && event.detail > 1) return;
             onAction(action);
           }}
+          onDoubleClick={(event) => event.stopPropagation()}
         >
           <FontAwesomeIcon icon={icon} />
         </button>

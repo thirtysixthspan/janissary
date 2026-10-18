@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { ScriptRowActions } from './ScriptRowActions';
 
@@ -39,6 +40,33 @@ describe('ScriptRowActions', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Run deploy' }));
+
+    expect(outer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['Run', 'run'],
+    ['Duplicate', 'duplicate'],
+  ])('calls onAction once for a double-click on the %s button', async (label, action) => {
+    const user = userEvent.setup();
+    const onAction = renderActions();
+
+    await user.dblClick(screen.getByRole('button', { name: `${label} deploy` }));
+
+    expect(onAction).toHaveBeenCalledOnce();
+    expect(onAction).toHaveBeenCalledWith(action);
+  });
+
+  it.each(['Run', 'Duplicate', 'Delete'])('stops a double-click on the %s button from reaching the row around it', async (label) => {
+    const user = userEvent.setup();
+    const outer = vi.fn();
+    render(
+      <div onDoubleClick={outer}>
+        <ScriptRowActions name="deploy" onAction={vi.fn()} />
+      </div>,
+    );
+
+    await user.dblClick(screen.getByRole('button', { name: `${label} deploy` }));
 
     expect(outer).not.toHaveBeenCalled();
   });
