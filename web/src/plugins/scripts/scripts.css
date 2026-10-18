@@ -18,3 +18,10 @@
 .scripts-num { color: var(--muted); flex-shrink: 0; }
 .scripts-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; }
 .scripts-clock { color: var(--muted); flex-shrink: 0; }
+.scripts-row-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.scripts-row-actions button {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  font-size: 12px; padding: 0 4px; line-height: 1;
+}
+.scripts-row-actions button:hover { color: var(--fg); }
+.scripts-delete-note { color: var(--muted); }

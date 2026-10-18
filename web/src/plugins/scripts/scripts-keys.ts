@@ -15,3 +15,9 @@ export function rowIndexOf(rows: readonly { readonly name: string }[], name: str
   const index = rows.findIndex((row) => row.name === name);
   return index === -1 ? null : index;
 }
+
+export function nameAfterRemoval(rows: readonly { readonly name: string }[], name: string): string | null {
+  const index = rows.findIndex((row) => row.name === name);
+  if (index === -1) return null;
+  return rows[index + 1]?.name ?? rows[index - 1]?.name ?? null;
+}

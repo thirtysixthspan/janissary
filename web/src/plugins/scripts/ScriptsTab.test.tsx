@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RunscriptRow } from '@shared/plugins/scripts/shared';
@@ -200,16 +200,14 @@ describe('ScriptsTab keyboard movement', () => {
     expect(selectedName(container)).toBe('a');
   });
 
-  it('sends nothing and leaves the selection in place on Delete and Backspace, without preventing their default', () => {
+  it('sends nothing and leaves the selection empty on Delete and Backspace with no selection, without preventing their default', () => {
     const { container, intent } = renderTab([row('a'), row('b')]);
     const list = container.querySelector('.scripts-tab')!;
-
-    fireEvent.click(screen.getByText('b'));
 
     expect(fireEvent.keyDown(list, { key: 'Delete' })).toBe(true);
     expect(fireEvent.keyDown(list, { key: 'Backspace' })).toBe(true);
     expect(intent).not.toHaveBeenCalled();
-    expect(selectedName(container)).toBe('b');
+    expect(selectedName(container)).toBeNull();
   });
 
   it('moves the selection with ArrowDown pressed on a row', () => {
@@ -258,5 +256,176 @@ describe('ScriptsTab selection across rerenders', () => {
 
     rerenderWith([row('a'), row('b')]);
     expect(selectedName(container)).toBe('b');
+  });
+});
+
+function dialogButton(label: string) {
+  return within(screen.getByRole('alertdialog')).getByRole('button', { name: label });
+}
+
+describe('ScriptsTab delete dialog', () => {
+  it.each(['Delete', 'Backspace'])('opens the dialog for the selected row on %s and sends nothing', (key) => {
+    const { container, intent } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('b'));
+
+    expect(fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key })).toBe(false);
+    expect(screen.getByText('Delete runscript "b"?')).toBeInTheDocument();
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('sends delete with the row name when the delete is confirmed', () => {
+    const { container, intent } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('b'));
+    fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Delete' });
+    fireEvent.click(dialogButton('Delete'));
+
+    expect(intent).toHaveBeenCalledWith('delete', { name: 'b' });
+  });
+
+  it('shows the schedule line for a row a system schedule uses', () => {
+    const { container } = renderTab([row('a'), row('b', 2)]);
+
+    fireEvent.click(screen.getByText('b'));
+    fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Delete' });
+
+    expect(screen.getByText('Used by 2 system schedules. They will fire as missing after this.')).toBeInTheDocument();
+  });
+
+  it('moves the selection to the next row after a confirmed delete of a selected row in the middle', () => {
+    const { container } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('b'));
+    fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Delete' });
+    fireEvent.click(dialogButton('Delete'));
+
+    expect(selectedName(container)).toBe('c');
+  });
+
+  it('moves the selection to the previous row after a confirmed delete of the last row', () => {
+    const { container } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('c'));
+    fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Delete' });
+    fireEvent.click(dialogButton('Delete'));
+
+    expect(selectedName(container)).toBe('b');
+  });
+
+  it('selects nothing after a confirmed delete of the only row', () => {
+    const { container } = renderTab([row('a')]);
+
+    fireEvent.click(screen.getByText('a'));
+    fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Delete' });
+    fireEvent.click(dialogButton('Delete'));
+
+    expect(selectedName(container)).toBeNull();
+  });
+
+  it('leaves the selection where it was after a confirmed delete of a row that is not selected', () => {
+    const { container, intent } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('a'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete c' }));
+    fireEvent.click(dialogButton('Delete'));
+
+    expect(intent).toHaveBeenCalledWith('delete', { name: 'c' });
+    expect(selectedName(container)).toBe('a');
+  });
+
+  it('keeps the highlight on the next name after a rerender drops the deleted row', () => {
+    const { container, rerenderWith } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('b'));
+    fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Delete' });
+    fireEvent.click(dialogButton('Delete'));
+    rerenderWith([row('a'), row('c')]);
+
+    expect(selectedName(container)).toBe('c');
+  });
+
+  it('returns focus to the tab after a confirm', () => {
+    const { container } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('b'));
+    fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Delete' });
+    fireEvent.click(dialogButton('Delete'));
+
+    expect(document.activeElement).toBe(container.querySelector('.scripts-tab'));
+  });
+
+  it('closes without sending and returns focus to the tab after a cancel, keeping the selection', () => {
+    const { container, intent } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('b'));
+    fireEvent.keyDown(container.querySelector('.scripts-tab')!, { key: 'Delete' });
+    fireEvent.click(dialogButton('Cancel'));
+
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
+    expect(selectedName(container)).toBe('b');
+    expect(document.activeElement).toBe(container.querySelector('.scripts-tab'));
+  });
+});
+
+describe('ScriptsTab row buttons', () => {
+  it.each([
+    ['Run', 'execute'],
+    ['Duplicate', 'clone'],
+  ])('sends %s as %s with the row name, keeps the selection, and returns focus to the tab', (label, name) => {
+    const { container, intent } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('a'));
+    fireEvent.click(screen.getByRole('button', { name: `${label} b` }));
+
+    expect(intent).toHaveBeenCalledWith(name, { name: 'b' });
+    expect(selectedName(container)).toBe('a');
+    expect(document.activeElement).toBe(container.querySelector('.scripts-tab'));
+  });
+
+  it('opens the dialog for its own row on a click of Delete, not for the selected row, and sends nothing', () => {
+    const { container, intent } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('b'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete c' }));
+
+    expect(screen.getByText('Delete runscript "c"?')).toBeInTheDocument();
+    expect(screen.queryByText('Delete runscript "b"?')).toBeNull();
+    expect(intent).not.toHaveBeenCalled();
+    expect(selectedName(container)).toBe('b');
+  });
+
+  it('presses the focused Run button on Enter, so it sends execute and not open, while another row is selected', async () => {
+    const user = userEvent.setup();
+    const { intent } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('a'));
+    screen.getByRole('button', { name: 'Run b' }).focus();
+    await user.keyboard('{Enter}');
+
+    expect(intent).toHaveBeenCalledWith('execute', { name: 'b' });
+    expect(intent).not.toHaveBeenCalledWith('open', expect.anything());
+  });
+
+  it('opens the dialog for its row on Enter pressed on the Delete button of that row, and sends nothing', async () => {
+    const user = userEvent.setup();
+    const { intent } = renderTab([row('a'), row('b')]);
+
+    fireEvent.click(screen.getByText('a'));
+    screen.getByRole('button', { name: 'Delete b' }).focus();
+    await user.keyboard('{Enter}');
+
+    expect(screen.getByText('Delete runscript "b"?')).toBeInTheDocument();
+    expect(intent).not.toHaveBeenCalled();
+  });
+
+  it('leaves the selection in place on ArrowDown pressed on a focused row button', () => {
+    const { container } = renderTab([row('a'), row('b'), row('c')]);
+
+    fireEvent.click(screen.getByText('a'));
+
+    expect(fireEvent.keyDown(screen.getByRole('button', { name: 'Run b' }), { key: 'ArrowDown' })).toBe(true);
+    expect(selectedName(container)).toBe('a');
   });
 });

@@ -1,12 +1,14 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { RunscriptRow } from '@shared/plugins/scripts/shared';
 import { scheduleWindowIcon } from '../api';
+import { ScriptRowActions, type RowAction } from './ScriptRowActions';
 
-export function ScriptRows({ rows, selectedIndex, onSelect, onOpen }: {
+export function ScriptRows({ rows, selectedIndex, onSelect, onOpen, onRowAction }: {
   rows: RunscriptRow[];
   selectedIndex: number | null;
   onSelect: (name: string) => void;
   onOpen: (name: string) => void;
+  onRowAction: (name: string, action: RowAction) => void;
 }) {
   return (
     <>
@@ -33,6 +35,7 @@ export function ScriptRows({ rows, selectedIndex, onSelect, onOpen }: {
               <FontAwesomeIcon icon={scheduleWindowIcon} />
             </span>
           )}
+          <ScriptRowActions name={row.name} onAction={(action) => onRowAction(row.name, action)} />
         </div>
       ))}
     </>
