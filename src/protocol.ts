@@ -73,6 +73,7 @@ export type {
 } from './protocol/database.js';
 export type {    PluginRpcCall, DefaultMenuEntry } from './protocol/plugin.js';
 export type { ScheduleView, AggregatedScheduleView, ScheduleLaunchView, ScheduleRpcCall } from './protocol/schedule.js';
+export type { RunscriptRowView, RunscriptsView } from './protocol/runscripts.js';
 export type {
   RemoteSessionAction,
   RemoteSessionKind,

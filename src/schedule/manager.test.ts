@@ -190,6 +190,38 @@ describe('ScheduleManager tick', () => {
     emitSpy.mockRestore();
     mgr.stop();
   });
+
+  it('emits one schedules tick per tick and no changed event when nothing fires', () => {
+    const { managers } = makeManagers();
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [{ id: 'test', command: 'echo hi', spec: 'every 1m', nextRun: Date.now() + 60_000, recurring: true, intervalMs: 60_000 }]);
+    const emitSpy = vi.spyOn(messageBus, 'emit');
+
+    mgr.start();
+    vi.advanceTimersByTime(1000);
+
+    expect(emitSpy.mock.calls.filter((call) => call[0] === 'schedules' && call[1].type === 'tick')).toHaveLength(1);
+    expect(emitSpy).not.toHaveBeenCalledWith('schedules', { type: 'changed' });
+
+    emitSpy.mockRestore();
+    mgr.stop();
+  });
+
+  it('emits schedules changed alongside the tick when an entry fires', () => {
+    const { managers } = makeManagers();
+    const mgr = new ScheduleManager(managers);
+    mgr.set('janus', [{ id: 'test', command: 'clear', spec: 'every 1m', nextRun: Date.now() - 1000, recurring: true, intervalMs: 60_000 }]);
+    const emitSpy = vi.spyOn(messageBus, 'emit');
+
+    mgr.start();
+    vi.advanceTimersByTime(1000);
+
+    expect(emitSpy).toHaveBeenCalledWith('schedules', { type: 'changed' });
+    expect(emitSpy).toHaveBeenCalledWith('schedules', { type: 'tick' });
+
+    emitSpy.mockRestore();
+    mgr.stop();
+  });
 });
 
 describe('ScheduleManager delivery to a plugin tab that owns a terminal', () => {

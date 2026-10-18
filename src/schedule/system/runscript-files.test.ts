@@ -6,7 +6,7 @@ import path from 'node:path';
 import type * as NodeFs from 'node:fs';
 import type * as NextFreeName from '../../editor/next-free-name.js';
 import { nextFreeName } from '../../editor/next-free-name.js';
-import { catalogRunscripts, cloneRunscript, createRunscript, deleteRunscript, ensureScriptsDirectory, listRunscriptNames, newUntitledRunscript, readRunscript } from './runscript-files.js';
+import { catalogRunscripts, cloneRunscript, createRunscript, deleteRunscript, ensureScriptsDirectory, listRunscriptNames, newUntitledRunscript, readRunscript, runscriptFilePath } from './runscript-files.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof NodeFs>();
@@ -404,6 +404,21 @@ describe('runscript files', () => {
       expect(readdirSync(elsewhere)).toEqual([]);
     } finally {
       write.mockRestore();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('computes the runscript file path without creating the directory or writing a Git exclusion', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'schedule path '));
+    try {
+      git(root, 'init', '-q');
+      const excludeFile = path.join(root, '.git', 'info', 'exclude');
+      const originalExclude = readFileSync(excludeFile, 'utf8');
+
+      expect(runscriptFilePath(root, 'deploy')).toBe(path.join(root, '.janissary', 'scripts', 'deploy.rs'));
+      expect(existsSync(path.join(root, '.janissary'))).toBe(false);
+      expect(readFileSync(excludeFile, 'utf8')).toBe(originalExclude);
+    } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });

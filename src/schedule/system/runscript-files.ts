@@ -20,6 +20,10 @@ function runscriptsDirectoryPath(projectRoot: string): string {
   return path.join(projectRoot, '.janissary', 'scripts');
 }
 
+export function runscriptFilePath(projectRoot: string, name: string): string {
+  return path.join(runscriptsDirectoryPath(projectRoot), `${name}.rs`);
+}
+
 function excludeScriptsFromGit(projectRoot: string): void {
   try {
     ensureSystemScheduleExcluded(projectRoot);
@@ -43,7 +47,7 @@ function scriptsDirectory(projectRoot: string): { directory: string; exists: boo
 
 export function readRunscript(projectRoot: string, name: string): { file: string; exists: boolean; lines: string[]; text: string } {
   if (!isRunscriptName(name)) throw new Error(`Invalid runscript name: ${name}`);
-  const file = path.join(runscriptsDirectoryPath(projectRoot), `${name}.rs`);
+  const file = runscriptFilePath(projectRoot, name);
   const scripts = scriptsDirectory(projectRoot);
   if (!scripts.exists) return { file, exists: false, lines: [], text: '' };
   let stat;
